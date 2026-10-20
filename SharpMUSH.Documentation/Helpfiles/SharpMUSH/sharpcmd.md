@@ -183,12 +183,8 @@ Please note that there are no destroy or odestroy attributes.
 
 Sets the actions to be taken by `<object>` when a player disconnects from the game. @adisconnects are triggered on disconnecting players, their locations (if the room_connects @config option is true), their zone object/objects in their zone master room, and objects in the Master Room.
 
-Several arguments are passed to @adisconnect:<br>
-%1 = number of remaining connections (0 if a full disconnect)<br>
-%2 = bytes received by the disconnecting descriptor<br>
-%3 = bytes sent by the disconnecting descriptor<br>
-%4 = commands issued by the disconnecting descriptor<br>
-%5 = 1 if the descriptor was hidden on disconnect, 0 otherwise
+One argument is passed to @adisconnect:<br>
+%1 = number of remaining connections (0 if a full disconnect)
 
 ### Example
 ```sharp
@@ -295,7 +291,7 @@ For players and things, this means failure to get/take. For exits, it means fail
 `@ofollow <object>[=<message>]`<br>
 `@afollow <object>[=<action list>]`
 
-Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
+These attributes can be set, but the follow command does not use them yet: it only tells the follower "You are now following" and the name, and tells `<object>` who is following.
 
 ::: seealso
 - [follow]
@@ -312,7 +308,7 @@ Sets the message shown to someone who begins following `<object>`, the message s
 `@ounfollow <object>[=<message>]`<br>
 `@aunfollow <object>[=<action list>]`
 
-Sets the message shown to someone who stops following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
+These attributes can be set, but the unfollow command does not use them yet: it only tells you "You stop following."
 
 ::: seealso
 - [follow]
@@ -460,7 +456,7 @@ The old location of the entering object is passed in %0, if `<object>` had permi
 `@opayment <object>[=<message>]`<br>
 `@apayment <object>[=<action list>]`
 
-These attributes contain the messages shown to someone who pays `<object>` pennies with the "give" command, the message shown to others when someone pays `<object>`, and the actions to be taken by `<object>` when it's paid. Each attribute is passed the number of pennies paid as %0.
+These attributes can be set, but SharpMUSH has no money: "give" never pays an object, so they are never shown or run.
 
 ### Example
 ```sharp
@@ -613,7 +609,7 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 # @away
 `@away <player>[=<message>]`
 
-If `<message>` evaluates to something non-null, it will be shown to anyone who pages `<player>` when she is not connected.
+This attribute can be set, but page does not use it yet: someone who pages `<player>` while she is not connected is not shown `<message>`.
 
 ### Example
 ```sharp
@@ -630,13 +626,13 @@ If `<message>` evaluates to something non-null, it will be shown to anyone who p
 `@boot/port[/silent] <descriptor number>`<br>
 `@boot/me`
 
-The first form of this command disconnects all of `<player>`'s connections from the game.
+The first form of this command disconnects `<player>`'s most recent connection from the game.
 
 The `/port` switch disconnects a particular descriptor (as shown under "Des" in the Wizard WHO, returned by lports() and ports(), etc).
 
 If the `/silent` switch is given, the message telling `<player>` he was booted is suppressed.
 
-The `/me` switch boots all descriptors for the player using the command which have been idle for over 1 minute. Players can use this command to terminate hung connections.
+The `/me` switch disconnects the connection you typed the command on.
 
 Anyone may @boot their own connections. Only holders of `players.moderate` and those with the "boot" power can @boot other players, and each time they do it is recorded in the audit log.
 
@@ -646,14 +642,13 @@ Anyone may @boot their own connections. Only holders of `players.moderate` and t
 - [LOGOUT]
 :::
 # @chown
-`@chown[/preserve] <object>=<player>`<br>
-`@chown <object>/<attribute>=<player>`
+`@chown[/preserve] <object>=<player>`
 
 Changes the ownership of `<object>` to `<player>`. You can chown things, rooms or exits. Players can't be @chown'd - they always own themselves. To chown a thing, you have to be carrying it. If you do not own an object, you can only chown it if it has the CHOWN_OK flag and you pass its @lock/chown. If you're not a Wizard, you can only @chown objects to yourself or a Zone Master whose zone-lock you pass.
 
 Normally, @chown'ing an object clears privileged flags and powers, and sets the object halt. Wizards can use `@chown/preserve` to avoid this. Doing this to an active object with queued commands is not recommended, and may have strange and insecure effects.
 
-If `/<attribute>` is specified, it acts as an alias for @atrchown; see [@atrchown] for details.
+To change the owner of an attribute, use [@atrchown].
 
 ### Examples
 ```sharp
@@ -735,14 +730,7 @@ Show just the object names (with no ansi) in a table:
 # @invformat
 `@invformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of the usual "You are carrying:" list of objects when `<object>` uses the "inventory" command. The list of objects that would normally appear in the inventory is passed as %0, and a list of the names as they would appear in the default display, |-delimited, is passed as %1.
-
-### Example
-```sharp
-> @invformat me=You're holding: [itemize(iter(%0, name(%i0), %b, |), |)]
-> inventory
-You're holding: Red Ball, Pickle, and Piano
-```
+This attribute can be set, but the "inventory" command does not use it yet: inventory always shows the usual "You are carrying:" list.
 
 
 ::: seealso
@@ -852,27 +840,7 @@ The same, reading the arguments by name:
 # @cost
 `@cost <object>[=<amount>]`
 
-The COST attribute contains the number of pennies that must be given to `<object>` to trigger its @pay/@opay/@apay attributes. If less than this amount is given, the money will be refused, and if more is given, the difference is refunded.
-
-This attribute is evaluated, with the amount being given passed as %0. If the attribute returns a number less than 0, the money will be refused. Non-players must have this attribute set in order to receive pennies. Players who don't have a COST always accept the amount of pennies given.
-
-### Example
-```sharp
-> @cost Exit Machine=10
-> @apay Exit Machine=@open %n-exit
-> @pay Exit Machine=Your exit has been created.
-```
-
-```sharp
-> give Exit Machine=10
-Your exit has been created.
-(The exit will also have been opened by the machine.)
-```
-
-```sharp
-> @cost charity=%0
-> @pay charity=Thanks for your donation of %0 [money(%0)].
-```
+The COST attribute can be set, but SharpMUSH has no money: "give" with a number only answers "Money transfer will not be implemented.", so COST is never read and @payment, @opayment and @apayment never run.
 
 
 ::: seealso
@@ -885,13 +853,13 @@ Your exit has been created.
 # @create
 `@create <name>[=<cost>[,<dbref>]]`
 
-This command creates a new thing called `<name>`. Creating an object costs a certain number of pennies (see '@config object_cost'); you can specify a higher cost if you wish. This cost is refunded to you when the object is destroyed.
+This command creates a new thing called `<name>`. SharpMUSH has no money, so creating an object costs nothing and `<cost>` is accepted and ignored.
 
 Output: the new thing's dbref, as `create()` returns it.
 
-Some MUSHes choose to limit the number of objects you can create by setting a quota.
+When quotas are enabled, each object you create uses part of your building quota; see [@quota].
 
-Wizards and objects with the pick_dbref power can also specify the `<dbref>` of a garbage object to use when creating the object. Otherwise, the object is given the next available dbref.
+Wizards and objects with the PICK_DBREFS power can also specify the `<dbref>` of a garbage object to use when creating the object. Otherwise, the object is given the next available dbref.
 
 
 ::: seealso
@@ -1014,7 +982,7 @@ setting, rather than PennMUSH's dump_interval.
 `@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`<br>
 `@lalias <object>[=<leave alias1>[; ... ; <leave aliasN>]]`
 
-These attributes contain lists of "enter aliases" and "leave aliases" for `<object>` - any of the aliases can be used in place of "enter `<object>`" and "leave `<object>`" to enter/leave the object.
+These attributes can be set, but they are not used yet: their "enter aliases" and "leave aliases" do not work in place of "enter `<object>`" and "leave `<object>`".
 
 These attributes only have meaning for players and things (as rooms/exits cannot be "enter"ed) - the aliases for exits are stored in @alias.
 
@@ -1223,7 +1191,7 @@ You may wish to use the @search command instead, which can filter the results mo
 # FORWARDLIST
 `@forwardlist <object>[=<list of dbrefs>]`
 
-If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @lock/filter will be forwarded (prefixed with its @prefix) to each of the dbrefs given in its @forwardlist attribute, in much the same way as puppets forward sound to their owners.
+This attribute holds the dbrefs an AUDIBLE `<object>` is meant to forward what it hears to. Forwarding is not implemented yet: nothing is sent to them, though an object with a @forwardlist counts as listening (for @sweep and similar).
 
 In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward. (If you want to allow all objects you own to forward to you, regardless of whether or not they control you, use `@lock/forward me=$me`)
 
@@ -1295,7 +1263,7 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 # @haven
 `@haven <player>[=<message>]`
 
-When someone attempts to page `<player>` and is unable to, either because `<player>` is set HAVEN or because of his page lock, they will be shown `<message>`, if it evaluates to something non-null.
+This attribute can be set, but page does not use it yet: when someone cannot page `<player>`, because `<player>` is set HAVEN or because of his page lock, they are not shown `<message>`.
 
 ### Example
 ```sharp
@@ -1312,14 +1280,13 @@ When someone attempts to page `<player>` and is unable to, either because `<play
 - [@idle]
 :::
 # @hide
-`@hide[/<switch>] <descriptor>`<br>
-`@hide[/<switch>] [<player>]`
+`@hide[/<switch>]`
 
 This command allows players to hide their online status. Hidden connections don't show up on WHO, in lwho(), etc, when used by players without see_all.
 
-The first form of this command affects the single connection specified by `<descriptor>` (as returned by ports(), or shown on the admin WHO). The second affects all connections for the given `<player>`, or the enactor if no `<player>` is given. You must be a Wizard, Royalty, or have the Hide @power to affect your own connections; only Wizards can affect other players' connections.
+It takes no argument and always affects all of your own connections. You must be a Wizard, Royalty, or have the Hide @power.
 
-The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide connections. If no switch is given, the command acts as a toggle: for a single descriptor, the hide status is reversed. For a player, if all his connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
+The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhide them. If no switch is given, the command acts as a toggle: if all your connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
 
 
 ::: seealso
@@ -1386,7 +1353,7 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 # @idle
 `@idle <player>[=<message>]`
 
-This message is sent in return to every page which successfully reaches you if it evaluates non-null. It is useful if you are idle for long periods of time and wish to inform people where you are, or if you are in a meeting and cannot quickly return pages.
+This attribute can be set, but page does not use it yet: it is not sent back to those who page you.
 
 ### Example
 ```sharp
@@ -1442,9 +1409,9 @@ From outside, Test bounces.
 - [@infilter]
 :::
 # @kick
-`@kick <number>`
+`@kick <player>`
 
-This wizard-only command forces the immediate execution of `<number>` items from the queue. Rarely useful. If your MUSH is lagging badly, chances are high that it stems from network problems. Check the queue before using this command.
+Disconnects every connection `<player>` has, telling each one "You have been disconnected." It needs the `server.operate` permission. See [@boot] to disconnect a single connection.
 
 
 ::: seealso
@@ -1470,7 +1437,7 @@ The `/spoof` switch causes nospoof notifications to show the enactor's dbref ins
 
 Links `<object>` to either a room or a thing. If a thing or player is linked, that sets the object's HOME. If a room is linked, that sets the object's drop-to room, which is where objects that are dropped in the room will be sent to.
 
-Most often, @link is used to link or relink an exit to a destination room. In order to link an exit to a room, you must either own or control the room, OR the room must be set LINK_OK. If the exit is currently unlinked, and you pass its @lock/link, you may link it even if you do not own it. In this case, the exit will be @chowned to you (and set HALT). Linking an exit may have a cost (usually 1 penny.) The Wizard-only `/preserve` switch can be used to link without @chowning and HALTing the exit.
+Most often, @link is used to link or relink an exit to a destination room. In order to link an exit to a room, you must either own or control the room, OR the room must be set LINK_OK. If the exit is currently unlinked, and you pass its @lock/link, you may link it even if you do not own it. In this case, the exit will be @chowned to you (and set HALT). The Wizard-only `/preserve` switch can be used to link without @chowning and HALTing the exit.
 
 If the destination of an exit is "variable", its destination is determined at the time of travel by the attribute DESTINATION on the exit, which is evaluated like a U()-function. You must have permission to link to whatever the DESTINATION evaluates to in order for the exit to work. If there's no DESTINATION attribute, the EXITTO attribute is also tried.
 
@@ -1539,9 +1506,9 @@ Valid flags include:
 `@log[/<switch>] <message>`<br>
 `@log/recall/<switch> [<number>]`
 
-This wizard-only command puts `<message>` in a log file, tagged with the time and object executing the command. The available switches are /check, /cmd, /conn, /err, /trace, and /wiz, specifying which file to log to. /cmd is default.
+This command writes `<message>` to the server log, tagged with the object executing the command. It needs the `server.operate` permission. The available switches are /check, /cmd, /conn, /err, /trace, and /wiz, specifying which log category to use. /cmd is default.
 
-Adding the `/recall` switch will display the last `<number>` lines written to that log file, or the entire log buffer (Which is the last 1 kilobyte or so of data written to the log) if omitted.
+Adding the `/recall` switch displays the last `<number>` entries in that category: 100 if omitted, and at most 1000.
 
 
 ::: seealso
@@ -1699,7 +1666,7 @@ If `<return exit name>` is given, the MUSH will attempt to open an exit back fro
 
 Both `<exit name>` and `<return exit name>` can include any number of aliases for the exits, separated by semicolons. See [@name] for details.
 
-Wizards and objects with the pick_dbref power can specify garbage dbrefs to use for the exit and return exit.
+Wizards and objects with the PICK_DBREFS power can specify garbage dbrefs to use for the exit and return exit.
 
 To open an exit in a room, you must control the room, have the Open_Anywhere @power, or the room must be set OPEN_OK and you must pass its @lock/open.
 
@@ -1850,9 +1817,9 @@ This command manipulate the message at the top of WHO/DOING. By itself, it displ
 - [who]
 :::
 # @poor
-`@poor <value>`
+`@poor <player>`
 
-This command sets the pennies of every player on the MUSH to `<value>`. It can only be used by God.
+This command sets `<player>`'s building quota to 0, so they cannot build until it is raised again with [@quota]. It needs the `players.moderate` permission, and refuses when quotas are disabled.
 
 
 ::: seealso
@@ -1862,9 +1829,7 @@ This command sets the pennies of every player on the MUSH to `<value>`. It can o
 # @prefix
 `@prefix <object>[=<message>]`
 
-This attribute is meant to be used in conjunction with the AUDIBLE flag. The @prefix of the object is prepended to messages propagated via AUDIBLE. Pronoun substitution is done on @prefix messages.
-
-For example, if you have an audible exit "Outside" leading from a room Garden to a room Street, with @prefix "From the garden nearby," if Joe does a ":waves to everyone." from the Garden, the people at Street will see the message, "From the garden nearby, Joe waves to everyone."
+This attribute is meant to be used with the AUDIBLE flag, prepended to messages propagated via AUDIBLE. SharpMUSH does not propagate sound through AUDIBLE objects or exits yet, so @prefix is never used.
 
 
 ::: seealso
@@ -1884,13 +1849,9 @@ The @purge command should almost never need to be performed manually. If you do 
 # @readcache
 `@readcache`
 
-This wizard-only command reloads the cached text files (listed under '@config messages') and rebuilds the indexes for help, news and similar commands.
+This command rereads the text files and rebuilds the indexes for help, news and similar commands. Changes to those files while the game is running are not seen until @readcache is used. It needs the `server.operate` permission.
 
-On some systems (where '@config compile' shows 'Changed help files will be automatically reindexed.'), updates to these files are noticed and loaded automatically. Otherwise, @readcache must be used any time changes are made to one of these files while the game is running.
-
-A site admin can achieve the same effect by sending the MUSH process a kill -1 or kill -HUP.
-
-@readcache does not load updates to the configuration files (mush.cnf, restrict.cnf, etc) - the game must be restarted with `@shutdown/reboot` to reload these.
+@readcache does not reload configuration; game options are changed with [@config].
 
 
 ::: seealso
@@ -2046,22 +2007,17 @@ You can use this command to set yourself or any of your objects to be male, fema
 # @shutdown
 `@shutdown[/panic][/reboot][/paranoid]`
 
-@shutdown shuts down the game. It may only be used by Wizards.
+@shutdown tells everyone connected that the game is shutting down and logs it, but does not stop the game: the server's process is stopped by whatever runs it, such as Docker or the host. The world is saved as it changes, so there is nothing to save first. It needs the `server.operate` permission.
 
-`@shutdown/panic` performs a panic shutdown of the game, using a seperate database file, not the normal one. It may only be used by God.
+`@shutdown/panic` does the same, logged as a panic. It may only be used by God.
 
 `@shutdown/reboot` restarts the game engine without disconnecting anyone: connections are held by the connection server while the engine stops and starts again. Everyone connected is told first. The engine is started again by whatever runs it, such as Docker's restart policy; run by hand, it just stops. A restart is what starts or stops a plugin after [@plugin] changes it. It needs the `server.operate` permission.
 
-If the `/paranoid` switch is added, the shutdown dump will be a paranoid dump (see @dump).
+`@shutdown/paranoid` announces that the database is being saved and logs the request; it writes nothing, because the world is always on disk.
 # @slave
 `@slave/restart [info|ssl]`
 
-@slave is a wizard-only command used to control the various subprocesses used by the mush to do various things. The only switch it currently takes is `/restart`, which will shut down and relaunch the slave daemon process in question.
-
-Two different daemons are used:
-
-info: Resolves IP addresses into host names whenever a new connection is established.<br>
-ssl : Handles encrypted SSL connections across @shutdown/reboots.
+@slave is accepted for compatibility and does nothing: SharpMUSH has no helper daemons to restart, and it only replies that the command does nothing. It needs the `server.operate` permission.
 # colorstyle
 `SOCKSET colorstyle=<value>`<br>
 `@SOCKSET [me|<descriptor>]=colorstyle,<value>`
@@ -2220,18 +2176,18 @@ Note that @startups are NEVER inherited from parent objects.
 `@stats/paging`<br>
 `@stats/freespace`
 
-In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. A destroyed object is removed rather than kept as garbage, so there is no garbage count.
+In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with a garbage count, which is always 0: a destroyed object is removed rather than kept as garbage.
 
 `@stats/tables` lists SharpMUSH's lookup tables (built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections) with the number of entries in each.<br>
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.
 
 `@stats/chunks`, `/regions`, `/paging` and `/freespace` report PennMUSH's attribute-chunk allocator. SharpMUSH keeps attributes in its database provider and has no chunk allocator, so these switches say so and return `#-1 NOT SUPPORTED`. For how much disk the database itself uses, see `@storage`.
 # @sweep
-`@sweep [connected | here | inventory | exits ]`
+`@sweep[/connected][/here][/inventory][/exits]`
 
-@sweep gives you a list of all nearby objects that are listening, including the room you are in and the objects you are carrying. Most objects only listen for a particular string or phrase, so they normally do not pose a problem if you need privacy. You will have to be careful of players and puppets since they will hear everything you say and do. (And might post the same to r.g.m!) AUDIBLE exits are also shown on an ordinary sweep, if the room is also AUDIBLE. (Audible exits aren't active unless the room is audible).
+@sweep gives you a list of the objects that are listening in your location, including the room you are in. Most objects only listen for a particular string or phrase, so they normally do not pose a problem if you need privacy. You will have to be careful of players and puppets since they will hear everything you say and do. (And might post the same to r.g.m!)
 
-The four command options can also be used as switches (i.e., you can use "`@sweep/connected`" instead of "`@sweep connected`"). If the connected flag is given, only connected players and puppets owned by connected players will be shown in the @sweep. The "here" and "inventory" flags check only your location or inventory, respectively. "exits" only checks for AUDIBLE exits.
+The options are switches; an argument is ignored. With `/connected`, only connected players and puppets owned by connected players are shown. `/here` checks only your location, `/inventory` only the objects you carry, and `/exits` only AUDIBLE exits in your room.
 
 
 ::: seealso
@@ -2409,7 +2365,7 @@ The `/silent` switch suppresses the confirmation message, and `/noisy` causes it
 `ahelp [<topic>]`<br>
 `anews [<topic>]`
 
-These commands, if enabled, show the admin-only help or news files for the MUSH. Only Wizards and Royalty may use them.
+These commands, if enabled, show the admin-only help or news files for the MUSH. Only Wizards may use them.
 # brief
 `brief[/opaque] [<object>]`
 
@@ -2545,7 +2501,7 @@ The `/opaque` switch omits contents listings.
 # follow
 `follow <object>`
 
-If you pass the object's follow lock, you begin following it. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
+You begin following `<object>`, a player or thing; its follow lock is not checked. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
 
 
 ::: seealso
@@ -2626,14 +2582,7 @@ To get an object from someone else's inventory, the possessive_get @config optio
 `@obuy <object>[=<message>]`<br>
 `@abuy <object>[=<message>]`
 
-These attributes contain the message shown to a player who successfully buys something from `<object>` using the "buy" command, the message shown to others in the room when something is bought from `<object>` (prefixed with the buyer's name), and the actions to be taken by `<object>` when something is bought from it, respectively. Each attribute is passed the item being purchased as %0 and the amount paid for it as %1.
-
-### Example
-```sharp
-> @buy Vendor=udefault(me/buy`%0,You buy %0 for %1 [money(%1)]., %0, %1)
-> @obuy Vendor=hands some money to [name(me)] for [art(%0)] %0.
-> @abuy Vendor=:goes into the storeroom. ; @wait 2=:returns with %n's %0.
-```
+These attributes can be set, but they are never shown or run: SharpMUSH has no money, and the "buy" command is not implemented.
 
 
 ::: seealso
@@ -2648,18 +2597,7 @@ These attributes contain the message shown to a player who successfully buys som
 # @pricelist
 `@pricelist <object>=<item1>:<price1>[,<price2>][ <item2>:...]`
 
-The PRICELIST attribute is a space-delimited list of item names and prices that are checked when the 'buy' command is run.
-
-An item name may have '_'s where the player would use a space in the name.
-
-A price is either a number (20), a range of numbers (10-30), or a minimum number (10+). An item can also have several different prices, separated by commas.
-
-A player must pass `<object>`'s @lock/pay in order to purchase from it.
-
-### Example
-```sharp
-> @PRICELIST vendor=mansion:1000+ large_house:100-200 house:20,30,50
-```
+The PRICELIST attribute can be set, but nothing reads it: SharpMUSH has no money, and the "buy" command is not implemented.
 
 
 ::: seealso
@@ -2673,19 +2611,7 @@ A player must pass `<object>`'s @lock/pay in order to purchase from it.
 # buy
 `buy <item>[ from <vendor>][ for <cost>]`
 
-When you try buying an item, PRICELIST attributes on nearby objects (or `<vendor>` if given) will be checked for matching item:costs. If `<cost>` is given, the first item that matches that cost will be purchased. Otherwise, the first matching item that you can afford will be purchased. You must pass the vendor's @lock/pay in order to purchase items.
-
-If the pricelist match contains a list of prices, ITEM:30,20,10, the first one you can afford will be the resulting price.
-
-### Example
-```sharp
-> @PRICELIST vendor=coke:20 pepsi:20
-> &drink`coke vendor=You enjoy a delicious coke.
-> &drink`pepsi vendor=It tastes like a funny coke.
-> @BUY vendor=u(drink`%0)
-> buy coke
-You enjoy a delicious coke.
-```
+The buy command is not implemented: SharpMUSH has no money. It reads no PRICELIST, checks no @lock/pay and runs no @buy attributes; it only says that buying needs an economy system.
 
 
 ::: seealso
@@ -2695,14 +2621,11 @@ You enjoy a delicious coke.
 - [@cost]
 :::
 # give
-`give[/silent] <recipient>=<number>`<br>
-`give[/silent] <number> to <recipient>`<br>
-`give <recipient>=<object>`<br>
-`give <object> to <recipient>`
+`give <recipient>=<object>`
 
-The first two forms of this command give `<number>` pennies to `<recipient>`. If `<recipient>` is a non-player, it must have an @COST, and any pennies given to it will go to its owner. The amount given must match `<recipient>`'s @cost (if set). If `/silent` is given, the message informing the recipient how many pennies were given is suppressed. Wizards may "give" a negative number of pennies to take from players. When you give `<recipient>` pennies, his PAYMENT/OPAYMENT/APAYMENT attributes are triggered. You must pass `<recipient>`'s @lock/pay, unless you are a Wizard and are either giving a negative number of pennies, or giving to a player with no @cost.
+SharpMUSH has no money: `give <recipient>=<number>` only answers "Money transfer will not be implemented.", and the `/silent` switch has no effect.
 
-The last two forms of this command give an `<object>` from your inventory to `<recipient>`. The recipient must be set ENTER_OK, and you must pass his @lock/from. You must also pass `<object>`'s @lock/give, and `<object>` must pass `<recipient>`'s @lock/receive. When you give an object successfully, your GIVE/OGIVE/AGIVE attributes, `<recipient>`'s RECEIVE/ORECEIVE/ARECEIVE attributes, and `<object>`'s SUCCESS/ASUCCESS/OSUCCESS attributes are all triggered.
+This command gives an `<object>` from your inventory to `<recipient>`. The recipient must be set ENTER_OK or controlled by you, and you must pass his @lock/from. You must also pass `<object>`'s @lock/give, and `<object>` must pass `<recipient>`'s @lock/receive. When you give an object successfully, your GIVE/OGIVE/AGIVE attributes, `<recipient>`'s RECEIVE/ORECEIVE/ARECEIVE attributes, and `<object>`'s SUCCESS/ASUCCESS/OSUCCESS attributes are all triggered.
 
 
 ::: seealso
@@ -2751,7 +2674,7 @@ This command returns some information about the MUSH you are on, such as its ver
 # i
 `inventory`
 
-Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. It also tells you how much MUSH money you have. If you are not set OPAQUE, others will also be able to see what is in your inventory by looking at you.
+Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. If you are not set OPAQUE, others will also be able to see what is in your inventory by looking at you.
 
 Output: the dbrefs of what you carry, separated by spaces.
 
@@ -2814,7 +2737,7 @@ If `<message>` begins with a double-quote and the chat_strip_quote @config optio
 # score
 `score`
 
-Displays how many pennies you have. Helpful to see if any machines are looping. If they are, your pennies will be being rapidly drained. MUSH money may also be used for other purposes in the game.
+The score command is not supported: SharpMUSH does not track money, so it only says so. To find looping objects, see [@ps].
 
 
 ::: seealso
@@ -2974,21 +2897,7 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 - [@aufail]
 :::
 # WARN_ON_MISSING
-This internal command is run when someone attempts to run a command which starts with a function, for example:
-```sharp
-&test me=$test: [emit(test)]
-```
-By default it sends the owner of the offending object a message, so they can fix the code to use a command instead of a function. The command must be enabled (either in restrict.cnf or with @command/enable) in order to be used. It can be @hooked to set custom behaviour.
-
-### Example
-```sharp
-> @hook/override warn_on_missing=#0, wom
-> &wom #0=$warn_on_missing: @pemit/list %# [owner(%!)]=[name(%!)] has broken code in %=!
-```
-
-```sharp
-> &wom #0=$warn_on_missing *: @pemit [owner(%!)]=[name(%!)] has broken code in %= - attempted to run %0!
-```
+This internal command does nothing. The engine never runs it, including when a command starts with a function, so hooking it with @hook has no effect.
 
 
 ::: seealso
@@ -3030,9 +2939,9 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 - [@pemit]
 :::
 # SESSION
-`SESSION [<pattern>]`
+`SESSION`
 
-The SESSION command is the same as the admin WHO, but instead of showing the hostname, it shows the number of bytes sent to, received from, and pending for each connection. `<pattern>` limits the output, only showing players whose name begins with `<pattern>`, or whose names or aliases match `<pattern>` if it's a wildcard pattern.
+The SESSION command shows information about your own first connection: your name and dbref, how long ago you connected, how long you have been idle, and your host. It takes no argument.
 
 
 ::: seealso
@@ -3072,9 +2981,9 @@ A variable with several values repeats its name on one line per value, the defau
 
 Given a list of known good words in a category, the mush can suggest ones based on misspelled or otherwise invalid words. This is used for suggesting function names, help entries, etc. @suggest provides a way to add custom categories and vocabulary words.
 
-When given no switches or `/list`, shows all available suggestion categories. If the dict_file config option is set, tries to populate the 'words' category from it.
+When given no switches or `/list`, shows all available suggestion categories.
 
-`/add` and `/delete` are Wizard-only switches that do the respective operation for a word in a given category.
+`/add` and `/delete` add or remove a word in a given category. They currently need no special permission.
 
 ### Example
 ```sharp

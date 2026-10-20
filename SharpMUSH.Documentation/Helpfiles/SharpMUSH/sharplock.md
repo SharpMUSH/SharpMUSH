@@ -321,7 +321,7 @@ For players and things, controls who may give the object away. Has no meaning fo
 Controls who may give items to this object.
 
 ## Pay Lock
-Controls who can 'buy' an item from this vendor.
+Can be set, but has no effect: SharpMUSH has no money, so nothing can be bought or paid.
 
 ## Receive Lock
 Controls what may be given to this object.

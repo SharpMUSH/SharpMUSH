@@ -155,7 +155,7 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 
 `cwho(<channel>[,<on|off|all>[,<skip gagged?>]])`
 
-- **cwho()**: The dbrefs of *\<channel\>*'s members, space separated. The second argument selects which: **on** (default) lists connected members, **off** lists the rest, and **all** lists everyone. Members hiding on the channel are treated as off unless you have the `Who` power; things are always listed. A true third argument omits members who are gagging the channel.
+- **cwho()**: The dbrefs of *\<channel\>*'s members, space separated. The second argument selects which: **on** (default) lists connected members, **off** lists the rest, and **all** lists everyone. Members hiding on the channel are treated as off unless you are a wizard or royalty or have the See_All power; things are always listed. A true third argument omits members who are gagging the channel.
 
 ## crecall()
 

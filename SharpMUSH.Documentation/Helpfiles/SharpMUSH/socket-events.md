@@ -23,8 +23,6 @@
 - **socket\`createfail** (*descriptor*, *ip*, *count*, *reason*, *name*, *error*)
 - Triggered when the connect screen refuses to create an account (`register`) or a character (`make`). *<reason>* is "creation disabled" when player_creation is off, "name taken" or "bad name" for a character name, or the account service's own message for a refused account. *<name>* is the name asked for, empty when creation is disabled. *<count>* is always 1, and *<error>* always empty: SharpMUSH sends no registration mail.
 
-**Note**: A sitelock rule with deny_silent will not trigger socket\`loginfail or socket\`createfail.
-
 ## Client reports
 
 - **socket\`gmcp** (*descriptor*, *package*, *message*, *player*)

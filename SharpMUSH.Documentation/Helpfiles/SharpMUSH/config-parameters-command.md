@@ -36,7 +36,7 @@ The categories and groups are the same as those used by `@config/list`.
 
 Values must be of the listed type for each option. They include: *<number>*, *<dbref>*, *<boolean>* (Yes/No), *<time>*, or *<string>*.
 
-Options which take a *<time>* will accept either a number of seconds or a combination of numbers followed by 's' for seconds, 'm' for minutes or 'h' for hours, making `1h30m` and `5400` equivalent.
+Options which take a *<time>* accept a plain number of seconds, such as `5400`; forms like `1h30m` are refused.
 
 *<dbref>* options can be given with or without the leading '#', so '1' and '#1' are the same.
 

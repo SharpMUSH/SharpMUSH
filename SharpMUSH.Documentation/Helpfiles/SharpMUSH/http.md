@@ -97,7 +97,7 @@ The seeded #8 is ready to use. To point the HTTP surface at a handler of your ow
 > &GET *HTTPHandler=say Somebody tried to HTTP GET %0!
 ```
 
-You will very likely want to set the `http_handler` option in your `mush.cnf` file to ensure it survives over reboots and is actively receiving events even during startup.
+`@config/set` stores the `http_handler` option, so it lasts across restarts.
 
 ### Status and content type
 

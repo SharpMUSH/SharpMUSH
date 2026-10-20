@@ -103,15 +103,9 @@ This is the index to the MUSH online help files.
 :::
 
 # Costs
-  Some things on the MUSH cost pennies. The default costs are shown below:
+  SharpMUSH has no money, so building and searching cost no pennies. The only cost is quota: when the 'use_quota' `@config` option is on, each object you create counts 'quota_cost' against your quota. See [quotas].
 
-    `@dig`: 10 pennies<br>
-    `@create`: 10 pennies (or more)<br>
-    `@search`: 100 pennies *<br>
-    `@link`: 1 penny (if you didn't already own it, +1 to the previous owner)<br>
-    `@open`: 1 penny (2 pennies if linked at the same time)
-
-  Type '`@config`/list costs' to get the costs for the MUSH you are on.
+  The penny cost options in '`@config`/list costs' (object_cost, exit_cost, link_cost, room_cost, queue_cost, find_cost) are accepted but have no effect.
 
 
 ::: seealso
@@ -132,9 +126,9 @@ This is the index to the MUSH online help files.
 
 # Object IDs
 # Objids
-  When an object is destroyed, its dbref number will eventually be recycled and given to a newly created object. This can cause problems in code, particularly in database code which stores members of a group, as code which was meant to refer to the old object ends up referring to the new one by mistake.
+  When an object is destroyed, its dbref number can later be given to a newly created object (for example by a creator with the Pick_DBRefs `@power`). This can cause problems in code, particularly in database code which stores members of a group, as code which was meant to refer to the old object ends up referring to the new one by mistake.
 
-  To avoid this problem, you can use the "object id", or objid, instead of the dbref. An object id consists of the object's dbref, a colon, and then the object's creation time. Objids can be used anywhere dbrefs can and, because the creation time is different each time the dbref is recycled, the objid is totally unique to each object.
+  To avoid this problem, you can use the "object id", or objid, instead of the dbref. An object id consists of the object's dbref, a colon, and then the object's creation time. Objids can be used anywhere dbrefs can and, because the creation time is different each time the dbref is reused, the objid is totally unique to each object.
 
   The `objid()` function returns the object id of an object, and the %: substitution evaluates to the objid of the enactor.
 
@@ -233,7 +227,7 @@ This is the index to the MUSH online help files.
 
 # Gender
 # SEX
-  Gender on a MUSH is entirely up to you. You can set yourself (or any of your objects) to be male, female, neuter, or plural. If whatever is in the SEX attribute is not recognizable, the MUSH will assume the object is neuter. Setting a gender attribute will enable pronoun substitution by the MUSH. The SEX attribute is visual to anyone who wants to see it.
+  Gender on a MUSH is entirely up to you. You can set yourself (or any of your objects) to be male, female, neuter, or plural. If whatever is in the SEX attribute is not recognizable, the MUSH will assume the object is plural (they/them). Setting a gender attribute will enable pronoun substitution by the MUSH. The SEX attribute is visual to anyone who wants to see it.
 
   The `obj()`, `subj()`, `poss()` and `aposs()` functions return different pronouns for an object based on its `@sex`, and the %o, %s, %p and %a substitutions return the same pronouns for the enactor.
 
@@ -353,7 +347,7 @@ This is the index to the MUSH online help files.
     &PART1 object=<action list> ; @trigger me/PART2
     &PART2 object=@select <test for being done>=<false>,@trigger me/PART1
   ```
-  Looping can be a problem when it goes on without stopping. The `@ps` command can be used to see if you are looping. Beware! A looping machine that isn't `@halt`'d will drain your pennies while you are away from the mush!
+  Looping can be a problem when it goes on without stopping. The `@ps` command can be used to see if you are looping. Beware! A looping machine that isn't `@halt`'d keeps running while you are away from the mush.
 
   The `@retry` and `@include` commands, and %= substitution, can also be useful for building code which needs to loop.
 
@@ -391,11 +385,11 @@ This is the index to the MUSH online help files.
 :::
 
 # Money
-  The MUSH has a built-in money system, which gives a starting amount of money to new players and hands out a daily allowance thereafter. MUSH money (the default name is "pennies", but this may be different depending on the particular MUSH) is spent on some MUSH commands that are computationally expensive or alter the database. In addition, every time you "queue" a command, it costs you a certain amount of money -- this prevents looping from getting out of control, since when all your money is spent, you can't queue any more commands.
+  SharpMUSH has no money system. Players get no starting money or daily allowance, and queued commands and building cost nothing.
 
-  The money system can also be used on player-created objects by setting `@cost`/`@payment`/`@opayment`/`@apayment` attributes and using the "give" command to give pennies, or by setting `@pricelist`/`@buy`/`@obuy`/`@abuy` attributes and buying items with the "buy" command. The Pay `@lock` on an object controls who can give it pennies.
+  Giving pennies with "give" is refused, and the "buy" command does not buy anything. The `@cost`, `@payment` and `@pricelist` attributes can be set but nothing uses them.
 
-  The "score" command tells you how many pennies you have.
+  The "score" command says that money is not tracked.
 
 
 ::: seealso
@@ -432,7 +426,7 @@ This is the index to the MUSH online help files.
 # Quotas
   The Quota system controls how many objects a player may own. It is only used of the 'use_quota' `@config` option is set to Yes.
 
-  Each object created normally costs one quota (though this can be altered with the 'quota_cost' `@config` option), and every player starts with a fixed amount of quota, controlled with the 'starting_quota' `@config` option. Whenever you create an object of any type, your remaining quota, stored in the RQUOTA attribute, is decreased by the quota_cost.
+  Each object created normally costs one quota (though this can be altered with the 'quota_cost' `@config` option), and every player starts with a fixed amount of quota, controlled with the 'starting_quota' `@config` option. Whenever you create an object of any type, it counts against your quota: you can create an object while your quota minus the number of objects you own is at least the quota_cost.
 
   Wizards can give specific players (for example, builder characters) unlimited quota by giving them the No_Quota `@power`.
 
@@ -457,7 +451,7 @@ This is the index to the MUSH online help files.
   See [regexp syntax]
 
 # RQUOTA
-  This attribute tracks remaining building quota if it is implemented. It is settable in-game only by a wizard, and is only visible to wizards.
+  SharpMUSH does not use this attribute: remaining quota is the player's quota minus the objects they own. A database import reads RQUOTA to set the quota. It is settable in-game only by a wizard, and is only visible to wizards.
 
 
 ::: seealso
@@ -567,7 +561,7 @@ This is the index to the MUSH online help files.
 # Objects
   Everything on a MUSH is an object in the MUSH database. There are four main types of objects: players, things (once called 'objects'), rooms and exits. You can see the type of an object when you 'examine' it, or with the `type()` function.
 
-  There is also a 'garbage' type, used for objects which have been created and then `@destroyed`. Garbage objects cannot be used in any way, and their dbrefs will be recycled (with a new objid) when something new is created.
+  There is no garbage type in SharpMUSH: an object that is `@destroyed` is removed from the database. See [garbage].
 
   For more information on each type, see [players], [things], [rooms], [exits] and [garbage].
 
@@ -640,9 +634,9 @@ This is the index to the MUSH online help files.
 :::
 
 # Garbage
-  Garbage objects previously existed as one of the four main types (player, thing, exit or room) but were destroyed with `@destroy`/`@nuke`. They exist only as placeholders in the database; you can do nothing with them. The dbrefs of garbage objects will be reused when new objects are created (but with a different creation time/object id).
+  SharpMUSH keeps no garbage objects. When `@destroy`/`@nuke` finishes destroying an object, it is removed from the database, so `@stats` always reports zero garbage.
 
-  The total number of garbage objects, and the next garbage object to be recycled, is shown in `@stats`. You can use lsearch(all,type,garbage) to get a list of all garbage dbrefs.
+  New objects take the next unused dbref; a destroyed object's dbref is not reused automatically. A creator with the Pick_DBRefs `@power` can choose a free dbref. A reused dbref gets a new creation time, so its objid differs.
 
 
 ::: seealso
