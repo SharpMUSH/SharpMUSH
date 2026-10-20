@@ -539,3 +539,20 @@ At head `bb46d34bb`, build, formatting, bUnit, scene/Discord plugin tests, help
 integrity, layout, PennMUSH parity and code analyses passed. Core and integration
 test jobs were still running at inspection. Claude review failed before producing
 findings; CodeRabbit skipped the draft. These do not establish full CI acceptance.
+
+
+### Story composer runtime proof (2026-10-20)
+
+After explicit user approval, the local administrator assigned the `approved`
+role to disposable JourneySecond (#18). The private Onboarding Story validation
+scene was created through the normal scene UI. In connected Play/Story mode,
+the guide inserted `look` into the empty composer, switched Say to Command,
+closed the sheet and focused the composer. The scene still showed no activity.
+Appending a test draft and trying insertion again kept the sheet open, displayed
+the refusal explanation and preserved `look draft-preservation`. No Send action
+was taken. Screenshot: `work/onboarding/story-draft-preservation.png`.
+
+The completed core CI run at `bb46d34bb` found one failure: the veteran catalog
+test still expected four steps. Its expected IDs now include the user-requested
+`channels` lesson before `continue`; the no-command-practice veteran assertion
+remains unchanged. Integration CI passed.

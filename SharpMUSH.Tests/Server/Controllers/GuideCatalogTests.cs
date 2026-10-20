@@ -45,7 +45,7 @@ public class GuideCatalogTests
 	public async Task VeteransGetAConciseDeltaTourAndRoleplayersGetTheirOwnExamples()
 	{
 		var veteran = GuideCatalog.Player(GuidePath.Mush);
-		await Assert.That(veteran.Select(lesson => lesson.Id)).IsEquivalentTo(new[] { "place", "sign-in", "world", "continue" });
+		await Assert.That(veteran.Select(lesson => lesson.Id)).IsEquivalentTo(new[] { "place", "sign-in", "world", "channels", "continue" });
 		await Assert.That(veteran.Any(lesson => lesson.InsertCommand is not null)).IsFalse();
 		await Assert.That(veteran.Single(lesson => lesson.Id == "world").Body.Contains("Command", StringComparison.Ordinal)).IsTrue();
 		var roleplay = GuideCatalog.Player(GuidePath.OtherRoleplay);
