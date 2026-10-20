@@ -43,7 +43,7 @@ The dated records below provide the details and limitations of each observation.
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
 | Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
 | Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; open guide removes disabled `+help` and restores it automatically without losing focus | Actual uninstall scenario not exercised; disabled-handler transition verified |
-| Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview and feature links | Review all configured guide links with an ordinary player after admin changes |
+| Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview; all three configured wiki links opened as an ordinary player after admin changes, with disabled-reader omission verified | No outstanding configured-link case identified |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
 | Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
 | Production art safety | Bounded approved neutral SVG fallback; candidates withheld after independent QA | All 252 inventory slots, independent QA and owner visual acceptance; approved genre assets wired into catalog |
@@ -797,3 +797,21 @@ Four new disposal findings were traced to consumer-owned HTTP responses:
 GuidePackageCommands and OnboardingService dispose their awaited responses with
 `using var`. Ownership evidence was added to each review thread, and all four
 were resolved. Current-head remote CI still requires verification after push.
+
+### Configured guide links as an ordinary player (2026-10-20)
+
+Created three clearly named public reference fixtures in the isolated world
+and configured WelcomePage, RulesPage and CharacterGuidePage through the admin
+settings API. While wiki-reader was absent, public server-info omitted all
+three links. Installed only the bundled wiki-reader package, retaining every
+previously installed package; the public projection then contained the three
+correct canonical wiki URLs.
+
+Signed in as the disposable ordinary player and followed each link from
+`/welcome`. Welcome, Rules and Character Reference each rendered the expected
+title and fixture body, with browser Back returning to the guide. Screenshot:
+`work/onboarding/player-guide-character-reference.png`.
+
+Restored the exact original onboarding settings and installed-package set using
+their APIs, then verified all three guide links were absent again. The public
+reference pages remain as harmless test fixtures. No production state changed.
