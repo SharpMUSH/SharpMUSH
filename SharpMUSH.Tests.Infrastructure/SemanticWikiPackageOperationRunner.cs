@@ -53,14 +53,10 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 		try
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			// The body runs as a queue entry, which does not carry this flow, so it enters the root itself.
-			// Hook entries are admitted by the inner runner and do not: a hook therefore takes an attempt of
-			// its own, which taints this one, and an operation that collected hooks stays UNKNOWN.
+			// The inner runner captures this flow's root and re-enters it in the body entry and in each
+			// hook entry it admits (SemanticWikiPackageOperationScope), so their holds join this operation.
 			using (SemanticFixturePackageOperation.EnterAmbient(root))
-				inner = await _inner.StartAsync(operation, async ct =>
-				{
-					using (SemanticFixturePackageOperation.EnterAmbient(root)) return await body(ct);
-				}, cancellationToken, provenance);
+				inner = await _inner.StartAsync(operation, body, cancellationToken, provenance);
 		}
 		catch
 		{

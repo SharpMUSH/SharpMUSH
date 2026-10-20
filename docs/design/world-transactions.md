@@ -158,12 +158,14 @@ A reader treats the marker it reads in its own snapshot as SETTLED only when it 
 version 1, state 1 and the open fixture's identity; anything else is UNKNOWN, and the reader reports
 an incomplete result instead of certifying. A later package write cannot change an older snapshot.
 
-Known gaps, all of which leave the world UNKNOWN rather than wrongly SETTLED:
+Queue entries do not run in the flow that started an operation, so `PackageOperationRunner`
+captures an optional `IPackageOperationScope` when the operation starts and enters it in the body
+entry and in each hook entry it admits. On a fixture that hands those entries the coordinator's
+operation; a hold joins it only while it is still live, so an entry that runs after the operation
+was released takes an attempt of its own, which invalidates.
 
-- Hook entries run on the queue, which does not carry the coordinator's flow, so a hook takes an
-  attempt of its own and taints the operation. An operation that collected any hook (every package
-  with objects) does not settle until the coordinator hands its root to its hook entries.
-- Hooks that ran code stay UNKNOWN until queued descendants and command failures are observed.
+Known gap, which leaves the world UNKNOWN rather than wrongly SETTLED: hooks that ran code stay
+UNKNOWN until queued descendants and command failures are observed.
 
 ### Follow-ups this decision left
 
