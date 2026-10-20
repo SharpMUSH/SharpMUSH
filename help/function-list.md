@@ -32,6 +32,8 @@
   [Page functions]: read your own page log (PAGERECALL, PAGECONVERSATIONS) <br>
   [Wiki functions]: read the shared wiki (WIKI, WIKILIST)
 
+From plugins: [scene functions], [scene type functions], [scene write functions]
+
 ## Functions for data, text and output
 
   [Bitwise functions]: manipulation of individual bits of numbers (SHL, BOR) <br>

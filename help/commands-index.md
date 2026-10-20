@@ -34,6 +34,8 @@ The `]` prefix runs a command without evaluating its arguments; see [literal com
 - [commands at login]: login-screen, account, connection and MUX channel commands
 - [commands the game runs]: HUH_COMMAND, WARN_ON_MISSING and unimplemented commands
 
+From plugins: [ooc]
+
 ## @-commands
 
 In addition to these, there are several types of '@' commands. @-commands are usually commands which have permanent effects on the MUSH (such as creating a new object). Here are the help topics on @-commands:

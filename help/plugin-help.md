@@ -13,4 +13,5 @@ A plugin can bring its own help, which is part of `help` for as long as the plug
 
 Some plugin topics also appear on the lists they belong to, such as [@-wizard] or a category of the [function list]. See [@plugin] for the plugins this game has.
 
-Discord: [@discord]
+Discord: [@discord]<br>
+Scene System: [ooc], [@scene], [scene functions], [scene system], [scene type functions], [scene write functions]

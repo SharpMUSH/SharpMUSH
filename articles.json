@@ -4844,6 +4844,7 @@
       "Mail-other",
       "@mail/clear",
       "@mail/unclear",
+      "@mail/purge",
       "@mail/tag",
       "@mail/untag",
       "@mail/unread",
@@ -15386,5 +15387,347 @@
     ],
     "file": "discord-command.md",
     "plugin": "discord"
+  },
+  {
+    "id": "ooc-command",
+    "lookup": "ooc",
+    "title": "ooc",
+    "aliases": [
+      "ooc/noeval"
+    ],
+    "sections": [],
+    "file": "ooc-command.md",
+    "plugin": "scene"
+  },
+  {
+    "id": "scene-command",
+    "lookup": "@scene",
+    "title": "@scene",
+    "aliases": [
+      "@scene/noeval"
+    ],
+    "sections": [
+      {
+        "id": "scene-reading",
+        "lookup": "@scene reading",
+        "heading": "Reading scenes",
+        "aliases": [
+          "@scene/list",
+          "@scene/get"
+        ]
+      },
+      {
+        "id": "scene-creating",
+        "lookup": "@scene creating",
+        "heading": "Creating and changing scenes",
+        "aliases": [
+          "@scene/create",
+          "@scene/set"
+        ]
+      },
+      {
+        "id": "scene-poses",
+        "lookup": "@scene poses",
+        "heading": "Writing poses",
+        "aliases": [
+          "@scene/addpose",
+          "@scene/setpose",
+          "@scene/editpose"
+        ]
+      },
+      {
+        "id": "scene-pose-history",
+        "lookup": "@scene pose history",
+        "heading": "Pose history and order",
+        "aliases": [
+          "@scene/undo",
+          "@scene/redo",
+          "@scene/move",
+          "@scene/delete"
+        ]
+      },
+      {
+        "id": "scene-members",
+        "lookup": "@scene members",
+        "heading": "Members and focus",
+        "aliases": [
+          "@scene/member",
+          "@scene/unmember",
+          "@scene/focus",
+          "@scene/showas",
+          "@scene/notice"
+        ]
+      },
+      {
+        "id": "scene-plots",
+        "lookup": "@scene plots",
+        "heading": "Plots",
+        "aliases": [
+          "@scene/plot",
+          "@scene/plot/create",
+          "@scene/plot/link",
+          "@scene/plot/unlink"
+        ]
+      },
+      {
+        "id": "scene-types",
+        "lookup": "@scene types",
+        "heading": "Pose types",
+        "aliases": [
+          "@scene/types"
+        ]
+      }
+    ],
+    "file": "scene-command.md",
+    "plugin": "scene"
+  },
+  {
+    "id": "scene-functions",
+    "lookup": "scene functions",
+    "title": "Scene Functions",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "scene",
+        "lookup": "scene()",
+        "heading": "scene()",
+        "aliases": []
+      },
+      {
+        "id": "scenelist",
+        "lookup": "scenelist()",
+        "heading": "scenelist()",
+        "aliases": []
+      },
+      {
+        "id": "sceneshared",
+        "lookup": "sceneshared()",
+        "heading": "sceneshared()",
+        "aliases": []
+      },
+      {
+        "id": "scenewhere",
+        "lookup": "scenewhere()",
+        "heading": "scenewhere()",
+        "aliases": []
+      },
+      {
+        "id": "sceneposes",
+        "lookup": "sceneposes()",
+        "heading": "sceneposes()",
+        "aliases": []
+      },
+      {
+        "id": "scenepose",
+        "lookup": "scenepose()",
+        "heading": "scenepose()",
+        "aliases": []
+      },
+      {
+        "id": "sceneedits",
+        "lookup": "sceneedits()",
+        "heading": "sceneedits()",
+        "aliases": []
+      },
+      {
+        "id": "scenemembers",
+        "lookup": "scenemembers()",
+        "heading": "scenemembers()",
+        "aliases": []
+      },
+      {
+        "id": "scenemember",
+        "lookup": "scenemember()",
+        "heading": "scenemember()",
+        "aliases": []
+      },
+      {
+        "id": "scenefocus",
+        "lookup": "scenefocus()",
+        "heading": "scenefocus()",
+        "aliases": []
+      },
+      {
+        "id": "scenetags",
+        "lookup": "scenetags()",
+        "heading": "scenetags()",
+        "aliases": []
+      },
+      {
+        "id": "scenecast",
+        "lookup": "scenecast()",
+        "heading": "scenecast()",
+        "aliases": []
+      }
+    ],
+    "file": "scene-functions.md",
+    "plugin": "scene"
+  },
+  {
+    "id": "scene-system",
+    "lookup": "scene system",
+    "title": "Scene System",
+    "aliases": [
+      "scene plugin"
+    ],
+    "sections": [],
+    "file": "scene-system.md",
+    "plugin": "scene"
+  },
+  {
+    "id": "scene-type-functions",
+    "lookup": "scene type functions",
+    "title": "Scene Type and Detail Functions",
+    "aliases": [
+      "scene detail functions"
+    ],
+    "sections": [
+      {
+        "id": "scenetypes",
+        "lookup": "scenetypes()",
+        "heading": "scenetypes()",
+        "aliases": []
+      },
+      {
+        "id": "scenetype",
+        "lookup": "scenetype()",
+        "heading": "scenetype()",
+        "aliases": []
+      },
+      {
+        "id": "scenetypecheck",
+        "lookup": "scenetypecheck()",
+        "heading": "scenetypecheck()",
+        "aliases": []
+      },
+      {
+        "id": "scenedetails",
+        "lookup": "scenedetails()",
+        "heading": "scenedetails()",
+        "aliases": []
+      },
+      {
+        "id": "scenedetail",
+        "lookup": "scenedetail()",
+        "heading": "scenedetail()",
+        "aliases": []
+      },
+      {
+        "id": "scenedetailcheck",
+        "lookup": "scenedetailcheck()",
+        "heading": "scenedetailcheck()",
+        "aliases": []
+      },
+      {
+        "id": "scenedetailvalue",
+        "lookup": "scenedetailvalue()",
+        "heading": "scenedetailvalue()",
+        "aliases": []
+      }
+    ],
+    "file": "scene-type-functions.md",
+    "plugin": "scene"
+  },
+  {
+    "id": "scene-write-functions",
+    "lookup": "scene write functions",
+    "title": "Scene Write Functions",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "scenecreate",
+        "lookup": "scenecreate()",
+        "heading": "scenecreate()",
+        "aliases": []
+      },
+      {
+        "id": "sceneinvite",
+        "lookup": "sceneinvite()",
+        "heading": "sceneinvite()",
+        "aliases": []
+      },
+      {
+        "id": "scenejoin",
+        "lookup": "scenejoin()",
+        "heading": "scenejoin()",
+        "aliases": []
+      },
+      {
+        "id": "sceneset",
+        "lookup": "sceneset()",
+        "heading": "sceneset()",
+        "aliases": []
+      },
+      {
+        "id": "sceneaddpose",
+        "lookup": "sceneaddpose()",
+        "heading": "sceneaddpose()",
+        "aliases": []
+      },
+      {
+        "id": "scenesetpose",
+        "lookup": "scenesetpose()",
+        "heading": "scenesetpose()",
+        "aliases": []
+      },
+      {
+        "id": "sceneeditpose",
+        "lookup": "sceneeditpose()",
+        "heading": "sceneeditpose()",
+        "aliases": []
+      },
+      {
+        "id": "sceneundo",
+        "lookup": "sceneundo()",
+        "heading": "sceneundo()",
+        "aliases": [
+          "sceneredo()"
+        ]
+      },
+      {
+        "id": "scenemovepose",
+        "lookup": "scenemovepose()",
+        "heading": "scenemovepose()",
+        "aliases": []
+      },
+      {
+        "id": "scenedelpose",
+        "lookup": "scenedelpose()",
+        "heading": "scenedelpose()",
+        "aliases": []
+      },
+      {
+        "id": "sceneaddmember",
+        "lookup": "sceneaddmember()",
+        "heading": "sceneaddmember()",
+        "aliases": []
+      },
+      {
+        "id": "sceneunmember",
+        "lookup": "sceneunmember()",
+        "heading": "sceneunmember()",
+        "aliases": []
+      },
+      {
+        "id": "scenesetfocus",
+        "lookup": "scenesetfocus()",
+        "heading": "scenesetfocus()",
+        "aliases": []
+      },
+      {
+        "id": "sceneshowas",
+        "lookup": "sceneshowas()",
+        "heading": "sceneshowas()",
+        "aliases": []
+      },
+      {
+        "id": "sceneplot",
+        "lookup": "sceneplot()",
+        "heading": "sceneplot()",
+        "aliases": []
+      }
+    ],
+    "file": "scene-write-functions.md",
+    "plugin": "scene"
   }
 ]
