@@ -1123,3 +1123,17 @@ reinstall, supplementing the earlier disabled-handler acceptance.
 The in-app browser's Ctrl-plus input did not change viewport dimensions or
 device-pixel ratio. It does not establish actual browser zoom acceptance;
 the native 200% zoom gate remains open.
+
+### Editable welcome starters (2026-10-20)
+
+Added four localized welcome starters to the shared identity form: collaborative
+stories, adventure, relaxed roleplay, and new players. Selection uses the current
+game name and replaces only the editable draft. Loading or changing the game
+name does not overwrite an existing introduction; persistence still requires Save.
+The focused setup-identity suite passed 9/9; independent source review was clean.
+
+Published to the isolated local preview and selected Collaborative stories in
+First Setup. Both textarea and unsaved player preview updated correctly, and all
+four buttons measured 44px high. An older cached stylesheet on the original
+preview origin initially hid the button styling; a fresh localhost origin loaded
+the verified published CSS. Screenshot: `work/onboarding/welcome-starters-desktop.png`.
