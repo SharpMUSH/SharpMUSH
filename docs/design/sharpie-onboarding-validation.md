@@ -446,3 +446,22 @@ height). Tab from the final reference disclosure wrapped to the Back to game
 control inside the dialog. This verifies narrow reflow and that focus boundary,
 not browser zoom, a screen-reader session, or physical mobile hardware.
 The viewport override was restored after checking.
+
+
+### Familiarity selection and independent return (2026-10-20)
+
+In the published anonymous desktop client, switching from Discord to MUSH
+showed the five-step veteran path and retained prior completion markers.
+The inspected lessons covered web-account versus character-password identity,
+claiming existing characters, Story/Terminal modes, channel help, and optional
+game-specific additions. Previously completed steps remained accessible from
+the step list; advancing a completed introductory step resumed the incomplete
+channel lesson. The roleplay path showed its distinct persistent-world intro.
+
+Choosing independent exploration navigated immediately to Play without opening
+the guide. Reloading kept it closed. Explicitly opening Sharpie's control then
+offered familiarity choices; selecting roleplay restored the selected intro and
+focused its heading. Screenshot:
+`work/onboarding/independent-return-roleplay.png`. This checks anonymous path
+selection, persistence and voluntary re-entry, not a fresh authenticated
+end-to-end journey for every path.
