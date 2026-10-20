@@ -22,6 +22,10 @@ supersede earlier statements about missing publication or completed checks.
   and ordinary-player denial were exercised against the isolated server.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
+- At `e524550fe`, GitHub build, formatting, core/component/integration/plugin
+  tests, help integrity, parity, table layout and CodeQL passed. Automated
+  Claude review failed before findings; independent review remains the
+  substantive review evidence.
 - Existing-character claim returned to the retained guide step and preserved
   the existing roster and active character in the real browser.
 - Real failed-connection retry preserved the saved character, then connected
@@ -41,7 +45,7 @@ The dated records below provide the details and limitations of each observation.
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests; fresh keyboard login/create/welcome/Play journey | Screen-reader review remains open |
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
-| Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
+| Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs; three live connections verify room speech, targeted pages and member-only cross-room channel delivery | No outstanding command-audience case identified |
 | Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; open guide removes disabled `+help` and restores it automatically without losing focus | Actual uninstall scenario not exercised; disabled-handler transition verified |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview; all three configured wiki links opened as an ordinary player after admin changes, with disabled-reader omission verified | No outstanding configured-link case identified |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
@@ -815,3 +819,46 @@ title and fixture body, with browser Back returning to the guide. Screenshot:
 Restored the exact original onboarding settings and installed-package set using
 their APIs, then verified all three guide links were absent again. The public
 reference pages remain as harmless test fixtures. No production state changed.
+
+### Live command audience validation (2026-10-20)
+
+Three disposable accounts signed in through the real account API and obtained
+single-use tokens for their existing characters. Separate gateway WebSockets
+connected VeteranPilot, RoleplayPilot and RetryPilot. A unique `say` message
+reached all three co-located characters. A unique `page RoleplayPilot=...`
+message reached sender and recipient and was absent from RetryPilot's collected
+output during the two-second observation window. Each test connection sent QUIT
+and closed afterward. No credentials or handshake tokens were logged.
+
+Evidence: `work/onboarding/audience-validation.json`; reproducible scratch
+driver `work/onboarding/check-audiences.py`. This validates the room-speech and
+private-page explanations; cross-room channel delivery remains a separate check.
+
+Returning to Welcome after the guide-link test completed its asynchronous load
+and removed all three restored/disabled links. The earlier observation was an
+intermediate render, not a persistent stale-link failure.
+
+### Cross-room channel audience validation (2026-10-20)
+
+Created a dedicated randomly named channel in the isolated world and moved only
+RoleplayPilot to another existing room. Three disposable players connected
+through the real gateway. The exact lesson commands `@channel/list` and
+`@channel/on NAME` discovered and joined the channel. `@chat NAME=...` delivered
+a unique message to VeteranPilot and RoleplayPilot across rooms; RetryPilot,
+who had not joined, did not receive it during the two-second observation window.
+
+All three test connections quit and closed. RoleplayPilot's original location
+was restored and read back for equality, and the dedicated channel was deleted.
+Evidence: `work/onboarding/channel-audience-validation.json` and scratch driver
+`work/onboarding/check-channel-audience.py`.
+
+### Integrated CI outcome (2026-10-20)
+
+For PR head `e524550fe`, .NET run `39396842975` passed build, formatting, core
+tests, component tests, integration tests, Scene/Discord plugin tests and help
+integrity. Parity run `39396842949`, table-layout run `39396842908`, deployment
+impact and both CodeQL analysis runs also passed. The automated Claude review
+job failed and CodeRabbit skipped the draft; neither is counted as substantive
+review. Independent review of the latest keyboard changes and merge resolution
+found no actionable defects. Subsequent documentation-only evidence edits do
+not change the tested implementation.
