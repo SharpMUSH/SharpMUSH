@@ -130,4 +130,23 @@ public class WelcomeTests : BunitContext
 		await Assert.That(page.FindAll(".guide-context a[href='/wiki']").Count).IsEqualTo(enabled ? 1 : 0);
 	}
 
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task SuccessfulInsertionReturnsToPlay_RefusalKeepsTheGuide(bool inserted)
+	{
+		var guide = Services.GetRequiredService<OnboardingService>();
+		await guide.LoadAsync(GuideJourney.Player);
+		await guide.ChoosePathAsync(GuidePath.Discord);
+		await guide.SetCurrentStepAsync("useful-action");
+		var returns = 0;
+		var companion = Render<GuideCompanion>(parameters => parameters
+			.Add(component => component.Guide, guide)
+			.Add(component => component.InsertLook, () => Task.FromResult(inserted))
+			.Add(component => component.OnInserted, () => returns++));
+		await companion.Find("article button.guide-action").ClickAsync();
+		await Assert.That(returns).IsEqualTo(inserted ? 1 : 0);
+		await Assert.That(guide.Progress.Active).IsTrue();
+	}
+
 }

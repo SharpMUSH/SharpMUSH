@@ -185,7 +185,7 @@ else
                 case PlaySheet.Guide:
                     <button type="button" @onclick="CloseMobileSheet">@Loc["GuideClose"]</button>
                 <SharpMUSH.Client.Components.Onboarding.GuideCompanion Expanded="true" Guide="@(ServiceProvider.GetService<OnboardingService>())"
-                    OnExit="CloseMobileSheet"
+                    OnExit="CloseMobileSheet" OnInserted="CloseMobileSheet"
                     InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
                     <a href="/welcome">@Loc["GuideOpenFull"]</a>
                     break;

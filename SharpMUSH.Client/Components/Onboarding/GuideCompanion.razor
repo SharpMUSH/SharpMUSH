@@ -34,6 +34,7 @@ else if (Guide is { Ready: true, Progress.Active: true })
     [Parameter] public OnboardingService? Guide { get; set; }
     [Parameter] public Func<Task<bool>>? InsertLook { get; set; }
     [Parameter] public EventCallback OnExit { get; set; }
+    [Parameter] public EventCallback OnInserted { get; set; }
     private string? _message;
     private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Guide!.Progress.Path, Loc);
     private int Index => Math.Max(0, Array.FindIndex(Lessons.ToArray(), item => item.Id == Guide!.Progress.CurrentStepId));
@@ -57,9 +58,9 @@ else if (Guide is { Ready: true, Progress.Active: true })
     }
     private async Task Insert()
     {
-        _message = InsertLook is not null && await InsertLook()
-            ? Loc["GuideInserted"]
-            : Loc["GuideInsertUnavailable"];
+        var inserted = InsertLook is not null && await InsertLook();
+        _message = inserted ? Loc["GuideInserted"] : Loc["GuideInsertUnavailable"];
+        if (inserted) await OnInserted.InvokeAsync();
     }
     public void Dispose() { if (Guide is not null) Guide.Changed -= Changed; }
 }

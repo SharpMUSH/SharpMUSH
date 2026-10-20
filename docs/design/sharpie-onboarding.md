@@ -116,9 +116,12 @@ game, not a separate Discord account; scene archives depend on game capabilities
    not a full-screen celebration or a mandatory tour of every feature.
 
 Each step has one main action and Back, Skip this step, and Close. The guide is a
-side panel on desktop and an in-flow expandable card on mobile. It must not cover
-the composer, intercept its shortcuts, or repeatedly restore itself after dismissal.
-On small screens it may link to the full guide page instead of squeezing play.
+player-opened side sheet on desktop and mobile, reached from the Play header.
+It never consumes space above the terminal or opens automatically over play.
+The sheet is modal while explicitly open: Escape or its close control restores
+focus to the opener. Successful command insertion closes it without sending the
+command or dismissing the journey; refusal keeps the explanation visible.
+The full guide page remains available for longer reading.
 
 The guide may point to a control only while that control exists and is visible.
 Stable semantic anchors, not screen coordinates, identify controls. A missing or
