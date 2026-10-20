@@ -257,12 +257,18 @@
 }
 
 /* Explicitly opened guide: a visible return action, outside the game layout. */
+.play-guide-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
 .play-guide-return {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
-    margin-bottom: 12px;
+    text-decoration: none;
     padding: 10px 16px;
     border: 1px solid var(--accent);
     border-radius: 8px;

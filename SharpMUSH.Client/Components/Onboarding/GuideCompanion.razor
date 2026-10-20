@@ -10,7 +10,6 @@
         <div class="guide-companion-content">
             <p role="status">@Guide.Error</p>
             <button type="button" disabled="@Guide.Loading" @onclick="Reload">@Loc["GuideReloadProgress"]</button>
-            <a href="/welcome">@Loc["GuideOpenFull"]</a>
         </div>
     </section>
 }
@@ -23,7 +22,6 @@ else if (Guide is { Ready: true, Progress.Active: true })
             <GuidePanel Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert">
                 <Context><GuideContext LessonId="@Lesson.Id" /></Context>
             </GuidePanel>
-            <a href="/welcome">@Loc["GuideOpenFull"]</a>
         </div>
     </section>
 }

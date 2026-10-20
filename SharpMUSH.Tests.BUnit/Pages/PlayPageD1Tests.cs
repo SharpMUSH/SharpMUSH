@@ -522,6 +522,9 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await cut.Find("button.play-guide-btn").ClickAsync();
 		await Assert.That(cut.FindAll("[role=dialog]").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".play-main [role=dialog]").Count).IsEqualTo(0);
+		await Assert.That(cut.Find(".play-guide-navigation button").TextContent).IsEqualTo("Back to game");
+		await Assert.That(cut.Find(".play-guide-navigation a").GetAttribute("href")).IsEqualTo("/welcome");
+		await Assert.That(cut.FindAll("[role=dialog] a[href='/welcome']").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".play-main .play-card").Count).IsEqualTo(1);
 	}
 
