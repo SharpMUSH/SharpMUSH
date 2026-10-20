@@ -5,7 +5,7 @@ These options control some attribute behavior.
 - `amail=<boolean>`: Is the @amail attribute used?
 - `player_listen=<boolean>`: Is @listen checked on players?
 - `player_ahear=<boolean>`: Is @ahear triggered on players?
-- `startups=<boolean>`: Accepted but ignored; @startup always runs when the server starts.
+- `startups=<boolean>`: Accepted but ignored; @startup attributes run at every server start.
 - `room_connects=<boolean>`: Are @aconnect and @adisconnect triggered on rooms?
 - `read_remote_desc=<boolean>`: Accepted but ignored.
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?

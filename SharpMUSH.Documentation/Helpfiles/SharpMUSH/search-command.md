@@ -53,7 +53,7 @@ If a `<player>` argument is supplied, only objects owned by that player will be 
 
 ## Types, names, zones and parents
 
-If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT, PLAYER, GARBAGE. This shows all objects of the specified type.
+If `<class>`=TYPE, possible `<restriction>`s include THING (or OBJECT), ROOM, EXIT and PLAYER. This shows all objects of the specified type.
 
 If `<class>`=NAME, only objects whose name begin with the string `<restriction>` will be listed. If `<class>`=EXITS, OBJECTS, ROOMS or PLAYERS, only objects of that type whose name begins with `<restriction>` are listed.
 

@@ -853,7 +853,7 @@ Europe/Paris
 
   This function clones `<object>`, as per @clone, and returns the dbref number of the clone, or #-1 if the object could not be cloned.
 
-  The clone will have the same name as the original object unless you give a `<new name>` for it. Normally, the clone will be created with the first available dbref, but wizards and objects with the PICK_DBREFS power may give the `<dbref>` of a garbage object to use instead.
+  The clone will have the same name as the original object unless you give a `<new name>` for it. Normally, the clone will be created with the first available dbref, but wizards and objects with the PICK_DBREFS power may give an unused `<dbref>` to use instead.
 
   If the optional fourth argument is the string preserve, acts as @clone/preserve.<br>
   Note: If @create or @clone is restricted or disabled, clone() will also be restricted/disabled.
@@ -1060,7 +1060,7 @@ You say, "0"
 
   Creates a player with a given `<name>` and `<password>`. This function can only be used by wizards.
 
-  The optional third argument can be used to specify a garbage object to use for the new player.
+  The optional third argument can be used to specify an unused dbref for the new player.
 
 
 ::: seealso
@@ -1074,7 +1074,7 @@ You say, "0"
 
    This function creates an object with name `<object>`, and returns the dbref number of the created object. It returns #-1 on error. The `<cost>` argument is accepted but ignored.
 
-   Wizards and objects with the PICK_DBREFS power may also specify a `<dbref>`; if this refers to a garbage object, the new object is created with this dbref.
+   Wizards and objects with the PICK_DBREFS power may also specify an unused `<dbref>` for the new object.
 
 
 ::: seealso
@@ -1298,7 +1298,7 @@ think die(3, 6, 1)
 
   This function digs a room called `<name>`, and optionally opens and links `<exit to>` and `<exit from>`, like the normal @dig command. It returns the dbref number of the new room.
 
-  Wizards and objects with the PICK_DBREFS power can supply optional fourth through sixth arguments to specify garbage objects to use for the new room and exits.
+  Wizards and objects with the PICK_DBREFS power can supply optional fourth through sixth arguments to specify unused dbrefs for the new room and exits.
 
 
 ::: seealso
@@ -3796,7 +3796,7 @@ think objevals(me,v(DATA`TEXT))
 
   If a `<destination>` is given, it will attempt to link the exit to `<destination>` after opening it.
 
-  Wizards and objects with the PICK_DBREFS power can specify a garbage dbref to use for the new exit.
+  Wizards and objects with the PICK_DBREFS power can specify an unused dbref for the new exit.
 
   It returns the dbref of the newly created exit, or #-1 on error.
 
@@ -3935,7 +3935,7 @@ think permission(me, wiki.delete)
 
   Returns the value of "pi" (3.14159265358979323846264338327, rounded to the game's float_precision setting).
 # pidinfo()
-`pidinfo(<pid>[, <list of fields>[, <output separator>]])`
+`pidinfo(<pid>[, <field>[, <output separator>]])`
 
   This function returns information about a process id if the player has permission to see the process. The second argument names one field:
 
@@ -5763,7 +5763,7 @@ You say, "101"
 # type()
 `type(<object>)`
 
-  This function returns the type of an object - one of PLAYER, THING, EXIT, ROOM or GARBAGE - or #-1 if the object can't be found.
+  This function returns the type of an object - one of PLAYER, THING, EXIT or ROOM - or #-1 if the object can't be found.
 
   Examples:
 ```sharp
