@@ -351,8 +351,8 @@ public class UserDefinedFunctionTests
 		}
 		finally
 		{
-			Registry.Delete("add");
-			Registry.SetBuiltinRestriction("add", null);
+			// /builtin also puts the built-in back in the function library, which /delete took it out of.
+			await Cmd("@function/builtin add");
 		}
 	}
 
