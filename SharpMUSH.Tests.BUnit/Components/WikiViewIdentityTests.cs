@@ -306,8 +306,9 @@ public class WikiViewIdentityTests : TrackingBunitContext
 
 		public void ReleaseAll()
 		{
-			foreach (var read in _reads.Where(x => x.Started.Task.IsCompletedSuccessfully))
-				if (!read.Answer.Task.IsCompleted) read.Complete(Page("cleanup", "Cleanup", "Cleanup"));
+			foreach (var read in _reads.Where(x => x.Started.Task.IsCompletedSuccessfully
+				&& !x.Answer.Task.IsCompleted))
+				read.Complete(Page("cleanup", "Cleanup", "Cleanup"));
 		}
 
 		public Task JoinAsync() => Task.WhenAll(_reads.Where(x => x.Started.Task.IsCompletedSuccessfully)

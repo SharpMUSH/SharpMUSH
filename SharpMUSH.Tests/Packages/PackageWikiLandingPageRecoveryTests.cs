@@ -182,6 +182,7 @@ public class PackageWikiLandingPageRecoveryTests
 				boundary = new PublicationRegistry(database, wiki, id, target.Page, cancel, requestCancellation.Token,
 					conflictResolution is null ? null : originalId);
 				var apply = Installer(services, boundary).ApplyAsync(desired, request, requestCancellation.Token);
+				Exception? primaryFailure = null;
 				try
 				{
 					await boundary.Published.Task.WaitAsync(deadline.Token);
@@ -201,12 +202,23 @@ public class PackageWikiLandingPageRecoveryTests
 					}
 					await Assert.That(await wiki.GetBySlugAsync(target.Page) is NotFound).IsTrue();
 				}
+				catch (Exception error)
+				{
+					primaryFailure = error;
+					throw;
+				}
 				finally
 				{
 					requestCancellation.Cancel();
 					// Join the actual apply/recovery before allowing its host/environment to close, including assertion failure.
 					try { await apply; }
-					catch (Exception) when (apply.IsCompleted) { }
+					catch (Exception cleanupFailure) when (apply.IsCompleted)
+					{
+						// Preserve a primary failure; a successful body may suppress only its expected injected fault.
+						if (primaryFailure is null
+							&& !(cancel ? cleanupFailure is OperationCanceledException : cleanupFailure is PublicationFailure))
+							throw;
+					}
 				}
 			}
 			await host.DisposeAsync();
