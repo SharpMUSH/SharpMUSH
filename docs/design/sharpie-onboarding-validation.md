@@ -8,7 +8,7 @@ The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
 - Full component suite: **2,903 passed**, zero failed/skipped after the guide
-  channel teaching and command-focus handoff (`guide-channels-tests.log`).
+  dedicated channel step and automatic command suggestions (`guide-auto-final.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -20,8 +20,10 @@ supersede earlier statements about missing publication or completed checks.
   and ordinary-player denial were exercised against the isolated server.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
+- Existing-character claim returned to the retained guide step and preserved
+  the existing roster and active character in the real browser.
 - Still open: broader keyboard/screen-reader checks, real failed-connection
-  retry/claim journeys, published admin draft-feedback
+  retry journey, published admin draft-feedback
   recheck, and PR/CI verification. The fresh genre-art inventory is not approved.
 
 ## Verified on 2026-10-19
@@ -269,7 +271,7 @@ are under independent visual review and are not shipped or owner-approved.
 ## Channels and command focus — 2026-10-19
 
 Published client includes `a3e7e1305` channel guidance and `422af8a37` focus fix.
-The final lesson in every path teaches Browse channels, `@channel/list`, reading
+The dedicated “Find people who can help” lesson in every guided path teaches Browse channels, `@channel/list`, reading
 channel descriptions, joining, chatting and leaving, with explicit cross-room
 audience and game-dependent names/permissions. Reference commands are localized.
 The live ordinary-player terminal accepted `@channel/list` and returned the
@@ -287,3 +289,33 @@ its summary; channel entries displayed their localized meanings and audiences.
 The viewport override was reset afterward. These are browser viewport/keyboard
 checks, not physical-device or screen-reader acceptance. Screenshot:
 `work/onboarding/channels-phone.png`.
+
+### Dedicated channel step, automatic suggestions and existing-character claim
+
+At implementation commit `1abd82725`, channels are a separate stable step before
+the final lesson (eight basic steps, five veteran steps). Reloading `/welcome`
+retained the selected channel step. Final-step package suggestions loaded
+automatically for the active character, showing `+help` and `+scene/help` without
+a discovery button. The full local bUnit run passed 2,903 tests with no failures
+or skips (`work/onboarding/guide-auto-final.log`).
+
+In the isolated loopback world, signing into the ordinary test account preserved
+the nested return route to `/characters/claim?returnUrl=%2Fwelcome`. Claiming the
+existing disposable character ClaimPilot returned to `/welcome` and the same
+channel step. The account roster then showed ClaimPilot #19 alongside the
+unchanged JourneyTester #17 and JourneySecond #18; JourneyTester remained active.
+Screenshot: `work/onboarding/claim-roster.png`. No production account or world was
+used.
+
+Remote CI for that exact commit passed build, formatting, bUnit, scene and Discord
+plugin suites, parity and security analyses at inspection. Core tests, integration
+and help-integrity were still running; `claude-review` failed. This is not a claim
+that all CI or review gates have passed.
+
+The later response-disposal review finding on
+`GuidePackageCommandsTests.cs:103` was checked against the consuming component.
+The fake handler transfers its response through `HttpClient.SendAsync`;
+`GuidePackageCommands.Check` owns it with `using var response`, including
+failure/cancellation exits. Disposing inside the handler would prematurely
+dispose the response before the consumer can read it. No production ownership
+change is needed for this finding.
