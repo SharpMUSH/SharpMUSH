@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Nastavi uz {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>ili</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Zadnje korišteno</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Ponovno započni prijavu</value>
   </data>

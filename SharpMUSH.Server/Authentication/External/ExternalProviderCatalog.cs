@@ -112,6 +112,14 @@ public sealed class ExternalProviderCatalog(IMediator mediator, ISecretStore sec
 		finally { gate.Release(); }
 		return await StatusAsync(ExternalProviderDefinition.Get(provider), cancellationToken);
 	}
+	/// <summary>Which provider each registration belongs to, so a linked identity can show its service's name and logo.</summary>
+	public async Task<IReadOnlyDictionary<string, string>> ProvidersByRegistrationAsync(CancellationToken cancellationToken = default)
+	{
+		var providers = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var definition in ExternalProviderDefinition.All)
+			providers[(await SettingsAsync(definition.Id, cancellationToken)).RegistrationId] = definition.Id;
+		return providers;
+	}
 	public async Task<IReadOnlyCollection<string>> EnabledRegistrationsAsync(CancellationToken cancellationToken = default)
 	{
 		var registrations = new List<string>();

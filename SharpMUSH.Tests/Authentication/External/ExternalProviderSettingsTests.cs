@@ -7,9 +7,9 @@ namespace SharpMUSH.Tests.Authentication.External;
 public class ExternalProviderSettingsTests
 {
 	[Test]
-	public async Task FourFixedProvidersAreDisabledByDefaultAndNeverRequestEmailOrBotScopes()
+	public async Task FixedProvidersAreDisabledByDefaultAndNeverRequestEmailOrBotScopes()
 	{
-		await Assert.That(ExternalProviderDefinition.All.Select(p => p.Id)).IsEquivalentTo(["discord", "google", "microsoft", "grapevine"]);
+		await Assert.That(ExternalProviderDefinition.All.Select(p => p.Id)).IsEquivalentTo(["discord", "google", "microsoft", "grapevine", "github"]);
 		foreach (var provider in ExternalProviderDefinition.All)
 		{
 			await Assert.That(new ExternalProviderSettings().Enabled).IsFalse();
@@ -18,6 +18,9 @@ public class ExternalProviderSettingsTests
 		}
 		await Assert.That(ExternalProviderDefinition.Get("grapevine").RequiresClientSecret).IsFalse();
 		await Assert.That(ExternalProviderDefinition.Get("grapevine").UserInformationEndpoint).IsEqualTo("https://grapevine.haus/users/me");
+		// A GitHub token with no scope reads the public profile only, never email or repositories.
+		await Assert.That(ExternalProviderDefinition.Get("github").Scopes).IsEmpty();
+		await Assert.That(ExternalProviderDefinition.Get("github").RequiresClientSecret).IsTrue();
 	}
 
 	[Test]

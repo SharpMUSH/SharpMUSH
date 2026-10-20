@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Doorgaan met {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Laatst gebruikt</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Aanmelden opnieuw starten</value>
   </data>

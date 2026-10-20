@@ -26,11 +26,21 @@
             {
                 @foreach (var provider in _providers)
                 {
-                    <MudButton OnClick="() => Choose(AccountSecurityOperation.LinkIdentity, provider.Id)" Disabled="_busy">@Loc["AuthLinkProvider", provider.DisplayName]</MudButton>
+                    <div class="signin-provider">
+                        <div class="signin-method">
+                            <span class="signin-provider-name"><ProviderLogo Provider="@provider.Id" />@provider.DisplayName</span>
+                            <MudButton OnClick="() => Choose(AccountSecurityOperation.LinkIdentity, provider.Id)" Disabled="_busy">@Loc["AuthLinkProvider", provider.DisplayName]</MudButton>
+                        </div>
+                        @foreach (var identity in _identities.Where(identity => identity.Provider == provider.Id))
+                        {
+                            <div class="signin-method signin-identity"><span>@identity.Label</span><MudButton OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
+                        }
+                    </div>
                 }
-                @foreach (var identity in _identities)
+                @* A link through a service staff have since turned off can still be removed. *@
+                @foreach (var identity in _identities.Where(identity => _providers.All(provider => provider.Id != identity.Provider)))
                 {
-                    <div class="signin-method"><span>@identity.Label</span><MudButton OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
+                    <div class="signin-method"><span class="signin-provider-name"><ProviderLogo Provider="@(identity.Provider ?? "")" />@identity.Label</span><MudButton OnClick="() => Choose(AccountSecurityOperation.UnlinkIdentity, identity.Id)" Disabled="_busy">@Loc["AuthUnlink"]</MudButton></div>
                 }
                 @if(_hasPassword) { <MudButton OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "remove")' Disabled="_busy">@Loc["AuthRemoveAccountPassword"]</MudButton> }
                 <MudButton OnClick='() => Choose(AccountSecurityOperation.AccountPassword, "set")' Disabled="_busy">@Loc["AuthChangeAccountPassword"]</MudButton>
@@ -53,7 +63,7 @@
 @code {
     private AccountSecurityClient? _client;
     private IReadOnlyList<AccountSecurityClient.Provider> _providers = [];
-    private readonly List<(string Id,string Label)> _identities = [];
+    private readonly List<(string Id,string Label,string? Provider)> _identities = [];
     private bool _loaded, _legacyOnly, _legacy, _hasPassword, _busy;
     private string? _error;
     private AccountSecurityOperation? _operation;
@@ -65,7 +75,7 @@
         if (await _client.SecurityAsync() is not JsonElement data) return;
         _hasPassword = data.GetProperty("hasPassword").GetBoolean(); _legacy = data.GetProperty("allowCharacterPasswordAccountLogin").GetBoolean();
         _legacyOnly = !_hasPassword && data.GetProperty("passkeys").GetArrayLength() == 0 && data.GetProperty("identities").GetArrayLength() == 0;
-        foreach (var identity in data.GetProperty("identities").EnumerateArray()) _identities.Add((identity.GetProperty("id").GetString()!,identity.GetProperty("label").GetString() ?? identity.GetProperty("registration").GetString()!));
+        foreach (var identity in data.GetProperty("identities").EnumerateArray()) _identities.Add((identity.GetProperty("id").GetString()!,identity.GetProperty("label").GetString() ?? identity.GetProperty("registration").GetString()!,identity.TryGetProperty("provider",out var provider) ? provider.GetString() : null));
         if (await _client.ProvidersAsync() is IReadOnlyList<AccountSecurityClient.Provider> providers) _providers = providers;
         _loaded = true;
     }
