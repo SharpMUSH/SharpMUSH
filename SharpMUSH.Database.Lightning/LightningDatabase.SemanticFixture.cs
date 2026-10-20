@@ -39,6 +39,7 @@ public partial class LightningDatabase
 			var provider = new LightningDatabase(logger, options, passwordService, relations, migrationSources,
 				pluginFlags, credentialGate, credentialRevokers)
 			{ _fixtureLease = lease };
+			provider.Store.AttachFixturePackageTracking(capability);
 			try { if (capability.Phase == SemanticFixturePhase.Active) provider.Store.RegisterExistingAtomicLayout(); }
 			catch { provider.DisposeAsync().GetAwaiter().GetResult(); throw; }
 			return provider;

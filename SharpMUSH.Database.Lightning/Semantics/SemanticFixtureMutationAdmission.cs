@@ -43,7 +43,8 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			if (_phase != SemanticFixturePhase.Inactive || _ownership.IsRevoked || _poisoned) return false;
+			if (_phase != SemanticFixturePhase.Inactive || _active is null || _ownership.IsRevoked
+				|| _ownership.IsQuarantined || _poisoned) return false;
 			_everMutatingPackageAdmitted = true;
 			return true;
 		}
