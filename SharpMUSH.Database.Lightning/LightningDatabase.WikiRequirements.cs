@@ -58,6 +58,9 @@ public partial class LightningDatabase
 		=> tx.TryGet(Tables.WikiRequirement, WikiRequirementKey(WikiRuleScope.Page, CanonicalWikiPageId(pageId)), out _);
 
 	/// <summary>The set a row holds; null for a row naming a scope or action this build does not know.</summary>
+	internal static WikiRequirementSet? MapWikiRequirementForQueries(WikiRequirementRecord? record)
+		=> record is null ? null : MapWikiRequirement(record);
+
 	private static WikiRequirementSet? MapWikiRequirement(WikiRequirementRecord record)
 	{
 		if (!Enum.TryParse<WikiRuleScope>(record.Scope, ignoreCase: true, out var scope)) return null;

@@ -40,6 +40,10 @@ public partial class LightningDatabase
 		return Store.SettleFixturePackageAttemptAsync(lease, root);
 	}
 
+	/// <summary>The current issued lease, whose epoch and in-memory key seal query continuations.</summary>
+	internal SemanticFixtureLease SemanticFixtureLeaseForQueries
+		=> _fixtureLease is { } lease && !_fixtureClosed ? lease : throw SemanticFixtureCapability.Unavailable();
+
 	/// <summary>Admits a semantic read on this provider's current issued lease; see <see cref="SemanticFixtureReadLease"/>.</summary>
 	internal SemanticFixtureReadLease AdmitSemanticRead(CancellationToken deadline)
 	{
