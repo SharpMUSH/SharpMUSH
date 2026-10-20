@@ -7,8 +7,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,901 passed**, zero failed/skipped after the guide
-  navigation and framing changes (`guide-navigation-tests.log`).
+- Full component suite: **2,902 passed**, zero failed/skipped after the guide
+  icon navigation and inactive-path chooser (`guide-icon-stop-tests.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -239,3 +239,28 @@ response; three state guards intentionally recheck after awaited JS calls; the
 optional presentation boundary logs failures, propagates caller cancellation,
 and returns no unverified links. No safety guards were removed to silence these
 findings. CI and broader end-to-end acceptance remain required.
+
+
+## Icon controls and live draft protection — 2026-10-19
+
+Published client at `058830c83`: Back to game and full-guide navigation are
+icon-only controls with localized accessible names/tooltips. Stop this guide is
+also an icon, and the lesson header no longer displays “With Sharpie”. An inactive
+journey now offers four starting points inside the Play sheet rather than leaving
+it empty. Browser selection starts/resumes the lesson in place. The full component
+suite passes 2,902 tests, including the new inactive-path regression.
+
+Live account/terminal evidence on the isolated world: inserting `look` into an
+empty connected input closed the sheet without sending and retained the current
+lesson on reopening. A second insertion with that draft already present left
+`look` unchanged, kept the sheet open, and explained the refusal. Back to game
+preserved the draft; only explicit Send echoed `look`, cleared the input, and
+produced the room response at 23:17:34. Screenshots:
+`work/onboarding/guide-stop-icon.png` and
+`work/onboarding/guide-draft-preserved.png`.
+
+Focus currently returns to the guide opener after successful insertion; improving
+that handoff to the command input remains an accessibility/usability follow-up.
+Character claim, failed-connection retry, administrator draft-feedback runtime
+checks and broader accessibility acceptance remain open. Genre lesson pilots
+are under independent visual review and are not shipped or owner-approved.
