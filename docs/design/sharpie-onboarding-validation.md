@@ -862,3 +862,28 @@ job failed and CodeRabbit skipped the draft; neither is counted as substantive
 review. Independent review of the latest keyboard changes and merge resolution
 found no actionable defects. Subsequent documentation-only evidence edits do
 not change the tested implementation.
+
+### Administrator narrow-screen keyboard check (2026-10-20)
+
+Signed in as the isolated administrator and opened `/admin/onboarding` at
+320×740. Document width was 320px; all 21 input/select/textarea/button controls
+inside main-content stayed within its horizontal bounds. The smallest action
+button measured 45.39px high. From the page heading, Tab reached Game name with
+visible focus. Further Tab presses reached Genre and Save game introduction;
+the focused save button was fully visible at y=377–422px. No settings or
+checklist states were changed during this check.
+
+Screenshots: `work/onboarding/admin-onboarding-320.png` and
+`work/onboarding/admin-onboarding-320-save-focus.png`. This covers the admin
+page's narrow layout and keyboard reachability, not native browser zoom or
+screen-reader speech.
+
+### Current-head CI refresh (2026-10-20)
+
+For head `ee8c82993`, .NET run `39398713683` passed build, format, core,
+component, integration, Scene/Discord plugin and help-integrity checks. Parity
+run `39398713494`, table-layout run `39398713450`, deployment-impact and
+CodeQL checks also passed. Claude review run `39398713297` failed with
+`is_error:true`, one turn, zero model cost and empty model usage; it produced
+no buffered inline comments and does not count as a completed review.
+CodeRabbit explicitly skipped the draft.
