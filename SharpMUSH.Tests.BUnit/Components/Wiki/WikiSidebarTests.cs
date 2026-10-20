@@ -5,6 +5,7 @@ using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Components.Wiki;
+using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
 
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
@@ -270,6 +271,176 @@ public class WikiSidebarTests : TrackingBunitContext
 			await Assert.That(cut.Markup).DoesNotContain("First private collection");
 		}
 		finally { await cut.InvokeAsync(() => handler.CompleteSecond(false)); }
+	}
+
+	private const string ContextRoute = "/wiki/main/intro?browseCollection=package%3Areference&browseQ=R%C3%A8gle%20%26%20C%2B%2B&browseCategory=guides&browseSkip=100&membersCollection=game&membersSkip=50&lang=fr-CA&expectedPageId=intro&extra=a%26b";
+	private const string EquivalentContextRoute = "/wiki/main/intro?EXTRA=a%26b&EXPECTEDPAGEID=intro&lang=ignored&LANG=fr-CA&membersSkip=50&membersCollection=game&browseSkip=100&browseCategory=guides&browseQ=R%C3%A8gle+%26+C%2B%2B&browseCollection=package%3Areference#costs";
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task EquivalentFragmentContextKeepsDirectoryAndSearchActionable(bool reorder)
+	{
+		var handler = InstallContextDirectory();
+		var cut = RenderAt(ContextRoute);
+		var count = handler.Requests.Count;
+		var header = cut.Find(".kit-side-sub").TextContent;
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.Pending = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(reorder ? EquivalentContextRoute : ContextRoute + "#costs"));
+			await Assert.That(handler.Requests.Count).IsEqualTo(count);
+			await Assert.That(cut.Find(".kit-side-sub").TextContent).IsEqualTo(header);
+			await cut.Find(".kit-side-search input").InputAsync("harbour");
+			await cut.Find(".kit-side-search").SubmitAsync();
+			var location = new Uri(_nav.Uri);
+			var query = System.Web.HttpUtility.ParseQueryString(location.Query);
+			await Assert.That(Uri.UnescapeDataString(location.AbsolutePath)).IsEqualTo("/wiki/collections/package:reference");
+			await Assert.That(query["q"]).IsEqualTo("harbour");
+			await Assert.That(query["lang"]).IsEqualTo("fr-CA");
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	public async Task PendingDirectoryFinishesAcrossEquivalentFragmentWithoutDuplicateRead()
+	{
+		var handler = InstallContextDirectory();
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.Pending = pending.Task;
+		_nav.NavigateTo(ContextRoute);
+		var cut = Render<WikiSidebar>();
+		try
+		{
+			cut.WaitForAssertion(() => RequireContext(handler.Requests.Count == 1, "Initial owner read did not start."));
+			await cut.InvokeAsync(() => _nav.NavigateTo(EquivalentContextRoute));
+			await Assert.That(handler.Requests.Count).IsEqualTo(1);
+			await cut.InvokeAsync(() => pending.TrySetResult(true));
+			cut.WaitForAssertion(() => cut.Find(".wiki-side-cats a.kit-row"));
+			await Assert.That(handler.Requests.Count).IsEqualTo(2)
+				.Because("the single owner read is followed by its single authorized return-origin read");
+			await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("Reference collection");
+			await cut.Find(".kit-side-search input").InputAsync("harbour");
+			await cut.Find(".kit-side-search").SubmitAsync();
+			await Assert.That(Uri.UnescapeDataString(new Uri(_nav.Uri).AbsolutePath)).IsEqualTo("/wiki/collections/package:reference");
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	[Arguments("extra=a%26b", "extra=A%26b")]
+	[Arguments("extra=a%26b", "unknown=a%26b")]
+	[Arguments("expectedPageId=intro", "expectedPageId=other")]
+	[Arguments("lang=fr-CA", "lang=de")]
+	[Arguments("browseQ=R%C3%A8gle%20%26%20C%2B%2B", "browseQ=Changed")]
+	[Arguments("browseSkip=100", "browseSkip=150")]
+	[Arguments("membersCollection=game", "membersCollection=all")]
+	[Arguments("membersSkip=50", "membersSkip=100")]
+	[Arguments("/wiki/main/intro", "/wiki/help/intro")]
+	public async Task RealContextChangeClearsDirectoryAndBlocksOldSearch(string before, string after)
+	{
+		var handler = InstallContextDirectory();
+		var cut = RenderAt(ContextRoute);
+		var count = handler.Requests.Count;
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.Pending = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(ContextRoute.Replace(before, after, StringComparison.Ordinal) + "#costs"));
+			cut.WaitForAssertion(() => RequireContext(handler.Requests.Count > count, "A real context change did not reauthorize."));
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Reference collection");
+			var destination = _nav.Uri;
+			await cut.Find(".kit-side-search input").InputAsync("blocked");
+			await cut.Find(".kit-side-search").SubmitAsync();
+			await Assert.That(_nav.Uri).IsEqualTo(destination);
+			await cut.InvokeAsync(() => pending.TrySetResult(false));
+			cut.WaitForAssertion(() => cut.Find("button.wiki-side-new"));
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task ReaderChangeReauthorizesEvenAfterEquivalentFragmentReuse(bool characterChange)
+	{
+		var handler = InstallContextDirectory();
+		var cut = RenderAt(ContextRoute);
+		await cut.InvokeAsync(() => _nav.NavigateTo(EquivalentContextRoute));
+		var count = handler.Requests.Count;
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		handler.Pending = pending.Task;
+		try
+		{
+			var auth = Services.GetRequiredService<IAccountAuthState>();
+			await cut.InvokeAsync(() =>
+			{
+				if (characterChange) auth.ActiveCharacterChanged += Raise.Event<Action>();
+				else auth.AuthStateChanged += Raise.Event<Action>();
+			});
+			cut.WaitForAssertion(() => RequireContext(handler.Requests.Count > count, "Reader change reused a previous reader's authorization."));
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Reference collection");
+			await cut.InvokeAsync(() => pending.TrySetResult(false));
+			cut.WaitForAssertion(() => cut.Find("button.wiki-side-new"));
+			await Assert.That(cut.FindAll(".wiki-side-collections a, .wiki-side-cats a")).IsEmpty();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	public async Task RetryReissuesFailedDirectoryAtTheSameContext()
+	{
+		var handler = InstallContextDirectory();
+		handler.Refuse = true;
+		_nav.NavigateTo(ContextRoute);
+		var cut = Render<WikiSidebar>();
+		cut.WaitForAssertion(() => cut.Find("button.wiki-side-new"));
+		var count = handler.Requests.Count;
+		handler.Refuse = false;
+		await cut.Find("button.wiki-side-new").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".wiki-side-cats a.kit-row"));
+		await Assert.That(handler.Requests.Count).IsEqualTo(count + 2);
+		await Assert.That(cut.Find(".kit-side-sub").TextContent).Contains("Reference collection");
+	}
+
+	private ContextDirectoryApi InstallContextDirectory()
+	{
+		var handler = new ContextDirectoryApi();
+		var client = Track(new HttpClient(handler) { BaseAddress = new Uri(_nav.BaseUri) });
+		Services.GetRequiredService<IHttpClientFactory>().CreateClient("api").Returns(client);
+		return handler;
+	}
+
+	private static void RequireContext(bool condition, string message)
+	{
+		if (!condition) throw new InvalidOperationException(message);
+	}
+
+	private sealed class ContextDirectoryApi : HttpMessageHandler
+	{
+		public List<Uri> Requests { get; } = [];
+		public Task<bool>? Pending { get; set; }
+		public bool Refuse { get; set; }
+
+		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var uri = request.RequestUri!;
+			Requests.Add(uri);
+			// Each concurrent request gets its own response even when the gate is shared.
+			var allowed = Pending is { } pending ? await pending : !Refuse;
+			if (!allowed) return new HttpResponseMessage(HttpStatusCode.Forbidden);
+			var collection = System.Web.HttpUtility.ParseQueryString(uri.Query)["collection"] ?? "package:reference";
+			return new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new WikiNavigationDto(collection, 151,
+					[new WikiCollectionSummaryDto(collection, "Reference collection", 151)],
+					[new WikiCategorySummaryDto("guides", "Guides", 3, true, true)]))
+			};
+		}
 	}
 
 	private DelayedDirectoryApi InstallDelayedDirectory()

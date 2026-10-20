@@ -271,10 +271,11 @@ else
     };
 
     // A successful navigation read authorizes only this displayed destination. It is discarded on
-    // every URI/context change; collection hints never establish article ownership or read permission.
+    // every effective context change; fragments and query ordering do not change that context.
+    // Collection hints never establish article ownership or read permission.
     private Task LoadNavigationAsync()
     {
-        var identity = (PagePath, Nav.Uri, BrowseState, Locale, MembersCollection, MembersSkip);
+        var identity = (PagePath, WikiJourneyLinks.NavigationIdentity(Nav.Uri), BrowseState, Locale, MembersCollection, MembersSkip);
         if (_navigationFor == identity) return _navigationLoad;
         _navigationFor = identity;
         var version = Interlocked.Increment(ref _navigationVersion);

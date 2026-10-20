@@ -549,6 +549,100 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		return account;
 	}
 
+	[Test]
+	[Arguments("generated")]
+	[Arguments("fragment")]
+	[Arguments("key-case")]
+	public async Task FollowingTocRetainsAuthorizedJourneyWithoutAnotherNavigationRead(string variant)
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro&extra=a%26b";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var back = cut.Find(".wiki-back-results").GetAttribute("href");
+		var reads = _api.NavigationRequests.Count;
+		var articles = _api.ArticleRequests.Count;
+		var href = cut.FindAll(".wiki-toc a").First(a => Address(a).Fragment == "#costs").GetAttribute("href")!;
+		if (variant == "fragment") href = original + "#costs";
+		if (variant == "key-case")
+			href = href.Replace("lang=fr-CA", "LANG=fr-CA", StringComparison.Ordinal)
+				.Replace("extra=a%26b", "EXTRA=a%26b", StringComparison.Ordinal);
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(href));
+			cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "TOC navigation discarded the authorized return."));
+			await Assert.That(cut.Find(".wiki-back-results").GetAttribute("href")).IsEqualTo(back);
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(reads);
+			await Assert.That(_api.ArticleRequests.Count).IsEqualTo(articles);
+			await AssertJourney(cut.Find("#guide"), "fr-CA");
+			foreach (var toc in cut.FindAll(".wiki-toc a"))
+			{
+				await AssertJourney(toc, "fr-CA");
+				await Assert.That(Query(toc)["expectedPageId"]).IsEqualTo("intro");
+			}
+			await Assert.That(Query(cut.Find("#guide"))["expectedPageId"]).IsNull();
+			await cut.InvokeAsync(() => _nav.NavigateTo(original + "#wiki-top"));
+			await cut.InvokeAsync(() => _nav.NavigateTo(original));
+			await Assert.That(cut.Find(".wiki-back-results").GetAttribute("href")).IsEqualTo(back);
+			await Assert.That(_api.NavigationRequests.Count).IsEqualTo(reads);
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	[Arguments("extra=a%26b", "extra=A%26b")]
+	[Arguments("extra=a%26b", "unknown=a%26b")]
+	[Arguments("lang=fr-CA", "lang=de")]
+	[Arguments("browseQ=R%C3%A8gle%20%26%20C%2B%2B", "browseQ=Changed")]
+	[Arguments("browseSkip=100", "browseSkip=150")]
+	[Arguments("membersCollection=game", "membersCollection=all")]
+	[Arguments("membersSkip=50", "membersSkip=100")]
+	public async Task ChangedQueryValueStillClearsAndReauthorizesJourney(string before, string after)
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro&extra=a%26b";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var reads = _api.NavigationRequests.Count;
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(original.Replace(before, after, StringComparison.Ordinal) + "#costs"));
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > reads, "A real context change reused old authorization."));
+			await Assert.That(cut.FindAll(".wiki-back-results")).IsEmpty();
+			await cut.InvokeAsync(() => pending.TrySetResult(false));
+			await Assert.That(cut.FindAll(".wiki-back-results")).IsEmpty();
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
+	public async Task ChangedExpectedIdentityStartsConstrainedReadAndClearsPreviousJourney()
+	{
+		const string original = "/wiki/main/intro?" + Origin + "&expectedPageId=intro";
+		_nav.NavigateTo(original);
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		cut.WaitForAssertion(() => Require(cut.FindAll(".wiki-back-results").Count == 1, "Initial return was not authorized."));
+		var pending = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.PendingArticle = pending.Task;
+		try
+		{
+			await cut.InvokeAsync(() => _nav.NavigateTo(original.Replace("expectedPageId=intro", "expectedPageId=other", StringComparison.Ordinal) + "#costs"));
+			cut.WaitForAssertion(() => Require(_api.ArticleRequests.Any(uri => Query(uri)["expectedPageId"] == "other"), "Changed identity did not start a constrained article read."));
+			await Assert.That(cut.FindAll(".wiki-back-results, .wiki-article-body")).IsEmpty();
+			await Assert.That(cut.Markup).DoesNotContain("Introduction body");
+			await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound)));
+			await Assert.That(cut.Markup).DoesNotContain("Introduction body");
+		}
+		finally { await cut.InvokeAsync(() => CompletePending(pending, new HttpResponseMessage(HttpStatusCode.NotFound))); }
+	}
+
 	private static void RaiseReaderChanged(IAccountAuthState auth, bool characterChange)
 	{
 		if (characterChange)
@@ -636,6 +730,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		public bool RefuseArticle { get; set; }
 		public Task<HttpResponseMessage>? PendingReference { get; set; }
 		public Task<HttpResponseMessage>? PendingNavigation { get; set; }
+		public Task<bool>? NavigationGate { get; set; }
 		public Task<HttpResponseMessage>? PendingArticle { get; set; }
 		public string? NavigationJson { get; set; }
 		public string? IntroHtmlOverride { get; set; }
@@ -668,6 +763,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 			{
 				NavigationRequests.Add(uri);
 				NavigationTokens.Add(token);
+				if (NavigationGate is { } gate && !await gate) return new HttpResponseMessage(HttpStatusCode.Forbidden);
 				if (AuthorizeBySession && token != "first-character-session") return new HttpResponseMessage(HttpStatusCode.Forbidden);
 				if (PendingNavigation is { } navigation) return await navigation;
 				if (NavigationJson is { } body) return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body) };

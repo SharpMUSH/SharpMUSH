@@ -29,7 +29,7 @@
     </SidebarGroup>
     @if (_failed)
     {
-        <button type="button" class="wiki-side-new" @onclick="LoadNavigationAsync">@Loc["WikiLoadFailed"]</button>
+        <button type="button" class="wiki-side-new" @onclick="RetryNavigationAsync">@Loc["WikiLoadFailed"]</button>
     }
     @if (_navigation is { } navigation)
     {
@@ -95,7 +95,9 @@
 
     private WikiNavigationDto? _navigation;
     private WikiBrowseState? _returnState;
-    private string? _authorizedUri;
+    private string? _authorizedIdentity;
+    private string? _navigationFor;
+    private Task _navigationLoad = Task.CompletedTask;
     private bool _failed;
     private int _loadVersion;
     private bool _disposed;
@@ -124,9 +126,10 @@
     {
         if (_disposed) return;
         Interlocked.Increment(ref _loadVersion);
+        _navigationFor = null;
         _navigation = null;
         _returnState = null;
-        _authorizedUri = null;
+        _authorizedIdentity = null;
         _failed = false;
         _ = InvokeAsync(async () =>
         {
@@ -149,18 +152,32 @@
         });
     }
 
-    private async Task LoadNavigationAsync()
+    private Task RetryNavigationAsync()
     {
-        if (_disposed) return;
-        var version = ++_loadVersion;
+        _navigationFor = null;
+        return LoadNavigationAsync();
+    }
+
+    private Task LoadNavigationAsync()
+    {
+        if (_disposed) return Task.CompletedTask;
         var requestedUri = Nav.Uri;
-        var path = _path;
-        var locale = _locale;
-        // A directory authorizes actions only for the route that requested it.
+        var identity = WikiJourneyLinks.NavigationIdentity(requestedUri);
+        if (_navigationFor == identity) return _navigationLoad;
+        _navigationFor = identity;
+        var version = Interlocked.Increment(ref _loadVersion);
+        // A directory authorizes actions only for the effective context that requested it.
+        // Reuse pending and completed work for fragment/query-order changes, never reader changes.
         _navigation = null;
         _returnState = null;
-        _authorizedUri = null;
+        _authorizedIdentity = null;
         _failed = false;
+        _navigationLoad = ResolveNavigationAsync(version, requestedUri, identity, _path, _locale);
+        return _navigationLoad;
+    }
+
+    private async Task ResolveNavigationAsync(int version, string requestedUri, string identity, string path, string? locale)
+    {
         string? collection = null;
         string? page = null;
         if (path.StartsWith("/wiki/collections/", StringComparison.Ordinal))
@@ -168,7 +185,7 @@
         else if (path.StartsWith("/wiki/", StringComparison.Ordinal) && path[6..].Split('/').Length == 2)
             page = path[6..];
         var result = await Wiki.GetNavigationAsync(collection, page, lang: locale);
-        if (_disposed || version != _loadVersion || requestedUri != Nav.Uri) return;
+        if (_disposed || version != _loadVersion || identity != WikiJourneyLinks.NavigationIdentity(Nav.Uri)) return;
         if (result is not WikiNavigationDto navigation)
         {
             _failed = true;
@@ -190,7 +207,7 @@
                 var browse = new WikiBrowseState(query["browseCollection"], query.GetValueOrDefault("browseQ"),
                     query.GetValueOrDefault("browseCategory"), WikiBrowseState.ParseSkip(query.GetValueOrDefault("browseSkip")), locale).Normalize();
                 var origin = await Wiki.GetNavigationAsync(collection: browse.Collection, lang: locale);
-                if (_disposed || version != _loadVersion || requestedUri != Nav.Uri) return;
+                if (_disposed || version != _loadVersion || identity != WikiJourneyLinks.NavigationIdentity(Nav.Uri)) return;
                 if (origin is WikiNavigationDto authorized && authorized.Collection == browse.Collection) returnState = browse;
             }
         }
@@ -198,7 +215,7 @@
 
         _navigation = navigation;
         _returnState = returnState;
-        _authorizedUri = requestedUri;
+        _authorizedIdentity = identity;
     }
 
     private void Locate()
@@ -216,7 +233,7 @@
 
     private void Search(string term)
     {
-        if (_navigation is not { } navigation || _authorizedUri != Nav.Uri) return;
+        if (_navigation is not { } navigation || _authorizedIdentity != WikiJourneyLinks.NavigationIdentity(Nav.Uri)) return;
         Nav.NavigateTo(WikiJourneyLinks.Collection(new WikiBrowseState(navigation.Collection, term, _category, 0, _locale)));
     }
 

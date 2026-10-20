@@ -9,6 +9,21 @@ public static class WikiJourneyLinks
 	private static readonly string[] ContextKeys =
 		["browseCollection", "browseQ", "browseCategory", "browseSkip", "membersCollection", "lang", "returnUrl", "expectedPageId"];
 
+	/// <summary>
+	/// Identifies a navigation context without its fragment or query ordering. All query keys,
+	/// including unknown keys, follow ReadQuery's case-insensitive, last-value-wins semantics;
+	/// values and path casing remain significant. This is an identity, not an authorization grant.
+	/// </summary>
+	public static string NavigationIdentity(string uri)
+	{
+		var address = new Uri(uri, UriKind.Absolute);
+		var query = WikiBrowseState.ReadQuery(uri);
+		var path = address.GetLeftPart(UriPartial.Path);
+		return query.Count == 0 ? path : path + "?" + string.Join('&', query
+			.OrderBy(pair => pair.Key, StringComparer.OrdinalIgnoreCase)
+			.Select(pair => Uri.EscapeDataString(pair.Key.ToUpperInvariant()) + "=" + Uri.EscapeDataString(pair.Value)));
+	}
+
 	/// <summary>Opens an authorized entrance at its exact incarnation; the ID constraint grants no access.</summary>
 	public static string Landing(WikiLandingPageDto landing, WikiBrowseState state)
 	{
