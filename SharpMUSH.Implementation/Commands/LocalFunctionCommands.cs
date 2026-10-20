@@ -45,18 +45,12 @@ public partial class Commands
 		}
 		if (name.Length == 0)
 		{
-			if (!TryLocalRegistry(() => registry.All(owner).OrderBy(f => f.Name).ToArray(), out var entries))
+			if (!TryLocalRegistry(() => registry.All(owner), out var entries))
 				return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, "LOCAL"));
-			await NotifyService.NotifyLocalized(executor, "LocalFunctionHeader", executor);
-			foreach (var entry in entries)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
-					entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
-				var signature = entry.AliasOf is { } target ? registry.Get(target, owner)?.ArgumentNames ?? [] : entry.ArgumentNames;
-				if (signature.Length > 0)
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", signature));
-			}
-			return CallState.Empty;
+			var listing = FunctionListing("Your local functions", entries, target => registry.Get(target, owner), true,
+				"You have no local functions.", $"{Counted(entries.Count, "local function")} · call one with localfun()");
+			await NotifyService.Notify(executor, listing, executor);
+			return new CallState(listing);
 		}
 		if (name.Length > 64 || !name.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
 			return await Report(ErrorMessages.Returns.InvalidArgument);
@@ -91,12 +85,9 @@ public partial class Commands
 		if (args.Count == 1)
 		{
 			if (!TryLocalRegistry(() => registry.Get(name, owner), out var entry) || entry is null) return await Report(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor,
-				entry.Name, entry.MinArgs, entry.MaxArgs, entry.Enabled ? "Enabled" : "Disabled");
-			var signature = entry.AliasOf is { } target ? registry.Get(target, owner)?.ArgumentNames ?? [] : entry.ArgumentNames;
-			if (signature.Length > 0)
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor, string.Join(" ", signature));
-			return CallState.Empty;
+			var report = UserFunctionReport(entry, target => registry.Get(target, owner), true);
+			await NotifyService.Notify(executor, report, executor);
+			return new CallState(report);
 		}
 		if (IsReservedLocalFunctionName(name))
 			return await Report(ErrorMessages.Returns.PermissionDenied);
@@ -132,8 +123,8 @@ public partial class Commands
 				registry.DefineLocal(new UserDefinedFunction(name, obj.Object().DBRef, leaf.LongName!, min, max, true, null) { Owner = owner });
 			}
 			catch (NotSupportedException) { return await Report(ErrorMessages.Returns.PermissionDenied); }
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor,
-				name, $"{obj.Object().DBRef}/{attribute}");
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefinedFormat), executor,
+				name, $"#{obj.Object().DBRef.Number}/{leaf.LongName}");
 			return CallState.Empty;
 		}
 	}

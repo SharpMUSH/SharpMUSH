@@ -45,9 +45,9 @@
 `@function/clone <clone>=<function name>`<br>
 `@function/args <function name>=[<name> ...]`
 
-When used without any arguments, this command shows how many global user-defined and built-in functions there are. Wizards also see the first ten user-defined functions, with their argument counts and whether each is enabled.
+When used without any arguments, this command lists the global user-defined functions and counts the built-in ones. A player with the `config.admin` permission or the Functions power also sees the object and attribute each function evaluates, its argument count and whether it is enabled; anyone else sees the names.
 
-When used with a function name, it displays some information about how that function is parsed, and how many arguments it takes.
+When used with a function name, it shows whether that function is a built-in or a @function, whether it is enabled, how many arguments it takes, and the names set with `/args`.
 
 Otherwise, this command defines a global function with the name `<function name>`, which evaluates to `<attribute>` on `<object>`.
 
