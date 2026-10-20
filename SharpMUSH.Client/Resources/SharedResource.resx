@@ -9554,8 +9554,8 @@
   <data name="GuideIdentityRulesPage" xml:space="preserve"><value>Rules wiki page</value></data>
   <data name="GuideIdentityCharacterPage" xml:space="preserve"><value>Character guide wiki page</value></data>
   <data name="GuideIdentityWikiHint" xml:space="preserve"><value>Use namespace/slug. Only pages readable while signed out appear in the public guide. Leave a field blank to omit it.</value></data>
-  <data name="GuideIdentityPreviewLabel" xml:space="preserve"><value>Unsaved player welcome preview</value></data>
-  <data name="GuideIdentityPreview" xml:space="preserve"><value>Preview — not saved yet</value></data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve"><value>Player welcome preview</value></data>
+  <data name="GuideIdentityPreview" xml:space="preserve"><value>Player welcome preview</value></data>
   <data name="GuideIdentityNoArt" xml:space="preserve"><value>No approved illustration is available for this style yet. The written guide remains available.</value></data>
   <data name="GuideIdentityVisibility" xml:space="preserve"><value>Wiki links appear only after their visibility and the wiki reader are checked by the server.</value></data>
   <data name="GuideIdentitySaved" xml:space="preserve"><value>Saved. The public guide uses these settings.</value></data>
