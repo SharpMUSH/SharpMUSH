@@ -20,6 +20,7 @@ public class PackageLifecycleRuntimeTests
 	[Arguments(0)]
 	[Arguments(1)]
 	[Arguments(2)]
+	[Arguments(3)]
 	public async Task StoredHookReportsRealParserVerdictWithoutClaimingBusinessSuccess(int mode)
 	{
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
@@ -32,6 +33,7 @@ public class PackageLifecycleRuntimeTests
 			{
 				0 => "&HOOK_DONE me=yes",
 				1 => "nonexistent_lifecycle_command_57219; &HOOK_DONE me=yes",
+				3 => "&HOOK_DONE me=yes; nonexistent_lifecycle_command_57219",
 				_ => "&HOOK_DONE me=before; think [strcat(foo,bar"
 			};
 			await mediator.Send(new SetAttributeCommand(target, ["AINSTALL"], MarkupText.Plain(script), god));
@@ -50,9 +52,8 @@ public class PackageLifecycleRuntimeTests
 			}
 			else
 			{
-				// HUH_COMMAND does not mark an unknown command as HadErrors. Parsed describes the
-				// local parser verdict, and must never be promoted to a business-success certificate.
-				await Assert.That(verdict).IsEqualTo(PackageLifecycleOutcome.Parsed);
+				await Assert.That(verdict).IsEqualTo(mode == 0 ? PackageLifecycleOutcome.Parsed : PackageLifecycleOutcome.CommandFailure);
+				// A failed command does not roll back or stop the other commands in the list.
 				await Assert.That(marker?.Value.ToPlainText()).IsEqualTo("yes");
 			}
 		}
@@ -101,7 +102,7 @@ public class PackageLifecycleRuntimeTests
 			}
 			else
 			{
-				await Assert.That(report.LifecycleOutcomes.GetValueOrDefault(PackageLifecycleOutcome.Parsed)).IsEqualTo(1);
+				await Assert.That(report.LifecycleOutcomes.GetValueOrDefault(PackageLifecycleOutcome.CommandFailure)).IsEqualTo(1);
 				await Assert.That(marker?.Value.ToPlainText()).IsEqualTo("yes");
 			}
 		}
