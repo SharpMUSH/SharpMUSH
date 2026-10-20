@@ -33,6 +33,15 @@ public class ExternalProviderCatalogTests
 		(await catalog.EffectiveAsync("google")).Expect<Error<string>>();
 	}
 	[Test]
+	public async Task EveryRegistrationMapsBackToItsProvider()
+	{
+		var (catalog, _, _) = Create(new() { ["google"] = Enabled with { RegistrationId = "google-2024" } });
+		var providers = await catalog.ProvidersByRegistrationAsync();
+		await Assert.That(providers["google-2024"]).IsEqualTo("google");
+		await Assert.That(providers["external-github"]).IsEqualTo("github");
+		await Assert.That(providers.Count).IsEqualTo(ExternalProviderDefinition.All.Count);
+	}
+	[Test]
 	public async Task DisableIsImmediateAndEverySaveChangesGeneration()
 	{
 		Dictionary<string, ExternalProviderSettings> settings = new() { ["google"] = Enabled };

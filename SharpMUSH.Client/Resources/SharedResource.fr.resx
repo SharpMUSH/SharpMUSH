@@ -5620,6 +5620,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Continuer avec {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>ou</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Utilisé la dernière fois</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Recommencer la connexion</value>
   </data>
