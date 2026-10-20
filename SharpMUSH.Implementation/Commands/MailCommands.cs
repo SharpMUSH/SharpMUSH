@@ -59,6 +59,7 @@ public partial class Commands
 				NotifyService, arg0, arg1, switches),
 			[.., "CLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService, Mediator,
 				NotifyService, arg0, arg1, "CLEAR"),
+			[.., "PURGE"] when executor.IsPlayer => await PurgeMail.Handle(parser, Mediator, NotifyService),
 			[.., "UNCLEAR"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService, Mediator,
 				NotifyService, arg0, arg1, "UNCLEAR"),
 			[.., "TAG"] when executor.IsPlayer => await StatusMail.Handle(parser, ObjectDataService, Mediator,

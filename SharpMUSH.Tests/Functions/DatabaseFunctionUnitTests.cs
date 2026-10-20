@@ -163,6 +163,16 @@ public class DatabaseFunctionUnitTests
 	}
 
 	[Test]
+	public async Task Test_Sql_LowercaseRegisterNameIsReadable()
+	{
+		// Register names are case-insensitive, as setq() stores them: a lowercase name is r()'s too.
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			"[null(sql(lit(SELECT `name` FROM `test_sql_data_func` WHERE id = 1),%b,%b,rowcnt))][r(rowcnt)]"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
 	[Arguments("sqlescape(test_string_no_special_chars)", "test_string_no_special_chars")]
 	public async Task Test_Sqlescape_NoSpecialChars(string str, string expected)
 	{

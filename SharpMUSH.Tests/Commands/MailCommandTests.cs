@@ -75,6 +75,34 @@ public class MailCommandTests
 	}
 
 	/// <summary>
+	/// <c>@mail/purge</c> (<c>do_mail_purge</c>) deletes the messages <c>@mail/clear</c> marked, and only
+	/// those. It was declared but not dispatched, so it answered "Bad arguments".
+	/// </summary>
+	[Test]
+	public async ValueTask PurgeDeletesOnlyClearedMessages()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MailPurge");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{player.DbRef.Number}=Purged Subject/Purged body."));
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@mail #{player.DbRef.Number}=Kept Subject/Kept body."));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mail/clear 1"));
+
+		var beforePurge = NotificationsTo(player.DbRef).Length;
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mail/purge"));
+		var afterPurge = NotificationsTo(player.DbRef).Skip(beforePurge).ToArray();
+
+		await Assert.That(afterPurge).Contains("MAIL: Mailbox purged.");
+		var mailbox = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<SharpPlayer>();
+		var remaining = await Mediator.CreateStream(new GetAllMailListQuery(mailbox))
+			.Select(mail => mail.Subject.ToPlainText()).ToListAsync();
+		await Assert.That(remaining).IsEquivalentTo(new[] { "Kept Subject" });
+	}
+
+	/// <summary>
 	/// <c>@mail/review &lt;player&gt;=&lt;msglist&gt;</c> reads the mail the reviewer sent to that player. Both of its
 	/// guards were inverted: a non-blank name skipped the locate, and a successful list was read
 	/// through <c>AsError</c>, so the success path threw rather than printing anything. The
