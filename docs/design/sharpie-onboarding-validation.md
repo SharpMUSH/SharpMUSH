@@ -37,17 +37,17 @@ The dated records below provide the details and limitations of each observation.
 
 | Requirement | Current evidence | Remaining gate |
 |---|---|---|
-| Four familiarity paths | Browser-selected Discord, MUSH, other-roleplay and independent paths; tailored copy and retained progress | Fresh authenticated full journey for each path on both viewport classes |
+| Four familiarity paths | Browser-selected Discord, MUSH, other-roleplay and independent paths; full authenticated desktop Discord lesson sequence through connected Play | Fresh authenticated remaining paths and full mobile journeys |
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests | Complete keyboard-only journey across login and character handoffs |
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
-| Account isolation and anonymous import | Real authorization/account isolation HTTP checks; explicit import/decline and future-schema tests | Browser second-account/logout sequence with persisted progress |
+| Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
 | Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
 | Installed-package accuracy | Reviewed-source/version/baseline/access regressions and live package help evidence | Browser package removal/disabled transition while guide remains open |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview and feature links | Review all configured guide links with an ordinary player after admin changes |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
 | Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
 | Production art safety | Bounded approved neutral SVG fallback; candidates withheld after independent QA | All 252 inventory slots, independent QA and owner visual acceptance; approved genre assets wired into catalog |
-| Documentation and review | Player/admin guides, design, validation records and draft PR #2069; existing review threads resolved | Final current-head CI and substantive review; screenshots packaged for review |
+| Documentation and review | Player/admin guides, design, validation records, packaged browser screenshots and draft PR #2069; existing review threads resolved | Final current-head CI and substantive review |
 
 The failed automated Claude review produced no findings (one turn, no model
 usage); it is not a successful review. CodeRabbit skips this draft PR. Neither
@@ -572,3 +572,37 @@ The connected Story practice guide was also checked at 390×844: document width
 390px and dialog client/scroll widths both 309px. Its existing draft remained
 present after the viewport change. This supplements desktop insertion/refusal
 evidence; it does not verify a physical on-screen keyboard.
+
+### Live account isolation (2026-10-20)
+
+Signed out of onboarding-player through the account UI, then signed into the
+separate existing retry fixture. The welcome page offered an explicit choice
+to import anonymous browser progress; no familiarity path was selected.
+Choosing “Keep my account progress” and Discord started with no completed
+steps. The character lesson identified RetryPilot, not JourneySecond. This
+verifies the visible account boundary and opt-in anonymous import in the live
+browser. Screenshot: `work/onboarding/account-isolation.png`.
+
+### Authenticated Discord lesson sequence (2026-10-20)
+
+RetryPilot completed all eight lessons from the introduction through the final
+lesson using Return on the advance control. Local `look` practice produced only
+the practice-room explanation. The channels lesson showed three commands with
+one-line explanations. The final lesson automatically displayed verified
+`+help` and `+scene/help` suggestions. Completing the final step replaced the
+lesson with the completion message. “Open the game” reached connected Play as
+RetryPilot in Room Zero, with the command input focused and no guide overlay.
+This proves the authenticated desktop lesson sequence; it does not substitute
+for a fresh login/claim journey or mobile execution of every path.
+
+### Returning veteran path on mobile (2026-10-20)
+
+At 390×844, authenticated RetryPilot selected the MUSH path after completing
+Discord. Shared completed topics remained marked. Each of the five veteran
+lessons was opened explicitly and showed the expected distinct content:
+MUSH foundations, web account/character linking, Story versus Terminal,
+channels, and installed additions. No command-practice step was added.
+Document scroll width equalled the 390px viewport. The Play-modes lesson was
+visually inspected and its unchanged screenshot added to the review gallery.
+Return on the final advance button displayed completion. This checks a returning
+account's mobile review flow, not a new account's first-time progression.

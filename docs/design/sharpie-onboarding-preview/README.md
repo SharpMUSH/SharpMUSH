@@ -31,6 +31,14 @@ choices are below this viewport. These are browser viewport simulations.
 
 ![Welcome introduction at 320 pixels](welcome-introduction-mobile.png)
 
+## Experienced MUSH player on mobile
+
+The authenticated veteran path explains the two Play modes and shows package
+help verified for the active character. This 390px capture is scrolled to the
+lesson; its remaining controls continue below the viewport.
+
+![Veteran Play modes lesson at 390 pixels](veteran-mobile-modes.png)
+
 See [validation and remaining gates](../sharpie-onboarding-validation.md).
 These screenshots establish appearance of these states, not complete acceptance
 of all routes, accessibility, authentication or artwork.
