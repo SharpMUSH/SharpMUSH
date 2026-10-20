@@ -9029,7 +9029,7 @@
     <value>Remove this service?</value>
   </data>
   <data name="AdmSignInRemoveBody" xml:space="preserve">
-    <value>Players who sign in only with {0} can't sign in until staff set it up again or they reset their password. Their links are kept.</value>
+    <value>Players' links to {0} are removed with it. Those who sign in only with {0} can't sign in again until staff set a password for their account.</value>
   </data>
   <data name="AdmSignInRemoved" xml:space="preserve">
     <value>Removed {0}.</value>

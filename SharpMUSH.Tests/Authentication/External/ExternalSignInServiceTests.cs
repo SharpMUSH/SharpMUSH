@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
@@ -14,6 +15,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication.External;
+using SharpMUSH.Server.Controllers;
 
 namespace SharpMUSH.Tests.Authentication.External;
 
@@ -133,7 +135,7 @@ public class ExternalSignInServiceTests
 			.Returns(call => ValueTask.FromResult<FoundResult<string>>(call.Arg<string>().StartsWith("signin.")
 				? "client-secret"
 				: new NotFound()));
-		_providers = new ExternalSignInProviders(new InMemoryServerData(), _secrets);
+		_providers = new ExternalSignInProviders(new InMemoryServerData(), _secrets, _db);
 
 		var http = Substitute.For<IHttpClientFactory>();
 		http.CreateClient(Arg.Any<string>()).Returns(_ => new HttpClient(_service, disposeHandler: false));
@@ -359,5 +361,101 @@ public class ExternalSignInServiceTests
 			Endpoints: Endpoints with { TokenUrl = "http://id.example.test/token" }));
 
 		await Assert.That(saved is Error<string>).IsTrue();
+	}
+
+	[Test]
+	public async Task Two_removals_at_once_cannot_take_the_last_way_in()
+	{
+		var flow = (await SignInAsync(Profile("1111", "Jun"))).Expect<ExternalSignInService.ReturnedFlow>();
+		var account = (await _signIn.CreateAccountAsync(flow, "jun", null)).Expect<SharpAccount>();
+		(await _providers.SaveAsync("other", new SignInProviderUpdate(ExternalSignInKinds.Discord, null, "id", true)))
+			.Expect<ExternalSignInProvider>();
+		await _db.AddAccountExternalLoginAsync(new AccountExternalLogin(account.Id!, "other", "x2", "Jun", _time.Now, null));
+
+		// The first removal holds its turn until the second has been asked for.
+		var held = new TaskCompletionSource();
+		var first = _signIn.RemoveWayInAsync(account, async () =>
+		{
+			await held.Task;
+			return await _signIn.UnlinkAsync(account.Id!, "chat");
+		}, withoutProvider: "chat").AsTask();
+		var second = _signIn.RemoveWayInAsync(account, () => _signIn.UnlinkAsync(account.Id!, "other"),
+			withoutProvider: "other").AsTask();
+		held.SetResult();
+
+		await Assert.That(await first).IsEqualTo(WayInRemoval.Removed);
+		await Assert.That(await second).IsEqualTo(WayInRemoval.OnlyWayIn);
+		await Assert.That(await _db.GetAccountExternalLoginsAsync(account.Id!)).Count().IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task Removing_a_provider_removes_the_links_to_it()
+	{
+		var flow = (await SignInAsync(Profile("1212", "Kit"))).Expect<ExternalSignInService.ReturnedFlow>();
+		var account = (await _signIn.CreateAccountAsync(flow, "kit", null)).Expect<SharpAccount>();
+		(await _providers.SaveAsync("chat2", new SignInProviderUpdate(ExternalSignInKinds.Discord, null, "id", true)))
+			.Expect<ExternalSignInProvider>();
+		await _db.AddAccountExternalLoginAsync(new AccountExternalLogin(account.Id!, "chat2", "1212", "Kit", _time.Now, null));
+
+		await Assert.That(await _providers.RemoveAsync("chat")).IsTrue();
+
+		// A service set up again under the id is a new one: the person its ids name now is not the one linked before.
+		await Assert.That(await _db.GetAccountExternalLoginAsync("chat", "1212")).IsNull();
+		await Assert.That((await _db.GetAccountExternalLoginsAsync(account.Id!)).Select(link => link.Provider))
+			.IsEquivalentTo(["chat2"]);
+	}
+
+	[Test]
+	public async Task A_saved_provider_cannot_be_pointed_at_another_service()
+	{
+		var kind = await _providers.SaveAsync("chat", new SignInProviderUpdate(ExternalSignInKinds.Discord, null, "client-id", true));
+		var profile = await _providers.SaveAsync("chat", new SignInProviderUpdate(ExternalSignInKinds.Custom, "Chat", "client-id", true,
+			Endpoints: Endpoints with { UserInfoUrl = "https://other.example.test/me" }));
+		var field = await _providers.SaveAsync("chat", new SignInProviderUpdate(ExternalSignInKinds.Custom, "Chat", "client-id", true,
+			Endpoints: Endpoints with { SubjectField = "sub" }));
+		var renamed = await _providers.SaveAsync("chat", new SignInProviderUpdate(ExternalSignInKinds.Custom, "Chat room", "client-2", true,
+			Endpoints: Endpoints with { Scopes = "identify" }));
+
+		await Assert.That(kind is Error<string>).IsTrue();
+		await Assert.That(profile is Error<string>).IsTrue();
+		await Assert.That(field is Error<string>).IsTrue();
+		await Assert.That(renamed.Expect<ExternalSignInProvider>().Name).IsEqualTo("Chat room");
+	}
+
+	private SignInProvidersController Controller() => new(_providers, _signIn, _secrets, Substitute.For<IAuditLog>())
+	{
+		ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+	};
+
+	[Test]
+	public async Task A_new_provider_can_use_a_secret_already_stored()
+	{
+		var saved = await Controller().Save("fresh", new SignInProviderUpdate(ExternalSignInKinds.Discord, null, "id", true));
+
+		await Assert.That(saved.Result).IsTypeOf<OkObjectResult>();
+		await _secrets.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SecretAuthor>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task A_secret_is_not_stored_for_settings_that_are_refused()
+	{
+		var saved = await Controller().Save("chat", new SignInProviderUpdate(ExternalSignInKinds.Discord, null, "id", true,
+			ClientSecret: "new-secret"));
+
+		await Assert.That(saved.Result).IsTypeOf<BadRequestObjectResult>();
+		await _secrets.DidNotReceive().SetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SecretAuthor>(), Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async Task Settings_are_not_saved_when_the_secret_is_refused()
+	{
+		_secrets.SetAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<SecretAuthor>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<Result<SecretStatus>>(new Error<string>("refused")));
+
+		var saved = await Controller().Save("chat", new SignInProviderUpdate(ExternalSignInKinds.Custom, "Renamed", "client-id", true,
+			Endpoints: Endpoints, ClientSecret: "new-secret"));
+
+		await Assert.That(saved.Result).IsTypeOf<BadRequestObjectResult>();
+		await Assert.That((await _providers.GetAsync("chat")).Expect<ExternalSignInProvider>().Name).IsEqualTo("Chat");
 	}
 }

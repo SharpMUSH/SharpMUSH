@@ -135,6 +135,9 @@ public interface IAccountStore
 	ValueTask<bool> RemoveAccountExternalLoginAsync(string accountId, string provider,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>Removes every account's sign-in through <paramref name="provider"/>, returning how many it removed.</summary>
+	ValueTask<int> RemoveExternalLoginsOfProviderAsync(string provider, CancellationToken cancellationToken = default);
+
 	/// <summary>The account's ban, or null when it is not banned.</summary>
 	ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default);
 

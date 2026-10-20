@@ -343,12 +343,13 @@ public class AccountController(
 
 			if (await accountService.GetByIdAsync(accountId) is not { } account)
 				return Unauthorized("Account not found or not active.");
-			if (!await externalSignIn.KeepsAWayInAsync(account, withoutPasskey: credentialId))
-				return Conflict(OnlyWayIn);
-
-			return await passkeys.RemoveAsync(accountId, credentialId)
-				? NoContent()
-				: NotFound("No such passkey on this account.");
+			return await externalSignIn.RemoveWayInAsync(account, () => passkeys.RemoveAsync(accountId, credentialId),
+					withoutPasskey: credentialId, ct: HttpContext.RequestAborted) switch
+			{
+				WayInRemoval.Removed => NoContent(),
+				WayInRemoval.OnlyWayIn => Conflict(OnlyWayIn),
+				_ => NotFound("No such passkey on this account.")
+			};
 		});
 
 	private const string OnlyWayIn = "This is the only way into your account. Set a password or add another way to sign in first.";
@@ -382,12 +383,13 @@ public class AccountController(
 		{
 			if (await accountService.GetByIdAsync(accountId) is not { } account)
 				return Unauthorized("Account not found or not active.");
-			if (!await externalSignIn.KeepsAWayInAsync(account, withoutProvider: provider))
-				return Conflict(OnlyWayIn);
-
-			return await externalSignIn.UnlinkAsync(accountId, provider)
-				? NoContent()
-				: NotFound("This account has no sign-in through that service.");
+			return await externalSignIn.RemoveWayInAsync(account, () => externalSignIn.UnlinkAsync(accountId, provider),
+					withoutProvider: provider, ct: HttpContext.RequestAborted) switch
+			{
+				WayInRemoval.Removed => NoContent(),
+				WayInRemoval.OnlyWayIn => Conflict(OnlyWayIn),
+				_ => NotFound("This account has no sign-in through that service.")
+			};
 		});
 
 	/// <summary>

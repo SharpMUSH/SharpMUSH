@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Services.Interfaces;
@@ -24,7 +25,8 @@ public sealed record ExternalSignInProvider(
 /// Reads and changes the sign-in providers. A provider's client secret is the secret <c>signin.&lt;id&gt;.secret</c>,
 /// so it is set here or with <c>@secret</c>, and overridden from the environment like any other.
 /// </summary>
-public sealed partial class ExternalSignInProviders(IExpandedObjectDataService serverData, ISecretStore secrets)
+public sealed partial class ExternalSignInProviders(IExpandedObjectDataService serverData, ISecretStore secrets,
+	IAccountStore accounts)
 {
 	/// <summary>The longest provider id.</summary>
 	public const int MaxIdLength = 32;
@@ -112,6 +114,15 @@ public sealed partial class ExternalSignInProviders(IExpandedObjectDataService s
 		return ready;
 	}
 
+	/// <summary>
+	/// Whether <paramref name="update"/> can be saved as the provider <paramref name="id"/>, as <see cref="SaveAsync"/>
+	/// checks it, so a caller can store the client secret only once the settings will be taken.
+	/// </summary>
+	public async ValueTask<Result<None>> CheckAsync(string id, SignInProviderUpdate update)
+		=> Validate(id, update) is Error<string> invalid
+			? invalid
+			: KeepsIdentities((await LoadAsync()).Providers.FirstOrDefault(p => p.Id == id), update);
+
 	/// <summary>Adds or replaces the provider <paramref name="id"/>, after checking what it was given.</summary>
 	public async ValueTask<Result<ExternalSignInProvider>> SaveAsync(string id, SignInProviderUpdate update)
 	{
@@ -129,6 +140,11 @@ public sealed partial class ExternalSignInProviders(IExpandedObjectDataService s
 		try
 		{
 			var data = await LoadAsync();
+			if (KeepsIdentities(data.Providers.FirstOrDefault(p => p.Id == id), update) is Error<string> moved)
+			{
+				return moved;
+			}
+
 			data.Providers.RemoveAll(p => p.Id == id);
 			data.Providers.Add(provider);
 			await serverData.SetExpandedServerDataAsync(data);
@@ -141,7 +157,31 @@ public sealed partial class ExternalSignInProviders(IExpandedObjectDataService s
 		return provider;
 	}
 
-	/// <summary>Removes the provider and its stored secret. Links to it stay on accounts, unusable until it is back.</summary>
+	/// <summary>
+	/// A link is keyed by provider id and the service's id for the person, so a saved provider cannot be pointed at a
+	/// service whose ids mean other people: its kind stays, and a custom one keeps its profile address and id field.
+	/// </summary>
+	private static Result<None> KeepsIdentities(ExternalSignInProvider? existing, SignInProviderUpdate update)
+	{
+		if (existing is null)
+		{
+			return new None();
+		}
+
+		var same = existing.Kind == update.Kind
+			&& (existing.Kind != ExternalSignInKinds.Custom
+				|| (existing.Endpoints?.UserInfoUrl == update.Endpoints?.UserInfoUrl.Trim()
+					&& existing.Endpoints?.SubjectField == update.Endpoints?.SubjectField.Trim()));
+		return same
+			? new None()
+			: new Error<string>("A service's kind, profile address and id field cannot change: they decide who its links belong to. "
+				+ "Remove it and add it again; its links go with it.");
+	}
+
+	/// <summary>
+	/// Removes the provider, its stored secret and every account's link to it. Kept links would sign in whoever a
+	/// service set up later under the same id gives the same id to.
+	/// </summary>
 	public async ValueTask<bool> RemoveAsync(string id)
 	{
 		bool removed;
@@ -163,6 +203,7 @@ public sealed partial class ExternalSignInProviders(IExpandedObjectDataService s
 		if (removed)
 		{
 			await secrets.ClearAsync(SecretName(id));
+			await accounts.RemoveExternalLoginsOfProviderAsync(id);
 		}
 
 		return removed;

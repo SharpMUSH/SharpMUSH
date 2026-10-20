@@ -51,11 +51,11 @@
                     <MudTextField T="string" @bind-Value="_endpoints.TokenUrl" Label="@Loc["AdmSignInTokenUrl"]" Placeholder="https://"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" />
                     <MudTextField T="string" @bind-Value="_endpoints.UserInfoUrl" Label="@Loc["AdmSignInUserInfoUrl"]" Placeholder="https://"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" Disabled="@(_editing is not null)" />
                     <MudTextField T="string" @bind-Value="_endpoints.Scopes" Label="@Loc["AdmSignInScopes"]" Placeholder="openid profile"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
                     <MudTextField T="string" @bind-Value="_endpoints.SubjectField" Label="@Loc["AdmSignInSubjectField"]" Placeholder="sub"
-                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" Disabled="@(_editing is not null)" />
                     <MudTextField T="string" @bind-Value="_endpoints.NameFields" Label="@Loc["AdmSignInNameFields"]" Placeholder="name"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
                     <MudTextField T="string" @bind-Value="_endpoints.EmailField" Label="@Loc["AdmSignInEmailField"]" Placeholder="email"

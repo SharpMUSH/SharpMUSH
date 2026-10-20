@@ -173,4 +173,22 @@ public partial class LightningDatabase
 			return true;
 		}, cancellationToken);
 	}
+
+	public async ValueTask<int> RemoveExternalLoginsOfProviderAsync(string provider, CancellationToken cancellationToken = default)
+	{
+		var prefix = Keys.Concat(Keys.Str(provider), Keys.Sep);
+		return await Store.WriteAsync(tx =>
+		{
+			var found = tx.Range(Tables.AccountExternalLogin, prefix)
+				.Select(entry => (entry.Key, Codec.Deserialize<AccountExternalLoginRecord>(entry.Value).AccountKey))
+				.ToList();
+			foreach (var (key, accountKey) in found)
+			{
+				tx.Delete(Tables.AccountExternalLogin, key);
+				tx.Delete(Tables.AccountExternalLoginByAccount, Keys.Str(accountKey), key);
+			}
+
+			return found.Count;
+		}, cancellationToken);
+	}
 }

@@ -263,6 +263,31 @@ public sealed class ExternalSignInService(
 			.Any(link => link.Provider != withoutProvider && ready.Any(provider => provider.Id == link.Provider));
 	}
 
+	/// <summary>
+	/// Removes one of the account's ways in, a passkey or a service sign-in, unless it is the last one
+	/// (<see cref="KeepsAWayInAsync"/>). Removals from one account run one at a time, so two at once cannot each see
+	/// the other's way in and take both.
+	/// </summary>
+	public async ValueTask<WayInRemoval> RemoveWayInAsync(SharpAccount account, Func<ValueTask<bool>> remove,
+		string? withoutProvider = null, byte[]? withoutPasskey = null, CancellationToken ct = default)
+	{
+		var gate = _removalGates[(int)((uint)StringComparer.Ordinal.GetHashCode(account.Id!) % (uint)_removalGates.Length)];
+		await gate.WaitAsync(ct);
+		try
+		{
+			if (!await KeepsAWayInAsync(account, withoutProvider, withoutPasskey, ct))
+				return WayInRemoval.OnlyWayIn;
+
+			return await remove() ? WayInRemoval.Removed : WayInRemoval.NotFound;
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	private readonly SemaphoreSlim[] _removalGates = Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
+
 	/// <summary>Removes the account's sign-in through <paramref name="providerId"/>; false when it has none.</summary>
 	public ValueTask<bool> UnlinkAsync(string accountId, string providerId, CancellationToken ct = default)
 		=> accounts.RemoveAccountExternalLoginAsync(accountId, providerId, ct);
@@ -370,4 +395,12 @@ public sealed class ExternalSignInService(
 				_ => null
 			}
 			: null;
+}
+
+/// <summary>What <see cref="ExternalSignInService.RemoveWayInAsync"/> did.</summary>
+public enum WayInRemoval
+{
+	Removed,
+	NotFound,
+	OnlyWayIn
 }

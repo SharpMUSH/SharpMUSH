@@ -46,30 +46,35 @@ public class SignInProvidersController(
 	[HttpPut("{id}")]
 	public async Task<ActionResult<SignInProviderSettings>> Save(string id, [FromBody] SignInProviderUpdate update)
 	{
-		var isNew = await providers.GetAsync(id) is NotFound;
-		if (isNew && string.IsNullOrEmpty(update.ClientSecret))
+		var typed = !string.IsNullOrEmpty(update.ClientSecret);
+		if (!typed && await providers.GetAsync(id) is NotFound && !await providers.HasSecretAsync(id))
 		{
 			return BadRequest(new { error = "A new provider needs its client secret." });
 		}
 
-		return await providers.SaveAsync(id, update) switch
+		// The settings are checked before the secret is stored, and the secret is stored before the settings, so a
+		// refused secret leaves the provider as it was.
+		if (await providers.CheckAsync(id, update) is Error<string> invalid)
 		{
-			ExternalSignInProvider saved => await SavedAsync(saved, update.ClientSecret),
-			Error<string> error => BadRequest(new { error = error.Value }),
-		};
-	}
+			return BadRequest(new { error = invalid.Value });
+		}
 
-	private async Task<ActionResult<SignInProviderSettings>> SavedAsync(ExternalSignInProvider saved, string? clientSecret)
-	{
-		var id = saved.Id;
-		if (!string.IsNullOrEmpty(clientSecret)
-			&& await secrets.SetAsync(ExternalSignInProviders.SecretName(id), clientSecret, PortalSecretAuthor.Of(User),
+		if (typed && await secrets.SetAsync(ExternalSignInProviders.SecretName(id), update.ClientSecret!, PortalSecretAuthor.Of(User),
 				HttpContext.RequestAborted) is Error<string> refused)
 		{
 			return BadRequest(new { error = refused.Value });
 		}
 
-		await audit.RecordPortalAsync(User, AuditActions.SignInProviderSave, AuditTargets.Of(AuditTargetKinds.SignInProvider, id),
+		return await providers.SaveAsync(id, update) switch
+		{
+			ExternalSignInProvider saved => await SavedAsync(saved),
+			Error<string> error => BadRequest(new { error = error.Value }),
+		};
+	}
+
+	private async Task<ActionResult<SignInProviderSettings>> SavedAsync(ExternalSignInProvider saved)
+	{
+		await audit.RecordPortalAsync(User, AuditActions.SignInProviderSave, AuditTargets.Of(AuditTargetKinds.SignInProvider, saved.Id),
 			$"{saved.Kind}, {(saved.Enabled ? "enabled" : "disabled")}");
 		return Ok(await SettingsAsync(saved));
 	}
