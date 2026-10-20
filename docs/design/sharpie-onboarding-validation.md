@@ -7,8 +7,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,908 passed**, zero failed/skipped after the
-  character-entry return fix (`return-route-green.log`).
+- Full component suite: **2,912 passed**, zero failed/skipped after the
+  catalog-backed single-choice genre controls (`genre-select-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -385,3 +385,21 @@ document after its path button disappeared. The companion now focuses the lesson
 heading after rendering that transition, without adding the heading to tab order.
 The regression failed before the fix. Full component validation then passed
 2,908 tests, zero failures/skips (`admin-preview-focus-green.log`).
+
+### MSSP choices and published keyboard follow-up (2026-10-20)
+
+Genre and subgenre now use the shared `MsspCatalog` choices in single-select
+controls. The onboarding settings endpoint requires exactly one listed value
+for each; `None` is the explicit absent-category choice. Existing unsupported
+values remain visible as disabled options until the administrator selects a
+supported replacement. No unrelated MSSP variables are edited.
+
+The full component suite passed 2,912 tests. The local server and client were
+updated and the browser showed Fantasy / High Fantasy selected with the catalog
+options available, plus the simplified Anime mascot label. Screenshot:
+`work/onboarding/mssp-single-select.png`.
+
+In the published Play guide, keyboard selection of the Discord path placed focus
+on its lesson heading. Escape closed the sheet and restored focus to the guide
+opener. The retained lesson resumed correctly. These verify DOM/native keyboard
+focus behavior, not an actual screen-reader session.
