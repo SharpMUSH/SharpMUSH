@@ -54,6 +54,18 @@ world back, while restoring character links only through an explicit validated
 mapping. A raw reversal of directory names is insufficient for this contract.
 Define and test retry behavior at each durable transition.
 
+Legacy sessions that already swapped worlds without a prepared identity mapping
+must refuse automatic rollback and leave both directories intact. They require
+operator recovery with an explicit ownership mapping: guessing could overwrite
+retained accounts or restore revoked credentials. Missing current-identity source
+data must likewise fail closed. Pre-swap failures leave the original identity
+and ownership state untouched.
+
+When an imported object already holds a role with the same slug as a transferred
+account role, conflicting permissions must stop promotion. Do not silently change
+the imported object's authority. Preserve custom permission definitions referenced
+by transferred accounts and roles.
+
 ## Required evidence
 
 1. Real isolated-worker promotion with a claimed portal administrator:

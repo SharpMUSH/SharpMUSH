@@ -1079,3 +1079,27 @@ start playing”; the previous wording incorrectly implied creation was required
 on the claim route. The screenshot predates rebuilding that copy-only change.
 The fixture gateway is unavailable because another process owns port 4202, so
 this check proves the claim/guide handoff, not a new terminal connection.
+
+### Import identity repair acceptance (2026-10-20)
+
+Commit `5f67d0b7e` repairs #2078. A fresh isolated world on port 18082 claimed
+its administrator, left the setup wizard pending, and previewed the repository's
+TinyMUX fixture with name `Imported Journey Pilot`, genre `Fantasy`, and
+subgenre `High Fantasy`. After preview completed, the administrator changed
+the portal password through the normal account API, then promoted and restarted.
+
+The restarted server accepted the latest password, rejected the preview-time
+password and outgoing session, retained the claimed-setup flag, and returned
+the unfinished wizard. Its account owned only the validated imported Wizard
+at #1. Browser sign-in succeeded; `/setup?step=identity` displayed the imported
+name and both MSSP selections, and retained them on reload. Screenshot:
+`work/onboarding/import-identity-resumed.png`; private fixture evidence:
+`work/onboarding/fresh-import-18082/verification.json`.
+
+The focused import suite passed 38/38 and startup coordinator suite passed 2/2.
+Build and formatting checks passed; independent source and final fixture reviews
+found no actionable defects. Those tests also cover imported character password
+preservation, factor/index continuity, rollback credential freshness, invalid
+mapping rejection, and transactional failure. Actual external-provider and
+passkey authentication are still separate acceptance work. The previous failed
+18081 world remains retained; it was not overwritten to produce this result.
