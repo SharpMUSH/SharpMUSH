@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,919 passed**, zero failed/skipped after the
-  package-refresh regression (`package-refresh-green.log`).
+- Full component suite: **2,920 passed**, zero failed/skipped after the
+  Explore-return regression (`explore-return-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -704,3 +704,24 @@ dispatch availability; it did not uninstall the package or edit its attributes.
 Evidence: `package-refresh-disabled.json`, `package-refresh-restored.json`,
 `package-refresh-disabled.png`, and `package-refresh-restored.png` under
 `work/onboarding/`.
+
+### Keyboard action audit and Explore return (2026-10-20)
+
+On the final lesson at 390px, ten successive Tab presses traversed Scenes,
+Explore, Back, Skip, Complete, the command reference, Back to game, full guide,
+Stop and Scenes again. Every focused control remained inside the modal. All
+seven icon controls measured 44×44 CSS pixels. Shift+Tab to Back to game and
+Enter closed the modal and restored focus to its opener; Enter reopened it.
+
+The same audit reproduced an ineffective Explore action: following its `/play`
+link while already on `/play` left the dialog open and focus on that link.
+The component regression failed before the fix. The Play host now supplies an
+explicit Explore callback that closes the guide and focuses the existing
+composer, preserving guide progress. Other hosts retain normal link navigation.
+This is keyboard/DOM evidence, not a screen-reader or 200% zoom certification.
+
+After publication, entering an unsent `look` draft, opening the guide and
+activating Explore with Enter yielded zero dialogs, focus on “Game command”,
+and the unchanged `look` draft. No command was sent. Screenshot:
+`work/onboarding/explore-return-draft.png`. The full 2,920-case component suite,
+formatting and publication passed.

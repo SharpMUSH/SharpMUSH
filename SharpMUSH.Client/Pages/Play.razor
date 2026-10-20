@@ -192,7 +192,7 @@ else
                         </SharpMUSH.Client.Components.Onboarding.GuideTooltip>
                     </nav>
                     <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
-                        OnExit="CloseMobileSheet" OnInserted="ReturnToCommandAsync"
+                        OnExit="CloseMobileSheet" OnInserted="ReturnToCommandAsync" OnExplore="ReturnToCommandAsync"
                         InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
                     break;
                 case PlaySheet.Room:

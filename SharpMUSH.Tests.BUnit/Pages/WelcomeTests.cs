@@ -207,4 +207,20 @@ public class WelcomeTests : BunitContext
 		await Assert.That(companion.FindAll("details.guide-companion, .guide-companion > summary").Count).IsEqualTo(0);
 	}
 
+	[Test]
+	public async Task ExploreFromPlayReturnsToComposerWithoutDismissingProgress()
+	{
+		var guide = Services.GetRequiredService<OnboardingService>();
+		await guide.LoadAsync(GuideJourney.Player);
+		await guide.ChoosePathAsync(GuidePath.Mush);
+		await guide.SetCurrentStepAsync("continue");
+		var returns = 0;
+		var companion = Render<GuideCompanion>(parameters => parameters
+			.Add(component => component.Guide, guide)
+			.Add(component => component.OnExplore, () => returns++));
+		await companion.Find("article button[aria-label='Explore the game']").ClickAsync();
+		await Assert.That(returns).IsEqualTo(1);
+		await Assert.That(guide.Progress.Active).IsTrue();
+		await Assert.That(guide.Progress.CurrentStepId).IsEqualTo("continue");
+	}
 }

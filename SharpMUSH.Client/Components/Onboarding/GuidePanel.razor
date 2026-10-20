@@ -34,7 +34,14 @@
         @if (Lesson.ActionUrl is not null)
         {
             <GuideTooltip Text="@Lesson.ActionLabel">
-                <a class="guide-action guide-icon" href="@Lesson.ActionUrl" aria-label="@Lesson.ActionLabel"><MudIcon Icon="@(Lesson.ActionUrl == "/play" ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.ArrowForward)" /></a>
+                @if (Lesson.ActionUrl == "/play" && OnExplore.HasDelegate)
+                {
+                    <button type="button" class="guide-action guide-icon" aria-label="@Lesson.ActionLabel" @onclick="OnExplore"><MudIcon Icon="@Icons.Material.Outlined.PlayArrow" /></button>
+                }
+                else
+                {
+                    <a class="guide-action guide-icon" href="@Lesson.ActionUrl" aria-label="@Lesson.ActionLabel"><MudIcon Icon="@(Lesson.ActionUrl == "/play" ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.ArrowForward)" /></a>
+                }
             </GuideTooltip>
         }
         @if (Lesson.Id == "useful-action")
@@ -83,6 +90,7 @@
     [Parameter] public EventCallback OnSkip { get; set; }
     [Parameter] public EventCallback OnClose { get; set; }
     [Parameter] public EventCallback OnInsert { get; set; }
+    [Parameter] public EventCallback OnExplore { get; set; }
     [Parameter] public RenderFragment? Context { get; set; }
     [Parameter] public SharpieArt? Art { get; set; } = SharpieArtCatalog.Resolve(null, null, null, null, GuideImagery.Full);
     [Parameter] public GuideImagery Imagery { get; set; } = GuideImagery.Full;
