@@ -507,3 +507,35 @@ RGB(125,135,144) measured 4.86:1. These are the inspected dark-theme paragraphs,
 not a contrast audit of all themes or controls. Browser zoom shortcuts did not
 change viewport dimensions or device-pixel ratio in this browser; therefore
 200% browser zoom remains unverified.
+
+
+### Returning login, character switching and channels (2026-10-20)
+
+The guide sign-in link preserved `/welcome?returnUrl=%2Fplay`. Signing in as the
+existing ordinary test account restored its own saved progress (rather than the
+anonymous profile's completion markers) and JourneyTester as active character.
+The real account roster retained JourneyTester, JourneySecond and ClaimPilot.
+Switching through the account menu to JourneySecond updated the guide's character
+context; Play connected as JourneySecond and reopening the guide retained the
+character lesson with that same identity. Screenshot:
+`work/onboarding/character-switch-guide.png`.
+
+In the isolated world, `@channel/list` first returned `No channels`. A disposable
+OnboardingHelp player channel was created through the engine. Listing then showed
+it; leaving and rejoining with `@channel/on OnboardingHelp` produced the expected
+confirmation and sidebar update. `@channel/who` confirmed JourneySecond was its
+only member before the guide's `@chat OnboardingHelp=Can someone help?` example
+was explicitly sent. The engine echoed the message on that channel. This proves
+the sequence and self delivery, not multi-player audience isolation. Evidence:
+`work/onboarding/live-channel-sequence.txt`.
+
+Story-mode validation reached the installed scene package's real participation
+restriction: JourneySecond is not approved. No scene was created. Automatic
+approval review rejected assigning `approved` to this disposable character
+without explicit permission; that exact role/recipient/test-world request is
+pending with the user. No permission was changed or alternate bypass attempted.
+
+At head `bb46d34bb`, build, formatting, bUnit, scene/Discord plugin tests, help
+integrity, layout, PennMUSH parity and code analyses passed. Core and integration
+test jobs were still running at inspection. Claude review failed before producing
+findings; CodeRabbit skipped the draft. These do not establish full CI acceptance.
