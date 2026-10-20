@@ -7,47 +7,27 @@
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
-@if (Auth.IsLoggedIn && Auth.ActiveCharacter is { } character)
+@if (Auth.IsLoggedIn && Auth.ActiveCharacter is not null && (_loading || _error || _capabilities.Length > 0))
 {
     <section class="guide-packages" aria-label="@Loc["GuidePackagesLabel"]">
-        <button type="button" disabled="@_loading" @onclick="Check">@Loc[_loading ? "GuidePackagesLoading" : "GuidePackagesCheck", character.Name]</button>
-        @if (_error)
+        @if (_loading) { <p role="status">@Loc["GuidePackagesLoading"]</p> }
+        else if (_error) { <p role="status">@Loc["GuidePackagesError"]</p> }
+        else
         {
-            <p role="status">@Loc["GuidePackagesError"]</p>
-        }
-        else if (_checked)
-        {
-            @if (_capabilities.Length == 0)
-            {
-                <p role="status">@Loc["GuidePackagesEmpty"]</p>
-            }
-            else
-            {
-                <p>@Loc["GuidePackagesExplanation"]</p>
-                <ul>
-                    @foreach (var capability in _capabilities)
-                    {
-                        <li><code>@capability.Command</code> · @Loc["GuidePackagesVersion", capability.PackageId, capability.InstalledVersion]
-                            @(" · ")
-                            @if (capability.HelpUrl is { } reference)
-                            {
-                                <a href="@reference" target="_blank" rel="noopener noreferrer">@Loc["GuidePackagesReference"]</a>
-                            }
-                            else
-                            {
-                                <span>@Loc["GuidePackagesBundled"]</span>
-                            }
-                        </li>
-                    }
-                </ul>
-            }
+            <p>@Loc["GuidePackagesExplanation"]</p>
+            <ul>
+                @foreach (var capability in _capabilities)
+                {
+                    <li><code>@capability.Command</code></li>
+                }
+            </ul>
         }
     </section>
 }
 
 @code {
     private GuideCapability[] _capabilities = [];
-    private bool _loading, _checked, _error, _disposed;
+    private bool _loading, _error, _disposed, _initialized;
     private long _generation;
     private CancellationTokenSource? _pending;
     private (string? Token, int? Character, long? Created) Authority =>
@@ -58,6 +38,8 @@
         Auth.AuthStateChanged += Changed;
         Auth.ActiveCharacterChanged += Changed;
         await Auth.InitAsync();
+        _initialized = true;
+        await Check();
     }
 
     private async Task Check()
@@ -81,7 +63,7 @@
                 ?? throw new JsonException("Missing capabilities response.");
             if (!Current()) return;
             _capabilities = capabilities;
-            _checked = true;
+
         }
         catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException)
         {
@@ -99,9 +81,12 @@
         _pending?.Cancel();
         _pending = null;
         _capabilities = [];
-        _loading = _checked = _error = false;
+        _loading = _error = false;
     }
-    private void Changed() => _ = InvokeAsync(() => { Reset(); StateHasChanged(); });
+    private void Changed()
+    {
+        if (_initialized) _ = InvokeAsync(async () => { await Check(); StateHasChanged(); });
+    }
     public void Dispose()
     {
         _disposed = true;

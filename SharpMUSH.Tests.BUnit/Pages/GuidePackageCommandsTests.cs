@@ -36,7 +36,7 @@ public class GuidePackageCommandsTests : BunitContext
 	};
 
 	[Test]
-	public async Task BundledCommandsExplainTheirSourceWithoutAnEmptyReferenceLink()
+	public async Task BundledCommandsLoadWithoutAnExtraAction()
 	{
 		using var handler = new Handler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
 		{
@@ -44,8 +44,8 @@ public class GuidePackageCommandsTests : BunitContext
 		}));
 		Configure(handler);
 		var page = Render<GuidePackageCommands>();
-		await page.Find("button").ClickAsync();
-		await Assert.That(page.Markup).Contains("Included with this server");
+		await Assert.That(page.FindAll("button").Count).IsEqualTo(0);
+		await Assert.That(page.Markup).DoesNotContain("1.8.0");
 		await Assert.That(page.FindAll("a").Count).IsEqualTo(0);
 		await Assert.That(page.Find("code").TextContent).IsEqualTo("+help");
 	}
@@ -60,9 +60,9 @@ public class GuidePackageCommandsTests : BunitContext
 			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) }));
 		Configure(handler);
 		var page = Render<GuidePackageCommands>();
-		await page.Find("button").ClickAsync();
-		await Assert.That(page.Find("[role=status]").TextContent.Contains(failed ? "failed" : "No verified", StringComparison.Ordinal)).IsTrue();
-		await Assert.That(page.Find("button").HasAttribute("disabled")).IsFalse();
+		await Assert.That(page.FindAll("button").Count).IsEqualTo(0);
+		if (failed) await Assert.That(page.Find("[role=status]").TextContent).Contains("unavailable");
+		else await Assert.That(page.FindAll(".guide-packages").Count).IsEqualTo(0);
 	}
 
 	[Test]
@@ -76,7 +76,7 @@ public class GuidePackageCommandsTests : BunitContext
 	}
 
 	[Test]
-	public async Task ExplicitCheckUsesCurrentSessionAndShowsVersionWithoutSendingCommand()
+	public async Task AutomaticCheckUsesCurrentSessionWithoutSendingCommand()
 	{
 		var requests = new List<string>();
 		using var handler = new Handler(request =>
@@ -86,10 +86,10 @@ public class GuidePackageCommandsTests : BunitContext
 		});
 		Configure(handler);
 		var page = Render<GuidePackageCommands>();
-		await Assert.That(requests.Count).IsEqualTo(0);
-		await page.Find("button").ClickAsync();
+		await Assert.That(requests.Count).IsEqualTo(1);
+		await Assert.That(page.FindAll("button").Count).IsEqualTo(0);
 		await Assert.That(page.FindAll("code").Select(node => node.TextContent)).Contains("+help");
-		await Assert.That(page.Markup.Contains("1.8.0", StringComparison.Ordinal)).IsTrue();
+		await Assert.That(page.Markup.Contains("1.8.0", StringComparison.Ordinal)).IsFalse();
 		await Assert.That(requests).IsEquivalentTo(new[] { "GET /api/onboarding/capabilities session-a" });
 	}
 
@@ -99,10 +99,11 @@ public class GuidePackageCommandsTests : BunitContext
 	public async Task LateResponseCannotCrossAuthorityChange(bool account)
 	{
 		var reply = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
-		using var handler = new Handler(_ => reply.Task);
+		var calls = 0;
+		using var handler = new Handler(_ => ++calls == 1 ? reply.Task : Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) }));
 		var auth = Configure(handler);
 		var page = Render<GuidePackageCommands>();
-		var pending = page.Find("button").ClickAsync();
+
 		await page.InvokeAsync(() =>
 		{
 			if (account)
@@ -117,7 +118,7 @@ public class GuidePackageCommandsTests : BunitContext
 			}
 		});
 		reply.SetResult(Reply());
-		await pending;
+		await page.InvokeAsync(() => Task.CompletedTask);
 		await Assert.That(page.FindAll("code").Count).IsEqualTo(0);
 	}
 }

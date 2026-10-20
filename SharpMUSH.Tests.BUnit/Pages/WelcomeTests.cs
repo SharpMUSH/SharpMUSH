@@ -66,11 +66,11 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
-	public async Task VeteranFinishesAfterItsFourLessons()
+	public async Task VeteranFinishesAfterItsFiveLessons()
 	{
 		var page = Render<Welcome>();
 		await page.Find("[data-guide-path=mush]").ClickAsync();
-		for (var i = 0; i < 4; i++)
+		for (var i = 0; i < 5; i++)
 			await page.Find(".guide-panel-actions .guide-action").ClickAsync();
 		await Assert.That(page.FindAll(".welcome-explore").Count).IsEqualTo(1);
 		await Assert.That(page.FindAll(".guide-lesson").Count).IsEqualTo(0);

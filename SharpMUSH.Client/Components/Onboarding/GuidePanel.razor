@@ -16,11 +16,10 @@
         <h2 aria-live="polite">@Lesson.Title</h2>
         <p>@Lesson.Body</p>
         @Context
-        @if (Lesson.Id == "continue")
+        @if (Lesson.Id == "channels")
         {
             <section class="guide-channels" aria-label="@Loc["GuideChannelsTitle"]">
-                <h3>@Loc["GuideChannelsTitle"]</h3>
-                <p>@Loc["GuideChannelsDiscover"]</p>
+
                 <ol>
                     <li><code>@@channel/list</code> — @Loc["GuideChannelsList"]</li>
                     <li><code>@@channel/what NAME</code> — @Loc["GuideChannelsDescription"]</li>

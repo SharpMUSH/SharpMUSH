@@ -167,7 +167,7 @@ public class OnboardingServiceTests
 		await guide.ChoosePathAsync(GuidePath.Mush);
 		foreach (var lesson in GuideCatalog.Player(GuidePath.Mush)) await guide.CompleteStepAsync(lesson.Id);
 		await Assert.That(guide.Progress.Active).IsFalse();
-		await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "place", "sign-in", "world", "continue" });
+		await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "place", "sign-in", "world", "channels", "continue" });
 		await Assert.That(guide.Progress.SkippedStepIds).IsEmpty();
 	}
 

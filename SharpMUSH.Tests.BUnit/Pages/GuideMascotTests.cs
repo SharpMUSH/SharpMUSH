@@ -11,10 +11,10 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class GuideMascotTests : TrackingBunitContext
 {
 	[Test]
-	public async Task FinalLessonTeachesChannelDiscoveryAndAudience()
+	public async Task ChannelLessonTeachesDiscoveryAndAudience()
 	{
 		Services.AddSingleton<IStringLocalizer<SharedResource>>(PortalLocalizer.Create());
-		var cut = Render<GuidePanel>(p => p.Add(x => x.Lesson, GuideCatalog.Player(GuidePath.Discord).Last()));
+		var cut = Render<GuidePanel>(p => p.Add(x => x.Lesson, GuideCatalog.Player(GuidePath.Discord).Single(x => x.Id == "channels")));
 		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("@channel/list");
 		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("@channel/on NAME");
 		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("not just your room");

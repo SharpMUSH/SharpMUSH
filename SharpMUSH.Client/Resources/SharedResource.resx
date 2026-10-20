@@ -9496,10 +9496,10 @@
   <data name="GuideCommand_page_Audience" xml:space="preserve"><value>One named player</value></data>
   <data name="GuidePackagesLabel" xml:space="preserve"><value>Package commands for your character</value></data>
   <data name="GuidePackagesCheck" xml:space="preserve"><value>Check available commands for {0}</value></data>
-  <data name="GuidePackagesLoading" xml:space="preserve"><value>Checking commands for {0}…</value></data>
-  <data name="GuidePackagesError" xml:space="preserve"><value>The command check failed. Try again; no commands were sent.</value></data>
+  <data name="GuidePackagesLoading" xml:space="preserve"><value>Loading game help…</value></data>
+  <data name="GuidePackagesError" xml:space="preserve"><value>Game help is unavailable right now. Type help in the game.</value></data>
   <data name="GuidePackagesEmpty" xml:space="preserve"><value>No verified package suggestions are available for this character here. Other packages may still be installed; use the game’s own help.</value></data>
-  <data name="GuidePackagesExplanation" xml:space="preserve"><value>These help commands were checked for your current character. Type them in the Game command box (or Command mode in Story) when you want to read more. Access can change as you move or game settings change; check again when needed. Nothing is sent by this guide.</value></data>
+  <data name="GuidePackagesExplanation" xml:space="preserve"><value>For this game's extra features, try:</value></data>
   <data name="GuidePackagesVersion" xml:space="preserve"><value>{0}, version {1}</value></data>
   <data name="GuidePackagesReference" xml:space="preserve"><value>Package reference (opens a new tab)</value></data>
   <data name="GuideCharacterConnectionFailed" xml:space="preserve"><value>Your character is saved, but we could not connect to the game. Retry the connection, or return to your account and play later.</value></data>
@@ -9608,4 +9608,12 @@
   <data name="GuideCommand_channel_on_Audience" xml:space="preserve"><value>May announce your membership to the channel</value></data>
   <data name="GuideCommand_chat_Meaning" xml:space="preserve"><value>Talk on a channel</value></data>
   <data name="GuideCommand_chat_Audience" xml:space="preserve"><value>People listening to that channel, wherever they are</value></data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
 </root>
