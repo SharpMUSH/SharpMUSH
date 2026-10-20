@@ -80,7 +80,8 @@ public partial class Commands
 			return new CallState(player.Object.DBRef);
 		}
 
-		await TriggerLoginFailAsync(handle, ipAddress, "invalid or expired native login token", "#-1", "token");
+		await TriggerLoginFailAsync(handle, ipAddress, "invalid or expired native login token", "#-1", "token",
+			badCredentials: !policyNotified);
 		if (!policyNotified)
 			await NotifyService.Notify(handle, "Invalid or expired login token. Generate a new one in the portal.");
 		return new CallState(ErrorMessages.Returns.InvalidPassword);

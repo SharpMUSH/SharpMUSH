@@ -132,12 +132,6 @@ public partial class Commands
 			return new None();
 		}
 
-		var ipAddress = AddressOf(handle);
-		if (await IsOverConnectFailLimitAsync(handle, ipAddress))
-		{
-			return new None();
-		}
-
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
 		// Arguments["0"] holds the entire remainder of the line after the command word,
 		// so we split it on whitespace ourselves.
@@ -158,12 +152,24 @@ public partial class Commands
 			return new None();
 		}
 
-		return await AccountService.AuthenticateAsync(identifier, password) switch
+		if (!await BeginLoginAttemptAsync(handle, AddressOf(handle)))
 		{
-			SharpAccount account => await AccountLoggedInAsync(handle, account),
-			AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
-			NotFound => await BadCredentialsAsync(handle, ipAddress, "Invalid account name or password.")
-		};
+			return new None();
+		}
+
+		try
+		{
+			return await AccountService.AuthenticateAsync(identifier, password) switch
+			{
+				SharpAccount account => await AccountLoggedInAsync(handle, account),
+				AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
+				NotFound => await BadCredentialsAsync(handle, "Invalid account name or password.")
+			};
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
 	}
 
 	private async ValueTask<Option<CallState>> RefusedAsync(long handle, string message)
@@ -173,9 +179,9 @@ public partial class Commands
 	}
 
 	/// <summary>A wrong account or character password, which counts toward <c>connect_fail_limit</c>.</summary>
-	private async ValueTask<Option<CallState>> BadCredentialsAsync(long handle, string ipAddress, string message)
+	private async ValueTask<Option<CallState>> BadCredentialsAsync(long handle, string message)
 	{
-		LoginFailures.Record(ipAddress);
+		LoginFailures.Fail(handle);
 		return await RefusedAsync(handle, message);
 	}
 
@@ -423,12 +429,6 @@ public partial class Commands
 			return new None();
 		}
 
-		var ipAddress = AddressOf(handle);
-		if (await IsOverConnectFailLimitAsync(handle, ipAddress))
-		{
-			return new None();
-		}
-
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]; Arguments["0"] holds the
 		// rest of the line. The password is its last word, and everything before it is the name.
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message.ToPlainText()?.Trim() : null;
@@ -442,12 +442,24 @@ public partial class Commands
 		var charName = arg0[..split].Trim();
 		var charPassword = arg0[(split + 1)..];
 
-		return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
+		if (!await BeginLoginAttemptAsync(handle, AddressOf(handle)))
 		{
-			SharpPlayer claimed => await ClaimedAsync(handle, claimed),
-			LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
-			NotFound => await BadCredentialsAsync(handle, ipAddress, "No character has that name and password."),
-		};
+			return new None();
+		}
+
+		try
+		{
+			return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
+			{
+				SharpPlayer claimed => await ClaimedAsync(handle, claimed),
+				LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
+				NotFound => await BadCredentialsAsync(handle, "No character has that name and password."),
+			};
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
 	}
 
 	/// <summary>Tells the socket the character is now on its account, and how to play it.</summary>

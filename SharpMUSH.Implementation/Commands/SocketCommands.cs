@@ -234,11 +234,25 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		if (await IsOverConnectFailLimitAsync(handle, ipAddress))
+		if (!await BeginLoginAttemptAsync(handle, ipAddress))
 		{
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		try
+		{
+			return await ConnectAdmittedAsync(parser, handle, username, password, ipAddress, hostName, mode);
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
+	}
+
+	/// <summary>The connect commands once the address may try: a guest, a token or a player.</summary>
+	private async ValueTask<Option<CallState>> ConnectAdmittedAsync(IMUSHCodeParser parser, long handle, string username,
+		string password, string ipAddress, string hostName, ConnectMode mode)
+	{
 		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
 		{
 			return await HandleGuestLogin(parser, handle, ipAddress, hostName);
@@ -292,24 +306,25 @@ public partial class Commands
 			null, // System event
 			handle.ToString(),
 			ipAddress,
-			(badCredentials ? LoginFailures.Record(ipAddress) : LoginFailures.Count(ipAddress)).ToString(),
+			(badCredentials ? LoginFailures.Fail(handle) : LoginFailures.Count(ipAddress)).ToString(),
 			reason,
 			playerObjid,
 			name);
 
 	/// <summary>
 	/// PennMUSH's <c>check_fails</c> (<c>src/player.c</c>): once an address has failed
-	/// <c>connect_fail_limit</c> logins in ten minutes, it is told so and nothing else is tried.
+	/// <c>connect_fail_limit</c> logins in ten minutes, it is told so and nothing else is tried. An
+	/// admitted attempt holds its place in the count until the caller ends it.
 	/// </summary>
-	private async ValueTask<bool> IsOverConnectFailLimitAsync(long handle, string ipAddress)
+	private async ValueTask<bool> BeginLoginAttemptAsync(long handle, string ipAddress)
 	{
-		if (LoginFailures.Count(ipAddress) < Configuration.CurrentValue.Limit.ConnectFailLimit)
+		if (LoginFailures.TryBegin(ipAddress, handle, Configuration.CurrentValue.Limit.ConnectFailLimit))
 		{
-			return false;
+			return true;
 		}
 
 		await NotifyService.Notify(handle, "This IP address has failed too many times. Please try again in 10 minutes.");
-		return true;
+		return false;
 	}
 
 	/// <summary>Checks the password and the account, then binds the connection to the player and logs it in.</summary>
