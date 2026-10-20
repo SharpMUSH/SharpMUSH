@@ -7,7 +7,7 @@ Roslyn source generators for C# SharpMUSH plugins. This package generates
 Reference this package alongside `SharpMUSH.Library`, using matching versions:
 
 ```xml
-<PackageReference Include="SharpMUSH.Implementation.Generated" Version="2.0.0"
+<PackageReference Include="SharpMUSH.Implementation.Generated" Version="3.0.0"
                   PrivateAssets="all" />
 ```
 

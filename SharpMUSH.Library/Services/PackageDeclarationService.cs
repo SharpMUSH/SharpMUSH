@@ -31,6 +31,7 @@ public sealed class PackageDeclarationService(
 		List<string> notes,
 		CancellationToken cancellationToken = default)
 	{
+		writes.Origin.RequireDeclarations(roles, packages, claims, mediator, indexBuilder);
 		var plan = await PlanCoreAsync(packageId, declared, owned, cancellationToken);
 		if (plan.IsBlocked)
 		{

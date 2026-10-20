@@ -222,6 +222,7 @@ internal static class EngineRegistration
 		// A package's roles, permissions, categories and @job schedules (manifest format 1.2).
 		services.AddSingleton<IPackageDeclarationService, PackageDeclarationService>();
 		services.AddSingleton<IPackageSettingService, PackageSettingService>();
+		services.AddPackageWriteTransactions<SharpMUSH.Database.Lightning.LightningDatabase>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
 		services.AddSingleton(EngineVersion.FromAssemblyVersion(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();

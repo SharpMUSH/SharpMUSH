@@ -10,6 +10,8 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
+using SharpMUSH.Tests.Packages;
+
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
 public partial class IntegratedWikiMutationTests
@@ -48,10 +50,7 @@ public partial class IntegratedWikiMutationTests
 			await Assert.That(ReferenceEquals(provider, host.Services.GetRequiredService<LightningDatabase>())).IsTrue();
 			await Assert.That(owner.IsQuarantined).IsFalse();
 			await Assert.That(() => owner.Dispose()).Throws<InvalidOperationException>();
-			await using (var writes = new PackageWriteTransaction(mediator,
-				services.GetRequiredService<IObjectStore>(), services.GetRequiredService<IAttributeStore>(),
-				services.GetRequiredService<IFlagAndPowerStore>(), services.GetRequiredService<IPackageRegistryService>(),
-				services.GetRequiredService<IApplicationRegistryService>(), services.GetRequiredService<ILockService>(), god))
+			await using (var writes = TestPackageWrites.Issue(services, god))
 			{
 				await writes.SetAttributeAsync(new DBRef(1), ["RETENTION_VALUE"], MarkupText.Plain("changed"), god, CancellationToken.None);
 				await Assert.That((await provider.GetAttributeAsync(new DBRef(1), ["RETENTION_VALUE"]).LastAsync()).Value.ToPlainText()).IsEqualTo("changed");

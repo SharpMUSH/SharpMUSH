@@ -87,8 +87,7 @@ public class PackageSchedulerRecoveryTests
 			{
 				try
 				{
-					await using var writes = new PackageWriteTransaction(Mediator, Database, Database, Database, Registry,
-						(IApplicationRegistryService)Database, Locks, pm);
+					await using var writes = TestPackageWrites.Issue(World.Services, pm);
 					await Assert.That(await writes.SetLockAsync(node, "Use", "#FALSE", token) is Success).IsTrue();
 					await writes.SetAttributeAsync(dbref, ["RECOVERY_VALUE"], MarkupText.Plain("changed"), pm, token);
 					await writes.UpsertManagedAttributeAsync(baseline with { BaselineValue = "changed" });

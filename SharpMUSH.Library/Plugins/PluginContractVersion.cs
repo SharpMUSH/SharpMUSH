@@ -12,12 +12,12 @@ namespace SharpMUSH.Library.Plugins;
 public static class PluginContractVersion
 {
 	/// <summary>The contract version this server implements.</summary>
-	public static readonly PackageVersion Current = new(2, 0, 0);
+	public static readonly PackageVersion Current = new(3, 0, 0);
 
 	/// <summary>
 	/// True when this server satisfies a managed package's minimum requirement. The constraint's lower bound
 	/// names the contract the plugin was built against, and a major version apart breaks binary compatibility,
-	/// so <c>&gt;=1.0</c> is refused by a 2.x server as <c>&gt;=3.0</c> is.
+	/// so <c>&gt;=2.0</c> is refused by a 3.x server as <c>&gt;=4.0</c> is.
 	/// </summary>
 	public static bool Satisfies(VersionConstraint minServerVersion) =>
 		BuiltAgainst(minServerVersion)?.Major == Current.Major

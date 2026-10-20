@@ -12,6 +12,8 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Services;
 
+using SharpMUSH.Tests.Packages;
+
 namespace SharpMUSH.Tests.Wiki.Semantics;
 
 public partial class IntegratedWikiMutationTests
@@ -223,11 +225,12 @@ public partial class IntegratedWikiMutationTests
 		{
 			beforeInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 1));
 			await host.Services.GetRequiredService<IPackageInstallService>().UninstallAsync("begin-nested-missing");
-			afterInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 2));
+			// The inner runner and the inner transaction's retained BEGIN each count an attempt.
+			afterInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 3));
 			return false;
 		});
 		await Assert.That(beforeInner && afterInner).IsTrue();
-		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 2))).IsTrue();
+		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 3))).IsTrue();
 	}
 
 	[Test]
@@ -280,10 +283,7 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(async () => await services.GetRequiredService<IPackageOperationRunner>().RunAsync<int>("begin-compensation", async ct =>
 		{
 			beganBeforeWrite = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 1));
-			await using var writes = new PackageWriteTransaction(mediator,
-				services.GetRequiredService<IObjectStore>(), services.GetRequiredService<IAttributeStore>(),
-				services.GetRequiredService<IFlagAndPowerStore>(), services.GetRequiredService<IPackageRegistryService>(),
-				services.GetRequiredService<IApplicationRegistryService>(), services.GetRequiredService<ILockService>(), god);
+			await using var writes = TestPackageWrites.Issue(services, god);
 			await writes.SetAttributeAsync(new DBRef(1), ["BEGIN_UNDO"], MarkupText.Plain("changed"), god, ct);
 			forwardWritten = (await provider.GetAttributeAsync(new DBRef(1), ["BEGIN_UNDO"], ct).LastAsync()).Value.ToPlainText() == "changed";
 			throw new ArithmeticException("Owned compensation failure");

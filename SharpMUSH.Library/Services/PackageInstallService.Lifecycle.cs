@@ -27,6 +27,7 @@ public partial class PackageInstallService
 	private async Task<Result<Success>> UninstallExclusiveAsync(
 		string packageId, bool force, CancellationToken cancellationToken)
 	{
+		await using var writes = await BeginWritesAsync(cancellationToken);
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
@@ -111,7 +112,6 @@ public partial class PackageInstallService
 			}
 		}
 
-		await using var writes = BeginWrites(await GetPackageManagerWizardAsync(cancellationToken));
 		return await RetirePackageAsync(writes, installed, ownObjects, cancellationToken) switch
 		{
 			Error<string> error => await writes.RevertAsync(error),
@@ -262,6 +262,7 @@ public partial class PackageInstallService
 	private async Task<Result<PackageRollbackResult>> RollbackExclusiveAsync(
 		string packageId, int revision, CancellationToken cancellationToken)
 	{
+		await using var writes = await BeginWritesAsync(cancellationToken);
 		if (await registry.GetInstalledPackageAsync(packageId) is not InstalledPackageRecord installed)
 		{
 			return new Error<string>($"'{packageId}' is not installed.");
@@ -334,7 +335,7 @@ public partial class PackageInstallService
 		return await PlanObjectRollbackAsync(packageId, revision, snapshot, cancellationToken) switch
 		{
 			ObjectRollback objects => await RestoreRevisionAsync(
-				installed, record, snapshot, managedAttributes, sharedRefs, objects, cancellationToken),
+				writes, installed, record, snapshot, managedAttributes, sharedRefs, objects, cancellationToken),
 			Error<string> error => error
 		};
 	}
@@ -404,6 +405,7 @@ public partial class PackageInstallService
 	/// own released last, and the new revision record committing it.
 	/// </summary>
 	private async Task<PackageRollbackResult> RestoreRevisionAsync(
+		PackageWriteTransaction writes,
 		InstalledPackageRecord installed,
 		PackageRevisionRecord record,
 		PackageRevisionSnapshot snapshot,
@@ -414,8 +416,7 @@ public partial class PackageInstallService
 	{
 		var packageId = installed.Id;
 		var revision = record.Revision;
-		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
-		await using var writes = BeginWrites(pmWizard);
+		var pmWizard = writes.PackageManager;
 		var notes = new List<string>();
 		var restoredKeys = new HashSet<(string, string)>();
 

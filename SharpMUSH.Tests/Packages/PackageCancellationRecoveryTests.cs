@@ -21,12 +21,8 @@ public class PackageCancellationRecoveryTests
 	private ILockService Locks => WebAppFactoryArg.Services.GetRequiredService<ILockService>();
 	private IPackageRegistryService Registry => (IPackageRegistryService)Database;
 
-	private async Task<PackageWriteTransaction> BeginAsync(TimeProvider? clock = null) => new(
-		Mediator, Database, Database, Database, Registry, (IApplicationRegistryService)Database,
-		Locks, (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>())
-	{
-		RecoveryClock = clock ?? TimeProvider.System
-	};
+	private async Task<PackageWriteTransaction> BeginAsync(TimeProvider? clock = null) => TestPackageWrites.Issue(
+		WebAppFactoryArg.Services, (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>(), clock);
 
 	[Test]
 	public async Task Dispose_FailedInverseIsObservableAndOtherInversesAreAttempted()
@@ -165,8 +161,7 @@ public class PackageCancellationRecoveryTests
 		using (var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan, executionCancellation.Token))
 		using (budget.Enter())
 		{
-			var writes = new PackageWriteTransaction(Mediator, Database, Database, Database, Registry,
-				(IApplicationRegistryService)Database, Locks, pm);
+			var writes = TestPackageWrites.Issue(WebAppFactoryArg.Services, pm);
 			try
 			{
 				var changed = await writes.SetLockAsync(node, "Use", "#FALSE", executionCancellation.Token);

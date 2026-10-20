@@ -15,7 +15,7 @@ namespace SharpMUSH.Library.Services;
 /// that fails is reverted by replaying the inverses newest first, which returns everything it
 /// touched to what it was before, however often it was written:
 /// <code>
-/// await using var writes = BeginWrites(packageManager);
+/// await using var writes = await transactions.CreateAsync(packageManager, cancellationToken);
 /// // ... writes through `writes` ...
 /// await registry.AddPackageRevisionAsync(revision); // the commit write
 /// writes.Commit();
@@ -33,16 +33,39 @@ namespace SharpMUSH.Library.Services;
 /// reversed: a revision record, or the package's removal. This is the permanent contract (#1186):
 /// docs/design/world-transactions.md §0 says what a crash leaves behind and how an operator recovers.
 /// </remarks>
-public sealed class PackageWriteTransaction(
-	IMediator mediator,
-	IObjectStore objects,
-	IAttributeStore attributes,
-	IFlagAndPowerStore flags,
-	IPackageRegistryService registry,
-	IApplicationRegistryService applications,
-	ILockService locks,
-	SharpPlayer packageManager) : IAsyncDisposable
+public sealed class PackageWriteTransaction : IAsyncDisposable
 {
+	private readonly IMediator mediator;
+	private readonly IObjectStore objects;
+	private readonly IAttributeStore attributes;
+	private readonly IFlagAndPowerStore flags;
+	private readonly IPackageRegistryService registry;
+	private readonly IApplicationRegistryService applications;
+	private readonly ILockService locks;
+	private readonly SharpPlayer packageManager;
+	private readonly IAsyncDisposable _lifetime;
+
+	/// <summary>Issued only by <see cref="PackageWriteTransactionFactory"/>; obtain one through <see cref="IPackageWriteTransactionFactory"/>.</summary>
+	internal PackageWriteTransaction(PackageWriteTransactionFactory origin, IMediator transactionMediator,
+		IObjectStore transactionObjects, IAttributeStore transactionAttributes, IFlagAndPowerStore transactionFlags,
+		IPackageRegistryService transactionRegistry, IApplicationRegistryService transactionApplications,
+		ILockService transactionLocks, SharpPlayer manager, IAsyncDisposable lifetime)
+	{
+		Origin = origin;
+		mediator = transactionMediator;
+		objects = transactionObjects;
+		attributes = transactionAttributes;
+		flags = transactionFlags;
+		registry = transactionRegistry;
+		applications = transactionApplications;
+		locks = transactionLocks;
+		packageManager = manager;
+		_lifetime = lifetime;
+	}
+
+	/// <summary>The world this transaction was issued for; helpers check their own services against it.</summary>
+	internal PackageWriteTransactionFactory Origin { get; }
+
 	/// <summary>The Package Manager wizard this operation writes as.</summary>
 	public SharpPlayer PackageManager => packageManager;
 
@@ -120,16 +143,12 @@ public sealed class PackageWriteTransaction(
 		Task pending;
 		lock (_stateGate)
 		{
-			if (_committed)
-			{
-				if (explicitRevert) throw new InvalidOperationException("The package transaction has committed.");
-				return Task.FromResult<IReadOnlyList<string>>([]);
-			}
+			if (_committed && explicitRevert) throw new InvalidOperationException("The package transaction has committed.");
 
 			if (_recovery is not null) return _recovery;
 			completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
 			_recovery = completion.Task;
-			_reportImplicitFailure = !explicitRevert;
+			_reportImplicitFailure = !explicitRevert && !_committed;
 			pending = _forward?.Task ?? Task.CompletedTask;
 		}
 
@@ -141,20 +160,24 @@ public sealed class PackageWriteTransaction(
 
 	private async Task RecoverAsync(Task pending, TaskCompletionSource<IReadOnlyList<string>> completion)
 	{
+		IReadOnlyList<string> unrestored = [];
+		Exception? failure = null;
 		try
 		{
 			await pending;
-			IReadOnlyList<string> unrestored;
-			using (new OwnedExecution(this))
+			if (!_committed)
 			{
-				unrestored = await RevertAllAsync();
+				using (new OwnedExecution(this)) unrestored = await RevertAllAsync();
 			}
-			completion.SetResult(unrestored);
 		}
-		catch (Exception ex)
-		{
-			completion.SetException(ex);
-		}
+		catch (Exception error) { failure = error; }
+
+		// Physical ownership ends only after actual forward work and compensation have joined.
+		// Commit alone cannot release it, and every closer shares this same terminal completion.
+		try { await _lifetime.DisposeAsync(); }
+		catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
+		if (failure is not null) completion.SetException(failure);
+		else completion.SetResult(unrestored);
 	}
 
 	private void RequireOpen()

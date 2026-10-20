@@ -72,8 +72,7 @@ public partial class PackageWriteTransactionTests
 			await JoinOrReleaseAsync(nested, release.Task);
 			sourceReached = true;
 		});
-		writes = new PackageWriteTransaction(Mediator, Database, Database, Database, Registry, applications,
-			WebAppFactoryArg.Services.GetRequiredService<ILockService>(), await PackageManagerAsync());
+		writes = TestPackageWrites.Compose(WebAppFactoryArg.Services, applications, await PackageManagerAsync());
 		var forward = writes.RemoveApplicationAsync("recursive-forward-" + Guid.NewGuid().ToString("N"));
 		try
 		{
@@ -144,8 +143,7 @@ public partial class PackageWriteTransactionTests
 			captured = Task.Run(async () => { await release.Task; await transaction.DisposeAsync(); });
 			return Task.CompletedTask;
 		});
-		writes = new PackageWriteTransaction(Mediator, Database, Database, Database, Registry, applications,
-			WebAppFactoryArg.Services.GetRequiredService<ILockService>(), await PackageManagerAsync());
+		writes = TestPackageWrites.Compose(WebAppFactoryArg.Services, applications, await PackageManagerAsync());
 		try
 		{
 			await writes.RemoveApplicationAsync("expired-forward-" + Guid.NewGuid().ToString("N"));
