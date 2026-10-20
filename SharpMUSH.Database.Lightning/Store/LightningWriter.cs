@@ -63,7 +63,34 @@ internal sealed class LightningWriter : IDisposable
 	/// inside one of its own read sections, whose lock it could not take again.</summary>
 	private readonly Func<bool> _mayRunInline;
 
+	private readonly object _stateGate = new();
+	private readonly object _disposeGate = new();
 	private volatile bool _disposed;
+	private bool _joined;
+
+	// Synchronous callbacks can nest writers. Remember every ancestor, rather than just the current
+	// writer, so disposal cannot join a turn held anywhere on this thread's execution stack.
+	[ThreadStatic] private static ExecutionFrame? _execution;
+
+	private sealed class ExecutionFrame : IDisposable
+	{
+		internal readonly LightningWriter Writer;
+		internal readonly ExecutionFrame? Parent;
+		internal ExecutionFrame(LightningWriter writer)
+		{
+			Writer = writer;
+			Parent = _execution;
+			_execution = this;
+		}
+		public void Dispose() => _execution = Parent;
+	}
+
+	internal void RequireExternalDisposal()
+	{
+		for (var frame = _execution; frame is not null; frame = frame.Parent)
+			if (ReferenceEquals(frame.Writer, this))
+				throw new InvalidOperationException("A writer callback cannot dispose its own or an ancestor writer.");
+	}
 
 	public LightningWriter(Action<IReadOnlyList<BatchItem>> executeBatch, Func<Func<LightningTransaction, object?>, object?> executeRaw, int maxBatch,
 		Func<bool>? mayRunInline = null)
@@ -127,6 +154,7 @@ internal sealed class LightningWriter : IDisposable
 
 			try
 			{
+				using var execution = new ExecutionFrame(this);
 				_executeBatch([item]);
 			}
 			catch (Exception ex)
@@ -149,8 +177,16 @@ internal sealed class LightningWriter : IDisposable
 		return true;
 	}
 
-	public void Pause() => _resume.Reset();
-	public void Resume() => _resume.Set();
+	public void Pause()
+	{
+		lock (_stateGate)
+			if (!_disposed) _resume.Reset();
+	}
+	public void Resume()
+	{
+		lock (_stateGate)
+			if (!_disposed) _resume.Set();
+	}
 
 	/// <summary>
 	/// Drains and pauses in one step: completes once every job queued before this call has finished and
@@ -167,8 +203,13 @@ internal sealed class LightningWriter : IDisposable
 		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var park = new SoloJob(() =>
 		{
-			_resume.Reset();
-			parked.SetResult();
+			lock (_stateGate)
+			{
+				// Dispose may have closed admission while this park waited behind an earlier job.
+				// Never consume its wake-up: shutdown must drain this job and the rest of the queue.
+				if (!_disposed) _resume.Reset();
+				parked.SetResult();
+			}
 			_resume.Wait();
 			return null;
 		}, completion, CancellationToken.None);
@@ -199,6 +240,7 @@ internal sealed class LightningWriter : IDisposable
 				// before it.
 				if (!reader.TryRead(out var first)) continue;
 
+				using var execution = new ExecutionFrame(this);
 				if (first is SoloJob solo)
 				{
 					RunSolo(solo);
@@ -275,24 +317,28 @@ internal sealed class LightningWriter : IDisposable
 		}
 	}
 
-	/// <summary>Closes the queue, wakes a parked writer and waits for the thread to finish the job it is on,
-	/// then for a caller's own job still running. The resume event is disposed only once that thread has
-	/// actually exited — a job still running would otherwise wait on a disposed event. The turn is never
-	/// disposed: it holds no wait handle, and a caller that read <see cref="_disposed"/> just before it was
-	/// set must still be able to try it.</summary>
+	/// <summary>Stops admission, drains queued jobs and joins both the writer thread and any admitted
+	/// inline execution before returning. Native owners may release their environment only afterwards.
+	/// A callback cannot dispose its own execution stack; that refusal precedes any state change.
+	/// The turn is never disposed, since an enqueue that observed open admission may still try it.</summary>
 	public void Dispose()
 	{
-		_queue.Writer.TryComplete();
-		_resume.Set();
-		if (Thread.CurrentThread == _thread) return;
-		var exited = _thread.Join(TimeSpan.FromSeconds(10));
-
-		// Once this holds the turn, no caller's own job is running, and none starts after: they see
-		// _disposed and queue instead, which the closed queue refuses.
-		var holding = _turn.Wait(TimeSpan.FromSeconds(10));
-		_disposed = true;
-		if (holding) _turn.Release();
-
-		if (exited) _resume.Dispose();
+		RequireExternalDisposal();
+		lock (_disposeGate)
+		{
+			if (_joined) return;
+			lock (_stateGate)
+			{
+				_disposed = true;
+				_queue.Writer.TryComplete();
+				_resume.Set();
+			}
+			_thread.Join();
+			// An inline execution may still own the turn even when no job ever entered the queue.
+			_turn.Wait();
+			_turn.Release();
+			lock (_stateGate) _resume.Dispose();
+			_joined = true;
+		}
 	}
 }

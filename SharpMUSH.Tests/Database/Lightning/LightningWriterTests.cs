@@ -3,7 +3,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
-public class LightningWriterTests
+public partial class LightningWriterTests
 {
 	private readonly List<string> _paths = [];
 
@@ -66,15 +66,10 @@ public class LightningWriterTests
 	}
 
 	/// <summary>
-	/// Disposing the store while the writer thread is mid-job must not take the process with it. Dispose
-	/// completes the queue and signals the resume event; if it then disposed that event while the thread
-	/// was still inside a job, the thread's next wait on it throws <see cref="ObjectDisposedException"/> on
-	/// a thread with no handler — an unhandled exception, which is process death, not a failed test. The
-	/// job below sleeps long enough that Dispose lands while it runs; the assertion is simply that we are
-	/// still here afterwards and its task reached a terminal state. Dispose's join outlasts a job this
-	/// short, so this guards the contract rather than reproducing the join-timeout path itself — which
-	/// cannot be provoked without holding a job past the ten-second join and tearing the environment down
-	/// under a live transaction.
+	/// Disposing the store must join actual writer execution before releasing the native environment
+	/// or resume event. This short native round trip verifies committed work survives concurrent close.
+	/// DisposalWaitsForActualExecutionBeyondOldTimeout separately holds the real writer beyond the old
+	/// join deadline using a managed backend, so its RED reproduction cannot unmap a live transaction.
 	/// </summary>
 	[Test]
 	public async Task DisposingWhileAJobIsRunningDoesNotKillTheProcess()

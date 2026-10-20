@@ -43,7 +43,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			if (_phase != SemanticFixturePhase.Inactive || _active is null || _ownership.IsRevoked
+			if (_phase != SemanticFixturePhase.Inactive || _active is null || _active.IsClosing || _active.NativeClosed || _ownership.IsRevoked
 				|| _ownership.IsQuarantined || _poisoned) return false;
 			_everMutatingPackageAdmitted = true;
 			return true;
@@ -54,7 +54,7 @@ internal sealed partial class SemanticFixtureCapability
 		lock (_gate)
 		{
 			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease)
-				|| !_initialized || !lease.IsInitialized || _phase != SemanticFixturePhase.Inactive
+				|| !_initialized || !lease.IsInitialized || lease.IsClosing || lease.NativeClosed || _phase != SemanticFixturePhase.Inactive
 				|| _ownership.IsRevoked || _ownership.IsQuarantined || _poisoned) throw Unavailable();
 			_everMutatingPackageAdmitted = true;
 		}
@@ -63,7 +63,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			if (_active is null || _ownership.IsRevoked || _poisoned || _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed)
+			if (_active is null || _active.IsClosing || _active.NativeClosed || _ownership.IsRevoked || _poisoned || _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed)
 				throw Unavailable();
 			if (_phase == SemanticFixturePhase.Active && operation == SemanticFixtureMutation.Unsupported)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
@@ -80,7 +80,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			if (!ReferenceEquals(lease.Owner, this) || _active is null || _poisoned || _phase != lease.Phase
+			if (!ReferenceEquals(lease.Owner, this) || _active is null || _active.IsClosing || _active.NativeClosed || _poisoned || _phase != lease.Phase
 				|| _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed) throw Unavailable();
 		}
 	}
@@ -89,7 +89,7 @@ internal sealed partial class SemanticFixtureCapability
 		lock (_gate)
 		{
 			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease) || !_initialized || !lease.IsInitialized || _poisoned
-				|| _ownership.IsRevoked || _ownership.IsQuarantined || _phase != SemanticFixturePhase.Inactive
+				|| _ownership.IsRevoked || _ownership.IsQuarantined || lease.IsClosing || lease.NativeClosed || _phase != SemanticFixturePhase.Inactive
 				|| _legacyMutationsInFlight != 0 || _everMutatingPackageAdmitted || !_installerFenceInstalled || !_runnerFenceInstalled)
 				throw Unavailable();
 			_phase = SemanticFixturePhase.Activating;

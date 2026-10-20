@@ -10,20 +10,23 @@ public sealed partial class LightningStore
 {
 	// This marker is an invalidation history, never evidence that a lifecycle has settled.
 	private static ReadOnlySpan<byte> FixturePackageStateKey => "prototype.semantic.package-settlement/v1"u8;
-	private sealed record FixturePackageWriteTracking(SemanticFixtureCapability Owner);
+	private sealed record FixturePackageWriteTracking(SemanticFixtureLease Lease)
+	{
+		internal SemanticFixtureCapability Owner => Lease.Owner;
+	}
 	private FixturePackageWriteTracking? _fixturePackageTracking;
 
-	internal void AttachFixturePackageTracking(SemanticFixtureCapability owner)
+	internal void AttachFixturePackageTracking(SemanticFixtureLease lease)
 	{
 		if (_fixturePackageTracking is not null) throw new InvalidOperationException("Fixture tracking is already attached.");
-		_fixturePackageTracking = new(owner);
+		_fixturePackageTracking = new(lease);
 	}
 
 	// A conservative attempt fence: successful return proves only a committed UNKNOWN marker.
 	// The writer owns completion through commit; cancellation never detaches an in-flight transaction.
 	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct)
 	{
-		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Owner, lease.Owner))
+		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
 			throw SemanticFixtureCapability.Unavailable();
 		tracking.Owner.RequirePackageAttempt(lease);
 		ct.ThrowIfCancellationRequested();
@@ -49,6 +52,7 @@ public sealed partial class LightningStore
 	private void RefuseUnclassifiedFixtureWrite()
 	{
 		if (_fixturePackageTracking is not { } tracking) return;
+		tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
 		_ = tracking.Owner.AdmitPackageMutation();
 		throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
 	}
@@ -92,6 +96,7 @@ public sealed partial class LightningStore
 					|| Protects("prototype.semantic.fixture.identity/v1"u8, key, prefixDelete)))
 					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
+				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
 				if (!tracking.Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
 				var meta = Db(Tables.Meta);
 				var identity = tracking.Owner.FixtureId;

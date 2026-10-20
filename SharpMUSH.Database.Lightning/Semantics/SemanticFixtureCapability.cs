@@ -157,6 +157,9 @@ internal sealed partial class SemanticFixtureCapability : IDisposable
 		lock (_gate)
 		{
 			if (_active != lease || !_ownership.MayReleaseLease) return;
+			if (HasRetainedOperations(lease)) throw new SemanticFixtureOperationInProgressException();
+			if (lease.NativeOpenAttempted && !lease.NativeClosed)
+				throw new InvalidOperationException("Close native fixture storage before releasing its lease.");
 			if (!_initialized) _poisoned = true;
 			_active = null;
 		}
@@ -191,6 +194,9 @@ internal sealed class SemanticFixtureLease : IDisposable
 	internal string CanonicalPath => _owner.CanonicalPath;
 	internal bool IsFirstOpen { get; }
 	internal bool IsInitialized { get; private set; }
+	internal bool IsClosing { get; set; }
+	internal bool NativeOpenAttempted { get; set; }
+	internal bool NativeClosed { get; set; }
 	internal void MarkInitialized() => IsInitialized = true;
 	internal void Initialized() => _owner.Initialized(this);
 	internal void InitializationFailed() => _owner.InitializationFailed(this);

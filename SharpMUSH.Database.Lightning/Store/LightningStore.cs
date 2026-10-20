@@ -40,6 +40,8 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	private bool _disposed;
+	private readonly object _fixtureStoreDisposeGate = new();
+	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _fixtureStoreCloseFailure;
 
 	/// <summary>Forces a sync every <see cref="LightningStoreOptions.FlushInterval"/> under
 	/// <see cref="LightningSyncMode.Periodic"/>; null in the other modes, where every commit syncs itself.</summary>
@@ -245,7 +247,7 @@ public sealed partial class LightningStore : IDisposable
 	/// modes need on the way out (<see cref="MDBResultCode.Success"/> under Full, which has nothing
 	/// unflushed). The environment is disposed whichever way that flush went; the caller decides how to
 	/// report a failure once its own cleanup is complete.</summary>
-	internal MDBResultCode Close()
+	private MDBResultCode Close()
 	{
 		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
@@ -663,9 +665,39 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	internal void RequireExternalDisposal() => _writer.RequireExternalDisposal();
+
 	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
 	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()
+	{
+		RequireExternalDisposal();
+		if (_fixturePackageTracking is not { } tracking)
+		{
+			DisposeCore();
+			return;
+		}
+
+		lock (_fixtureStoreDisposeGate)
+		{
+			_fixtureStoreCloseFailure?.Throw();
+			if (_disposed) return;
+			tracking.Owner.BeginNativeClose(tracking.Lease);
+			try
+			{
+				DisposeCore();
+				tracking.Owner.ConfirmNativeClose(tracking.Lease);
+			}
+			catch (Exception error)
+			{
+				_fixtureStoreCloseFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error);
+				tracking.Lease.Quarantine();
+				throw;
+			}
+		}
+	}
+
+	private void DisposeCore()
 	{
 		if (_disposed) return;
 		_disposed = true;
