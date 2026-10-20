@@ -4,19 +4,21 @@ namespace SharpMUSH.Library.Services;
 
 /// <inheritdoc cref="ILoginFailureTracker"/>
 /// <remarks>
-/// Like PennMUSH it keeps only the most recent <see cref="Capacity"/> entries from every address
-/// together, so a flood of failures costs a fixed amount of memory.
+/// Like PennMUSH it keeps only the most recent <see cref="Capacity"/> failures from every address
+/// together, so a flood of failures costs a fixed amount of memory. Attempts in progress are held
+/// apart, so attempts that never fail cannot push failures out.
 /// </remarks>
 public sealed class LoginFailureTracker(TimeProvider clock) : ILoginFailureTracker
 {
 	public const int Capacity = 1000;
 	public static readonly TimeSpan Window = TimeSpan.FromMinutes(10);
 
-	private readonly record struct Entry(string? Address, DateTimeOffset At, long? Attempt);
+	private readonly record struct Entry(string Address, DateTimeOffset At);
 
 	private readonly Lock _gate = new();
 	private readonly Entry[] _entries = new Entry[Capacity];
-	private readonly Dictionary<long, int> _attempts = [];
+	private readonly Dictionary<long, string> _attempts = [];
+	private readonly Dictionary<string, int> _pending = [];
 	private int _next;
 	private int _count;
 
@@ -24,12 +26,11 @@ public sealed class LoginFailureTracker(TimeProvider clock) : ILoginFailureTrack
 	{
 		lock (_gate)
 		{
-			if (CountLocked(address) >= limit) return false;
+			if (_attempts.ContainsKey(handle)) return false;
+			if (CountLocked(address) + _pending.GetValueOrDefault(address) >= limit) return false;
 
-			_attempts[handle] = _next;
-			_entries[_next] = new Entry(address, clock.GetUtcNow(), handle);
-			_next = (_next + 1) % Capacity;
-			_count = Math.Min(_count + 1, Capacity);
+			_attempts[handle] = address;
+			_pending[address] = _pending.GetValueOrDefault(address) + 1;
 			return true;
 		}
 	}
@@ -38,11 +39,12 @@ public sealed class LoginFailureTracker(TimeProvider clock) : ILoginFailureTrack
 	{
 		lock (_gate)
 		{
-			if (TakeAttemptLocked(handle) is not int slot) return 0;
+			if (TakeAttemptLocked(handle) is not { } address) return 0;
 
-			var entry = _entries[slot];
-			_entries[slot] = entry with { Attempt = null };
-			return CountLocked(entry.Address!);
+			_entries[_next] = new Entry(address, clock.GetUtcNow());
+			_next = (_next + 1) % Capacity;
+			_count = Math.Min(_count + 1, Capacity);
+			return CountLocked(address);
 		}
 	}
 
@@ -50,10 +52,7 @@ public sealed class LoginFailureTracker(TimeProvider clock) : ILoginFailureTrack
 	{
 		lock (_gate)
 		{
-			if (TakeAttemptLocked(handle) is int slot)
-			{
-				_entries[slot] = _entries[slot] with { Address = null };
-			}
+			TakeAttemptLocked(handle);
 		}
 	}
 
@@ -65,9 +64,22 @@ public sealed class LoginFailureTracker(TimeProvider clock) : ILoginFailureTrack
 		}
 	}
 
-	/// <summary>The slot still holding the attempt on <paramref name="handle"/>, if a newer entry has not replaced it.</summary>
-	private int? TakeAttemptLocked(long handle)
-		=> _attempts.Remove(handle, out var slot) && _entries[slot].Attempt == handle ? slot : null;
+	/// <summary>Ends the attempt on <paramref name="handle"/>, returning its address if it was in progress.</summary>
+	private string? TakeAttemptLocked(long handle)
+	{
+		if (!_attempts.Remove(handle, out var address)) return null;
+
+		if (_pending[address] == 1)
+		{
+			_pending.Remove(address);
+		}
+		else
+		{
+			_pending[address]--;
+		}
+
+		return address;
+	}
 
 	private int CountLocked(string address)
 	{

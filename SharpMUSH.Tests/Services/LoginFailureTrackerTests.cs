@@ -33,16 +33,33 @@ public class LoginFailureTrackerTests
 	}
 
 	[Test]
-	public async Task EndWithoutFailTakesTheAttemptBack()
+	public async Task AnAttemptThatEndsWithoutFailingIsNotAFailure()
 	{
 		var tracker = new LoginFailureTracker(new Clock());
 
-		tracker.TryBegin("192.0.2.1", 1, 5);
-		await Assert.That(tracker.Count("192.0.2.1")).IsEqualTo(1);
-
+		tracker.TryBegin("192.0.2.1", 1, 1);
 		tracker.End(1);
 
 		await Assert.That(tracker.Count("192.0.2.1")).IsEqualTo(0);
+		await Assert.That(tracker.TryBegin("192.0.2.1", 2, 1)).IsTrue();
+	}
+
+	[Test]
+	public async Task AttemptsThatNeverFailCannotPushFailuresOut()
+	{
+		var tracker = new LoginFailureTracker(new Clock());
+		FailOnce(tracker, "192.0.2.1", 0);
+		FailOnce(tracker, "192.0.2.1", 1);
+
+		for (var i = 0; i < LoginFailureTracker.Capacity; i++)
+		{
+			tracker.TryBegin("192.0.2.1", 100 + i, 3);
+			tracker.End(100 + i);
+		}
+
+		await Assert.That(tracker.Count("192.0.2.1")).IsEqualTo(2);
+		FailOnce(tracker, "192.0.2.1", 2);
+		await Assert.That(tracker.TryBegin("192.0.2.1", 3, 3)).IsFalse();
 	}
 
 	[Test]

@@ -349,6 +349,11 @@ public partial class Functions
 			parser, executor, executor, db, LocateFlags.All,
 			async found =>
 			{
+				if (!await CanSeeQueueOf(executor, found))
+				{
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
 				var query = attr is null
 					? new ScheduleSemaphoreQuery(found.Object().DBRef)
 					: new ScheduleSemaphoreQuery(new DbRefAttribute(found.Object().DBRef, attr.Split('`')));
@@ -356,6 +361,10 @@ public partial class Functions
 				return string.Join(' ', await pids.ToArrayAsync());
 			});
 	}
+
+	/// <summary>@ps's rule for reading an object's queue: its controller, a privileged player or the See_Queue power.</summary>
+	private async ValueTask<bool> CanSeeQueueOf(AnySharpObject executor, AnySharpObject located)
+		=> await PermissionService.Controls(executor, located) || await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
 
 	[SharpFunction(Name = "powers", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi, SideEffectMinArgs = 2, ParameterNames = ["object"])]
 	public async ValueTask<CallState> Powers(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -476,13 +485,9 @@ public partial class Functions
 		return maybeLocate switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject located when !await CanSeeQueueOf(located) => new CallState(ErrorMessages.Returns.PermissionDenied),
+			AnySharpObject located when !await CanSeeQueueOf(executor, located) => new CallState(ErrorMessages.Returns.PermissionDenied),
 			AnySharpObject located => await PidsOf(located.Object().DBRef)
 		};
-
-		// @ps's rule: the object's controller, a privileged player or the See_Queue power.
-		async ValueTask<bool> CanSeeQueueOf(AnySharpObject located)
-			=> await PermissionService.Controls(executor, located) || await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
 
 		async ValueTask<CallState> PidsOf(DBRef locationDBRef)
 		{
