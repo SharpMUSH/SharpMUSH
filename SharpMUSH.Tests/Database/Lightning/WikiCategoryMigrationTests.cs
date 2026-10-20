@@ -15,7 +15,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database.Lightning;
 
-public class WikiCategoryMigrationTests
+public partial class WikiCategoryMigrationTests
 {
 	private readonly List<string> _paths = [];
 	private static readonly byte[] StateKey = "core.wiki.cat.value-upgrade/state"u8.ToArray();

@@ -22,9 +22,11 @@ public class WikiCategoryNativeCommitFailureTests
 	private const string Phases = "category-seeded,category-commit-failed,category-limits-restored,category-reopened,category-retry-complete,category-commit-failure-complete";
 
 	[Test]
-	[Arguments(false)]
-	[Arguments(true)]
-	public async Task NativeCommitFailureRestoresLimitsAndRecoversActualCategoryCoordinator(bool resumed)
+	[Arguments(false, false)]
+	[Arguments(true, false)]
+	[Arguments(false, true)]
+	[Arguments(true, true)]
+	public async Task NativeCommitFailureRestoresLimitsAndRecoversActualCategoryCoordinator(bool resumed, bool grouped)
 	{
 		if (!OperatingSystem.IsLinux() || RuntimeInformation.OSArchitecture != Architecture.X64
 			|| RuntimeInformation.ProcessArchitecture != Architecture.X64 || IntPtr.Size != 8 || !BitConverter.IsLittleEndian)
@@ -45,7 +47,7 @@ public class WikiCategoryNativeCommitFailureTests
 		var runtimeTemp = Path.Join(scratch, "runtime-temp");
 		var world = Path.Join(fixtureParent, "world");
 		var evidence = Path.Join(fixtureParent, "evidence");
-		var scenario = "category-commit-failure-" + (resumed ? "resume" : "initial");
+		var scenario = (grouped ? "category-group-commit-failure-" : "category-commit-failure-") + (resumed ? "resume" : "initial");
 		Process? process = null;
 		Task<string>? stdout = null;
 		Task<string>? stderr = null;
@@ -102,6 +104,8 @@ public class WikiCategoryNativeCommitFailureTests
 			Identity(proof, process.Id, world, scenario);
 			Check(proof.GetProperty("schema").GetInt32() == 1, "Unexpected evidence schema");
 			Check(proof.GetProperty("resumed").GetBoolean() == resumed, "Wrong resume path");
+			if (grouped) VerifyGroupedProof(proof);
+			else if (proof.TryGetProperty("grouped", out var groupMode)) Check(!groupMode.GetBoolean(), "Single proof reported grouped execution");
 			var pageSize = proof.GetProperty("pageSize").GetUInt64();
 			Check(pageSize > 0 && proof.GetProperty("armedSoft").GetUInt64() == checked(2UL * pageSize), "Limit was not the actual two metadata-page boundary");
 			Check(proof.GetProperty("softAfter").GetUInt64() == proof.GetProperty("softBefore").GetUInt64(), "Soft limit not restored");
@@ -178,6 +182,34 @@ public class WikiCategoryNativeCommitFailureTests
 		if (failures.Count > 1) throw new AggregateException(failures);
 	}
 
+	private static void VerifyGroupedProof(JsonElement proof)
+	{
+		Check(proof.GetProperty("grouped").GetBoolean(), "Group proof did not report grouped execution");
+		Check(proof.GetProperty("cohortSize").GetInt32() == 3 && proof.GetProperty("maxBatchJobs").GetInt32() == 3,
+			"Group proof did not use the exact three-job cohort");
+		Check(proof.GetProperty("allQueuedPending").GetBoolean(), "All original producers were not pending while paused");
+		Check(proof.GetProperty("sameCommitException").GetBoolean(), "Producer failures were not the same actual parent exception");
+		Check(proof.GetProperty("neighborACallbacks").GetInt32() == 1 && proof.GetProperty("neighborBCallbacks").GetInt32() == 1,
+			"Successful neighbor callbacks did not each return exactly once");
+		Check(proof.GetProperty("neighborASawCandidate").GetBoolean() && proof.GetProperty("neighborBSawCandidate").GetBoolean()
+			&& proof.GetProperty("neighborBSawA").GetBoolean(), "Missing actual uncommitted coordinator/A/B visibility chain");
+		var stack = proof.GetProperty("commitStack").GetString() ?? throw new InvalidDataException("Missing group commit stack");
+		Check(stack.Contains("LightningStore.WriteBatch", StringComparison.Ordinal)
+			&& stack.Contains("LightningWriter.RunBatch", StringComparison.Ordinal), "Missing actual grouped native parent COMMIT stack");
+		var producers = proof.GetProperty("producers");
+		Check(producers.ValueKind == JsonValueKind.Array && producers.GetArrayLength() == 3, "Wrong observed group producer count");
+		var roles = new[] { "category", "neighbor-a", "neighbor-b" };
+		for (var index = 0; index < roles.Length; index++)
+		{
+			var producer = producers[index];
+			UniqueProperties(producer);
+			Check(producer.EnumerateObject().Count() == 4, "Unexpected group producer proof fields");
+			Check(producer.GetProperty("role").GetString() == roles[index] && producer.GetProperty("faulted").GetBoolean()
+				&& producer.GetProperty("nativeCode").GetInt32() == 27 && producer.GetProperty("operation").GetString() == "commit",
+				"Original producer did not report the selected parent native COMMIT failure: " + roles[index]);
+		}
+	}
+
 	private static async Task VerifyRecoveredWorld(string world, string expectedSourceHash)
 	{
 		Check(Directory.Exists(world) && File.Exists(Path.Join(world, "data.mdb")), "Child-closed recovered world is missing");
@@ -187,6 +219,7 @@ public class WikiCategoryNativeCommitFailureTests
 			Substitute.For<IPasswordService>(), relations: null);
 		var source = db.Store.Read(tx =>
 		{
+			VerifyGroupNeighborsAbsent(tx);
 			Check(tx.Count(Tables.WikiPage) == 1, "Recovered world has unexpected source rows");
 			if (!tx.TryGet(Tables.WikiPage, new byte[8], out var bytes)) throw new InvalidDataException("Missing id-zero source");
 			return bytes.ToArray();
@@ -244,6 +277,13 @@ public class WikiCategoryNativeCommitFailureTests
 		Check(beforeAdmission.SequenceEqual(RecoveredRows(db)), "Parent verification changed raw source/category/authority snapshot");
 	}
 
+	private static void VerifyGroupNeighborsAbsent(ITx tx)
+	{
+		Check(!tx.TryGet(Tables.Meta, "test.category.failed-group/A"u8, out _)
+			&& !tx.TryGet(Tables.Meta, "test.category.failed-group/B"u8, out _),
+			"Failed group neighbor writes survived in the recovered world");
+	}
+
 	private static string[] RecoveredRows(LightningDatabase db) => db.Store.Read(tx =>
 	{
 		var rows = new List<string>();
@@ -255,6 +295,9 @@ public class WikiCategoryNativeCommitFailureTests
 			if (!tx.TryGet(Tables.Meta, Encoding.UTF8.GetBytes(key), out var value)) throw new InvalidDataException("Missing authority snapshot row");
 			rows.Add(key + ":" + Convert.ToHexString(value));
 		}
+		VerifyGroupNeighborsAbsent(tx);
+		rows.Add("test.category.failed-group/A:absent");
+		rows.Add("test.category.failed-group/B:absent");
 		return rows.ToArray();
 	});
 
@@ -279,11 +322,17 @@ public class WikiCategoryNativeCommitFailureTests
 
 	private static void Identity(JsonElement entry, int pid, string world, string scenario)
 	{
-		var names = new HashSet<string>(StringComparer.Ordinal);
-		foreach (var property in entry.EnumerateObject()) Check(names.Add(property.Name), "Duplicate JSON proof property: " + property.Name);
+		UniqueProperties(entry);
 		Check(entry.GetProperty("pid").GetInt32() == pid, "Wrong proof PID");
 		Check(entry.GetProperty("world").GetString() == world, "Wrong proof world");
 		Check(entry.GetProperty("scenario").GetString() == scenario, "Wrong proof scenario");
+	}
+
+	private static void UniqueProperties(JsonElement entry)
+	{
+		Check(entry.ValueKind == JsonValueKind.Object, "Expected JSON proof object");
+		var names = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var property in entry.EnumerateObject()) Check(names.Add(property.Name), "Duplicate JSON proof property: " + property.Name);
 	}
 
 	private static string Hash(JsonElement proof, string name)
