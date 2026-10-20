@@ -411,3 +411,12 @@ the reference disclosure measured 287×36. Shift+Tab from the first control
 reached the focus-trap sentinel inside the dialog, and Tab returned to the first
 control without entering the underlying game. This is a bounded focus-containment
 check, not proof of every screen-reader or keyboard interaction.
+
+At a 390×844 viewport, the published dedicated channel lesson had document
+width 390px and dialog width/scroll-width 309px, with no horizontal overflow.
+Its vertical scroll height was 1000px. Keyboard navigation reached the final
+reference disclosure and scrolled it fully into view (top 787.8px, bottom
+823.8px). Escape returned focus to the Play guide opener; reopening retained the
+channel lesson. The viewport override was reset. Screenshot:
+`work/onboarding/channel-step-mobile-final.png`. This remains viewport emulation,
+not physical-device or virtual-keyboard testing.
