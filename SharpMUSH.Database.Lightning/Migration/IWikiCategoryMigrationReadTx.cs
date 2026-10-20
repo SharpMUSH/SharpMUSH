@@ -6,6 +6,8 @@ namespace SharpMUSH.Database.Lightning.Migration;
 /// <summary>Private copied reads for the bounded category-value migration only.</summary>
 internal interface IWikiCategoryMigrationReadTx
 {
+	Found<NativeReadValue> ReadWikiCategoryState(NativeReadBudget budget);
+	Found<NativeReadValue> ReadWikiCategoryCompletion(NativeReadBudget budget);
 	Found<NativeReadValue> ReadWikiCategoryPage(ReadOnlySpan<byte> pageKey, int maxSourceBytes, NativeReadBudget budget);
 	WikiCategoryKeyBatch ReadWikiCategoryKeys(TableDef table, ReadOnlySpan<byte> afterKey,
 		int maxKeys, int maxKeyBytes, NativeReadBudget budget);

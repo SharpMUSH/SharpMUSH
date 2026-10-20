@@ -9,6 +9,49 @@ public sealed partial class LightningStore
 {
 	private sealed partial class Tx : IWikiCategoryMigrationReadTx
 	{
+		public Found<NativeReadValue> ReadWikiCategoryState(NativeReadBudget budget)
+			=> ReadWikiCategoryMeta(WikiCategoryCheckpointCodec.StateKey, 128 * 1024, budget);
+
+		public Found<NativeReadValue> ReadWikiCategoryCompletion(NativeReadBudget budget)
+			=> ReadWikiCategoryMeta(WikiCategoryCheckpointCodec.CompletionKey, 1024, budget);
+
+		private Found<NativeReadValue> ReadWikiCategoryMeta(ReadOnlySpan<byte> key, int maxValueBytes,
+			NativeReadBudget budget)
+		{
+			ArgumentNullException.ThrowIfNull(budget);
+			var db = CheckedTable(Tables.Meta, budget);
+			budget.ChargeProbe();
+			var (code, nativeKey, nativeValue) = tx.Get(db, key);
+			if (!FoundNative(code, "wiki category authority get"))
+			{
+				budget.CancellationToken.ThrowIfCancellationRequested();
+				return new NotFound();
+			}
+			if (NativeSize(ref nativeKey) != key.Length)
+				throw new InvalidDataException("Invalid native wiki category migration authority.");
+			budget.ChargeBytes(key.Length);
+			var size = NativeSize(ref nativeValue);
+			// These private known-key VALUE caps are independent of the public combined record cap.
+			// Inspect managed native metadata before any span access, narrowing, value admission or allocation.
+			if (size < 0 || size > maxValueBytes)
+				throw new InvalidDataException("Invalid native wiki category migration authority.");
+			if (!nativeKey.AsSpan().SequenceEqual(key))
+				throw new InvalidDataException("Invalid native wiki category migration authority.");
+			var length = checked((int)size);
+			budget.ChargeBytes(length);
+			budget.ChargeRecord();
+			var reservation = budget.ReserveWorking(ObjectBytes + ArrayBytes(length));
+			try
+			{
+				var copy = new byte[length];
+				nativeValue.AsSpan().CopyTo(copy);
+				var owner = new NativeReadValue(copy, reservation);
+				budget.CancellationToken.ThrowIfCancellationRequested();
+				return owner;
+			}
+			catch { reservation.Dispose(); throw; }
+		}
+
 		private const int WikiCategorySourceCeiling = 64 * 1024 * 1024;
 		private const int WikiCategoryKeyCeiling = 128 * 1024;
 
