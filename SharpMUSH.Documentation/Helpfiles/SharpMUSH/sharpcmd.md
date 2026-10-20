@@ -2983,7 +2983,7 @@ Given a list of known good words in a category, the mush can suggest ones based 
 
 When given no switches or `/list`, shows all available suggestion categories.
 
-`/add` and `/delete` add or remove a word in a given category. They currently need no special permission.
+`/add` and `/delete` add or remove a word in a given category. They need the `config.admin` permission.
 
 ### Example
 ```sharp

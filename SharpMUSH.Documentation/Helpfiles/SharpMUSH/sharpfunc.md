@@ -1891,7 +1891,7 @@ think fmod(6.1,2.5)
 # followers()
 `followers(<object>)`
 
-  Returns the list of things and players following object.
+  Returns the list of things and players following object. You must control `<object>`.
 
 
 ::: seealso
@@ -4023,7 +4023,7 @@ think permission(me, wiki.delete)
 # lpids()
 `lpids([<object>[, <queue types>]])`
 
-  This function returns a list of queue process ids (pids) for commands queued by `<object>` itself. Objects with the same owner are not included, and "all" is not a special value. `<object>` defaults to the caller.
+  This function returns a list of queue process ids (pids) for commands queued by `<object>` itself. Objects with the same owner are not included, and "all" is not a special value. `<object>` defaults to the caller. You must control `<object>`, unless you are a Wizard or Royalty or have the See_Queue power.
 
   `<queue types>` should be a list of one or more of the following words, to filter the pids returned:<br>
     wait        --  Only return wait queues<br>

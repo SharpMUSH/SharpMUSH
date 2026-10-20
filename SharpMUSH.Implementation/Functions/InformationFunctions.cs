@@ -476,8 +476,13 @@ public partial class Functions
 		return maybeLocate switch
 		{
 			Error<CallState> error => error.Value,
+			AnySharpObject located when !await CanSeeQueueOf(located) => new CallState(ErrorMessages.Returns.PermissionDenied),
 			AnySharpObject located => await PidsOf(located.Object().DBRef)
 		};
+
+		// @ps's rule: the object's controller, a privileged player or the See_Queue power.
+		async ValueTask<bool> CanSeeQueueOf(AnySharpObject located)
+			=> await PermissionService.Controls(executor, located) || await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
 
 		async ValueTask<CallState> PidsOf(DBRef locationDBRef)
 		{

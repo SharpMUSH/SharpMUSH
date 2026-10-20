@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using DotNext.Collections.Generic;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
@@ -508,6 +509,12 @@ public partial class Commands
 				await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
 			}
 			return CallState.Empty;
+		}
+
+		if ((switches.Contains("ADD") || switches.Contains("DELETE")) && !await executor.Can(PortalPermission.ConfigAdmin))
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		if (switches.Contains("ADD"))

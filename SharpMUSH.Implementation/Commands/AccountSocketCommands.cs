@@ -132,6 +132,12 @@ public partial class Commands
 			return new None();
 		}
 
+		var ipAddress = AddressOf(handle);
+		if (await IsOverConnectFailLimitAsync(handle, ipAddress))
+		{
+			return new None();
+		}
+
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"];
 		// Arguments["0"] holds the entire remainder of the line after the command word,
 		// so we split it on whitespace ourselves.
@@ -156,7 +162,7 @@ public partial class Commands
 		{
 			SharpAccount account => await AccountLoggedInAsync(handle, account),
 			AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
-			NotFound => await RefusedAsync(handle, "Invalid account name or password.")
+			NotFound => await BadCredentialsAsync(handle, ipAddress, "Invalid account name or password.")
 		};
 	}
 
@@ -165,6 +171,16 @@ public partial class Commands
 		await NotifyService.Notify(handle, message);
 		return new None();
 	}
+
+	/// <summary>A wrong account or character password, which counts toward <c>connect_fail_limit</c>.</summary>
+	private async ValueTask<Option<CallState>> BadCredentialsAsync(long handle, string ipAddress, string message)
+	{
+		LoginFailures.Record(ipAddress);
+		return await RefusedAsync(handle, message);
+	}
+
+	private string AddressOf(long handle)
+		=> ConnectionService.Get(handle)?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
 	private async ValueTask<Option<CallState>> AccountLoggedInAsync(long handle, SharpAccount account)
 	{
@@ -407,6 +423,12 @@ public partial class Commands
 			return new None();
 		}
 
+		var ipAddress = AddressOf(handle);
+		if (await IsOverConnectFailLimitAsync(handle, ipAddress))
+		{
+			return new None();
+		}
+
 		// CommandBehavior.SOCKET | NoParse commands never populate Arguments["1"]; Arguments["0"] holds the
 		// rest of the line. The password is its last word, and everything before it is the name.
 		var arg0 = parser.CurrentState.Arguments.TryGetValue("0", out var a0) ? a0.Message.ToPlainText()?.Trim() : null;
@@ -424,7 +446,7 @@ public partial class Commands
 		{
 			SharpPlayer claimed => await ClaimedAsync(handle, claimed),
 			LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
-			NotFound => await RefusedAsync(handle, "No character has that name and password."),
+			NotFound => await BadCredentialsAsync(handle, ipAddress, "No character has that name and password."),
 		};
 	}
 
@@ -514,7 +536,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask TriggerCreateFailAsync(long handle, string reason, string name)
 	{
-		var ipAddress = ConnectionService.Get(handle)?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var ipAddress = AddressOf(handle);
 		await EventService.TriggerEventAsync(SharpEvents.SocketCreateFail, null,
 			handle.ToString(),
 			ipAddress,

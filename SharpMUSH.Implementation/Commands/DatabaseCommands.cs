@@ -102,7 +102,7 @@ public partial class Commands
 	/// its caller, while the executor remains the identity the attribute is read under.
 	/// </remarks>
 	[SharpCommand(Name = "@MAPSQL", Switches = ["NOTIFY", "COLNAMES", "SPOOF", "PREPARE"], Behavior = CB.Default | CB.EqSplit,
-		MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
+		CommandLock = "FLAG^WIZARD|POWER^SQL_OK", MinArgs = 0, MaxArgs = 0, ParameterNames = ["obj/attr", "query"])]
 	public async ValueTask<Option<CallState>> MapSql(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
