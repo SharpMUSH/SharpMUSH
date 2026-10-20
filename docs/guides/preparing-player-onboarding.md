@@ -7,6 +7,11 @@ updates the welcome heading and introduction as you type. Artwork follows the
 selected style and genre when a reviewed illustration is available; otherwise
 the preview identifies the default Sharpie fallback.
 
+For the short welcome, choose a starter for collaborative stories, adventure,
+relaxed roleplay, or new players. Selecting one fills the draft with the current
+game name; edit it to suit your community, then save. Existing text stays intact
+until you choose a starter, and changing the game name does not rewrite your draft.
+
 Set the game name, short introduction, one MSSP genre, one subgenre and preferred
 Sharpie style. Both category dropdowns use the shared MSSP catalog; choose `None`
 for a category that does not apply. The server rejects multiple or unlisted
