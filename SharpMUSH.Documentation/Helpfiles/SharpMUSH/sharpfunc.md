@@ -5887,7 +5887,7 @@ think words(unmark(a%*<|>b), %*<|>)
 
   Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to `[capstr(%n)]`).
 
-  v() can also return the value of stack registers %0 through %9: v(0) is equivilent to %0. A number of two or more digits, such as v(10), is treated as an attribute name; use r(10,args) through r(29,args) for the higher registers.
+  v() can also return the value of stack registers %0 through %9: v(0) is equivilent to %0. A number of two or more digits, such as v(10), is treated as an attribute name; use %`<10>` or r(10,args) for argument 10 and higher.
 
   The final form of this function is equivilent to get(me/`<attribute>`), but is usually slightly more efficient.
 
