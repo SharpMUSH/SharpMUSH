@@ -19,4 +19,4 @@ Players use the scene package's `+scene` commands. Those commands do their work 
 - [scene type functions]: read the game's pose types and scene details
 - [scene write functions]: change scenes, poses, members and plots
 
-Scene, pose and plot ids are numbers. Times are UTC milliseconds since 1970: [secs()] times 1000. When a scene is made or changed, the plugin raises the [scene events].
+Scene and pose ids are numbers. A plot id is 32 hexadecimal characters, not a number. Times are UTC milliseconds since 1970: [secs()] times 1000. When a scene is made or changed, the plugin raises the [scene events].
