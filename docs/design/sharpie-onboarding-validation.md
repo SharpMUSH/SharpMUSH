@@ -36,6 +36,17 @@ supersede earlier statements about missing publication or completed checks.
 
 ## Requirement-to-evidence audit (2026-10-20)
 
+### Wiki ordering fixture CI repair
+
+The .NET run `39486235174` on `34d0dfafa` passed build, formatting, component,
+plugin, help-integrity and integration jobs. Core tests had one failure among
+19,261 cases: `InactiveWriterLeaseSurvivesCancelledWaiterAndBootstrapsCommittedBody`.
+Its pause-event reset did not guarantee the writer had parked before the queued
+mutation was submitted. The fixture now awaits the existing drain-and-park
+operation; related ordering fixtures use the same confirmed precondition.
+The failing case and all 137 tests in its affected class pass locally. This changes test synchronization, not the
+production write/activation contract. Updated-head CI remains required.
+
 ### Runtime keyboard tooltip and focus contrast
 
 On the published Discord preview, Tab from Stop bypassed the disabled Back

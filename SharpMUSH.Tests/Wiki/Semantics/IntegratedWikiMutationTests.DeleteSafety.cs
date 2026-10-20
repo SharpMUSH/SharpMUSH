@@ -303,7 +303,7 @@ public partial class IntegratedWikiMutationTests
 		var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var count = 0;
 		provider.AtomicLegacyPrepared = _ => { if (Interlocked.Increment(ref count) == 3) ready.TrySetResult(); };
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<None>>? deletion = null;
 		Task<Found<WikiPage>>? body = null, title = null;
 		try
@@ -351,7 +351,7 @@ public partial class IntegratedWikiMutationTests
 		var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var count = 0;
 		provider.AtomicLegacyPrepared = _ => { if (Interlocked.Increment(ref count) == 2) ready.TrySetResult(); };
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<None>>? first = null, second = null;
 		try
 		{
@@ -496,7 +496,7 @@ public partial class IntegratedWikiMutationTests
 		var wiki = host.Services.GetRequiredService<IWikiService>();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		var page = (await wiki.CreateAsync("Delete inactive queued target", "original", "#1", sourceLocale: "en")).Expect<WikiPage>();
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<None>>? parent = null;
 		try
 		{
@@ -529,7 +529,7 @@ public partial class IntegratedWikiMutationTests
 		var page = (await wiki.CreateAsync("Delete active queued target", "original", "#1", sourceLocale: "en")).Expect<WikiPage>();
 		var ready = new TaskCompletionSource<PreparedLegacyWikiMutation>(TaskCreationOptions.RunContinuationsAsynchronously);
 		provider.AtomicLegacyPrepared = value => ready.TrySetResult(value);
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<None>>? parent = null;
 		LegacyWikiPreparationScope? scope = null;
 		try

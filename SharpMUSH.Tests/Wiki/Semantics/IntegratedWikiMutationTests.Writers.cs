@@ -30,7 +30,7 @@ public partial class IntegratedWikiMutationTests
 			if (mutation.Kind == WikiLegacyMutationKind.Body) bodyReady.TrySetResult();
 			if (mutation.Kind == WikiLegacyMutationKind.Title) titleReady.TrySetResult();
 		};
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<WikiPage>>? body = null;
 		Task<FoundResult<WikiPage>>? title = null;
 		try
@@ -73,7 +73,7 @@ public partial class IntegratedWikiMutationTests
 		var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var prepared = 0;
 		provider.AtomicLegacyPrepared = _ => { if (Interlocked.Increment(ref prepared) == 2) ready.TrySetResult(); };
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Result<WikiPage>>? first = null, second = null;
 		try
 		{
@@ -147,7 +147,7 @@ public partial class IntegratedWikiMutationTests
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		var prepared = new TaskCompletionSource<PreparedLegacyWikiMutation>(TaskCreationOptions.RunContinuationsAsynchronously);
 		provider.AtomicLegacyPrepared = mutation => prepared.TrySetResult(mutation);
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<FoundResult<WikiPage>>? parent = null;
 		LegacyWikiPreparationScope? scope = null;
 		try
@@ -280,7 +280,7 @@ public partial class IntegratedWikiMutationTests
 		var ready = NewSignal();
 		provider.AtomicLegacyPrepared = _ => ready.TrySetResult();
 		var categories = new[] { "before" };
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<WikiPage>>? parent = null;
 		try
 		{
