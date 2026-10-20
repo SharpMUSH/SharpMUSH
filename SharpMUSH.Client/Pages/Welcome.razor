@@ -172,7 +172,6 @@
         _preview = _preview with { Imagery = value }; return Task.CompletedTask;
     }
     private string CharacterUrl(bool claim) => (claim ? "/characters/claim" : "/characters/new") + "?returnUrl=" + Uri.EscapeDataString(ResumeUrl);
-    internal static string LocalReturn(string? value) => value is { Length: > 0 } && value.StartsWith('/') && !value.StartsWith("//", StringComparison.Ordinal)
-        && !value.Contains('\\') && !value.Any(char.IsControl) ? value : "/play";
+    internal static string LocalReturn(string? value) => OnboardingRoutes.LocalReturn(value);
     public void Dispose() => Guide.Changed -= OnChanged;
 }

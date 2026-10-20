@@ -19,6 +19,7 @@ public class ExternalLoginUiTests : TrackingBunitContext
 	private sealed class Handler : HttpMessageHandler
 	{
 		public string? Csrf; public int Attempts; public bool HasPassword = true;
+		public object? Completion;
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			var path = request.RequestUri!.AbsolutePath;
@@ -26,7 +27,7 @@ public class ExternalLoginUiTests : TrackingBunitContext
 			if (path == "/api/account/security") return Reply(new { hasPassword = HasPassword, allowCharacterPasswordAccountLogin = true, passkeys = new[] { new { id = "key" } }, identities = new[] { new { id = "google-identity", label = "Google account", registration = "google" } } });
 			if (path.EndsWith("/csrf", StringComparison.Ordinal)) return Reply(new { token = "browser-csrf", fieldName = "__RequestVerificationToken" });
 			if (path.EndsWith("/complete", StringComparison.Ordinal))
-			{ Csrf = request.Headers.GetValues("X-SharpMUSH-CSRF").Single(); return Reply(new { signupRequired = true, returnPath = "/account" }); }
+			{ Csrf = request.Headers.GetValues("X-SharpMUSH-CSRF").Single(); return Reply(Completion ?? new { signupRequired = true, returnPath = "/account" }); }
 			if (path.EndsWith("/signup", StringComparison.Ordinal)) { Attempts++; return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("Username is already taken.") }); }
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized) { Content = new StringContent("Signed out") });
 		}
@@ -41,6 +42,42 @@ public class ExternalLoginUiTests : TrackingBunitContext
 		Services.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(), NullLogger<AccountAuthService>.Instance, []));
 		Services.AddSingleton<AccountSecurityClient>(); Services.AddSingleton(Substitute.For<ITerminalService>()); return handler;
 	}
+	[Test]
+	[Arguments("/welcome", "/characters/new?returnUrl=%2Fwelcome")]
+	[Arguments("/welcome?returnUrl=%2Fplay", "/characters/new?returnUrl=%2Fwelcome%3FreturnUrl%3D%252Fplay")]
+	[Arguments("/characters/claim?returnUrl=%2Fwelcome", "/characters/claim?returnUrl=%2Fwelcome")]
+	[Arguments("/characters/new?returnUrl=%2Fwelcome", "/characters/new?returnUrl=%2Fwelcome")]
+	[Arguments("//evil.example/characters/new", "/characters/new")]
+	[Arguments("/characters/newer", "/characters/new")]
+	[Arguments("/\\evil.example", "/characters/new")]
+	[Arguments("/welcome\n", "/characters/new")]
+	public async Task ExternalLoginWithoutCharactersPreservesValidatedOnboardingDestination(string destination, string expected)
+	{
+		var wire = Setup();
+		wire.Completion = new { accountId = "new-account", username = "newbie", characters = Array.Empty<AccountAuthService.CharacterSummary>(), accountSessionToken = "external-session", mustChangePassword = false, role = "Guest", permissions = Array.Empty<string>(), returnPath = destination };
+		var nav = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+		var cut = Render<ExternalLoginComplete>();
+		cut.WaitForAssertion(() =>
+		{
+			if (!nav.Uri.EndsWith(expected, StringComparison.Ordinal)) throw new InvalidOperationException($"Expected {expected}, got {nav.Uri}");
+		});
+		await Assert.That(Services.GetRequiredService<AccountAuthService>().IsLoggedIn).IsTrue();
+	}
+
+	[Test]
+	public async Task ExternalLoginPasswordChangeTakesPrecedenceOverGuideReturn()
+	{
+		var wire = Setup();
+		wire.Completion = new { accountId = "new-account", username = "newbie", characters = Array.Empty<AccountAuthService.CharacterSummary>(), accountSessionToken = "external-session", mustChangePassword = true, role = "Guest", permissions = Array.Empty<string>(), returnPath = "/welcome" };
+		var nav = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+		var cut = Render<ExternalLoginComplete>();
+		cut.WaitForAssertion(() =>
+		{
+			if (!nav.Uri.EndsWith("/account", StringComparison.Ordinal)) throw new InvalidOperationException("Password change was bypassed.");
+		});
+		await Assert.That(Services.GetRequiredService<AccountAuthService>().MustChangePassword).IsTrue();
+	}
+
 	[Test]
 	public async Task ReadyProvidersRenderAllFourChoicesWithRealLocalizedLabels()
 	{

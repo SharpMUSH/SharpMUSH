@@ -114,23 +114,7 @@
     /// `login` names the exact next command. This routes it to the one page that resolves the
     /// state, which explains itself on arrival.
     /// </summary>
-    private string OnboardingUrl
-    {
-        get
-        {
-            if (_returnUrl is not { } path || Welcome.LocalReturn(path) != path)
-                return "/characters/new";
-            // Character entry is already the next onboarding action. Preserve its
-            // own validated guide return rather than replacing the entire route.
-            if (path is "/characters/new" or "/characters/claim"
-                || path.StartsWith("/characters/new?", StringComparison.Ordinal)
-                || path.StartsWith("/characters/claim?", StringComparison.Ordinal))
-                return path;
-            return path == "/welcome" || path.StartsWith("/welcome?", StringComparison.Ordinal)
-                ? "/characters/new?returnUrl=" + Uri.EscapeDataString(path)
-                : "/characters/new";
-        }
-    }
+    private string OnboardingUrl => OnboardingRoutes.FirstCharacter(_returnUrl);
 
     private int _tabIndex = SignInTabIndex;
     private bool _busy;

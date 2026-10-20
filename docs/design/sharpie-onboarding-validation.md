@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,997 passed**, zero failed/skipped after integrating
-  current main (`main-merge-bunit.log`).
+- Full component suite: **3,007 passed**, zero failed/skipped after external-login
+  routing and setup-resume fixes (`external-setup-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -913,3 +913,35 @@ Automatic approval review rejected temporarily selecting Daylight for the
 disposable VeteranPilot because the selection persists a character preference.
 No theme was changed. Explicit approval for changing and restoring that
 preference has been requested; the browser check remains pending.
+
+### Icon tooltip keyboard behavior (2026-10-20)
+
+In the real Discord Welcome preview, path selection focused the lesson heading.
+Tab skipped disabled Back and focused Skip for now; its visible tooltip carried
+the same label as the control's accessible name. Escape removed the tooltip
+while retaining focus on Skip and leaving the guide open. The next Tab reached
+I've got this and displayed its tooltip, confirming dismissal does not suppress
+labels on subsequent controls. No lesson action was activated and account
+progress was unchanged. Screenshot:
+`work/onboarding/keyboard-complete-tooltip.png`. This checks the Welcome
+tooltip interaction, not screen-reader speech or the companion's modal Escape
+sequence.
+
+### External login and setup resume regression fixes (2026-10-20)
+
+Independent review found that external login discarded the requested onboarding
+destination for accounts without characters, and setup advanced to Packages
+without recording that step in its URL. The pre-fix suite reproduced four
+failures among 3,002 cases.
+
+Password and external login now share the same validated first-character route
+helper. Welcome return paths and explicit create/claim routes survive external
+completion, invalid routes fall back safely, and required password changes
+retain precedence. Setup records `/setup?step=packages`; the regression remounts
+the page at that URL and verifies Packages remains selected. The full component
+suite passes all 3,007 cases with no skipped tests.
+
+Logs: `work/onboarding/external-setup-red.log` and
+`work/onboarding/external-setup-green.log`. The isolated server's public provider
+endpoint returned an empty list. A configured-provider browser round trip and
+fresh-world setup remain acceptance gaps; component tests do not replace them.
