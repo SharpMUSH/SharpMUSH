@@ -686,8 +686,12 @@ public sealed partial class LightningStore : IDisposable
 		return true;
 	}
 
-	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables, ulong? readTransactionId = null) : ITx
+	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables, ulong? readTransactionId) : ITx
 	{
+		// The owned native cipher probe constructs this exact managed bounded-reader shape.
+		// Its ordinary bounded reads do not opt into the callback-scoped snapshot capabilities.
+		public Tx(LightningTransaction tx, TableSnapshot tables) : this(tx, tables, null) { }
+
 		private LmdbDb Db(TableDef t)
 		{
 			NativeTableName.Validate(t.Name);

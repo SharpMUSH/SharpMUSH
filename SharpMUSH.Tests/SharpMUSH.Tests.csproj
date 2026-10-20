@@ -25,6 +25,7 @@
     <!-- Run the recovery probe as a separate process with its own dependency output. -->
     <ProjectReference Include="../tools/WikiSemantics.NativeProbe/WikiSemantics.NativeProbe.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
     <Compile Include="../tools/ContractAudit/SourceProvenance.cs" Link="Documentation/SourceProvenance.cs" />
+    <Compile Include="../tools/WikiSemantics.NativeProbe/CategoryCommitStack.cs" Link="Database/Lightning/CategoryCommitStack.cs" />
     <ProjectReference Include="../SharpMUSH.Plugins.Scene/SharpMUSH.Plugins.Scene.csproj" Aliases="ScenePlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
     <ProjectReference Include="../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />
