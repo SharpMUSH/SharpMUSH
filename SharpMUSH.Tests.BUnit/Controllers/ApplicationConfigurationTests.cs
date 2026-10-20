@@ -89,7 +89,7 @@ public class ApplicationConfigurationTests
 		await Assert.That(present.Where(item => !item.Id.StartsWith("signin-", StringComparison.Ordinal)).Select(item => item.Id)).IsEquivalentTo(new[] { "softcode" });
 		await registry.RemoveApplicationAsync("example");
 		var absent = (IReadOnlyList<ApplicationConfigurationTile>)((OkObjectResult)(await controller.List()).Result!).Value!;
-		await Assert.That(absent.Select(item => item.Id)).IsEquivalentTo(new[] { "signin-discord", "signin-google", "signin-microsoft", "signin-grapevine" });
+		await Assert.That(absent.Select(item => item.Id)).IsEquivalentTo(new[] { "signin-discord", "signin-google", "signin-microsoft", "signin-grapevine", "signin-github" });
 	}
 
 	[Test]

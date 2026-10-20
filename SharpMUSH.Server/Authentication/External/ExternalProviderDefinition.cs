@@ -15,7 +15,10 @@ public sealed record ExternalProviderDefinition(string Id, string DisplayName, s
 		new("google", "Google", "https://accounts.google.com", true, true, "", "", "", ["openid", "profile"]),
 		new("microsoft", "Microsoft", "https://login.microsoftonline.com", true, true, "", "", "", ["openid", "profile"]),
 		new("grapevine", "Grapevine", "https://grapevine.haus", false, false, "https://grapevine.haus/oauth/authorize",
-			"https://grapevine.haus/oauth/token", "https://grapevine.haus/users/me", ["profile"])
+			"https://grapevine.haus/oauth/token", "https://grapevine.haus/users/me", ["profile"]),
+		// No scope: a GitHub token without one reads only the public profile, which is all an identity needs.
+		new("github", "GitHub", "https://github.com", false, true, "https://github.com/login/oauth/authorize",
+			"https://github.com/login/oauth/access_token", "https://api.github.com/user", [])
 	]);
 
 	public static ExternalProviderDefinition Get(string id) => All.Single(provider => provider.Id == id);

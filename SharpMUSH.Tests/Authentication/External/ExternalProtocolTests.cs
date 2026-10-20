@@ -58,19 +58,27 @@ public class ExternalProtocolTests
 	[Test]
 	[Arguments("discord", true)]
 	[Arguments("grapevine", false)]
+	[Arguments("github", true)]
 	public async Task OAuthCodeAndUserInfoAreValidatedWithoutPersistingTokens(string id, bool confidential)
 	{
 		var backchannel = new Backchannel(); var completion = Substitute.For<IExternalAuthenticationCompletion>();
-		backchannel.Profile = id == "discord" ? "{\"id\":\"subject\",\"username\":\"display\"}" : "{\"uid\":\"subject\",\"username\":\"display\"}";
+		backchannel.Profile = id switch
+		{
+			"discord" => "{\"id\":\"subject\",\"username\":\"display\"}",
+			"github" => "{\"id\":583231,\"login\":\"display\"}",
+			_ => "{\"uid\":\"subject\",\"username\":\"display\"}"
+		};
 		using var services = Create(id, backchannel, completion);
 		var callback = await CallbackAsync(services, id);
-		await completion.Received(1).CompleteAsync(Arg.Any<HttpContext>(), Arg.Is<AuthenticationProperties>(p => p.Items["transaction"] == "original"), new ExternalIdentityKey("registration-" + id, ExternalProviderDefinition.Get(id).Issuer, "subject"), "display", Arg.Any<CancellationToken>());
+		var subject = id == "github" ? "583231" : "subject";
+		await completion.Received(1).CompleteAsync(Arg.Any<HttpContext>(), Arg.Is<AuthenticationProperties>(p => p.Items["transaction"] == "original"), new ExternalIdentityKey("registration-" + id, ExternalProviderDefinition.Get(id).Issuer, subject), "display", Arg.Any<CancellationToken>());
 		var values = QueryHelpers.ParseQuery("?" + backchannel.TokenBody);
 		await Assert.That(values.ContainsKey("client_secret")).IsEqualTo(confidential);
 		await Assert.That(values["redirect_uri"].ToString()).IsEqualTo("https://game.example/signin-external-" + id);
 		await Assert.That(values.ContainsKey("code_verifier")).IsFalse();
 		await Assert.That(callback.Response.Headers.SetCookie.ToString()).DoesNotContain("ExternalTransient");
 		await Assert.That(backchannel.UserInfoAuthorization).IsEqualTo("Bearer remote-token");
+		await Assert.That(backchannel.UserInfoUserAgent).StartsWith("SharpMUSH");
 	}
 	[Test]
 	public async Task TokenErrorsAndMissingIdentifiersFailWithOnlyGenericBrowserError()
@@ -242,6 +250,7 @@ public class ExternalProtocolTests
 		public string Profile { get; set; } = "{}";
 		public string TokenBody { get; private set; } = "";
 		public string? UserInfoAuthorization { get; private set; }
+		public string? UserInfoUserAgent { get; private set; }
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			if (request.Method == HttpMethod.Post)
@@ -250,7 +259,7 @@ public class ExternalProtocolTests
 				if (IdToken is not null) return new(HttpStatusCode.OK) { Content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { access_token = "remote-token", token_type = "Bearer", id_token = IdToken })) };
 				return new(TokenError ? HttpStatusCode.BadRequest : HttpStatusCode.OK) { Content = new StringContent(TokenError ? "{\"error\":\"raw-upstream-error\"}" : "{\"access_token\":\"remote-token\",\"token_type\":\"Bearer\"}") };
 			}
-			UserInfoAuthorization = request.Headers.Authorization?.ToString(); return new(HttpStatusCode.OK) { Content = new StringContent(Profile) };
+			UserInfoAuthorization = request.Headers.Authorization?.ToString(); UserInfoUserAgent = request.Headers.UserAgent.ToString(); return new(HttpStatusCode.OK) { Content = new StringContent(Profile) };
 		}
 	}
 }

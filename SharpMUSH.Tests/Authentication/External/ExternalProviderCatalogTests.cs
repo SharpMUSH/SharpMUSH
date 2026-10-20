@@ -28,7 +28,7 @@ public class ExternalProviderCatalogTests
 	{
 		var (catalog, _, _) = Create([]);
 		var statuses = await catalog.StatusesAsync();
-		await Assert.That(statuses.Count).IsEqualTo(4);
+		await Assert.That(statuses.Count).IsEqualTo(ExternalProviderDefinition.All.Count);
 		await Assert.That(statuses.Any(status => status.Ready)).IsFalse();
 		(await catalog.EffectiveAsync("google")).Expect<Error<string>>();
 	}

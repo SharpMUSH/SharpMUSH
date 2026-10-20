@@ -21,6 +21,25 @@ public class ExternalIdentityAdapterTests
 		ExternalIdentityAdapter.OpenId(Provider(provider), Claims("stable-subject", "https://attacker.example")).Expect<Error<string>>();
 	}
 	[Test]
+	public async Task GitHubUsesItsNumericIdAndLogin()
+	{
+		using var json = JsonDocument.Parse("{\"id\":583231,\"login\":\"octocat\",\"name\":\"The Octocat\"}");
+		var proof = ExternalIdentityAdapter.OAuth(Provider("github"), json.RootElement).Expect<ExternalIdentityProof>();
+		await Assert.That(proof.Key).IsEqualTo(new ExternalIdentityKey("registration", "https://github.com", "583231"));
+		await Assert.That(proof.Label).IsEqualTo("octocat");
+	}
+	[Test]
+	[Arguments("{\"id\":\"583231\"}")]
+	[Arguments("{\"id\":0}")]
+	[Arguments("{\"id\":1.5}")]
+	[Arguments("{\"login\":\"octocat\"}")]
+	public async Task InvalidGitHubIdentifiersAreRefused(string profile)
+	{
+		using var json = JsonDocument.Parse(profile);
+		ExternalIdentityAdapter.OAuth(Provider("github"), json.RootElement).Expect<Error<string>>();
+		await Task.CompletedTask;
+	}
+	[Test]
 	[Arguments("{}")]
 	[Arguments("{\"uid\":123}")]
 	[Arguments("{\"uid\":\"\"}")]
