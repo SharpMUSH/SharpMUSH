@@ -12,7 +12,7 @@ public sealed class PackageOperationRunner(
 	IPackageOperationGate gate,
 	IWorldBackupService backups,
 	IPackageLifecycleRunner lifecycle,
-	ILogger<PackageOperationRunner> logger) : IPackageOperationRunner
+	ILogger<PackageOperationRunner> logger) : IPackageOperationRunner, IPackageOperationLifetime
 {
 	/// <summary>The queue group package operations and their lifecycle hooks are admitted under.</summary>
 	public const string QueueGroup = "package";
@@ -29,7 +29,11 @@ public sealed class PackageOperationRunner(
 	private readonly HashSet<Task> _settlements = [];
 
 	/// <summary>What the operation's entry hands back: its outcome, and the hooks it held back.</summary>
-	private sealed record Finished<T>(PackageOperationOutcome<T> Outcome, IReadOnlyList<PackageLifecycleHook> Hooks);
+	private sealed record Finished<T>(Task<PackageOperationOutcome<T>> Completion, IReadOnlyList<PackageLifecycleHook> Hooks)
+	{
+		internal Finished(PackageOperationOutcome<T> outcome, IReadOnlyList<PackageLifecycleHook> hooks)
+			: this(Task.FromResult(outcome), hooks) { }
+	}
 
 	/// <inheritdoc />
 	public async Task<PackageOperationOutcome<T>> RunAsync<T>(
@@ -37,11 +41,19 @@ public sealed class PackageOperationRunner(
 		Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
 	{
+		var execution = await StartAsync(operation, body, cancellationToken, provenance);
+		return await execution.Completion.WaitAsync(cancellationToken);
+	}
+
+	/// <inheritdoc />
+	public async Task<PackageOperationExecution<T>> StartAsync<T>(string operation, Func<CancellationToken, Task<T>> body,
+		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
+	{
 		await _sequence.WaitAsync(cancellationToken);
 		var settlement = SettleAsync(operation, body, cancellationToken, provenance);
 		lock (_settlements) _settlements.Add(settlement);
 		_ = ObserveSettlementAsync(settlement, operation);
-		return await settlement.WaitAsync(cancellationToken);
+		return new PackageOperationExecution<T>(settlement);
 	}
 
 	private async Task ObserveSettlementAsync(Task settlement, string operation)
@@ -116,8 +128,14 @@ public sealed class PackageOperationRunner(
 		// Caller observation is cancellable, but this coordinator must join the body (including
 		// compensation) and every committed hook after the caller has abandoned its observation.
 		var finished = await completion.Task;
-		await RunHooksAsync(finished.Hooks);
-		return finished.Outcome;
+		try { await RunHooksAsync(finished.Hooks); }
+		catch (Exception exception) when (finished.Completion.IsFaulted || finished.Completion.IsCanceled)
+		{
+			// Join hooks first, and preserve the original body failure/cancellation if their admission
+			// also failed. Both failures stay observed; a hook failure cannot turn the body into success.
+			logger.LogError(exception, "Package {Operation} hook admission failed after its body failed.", operation);
+		}
+		return await finished.Completion;
 	}
 
 	/// <summary>The operation's queue entry: the backup and then the operation, in one hold of the gate.</summary>
@@ -166,10 +184,13 @@ public sealed class PackageOperationRunner(
 				}
 			}
 
-			var (result, hooks) = await PackageLifecycleDeferral.CollectAsync(() => body(cancellationToken));
-			return new Finished<T>(new PackageOperationRan<T>(result, backup), hooks);
+			var captured = await PackageLifecycleDeferral.CaptureCompletionAsync(() => body(cancellationToken));
+			return new Finished<T>(BodyOutcomeAsync(captured.Completion, backup), captured.Hooks);
 		}, cancellationToken);
 	}
+
+	private static async Task<PackageOperationOutcome<T>> BodyOutcomeAsync<T>(Task<T> completion, WorldBackup? backup)
+		=> new PackageOperationRan<T>(await completion, backup);
 
 	/// <summary>
 	/// Runs each held-back lifecycle hook as a queue entry of its own, in order, and waits for them.

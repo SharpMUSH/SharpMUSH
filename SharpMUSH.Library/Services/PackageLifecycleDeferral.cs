@@ -4,51 +4,73 @@ namespace SharpMUSH.Library.Services;
 public sealed record PackageLifecycleHook(string ObjId, string Attribute);
 
 /// <summary>
-/// Holds back an apply's lifecycle hooks while it runs as a queue entry (#1332). A hook is softcode
-/// that may queue work of its own; run inside the operation's entry, it would run as part of the
-/// operation. <see cref="PackageOperationRunner"/> collects them here instead and gives each an entry
-/// of its own once the operation's entry has finished.
-///
-/// <para>Per async flow, like <see cref="ParserInterfaces.ExecutionBudget"/>: only the flow that called
-/// <see cref="CollectAsync{T}"/> defers anything, and an apply anywhere else runs its hooks inline as
-/// before.</para>
+/// Holds back an apply's lifecycle hooks while it runs as a queue entry (#1332). Each collected
+/// hook gets its own entry after the operation's entry finishes. An escaped child which reaches
+/// a closed collection must run its hook normally; it cannot append to an already published list.
 /// </summary>
 public static class PackageLifecycleDeferral
 {
-	private static readonly AsyncLocal<List<PackageLifecycleHook>?> Pending = new();
+	private static readonly AsyncLocal<HookCollection?> Pending = new();
+
+	private sealed class HookCollection
+	{
+		private readonly List<PackageLifecycleHook> _hooks = [];
+		private IReadOnlyList<PackageLifecycleHook>? _closed;
+		internal bool TryAdd(PackageLifecycleHook hook)
+		{
+			lock (_hooks)
+			{
+				if (_closed is not null) return false;
+				_hooks.Add(hook);
+				return true;
+			}
+		}
+		internal IReadOnlyList<PackageLifecycleHook> Close()
+		{
+			lock (_hooks) return _closed ??= _hooks.AsReadOnly();
+		}
+	}
 
 	/// <summary>Runs <paramref name="operation"/>, collecting rather than running every hook it would run.</summary>
 	public static async Task<(T Result, IReadOnlyList<PackageLifecycleHook> Hooks)> CollectAsync<T>(Func<Task<T>> operation)
 	{
-		var hooks = new List<PackageLifecycleHook>();
+		var captured = await CaptureCompletionAsync(operation);
+		return (await captured.Completion, captured.Hooks);
+	}
+
+	// The coordinator owns this actual completion even on fault/cancellation. No caller timeout or
+	// abandoned observation may freeze its hooks before the body, including compensation, finishes.
+	internal static async Task<PackageLifecycleCapture<T>> CaptureCompletionAsync<T>(Func<Task<T>> operation)
+	{
+		ArgumentNullException.ThrowIfNull(operation);
+		var hooks = new HookCollection();
+		var previous = Pending.Value;
 		Pending.Value = hooks;
 		try
 		{
-			var result = await operation();
-			return (result, hooks);
+			Task<T> completion;
+			try
+			{
+				completion = operation() ?? Task.FromException<T>(new InvalidOperationException("The package operation returned no completion."));
+			}
+			catch (Exception exception) { completion = Task.FromException<T>(exception); }
+			await ((Task)completion).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			return new(completion, hooks.Close());
 		}
 		finally
 		{
-			Pending.Value = null;
+			hooks.Close();
+			Pending.Value = previous;
 		}
 	}
 
 	/// <summary>
-	/// Records the hook for later and answers true when the current flow is collecting; answers false,
-	/// and records nothing, when the caller should run it now.
+	/// Records a hook in the active collection, or answers false when the caller should run it now.
+	/// A collection closes after its actual body completes; late work cannot change its frozen list.
 	/// </summary>
 	public static bool TryDefer(string objId, string attribute)
-	{
-		if (Pending.Value is not { } hooks)
-		{
-			return false;
-		}
-
-		lock (hooks)
-		{
-			hooks.Add(new PackageLifecycleHook(objId, attribute));
-		}
-
-		return true;
-	}
+		=> Pending.Value?.TryAdd(new PackageLifecycleHook(objId, attribute)) ?? false;
 }
+
+// An actual body task plus the hooks retained on every terminal path. This is not a success grant.
+internal sealed record PackageLifecycleCapture<T>(Task<T> Completion, IReadOnlyList<PackageLifecycleHook> Hooks);
