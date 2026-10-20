@@ -45,6 +45,18 @@ public class DatabaseCommandTests
 	}
 
 	/// <summary>
+	/// Creates a unique test player with the SQL_OK power, which <c>@mapsql</c> needs, and nothing
+	/// else, so tests of what a mortal may trigger keep a mortal's control.
+	/// </summary>
+	private async Task<TestIsolationHelpers.TestPlayer> CreateSqlOkTestPlayerAsync(string prefix)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {player.DbRef}=SQL_OK"));
+		return player;
+	}
+
+	/// <summary>
 	/// The tables are only ever read, so they are created and filled once for the session; recreating
 	/// them per test would truncate them under any test reading them at the time.
 	/// </summary>
@@ -160,8 +172,7 @@ public class DatabaseCommandTests
 	public async Task MapSqlDoesNotReportRejectedRowsOrSkipARejectedHeader(bool columnNames)
 	{
 		// Exercise the ordinary owner ceiling; Wizards have an additional database-sized allowance.
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCapacity");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlCapacity");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		await testParser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think callback"));
 		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
@@ -277,8 +288,7 @@ public class DatabaseCommandTests
 	[Arguments(true)]
 	public async Task MapSqlNotifyReleasesAnExistingWaiterAtOwnerCapacity(bool saturated)
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNotifyCapacity");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlNotifyCapacity");
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "mapsql-completed-" + Guid.NewGuid().ToString("N");
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPCAPACITY me=think row-" + marker));
@@ -327,8 +337,7 @@ public class DatabaseCommandTests
 	[NotInParallel] // parks the scheduler's single consumer, stalling every other test's queued work
 	public async Task MapSqlNotifyDoesNotCreateACreditBeforeQueuedRowsRun()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlOrderedCompletion");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlOrderedCompletion");
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "ordered-map-" + Guid.NewGuid().ToString("N");
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPORDER me=think row-" + marker));
@@ -378,8 +387,7 @@ public class DatabaseCommandTests
 	[NotInParallel] // compares the session-wide queue total before and after
 	public async Task MapSqlNotifyQueryErrorDoesNotLeakCompletionReservation()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlCompletionError");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlCompletionError");
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPERROR me=think unreachable"));
 		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
@@ -392,8 +400,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async Task MapSqlNotifyWithZeroRowsStillPublishesCompletion()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlEmptyCompletion");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlEmptyCompletion");
 		var parser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "empty-map-" + Guid.NewGuid().ToString("N");
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&MAPEMPTY me=think unexpected-row"));
@@ -776,8 +783,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async Task MapSqlRefusesATargetTheExecutorDoesNotControl()
 	{
-		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNoControl");
+		var mortal = await CreateSqlOkTestPlayerAsync("MapSqlNoControl");
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "MapSqlNoControlTarget");
 		var marker = "uncontrolled-" + Guid.NewGuid().ToString("N");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&MAPDENIED {target}=think {marker}"));
@@ -802,8 +808,7 @@ public class DatabaseCommandTests
 	[Arguments(true, false)]
 	public async Task MapSqlAcceptsAnOwnedLinkOkTargetOnlyWithoutSpoof(bool spoof, bool allowed)
 	{
-		var owner = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlLinkOkOwner");
+		var owner = await CreateSqlOkTestPlayerAsync("MapSqlLinkOkOwner");
 		var requester = await CreateOwnedThingAsync(owner, "MapSqlLinkOkRequester");
 		var target = await CreateOwnedThingAsync(owner, "MapSqlLinkOkTarget");
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {target}=TRUST"));
@@ -895,8 +900,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async Task MapSqlRowCallbackExposesNamedColumnArguments()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNamedArgs");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlNamedArgs");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "named-" + Guid.NewGuid().ToString("N");
 		await testParser.CommandParse(player.Handle, ConnectionService,
@@ -924,8 +928,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async Task MapSqlRowCallbackKeepsNumericColumnNamesOutOfTheArgumentPositions()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlNumericNames");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlNumericNames");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "numeric-" + Guid.NewGuid().ToString("N");
 		await testParser.CommandParse(player.Handle, ConnectionService,
@@ -947,8 +950,7 @@ public class DatabaseCommandTests
 	[Test]
 	public async Task MapSqlRowCallbacksKeepTheirOwnValuesWhenTheProviderReusesTheRowDictionary()
 	{
-		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
-			SqlWebAppFactoryArg.Services, Mediator, ConnectionService, "MapSqlReusedRow");
+		var player = await CreateSqlOkTestPlayerAsync("MapSqlReusedRow");
 		var testParser = SqlWebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var marker = "reused-" + Guid.NewGuid().ToString("N");
 		await testParser.CommandParse(player.Handle, ConnectionService,

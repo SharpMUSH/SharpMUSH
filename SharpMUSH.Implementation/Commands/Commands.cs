@@ -35,6 +35,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 	private ApplicationDraftService ApplicationDrafts { get; }
 	private IOttStore OttStore { get; }
 	private NativeLoginService NativeLogins { get; }
+	private ILoginFailureTracker LoginFailures { get; }
 	private IAccountService AccountService { get; }
 	private IAccountSessionStore AccountSessionStore { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
@@ -187,7 +188,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IWebPushService webPush,
 		IPortalPresence portalPresence,
 		ILibraryProvider<FunctionDefinition> functions,
-		NativeLoginService nativeLogins)
+		NativeLoginService nativeLogins,
+		ILoginFailureTracker loginFailures)
 	{
 		Mediator = mediator;
 		RelationshipCycles = relationshipCycles;
@@ -203,6 +205,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		ApplicationDrafts = applicationDrafts;
 		OttStore = ottStore;
 		NativeLogins = nativeLogins;
+		LoginFailures = loginFailures;
 		AccountService = accountService;
 		AccountSessionStore = accountSessionStore;
 		ObjectDataService = objectDataService;

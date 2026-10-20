@@ -76,7 +76,7 @@ Otherwise, this command defines a global function with the name `<function name>
 
 ## Definition permissions
 
-`<object>` must be something that the player using the @function command controls.
+Defining a global function, and every switch that changes one, needs the `config.admin` permission or the Functions power. `<object>` must also be something that the player using the @function command controls.
 
 A function defined using @function works just like any of the normal MUSH functions, from the user's perspective. The functions are executed by the object, with its powers.
 

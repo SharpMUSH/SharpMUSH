@@ -284,6 +284,11 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
+				if (!await PermissionService.Controls(executor, found))
+				{
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
 				// PennMUSH's fun_followers reads the leader's own FOLLOWERS list, which add_follower and
 				// del_follower keep beside each follower's FOLLOWING (MovementCommands does the same), in
 				// the order they began following; it does not scan every object's FOLLOWING. Read as GOD,

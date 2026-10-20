@@ -234,6 +234,25 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (!await BeginLoginAttemptAsync(handle, ipAddress))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		try
+		{
+			return await ConnectAdmittedAsync(parser, handle, username, password, ipAddress, hostName, mode);
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
+	}
+
+	/// <summary>The connect commands once the address may try: a guest, a token or a player.</summary>
+	private async ValueTask<Option<CallState>> ConnectAdmittedAsync(IMUSHCodeParser parser, long handle, string username,
+		string password, string ipAddress, string hostName, ConnectMode mode)
+	{
 		if (username.Equals("guest", StringComparison.OrdinalIgnoreCase))
 		{
 			return await HandleGuestLogin(parser, handle, ipAddress, hostName);
@@ -277,15 +296,36 @@ public partial class Commands
 	/// Fires SOCKET`LOGINFAIL as a system event.
 	/// PennMUSH spec: socket`loginfail (descriptor, IP, count, reason, playerobjid, name)
 	/// </summary>
-	private async ValueTask TriggerLoginFailAsync(long handle, string ipAddress, string reason, string playerObjid, string name)
+	/// <remarks>
+	/// A wrong name, password or token counts toward <c>connect_fail_limit</c>; any other refusal only
+	/// reports the count, as PennMUSH's <c>mark_failed</c> and <c>count_failed</c> divide them.
+	/// </remarks>
+	private async ValueTask TriggerLoginFailAsync(long handle, string ipAddress, string reason, string playerObjid, string name,
+		bool badCredentials = true)
 		=> await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
 			null, // System event
 			handle.ToString(),
 			ipAddress,
-			"1", // count - simplified for now
+			(badCredentials ? LoginFailures.Fail(handle) : LoginFailures.Count(ipAddress)).ToString(),
 			reason,
 			playerObjid,
 			name);
+
+	/// <summary>
+	/// PennMUSH's <c>check_fails</c> (<c>src/player.c</c>): once an address has failed
+	/// <c>connect_fail_limit</c> logins in ten minutes, it is told so and nothing else is tried. An
+	/// admitted attempt holds its place in the count until the caller ends it.
+	/// </summary>
+	private async ValueTask<bool> BeginLoginAttemptAsync(long handle, string ipAddress)
+	{
+		if (LoginFailures.TryBegin(ipAddress, handle, Configuration.CurrentValue.Limit.ConnectFailLimit))
+		{
+			return true;
+		}
+
+		await NotifyService.Notify(handle, "This IP address has failed too many times. Please try again in 10 minutes.");
+		return false;
+	}
 
 	/// <summary>Checks the password and the account, then binds the connection to the player and logs it in.</summary>
 	private async ValueTask<Option<CallState>> LoginPlayerAsync(
@@ -309,7 +349,8 @@ public partial class Commands
 
 		if (await AccountRefusalAsync(foundDB.Object.DBRef) is { } refusal)
 		{
-			await TriggerLoginFailAsync(handle, ipAddress, "account not active", $"#{foundDB.Object.Key}", foundDB.Object.Name);
+			await TriggerLoginFailAsync(handle, ipAddress, "account not active", $"#{foundDB.Object.Key}", foundDB.Object.Name,
+				badCredentials: false);
 			await NotifyService.Notify(handle, refusal);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -388,9 +429,7 @@ public partial class Commands
 
 		if (playerDbRef is null)
 		{
-			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail, null,
-				handle.ToString(), ipAddress, "1",
-				"invalid or expired login token", "#-1", "token");
+			await TriggerLoginFailAsync(handle, ipAddress, "invalid or expired login token", "#-1", "token");
 			await NotifyService.Notify(handle, "Invalid or expired login token.");
 			Logger?.LogWarning("OTT login failed for handle {Handle} from {IP}: token invalid/expired", handle, ipAddress);
 			return new CallState(ErrorMessages.Returns.InvalidPassword);
@@ -460,14 +499,7 @@ public partial class Commands
 
 		if (guestPlayers.Count == 0)
 		{
-			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
-				null,
-				handle.ToString(),
-				ipAddress,
-				"1",
-				"no guest characters available",
-				"#-1",
-				"guest");
+			await TriggerLoginFailAsync(handle, ipAddress, "no guest characters available", "#-1", "guest", badCredentials: false);
 
 			await NotifyService.Notify(handle, "Sorry, there are no guest characters available.");
 			return new CallState(ErrorMessages.Returns.NoGuestCharacters);
@@ -488,14 +520,7 @@ public partial class Commands
 
 			if (selectedGuest == null)
 			{
-				await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
-					null,
-					handle.ToString(),
-					ipAddress,
-					"1",
-					"all guest characters in use",
-					"#-1",
-					"guest");
+				await TriggerLoginFailAsync(handle, ipAddress, "all guest characters in use", "#-1", "guest", badCredentials: false);
 
 				await NotifyService.Notify(handle, "Sorry, all guest characters are currently in use.");
 				return new CallState(ErrorMessages.Returns.AllGuestsInUse);
@@ -518,14 +543,7 @@ public partial class Commands
 
 			if (totalGuestConnections >= maxGuests)
 			{
-				await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
-					null,
-					handle.ToString(),
-					ipAddress,
-					"1",
-					"maximum guest connections reached",
-					"#-1",
-					"guest");
+				await TriggerLoginFailAsync(handle, ipAddress, "maximum guest connections reached", "#-1", "guest", badCredentials: false);
 
 				await NotifyService.Notify(handle, "Sorry, the maximum number of guest connections has been reached.");
 				return new CallState(ErrorMessages.Returns.MaxGuestsReached);
@@ -552,14 +570,7 @@ public partial class Commands
 		if (selectedGuest == null)
 		{
 			// This shouldn't happen, but handle it just in case
-			await EventService.TriggerEventAsync(SharpEvents.SocketLoginFail,
-				null,
-				handle.ToString(),
-				ipAddress,
-				"1",
-				"unexpected guest selection failure",
-				"#-1",
-				"guest");
+			await TriggerLoginFailAsync(handle, ipAddress, "unexpected guest selection failure", "#-1", "guest", badCredentials: false);
 
 			await NotifyService.Notify(handle, "Sorry, there are no guest characters available.");
 			return new CallState(ErrorMessages.Returns.GuestSelectionFailed);

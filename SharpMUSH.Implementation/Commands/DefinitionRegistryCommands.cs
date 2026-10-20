@@ -1173,6 +1173,11 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> AliasFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName, string? aliasName)
 	{
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
+		{
+			return denied;
+		}
+
 		if (string.IsNullOrEmpty(aliasName))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyAliasName), executor);
@@ -1196,7 +1201,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> CloneFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName, string? existingName)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1245,7 +1250,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> RestoreBuiltinFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1275,7 +1280,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> PreserveFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1299,7 +1304,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> RestoreFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1325,6 +1330,11 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> DeleteFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName)
 	{
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
+		{
+			return denied;
+		}
+
 		var removedUser = userFunctionService.Delete(functionName);
 		var removedBuiltin = FunctionLibrary?.Remove(functionName.ToUpper()) ?? false;
 
@@ -1342,6 +1352,11 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> SetFunctionEnabledAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName, bool enabled)
 	{
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
+		{
+			return denied;
+		}
+
 		if (!userFunctionService.SetEnabled(functionName, enabled))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionNotFoundFormat), executor, functionName);
@@ -1363,7 +1378,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> RestrictFunctionAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
 		string functionName, string? restriction)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1396,7 +1411,7 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> NameFunctionArgumentsAsync(AnySharpObject executor,
 		IUserDefinedFunctionService userFunctionService, string functionName, string? names)
 	{
-		if (await RejectUnlessConfigAdmin(executor) is { } denied)
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
 		{
 			return denied;
 		}
@@ -1464,6 +1479,11 @@ public partial class Commands : ICommandRestrictionApplier
 	private async ValueTask<Option<CallState>> DefineFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IUserDefinedFunctionService userFunctionService, string functionName, string objSpec)
 	{
+		if (await RejectUnlessGlobalFuncs(executor) is { } denied)
+		{
+			return denied;
+		}
+
 		var attribSpec = parser.CurrentState.Arguments.GetValueOrDefault("2")?.Message.ToPlainText();
 		if (string.IsNullOrEmpty(attribSpec))
 		{
@@ -2082,6 +2102,20 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// The refusal a caller who may not change global functions gets, or null when they may: the
+	/// <c>ConfigAdmin</c> permission or the <c>Functions</c> power (PennMUSH's <c>Global_Funcs</c>).
+	/// </summary>
+	private async ValueTask<CallState?> RejectUnlessGlobalFuncs(AnySharpObject executor)
+	{
+		if (await executor.HasPower("FUNCTIONS"))
+		{
+			return null;
+		}
+
+		return await RejectUnlessConfigAdmin(executor);
 	}
 
 	/// <summary>The refusal a caller without the <c>ConfigAdmin</c> permission gets, or null when they have it.</summary>

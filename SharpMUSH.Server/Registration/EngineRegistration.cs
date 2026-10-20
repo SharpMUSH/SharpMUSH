@@ -132,6 +132,7 @@ internal static class EngineRegistration
 		services.AddSingleton<ITaskQueueControl>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<ITaskQueueReader>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<IQueueControlService, QueueControlService>();
+		services.AddSingleton<ILoginFailureTracker, LoginFailureTracker>();
 		services.AddSingleton<IConnectionService, ConnectionService>();
 		services.AddSingleton<IInputSessionService, InputSessionService>();
 		services.AddSingleton<ApplicationDraftService>();
