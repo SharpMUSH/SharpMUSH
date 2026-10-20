@@ -2169,6 +2169,12 @@
         "aliases": []
       },
       {
+        "id": "delimiters",
+        "lookup": "datatable() delimiters",
+        "heading": "Delimiters",
+        "aliases": []
+      },
+      {
         "id": "examples",
         "lookup": "datatable() examples",
         "heading": "Examples",
