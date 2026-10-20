@@ -7,17 +7,19 @@ neutral mascot while genre candidates await quality and owner acceptance.
 
 ## Discord introduction and path selection
 
-The welcome page is scrolled to its choices and first lesson. Previously completed
-steps belong to the disposable browser test profile.
+The welcome page shows the game identity, four familiarity choices and the first
+lesson. Previously completed steps belong to the disposable browser test profile.
+The remaining lesson controls continue below this viewport.
 
 ![Discord path and lesson](welcome-discord-lesson.png)
 
 ## Explicitly opened Play guide
 
 The guide overlays play only after the player opens it. Its top icons return to
-play or the full guide; the separate stop icon dismisses the journey. This capture
-is signed out, so the terminal is disconnected. Earlier connected-command evidence
-is described in the validation record, not claimed by this image.
+play or the full guide; the separate stop icon dismisses the journey. The player
+is connected as the disposable RoleplayPilot character. Back, Skip and Complete
+also use named icon controls. The visible Back tooltip demonstrates the focused
+control's label.
 
 ![Channel guide on desktop](play-channels-desktop.png)
 
@@ -31,13 +33,31 @@ choices are below this viewport. These are browser viewport simulations.
 
 ![Welcome introduction at 320 pixels](welcome-introduction-mobile.png)
 
-## Experienced MUSH player on mobile
+## Package help updates while the guide stays open
 
-The authenticated veteran path explains the two Play modes and shows package
-help verified for the active character. This 390px capture is scrolled to the
-lesson; its remaining controls continue below the viewport.
+The final veteran lesson shows only verified package help. Temporarily disabling
+the local Help Librarian's command matching removed `+help`; restoring its
+original state brought it back. The guide remained open and focus stayed on the
+lesson heading. These captures demonstrate command availability, not a package
+uninstallation.
 
-![Veteran Play modes lesson at 390 pixels](veteran-mobile-modes.png)
+![Help command disabled; scene help remains](package-help-disabled.png)
+
+![Help command restored automatically](package-help-restored.png)
+
+## Return to play without losing a draft
+
+Activating Explore by keyboard closes the guide, focuses the composer and leaves
+the unsent `look` draft intact. Nothing is sent automatically.
+
+![Explore returns to the existing draft](explore-return-draft.png)
+
+## Completion
+
+Completing or skipping the final welcome lesson focuses the completion message.
+Tab then reaches Open the game. Passive reload does not take focus.
+
+![Completed mobile journey](completion-focus-mobile.png)
 
 See [validation and remaining gates](../sharpie-onboarding-validation.md).
 These screenshots establish appearance of these states, not complete acceptance
