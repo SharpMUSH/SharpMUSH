@@ -9,8 +9,7 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **3,008 passed**, zero failed/skipped after the preview
-  selection correction (`preview-explore-green.log`).
+- Full component suite: **3,017 passed** after the preview completion correction.
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -22,16 +21,17 @@ supersede earlier statements about missing publication or completed checks.
   and ordinary-player denial were exercised against the isolated server.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
-- At `240b0690f`, GitHub build, formatting, core/component/integration/plugin
-  tests, help integrity, parity, table layout and CodeQL passed. Automated
-  Claude review failed before findings; independent review remains the
-  substantive review evidence.
+- At `cc0d80bc0`, all current PR checks are complete with no failures (live
+  rechecked 2026-10-20). Independent source review remains substantive review
+  evidence; an automated workflow's green status alone does not establish it.
 - Existing-character claim returned to the retained guide step and preserved
   the existing roster and active character in the real browser.
 - Real failed-connection retry preserved the saved character, then connected
   successfully; the roster contained exactly one character afterward.
 - Published administrator draft feedback passed the keyboard edit/reload check.
-- Still open: broader keyboard/screen-reader checks and PR/CI verification.
+- The authenticated mobile Discord journey reaches connected Play and returns
+  real `look` output at 390px, without horizontal overflow or a guide overlay.
+- Still open: broader keyboard/screen-reader checks and final review acceptance.
   The fresh genre-art inventory is not approved.
 
 ## Requirement-to-evidence audit (2026-10-20)
@@ -45,7 +45,7 @@ Its pause-event reset did not guarantee the writer had parked before the queued
 mutation was submitted. The fixture now awaits the existing drain-and-park
 operation; related ordering fixtures use the same confirmed precondition.
 The failing case and all 137 tests in its affected class pass locally. This changes test synchronization, not the
-production write/activation contract. Updated-head CI remains required.
+production write/activation contract. Updated-head CI at `cc0d80bc0` is green.
 
 ### Runtime keyboard tooltip and focus contrast
 
@@ -86,7 +86,7 @@ Bundled plus-help 1.8.1 changes required powers but retains the reviewed command
 handlers. Onboarding now recognizes both 1.8.0 and 1.8.1. All 26 capability cases
 pass across both versions, including provenance, reachability, shadowing and
 unchanged-baseline guards. Local build completed with zero warnings/errors.
-New-head remote CI and review remain pending; these focused checks do not replace
+New-head remote CI is green; these focused checks do not replace
 the broader runtime and artwork acceptance requirements below.
 
 
@@ -136,7 +136,7 @@ The dated records below provide the details and limitations of each observation.
 
 | Requirement | Current evidence | Remaining gate |
 |---|---|---|
-| Four familiarity paths | Browser-selected all four paths; complete authenticated desktop Discord, fresh desktop MUSH and fresh mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence | Remaining viewport coverage |
+| Four familiarity paths | Browser-selected all four paths; authenticated desktop/mobile Discord, desktop MUSH and mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence and 320px independent entry | Physical-device coverage is not established |
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests; fresh keyboard login/create/welcome/Play journey | Screen-reader review remains open |
 | Account and character handoff | Live create, existing-character claim, fresh empty-account claim, roster preservation, failed-connection retry; routing regressions | Configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
@@ -144,9 +144,9 @@ The dated records below provide the details and limitations of each observation.
 | Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; disabled-handler and actual Scene uninstall/reinstall both update the open guide without losing focus | No outstanding package lifecycle case identified |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview; all three configured wiki links opened as an ordinary player after admin changes, with disabled-reader omission verified | No outstanding configured-link case identified |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence, deferred tasks; completed fresh-world setup and real imported-world sign-in/identity-step reload | Actual external/passkey authentication after import remains separate |
-| Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
+| Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, light/dark text and focus contrast | Actual 200% zoom; screen-reader speech and administrator-customized theme checks |
 | Production art safety | Bounded approved neutral SVG fallback; candidates withheld after independent QA | All 252 inventory slots, independent QA and owner visual acceptance; approved genre assets wired into catalog |
-| Documentation and review | Player/admin guides, design, validation records, packaged browser screenshots and draft PR #2069; existing review threads resolved | Final current-head CI and substantive review |
+| Documentation and review | Player/admin guides, design, validation records, packaged browser screenshots and draft PR #2069; current-head CI green; latest CodeQL thread resolved with regression evidence | Final substantive review acceptance |
 
 The failed automated Claude review produced no findings (one turn, no model
 usage); it is not a successful review. CodeRabbit skips this draft PR. Neither
@@ -1247,3 +1247,40 @@ and left focus on Save. A subsequent Save then Tab moved to the next checklist
 button without focus being pulled back. Screenshots:
 `work/onboarding/welcome-starter-player-result.png` and
 `work/onboarding/welcome-save-keyboard-focus.png`.
+
+### Mobile Discord journey reaches connected play (2026-10-20)
+
+Completed the Discord path at a 390 × 740 viewport using the disposable ordinary
+player JourneyTester: sign-in return to welcome, character confirmation, local
+`look` practice, audience guidance, channel help, and installed-package help.
+The final lesson focused the completion message and Open game reached `/play`.
+The initial connection failed because the isolated gateway, renderer and broker
+were stopped; restored those existing containers and the local server.
+
+After signing in again without Remember me, Play connected as JourneyTester.
+Typing `look` into the real game composer returned Room Zero's output. The
+completed guide did not reopen or cover the terminal. At 390px viewport width,
+document scroll width was also 390px; the enabled command input was within the
+viewport at x=43.36, y=695.88, width=281.64, height=20.25. Screenshot:
+[connected mobile play](sharpie-onboarding-preview/discord-connected-mobile.png).
+
+This verifies responsive browser layout and a real command after the journey;
+it does not establish physical-device keyboard, screen-reader speech, or actual
+200% browser zoom acceptance.
+
+### Light-theme focus and latest review disposition (2026-10-20)
+
+Voluntary re-entry from connected Play displayed the veteran lesson with neutral
+Sharpie and the verified `+help` / `+scene/help` suggestions. On its white surface,
+computed text color #14181c has 17.84:1 contrast. The Scenes link and the focused
+Explore the game button outline use #00775f, giving 5.52:1 against white. The
+keyboard outline is 2px with 3px offset. Tab from Stop reached Scenes, then
+Explore the game. Back to game closed the panel and returned focus to its opener.
+Screenshot: [light-theme keyboard focus](sharpie-onboarding-preview/light-keyboard-contrast.png).
+
+The current-head CodeQL comment called the second Connected guard constant.
+Re-ran `DisconnectDuringGuideInputCheckRefusesInsertion`: 1 passed. It suspends
+JS interop, renders Connected=false, then confirms no insertion or send after
+resumption. Retained the guard, replied with this evidence and resolved thread
+`PRRT_kwDOLef2xs6uggzg`. This disposition does not substitute for final human
+review acceptance.
