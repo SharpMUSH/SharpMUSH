@@ -1137,3 +1137,18 @@ First Setup. Both textarea and unsaved player preview updated correctly, and all
 four buttons measured 44px high. An older cached stylesheet on the original
 preview origin initially hid the button styling; a fresh localhost origin loaded
 the verified published CSS. Screenshot: `work/onboarding/welcome-starters-desktop.png`.
+
+### Welcome persistence and keyboard Save (2026-10-20)
+
+Selected Adventure using Tab/Enter in administrator onboarding, saved it, and
+reloaded: the stored introduction remained intact and appeared in the player
+welcome. This exposed a focus loss when Save was disabled with its fieldset.
+Moved Save outside the disabled fieldset, exposing `aria-disabled` while busy
+and rejecting repeated activation. No delayed focus operation is needed.
+
+The focused suite passed 10/10, including a deferred-request duplicate-submission
+regression; independent review was clean. In the published browser, Enter saved
+and left focus on Save. A subsequent Save then Tab moved to the next checklist
+button without focus being pulled back. Screenshots:
+`work/onboarding/welcome-starter-player-result.png` and
+`work/onboarding/welcome-save-keyboard-focus.png`.
