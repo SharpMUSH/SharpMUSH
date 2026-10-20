@@ -152,12 +152,24 @@ public partial class Commands
 			return new None();
 		}
 
-		return await AccountService.AuthenticateAsync(identifier, password) switch
+		if (!await BeginLoginAttemptAsync(handle, AddressOf(handle)))
 		{
-			SharpAccount account => await AccountLoggedInAsync(handle, account),
-			AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
-			NotFound => await RefusedAsync(handle, "Invalid account name or password.")
-		};
+			return new None();
+		}
+
+		try
+		{
+			return await AccountService.AuthenticateAsync(identifier, password) switch
+			{
+				SharpAccount account => await AccountLoggedInAsync(handle, account),
+				AccountUnavailable unavailable => await RefusedAsync(handle, unavailable.Message),
+				NotFound => await BadCredentialsAsync(handle, "Invalid account name or password.")
+			};
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
 	}
 
 	private async ValueTask<Option<CallState>> RefusedAsync(long handle, string message)
@@ -165,6 +177,16 @@ public partial class Commands
 		await NotifyService.Notify(handle, message);
 		return new None();
 	}
+
+	/// <summary>A wrong account or character password, which counts toward <c>connect_fail_limit</c>.</summary>
+	private async ValueTask<Option<CallState>> BadCredentialsAsync(long handle, string message)
+	{
+		LoginFailures.Fail(handle);
+		return await RefusedAsync(handle, message);
+	}
+
+	private string AddressOf(long handle)
+		=> ConnectionService.Get(handle)?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
 
 	private async ValueTask<Option<CallState>> AccountLoggedInAsync(long handle, SharpAccount account)
 	{
@@ -420,12 +442,24 @@ public partial class Commands
 		var charName = arg0[..split].Trim();
 		var charPassword = arg0[(split + 1)..];
 
-		return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
+		if (!await BeginLoginAttemptAsync(handle, AddressOf(handle)))
 		{
-			SharpPlayer claimed => await ClaimedAsync(handle, claimed),
-			LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
-			NotFound => await RefusedAsync(handle, "No character has that name and password."),
-		};
+			return new None();
+		}
+
+		try
+		{
+			return await AccountService.ClaimCharacterAsync(accountId, charName, charPassword) switch
+			{
+				SharpPlayer claimed => await ClaimedAsync(handle, claimed),
+				LinkedElsewhere => await RefusedAsync(handle, "That character is on another account. Give that account's password to move it here, or ask staff."),
+				NotFound => await BadCredentialsAsync(handle, "No character has that name and password."),
+			};
+		}
+		finally
+		{
+			LoginFailures.End(handle);
+		}
 	}
 
 	/// <summary>Tells the socket the character is now on its account, and how to play it.</summary>
@@ -514,7 +548,7 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask TriggerCreateFailAsync(long handle, string reason, string name)
 	{
-		var ipAddress = ConnectionService.Get(handle)?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
+		var ipAddress = AddressOf(handle);
 		await EventService.TriggerEventAsync(SharpEvents.SocketCreateFail, null,
 			handle.ToString(),
 			ipAddress,

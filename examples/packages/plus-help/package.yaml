@@ -1,6 +1,6 @@
 format: "1.10"
 package: plus-help
-version: 1.8.0
+version: 1.8.1
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -35,8 +35,8 @@ objects:
     # hand-registered +help/source target can belong to anyone — and See_All is what skips the
     # attribute-read check. It deliberately goes no further, because reading is a different gate
     # from evaluating and no power lifts the second one. Send_OOB is what cmdlink() asks of whoever
-    # writes a command link, as PennMUSH asks it of XCH_CMD.
-    powers: [See_All, Send_OOB]
+    # writes a command link, as PennMUSH asks it of XCH_CMD. Functions lets STARTUP register helplink().
+    powers: [See_All, Send_OOB, Functions]
     attributes:
 
       # ── The registry ────────────────────────────────────────────────────────

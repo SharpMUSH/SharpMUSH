@@ -56,4 +56,9 @@
 			ReferenceOutputAssembly="false" />
 	</ItemGroup>
 
+	<ItemGroup>
+		<!-- In-game help for @scene, ooc and the scene functions, indexed with the engine's while the plugin is loaded. -->
+		<None Update="help\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
 </Project>

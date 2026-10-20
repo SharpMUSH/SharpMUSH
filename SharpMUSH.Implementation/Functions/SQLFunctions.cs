@@ -51,7 +51,7 @@ public partial class Functions
 		var rowSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 1, " ").ToPlainText();
 		var fieldSeparator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
 		var registerName = args.Count > 3 && args.TryGetValue("3", out var value2)
-			? value2.Message.ToPlainText()
+			? value2.Message.ToPlainText().ToUpper()
 			: string.Empty;
 
 		// If more than 4 arguments, treat remaining arguments as prepared statement parameters

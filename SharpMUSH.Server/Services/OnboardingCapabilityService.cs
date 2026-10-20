@@ -19,6 +19,7 @@ public sealed class OnboardingCapabilityService(IPackageRegistryService registry
 	private static readonly Adapter[] Reviewed =
 	[
 		new("plus-help", "1.8.0", "+help"),
+		new("plus-help", "1.8.1", "+help"),
 		new("scene", "1.15.0", "+scene/help")
 	];
 

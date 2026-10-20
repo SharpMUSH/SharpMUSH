@@ -366,6 +366,26 @@ public class CommandManagementTests
 		}
 	}
 
+	/// <summary>
+	/// Penn's logging words are restriction words, not a name lock: SharpMUSH does not support them,
+	/// so <c>@command/restrict</c> refuses them and leaves the command as it was.
+	/// </summary>
+	[Test]
+	public async ValueTask Restrict_UnsupportedLogWords_AreRefusedNotLocks()
+	{
+		var wizard = await Wizard();
+		var clone = CommandName();
+		var mortal = await Mortal("CmdLogName");
+		await As(wizard, $"@command/clone think={clone}");
+
+		await Assert.That(await As(wizard, $"@command/restrict {clone}=logname"))
+			.Contains("Restrict attempt failed: 'logname' is not supported in a command restriction.");
+		await Assert.That(await As(wizard, $"@command/restrict {clone}=wizard logargs"))
+			.Contains("Restrict attempt failed: 'logargs' is not supported in a command restriction.");
+
+		await Assert.That(await As(mortal, $"{clone} still open")).Contains("still open");
+	}
+
 	[Test]
 	public async ValueTask Restrict_WithNothing_AsksHow()
 	{

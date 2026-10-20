@@ -57,7 +57,7 @@ For commands, `<restriction>` should be an `@lock`-style boolexp (though, for ba
     nofixed    Usable only by non-FIXED objects.<br>
     noguest    Usable only by non-guest `@powered` objects.<br>
     nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.<br>
-    logname, logargs  Not supported: a function ignores them, and @command/restrict reads them as a lock.
+    logname, logargs  Not supported: a function ignores them, and @command/restrict refuses them.
 
 ## Restrictions for functions or commands only
 

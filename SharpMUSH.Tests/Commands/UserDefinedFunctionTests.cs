@@ -328,6 +328,35 @@ public class UserDefinedFunctionTests
 	}
 
 	[Test]
+	[NotInParallel] // overrides add(), which every other test may call
+	public async ValueTask RestrictBuiltinRestrictsTheBuiltinNotTheOverride()
+	{
+		// PennMUSH: /restrict with /builtin restricts the built-in of that name, even while a @function
+		// overrides it; it does not run /builtin (which would drop the override).
+		Registry.Delete("add");
+		Registry.SetBuiltinRestriction("add", null);
+		var attr = $"ADDRB{U()}";
+		await Cmd($"&{attr} me=overridden");
+
+		try
+		{
+			await Cmd("@function/delete add");
+			await Cmd($"@function add=me,{attr}");
+
+			await Cmd("@function/restrict/builtin add=wizard");
+
+			await Assert.That(Registry.GetBuiltinRestriction("add")).IsEqualTo("wizard");
+			await Assert.That(Registry.Get("add")?.Restriction).IsNull();
+			await Assert.That(await Eval("add(2,3)")).IsEqualTo("overridden");
+		}
+		finally
+		{
+			// /builtin also puts the built-in back in the function library, which /delete took it out of.
+			await Cmd("@function/builtin add");
+		}
+	}
+
+	[Test]
 	[NotInParallel] // @function/restore * drops every other test's user function
 	public async ValueTask PreserveSurvivesRestoreReset()
 	{

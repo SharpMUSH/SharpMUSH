@@ -36,6 +36,22 @@ supersede earlier statements about missing publication or completed checks.
 
 ## Requirement-to-evidence audit (2026-10-20)
 
+### Current main compatibility follow-up
+
+Integrated main `63f84be8e8e01dfc3d5e1ad75771f6dc31f52d8c` without conflicts.
+The synthetic-merge CI failure was reproduced: a Base64Url hyphen in a generated
+function name is not a valid function token. The permission fixture now normalizes
+hyphens and includes a deterministic hyphen case; all 13 permission tests pass.
+
+Bundled plus-help 1.8.1 changes required powers but retains the reviewed command
+handlers. Onboarding now recognizes both 1.8.0 and 1.8.1. All 26 capability cases
+pass across both versions, including provenance, reachability, shadowing and
+unchanged-baseline guards. Local build completed with zero warnings/errors.
+New-head remote CI and review remain pending; these focused checks do not replace
+the broader runtime and artwork acceptance requirements below.
+
+
+
 ### Latest integration and narrow-screen welcome check
 
 At `18a9d4808`, main is integrated without unresolved conflicts. Both local
