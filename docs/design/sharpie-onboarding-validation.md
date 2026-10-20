@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,912 passed**, zero failed/skipped after the
-  catalog-backed single-choice genre controls (`genre-select-green.log`).
+- Full component suite: **2,914 passed**, zero failed/skipped after the
+  immediate capability-clearing regression (`capability-authority-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -41,7 +41,7 @@ The dated records below provide the details and limitations of each observation.
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests | Complete keyboard-only journey across login and character handoffs |
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
 | Account isolation and anonymous import | Real authorization/account isolation HTTP checks; explicit import/decline and future-schema tests | Browser second-account/logout sequence with persisted progress |
-| Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Story composer insertion during an actual scene; multi-player audience check |
+| Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
 | Installed-package accuracy | Reviewed-source/version/baseline/access regressions and live package help evidence | Browser package removal/disabled transition while guide remains open |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview and feature links | Review all configured guide links with an ordinary player after admin changes |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
@@ -556,3 +556,19 @@ The completed core CI run at `bb46d34bb` found one failure: the veteran catalog
 test still expected four steps. Its expected IDs now include the user-requested
 `channels` lesson before `continue`; the no-command-practice veteran assertion
 remains unchanged. Integration CI passed.
+
+
+### Independent review: capability repaint (2026-10-20)
+
+Review found that already-rendered package commands could remain visible during
+a new account/character capability request. Two regressions first failed with
+one stale command still rendered. The component now repaints immediately after
+starting the check (which clears its previous state), then again after completion
+if still alive. Both account and character transitions are covered with the new
+response held pending. Full bUnit passed 2,914 tests; direct formatting and
+independent focused source review passed. Commit: `8e6ea1aef`.
+
+The connected Story practice guide was also checked at 390×844: document width
+390px and dialog client/scroll widths both 309px. Its existing draft remained
+present after the viewport change. This supplements desktop insertion/refusal
+evidence; it does not verify a physical on-screen keyboard.
