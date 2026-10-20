@@ -147,6 +147,7 @@ public class WelcomeTests : BunitContext
 		await companion.Find("article button.guide-action").ClickAsync();
 		await Assert.That(returns).IsEqualTo(inserted ? 1 : 0);
 		await Assert.That(guide.Progress.Active).IsTrue();
+		await Assert.That(companion.FindAll("details.guide-companion, .guide-companion > summary").Count).IsEqualTo(0);
 	}
 
 }

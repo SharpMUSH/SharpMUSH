@@ -5,19 +5,18 @@
 
 @if (Guide is { Ready: false, Error: not null })
 {
-    <details class="guide-companion guide-recovery">
-        <summary>@Loc["GuideRecoveryTitle"]</summary>
+    <section class="guide-companion guide-recovery">
+        <h2>@Loc["GuideRecoveryTitle"]</h2>
         <div class="guide-companion-content">
             <p role="status">@Guide.Error</p>
             <button type="button" disabled="@Guide.Loading" @onclick="Reload">@Loc["GuideReloadProgress"]</button>
             <a href="/welcome">@Loc["GuideOpenFull"]</a>
         </div>
-    </details>
+    </section>
 }
 else if (Guide is { Ready: true, Progress.Active: true })
 {
-    <details class="guide-companion" open="@Expanded">
-        <summary>@Loc["GuideCompanionTitle", Lesson.Title]</summary>
+    <section class="guide-companion">
         <div class="guide-companion-content">
             @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReloadProgress"]</button></p> }
             @if (_message is not null) { <p role="status">@_message</p> }
@@ -26,11 +25,10 @@ else if (Guide is { Ready: true, Progress.Active: true })
             </GuidePanel>
             <a href="/welcome">@Loc["GuideOpenFull"]</a>
         </div>
-    </details>
+    </section>
 }
 
 @code {
-    [Parameter] public bool Expanded { get; set; }
     [Parameter] public OnboardingService? Guide { get; set; }
     [Parameter] public Func<Task<bool>>? InsertLook { get; set; }
     [Parameter] public EventCallback OnExit { get; set; }

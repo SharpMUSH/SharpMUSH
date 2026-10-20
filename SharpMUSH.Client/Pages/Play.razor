@@ -183,8 +183,8 @@ else
                                 Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(PlaySettingsMenu.Sheet)" />
                     break;
                 case PlaySheet.Guide:
-                    <button type="button" @onclick="CloseMobileSheet">@Loc["GuideBackToGame"]</button>
-                <SharpMUSH.Client.Components.Onboarding.GuideCompanion Expanded="true" Guide="@(ServiceProvider.GetService<OnboardingService>())"
+                    <button type="button" class="play-guide-return" @onclick="CloseMobileSheet">@Loc["GuideBackToGame"]</button>
+                <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
                     OnExit="CloseMobileSheet" OnInserted="CloseMobileSheet"
                     InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
                     @if (ServiceProvider.GetService<OnboardingService>() is null or { Ready: true, Progress.Active: false })
