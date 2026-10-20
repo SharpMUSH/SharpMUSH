@@ -111,7 +111,9 @@ game, not a separate Discord account; scene archives depend on game capabilities
    `pose smiles.`, and `page Name=Hello` as examples with their audience explained.
    Never send example speech, private messages, movement or package commands for
    the player. The local practice preview is unmistakably not live game output.
-7. **Continue your story.** Offer available next steps: game guide, finding people,
+7. **Find people who can help.** Show how to list channels, join a named channel,
+   and ask a question. Explain that channel listeners can be outside the room.
+8. **Continue your story.** Offer available next steps: game guide, finding people,
    scenes, communication and help. Completion is a modest “You're ready to explore”,
    not a full-screen celebration or a mandatory tour of every feature.
 
@@ -144,7 +146,9 @@ help links and actual installed versions as evidence. No package-name-only guess
 ## Genre and artwork
 
 Select artwork by explicit admin override, then supported subgenre, supported genre,
-then neutral Sharpie. Subgenre is open-ended; an unknown label is a normal fallback.
+then neutral Sharpie. The onboarding editor accepts one genre and one subgenre from the shared MSSP
+catalog, with `None` for an absent category. Imported unsupported values remain
+visible until explicitly replaced; unknown runtime metadata uses the neutral fallback.
 Genre does not determine art style. Admins choose one coherent style from the
 six approved styles: minimalist, chibi, anime (androgynous non-binary looks), kemono, pixel and comicbook; players can choose reduced imagery or no mascot.
 

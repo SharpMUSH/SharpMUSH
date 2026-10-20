@@ -28,6 +28,29 @@ supersede earlier statements about missing publication or completed checks.
 - Still open: broader keyboard/screen-reader checks and PR/CI verification.
   The fresh genre-art inventory is not approved.
 
+## Requirement-to-evidence audit (2026-10-20)
+
+This checklist separates demonstrated behavior from remaining acceptance work.
+The dated records below provide the details and limitations of each observation.
+
+| Requirement | Current evidence | Remaining gate |
+|---|---|---|
+| Four familiarity paths | Browser-selected Discord, MUSH, other-roleplay and independent paths; tailored copy and retained progress | Fresh authenticated full journey for each path on both viewport classes |
+| Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests | Complete keyboard-only journey across login and character handoffs |
+| Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
+| Account isolation and anonymous import | Real authorization/account isolation HTTP checks; explicit import/decline and future-schema tests | Browser second-account/logout sequence with persisted progress |
+| Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Story composer insertion during an actual scene; multi-player audience check |
+| Installed-package accuracy | Reviewed-source/version/baseline/access regressions and live package help evidence | Browser package removal/disabled transition while guide remains open |
+| Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview and feature links | Review all configured guide links with an ordinary player after admin changes |
+| Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
+| Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
+| Production art safety | Bounded approved neutral SVG fallback; candidates withheld after independent QA | All 252 inventory slots, independent QA and owner visual acceptance; approved genre assets wired into catalog |
+| Documentation and review | Player/admin guides, design, validation records and draft PR #2069; existing review threads resolved | Final current-head CI and substantive review; screenshots packaged for review |
+
+The failed automated Claude review produced no findings (one turn, no model
+usage); it is not a successful review. CodeRabbit skips this draft PR. Neither
+status closes the independent-review or final CI gate.
+
 ## Verified on 2026-10-19
 
 - Full Blazor component suite: **2,873 passed, zero failed/skipped**.
