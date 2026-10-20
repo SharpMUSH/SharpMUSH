@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
@@ -49,6 +50,9 @@ public partial class LightningDatabase
 		AtomicLegacyPrepared?.Invoke(mutation);
 		return await Store.WriteAsync(tx =>
 		{
+			// Authority failures must precede receipt replay and retain their readiness diagnostics.
+			try { RequireWikiCategoryReady(tx, scope.Budget); }
+			catch (NativeReadLimitException) { throw new WikiFixtureMutationException(WikiFixtureMutationFailure.WorkLimit); }
 			using var work = CreateLegacyWork(tx, scope);
 			IntegratedWikiCommitResult result;
 			try
@@ -254,10 +258,28 @@ public partial class LightningDatabase
 		var value = LegacyBytes(work, 1 + 3L * page.AuthorDbref.Length, () => WikiVisibilityValue(page));
 		Emit(Tables.WikiRecent, LegacyBytes(work, 16, () => WikiRecentKey(key, page)));
 		Emit(Tables.WikiByNamespace, LegacyBytes(work, 12 + 2L * (page.Namespace.Length + page.Slug.Length), () => WikiNamespaceKey(key, page)));
+		var titleBytes = Encoding.BigEndianUnicode.GetByteCount(page.Title);
+		var categoryPrefixLength = -1;
+		byte[]? categoryValue = null;
 		foreach (var category in WikiIndexCategories(page))
 		{
 			work.Budget.CancellationToken.ThrowIfCancellationRequested();
-			Emit(Tables.WikiByCategory, LegacyBytes(work, 16 + 6L * category.Length + 2L * page.Title.Length, () => WikiLabelKey(category, key, page)));
+			// One encoder reservation covers both the temporary prefix and the retained key.
+			var categoryKey = LegacyBytes(work, checked(16 + 6L * category.Length + 2L * page.Title.Length),
+				() => WikiCategoryValueCodec.Key(WikiCategoryValueCodec.LabelPrefix(category), page.Title, key));
+			if (add)
+			{
+				var prefixLength = categoryKey.Length - titleBytes - 10;
+				// Value stores only prefix length, publication and author; equal lengths share bytes.
+				if (categoryValue is null || prefixLength != categoryPrefixLength)
+				{
+					categoryValue = LegacyBytes(work, checked(9 + 3L * page.AuthorDbref.Length),
+						() => WikiCategoryValueCodec.Value(categoryKey.AsSpan(0, prefixLength), page.Published, page.AuthorDbref));
+					categoryPrefixLength = prefixLength;
+				}
+				work.Delta.Put(Tables.WikiByCategory, categoryKey, categoryValue);
+			}
+			else work.Delta.Delete(Tables.WikiByCategory, categoryKey);
 		}
 		void Emit(TableDef table, byte[] indexKey)
 		{

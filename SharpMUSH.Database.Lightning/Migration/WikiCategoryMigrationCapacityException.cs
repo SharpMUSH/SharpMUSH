@@ -26,6 +26,7 @@ internal sealed class WikiCategoryMigrationCapacityException : Exception
 	{
 		"source-bytes" => "SHARPMUSH_LIGHTNING_WIKI_CAT_MIGRATION_MAX_SOURCE_BYTES",
 		"key-bytes" => "SHARPMUSH_LIGHTNING_WIKI_CAT_MIGRATION_MAX_KEY_BATCH_BYTES",
+		"delta-bytes" => "SHARPMUSH_LIGHTNING_WIKI_CAT_MIGRATION_MAX_DELTA_BYTES",
 		_ => throw new ArgumentOutOfRangeException(nameof(dimension))
 	};
 
