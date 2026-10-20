@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -96,11 +97,12 @@ public sealed class PackageOperationRunner(
 		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
 	{
 		var completion = new TaskCompletionSource<Finished<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		// Admitted like an HTTP handler command: it arrived on a socket, not from an object, so it is
 		// charged to no owner's quota (AdmitSocketWork), and the queue's single consumer runs it with
 		// nothing else beside it.
-		var admission = await scheduler.AdmitSocketWork(async () =>
+		var admission = await AdmitReleasedWorkAsync(async () =>
 			{
 				// A cancelled request which never started must not mutate. Still settle the owned
 				// coordinator so the sequence can be released when the queue skips its body.
@@ -116,8 +118,12 @@ public sealed class PackageOperationRunner(
 				return null;
 			}, $"package-{operation}", QueueGroup,
 			// An entry halted before it ran, or dropped at shutdown, still answers the request.
-			onReleased: () => completion.TrySetResult(new Finished<T>(
-				new PackageOperationRefused($"The package {operation} was halted before it ran; nothing was changed."), [])));
+			onReleased: () =>
+			{
+				completion.TrySetResult(new Finished<T>(
+					new PackageOperationRefused($"The package {operation} was halted before it ran; nothing was changed."), []));
+				released.TrySetResult();
+			});
 		if (!admission.Accepted)
 		{
 			logger.LogWarning("Package {Operation} refused by the queue: {Reason}.", operation, admission.Reason);
@@ -127,7 +133,14 @@ public sealed class PackageOperationRunner(
 
 		// Caller observation is cancellable, but this coordinator must join the body (including
 		// compensation) and every committed hook after the caller has abandoned its observation.
-		var finished = await completion.Task;
+		Finished<T> finished;
+		try { finished = await completion.Task; }
+		finally
+		{
+			// Publication can precede release, including when backup/provenance or the gate faults.
+			// No hook or later operation may overtake the body reservation's actual release.
+			await released.Task;
+		}
 		try { await RunHooksAsync(finished.Hooks); }
 		catch (Exception exception) when (finished.Completion.IsFaulted || finished.Completion.IsCanceled)
 		{
@@ -137,6 +150,14 @@ public sealed class PackageOperationRunner(
 		}
 		return await finished.Completion;
 	}
+
+	// The optional observer signals after reservation removal and CTS disposal. Third-party schedulers
+	// retain their existing release callback contract; neither path certifies business/hook success.
+	private ValueTask<QueueAdmissionResult> AdmitReleasedWorkAsync(Func<ValueTask<CallState?>> action,
+		string trigger, string group, Action onReleased)
+		=> scheduler is IQueueReleaseObserver observed
+			? observed.AdmitObservedSocketWork(action, trigger, group, _ => onReleased())
+			: scheduler.AdmitSocketWork(action, trigger, group, onReleased);
 
 	/// <summary>The operation's queue entry: the backup and then the operation, in one hold of the gate.</summary>
 	private async Task<Finished<T>> ExecuteAsync<T>(
@@ -205,7 +226,7 @@ public sealed class PackageOperationRunner(
 			foreach (var hook in hooks)
 			{
 				var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-				var admission = await scheduler.AdmitSocketWork(async () =>
+				var admission = await AdmitReleasedWorkAsync(async () =>
 					{
 						await lifecycle.RunLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken);
 						return null;

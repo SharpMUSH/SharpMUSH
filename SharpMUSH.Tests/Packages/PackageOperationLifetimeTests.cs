@@ -235,10 +235,10 @@ public partial class PackageOperationLifetimeTests
 		await Assert.That(mutated).IsFalse();
 	}
 
-	private static PackageOperationRunner CreateRunner(ControlledScheduler scheduler, IPackageLifecycleRunner? lifecycle = null)
+	private static PackageOperationRunner CreateRunner(ControlledScheduler scheduler, IPackageLifecycleRunner? lifecycle = null, IWorldBackupService? backupService = null)
 	{
-		var backups = Substitute.For<IWorldBackupService>();
-		backups.IsSupported.Returns(false);
+		var backups = backupService ?? Substitute.For<IWorldBackupService>();
+		if (backupService is null) backups.IsSupported.Returns(false);
 		return new PackageOperationRunner(scheduler.Scheduler, new PackageOperationGate(), backups,
 			lifecycle ?? Substitute.For<IPackageLifecycleRunner>(), NullLogger<PackageOperationRunner>.Instance);
 	}
@@ -263,12 +263,27 @@ public partial class PackageOperationLifetimeTests
 		private readonly Channel<ControlledEntry> _entries = Channel.CreateUnbounded<ControlledEntry>();
 		private int _admissionCount;
 
-		public ITaskScheduler Scheduler { get; } = Substitute.For<ITaskScheduler>();
+		public ITaskScheduler Scheduler { get; }
+		public int ObservedAdmissionCount { get; private set; }
 		public int AdmissionCount => Volatile.Read(ref _admissionCount);
 		public TaskCompletionSource AdmissionFailure { get; } = Signal();
 
-		public ControlledScheduler(string? failTrigger = null)
+		public ControlledScheduler(string? failTrigger = null, bool observed = false, bool refuse = false)
 		{
+			Scheduler = observed ? Substitute.For<ITaskScheduler, IQueueReleaseObserver>() : Substitute.For<ITaskScheduler>();
+			if (observed)
+				((IQueueReleaseObserver)Scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>())
+					.Returns(call =>
+					{
+						ObservedAdmissionCount++;
+						if (refuse) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.GlobalLimit));
+						var pid = Interlocked.Increment(ref _admissionCount);
+						var release = call.Arg<Action<QueueEntryRelease>>();
+						var entry = new ControlledEntry(call.Arg<Func<ValueTask<CallState?>>>(),
+							() => release(new(pid, SharpMUSH.Library.Models.Diagnostics.QueueOutcome.Completed, null)), call.ArgAt<string>(1));
+						if (!_entries.Writer.TryWrite(entry)) throw new InvalidOperationException("Test admission channel closed.");
+						return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
+					});
 			Scheduler.AdmitSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action?>())
 				.Returns(call =>
 				{
