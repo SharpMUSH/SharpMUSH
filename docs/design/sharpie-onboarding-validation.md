@@ -42,7 +42,7 @@ The dated records below provide the details and limitations of each observation.
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
 | Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs | Multi-player audience check |
-| Installed-package accuracy | Reviewed-source/version/baseline/access regressions and live package help evidence | Browser package removal/disabled transition while guide remains open |
+| Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; open guide removes disabled `+help` and restores it automatically without losing focus | Actual uninstall scenario not exercised; disabled-handler transition verified |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview and feature links | Review all configured guide links with an ordinary player after admin changes |
 | Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
 | Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
@@ -682,3 +682,25 @@ cancels the refresh loop. This bounds freshness rather than promising immediate
 package-change notification. Real-browser package removal remains an open gate.
 Both removal and failed-verification cases pass, including no further requests
 after disposal. The full 2,919-case component suite and whitespace check pass.
+
+### Live package-command availability transition (2026-10-20)
+
+Published revision `2cab805af` was loaded in the 390px browser, connected as
+RoleplayPilot. The open final veteran lesson initially listed `+help` and
+`+scene/help`. A read-only administrator query identified Help Librarian as
+`#10` and confirmed `hasflag(#10,NO_COMMAND)` was `0`.
+
+Temporarily setting `NO_COMMAND` on that object through the normal command API
+returned `1`; the still-open guide removed only `+help`. Clearing the flag
+returned `0`, restoring the original state, and `+help` reappeared automatically.
+Both observations retained one dialog and focus on “Explore this game's
+additions”. No navigation, guide reopening or account change occurred. There
+were no browser error logs at the final observation.
+
+One locator wait expired before the next refresh; a subsequent accessibility
+snapshot and DOM observation confirmed both restored commands. This proves the
+transition, not an exact measured refresh latency. The fixture changed command
+dispatch availability; it did not uninstall the package or edit its attributes.
+Evidence: `package-refresh-disabled.json`, `package-refresh-restored.json`,
+`package-refresh-disabled.png`, and `package-refresh-restored.png` under
+`work/onboarding/`.
