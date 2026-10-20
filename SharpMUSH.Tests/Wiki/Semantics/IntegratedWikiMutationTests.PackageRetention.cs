@@ -219,8 +219,10 @@ public partial class IntegratedWikiMutationTests
 	[Arguments(true)]
 	public async Task FixtureRetainedOperationRejectsUnissuedRelease(bool foreignOwner)
 	{
-		await using var fixture = new SemanticWikiPrototypeFixture(Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")!, "retention-ownership"));
-		await using var foreign = new SemanticWikiPrototypeFixture(Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")!, "retention-ownership"));
+		var scratch = Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")
+			?? Path.Combine(Environment.CurrentDirectory, "work/semantic-wiki-prototype/b1/tmp"), "retention-ownership");
+		await using var fixture = new SemanticWikiPrototypeFixture(scratch);
+		await using var foreign = new SemanticWikiPrototypeFixture(scratch);
 		var owner = fixture.Capability;
 		using var lease = owner.Claim(new LightningStoreOptions { Path = fixture.WorldPath });
 		lease.Initialized();
