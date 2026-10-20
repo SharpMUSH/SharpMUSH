@@ -57,7 +57,7 @@ and the action takes place after the object has been "notified" that its time fo
 
 An object is notified using the "`@notify`" command. When you type "`@wait` `<object>`=`<action>`", you are adding one to the SEMAPHORE attribute on the object. When you type "`@notify` `<object>`", you are decreasing the SEMAPHORE attribute on the object by one. Whenever the attribute decreases, one of the actions waiting on the object takes place. The actions occur in the order they were added.
 
-You can make the semaphore attribute of an object negative by `@notify`-ing it more times than things have been `@wait`-ed on it. If you do so, anything `@wait`-ed on the object will add one to the SEMAPHORE attribute and the action will take place immediately. You can also make all the actions waiting on an object take place right away by using "`@notify`/all", or wipe all the commands out and clear the SEMAPHORE attribute by using "`@drain`". Please note that all SEMAPHORE attributes are cleared out whenever the MUSH is restarted.
+You can make the semaphore attribute of an object negative by `@notify`-ing it more times than things have been `@wait`-ed on it. If you do so, anything `@wait`-ed on the object will add one to the SEMAPHORE attribute and the action will take place immediately. You can also make all the actions waiting on an object take place right away by using "`@notify`/all", or wipe all the commands out and clear the SEMAPHORE attribute by using "`@drain`". The SEMAPHORE attribute is kept when the MUSH restarts, but the commands waiting on it are lost, so reset it in a STARTUP attribute (for example with `@drain me`).
 
 Semaphores can be used to make sure that events occur in the right order, or to make sure that two players can't use the same object at the same time.
 
@@ -95,7 +95,7 @@ Semaphores can be used to enforce mutual exclusion - to prevent the same object 
     SEMAPHORE [#1ic+]: -1
 ```
 
-If a second player types doit as well, the second player's command is put on the semaphore queue and not run until the `@notify` me at the end of the REPORT attribute. Note the STARTUP attribute - because semaphores are cleared when the MUSH starts up, you must insure that the object gets `@notify`'d once when it starts up.
+If a second player types doit as well, the second player's command is put on the semaphore queue and not run until the `@notify` me at the end of the REPORT attribute. Note the STARTUP attribute - because the commands waiting on a semaphore are lost when the MUSH restarts, it resets the count with `@drain` and then `@notify`s the object once.
 
 ## Named semaphore attributes
 

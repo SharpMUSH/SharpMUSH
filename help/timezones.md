@@ -17,7 +17,7 @@ If the time zone argument is a dbref, the contents of that object's @TZ attribut
 
 If it's the string 'UTC', that time zone is used instead of the local one. If it's a number between -24 and +24, it adds that many hours from UTC/GMT. Fractional times are supported, e.g., -1.5 hours.
 
-If the MUSH supports it (See @config compile), symbolic time zone names can also be used.
+Symbolic time zone names can also be used.
 
 valid(timezone, `<tz>`) tests if `<tz>` can be used as a timezone.
 

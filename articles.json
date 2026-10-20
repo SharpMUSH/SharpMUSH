@@ -4844,7 +4844,6 @@
       "Mail-other",
       "@mail/clear",
       "@mail/unclear",
-      "@mail/purge",
       "@mail/tag",
       "@mail/untag",
       "@mail/unread",
@@ -5096,12 +5095,6 @@
         "id": "display-configuration",
         "lookup": "monikers display configuration",
         "heading": "Display configuration",
-        "aliases": []
-      },
-      {
-        "id": "object-types",
-        "lookup": "monikers object types",
-        "heading": "Object types and removing options",
         "aliases": []
       }
     ],
@@ -9243,10 +9236,20 @@
     "file": "sharpflag.md"
   },
   {
-    "id": "legacy:HALTED",
-    "lookup": "HALTED",
-    "title": "HALTED",
+    "id": "legacy:GOING_TWICE",
+    "lookup": "GOING_TWICE",
+    "title": "GOING_TWICE",
     "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:HALT",
+    "lookup": "HALT",
+    "title": "HALT",
+    "aliases": [
+      "HALTED"
+    ],
     "sections": [],
     "file": "sharpflag.md"
   },
@@ -9259,9 +9262,17 @@
     "file": "sharpflag.md"
   },
   {
-    "id": "legacy:INHERIT",
-    "lookup": "INHERIT",
-    "title": "INHERIT",
+    "id": "legacy:HEAR_CONNECT",
+    "lookup": "HEAR_CONNECT",
+    "title": "HEAR_CONNECT",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:HEAVY",
+    "lookup": "HEAVY",
+    "title": "HEAVY",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9270,6 +9281,22 @@
     "id": "legacy:JUMP_OK",
     "lookup": "JUMP_OK",
     "title": "JUMP_OK",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:JUDGE",
+    "lookup": "JUDGE",
+    "title": "JUDGE",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:JURY_OK",
+    "lookup": "JURY_OK",
+    "title": "JURY_OK",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9299,6 +9326,22 @@
     "file": "sharpflag.md"
   },
   {
+    "id": "legacy:LISTEN_PARENT",
+    "lookup": "LISTEN_PARENT",
+    "title": "LISTEN_PARENT",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:LOUD",
+    "lookup": "LOUD",
+    "title": "LOUD",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
     "id": "legacy:OPEN_OK",
     "lookup": "OPEN_OK",
     "title": "OPEN_OK",
@@ -9315,9 +9358,65 @@
     "file": "sharpflag.md"
   },
   {
+    "id": "legacy:MISTRUST",
+    "lookup": "MISTRUST",
+    "title": "MISTRUST",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:MONIKER",
+    "lookup": "MONIKER",
+    "title": "MONIKER",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
     "id": "legacy:MYOPIC",
     "lookup": "MYOPIC",
     "title": "MYOPIC",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:NOACCENTS",
+    "lookup": "NOACCENTS",
+    "title": "NOACCENTS",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:NO_LEAVE",
+    "lookup": "NO_LEAVE",
+    "title": "NO_LEAVE",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:NO_LOG",
+    "lookup": "NO_LOG",
+    "title": "NO_LOG",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:NO_TEL",
+    "lookup": "NO_TEL",
+    "title": "NO_TEL",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:NO_WARN",
+    "lookup": "NO_WARN",
+    "title": "NO_WARN",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9347,9 +9446,25 @@
     "file": "sharpflag.md"
   },
   {
+    "id": "legacy:ON-VACATION",
+    "lookup": "ON-VACATION",
+    "title": "ON-VACATION",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
     "id": "legacy:ORPHAN",
     "lookup": "ORPHAN",
     "title": "ORPHAN",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:PARANOID",
+    "lookup": "PARANOID",
+    "title": "PARANOID",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9366,6 +9481,14 @@
     "id": "legacy:QUIET",
     "lookup": "QUIET",
     "title": "QUIET",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:ROYALTY",
+    "lookup": "ROYALTY",
+    "title": "ROYALTY",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9411,10 +9534,36 @@
     "file": "sharpflag.md"
   },
   {
+    "id": "legacy:SUSPECT",
+    "lookup": "SUSPECT",
+    "title": "SUSPECT",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:TERSE",
+    "lookup": "TERSE",
+    "title": "TERSE",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
     "id": "legacy:TRANSPARENT",
     "lookup": "TRANSPARENT",
     "title": "TRANSPARENT",
     "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:TRUST",
+    "lookup": "TRUST",
+    "title": "TRUST",
+    "aliases": [
+      "INHERIT"
+    ],
     "sections": [],
     "file": "sharpflag.md"
   },
@@ -9430,6 +9579,14 @@
     "id": "legacy:UNINSPECTED",
     "lookup": "UNINSPECTED",
     "title": "UNINSPECTED",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:UNREGISTERED",
+    "lookup": "UNREGISTERED",
+    "title": "UNREGISTERED",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -9454,6 +9611,14 @@
     "id": "legacy:WIZARD",
     "lookup": "WIZARD",
     "title": "WIZARD",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpflag.md"
+  },
+  {
+    "id": "legacy:Z_TEL",
+    "lookup": "Z_TEL",
+    "title": "Z_TEL",
     "aliases": [],
     "sections": [],
     "file": "sharpflag.md"
@@ -13626,9 +13791,9 @@
         "aliases": []
       },
       {
-        "id": "character-specific-rules",
-        "lookup": "@sitelock character-specific rules",
-        "heading": "Character-specific rules",
+        "id": "removing-rules",
+        "lookup": "@sitelock remove",
+        "heading": "Removing rules",
         "aliases": []
       }
     ],

@@ -74,8 +74,6 @@ In all cases, %# is the dbref of the object doing the command, and all hooks sha
 
 A number of named registers are available in @hooks, accessible via `r(<name>, args)`, containing the arguments passed to the command. The exact registers available depend on the command type and the arguments passed; see [@hook registers] for a description of all possible registers.
 
-Hooks can also be set in the alias.cnf file.
-
 Leaving out the object and attribute clears an existing hook. Wizards can see existing hooks with @command or `@hook/list`.
 
 ## Inline hooks
