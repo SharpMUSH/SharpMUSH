@@ -261,10 +261,21 @@ public class ImportPromotionJournalTests
 		try
 		{
 			File.SetUnixFileMode(session.Directory, UnixFileMode.None);
+			if (CanStillRead(session.Directory))
+			{
+				Skip.Test("This environment reads directories without read permission (root); the Unix permission failure cannot be exercised.");
+				return;
+			}
 			await Assert.That(() => journal.List()).Throws<UnauthorizedAccessException>();
 			await Assert.That(journal.ApplyPendingBeforeHostConstruction).Throws<UnauthorizedAccessException>();
 		}
 		finally { File.SetUnixFileMode(session.Directory, original); }
+	}
+
+	private static bool CanStillRead(string directory)
+	{
+		try { _ = Directory.GetFileSystemEntries(directory); return true; }
+		catch (UnauthorizedAccessException) { return false; }
 	}
 
 }
