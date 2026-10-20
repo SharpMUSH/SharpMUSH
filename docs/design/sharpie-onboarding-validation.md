@@ -69,6 +69,13 @@ Evidence: `work/onboarding/channel-help-keyboard-320.png`. This check uses the
 administrator's explicit player-guide preview and does not claim a new
 ordinary-player permission or live command-delivery test.
 
+On the subsequently published client, keyboard activation of Skip to main
+content focused `main-content` without leaving `/welcome?preview=true`.
+Keyboard activation of the MUSH familiarity choice focused the “Just what's
+new” lesson heading. The current veteran journey has five steps, including the
+added channel-help lesson; older four-step observations below describe earlier
+revisions.
+
 This checklist separates demonstrated behavior from remaining acceptance work.
 The dated records below provide the details and limitations of each observation.
 
