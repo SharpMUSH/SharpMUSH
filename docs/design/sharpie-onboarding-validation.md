@@ -37,7 +37,7 @@ The dated records below provide the details and limitations of each observation.
 
 | Requirement | Current evidence | Remaining gate |
 |---|---|---|
-| Four familiarity paths | Browser-selected Discord, MUSH, other-roleplay and independent paths; full authenticated desktop Discord lesson sequence through connected Play | Fresh authenticated remaining paths and full mobile journeys |
+| Four familiarity paths | Browser-selected all four paths; complete authenticated desktop Discord and fresh mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence | Fresh authenticated MUSH sequence and remaining viewport coverage |
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests | Complete keyboard-only journey across login and character handoffs |
 | Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
@@ -52,6 +52,13 @@ The dated records below provide the details and limitations of each observation.
 The failed automated Claude review produced no findings (one turn, no model
 usage); it is not a successful review. CodeRabbit skips this draft PR. Neither
 status closes the independent-review or final CI gate.
+
+At implementation revision `81f983803`, GitHub build, formatting and component
+tests passed; core and integration tests were still running when checked.
+Claude review run `39386132471` failed after initialization with
+`is_error: true`, one turn, zero cost and empty model usage. It produced no
+buffered comments. The log does not establish the underlying service or
+configuration cause, and this failure is not evidence of a code finding.
 
 ## Verified on 2026-10-19
 
@@ -642,3 +649,20 @@ Escape, then zero dialogs and focus on the guide opener after the second.
 Stop-tooltip placement was visually inspected and captured in
 `work/onboarding/guide-tooltip-mobile.png`. All 2,917 component tests, formatting
 and local publication passed. Touch icon comprehension remains a user-test item.
+
+### Fresh other-roleplay mobile journey (2026-10-20)
+
+A new disposable local account was used; no existing account progress was reset.
+At 390×844, signing in with `/welcome` as the return destination led to first
+character creation. Creating RoleplayPilot without a chosen native password
+returned to `/welcome`. Declining anonymous progress left all eight steps fresh.
+The roleplay path displayed its distinct persistent-world introduction,
+forum-versus-room navigation explanation and collaborative dialogue guidance.
+
+All eight lessons were traversed with Enter on the advance control. Local
+`look` practice returned the practice room; installed `+help` and `+scene/help`
+appeared automatically in the final lesson. Completion focused the completion
+message, then Tab/Enter on “Open the game” reached connected Play as RoleplayPilot,
+with no guide overlay and focus in the command input. Explicitly sending `look`
+returned the actual room description. Screenshot:
+`work/onboarding/fresh-roleplay-mobile-play.png`.
