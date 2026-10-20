@@ -319,3 +319,28 @@ The fake handler transfers its response through `HttpClient.SendAsync`;
 failure/cancellation exits. Disposing inside the handler would prematurely
 dispose the response before the consumer can read it. No production ownership
 change is needed for this finding.
+
+### Real first-character connection recovery
+
+Stopped only `codex-sharpie-onboarding-gateway-network` in the isolated preview.
+A fresh disposable account created RetryPilot with the passwordless option.
+The UI retained the saved character, removed creation inputs and showed
+“Retry connection” with an honest failure message. After restarting that same
+gateway, retry reached Play connected as RetryPilot, with the game-command input
+focused. Failure screenshot: `work/onboarding/connection-retry-failure.png`.
+The gateway is restored. Subsequent browser inspection of the account roster
+showed exactly one character, RetryPilot #20: retry did not duplicate creation.
+
+This run also reproduced a separate return-route bug: signing in with no
+characters from `/login?returnUrl=%2Fcharacters%2Fnew%3FreturnUrl%3D%252Fwelcome`
+landed at `/characters/new` without the nested guide destination, and recovery
+therefore went to Play. `Login.OnboardingUrl` currently preserves direct welcome
+routes only. This needs a regression and safe preservation of the character
+creation/claim destination before this journey can be accepted.
+
+The routing regression reproduced both lost create and claim destinations
+(2 failed, 9 passed). Login now preserves only the exact local character-entry
+routes, with their query strings; CharacterCreate still independently restricts
+its final destination to the local welcome route. Three negative cases cover
+protocol-relative, near-match and traversal paths. Browser publication and
+rechecking this fix remain pending.

@@ -133,6 +133,27 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	[TUnit.Core.Test]
+	[Arguments("/characters/new?returnUrl=%2Fwelcome")]
+	[Arguments("/characters/claim?returnUrl=%2Fwelcome")]
+	public async Task Login_WithNoCharacters_PreservesCharacterEntry(string destination)
+	{
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString(destination)}", characters: []);
+		WaitForNavigation(cut, destination);
+		await Assert.That(Nav.Uri).EndsWith(destination);
+	}
+
+	[TUnit.Core.Test]
+	[Arguments("//evil.example/characters/new")]
+	[Arguments("/characters/newer?returnUrl=%2Fwelcome")]
+	[Arguments("/characters/new/../../admin")]
+	public async Task Login_WithNoCharacters_RejectsOtherEntryRoutes(string destination)
+	{
+		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString(destination)}", characters: []);
+		WaitForNavigation(cut, "/characters/new");
+		await Assert.That(Nav.Uri).EndsWith("/characters/new");
+	}
+
+	[TUnit.Core.Test]
 	public async Task Login_WithACharacter_StillHonoursTheReturnUrl()
 	{
 		var cut = await SubmitLoginFrom($"/login?returnUrl={Uri.EscapeDataString("/wiki")}", OneCharacter);
