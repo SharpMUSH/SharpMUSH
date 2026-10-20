@@ -276,15 +276,18 @@ public partial class TaskScheduler(
 		var failedInvocations = entry.Observation?.FailedInvocations;
 		if (outcome == QueueOutcome.Completed && failedInvocations > 0) outcome = QueueOutcome.InvocationFailure;
 		entry.Observation?.Complete(outcome);
+		// A release callback's failure must not stop the consumer (see ObservedOrLegacyReleaseCallbackFailureCannotStopTheConsumer).
 		try { entry.OnReleased?.Invoke(); }
-		catch (Exception exception) { logger.LogError(exception, "Queue release callback failed for PID {Pid}", entry.Pid); }
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{ logger.LogError(exception, "Queue release callback failed for PID {Pid}", entry.Pid); }
 		finally
 		{
 			try { entry.Cts.Dispose(); }
 			finally
 			{
 				try { entry.OnObservedRelease?.Invoke(new(entry.Pid, outcome, failedInvocations)); }
-				catch (Exception exception) { logger.LogError(exception, "Queue release observer failed for PID {Pid}", entry.Pid); }
+				catch (Exception exception) when (exception is not OperationCanceledException)
+				{ logger.LogError(exception, "Queue release observer failed for PID {Pid}", entry.Pid); }
 			}
 		}
 	}

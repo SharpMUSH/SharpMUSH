@@ -27,21 +27,27 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
+		// Retained through the whole installer call, including a managed package's file deployment, which
+		// opens no package transaction of its own.
+		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 		return await _inner.ApplyAsync(manifest, request, cancellationToken, fileSource);
 	}
 	public async Task<Result<Success>> UninstallAsync(string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
+		// Retained through the whole installer call, including a managed package's file deployment, which
+		// opens no package transaction of its own.
+		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 		return await _inner.UninstallAsync(packageId, force, cancellationToken);
 	}
 	public async Task<Result<PackageRollbackResult>> RollbackAsync(string packageId, int revision, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
+		// Retained through the whole installer call, including a managed package's file deployment, which
+		// opens no package transaction of its own.
+		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
 		cancellationToken.ThrowIfCancellationRequested();
 		return await _inner.RollbackAsync(packageId, revision, cancellationToken);
 	}
