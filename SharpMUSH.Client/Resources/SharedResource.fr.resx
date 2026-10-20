@@ -5785,4 +5785,5 @@
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Parcourir les pages</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Rubriques à découvrir</value></data>
+  <data name="WikiStartHere" xml:space="preserve"><value>Commencez ici</value></data>
 </root>

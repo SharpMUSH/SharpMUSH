@@ -16,6 +16,13 @@
             <h1>@Title</h1>
             <a href="@WikiLocaleLinks.WithLocale("/wiki", _state.Locale)">@Loc["NavWikiHome"]</a>
         }
+        @if (navigation.LandingPage is { } landing)
+        {
+            <section class="wiki-collection-landing" aria-label="@Loc["WikiStartHere"]">
+                <h2>@Loc["WikiStartHere"]</h2>
+                <a href="@WikiJourneyLinks.Landing(landing, _state)">@landing.Title</a>
+            </section>
+        }
         @if (navigation.Categories.Any(row => row.Pinned && row.HasPage))
         {
             <section class="wiki-collection-featured" aria-label="@Loc["WikiFeaturedTopics"]">

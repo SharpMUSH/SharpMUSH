@@ -6491,4 +6491,5 @@
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Просмотреть элементы</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Избранные темы</value></data>
+  <data name="WikiStartHere" xml:space="preserve"><value>Начните здесь</value></data>
 </root>
