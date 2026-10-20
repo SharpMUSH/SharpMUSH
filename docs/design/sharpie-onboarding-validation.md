@@ -7,8 +7,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,902 passed**, zero failed/skipped after the guide
-  icon navigation and inactive-path chooser (`guide-icon-stop-tests.log`).
+- Full component suite: **2,903 passed**, zero failed/skipped after the guide
+  channel teaching and command-focus handoff (`guide-channels-tests.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -264,3 +264,26 @@ that handoff to the command input remains an accessibility/usability follow-up.
 Character claim, failed-connection retry, administrator draft-feedback runtime
 checks and broader accessibility acceptance remain open. Genre lesson pilots
 are under independent visual review and are not shipped or owner-approved.
+
+
+## Channels and command focus — 2026-10-19
+
+Published client includes `a3e7e1305` channel guidance and `422af8a37` focus fix.
+The final lesson in every path teaches Browse channels, `@channel/list`, reading
+channel descriptions, joining, chatting and leaving, with explicit cross-room
+audience and game-dependent names/permissions. Reference commands are localized.
+The live ordinary-player terminal accepted `@channel/list` and returned the
+correct empty-world result, “No channels.” Join/chat syntax was checked against
+shipped channel help; no public message or membership change was made.
+
+Real-browser insertion into the empty connected input closed the guide and left
+focus on Game command with value `look`, without sending. This supersedes the
+previous focus follow-up. Standard Back to game still returns to its opener.
+
+The channel lesson's document scroll width equaled the viewport at 390px and
+320px. At 390px its content width was 314px; command examples wrapped within the
+card. Enter expanded and collapsed the common-command reference with focus on
+its summary; channel entries displayed their localized meanings and audiences.
+The viewport override was reset afterward. These are browser viewport/keyboard
+checks, not physical-device or screen-reader acceptance. Screenshot:
+`work/onboarding/channels-phone.png`.
