@@ -18,6 +18,14 @@ public partial class PackageWriteTransactionTests
 
 	private static TaskCompletionSource Signal() => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
+	/// <summary>Waits for <paramref name="signal"/>, surfacing <paramref name="worker"/>'s own failure if it ends first.</summary>
+	private static async Task ReachedAsync(TaskCompletionSource signal, Task worker)
+	{
+		await Task.WhenAny(signal.Task, worker).WaitAsync(TimeSpan.FromSeconds(30));
+		if (!signal.Task.IsCompleted) await worker;
+		await signal.Task;
+	}
+
 	/// <summary>A write a helper makes to a store the transaction does not cover, as a wiki or role write is.</summary>
 	private async Task ExternalWriteAsync(DBRef dbref, string value) =>
 		await Database.SetAttributeAsync(dbref, ["TX_VALUE"], MarkupText.Plain(value), await PackageManagerAsync());
@@ -38,7 +46,7 @@ public partial class PackageWriteTransactionTests
 			writes.Track("external TX_VALUE", () => ExternalWriteAsync(dbref, "original"));
 		});
 
-		await written.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await ReachedAsync(written, helper);
 		var dispose = writes.DisposeAsync().AsTask();
 		await Task.Delay(100);
 		await Assert.That(dispose.IsCompleted).IsFalse();
@@ -65,7 +73,7 @@ public partial class PackageWriteTransactionTests
 				return null;
 			}, notes));
 
-		await resolving.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await ReachedAsync(resolving, helper);
 		var dispose = writes.DisposeAsync().AsTask();
 		await Task.Delay(100);
 		await Assert.That(dispose.IsCompleted).IsFalse();
@@ -117,17 +125,28 @@ public partial class PackageWriteTransactionTests
 			}
 			await ExternalWriteAsync(dbref, "external");
 			writes.Track("external TX_VALUE", () => ExternalWriteAsync(dbref, "nested"));
-			// Two writes at once from inside the helper are still one too many.
-			var first = writes.SetAttributeAsync(dbref, ["TX_SIBLING"], MarkupText.Plain("a"), pm, CancellationToken.None);
+			// A concurrent flow inside the helper that holds the admission leaves this flow no room to write.
+			var siblingHeld = Signal();
+			var siblingRelease = Signal();
+			var sibling = Task.Run(async () =>
+			{
+				using (writes.AdmitHelper())
+				{
+					siblingHeld.SetResult();
+					await siblingRelease.Task;
+				}
+			});
+			await ReachedAsync(siblingHeld, sibling);
 			await Assert.That(async () => await writes.SetAttributeAsync(dbref, ["TX_SIBLING"], MarkupText.Plain("b"), pm,
 				CancellationToken.None)).Throws<InvalidOperationException>();
-			await first;
+			siblingRelease.SetResult();
+			await sibling;
 			await Assert.That(async () => await writes.DisposeAsync()).Throws<InvalidOperationException>();
 			held.SetResult();
 			await release.Task;
 		});
 
-		await held.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await ReachedAsync(held, helper);
 		await Assert.That(async () => await writes.SetAttributeAsync(dbref, ["TX_OUTSIDE"], MarkupText.Plain("x"), pm,
 			CancellationToken.None)).Throws<InvalidOperationException>();
 		await Assert.That(() => writes.Track("outside", () => Task.CompletedTask)).Throws<InvalidOperationException>();
@@ -163,7 +182,7 @@ public partial class PackageWriteTransactionTests
 			catch (InvalidOperationException error) { refused = error; }
 		});
 
-		await written.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await ReachedAsync(written, helper);
 		var dispose = writes.DisposeAsync().AsTask();
 		release.SetResult();
 		await helper;
@@ -189,7 +208,7 @@ public partial class PackageWriteTransactionTests
 			await Task.Delay(Timeout.Infinite, cancellation.Token);
 		});
 
-		await written.Task.WaitAsync(TimeSpan.FromSeconds(30));
+		await ReachedAsync(written, helper);
 		await cancellation.CancelAsync();
 		await Assert.That(async () => await helper).Throws<OperationCanceledException>();
 		await Assert.That(await AttributeAsync(dbref, "TX_VALUE")).IsEqualTo("before cancel");
