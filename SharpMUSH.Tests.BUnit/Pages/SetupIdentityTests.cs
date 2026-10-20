@@ -28,10 +28,11 @@ public class SetupIdentityTests : BunitContext
 	private sealed class Handler : HttpMessageHandler
 	{
 		public int Writes;
+		public OnboardingSettings? Saved;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			var result = new OnboardingSettings("Imported world", ["Fantasy"], ["High Fantasy"], "An existing introduction", "", "", "", "chibi", "");
-			if (request.Method == HttpMethod.Put) { Writes++; result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!; }
+			if (request.Method == HttpMethod.Put) { Writes++; result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!; Saved = result; }
 			return new(HttpStatusCode.OK) { Content = JsonContent.Create(result) };
 		}
 	}
@@ -63,4 +64,36 @@ public class SetupIdentityTests : BunitContext
 		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(handler.Writes).IsEqualTo(1);
 	}
+	[Test]
+	[Arguments(0)]
+	[Arguments(1)]
+	[Arguments(2)]
+	[Arguments(3)]
+	public async Task WelcomeStarterOnlyReplacesDraftWhenChosenAndEditsSave(int starter)
+	{
+		using var handler = new Handler();
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement("#guide-introduction");
+		await Assert.That(form.Find("textarea").GetAttribute("value")).IsEqualTo("An existing introduction");
+		await form.Find("#guide-game-name").InputAsync("Our world");
+		await Assert.That(form.Find(".identity-preview-intro").TextContent).IsEqualTo("An existing introduction");
+		await form.FindAll(".identity-starters button")[starter].ClickAsync();
+		var chosen = form.Find(".identity-preview-intro").TextContent;
+		await Assert.That(chosen.StartsWith("Welcome to Our world.", StringComparison.Ordinal)).IsTrue();
+		await Assert.That(form.Find("textarea").GetAttribute("value")).IsEqualTo(chosen);
+		await Assert.That(handler.Writes).IsEqualTo(0);
+		await form.Find("#guide-game-name").InputAsync("Another name");
+		await Assert.That(form.Find(".identity-preview-intro").TextContent).IsEqualTo(chosen);
+		var edited = chosen + " A personal addition.";
+		await form.Find("#guide-introduction").InputAsync(edited);
+		await Assert.That(form.Find(".identity-preview-intro").TextContent).IsEqualTo(edited);
+		await Assert.That(handler.Writes).IsEqualTo(0);
+		await form.Find(".identity-save").ClickAsync();
+		await Assert.That(handler.Writes).IsEqualTo(1);
+		await Assert.That(handler.Saved!.Introduction).IsEqualTo(edited);
+	}
+
 }

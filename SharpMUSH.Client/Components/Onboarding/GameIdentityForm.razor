@@ -17,6 +17,13 @@
         <fieldset disabled="@_busy">
             <label for="guide-game-name">@Loc["GuideIdentityName"]</label><input id="guide-game-name" @bind="_name" @bind:event="oninput" @bind:after="MarkDirty" maxlength="128" />
             <label for="guide-introduction">@Loc["GuideIdentityIntroduction"]</label><textarea id="guide-introduction" @bind="_introduction" @bind:event="oninput" @bind:after="MarkDirty" maxlength="1000" rows="3"></textarea>
+            <p id="guide-welcome-starters-help">@Loc["GuideIdentityStarterHint"]</p>
+            <div class="identity-starters" role="group" aria-label="@Loc["GuideIdentityStarters"]" aria-describedby="guide-welcome-starters-help">
+                @foreach (var starter in WelcomeStarters)
+                {
+                    <button type="button" @onclick="() => ChooseWelcome(starter)">@Loc[$"GuideIdentityStarter{starter}"]</button>
+                }
+            </div>
             <div class="identity-columns">
                 <div><label for="guide-genres">@Loc["GuideIdentityGenres"]</label><select id="guide-genres" @bind="_genres" @bind:after="MarkDirty">
                     @if (!MsspCatalog.Find("GENRE")!.Choices.Contains(_genres)) { <option value="@_genres" disabled>@_genres</option> }
@@ -82,6 +89,13 @@
             case ApiFailure failure: _error = failure.Message; break;
         }
         _busy = false;
+    }
+    private static readonly string[] WelcomeStarters = ["Stories", "Adventure", "Relaxed", "NewPlayers"];
+    private void ChooseWelcome(string starter)
+    {
+        var gameName = string.IsNullOrWhiteSpace(_name) ? Loc["GuideIdentityThisGame"].Value : _name.Trim();
+        _introduction = Loc[$"GuideIdentityStarter{starter}Text", gameName].Value;
+        MarkDirty();
     }
     private void MarkDirty() => _saved = false;
     private async Task Save()

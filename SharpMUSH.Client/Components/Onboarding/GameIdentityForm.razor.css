@@ -15,3 +15,7 @@
 .identity-preview-content h2 { font-size: 1.4rem; overflow-wrap: anywhere; }
 .identity-preview-content img { width: min(25%, 7rem); height: auto; object-fit: contain; }
 .identity-preview-intro { white-space: pre-line; overflow-wrap: anywhere; }
+
+.identity-starters { display: flex; flex-wrap: wrap; gap: .5rem; }
+.identity-starters button { min-height: 44px; max-width: 100%; padding: .5rem .75rem; overflow-wrap: anywhere; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+.identity-starters button:hover { border-color: var(--accent); }

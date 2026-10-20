@@ -9619,4 +9619,15 @@
   <data name="GuideIdentityArtFallback" xml:space="preserve"><value>Showing the default Sharpie until artwork for your selected style and genre is available.</value></data>
   <data name="GuideChannelsName" xml:space="preserve"><value>Replace NAME with a channel from the list.</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Start here</value></data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve"><value>Choose a starter to replace the welcome above, then edit it to make it yours. Save when ready.</value></data>
+  <data name="GuideIdentityStarters" xml:space="preserve"><value>Welcome starters</value></data>
+  <data name="GuideIdentityThisGame" xml:space="preserve"><value>this game</value></data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve"><value>Collaborative stories</value></data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve"><value>Adventure</value></data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve"><value>Relaxed roleplay</value></data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve"><value>New players</value></data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve"><value>Welcome to {0}. Bring a character, share an idea, and imagine the stories we could tell together.</value></data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve"><value>Welcome to {0}. Who will your character become? Let your curiosity lead the way into a new story.</value></data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve"><value>Welcome to {0}. Take a moment to settle in, imagine a character, and find a story you would like to tell.</value></data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve"><value>Welcome to {0}. New to text roleplay? Start with a character idea and a little curiosity. Every story begins somewhere.</value></data>
 </root>
