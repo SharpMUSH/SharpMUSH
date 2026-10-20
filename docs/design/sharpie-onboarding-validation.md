@@ -769,3 +769,18 @@ preview focused the `Just what's new` h2 and scrolled it into view. The live
 create page exposed `Create a character` as h1. The full component suite passed
 2,925 tests, with zero failures or skips; targeted formatting and `git diff
 --check` passed. Screenshot: `work/onboarding/welcome-path-focus.png`.
+
+### Narrow-screen veteran focus and contrast (2026-10-20)
+
+At 320×740 in the published player-guide preview, keyboard activation of the
+MUSH choice focused the lesson h2 at viewport y=386px. Document width remained
+320px. Stop, Back, Skip and Complete each measured 44×44px. Tab reached Skip
+(Back was disabled on the first lesson); another Tab and Enter completed the
+lesson and displayed the account/character lesson without horizontal overflow.
+The action retained focus, and the changing heading has `aria-live="polite"`.
+This verifies DOM semantics and keyboard behavior, not screen-reader speech.
+
+Computed dark-theme heading, body and enabled action foreground was
+RGB(233,237,240) on RGB(22,24,27), giving 15.11:1 contrast. This measurement
+does not establish contrast for other themes, focus rings or disabled controls.
+Screenshot: `work/onboarding/welcome-veteran-320-focus.png`.
