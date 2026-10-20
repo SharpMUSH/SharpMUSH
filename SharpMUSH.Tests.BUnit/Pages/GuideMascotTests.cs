@@ -29,6 +29,7 @@ public class GuideMascotTests : TrackingBunitContext
 		var cut = Render<GuidePanel>(p => p.Add(x => x.Lesson, GuideCatalog.Player(GuidePath.Discord)[0]));
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(1);
 		await Assert.That(cut.Markup).Contains("help say");
+		await Assert.That(cut.Find(".guide-panel-heading button").TextContent).IsEqualTo("Stop this guide");
 		await Assert.That(cut.Markup).Contains("Read how a specific command works");
 		await Assert.That(cut.Find("img").GetAttribute("src")).Contains("sharpie-minimal.svg");
 	}

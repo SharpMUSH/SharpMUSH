@@ -9593,4 +9593,6 @@
   <data name="GuideHelpEntry" xml:space="preserve"><value>Getting started with Sharpie / Change my guide</value></data>
   <data name="GuideAdminEntry" xml:space="preserve"><value>Prepare for new players</value></data>
   <data name="GuideAdminDescription" xml:space="preserve"><value>— game introduction and onboarding checklist.</value></data>
+  <data name="GuideBackToGame" xml:space="preserve"><value>Back to game</value></data>
+  <data name="GuideStop" xml:space="preserve"><value>Stop this guide</value></data>
 </root>

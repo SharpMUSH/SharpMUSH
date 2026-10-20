@@ -115,11 +115,11 @@ game, not a separate Discord account; scene archives depend on game capabilities
    scenes, communication and help. Completion is a modest “You're ready to explore”,
    not a full-screen celebration or a mandatory tour of every feature.
 
-Each step has one main action and Back, Skip this step, and Close. The guide is a
+Each step has one main action and Back, Skip this step, and Stop this guide. The guide is a
 player-opened side sheet on desktop and mobile, reached from the Play header.
 It never consumes space above the terminal or opens automatically over play.
-The sheet is modal while explicitly open: Escape or its close control restores
-focus to the opener. Successful command insertion closes it without sending the
+The sheet is modal while explicitly open: Escape or Back to game restores
+focus to the opener without changing progress. Stop this guide dismisses the journey. Successful command insertion closes it without sending the
 command or dismissing the journey; refusal keeps the explanation visible.
 The full guide page remains available for longer reading.
 
