@@ -13,15 +13,20 @@ namespace SharpMUSH.Library.Services.Interfaces;
 ///
 /// <para>An apply's lifecycle hooks (<c>AINSTALL</c>, <c>AUPDATE</c>) do not run in the operation's
 /// entry. Each is queued as an entry of its own once that entry has finished, and the call returns
-/// after they have run. Nothing in the operation's entry waits on the queue, so it cannot deadlock
-/// against itself.</para>
+/// after their entries are released (including halt, expiry or shutdown). Caller cancellation can
+/// end observation earlier, but the runner retains sequencing through body/compensation settlement
+/// and hook admission/release. Committed hooks are independent of the caller's lifetime, and each
+/// retains its scheduler cancellation and softcode deadline. Nothing in the operation's entry waits
+/// on the queue, so it cannot deadlock against itself.</para>
 /// </summary>
 public interface IPackageOperationRunner
 {
 	/// <param name="operation">A short name for the queue entry and the logs: <c>apply</c>, <c>rollback</c>, <c>uninstall</c>.</param>
 	/// <param name="body">The package operation itself.</param>
 	/// <param name="provenance">Resolves the initiating context inside the operation gate, immediately before its backup.</param>
-	/// <param name="cancellationToken">The caller's token, passed on to <paramref name="body"/>.</param>
+	/// <param name="cancellationToken">Cancels caller observation and, linked with the entry's external
+	/// halt/shutdown cancellation, asks <paramref name="body"/> to unwind. The replacement body budget
+	/// excludes the entry's softcode deadline. Cancellation does not imply that nothing changed.</param>
 	Task<PackageOperationOutcome<T>> RunAsync<T>(
 		string operation,
 		Func<CancellationToken, Task<T>> body,

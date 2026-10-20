@@ -9618,4 +9618,5 @@
   <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
   <data name="GuideIdentityArtFallback" xml:space="preserve"><value>Showing the default Sharpie until artwork for your selected style and genre is available.</value></data>
   <data name="GuideChannelsName" xml:space="preserve"><value>Replace NAME with a channel from the list.</value></data>
+  <data name="WikiStartHere" xml:space="preserve"><value>Start here</value></data>
 </root>

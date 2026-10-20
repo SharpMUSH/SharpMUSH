@@ -33,6 +33,11 @@ public static class PackageManifestWriter
 	public static string Write(PackageManifest manifest)
 	{
 		ArgumentNullException.ThrowIfNull(manifest);
+		var landingIssues = PackageManifestService.ValidateWikiLandingPage(manifest);
+		if (landingIssues.Count > 0)
+		{
+			throw new ArgumentException(string.Join(" ", landingIssues.Select(issue => issue.Message)), nameof(manifest));
+		}
 
 		var yaml = new StringBuilder();
 		WriteHeader(yaml, manifest);
@@ -96,6 +101,10 @@ public static class PackageManifestWriter
 
 		AppendOptional(yaml, "category", manifest.Category);
 		AppendOptional(yaml, "wiki_collection_name", manifest.WikiCollectionName);
+		if (manifest.WikiLandingPage is { } landing)
+		{
+			yaml.Append("wiki_landing_page: ").AppendLine(Quoted(landing.Label));
+		}
 
 		AppendOptional(yaml, "convention_prefix", manifest.ConventionPrefix);
 

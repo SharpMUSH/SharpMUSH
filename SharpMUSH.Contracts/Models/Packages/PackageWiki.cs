@@ -75,6 +75,15 @@ public sealed record PackageWikiPageSpec(
 	public string Label => $"{NamespaceName}:{Page}";
 }
 
+/// <summary>The authored identity of a declared package wiki entrance (format 1.14).</summary>
+/// <param name="Namespace">Main, Help or Category, as for a shipped wiki page.</param>
+/// <param name="Page">The canonical authored page slug; never derived from a title.</param>
+public sealed record PackageWikiLandingPageSpec(WikiNamespace Namespace, string Page)
+{
+	/// <summary>The exact <c>namespace:slug</c> authored key.</summary>
+	public string Label => $"{WikiHelpers.NamespaceName(Namespace)}:{Page}";
+}
+
 /// <summary>
 /// What a package page holds, field by field: the unit the upgrade merge compares. A baseline, the live page and
 /// the new version are each one of these. <see cref="Categories"/> are keys, sorted; <see cref="Markdown"/> has

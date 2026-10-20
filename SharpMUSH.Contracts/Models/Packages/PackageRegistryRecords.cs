@@ -49,7 +49,16 @@ public sealed record InstalledPackageRecord(
 {
 	/// <summary>The authored public label from the last applied manifest, or null for the package-id-derived fallback.</summary>
 	public string? WikiCollectionName { get; init; }
+
+	/// <summary>The exact owned wiki entrance captured by the last successful apply, or null for none.</summary>
+	public PackageWikiLandingPageBinding? WikiLandingPage { get; init; }
 }
+
+/// <summary>
+/// The exact owned page incarnation used as a package collection entrance. This is installed metadata,
+/// distinct from the manifest's authored key; a later page with the same slug cannot replace its PageId.
+/// </summary>
+public sealed record PackageWikiLandingPageBinding(string Namespace, string Slug, string PageId);
 
 /// <summary>An object created by a package (sys_package_objects).</summary>
 /// <param name="PackageId">Owning package id.</param>

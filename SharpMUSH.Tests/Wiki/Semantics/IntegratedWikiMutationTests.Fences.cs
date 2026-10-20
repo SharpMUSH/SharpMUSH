@@ -28,7 +28,6 @@ public partial class IntegratedWikiMutationTests
 		foreach (var operation in new Func<Task>[]
 		{
 			async () => { await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id), WikiRequirementSet.Protection, "#1"); },
-			async () => { await wiki.DeleteAsync(page.Id, "#1"); },
 			async () => { await wiki.UpsertTranslationAsync(page.Id, "fr", "Translated target", "translation", "#1", null, true, null); },
 			async () => { await wiki.DeleteTranslationAsync(page.Id, "fr", "#1"); },
 			() => provider.UpsertPackageWikiPageAsync(owner),

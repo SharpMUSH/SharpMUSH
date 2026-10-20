@@ -102,6 +102,9 @@ public sealed record PackageRevisionSnapshot(
 {
 	/// <summary>The collection label applied at this revision; rollback restores it, including null for legacy revisions.</summary>
 	public string? WikiCollectionName { get; init; }
+
+	/// <summary>The captured exact wiki entrance; absent in legacy snapshots and never reconstructed by slug.</summary>
+	public PackageWikiLandingPageBinding? WikiLandingPage { get; init; }
 }
 
 /// <summary>One object in a revision snapshot.</summary>

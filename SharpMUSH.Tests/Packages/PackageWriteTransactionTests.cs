@@ -53,7 +53,7 @@ public class PackageWriteTransactionTests
 		await writes.SetAttributeAsync(dbref, ["TX_ADDED"], MarkupText.Plain("added"), pm, CancellationToken.None);
 		await writes.SetNameAsync(node, "Tx Renamed", CancellationToken.None);
 		await writes.SetFlagAsync(node, dark, CancellationToken.None);
-		await Assert.That((await writes.SetLockAsync(node, "Use", "#FALSE", CancellationToken.None)).Value).IsTypeOf<Success>();
+		await Assert.That(await writes.SetLockAsync(node, "Use", "#FALSE", CancellationToken.None) is Success).IsTrue();
 		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_VALUE", "second", "h", "2.0.0"));
 		await writes.UpsertManagedAttributeAsync(new ManagedAttributeRecord(package, objid, "TX_ADDED", "added", "h", "2.0.0"));
 	}

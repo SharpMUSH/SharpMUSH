@@ -1,4 +1,7 @@
 .wiki-collection-browser { min-width: 0; display: grid; gap: 1rem; }
+.wiki-collection-landing { min-width: 0; display: grid; gap: .35rem; padding: .75rem 1rem; border: 1px solid var(--border); border-inline-start: 3px solid var(--accent); border-radius: var(--radius-row); background: var(--surface); }
+.wiki-collection-landing h2 { margin: 0; font-size: .9rem; color: var(--text-dim); }
+.wiki-collection-landing a { min-width: 0; min-height: 44px; display: flex; align-items: center; color: var(--accent); font-size: 1.15rem; font-weight: 600; overflow-wrap: anywhere; }
 .wiki-collection-featured { min-width: 0; }
 .wiki-collection-featured h2 { margin: 0 0 .65rem; font-size: 1rem; color: var(--text-dim); }
 .wiki-collection-featured-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: .75rem; }

@@ -58,6 +58,12 @@ public partial class PackageInstallService
 		IPackageFileSource? fileSource,
 		CancellationToken cancellationToken)
 	{
+		var manifestIssues = PackageManifestService.ValidateWikiLandingPage(manifest);
+		if (manifestIssues.Count > 0)
+		{
+			return InvalidWikiLanding(manifestIssues);
+		}
+
 		var compatibility = PackageServerCompatibility.Check(manifest, engine.Current);
 		if (RefuseServerVersion(compatibility, request) is { } refused)
 		{
@@ -93,7 +99,14 @@ public partial class PackageInstallService
 		}
 
 		var inputs = await GatherInputsAsync(manifest, request.ConfigureAnswers, cancellationToken);
+		var landingIssues = await CheckPreviousWikiLandingAsync(manifest, inputs.Installed, cancellationToken);
+		if (landingIssues.Count > 0)
+		{
+			return InvalidWikiLanding(landingIssues);
+		}
+
 		var changeset = planner.ComputeChangeset(inputs);
+		changeset = changeset with { Notes = [.. changeset.Notes, .. WikiLandingNotes(manifest, inputs.Installed)] };
 
 		if (changeset.IsBlocked)
 		{
@@ -213,6 +226,9 @@ public partial class PackageInstallService
 		/// <summary>The options the package owns after this apply (<see cref="InstalledPackageRecord.Settings"/>).</summary>
 		public IReadOnlyList<PackageSettingRecord>? Settings { get; set; }
 
+		/// <summary>The accepted owned/live entrance resolved after the actual wiki apply.</summary>
+		public PackageWikiLandingPageBinding? WikiLandingPage { get; set; }
+
 		public List<string> Notes { get; } = [.. Changeset.Notes];
 
 		/// <summary>The wiki pages this apply let go of untouched, deleted once it commits.</summary>
@@ -272,6 +288,19 @@ public partial class PackageInstallService
 		if (await ApplyWikiAsync(run, cancellationToken) is Error<string> wikiError)
 		{
 			return wikiError;
+		}
+
+		switch (await ResolveWikiLandingAsync(run.Manifest, run.Inputs.Installed, cancellationToken))
+		{
+			case PackageWikiLandingSelection selection:
+				run.WikiLandingPage = selection switch
+				{
+					PackageWikiLandingBound bound => bound.Binding,
+					PackageWikiLandingAbsent => null
+				};
+				break;
+			case Error<string> error:
+				return error;
 		}
 
 		await RetireRemovedObjectsAsync(run, cancellationToken);
@@ -537,7 +566,8 @@ public partial class PackageInstallService
 			source.Commit, source.Branch, DateTimeOffset.UtcNow, revision, Owned: run.Owned, Settings: run.Settings,
 			Kind: manifest.Kind, PastMaximum: pastMaximum, Plugins: manifest.Plugins)
 		{
-			WikiCollectionName = manifest.WikiCollectionName
+			WikiCollectionName = manifest.WikiCollectionName,
+			WikiLandingPage = run.WikiLandingPage
 		});
 
 		await writes.SetPackageDependenciesAsync(manifest.Name, manifest.Dependencies
@@ -562,7 +592,8 @@ public partial class PackageInstallService
 			run.Request.Readme,
 			manifest.Plugins)
 		{
-			WikiCollectionName = manifest.WikiCollectionName
+			WikiCollectionName = manifest.WikiCollectionName,
+			WikiLandingPage = run.WikiLandingPage
 		};
 
 		await registry.AddPackageRevisionAsync(new PackageRevisionRecord(

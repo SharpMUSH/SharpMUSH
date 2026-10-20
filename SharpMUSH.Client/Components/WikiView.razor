@@ -26,7 +26,7 @@ else if (_loadFailed)
 }
 else if (Mode == WikiMode.View)
 {
-    <WikiDisplay @key="_readerVersion" Slug="@Slug" Namespace="@Namespace" Locale="@Locale" Article="@_article"
+    <WikiDisplay @key="_readerVersion" Slug="@Slug" Namespace="@Namespace" Locale="@Locale" ExpectedPageId="@ExpectedPageId" Article="@_article"
                  BrowseState="@BrowseState" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip"
                  Embedded="@Embedded" ShowTitle="@ShowTitle"
                  ActivateEditMode="ActivateEditMode" />
@@ -80,6 +80,9 @@ else
     /// <summary>The locale requested via <c>?lang=</c>; null means the reader's stored preference.</summary>
     [Parameter] public string? Locale { get; init; }
 
+    /// <summary>The expected stored page ID for this read, independently of the reader's permissions.</summary>
+    [Parameter] public string? ExpectedPageId { get; init; }
+
     /// <summary>Untrusted return destination; the display validates it through normal navigation.</summary>
     [Parameter] public WikiBrowseState? BrowseState { get; init; }
 
@@ -117,6 +120,7 @@ else
     private bool _disposed;
     private int _readerVersion;
     private int _loadVersion;
+    private (string Slug, string? Namespace, string? Locale, string? ExpectedPageId)? _loadIdentity;
 
     private bool IsCurrentReader(int reader) => !_disposed && reader == Volatile.Read(ref _readerVersion);
     private bool IsCurrentLoad(int reader, int load) => IsCurrentReader(reader) && load == Volatile.Read(ref _loadVersion);
@@ -289,7 +293,17 @@ else
     {
         AccountAuth.AuthStateChanged += OnAuthStateChanged;
         AccountAuth.ActiveCharacterChanged += OnAuthStateChanged;
+        _loadIdentity = (Slug, Namespace, Locale, ExpectedPageId);
         await ReadForReaderAsync(Volatile.Read(ref _readerVersion));
+    }
+
+    protected override void OnParametersSet()
+    {
+        var identity = (Slug, Namespace, Locale, ExpectedPageId);
+        if (_loadIdentity == identity) return;
+        _loadIdentity = identity;
+        // Parameter changes use the same existing reset/read epochs as an authority change.
+        OnAuthStateChanged();
     }
 
     private async Task ReadForReaderAsync(int reader)
@@ -341,7 +355,7 @@ else
     {
         if (!IsCurrentReader(reader)) return true;
         var load = Interlocked.Increment(ref _loadVersion);
-        var result = await Wiki.GetWikiArticle(Slug, Namespace, Locale);
+        var result = await Wiki.GetWikiArticle(Slug, Namespace, Locale, ExpectedPageId);
         if (!IsCurrentLoad(reader, load)) return true;
         switch (result)
         {

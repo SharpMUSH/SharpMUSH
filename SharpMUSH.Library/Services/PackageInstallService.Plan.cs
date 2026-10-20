@@ -26,8 +26,19 @@ public partial class PackageInstallService
 	{
 		var inputs = await GatherInputsAsync(manifest, configureAnswers ?? new Dictionary<string, string>(), cancellationToken);
 		var changeset = planner.ComputeChangeset(inputs);
+		var manifestIssues = new List<PackageManifestIssue>(PackageManifestService.ValidateWikiLandingPage(manifest));
+		if (manifestIssues.Count == 0)
+		{
+			manifestIssues.AddRange(await CheckPreviousWikiLandingAsync(manifest, inputs.Installed, cancellationToken));
+		}
+
+		var landingNotes = manifestIssues.Count == 0
+			? WikiLandingNotes(manifest, inputs.Installed)
+			: manifestIssues.Select(issue => $"Wiki landing page blocked ({issue.Path}): {issue.Message}").ToArray();
 		return changeset with
 		{
+			ManifestIssues = manifestIssues,
+			Notes = [.. changeset.Notes, .. landingNotes],
 			Declarations = await PlanDeclarationsAsync(manifest, inputs.Installed, cancellationToken),
 			Settings = await PlanSettingsAsync(inputs, changeset),
 			Wiki = await wiki.PlanAsync(manifest.Name, manifest.Version.ToString(), manifest.WikiPages, DeclaredPermissions(manifest),
