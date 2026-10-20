@@ -84,14 +84,15 @@ public class OAuthFlowTests(ServerWebAppFactory factory)
 		var location = (await decided.Content.ReadFromJsonAsync<OAuthDecisionView>())!.Location!;
 		var code = Uri.UnescapeDataString(location.Split("code=")[1].Split('&')[0]);
 
-		using var exchanged = await http.PostAsync("api/oauth/token", new FormUrlEncodedContent(new Dictionary<string, string>
+		using var form = new FormUrlEncodedContent(new Dictionary<string, string>
 		{
 			["grant_type"] = "authorization_code",
 			["code"] = code,
 			["redirect_uri"] = Redirect,
 			["code_verifier"] = Verifier,
 			["client_id"] = clientId,
-		}));
+		});
+		using var exchanged = await http.PostAsync("api/oauth/token", form);
 		await Assert.That(exchanged.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var json = await exchanged.Content.ReadFromJsonAsync<Dictionary<string, System.Text.Json.JsonElement>>();
 		return new(json!["access_token"].GetString()!, json["refresh_token"].GetString(), json["scope"].GetString()!);
