@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} paletitems zijn weggelaten omdat de limiet bereikt was.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>of</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Doorgaan met {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Niet ingesteld</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Wachtwoord instellen</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>als {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Terug naar je account</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Terug naar inloggen</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Er lopen te veel aanmeldingen tegelijk. Probeer het over een minuut opnieuw.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Heb je hier al een account? Log daarop in en koppel {0} op je accountpagina.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Deze aanmelding is verlopen of al gebruikt. Begin opnieuw vanaf de inlogpagina.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Aanmelden is niet voltooid</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Aanmelden afronden…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>{0} koppelen</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} gekoppeld als {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Gekoppeld op {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Nog geen account hier meldt zich aan met {0} als {1}. Kies een gebruikersnaam om er een te maken.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Maak je account aan</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Dit spel neemt op dit moment geen nieuwe accounts aan.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Rond het aanmelden af in het tabblad waar je begon.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Andere manieren om in te loggen</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Log in met een andere dienst in plaats van een wachtwoord.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Geen diensten gekoppeld.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>niet beschikbaar</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>{0} ontkoppelen</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Ontkoppelen</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Je kunt niet meer inloggen met {0} totdat je het opnieuw koppelt.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>{0} ontkoppelen?</value>
+  </data>
 </root>

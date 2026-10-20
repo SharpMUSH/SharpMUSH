@@ -14,6 +14,8 @@ public sealed class PasskeyListState
 	public bool Adding { get; set; }
 	public string Name { get; set; } = string.Empty;
 	public string Password { get; set; } = string.Empty;
+	/// <summary>Whether the account has a password to confirm a new passkey with.</summary>
+	public bool HasPassword { get; set; } = true;
 	public string? Renaming { get; set; }
 	public string Rename { get; set; } = string.Empty;
 	public string? Error { get; set; }

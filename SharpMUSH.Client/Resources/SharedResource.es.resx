@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>Se omitieron {0} entradas de la paleta por superar los límites.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>o</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuar con {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Sin establecer</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Establecer una contraseña</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>como {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Volver a tu cuenta</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Volver a iniciar sesión</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Hay demasiados inicios de sesión en curso. Inténtalo de nuevo en un minuto.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>¿Ya tienes una cuenta aquí? Inicia sesión en ella y vincula {0} desde la página de tu cuenta.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Este inicio de sesión caducó o ya se usó. Empieza de nuevo desde la página de inicio de sesión.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>El inicio de sesión no terminó</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Terminando el inicio de sesión…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Vincular {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} vinculado como {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Vinculado el {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Todavía no hay ninguna cuenta aquí que inicie sesión con {0} como {1}. Elige un nombre de usuario para crear una.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Crea tu cuenta</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Este juego no acepta cuentas nuevas en este momento.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Termina de iniciar sesión en la pestaña desde la que empezaste.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Otras formas de iniciar sesión</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Inicia sesión con otro servicio en lugar de una contraseña.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>No hay servicios vinculados.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>no disponible</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Desvincular {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Desvincular</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>No podrás iniciar sesión con {0} hasta que lo vuelvas a vincular.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>¿Desvincular {0}?</value>
+  </data>
 </root>

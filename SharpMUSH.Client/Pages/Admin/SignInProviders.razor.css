@@ -1,0 +1,134 @@
+.signin-form {
+	display: flex;
+	align-items: flex-start;
+	gap: 12px;
+	padding: 14px 16px 16px;
+	min-width: 0;
+	flex-wrap: wrap;
+}
+
+.signin-form ::deep .signin-field {
+	flex: 1 1 240px;
+	min-width: 0;
+	margin: 0;
+}
+
+.signin-form ::deep .signin-field--wide {
+	flex: 1 1 100%;
+}
+
+.signin-form ::deep .signin-field--mono .mud-input-slot {
+	font-family: var(--font-mono);
+}
+
+.signin-form ::deep .signin-check {
+	flex: 0 0 auto;
+	align-self: center;
+}
+
+/* the address to copy into the service's settings, on a line of its own */
+.signin-redirect {
+	display: flex;
+	flex: 1 1 100%;
+	flex-direction: column;
+	gap: 4px;
+	padding: 10px 12px;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	background: var(--surface-2);
+}
+
+.signin-label {
+	font-size: 12px;
+	color: var(--text-dim);
+}
+
+.signin-redirect-uri {
+	font-family: var(--font-mono);
+	overflow-wrap: anywhere;
+	user-select: all;
+}
+
+.signin-help {
+	font-size: 12px;
+	color: var(--text-faint);
+}
+
+.signin-form-actions {
+	display: flex;
+	gap: 8px;
+	margin-left: auto;
+	align-self: center;
+}
+
+.signin-empty {
+	margin: 0;
+	padding: 14px 16px 16px;
+	font-size: 13px;
+	color: var(--text-dim);
+}
+
+.signin-rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.signin-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 12px 10px 16px;
+}
+
+.signin-row:not(:first-child) {
+	border-top: 1px solid var(--border-soft);
+}
+
+.signin-row ::deep .signin-row-icon {
+	color: var(--text-dim);
+	flex-shrink: 0;
+}
+
+.signin-row-text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+}
+
+.signin-row-head {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	flex-wrap: wrap;
+}
+
+.signin-row-name {
+	font-weight: 600;
+}
+
+.signin-sub {
+	font-size: 12px;
+	font-family: var(--font-mono);
+	color: var(--text-dim);
+	overflow-wrap: anywhere;
+}
+
+.signin-row-actions {
+	display: flex;
+	flex-shrink: 0;
+}
+
+/* On a phone a service's buttons go under its name and addresses rather than squeezing them. */
+@container page (max-width: 48rem) {
+	.signin-row {
+		flex-wrap: wrap;
+	}
+
+	.signin-row-actions {
+		flex: 1 1 100%;
+		justify-content: flex-end;
+	}
+}

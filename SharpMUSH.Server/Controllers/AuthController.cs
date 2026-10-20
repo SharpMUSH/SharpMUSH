@@ -16,6 +16,8 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Library.API;
+using SharpMUSH.Server.Authentication.External;
 using SharpMUSH.Server.Authentication.Passkeys;
 using SharpMUSH.Library.Logging;
 
@@ -38,6 +40,8 @@ public class AuthController(
 	IHostEnvironment environment,
 	SitelockGuard sitelockGuard,
 	PasskeyService passkeys,
+	ExternalSignInService externalSignIn,
+	ExternalSignInProviders externalProviders,
 	IPortalThemeService themes,
 	ILogger<AuthController> logger) : ControllerBase
 {
@@ -301,10 +305,185 @@ public class AuthController(
 		return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
 	}
 
+	/// <summary>The services the sign-in page offers, beside a password and passkeys.</summary>
+	[HttpGet("external/providers")]
+	public async Task<IActionResult> ExternalProviders()
+		=> Ok((await externalProviders.ReadyAsync()).Select(p => new ExternalSignInProviderInfo(p.Id, p.Name, p.Kind)).ToList());
+
+	/// <summary>
+	/// Starts signing in through a service: the address of its sign-in page to send the browser to. The account
+	/// is found, or made, when the portal finishes the flow (<see cref="ExternalComplete"/>).
+	/// </summary>
+	[HttpPost("external/{provider}/begin")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> ExternalBegin(string provider, [FromBody] ExternalSignInBeginRequest request)
+	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		return await externalSignIn.BeginAsync(provider, request.Binding, linkAccountId: null, Request) switch
+		{
+			string url => Ok(new ExternalSignInBeginResponse(url)),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	/// <summary>
+	/// Where the service sends the browser back to. Reads who the person is from the service and sends the browser
+	/// on to the portal page that finishes the flow.
+	/// </summary>
+	[HttpGet("external/{provider}/callback")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> ExternalCallback(string provider, [FromQuery] string? state, [FromQuery] string? code,
+		[FromQuery] string? error)
+		=> Redirect(await externalSignIn.CallbackAsync(provider, state, code, error, HttpContext.RequestAborted));
+
+	/// <summary>Request body finishing a service sign-in, from the tab that started it.</summary>
+	/// <param name="Flow">The flow id the service's return carried.</param>
+	/// <param name="Binding">The value the tab kept when it started the flow.</param>
+	/// <param name="RememberMe">As on <see cref="AccountLoginRequest"/>.</param>
+	/// <param name="CreateAccount">Make a new account for an identity linked to none.</param>
+	/// <param name="Username">The new account's username.</param>
+	/// <param name="Email">The new account's email, if any.</param>
+	public record ExternalCompleteRequest(string? Flow, string? Binding, bool RememberMe = false, bool CreateAccount = false,
+		string? Username = null, string? Email = null);
+
+	/// <summary>How a service sign-in finished.</summary>
+	/// <param name="Outcome"><c>signedIn</c> with <paramref name="Session"/>; <c>newAccount</c> when the identity is linked
+	/// to no account and one can be made; <c>linked</c> when it was linked to the account that asked.</param>
+	/// <param name="ProviderName">What the service is called.</param>
+	/// <param name="ServiceName">The name the service gave the person.</param>
+	/// <param name="SuggestedUsername">For <c>newAccount</c>, a username to offer.</param>
+	/// <param name="SuggestedEmail">For <c>newAccount</c>, the email the service verified, when no account has it.</param>
+	/// <param name="CanCreate">For <c>newAccount</c>, whether new accounts may be made now.</param>
+	public record ExternalCompleteResponse(string Outcome, string ProviderName, string ServiceName,
+		AccountLoginResponse? Session = null, string? SuggestedUsername = null, string? SuggestedEmail = null,
+		bool CanCreate = false);
+
+	/// <summary>
+	/// Finishes a service sign-in: signs in to the account the identity is linked to, links it to the account that
+	/// asked, or makes a new account for it. Until a new account is asked for, a flow for an unlinked identity stays,
+	/// so the portal can ask for a username first.
+	/// </summary>
+	[HttpPost("external/complete")]
+	[EnableRateLimiting("public-api")]
+	public async Task<IActionResult> ExternalComplete([FromBody] ExternalCompleteRequest request)
+	{
+		if (IsSitelocked(SitelockGuard.Connect))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		return await externalSignIn.ReturnedAsync(request.Flow, request.Binding) switch
+		{
+			ExternalSignInService.ReturnedFlow flow => await CompleteServiceFlowAsync(flow, request),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	private async Task<IActionResult> CompleteServiceFlowAsync(ExternalSignInService.ReturnedFlow flow, ExternalCompleteRequest request)
+	{
+		if (flow.Flow.LinkAccountId is { } linkAccountId)
+			return await LinkServiceAsync(flow, linkAccountId);
+
+		return await externalSignIn.LinkedAccountAsync(flow, HttpContext.RequestAborted) switch
+		{
+			SharpAccount account => await ServiceSignedInAsync(flow, account, request.RememberMe),
+			_ when request.CreateAccount => await CreateServiceAccountAsync(flow, request),
+			_ => Ok(await NewServiceAccountAsync(flow)),
+		};
+	}
+
+	private async Task<IActionResult> ServiceSignedInAsync(ExternalSignInService.ReturnedFlow flow, SharpAccount account, bool remember)
+	{
+		externalSignIn.Finish(flow);
+		if (!account.IsActive)
+		{
+			var unavailable = await accountService.UnavailableAsync(account);
+			logger.LogInformation("{Provider} sign-in refused for {Id}: account is {Status}", flow.Provider.Id,
+				LogSanitizer.Sanitize(account.Id), account.Status);
+			return StatusCode(StatusCodes.Status403Forbidden, unavailable.Message);
+		}
+
+		return await SignInAsync(account, remember) switch
+		{
+			AccountLoginResponse session => Ok(new ExternalCompleteResponse("signedIn", flow.Provider.Name, flow.Identity.Name, session)),
+			ObjectResult refused => refused,
+		};
+	}
+
+	private async Task<ExternalCompleteResponse> NewServiceAccountAsync(ExternalSignInService.ReturnedFlow flow)
+	{
+		var email = flow.Identity.Email is { } verified && !await accountService.EmailExistsAsync(verified) ? verified : null;
+		return new ExternalCompleteResponse("newAccount", flow.Provider.Name, flow.Identity.Name,
+			SuggestedUsername: ExternalSignInService.SuggestUsername(flow.Identity), SuggestedEmail: email,
+			CanCreate: options.CurrentValue.Net.PlayerCreation && !IsSitelocked(SitelockGuard.Create));
+	}
+
+	private async Task<IActionResult> CreateServiceAccountAsync(ExternalSignInService.ReturnedFlow flow, ExternalCompleteRequest request)
+	{
+		if (IsSitelocked(SitelockGuard.Create))
+			return StatusCode(StatusCodes.Status403Forbidden, SitelockedMessage);
+
+		if (!options.CurrentValue.Net.PlayerCreation)
+			return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
+
+		var username = request.Username?.Trim() ?? string.Empty;
+		if (username.Length == 0)
+			return BadRequest("Username is required.");
+		if (username.Contains('@'))
+			return BadRequest("A username cannot hold '@'.");
+
+		var email = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+		return await externalSignIn.CreateAccountAsync(flow, username, email, HttpContext.RequestAborted) switch
+		{
+			SharpAccount account => await ServiceAccountCreatedAsync(flow, account, request.RememberMe),
+			ExternalLoginTaken => ServiceIdentityTaken(flow),
+			Error<string> error => Conflict(error.Value),
+		};
+	}
+
+	private async Task<IActionResult> ServiceAccountCreatedAsync(ExternalSignInService.ReturnedFlow flow, SharpAccount account, bool remember)
+	{
+		externalSignIn.Finish(flow);
+		logger.LogInformation("Account {Id} made by signing in with {Provider}", LogSanitizer.Sanitize(account.Id), flow.Provider.Id);
+		return Ok(new ExternalCompleteResponse("signedIn", flow.Provider.Name, flow.Identity.Name,
+			await NewAccountSessionAsync(account, remember)));
+	}
+
+	/// <remarks>Not a 409: that one leaves the portal's form up to try another username, and this flow is over.</remarks>
+	private BadRequestObjectResult ServiceIdentityTaken(ExternalSignInService.ReturnedFlow flow)
+	{
+		externalSignIn.Finish(flow);
+		return BadRequest($"This {flow.Provider.Name} account already signs in to an account here. Sign in with {flow.Provider.Name} again.");
+	}
+
+	private async Task<IActionResult> LinkServiceAsync(ExternalSignInService.ReturnedFlow flow, string accountId)
+	{
+		externalSignIn.Finish(flow);
+		if (await accountService.GetByIdAsync(accountId) is not { IsActive: true })
+			return Unauthorized("Account not found or not active.");
+
+		var name = flow.Provider.Name;
+		return await externalSignIn.LinkAsync(flow, accountId, HttpContext.RequestAborted) switch
+		{
+			ExternalLoginAddOutcome.Added => Ok(new ExternalCompleteResponse("linked", name, flow.Identity.Name)),
+			ExternalLoginAddOutcome.LinkedElsewhere => Conflict($"This {name} account already signs in to another account here."),
+			_ => Conflict($"Your account already has a {name} sign-in. Remove it first to link another."),
+		};
+	}
+
 	/// <param name="remember">Also start a remembered login for this browser.</param>
 	/// <param name="preferredKey">The character to bind the session to, when the account still owns it;
 	/// otherwise the primary character.</param>
 	private async Task<IActionResult> AccountLoggedInAsync(SharpAccount account, bool remember,
+		int? preferredKey = null, long? preferredCreationTime = null)
+		=> await SignInAsync(account, remember, preferredKey, preferredCreationTime) switch
+		{
+			AccountLoginResponse session => Ok(session),
+			ObjectResult refused => refused,
+		};
+
+	/// <summary>The session <see cref="AccountLoggedInAsync"/> answers with, or why the account may not sign in now.</summary>
+	private async Task<SignInAnswer> SignInAsync(SharpAccount account, bool remember,
 		int? preferredKey = null, long? preferredCreationTime = null)
 	{
 		var characters = await accountService.GetCharactersAsync(account.Id!);
@@ -333,9 +512,10 @@ public class AuthController(
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp(),
 			primary?.Object.Key, primary?.Object.CreationTime);
 		logger.LogInformation("Account login success for {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
-		return Ok(new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
-			account.MustChangePassword, role.ToString(), permissions.ToList()));
+		return new AccountLoginResponse(account.Id!, account.Username, charSummaries, sessionToken,
+			account.MustChangePassword, role.ToString(), permissions.ToList());
 	}
+
 
 	/// <summary>Request body for account registration.</summary>
 	/// <param name="RememberMe">As on <see cref="AccountLoginRequest"/>.</param>
@@ -368,6 +548,9 @@ public class AuthController(
 	/// Mint the session a newly registered account signs in with.
 	/// </summary>
 	private async Task<IActionResult> RegisteredAsync(SharpAccount account, bool remember)
+		=> Ok(await NewAccountSessionAsync(account, remember));
+
+	private async Task<AccountLoginResponse> NewAccountSessionAsync(SharpAccount account, bool remember)
 	{
 		if (remember)
 			await RememberAsync(account.Id!);
@@ -378,8 +561,8 @@ public class AuthController(
 		var sessionToken = await accountSessionStore.CreateTokenAsync(account.Id!, TimeSpan.FromMinutes(15), ClientIp());
 
 		logger.LogInformation("Account registered: {Username} ({Id})", LogSanitizer.Sanitize(account.Username), LogSanitizer.Sanitize(account.Id));
-		return Ok(new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
-			account.MustChangePassword, role.ToString(), permissions.ToList()));
+		return new AccountLoginResponse(account.Id!, account.Username, [], sessionToken,
+			account.MustChangePassword, role.ToString(), permissions.ToList());
 	}
 
 	/// <summary>
@@ -482,3 +665,5 @@ public class AuthController(
 			await new AnySharpObject(character).IsWizard(ct));
 }
 
+/// <summary>A sign-in's session, or the response that refuses it.</summary>
+public union SignInAnswer(AuthController.AccountLoginResponse, ObjectResult);

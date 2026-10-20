@@ -10,6 +10,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.OAuth;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -21,7 +22,8 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 /// characters list on init (<c>api/account/characters</c>). Always returns an empty list —
 /// these tests are about render-crash regressions, not characters-table content.
 /// </summary>
-file sealed class AccountPageApiHandler(object[]? characters = null, object[]? passkeys = null, OAuthGrantView[]? grants = null)
+file sealed class AccountPageApiHandler(object[]? characters = null, object[]? passkeys = null, OAuthGrantView[]? grants = null,
+	AccountSignIns? signIns = null)
 	: HttpMessageHandler
 {
 	/// <summary>DELETE api/account/characters/{n} requests seen: the unlink itself.</summary>
@@ -42,6 +44,8 @@ file sealed class AccountPageApiHandler(object[]? characters = null, object[]? p
 			});
 		if (request.Method == HttpMethod.Get && path == "api/oauth/grants")
 			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(grants ?? []) });
+		if (request.Method == HttpMethod.Get && path == "api/account/sign-ins" && signIns is not null)
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(signIns) });
 		if (request.Method == HttpMethod.Delete && path.StartsWith("api/account/characters/", StringComparison.Ordinal))
 		{
 			Unlinks++;
@@ -99,6 +103,7 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 				NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton<PasskeyInterop>()
 			.AddSingleton<AccountPasskeyService>()
+			.AddSingleton<ExternalSignInService>()
 			.AddSingleton<ConnectedAppsService>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;
@@ -260,6 +265,64 @@ public class AccountPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("#passkeys .acct-passkey-meta").TextContent).Contains("AuthPasskeyNeverUsed");
 		await Assert.That(cut.Find("#passkeys button[aria-label='AuthPasskeyRemove']")).IsNotNull();
 		await Assert.That(cut.FindAll("#passkeys button").Any(b => b.TextContent.Contains("AuthPasskeyAdd"))).IsTrue();
+	}
+
+	/// <summary>
+	/// An account made through a sign-in service has no password: the profile says so and offers to set one without
+	/// asking for a current password, and a new passkey is not asked for one either.
+	/// </summary>
+	[Test]
+	public async Task Render_Passwordless_OffersToSetAPassword_WithoutTheCurrentOne()
+	{
+		Auth.SetAuthorized("headwiz");
+		var linked = new LinkedSignIn("discord", "Discord", ExternalSignInKinds.Discord, "ariel", DateTimeOffset.UnixEpoch, null, true);
+		SeedAuthState(loggedIn: true, handler: new AccountPageApiHandler(signIns: new AccountSignIns(false, [linked], [])));
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find(".acct-password-unset"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".acct-password-unset").TextContent).Contains("AuthPasswordNotSet");
+		await cut.FindAll("button").Single(b => b.TextContent.Trim() == "AuthPasswordSet").ClickAsync();
+		await Assert.That(cut.Markup).Contains("AuthNewPassword");
+		await Assert.That(cut.Markup).DoesNotContain("AuthCurrentPassword");
+
+		await cut.FindAll("#passkeys button").Single(b => b.TextContent.Contains("AuthPasskeyAdd")).ClickAsync();
+		await Assert.That(cut.Markup).Contains("AuthPasskeyName");
+		await Assert.That(cut.Markup).DoesNotContain("AuthCurrentPassword");
+	}
+
+	/// <summary>The sign-ins card, the <c>#sign-ins</c> anchor, lists linked services and offers the others.</summary>
+	[Test]
+	public async Task Render_LoggedIn_ListsServiceSignIns_AndOffersTheOthers()
+	{
+		Auth.SetAuthorized("headwiz");
+		var linked = new LinkedSignIn("discord", "Discord", ExternalSignInKinds.Discord, "ariel", DateTimeOffset.UnixEpoch, null, true);
+		var gone = new LinkedSignIn("old", "old", null, "ariel@old", DateTimeOffset.UnixEpoch, null, false);
+		var signIns = new AccountSignIns(true, [linked, gone], [new ExternalSignInProviderInfo("google", "Google", ExternalSignInKinds.Google)]);
+		SeedAuthState(loggedIn: true, handler: new AccountPageApiHandler(signIns: signIns));
+
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#sign-ins .acct-service"), TimeSpan.FromSeconds(5));
+
+		var rows = cut.FindAll("#sign-ins .acct-service");
+		await Assert.That(rows.Select(r => r.GetAttribute("data-provider")).ToList()).IsEquivalentTo(["discord", "old"]);
+		await Assert.That(rows[0].TextContent).Contains("AuthServiceAs(ariel)");
+		await Assert.That(rows[0].TextContent).DoesNotContain("AuthServiceUnavailable");
+		await Assert.That(rows[1].TextContent).Contains("AuthServiceUnavailable");
+		await Assert.That(cut.Find("#sign-ins button[aria-label='AuthServiceUnlink(Discord)']")).IsNotNull();
+		await Assert.That(cut.Find("#sign-ins .acct-service-link[data-provider='google']").TextContent).Contains("AuthServiceLink(Google)");
+		await Assert.That(cut.Find(".acct-row--password").TextContent).Contains("••••••••");
+	}
+
+	/// <summary>With no service set up and none linked, there is no sign-ins card.</summary>
+	[Test]
+	public async Task Render_LoggedIn_NoServices_ShowsNoSignInsCard()
+	{
+		Auth.SetAuthorized("headwiz");
+		SeedAuthState(loggedIn: true, handler: new AccountPageApiHandler(signIns: new AccountSignIns(true, [], [])));
+		var cut = Render<SharpMUSH.Client.Pages.Account>();
+		cut.WaitForAssertion(() => cut.Find("#passkeys"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("#sign-ins")).IsEmpty();
 	}
 
 	/// <summary>An account that allowed no app is not shown an empty Connected apps card.</summary>

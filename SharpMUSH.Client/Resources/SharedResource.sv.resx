@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palettposter utelämnades eftersom gränsen nåddes.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>eller</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsätt med {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Inte angivet</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Ange ett lösenord</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>som {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Tillbaka till ditt konto</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Tillbaka till inloggning</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>För många inloggningar pågår. Försök igen om en minut.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Har du redan ett konto här? Logga in på det och koppla sedan {0} på din kontosida.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Den här inloggningen har gått ut eller redan använts. Börja om från inloggningssidan.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Inloggningen slutfördes inte</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Slutför inloggningen …</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Koppla {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} kopplat som {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Kopplat {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Inget konto här loggar in med {0} som {1} ännu. Välj ett användarnamn för att skapa ett.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Skapa ditt konto</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Det här spelet tar inte emot nya konton just nu.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Slutför inloggningen i fliken du började i.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Andra sätt att logga in</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Logga in med en annan tjänst i stället för ett lösenord.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Inga tjänster kopplade.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>otillgänglig</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Koppla från {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Koppla från</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Du kan inte logga in med {0} förrän du kopplar det igen.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koppla från {0}?</value>
+  </data>
 </root>

@@ -8848,4 +8848,199 @@
   <data name="OAuthAdmDeleted" xml:space="preserve">
     <value>Deleted {0}.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>or</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continue with {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Not set</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Set a password</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>as {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Back to your account</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Back to sign in</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Too many sign-ins are under way. Try again in a minute.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Already have an account here? Sign in to it, then link {0} on your account page.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>This sign-in has expired or was already used. Start again from the sign-in page.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Sign-in didn't finish</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Finishing sign-in…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Link {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>Linked {0} as {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Linked {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>No account here signs in with {0} as {1} yet. Choose a username to create one.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Create your account</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>This game isn't taking new accounts right now.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Finish signing in in the tab you started from.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Other ways to sign in</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Sign in with another service instead of a password.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>No services linked.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>unavailable</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Unlink {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Unlink</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>You won't be able to sign in with {0} until you link it again.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Unlink {0}?</value>
+  </data>
+  <data name="AdmSignIn" xml:space="preserve">
+    <value>Sign-in services</value>
+  </data>
+  <data name="AdmSignInDescription" xml:space="preserve">
+    <value>Let players sign in with Discord, Google, GitHub, Microsoft or another OAuth 2.0 service instead of a password. Register the game with the service, then enter the client id and secret it gives you.</value>
+  </data>
+  <data name="AdmSignInAdd" xml:space="preserve">
+    <value>Add a service</value>
+  </data>
+  <data name="AdmSignInChange" xml:space="preserve">
+    <value>Change {0}</value>
+  </data>
+  <data name="AdmSignInKind" xml:space="preserve">
+    <value>Service</value>
+  </data>
+  <data name="AdmSignInCustom" xml:space="preserve">
+    <value>Other (OAuth 2.0)</value>
+  </data>
+  <data name="AdmSignInId" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="AdmSignInIdHelp" xml:space="preserve">
+    <value>Lower-case letters and digits. It is part of the address below, so it can't change later.</value>
+  </data>
+  <data name="AdmSignInName" xml:space="preserve">
+    <value>Name players see</value>
+  </data>
+  <data name="AdmSignInRedirect" xml:space="preserve">
+    <value>Redirect address</value>
+  </data>
+  <data name="AdmSignInRedirectHelp" xml:space="preserve">
+    <value>Register this address with the service as the redirect (callback) URL.</value>
+  </data>
+  <data name="AdmSignInClientId" xml:space="preserve">
+    <value>Client id</value>
+  </data>
+  <data name="AdmSignInClientSecret" xml:space="preserve">
+    <value>Client secret</value>
+  </data>
+  <data name="AdmSignInSecretKeep" xml:space="preserve">
+    <value>Leave empty to keep the stored secret.</value>
+  </data>
+  <data name="AdmSignInAuthorizeUrl" xml:space="preserve">
+    <value>Authorization address</value>
+  </data>
+  <data name="AdmSignInTokenUrl" xml:space="preserve">
+    <value>Token address</value>
+  </data>
+  <data name="AdmSignInUserInfoUrl" xml:space="preserve">
+    <value>Profile address</value>
+  </data>
+  <data name="AdmSignInScopes" xml:space="preserve">
+    <value>Scopes</value>
+  </data>
+  <data name="AdmSignInSubjectField" xml:space="preserve">
+    <value>Id field</value>
+  </data>
+  <data name="AdmSignInNameFields" xml:space="preserve">
+    <value>Name fields</value>
+  </data>
+  <data name="AdmSignInEmailField" xml:space="preserve">
+    <value>Email field</value>
+  </data>
+  <data name="AdmSignInEmailVerifiedField" xml:space="preserve">
+    <value>Email verified field</value>
+  </data>
+  <data name="AdmSignInEmailVerifiedHelp" xml:space="preserve">
+    <value>Without one, the email is never offered for a new account.</value>
+  </data>
+  <data name="AdmSignInEnabled" xml:space="preserve">
+    <value>Players can sign in with it</value>
+  </data>
+  <data name="AdmSignInList" xml:space="preserve">
+    <value>Services</value>
+  </data>
+  <data name="AdmSignInNone" xml:space="preserve">
+    <value>No sign-in services yet. Players sign in with a password or a passkey.</value>
+  </data>
+  <data name="AdmSignInReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="AdmSignInDisabled" xml:space="preserve">
+    <value>Off</value>
+  </data>
+  <data name="AdmSignInNoSecret" xml:space="preserve">
+    <value>No secret</value>
+  </data>
+  <data name="AdmSignInIncomplete" xml:space="preserve">
+    <value>Incomplete</value>
+  </data>
+  <data name="AdmSignInEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="AdmSignInRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="AdmSignInRemoveTitle" xml:space="preserve">
+    <value>Remove this service?</value>
+  </data>
+  <data name="AdmSignInRemoveBody" xml:space="preserve">
+    <value>Players who sign in only with {0} can't sign in until staff set it up again or they reset their password. Their links are kept.</value>
+  </data>
+  <data name="AdmSignInRemoved" xml:space="preserve">
+    <value>Removed {0}.</value>
+  </data>
+  <data name="AdmSignInSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="AdmSignInSaveFailed" xml:space="preserve">
+    <value>Couldn't save: {0}</value>
+  </data>
+  <data name="AdmSignInLoadFailed" xml:space="preserve">
+    <value>Couldn't load the sign-in services: {0}</value>
+  </data>
 </root>

@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palettoppføringer ble utelatt fordi grensen var nådd.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>eller</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsett med {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Ikke angitt</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Angi et passord</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>som {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Tilbake til kontoen din</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Tilbake til innlogging</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>For mange innlogginger pågår. Prøv igjen om et minutt.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Har du allerede en konto her? Logg inn på den, og koble til {0} på kontosiden din.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Denne innloggingen har utløpt eller er allerede brukt. Start på nytt fra innloggingssiden.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Innloggingen ble ikke fullført</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Fullfører innlogging …</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Koble til {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} er koblet til som {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Koblet til {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Ingen konto her logger inn med {0} som {1} ennå. Velg et brukernavn for å opprette en.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Opprett kontoen din</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Dette spillet tar ikke imot nye kontoer akkurat nå.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Fullfør innloggingen i fanen du startet fra.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Andre måter å logge inn på</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Logg inn med en annen tjeneste i stedet for et passord.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Ingen tjenester koblet til.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>utilgjengelig</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Koble fra {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Koble fra</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Du kan ikke logge inn med {0} før du kobler den til igjen.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Koble fra {0}?</value>
+  </data>
 </root>

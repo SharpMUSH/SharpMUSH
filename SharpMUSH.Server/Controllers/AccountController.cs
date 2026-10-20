@@ -13,6 +13,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Server.Authentication;
+using SharpMUSH.Server.Authentication.External;
 using SharpMUSH.Server.Authentication.Passkeys;
 using SharpMUSH.Library.Logging;
 
@@ -31,6 +32,7 @@ public class AccountController(
 	IOptionsWrapper<SharpMUSHOptions> options,
 	IValidateService validateService,
 	PasskeyService passkeys,
+	ExternalSignInService externalSignIn,
 	IPortalThemeService themes,
 	BearerAccountResolver bearer,
 	ILogger<AccountController> logger) : ControllerBase
@@ -270,7 +272,7 @@ public class AccountController(
 			return Ok(held.Select(Summarize).ToList());
 		});
 
-	public record PasskeyOptionsRequest(string CurrentPassword);
+	public record PasskeyOptionsRequest(string? CurrentPassword);
 
 	/// <summary>
 	/// Starts adding a passkey: the options the browser hands to <c>navigator.credentials.create</c>. Asks
@@ -284,8 +286,10 @@ public class AccountController(
 			var account = await accountService.GetByIdAsync(accountId);
 			if (account is null) return Unauthorized("Account not found or not active.");
 
-			if (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
-				|| confirmed.Id != account.Id)
+			// An account made through another service has no password to ask for; its session came from that service.
+			if (!string.IsNullOrEmpty(account.PasswordHash)
+				&& (await accountService.AuthenticateAsync(account.Username, request.CurrentPassword ?? string.Empty) is not SharpAccount confirmed
+					|| confirmed.Id != account.Id))
 				return Unauthorized("Current password is incorrect.");
 
 			return await passkeys.BeginRegistrationAsync(account, Request, HttpContext.RequestAborted) switch
@@ -334,11 +338,56 @@ public class AccountController(
 	public Task<IActionResult> RemovePasskey(string id)
 		=> AsAccountAsync(async accountId =>
 		{
-			if (PasskeyService.CredentialIdOf(id) is not { } credentialId
-				|| !await passkeys.RemoveAsync(accountId, credentialId))
+			if (PasskeyService.CredentialIdOf(id) is not { } credentialId)
 				return NotFound("No such passkey on this account.");
 
-			return NoContent();
+			if (await accountService.GetByIdAsync(accountId) is not { } account)
+				return Unauthorized("Account not found or not active.");
+			if (!await externalSignIn.KeepsAWayInAsync(account, withoutPasskey: credentialId))
+				return Conflict(OnlyWayIn);
+
+			return await passkeys.RemoveAsync(accountId, credentialId)
+				? NoContent()
+				: NotFound("No such passkey on this account.");
+		});
+
+	private const string OnlyWayIn = "This is the only way into your account. Set a password or add another way to sign in first.";
+
+	/// <summary>How the account can be signed in to: whether it has a password, its service sign-ins, and the services it could link.</summary>
+	[HttpGet("sign-ins")]
+	public Task<IActionResult> GetSignIns()
+		=> AsAccountAsync(async accountId =>
+			await accountService.GetByIdAsync(accountId) is { } account
+				? Ok(await externalSignIn.SignInsAsync(account, HttpContext.RequestAborted))
+				: Unauthorized("Account not found or not active."));
+
+	/// <summary>
+	/// Starts linking a service to the account: the address of its sign-in page. The portal finishes it as it
+	/// finishes a sign-in (<c>api/auth/external/complete</c>).
+	/// </summary>
+	[HttpPost("sign-ins/{provider}/begin")]
+	[EnableRateLimiting("public-api")]
+	public Task<IActionResult> BeginLinkSignIn(string provider, [FromBody] ExternalSignInBeginRequest request)
+		=> AsAccountAsync(async accountId =>
+			await externalSignIn.BeginAsync(provider, request.Binding, accountId, Request) switch
+			{
+				string url => Ok(new ExternalSignInBeginResponse(url)),
+				Error<string> error => BadRequest(error.Value),
+			});
+
+	/// <summary>Removes the account's sign-in through a service. Refused when it is the account's only way in.</summary>
+	[HttpDelete("sign-ins/{provider}")]
+	public Task<IActionResult> RemoveSignIn(string provider)
+		=> AsAccountAsync(async accountId =>
+		{
+			if (await accountService.GetByIdAsync(accountId) is not { } account)
+				return Unauthorized("Account not found or not active.");
+			if (!await externalSignIn.KeepsAWayInAsync(account, withoutProvider: provider))
+				return Conflict(OnlyWayIn);
+
+			return await externalSignIn.UnlinkAsync(accountId, provider)
+				? NoContent()
+				: NotFound("This account has no sign-in through that service.");
 		});
 
 	/// <summary>

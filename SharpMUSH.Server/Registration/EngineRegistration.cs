@@ -164,6 +164,10 @@ internal static class EngineRegistration
 		services.AddSingleton<Server.Authentication.Passkeys.PasskeyRelyingParty>();
 		services.AddSingleton<Server.Authentication.Passkeys.PasskeyCeremonyStore>();
 		services.AddSingleton<Server.Authentication.Passkeys.PasskeyService>();
+		// Signing in through Discord, Google and other OAuth 2.0 services, beside passwords and passkeys.
+		services.AddSingleton<Server.Authentication.External.ExternalSignInProviders>();
+		services.AddSingleton<Server.Authentication.External.ExternalSignInFlows>();
+		services.AddSingleton<Server.Authentication.External.ExternalSignInService>();
 		services.AddSingleton<BanEnforcementService>();
 		// Library-layer call sites (AccountService, SitelockController) depend on IBanEnforcer, not
 		// the concrete Server-layer BanEnforcementService, so Library stays off Server.
@@ -394,6 +398,14 @@ internal static class EngineRegistration
 			});
 		// Web push: no redirects, so a push goes only to the push service host the subscription was checked against.
 		services.AddHttpClient(Services.WebPushService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30))
+			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
+		// Sign-in services: no redirects, so the client secret and the code go only to the token address staff set.
+		services.AddHttpClient(Server.Authentication.External.ExternalSignInService.HttpClientName, client =>
+			{
+				client.Timeout = TimeSpan.FromSeconds(15);
+				client.MaxResponseContentBufferSize = 1 << 20;
+				client.DefaultRequestHeaders.UserAgent.ParseAdd("SharpMUSH");
+			})
 			.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 		services.AddMediator();
 

@@ -78,6 +78,7 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []))
 			.AddSingleton(Substitute.For<ITerminalService>())
+			.AddSingleton<ExternalSignInService>()
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 
 		JSInterop.Mode = JSRuntimeMode.Loose;

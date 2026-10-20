@@ -1,0 +1,300 @@
+@page "/admin/config/signin"
+@layout ConfigLayout
+@attribute [Authorize(Policy = "config.admin")]
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject SignInProvidersService Providers
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["AdmSignIn"] - @Loc["Configuration"]</PageTitle>
+
+@* The services players can sign in with instead of a password. A client secret goes up in the form and is never
+   shown again; it is kept as the secret signin.<id>.secret. *@
+<div class="config-section-page">
+    <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["AdmSignIn"]" Description="@Loc["AdmSignInDescription"]" />
+
+    <div class="page-stack">
+        <KitCard Title="@(_editing is null ? Loc["AdmSignInAdd"] : Loc["AdmSignInChange", _editing])">
+            <div class="signin-form">
+                <MudSelect T="string" Value="_kind" ValueChanged="KindChangedAsync" Label="@Loc["AdmSignInKind"]"
+                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field" Disabled="@(_editing is not null)">
+                    @foreach (var kind in ExternalSignInKinds.All)
+                    {
+                        <MudSelectItem T="string" Value="kind">@KindName(kind)</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudTextField T="string" Value="_id" ValueChanged="IdChangedAsync" Label="@Loc["AdmSignInId"]" MaxLength="32"
+                              HelperText="@Loc["AdmSignInIdHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense"
+                              Class="signin-field signin-field--mono" Disabled="@(_editing is not null)" />
+                <MudTextField T="string" @bind-Value="_name" Label="@Loc["AdmSignInName"]" Placeholder="@KindName(_kind)" MaxLength="40"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field" />
+
+                <div class="signin-redirect">
+                    <span class="signin-label">@Loc["AdmSignInRedirect"]</span>
+                    <code class="signin-redirect-uri">@(_redirectUri ?? "…")</code>
+                    <span class="signin-help">@Loc["AdmSignInRedirectHelp"]</span>
+                </div>
+
+                <MudTextField T="string" @bind-Value="_clientId" Label="@Loc["AdmSignInClientId"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                <MudTextField T="string" @bind-Value="_clientSecret" Label="@Loc["AdmSignInClientSecret"]" InputType="InputType.Password"
+                              HelperText="@(_editing is null ? null : Loc["AdmSignInSecretKeep"].Value)"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field" UserAttributes="@NoAutofill" />
+
+                @if (_kind == ExternalSignInKinds.Custom)
+                {
+                    <MudTextField T="string" @bind-Value="_endpoints.AuthorizeUrl" Label="@Loc["AdmSignInAuthorizeUrl"]" Placeholder="https://"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.TokenUrl" Label="@Loc["AdmSignInTokenUrl"]" Placeholder="https://"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.UserInfoUrl" Label="@Loc["AdmSignInUserInfoUrl"]" Placeholder="https://"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--wide signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.Scopes" Label="@Loc["AdmSignInScopes"]" Placeholder="openid profile"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.SubjectField" Label="@Loc["AdmSignInSubjectField"]" Placeholder="sub"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.NameFields" Label="@Loc["AdmSignInNameFields"]" Placeholder="name"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.EmailField" Label="@Loc["AdmSignInEmailField"]" Placeholder="email"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                    <MudTextField T="string" @bind-Value="_endpoints.EmailVerifiedField" Label="@Loc["AdmSignInEmailVerifiedField"]"
+                                  Placeholder="email_verified" HelperText="@Loc["AdmSignInEmailVerifiedHelp"]"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Class="signin-field signin-field--mono" />
+                }
+
+                <MudCheckBox T="bool" @bind-Value="_enabled" Label="@Loc["AdmSignInEnabled"]" Dense="true" Class="signin-check" />
+                <div class="signin-form-actions">
+                    @if (_editing is not null)
+                    {
+                        <CapsuleButton OnClick="ResetAsync">@Loc["Cancel"]</CapsuleButton>
+                    }
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Filled.Save" Class="signin-save"
+                                   Disabled="@(_busy || string.IsNullOrWhiteSpace(_id) || string.IsNullOrWhiteSpace(_clientId)
+                                               || (_editing is null && _clientSecret.Length == 0))"
+                                   OnClick="SaveAsync">@Loc["Save"]</CapsuleButton>
+                </div>
+            </div>
+        </KitCard>
+
+        <KitCard Title="@Loc["AdmSignInList"]">
+            <Controls>
+                <Pill Tag="true">@_providers.Count</Pill>
+            </Controls>
+            <ChildContent>
+                @if (_loading)
+                {
+                    <MudProgressLinear Color="Color.Secondary" Indeterminate="true" />
+                }
+                else if (_providers.Count == 0)
+                {
+                    <p class="signin-empty">@Loc["AdmSignInNone"]</p>
+                }
+                else
+                {
+                    <ul class="signin-rows">
+                        @foreach (var provider in _providers)
+                        {
+                            <li class="signin-row" data-provider="@provider.Id">
+                                <MudIcon Icon="@ExternalSignInIcons.For(provider.Kind)" Size="Size.Small" Class="signin-row-icon" />
+                                <div class="signin-row-text">
+                                    <span class="signin-row-head">
+                                        <span class="signin-row-name">@provider.Name</span>
+                                        <Pill Tag="true" Warn="@(!provider.Ready)">@StateLabel(provider)</Pill>
+                                    </span>
+                                    <code class="signin-sub">@provider.Id</code>
+                                    <code class="signin-sub">@provider.RedirectUri</code>
+                                </div>
+                                <div class="signin-row-actions">
+                                    <MudIconButton Icon="@Icons.Material.Outlined.Edit" Size="Size.Small"
+                                                   aria-label="@Loc["AdmSignInEdit"]" title="@Loc["AdmSignInEdit"]" OnClick="@(() => Edit(provider))" />
+                                    <MudIconButton Icon="@Icons.Material.Outlined.DeleteOutline" Size="Size.Small" Color="Color.Error"
+                                                   aria-label="@Loc["AdmSignInRemove"]" title="@Loc["AdmSignInRemove"]"
+                                                   Disabled="@_busy" OnClick="@(() => _removing = provider)" />
+                                </div>
+                            </li>
+                        }
+                    </ul>
+                }
+            </ChildContent>
+        </KitCard>
+    </div>
+</div>
+
+<ConfirmDialog Visible="@(_removing is not null)" VisibleChanged="@(visible => { if (!visible) _removing = null; })"
+               Title="@Loc["AdmSignInRemoveTitle"]" ConfirmText="@Loc["AdmSignInRemove"]" OnConfirm="RemoveAsync">
+    <MudText>@Loc["AdmSignInRemoveBody", _removing?.Name ?? ""]</MudText>
+</ConfirmDialog>
+
+@code {
+    // A password manager offering to save the secret as a login would keep a copy outside the server.
+    private static readonly Dictionary<string, object> NoAutofill = new() { ["autocomplete"] = "new-password" };
+
+    /// <summary>A custom provider's addresses and fields as the form edits them.</summary>
+    private sealed class EndpointsForm
+    {
+        public string AuthorizeUrl { get; set; } = string.Empty;
+        public string TokenUrl { get; set; } = string.Empty;
+        public string UserInfoUrl { get; set; } = string.Empty;
+        public string Scopes { get; set; } = "openid profile email";
+        public string SubjectField { get; set; } = "sub";
+        public string NameFields { get; set; } = "name";
+        public string? EmailField { get; set; } = "email";
+        public string? EmailVerifiedField { get; set; } = "email_verified";
+
+        public static EndpointsForm Of(SignInProviderEndpoints endpoints) => new()
+        {
+            AuthorizeUrl = endpoints.AuthorizeUrl, TokenUrl = endpoints.TokenUrl, UserInfoUrl = endpoints.UserInfoUrl,
+            Scopes = endpoints.Scopes, SubjectField = endpoints.SubjectField, NameFields = endpoints.NameFields,
+            EmailField = endpoints.EmailField, EmailVerifiedField = endpoints.EmailVerifiedField
+        };
+
+        public SignInProviderEndpoints ToEndpoints() => new(AuthorizeUrl.Trim(), TokenUrl.Trim(), UserInfoUrl.Trim(), Scopes.Trim(),
+            SubjectField.Trim(), NameFields.Trim(), Blank(EmailField), Blank(EmailVerifiedField));
+
+        private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private bool _loading = true;
+    private bool _busy;
+    private List<SignInProviderSettings> _providers = [];
+    private SignInProviderSettings? _removing;
+    private string? _editing;
+    private string _kind = ExternalSignInKinds.Discord;
+    private string _id = ExternalSignInKinds.Discord;
+    private string? _name;
+    private string _clientId = string.Empty;
+    private string _clientSecret = string.Empty;
+    private bool _enabled = true;
+    private string? _redirectUri;
+    private EndpointsForm _endpoints = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(LoadAsync(), RedirectUriAsync());
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        switch (await Providers.ListAsync())
+        {
+            case List<SignInProviderSettings> providers:
+                _providers = providers;
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["AdmSignInLoadFailed", failure.Message], Severity.Error);
+                break;
+        }
+
+        _loading = false;
+    }
+
+    private async Task KindChangedAsync(string kind)
+    {
+        // The id follows a ready-made kind until someone types one of their own.
+        var followed = _id == _kind || string.IsNullOrEmpty(_id);
+        _kind = kind;
+        if (followed && kind != ExternalSignInKinds.Custom)
+        {
+            await IdChangedAsync(kind);
+        }
+    }
+
+    private async Task IdChangedAsync(string? id)
+    {
+        _id = (id ?? string.Empty).Trim().ToLowerInvariant();
+        await RedirectUriAsync();
+    }
+
+    private async Task RedirectUriAsync()
+    {
+        _redirectUri = string.IsNullOrEmpty(_id)
+            ? null
+            : await Providers.RedirectUriAsync(_id) is SignInProviderRedirect redirect ? redirect.RedirectUri : null;
+    }
+
+    private void Edit(SignInProviderSettings provider)
+    {
+        _editing = provider.Id;
+        _kind = provider.Kind;
+        _id = provider.Id;
+        _name = provider.Name;
+        _clientId = provider.ClientId;
+        _clientSecret = string.Empty;
+        _enabled = provider.Enabled;
+        _redirectUri = provider.RedirectUri;
+        _endpoints = EndpointsForm.Of(provider.Endpoints);
+    }
+
+    private async Task ResetAsync()
+    {
+        _editing = null;
+        _kind = ExternalSignInKinds.Discord;
+        _name = null;
+        _clientId = string.Empty;
+        _clientSecret = string.Empty;
+        _enabled = true;
+        _endpoints = new EndpointsForm();
+        await IdChangedAsync(ExternalSignInKinds.Discord);
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        var update = new SignInProviderUpdate(_kind, string.IsNullOrWhiteSpace(_name) ? null : _name.Trim(), _clientId.Trim(), _enabled,
+            _clientSecret.Length == 0 ? null : _clientSecret,
+            _kind == ExternalSignInKinds.Custom ? _endpoints.ToEndpoints() : null);
+        switch (await Providers.SaveAsync(_id, update))
+        {
+            case SignInProviderSettings saved:
+                Snackbar.Add(Loc["AdmSignInSaved", saved.Name], Severity.Success);
+                await ResetAsync();
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["AdmSignInSaveFailed", failure.Message], Severity.Error);
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (_removing is not { } provider) return;
+        _removing = null;
+        _busy = true;
+        switch (await Providers.RemoveAsync(provider.Id))
+        {
+            case Success:
+                Snackbar.Add(Loc["AdmSignInRemoved", provider.Name], Severity.Success);
+                if (_editing == provider.Id) await ResetAsync();
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(Loc["AdmSignInSaveFailed", failure.Message], Severity.Error);
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private string KindName(string kind) => kind switch
+    {
+        ExternalSignInKinds.Discord => "Discord",
+        ExternalSignInKinds.Google => "Google",
+        ExternalSignInKinds.GitHub => "GitHub",
+        ExternalSignInKinds.Microsoft => "Microsoft",
+        _ => Loc["AdmSignInCustom"]
+    };
+
+    private string StateLabel(SignInProviderSettings provider) => provider switch
+    {
+        { Ready: true } => Loc["AdmSignInReady"],
+        { Enabled: false } => Loc["AdmSignInDisabled"],
+        { SecretSet: false } => Loc["AdmSignInNoSecret"],
+        _ => Loc["AdmSignInIncomplete"]
+    };
+}

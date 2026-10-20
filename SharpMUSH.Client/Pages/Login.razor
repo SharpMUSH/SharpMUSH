@@ -2,10 +2,12 @@
 @layout OnboardingLayout
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @inject AccountAuthService AccountAuth
 @inject ITerminalService Terminal
+@inject ExternalSignInService ExternalSignIn
 
 <PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
 
@@ -92,6 +94,28 @@
             </MudTabPanel>
         </MudTabs>
 
+        @* Signing in and signing up are one button per service: an identity with no account yet is asked for a
+           username on the page the service sends it back to. *@
+        @if (_services.Count > 0)
+        {
+            <div class="login-or" role="separator"><span>@Loc["AuthOr"]</span></div>
+            <div class="login-services">
+                @foreach (var service in _services)
+                {
+                    <MudButton Variant="Variant.Outlined" FullWidth="true" Disabled="_busy"
+                               StartIcon="@ExternalSignInIcons.For(service.Kind)" Class="login-service"
+                               data-provider="@service.Id" OnClick="() => ServiceSignInAsync(service)"
+                               Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                        @Loc["AuthContinueWith", service.Name]
+                    </MudButton>
+                }
+            </div>
+            @if (_serviceError is not null)
+            {
+                <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">@_serviceError</MudAlert>
+            }
+        }
+
         <MudDivider Class="my-3" />
         <MudText Align="Align.Center" Style="font-size:0.8125rem;color:var(--text-faint);">
             @Loc["AuthConnectDirectly"]
@@ -117,6 +141,8 @@
     private bool _busy;
     private bool _passkeysSupported;
     private string? _error;
+    private string? _serviceError;
+    private IReadOnlyList<ExternalSignInProviderInfo> _services = [];
 
     private string _loginIdentifier = string.Empty;
     private string _loginPassword = string.Empty;
@@ -161,8 +187,27 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender) return;
+        var services = ExternalSignIn.ProvidersAsync();
         _passkeysSupported = await AccountAuth.PasskeysSupportedAsync();
-        if (_passkeysSupported) StateHasChanged();
+        // A server that cannot list them offers none: the password and passkey still work.
+        if (await services is List<ExternalSignInProviderInfo> { Count: > 0 } offered) _services = offered;
+        if (_passkeysSupported || _services.Count > 0) StateHasChanged();
+    }
+
+    private async Task ServiceSignInAsync(ExternalSignInProviderInfo service)
+    {
+        _serviceError = null;
+        _busy = true;
+        switch (await ExternalSignIn.BeginSignInAsync(service.Id, _rememberMe, _returnUrl))
+        {
+            case string url:
+                Nav.NavigateTo(url, forceLoad: true);
+                break;
+            case ApiFailure failure:
+                _busy = false;
+                _serviceError = failure.Message;
+                break;
+        }
     }
 
     private static string? GetQueryParam(string uri, string key)

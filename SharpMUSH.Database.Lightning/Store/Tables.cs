@@ -66,6 +66,10 @@ public static class Tables
 	public static readonly TableDef AccountPasskey = TableDef.Node("acct.passkey");
 	/// <summary>Account key → the credential-id hashes of its passkeys.</summary>
 	public static readonly TableDef AccountPasskeyByAccount = TableDef.Index("acct.passkey.acct", duplicates: true);
+	/// <summary>Provider + 0x00 + subject → a sign-in through another service; see <c>LightningDatabase.ExternalLogins.cs</c>.</summary>
+	public static readonly TableDef AccountExternalLogin = TableDef.Node("acct.extlogin");
+	/// <summary>Account key → the <see cref="AccountExternalLogin"/> keys of its sign-ins.</summary>
+	public static readonly TableDef AccountExternalLoginByAccount = TableDef.Index("acct.extlogin.acct", duplicates: true);
 	/// <summary>SHA-256 of a web push endpoint → the subscription; see <c>LightningDatabase.PushSubscriptions.cs</c>.</summary>
 	public static readonly TableDef PushSubscription = TableDef.Node("push.sub");
 	/// <summary>Account key → the endpoint hashes of its push subscriptions.</summary>

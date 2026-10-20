@@ -5,12 +5,14 @@
 @using SharpMUSH.Library.DiscriminatedUnions
 @using Microsoft.AspNetCore.Components.Authorization
 @using SharpMUSH.Client.Components.Settings
+@using SharpMUSH.Library.API
 @inject AccountAuthService AccountAuth
 @inject NavigationManager Nav
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IStringLocalizer<SharedResource> Loc
 @inject IDialogService DialogService
 @inject AccountPasskeyService Passkeys
+@inject ExternalSignInService ExternalSignIn
 
 <PageTitle>@Loc["MyAccount"] — @Loc["AppTitle"]</PageTitle>
 
@@ -81,9 +83,13 @@
                     @if (_editingPassword)
                     {
                         <div class="acct-fields">
-                            <MudTextField @bind-Value="_oldPassword" Label="@Loc["AuthCurrentPassword"]"
-                                          InputType="InputType.Password"
-                                          Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                            @* An account that signs in only through a service has no password to confirm. *@
+                            @if (HasPassword)
+                            {
+                                <MudTextField @bind-Value="_oldPassword" Label="@Loc["AuthCurrentPassword"]"
+                                              InputType="InputType.Password"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
+                            }
                             <MudTextField @bind-Value="_newPassword" Label="@Loc["AuthNewPassword"]"
                                           InputType="InputType.Password"
                                           Variant="Variant.Outlined" Margin="Margin.Dense" Class="acct-input" />
@@ -95,8 +101,16 @@
                     }
                     else
                     {
-                        <div class="acct-value"><span class="acct-label">@Loc["AuthPassword"]</span> ••••••••</div>
-                        <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">@Loc["AuthChange"]</button>
+                        @if (HasPassword)
+                        {
+                            <div class="acct-value"><span class="acct-label">@Loc["AuthPassword"]</span> ••••••••</div>
+                            <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">@Loc["AuthChange"]</button>
+                        }
+                        else
+                        {
+                            <div class="acct-value acct-password-unset"><span class="acct-label">@Loc["AuthPassword"]</span> @Loc["AuthPasswordNotSet"]</div>
+                            <button class="acct-btn acct-btn-outline" @onclick="() => _editingPassword = true">@Loc["AuthPasswordSet"]</button>
+                        }
                     }
                 </div>
 
@@ -118,6 +132,8 @@
                                    OnUnlink="@(character => UnlinkCharacterAsync(character.DbrefNumber, character.Name))" />
 
             <PasskeyList State="_passkeyList" @bind-Busy="_busy" />
+
+            <ExternalSignInList @bind-SignIns="_signIns" @bind-Busy="_busy" />
 
             <ConnectedAppsCard />
 
@@ -142,6 +158,10 @@
     private bool _isDebugAuth;
 
     private readonly PasskeyListState _passkeyList = new();
+    private AccountSignIns? _signIns;
+
+    /// <summary>Whether the account has a password; true until its sign-ins say otherwise.</summary>
+    private bool HasPassword => _signIns?.HasPassword ?? true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -175,6 +195,8 @@
     {
         if (!AccountAuth.IsLoggedIn || AccountAuth.MustChangePassword) return;
         await _passkeyList.LoadAsync(Passkeys);
+        if (await ExternalSignIn.SignInsAsync() is AccountSignIns signIns) _signIns = signIns;
+        _passkeyList.HasPassword = HasPassword;
     }
 
     private async Task RefreshCharactersAsync()
@@ -206,6 +228,11 @@
         _newPassword = string.Empty;
         if (result is ApiFailure failure) _profileError = failure.Message;
         else _profileSuccess = Loc["AuthPasswordUpdated"];
+        if (result is Success && _signIns is { HasPassword: false } signIns)
+        {
+            _signIns = signIns with { HasPassword = true };
+            _passkeyList.HasPassword = true;
+        }
         // A forced change hid the rest of the page, the passkeys with it.
         if (result is Success && _passkeyList.Passkeys is null) await LoadPasskeysAsync();
     }

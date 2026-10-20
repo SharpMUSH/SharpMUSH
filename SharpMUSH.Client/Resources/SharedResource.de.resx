@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} Paletteneinträge wurden ausgelassen, weil das Limit erreicht war.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>oder</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Weiter mit {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Nicht festgelegt</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Passwort festlegen</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>als {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Zurück zu deinem Konto</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Zurück zur Anmeldung</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Gerade laufen zu viele Anmeldungen. Versuche es in einer Minute erneut.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Du hast hier schon ein Konto? Melde dich damit an und verknüpfe {0} auf deiner Kontoseite.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Diese Anmeldung ist abgelaufen oder wurde schon verwendet. Beginne erneut auf der Anmeldeseite.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Anmeldung nicht abgeschlossen</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Anmeldung wird abgeschlossen …</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>{0} verknüpfen</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} ist als {1} verknüpft.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Verknüpft am {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Noch meldet sich kein Konto hier mit {0} als {1} an. Wähle einen Benutzernamen, um eines zu erstellen.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Konto erstellen</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Dieses Spiel nimmt gerade keine neuen Konten an.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Schließe die Anmeldung in dem Tab ab, in dem du sie begonnen hast.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Andere Anmeldewege</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Melde dich über einen anderen Dienst statt mit einem Passwort an.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Keine Dienste verknüpft.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>nicht verfügbar</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>{0} trennen</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Trennen</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Du kannst dich nicht mehr mit {0} anmelden, bis du es erneut verknüpfst.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>{0} trennen?</value>
+  </data>
 </root>

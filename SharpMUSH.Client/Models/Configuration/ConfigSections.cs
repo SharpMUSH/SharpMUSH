@@ -43,6 +43,7 @@ public static class ConfigSections
 			new("/admin/config/bannednames", "BannedNames", Icons.Material.Outlined.Block, "BannedNames"),
 			new("/admin/config/restrictions", "Restriction", Icons.Material.Outlined.GppBad, "Restrictions"),
 			new("/admin/config/secrets", "Secrets", Icons.Material.Outlined.Key, "AdmSecrets"),
+			new("/admin/config/signin", "SignIn", Icons.Material.Outlined.Login, "AdmSignIn"),
 			new("/admin/config/apps", "Apps", Icons.Material.Outlined.Extension, "OAuthAdmApps"),
 		]),
 		new("Content", "Content", "ContentCategoryDescription", Icons.Material.Outlined.Article, false,

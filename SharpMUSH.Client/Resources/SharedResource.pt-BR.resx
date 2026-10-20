@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} entradas da paleta ficaram de fora por passarem dos limites.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>ou</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuar com {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Não definida</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Definir uma senha</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>como {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Voltar para sua conta</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Voltar para entrar</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Há muitos logins em andamento. Tente novamente em um minuto.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Já tem uma conta aqui? Entre nela e vincule {0} na página da sua conta.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Este login expirou ou já foi usado. Comece de novo pela página de entrada.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>O login não foi concluído</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Concluindo o login…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Vincular {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} vinculado como {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Vinculado em {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Nenhuma conta aqui entra com {0} como {1} ainda. Escolha um nome de usuário para criar uma.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Crie sua conta</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Este jogo não está aceitando novas contas agora.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Conclua o login na aba em que você começou.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Outras formas de entrar</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Entre com outro serviço em vez de uma senha.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Nenhum serviço vinculado.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>indisponível</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Desvincular {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Desvincular</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Você não poderá entrar com {0} até vinculá-lo novamente.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Desvincular {0}?</value>
+  </data>
 </root>

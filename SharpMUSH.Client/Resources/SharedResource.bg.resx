@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} записи в палитрата бяха пропуснати заради ограниченията.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>или</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Продължи с {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Не е зададена</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Задай парола</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>като {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Обратно към профила</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Обратно към вход</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Твърде много влизания се обработват. Опитай отново след минута.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Вече имаш профил тук? Влез в него и свържи {0} от страницата на профила.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Това влизане е изтекло или вече е използвано. Започни отначало от страницата за вход.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Влизането не завърши</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Завършване на влизането…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Свържи {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} е свързан като {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Свързан на {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Още няма профил тук, който влиза с {0} като {1}. Избери потребителско име, за да създадеш такъв.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Създай профила си</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Тази игра не приема нови профили в момента.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Завърши влизането в раздела, от който започна.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Други начини за вход</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Влизай чрез друга услуга вместо с парола.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Няма свързани услуги.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>недостъпно</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Прекъсни връзката с {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Прекъсни</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Няма да можеш да влизаш с {0}, докато не го свържеш отново.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Да се прекъсне ли връзката с {0}?</value>
+  </data>
 </root>

@@ -100,6 +100,41 @@ public interface IAccountStore
 	/// <summary>Removes one of the account's passkeys. False when the account holds no such passkey.</summary>
 	ValueTask<bool> RemoveAccountPasskeyAsync(string accountId, byte[] credentialId, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// The link of the service identity <paramref name="subject"/> at <paramref name="provider"/>, whichever account
+	/// holds it, or null. A link to a deleted account is still returned; the caller decides what that means.
+	/// </summary>
+	ValueTask<AccountExternalLogin?> GetAccountExternalLoginAsync(string provider, string subject,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>The account's sign-ins through other services, oldest first.</summary>
+	ValueTask<IReadOnlyList<AccountExternalLogin>> GetAccountExternalLoginsAsync(string accountId,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Links a service identity to the account, unless the identity signs in to another account that is not deleted,
+	/// or the account already has a sign-in through that provider. Both are checked in the write itself. A link left
+	/// on a deleted account moves to this one.
+	/// </summary>
+	ValueTask<ExternalLoginAddOutcome> AddAccountExternalLoginAsync(AccountExternalLogin login,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Creates an account with no password, signed in to by <paramref name="login"/> (its account id is ignored), in
+	/// one write: of two sign-ups racing with one identity, exactly one makes an account. A link left on a deleted
+	/// account moves to the new one.
+	/// </summary>
+	ValueTask<ExternalAccountCreation> CreateAccountWithExternalLoginAsync(string username, string? email,
+		AccountExternalLogin login, CancellationToken cancellationToken = default);
+
+	/// <summary>Records a sign-in through the link: the time, and the name the service gave this time.</summary>
+	ValueTask RecordAccountExternalLoginUseAsync(string provider, string subject, string name, DateTimeOffset usedAt,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>Removes the account's sign-in through <paramref name="provider"/>. False when it has none.</summary>
+	ValueTask<bool> RemoveAccountExternalLoginAsync(string accountId, string provider,
+		CancellationToken cancellationToken = default);
+
 	/// <summary>The account's ban, or null when it is not banned.</summary>
 	ValueTask<AccountBan?> GetAccountBanAsync(string accountId, CancellationToken cancellationToken = default);
 

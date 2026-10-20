@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>Pominięto {0} wpisów palety z powodu limitów.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>lub</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Kontynuuj przez {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Nie ustawiono</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Ustaw hasło</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>jako {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Wróć do konta</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Wróć do logowania</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Trwa zbyt wiele logowań. Spróbuj ponownie za minutę.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Masz już tu konto? Zaloguj się na nie, a potem połącz {0} na stronie konta.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>To logowanie wygasło lub zostało już użyte. Zacznij od nowa na stronie logowania.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Logowanie nie zostało dokończone</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Kończenie logowania…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Połącz {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>Połączono {0} jako {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Połączono {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Żadne konto tutaj nie loguje się jeszcze przez {0} jako {1}. Wybierz nazwę użytkownika, aby je utworzyć.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Utwórz konto</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Ta gra nie przyjmuje teraz nowych kont.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Dokończ logowanie w karcie, w której je rozpocząłeś.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Inne sposoby logowania</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Loguj się przez inną usługę zamiast hasła.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Brak połączonych usług.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>niedostępne</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Odłącz {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Odłącz</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Nie zalogujesz się przez {0}, dopóki go ponownie nie połączysz.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Odłączyć {0}?</value>
+  </data>
 </root>

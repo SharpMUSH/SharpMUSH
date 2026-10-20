@@ -417,6 +417,16 @@ public class AccountAuthService(
 			ApiFailure failure => Logged(failure, "Passkey login"),
 		};
 
+	/// <summary>
+	/// Adopts the session a sign-in through another service ended with (<see cref="ExternalSignInService"/>); answers
+	/// with the account's roster, as <see cref="LoginAsync"/> does.
+	/// </summary>
+	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> AdoptSessionAsync(LoginResponse session) =>
+		IsComplete(session)
+			? await SignedInAsync(session)
+			: Logged(new ApiFailure(ApiFailureKind.Unexpected, "The server's sign-in answer was missing its session, name or roster."),
+				"Service sign-in");
+
 	/// <summary>Creates an account and signs in to it; answers with its (empty) roster.</summary>
 	public async Task<ApiResult<IReadOnlyList<CharacterSummary>>> RegisterAsync(
 		string username, string? email, string password, bool rememberMe = false) =>

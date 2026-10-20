@@ -1,0 +1,182 @@
+@page "/login/external"
+@layout OnboardingLayout
+@using SharpMUSH.Client.Layout
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@inject AccountAuthService AccountAuth
+@inject ExternalSignInService ServiceSignIn
+@inject ISnackbar Snackbar
+
+<PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
+
+@* Where a sign-in service sends the browser back to. The tab finishes the flow with the binding it kept when it
+   left, then signs in, links the service, or asks for a username for a new account. *@
+<div class="login-page">
+    <div class="login-brand">
+        <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="login-logo" />
+        <h1 class="login-brand-title">@Loc["AppTitle"]</h1>
+    </div>
+
+    <MudPaper Elevation="4" Class="login-card ext-card">
+        @if (_newAccount is { } offer)
+        {
+            <h2 class="ext-title">@Loc["AuthServiceNewAccountTitle"]</h2>
+            <p class="ext-text">@Loc["AuthServiceNewAccountBody", offer.ProviderName, offer.ServiceName]</p>
+
+            @if (offer.CanCreate)
+            {
+                <MudTextField id="ext-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person" Disabled="_busy" />
+                <MudTextField id="ext-email" @bind-Value="_email" Label="@Loc["AuthEmailOptional"]"
+                              Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
+                              Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email" Disabled="_busy" />
+
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+                }
+
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Disabled="_busy"
+                           OnClick="CreateAsync" Class="ext-create" Style="font-weight:600;font-size:0.9375rem;height:42px;">
+                    @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+                    @Loc["AuthCreateAccount"]
+                </MudButton>
+                <p class="ext-hint">@Loc["AuthServiceExistingAccountHint", offer.ProviderName]</p>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">@Loc["AuthServiceNoNewAccounts"]</MudAlert>
+                <MudLink Href="/login" Class="ext-back">@Loc["AuthServiceBackToSignIn"]</MudLink>
+            }
+        }
+        else if (_error is not null)
+        {
+            <h2 class="ext-title">@Loc["AuthServiceFailedTitle"]</h2>
+            <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3 ext-error">@_error</MudAlert>
+            <MudLink Href="@(_linking ? "/account" : "/login")" Class="ext-back">
+                @Loc[_linking ? "AuthServiceBackToAccount" : "AuthServiceBackToSignIn"]
+            </MudLink>
+        }
+        else
+        {
+            <div class="ext-working">
+                <MudProgressCircular Indeterminate="true" Size="Size.Small" Color="Color.Primary" />
+                <span>@Loc["AuthServiceFinishing"]</span>
+            </div>
+        }
+    </MudPaper>
+</div>
+
+@code {
+    private const string OnboardingUrl = "/characters/new";
+
+    private AccountApiClient.ExternalCompleteResponse? _newAccount;
+    private ExternalSignInService.Pending? _pending;
+    private string? _flow;
+    private string? _error;
+    private bool _busy;
+    private bool _linking;
+    private string _username = string.Empty;
+    private string _email = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var query = new Uri(Nav.Uri).Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Select(pair => pair.Split('=', 2))
+            .Where(pair => pair.Length == 2)
+            .ToDictionary(pair => pair[0], pair => Uri.UnescapeDataString(pair[1]));
+
+        if (await ServiceSignIn.PendingAsync() is ExternalSignInService.Pending pending)
+        {
+            _pending = pending;
+            _linking = pending.Linking;
+        }
+
+        _flow = query.GetValueOrDefault("flow");
+        if (query.ContainsKey("error") || _flow is null)
+        {
+            _error = Loc[query.GetValueOrDefault("error") == "busy" ? "AuthServiceBusy" : "AuthServiceExpired"];
+            await ServiceSignIn.ForgetAsync();
+            return;
+        }
+
+        if (_pending is null)
+        {
+            // Another tab, or a link someone sent: only the tab that left for the service can finish it.
+            _error = Loc["AuthServiceOtherTab"];
+            return;
+        }
+
+        await FinishAsync(await ServiceSignIn.CompleteAsync(_flow, _pending));
+    }
+
+    private async Task CreateAsync()
+    {
+        if (_pending is null || _flow is null) return;
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_username))
+        {
+            _error = Loc["AuthUsernameRequired"];
+            return;
+        }
+
+        _busy = true;
+        await FinishAsync(await ServiceSignIn.CompleteAsync(_flow, _pending, createAccount: true, _username.Trim(), _email));
+        _busy = false;
+    }
+
+    private async Task FinishAsync(ApiResult<AccountApiClient.ExternalCompleteResponse> result)
+    {
+        switch (result)
+        {
+            case AccountApiClient.ExternalCompleteResponse { Outcome: "signedIn", Session: { } session }:
+                await SignedInAsync(session);
+                break;
+            case AccountApiClient.ExternalCompleteResponse { Outcome: "linked" } linked:
+                await ServiceSignIn.ForgetAsync();
+                Snackbar.Add(Loc["AuthServiceLinked", linked.ProviderName, linked.ServiceName], Severity.Success);
+                Nav.NavigateTo("/account#sign-ins", replace: true);
+                break;
+            case AccountApiClient.ExternalCompleteResponse { Outcome: "newAccount" } offer:
+                _newAccount = offer;
+                if (_username.Length == 0) _username = offer.SuggestedUsername ?? string.Empty;
+                if (_email.Length == 0) _email = offer.SuggestedEmail ?? string.Empty;
+                break;
+            case AccountApiClient.ExternalCompleteResponse:
+                _error = Loc["AuthServiceExpired"];
+                break;
+            case ApiFailure { Status: System.Net.HttpStatusCode.Conflict } failure when _newAccount is not null:
+                // A username or email someone else has: the form stays to try another.
+                _error = failure.Message;
+                break;
+            case ApiFailure failure:
+                _newAccount = null;
+                _error = failure.Message;
+                await ServiceSignIn.ForgetAsync();
+                break;
+        }
+    }
+
+    private async Task SignedInAsync(AccountApiClient.LoginResponse session)
+    {
+        var returnUrl = _pending?.ReturnUrl;
+        await ServiceSignIn.ForgetAsync();
+        switch (await AccountAuth.AdoptSessionAsync(session))
+        {
+            case IReadOnlyList<AccountAuthService.CharacterSummary> characters:
+                Nav.NavigateTo(characters.Count == 0 ? OnboardingUrl : SafeReturn(returnUrl), replace: true);
+                break;
+            case ApiFailure failure:
+                _newAccount = null;
+                _error = failure.Message;
+                break;
+        }
+    }
+
+    /// <summary>A same-origin path only, as the sign-in page allows.</summary>
+    private static string SafeReturn(string? url)
+        => string.IsNullOrEmpty(url) || !url.StartsWith('/') || url.StartsWith("//") || url.StartsWith("/\\") ? "/" : url;
+}

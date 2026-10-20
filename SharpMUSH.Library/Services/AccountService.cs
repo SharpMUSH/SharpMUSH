@@ -115,7 +115,9 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
+		// An account made by signing in through another service has no password to confirm: its first one is set
+		// from the session alone, as the service sign-in that made the session is the only way in it has.
+		if (!string.IsNullOrEmpty(account.PasswordHash) && !passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
 		var newHash = passwordService.HashPassword(newPassword);
@@ -130,7 +132,7 @@ public class AccountService(
 		if (account is null)
 			return new Error<string>("Account not found.");
 
-		if (!passwordService.PasswordIsValid(currentPassword, account.PasswordHash))
+		if (!string.IsNullOrEmpty(account.PasswordHash) && !passwordService.PasswordIsValid(currentPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
 
 		if (newEmail is not null && await database.GetAccountByEmailAsync(newEmail, ct) is not null)

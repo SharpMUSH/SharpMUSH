@@ -39,6 +39,17 @@ public sealed record AccountPasskeyRecord
 	public long? LastUsedAtMs { get; init; }
 }
 
+/// <summary>A sign-in through another service, keyed by provider + 0x00 + subject. Times are Unix milliseconds.</summary>
+public sealed record AccountExternalLoginRecord
+{
+	public string AccountKey { get; init; } = "";
+	public string Provider { get; init; } = "";
+	public string Subject { get; init; } = "";
+	public string Name { get; init; } = "";
+	public long CreatedAtMs { get; init; }
+	public long? LastUsedAtMs { get; init; }
+}
+
 /// <summary>
 /// A web push subscription, keyed by the SHA-256 of its endpoint, which can run past what an LMDB key holds.
 /// Times are Unix milliseconds.

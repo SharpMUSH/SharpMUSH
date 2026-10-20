@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} paletposter blev udeladt, fordi grænsen var nået.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>eller</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Fortsæt med {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Ikke angivet</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Angiv en adgangskode</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>som {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Tilbage til din konto</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Tilbage til log ind</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Der er for mange igangværende logins. Prøv igen om et minut.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Har du allerede en konto her? Log ind på den, og tilknyt derefter {0} på din kontoside.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Dette login er udløbet eller allerede brugt. Start forfra fra log ind-siden.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Login blev ikke fuldført</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Fuldfører login…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Tilknyt {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} er tilknyttet som {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Tilknyttet {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Ingen konto her logger ind med {0} som {1} endnu. Vælg et brugernavn for at oprette en.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Opret din konto</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Dette spil tager ikke imod nye konti lige nu.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Fuldfør login i den fane, du startede fra.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Andre måder at logge ind</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Log ind med en anden tjeneste i stedet for en adgangskode.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Ingen tjenester tilknyttet.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>utilgængelig</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Fjern tilknytning til {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Fjern tilknytning</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Du kan ikke logge ind med {0}, før du tilknytter den igen.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Fjern tilknytning til {0}?</value>
+  </data>
 </root>

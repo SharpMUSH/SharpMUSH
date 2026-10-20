@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} intrări de paletă au fost omise, peste limite.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>sau</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuă cu {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Nesetată</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Setează o parolă</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>ca {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Înapoi la cont</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Înapoi la autentificare</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Sunt prea multe autentificări în curs. Încearcă din nou peste un minut.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Ai deja un cont aici? Autentifică-te în el, apoi conectează {0} din pagina contului.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Această autentificare a expirat sau a fost deja folosită. Începe din nou de pe pagina de autentificare.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Autentificarea nu s-a încheiat</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Se finalizează autentificarea…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Conectează {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} conectat ca {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Conectat la {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Niciun cont de aici nu se autentifică încă prin {0} ca {1}. Alege un nume de utilizator pentru a crea unul.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Creează-ți contul</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Acest joc nu acceptă conturi noi momentan.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Finalizează autentificarea în fila din care ai început.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Alte moduri de autentificare</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Autentifică-te printr-un alt serviciu în loc de parolă.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Niciun serviciu conectat.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>indisponibil</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Deconectează {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Deconectează</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Nu te vei mai putea autentifica prin {0} până nu îl conectezi din nou.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Deconectezi {0}?</value>
+  </data>
 </root>

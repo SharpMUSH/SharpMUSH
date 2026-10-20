@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} записей палитры пропущено из-за ограничений.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>или</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Продолжить через {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Не задан</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Задать пароль</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>как {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Вернуться к аккаунту</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Вернуться ко входу</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Сейчас выполняется слишком много входов. Попробуйте через минуту.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Уже есть аккаунт здесь? Войдите в него и привяжите {0} на странице аккаунта.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Этот вход истёк или уже использован. Начните заново со страницы входа.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Вход не завершён</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Завершение входа…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Привязать {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} привязан как {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Привязан {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Здесь ещё нет аккаунта, который входит через {0} как {1}. Выберите имя пользователя, чтобы создать его.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Создайте аккаунт</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Эта игра сейчас не принимает новые аккаунты.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Завершите вход во вкладке, с которой вы начали.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Другие способы входа</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Входите через другой сервис вместо пароля.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Нет привязанных сервисов.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>недоступно</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Отвязать {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Отвязать</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Вы не сможете входить через {0}, пока не привяжете его снова.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Отвязать {0}?</value>
+  </data>
 </root>

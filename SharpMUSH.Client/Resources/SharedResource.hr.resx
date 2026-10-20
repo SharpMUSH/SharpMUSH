@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} stavki palete izostavljeno je jer su prešle ograničenja.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>ili</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Nastavi s {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Nije postavljena</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Postavi lozinku</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>kao {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Natrag na račun</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Natrag na prijavu</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>U tijeku je previše prijava. Pokušaj ponovno za minutu.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Već imaš račun ovdje? Prijavi se u njega, a zatim poveži {0} na stranici računa.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Ova prijava je istekla ili je već iskorištena. Počni ispočetka sa stranice za prijavu.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>Prijava nije dovršena</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Dovršavanje prijave…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Poveži {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} povezan kao {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Povezano {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Ovdje se još nijedan račun ne prijavljuje putem {0} kao {1}. Odaberi korisničko ime da ga stvoriš.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Stvori svoj račun</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Ova igra trenutačno ne prima nove račune.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Dovrši prijavu u kartici iz koje si je započeo.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Drugi načini prijave</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Prijavi se drugom uslugom umjesto lozinkom.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Nema povezanih usluga.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>nedostupno</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Odspoji {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Odspoji</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Nećeš se moći prijaviti putem {0} dok ga ponovno ne povežeš.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Odspojiti {0}?</value>
+  </data>
 </root>

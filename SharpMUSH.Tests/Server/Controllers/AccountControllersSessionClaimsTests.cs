@@ -51,6 +51,11 @@ public class AccountControllersSessionClaimsTests
 			new PasskeyService(Substitute.For<SharpMUSH.Library.IAccountStore>(),
 				new PasskeyRelyingParty(new ConfigurationBuilder().Build(), Substitute.For<IOptionsWrapper<SharpMUSHOptions>>()),
 				new PasskeyCeremonyStore(TimeProvider.System), TimeProvider.System, NullLogger<PasskeyService>.Instance),
+			new SharpMUSH.Server.Authentication.External.ExternalSignInService(new SharpMUSH.Server.Authentication.External.ExternalSignInProviders(Substitute.For<SharpMUSH.Library.Services.Interfaces.IExpandedObjectDataService>(), Substitute.For<SharpMUSH.Library.Services.Interfaces.ISecretStore>()),
+				new SharpMUSH.Server.Authentication.External.ExternalSignInFlows(TimeProvider.System),
+				Substitute.For<SharpMUSH.Library.IAccountStore>(), Substitute.For<IHttpClientFactory>(),
+				new Microsoft.Extensions.Configuration.ConfigurationBuilder().Build(), TimeProvider.System,
+				Substitute.For<Microsoft.Extensions.Logging.ILogger<SharpMUSH.Server.Authentication.External.ExternalSignInService>>()),
 			Substitute.For<SharpMUSH.Library.Services.Interfaces.IPortalThemeService>(),
 			new BearerAccountResolver(sessions, accounts),
 			NullLogger<AccountController>.Instance)

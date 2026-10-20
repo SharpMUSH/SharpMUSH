@@ -1,0 +1,123 @@
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject IDialogService DialogService
+@inject ExternalSignInService ExternalSignIn
+@inject NavigationManager Nav
+
+@* Shown only when the game offers a service or the account already has a link: with neither there is nothing to do. *@
+@if (SignIns is { } signIns && (signIns.Linked.Count > 0 || signIns.Available.Count > 0))
+{
+    <div id="sign-ins" class="acct-anchor">
+        <KitCard Title="@Loc["AuthServiceSignIns"]" Sub="@Loc["AuthServiceSignInsDescription"]">
+            <div class="acct-section">
+                @if (signIns.Linked.Count == 0)
+                {
+                    <div class="acct-empty">@Loc["AuthServiceSignInsNone"]</div>
+                }
+                else
+                {
+                    <ul class="acct-passkeys">
+                        @foreach (var link in signIns.Linked)
+                        {
+                            <li class="acct-passkey acct-service" data-provider="@link.Provider">
+                                <MudIcon Icon="@ExternalSignInIcons.For(link.Kind)" Size="Size.Small" Class="acct-passkey-icon" />
+                                <div class="acct-passkey-text">
+                                    <div class="acct-passkey-name">
+                                        @link.ProviderName
+                                        <span class="acct-service-as">@Loc["AuthServiceAs", link.Name]</span>
+                                        @if (!link.Usable)
+                                        {
+                                            <span class="acct-flag">@Loc["AuthServiceUnavailable"]</span>
+                                        }
+                                    </div>
+                                    <div class="acct-passkey-meta">
+                                        @Loc["AuthServiceLinkedOn", link.CreatedAt.LocalDateTime.ToString("d")]
+                                        @if (link.LastUsedAt is { } used)
+                                        {
+                                            <text> · @Loc["AuthPasskeyLastUsed", used.LocalDateTime.ToString("d")]</text>
+                                        }
+                                    </div>
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Outlined.LinkOff" Size="Size.Small" Color="Color.Error"
+                                               aria-label="@Loc["AuthServiceUnlink", link.ProviderName]" Disabled="Busy"
+                                               OnClick="() => UnlinkAsync(link)" />
+                            </li>
+                        }
+                    </ul>
+                }
+
+                @if (signIns.Available.Count > 0)
+                {
+                    <div class="acct-service-links">
+                        @foreach (var service in signIns.Available)
+                        {
+                            <button class="acct-btn acct-btn-outline acct-service-link" disabled="@Busy" data-provider="@service.Id"
+                                    @onclick="() => LinkAsync(service)">
+                                <MudIcon Icon="@ExternalSignInIcons.For(service.Kind)" Size="Size.Small" Class="mr-1" />
+                                @Loc["AuthServiceLink", service.Name]
+                            </button>
+                        }
+                    </div>
+                }
+
+                @if (_error is not null)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
+                }
+            </div>
+        </KitCard>
+    </div>
+}
+
+@code {
+    /// <summary>The account's sign-ins, loaded by the page; null while loading.</summary>
+    [Parameter] public AccountSignIns? SignIns { get; set; }
+
+    [Parameter] public EventCallback<AccountSignIns> SignInsChanged { get; set; }
+
+    [Parameter] public bool Busy { get; set; }
+
+    [Parameter] public EventCallback<bool> BusyChanged { get; set; }
+
+    private string? _error;
+
+    private async Task LinkAsync(ExternalSignInProviderInfo service)
+    {
+        _error = null;
+        await BusyChanged.InvokeAsync(true);
+        switch (await ExternalSignIn.BeginLinkAsync(service.Id))
+        {
+            case string url:
+                Nav.NavigateTo(url, forceLoad: true);
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                await BusyChanged.InvokeAsync(false);
+                break;
+        }
+    }
+
+    private async Task UnlinkAsync(LinkedSignIn link)
+    {
+        if (!await DialogService.ConfirmAsync(Loc, Loc["AuthServiceUnlinkConfirmTitle", link.ProviderName],
+            Loc["AuthServiceUnlinkConfirm", link.ProviderName], Loc["AuthServiceUnlinkButton"])) return;
+
+        _error = null;
+        await BusyChanged.InvokeAsync(true);
+        var result = await ExternalSignIn.UnlinkAsync(link.Provider);
+        await BusyChanged.InvokeAsync(false);
+        switch (result)
+        {
+            case Success when SignIns is { } signIns:
+                await SignInsChanged.InvokeAsync(await ExternalSignIn.SignInsAsync() is AccountSignIns fresh
+                    ? fresh
+                    : signIns with { Linked = signIns.Linked.Where(l => l.Provider != link.Provider).ToList() });
+                break;
+            case ApiFailure failure:
+                _error = failure.Message;
+                break;
+        }
+    }
+}

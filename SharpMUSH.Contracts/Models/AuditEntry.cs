@@ -57,6 +57,7 @@ public static class AuditTargetKinds
 	public const string Feed = "feed";
 	public const string Package = "package";
 	public const string App = "app";
+	public const string SignInProvider = "signin-provider";
 }
 
 /// <summary>
@@ -160,6 +161,8 @@ public static class AuditActions
 	public const string SecretSet = "secret.set";
 	public const string SecretClear = "secret.clear";
 	public const string SecretHosts = "secret.hosts";
+	public const string SignInProviderSave = "signin.provider.save";
+	public const string SignInProviderRemove = "signin.provider.remove";
 
 	/// <summary>An app registered for OAuth, changed, or given a new secret.</summary>
 	public const string AppSave = "app.save";
@@ -179,6 +182,6 @@ public static class AuditActions
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
 		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
-		AppSave, AppDelete, FeedLineDelete
+		SignInProviderSave, SignInProviderRemove, AppSave, AppDelete, FeedLineDelete
 	];
 }

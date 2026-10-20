@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>有 {0} 个命令面板条目因超出限制而未显示。</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>或</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>使用 {0} 继续</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>未设置</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>设置密码</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>身份：{0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>返回你的账户</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>返回登录</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>正在进行的登录过多，请一分钟后再试。</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>已有账户？请先登录，再在账户页面关联 {0}。</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>此次登录已过期或已被使用，请从登录页面重新开始。</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>登录未完成</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>正在完成登录…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>关联 {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>已关联 {0}，身份：{1}。</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>关联于 {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>这里还没有通过 {0}（{1}）登录的账户。请选择用户名来创建一个。</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>创建你的账户</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>本游戏目前不接受新账户。</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>请在你开始登录的标签页中完成登录。</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>其他登录方式</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>使用其他服务登录，而不是密码。</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>未关联任何服务。</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>不可用</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>取消关联 {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>取消关联</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>在重新关联之前，你将无法使用 {0} 登录。</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>取消关联 {0}？</value>
+  </data>
 </root>

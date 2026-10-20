@@ -5608,4 +5608,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} entrées de palette ont été omises, au-delà des limites.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>ou</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Continuer avec {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Non défini</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Définir un mot de passe</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>en tant que {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Retour à votre compte</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Retour à la connexion</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Trop de connexions sont en cours. Réessayez dans une minute.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Vous avez déjà un compte ici ? Connectez-vous, puis associez {0} depuis la page de votre compte.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Cette connexion a expiré ou a déjà été utilisée. Recommencez depuis la page de connexion.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>La connexion n’a pas abouti</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Finalisation de la connexion…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>Associer {0}</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} associé en tant que {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Associé le {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Aucun compte ici ne se connecte encore avec {0} en tant que {1}. Choisissez un nom d’utilisateur pour en créer un.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Créez votre compte</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Ce jeu n’accepte pas de nouveaux comptes pour le moment.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Terminez la connexion dans l’onglet d’où vous l’avez lancée.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>Autres moyens de connexion</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Connectez-vous avec un autre service au lieu d’un mot de passe.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Aucun service associé.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>indisponible</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>Dissocier {0}</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Dissocier</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Vous ne pourrez plus vous connecter avec {0} tant que vous ne l’aurez pas associé à nouveau.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Dissocier {0} ?</value>
+  </data>
 </root>

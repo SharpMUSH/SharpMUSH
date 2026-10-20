@@ -71,6 +71,12 @@ public sealed class AccountApiClient(IHttpClientFactory httpClientFactory)
 	/// <summary>One of the account's passkeys. <paramref name="IsSynced"/>: the authenticator keeps it on more than one device.</summary>
 	public sealed record PasskeySummary(string Id, string Name, DateTimeOffset CreatedAt, DateTimeOffset? LastUsedAt, bool IsSynced);
 
+	/// <summary>How a sign-in through another service finished (<c>api/auth/external/complete</c>).</summary>
+	/// <param name="Outcome"><c>signedIn</c> with <paramref name="Session"/>, <c>newAccount</c> when the service identity
+	/// has no account yet, or <c>linked</c>.</param>
+	public sealed record ExternalCompleteResponse(string Outcome, string ProviderName, string ServiceName,
+		LoginResponse? Session = null, string? SuggestedUsername = null, string? SuggestedEmail = null, bool CanCreate = false);
+
 	private const string NoSession = "The server answered without a session.";
 	private const string IncompleteSession = "The server's sign-in answer was missing its session, name or roster.";
 

@@ -6314,4 +6314,85 @@
   <data name="NavPaletteDropped" xml:space="preserve">
     <value>{0} palettabejegyzés kimaradt, mert túllépte a korlátokat.</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>vagy</value>
+  </data>
+  <data name="AuthContinueWith" xml:space="preserve">
+    <value>Folytatás ezzel: {0}</value>
+  </data>
+  <data name="AuthPasswordNotSet" xml:space="preserve">
+    <value>Nincs megadva</value>
+  </data>
+  <data name="AuthPasswordSet" xml:space="preserve">
+    <value>Jelszó megadása</value>
+  </data>
+  <data name="AuthServiceAs" xml:space="preserve">
+    <value>mint {0}</value>
+  </data>
+  <data name="AuthServiceBackToAccount" xml:space="preserve">
+    <value>Vissza a fiókodhoz</value>
+  </data>
+  <data name="AuthServiceBackToSignIn" xml:space="preserve">
+    <value>Vissza a bejelentkezéshez</value>
+  </data>
+  <data name="AuthServiceBusy" xml:space="preserve">
+    <value>Túl sok bejelentkezés van folyamatban. Próbáld újra egy perc múlva.</value>
+  </data>
+  <data name="AuthServiceExistingAccountHint" xml:space="preserve">
+    <value>Már van itt fiókod? Jelentkezz be vele, majd kapcsold hozzá a(z) {0} fiókot a fiókoldaladon.</value>
+  </data>
+  <data name="AuthServiceExpired" xml:space="preserve">
+    <value>Ez a bejelentkezés lejárt vagy már fel lett használva. Kezdd újra a bejelentkezési oldalon.</value>
+  </data>
+  <data name="AuthServiceFailedTitle" xml:space="preserve">
+    <value>A bejelentkezés nem fejeződött be</value>
+  </data>
+  <data name="AuthServiceFinishing" xml:space="preserve">
+    <value>Bejelentkezés befejezése…</value>
+  </data>
+  <data name="AuthServiceLink" xml:space="preserve">
+    <value>{0} összekapcsolása</value>
+  </data>
+  <data name="AuthServiceLinked" xml:space="preserve">
+    <value>{0} összekapcsolva mint {1}.</value>
+  </data>
+  <data name="AuthServiceLinkedOn" xml:space="preserve">
+    <value>Összekapcsolva: {0}</value>
+  </data>
+  <data name="AuthServiceNewAccountBody" xml:space="preserve">
+    <value>Itt még egyetlen fiók sem jelentkezik be a(z) {0} szolgáltatással mint {1}. Válassz felhasználónevet a létrehozásához.</value>
+  </data>
+  <data name="AuthServiceNewAccountTitle" xml:space="preserve">
+    <value>Fiók létrehozása</value>
+  </data>
+  <data name="AuthServiceNoNewAccounts" xml:space="preserve">
+    <value>Ez a játék most nem fogad új fiókokat.</value>
+  </data>
+  <data name="AuthServiceOtherTab" xml:space="preserve">
+    <value>Fejezd be a bejelentkezést abban a lapon, ahol elkezdted.</value>
+  </data>
+  <data name="AuthServiceSignIns" xml:space="preserve">
+    <value>További bejelentkezési módok</value>
+  </data>
+  <data name="AuthServiceSignInsDescription" xml:space="preserve">
+    <value>Jelentkezz be egy másik szolgáltatással jelszó helyett.</value>
+  </data>
+  <data name="AuthServiceSignInsNone" xml:space="preserve">
+    <value>Nincs összekapcsolt szolgáltatás.</value>
+  </data>
+  <data name="AuthServiceUnavailable" xml:space="preserve">
+    <value>nem elérhető</value>
+  </data>
+  <data name="AuthServiceUnlink" xml:space="preserve">
+    <value>{0} leválasztása</value>
+  </data>
+  <data name="AuthServiceUnlinkButton" xml:space="preserve">
+    <value>Leválasztás</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirm" xml:space="preserve">
+    <value>Nem tudsz bejelentkezni a(z) {0} szolgáltatással, amíg újra össze nem kapcsolod.</value>
+  </data>
+  <data name="AuthServiceUnlinkConfirmTitle" xml:space="preserve">
+    <value>Leválasztod: {0}?</value>
+  </data>
 </root>
