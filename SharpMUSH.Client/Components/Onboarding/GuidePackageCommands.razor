@@ -4,6 +4,7 @@
 @using SharpMUSH.Library.Models.Portal.Onboarding
 @inject IAccountAuthState Auth
 @inject IHttpClientFactory Http
+@inject IServiceProvider Services
 @inject IStringLocalizer<SharedResource> Loc
 @implements IDisposable
 
@@ -30,6 +31,7 @@
     private bool _loading, _error, _disposed, _initialized;
     private long _generation;
     private CancellationTokenSource? _pending;
+    private readonly CancellationTokenSource _stop = new();
     private (string? Token, int? Character, long? Created) Authority =>
         (Auth.IsLoggedIn ? Auth.AccountSessionToken : null, Auth.ActiveCharacter?.DbrefNumber, Auth.ActiveCharacter?.CreationTime);
 
@@ -40,17 +42,40 @@
         await Auth.InitAsync();
         _initialized = true;
         await Check();
+        if (!_disposed) _ = RefreshWhileOpen();
     }
 
-    private async Task Check()
+    private async Task RefreshWhileOpen()
     {
-        Reset();
+        var stopToken = _stop.Token;
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30),
+            Services.GetService<TimeProvider>() ?? TimeProvider.System);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stopToken))
+                await InvokeAsync(async () =>
+                {
+                    if (_disposed || _pending is not null) return;
+                    await Check(background: true);
+                    if (!_disposed) StateHasChanged();
+                });
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+    }
+
+    private async Task Check(bool background = false)
+    {
+        Reset(clearCommands: !background);
         var authority = Authority;
-        if (authority.Token is null || authority.Character is null || _disposed) return;
+        if (authority.Token is null || authority.Character is null || _disposed)
+        {
+            _capabilities = [];
+            return;
+        }
         var generation = _generation;
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         _pending = cancellation;
-        _loading = true;
+        _loading = !background;
         bool Current() => !_disposed && generation == _generation && authority == Authority;
         try
         {
@@ -67,7 +92,11 @@
         }
         catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException)
         {
-            if (Current()) _error = true;
+            if (Current())
+            {
+                _capabilities = [];
+                _error = true;
+            }
         }
         finally
         {
@@ -75,12 +104,12 @@
         }
     }
 
-    private void Reset()
+    private void Reset(bool clearCommands = true)
     {
         _generation++;
         _pending?.Cancel();
         _pending = null;
-        _capabilities = [];
+        if (clearCommands) _capabilities = [];
         _loading = _error = false;
     }
     private void Changed()
@@ -96,8 +125,10 @@
     public void Dispose()
     {
         _disposed = true;
+        _stop.Cancel();
         Reset();
         Auth.AuthStateChanged -= Changed;
         Auth.ActiveCharacterChanged -= Changed;
+        _stop.Dispose();
     }
 }

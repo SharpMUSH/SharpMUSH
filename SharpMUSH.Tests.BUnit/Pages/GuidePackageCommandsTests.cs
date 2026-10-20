@@ -11,6 +11,51 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 
 public class GuidePackageCommandsTests : BunitContext
 {
+	private sealed class Clock : TimeProvider
+	{
+		private TimerCallback? _callback;
+		private object? _state;
+		public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+		{
+			_callback = callback;
+			_state = state;
+			return new ClockTimer(() => _callback = null);
+		}
+		public void Tick() => _callback?.Invoke(_state);
+		private sealed class ClockTimer(Action stop) : ITimer
+		{
+			public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+			public void Dispose() => stop();
+			public ValueTask DisposeAsync() { Dispose(); return ValueTask.CompletedTask; }
+		}
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task OpenGuideRefreshesRemovedCommandsAndStopsOnDisposal(bool unavailable)
+	{
+		var clock = new Clock();
+		Services.AddSingleton<TimeProvider>(clock);
+		var calls = 0;
+		using var handler = new Handler(_ => Task.FromResult(++calls == 1 ? Reply()
+			: unavailable ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) }));
+		Configure(handler);
+		var page = Render<GuidePackageCommands>();
+		await Assert.That(page.Find("code").TextContent).IsEqualTo("+help");
+		await page.InvokeAsync(clock.Tick);
+		page.WaitForAssertion(() =>
+		{
+			if (page.FindAll("code").Count != 0) throw new InvalidOperationException("Removed command remains visible.");
+		});
+		await Assert.That(calls).IsEqualTo(2);
+		if (unavailable) await Assert.That(page.Find("[role=status]").TextContent).Contains("unavailable");
+		page.Dispose();
+		clock.Tick();
+		await Assert.That(calls).IsEqualTo(2);
+	}
+
 	private sealed class Handler(Func<HttpRequestMessage, Task<HttpResponseMessage>> respond) : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) => respond(request);

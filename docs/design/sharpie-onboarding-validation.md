@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,917 passed**, zero failed/skipped after the
-  keyboard-tooltip regression (`guide-tooltip-tests.log`).
+- Full component suite: **2,919 passed**, zero failed/skipped after the
+  package-refresh regression (`package-refresh-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -666,3 +666,19 @@ message, then Tab/Enter on “Open the game” reached connected Play as Rolepla
 with no guide overlay and focus in the command input. Explicitly sending `look`
 returned the actual room description. Screenshot:
 `work/onboarding/fresh-roleplay-mobile-play.png`.
+
+### Open-guide package freshness regression (2026-10-20)
+
+Inspection found that package commands refreshed only on initial mounting or
+account/character changes. A controlled-clock component regression reproduced
+the stale command after package availability changed.
+
+The component now rechecks every 30 seconds while mounted, without sending a
+game command or adding a manual discovery button. Background checks preserve
+the current display while pending; an empty response removes commands and a
+failed verification clears them and shows the existing unavailable status.
+Requests retain the 10-second timeout and authority/generation guards. Disposal
+cancels the refresh loop. This bounds freshness rather than promising immediate
+package-change notification. Real-browser package removal remains an open gate.
+Both removal and failed-verification cases pass, including no further requests
+after disposal. The full 2,919-case component suite and whitespace check pass.
