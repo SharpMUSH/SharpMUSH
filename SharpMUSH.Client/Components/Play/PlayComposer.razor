@@ -285,6 +285,13 @@
         return true;
     }
 
+    public async Task FocusCommandAsync()
+    {
+        if (_field is null) return;
+        try { await _field.FocusAsync(); }
+        catch (Exception error) when (error is JSException or InvalidOperationException) { }
+    }
+
     // Ctrl/⌘+Enter inserts nothing in a textarea, so it needs no preventDefault. Plain Enter is handled in
     // layout.js (SendFromEnter), which prevents the newline only for the Enter that sends.
     // In Command mode, Up and Down walk the command history while the line is one line, as the terminal's input

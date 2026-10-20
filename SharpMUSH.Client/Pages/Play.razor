@@ -188,7 +188,7 @@ else
                         <a class="play-guide-return" href="/welcome" aria-label="@Loc["GuideOpenFull"]" title="@Loc["GuideOpenFull"]"><MudIcon Icon="@Icons.Material.Outlined.Explore" /></a>
                     </nav>
                     <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
-                        OnExit="CloseMobileSheet" OnInserted="CloseMobileSheet"
+                        OnExit="CloseMobileSheet" OnInserted="ReturnToCommandAsync"
                         InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
                     break;
                 case PlaySheet.Room:

@@ -564,6 +564,13 @@
         return true;
     }
 
+    public async Task FocusCommandAsync()
+    {
+        if (!Interactive) return;
+        try { await _inputRef.FocusAsync(); }
+        catch (Exception error) when (error is JSException or InvalidOperationException) { }
+    }
+
     /// <summary>Puts <paramref name="text"/> in the input line and focuses it, for the player to finish (Play's "page Name=").</summary>
     public async Task SetInputAsync(string text)
     {
