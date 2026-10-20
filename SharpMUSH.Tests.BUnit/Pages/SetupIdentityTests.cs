@@ -29,10 +29,11 @@ public class SetupIdentityTests : BunitContext
 	{
 		public int Writes;
 		public OnboardingSettings? Saved;
+		public TaskCompletionSource? PendingSave;
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			var result = new OnboardingSettings("Imported world", ["Fantasy"], ["High Fantasy"], "An existing introduction", "", "", "", "chibi", "");
-			if (request.Method == HttpMethod.Put) { Writes++; result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!; Saved = result; }
+			if (request.Method == HttpMethod.Put) { Writes++; result = (await request.Content!.ReadFromJsonAsync<OnboardingSettings>(cancellationToken))!; Saved = result; if (PendingSave is not null) await PendingSave.Task; }
 			return new(HttpStatusCode.OK) { Content = JsonContent.Create(result) };
 		}
 	}
@@ -94,6 +95,32 @@ public class SetupIdentityTests : BunitContext
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Writes).IsEqualTo(1);
 		await Assert.That(handler.Saved!.Introduction).IsEqualTo(edited);
+	}
+
+	[Test]
+	public async Task SaveRemainsFocusableAndRejectsDuplicateClicksWhilePending()
+	{
+		using var handler = new Handler { PendingSave = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously) };
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		var button = form.WaitForElement(".identity-save");
+		var saving = button.ClickAsync();
+		form.WaitForAssertion(() =>
+		{
+			if (button.GetAttribute("aria-disabled") != "true") throw new InvalidOperationException("Save has not started.");
+		});
+		await Assert.That(form.Find("fieldset").HasAttribute("disabled")).IsTrue();
+		await Assert.That(button.HasAttribute("disabled")).IsFalse();
+		await Assert.That(button.Closest("fieldset")).IsNull();
+		await button.ClickAsync();
+		await Assert.That(handler.Writes).IsEqualTo(1);
+		handler.PendingSave.SetResult();
+		await saving;
+		await Assert.That(button.GetAttribute("aria-disabled")).IsEqualTo("false");
+		await Assert.That(form.Find("fieldset").HasAttribute("disabled")).IsFalse();
+		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsEqualTo(0);
 	}
 
 }

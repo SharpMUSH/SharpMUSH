@@ -61,8 +61,8 @@
                 @if (PreviewArt is null) { <p>@Loc["GuideIdentityNoArt"]</p> }
                 <p>@Loc["GuideIdentityVisibility"]</p>
             </section>
-            <button type="button" class="identity-save" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
         </fieldset>
+        <button type="button" class="identity-save" aria-disabled="@(_busy ? "true" : "false")" @onclick="Save">@(_busy ? Loc["GuideIdentitySaving"].Value : SaveLabel ?? Loc["GuideIdentitySave"].Value)</button>
         @if (_saved) { <p role="status">@Loc["GuideIdentitySaved"]</p> }
     }
 </section>
@@ -100,6 +100,7 @@
     private void MarkDirty() => _saved = false;
     private async Task Save()
     {
+        if (_busy) return;
         _busy = true; _saved = false; _error = null;
         var values = new OnboardingSettings(_name, [_genres], [_subgenres], _introduction, _welcome, _rules, _character, _style,
             SharpieArtCatalog.Approved.Any(art => art.Id == _override && art.Style == _style) ? _override : "");
