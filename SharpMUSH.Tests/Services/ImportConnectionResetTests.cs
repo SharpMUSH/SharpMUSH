@@ -1,5 +1,7 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Abstractions;
 using SharpMUSH.Messaging.Messages;
@@ -22,8 +24,8 @@ public class ImportConnectionResetTests
 		if (imported)
 		{
 			var session = journal.Create();
-			Directory.CreateDirectory(journal.LiveWorldPath);
-			Directory.CreateDirectory(session.WorldPath);
+			await CreateClosedWorldAsync(journal.LiveWorldPath);
+			await CreateClosedWorldAsync(session.WorldPath);
 			Directory.CreateDirectory(session.KeyRingPath);
 			journal.MarkReady(session.Id);
 			journal.RequestPromotion(session.Id);
@@ -45,4 +47,11 @@ public class ImportConnectionResetTests
 		}
 		else await states.DidNotReceive().GetAllConnectionsAsync(Arg.Any<CancellationToken>());
 	}
+	private static async Task CreateClosedWorldAsync(string path)
+	{
+		await using var world = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
+			new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
+		await world.Migrate();
+	}
+
 }
