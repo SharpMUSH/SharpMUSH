@@ -22,7 +22,7 @@ supersede earlier statements about missing publication or completed checks.
   and ordinary-player denial were exercised against the isolated server.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
-- At `ee8c82993`, GitHub build, formatting, core/component/integration/plugin
+- At `240b0690f`, GitHub build, formatting, core/component/integration/plugin
   tests, help integrity, parity, table layout and CodeQL passed. Automated
   Claude review failed before findings; independent review remains the
   substantive review evidence.
@@ -987,3 +987,21 @@ Directly opening `/setup?step=packages` before claim still renders Step 1,
 Claim the administrator account, with no package controls. The query parameter
 does not bypass the first-run claim boundary. This was checked in the browser
 without entering credentials or submitting the form.
+
+### Latest implementation CI and remaining decisions (2026-10-20)
+
+.NET run `39405701882` completed successfully for implementation head
+`240b0690f`: build, formatting, core, component, integration, both plugin suites
+and help integrity all passed.
+
+The art inventory has 133 of 252 slots represented and 171 retained versions.
+Independent QA rejected all four Exploration pilot versions after three bounded
+generative repairs: broad interior gradients and granular cyan edges persisted;
+the final version also introduced a detached green speck. Generation stopped
+pending a decision on one SVG comparison pilot. No failed asset was promoted.
+
+Outstanding user input: authorization for the disposable first-admin claim,
+the previously identified disposable-account recovery, temporary Daylight theme
+selection/restoration, native zoom/screen-reader acceptance, and the artwork
+method decision. A real external-provider round trip additionally requires a
+configured test provider. These are not completed acceptance checks.
