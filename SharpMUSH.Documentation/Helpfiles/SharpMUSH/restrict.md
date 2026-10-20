@@ -34,12 +34,10 @@
 -->
 # Restrict
 
-Commands, functions and attributes can have their permission levels controlled in the mush config files, or by wizards from the game via `@command`, `@function` and `@attribute`.
+Commands, functions and attributes can have their permission levels controlled in the game's configuration, or by wizards from the game via `@command`, `@function` and `@attribute`.
 
-In the config file, the syntax is:<br>
-`restrict_command <command-name> <restriction> [" <error message>]`<br>
-    restrict_function `<function-name>` `<restriction>`<br>
-    restrict_attribute `<attribute-name>` `<restriction>`
+In the configuration, the `command_restrictions` and `function_restrictions` settings hold
+`<name> <restriction>` lines (see [restrict imported]).
 
 From the game:<br>
 `@command/restrict <command-name>=<restriction> [" <error message>]`<br>
@@ -59,8 +57,7 @@ For commands, `<restriction>` should be an `@lock`-style boolexp (though, for ba
     nofixed    Usable only by non-FIXED objects.<br>
     noguest    Usable only by non-guest `@powered` objects.<br>
     nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.<br>
-    logname    When used, log cmd/fun name, and who is using it<br>
-    logargs    When used, log cmd/fun name and args, and who is using it
+    logname, logargs  Not supported: a function ignores them, and @command/restrict reads them as a lock.
 
 ## Restrictions for functions or commands only
 
@@ -110,8 +107,7 @@ Examples:
     > @function/restrict ansi=admin
 ```
 ```sharp
-  Don't let anyone set SUSPECT or GAGGED use @emit, and log the name of anyone who uses it.
-    > @command/restrict @emit=logname
+  Don't let anyone set SUSPECT or GAGGED use @emit.
     > @command/restrict @emit=!flag^suspect&!flag^gagged
 ```
 

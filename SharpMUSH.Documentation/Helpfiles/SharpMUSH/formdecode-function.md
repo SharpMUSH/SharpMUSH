@@ -21,7 +21,6 @@ If *<paramname>* is not given, formdecode() returns a list of parameter names.
 
 If there are multiple values, they will be separated by *<osep>* (default %b)
 
-formdecode() requires libcurl (`@http`) to be enabled.
 
 ## Examples
 

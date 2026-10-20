@@ -36,12 +36,12 @@ A descriptive list of default flags is available in [FLAG LIST]. A complete list
 You can see the list of flags set on an object in several ways:
 
 1. If you are allowed to examine the object. The flags are listed in expanded word format on the line just below the object's name, after the word "Flags:"
-2. Flag abbreviations are also visible after the object's name in the room description, if the object is not set OPAQUE and you are not set MYOPIC
+2. Flag abbreviations follow the dbref after an object's name, as in `Chest(#5Tn)`, wherever the dbref is shown to you, such as in a room's contents when you can examine the object
 3. The `lflags()` and `flags()` function will return a list of flag names and abbreviations for an object, respectively
 
 ## Object types are not flags
 
-Note: The object type (player, thing, room, exit or garbage) is not actually a flag. See [TYPES OF OBJECTS] for more information.
+Note: The object type (player, thing, room or exit) is not actually a flag. See [TYPES OF OBJECTS] for more information.
 
 
 ::: seealso

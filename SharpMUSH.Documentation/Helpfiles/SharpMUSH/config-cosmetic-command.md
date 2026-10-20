@@ -41,5 +41,4 @@ More cosmetic options.
 - `wall_prefix=<string>`: Prefix for @wall messages.
 - `announce_connects=<boolean>`: Should (dis)connects be announced to non-HEAR_CONNECT players and to channels?
 - `chat_strip_quote=<boolean>`: Does +chan "foo strip the "?
-- `newline_one_char=<boolean>`: Is strlen(%r) equal to 1?
 - `only_ascii_in_names=<boolean>`: Names are ascii-only or are extended characters permitted?

@@ -20,14 +20,14 @@
 
   convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too, such as America/New_York, with their summer time. If no `<timezone>` is given, the server's timezone is used.
 
-- [convtime formats]: ISO dates, offsets, summer time gaps and the extended form
+- [convtime formats]: ISO dates, offsets, summer time gaps and dates before 1970
 - [convtime examples]: converting time() output and a dated time
 
 ## Other date formats
 
   convtime() also reads other ways of writing a date and time, such as 2026-10-30 20:00, in the same zone. A time that names its own offset, such as 2026-10-30T20:00:00Z or 2026-10-30T20:00:00+02:00, keeps it. A time the zone skips when summer time starts, such as 2027-03-14 02:30 in America/New_York, returns #-1 INVALID TIME; written in the format above, it is moved on past the gap, as PennMUSH does.
 
-  If the extended convtime() is supported (See @config compile), more formats for the date are enabled, including ones missing the day of week and year, and a 'Month Day Year' format. In this case, convtime() can also handle dates prior to 1970 (in which case a negative number will be returned).
+  Dates prior to 1970 are read too, and return a negative number.
 
 ## Examples
 

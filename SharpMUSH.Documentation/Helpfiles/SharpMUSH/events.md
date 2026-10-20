@@ -20,7 +20,7 @@ Unlike PennMUSH, **SharpMUSH pre-populates the event handler**: a new database i
 > &<event name> #9=<action list>
 ```
 
-If you would rather use a different object, point the config at it with `@config/set event_handler=<dbref>` and set the "event_handler" option in your mush.cnf so it survives dumps and is receiving events even during startup. On a fresh instance this is optional.
+If you would rather use a different object, point the config at it with `@config/set event_handler=<dbref>`; the setting is stored and lasts across restarts. On a fresh instance this is optional.
 
 - [events handler code]: permissions, queueing and the enactor
 - [events several attributes]: package attributes under one event

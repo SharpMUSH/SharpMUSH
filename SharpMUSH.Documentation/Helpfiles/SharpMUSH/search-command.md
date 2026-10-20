@@ -93,7 +93,7 @@ For the class TYPE=PLAYER, and for PLAYER=`<player-name>`, anyone may obtain inf
 
 If multiple `<class>` and `<restrictions>` are given, objects must meet all criteria in order to match successfully. The exception to this is that if multiple 'type' searches (PLAYER, EROOM, etc) are used, only the last type given is used in the search.
 
-@search is only mildly computationally expensive for most of the search classes. Computationally expensive searches are the evaluating searches (EVAL, EPLAYER, ETHING, EROOM, EEXIT), the attribute pattern searches (COMMAND, LISTEN), and ELOCK searches which perform evaluation searches (attr/value) or indirect locks (@obj/lock). These searches all cost a number of pennies (the exact amount is configurable; see @config find_cost).
+@search is only mildly computationally expensive for most of the search classes. Computationally expensive searches are the evaluating searches (EVAL, EPLAYER, ETHING, EROOM, EEXIT), the attribute pattern searches (COMMAND, LISTEN), and ELOCK searches which perform evaluation searches (attr/value) or indirect locks (@obj/lock).
 
 ::: seealso
 - [lsearch()]
@@ -107,7 +107,7 @@ If multiple `<class>` and `<restrictions>` are given, objects must meet all crit
 @search type=room <-- list all rooms owned by me.
 @search zone=#50 <-- list all objects belong to zone #50.
 @search Joe eval=1,100,200 <-- list objects from #100-#200 owned by Joe.
-@search eval=gt(money(##),10) <-- list all objects owned by me worth more than 10 coins.
+@search eval=gt(strlen(name(##)),10) <-- list my objects with names over 10 characters.
 @search all elock=FLAG^WIZARD|FLAG^ROYALTY <-- list all objects with wizard or royalty flags.
 @search wizard_bc command=+who <-- Forgot what object has your +who?
 ```

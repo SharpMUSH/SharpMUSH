@@ -34,7 +34,7 @@ The cloned object will have the same modification time as the original object, t
 
 Normally, the Wizard and Royalty flags, @powers and @warnings are stripped from the cloned object, but Wizards may use the `/preserve` flag to prevent this.
 
-The clone will normally be created with the first available dbref, but Wizards and objects with the pick_dbref power may specify the `<dbref>` of a garbage object to use that instead.
+The clone will normally be created with the first available dbref, but Wizards and objects with the PICK_DBREFS power may specify the `<dbref>` of a garbage object to use that instead.
 
 ## Cloning a room with its exits
 

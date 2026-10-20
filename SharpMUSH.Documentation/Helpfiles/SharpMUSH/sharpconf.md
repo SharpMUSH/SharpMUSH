@@ -5,22 +5,22 @@ These options control some attribute behavior.
 - `amail=<boolean>`: Is the @amail attribute used?
 - `player_listen=<boolean>`: Is @listen checked on players?
 - `player_ahear=<boolean>`: Is @ahear triggered on players?
-- `startups=<boolean>`: Are @startup triggered at restart?
+- `startups=<boolean>`: Accepted but ignored; @startup always runs when the server starts.
 - `room_connects=<boolean>`: Are @aconnect and @adisconnect triggered on rooms?
-- `read_remote_desc=<boolean>`: Can anyone remotely retrieve @descs?
+- `read_remote_desc=<boolean>`: Accepted but ignored.
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?
 - `gender_attr=<string>`: The attribute that holds an object's gender, which pronoun substitution reads and [@gender] sets. SEX when blank, and by default.
-- `reverse_shs=<boolean>`: Reverse the endedness of the shs password encryption? (**Warning**: Playing with this will break logins)
+- `reverse_shs=<boolean>`: Accepted but ignored; it has no effect on passwords or logins.
 
 # @config chat
 These options control chat system settings.
 
-- `chan_cost=<number>`: How many pennies a channel costs to create.
-- `max_channels=<number>`: How many channels can exist total.
-- `max_player_chans=<number>`: How many channels can each non-admin player create? If 0, mortals cannot create channels.
-- `noisy_cemit=<boolean>`: Is @cemit/noisy the default?
+- `chan_cost=<number>`: Accepted but ignored; channels cost nothing to create.
+- `max_channels=<number>`: How many channels each non-admin player may own.
+- `max_player_chans=<number>`: Accepted but ignored; see max_channels.
+- `noisy_cemit=<boolean>`: Accepted but ignored.
 - `chan_title_len=<number>`: How long can @channel/title's be?
-- `use_muxcomm=<boolean>`: Enable MUX-style channel aliases? See [MUXCOMSYS]
+- `use_muxcomm=<boolean>`: Accepted but ignored; MUX-style channel aliases always work. See [MUXCOMSYS]
 - `chat_token_alias=<character>`: A single character that can be used as well as + for talking on channels (+<chan> <msg>)
 - `page_log=<boolean>`: Keep each player's pages so they can read their page history, in game (page/recall) and in the web portal? A SharpMUSH extension, on by default; set it to no to keep no page log. See [page log]
 - `page_log_retention_days=<number>`: How many days a logged page is kept. -1 (the default) never deletes.
@@ -39,15 +39,15 @@ These options affect command behavior.
 - `destroy_possessions=<boolean>`: When a player is destroyed, are their objects as well?
 
 # @config costs
-These options control how many pennies various things cost.
+SharpMUSH has no money, so only quota_cost has an effect.
 
-- `object_cost=<number>`: How many pennies it costs to create an object.
-- `exit_cost=<number>`: How many pennies it costs to create an exit.
-- `link_cost=<number>`: How many pennies it costs to use @link.
-- `room_cost=<number>`: How many pennies it costs to @dig a room.
-- `queue_cost=<number>`: How many pennies it costs to queue a command. Refunded when the command executes.
-- `quota_cost=<number>`: How much @quota goes down by for each object.
-- `find_cost=<number>`: How many pennies it costs to use @search, @find, @entrances, and their function versions.
+- `object_cost=<number>`: Accepted but ignored.
+- `exit_cost=<number>`: Accepted but ignored.
+- `link_cost=<number>`: Accepted but ignored.
+- `room_cost=<number>`: Accepted but ignored.
+- `queue_cost=<number>`: Accepted but ignored.
+- `quota_cost=<number>`: How much @quota each object uses.
+- `find_cost=<number>`: Accepted but ignored.
 
 # @config db
 These are database options.
@@ -60,13 +60,12 @@ These are database options.
 - `ancestor_player=<dbref>`: As ancestor_room for players.
 - `base_room=<dbref>`: The starting room used to determine if other rooms are disconnected.
 - `default_home=<dbref>`: The room to send things to when they're homeless.
-- `exits_connect_rooms=<boolean>`: Is a room with any exit at all in not considered disconnected for FLOATING checks?
+- `exits_connect_rooms=<boolean>`: Accepted but ignored.
 - `zone_control_zmp_only=<boolean>`: Do we only perform control checks on ZMPs, or do we check ZMOs and ZMRs too?
 
 # @config dump
 These options affect database saves and other periodic checks.
 
-- `forking_dump=<boolean>`: Does the game clone itself and save in the copy, or just pause while the save happens?
 - `dump_message=<string>`: Notification message for a database save.
 - `dump_complete=<string>`: Notification message for the end of a save.
 - `dump_warning_1min=<string>`: Notification one minute before a save.
@@ -99,11 +98,11 @@ as a matter of course.
 # @config funcs
 These options affect the behavior of some functions.
 
-- `safer_ufun=<boolean>`: Are objects stopped from evaluting attributes on objects with more privileges than themselves?
+- `safer_ufun=<boolean>`: Accepted but ignored.
 - `function_side_effects=<boolean>`: Are function side effects (functions which alter the database) allowed?
 
 # @config log
 These options affect logging.
 
-- `log_commands=<boolean>`: Are all commands logged?
-- `log_forces=<boolean>`: Are @forces of wizard objects logged?
+- `log_commands=<boolean>`: Accepted but ignored.
+- `log_forces=<boolean>`: Accepted but ignored.

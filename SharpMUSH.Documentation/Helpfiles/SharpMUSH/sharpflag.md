@@ -51,27 +51,13 @@ Setting the AUDIBLE flag on a ROOM activates audible exits in that room. EXITs w
 
 # TRACK_MONEY
 
-**Flag: TRACK_MONEY (players)**
+**Flag: TRACK_MONEY (all types)**
 
-By setting the TRACK_MONEY flag, a player can determine which objects may be using their money. TRACK_MONEY reports all charges to a player and their objects except the queue deposit.
-
-```sharp
-> @set me=TRACK_MONEY
-> give Javelin=50
-You give 50 pennies to Javelin.
-GAME: Walker spent 50 pennies!
-> @create foo
-GAME: Walker spent 10 pennies!
-Created: Object #345.
-> @for foo=@search eval=1
-GAME: foo(#345) spent 100 pennies!
-(search results)
-> <a whole buncha commands>
-GAME: Object Walker(#123) lost a Penny to queue loss.
-```
+SharpMUSH has no money, so nothing is ever charged and this flag reports nothing. It can be set, and an imported database keeps it, but it has no effect.
 
 
 ::: seealso
+- [compatibility economy]
 :::
 
 # CHOWN_OK
@@ -123,7 +109,7 @@ ANSI colors can also be enabled on a per-connection basis with `@sockset`.
 
 This flag indicates to the MUSH that the player's client can handle the 256 XTERM colors.
 
-The flag is aliased to COLOR256 for MUX compatability.
+The flag is aliased to XTERM and COLOR256.
 
 XTERM colors can also be enabled on a per-connection basis with `@sockset`.
 
@@ -161,7 +147,7 @@ RGB colors can also be enabled on a per-connection basis with `@sockset`.
 
 This flag is used internally by the MUSH to track whether a player is currently connected. It cannot be set or cleared manually.
 
-Prior to 1.8.5p6, mortal objects couldn't use `hasflag(<player>, connected)` to see if a player was online, and needed to instead use `conn()` or `lwho()`. Starting with that version, any object can use `hasflag()` to see if they can see that a player is online. Be careful, when coding on a privileged object, not to give away the presence of hidden players!
+Any object can use `hasflag(<player>, connected)` to see whether a player it can see is online. Be careful, when coding on a privileged object, not to give away the presence of hidden players!
 
 
 ::: seealso
@@ -176,13 +162,13 @@ Prior to 1.8.5p6, mortal objects couldn't use `hasflag(<player>, connected)` to 
 
 When a room is set DARK, only objects which are set LIGHT will show up in the rooms contents list when someone "look"s in the room. Exits which are set DARK do not show up in a room's Obvious Exits list.
 
-DARK players and things do not show up in the contents list of rooms. Only Wizard players can set themselves dark. Puppets and Audible things with an `@forwardlist` will not be hidden by the flag.
+DARK players and things do not show up in the contents list of rooms. A DARK player is hidden only if they are a wizard or hold the CAN_DARK power. Puppets and Audible things with an `@forwardlist` will not be hidden by the flag.
 
 Note that players and things still trigger enter/leave messages, etc, in DARK rooms.
 
 If the "full_invis" `@config` option is on, DARK players and things will show up as "Someone" or "Something", respectively, when they speak.
 
-In the past, players set DARK were automatically hidden from the WHO list via `@hide`, but this no longer happens. If you wish to disappear completely, you must use `@hide` after setting yourself DARK.
+DARK does not hide a player from the WHO list. To disappear completely, use `@hide` as well.
 
 
 ::: seealso
@@ -230,26 +216,31 @@ ENTER_OK is often used in conjunction with AUDIBLE on vehicles and buildings.
 
 # FIXED
 
-**Flag: FIXED (exits)**
+**Flag: FIXED (players)**
 
-A FIXED exit cannot be unlinked. Only the owner can remove the FIXED flag. This flag is used to prevent accidental unlinking of important exits.
+A FIXED player cannot `@teleport` anything, and nothing they own can be teleported, except into the FIXED player. STICKY things they own stay where they are dropped, and functions restricted to non-FIXED players refuse their objects. A teleporter with the Tport_Anything power is exempt.
+
+Only wizards can set or clear FIXED.
 
 
 ::: seealso
-- [@unlink]
+- [@teleport]
+- [STICKY]
 :::
 
 # FLOATING
 
 **Flag: FLOATING (rooms)**
 
-A FLOATING room is one that isn't linked to by any exits. Such rooms can only be reached by teleporting to them. This flag is set automatically by the MUSH.
+FLOATING can be set on a room, but it has no effect in SharpMUSH, and nothing sets it automatically.
 
 # GAGGED
 
 **Flag: GAGGED (players)**
 
-A GAGGED player cannot speak, pose, emit, or whisper. They can still page and use commands.
+A GAGGED player, and everything they own, cannot speak, pose, emit, whisper, page or use the chat commands. Most commands that act on the world, such as get, give, @dig, @link, @lock and @trigger, are refused too, and so are functions such as pemit() and create().
+
+Only wizards can set or clear GAGGED, and a wizard cannot be gagged.
 
 
 ::: seealso
@@ -271,37 +262,76 @@ The GOING flag is used internally by the MUSH to mark objects which are schedule
 - [@destroy]
 :::
 
+# GOING_TWICE
+
+**Flag: GOING_TWICE (all types)**
+
+GOING_TWICE is used internally with GOING. The periodic purge sets it on an object that is still GOING, and frees an object that is both GOING and GOING_TWICE on its next pass. `@undestroy` clears both flags.
+
+It cannot be set or cleared manually, and only God sees it.
+
+
+::: seealso
+- [@destroy]
+- [GOING]
+:::
+
+# HALT
 # HALTED
 
-**Flag: HALTED (all types)**
+**Flag: HALT (all types)**
 
-A HALTED object cannot run its commands. Commands on the object are not even checked. The flag can be set with `@halt` and cleared with `@restart`.
+A HALT object runs no softcode. Nothing it queues runs, its `$`-commands and `^`-patterns do not fire, `@restart` skips its `@startup`, and `u()` on its attributes returns their text unevaluated.
+
+A HALT player can still type commands; only their queued work is stopped.
+
+`@halt <object>` with no new actions sets HALT, and so does `@chown` without /preserve. Clear it with `@set <object>=!HALT`; `@restart` does not clear it.
 
 
 ::: seealso
 - [@halt]
 - [@restart]
+- [@chown]
 :::
 
 # HAVEN
 
-**Flag: HAVEN (rooms, players)**
+**Flag: HAVEN (players)**
 
-A HAVEN room prevents people in it from paging each other or using communications channels. This is useful for RP areas where out-of-character communication should be minimized.
-
-A HAVEN player cannot be paged. They can still use channels and receive pages that they've requested with the "page/request" command.
+A HAVEN player cannot be paged or sent `@pemit` messages, except by wizards and holders of the Pemit_All power (who page with `page/override`). Channels are not affected.
 
 
 ::: seealso
 - [page]
-- [@channel]
+- [@pemit]
 :::
 
-# INHERIT
+# HEAR_CONNECT
 
-**Flag: INHERIT (all types)**
+**Flag: HEAR_CONNECT (all types)**
 
-The INHERIT flag is used internally by the MUSH. It cannot be set or cleared manually.
+A player set HEAR_CONNECT is told whenever a player connects or disconnects, as in `GAME: Walker has connected.` When the player is DARK, only wizards and royalty with HEAR_CONNECT are told.
+
+Only royalty and wizards can set HEAR_CONNECT.
+
+
+::: seealso
+- [SUSPECT]
+- [DARK]
+:::
+
+# HEAVY
+
+**Flag: HEAVY (all types)**
+
+Controlling the room an object stands in is normally enough to `@teleport` the object out of it. A HEAVY object needs more: the teleporter must control the object itself, or have the same owner.
+
+Only royalty and wizards can set HEAVY.
+
+
+::: seealso
+- [@teleport]
+:::
 
 # JUMP_OK
 
@@ -316,11 +346,30 @@ If a room is set JUMP_OK, anyone who passes its `@lock/teleport` can `@teleport`
 - [ABODE]
 :::
 
+# JUDGE
+
+**Flag: JUDGE (players)**
+
+JUDGE can be set on a player, but it has no effect in SharpMUSH. A game's own code may test it with `hasflag()`. Only royalty and wizards can set or clear it.
+
+# JURY_OK
+
+**Flag: JURY_OK (players)**
+
+The flag is aliased to JURYOK.
+
+JURY_OK can be set on a player, but it has no effect in SharpMUSH. A game's own code may test it with `hasflag()`. Only royalty and wizards can set or clear it.
+
 # KEEPALIVE
 
 **Flag: KEEPALIVE (players)**
 
-The KEEPALIVE flag prevents you from being automatically disconnected after a period of inactivity.
+KEEPALIVE can be set, but it has no effect in SharpMUSH. Whether an idle player is disconnected depends on the idle_timeout option and the Idle power, which wizards and royalty also have.
+
+
+::: seealso
+- [@power]
+:::
 
 # LIGHT
 
@@ -352,6 +401,32 @@ LINK_OK does not let others make it their home; that is ABODE.
 - [OPEN_OK]
 :::
 
+# LISTEN_PARENT
+
+**Flag: LISTEN_PARENT (players, things, rooms)**
+
+An object set both MONITOR and LISTEN_PARENT also checks the `^`-patterns on its parents against what it hears. Without LISTEN_PARENT, only its own `^`-patterns are checked.
+
+
+::: seealso
+- [MONITOR]
+- [listening]
+- [parent]
+:::
+
+# LOUD
+
+**Flag: LOUD (all types)**
+
+A LOUD object passes the speech lock of the room it speaks in, and can speak on a channel whatever the channel's speak restrictions.
+
+Only royalty and wizards can set LOUD.
+
+
+::: seealso
+- [@channel]
+:::
+
 # OPEN_OK
 
 **Flag: OPEN_OK (rooms)**
@@ -366,21 +441,105 @@ If a room is set OPEN_OK, anyone who passes its `@lock/open` can `@open` exits i
 
 # MONITOR
 
-**Flag: MONITOR (players)**
+**Flag: MONITOR (players, things, rooms)**
 
-When a player is set MONITOR, they receive notification whenever another player or object attempts to page them, even if the page fails (due to the player being HAVEN, for example).
+The flag is aliased to LISTENER and WATCHER.
+
+An object set MONITOR checks its `^`-patterns against everything it hears, and runs the ones that match. Without MONITOR, its `^`-patterns are ignored. A HALT object's patterns never run.
 
 
 ::: seealso
-- [page]
-- [HAVEN]
+- [listening]
+- [LISTEN_PARENT]
+- [@listen]
+:::
+
+# MISTRUST
+
+**Flag: MISTRUST (things, exits, rooms)**
+
+A MISTRUST object controls only itself, not the other objects its owner owns, and cannot use its owner's No_Quota power. It does not see the flags only the owner's objects may see, such as NOSPOOF.
+
+Setting or clearing MISTRUST needs the same privilege as TRUST.
+
+
+::: seealso
+- [TRUST]
+:::
+
+# MONIKER
+
+**Flag: MONIKER (all types)**
+
+MONIKER can be set, but it has no effect. An object's name is colored by its `@moniker`, whatever its flags. Only royalty and wizards can set or clear the flag.
+
+
+::: seealso
+- [@moniker]
+- [monikers]
 :::
 
 # MYOPIC
 
 **Flag: MYOPIC (players)**
 
-A MYOPIC player only sees the flags on objects that they own or control.
+MYOPIC can be set, but it has no effect in SharpMUSH.
+
+# NOACCENTS
+
+**Flag: NOACCENTS (players)**
+
+NOACCENTS can be set, but it has no effect. To have a connection sent plain ASCII, with accented characters replaced, use `@sockset stripaccents=yes` on it.
+
+
+::: seealso
+- [@sockset]
+:::
+
+# NO_LEAVE
+
+**Flag: NO_LEAVE (things)**
+
+The flag is aliased to NOLEAVE.
+
+Nobody inside a NO_LEAVE thing can get out of it with the `leave` command; they get the thing's `@lock/leave` failure message, or "You can't leave." Teleporting out is not affected.
+
+
+::: seealso
+- [leave]
+- [@teleport]
+:::
+
+# NO_LOG
+
+**Flag: NO_LOG (all types)**
+
+NO_LOG can be set, but it has no effect in SharpMUSH. Only wizards can set or clear it.
+
+# NO_TEL
+
+**Flag: NO_TEL (rooms)**
+
+Nothing in a NO_TEL room, or inside something in it, can be `@teleport`ed out, unless the teleporter controls the room or has the Tport_Anywhere power, as wizards and royalty do.
+
+
+::: seealso
+- [@teleport]
+- [Z_TEL]
+:::
+
+# NO_WARN
+
+**Flag: NO_WARN (all types)**
+
+The flag is aliased to NOWARN.
+
+`@warnings` checks skip an object set NO_WARN, and every object whose owner is set NO_WARN.
+
+
+::: seealso
+- [@warnings]
+:::
 
 # NO_COMMAND
 
@@ -403,26 +562,43 @@ There is also a NO_COMMAND attribute flag, which disables `$`-command AND `^`-li
 
 **Flag: NOSPOOF (players)**
 
-When a player is set NOSPOOF, they see the dbref# and name of the object that triggered any command which generates output to them. This helps prevent objects from impersonating other objects or players.
-
-The NOSPOOF prefix can be customized by setting the `@nospoof_message` config option.
+When a player is set NOSPOOF, a message caused by another object comes with that object's name in brackets, as in `[Walker:] Hello.` This helps prevent objects from impersonating other objects or players. With PARANOID, the tag also gives dbrefs.
 
 
 ::: seealso
-- [@config]
+- [PARANOID]
 :::
 
 # OPAQUE
 
 **Flag: OPAQUE (all types)**
 
-An OPAQUE object's flags are not visible to others in its location's contents list.
+A player or thing set OPAQUE does not show its contents to anyone looking at it from outside. In the exit list of a TRANSPARENT room, an OPAQUE exit is shown without its destination.
+
+# ON-VACATION
+
+**Flag: ON-VACATION (players)**
+
+The flag is aliased to ON_VACATION, ONVACATION and VACATION.
+
+ON-VACATION can be set, but it has no effect in SharpMUSH. A game's own code may test it with `hasflag()`.
 
 # ORPHAN
 
 **Flag: ORPHAN (all types)**
 
-The ORPHAN flag marks objects which were owned by a player who has been destroyed. Such objects can be claimed by anyone who passes their `@lock/chown`.
+An object set ORPHAN does not inherit from the ancestor for its type: attribute and lock lookups on it stop at its own parents. See [Ancestors].
+
+# PARANOID
+
+**Flag: PARANOID (all types)**
+
+PARANOID changes the NOSPOOF tag. A player set NOSPOOF and PARANOID sees the speaker's dbref, and its owner when the owner is someone else: `[Box(#12)]` or `[Walker(#5)'s Box(#12)]`. They also see the tag on messages they caused themselves. PARANOID without NOSPOOF does nothing.
+
+
+::: seealso
+- [NOSPOOF]
+:::
 
 # PUPPET
 
@@ -448,11 +624,35 @@ This flag suppresses several acknowledgement messages from commands, such as 'Se
 
 A QUIET player hears none of those. A player who is not QUIET still hears none about a QUIET object they own: its `&` and `@set` attribute writes, `@edit`, `@parent`, `@link` home, `@lock`, `@power` and flag changes. `@notify` and `@drain` say nothing when the object running them, or its owner, is QUIET, and `@channel/title` says nothing to a QUIET player. Three confirmations are never suppressed, as in PennMUSH: "Dropto set." from `@link`, "Owner changed." from `@chown`, and setting or clearing QUIET itself.
 
+# ROYALTY
+
+**Flag: ROYALTY (all types)**
+
+The ROYALTY flag is the `royalty` role: `@set <object>=ROYALTY` assigns the role and `@set <object>=!ROYALTY` removes it, under the rules of [@role rank], and `hasflag()` reports it for anything that holds the role, itself or through its account. See [roles flags].
+
+Royalty can:
+* See and examine everything, without control
+* Teleport anything anywhere
+* Hear DARK players connect, with HEAR_CONNECT
+* Idle without being disconnected
+* Build without quota limits
+* Set the flags reserved for royalty
+
+Only another holder of `protect.admin` controls an object of royalty.
+
+
+::: seealso
+- [roles]
+- [WIZARD]
+:::
+
 # SAFE
 
 **Flag: SAFE (all types)**
 
-A SAFE object cannot be destroyed with `@destroy`. Only a Wizard can remove the SAFE flag. DESTROY_OK takes precedence over SAFE.
+A SAFE object cannot be destroyed with a plain `@destroy`; `@nuke` is needed. When the really_safe option is on, which is the default, even `@nuke` is refused until the flag is cleared. `@wipe` and `wipe()` refuse a SAFE object too. DESTROY_OK takes precedence over SAFE.
+
+Anyone who controls the object can clear SAFE.
 
 
 ::: seealso
@@ -512,35 +712,74 @@ The flag and the option come from RhostMUSH.
 
 **Flag: STICKY (things, rooms)**
 
-When a STICKY thing is dropped, it goes to its home instead of staying in the current location.
+When a STICKY thing is dropped, it goes to its home instead of staying in the current location, unless its owner is FIXED. When you move, STICKY things you carry but do not control go home.
 
-When someone leaves a STICKY room through any exit (including `@tel`), they are sent to their home instead of the exit's destination.
+A STICKY room with a drop-to keeps what is dropped in it until the last connected player leaves. Then its contents go through the drop-to, except STICKY things, which go home.
+
+# SUSPECT
+
+**Flag: SUSPECT (all types)**
+
+When a SUSPECT player connects or disconnects, wizards are told, as in `GAME: Suspect Walker has connected.`
+
+Only wizards can set or clear SUSPECT, and only wizards and objects with See_All see it.
+
+# TERSE
+
+**Flag: TERSE (players, things)**
+
+When a TERSE player, anything a TERSE player owns, or a TERSE thing moves, the look it gets on arrival leaves out the room's description. A `look` typed on purpose still shows it.
+
+
+::: seealso
+- [look]
+:::
 
 # TRANSPARENT
 
-**Flag: TRANSPARENT (exits)**
+**Flag: TRANSPARENT (exits, rooms)**
 
-When someone looks at a TRANSPARENT exit, they see the description and contents of the exit's destination, instead of the exit's own description.
+When someone looks at a TRANSPARENT exit, they see the exit's own name and description, then the description and contents of the exit's destination.
 
 If the exit is also set CLOUDY, they only see the destination's description, not its contents.
+
+A TRANSPARENT room lists its exits one per line, each with its destination.
 
 
 ::: seealso
 - [CLOUDY]
+- [OPAQUE]
 - [look]
+:::
+
+# TRUST
+# INHERIT
+
+**Flag: TRUST (all types)**
+
+The flag is aliased to INHERIT.
+
+A TRUST object controls its owner and everything its owner owns. Every object of a TRUST player is treated the same way. An object without TRUST controls only those of its owner's objects that are not players, not TRUST, and not owned by a TRUST player, so TRUST also protects an object from its owner's other objects.
+
+The owner can set or clear TRUST, as can a wizard. `@chown` and `@chzone` clear it unless /preserve is given.
+
+
+::: seealso
+- [MISTRUST]
+- [@chown]
+- [@chzone]
 :::
 
 # UNFINDABLE
 
 **Flag: UNFINDABLE (all types)**
 
-An UNFINDABLE object cannot be found with `@find`, `@search`, or `locate`. Only a Wizard can find UNFINDABLE objects.
+The location of an UNFINDABLE player cannot be found with `@whereis`, `loc()` and the like, and neither can that of a player inside an UNFINDABLE room or thing. Anyone who controls the player, is near them, or has See_All can still locate them.
 
 
 ::: seealso
-- [@find]
-- [@search]
-- [locate]
+- [@whereis]
+- [loc()]
 :::
 
 # UNINSPECTED
@@ -551,30 +790,44 @@ This flag has no hardcoded purpose, but may be used by MUSH staff to indicate th
 
 Setting and clearing it requires Royalty.
 
+# UNREGISTERED
+
+**Flag: UNREGISTERED (players)**
+
+Powers cannot be granted to an UNREGISTERED player with `@power`. A game's own code can test the flag, for example in a lock such as `flag^unregistered`.
+
+Only royalty and wizards can set or clear UNREGISTERED.
+
+
+::: seealso
+- [@power]
+:::
+
 # VERBOSE
 
 **Flag: VERBOSE (all types)**
 
-The VERBOSE flag is similar to DEBUG, but shows less information. When an object is set VERBOSE, all command evaluation results will be shown to the object's owner, in the format:
+When an object is set VERBOSE, each command it runs is shown to its owner, and to any dbrefs in its DEBUGFORWARDLIST, in the format:
 
 ```text
-#dbref! <string to evaluate> => <evaluated string>
+#<dbref>] <command>
 ```
 
-Objects run under this flag are computationally expensive, and can generate large amounts of spam, so this flag should only be set when needed, and cleared afterwards.
+A VERBOSE puppet also relays what it hears to its owner when they are in the same room.
 
-There's also a VERBOSE attribute flag, which only affects a single attribute; see [attribute flags] for more information.
+VERBOSE can generate a lot of output, so set it only when needed, and clear it afterwards.
 
 
 ::: seealso
 - [debug]
+- [PUPPET]
 :::
 
 # VISUAL
 
 **Flag: VISUAL (all types)**
 
-A VISUAL object's attributes can be examined by anyone in its location who passes its `@lock/visual`. This is often used in conjunction with VERBOSE or DEBUG for debugging.
+Anyone who passes a VISUAL object's `@lock/examine` can examine it and read its locks without controlling it. This is often used in conjunction with VERBOSE or DEBUG for debugging.
 
 
 ::: seealso
@@ -603,3 +856,14 @@ With great power comes great responsibility!
 - [roles]
 :::
 
+# Z_TEL
+
+**Flag: Z_TEL (rooms, things)**
+
+When a room is in a zone, and the room or its zone object is set Z_TEL, nothing in it can be `@teleport`ed to a room outside that zone, unless the teleporter controls the room or has the Tport_Anywhere power.
+
+
+::: seealso
+- [zones]
+- [NO_TEL]
+:::

@@ -699,17 +699,15 @@ You say, "foo b"
 - [FIRST()]
 :::
 # benchmark()
-`benchmark(<expression>, <number>[, <sendto>])`
+`benchmark(<expression>, <number>[, <unit>])`
 
-  Evaluates `<expression>` `<number>` times, and returns the average, minimum, and maximum time it took to evaluate `<expression>` in microseconds. If a `<sendto>` argument is given, benchmark() instead pemits the times to the object `<sendto>`, and returns the result of the last evaluation of `<expression>`.
+  Evaluates `<expression>` `<number>` times, and returns the total time all the evaluations took, in milliseconds with three decimals. If `<unit>` is `s` or `seconds`, the time is given in seconds with six decimals instead. `<number>` must be at least 1.
 
   Example:
 ```sharp
-think benchmark(iter(lnum(1,100), ##), 200)
-Average: 520.47   Min: 340   Max: 1382
 think benchmark(iter(lnum(1,100), %i0), 200)
-Average: 110.27   Min: 106   Max: 281
 ```
+  Output: the total time in milliseconds, such as 21.734.
 # brackets()
 `brackets(<string>)`
 
@@ -806,9 +804,9 @@ You say, "foo barbaz blech"
 # checkpass()
 `checkpass(<player>, <string>)`
 
-  Returns 1 if `<string>` matches `<player>`'s password, and 0 otherwise. If `<player>` has no password, this function will always return 1.
+  Returns 1 if `<string>` matches `<player>`'s password, and 0 otherwise. If `<player>` has no password, this function always returns 0.
 
-  This function can only be used by wizards.
+  This function needs the `players.moderate` permission (see [roles]).
 
 
 ::: seealso
@@ -855,7 +853,7 @@ Europe/Paris
 
   This function clones `<object>`, as per @clone, and returns the dbref number of the clone, or #-1 if the object could not be cloned.
 
-  The clone will have the same name as the original object unless you give a `<new name>` for it. Normally, the clone will be created with the first available dbref, but wizards and objects with the pick_dbref power may give the `<dbref>` of a garbage object to use instead.
+  The clone will have the same name as the original object unless you give a `<new name>` for it. Normally, the clone will be created with the first available dbref, but wizards and objects with the PICK_DBREFS power may give the `<dbref>` of a garbage object to use instead.
 
   If the optional fourth argument is the string preserve, acts as @clone/preserve.<br>
   Note: If @create or @clone is restricted or disabled, clone() will also be restricted/disabled.
@@ -993,7 +991,7 @@ think config(command_aliases)
 # controls()
 `controls(<object>, <victim>[/<attribute>])`
 
-  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it will return #-1 ARGN NOT FOUND (where N is the argument which is the invalid object). If `<attribute>` is not a valid attribute name, it will return #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or have the See_All power, to use this function.
+  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
 
 
 ::: seealso
@@ -1009,7 +1007,7 @@ think config(command_aliases)
 
   If a `<timezone>` argument is given, the return value is based on that timezone instead of the MUSH server's local time. See [timezones] for more information on valid timezones.
 
-  If Extended convtime() is supported (see @config compile), negative values for `<seconds>` representing dates prior to 1970 are allowed.
+  Negative values for `<seconds>`, representing dates prior to 1970, are allowed.
 
   convutcsecs(`<seconds>`) is an alias for convsecs(`<seconds>`, utc).
 
@@ -1074,9 +1072,9 @@ You say, "0"
 # create()
 `create(<object>[, <cost>[, <dbref>]])`
 
-   This function creates an object with name `<object>` for `<cost>` pennies, and returns the dbref number of the created object. It returns #-1 on error.
+   This function creates an object with name `<object>`, and returns the dbref number of the created object. It returns #-1 on error. The `<cost>` argument is accepted but ignored.
 
-   Wizards may also specify a `<dbref>`; if this refers to a garbage object, the new object is created with this dbref.
+   Wizards and objects with the PICK_DBREFS power may also specify a `<dbref>`; if this refers to a garbage object, the new object is created with this dbref.
 
 
 ::: seealso
@@ -1300,7 +1298,7 @@ think die(3, 6, 1)
 
   This function digs a room called `<name>`, and optionally opens and links `<exit to>` and `<exit from>`, like the normal @dig command. It returns the dbref number of the new room.
 
-  Wizards and objects with the pick_dbref power can supply optional fourth through sixth arguments to specify garbage objects to use for the new room and exits.
+  Wizards and objects with the PICK_DBREFS power can supply optional fourth through sixth arguments to specify garbage objects to use for the new room and exits.
 
 
 ::: seealso
@@ -1320,22 +1318,18 @@ think die(3, 6, 1)
 
   Returns a checksum (hash, digest, etc.) of `<string>` using the given `<algorithm>`. The result is a unique large number represented in base 16.
 
-  Typically at least the following algorithms are supported:
+  The supported algorithms are:
 
-  md4 md5 ripemd160 sha1 sha224 sha256 sha384 sha512 whirlpool
+  md5 sha1 sha256 sha384 sha512
 
-  Depending on the host's OpenSSL version and how it was configured, there might be more (or less) available. digest(list) returns the methods a particular server understands if the OpenSSL library version being used is recent enough (1.0.0 and higher), or '#-1 LISTING NOT SUPPORTED' on older versions. For portable code, stick with MD5, SHA1 and the SHA2 family.
+  digest(list) returns that list. An unknown algorithm gives #-1 ARGUMENT OUT OF RANGE.
 
   Example:
 ```sharp
 think iter(digest(list), %i0(foo) => [digest(%i0, foo)], %b, %r)
-...
-MD4(foo) => 0ac6700c491d70fb8650940b1ca1e4b2
 MD5(foo) => acbd18db4cc2f85cedef654fccc4a4d8
-MDC2(foo) => 5da2a8f36bf237c84fddf81b67bd0afc
-RIPEMD160(foo) => 42cfa211018ea492fdee45ac637b7972a0ad6873
 SHA1(foo) => 0beec7b5ea3f0fdbc95d0dd47f3c5bc275da8a33
-SHA224(foo) => 0808f64e60d58979fcb676c96ec938270dea42445aeefcd3a4e6f8db
+SHA256(foo) => 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
 ...
 ```
 
@@ -1709,7 +1703,7 @@ a test
 `filter([<obj>/]<attr>, <list>[, <delimiter>[, <osep>[, ..., <argN>]]])`<br>
 `filterbool([<obj>]/<attr>, <list>[, <delimiter>[, <osep>[, ..., <argN>]]])`
 
-  These functions returns the elements of `<list>` for which a user-defined function evaluates to "1" (for filter()), or to a boolean true value (for filterbool()). That function is specified by the first argument (just as with the ufun() function), and the element of the list being tested is passed to that user-defined function as %0. Up to 29 further `<arg>`s can be specified, and will be available in the function as v(1) to v(30).
+  These functions returns the elements of `<list>` for which a user-defined function evaluates to "1" (for filter()), or to a boolean true value (for filterbool()). That function is specified by the first argument (just as with the ufun() function), and the element of the list being tested is passed to that user-defined function as %0. Up to 31 further `<arg>`s can be specified, and will be available in the function as v(1) to v(31).
 
   `<delimiter>` defaults to a space, and `<osep>` defaults to `<delimiter>`.
 
@@ -1758,9 +1752,9 @@ Kept: 12 7 / Dropped: apples pears
 # findable()
 `findable(<object>, <victim>)`
 
-  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If one of the objects does not exist, it will return #-1 ARGN NOT FOUND (where N is the argument which is the invalid object).
+  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
 
-  The object executing the function needs to be see_all or control both `<object>` and `<victim>`.
+  The object executing the function needs to be see_all or control either `<object>` or `<victim>`.
 
 
 ::: seealso
@@ -1897,7 +1891,7 @@ think fmod(6.1,2.5)
 # followers()
 `followers(<object>)`
 
-  Returns the list of things and players following object. You must control `<object>`.
+  Returns the list of things and players following object.
 
 
 ::: seealso
@@ -2222,7 +2216,7 @@ think hasrole(*Ariel, moderator)
 # hastype()
 `hastype(<object>, <type list>)`
 
-  Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE.
+  Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM and EXIT.
 
   Example:
 ```sharp
@@ -2275,11 +2269,12 @@ think hastype(test object, PLAYER THING)
 :::
 # idle()
 # idlesecs()
-`idle(<player|descriptor>[, <precision>])`
+`idle(<player|descriptor>[, <precision>])`<br>
+`idlesecs([<player|descriptor>[, <precision>]])`
 
   This function returns the number of seconds a player has been idle, much as WHO does. `<player name>` must be the full name of a player, or a player's dbref. You can also specify a `<descriptor>`, useful if a player is connected multiple times, or for connections which are still at the login screen. Players who are not connected have an idle time of "-1", as do dark wizards, when idle() is used on them by a non-priv'ed player.
 
-  idlesecs() is an alias for idle().
+  idlesecs() is the same as idle(), except that with no argument it returns your own idle time (that of your least idle connection).
 
 
 ::: seealso
@@ -2311,9 +2306,7 @@ You typed abc.
 # iname()
 `iname(<object>)`
 
-  iname() returns the name of `<object>`, as it would appear if you were inside it. It is identical to name() except that if the object has a NAMEFORMAT or NAMEACCENT attribute, it is used.
-
-  You must be see_all, control `<object>`, or be inside it to use this function.
+  iname() returns the name of `<object>`. It currently returns the plain name, the same as name(); NAMEFORMAT and NAMEACCENT attributes are not used.
 
 
 ::: seealso
@@ -2404,7 +2397,7 @@ You say, "meep GOOP bleep gleep"
 # isdaylight()
 `isdaylight([<secs>[, <timezone>]])`
 
-  Returns 1 if it's daylight savings in the specified timezone at the given time. Defaults to the host server's time zone and current time if not specified.
+  Returns 1 if it's daylight savings in the specified timezone at the given time. Defaults to UTC (which never has daylight savings) and the current time if not specified.
 
 
 ::: seealso
@@ -2636,7 +2629,7 @@ You say, "One|PLAYER"
 
   Returns `<string>` with all letters converted to lowercase.
 
-  If the MUSH is compiled with ICU Unicode support, lcstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.
+  lcstr2() does the same thing, except that ansi colors and other markup are stripped.
 
   Example:
 ```sharp
@@ -3184,7 +3177,7 @@ th lt(1,3,2)
 
   If a `<viewer>` is given, and used by a See_All object, lwho() returns the output of lwho() from `<viewer>`'s point of view.
 
-  `<status>` can be used to include "#-1" dbrefs for unconnected ports, and must be one of "all", "online" (the default) or "offline". It is primarily useful when using a `<status>` with lports(), to make the dbrefs and ports match up. Only See_All players can see offline dbrefs.
+  `<status>` must be one of "online" (the default), "offline" or "all". "offline" lists the players who are not connected, and "all" lists every player, connected or not, that `<viewer>` can see. Only See_All players can use "offline" or "all".
 
   lwhoid() returns a list of objid's instead.
 
@@ -3380,7 +3373,7 @@ You say, "es"
 
   msecs() returns the time as the number of seconds since the epoch.
 
-  Only things, rooms, and exits have modification times. You must be able to examine an object to see its modification time.
+  Every type of object, players included, has a modification time. Any object you can locate can be checked; no examine permission is needed.
 
 
 ::: seealso
@@ -3803,7 +3796,7 @@ think objevals(me,v(DATA`TEXT))
 
   If a `<destination>` is given, it will attempt to link the exit to `<destination>` after opening it.
 
-  Wizards and objects with the pick_dbref power can specify a garbage dbref to use for the new exit.
+  Wizards and objects with the PICK_DBREFS power can specify a garbage dbref to use for the new exit.
 
   It returns the dbref of the newly created exit, or #-1 on error.
 
@@ -3874,13 +3867,11 @@ think objevals(me,v(DATA`TEXT))
 - [ORFLAGS()]
 :::
 # owner()
-`owner(<object>[/<attribute>])`<br>
-`owner(<object>[/<attribute>], <new owner>[, preserve])`
+`owner(<object>[/<attribute>][, <new owner>[, preserve]])`
 
-  Given just an object, it returns the owner of the object. Given an object/attribute pair, it returns the owner of that attribute.
+  Given just an object, it returns the owner of the object. Given an object/attribute pair, it returns the owner of that attribute, or #-1 if the attribute is missing or you cannot read it.
 
-  If `<new owner>` is specified, the ownership is changed, as in @chown or @atrchown. If the optional third argument is "preserve", privileged flags and powers will be preserved ala @chown/preserve.<br>
-  If changing ownership, #-1 or 0 is returned on failure, 1 on success.
+  owner() does not change ownership: <new owner> and preserve are accepted and ignored. Use @chown or @atrchown for that.
 
 
 ::: seealso
@@ -3946,16 +3937,16 @@ think permission(me, wiki.delete)
 # pidinfo()
 `pidinfo(<pid>[, <list of fields>[, <output separator>]])`
 
-  This function returns information about a process id if the player has permission to see the process. The `<list of fields>` is a space-separated list that may contain the following elements:
+  This function returns information about a process id if the player has permission to see the process. The second argument names one field:
 
-    queue       the queue ("wait" or "semaphore") for the process<br>
+    pid         the process id<br>
+    command     the queued command<br>
     executor    the queueing object<br>
-    time        remaining time for timed queued entries (or -1)<br>
-    object      the semaphore object for semaphores (or #-1)<br>
-    attribute   the semaphore attribute for semaphores (or #-1)<br>
-    command     the queued command
+    status      always "waiting"<br>
+    delay       remaining delay in seconds (or 0)<br>
+    semaphore   the semaphore source
 
-  If `<list of fields>` is not provided, all fields are returned. The fields are separated by `<output separator>`, which defaults to a space.
+  Any other value, including a list of several fields, returns #-1 INVALID FIELD. With no field, it returns pid, command, executor, status and delay, separated by `<output separator>`, which defaults to a space.
 
 
 ::: seealso
@@ -3966,7 +3957,9 @@ think permission(me, wiki.delete)
 # playermem()
 `playermem(<player>)`
 
-  This function returns the amount of memory, in bytes, being used by everything owned by the player. It can only be used by players with Search powers.
+  This function returns the amount of memory, in bytes, being used by everything owned by the player.
+
+  **Not implemented.** SharpMUSH always answers 0, whatever player it is asked about.
 
 
 ::: seealso
@@ -4030,12 +4023,12 @@ think permission(me, wiki.delete)
 # lpids()
 `lpids([<object>[, <queue types>]])`
 
-  This function returns a list of queue process ids (pids). Only commands queued by objects with the same owner as `<object>` are listed. If you have the see_queue @power, you can specify "all" for `<object>` to get pids for everyone's queue entries. `<object>` defaults to the caller, or "all" for priviledged callers.
+  This function returns a list of queue process ids (pids) for commands queued by `<object>` itself. Objects with the same owner are not included, and "all" is not a special value. `<object>` defaults to the caller.
 
   `<queue types>` should be a list of one or more of the following words, to filter the pids returned:<br>
     wait        --  Only return wait queues<br>
     semaphore   --  Only return semaphore queues<br>
-    independent --  Only return commands queued by `<object>` specifically, instead of all objects with the same owner as `<object>`.<br>
+    independent --  Accepted, but changes nothing: only `<object>`'s own entries are ever returned.<br>
   If not specified, it defaults to "wait semaphore".
 
 
@@ -4304,8 +4297,7 @@ You say "this Trash is the Brash string"
     html      --  Escape HTML entities (< to &lt;, etc) and convert Pueblo to HTML tags<br>
     markdown  --  Write the string as Markdown, with highlighting as bold and a table as a pipe table<br>
     noaccents --  Downgrade accented characters, as per stripaccents()<br>
-    markup    --  Leave any markup not already converted by ansi/html as internal markup tags. Without this, unhandled markup<br>
-                  will be stripped, as per stripansi()
+    markup    --  Accepted for compatibility; it has no effect
 
   Examples:
 ```sharp
@@ -4442,7 +4434,7 @@ You say, "-   foo-"
 
   This function may be used to the get the location of `<object>`'s location (and on through the levels of locations), substituting for repeated nested loc() calls. `<levels>` indicates the number of loc()-equivalent calls to make; i.e., loc(loc(`<object>`)) is equivalent to rloc(`<object>`,2). rloc(`<object>`,0) is equivalent to num(`<object>`), and rloc(`<object>`,1) is equivalent to loc(`<object>`).
 
-  If rloc() encounters a room, the dbref of that room is returned. If rloc() encounters an exit, the dbref of that exit's destination is returned. You must control `<object>`, be near it, or it must be a findable player.
+  If rloc() encounters a room, the dbref of that room is returned. If rloc() encounters an exit, the dbref of that exit's source room is returned. You must control `<object>`, be near it, or it must be a findable player.
 
 
 ::: seealso
@@ -4457,7 +4449,7 @@ You say, "-   foo-"
 
   This function looks for an object called `<object>` located inside `<container>`. If a single matching object is found, its dbref is returned. If several matching objects are found, #-2 is returned, and if nothing matches, or you lack permission, #-1 is returned.
 
-  You must be in `<container>`, or be able to examine it, to use this function.
+  You must be able to examine `<container>` to use this function.
 
   This function has been deprecated and may be removed in a future patchlevel; locate(`<container>`, `<object>`, i) should be used instead.
 
@@ -4785,7 +4777,7 @@ You say, "bar baz foo gleep moof"
 # sha0()
 `sha0(<string>)`
 
-  Returns the SHA-0 cryptographic hash of the string. See RFC 3174 for more information. Deprecated; use digest() and higher strength algorithms instead. On servers with newer versions of OpenSSL that no longer provide the algorithm, returns #-1 NOT SUPPORTED.
+  Returns the SHA-0 cryptographic hash of the string. See RFC 3174 for more information. Deprecated; use digest() and higher strength algorithms instead. SharpMUSH does not provide SHA-0, so this always returns #-1 NOT SUPPORTED.
 
 
 ::: seealso
@@ -5058,7 +5050,7 @@ You don\'t say
 
   When used in an SQL query, the results of an sqlescape() function should be enclosed in single quotes.
 
-  You must be a WIZARD or have the Sql_Ok power to use this function.
+  Anyone may use this function. If SQL is not enabled, it returns #-1 SQL IS NOT ENABLED.
 
 
 ::: seealso
@@ -5796,7 +5788,7 @@ ROOM
 
   Returns `<string>` with all letters converted to uppercase.
 
-  If the MUSH is compiled with ICU Unicode support, ucstr2() does the same thing except the returned string might be a different length, and ansi colors and other markup are stripped.
+  ucstr2() does the same thing except that ansi colors and other markup are stripped, and the returned string might be a different length.
 
   Example:
 ```sharp
@@ -5895,7 +5887,7 @@ think words(unmark(a%*<|>b), %*<|>)
 
   Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to `[capstr(%n)]`).
 
-  v() can also return the value of stack registers. v(0) is equivilent to %0, but v() can return up to 30 registers (v(0) through v(29)). Calling v() with an integer arg that is not between 0 and 29 (inclusive) will return an out-of-range error.
+  v() can also return the value of stack registers %0 through %9: v(0) is equivilent to %0. A number of two or more digits, such as v(10), is treated as an attribute name; use r(10,args) through r(29,args) for the higher registers.
 
   The final form of this function is equivilent to get(me/`<attribute>`), but is usually slightly more efficient.
 
@@ -5991,20 +5983,15 @@ think words(unmark(a%*<|>b), %*<|>)
 `version()`<br>
 `numversion()`
 
-  version() returns a string which contains various version information for the MUSH you're on. numversion() returns an integer representation of the version/patchlevel which can be used for softcode comparison.
+  version() returns "PennMUSH emulated in SharpMUSH " followed by the server's assembly version. numversion() returns a fixed number in YYYYMMDDHHMMSS form, 20250102000000; it does not change between releases.
 
   Example:
 ```sharp
 say version()
-You say "SharpMUSH version 1.8.1 patchlevel 4 [12/06/2005]"
+You say, "PennMUSH emulated in SharpMUSH 2.0.0.0"
 say numversion()
-You say "1008001004"
+You say, "20250102000000"
 ```
-
-    > say version()<br>
-    You say, "SharpMUSH version 1.8.5 patchlevel 7 [03/16/2015] (rev ebdea0a)"<br>
-    > say numversion()<br>
-    You say, "1008005007"
 
 
 ::: seealso
@@ -6013,9 +6000,9 @@ You say "1008001004"
 # visible()
 `visible(<object>, <victim>[/<attribute>])`
 
-  If no attribute name is provided, this function returns 1 if `<object>` can examine `<victim>`, or 0, if it cannot. If an attribute name is given, the function returns 1 if `<object>` can see the attribute `<attribute>` on `<victim>`, or 0, if it cannot.
+  If no attribute name is provided, this function returns 1 if `<object>` can see `<victim>` (`<victim>` is not DARK, or `<object>` has See_All), or 0, if it cannot. If an attribute name is given, the function returns 1 if `<object>` can see the attribute `<attribute>` on `<victim>`, or 0, if it cannot.
 
-  If `<object>`, `<victim>`, or `<attribute>` is invalid, the function returns 0.
+  If `<attribute>` does not exist, the function returns 0. If `<object>` or `<victim>` cannot be found, it returns a #-1 error.
 
 
 ::: seealso
@@ -6108,7 +6095,7 @@ You say "1008001004"
 # wipe()
 `wipe(<object>[/<attribute pattern>])`
 
-  This function is equivalent to @wipe, and attempts to wipe all the attributes on `<object>` whose names match `<attribute pattern>`, or "*" if no pattern is given. It returns nothing. Like @wipe, this function will destroy entire attribute trees; to safely remove a single attribute, use attrib_set() instead.
+  This function is equivalent to @wipe, and attempts to wipe all the attributes on `<object>` whose names match `<attribute pattern>`, or "**" (every attribute, including those inside attribute trees) if no pattern is given. It returns nothing. Like @wipe, this function will destroy entire attribute trees; to safely remove a single attribute, use attrib_set() instead.
 
 
 ::: seealso
@@ -6380,9 +6367,9 @@ think words(1 2%b%b3, %b)
 
     upsince   - The time the MUSH was started. This is the default.<br>
     reboot    - The time the MUSH was last rebooted.<br>
-    save      - The time the MUSH last saved, or -1 if it hasn't.<br>
-    nextsave  - The time of the next automatic save.<br>
-    dbck      - The time of the next automatic dbck.<br>
+    save      - Always -1: SharpMUSH has no scheduled save.<br>
+    nextsave  - Always -1.<br>
+    dbck      - Always -1: SharpMUSH has no scheduled dbck.<br>
     purge     - The time of the next automatic purge.<br>
     warnings  - The time of the next automatic warnings check, or -1 if automated warnings are disabled.
 
@@ -6409,7 +6396,7 @@ think words(1 2%b%b3, %b)
 
  This is the same mechanism used to suggest help entries, function names, etc. when an unknown one is encountered.
 
- If the dict_file @config option is set, loads that file into the 'words' category.
+ Categories and their words are added with @suggest; the example assumes a 'words' category has been added.
 
  Example:
 ```sharp
@@ -6428,7 +6415,7 @@ AARDVARK AARDVARKS AARDVARK'S etc...
 
   `<id>` is a value returned by connlog(). connrecord() returns the following fields: DBREF NAME IPADDR HOSTNAME CONNECTION-TIME DISCONNECTION-TIME DISCONNECTION-REASON SSL WEBSOCKET. If the optional `<osep>` argument is given, it is used instead of space to seperate fields.
 
-  If a single connection had multiple logins and logouts, only the last one is used. If a connection was never logged in, the DBREF field is #-1 and the NAME field is -. If the connection is still active, the DISCONNECTION-TIME is -1 and DISCONNECTION-REASON is -.
+  If a single connection had multiple logins and logouts, only the last one is used. The NAME field is always "Unknown". If a connection was never logged in, the DBREF field is #-1. If the connection is still active, the DISCONNECTION-TIME is 0 and DISCONNECTION-REASON is empty.
 
   Times are in seconds since the epoch, as returned by secs().
 

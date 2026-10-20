@@ -44,9 +44,10 @@ queue-and-cancel operations from retaining unlimited command bodies.
 ## Queue limits
 
 `global_queue_limit` defaults to 10000 admitted jobs. `player_queue_limit` defaults
-to 100 and applies to the executor's owner, across that owner's objects. Wizards
-and executors with Queue power add the current database object count (including
-garbage) to that owner allowance. The global ceiling still applies. Host
+to 100 and applies to each object on its own, or to the owner across all of that
+owner's objects when `owner_queues` is on. Wizards and executors with Queue power
+(the owner, with `owner_queues`) add the current database object count
+(including garbage) to that allowance. The global ceiling still applies. Host
 callbacks submitted without an executor or connection share the `system` bucket,
 which also obeys `player_queue_limit`. Use the executor-aware admission overload
 for player-owned work; omitting an actor never bypasses the owner cap.

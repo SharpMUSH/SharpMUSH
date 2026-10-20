@@ -20,7 +20,7 @@
 
   A query that doesn't return any rows, such as an UPDATE or SELECT that has no matches will return a null string.
 
-  If `<register>` is specified, and `<query>` alters the database (such as an UPDATE or INSERT query), there is a side-effect: the number of affected rows is stored into the specified q-register.
+  If `<register>` is specified, there is a side-effect: the number of rows the query returned is stored into the specified q-register. A query that returns no rows, such as an UPDATE or INSERT, stores 0.
 
 - [sql prepared statements]: parameterized queries and an example
 

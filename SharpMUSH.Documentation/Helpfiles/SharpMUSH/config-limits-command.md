@@ -37,9 +37,9 @@ Limits and other constants.
 - `max_logins=<number>`: The maximum number of connected players.
 - `max_guests=<number>`: The maximum number of connected guests. If 0, no limit. If -1, limited by the number of guest players in the db.
 - `max_named_qregs=<number>`: The maximum number of qregs except for a-z and 0-9. The limit is per-localize()-call.
-- `connect_fail_limit=<count>`: The maximum number of times in a 10 minute period that an IP can attempt to log in and fail. Maximum is 50, 0 means no limit.
-- `idle_timeout=<time>`: The number of minutes a connection can be idle before getting booted. 0 means no limit.
-- `unconnected_idle_timeout=<time>`: The number of minutes a connection can be sitting at the login screen before getting booted. 0 means no limit.
+- `connect_fail_limit=<count>`: The number of failed logins before an IP is temporarily banned, from 1 to 100. The server does not enforce it yet.
+- `idle_timeout=<time>`: The number of seconds a player can be idle before getting booted. 0 means no limit.
+- `unconnected_idle_timeout=<time>`: The number of seconds a connection can sit at the login screen before getting booted, at least 10. The server does not enforce it yet.
 
 ## Communication and economy limits
 

@@ -81,7 +81,8 @@ combat_primer house_rules
 - `wikirecent(<count>)`
 
 Returns a space-separated list of the most recently edited page references,
-newest first. *<count>* defaults to 10 and is clamped to 1-50.
+newest first. *<count>* defaults to 10 and must be 1-50; any other value is
+an error.
 
 ::: seealso
 - [WIKI()]
