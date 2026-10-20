@@ -46,7 +46,7 @@
             <div class="welcome-path-list">
                 @foreach (var (path, title, detail) in Choices)
                 {
-                    <button type="button" data-guide-path="@path.ToString().ToLowerInvariant()" aria-pressed="@(Progress.Active && Progress.Path == path ? "true" : "false")" @onclick="() => Choose(path)">
+                    <button type="button" data-guide-path="@path.ToString().ToLowerInvariant()" aria-pressed="@((Preview ? _previewSelection == path : Progress.Active && Progress.Path == path) ? "true" : "false")" @onclick="() => Choose(path)">
                         <strong>@title</strong><span>@detail</span>
                     </button>
                 }
@@ -99,6 +99,7 @@
     private GuidePanel? _panel;
     private bool _focusLesson;
     private OnboardingProgress _preview = new();
+    private GuidePath? _previewSelection;
     private OnboardingProgress Progress => Preview ? _preview : Guide.Progress;
     private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Progress.Path, Loc);
     private int CurrentIndex => Math.Max(0, Array.FindIndex(Lessons.ToArray(), lesson => lesson.Id == Progress.CurrentStepId));
@@ -125,7 +126,11 @@
     private void OnChanged() => _ = InvokeAsync(StateHasChanged);
     private async Task Choose(GuidePath path)
     {
-        if (Preview) _preview = _preview with { Path = path, Active = path != GuidePath.Explore, CurrentStepId = "place" };
+        if (Preview)
+        {
+            _previewSelection = path;
+            _preview = _preview with { Path = path, Active = path != GuidePath.Explore, CurrentStepId = "place" };
+        }
         else await Guide.ChoosePathAsync(path);
         _focusLesson = Progress.Active && Progress.Path == path && (Preview || Guide.Error is null);
         if (path == GuidePath.Explore && !Preview && Guide.Progress.Dismissed) Nav.NavigateTo(Destination);
@@ -161,7 +166,7 @@
     }
     private async Task Close()
     {
-        if (Preview) { _preview = _preview with { Active = false }; return; }
+        if (Preview) { _previewSelection = null; _preview = _preview with { Active = false }; return; }
         await Guide.DismissAsync();
         if (Guide.Progress.Dismissed) Nav.NavigateTo(Destination);
     }

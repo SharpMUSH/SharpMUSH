@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **3,007 passed**, zero failed/skipped after external-login
-  routing and setup-resume fixes (`external-setup-green.log`).
+- Full component suite: **3,008 passed**, zero failed/skipped after the preview
+  selection correction (`preview-explore-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -945,3 +945,26 @@ Logs: `work/onboarding/external-setup-red.log` and
 `work/onboarding/external-setup-green.log`. The isolated server's public provider
 endpoint returned an empty list. A configured-provider browser round trip and
 fresh-world setup remain acceptance gaps; component tests do not replace them.
+
+### Four-path narrow-layout check after publishing (2026-10-20)
+
+Published client revision `c41db7080` to the isolated preview. At 320×740,
+selected Discord, MUSH, other roleplay and independent exploration in preview
+mode. Also opened Discord's channel lesson and expanded the command reference.
+All six inspected states had a 320px document width and scroll width, with no
+visible main-content buttons, links, inputs or command labels outside the
+horizontal viewport. Independent exploration removed the lesson panel.
+Restored the viewport override afterward; preview choices did not save progress.
+
+Evidence: `work/onboarding/four-path-320-layout.json` and successful publish log
+`work/onboarding/external-setup-publish.log`. This covers these preview layouts,
+not full authenticated mobile journeys or native device keyboards.
+
+The narrow-layout check also exposed an accessibility-state mismatch: Explore
+hid the guide but stayed `aria-pressed=false` in preview. Preview now tracks its
+selection separately from whether a lesson is active. A regression reproduced
+the mismatch, then verified initial unselected state, MUSH-to-Explore selection,
+absence of the lesson and unchanged persisted progress. All 3,008 component
+tests pass. After publishing, the real browser confirmed MUSH-to-Explore leaves
+only Explore pressed (`aria-pressed=true`) and removes the lesson panel.
+Screenshot: `work/onboarding/explore-preview-selected.png`.

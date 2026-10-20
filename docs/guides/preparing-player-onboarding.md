@@ -30,6 +30,16 @@ missing permissions and unavailable routes. Check sign-in, character creation or
 claim, entering play, help and a harmless command. Check narrow screens and
 keyboard navigation as well.
 
+If you enable an external sign-in provider, test its complete round trip with a
+new player account as well as an existing one. Starting from the guide should
+retain the guide destination after character creation; starting from character
+claim should return to claim. A visible provider button alone does not verify
+that its callback or account creation works.
+
+First Setup records its current stage in the URL. After saving handlers, the
+Packages stage uses `/setup?step=packages`, so reloading resumes there. Review
+the selections before applying packages; visiting a stage does not apply them.
+
 Only reviewed, shipped art is eligible for the client catalog. Unknown genres
 never become image paths. New inventory candidates remain separate from approved
 assets, and the text journey remains usable without artwork.

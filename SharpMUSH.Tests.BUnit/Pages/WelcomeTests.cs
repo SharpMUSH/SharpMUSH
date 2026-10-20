@@ -106,6 +106,27 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
+	public async Task PreviewExploreRemainsSelectedWithoutPersistingProgress()
+	{
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/welcome?preview=true");
+		var page = Render<Welcome>();
+		var guide = Services.GetRequiredService<OnboardingService>();
+		var original = guide.Progress;
+		await Assert.That(page.FindAll("[data-guide-path][aria-pressed=true]").Count).IsEqualTo(0);
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(page.Find("[data-guide-path=mush]").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await page.Find("[data-guide-path=explore]").ClickAsync();
+		await Assert.That(page.Find("[data-guide-path=explore]").GetAttribute("aria-pressed")).IsEqualTo("true");
+		await Assert.That(page.FindAll("[data-guide-path][aria-pressed=true]").Count).IsEqualTo(1);
+		await Assert.That(page.FindAll(".guide-lesson").Count).IsEqualTo(0);
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await page.Find(".guide-stop").ClickAsync();
+		await Assert.That(page.FindAll("[data-guide-path][aria-pressed=true]").Count).IsEqualTo(0);
+		await Assert.That(guide.Progress).IsEqualTo(original);
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier.Contains("setItem", StringComparison.Ordinal))).IsFalse();
+	}
+
+	[Test]
 	public async Task VeteranFinishesAfterItsFiveLessons()
 	{
 		var page = Render<Welcome>();
