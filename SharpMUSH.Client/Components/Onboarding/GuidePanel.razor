@@ -16,6 +16,20 @@
         <h2 aria-live="polite">@Lesson.Title</h2>
         <p>@Lesson.Body</p>
         @Context
+        @if (Lesson.Id == "continue")
+        {
+            <section class="guide-channels" aria-label="@Loc["GuideChannelsTitle"]">
+                <h3>@Loc["GuideChannelsTitle"]</h3>
+                <p>@Loc["GuideChannelsDiscover"]</p>
+                <ol>
+                    <li><code>@@channel/list</code> — @Loc["GuideChannelsList"]</li>
+                    <li><code>@@channel/what NAME</code> — @Loc["GuideChannelsDescription"]</li>
+                    <li><code>@@channel/on NAME</code> — @Loc["GuideChannelsJoin"]</li>
+                    <li><code>@@chat NAME=Hello, can someone help me get started?</code> — @Loc["GuideChannelsChat"]</li>
+                </ol>
+                <p>@Loc["GuideChannelsAudience"]</p>
+            </section>
+        }
         @if (Lesson.ActionUrl is not null)
         {
             <a class="guide-action" href="@Lesson.ActionUrl">@Lesson.ActionLabel</a>
@@ -64,6 +78,6 @@
     [Parameter] public SharpieArt? Art { get; set; } = SharpieArtCatalog.Resolve(null, null, null, null, GuideImagery.Full);
     [Parameter] public GuideImagery Imagery { get; set; } = GuideImagery.Full;
     private string? _failedArt;
-    private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0];
+    private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0].Replace("@", "").Replace("/", "_");
     private bool _practiced;
 }

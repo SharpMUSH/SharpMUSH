@@ -11,6 +11,17 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class GuideMascotTests : TrackingBunitContext
 {
 	[Test]
+	public async Task FinalLessonTeachesChannelDiscoveryAndAudience()
+	{
+		Services.AddSingleton<IStringLocalizer<SharedResource>>(PortalLocalizer.Create());
+		var cut = Render<GuidePanel>(p => p.Add(x => x.Lesson, GuideCatalog.Player(GuidePath.Discord).Last()));
+		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("@channel/list");
+		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("@channel/on NAME");
+		await Assert.That(cut.Find(".guide-channels").TextContent).Contains("not just your room");
+		await Assert.That(cut.FindAll(".guide-channels button").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Every_style_keeps_an_approved_mascot_until_its_art_is_available()
 	{
 		foreach (var style in SharpieArtCatalog.Styles)

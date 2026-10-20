@@ -9595,4 +9595,17 @@
   <data name="GuideAdminDescription" xml:space="preserve"><value>— game introduction and onboarding checklist.</value></data>
   <data name="GuideBackToGame" xml:space="preserve"><value>Back to game</value></data>
   <data name="GuideStop" xml:space="preserve"><value>Stop this guide</value></data>
+  <data name="GuideChannelsTitle" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideChannelsDiscover" xml:space="preserve"><value>Channels connect people across rooms. In Play, Browse channels opens the channel browser. Games often have newbie, help or social channels; their names and access rules vary.</value></data>
+  <data name="GuideChannelsList" xml:space="preserve"><value>See channels this character can see. Look for one intended for newcomer questions.</value></data>
+  <data name="GuideChannelsDescription" xml:space="preserve"><value>Read its description before joining. Replace NAME with a channel shown by the game.</value></data>
+  <data name="GuideChannelsJoin" xml:space="preserve"><value>Join it if permitted. You can leave with @channel/off NAME.</value></data>
+  <data name="GuideChannelsChat" xml:space="preserve"><value>Send your question after choosing the right channel. This is a real message, not local practice.</value></data>
+  <data name="GuideChannelsAudience" xml:space="preserve"><value>Channel messages reach people listening on that channel, not just your room. Follow its rules and avoid posting passwords or private information. Use help @channel and help @chat for details; if no help channel is available, use the game’s advertised support route.</value></data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve"><value>Discover visible channels</value></data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve"><value>Join a channel that permits you</value></data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve"><value>May announce your membership to the channel</value></data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve"><value>Talk on a channel</value></data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve"><value>People listening to that channel, wherever they are</value></data>
 </root>

@@ -48,3 +48,20 @@ mentioned elsewhere does not prove that it is installed in your game.
 Close or skip guidance whenever you prefer. Artwork preferences do not change
 the written instructions. If progress changed in another tab, reload it before
 making further choices.
+
+## Find a channel for questions
+
+Channels carry conversations across rooms. In Play, use **Browse channels**, or
+enter `@channel/list` to see the channels your character may discover. Many games
+provide a newcomer/help channel, but names and permissions vary.
+
+1. Read descriptions with `@channel/what NAME`.
+2. Join an appropriate channel with `@channel/on NAME` if permitted.
+3. Ask with `@chat NAME=Hello, can someone help me get started?`.
+4. Leave with `@channel/off NAME` when wanted.
+
+Replace `NAME` with a channel the game actually lists. Joining may announce your
+membership; chat reaches the channel's listeners, wherever their characters are.
+These commands affect the live game. The guide never joins or sends a question
+for you. Use `help @channel` and `help @chat` for more information. If no channel
+is available, follow the game's advertised support route.
