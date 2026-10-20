@@ -32,7 +32,7 @@ Draws a frame round *<body>*, with *<title>* set into the top edge. A [RULE()] o
 *<width>* is the whole box, borders included; see [LAYOUT FUNCTIONS] for an empty width.
 
 - [box() options]: borders, theme, title placement, more titles and padding
-- [box() examples]: a box with a centred title, and one on the left
+- [box() examples]: a centred title, one on the left, and a centred body
 - [box() border examples]: a rounded border, pieces of your own, and a bottom title
 
 ::: seealso
@@ -65,6 +65,15 @@ Options:
 +=< Title >========+
 | Hello            |
 +==================+
+```
+
+To centre the body, give it as an [ITEM()] with `-` as its width:
+
+```sharp
+> think box(item(Hello there.,-),,30)
++============================+
+|        Hello there.        |
++============================+
 ```
 
 ## Border examples

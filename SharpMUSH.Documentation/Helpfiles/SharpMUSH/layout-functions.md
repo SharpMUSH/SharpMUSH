@@ -213,7 +213,11 @@ Bram
 
 `ldatatable(<options>, <headings>, <rows>[, <delimiter>])`
 
-[DATATABLE()] with its rows given as one list, split on *<delimiter>* (a space when none is given), so one [ITER()] can make a row for each record. The headings and each row's cells are split by `|`, or by the `delim` option, as in datatable(). It takes datatable()'s options and gives way on a narrow screen the same way. An empty list draws the headings alone.
+[DATATABLE()] with its rows given as one list, so one [ITER()] can make a row for each record. It has two delimiters:
+- *<delimiter>* splits *<rows>* into rows. A space when none is given.
+- The `delim` option splits the headings and each row's cells. `|` by default; see [datatable() delimiters].
+
+It takes datatable()'s options and gives way on a narrow screen the same way. An empty list draws the headings alone.
 
 ### Examples
 ```sharp
@@ -245,7 +249,7 @@ Raya    Writing a scene
 
 `datacolumns(<options>, <column1>[, ... , <columnN>])`
 
-The same table as [DATATABLE()], given a column at a time instead of a row at a time. Each column is its heading and then its cells, split by `|`, so a list another function made is a column as it stands. A column shorter than the others is filled out with empty cells. It takes the same options, and gives way on a narrow screen the same way.
+The same table as [DATATABLE()], given a column at a time instead of a row at a time. Each column is its heading and then its cells, split by `|` or by the `delim` option (see [datatable() delimiters]), so a list another function made is a column as it stands. A column shorter than the others is filled out with empty cells. It takes the same options, and gives way on a narrow screen the same way.
 
 ### Example
 ```sharp
@@ -258,7 +262,7 @@ Raya      5m
 
 ### Lists from other functions
 
-With lists from other functions, change the delimiter to the space they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. The space is quoted: `"delim":"%b"` would leave the option empty. A cell holding a space then needs another delimiter.
+With lists from other functions, set `delim` to the space they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. A cell holding a space then needs another delimiter, such as a newline; see [datatable() delimiters].
 
 ::: seealso
 - [DATATABLE()]

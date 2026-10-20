@@ -16,6 +16,11 @@
       "lookup": "datatable() options"
     },
     {
+      "id": "delimiters",
+      "heading": "Delimiters",
+      "lookup": "datatable() delimiters"
+    },
+    {
       "id": "examples",
       "heading": "Examples",
       "lookup": "datatable() examples"
@@ -27,10 +32,11 @@
 
 `datatable(<options>, <headings>[, <row1>, ... , <rowN>])`
 
-Rows under headings, the headings and each row's cells split by `|`. Each column is as wide as its widest cell. Begin a heading with `<`, `-` or `>`, as in [ALIGN()], to place its column's text left, centred or right.
+Rows under headings. The headings and each row's cells are split by `|`, or by the text the `delim` option names. Each column is as wide as its widest cell. Begin a heading with `<`, `-` or `>`, as in [ALIGN()], to place its column's text left, centred or right.
 
 - [datatable() narrow screens]: how a table too wide gives way
 - [datatable() options]: priority, widths, wrapping, growth, separators and stripes
+- [datatable() delimiters]: splitting cells on something other than `|`
 - [datatable() examples]: one table at three widths
 
 ::: seealso
@@ -47,7 +53,7 @@ When the table is too wide, the columns that wrap give way first, widest first, 
 
 ## Options
 
-Options (the first argument, which may be empty). The lists are split like the cells, and a list may stop short or leave a column's place empty:
+Options (the first argument, which may be empty). The lists are split by `delim`, like the cells, and a list may stop short or leave a column's place empty:
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
@@ -56,10 +62,25 @@ Options (the first argument, which may be empty). The lists are split like the c
 - `"nowrap":"<list>"` - the numbers of the columns that never wrap.
 - `"grow":"<list>"` - each column's share of the width left over once every column fits. A table with a column that grows fills its width; one without is as wide as its cells. No column grows past its greatest width.
 - `"gap":<n>` - spaces between the columns. Two by default.
-- `"sep":"<text>"` - drawn between the columns instead of spaces.
+- `"sep":"<text>"` - drawn between the columns instead of spaces. It does not split anything; `delim` does.
 - `"rule":"<text>"` - the line under the headings. `-` by default; `"rule":""` for none.
 - `"stripe":true` - lays every second row on a background of its own, to help the eye along a row: the theme's `surface` colour, or dark grey when the theme has none. `"stripe":"<codes>"` uses that colour instead, in [ANSI()] codes: `"stripe":"/#203040"`. Rows shown as labelled values are not striped.
-- `"delim":"<text>"` - what splits the headings, cells and lists. `|` by default.
+- `"delim":"<text>"` - what splits the headings, cells and lists. `|` by default; see [datatable() delimiters].
+
+## Delimiters
+
+The `delim` option names what splits the headings, the cells and the lists in the other options. Change it when a cell can hold a `|`:
+
+```sharp
+> think datatable({{"delim":";"}},Name;Motto,Raya;a|b)
+Name  Motto
+-----------
+Raya  a|b
+```
+
+- A space, for lists other functions made: `{{"delim":" "}}`. A run of spaces splits once, so no cell can be empty.
+- A newline: build the options with `json(object,delim,json(string,%r))`. Inline, `%r` is not valid JSON and `\n` is the letter `n`.
+- Text a player typed: a marked delimiter, written inline as `{{"delim":"%*<^>"}}`, splits only at a marked `^`. `json()` drops the mark. See [LIST SEPARATORS].
 
 ## Examples
 
