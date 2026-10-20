@@ -488,10 +488,11 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
-	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default) => _writer.EnqueueAsync(job, ct);
+	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default)
+		=> _writer.EnqueueAsync(AttributeFixtureWrite(job), ct);
 
 	public async ValueTask WriteAsync(Action<ITx> job, CancellationToken ct = default)
-		=> await _writer.EnqueueAsync<object?>(tx => { job(tx); return null; }, ct).ConfigureAwait(false);
+		=> await _writer.EnqueueAsync(AttributeFixtureWrite<object?>(tx => { job(tx); return null; }), ct).ConfigureAwait(false);
 
 	/// <summary>
 	/// Queues <paramref name="job"/> onto the writer thread like any other write, but hands it the raw

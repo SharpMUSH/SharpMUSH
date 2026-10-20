@@ -74,34 +74,46 @@ public sealed class PackageWikiService(
 	}
 
 	/// <inheritdoc />
-	public async Task DeleteReleasedAsync(IReadOnlyList<PackageWikiDeletion> deletions, string editorDbref, List<string> notes)
+	public async Task DeleteReleasedAsync(PackageWriteTransaction writes, IReadOnlyList<PackageWikiDeletion> deletions,
+		string editorDbref, List<string> notes)
 	{
 		if (deletions.Count == 0)
 		{
 			return;
 		}
 
-		var pinned = (await wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
-		foreach (var deletion in deletions)
+		writes.Origin.RequireWiki(wiki, localization, packages, roles);
+		using var admitted = writes.AdmitReleased();
+		try
 		{
-			try
+			var pinned = (await wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
+			foreach (var deletion in deletions)
 			{
-				if (deletion.UnpinCategory is { } category && pinned.Contains(category))
+				try
 				{
-					await wiki.SetCategoryPinnedAsync(category, pinned: false);
-				}
+					if (deletion.UnpinCategory is { } category && pinned.Contains(category))
+					{
+						await wiki.SetCategoryPinnedAsync(category, pinned: false);
+					}
 
-				notes.Add(await wiki.DeleteAsync(deletion.PageId, editorDbref) switch
+					notes.Add(await wiki.DeleteAsync(deletion.PageId, editorDbref) switch
+					{
+						None => $"Deleted wiki page {deletion.Title}: nobody had changed it.",
+						NotFound => $"Wiki page {deletion.Title} was already gone.",
+					});
+				}
+				catch (Exception ex) when (ex is not OperationCanceledException)
 				{
-					None => $"Deleted wiki page {deletion.Title}: nobody had changed it.",
-					NotFound => $"Wiki page {deletion.Title} was already gone.",
-				});
+					// The operation has committed; a page that could not be deleted is left as the game's.
+					writes.ReleasedWorkFailed();
+					notes.Add($"Wiki page {deletion.Title} could not be deleted and is left as the game's: {ex.Message}");
+				}
 			}
-			catch (Exception ex) when (ex is not OperationCanceledException)
-			{
-				// The operation has committed; a page that could not be deleted is left as the game's.
-				notes.Add($"Wiki page {deletion.Title} could not be deleted and is left as the game's: {ex.Message}");
-			}
+		}
+		catch
+		{
+			writes.ReleasedWorkFailed();
+			throw;
 		}
 	}
 

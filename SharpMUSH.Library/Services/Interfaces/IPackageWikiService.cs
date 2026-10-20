@@ -56,7 +56,10 @@ public interface IPackageWikiService
 
 	/// <summary>
 	/// Deletes the pages an apply let go of untouched, unpinning a category the package pinned while it is still
-	/// pinned. Runs after the operation committed: a deleted page keeps neither its id nor its history.
+	/// pinned. Runs after the operation committed, as work <paramref name="writes"/> owns: closing waits for it,
+	/// and a page it could not delete stops the transaction reporting a clean commit. A deleted page keeps
+	/// neither its id nor its history.
 	/// </summary>
-	Task DeleteReleasedAsync(IReadOnlyList<PackageWikiDeletion> deletions, string editorDbref, List<string> notes);
+	Task DeleteReleasedAsync(PackageWriteTransaction writes, IReadOnlyList<PackageWikiDeletion> deletions,
+		string editorDbref, List<string> notes);
 }

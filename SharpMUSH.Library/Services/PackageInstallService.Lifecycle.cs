@@ -197,7 +197,7 @@ public partial class PackageInstallService
 
 		await registry.RemoveInstalledPackageAsync(packageId);
 		writes.Commit();
-		await wiki.DeleteReleasedAsync(wikiDeletions, editor, notes);
+		await wiki.DeleteReleasedAsync(writes, wikiDeletions, editor, notes);
 
 		// What its STARTUP registered in memory goes with its objects: a hook, a global function or an
 		// @command/add command left pointing at one would keep running its code until a restart.

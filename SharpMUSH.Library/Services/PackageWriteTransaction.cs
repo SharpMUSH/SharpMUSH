@@ -43,13 +43,13 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 	private readonly IApplicationRegistryService applications;
 	private readonly ILockService locks;
 	private readonly SharpPlayer packageManager;
-	private readonly IAsyncDisposable _lifetime;
+	private readonly IPackageWriteHold _lifetime;
 
 	/// <summary>Issued only by <see cref="PackageWriteTransactionFactory"/>; obtain one through <see cref="IPackageWriteTransactionFactory"/>.</summary>
 	internal PackageWriteTransaction(PackageWriteTransactionFactory origin, IMediator transactionMediator,
 		IObjectStore transactionObjects, IAttributeStore transactionAttributes, IFlagAndPowerStore transactionFlags,
 		IPackageRegistryService transactionRegistry, IApplicationRegistryService transactionApplications,
-		ILockService transactionLocks, SharpPlayer manager, IAsyncDisposable lifetime)
+		ILockService transactionLocks, SharpPlayer manager, IPackageWriteHold lifetime)
 	{
 		Origin = origin;
 		mediator = transactionMediator;
@@ -81,6 +81,7 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 	private Holder? _holder;
 	private Task<IReadOnlyList<string>>? _recovery;
 	private bool _reportImplicitFailure;
+	private bool _releasedWorkFailed;
 
 	// A recovery dispatch/cooperative deadline, not a hard completion limit for a started inverse.
 	internal static readonly TimeSpan RecoveryTimeout = TimeSpan.FromSeconds(30);
@@ -176,7 +177,13 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 
 		// Physical ownership ends only after actual forward work and compensation have joined.
 		// Commit alone cannot release it, and every closer shares this same terminal completion.
-		try { await _lifetime.DisposeAsync(); }
+		try
+		{
+			_lifetime.Report(_committed
+				? _releasedWorkFailed ? PackageWriteVerdict.ReleasedWorkFailed : PackageWriteVerdict.Committed
+				: failure is null && unrestored.Count == 0 ? PackageWriteVerdict.Reverted : PackageWriteVerdict.CompensationFailed);
+			await _lifetime.DisposeAsync();
+		}
 		catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
 		if (failure is not null) completion.SetException(failure);
 		else completion.SetResult(unrestored);
@@ -209,6 +216,31 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 	/// Dispose it after the helper's last write and its tracking: <c>using var admitted = writes.AdmitHelper();</c>
 	/// </summary>
 	internal IDisposable AdmitHelper() => Admit(helper: true);
+
+	/// <summary>
+	/// Admits work the committed operation owns but does not undo, such as deleting the wiki pages it let
+	/// go of. Closing waits for it; <see cref="ReleasedWorkFailed"/> records that some of it did not happen.
+	/// </summary>
+	internal IDisposable AdmitReleased()
+	{
+		lock (_stateGate)
+		{
+			if (!_committed || _recovery is not null)
+			{
+				throw new InvalidOperationException("Released work needs a committed, open package transaction.");
+			}
+
+			RequireIdle();
+			_forward = new(TaskCreationOptions.RunContinuationsAsynchronously);
+			return _holder = new Holder(this, helper: false, null, new OwnedExecution(this));
+		}
+	}
+
+	/// <summary>Records that work admitted by <see cref="AdmitReleased"/> failed; the transaction then cannot report a clean commit.</summary>
+	internal void ReleasedWorkFailed()
+	{
+		lock (_stateGate) _releasedWorkFailed = true;
+	}
 
 	private Holder Admit(bool helper)
 	{

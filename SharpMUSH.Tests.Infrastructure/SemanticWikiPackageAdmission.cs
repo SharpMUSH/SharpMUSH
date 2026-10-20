@@ -20,6 +20,25 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		Owner = owner;
 		owner.RegisterPackageFence(runner: false);
 	}
+	/// <summary>
+	/// One attempt per installer operation. Inside a coordinated operation the attempt is that operation's
+	/// own, so the coordinator can still settle it; otherwise it is a retained attempt of its own that owns
+	/// the installer's flow, so its transactions join it, and it never settles.
+	/// </summary>
+	private async Task<T> AttemptAsync<T>(Func<Task<T>> run, CancellationToken cancellationToken)
+	{
+		if (_provider.CurrentSemanticFixturePackageOperation is { } coordinated)
+		{
+			await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken, coordinated);
+			cancellationToken.ThrowIfCancellationRequested();
+			return await run();
+		}
+
+		await using var attempt = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
+		using (SemanticFixturePackageOperation.EnterAmbient(attempt)) return await run();
+	}
+
 	public Task<PackageChangeset> PlanAsync(PackageManifest manifest, IReadOnlyDictionary<string, string>? configureAnswers = null, CancellationToken cancellationToken = default)
 		=> _inner.PlanAsync(manifest, configureAnswers, cancellationToken);
 	public Task<Found<string>> GetReadmeAsync(string packageId) => _inner.GetReadmeAsync(packageId);
@@ -27,22 +46,16 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.ApplyAsync(manifest, request, cancellationToken, fileSource);
+		return await AttemptAsync(() => _inner.ApplyAsync(manifest, request, cancellationToken, fileSource), cancellationToken);
 	}
 	public async Task<Result<Success>> UninstallAsync(string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.UninstallAsync(packageId, force, cancellationToken);
+		return await AttemptAsync(() => _inner.UninstallAsync(packageId, force, cancellationToken), cancellationToken);
 	}
 	public async Task<Result<PackageRollbackResult>> RollbackAsync(string packageId, int revision, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.RollbackAsync(packageId, revision, cancellationToken);
+		return await AttemptAsync(() => _inner.RollbackAsync(packageId, revision, cancellationToken), cancellationToken);
 	}
 }

@@ -13,7 +13,7 @@ public partial class LightningDatabase
 		var operation = owner.RetainPackageOperation(lease);
 		try
 		{
-			await BeginSemanticFixturePackageAttemptAsync(owner, cancellationToken);
+			await BeginSemanticFixturePackageAttemptAsync(owner, cancellationToken, operation);
 			cancellationToken.ThrowIfCancellationRequested();
 			return operation;
 		}
@@ -22,6 +22,22 @@ public partial class LightningDatabase
 			await operation.DisposeAsync();
 			throw;
 		}
+	}
+
+	/// <summary>The live coordinated operation whose flow this is, on this provider's current lease; null otherwise.</summary>
+	internal SemanticFixturePackageOperation? CurrentSemanticFixturePackageOperation
+		=> _fixtureLease is { } lease && SemanticFixturePackageOperation.Ambient is { IsReleased: false } root
+			&& ReferenceEquals(root.Lease, lease) ? root : null;
+
+	/// <summary>
+	/// Settles <paramref name="root"/>'s generation when the store and capability agree it may; see
+	/// <c>LightningStore.SettleFixturePackageAttemptAsync</c>. Only the package coordinator calls this.
+	/// </summary>
+	internal ValueTask<bool> SettleSemanticFixturePackageOperationAsync(SemanticFixturePackageOperation root)
+	{
+		if (_fixtureLease is not { } lease || !ReferenceEquals(root.Lease, lease) || _fixtureClosed)
+			throw SemanticFixtureCapability.Unavailable();
+		return Store.SettleFixturePackageAttemptAsync(lease, root);
 	}
 
 	internal void PrepareSemanticFixtureClose()
