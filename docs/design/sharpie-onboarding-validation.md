@@ -22,7 +22,7 @@ supersede earlier statements about missing publication or completed checks.
   and ordinary-player denial were exercised against the isolated server.
 - Whole-branch source review completed; its remaining entry-link localization
   finding is addressed and the fresh full component suite passes.
-- At `e524550fe`, GitHub build, formatting, core/component/integration/plugin
+- At `ee8c82993`, GitHub build, formatting, core/component/integration/plugin
   tests, help integrity, parity, table layout and CodeQL passed. Automated
   Claude review failed before findings; independent review remains the
   substantive review evidence.
@@ -887,3 +887,29 @@ CodeQL checks also passed. Claude review run `39398713297` failed with
 `is_error:true`, one turn, zero model cost and empty model usage; it produced
 no buffered inline comments and does not count as a completed review.
 CodeRabbit explicitly skipped the draft.
+
+### Channel lesson dark-theme contrast (2026-10-20)
+
+Opened the real Welcome preview, selected Discord and its help-channel step.
+Read computed foreground and nearest opaque background colors for rendered
+lesson text, command labels, descriptions, hints and named controls. Main text
+and commands measured 15.11:1; the subdued channel-name hint measured 4.86:1;
+the footer hint measured 5.24:1. These sampled text pairs exceed 4.5:1.
+The check does not establish light-theme, focus-indicator, arbitrary custom-theme
+or screen-reader acceptance. Preview selections did not change account progress.
+
+Evidence: `work/onboarding/dark-channel-contrast.json` and
+`work/onboarding/channel-contrast-preview.png`.
+
+### Daylight source-palette check (2026-10-20)
+
+The built-in Daylight tokens in `SharpMUSH.Contracts/Models/Portal/PortalThemes.cs`
+give body text on the guide's white surface 17.84:1, faint hints 5.66:1,
+accent focus outlines 5.52:1, and faint footer text on the page background
+5.14:1. The guide CSS uses these tokens directly. These are source-palette
+calculations, not rendered light-theme acceptance.
+
+Automatic approval review rejected temporarily selecting Daylight for the
+disposable VeteranPilot because the selection persists a character preference.
+No theme was changed. Explicit approval for changing and restoring that
+preference has been requested; the browser check remains pending.

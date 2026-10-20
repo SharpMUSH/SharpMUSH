@@ -59,6 +59,15 @@ Tab then reaches Open the game. Passive reload does not take focus.
 
 ![Completed mobile journey](completion-focus-mobile.png)
 
+## Administrator keyboard access at 320 pixels
+
+Tab navigation reaches Save game introduction with a visible focus outline,
+clear spacing, and the entire button above the bottom navigation. All 21 form
+and checklist controls stayed within the 320px viewport. This check did not
+change settings or checklist state.
+
+![Administrator save action focused at 320 pixels](admin-mobile-save-focus.png)
+
 See [validation and remaining gates](../sharpie-onboarding-validation.md).
 These screenshots establish appearance of these states, not complete acceptance
 of all routes, accessibility, authentication or artwork.
