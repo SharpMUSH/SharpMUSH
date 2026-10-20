@@ -1,3 +1,4 @@
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Services;
 
 namespace SharpMUSH.Client.Models.Wiki;
@@ -6,7 +7,19 @@ namespace SharpMUSH.Client.Models.Wiki;
 public static class WikiJourneyLinks
 {
 	private static readonly string[] ContextKeys =
-		["browseCollection", "browseQ", "browseCategory", "browseSkip", "membersCollection", "lang", "returnUrl"];
+		["browseCollection", "browseQ", "browseCategory", "browseSkip", "membersCollection", "lang", "returnUrl", "expectedPageId"];
+
+	/// <summary>Opens an authorized entrance at its exact incarnation; the ID constraint grants no access.</summary>
+	public static string Landing(WikiLandingPageDto landing, WikiBrowseState state)
+	{
+		state = state.Normalize();
+		return WithExpectedPageId(Page(landing.Namespace, landing.Slug, state, membersCollection: state.Collection), landing.PageId);
+	}
+
+	/// <summary>Preserves identity only for an explicit same-article locale or fragment link.</summary>
+	public static string SameArticle(string path, string? expectedPageId, WikiBrowseState? state,
+		string? membersCollection = null, int? membersSkip = null, string? locale = null)
+		=> WithExpectedPageId(Article(path, state, membersCollection, membersSkip, locale), expectedPageId);
 
 	public static string Collection(WikiBrowseState state)
 	{
@@ -63,6 +76,19 @@ public static class WikiJourneyLinks
 	private static void Add(Dictionary<string, string> query, string key, string? value)
 	{
 		if (!string.IsNullOrEmpty(value)) query[key] = value;
+	}
+
+	private static string WithExpectedPageId(string path, string? expectedPageId)
+	{
+		if (expectedPageId is null) return path;
+		var fragmentStart = path.IndexOf('#');
+		var fragment = fragmentStart < 0 ? string.Empty : path[fragmentStart..];
+		if (fragmentStart >= 0) path = path[..fragmentStart];
+		var query = WikiBrowseState.ReadQuery(path);
+		var queryStart = path.IndexOf('?');
+		if (queryStart >= 0) path = path[..queryStart];
+		query["expectedPageId"] = expectedPageId;
+		return Append(path, query) + fragment;
 	}
 
 	private static string Append(string path, Dictionary<string, string> query) => query.Count == 0 ? path

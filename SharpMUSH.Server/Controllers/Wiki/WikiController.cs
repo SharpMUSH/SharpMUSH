@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -38,6 +40,23 @@ public class WikiController(
 	IWikiNameResolver names,
 	ILogger<WikiController> logger) : WikiControllerBase(wikiService, localization, access, names, logger)
 {
+	private readonly WikiLandingReaderResolver? _landingReaders;
+	private readonly WikiLandingReadService? _landingRead;
+
+	[ActivatorUtilitiesConstructor]
+	public WikiController(IWikiService wikiService, IWikiLocalizationService localization,
+		IWikiAccessService access, IPrerenderCacheService prerenderCache, IWikiNameResolver names,
+		ILogger<WikiController> logger, WikiLandingReaderResolver landingReaders, WikiLandingReadService landingRead)
+		: this(wikiService, localization, access, prerenderCache, names, logger)
+	{
+		_landingReaders = landingReaders;
+		_landingRead = landingRead;
+	}
+
+	[NonAction]
+	public Task<IActionResult> GetPage(string ns, string slug, string? lang = null)
+		=> GetPageWithIdentity(ns, slug, lang);
+
 	/// <summary>
 	/// GET /api/wiki/ns/{namespace}/{slug}?lang=fr
 	/// Returns JSON page data for a page identified by (namespace, slug), resolved into the
@@ -46,12 +65,34 @@ public class WikiController(
 	/// configured default rather than producing a 400.
 	/// </summary>
 	[HttpGet("ns/{ns}/{slug}")]
-	public async Task<IActionResult> GetPage(string ns, string slug, [FromQuery] string? lang = null)
+	[ActionName(nameof(GetPage))]
+	public async Task<IActionResult> GetPageWithIdentity(string ns, string slug, [FromQuery] string? lang = null,
+		[FromQuery] string? expectedPageId = null)
 	{
-		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage page || !await CanSeeAsync(page))
+		var constrained = expectedPageId is not null || Request.Query.ContainsKey("expectedPageId");
+		if (constrained) Response.Headers.CacheControl = "private, no-store";
+		if (_landingReaders is { } readers)
+		{
+			if (await readers.AuthenticateAsync(HttpContext) is not ClaimsPrincipal principal) return NotFound();
+			HttpContext.User = principal;
+		}
+		else if (OAuthBearerAuthenticationHandler.AppToken(Request) is not null) return NotFound();
+		if (constrained)
+		{
+			if (expectedPageId is not { Length: > 0 and <= 512 }
+				|| expectedPageId.Any(char.IsControl) || expectedPageId != expectedPageId.Trim()
+				|| Request.Query.TryGetValue("expectedPageId", out var values) && values.Count != 1
+				|| _landingRead is not { } read)
+				return NotFound();
+			return await read.ArticleAsync(User, ParseNamespace(ns), slug, expectedPageId, lang, HttpContext.RequestAborted) switch
+			{
+				WikiPageDto page => Ok(page),
+				_ => NotFound()
+			};
+		}
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing || !await CanSeeAsync(existing))
 			return NotFound();
-
-		return Ok(await LocalizedDtoAsync(page, lang));
+		return Ok(await LocalizedDtoAsync(existing, lang));
 	}
 
 	/// <summary>

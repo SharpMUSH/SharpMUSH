@@ -19,13 +19,20 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	/// <summary>The sidebar, the index and the article all ask for the category names at once; they share a request.</summary>
 	private readonly SingleFlight<string, IReadOnlyDictionary<string, string>> _categoryNamesFlight = new();
 
-	public async ValueTask<FoundResult<WikiArticle>> GetWikiArticle(
+	public ValueTask<FoundResult<WikiArticle>> GetWikiArticle(
 		string slug, string? ns = null, string? lang = null)
+		=> GetWikiArticle(slug, ns, lang, expectedPageId: null);
+
+	/// <summary>Reads the canonical article only if it still has the expected page identity; access is checked separately.</summary>
+	public async ValueTask<FoundResult<WikiArticle>> GetWikiArticle(
+		string slug, string? ns, string? lang, string? expectedPageId)
 	{
 		try
 		{
 			var http = httpClientFactory.CreateClient("api");
 			var url = $"api/wiki/ns/{Uri.EscapeDataString(ns ?? "main")}/{Uri.EscapeDataString(slug)}{LangQuery(lang, first: true)}";
+			if (expectedPageId is not null)
+				url += (url.Contains('?') ? "&" : "?") + "expectedPageId=" + Uri.EscapeDataString(expectedPageId);
 			var dto = await http.GetFromJsonAsync<WikiPageDto>(url);
 			return dto is null ? new NotFound() : ToArticle(dto);
 		}

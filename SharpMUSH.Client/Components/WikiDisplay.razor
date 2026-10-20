@@ -182,6 +182,9 @@ else
     [Parameter]
     public string? Locale { get; init; }
 
+    /// <summary>Identity retained on this article's language and fragment links only.</summary>
+    [Parameter] public string? ExpectedPageId { get; init; }
+
     [Parameter] public WikiBrowseState? BrowseState { get; init; }
     [Parameter] public string? MembersCollection { get; init; }
     [Parameter] public int MembersSkip { get; init; }
@@ -453,7 +456,7 @@ else
         ?? [];
 
     private string LocaleHref(string locale) =>
-        JourneyHref(PagePath, locale);
+        WikiJourneyLinks.SameArticle(PagePath, ExpectedPageId, _returnState, MembersCollection, MembersSkip, locale);
 
     /// <summary>
     /// The locale a "Translate this page" link should target. The raw <c>?lang=</c> wins over
@@ -735,7 +738,8 @@ else
     /// <summary>The link for a TOC entry: the page path with the query as addressed now (so a
     /// translated page keeps its <c>?lang=</c>) plus the anchor. A bare <c>#anchor</c> would resolve
     /// against <c>&lt;base href="/"&gt;</c> and leave the page.</summary>
-    private string TocHref(string anchor) => $"{JourneyHref(PagePath + new Uri(Nav.Uri).Query)}#{anchor}";
+    private string TocHref(string anchor) =>
+        $"{WikiJourneyLinks.SameArticle(PagePath + new Uri(Nav.Uri).Query, ExpectedPageId, _returnState, MembersCollection, MembersSkip, Locale)}#{anchor}";
 
     /// <summary>Whether anything remains to show once the banner has taken the first image. A
     /// directive placeholder is an empty element the body hydrates into a listing, so it counts.</summary>

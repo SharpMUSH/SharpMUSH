@@ -12,8 +12,8 @@
     <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
     <PalettePage Kind="wiki" Subject="@($"{Ns}/{Slug}")" Rows="@PaletteRows" />
 
-    <WikiView @key="@($"{Ns}:{Slug}:{Lang}")" Slug="@Slug" Namespace="@Ns"
-              Locale="@Lang" BrowseState="@_browseState" MembersCollection="@_membersCollection" MembersSkip="@_membersSkip"
+    <WikiView @key="(Ns, Slug, Lang, ExpectedPageId)" Slug="@Slug" Namespace="@Ns"
+              Locale="@Lang" ExpectedPageId="@ExpectedPageId" BrowseState="@_browseState" MembersCollection="@_membersCollection" MembersSkip="@_membersSkip"
               Mode="WikiView.WikiMode.View" />
 }
 
@@ -28,6 +28,10 @@
     [SupplyParameterFromQuery(Name = "lang")]
     public string? Lang { get; set; }
 
+    /// <summary>An exact-incarnation constraint from a collection entrance; never an authorization grant.</summary>
+    [SupplyParameterFromQuery(Name = "expectedPageId")]
+    public string? ExpectedPageId { get; set; }
+
     private bool _redirecting;
     private bool _disposed;
     private WikiBrowseState? _browseState;
@@ -40,6 +44,7 @@
     {
         var query = WikiBrowseState.ReadQuery(Nav.Uri);
         Lang = WikiLocaleLinks.FromUri(Nav.Uri);
+        ExpectedPageId = query.GetValueOrDefault("expectedPageId");
         _browseState = !string.IsNullOrWhiteSpace(query.GetValueOrDefault("browseCollection"))
             ? new WikiBrowseState(query["browseCollection"], query.GetValueOrDefault("browseQ"), query.GetValueOrDefault("browseCategory"),
                 WikiBrowseState.ParseSkip(query.GetValueOrDefault("browseSkip")), Lang).Normalize()
