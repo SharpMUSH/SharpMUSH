@@ -997,11 +997,68 @@ and help integrity all passed.
 The art inventory has 133 of 252 slots represented and 171 retained versions.
 Independent QA rejected all four Exploration pilot versions after three bounded
 generative repairs: broad interior gradients and granular cyan edges persisted;
-the final version also introduced a detached green speck. Generation stopped
-pending a decision on one SVG comparison pilot. No failed asset was promoted.
+the final version also introduced a detached green speck. No failed asset was
+promoted. The user subsequently chose fresh image generation with transparency
+included from the start, rather than an SVG comparison or further repair passes.
+The fresh Exploration pilot and independent edge/anatomy review are in progress.
 
-Outstanding user input: authorization for the disposable first-admin claim,
-the previously identified disposable-account recovery, temporary Daylight theme
-selection/restoration, native zoom/screen-reader acceptance, and the artwork
-method decision. A real external-provider round trip additionally requires a
-configured test provider. These are not completed acceptance checks.
+The disposable local tests are authorized; their execution status is recorded
+below. Native zoom/screen-reader acceptance remains unverified. A real
+external-provider round trip additionally requires a configured test provider.
+These are not completed acceptance checks.
+
+### Authorized local-test continuation (2026-10-20)
+
+The user explicitly approved the disposable local tests. VeteranPilot's theme
+was changed from Game default to Daylight through Settings. Rendered channel
+commands and controls used RGB(20,24,28) on white (17.84:1); the muted hint used
+RGB(95,104,114) on white (5.66:1). Restored Game default and verified the selected
+radio and Phosphor/Dark appearance. Screenshot: `work/onboarding/daylight-channels.png`.
+
+Claimed only the new port18081 administrator through the normal setup endpoint,
+with private credentials saved mode0600. Status changed to `needsSetup:false`
+and the authenticated wizard returned 200 with `pending:true`. The remaining
+wizard was not completed. Browser execution then timed out amid shell process
+resource failures; both local HTTP previews were subsequently confirmed down.
+Restarted only the isolated setup server against its existing broker and saved
+world; status remained `needsSetup:false`. The empty-account recovery did not
+mutate credentials or create a character before that interruption.
+
+### Fresh-world browser completion (2026-10-20)
+
+Rechecked the isolated server on 18081: it was healthy outside the network
+sandbox and retained `needsSetup:false`. Signed in as its disposable admin,
+opened `/setup`, and resumed at the import/new-game choice. Selected Start a
+new game, saved a local pilot name and welcome, kept the existing HTTP/event
+handlers, and reached `/setup?step=packages`. Reloading preserved Step 5 and
+the package selection. Saving the default packages and starter wiki reached
+“Setup complete. You are the administrator.” Screenshot:
+`work/onboarding/fresh-setup-complete.png`.
+
+This verifies the new-world route and package-step reload in the browser;
+imported-world preservation remains a separate outstanding check.
+
+### Imported-world fixture prepared (2026-10-20)
+
+Uploaded the repository's `tinymux-v2.flat` with a test `mush.cnf` naming
+Imported Journey Pilot, Fantasy / High Fantasy into the isolated 18081 fixture.
+Preview `6118b1b11ba849849f53be9e5aca4889` reached Ready with three converted
+objects, no errors, and documented TinyMUX compatibility/object-remapping
+warnings. Promoted through the normal restart-confirmation endpoint, verified
+shutdown, and restarted the fixture; its startup log confirms it is listening.
+The browser attempted navigation before startup finished and is now on a
+connection-error page whose data URL the browser tool refuses to reload.
+Post-import browser identity/resume verification is not yet complete.
+
+### Imported-world authentication regression (2026-10-20)
+
+A fresh browser tab successfully reached the restarted fixture and showed the
+imported game name. The original portal administrator's previously verified
+credentials were rejected. Setup status still reports `needsSetup:false`;
+the restart log says a new unclaimed admin was generated. The isolated import
+worker carries configuration/secrets but no existing portal account identity,
+while importing #1's password marks setup completed. Imported-world acceptance
+is therefore failed, not merely untested. Repair is tracked in
+[issue #2078](https://github.com/SharpMUSH/SharpMUSH/issues/2078), including
+credential-factor preservation, safe ownership/session handling, and real
+promotion/rollback coverage. No production world was affected.
