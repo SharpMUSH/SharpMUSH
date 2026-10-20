@@ -49,6 +49,16 @@ internal sealed partial class SemanticFixtureCapability
 			return true;
 		}
 	}
+	internal void RequirePackageAttempt(SemanticFixtureLease lease)
+	{
+		lock (_gate)
+		{
+			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease)
+				|| !_initialized || !lease.IsInitialized || _phase != SemanticFixturePhase.Inactive
+				|| _ownership.IsRevoked || _ownership.IsQuarantined || _poisoned) throw Unavailable();
+			_everMutatingPackageAdmitted = true;
+		}
+	}
 	internal SemanticFixtureMutationLease EnterMutation(SemanticFixtureMutation operation)
 	{
 		lock (_gate)

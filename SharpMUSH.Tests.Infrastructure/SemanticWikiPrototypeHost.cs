@@ -101,8 +101,8 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 		services.AddSingleton<PackageOperationRunner>();
 		services.RemoveAll<IPackageInstallService>();
 		services.RemoveAll<IPackageOperationRunner>();
-		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability));
-		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability));
+		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
+		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
 		_configureTestServices?.Invoke(services);
 	}
 

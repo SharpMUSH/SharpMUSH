@@ -19,6 +19,33 @@ public sealed partial class LightningStore
 		_fixturePackageTracking = new(owner);
 	}
 
+	// A conservative attempt fence: successful return proves only a committed UNKNOWN marker.
+	// The writer owns completion through commit; cancellation never detaches an in-flight transaction.
+	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct)
+	{
+		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Owner, lease.Owner))
+			throw SemanticFixtureCapability.Unavailable();
+		tracking.Owner.RequirePackageAttempt(lease);
+		ct.ThrowIfCancellationRequested();
+		return _writer.EnqueueRawAsync(tx =>
+		{
+			// The raw writer has acquired this store's native lifetime gate before this recheck.
+			tracking.Owner.RequirePackageAttempt(lease);
+			ct.ThrowIfCancellationRequested();
+			var meta = _tables[Tables.Meta];
+			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId)
+				throw SemanticFixtureCapability.Unavailable();
+			var generation = checked(ReadFixturePackageGeneration(tx, meta, lease.FixtureId) + 1);
+			Span<byte> state = stackalloc byte[32];
+			EncodeUnknownPackageState(state, lease.FixtureId, generation);
+			var code = tx.Put(meta, FixturePackageStateKey, state);
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "begin fixture package attempt");
+			ct.ThrowIfCancellationRequested();
+			Commit(tx);
+			return generation;
+		}, ct);
+	}
+
 	private void RefuseUnclassifiedFixtureWrite()
 	{
 		if (_fixturePackageTracking is not { } tracking) return;
