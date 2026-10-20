@@ -9,19 +9,45 @@ public class BoundedDuplicateReadTests
 {
 	private const string FullRows = "4020:10|4020:1000|4020:80|4020:FF0102";
 
-	private LightningStore Open(string? existing = null)
+	private static OwnedWorld Open(string? existing = null, bool preserveFiles = false) => new(existing, preserveFiles);
+
+	private sealed class OwnedWorld : IDisposable
 	{
-		// Root owns cleanup after terminal completion and verified native closure. Retain every
-		// unique world if construction/disposal fails; an After(Test) hook cannot certify closure.
-		var scratch = Path.GetFullPath(Environment.GetEnvironmentVariable("TMPDIR")
-			?? Path.Combine(AppContext.BaseDirectory, "work", "snapshot-primitive-tests"));
-		if (scratch is "/tmp" or "/var/tmp"
-			|| scratch.StartsWith("/tmp/", StringComparison.Ordinal)
-			|| scratch.StartsWith("/var/tmp/", StringComparison.Ordinal))
-			throw new InvalidOperationException("Bounded duplicate fixtures require disk-backed TMPDIR.");
-		Directory.CreateDirectory(scratch);
-		var path = existing ?? Path.Combine(scratch, "duplicates-" + Guid.NewGuid().ToString("N"));
-		return new LightningStore(new LightningStoreOptions { Path = path, MapSize = 256L << 20 });
+		private readonly string _path;
+		private readonly bool _preserveFiles;
+		private bool _disposeStarted;
+		public LightningStore Store { get; }
+		public OwnedWorld(string? existing, bool preserveFiles)
+		{
+			var scratch = Path.GetFullPath(Environment.GetEnvironmentVariable("TMPDIR")
+				?? Path.Combine(AppContext.BaseDirectory, "work", "snapshot-primitive-tests"));
+			if (scratch is "/tmp" or "/var/tmp"
+				|| scratch.StartsWith("/tmp/", StringComparison.Ordinal)
+				|| scratch.StartsWith("/var/tmp/", StringComparison.Ordinal))
+				throw new InvalidOperationException("Bounded duplicate fixtures require disk-backed TMPDIR.");
+			for (string? ancestor = scratch; ancestor is not null; ancestor = Path.GetDirectoryName(ancestor))
+				if ((Directory.Exists(ancestor) || File.Exists(ancestor))
+					&& (File.GetAttributes(ancestor) & FileAttributes.ReparsePoint) != 0)
+					throw new InvalidOperationException("Linked fixture scratch ancestor refused.");
+			Directory.CreateDirectory(scratch);
+			_path = existing ?? Path.Combine(scratch, "duplicates-" + Guid.NewGuid().ToString("N"));
+			_preserveFiles = preserveFiles;
+			if (existing is null && (Directory.Exists(_path) || File.Exists(_path)))
+				throw new InvalidOperationException("Owned world already exists.");
+			if (existing is not null && (!Directory.Exists(_path) || Path.GetDirectoryName(_path) != scratch
+				|| !Path.GetFileName(_path).StartsWith("duplicates-", StringComparison.Ordinal)))
+				throw new InvalidOperationException("Reopen requires this fixture's retained world.");
+			// Constructor failures retain the path: no owner was returned to certify native closure.
+			Store = new LightningStore(new LightningStoreOptions { Path = _path, MapSize = 256L << 20 });
+		}
+		public void Dispose()
+		{
+			if (_disposeStarted) return;
+			_disposeStarted = true;
+			// A failing first close must never be mistaken for confirmed closure by a later retry.
+			Store.Dispose();
+			if (!_preserveFiles) Directory.Delete(_path, recursive: true);
+		}
 	}
 
 	// Fixture allowances, not a proposed authorization request envelope.
@@ -71,7 +97,8 @@ public class BoundedDuplicateReadTests
 	public async Task ExactRunAndStrictContinuationHaveLiteralOrderAndAccounting(
 		string? afterHex, string expected, int probes, long bytes, int records)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget();
 		var after = afterHex is null ? null : Convert.FromHexString(afterHex);
@@ -95,7 +122,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(true)]
 	public async Task MissingExactKeyDoesNotAdmitItsNeighbors(bool resume)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = store.OpenTable("bounded.missing", duplicates: true);
 		await store.WriteAsync(tx =>
 		{
@@ -116,7 +144,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(true)]
 	public async Task NullAndEmptyContinuationAlsoReadSingletonInlineValue(bool emptyContinuation)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = store.OpenTable("bounded.singleton", duplicates: true);
 		await store.WriteAsync(tx => tx.Put(table, [0x23], [0x80, 0x01]));
 		var budget = Budget();
@@ -133,7 +162,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(129, 133, 260L, "44:81")]
 	public async Task Local128BoundaryContinuesInsideTheSameCallbackAndBudget(int rows, int probes, long bytes, string tail)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = store.OpenTable("bounded.boundary", duplicates: true);
 		await store.WriteAsync(tx =>
 		{
@@ -168,7 +198,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task Shared128RecordLimitRefusesThe129thInsteadOfReturningTruncation()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = store.OpenTable("bounded.shared-records", duplicates: true);
 		await store.WriteAsync(tx =>
 		{
@@ -201,7 +232,8 @@ public class BoundedDuplicateReadTests
 		string dimension, int maxProbes, long maxBytes, int? maxRecords, string? afterHex,
 		int probes, long bytes, int records)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget(maxProbes, maxBytes, records: maxRecords);
 		var after = afterHex is null ? null : Convert.FromHexString(afterHex);
@@ -221,7 +253,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(1900L)]
 	public async Task WorkingLimitRefusesBeforeStagingEntryOrFinalOverlapAndCleansUp(long working)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget(working: working);
 		var error = Capture(() =>
@@ -246,7 +279,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task FailedDuplicateReadSharesPointRecordAllowanceAndRetainsPriorOwner()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		await store.WriteAsync(tx => tx.Put(Tables.Meta, [9], [7]));
 		var budget = Budget(records: 2);
@@ -277,8 +311,9 @@ public class BoundedDuplicateReadTests
 	public async Task ActualFlagsWinOverCounterfeitDefinitionsAndPersistedReopen()
 	{
 		string path;
-		using (var store = Open())
+		using (var world = Open(preserveFiles: true))
 		{
+			var store = world.Store;
 			path = store.Path;
 			var variable = await Seed(store);
 			using var accepted = store.Read(tx => Checked(tx).ReadDuplicates(TableDef.Node(variable.Name), [0x40, 0x20], null, Budget()));
@@ -297,7 +332,8 @@ public class BoundedDuplicateReadTests
 				await Assert.That((budget.Probes, budget.Bytes, budget.Records, budget.WorkingBytes)).IsEqualTo((0, 0L, 0, 0L));
 			}
 		}
-		using var reopened = Open(path);
+		using var reopenedWorld = Open(path);
+		var reopened = reopenedWorld.Store;
 		var declaredPlain = reopened.OpenTable("bounded.duplicates", duplicates: false);
 		using var persisted = reopened.Read(tx => Checked(tx).ReadDuplicates(declaredPlain, [0x40, 0x20], null, Budget()));
 		await Assert.That(Rows(persisted)).IsEqualTo(FullRows);
@@ -306,7 +342,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task UnknownTableDoesNotCreateOrChargeACursor()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var budget = Budget();
 		var error = Capture(() =>
 		{
@@ -319,7 +356,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task PrecancellationPreservesTokenWithoutNativeWork()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		using var cancellation = new CancellationTokenSource();
 		cancellation.Cancel();
@@ -334,7 +372,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task NativeInvalidKeyRemainsAnErrorAndReleasesCursorAccounting()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget();
 		var error = Capture(() => { using var batch = store.Read(tx => Checked(tx).ReadDuplicates(table, [], null, budget)); });
@@ -347,7 +386,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task CopiedBatchOutlivesCallbackAndOnlyReleasesItsOwnReservation()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget();
 		using var inputOwner = budget.ReserveWorking(32);
@@ -374,7 +414,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(true)]
 	public async Task EscapedCapabilityRejectsBeforeChargesEvenDuringAFreshCallback(bool callbackThrows)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		IBoundedDuplicateReadTx? escaped = null;
 		var sentinel = new InvalidOperationException("callback failure");
@@ -403,7 +444,8 @@ public class BoundedDuplicateReadTests
 	[Test]
 	public async Task WriteWrapperRejectsReadOnlyDuplicateCapabilityWithoutCharges()
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = await Seed(store);
 		var budget = Budget();
 		var error = await store.WriteAsync(tx => Capture(() =>
@@ -418,7 +460,8 @@ public class BoundedDuplicateReadTests
 	[Arguments(true)]
 	public async Task LocalByteCapChargesLookaheadAndStrictResumeOrSharedRefusal(bool sharedCap)
 	{
-		using var store = Open();
+		using var world = Open();
+		var store = world.Store;
 		var table = store.OpenTable("bounded.byte-cap", duplicates: true);
 		await store.WriteAsync(tx =>
 		{
