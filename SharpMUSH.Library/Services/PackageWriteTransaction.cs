@@ -77,6 +77,8 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 	private static readonly AsyncLocal<OwnedExecution?> CurrentExecution = new();
 	private bool _committed;
 	private TaskCompletionSource? _forward;
+	// The innermost admission holding _forward: a single write, or a helper and the writes it nests.
+	private Holder? _holder;
 	private Task<IReadOnlyList<string>>? _recovery;
 	private bool _reportImplicitFailure;
 
@@ -196,27 +198,71 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 		}
 	}
 
-	private IDisposable AdmitWrite()
+	private IDisposable AdmitWrite() => Admit(helper: false);
+
+	/// <summary>
+	/// Admits a package helper's direct execution, before it gathers state, runs a caller's callback
+	/// or writes. Until the returned admission is disposed, the helper's own flow may call this
+	/// transaction's writes and <see cref="Track"/>; independent work is refused, and closing waits
+	/// for it before compensating. Once closing has begun, the helper's further writes are refused,
+	/// while its <see cref="Track"/> of a write it already made is still recorded and undone.
+	/// Dispose it after the helper's last write and its tracking: <c>using var admitted = writes.AdmitHelper();</c>
+	/// </summary>
+	internal IDisposable AdmitHelper() => Admit(helper: true);
+
+	private Holder Admit(bool helper)
 	{
 		lock (_stateGate)
 		{
 			RequireOpen();
-			RequireIdle();
-			_forward = new(TaskCreationOptions.RunContinuationsAsynchronously);
-			return new ForwardWrite(this, _forward, new OwnedExecution(this));
+			if (_holder is null)
+			{
+				RequireIdle();
+				_forward = new(TaskCreationOptions.RunContinuationsAsynchronously);
+			}
+			else if (!HeldByHelperHere())
+			{
+				RequireIdle();
+			}
+
+			return _holder = new Holder(this, helper, _holder, new OwnedExecution(this));
 		}
 	}
 
-	private sealed class ForwardWrite(PackageWriteTransaction transaction, TaskCompletionSource completion, OwnedExecution execution) : IDisposable
+	/// <summary>Whether the innermost admission is a helper's, and the current flow is running inside it.</summary>
+	private bool HeldByHelperHere()
+	{
+		if (_holder is not { Helper: true } holder) return false;
+		for (var execution = CurrentExecution.Value; execution is not null; execution = execution.Parent)
+		{
+			if (ReferenceEquals(execution, holder.Execution)) return execution.IsActive;
+		}
+
+		return false;
+	}
+
+	private sealed class Holder(PackageWriteTransaction transaction, bool helper, Holder? outer, OwnedExecution execution) : IDisposable
 	{
 		private PackageWriteTransaction? _transaction = transaction;
+		public bool Helper { get; } = helper;
+		public OwnedExecution Execution { get; } = execution;
 
 		public void Dispose()
 		{
 			if (Interlocked.Exchange(ref _transaction, null) is not { } owner) return;
-			execution.Dispose();
-			lock (owner._stateGate) owner._forward = null;
-			completion.SetResult();
+			Execution.Dispose();
+			TaskCompletionSource? completion = null;
+			lock (owner._stateGate)
+			{
+				owner._holder = outer;
+				if (outer is null)
+				{
+					completion = owner._forward;
+					owner._forward = null;
+				}
+			}
+
+			completion?.SetResult();
 		}
 	}
 
@@ -282,15 +328,23 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 	}
 
 	/// <summary>
-	/// Records a write made outside this class with its inverse, for a store it does not cover: the
-	/// role registry (<see cref="IPackageDeclarationService"/>).
+	/// Records a write made outside this class with its inverse, for a store it does not cover: roles,
+	/// wiki pages and configuration. A helper calls it inside its <see cref="AdmitHelper"/> admission.
 	/// </summary>
 	public void Track(string what, Func<Task> revert)
 	{
 		lock (_stateGate)
 		{
-			RequireOpen();
-			RequireIdle();
+			if (!HeldByHelperHere())
+			{
+				RequireOpen();
+				RequireIdle();
+			}
+			else if (_committed)
+			{
+				RequireOpen();
+			}
+
 			_undo.Push((what, revert));
 		}
 	}
