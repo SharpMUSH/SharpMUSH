@@ -2,18 +2,21 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
-using SharpMUSH.Server.Hubs;
+using SharpMUSH.Server.Authentication;
 
 namespace SharpMUSH.Tests.Packages;
 
@@ -134,15 +137,80 @@ public class ThreePackWikiAcceptanceTests
 	private async Task<T> WithReader<T>(Func<WikiCollectionsController, Task<T>> request, params string[] permissions)
 	{
 		await using var scope = World.Services.CreateAsyncScope();
-		var controller = ActivatorUtilities.CreateInstance<WikiCollectionsController>(scope.ServiceProvider);
-		var user = permissions.Length == 0 ? new ClaimsPrincipal(new ClaimsIdentity())
-			: new ClaimsPrincipal(new ClaimsIdentity(permissions.Select(scope => new Claim(PortalPermission.ClaimType, scope))
-				.Append(new Claim(GameHub.CharacterDbrefClaim, "#42")), "fixture-request"));
-		controller.ControllerContext = new ControllerContext
+		var services = scope.ServiceProvider;
+		var contexts = services.GetRequiredService<IHttpContextAccessor>();
+		var previous = contexts.HttpContext;
+		var context = new DefaultHttpContext
 		{
-			HttpContext = new DefaultHttpContext { User = user, RequestServices = scope.ServiceProvider }
+			RequestServices = services,
+			User = new ClaimsPrincipal(new ClaimsIdentity())
 		};
-		return await request(controller);
+		string? token = null;
+		IAccountSessionStore? sessions = null;
+		contexts.HttpContext = context;
+		try
+		{
+			if (permissions.Length > 0)
+			{
+				var wikiScopes = PortalPermission.AllScopes.Where(permission => permission.StartsWith("wiki.", StringComparison.Ordinal)).ToArray();
+				var requested = permissions.ToHashSet(StringComparer.Ordinal);
+				if (requested.Any(permission => !wikiScopes.Contains(permission, StringComparer.Ordinal)))
+					throw new InvalidOperationException("The three-pack fixture accepts only known wiki permissions.");
+				var accounts = services.GetRequiredService<IAccountService>();
+				var database = services.GetRequiredService<ISharpDatabase>();
+				var roles = services.GetRequiredService<IRoleRegistryService>();
+				var name = "threepack" + Guid.NewGuid().ToString("N")[..12];
+				var account = (await accounts.CreateAccountAsync(name, null, "Three-Pack-Native-Account-83!")).Expect<SharpAccount>();
+				var accountId = account.Id ?? throw new InvalidOperationException("Native reader account has no ID.");
+				var created = await database.CreatePlayerAsync(name, "Three-Pack-Native-Character-83!", new DBRef(0), new DBRef(0), 0);
+				var character = (await database.GetObjectNodeAsync(created)).Expect<SharpPlayer>();
+				await accounts.LinkCharacterAsync(accountId, character.Object.DBRef);
+				await Assert.That((await accounts.GetCharactersAsync(accountId)).Single().Object.DBRef).IsEqualTo(character.Object.DBRef);
+				foreach (var permission in wikiScopes)
+				{
+					// Explicit child denies preserve the existing admin-without-drafts fixture. The
+					// role resolver's umbrella inheritance must not silently add another requested role.
+					var state = requested.Contains(permission) ? PermissionState.Allow : PermissionState.Deny;
+					await roles.SetAccountOverrideAsync(accountId, permission, state);
+					await roles.SetObjectOverrideAsync(character.Object.Key, permission, state);
+				}
+				var capabilities = services.GetRequiredService<IAdministrativeCapabilityService>();
+				var active = await capabilities.GetGrantedScopesAsync(new(accountId, character.Object.DBRef, character.Object.DBRef));
+				var accountOnly = await capabilities.GetGrantedScopesAsync(new(accountId));
+				await Assert.That(active.Where(permission => permission.StartsWith("wiki.", StringComparison.Ordinal))).IsEquivalentTo(requested);
+				await Assert.That(accountOnly.Where(permission => permission.StartsWith("wiki.", StringComparison.Ordinal))).IsEquivalentTo(requested);
+				sessions = services.GetRequiredService<IAccountSessionStore>();
+				token = await sessions.CreateTokenAsync(accountId, TimeSpan.FromMinutes(15), "unknown",
+					character.Object.Key, character.Object.CreationTime);
+				var bound = (await sessions.InspectAsync(token)).Expect<IAccountSessionStore.SessionIdentity>();
+				await Assert.That(bound.AccountId).IsEqualTo(accountId);
+				await Assert.That(bound.CharacterKey).IsEqualTo(character.Object.Key);
+				await Assert.That(bound.CharacterCreationTime).IsEqualTo(character.Object.CreationTime);
+				context.Request.Headers.Authorization = "Bearer " + token;
+				var authenticated = await context.AuthenticateAsync(AccountSessionAuthenticationHandler.SchemeName);
+				await Assert.That(authenticated.Succeeded).IsTrue();
+				context.User = authenticated.Principal ?? throw new InvalidOperationException("Real account-session authentication produced no principal.");
+				await Assert.That(context.User.Identity?.AuthenticationType).IsEqualTo(AccountSessionAuthenticationHandler.SchemeName);
+				await Assert.That(context.User.Identity?.IsAuthenticated == true).IsTrue();
+				await Assert.That(context.User.FindFirstValue(ClaimTypes.NameIdentifier)).IsEqualTo(accountId);
+				await Assert.That(AccountSessionAuthenticationHandler.ActingCharacter(context.User)).IsEqualTo((DBRef?)character.Object.DBRef);
+				await Assert.That(context.User.FindAll(PortalPermission.ClaimType).Select(claim => claim.Value)
+					.Where(permission => permission.StartsWith("wiki.", StringComparison.Ordinal))).IsEquivalentTo(requested);
+			}
+			else
+			{
+				await Assert.That(context.User.Identities.Any(identity => identity.IsAuthenticated)).IsFalse();
+				await Assert.That(context.Request.Headers.Authorization.Count).IsEqualTo(0);
+			}
+			var controller = ActivatorUtilities.CreateInstance<WikiCollectionsController>(services);
+			controller.ControllerContext = new ControllerContext { HttpContext = context };
+			return await request(controller);
+		}
+		finally
+		{
+			try { if (token is not null && sessions is not null) await sessions.RevokeAsync(token); }
+			finally { contexts.HttpContext = previous; }
+		}
 	}
 
 	private static T Value<T>(IActionResult response) => response is OkObjectResult { Value: T value }

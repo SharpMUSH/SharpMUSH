@@ -1,8 +1,10 @@
 using System.Net;
+using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Server.Services;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Wiki;
@@ -53,6 +55,105 @@ public class WikiLandingFreshnessTests
 			await Assert.That(deniedBody).DoesNotContain(package.Page.Title);
 		}
 		finally { await LandingFreshNative.CleanupAsync(Factory, package, reader); }
+	}
+
+	[Test]
+	[Arguments("members")]
+	[Arguments("ordinary-article")]
+	public async Task CharacterOverrideAgreesAcrossEntranceMembersAndOrdinaryRead(string endpoint)
+	{
+		var reader = await LandingFreshNative.ReaderAsync(Factory, drafts: false);
+		LandingNativePackage? package = null;
+		string? secondSession = null;
+		var sessions = Factory.Services.GetRequiredService<IAccountSessionStore>();
+		var roles = LandingFreshNative.Roles(Factory);
+		try
+		{
+			var db = LandingFreshNative.Database(Factory);
+			var otherId = await db.CreatePlayerAsync("landingother" + Guid.NewGuid().ToString("N")[..12],
+				"Fresh-Landing-Other-Character-83!", new SharpMUSH.Library.Models.DBRef(0), new SharpMUSH.Library.Models.DBRef(0), 0);
+			var other = (await db.GetObjectNodeAsync(otherId)).Expect<SharpMUSH.Library.Models.SharpPlayer>();
+			await Factory.Services.GetRequiredService<IAccountService>().LinkCharacterAsync(reader.AccountId, other.Object.DBRef);
+			secondSession = await sessions.CreateTokenAsync(reader.AccountId, TimeSpan.FromMinutes(15), "unknown", other.Object.Key, other.Object.CreationTime);
+			var secondReader = new LandingNativeReader(reader.AccountId, other, secondSession);
+			await roles.SetObjectOverrideAsync(reader.Character.Object.Key, PortalPermission.WikiAdmin, PermissionState.Allow);
+			await Assert.That((await LandingFreshNative.HeldAsync(Factory, reader)).Contains(PortalPermission.WikiAdmin)).IsTrue();
+			await Assert.That((await LandingFreshNative.HeldAsync(Factory, secondReader)).Contains(PortalPermission.WikiAdmin)).IsFalse();
+			package = await LandingFreshNative.InstallAsync(Factory);
+			(await LandingFreshNative.Wiki(Factory).SetRequirementsAsync(WikiRuleTarget.ForPage(package.Page.Id),
+				new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = [PortalPermission.WikiAdmin] }, "#1")).Expect<None>();
+			var article = "api/wiki/ns/main/" + Uri.EscapeDataString(package.Page.Slug);
+			var exact = article + "?expectedPageId=" + Uri.EscapeDataString(package.Page.Id);
+			var navigation = "api/wiki/navigation?collection=" + Uri.EscapeDataString("package:" + package.Manifest.Name);
+			var members = "api/wiki/collections/" + Uri.EscapeDataString("package:" + package.Manifest.Name) + "/pages";
+			using var first = LandingFreshNative.Client(Factory, reader.Session);
+			using (var allowed = await first.GetAsync(exact)) await Assert.That(allowed.StatusCode).IsEqualTo(HttpStatusCode.OK);
+			using (var response = await first.GetAsync(navigation))
+			{
+				await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+				using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+				await Assert.That(Text(Landing(json.RootElement) ?? throw new InvalidOperationException("Active character's allowed entrance is absent."), "PageId")).IsEqualTo(package.Page.Id);
+				await Assert.That(json.RootElement.GetProperty("total").GetInt32()).IsEqualTo(2);
+			}
+			using (var response = await first.GetAsync(endpoint == "members" ? members : article))
+			{
+				await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+				using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+				if (endpoint == "members")
+				{
+					await Assert.That(response.Headers.GetValues("X-Total-Count").Single()).IsEqualTo("2");
+					await Assert.That(json.RootElement.EnumerateArray().Any(row => Text(row, "Id") == package.Page.Id)).IsTrue();
+				}
+				else await Assert.That(Text(json.RootElement, "Id")).IsEqualTo(package.Page.Id);
+			}
+			using var second = LandingFreshNative.Client(Factory, secondSession);
+			using (var denied = await second.GetAsync(navigation))
+			{
+				await Assert.That(denied.StatusCode).IsEqualTo(HttpStatusCode.OK);
+				using var json = JsonDocument.Parse(await denied.Content.ReadAsStringAsync());
+				await Assert.That(Landing(json.RootElement)).IsNull();
+				await Assert.That(json.RootElement.GetProperty("total").GetInt32()).IsEqualTo(1);
+			}
+			using (var response = await second.GetAsync(members))
+			{
+				await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+				await Assert.That(response.Headers.GetValues("X-Total-Count").Single()).IsEqualTo("1");
+				await Assert.That(await response.Content.ReadAsStringAsync()).DoesNotContain(package.Page.Id);
+			}
+			foreach (var path in new[] { article, exact })
+			{
+				using var denied = await second.GetAsync(path);
+				await Assert.That(denied.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+				await Assert.That(await denied.Content.ReadAsStringAsync()).DoesNotContain(package.Page.Title);
+			}
+		}
+		finally
+		{
+			if (secondSession is not null) await sessions.RevokeAsync(secondSession);
+			await roles.SetObjectOverrideAsync(reader.Character.Object.Key, PortalPermission.WikiAdmin, PermissionState.Inherit);
+			await LandingFreshNative.CleanupAsync(Factory, package, reader);
+		}
+	}
+
+	[Test]
+	[Arguments("fixture-request", false)]
+	[Arguments("debugauth", false)]
+	[Arguments("AccountSession", true)]
+	[Arguments("DebugAuth", true)]
+	public async Task UnknownOrMixedAuthenticatedIdentitiesCannotSupplyWikiScopes(string scheme, bool mixed)
+	{
+		var identity = new ClaimsIdentity(new[]
+		{
+			new Claim(ClaimTypes.NameIdentifier, "unissued-account"),
+			new Claim(PortalPermission.ClaimType, PortalPermission.WikiAdmin),
+			new Claim(PortalPermission.ClaimType, PortalPermission.WikiRead)
+		}, scheme);
+		var principal = new ClaimsPrincipal(identity);
+		if (mixed) principal.AddIdentity(new ClaimsIdentity([new Claim(PortalPermission.ClaimType, PortalPermission.WikiAdmin)], "untrusted"));
+		using var scope = Factory.Services.CreateScope();
+		var reader = await scope.ServiceProvider.GetRequiredService<WikiLandingReaderResolver>().ResolveAsync(principal, CancellationToken.None);
+		await Assert.That(reader.Has(PortalPermission.WikiRead)).IsFalse();
+		await Assert.That(reader.Has(PortalPermission.WikiAdmin)).IsFalse();
 	}
 
 	private static JsonElement? Landing(JsonElement json)

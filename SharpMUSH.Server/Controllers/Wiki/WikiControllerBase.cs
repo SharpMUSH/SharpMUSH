@@ -33,6 +33,13 @@ public abstract class WikiControllerBase(
 {
 	private WikiReader? _reader;
 
+	/// <summary>Installs the server-resolved reader for this action's inherited visibility and DTO gates.</summary>
+	protected void UseReader(WikiReader reader)
+	{
+		ArgumentNullException.ThrowIfNull(reader);
+		_reader = reader;
+	}
+
 	/// <summary>Who may read, edit and delete which page; every gate in these controllers asks it.</summary>
 	protected IWikiAccessService Access { get; } = access;
 
@@ -69,9 +76,8 @@ public abstract class WikiControllerBase(
 	}
 
 	/// <summary>
-	/// The caller as a wiki reader: the permission claims the request was authenticated with (rebuilt from
-	/// the account's roles on every request) and the acting character's dbref; an anonymous caller holds
-	/// what the <c>everyone</c> role grants. Read once per request.
+	/// The action's installed reader, or its legacy permission-claim reader when no reader was installed.
+	/// An anonymous caller holds what the <c>everyone</c> role grants. Read once per request.
 	/// </summary>
 	protected async Task<WikiReader> ReaderAsync()
 		=> _reader ??= User.Identity?.IsAuthenticated == true

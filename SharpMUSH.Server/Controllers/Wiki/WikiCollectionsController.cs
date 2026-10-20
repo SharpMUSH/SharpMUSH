@@ -74,11 +74,10 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		{
 			if (await readers.AuthenticateAsync(HttpContext) is not ClaimsPrincipal principal) return NotFound();
 			HttpContext.User = principal;
+			UseReader(await readers.ResolveAsync(User, HttpContext.RequestAborted));
 		}
 		else if (OAuthBearerAuthenticationHandler.AppToken(Request) is not null) return NotFound();
-		var visibility = _landingReaders is { } fresh
-			? await Access.VisibilityAsync(await fresh.ResolveAsync(User, HttpContext.RequestAborted))
-			: await VisibilityAsync();
+		var visibility = await VisibilityAsync();
 		var membership = await MembershipAsync();
 		if (collection is null && page is { Length: > 0 and <= 512 })
 		{
@@ -145,6 +144,9 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		[FromQuery] string? category = null, [FromQuery] string? search = null, [FromQuery] string? lang = null)
 	{
 		if (search?.Length > 200) return BadRequest("Search must be at most 200 characters.");
+		// Use only the already-authenticated principal here. This endpoint does not opt into OAuth.
+		if (_landingReaders is { } readers)
+			UseReader(await readers.ResolveAsync(User, HttpContext.RequestAborted));
 		var membership = await MembershipAsync();
 		var visibility = Select(await VisibilityAsync(), membership, collection);
 		// Test collection visibility before search: zero search matches must be an empty page, not a missing collection.

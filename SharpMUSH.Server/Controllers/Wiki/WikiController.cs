@@ -90,6 +90,8 @@ public class WikiController(
 				_ => NotFound()
 			};
 		}
+		if (_landingReaders is { } fresh)
+			UseReader(await fresh.ResolveAsync(User, HttpContext.RequestAborted));
 		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing || !await CanSeeAsync(existing))
 			return NotFound();
 		return Ok(await LocalizedDtoAsync(existing, lang));

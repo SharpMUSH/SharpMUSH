@@ -9,7 +9,7 @@ using SharpMUSH.Server.Hubs;
 
 namespace SharpMUSH.Server.Services;
 
-/// <summary>Optional wiki authentication and fresh authority for the two landing-aware reads.</summary>
+/// <summary>Optional authentication for navigation/canonical articles and shared reader authority for collection reads.</summary>
 public sealed class WikiLandingReaderResolver(
 	IAdministrativeCapabilityService capabilities, DelegatedPermissions delegated, IWikiAccessService access)
 {
@@ -27,6 +27,11 @@ public sealed class WikiLandingReaderResolver(
 		if (authenticated.Length == 0) return await access.AnonymousAsync(ct);
 		if (authenticated is not [var identity]) return WikiReader.From([], null);
 		var principal = new ClaimsPrincipal(identity);
+		// Development deliberately supplies server-issued debug permissions, including before bootstrap.
+		// Preserve that known scheme only; unknown or mixed identities still fail closed.
+		if (identity.AuthenticationType == DebugAuthenticationHandler.SchemeName)
+			return WikiReader.From(identity.FindAll(PortalPermission.ClaimType).Select(claim => claim.Value),
+				principal.GetActingCharacter()?.ToString());
 		if (identity.FindFirst(ClaimTypes.NameIdentifier)?.Value is not { Length: > 0 } accountId)
 			return WikiReader.From([], null);
 
