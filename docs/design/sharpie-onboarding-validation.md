@@ -2,6 +2,8 @@
 
 Status: implementation in progress; not accepted for merge or deployment.
 
+[Review the browser screenshots](sharpie-onboarding-preview/README.md).
+
 ## Current acceptance snapshot
 
 The dated entries below retain the evidence as it was collected. Later entries
