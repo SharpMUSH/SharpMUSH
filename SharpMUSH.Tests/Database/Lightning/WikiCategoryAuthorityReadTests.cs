@@ -14,9 +14,9 @@ public class WikiCategoryAuthorityReadTests
 	private string NewPath()
 	{
 		var scratch = Environment.GetEnvironmentVariable("TMPDIR")
-			?? throw new InvalidOperationException("Configure disk-backed TMPDIR before running native migration tests.");
+			?? Path.Join(AppContext.BaseDirectory, "work");
 		Directory.CreateDirectory(scratch);
-		var path = Path.Combine(scratch, "sharpmush-category-authority-" + Guid.NewGuid().ToString("N"));
+		var path = Path.Join(scratch, "sharpmush-category-authority-" + Guid.NewGuid().ToString("N"));
 		_paths.Add(path);
 		return path;
 	}

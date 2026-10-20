@@ -21,9 +21,9 @@ public class WikiCategoryReadinessTests
 	private static async Task WithWorld(Func<LightningDatabase, string, Task> body)
 	{
 		// The parent runner sets disk-backed TMPDIR; keep this fixture self-contained even if it does not.
-		var root = Path.Combine(Directory.GetCurrentDirectory(), "work", "category-readiness-" + Guid.NewGuid().ToString("N"));
+		var root = Path.Join(Directory.GetCurrentDirectory(), "work", "category-readiness-" + Guid.NewGuid().ToString("N"));
 		Directory.CreateDirectory(root);
-		var db = Create(Path.Combine(root, "live"));
+		var db = Create(Path.Join(root, "live"));
 		try { await body(db, root); }
 		finally
 		{
@@ -118,7 +118,7 @@ public class WikiCategoryReadinessTests
 			await db.Migrate();
 			var page = await Add(db);
 			await db.DisposeAsync();
-			await using var reopened = Create(Path.Combine(root, "live"));
+			await using var reopened = Create(Path.Join(root, "live"));
 			var before = Snapshot(reopened);
 			var error = await Failure(() => Mutate(reopened, mutation, page.Id));
 			await Assert.That(error is InvalidOperationException).IsTrue();
@@ -155,7 +155,7 @@ public class WikiCategoryReadinessTests
 			await Assert.That((await db.GetPagesByCategoryAsync("a", 0, 10, WikiVisibility.All)).Single().Id).IsEqualTo(page.Id);
 			var before = Snapshot(db);
 			await db.DisposeAsync();
-			await using var reopened = Create(Path.Combine(root, "live"));
+			await using var reopened = Create(Path.Join(root, "live"));
 			await reopened.Migrate();
 			var reopenedAuthority = CompleteAuthority(reopened);
 			await Assert.That(reopenedAuthority).IsEqualTo(authority);
@@ -174,13 +174,13 @@ public class WikiCategoryReadinessTests
 			var oldEpoch = db.Store.Epoch;
 			if (swap)
 			{
-				var incoming = Path.Combine(root, "incoming");
+				var incoming = Path.Join(root, "incoming");
 				await using (var replacement = Create(incoming))
 				{
 					await replacement.Migrate();
 					await Add(replacement, "Replacement");
 				}
-				db.Store.SwapDirectory(incoming, Path.Combine(root, "previous"));
+				db.Store.SwapDirectory(incoming, Path.Join(root, "previous"));
 			}
 			else db.Store.WipeDirectory();
 			await Assert.That(db.Store.Epoch > oldEpoch).IsTrue();

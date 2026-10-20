@@ -24,9 +24,9 @@ public class WikiCategoryMigrationTests
 	private string NewPath()
 	{
 		var root = Environment.GetEnvironmentVariable("TMPDIR")
-			?? throw new InvalidOperationException("Configure disk-backed TMPDIR before running native migration tests.");
+			?? Path.Join(AppContext.BaseDirectory, "work");
 		Directory.CreateDirectory(root);
-		var path = Path.Combine(root, "wiki-category-coordinator-" + Guid.NewGuid().ToString("N"));
+		var path = Path.Join(root, "wiki-category-coordinator-" + Guid.NewGuid().ToString("N"));
 		_paths.Add(path);
 		return path;
 	}

@@ -252,8 +252,8 @@ public class WikiCategoryNativeBudgetTests
 				try { using var projection = Decode(source, budget); }
 				catch (JsonException ex) { failure = ex; }
 				var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-				Check(failure is not null, "Malformed tail accepted.");
-				Check(failure!.Message.Length <= 1024 && !failure.Message.Contains(marker, StringComparison.Ordinal), "Diagnostic exposed private input or exceeded fixed length.");
+				if (failure is null) throw new InvalidOperationException("Malformed tail accepted.");
+				Check(failure.Message.Length <= 1024 && !failure.Message.Contains(marker, StringComparison.Ordinal), "Diagnostic exposed private input or exceeded fixed length.");
 				Check(allocated <= 65536, "Malformed input exceeded independent warmed 64KiB allocation ceiling.");
 				Baseline(budget, Source(json));
 			}

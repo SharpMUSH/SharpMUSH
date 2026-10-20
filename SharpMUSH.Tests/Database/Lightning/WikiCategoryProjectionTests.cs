@@ -149,8 +149,8 @@ public partial class WikiCategoryProjectionTests
 					catch (JsonException ex) { failure = ex; }
 					var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
 					Console.WriteLine($"FAILURE_ALLOCATION {literal} nested={nested} allocated={allocated} independentLimit=65536 messageLength={failure?.Message.Length}");
-					Check(failure is not null, "Malformed literal was accepted");
-					Check(failure!.Message.Length <= 1024 && !failure.Message.Contains(privateMarker, StringComparison.Ordinal), "Malformed input diagnostic contains private tail or exceeds fixed message limit");
+					if (failure is null) throw new InvalidOperationException("Malformed literal was accepted");
+					Check(failure.Message.Length <= 1024 && !failure.Message.Contains(privateMarker, StringComparison.Ordinal), "Malformed input diagnostic contains private tail or exceeds fixed message limit");
 					Check(allocated <= 65536, "EMPIRICAL FAILURE ALLOCATION EXCESS: malformed literal allocated above independent 64KiB limit");
 				});
 		// Admission expectations come from the pinned charge contract and real Codec values.
