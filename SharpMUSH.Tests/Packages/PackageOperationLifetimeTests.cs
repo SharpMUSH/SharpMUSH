@@ -268,7 +268,7 @@ public partial class PackageOperationLifetimeTests
 		public int AdmissionCount => Volatile.Read(ref _admissionCount);
 		public TaskCompletionSource AdmissionFailure { get; } = Signal();
 
-		public ControlledScheduler(string? failTrigger = null, bool observed = false, bool refuse = false)
+		public ControlledScheduler(string? failTrigger = null, bool observed = false, bool refuse = false, string? refuseTrigger = null)
 		{
 			Scheduler = observed ? Substitute.For<ITaskScheduler, IQueueReleaseObserver>() : Substitute.For<ITaskScheduler>();
 			if (observed)
@@ -276,7 +276,7 @@ public partial class PackageOperationLifetimeTests
 					.Returns(call =>
 					{
 						ObservedAdmissionCount++;
-						if (refuse) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.GlobalLimit));
+						if (refuse || call.ArgAt<string>(1) == refuseTrigger) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.GlobalLimit));
 						var pid = Interlocked.Increment(ref _admissionCount);
 						var release = call.Arg<Action<QueueEntryRelease>>();
 						var entry = new ControlledEntry(call.Arg<Func<ValueTask<CallState?>>>(),

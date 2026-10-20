@@ -11,7 +11,13 @@ namespace SharpMUSH.Library.Services;
 /// </summary>
 public sealed class PackageOperationExecution<T>
 {
-	internal PackageOperationExecution(Task<PackageOperationOutcome<T>> completion) => Completion = completion;
+	internal PackageOperationExecution(Task<PackageOperationOutcome<T>> completion, Task<PackageOperationObservation> observation)
+	{
+		Completion = completion;
+		Observation = observation;
+	}
+	/// <summary>Frozen evidence published after owned releases, even when Completion faults.</summary>
+	public Task<PackageOperationObservation> Observation { get; }
 	/// <summary>The actual owned task. Use WaitAsync on it to cancel observation independently.</summary>
 	public Task<PackageOperationOutcome<T>> Completion { get; }
 }

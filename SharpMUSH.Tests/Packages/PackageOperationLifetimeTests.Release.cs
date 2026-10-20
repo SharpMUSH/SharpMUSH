@@ -129,6 +129,12 @@ public partial class PackageOperationLifetimeTests
 		catch (Exception error) { observed = error; }
 		await Assert.That(mode == 2 ? ReferenceEquals(observed, backupError)
 			: observed is OperationCanceledException cancellation && cancellation.CancellationToken == (mode == 1 ? cancelled.Token : request.Token)).IsTrue();
+		var report = await owned.Observation.WaitAsync(deadline.Token);
+		await Assert.That(report.Body).IsEqualTo(PackageTaskObservation.NotRun);
+		await Assert.That(report.BodyAdmission).IsEqualTo(PackageAdmissionObservation.Accepted);
+		await Assert.That(report.BodyRelease is not null).IsTrue();
+		await Assert.That(report.Coordinator).IsEqualTo(mode == 2 ? PackageTaskObservation.Faulted : PackageTaskObservation.Cancelled);
+
 	}
 
 	[Test]
