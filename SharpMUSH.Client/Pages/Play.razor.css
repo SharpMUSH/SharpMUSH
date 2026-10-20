@@ -264,12 +264,14 @@
     margin-bottom: 20px;
 }
 .play-guide-return {
+    width: 44px;
+    height: 44px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
     text-decoration: none;
-    padding: 10px 16px;
+    padding: 8px;
     border: 1px solid var(--accent);
     border-radius: 8px;
     background: var(--surface-3);

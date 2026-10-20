@@ -26,6 +26,26 @@ else if (Guide is { Ready: true, Progress.Active: true })
     </section>
 }
 
+else if (Guide is { Ready: true, Progress.Active: false })
+{
+    <section class="guide-start" aria-label="@Loc["GuideChoosePath"]">
+        @if (SharpieArtCatalog.Resolve(null, null, null, null, Guide.Progress.Imagery) is { } art)
+        {
+            <img src="@ApiUrl.Resolve(art.Url)" width="64" height="64" alt="" />
+        }
+        <h2>@Loc["GuideComingFrom"]</h2>
+        @foreach (var (path, key) in new[] { (GuidePath.Discord, "Discord"), (GuidePath.Mush, "Mush"), (GuidePath.OtherRoleplay, "Roleplay"), (GuidePath.Explore, "Explore") })
+        {
+            <button type="button" data-guide-path="@path" @onclick="() => Finish(() => Guide.ChoosePathAsync(path))">@Loc[$"GuidePath{key}Title"]</button>
+        }
+        @if (Guide.Error is not null) { <p role="status">@Guide.Error</p> }
+    </section>
+}
+else if (Guide is { Ready: false })
+{
+    <p role="status">@Loc["GuideLoading"]</p>
+}
+
 @code {
     [Parameter] public OnboardingService? Guide { get; set; }
     [Parameter] public Func<Task<bool>>? InsertLook { get; set; }

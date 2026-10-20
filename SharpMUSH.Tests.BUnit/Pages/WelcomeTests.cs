@@ -98,6 +98,18 @@ public class WelcomeTests : BunitContext
 		await Assert.That(navigation.Uri).IsEqualTo(navigation.BaseUri + "play");
 	}
 	[Test]
+	public async Task InactiveCompanionOffersPaths_AndStartsALesson()
+	{
+		var guide = Services.GetRequiredService<OnboardingService>();
+		await guide.LoadAsync(GuideJourney.Player);
+		var companion = Render<GuideCompanion>(parameters => parameters.Add(component => component.Guide, guide));
+		await Assert.That(companion.FindAll(".guide-start button").Count).IsEqualTo(4);
+		await companion.Find("[data-guide-path=Discord]").ClickAsync();
+		await Assert.That(companion.FindAll(".guide-panel").Count).IsEqualTo(1);
+		await Assert.That(guide.Progress.Active).IsTrue();
+	}
+
+	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task LeavingCompanionReturnsFocusThroughItsHost(bool complete)
