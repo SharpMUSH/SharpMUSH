@@ -55,7 +55,7 @@ These flags restrict access or alter attribute behavior. Propagation depends on 
 These attribute flags grant access. They are not inherited down attribute trees, and must be set on a branch attribute as well as a leaf to take effect (to make FOO\`BAR visual, FOO must be visual too):
 
 - `visual (v)`        Attribute can be seen by anyone via examine, get(), eval(), ufun(), zfun(), and similar functions.
-- `public (p)`        This attribute can be evaluated by any object, even if safer_ufun is in use. **DANGEROUS! AVOID!**
+- `public (p)`        This attribute can be evaluated by any object, whatever its privileges. **DANGEROUS! AVOID!**
 
 These attribute flags alter the way attributes are used in commands and ^-listens. They always only affect the attribute they're set on, regardless of attribute trees:
 
