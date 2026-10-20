@@ -35,6 +35,42 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 	}
 
 	[Test]
+	[Arguments("same-fragment", true)]
+	[Arguments("same-locale", true)]
+	[Arguments("same-forged", true)]
+	[Arguments("encoded-same", true)]
+	[Arguments("same-case-namespace", true)]
+	[Arguments("other-constrained", false)]
+	[Arguments("other-namespace", false)]
+	public async Task AuthoredBodyLinksKeepTrustedIdentityOnlyOnTheSameArticle(string anchorId, bool sameArticle)
+	{
+		_api.IntroHtmlOverride = JourneyApi.IntroHtml + """
+			<a id="same-fragment" href="/wiki/main/intro#costs">Same article costs</a>
+			<a id="same-locale" href="/wiki/main/intro?lang=de">Same article language link</a>
+			<a id="same-forged" href="/wiki/main/intro?expectedPageId=forged#costs">Same article forged identity</a>
+			<a id="encoded-same" href="/wiki/main/%69ntro#costs">Encoded same article</a>
+			<a id="other-constrained" href="/wiki/main/guide?expectedPageId=forged">Other article</a>
+			<a id="other-namespace" href="/wiki/help/intro?expectedPageId=forged">Other namespace</a>
+			<a id="same-case-namespace" href="/wiki/MAIN/intro#costs">Same namespace casing</a>
+			""";
+		_nav.NavigateTo("/wiki/main/intro?" + Origin + "&expectedPageId=intro");
+		var cut = RenderRoute(this);
+		WaitForBody(cut, "Introduction body");
+		var anchor = cut.Find("#" + anchorId);
+		var query = Query(anchor);
+		if (sameArticle)
+		{
+			await Assert.That(query["expectedPageId"]).IsEqualTo("intro");
+			await Assert.That(query.GetValues("expectedPageId")!.Length).IsEqualTo(1);
+		}
+		else await Assert.That(query["expectedPageId"]).IsNull();
+		await Assert.That(query["expectedPageId"]).IsNotEqualTo("forged");
+		await AssertJourney(anchor, "fr-CA");
+		if (anchorId == "same-fragment") await Assert.That(Address(anchor).Fragment).IsEqualTo("#costs");
+		await Assert.That(cut.Find("#local").GetAttribute("href")).IsEqualTo("#costs");
+	}
+
+	[Test]
 	public async Task ArticleThenGuideReturnsToTheSameCollectionSearchCategoryOffsetAndRequestedLocale()
 	{
 		_nav.NavigateTo("/wiki/main/intro?" + Origin);
@@ -602,6 +638,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 		public Task<HttpResponseMessage>? PendingNavigation { get; set; }
 		public Task<HttpResponseMessage>? PendingArticle { get; set; }
 		public string? NavigationJson { get; set; }
+		public string? IntroHtmlOverride { get; set; }
 
 		public static HttpResponseMessage Navigation(string collection, bool referenceVisible = true) => Json(new WikiNavigationDto(collection, 151,
 			referenceVisible
@@ -609,7 +646,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				: [new WikiCollectionSummaryDto("package:owner", "Article owner", 3)],
 			[new WikiCategorySummaryDto("guides", "Guides", 3, true, false)]));
 
-		public static HttpResponseMessage Article(string slug, bool privateArticle = false) => Json(new WikiPageDto(slug, slug, slug == "intro" ? "Introduction" : "Guide", "main", "Source stays unchanged", slug == "intro" ? IntroHtml : "<p>Guide body</p>", "body",
+		public static HttpResponseMessage Article(string slug, bool privateArticle = false, string? introHtml = null) => Json(new WikiPageDto(slug, slug, slug == "intro" ? "Introduction" : "Guide", "main", "Source stays unchanged", slug == "intro" ? introHtml ?? IntroHtml : "<p>Guide body</p>", "body",
 			DateTimeOffset.UnixEpoch, DateTimeOffset.UnixEpoch, privateArticle, 1, ["guides"], !privateArticle)
 		{
 			Locale = "en", RequestedLocale = "en", IsFallback = true, AvailableLocales = ["en", "de"],
@@ -650,7 +687,7 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				if (PendingArticle is { } article) return await article;
 				if (RefuseArticle) return new HttpResponseMessage(HttpStatusCode.NotFound);
 				var slug = Uri.UnescapeDataString(uri.AbsolutePath["/api/wiki/ns/main/".Length..]);
-				return Article(slug, privateArticle: AuthorizeBySession);
+				return Article(slug, privateArticle: AuthorizeBySession, introHtml: IntroHtmlOverride);
 			}
 			if (uri.AbsolutePath == "/api/wiki/exists")
 			{

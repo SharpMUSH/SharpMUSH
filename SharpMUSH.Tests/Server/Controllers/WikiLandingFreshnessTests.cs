@@ -18,6 +18,43 @@ public class WikiLandingFreshnessTests
 	private const string SelectedTitle = "SECRET_FRENCH_TITLE_BEFORE_AWAIT";
 	private const string SelectedBody = "SECRET_FRENCH_BODY_BEFORE_AWAIT";
 
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task OrdinaryDelegatedArticleUsesTransformedCurrentScopesWithoutExpectedIdentity(bool drafts)
+	{
+		var reader = await LandingFreshNative.ReaderAsync(Factory, drafts);
+		LandingNativePackage? package = null;
+		try
+		{
+			package = await LandingFreshNative.InstallAsync(Factory);
+			(await LandingFreshNative.Wiki(Factory).UpsertTranslationAsync(package.Page.Id, "fr", SelectedTitle,
+				SelectedBody, "#1", null, false, null)).Expect<WikiTranslation>();
+			var token = await LandingFreshNative.OAuthAsync(Factory, reader);
+			using var client = LandingFreshNative.Client(Factory, token);
+			var path = "api/wiki/ns/main/" + Uri.EscapeDataString(package.Page.Slug) + "?lang=fr";
+			using (var response = await client.GetAsync(path))
+			{
+				await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+				using var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+				await Assert.That(Text(json.RootElement, "Id")).IsEqualTo(package.Page.Id);
+				await Assert.That(Text(json.RootElement, "Title")).IsEqualTo(drafts ? SelectedTitle : package.Page.Title);
+				await Assert.That(Text(json.RootElement, "MarkdownSource")).IsEqualTo(drafts ? SelectedBody : package.Page.MarkdownSource);
+				await Assert.That(Text(json.RootElement, "Locale")).IsEqualTo(drafts ? "fr" : "en");
+			}
+			await LandingFreshNative.Roles(Factory).SetAccountOverrideAsync(reader.AccountId,
+				PortalPermission.WikiRead, PermissionState.Deny);
+			await Assert.That((await LandingFreshNative.HeldAsync(Factory, reader)).Contains(PortalPermission.WikiRead)).IsFalse();
+			using var denied = await client.GetAsync(path);
+			await Assert.That(denied.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+			var deniedBody = await denied.Content.ReadAsStringAsync();
+			await Assert.That(deniedBody).DoesNotContain(SelectedTitle);
+			await Assert.That(deniedBody).DoesNotContain(SelectedBody);
+			await Assert.That(deniedBody).DoesNotContain(package.Page.Title);
+		}
+		finally { await LandingFreshNative.CleanupAsync(Factory, package, reader); }
+	}
+
 	private static JsonElement? Landing(JsonElement json)
 	{
 		foreach (var property in json.EnumerateObject())
