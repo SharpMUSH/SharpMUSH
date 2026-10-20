@@ -1,33 +1,65 @@
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject IServiceProvider Services
+@inject IJSRuntime JS
 @inject IStringLocalizer<SharedResource> Loc
 @if (_providers.Count > 0)
 {
     <div class="external-signin" aria-label="@Loc["AuthOtherSignInMethods"]">
-        @foreach (var provider in _providers)
+        <div class="external-signin-divider"><span>@Loc["AuthOr"]</span></div>
+        @foreach (var provider in Full)
         {
-            <button type="button" class="external-signin-button" disabled="@_busy" @onclick="() => Start(provider.Id)">@Loc["AuthContinueWith", provider.DisplayName]</button>
+            <button type="button" class="external-signin-button" disabled="@_busy" @onclick="() => Start(provider.Id)">
+                <ProviderLogo Provider="@provider.Id" />
+                <span>@Loc["AuthContinueWith", provider.DisplayName]</span>
+                @if (provider.Id == _lastUsed && _providers.Count > CompactAbove) { <span class="external-signin-last">@Loc["AuthLastUsed"]</span> }
+            </button>
+        }
+        @if (Compact.Count > 0)
+        {
+            <div class="external-signin-row">
+                @foreach (var provider in Compact)
+                {
+                    <button type="button" class="external-signin-button external-signin-button--icon" disabled="@_busy" @onclick="() => Start(provider.Id)"
+                            aria-label="@Loc["AuthContinueWith", provider.DisplayName]" title="@Loc["AuthContinueWith", provider.DisplayName]">
+                        <ProviderLogo Provider="@provider.Id" />
+                    </button>
+                }
+            </div>
         }
     </div>
     @if (_error is not null) { <MudAlert Severity="Severity.Error" role="alert">@_error</MudAlert> }
 }
 @code {
+    /// <summary>
+    /// Up to this many services each get a full "Continue with" button. Past it they share one row of logo buttons,
+    /// so the form stays the same height however many services staff turn on; the service this browser used last
+    /// keeps a full button above the row.
+    /// </summary>
+    private const int CompactAbove = 2;
+    private const string LastUsedKey = "sharpmush.signin.lastProvider";
     [Parameter] public bool RememberMe { get; set; }
     [Parameter] public string ReturnPath { get; set; } = "/account";
     private IReadOnlyList<AccountSecurityClient.Provider> _providers = [];
     private AccountSecurityClient? _client;
+    private string? _lastUsed;
     private bool _busy;
     private string? _error;
+    private IEnumerable<AccountSecurityClient.Provider> Full
+     => _providers.Count <= CompactAbove ? _providers : _providers.Where(provider => provider.Id == _lastUsed);
+    private List<AccountSecurityClient.Provider> Compact
+     => _providers.Count <= CompactAbove ? [] : _providers.Where(provider => provider.Id != _lastUsed).ToList();
     protected override async Task OnInitializedAsync()
     {
         _client = Services.GetService<AccountSecurityClient>();
         if (_client is not null && await _client.ProvidersAsync() is IReadOnlyList<AccountSecurityClient.Provider> providers) _providers = providers;
+        if (_providers.Count > 0) _lastUsed = await JS.GetItemAsync(BrowserStore.Local, LastUsedKey);
     }
     private async Task Start(string provider)
     {
         if (_client is null) return;
         _busy = true; _error = null;
+        await JS.SetItemAsync(BrowserStore.Local, LastUsedKey, provider);
         if (await _client.StartAsync(provider, ReturnPath, RememberMe) is ApiFailure failure) { _error = failure.Message; _busy = false; }
     }
 }

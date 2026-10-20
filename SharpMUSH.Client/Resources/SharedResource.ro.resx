@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Continuă cu {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>sau</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Folosit ultima dată</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Reîncepe autentificarea</value>
   </data>

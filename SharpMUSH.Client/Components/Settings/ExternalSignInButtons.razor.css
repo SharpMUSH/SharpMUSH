@@ -1,4 +1,11 @@
 .external-signin { display: grid; gap: .65rem; margin-top: 1rem; }
-.external-signin-button { min-height: 2.75rem; padding: .6rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); color: var(--text-primary); background: var(--surface-1); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.external-signin-divider { display: flex; align-items: center; gap: .75rem; color: var(--text-faint); font-size: .8125rem; }
+.external-signin-divider::before, .external-signin-divider::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
+.external-signin-button { display: flex; align-items: center; justify-content: center; gap: .6rem; min-height: 2.75rem; padding: .6rem 1rem; border: 1px solid var(--border); border-radius: var(--radius-sm, 6px); color: var(--text-primary); background: var(--surface-1); font: inherit; cursor: pointer; overflow-wrap: anywhere; }
+.external-signin-button:hover:not(:disabled) { border-color: var(--text-faint); }
 .external-signin-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .external-signin-button:disabled { opacity: .6; cursor: wait; }
+.external-signin-last { padding: .1rem .45rem; border-radius: 999px; background: var(--surface-2, var(--surface-1)); border: 1px solid var(--border); color: var(--text-faint); font-size: .75rem; }
+.external-signin-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr)); gap: .5rem; }
+.external-signin-button--icon { padding: .5rem; }
+.external-signin-button--icon ::deep .provider-logo { width: 1.375rem; height: 1.375rem; }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Claims;
 using System.Text.Json;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -12,11 +13,21 @@ public static class ExternalIdentityAdapter
 	private static string? Label(string? value) => Bounded(value, 128) ? value : null;
 	public static Result<ExternalIdentityProof> OAuth(EffectiveExternalProvider provider, JsonElement profile)
 	{
+		var github = provider.Definition.Id == "github";
 		var subjectField = provider.Definition.Id == "grapevine" ? "uid" : "id";
-		if (profile.ValueKind != JsonValueKind.Object || !profile.TryGetProperty(subjectField, out var id) || id.ValueKind != JsonValueKind.String || !Bounded(id.GetString(), 512))
+		if (profile.ValueKind != JsonValueKind.Object || !profile.TryGetProperty(subjectField, out var id))
 			return new Error<string>("The provider returned no valid account identifier.");
-		var label = profile.TryGetProperty("username", out var name) && name.ValueKind == JsonValueKind.String ? Label(name.GetString()) : null;
-		return new ExternalIdentityProof(new(provider.Settings.RegistrationId, provider.Definition.Issuer, id.GetString()!), label);
+		// GitHub's user id is a JSON number; the others send a string.
+		var subject = (github, id.ValueKind) switch
+		{
+			(true, JsonValueKind.Number) when id.TryGetInt64(out var number) && number > 0 => number.ToString(CultureInfo.InvariantCulture),
+			(false, JsonValueKind.String) => id.GetString(),
+			_ => null
+		};
+		if (!Bounded(subject, 512))
+			return new Error<string>("The provider returned no valid account identifier.");
+		var label = profile.TryGetProperty(github ? "login" : "username", out var name) && name.ValueKind == JsonValueKind.String ? Label(name.GetString()) : null;
+		return new ExternalIdentityProof(new(provider.Settings.RegistrationId, provider.Definition.Issuer, subject!), label);
 	}
 	public static Result<ExternalIdentityProof> OpenId(EffectiveExternalProvider provider, ClaimsPrincipal principal)
 	{

@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Продолжить через {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>или</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Последний использованный</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Начать вход заново</value>
   </data>

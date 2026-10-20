@@ -22,7 +22,7 @@ namespace SharpMUSH.Server.Controllers;
 public sealed class AccountSecurityController(IMediator mediator, IAccountService accounts, IAccountSessionStore sessions,
  BearerAccountResolver bearer, AccountRecentProofService proofs, AccountSecurityService security,
  AccountSecurityCeremonyStore ceremonies, PasskeyService passkeys, AccountCredentialGate gate,
- IPasswordService passwords, IAuditLog? audit = null) : ControllerBase
+ IPasswordService passwords, ExternalProviderCatalog catalog, IAuditLog? audit = null) : ControllerBase
 {
 	public record PasswordProofRequest(string Password, AccountSecurityOperation Operation);
 	public record CeremonyRequest(AccountSecurityOperation Operation);
@@ -41,11 +41,12 @@ public sealed class AccountSecurityController(IMediator mediator, IAccountServic
 	{
 		var account = await accounts.GetByIdAsync(id);
 		var identities = await mediator.Send(new GetExternalIdentitiesQuery(id));
+		var providers = await catalog.ProvidersByRegistrationAsync(HttpContext.RequestAborted);
 		return Ok(new
 		{
 			HasPassword = !string.IsNullOrEmpty(account?.PasswordHash),
 			AllowCharacterPasswordAccountLogin = account?.AllowCharacterPasswordAccountLogin ?? false,
-			Identities = identities.Select(identity => new { identity.Id, identity.Key.Registration, identity.Label, identity.CreatedAt, identity.LastUsedAt }),
+			Identities = identities.Select(identity => new { identity.Id, identity.Key.Registration, Provider = providers.GetValueOrDefault(identity.Key.Registration), identity.Label, identity.CreatedAt, identity.LastUsedAt }),
 			Passkeys = (await passkeys.ListAsync(id)).Select(key => new { Id = PasskeyService.IdOf(key), key.Name })
 		});
 	});

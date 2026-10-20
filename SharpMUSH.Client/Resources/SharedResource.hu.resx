@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Folytatás ezzel: {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>vagy</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Legutóbb használt</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Bejelentkezés újrakezdése</value>
   </data>

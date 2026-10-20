@@ -6326,6 +6326,12 @@
   <data name="AuthContinueWith" xml:space="preserve">
     <value>Fortsätt med {0}</value>
   </data>
+  <data name="AuthOr" xml:space="preserve">
+    <value>eller</value>
+  </data>
+  <data name="AuthLastUsed" xml:space="preserve">
+    <value>Senast använd</value>
+  </data>
   <data name="AuthStartAgain" xml:space="preserve">
     <value>Börja om inloggningen</value>
   </data>

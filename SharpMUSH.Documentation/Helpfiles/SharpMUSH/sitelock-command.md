@@ -22,14 +22,14 @@
       "lookup": "@sitelock allow and deny options"
     },
     {
-      "id": "character-specific-rules",
-      "heading": "Character-specific rules",
-      "lookup": "@sitelock character-specific rules"
+      "id": "removing-rules",
+      "heading": "Removing rules",
+      "lookup": "@sitelock remove"
     }
   ],
   "redirects": {
     "@sitelock2": "@sitelock allow and deny options",
-    "@sitelock3": "@sitelock character-specific rules"
+    "@sitelock3": "@sitelock remove"
   }
 }
 -->
@@ -38,18 +38,17 @@
 `@sitelock`<br>
 `@sitelock/check <host>`
 
-The @sitelock command adds rules to the access.cnf file, controlling a host's level of access to the MUSH, or adds banned player names to the names.cnf file. Only Wizards may use @sitelock.
+The @sitelock command adds rules controlling a host's level of access to the MUSH, or adds banned player names. Rules and names are kept in the game's configuration (the `sitelock_rules` and `banned_names` settings), so they survive a restart. Using @sitelock needs the `players.moderate` permission.
 
-@sitelock without arguments lists all sites in access.cnf. Rules are processed in the order listed, and the first matching rule is applied. `@sitelock/check` tells you which rule will match for a given `<host>`.
+@sitelock without arguments (or `@sitelock/list`) lists all rules and banned names. A connection is refused when any rule that matches its host carries the deny option for what it is doing. `@sitelock/check` tells you which rule matches a given `<host>`.
 
 - [@sitelock names]: banning player names
 - [@sitelock rules]: adding a rule for a host, and the ban and register shorthands
 - [@sitelock allow and deny options]: the options a rule can set
-- [@sitelock character-specific rules]: rules for one character, and removing rules
+- [@sitelock remove]: removing rules
 
 ::: seealso
 - [WILDCARDS]
-- [regexp]
 - [IPADDR()]
 - [HOST()]
 :::
@@ -62,49 +61,24 @@ The @sitelock command adds rules to the access.cnf file, controlling a host's le
 
 ## Adding host rules
 
-`@sitelock[/player] <host-pattern>=<options>[, <name>]`<br>
-`@sitelock[/<ban|register>][/player] <host-pattern>`
+`@sitelock <host-pattern>=<options>`<br>
+`@sitelock/<ban|register> <host-pattern>`
 
-`@sitelock <host-pattern>=<options>[, <name>]` controls the access options for hosts which match `<host-pattern>`, which may include wildcard characters "*" and "?". See help @sitelock allow and deny options for the list of options, and help @sitelock character-specific rules for an explanation about the name argument.
+`@sitelock <host-pattern>=<options>` sets the access options, separated by spaces, for hosts which match `<host-pattern>`. The pattern may be a wildcard pattern using "*" and "?" (matched against the host name or the IP address), a bare IP address, or a CIDR block such as 10.0.0.0/8. Setting a rule for a pattern that already has one replaces it. Live connections that the new rule blocks are dropped. See help @sitelock allow and deny options for the list of options.
 
-For backward compatibility, `@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
-
-If the `/player` switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
+`@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
 
 ## Allow and deny options
 
-Sitelock allow/deny options:
-- connect -- allow this site to connect to non-guest players
-- !connect -- don't allow this site to connect to non-guest players
-- guest -- allow this site to connect to guest players
+Sitelock deny options:
+- !connect -- don't allow this site to connect to any player, guests included
 - !guest -- don't allow this site to connect to guest players
-- create -- allow this site to create players
-- !create -- don't allow this site to create players
-- default -- allow any of the above
-- none -- don't allow any of the above
-- !god -- God can't connect from this site.
-- !wizard -- Wizards can't connect from this site.
-- !admin -- Wizards and Royalty can't connect from this site.
+- !create -- don't allow this site to create players or accounts
 
-Allow/deny options not set are assumed to be allowed.
+Options not set are allowed. Other words are stored with the rule and shown in the listing, but have no effect.
 
-Sitelock special options:
-- register -- allow this site to use 'register `<name>` `<email>`' at the connection screen to register players. Players will be emailed their character's password. This should be used with !create to be effective.
-- suspect -- set all players who connect from this site SUSPECT.
-- deny_silent -- don't log failed access attempts from this site.
-- regexp -- Treat the hostname pattern as a regular expression instead of a wildcard pattern.
+## Removing rules
 
-## Character-specific rules
+`@sitelock/remove <string>`
 
-`@sitelock/remove[/player] <string>`
-
-If you specify a character name after the options, the options are only checked if the host pattern matches, AND the character being checked for connect support matches the one you gave. Use it only with connect and !connect options, since they're the only ones where an existing character is used.
-
-For example, to disallow anyone from connecting to 'Twink' from one domain, but to allow connections to the character from others, use something like:
-```sharp
-> @sitelock *.somesite.com=!connect,Twink
-```
-
-If you want to disallow connections to a character from anywhere, use @newpassword or `@sitelock *=!connect,Twink`.
-
-`@sitelock/remove` will delete entries that were added with @sitelock if their host-pattern matches `<string>` exactly. If the `/player` switch is given, `<string>` is treated as a player name, and entries whose host-patterns match the player's LASTIP or LASTSITE addresses exactly will be deleted.
+`@sitelock/remove` deletes the rule whose host-pattern matches `<string>` exactly.

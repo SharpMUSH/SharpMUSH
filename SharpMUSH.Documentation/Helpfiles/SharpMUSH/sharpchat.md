@@ -68,13 +68,13 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 - `cemit(<channel>, <message>[, <noisy>])`
 - `nscemit(<channel>, <message>[, <noisy>])`
 
-@cemit emits *\<message\>* on *\<channel\>*. It does not include your name. The channel prefix is included if the /noisy switch is given, and omitted if /silent is given - if neither is given, the default behaviour is controlled by the noisy_cemit @config option. The /noeval switch prevents *\<message\>* from being evaluated.
+@cemit emits *\<message\>* on *\<channel\>*. It does not include your name. The /noisy and /silent switches and the noisy_cemit @config option are accepted but have no effect. The /noeval switch prevents *\<message\>* from being evaluated.
 
 You must be able to speak on the channel, or have the See_All and Pemit_All @powers, to @cemit on the channel.
 
 @nscemit is exactly the same, but does not produce nospoof information when used by players with the Can_spoof @power.
 
-cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respectively. If *\<noisy\>* is given as a true value, they work like @cemit/noisy and @nscemit/noisy, respectively, instead.
+cemit() and nscemit() work the same as @cemit and @nscemit, respectively. The *\<noisy\>* argument is accepted but has no effect.
 
 @cemit is intended for use in writing extended chat systems. 
 
@@ -105,7 +105,7 @@ Help for `@channel` is split into a number of topics. For help on a specific swi
 # @channel/title
 # @channel/buffer
 
-- `@channel/recall[/last] <channel>[=<count>]`
+- `@channel/recall[/quiet] <channel>[=<count>]`
 - `@channel/title <channel>=<title>`
 - `@channel/buffer <channel>=<size>`
 

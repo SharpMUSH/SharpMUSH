@@ -18,13 +18,13 @@ public class ExternalLoginUiTests : TrackingBunitContext
 {
 	private sealed class Handler : HttpMessageHandler
 	{
-		public string? Csrf; public int Attempts; public bool HasPassword = true;
+		public string? Csrf; public int Attempts; public bool HasPassword = true; public int Providers = 4;
 		public object? Completion;
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 		{
 			var path = request.RequestUri!.AbsolutePath;
-			if (path.EndsWith("/providers", StringComparison.Ordinal)) return Reply(new[] { new { id = "discord", displayName = "Discord" }, new { id = "google", displayName = "Google" }, new { id = "microsoft", displayName = "Microsoft" }, new { id = "grapevine", displayName = "Grapevine" } });
-			if (path == "/api/account/security") return Reply(new { hasPassword = HasPassword, allowCharacterPasswordAccountLogin = true, passkeys = new[] { new { id = "key" } }, identities = new[] { new { id = "google-identity", label = "Google account", registration = "google" } } });
+			if (path.EndsWith("/providers", StringComparison.Ordinal)) return Reply(new[] { new { id = "discord", displayName = "Discord" }, new { id = "google", displayName = "Google" }, new { id = "microsoft", displayName = "Microsoft" }, new { id = "grapevine", displayName = "Grapevine" } }.Take(Providers));
+			if (path == "/api/account/security") return Reply(new { hasPassword = HasPassword, allowCharacterPasswordAccountLogin = true, passkeys = new[] { new { id = "key" } }, identities = new[] { new { id = "google-identity", label = "Google account", registration = "external-google", provider = "google" } } });
 			if (path.EndsWith("/csrf", StringComparison.Ordinal)) return Reply(new { token = "browser-csrf", fieldName = "__RequestVerificationToken" });
 			if (path.EndsWith("/complete", StringComparison.Ordinal))
 			{ Csrf = request.Headers.GetValues("X-SharpMUSH-CSRF").Single(); return Reply(Completion ?? new { signupRequired = true, returnPath = "/account" }); }
@@ -90,6 +90,31 @@ public class ExternalLoginUiTests : TrackingBunitContext
 		await CaptureAsync("login.html", cut.Markup);
 		await Assert.That(cut.Markup).Contains("Continue with Discord"); await Assert.That(cut.Markup).Contains("Continue with Grapevine");
 		await Assert.That(cut.Markup).DoesNotContain("AuthContinueWith");
+		await Assert.That(cut.FindAll(".external-signin-button--icon").Count).IsEqualTo(4);
+		await Assert.That(cut.Find(".external-signin-divider").TextContent).IsEqualTo("or");
+	}
+	[Test]
+	public async Task TwoProvidersGetFullButtons()
+	{
+		using var culture = CultureScope.For("en"); Setup().Providers = 2;
+		var cut = Render<Login>();
+		cut.WaitForAssertion(() => { if (cut.FindAll(".external-signin-button").Count != 2) throw new Exception("Ready providers did not render"); });
+		await Assert.That(cut.FindAll(".external-signin-button--icon").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".external-signin-button svg.provider-logo").Count).IsEqualTo(2);
+		await Assert.That(cut.Markup).DoesNotContain("Last used");
+	}
+	[Test]
+	public async Task TheLastUsedProviderKeepsAFullButtonAboveTheRow()
+	{
+		using var culture = CultureScope.For("en"); Setup();
+		JSInterop.Setup<string?>("localStorage.getItem", "sharpmush.signin.lastProvider").SetResult("google");
+		var cut = Render<Login>();
+		cut.WaitForAssertion(() => { if (cut.FindAll(".external-signin-button").Count != 4) throw new Exception("Ready providers did not render"); });
+		var full = cut.FindAll(".external-signin-button:not(.external-signin-button--icon)").Single();
+		await Assert.That(full.TextContent).Contains("Continue with Google");
+		await Assert.That(full.TextContent).Contains("Last used");
+		await Assert.That(cut.FindAll(".external-signin-button--icon").Select(button => button.GetAttribute("aria-label")))
+			.IsEquivalentTo(["Continue with Discord", "Continue with Microsoft", "Continue with Grapevine"]);
 	}
 	[Test]
 	[Arguments(true)]
@@ -103,6 +128,7 @@ public class ExternalLoginUiTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("Removing or changing a method signs out other sessions.");
 		await Assert.That(cut.Markup.Contains("Remove account password", StringComparison.Ordinal)).IsEqualTo(hasPassword);
 		await Assert.That(cut.Markup).Contains("Link Grapevine");
+		await Assert.That(cut.FindAll(".signin-provider").Single(row => row.TextContent.Contains("Link Google", StringComparison.Ordinal)).TextContent).Contains("Google account");
 		await CaptureAsync(hasPassword ? "account-methods.html" : "account-methods-passwordless.html", cut.Markup);
 	}
 

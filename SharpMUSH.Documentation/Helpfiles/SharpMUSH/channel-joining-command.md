@@ -56,7 +56,7 @@
 
 `@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given. Channels you may decompile also show their locks.
 
-`@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you have the `Who` power. A member's own hidden or gagging state is noted beside their name. The web portal's channel view keeps the same list beside the conversation, in place of connect and disconnect lines, which it does not show.
+`@channel/who` lists the members of the given channel: connected players and things. Members hiding on the channel with `@channel/hide` are omitted unless you are a wizard or royalty or have the See_All power. A member's own hidden or gagging state is noted beside their name. The web portal's channel view keeps the same list beside the conversation, in place of connect and disconnect lines, which it does not show.
 
 ## Personal channel settings
 

@@ -38,4 +38,4 @@ The wizard-only `/set` switch changes the value of `<option>` to `<value>`. Bool
 
 `@config/save <option>=<value>`
 
-SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So unlike PennMUSH, every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.
+SharpMUSH keeps one stored configuration, which the web portal's configuration page also edits, and the game reads its options from it. So every `/set` is stored and lasts across restarts. God may also use `/save`, which does the same and says so; there is no mush.cnf to write back to. A few options are not read by the game at all (the listening addresses and ports belong to the connection server's own configuration), so setting them has no effect.

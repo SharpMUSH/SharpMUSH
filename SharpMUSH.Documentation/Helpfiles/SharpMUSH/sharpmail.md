@@ -199,10 +199,7 @@ The @mail command can also take the following switches:
 
 Only wizards may stats players other than themselves.
 
-The /debug switch does sanity checking on the mail database, and may only be used by a wizard:
-* `@mail/debug sanity` - just does the check
-* `@mail/debug clear=<player name or dbref number>` - wipes mail for an object
-* `@mail/debug fix` - attempts to repair problems noted in the sanity check
+The /debug switch does nothing in SharpMUSH; it reports `MAIL: NOTHING TO DEBUG`. It needs the chat administration permission.
 
 The /nuke switch destroys the post office, erasing all @mail everywhere. It may only be used by God.
 

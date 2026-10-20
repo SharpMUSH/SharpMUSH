@@ -16,6 +16,7 @@ public sealed class ExternalOAuthOptions : OAuthOptions
 	public string PublicOrigin { get; set; } = "";
 }
 /// <summary>Fixed-provider OAuth adapter; Grapevine's public code exchange never sends a secret or PKCE.</summary>
+/// <remarks>GitHub's API refuses a request without a User-Agent, so every request names one.</remarks>
 public sealed class ExternalOAuthHandler(IOptionsMonitor<ExternalOAuthOptions> options, ILoggerFactory logger, UrlEncoder encoder,
  ExternalProviderCatalog catalog) : OAuthHandler<ExternalOAuthOptions>(options, new ExternalProtocolLoggerFactory(logger), encoder)
 {
@@ -29,9 +30,10 @@ public sealed class ExternalOAuthHandler(IOptionsMonitor<ExternalOAuthOptions> o
 	{
 		// Deliberately do not call the base exchange: it always sends client_secret.
 		var values = new Dictionary<string, string> { ["grant_type"] = "authorization_code", ["client_id"] = Options.ClientId, ["redirect_uri"] = Options.PublicOrigin + Options.CallbackPath, ["code"] = context.Code };
-		if (Options.ProviderId == "discord") values["client_secret"] = Options.ClientSecret;
+		if (ExternalProviderDefinition.Get(Options.ProviderId).RequiresClientSecret) values["client_secret"] = Options.ClientSecret;
 		using var request = new HttpRequestMessage(HttpMethod.Post, Options.TokenEndpoint) { Content = new FormUrlEncodedContent(values) };
 		request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+		request.Headers.UserAgent.Add(UserAgent);
 		try
 		{
 			using var response = await Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Context.RequestAborted);
@@ -44,6 +46,7 @@ public sealed class ExternalOAuthHandler(IOptionsMonitor<ExternalOAuthOptions> o
 		catch (Exception exception) when (exception is HttpRequestException or JsonException or InvalidDataException or TaskCanceledException)
 		{ return Failed(); }
 	}
+	private static readonly ProductInfoHeaderValue UserAgent = new("SharpMUSH", "1.0");
 	private static OAuthTokenResponse Failed() => OAuthTokenResponse.Failed(new AuthenticationFailureException("External token exchange failed."));
 	internal static async Task<JsonDocument> ReadJsonAsync(HttpContent content, CancellationToken ct)
 	{
@@ -63,6 +66,7 @@ public sealed class ExternalOAuthHandler(IOptionsMonitor<ExternalOAuthOptions> o
 			using var request = new HttpRequestMessage(HttpMethod.Get, Options.UserInformationEndpoint);
 			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
 			request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+			request.Headers.UserAgent.Add(UserAgent);
 			using var response = await Backchannel.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, Context.RequestAborted);
 			if (!response.IsSuccessStatusCode) throw new AuthenticationFailureException("External identity lookup failed.");
 			using var profile = await ReadJsonAsync(response.Content, Context.RequestAborted);
