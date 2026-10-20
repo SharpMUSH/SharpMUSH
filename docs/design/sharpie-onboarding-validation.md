@@ -429,3 +429,20 @@ in an unnumbered definition list with explicit zero list margins and spacing
 between rows. The long help/safety paragraph and secondary description/leave
 commands remain out of this introductory step; fuller instructions are available
 in the player guide. Channel audience and the meaning of NAME remain explicit.
+
+
+### Simplified channel lesson reflow (2026-10-20)
+
+The published client at commit `3b08a23eb` was visually checked at desktop
+and 390×844 viewport sizes. Three command/description rows now have clear
+spacing and inset margins. Full component tests passed 2,912/2,912.
+Screenshots: `work/onboarding/channels-simple-desktop.png` and
+`work/onboarding/channels-simple-mobile.png`.
+
+At 320×568 CSS pixels, document width remained 320px; the guide dialog
+measured 264px client and scroll width, and the command list measured 232px
+client and scroll width. Vertical scrolling remains necessary (821px content
+height). Tab from the final reference disclosure wrapped to the Back to game
+control inside the dialog. This verifies narrow reflow and that focus boundary,
+not browser zoom, a screen-reader session, or physical mobile hardware.
+The viewport override was restored after checking.
