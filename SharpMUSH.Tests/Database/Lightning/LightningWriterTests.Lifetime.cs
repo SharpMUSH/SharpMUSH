@@ -45,7 +45,8 @@ public partial class LightningWriterTests
 		{
 			release.Set();
 			var errors = new List<Exception>();
-			try { await job; } catch (Exception error) { errors.Add(error); }
+			await ((Task)job).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			if (job.Exception is { } failed) errors.AddRange(failed.InnerExceptions);
 			try
 			{
 				if (close is not null) await close;
