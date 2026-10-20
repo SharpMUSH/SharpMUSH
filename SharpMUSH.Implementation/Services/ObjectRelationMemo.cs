@@ -10,7 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
-/// The last answer to an object's grants, owner, location and flags, kept per object until that object is
+/// The last answer to an object's grants, owner, location, parent and flags, kept per object until that object is
 /// written. Every permission check reads these, often several times over (<c>loc()</c> as a mortal asks for
 /// the grants of both sides five times, the owner of each and the location of each), and each read
 /// through the cache costs a tagged lookup: 40-60 µs per call for <c>loc()</c>, <c>room()</c> or
@@ -60,6 +60,12 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 	private readonly ConcurrentDictionary<int, GrantsEntry> _grants = new();
 	private readonly ConcurrentDictionary<int, RefEntry> _owners = new();
 	private readonly ConcurrentDictionary<int, RefEntry> _locations = new();
+	private readonly ConcurrentDictionary<int, RefEntry> _parents = new();
+
+	/// <summary>The version at which each object was read with no parent; an entry in <see cref="_parents"/> holds one it had.</summary>
+	private readonly ConcurrentDictionary<int, long> _parentless = new();
+
+	private static readonly Task<AnyOptionalSharpObject> NoParent = Task.FromResult(new AnyOptionalSharpObject(new None()));
 	private readonly ConcurrentDictionary<int, FlagsEntry> _flags = new();
 
 	public Task<ObjectGrants> GrantsAsync(int number, bool isPlayer, Func<CancellationToken, Task<ObjectGrants>> read,
@@ -104,6 +110,28 @@ public sealed class ObjectRelationMemo(IMediator mediator, ObjectVersions versio
 	public Task<AnySharpContainer> LocationAsync(int number, Func<CancellationToken, Task<AnySharpContainer>> read,
 		CancellationToken cancellationToken)
 		=> RefAsync(_locations, number, read, cancellationToken);
+
+	/// <summary>
+	/// Every lock lookup walks the parent chain, the type ancestor's included, so an <c>@lock/interact</c> nobody set
+	/// costs each listener of an emit two parent reads. Most objects have no parent, which an owner or location never
+	/// is, so that answer is kept apart, for as long as the object's version stands.
+	/// </summary>
+	public Task<AnyOptionalSharpObject> ParentAsync(int number, Func<CancellationToken, Task<AnyOptionalSharpObject>> read,
+		CancellationToken cancellationToken)
+	{
+		var version = versions.Of(number);
+		return _parentless.TryGetValue(number, out var parentlessAt) && parentlessAt == version
+			? NoParent
+			: RefAsync(_parents, number, ct => ReadParentAsync(number, version, read, ct), cancellationToken);
+	}
+
+	private async Task<AnyOptionalSharpObject> ReadParentAsync(int number, long version,
+		Func<CancellationToken, Task<AnyOptionalSharpObject>> read, CancellationToken cancellationToken)
+	{
+		var parent = await read(cancellationToken);
+		if (parent is None) _parentless[number] = version;
+		return parent;
+	}
 
 	private Task<T> RefAsync<T>(ConcurrentDictionary<int, RefEntry> table, int number,
 		Func<CancellationToken, Task<T>> read, CancellationToken cancellationToken) where T : IObjectShaped<T>
