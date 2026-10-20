@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,920 passed**, zero failed/skipped after the
-  Explore-return regression (`explore-return-green.log`).
+- Full component suite: **2,921 passed**, zero failed/skipped after the
+  asynchronous-guard review (`review-async-guards.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -725,3 +725,18 @@ activating Explore with Enter yielded zero dialogs, focus on “Game command”,
 and the unchanged `look` draft. No command was sent. Screenshot:
 `work/onboarding/explore-return-draft.png`. The full 2,920-case component suite,
 formatting and publication passed.
+
+### Review: asynchronous guards and response ownership (2026-10-20)
+
+Two disposal findings in the capability tests were addressed by explicitly
+scoping response fixtures and waiting for the deferred response to render before
+disposing it. Two constant-condition findings were not applied: both checks
+follow an `await`, during which Blazor can process a disconnect or dispose the
+component. Comments now explain those reentrancy boundaries.
+
+`DisconnectDuringGuideInputCheckRefusesInsertion` holds the JavaScript busy
+check pending, renders the composer disconnected, then releases the result. It
+confirms no draft insertion or send occurs. All 2,921 component tests and
+formatting pass. Independent source review of periodic refresh, Explore return,
+response guards and the current cleanup found no concrete actionable defect;
+that review did not run tests.

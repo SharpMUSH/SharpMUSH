@@ -46,6 +46,20 @@ public class PlayComposerTests : BunitContext
 	}
 
 	[Test]
+	public async Task DisconnectDuringGuideInputCheckRefusesInsertion()
+	{
+		var pending = JSInterop.Setup<bool>("sharpmushLayout.formattedInputBusy", _ => true);
+		var cut = RenderComposer();
+		var insertion = cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("look"));
+		cut.WaitForAssertion(() => JSInterop.VerifyInvoke("sharpmushLayout.formattedInputBusy"));
+		cut.Render(p => p.Add(x => x.Connected, false));
+		pending.SetResult(false);
+		await Assert.That(await insertion).IsFalse();
+		await Assert.That(cut.Find("textarea").GetAttribute("value") ?? "").IsEqualTo("");
+		await Assert.That(_sent).IsEmpty();
+	}
+
+	[Test]
 	public async Task DisconnectedGuideInsertionIsRefused()
 	{
 		var cut = RenderComposer(connected: false);

@@ -38,9 +38,10 @@ public class GuidePackageCommandsTests : BunitContext
 		var clock = new Clock();
 		Services.AddSingleton<TimeProvider>(clock);
 		var calls = 0;
-		using var handler = new Handler(_ => Task.FromResult(++calls == 1 ? Reply()
-			: unavailable ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
-			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) }));
+		using var initial = Reply();
+		using var refreshed = unavailable ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+			: new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) };
+		using var handler = new Handler(_ => Task.FromResult(++calls == 1 ? initial : refreshed));
 		Configure(handler);
 		var page = Render<GuidePackageCommands>();
 		await Assert.That(page.Find("code").TextContent).IsEqualTo("+help");
@@ -197,8 +198,13 @@ public class GuidePackageCommandsTests : BunitContext
 		}
 		finally
 		{
-			pending.SetResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) });
+			using var response = new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Array.Empty<GuideCapability>()) };
+			pending.SetResult(response);
 			await page.InvokeAsync(() => Task.CompletedTask);
+			page.WaitForAssertion(() =>
+			{
+				if (page.FindAll(".guide-packages").Count != 0) throw new InvalidOperationException("Capability request has not completed.");
+			});
 		}
 	}
 

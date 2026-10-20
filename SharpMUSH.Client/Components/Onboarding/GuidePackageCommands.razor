@@ -57,6 +57,7 @@
                 {
                     if (_disposed || _pending is not null) return;
                     await Check(background: true);
+                    // Disposal can run while the HTTP request is awaited.
                     if (!_disposed) StateHasChanged();
                 });
         }

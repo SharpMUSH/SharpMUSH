@@ -280,6 +280,7 @@
             if (await JS.InvokeAsync<bool>("sharpmushLayout.formattedInputBusy", field.Input)) return false;
         }
         catch (JSException) { return false; }
+        // The JS await yields to rendering: connection, draft or character can change.
         if (!Connected || !_draft.IsEmpty || !ReferenceEquals(field, _field) || key != DraftKey) return false;
         await StartCommandAsync(line);
         return true;
