@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,916 passed**, zero failed/skipped after the
-  completion-focus regression (`completion-focus-green.log`).
+- Full component suite: **2,917 passed**, zero failed/skipped after the
+  keyboard-tooltip regression (`guide-tooltip-tests.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -624,3 +624,21 @@ Screenshot: `work/onboarding/completion-focus-mobile.png`.
 CI run 39380118401 for implementation commit `8e6ea1aef` completed successfully:
 build, format, core, integration, bUnit, both plugin suites and help integrity.
 This precedes the completion-focus correction and does not establish CI for it.
+
+### Icon vocabulary and keyboard tooltips (2026-10-20)
+
+The full-guide icon is now a book and stopping guidance uses a stop-square;
+returning to play retains its back arrow. Controls retain accessible names and
+44px hit areas. Visual labels appear on keyboard focus or hover, remain reachable
+inside the hover wrapper, and dismiss on Escape. No extra focus stop is added.
+See [research and recommendations](sharpie-onboarding-visual-standards.md).
+
+The first live check caught an Escape propagation bug not exposed by component
+tests: Blazor invokes the handler before checking its propagation flag, so
+synchronous dismissal removed that flag before reaching the parent sheet.
+Deferring the visibility change until after current event traversal fixes it.
+The repeated live check at 390px showed one dialog and no tooltip after the first
+Escape, then zero dialogs and focus on the guide opener after the second.
+Stop-tooltip placement was visually inspected and captured in
+`work/onboarding/guide-tooltip-mobile.png`. All 2,917 component tests, formatting
+and local publication passed. Touch icon comprehension remains a user-test item.

@@ -1,0 +1,32 @@
+<span class="guide-tooltip @(AlignEnd ? "guide-tooltip-end" : "")"
+      @onmouseenter="Enter" @onmouseleave="Leave"
+      @onfocusin="Focus" @onfocusout="Blur" @onkeydown="KeyDown" @onkeydown:stopPropagation="@Visible">
+    @ChildContent
+    @if (Visible)
+    {
+        @* The control's accessible name already contains this same label. *@
+        <span class="guide-tooltip-label" aria-hidden="true">@Text</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public string Text { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public bool AlignEnd { get; set; }
+    private bool _hovered;
+    private bool _focused;
+    private bool _dismissed;
+    private bool Visible => (_hovered || _focused) && !_dismissed;
+    private void Enter() { _hovered = true; _dismissed = false; }
+    private void Leave() { _hovered = false; }
+    private void Focus() { _focused = true; _dismissed = false; }
+    private void Blur() { _focused = false; }
+    private async Task KeyDown(KeyboardEventArgs args)
+    {
+        if (args.Key != "Escape" || !Visible) return;
+        // Blazor reads the propagation flag after invoking this handler. Retain it
+        // until this event finishes traversing; the next Escape may close the sheet.
+        await Task.Yield();
+        _dismissed = true;
+    }
+}

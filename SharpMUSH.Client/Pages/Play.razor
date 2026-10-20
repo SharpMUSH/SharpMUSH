@@ -184,8 +184,12 @@ else
                     break;
                 case PlaySheet.Guide:
                     <nav class="play-guide-navigation" aria-label="@Loc["GuidePanelLabel"]">
-                        <button type="button" class="play-guide-return" aria-label="@Loc["GuideBackToGame"]" title="@Loc["GuideBackToGame"]" @onclick="CloseMobileSheet"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" /></button>
-                        <a class="play-guide-return" href="/welcome" aria-label="@Loc["GuideOpenFull"]" title="@Loc["GuideOpenFull"]"><MudIcon Icon="@Icons.Material.Outlined.Explore" /></a>
+                        <SharpMUSH.Client.Components.Onboarding.GuideTooltip Text="@Loc["GuideBackToGame"]">
+                            <button type="button" class="play-guide-return" aria-label="@Loc["GuideBackToGame"]" @onclick="CloseMobileSheet"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" /></button>
+                        </SharpMUSH.Client.Components.Onboarding.GuideTooltip>
+                        <SharpMUSH.Client.Components.Onboarding.GuideTooltip Text="@Loc["GuideOpenFull"]">
+                            <a class="play-guide-return" href="/welcome" aria-label="@Loc["GuideOpenFull"]"><MudIcon Icon="@Icons.Material.Outlined.MenuBook" /></a>
+                        </SharpMUSH.Client.Components.Onboarding.GuideTooltip>
                     </nav>
                     <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
                         OnExit="CloseMobileSheet" OnInserted="ReturnToCommandAsync"

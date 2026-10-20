@@ -30,6 +30,32 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
+	public async Task GuideTooltipSupportsFocusHoverAndEscapeWithoutActivatingControl()
+	{
+		var clicked = 0;
+		var tip = Render<GuideTooltip>(p => p
+			.Add(x => x.Text, "Stop this guide")
+			.AddChildContent(builder =>
+			{
+				builder.OpenElement(0, "button");
+				builder.AddAttribute(1, "aria-label", "Stop this guide");
+				builder.AddAttribute(2, "onclick", Microsoft.AspNetCore.Components.EventCallback.Factory.Create(this, () => clicked++));
+				builder.CloseElement();
+			}));
+		await Assert.That(tip.FindAll(".guide-tooltip-label").Count).IsEqualTo(0);
+		await tip.Find(".guide-tooltip").FocusInAsync();
+		await Assert.That(tip.Find(".guide-tooltip-label").TextContent).IsEqualTo("Stop this guide");
+		await tip.Find(".guide-tooltip").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+		await Assert.That(tip.FindAll(".guide-tooltip-label").Count).IsEqualTo(0);
+		await Assert.That(clicked).IsEqualTo(0);
+		await tip.Find(".guide-tooltip").FocusOutAsync();
+		await tip.Find(".guide-tooltip").MouseEnterAsync();
+		await Assert.That(tip.FindAll(".guide-tooltip-label").Count).IsEqualTo(1);
+		await tip.Find(".guide-tooltip").MouseLeaveAsync();
+		await Assert.That(tip.FindAll(".guide-tooltip-label").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task Companion_keeps_retry_available_when_progress_reload_fails()
 	{
 		var guide = Services.GetRequiredService<OnboardingService>();

@@ -10,7 +10,9 @@
                 <img class="guide-mascot @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
             }
         </span>
-        <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" title="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Close" /></button>
+        <GuideTooltip Text="@Loc["GuideStop"]" AlignEnd="true">
+            <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Stop" /></button>
+        </GuideTooltip>
     </div>
     <article class="guide-lesson">
         <h2 @ref="_heading" tabindex="-1" aria-live="polite">@Lesson.Title</h2>
