@@ -173,3 +173,20 @@ now targets the actual player access controls (`/admin/config/Net`), verified in
 browser. Default wiki templates no longer advertise obsolete `create` login syntax;
 they link to the optional guide and current account/character flow. Existing game
 wiki content is not migrated or overwritten.
+
+### Draft PR and further keyboard checks (2026-10-19)
+
+Draft PR: https://github.com/SharpMUSH/SharpMUSH/pull/2069.
+The published implementation head is 1d52c080a. Formatting CI passed; the build
+was still running when checked. The automated Claude review failed immediately
+after initialization with no findings and was retried once. This is not a review
+pass; CodeRabbit explicitly skipped the draft.
+
+In the actual browser, an expired disposable account session rejected a guide
+choice with a recoverable save error instead of claiming success. Reload returned
+to anonymous browser progress. Keyboard activation advanced the other-roleplay
+path past its already-completed steps to the audience/consent lesson; Return
+expanded the command reference. The accessibility tree exposed the new heading,
+expanded state and command/audience definitions. The reduced Sharpie remained
+visible. Screenshot: `work/onboarding/roleplay-keyboard-reference.png`.
+This verifies these interactions, not a complete screen-reader assessment.
