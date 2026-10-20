@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SharpMUSH.Configuration.Mssp;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
@@ -51,13 +52,13 @@ public sealed class OnboardingSettingsController(IOptionsWrapper<SharpMUSHOption
 	private static bool Valid(OnboardingSettings settings)
 		=> Text(settings.MudName, 128) && !string.IsNullOrWhiteSpace(settings.MudName)
 			&& settings.Introduction is { Length: <= 1000 } && !settings.Introduction.Any(c => char.IsControl(c) && c is not '\n' and not '\r' and not '\t')
-			&& Values(settings.Genres) && Values(settings.Subgenres)
+			&& Choice("GENRE", settings.Genres) && Choice("SUBGENRE", settings.Subgenres)
 			&& Page(settings.WelcomePage) && Page(settings.RulesPage) && Page(settings.CharacterGuidePage)
 			&& SharpieArtCatalog.Styles.Contains(settings.ArtStyle)
 			&& (settings.ArtOverrideId == "" || SharpieArtCatalog.Approved.Any(art => art.Id == settings.ArtOverrideId && art.Style == settings.ArtStyle));
 
 	private static bool Text(string? value, int max) => value is not null && value.Length <= max && !value.Any(char.IsControl);
-	private static bool Values(string[]? values) => values is { Length: <= 16 } && values.All(value => Text(value, 128) && !string.IsNullOrWhiteSpace(value));
+	private static bool Choice(string variable, string[]? values) => values is { Length: 1 } && MsspCatalog.Find(variable)!.Choices.Contains(values[0]);
 	private static bool Page(string? value) => value == "" || OnboardingPresentationService.TryPage(value, out _, out _);
 	private static string[] ValuesOf(SharpMUSHOptions current, string key) => current.Mssp.Variables
 		.FirstOrDefault(pair => string.Equals(pair.Key, key, StringComparison.OrdinalIgnoreCase)).Value ?? [];

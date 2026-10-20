@@ -1,3 +1,4 @@
+@using SharpMUSH.Configuration.Mssp
 @using SharpMUSH.Client.Resources
 @inject IStringLocalizer<SharedResource> Loc
 @using SharpMUSH.Library.Models.Portal.Onboarding
@@ -14,11 +15,17 @@
     else
     {
         <fieldset disabled="@_busy">
-            <label for="guide-game-name">@Loc["GuideIdentityName"]</label><input id="guide-game-name" @bind="_name" @bind:after="MarkDirty" maxlength="128" />
-            <label for="guide-introduction">@Loc["GuideIdentityIntroduction"]</label><textarea id="guide-introduction" @bind="_introduction" @bind:after="MarkDirty" maxlength="1000" rows="3"></textarea>
+            <label for="guide-game-name">@Loc["GuideIdentityName"]</label><input id="guide-game-name" @bind="_name" @bind:event="oninput" @bind:after="MarkDirty" maxlength="128" />
+            <label for="guide-introduction">@Loc["GuideIdentityIntroduction"]</label><textarea id="guide-introduction" @bind="_introduction" @bind:event="oninput" @bind:after="MarkDirty" maxlength="1000" rows="3"></textarea>
             <div class="identity-columns">
-                <div><label for="guide-genres">@Loc["GuideIdentityGenres"]</label><textarea id="guide-genres" @bind="_genres" @bind:after="MarkDirty" rows="3"></textarea></div>
-                <div><label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label><textarea id="guide-subgenres" @bind="_subgenres" @bind:after="MarkDirty" rows="3"></textarea></div>
+                <div><label for="guide-genres">@Loc["GuideIdentityGenres"]</label><select id="guide-genres" @bind="_genres" @bind:after="MarkDirty">
+                    @if (!MsspCatalog.Find("GENRE")!.Choices.Contains(_genres)) { <option value="@_genres" disabled>@_genres</option> }
+                    @foreach (var choice in MsspCatalog.Find("GENRE")!.Choices) { <option value="@choice">@choice</option> }
+                </select></div>
+                <div><label for="guide-subgenres">@Loc["GuideIdentitySubgenres"]</label><select id="guide-subgenres" @bind="_subgenres" @bind:after="MarkDirty">
+                    @if (!MsspCatalog.Find("SUBGENRE")!.Choices.Contains(_subgenres)) { <option value="@_subgenres" disabled>@_subgenres</option> }
+                    @foreach (var choice in MsspCatalog.Find("SUBGENRE")!.Choices) { <option value="@choice">@choice</option> }
+                </select></div>
             </div>
             <p>@Loc["GuideIdentityGenreHint"]</p>
             <label for="guide-art-style">@Loc["GuideIdentityStyle"]</label>
@@ -26,9 +33,9 @@
                 @foreach (var style in SharpieArtCatalog.Styles) { <option value="@style">@StyleName(style)</option> }
             </select>
             <p>@Loc["GuideIdentityArtworkHint"] <a href="/admin/config/Cosmetic">@Loc["GuideIdentityAppearance"]</a>.</p>
-            <label for="guide-welcome-page">@Loc["GuideIdentityWelcomePage"]</label><input id="guide-welcome-page" @bind="_welcome" @bind:after="MarkDirty" maxlength="256" placeholder="main/welcome" />
-            <label for="guide-rules-page">@Loc["GuideIdentityRulesPage"]</label><input id="guide-rules-page" @bind="_rules" @bind:after="MarkDirty" maxlength="256" placeholder="main/rules" />
-            <label for="guide-character-page">@Loc["GuideIdentityCharacterPage"]</label><input id="guide-character-page" @bind="_character" @bind:after="MarkDirty" maxlength="256" placeholder="help/character_creation" />
+            <label for="guide-welcome-page">@Loc["GuideIdentityWelcomePage"]</label><input id="guide-welcome-page" @bind="_welcome" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="main/welcome" />
+            <label for="guide-rules-page">@Loc["GuideIdentityRulesPage"]</label><input id="guide-rules-page" @bind="_rules" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="main/rules" />
+            <label for="guide-character-page">@Loc["GuideIdentityCharacterPage"]</label><input id="guide-character-page" @bind="_character" @bind:event="oninput" @bind:after="MarkDirty" maxlength="256" placeholder="help/character_creation" />
             <p>@Loc["GuideIdentityWikiHint"]</p>
             <section class="identity-preview" aria-label="@Loc["GuideIdentityPreviewLabel"]">
                 <p class="identity-preview-label">@Loc["GuideIdentityPreview"]</p>
@@ -43,6 +50,7 @@
                         <img src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" />
                     }
                 </div>
+                @if (PreviewArt is { Theme: "neutral" }) { <p>@Loc["GuideIdentityArtFallback"]</p> }
                 @if (PreviewArt is null) { <p>@Loc["GuideIdentityNoArt"]</p> }
                 <p>@Loc["GuideIdentityVisibility"]</p>
             </section>
@@ -56,7 +64,7 @@
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public string? SaveLabel { get; set; }
     private string _name = "", _introduction = "", _genres = "", _subgenres = "", _welcome = "", _rules = "", _character = "", _style = "minimalist", _override = "";
-    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, Lines(_genres).FirstOrDefault(), Lines(_subgenres).FirstOrDefault(), _override, GuideImagery.Full);
+    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full);
     private bool _loaded, _busy, _saved;
     private string? _error;
     protected override Task OnInitializedAsync() => Load();
@@ -67,7 +75,7 @@
         {
             case OnboardingSettings settings:
                 _name = settings.MudName; _introduction = settings.Introduction;
-                _genres = string.Join('\n', settings.Genres); _subgenres = string.Join('\n', settings.Subgenres);
+                _genres = settings.Genres.Length == 0 ? "None" : string.Join(" / ", settings.Genres); _subgenres = settings.Subgenres.Length == 0 ? "None" : string.Join(" / ", settings.Subgenres);
                 _welcome = settings.WelcomePage; _rules = settings.RulesPage; _character = settings.CharacterGuidePage;
                 _style = settings.ArtStyle; _override = settings.ArtOverrideId; _loaded = true;
                 break;
@@ -79,7 +87,7 @@
     private async Task Save()
     {
         _busy = true; _saved = false; _error = null;
-        var values = new OnboardingSettings(_name, Lines(_genres), Lines(_subgenres), _introduction, _welcome, _rules, _character, _style,
+        var values = new OnboardingSettings(_name, [_genres], [_subgenres], _introduction, _welcome, _rules, _character, _style,
             SharpieArtCatalog.Approved.Any(art => art.Id == _override && art.Style == _style) ? _override : "");
         switch (await Http.CreateClient("api").PutApiAsync<OnboardingSettings, OnboardingSettings>("api/onboarding/settings", values, Loc["GuideIdentitySaveEmpty"].Value))
         {
@@ -88,6 +96,5 @@
         }
         _busy = false;
     }
-    private static string[] Lines(string value) => value.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
     private string StyleName(string style) => Loc[$"GuideStyle_{style}"];
 }

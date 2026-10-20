@@ -13,7 +13,7 @@
         <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" title="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Close" /></button>
     </div>
     <article class="guide-lesson">
-        <h2 aria-live="polite">@Lesson.Title</h2>
+        <h2 @ref="_heading" tabindex="-1" aria-live="polite">@Lesson.Title</h2>
         <p>@Lesson.Body</p>
         @Context
         @if (Lesson.Id == "channels")
@@ -77,6 +77,8 @@
     [Parameter] public SharpieArt? Art { get; set; } = SharpieArtCatalog.Resolve(null, null, null, null, GuideImagery.Full);
     [Parameter] public GuideImagery Imagery { get; set; } = GuideImagery.Full;
     private string? _failedArt;
+    private ElementReference _heading;
+    public ValueTask FocusHeadingAsync() => _heading.FocusAsync(preventScroll: true);
     private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0].Replace("@", "").Replace("/", "_");
     private bool _practiced;
 }

@@ -7,8 +7,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,903 passed**, zero failed/skipped after the guide
-  dedicated channel step and automatic command suggestions (`guide-auto-final.log`).
+- Full component suite: **2,908 passed**, zero failed/skipped after the
+  character-entry return fix (`return-route-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -22,9 +22,11 @@ supersede earlier statements about missing publication or completed checks.
   finding is addressed and the fresh full component suite passes.
 - Existing-character claim returned to the retained guide step and preserved
   the existing roster and active character in the real browser.
-- Still open: broader keyboard/screen-reader checks, real failed-connection
-  retry journey, published admin draft-feedback
-  recheck, and PR/CI verification. The fresh genre-art inventory is not approved.
+- Real failed-connection retry preserved the saved character, then connected
+  successfully; the roster contained exactly one character afterward.
+- Published administrator draft feedback passed the keyboard edit/reload check.
+- Still open: broader keyboard/screen-reader checks and PR/CI verification.
+  The fresh genre-art inventory is not approved.
 
 ## Verified on 2026-10-19
 
@@ -344,3 +346,42 @@ routes, with their query strings; CharacterCreate still independently restricts
 its final destination to the local welcome route. Three negative cases cover
 protocol-relative, near-match and traversal paths. Browser publication and
 rechecking this fix remain pending.
+
+### Published first-character guide return (2026-10-20)
+
+Published commit `9d3e2f8fa` successfully to the isolated client preview.
+A fresh character-free account signed in through the nested character-creation
+return URL. The browser retained `/characters/new?returnUrl=%2Fwelcome`.
+Passwordless creation of RoutePilot then connected to the test game and returned
+to `/welcome`, with focus on the welcome heading. Existing anonymous guide
+progress was offered for explicit import rather than silently copied.
+Screenshot: `work/onboarding/first-character-guide-return.png`.
+This closes the reproduced nested creation-return bug; claim routing also has
+the passing regression, while its fresh-account browser variant remains untested.
+
+### Administrator draft feedback (2026-10-20)
+
+Signed into the isolated administrator and saved the existing introduction
+unchanged. “Saved” appeared after the request completed. A native keyboard edit
+and Tab out of the introduction field removed that status and updated the
+unsaved preview. Reload restored the original introduction, proving the draft
+was not persisted. The verified/deferred checklist values survived reload.
+No registration, permissions, package installation or production settings changed.
+
+### Immediate preview and path-choice focus corrections
+
+The input-event regression failed before the form was changed to update on each
+keystroke. Text fields now update the draft preview and clear saved feedback
+without requiring blur; persistence still requires Save. The style is labelled
+“Anime mascot.” A neutral-art notice explains why unshipped style/genre choices
+currently show the approved default mascot.
+
+The configuration and onboarding settings controllers both require `config.admin`.
+Live isolated GET checks returned 403 for the ordinary player and 200 for the
+administrator on both endpoints.
+
+Keyboard selection in the inactive Play guide reproduced focus falling onto the
+document after its path button disappeared. The companion now focuses the lesson
+heading after rendering that transition, without adding the heading to tab order.
+The regression failed before the fix. Full component validation then passed
+2,908 tests, zero failures/skips (`admin-preview-focus-green.log`).

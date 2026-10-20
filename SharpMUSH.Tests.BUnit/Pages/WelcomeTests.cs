@@ -107,6 +107,8 @@ public class WelcomeTests : BunitContext
 		await companion.Find("[data-guide-path=Discord]").ClickAsync();
 		await Assert.That(companion.FindAll(".guide-panel").Count).IsEqualTo(1);
 		await Assert.That(guide.Progress.Active).IsTrue();
+		await Assert.That(companion.Find(".guide-lesson h2").GetAttribute("tabindex")).IsEqualTo("-1");
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "Blazor._internal.domWrapper.focus")).IsTrue();
 	}
 
 	[Test]

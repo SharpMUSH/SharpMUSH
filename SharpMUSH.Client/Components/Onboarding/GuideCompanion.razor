@@ -19,7 +19,7 @@ else if (Guide is { Ready: true, Progress.Active: true })
         <div class="guide-companion-content">
             @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReloadProgress"]</button></p> }
             @if (_message is not null) { <p role="status">@_message</p> }
-            <GuidePanel Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert">
+            <GuidePanel @ref="_panel" Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert">
                 <Context><GuideContext LessonId="@Lesson.Id" /></Context>
             </GuidePanel>
         </div>
@@ -36,7 +36,7 @@ else if (Guide is { Ready: true, Progress.Active: false })
         <h2>@Loc["GuideComingFrom"]</h2>
         @foreach (var (path, key) in new[] { (GuidePath.Discord, "Discord"), (GuidePath.Mush, "Mush"), (GuidePath.OtherRoleplay, "Roleplay"), (GuidePath.Explore, "Explore") })
         {
-            <button type="button" data-guide-path="@path" @onclick="() => Finish(() => Guide.ChoosePathAsync(path))">@Loc[$"GuidePath{key}Title"]</button>
+            <button type="button" data-guide-path="@path" @onclick="() => ChoosePath(path)">@Loc[$"GuidePath{key}Title"]</button>
         }
         @if (Guide.Error is not null) { <p role="status">@Guide.Error</p> }
     </section>
@@ -52,6 +52,21 @@ else if (Guide is { Ready: false })
     [Parameter] public EventCallback OnExit { get; set; }
     [Parameter] public EventCallback OnInserted { get; set; }
     private string? _message;
+    private GuidePanel? _panel;
+    private bool _focusLesson;
+    private async Task ChoosePath(GuidePath path)
+    {
+        await Finish(() => Guide!.ChoosePathAsync(path));
+        _focusLesson = Guide is { Ready: true, Progress.Active: true };
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusLesson && _panel is not null)
+        {
+            _focusLesson = false;
+            await _panel.FocusHeadingAsync();
+        }
+    }
     private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Guide!.Progress.Path, Loc);
     private int Index => Math.Max(0, Array.FindIndex(Lessons.ToArray(), item => item.Id == Guide!.Progress.CurrentStepId));
     private GuideLesson Lesson => Lessons[Index];

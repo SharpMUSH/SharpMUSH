@@ -10,6 +10,21 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 
 public class SetupIdentityTests : BunitContext
 {
+	[Test]
+	[Arguments("Fantasy\nHorror", "High Fantasy")]
+	[Arguments("Unlisted genre", "High Fantasy")]
+	[Arguments("Fantasy", "High Fantasy\nCyberpunk")]
+	[Arguments("Fantasy", "Unlisted subgenre")]
+	public async Task SettingsRejectNonCatalogOrMultipleChoices(string genres, string subgenres)
+	{
+		var writer = NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IConfigOptionWriter>();
+		var controller = new SharpMUSH.Server.Controllers.OnboardingSettingsController(
+			NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>(),
+			writer, NSubstitute.Substitute.For<SharpMUSH.Library.Services.Interfaces.IAuditLog>());
+		var request = new OnboardingSettings("Test", genres.Split('\n'), subgenres.Split('\n'), "", "", "", "", "minimalist", "");
+		await Assert.That(await controller.Put(request, default)).IsTypeOf<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
+	}
+
 	private sealed class Handler : HttpMessageHandler
 	{
 		public int Writes;
@@ -33,15 +48,18 @@ public class SetupIdentityTests : BunitContext
 		Services.AddLocalization();
 		var form = Render<GameIdentityForm>();
 		form.WaitForElement("#guide-game-name");
+		await Assert.That(form.Find("#guide-genres").TagName).IsEqualTo("SELECT");
+		await Assert.That(form.Find("#guide-subgenres").TagName).IsEqualTo("SELECT");
+		await Assert.That(form.FindAll("#guide-genres option").Select(option => option.TextContent)).Contains("Science Fiction");
 		await Assert.That(form.Find("#guide-game-name").GetAttribute("value")).IsEqualTo("Imported world");
 		await Assert.That(handler.Writes).IsEqualTo(0);
-		await form.Find("#guide-game-name").ChangeAsync("My new world");
+		await form.Find("#guide-game-name").InputAsync("My new world");
 		await Assert.That(form.Find(".identity-preview").TextContent.Contains("My new world", StringComparison.Ordinal)).IsTrue();
 		await Assert.That(handler.Writes).IsEqualTo(0);
 		await form.Find(".identity-save").ClickAsync();
 		await Assert.That(handler.Writes).IsEqualTo(1);
 		await Assert.That(form.Markup.Contains("Saved", StringComparison.Ordinal)).IsTrue();
-		await form.Find("#guide-introduction").ChangeAsync("Unsaved introduction");
+		await form.Find("#guide-introduction").InputAsync("Unsaved introduction");
 		await Assert.That(form.FindAll("[role=status]").Any(node => node.TextContent.Contains("Saved", StringComparison.Ordinal))).IsFalse();
 		await Assert.That(handler.Writes).IsEqualTo(1);
 	}

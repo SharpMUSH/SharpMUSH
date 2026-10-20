@@ -9545,9 +9545,9 @@
   <data name="GuideIdentityRetry" xml:space="preserve"><value>Retry settings</value></data>
   <data name="GuideIdentityName" xml:space="preserve"><value>Game name</value></data>
   <data name="GuideIdentityIntroduction" xml:space="preserve"><value>A short welcome for new players</value></data>
-  <data name="GuideIdentityGenres" xml:space="preserve"><value>Genres, one per line</value></data>
-  <data name="GuideIdentitySubgenres" xml:space="preserve"><value>Subgenres, one per line</value></data>
-  <data name="GuideIdentityGenreHint" xml:space="preserve"><value>These are the game's MSSP genre values. Unknown genres still get a usable guide.</value></data>
+  <data name="GuideIdentityGenres" xml:space="preserve"><value>Genre</value></data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve"><value>Subgenre</value></data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve"><value>Choose the game's MSSP genre and subgenre. Sharpie uses these selections for artwork; choose None when neither applies.</value></data>
   <data name="GuideIdentityStyle" xml:space="preserve"><value>Sharpie style</value></data>
   <data name="GuideIdentityAppearance" xml:space="preserve"><value>appearance settings</value></data>
   <data name="GuideIdentityWelcomePage" xml:space="preserve"><value>Welcome wiki page</value></data>
@@ -9567,7 +9567,7 @@
   <data name="GuideIdentitySaveEmpty" xml:space="preserve"><value>No saved settings were returned.</value></data>
   <data name="GuideStyle_minimalist" xml:space="preserve"><value>Minimalist mascot</value></data>
   <data name="GuideStyle_chibi" xml:space="preserve"><value>Chibi mascot</value></data>
-  <data name="GuideStyle_anime" xml:space="preserve"><value>Anime mascot (androgynous)</value></data>
+  <data name="GuideStyle_anime" xml:space="preserve"><value>Anime mascot</value></data>
   <data name="GuideStyle_kemono" xml:space="preserve"><value>Kemono mascot</value></data>
   <data name="GuideStyle_pixel" xml:space="preserve"><value>Pixel mascot</value></data>
   <data name="GuideStyle_comicbook" xml:space="preserve"><value>Comicbook mascot</value></data>
@@ -9616,4 +9616,5 @@
   <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
   <data name="GuideLesson_Explore_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
   <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Channels connect people across rooms. Use Browse channels in Play, or the commands below, to find a newbie, help or social channel. Names and access rules vary by game.</value></data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve"><value>Showing the default Sharpie until artwork for your selected style and genre is available.</value></data>
 </root>
