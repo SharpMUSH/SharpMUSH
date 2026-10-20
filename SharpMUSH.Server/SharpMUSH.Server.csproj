@@ -160,6 +160,8 @@
       <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.dll" />
       <ScenePluginFiles Include="$(ScenePluginOutDir)\SharpMUSH.Plugins.Scene.deps.json" />
       <ScenePluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\plugin.json" />
+      <!-- The plugin's help, served from plugins/scene/help/ while the plugin is loaded. -->
+      <ScenePluginHelpFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.Scene\help\*.md" />
     </ItemGroup>
   </Target>
 
@@ -168,6 +170,8 @@
   <Target Name="CopyScenePlugin" AfterTargets="Build" DependsOnTargets="ResolveScenePluginFiles">
     <MakeDir Directories="$(OutDir)plugins\scene" />
     <Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(OutDir)plugins\scene" SkipUnchangedFiles="false" />
+    <RemoveDir Directories="$(OutDir)plugins\scene\help" />
+    <Copy SourceFiles="@(ScenePluginHelpFiles)" DestinationFolder="$(OutDir)plugins\scene\help" SkipUnchangedFiles="false" />
   </Target>
 
   <!-- ...and into the PUBLISH output. `dotnet publish` does not collect $(OutDir), so CopyScenePlugin alone
@@ -180,6 +184,10 @@
     <ItemGroup>
       <ResolvedFileToPublish Include="@(ScenePluginFiles)">
         <RelativePath>plugins/scene/%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+      <ResolvedFileToPublish Include="@(ScenePluginHelpFiles)">
+        <RelativePath>plugins/scene/help/%(Filename)%(Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </ResolvedFileToPublish>
     </ItemGroup>
