@@ -968,3 +968,22 @@ absence of the lesson and unchanged persisted progress. All 3,008 component
 tests pass. After publishing, the real browser confirmed MUSH-to-Explore leaves
 only Explore pressed (`aria-pressed=true`) and removes the lesson panel.
 Screenshot: `work/onboarding/explore-preview-selected.png`.
+
+### Isolated First Setup fixture (2026-10-20)
+
+A second disposable server listens only on `127.0.0.1:18081`, with its own
+world, data-protection directory and separate NATS broker on loopback 14224.
+Sharing the existing broker would be unsafe because engine subjects, durable
+consumer names and connection-store buckets are not world-namespaced.
+The original preview on 18080 remains responsive.
+
+The setup status endpoint reports `needsSetup:true`; `/setup` renders the
+administrator claim form with labeled username/password/confirmation controls.
+Anonymous access to `/api/setup/wizard` returns 401. No administrator has been
+claimed or credentials created. Approval for that isolated claim is pending.
+Fixture launcher and state are under `work/onboarding/fresh-setup-18081/`.
+
+Directly opening `/setup?step=packages` before claim still renders Step 1,
+Claim the administrator account, with no package controls. The query parameter
+does not bypass the first-run claim boundary. This was checked in the browser
+without entering credentials or submitting the form.
