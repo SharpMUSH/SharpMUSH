@@ -9,8 +9,8 @@ Status: implementation in progress; not accepted for merge or deployment.
 The dated entries below retain the evidence as it was collected. Later entries
 supersede earlier statements about missing publication or completed checks.
 
-- Full component suite: **2,914 passed**, zero failed/skipped after the
-  immediate capability-clearing regression (`capability-authority-green.log`).
+- Full component suite: **2,916 passed**, zero failed/skipped after the
+  completion-focus regression (`completion-focus-green.log`).
 - Desktop dark/light journeys cover local practice, explicit terminal sending,
   guide dismissal/focus return, and verified installed-package help commands.
 - Browser viewports at 390px and 320px showed no horizontal overflow; keyboard
@@ -606,3 +606,21 @@ Document scroll width equalled the 390px viewport. The Play-modes lesson was
 visually inspected and its unchanged screenshot added to the review gallery.
 Return on the final advance button displayed completion. This checks a returning
 account's mobile review flow, not a new account's first-time progression.
+
+### Final lesson focus correction (2026-10-20)
+
+Independent review found that final Complete/Skip removed the focused button
+without selecting a completion destination. Both regression cases failed before
+the correction. Explicit completion now focuses the rendered completion message
+once; passive reload and subsequent imagery changes do not trigger that focus.
+All 2,916 component tests and direct formatting passed. Focused independent
+review accepted the correction.
+
+After publishing to the isolated preview, both Complete and Skip at 390px placed
+`document.activeElement` on `.welcome-completion`. Tab then moved to “Open the
+game.” Passive reload left focus on the document body, not the completion message.
+Screenshot: `work/onboarding/completion-focus-mobile.png`.
+
+CI run 39380118401 for implementation commit `8e6ea1aef` completed successfully:
+build, format, core, integration, bUnit, both plugin suites and help integrity.
+This precedes the completion-focus correction and does not establish CI for it.

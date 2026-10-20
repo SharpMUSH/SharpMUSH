@@ -78,7 +78,7 @@
         }
         else if (Lessons.All(lesson => Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id)))
         {
-            <p>@Loc["GuideReady"]</p><a class="welcome-explore" href="@Destination">@Loc["GuideOpenGame"]</a>
+            <p class="welcome-completion" tabindex="-1" @ref="_completion">@Loc["GuideReady"]</p><a class="welcome-explore" href="@Destination">@Loc["GuideOpenGame"]</a>
         }
         <label class="welcome-imagery">@Loc["GuideArtwork"]
             <select value="@Progress.Imagery" @onchange="ChangeImagery">
@@ -94,6 +94,8 @@
     [Parameter, SupplyParameterFromQuery(Name = "preview")] public bool Preview { get; set; }
     private string _game = "this game";
     private bool _artFailed;
+    private ElementReference _completion;
+    private bool _focusCompletion;
     private OnboardingProgress _preview = new();
     private OnboardingProgress Progress => Preview ? _preview : Guide.Progress;
     private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Progress.Path, Loc);
@@ -131,8 +133,22 @@
         _preview = _preview with { CurrentStepId = step }; return Task.CompletedTask;
     }
     private Task Back() => Select(Lessons[Math.Max(0, CurrentIndex - 1)].Id);
-    private Task Complete() => Preview ? Select(Lessons[Math.Min(Lessons.Count - 1, CurrentIndex + 1)].Id) : Guide.CompleteStepAsync(Current.Id);
-    private Task Skip() => Preview ? Complete() : Guide.SkipStepAsync(Current.Id);
+    private Task Complete() => Advance(false);
+    private Task Skip() => Advance(true);
+    private async Task Advance(bool skip)
+    {
+        if (Preview) { await Select(Lessons[Math.Min(Lessons.Count - 1, CurrentIndex + 1)].Id); return; }
+        if (skip) await Guide.SkipStepAsync(Current.Id);
+        else await Guide.CompleteStepAsync(Current.Id);
+        _focusCompletion = !Progress.Active && Lessons.All(lesson =>
+            Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!_focusCompletion) return;
+        _focusCompletion = false;
+        await _completion.FocusAsync();
+    }
     private async Task Close()
     {
         if (Preview) { _preview = _preview with { Active = false }; return; }
