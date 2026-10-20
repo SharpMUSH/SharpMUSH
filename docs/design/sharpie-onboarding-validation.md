@@ -41,8 +41,11 @@ supersede earlier statements about missing publication or completed checks.
 At `18a9d4808`, main is integrated without unresolved conflicts. Both local
 builds passed and 65 focused cases passed: 15 external-login UI, 10 setup
 identity, 38 import and two startup-coordinator tests. Formatting passed.
-GitHub's normal build, parity and layout workflows now run on this revision;
-their completion remains a separate gate.
+GitHub build, formatting, core/component/integration/plugin tests, help integrity,
+parity, layout, native-backend and CodeQL checks all passed on this revision
+(.NET run `39475129713`). Claude's workflow also completed successfully; its
+execution reported three turns and no execution error. CodeRabbit explicitly
+skipped the draft PR, so its green status is not review evidence.
 
 The published welcome-starter form was checked at a 320px browser viewport:
 document width remained 320px, all four starter buttons measured 44px high,
@@ -51,8 +54,10 @@ textarea reached Collaborative stories. The accessibility tree exposes the
 named Welcome starters group and all four named buttons. Evidence:
 `work/onboarding/welcome-starters-320.png`. This is responsive and keyboard
 evidence, not a native screen-reader or 200% browser-zoom acceptance check.
-The published client used for this check still predates the neutral preview
-label update; the source and focused tests include that update.
+The published client used for this narrow-screen check predates the neutral
+preview label update. A subsequent current-source publish succeeded, and the
+browser confirmed both the region name and visible label are now “Player welcome
+preview.” The saved game introduction and welcome starters remain present.
 
 The Discord-path channel-help lesson also reflows at 320px without horizontal
 overflow. Its three command definitions each occupy 244px and have no internal
