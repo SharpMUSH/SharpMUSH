@@ -9,9 +9,8 @@
             {
                 <img class="guide-mascot @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
             }
-            <span>@Loc["GuideWithSharpie"]</span>
         </span>
-        <button type="button" @onclick="OnClose">@Loc["GuideStop"]</button>
+        <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" title="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Close" /></button>
     </div>
     <article class="guide-lesson">
         <h2 aria-live="polite">@Lesson.Title</h2>

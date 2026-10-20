@@ -160,7 +160,16 @@ ink/mint/white identity and the canonical M.
 
 The same guide keeps the same representation across steps. Genre art can head the
 journey and chapter cards; compact instructions do not need a new illustration each.
-Every selected style needs a neutral fallback. Until that style has an approved shipped asset, use the owner-approved neutral minimalist SVG rather than leaving Sharpie absent. The lesson-card host remains visible after the welcome header scrolls away, including in the expandable play guide. Reduced imagery uses a smaller host; no-art mode omits both header and card illustrations. Loading errors never block guidance.
+Every selected style needs a neutral fallback. Until that style has an approved shipped asset, use the owner-approved neutral minimalist SVG rather than leaving Sharpie absent. The lesson-card host remains visible after the welcome header scrolls away, including in the player-opened Play guide sheet. Reduced imagery uses a smaller host; no-art mode omits both header and card illustrations. Loading errors never block guidance.
+Illustrations should explain the current activity through Sharpie's interaction
+with a genre-specific object, rather than repeat a labeled mascot badge. The first
+Fantasy pilot covers welcoming through an open portal, navigating with a map,
+and observing with a magnifier or telescope for the `look` lesson. Keep the same
+character and chosen style across these scenes. The visible “With Sharpie” label
+is omitted from lesson headers; stop remains an icon control with a localized
+accessible name and tooltip. Genre metadata alone must never promote unreviewed
+candidate art into the shipped catalog.
+
 No image generation occurs during a user's visit.
 
 Inventory check (2026-10-19): all 504 PNGs decode, with exactly 42 images for each

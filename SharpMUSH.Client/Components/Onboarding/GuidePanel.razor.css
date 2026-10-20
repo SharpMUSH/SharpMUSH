@@ -22,3 +22,5 @@
 .guide-mascot { width: 88px; height: 88px; object-fit: contain; flex: none; }
 .guide-mascot-reduced { width: 40px; height: 40px; }
 @container page (max-width: 48rem) { .guide-mascot:not(.guide-mascot-reduced) { width: 64px; height: 64px; } }
+
+.guide-panel .guide-stop { width: 44px; height: 44px; padding: 8px; justify-content: center; }
