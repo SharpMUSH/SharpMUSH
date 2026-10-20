@@ -52,6 +52,28 @@ public class PrivilegedCommandPermissionTests
 	}
 
 	[Test]
+	public async Task AHolderOfTheFunctionsPowerCanDefineAGlobalFunction()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("fnpower").ToLowerInvariant();
+		var holder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "FnPower");
+		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@power {holder.DbRef}=Functions"));
+		try
+		{
+			var parser = Factory.CommandParserFor(holder.DbRef, holder.Handle);
+			await parser.CommandParse(holder.Handle, Connections, MarkupText.Plain("&FN me=defined"));
+			await parser.CommandParse(holder.Handle, Connections, MarkupText.Plain($"@function {name}=me,FN"));
+
+			var result = await parser.CommandParse(holder.Handle, Connections, MarkupText.Plain($"think {name}()"));
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo("defined");
+		}
+		finally
+		{
+			await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@function/delete {name}"));
+			await Connections.Disconnect(holder.Handle);
+		}
+	}
+
+	[Test]
 	[Arguments("followers")]
 	[Arguments("lpids")]
 	public async Task AnUncontrolledObjectsListIsRefused(string function)

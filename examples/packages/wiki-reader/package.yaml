@@ -1,6 +1,6 @@
 format: "1.10"
 package: wiki-reader
-version: 1.7.0
+version: 1.7.1
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -22,7 +22,8 @@ objects:
     name: Wiki Reader
     location: "{{$master_room}}"
     # Send_OOB is what cmdlink() asks of whoever writes a command link, as PennMUSH asks it of XCH_CMD.
-    powers: [Send_OOB]
+    # Functions lets STARTUP register wikilink().
+    powers: [Send_OOB, Functions]
     attributes:
 
       FUN:
