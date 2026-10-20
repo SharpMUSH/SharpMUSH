@@ -43,12 +43,12 @@ The dated records below provide the details and limitations of each observation.
 |---|---|---|
 | Four familiarity paths | Browser-selected all four paths; complete authenticated desktop Discord, fresh desktop MUSH and fresh mobile other-roleplay sequences through connected Play; returning mobile MUSH sequence | Remaining viewport coverage |
 | Optional, dismissible, resumable | Independent route/reload, voluntary re-entry, Escape/back focus return, stop and resume tests; fresh keyboard login/create/welcome/Play journey | Screen-reader review remains open |
-| Account and character handoff | Live create, existing-character claim, roster preservation, failed-connection retry; routing regressions | Fresh-account claim browser variant; configured external-login provider journey |
+| Account and character handoff | Live create, existing-character claim, fresh empty-account claim, roster preservation, failed-connection retry; routing regressions | Configured external-login provider journey |
 | Account isolation and anonymous import | Real HTTP checks, future-schema tests, live logout/second-account sequence: explicit import declined, fresh progress and RetryPilot context confirmed | No outstanding account-boundary case identified |
 | Safe practice and real commands | Live local practice, empty-input insertion, draft refusal, explicit Send and core-command outputs; three live connections verify room speech, targeted pages and member-only cross-room channel delivery | No outstanding command-audience case identified |
-| Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; open guide removes disabled `+help` and restores it automatically without losing focus | Actual uninstall scenario not exercised; disabled-handler transition verified |
+| Installed-package accuracy | Reviewed-source/version/baseline/access regressions; live help evidence; disabled-handler and actual Scene uninstall/reinstall both update the open guide without losing focus | No outstanding package lifecycle case identified |
 | Game identity and feature gates | Public identity API checks, disabled/private wiki regressions, configured preview; all three configured wiki links opened as an ordinary player after admin changes, with disabled-reader omission verified | No outstanding configured-link case identified |
-| Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence and deferred tasks | Full fresh-world First Setup and imported-world interrupted resume in browser |
+| Separate admin flow | `config.admin` denial/allow checks, preview/save, checklist persistence, deferred tasks; completed fresh-world setup and real imported-world sign-in/identity-step reload | Actual external/passkey authentication after import remains separate |
 | Layout and accessibility | Desktop light/dark, 320/390px reflow, named icon controls, focus trap/return, no-art/reduced imagery, dark paragraph contrast | Actual 200% zoom; broader screen-reader and theme contrast checks |
 | Production art safety | Bounded approved neutral SVG fallback; candidates withheld after independent QA | All 252 inventory slots, independent QA and owner visual acceptance; approved genre assets wired into catalog |
 | Documentation and review | Player/admin guides, design, validation records, packaged browser screenshots and draft PR #2069; existing review threads resolved | Final current-head CI and substantive review |
@@ -1103,3 +1103,23 @@ preservation, factor/index continuity, rollback credential freshness, invalid
 mapping rejection, and transactional failure. Actual external-provider and
 passkey authentication are still separate acceptance work. The previous failed
 18081 world remains retained; it was not overwritten to produce this result.
+
+### Actual package lifecycle browser acceptance (2026-10-20)
+
+The isolated imported world on port 18082 initially advertised `+help` and
+`+scene/help`. With the experienced-player guide open at “Explore this game's
+additions”, uninstalled `scene-help`, `scene-config`, then `scene` using the
+normal package API without force. The capability API returned only `+help`;
+the open guide removed `+scene/help` at its background refresh. Keyboard focus
+stayed on the selected guide-step button.
+
+Restored the exact initial package selection through the setup package API.
+Both capability response and the still-open guide again included `+scene/help`,
+with focus unchanged and no page reload. Screenshots:
+`work/onboarding/package-uninstalled-guide.png` and
+`work/onboarding/package-restored-guide.png`. This verifies real uninstall and
+reinstall, supplementing the earlier disabled-handler acceptance.
+
+The in-app browser's Ctrl-plus input did not change viewport dimensions or
+device-pixel ratio. It does not establish actual browser zoom acceptance;
+the native 200% zoom gate remains open.
