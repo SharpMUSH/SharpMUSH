@@ -34,17 +34,17 @@ public class WikiCategoryNativeCommitFailureTests
 		}
 		var configured = Environment.GetEnvironmentVariable("TMPDIR");
 		var scratchRoot = Path.GetFullPath(string.IsNullOrWhiteSpace(configured)
-			? Path.Combine(Environment.CurrentDirectory, "work/category-native-commit") : configured);
+			? Path.Join(Environment.CurrentDirectory, "work/category-native-commit") : configured);
 		if (scratchRoot == "/tmp" || scratchRoot.StartsWith("/tmp/", StringComparison.Ordinal)
 			|| scratchRoot == "/var/tmp" || scratchRoot.StartsWith("/var/tmp/", StringComparison.Ordinal))
 			throw new InvalidOperationException("Native category probe requires disk-backed scratch");
 		RejectLinkedAncestors(scratchRoot);
-		var scratch = Path.Combine(scratchRoot, "category-commit-run-" + Guid.NewGuid().ToString("N"));
+		var scratch = Path.Join(scratchRoot, "category-commit-run-" + Guid.NewGuid().ToString("N"));
 		RequireAbsent(scratch);
-		var fixtureParent = Path.Combine(scratch, "fixture");
-		var runtimeTemp = Path.Combine(scratch, "runtime-temp");
-		var world = Path.Combine(fixtureParent, "world");
-		var evidence = Path.Combine(fixtureParent, "evidence");
+		var fixtureParent = Path.Join(scratch, "fixture");
+		var runtimeTemp = Path.Join(scratch, "runtime-temp");
+		var world = Path.Join(fixtureParent, "world");
+		var evidence = Path.Join(fixtureParent, "evidence");
 		var scenario = "category-commit-failure-" + (resumed ? "resume" : "initial");
 		Process? process = null;
 		Task<string>? stdout = null;
@@ -62,14 +62,14 @@ public class WikiCategoryNativeCommitFailureTests
 			RejectLinkedAncestors(fixtureParent);
 			var host = Environment.GetEnvironmentVariable("DOTNET_HOST_PATH");
 			var root = Environment.GetEnvironmentVariable("DOTNET_ROOT");
-			if (string.IsNullOrWhiteSpace(host)) host = string.IsNullOrWhiteSpace(root) ? "dotnet" : Path.Combine(root, "dotnet");
+			if (string.IsNullOrWhiteSpace(host)) host = string.IsNullOrWhiteSpace(root) ? "dotnet" : Path.Join(root, "dotnet");
 			var start = new ProcessStartInfo(host)
 			{
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 				RedirectStandardError = true
 			};
-			start.ArgumentList.Add(Path.Combine(AppContext.BaseDirectory, "native-semantic-probe", "WikiSemantics.NativeProbe.dll"));
+			start.ArgumentList.Add(Path.Join(AppContext.BaseDirectory, "native-semantic-probe", "WikiSemantics.NativeProbe.dll"));
 			foreach (var arg in new[] { "--scenario", scenario, "--world", world, "--evidence", evidence }) start.ArgumentList.Add(arg);
 			foreach (var name in new[] { "TMPDIR", "TMP", "TEMP" }) start.Environment[name] = runtimeTemp;
 			process = Process.Start(start) ?? throw new InvalidOperationException("Category probe did not start");
@@ -93,7 +93,7 @@ public class WikiCategoryNativeCommitFailureTests
 			Check(string.Join(',', phases) == Phases, "Incomplete or out-of-order category proof phases");
 			RejectLinkedAncestors(world);
 			RejectLinkedAncestors(evidence);
-			var evidenceFile = Path.Combine(evidence, "category-commit-failure.json");
+			var evidenceFile = Path.Join(evidence, "category-commit-failure.json");
 			RejectLinkedAncestors(evidenceFile);
 			Check(File.Exists(evidenceFile), "Missing category COMMIT evidence");
 			Check(new FileInfo(evidenceFile).Length <= 32768, "Category COMMIT evidence limit exceeded");
@@ -180,8 +180,8 @@ public class WikiCategoryNativeCommitFailureTests
 
 	private static async Task VerifyRecoveredWorld(string world, string expectedSourceHash)
 	{
-		Check(Directory.Exists(world) && File.Exists(Path.Combine(world, "data.mdb")), "Child-closed recovered world is missing");
-		RejectLinkedAncestors(Path.Combine(world, "data.mdb"));
+		Check(Directory.Exists(world) && File.Exists(Path.Join(world, "data.mdb")), "Child-closed recovered world is missing");
+		RejectLinkedAncestors(Path.Join(world, "data.mdb"));
 		await using var db = new LightningDatabase(NullLogger<LightningDatabase>.Instance,
 			new LightningStoreOptions { Path = world, MapSize = 256L << 20, Sync = LightningSyncMode.Full },
 			Substitute.For<IPasswordService>(), relations: null);

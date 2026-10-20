@@ -36,7 +36,7 @@ internal static class CategoryCommitFailureScenario
 		RequireAbsent(evidence);
 		Directory.CreateDirectory(evidence);
 		RejectLinkedAncestors(evidence);
-		var proofPath = Path.Combine(evidence, "category-commit-failure.json");
+		var proofPath = Path.Join(evidence, "category-commit-failure.json");
 		RequireAbsent(proofPath);
 		// Fixed storage and ordinary sinks exist before the restricted interval.
 		var proofBuffer = new byte[ProofCap];
@@ -261,18 +261,18 @@ internal static class CategoryCommitFailureScenario
 		Check(modules.Length == 1, "Expected one already-loaded liblmdb module");
 		var loaded = Path.GetFullPath(modules[0].FileName);
 		Check(loaded.Length <= 1024, "Native module path too long");
-		var deps = Path.Combine(AppContext.BaseDirectory, "WikiSemantics.NativeProbe.deps.json");
+		var deps = Path.Join(AppContext.BaseDirectory, "WikiSemantics.NativeProbe.deps.json");
 		using var manifest = JsonDocument.Parse(ReadBounded(deps, 4 << 20));
 		var library = manifest.RootElement.GetProperty("libraries").GetProperty("LightningDB/0.23.1");
 		Check(library.GetProperty("path").GetString() == "lightningdb/0.23.1", "Wrong resolved LightningDB package");
 		var packages = Environment.GetEnvironmentVariable("NUGET_PACKAGES")
-			?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
-		var package = Path.Combine(packages, "lightningdb", "0.23.1");
-		var packagedNative = Path.Combine(package, "runtimes", "linux-x64", "native", "liblmdb.so");
+			?? Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".nuget", "packages");
+		var package = Path.Join(packages, "lightningdb", "0.23.1");
+		var packagedNative = Path.Join(package, "runtimes", "linux-x64", "native", "liblmdb.so");
 		var hash = Convert.ToHexString(SHA256.HashData(ReadBounded(loaded, 16 << 20)));
 		Check(hash == Convert.ToHexString(SHA256.HashData(ReadBounded(packagedNative, 16 << 20))), "Loaded native module differs from resolved package");
-		Check(Encoding.UTF8.GetString(ReadBounded(Path.Combine(package, "wasm", "README.md"), 65536)).Contains("LMDB_1.0.1", StringComparison.Ordinal)
-			&& Encoding.UTF8.GetString(ReadBounded(Path.Combine(package, "wasm", "mdb.c"), 2 << 20)).Contains("#define NUM_METAS\t2", StringComparison.Ordinal),
+		Check(Encoding.UTF8.GetString(ReadBounded(Path.Join(package, "wasm", "README.md"), 65536)).Contains("LMDB_1.0.1", StringComparison.Ordinal)
+			&& Encoding.UTF8.GetString(ReadBounded(Path.Join(package, "wasm", "mdb.c"), 2 << 20)).Contains("#define NUM_METAS\t2", StringComparison.Ordinal),
 			"Missing pinned LMDB metadata-page provenance");
 		return (loaded, hash);
 	}
