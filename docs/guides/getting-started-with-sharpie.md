@@ -8,8 +8,8 @@ Choose the experience closest to yours: Discord, MUSHes, another roleplay
 environment, or independent exploration. Your game may supply its own welcome,
 rules and character guide. Those explain its setting and community expectations.
 
-The MUSH path is a four-step tour of what changes: web accounts, linking your
-existing character, Story/Terminal views and this game's additions. It does not
+The MUSH path is a five-step tour covering web accounts, linking your
+existing character, Story/Terminal views, channels and this game's additions. It does not
 require novice command practice. The common-command reference stays available.
 
 ## Accounts and characters
@@ -42,10 +42,13 @@ use the normal terminal to run commands.
 | `pose waves.` | Describe your character's action | People in the room |
 | `page NAME=Hello` | Send a private message | The named player |
 
-Each game may provide additional commands. Consult its help; a package being
-mentioned elsewhere does not prove that it is installed in your game.
+The final step automatically shows supported package-help commands verified for
+your active character. Each game may provide other commands too. Consult its
+help; a package being mentioned elsewhere does not prove it is installed.
 
-Close or skip guidance whenever you prefer. Artwork preferences do not change
+In Play, **Back to game** closes the guide and preserves your place.
+**Stop this guide** dismisses the journey; you can choose a path again later.
+Skip individual steps whenever you prefer. Artwork preferences do not change
 the written instructions. If progress changed in another tab, reload it before
 making further choices.
 

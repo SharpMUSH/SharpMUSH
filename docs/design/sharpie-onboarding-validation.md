@@ -403,3 +403,11 @@ In the published Play guide, keyboard selection of the Discord path placed focus
 on its lesson heading. Escape closed the sheet and restored focus to the guide
 opener. The retained lesson resumed correctly. These verify DOM/native keyboard
 focus behavior, not an actual screen-reader session.
+
+The published dialog exposes `role=dialog`, `aria-modal=true` and a name.
+All seven interactive controls inspected had accessible names. Navigation and
+stop icons measured 44×44 CSS pixels; lesson action buttons were 44px high;
+the reference disclosure measured 287×36. Shift+Tab from the first control
+reached the focus-trap sentinel inside the dialog, and Tab returned to the first
+control without entering the underlying game. This is a bounded focus-containment
+check, not proof of every screen-reader or keyboard interaction.

@@ -3,11 +3,17 @@
 Administrators with configuration permission can open `/admin/onboarding` from
 the dashboard. First Setup also offers an identity step after import. Review the
 prefilled imported values; save explicitly or defer the step. The unsaved preview
-shows the welcome heading, introduction and approved illustration for your chosen
-style before you apply the changes.
+updates the welcome heading and introduction as you type. Artwork follows the
+selected style and genre when a reviewed illustration is available; otherwise
+the preview identifies the default Sharpie fallback.
 
-Set the game name, short introduction, MSSP genres/subgenres and preferred Sharpie
-style. Genre changes preserve unrelated MSSP entries. Welcome, rules and character
+Set the game name, short introduction, one MSSP genre, one subgenre and preferred
+Sharpie style. Both category dropdowns use the shared MSSP catalog; choose `None`
+for a category that does not apply. The server rejects multiple or unlisted
+values submitted through this form. Existing unsupported imported values remain
+visible until you select a replacement. Genre changes preserve unrelated MSSP entries.
+The page and its settings API require the same `config.admin` permission as the
+configuration editor. Welcome, rules and character
 guide references use `namespace/slug`, for example `main/welcome`.
 
 A configured wiki link is shown publicly only when the wiki reader is enabled and
