@@ -1,4 +1,5 @@
 using NSubstitute;
+using SharpMUSH.Library.Utilities;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.RenderingWorker.Services;
 using SharpMUSH.SocketServer.Models;
@@ -73,6 +74,29 @@ public partial class TelnetServerNegotiationTests
 			await output(OutputTransformService.Transform(Encoding.UTF8.GetBytes(text), capabilities));
 			var wire = await ReadUntilAsync(fromServer, bytes => Contains(bytes, Convert.FromHexString(encodedHex)));
 			await Assert.That(Contains(wire, Convert.FromHexString(encodedHex))).IsTrue();
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+		}
+	}
+
+	[Test]
+	public async Task SilentClient_IsRegisteredForAscii()
+	{
+		var service = Substitute.For<IConnectionServerService>();
+		var (toServer, fromServer, handler, published, cts) = StartServer(connectionService: service);
+		using var serverCancellation = cts;
+		try
+		{
+			await ReadUntilAsync(fromServer, bytes => Contains(bytes, IAC, WILL, CHARSET));
+			await WriteAsync(toServer, "look\r\n"u8.ToArray());
+			await WaitForPublishedAsync<TelnetInputMessage>(published);
+			var registration = service.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IConnectionServerService.RegisterAsync));
+			var capabilities = (ProtocolCapabilities)registration.GetArguments()[9]!;
+			await Assert.That(capabilities.OutputCharset).IsEqualTo(TerminalCharsets.Ascii);
 		}
 		finally
 		{

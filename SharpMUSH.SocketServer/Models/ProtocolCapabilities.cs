@@ -42,7 +42,10 @@ public static class OutputFormatNegotiation
 /// <param name="SupportsAnsi">Whether the client supports basic 16-color ANSI codes</param>
 /// <param name="SupportsXterm256">Whether the client supports 256-color ANSI codes (ESC[38;5;n)</param>
 /// <param name="SupportsTruecolor">Whether the client supports 24-bit RGB ANSI codes (ESC[38;2;r;g;b)</param>
-/// <param name="SupportsUtf8">Whether the client claims UTF-8 (MTTS), or has not reported its terminal yet</param>
+/// <param name="SupportsUtf8">
+/// Whether the client claims UTF-8 (MTTS). A telnet connection starts without the claim; a WebSocket connection,
+/// whose client is a browser, starts with it.
+/// </param>
 /// <param name="Charset">
 /// The character set telnet CHARSET negotiation settled on (one of <see cref="TerminalCharsets"/>), or null when it
 /// never did. What the connection is written in is <see cref="OutputCharset"/>.

@@ -383,6 +383,9 @@ public partial class TelnetServer
 				{
 					await telnet.SendGMCPCommand(Encoding.UTF8.GetBytes(module), Encoding.UTF8.GetBytes(message));
 				},
+				// Without the client's word for UTF-8 (CHARSET, MTTS, or a terminal SharpMUSH knows) the connection
+				// is written in ASCII: the clients that never answer are the ones least likely to show Unicode.
+				capabilities: new ProtocolCapabilities(SupportsUtf8: false),
 				isSecure: isSecure, cancellationToken: ct);
 		}
 
