@@ -564,6 +564,7 @@ public class LayoutFunctionTests
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("gradient(x,r|g,{{\"flow\":\"sideways\"}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("gradient(x,r|g,{{\"repeat\":0}})", ErrorMessages.Returns.ArgRange)]
+	[Arguments("gradient(x,r|g,{{\"target\":\"edges\"}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("gradient(x,r|g,{{\"gradient\":\"b\"}})", "#-1 UNKNOWN LAYOUT OPTION GRADIENT")]
 	[Arguments("gauge(1,2,,{{\"gradient\":\"r\",\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("datacolumns({{\"nowrap\":\"3\"}},A|1,B|2)", ErrorMessages.Returns.ArgRange)]
