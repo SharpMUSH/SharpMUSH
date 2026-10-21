@@ -10,6 +10,22 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-modern-comicbook-shared-completion", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-modern-comicbook-administrator-capabilities", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-modern-anime-player-continue", "anime", "Modern", "images/sharpie/sharpie-modern-anime-player-continue.png", 1024, 1536, "player-continue"),
+		new SharpieArt("sharpie-spiritual-comicbook-administrator-identity", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-administrator-identity.png", 1145, 1374, "administrator-identity"),
+		new SharpieArt("sharpie-spiritual-comicbook-player-continue", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-player-continue.png", 1143, 1376, "player-continue"),
+		new SharpieArt("sharpie-spiritual-comicbook-player-speak-act", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-player-speak-act.png", 1145, 1374, "player-speak-act"),
+		new SharpieArt("sharpie-modern-comicbook-player-continue", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-modern-comicbook-player-speak-act", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-modern-comicbook-player-useful-action", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-modern-comicbook-player-place", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-modern-comicbook-player-world", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-modern-comicbook-player-sign-in", "comicbook", "Modern", "images/sharpie/sharpie-modern-comicbook-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-spiritual-comicbook-shared-completion", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-shared-completion.png", 1145, 1374, "shared-completion"),
+		new SharpieArt("sharpie-spiritual-comicbook-player-place", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-player-place.png", 1144, 1375, "player-place"),
+		new SharpieArt("sharpie-spiritual-comicbook-administrator-capabilities", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-administrator-capabilities.png", 1145, 1374, "administrator-capabilities"),
+		new SharpieArt("sharpie-spiritual-comicbook-administrator-rules", "comicbook", "Spiritual", "images/sharpie/sharpie-spiritual-comicbook-administrator-rules.png", 1145, 1374, "administrator-rules"),
 		new SharpieArt("sharpie-modern-anime-administrator-invite", "anime", "Modern", "images/sharpie/sharpie-modern-anime-administrator-invite.png", 1145, 1374, "administrator-invite"),
 		new SharpieArt("sharpie-modern-pixel-administrator-identity", "pixel", "Modern", "images/sharpie/sharpie-modern-pixel-administrator-identity.png", 1254, 1254, "administrator-identity"),
 		new SharpieArt("sharpie-modern-pixel-administrator-walkthrough", "pixel", "Modern", "images/sharpie/sharpie-modern-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
