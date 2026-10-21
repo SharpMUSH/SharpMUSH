@@ -154,9 +154,10 @@ public static class WikiCommandHelper
 	public static async ValueTask<bool> CanSeeDrafts(IMUSHCodeParser parser, AnySharpObject executor)
 		=> (await ReaderAsync(parser, executor)).Has(PortalPermission.WikiDrafts);
 
-	/// <summary>The executor's dbref string as stored in wiki author/editor fields.</summary>
+	/// <summary>The executor's objid (<c>#N:creation</c>) as stored in wiki author/editor fields, the same form
+	/// the portal's acting character takes.</summary>
 	public static string EditorDbref(AnySharpObject executor) =>
-		$"#{executor.Object().Key}";
+		executor.Object().DBRef.ToString();
 
 	/// <summary>One listing row: the page's reference, its title (marked when a draft), revision and last edit.</summary>
 	public static string[] PageRow(WikiPage page) =>

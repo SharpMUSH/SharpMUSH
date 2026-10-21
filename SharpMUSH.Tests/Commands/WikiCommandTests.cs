@@ -1462,4 +1462,65 @@ public class WikiCommandTests
 
 		await Assert.That((await WikiService.GetRequirementsAsync()).For(WikiRuleTarget.ForCategory(category))).IsNull();
 	}
+
+	/// <summary>The character's objid, as the portal's session claim carries it (<c>Object.DBRef</c>).</summary>
+	private async Task<string> PortalIdentityAsync(TestIsolationHelpers.TestPlayer player)
+		=> (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>().Object().DBRef.ToString();
+
+	/// <summary>
+	/// A draft written from the portal is the in-game author's own draft: they search it up and read its
+	/// body, and another mortal does neither.
+	/// </summary>
+	[Test]
+	public async ValueTask APortalDraft_IsTheSameCharactersOwnDraftInGame()
+	{
+		var author = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiPortalAuthor");
+		var other = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiPortalOther");
+		var marker = TestIsolationHelpers.GenerateUniqueName("portaldraftmarker").ToLowerInvariant();
+		var created = (await WikiService.CreateAsync(TestIsolationHelpers.GenerateUniqueName("Portal Draft"),
+			$"The {marker} phrase.", await PortalIdentityAsync(author), WikiNamespace.Main, "en")).Expect<WikiPage>();
+		var page = (await WikiService.SetMetadataAsync(created.Id, [], published: false)).Expect<WikiPage>();
+
+		await Parser.CommandParse(author.Handle, ConnectionService, MarkupText.Plain($"@wiki/search {marker}"));
+		await ExpectNotify(author.DbRef, "1 page(s) matching");
+		await Parser.CommandParse(author.Handle, ConnectionService, MarkupText.Plain($"@wiki/draft {page.Slug}"));
+		await ExpectNotify(author.DbRef, $"The {marker} phrase.");
+
+		await Parser.CommandParse(other.Handle, ConnectionService, MarkupText.Plain($"@wiki/search {marker}"));
+		await ExpectNotify(other.DbRef, "0 page(s) matching");
+		await Parser.CommandParse(other.Handle, ConnectionService, MarkupText.Plain($"@wiki/draft {page.Slug}"));
+		await ExpectNoNotify(other.DbRef, $"The {marker} phrase.");
+	}
+
+	/// <summary>
+	/// A page written in-game and then unpublished is the portal reader's own draft when the portal reader
+	/// is the same character: the direct read, the listing and the count all admit it, and they admit it
+	/// for nobody else without <c>wiki.drafts</c>.
+	/// </summary>
+	[Test]
+	public async ValueTask AnInGameDraft_IsTheSameCharactersOwnDraftInThePortal()
+	{
+		var author = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiGameAuthor");
+		var other = await ApprovedPlayerAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "WikiGameOther");
+		var title = TestIsolationHelpers.GenerateUniqueName("Game Draft");
+		await Parser.CommandParse(author.Handle, ConnectionService, MarkupText.Plain($"@wiki/create {title}=body"));
+		var created = (await WikiService.GetBySlugAsync(WikiHelpers.Slugify(title))).Expect<WikiPage>();
+		var page = (await WikiService.SetMetadataAsync(created.Id, [], published: false)).Expect<WikiPage>();
+		await Assert.That(page.AuthorDbref).IsEqualTo(await PortalIdentityAsync(author));
+
+		var access = WebAppFactoryArg.Services.GetRequiredService<IWikiAccessService>();
+		var only = new HashSet<string>(StringComparer.Ordinal) { page.Id };
+		foreach (var (reader, admitted) in new[]
+		{
+			(WikiReader.From([PortalPermission.WikiRead], await PortalIdentityAsync(author)), true),
+			(WikiReader.From([PortalPermission.WikiRead], await PortalIdentityAsync(other)), false)
+		})
+		{
+			var visibility = (await access.VisibilityAsync(reader)) with { IncludedPageIds = only };
+			await Assert.That(access.MaySeeDraft(reader, page)).IsEqualTo(admitted);
+			await Assert.That((await WikiService.GetAllPagesAsync(0, 10, WikiNamespace.Main, visibility)).Any(p => p.Id == page.Id))
+				.IsEqualTo(admitted);
+			await Assert.That(await WikiService.CountPagesAsync(WikiNamespace.Main, visibility)).IsEqualTo(admitted ? 1 : 0);
+		}
+	}
 }
