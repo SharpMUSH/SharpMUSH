@@ -14,7 +14,8 @@ public sealed class PackageOperationRunner(
 	IPackageOperationGate gate,
 	IWorldBackupService backups,
 	IPackageLifecycleRunner lifecycle,
-	ILogger<PackageOperationRunner> logger) : IPackageOperationRunner, IPackageOperationLifetime
+	ILogger<PackageOperationRunner> logger,
+	IPackageOperationScope? scope = null) : IPackageOperationRunner, IPackageOperationLifetime
 {
 	/// <summary>The queue group package operations and their lifecycle hooks are admitted under.</summary>
 	public const string QueueGroup = "package";
@@ -88,7 +89,11 @@ public sealed class PackageOperationRunner(
 		var status = PackageTaskObservation.Unknown;
 		try
 		{
-			var result = await RunInSequenceAsync(operation, body, cancellationToken, provenance, report);
+			// Captured in the starting flow, which this runs in until its first await; each queue entry
+			// the operation owns re-enters it. A capture that fails fails this operation and still
+			// releases the sequence.
+			var flow = scope?.Capture();
+			var result = await RunInSequenceAsync(operation, body, cancellationToken, provenance, report, flow);
 			status = PackageTaskObservation.Returned;
 			return result;
 		}
@@ -105,7 +110,7 @@ public sealed class PackageOperationRunner(
 		string operation,
 		Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance,
-		PackageOperationObservationBuilder report)
+		PackageOperationObservationBuilder report, object? flow)
 	{
 		var completion = new TaskCompletionSource<Finished<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -125,6 +130,7 @@ public sealed class PackageOperationRunner(
 					completion.TrySetCanceled(cancellationToken);
 					return null;
 				}
+				using var entered = scope?.Enter(flow);
 				var execution = ExecuteAsync(operation, body, cancellationToken, provenance, report);
 				// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
 				await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
@@ -159,7 +165,7 @@ public sealed class PackageOperationRunner(
 			// No hook or later operation may overtake the body reservation's actual release.
 			await released.Task;
 		}
-		try { await RunHooksAsync(finished.Hooks, report); }
+		try { await RunHooksAsync(finished.Hooks, report, flow); }
 		catch (Exception exception) when (finished.Completion.IsFaulted || finished.Completion.IsCanceled)
 		{
 			// Join hooks first, and preserve the original body failure/cancellation if their admission
@@ -238,7 +244,7 @@ public sealed class PackageOperationRunner(
 	/// The operation's entry has finished by now, so they follow it rather than run inside it, and each
 	/// gets the time budget any queue entry gets.
 	/// </summary>
-	private async Task RunHooksAsync(IReadOnlyList<PackageLifecycleHook> hooks, PackageOperationObservationBuilder report)
+	private async Task RunHooksAsync(IReadOnlyList<PackageLifecycleHook> hooks, PackageOperationObservationBuilder report, object? flow)
 	{
 		var pending = new List<Task>(hooks.Count);
 		try
@@ -253,6 +259,7 @@ public sealed class PackageOperationRunner(
 				{
 					admission = await AdmitReleasedWorkAsync(async () =>
 					{
+						using var entered = scope?.Enter(flow);
 						try
 						{
 							if (lifecycle is IPackageLifecycleObserver observer)

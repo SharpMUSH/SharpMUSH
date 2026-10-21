@@ -100,6 +100,7 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 			return provider;
 		});
 		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<IPackageOperationScope, SemanticWikiPackageOperationScope>();
 		services.AddSingleton<PackageOperationRunner>();
 		services.RemoveAll<IPackageInstallService>();
 		services.RemoveAll<IPackageOperationRunner>();
