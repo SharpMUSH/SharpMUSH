@@ -16,6 +16,10 @@ public static class TestPaths
 	public static DirectoryInfo Helpfiles =>
 		new(Path.Combine(RepositoryRoot, "SharpMUSH.Documentation", "Helpfiles", "SharpMUSH"));
 
+	/// <summary>A PennMUSH config file that sets nothing, so every option reads back at its default.</summary>
+	public static string EmptyConfigFile =>
+		Path.Combine(RepositoryRoot, "SharpMUSH.Tests", "Configuration", "Testfile", "empty.cnf");
+
 	/// <summary>
 	/// Every <c>.cs</c> file under a shipped project. Test projects are excluded, so a caller asking
 	/// "does production code do X" cannot be answered by its own assertions.

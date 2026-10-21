@@ -18,7 +18,18 @@ public partial class IntegratedWikiMutationTests
 
 	// The runner supplies the approved disk-backed TMPDIR/TMP/TEMP before starting this process.
 	private static string ScratchRoot => Path.Join(Path.GetTempPath(), "semantic-wiki-first-atomic", "integrated-wiki-mutations");
+	private static string RetentionRoot => Path.Combine(Environment.GetEnvironmentVariable("TMPDIR")
+		?? Path.Combine(Environment.CurrentDirectory, "work/semantic-wiki-prototype/b1/tmp"), "retention-ownership");
 	private static string ConfigFile => Path.Join(AppContext.BaseDirectory, "Configuration", "Testfile", "mushcnf.dst");
+
+	/// <summary>Each fixture removes its own world; the roots they share go once the class is done with them.</summary>
+	[After(Class)]
+	public static void RemoveTheEmptyScratchRoots()
+	{
+		foreach (var root in new[] { ScratchRoot, RecoveryRoot, RetentionRoot, Path.GetDirectoryName(ScratchRoot)! })
+			if (Directory.Exists(root) && !Directory.EnumerateFileSystemEntries(root).Any())
+				Directory.Delete(root);
+	}
 
 	private SemanticWikiPrototypeHost NewHost(Action<IServiceCollection>? configure = null)
 	{
