@@ -279,3 +279,24 @@ packages:
     package: alts
     version: 1.0.2
     description: +alts — the characters on your account, private until you make the list public, with any one kept off it (requires plus-help)
+  - path: onboarding/
+    name: Onboarding
+    package: onboarding
+    version: 1.0.0
+    description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
+  - path: onboarding-help/
+    package: onboarding-help
+    version: 1.0.0
+    description: Bridge — the checklist's topics in +help, and a step pointing new players at +help (requires onboarding and plus-help)
+  - path: onboarding-config/
+    package: onboarding-config
+    version: 1.0.0
+    description: Bridge — the checklist's steps and settings in +config onboarding (requires onboarding and plus-config)
+  - path: onboarding-chargen/
+    package: onboarding-chargen
+    version: 1.0.0
+    description: Bridge — the Get approved step says where the player's +app application stands (requires onboarding and chargen)
+  - path: onboarding-app/
+    package: onboarding-app
+    version: 1.0.0
+    description: Application package — the checklist on the portal's home page for a signed-in character with a step still open (requires onboarding)

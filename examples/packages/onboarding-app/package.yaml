@@ -1,0 +1,35 @@
+format: "1.10"
+package: onboarding-app
+version: 1.0.0
+kind: application
+authors: [SharpMUSH]
+description: "The getting-started checklist on the portal's home page, for a signed-in character with a step still open: the same steps as +welcome, with a button to tick off a step and one to hide the list."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [portal, application, onboarding, welcome]
+category: Essentials
+requires_server: ">=0.1"
+
+# An application package owns no objects. The onboarding package serves the routes it points at:
+# GET /http/onboarding/schema and /http/onboarding/data, both for the signed-in character, and POST /http/onboarding/act.
+depends:
+  - package: onboarding
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/onboarding/
+      branch: main
+
+# A widget for the home scope: the home page draws it in its side column, first, with no layout edit. A character with
+# nothing left to do, or who hid the list, gets a card with no pages, which draws nothing.
+application:
+  slug: onboarding
+  display_name: Getting started
+  icon: checklist
+  type: widget
+  schema_url: http/onboarding/schema
+  data_url: http/onboarding/data
+  minimum_role: player
+  zones: [RightSidebar]
+  scope: home
+  order: 1
