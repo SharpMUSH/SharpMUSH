@@ -32,30 +32,30 @@
                         @if (HasCharacters)
                         {
                             <button type="button" class="account-panel-item account-panel-switch-btn" @onclick="OpenSubmenu">
-                                <span class="account-panel-item-icon" aria-hidden="true">&#8644;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.SwapHoriz" Style="font-size:1rem;" /></span>
                                 <span class="account-panel-item-label">@Loc["AuthSwitchCharacter"]</span>
                             </button>
                         }
                         else
                         {
                             <div class="account-panel-item account-panel-item--inert">
-                                <span class="account-panel-item-icon" aria-hidden="true">&#8644;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.SwapHoriz" Style="font-size:1rem;" /></span>
                                 <span class="account-panel-item-label">@Loc["AuthNoCharacter"]</span>
                             </div>
                         }
                         <a href="/account" class="account-panel-item" @onclick="FollowLinkAsync">
-                            <span class="account-panel-item-icon" aria-hidden="true">&#9881;</span>
+                            <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ManageAccounts" Style="font-size:1rem;" /></span>
                             <span class="account-panel-item-label">@Loc["AuthAccountManagement"]</span>
                         </a>
                         @* The look of each character (theme and accent) is per character, so it sits beside
                            the character switch rather than only behind Account management's sidebar. *@
                         <a href="/settings/theme" class="account-panel-item account-panel-theme" @onclick="FollowLinkAsync">
-                            <span class="account-panel-item-icon" aria-hidden="true">&#9680;</span>
+                            <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Contrast" Style="font-size:1rem;" /></span>
                             <span class="account-panel-item-label">@Loc["NavTheme"]</span>
                         </a>
                         <div class="account-panel-divider"></div>
                         <button type="button" class="account-panel-item account-panel-item--danger" @onclick="HandleLogoutAsync">
-                            <span class="account-panel-item-icon" aria-hidden="true">&#9211;</span>
+                            <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.Logout" Style="font-size:1rem;" /></span>
                             <span class="account-panel-item-label">@Loc["AuthLogout"]</span>
                         </button>
                     </div>
@@ -65,7 +65,7 @@
                     {
                         <div class="account-panel-level account-panel-level--submenu" inert="@(_level == PanelLevel.Root)">
                             <button type="button" class="account-panel-back" @onclick="BackToRoot">
-                                <span class="account-panel-item-icon" aria-hidden="true">&#8249;</span>
+                                <span class="account-panel-item-icon" aria-hidden="true"><MudIcon Icon="@Icons.Material.Outlined.ChevronLeft" Style="font-size:1rem;" /></span>
                                 <span>@Loc["AuthSwitchCharacter"]</span>
                             </button>
                             <div class="account-panel-characters">

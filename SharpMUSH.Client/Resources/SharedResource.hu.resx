@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Fiókkezelés</value>
+    <value>Saját fiók</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# regisztrált karakter} other {# regisztrált karakter}}</value>
     <comment>MT — Hungarian keeps the noun singular after a numeral, so both categories are deliberately identical.</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Karakt.</value>
-    <comment>MT — abbreviated nav chip label, matching the English "Chars".</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Terminál bezárása</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>parancsterminál</value>
+    <value>Parancsterminál</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Terminál megnyitása</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ez a játék nem őrzi meg az üzenetek előzményeit, ezért csak az ebben a látogatásban kapottak látszanak.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Vissza a jelenethez</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Vissza a játékhoz</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Játék</value>
