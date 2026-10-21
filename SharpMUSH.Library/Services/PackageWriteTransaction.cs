@@ -163,31 +163,43 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 
 	private async Task RecoverAsync(Task pending, TaskCompletionSource<IReadOnlyList<string>> completion)
 	{
-		IReadOnlyList<string> unrestored = [];
-		Exception? failure = null;
-		try
-		{
-			await pending;
-			if (!_committed)
-			{
-				using (new OwnedExecution(this)) unrestored = await RevertAllAsync();
-			}
-		}
-		catch (Exception error) { failure = error; }
+		var recovery = RevertJoinedAsync(pending);
+		await ((Task)recovery).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 
 		// Physical ownership ends only after actual forward work and compensation have joined.
 		// Commit alone cannot release it, and every closer shares this same terminal completion.
-		try
-		{
-			_lifetime.Report(_committed
-				? _releasedWorkFailed ? PackageWriteVerdict.ReleasedWorkFailed : PackageWriteVerdict.Committed
-				: failure is null && unrestored.Count == 0 ? PackageWriteVerdict.Reverted : PackageWriteVerdict.CompensationFailed);
-			await _lifetime.DisposeAsync();
-		}
-		catch (Exception error) { failure = failure is null ? error : new AggregateException(failure, error); }
+		var release = ReleaseAsync(Failure(recovery) is null && recovery.Result.Count == 0);
+		await release.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+		var failure = Failure(recovery) is { } recoveryFailure
+			? Failure(release) is { } releaseFailure ? new AggregateException(recoveryFailure, releaseFailure) : recoveryFailure
+			: Failure(release);
 		if (failure is not null) completion.SetException(failure);
-		else completion.SetResult(unrestored);
+		else completion.SetResult(recovery.Result);
 	}
+
+	private async Task ReleaseAsync(bool restored)
+	{
+		_lifetime.Report(_committed
+			? _releasedWorkFailed ? PackageWriteVerdict.ReleasedWorkFailed : PackageWriteVerdict.Committed
+			: restored ? PackageWriteVerdict.Reverted : PackageWriteVerdict.CompensationFailed);
+		await _lifetime.DisposeAsync();
+	}
+
+	private async Task<IReadOnlyList<string>> RevertJoinedAsync(Task pending)
+	{
+		await pending;
+		if (_committed) return [];
+		using (new OwnedExecution(this)) return await RevertAllAsync();
+	}
+
+	/// <summary>The exception a finished task ended with, unwrapped as an await would throw it; null when it succeeded.</summary>
+	private static Exception? Failure(Task task) => task switch
+	{
+		{ IsCanceled: true } => new TaskCanceledException(task),
+		{ Exception: { InnerExceptions.Count: 1 } single } => single.InnerException,
+		{ Exception: { } many } => many,
+		_ => null
+	};
 
 	private void RequireOpen()
 	{

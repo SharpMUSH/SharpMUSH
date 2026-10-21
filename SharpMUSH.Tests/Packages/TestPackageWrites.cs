@@ -36,11 +36,12 @@ internal static class TestPackageWrites
 		=> Factory(services, applications).Issue(manager, NoRetention.Instance);
 
 	/// <summary>A factory over <paramref name="services"/>' stores and an explicit application registry, unretained.</summary>
-	public static PackageWriteTransactionFactory Factory(IServiceProvider services, IApplicationRegistryService applications)
+	public static PackageWriteTransactionFactory Factory(IServiceProvider services, IApplicationRegistryService applications,
+		IPackageRegistryService? registry = null)
 	{
 		var database = services.GetRequiredService<ISharpDatabase>();
 		return new PackageWriteTransactionFactory(database, PackageWriteTransactionFactory.Unretained,
-			services.GetRequiredService<IMediator>(), database, database, (IPackageRegistryService)database, applications,
+			services.GetRequiredService<IMediator>(), database, database, registry ?? (IPackageRegistryService)database, applications,
 			services.GetRequiredService<ILockService>(), () => Helpers(services));
 	}
 
