@@ -46,6 +46,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword, bool IsReserved,
 		bool IsGodsAccount);
 	private record CreateCharacterRequest(string Name, string Password);
+	private record AccountRolesResponse(string AccountKey, string Username, string[] RoleSlugs);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
@@ -472,5 +473,37 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(freshLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var body = await freshLogin.Content.ReadFromJsonAsync<AccountLoginResponse>();
 		await Assert.That(body!.Characters.Any(c => c.DbrefNumber == character.DbrefNumber)).IsFalse();
+	}
+
+	/// <summary>
+	/// The portal's Assignments tab looks an account up, then assigns and removes through the key it was
+	/// given. The account's full id has a <c>/</c>, which no route segment matches.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 6)]
+	public async Task RoleAssignment_ThroughTheLookedUpKey_AssignsAndRemoves()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		var looked = await GetAccountRolesAsync(godHttp, godSessionToken, target.Username);
+		await Assert.That(looked.AccountKey).DoesNotContain("/");
+
+		using var assign = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Post, $"api/roles/account/{looked.AccountKey}/builder"), godSessionToken));
+		await Assert.That(assign.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).RoleSlugs).Contains("builder");
+
+		using var remove = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Delete, $"api/roles/account/{looked.AccountKey}/builder"), godSessionToken));
+		await Assert.That(remove.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).RoleSlugs).DoesNotContain("builder");
+	}
+
+	private static async Task<AccountRolesResponse> GetAccountRolesAsync(HttpClient godHttp, string godSessionToken, string username)
+	{
+		using var response = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Get, $"api/roles/account?username={username}"), godSessionToken));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		return (await response.Content.ReadFromJsonAsync<AccountRolesResponse>())!;
 	}
 }

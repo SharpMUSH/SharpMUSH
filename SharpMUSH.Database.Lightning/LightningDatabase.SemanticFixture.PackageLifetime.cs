@@ -52,11 +52,18 @@ public partial class LightningDatabase
 	internal SemanticFixtureLease SemanticFixtureLeaseForQueries
 		=> _fixtureLease is { } lease && !_fixtureClosed ? lease : throw SemanticFixtureCapability.Unavailable();
 
+	/// <summary>
+	/// Whether this provider's issued world has closed, or begun to, so a semantic read can no longer run here.
+	/// A read checks it between sections and when anything it calls fails.
+	/// </summary>
+	internal bool SemanticStorageClosed
+		=> _fixtureClosed || Store.IsClosed || _fixtureLease is not { } lease || !lease.Owner.IsOpenForReads(lease);
+
 	/// <summary>Admits a semantic read on this provider's current issued lease; see <see cref="SemanticFixtureReadLease"/>.</summary>
-	internal SemanticFixtureReadLease AdmitSemanticRead(CancellationToken deadline)
+	internal SemanticFixtureReadLease AdmitSemanticRead()
 	{
 		if (_fixtureLease is not { } lease || _fixtureClosed) throw SemanticFixtureCapability.Unavailable();
-		return lease.Owner.AdmitRead(lease, deadline);
+		return lease.Owner.AdmitRead(lease);
 	}
 
 	internal void PrepareSemanticFixtureClose()

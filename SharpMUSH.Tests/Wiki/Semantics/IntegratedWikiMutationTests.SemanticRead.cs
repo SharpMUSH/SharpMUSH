@@ -239,21 +239,4 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(denied.Sections).IsEqualTo(3);
 		await host.CloseAsync();
 	}
-
-	[Test]
-	public async Task AnAdmittedReadRefusesCloseAndActivationAndClosingRefusesNewReads()
-	{
-		await using var host = await SettledHostAsync();
-		var result = await ProbeReadAsync(host, async (_, _) =>
-		{
-			await Assert.That(async () => await host.CloseAsync()).Throws<SemanticFixtureOperationInProgressException>();
-			await Assert.That(async () => await host.ActivateAtomicWikiProjectionAsync()).Throws<SemanticFixtureOperationInProgressException>();
-		});
-		await Assert.That(result is SemanticReadResult<string>.Certified).IsTrue();
-
-		var provider = host.Services.GetRequiredService<LightningDatabase>();
-		provider.PrepareSemanticFixtureClose();
-		await Assert.That(async () => await ProbeReadAsync(host)).Throws<Exception>();
-		await host.CloseAsync();
-	}
 }

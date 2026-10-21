@@ -21,9 +21,9 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/roles                                   — create or update a role
 ///   DELETE /api/roles/{slug}                            — remove a role (non-system only)
 ///   GET    /api/roles/account?username={username}       — an account's assigned roles and overrides
-///   POST   /api/roles/account/{accountId}/{slug}        — assign a role to an account
-///   DELETE /api/roles/account/{accountId}/{slug}        — remove a role from an account
-///   PUT    /api/roles/account/{accountId}/overrides     — set one per-account override
+///   POST   /api/roles/account/{key}/{slug}              — assign a role to an account
+///   DELETE /api/roles/account/{key}/{slug}              — remove a role from an account
+///   PUT    /api/roles/account/{key}/overrides           — set one per-account override
 ///   GET    /api/roles/permissions                       — the custom permissions the game defines
 ///   PUT    /api/roles/permissions                       — define one, or change its description
 ///   DELETE /api/roles/permissions/{scope}               — remove one and every setting of it
@@ -52,8 +52,10 @@ public class RolesController(
 		long CreatedAt,
 		long UpdatedAt);
 
+	/// <summary><see cref="AccountKey"/> is the account's id without its collection, the form the
+	/// account routes take: an id's <c>/</c> never matches a route segment, escaped or not.</summary>
 	public record AccountRolesDto(
-		string AccountId,
+		string AccountKey,
 		string Username,
 		string? Email,
 		string Status,
@@ -129,7 +131,7 @@ public class RolesController(
 		var assigned = await roles.GetRolesForAccountAsync(account.Id);
 		var overrides = await roles.GetAccountOverridesAsync(account.Id);
 		return Ok(new AccountRolesDto(
-			account.Id,
+			KeyOf(account.Id),
 			account.Username,
 			account.Email,
 			account.Status.ToString(),
@@ -137,41 +139,41 @@ public class RolesController(
 			overrides.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString())));
 	}
 
-	[HttpPost("account/{accountId}/{slug}")]
+	[HttpPost("account/{key}/{slug}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
-	public async Task<IActionResult> AssignRole(string accountId, string slug)
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "key is a public database identity used for account-role foreign keys, not a credential or token.")]
+	public async Task<IActionResult> AssignRole(string key, string slug)
 	{
 		if (Actor() is not { } actor) return Forbid();
-		return await management.AssignAsync(actor, accountId, slug, HttpContext.RequestAborted) switch
+		return await management.AssignAsync(actor, FullId(key), slug, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)
 		};
 	}
 
-	[HttpDelete("account/{accountId}/{slug}")]
+	[HttpDelete("account/{key}/{slug}")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
-	public async Task<IActionResult> RemoveRole(string accountId, string slug)
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "key is a public database identity used for account-role foreign keys, not a credential or token.")]
+	public async Task<IActionResult> RemoveRole(string key, string slug)
 	{
 		if (Actor() is not { } actor) return Forbid();
-		return await management.UnassignAsync(actor, accountId, slug, HttpContext.RequestAborted) switch
+		return await management.UnassignAsync(actor, FullId(key), slug, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)
 		};
 	}
 
-	[HttpPut("account/{accountId}/overrides")]
+	[HttpPut("account/{key}/overrides")]
 	[Authorize(Policy = PortalPermission.RolesAdmin)]
-	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "accountId is a public database identity used for account-role foreign keys, not a credential or token.")]
-	public async Task<IActionResult> SetOverride(string accountId, [FromBody] OverrideDto dto)
+	[SuppressMessage("Security", "cs/cleartext-storage-of-sensitive-information", Justification = "key is a public database identity used for account-role foreign keys, not a credential or token.")]
+	public async Task<IActionResult> SetOverride(string key, [FromBody] OverrideDto dto)
 	{
 		if (Actor() is not { } actor) return Forbid();
 		if (!Enum.TryParse<PermissionState>(dto.State, true, out var state) || !Enum.IsDefined(state))
 			return BadRequest(new { error = $"Invalid permission state: {dto.State}" });
-		return await management.SetOverridesAsync(actor, accountId, [dto.Scope], state, HttpContext.RequestAborted) switch
+		return await management.SetOverridesAsync(actor, FullId(key), [dto.Scope], state, HttpContext.RequestAborted) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)
@@ -277,6 +279,9 @@ public class RolesController(
 		"permission" => CategoryKind.Permission,
 		_ => null
 	};
+
+	private static string FullId(string key) => $"node_accounts/{key}";
+	private static string KeyOf(string accountId) => accountId.Split('/')[^1];
 
 	/// <summary>Portal role authority is account-wide, as in every other HTTP policy gate.</summary>
 	private CapabilityActor? Actor()

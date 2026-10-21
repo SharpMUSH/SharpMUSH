@@ -34,12 +34,12 @@ public class RegistryClientWriteTests
 	{
 		var (roles, _, wire) = Answering(HttpStatusCode.BadRequest, """{"error":"Unknown role: bulders"}""");
 
-		var result = await roles.AssignAsync("accounts/42", "bulders");
+		var result = await roles.AssignAsync("42", "bulders");
 
 		await Assert.That(result.Expect<ApiFailure>().Message).IsEqualTo("Unknown role: bulders");
 		await Assert.That(wire.LastRequest!.Method).IsEqualTo(HttpMethod.Post);
 		await Assert.That(wire.LastRequest!.RequestUri!.AbsolutePath)
-			.IsEqualTo("/api/roles/account/accounts%2F42/bulders");
+			.IsEqualTo("/api/roles/account/42/bulders");
 	}
 
 	[Test]
@@ -47,7 +47,7 @@ public class RegistryClientWriteTests
 	{
 		var (roles, _, wire) = Answering(HttpStatusCode.NoContent);
 
-		var result = await roles.RemoveAsync("accounts/42", "builder");
+		var result = await roles.RemoveAsync("42", "builder");
 
 		await Assert.That(result.Expect<Success>()).IsEqualTo(new Success());
 		await Assert.That(wire.LastRequest!.Method).IsEqualTo(HttpMethod.Delete);

@@ -74,16 +74,16 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 	}
 
 	/// <summary>Assigns a role to an account.</summary>
-	public Task<ApiResult<Success>> AssignAsync(string accountId, string slug) =>
-		Client.PostApiAsync($"api/roles/account/{Uri.EscapeDataString(accountId)}/{Uri.EscapeDataString(slug)}");
+	public Task<ApiResult<Success>> AssignAsync(string accountKey, string slug) =>
+		Client.PostApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/{Uri.EscapeDataString(slug)}");
 
 	/// <summary>Removes a role from an account.</summary>
-	public Task<ApiResult<Success>> RemoveAsync(string accountId, string slug) =>
-		Client.DeleteApiAsync($"api/roles/account/{Uri.EscapeDataString(accountId)}/{Uri.EscapeDataString(slug)}");
+	public Task<ApiResult<Success>> RemoveAsync(string accountKey, string slug) =>
+		Client.DeleteApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/{Uri.EscapeDataString(slug)}");
 
 	/// <summary>Sets one per-account override (<c>Allow</c>, <c>Deny</c>, or <c>Inherit</c> to clear it).</summary>
-	public Task<ApiResult<Success>> SetOverrideAsync(string accountId, string scope, string state) =>
-		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountId)}/overrides", new OverrideRequest(scope, state));
+	public Task<ApiResult<Success>> SetOverrideAsync(string accountKey, string scope, string state) =>
+		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/overrides", new OverrideRequest(scope, state));
 
 	private sealed record OverrideRequest(string Scope, string State);
 
