@@ -354,7 +354,7 @@ public class LayoutFunctionTests
 	private static readonly string[] LayoutHelpFiles =
 	[
 		"layout.md", "layout-functions.md", "layout-borders.md", "layout-themes.md", "theme-command.md",
-		"box-function.md", "bullets-function.md", "datatable-function.md", "fields-function.md", "figure-function.md",
+		"box-function.md", "bullets-function.md", "datatable-function.md", "datacolumns-function.md", "fields-function.md", "figure-function.md",
 		"flex-function.md", "gauge-function.md", "gradient-function.md", "notice-function.md", "rule-function.md",
 		"swatch-function.md", "tone-function.md", "tree-function.md"
 	];

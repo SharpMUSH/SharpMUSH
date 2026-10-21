@@ -32,6 +32,11 @@
 
 box() and rule() draw with a border style. The game's default is the `layout_border` option, `double` unless the game changes it; `"border":"<style>"` picks another. A client without Unicode is sent `double` as the `mush` style shown below.
 
+- [layout border styles]: mush, ascii, single, double, heavy, rounded and none
+- [layout borders nested]: a border given to a layout that holds others
+- [layout border pieces]: corners, edges, tees and title brackets of your own
+- [layout borders ascii]: what a client without Unicode is sent
+
 ## Styles
 
 ```
