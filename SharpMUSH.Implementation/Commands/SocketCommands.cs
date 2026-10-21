@@ -692,6 +692,11 @@ public partial class Commands
 		var theme = await PlayerThemeAsync(parser, new AnySharpObject(player));
 		var unreadable = theme is Error<string> error ? error.Value : null;
 		await MessageBus.Publish(new UpdateThemeMessage(handle, theme is string spec ? spec : null));
+
+		// The portal's background terminal is not the player entering the game: it is bound quietly, with
+		// no messages, announcements, hooks, events, LAST bookkeeping or look.
+		if (ConnectionService.Get(handle)?.PresenceClass == PresenceClasses.Portal) return;
+
 		await ShowPostLoginMessages(handle, new AnySharpObject(player), isGuest);
 		if (unreadable is not null)
 		{
@@ -700,7 +705,7 @@ public partial class Commands
 
 		// Trigger PLAYER`CONNECT event - PennMUSH compatible
 		// PennMUSH spec: player`connect (objid, number of connections, descriptor)
-		var connectionCount = await ConnectionService.Get(playerRef).CountAsync();
+		var connectionCount = await ConnectionService.Get(playerRef).CountAsync(c => c.PresenceClass != PresenceClasses.Portal);
 		await EventService.TriggerEventAsync(SharpEvents.PlayerConnect,
 			playerRef,
 			$"#{player.Object.Key}",
