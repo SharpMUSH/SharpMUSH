@@ -187,6 +187,14 @@ public interface IWikiService
 	Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published);
 
 	/// <summary>
+	/// Replaces the facts a page states about itself (<see cref="WikiPage.Facts"/>). Like
+	/// <see cref="SetMetadataAsync"/> it writes no revision, and an edit of the page's text, title or categories
+	/// keeps them. Returns the updated page, <c>NotFound</c> when no page with <paramref name="id"/> exists, or an
+	/// error naming the fact that is malformed or does not fit the world's schema.
+	/// </summary>
+	Task<FoundResult<WikiPage>> SetFactsAsync(string id, IEnumerable<WikiPageFact> facts);
+
+	/// <summary>
 	/// Returns the <em>source-locale</em> revision history for a page, ordered by revision number
 	/// descending, with skip/take pagination. Translation revisions are a separate stream — see
 	/// <see cref="GetRevisionsForLocaleAsync"/>.

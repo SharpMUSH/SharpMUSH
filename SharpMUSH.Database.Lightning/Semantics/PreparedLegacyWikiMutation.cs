@@ -5,7 +5,7 @@ using SharpMUSH.Library.Models.Wiki;
 
 namespace SharpMUSH.Database.Lightning.Semantics;
 
-internal enum WikiLegacyMutationKind { Create = 1, Body = 2, Title = 3, Metadata = 4, Delete = 5 }
+internal enum WikiLegacyMutationKind { Create = 1, Body = 2, Title = 3, Metadata = 4, Delete = 5, Facts = 6 }
 internal sealed record IntegratedWikiReceipt(Guid MutationId, string RequestDigest, string PageId,
 	long StateVersion, long CommitSequence, int BodyRevision, WikiLegacyMutationKind Kind);
 internal sealed record IntegratedWikiCommitted(IntegratedWikiReceipt Receipt, WikiPage Page);
@@ -35,6 +35,7 @@ internal abstract class PreparedLegacyWikiMutation
 			Body body => Body.Prepare(scope, body.Id, body.Value, body.Editor, body.EditSummary, body.At),
 			Title title => Title.Prepare(scope, title.Id, title.Value),
 			Metadata metadata => Metadata.Prepare(scope, metadata.Id, metadata.Categories, metadata.Published),
+			Facts facts => Facts.Prepare(scope, facts.Id, facts.Values),
 			Delete delete => Delete.Prepare(scope, delete.Id),
 			_ => throw new ArgumentException("Unknown restored request.", nameof(request))
 		};
@@ -123,6 +124,25 @@ internal abstract class PreparedLegacyWikiMutation
 			scope.Lifetime.ReserveAdditional(checked(256 + 16L * frozen.Length));
 			return new(scope, id, frozen, published, scope.Digest(WikiLegacyMutationKind.Metadata,
 				new[] { id, published ? "1" : "0", string.Empty, frozen.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) }.Concat(frozen)));
+		}
+	}
+	internal sealed class Facts : PreparedLegacyWikiMutation
+	{
+		private Facts(LegacyWikiPreparationScope scope, string id, ImmutableArray<WikiPageFact> values, string digest)
+			: base(scope, WikiLegacyMutationKind.Facts, digest) => (Id, Values) = (id, values);
+		internal string Id { get; }
+		/// <summary>The page's facts as it will state them, already normalized.</summary>
+		internal ImmutableArray<WikiPageFact> Values { get; }
+		internal static Facts Prepare(LegacyWikiPreparationScope scope, string id, IReadOnlyList<WikiPageFact> values)
+		{
+			id = scope.Target(id);
+			if (values.Count > WikiSemanticLimits.MaxFacts) throw new WikiSemanticCapacityException("facts");
+			scope.Lifetime.ReserveAdditional(checked(256 + 64L * values.Count));
+			foreach (var fact in values) { scope.Retain(fact.Property); scope.Retain(fact.Value); }
+			var frozen = values.ToImmutableArray();
+			var fields = new List<string?> { id, frozen.Length.ToString(System.Globalization.CultureInfo.InvariantCulture) };
+			foreach (var fact in frozen) { fields.Add(fact.Property); fields.Add(fact.Value); }
+			return new(scope, id, frozen, scope.Digest(WikiLegacyMutationKind.Facts, fields));
 		}
 	}
 }

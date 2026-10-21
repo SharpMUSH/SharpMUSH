@@ -1,6 +1,7 @@
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -171,6 +172,13 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			WikiPage page => await store.SetPageMetadataAsync(id,
 				WikiHelpers.NormalizeCategories(categories, WikiHelpers.ParseNamespace(page.Namespace)), published),
 			NotFound notFound => notFound,
+		};
+
+	public async Task<FoundResult<WikiPage>> SetFactsAsync(string id, IEnumerable<WikiPageFact> facts)
+		=> WikiPageFacts.Normalize(facts) switch
+		{
+			IReadOnlyList<WikiPageFact> normalized => await store.SetPageFactsAsync(id, normalized),
+			Error<string> error => error,
 		};
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync() => store.GetPinnedCategoriesAsync();

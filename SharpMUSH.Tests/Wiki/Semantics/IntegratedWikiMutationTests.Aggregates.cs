@@ -14,9 +14,9 @@ public partial class IntegratedWikiMutationTests
 	private static SemanticWikiQuery Counted(SemanticWikiQuery query) => query with { IncludeCount = true, Facets = ["pf2e:tradition"] };
 
 	/// <summary>What the oracle says the count and the tradition buckets are, buckets in keyword order.</summary>
-	private static async Task<(long Count, string Buckets)> OracleAggregateAsync(QueryWorld world, WikiReader reader, Func<QueryPage, bool> holds, ISet<string> edited)
+	private static async Task<(long Count, string Buckets)> OracleAggregateAsync(QueryWorld world, WikiReader reader, Func<QueryPage, bool> holds)
 	{
-		var ids = await OracleAsync(world, reader, holds, false, edited);
+		var ids = await OracleAsync(world, reader, holds, false);
 		var buckets = ids.SelectMany(id => world.Pages[id].Traditions.Distinct()).GroupBy(t => t).OrderBy(g => g.Key, StringComparer.Ordinal)
 			.Select(g => $"{g.Key}:{g.Count()}");
 		return (ids.Count, string.Join(",", buckets));
@@ -39,7 +39,7 @@ public partial class IntegratedWikiMutationTests
 			{
 				if (target is not null && !await TargetVisibleAsync(world.World, reader, target)) continue;
 				var because = $"seed {seed}, {string.Join(",", reader.Scopes)}, {string.Join(" & ", query.Predicates)}";
-				var (count, buckets) = await OracleAggregateAsync(world.World, reader, holds, world.Edited);
+				var (count, buckets) = await OracleAggregateAsync(world.World, reader, holds);
 				string? token = null;
 				// Every page of the walk carries the same exact aggregate over the whole answer.
 				do

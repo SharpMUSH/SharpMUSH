@@ -20,8 +20,8 @@ public partial class IntegratedWikiMutationTests
 	private static readonly string[] RandomTraditions = ["arcane", "divine", "occult", "primal"];
 	private static readonly long[] RandomLevels = [long.MinValue, -3, 0, 1, 2, 3, 5, 9, 10, 11, int.MaxValue];
 
-	/// <summary>A random world: its subjects in <see cref="QueryWorld.Pages"/>, its class targets, and the subjects edited since import.</summary>
-	private sealed record RandomWorld(QueryWorld World, IReadOnlyList<string> Targets, string Hot, ISet<string> Edited, IReadOnlyDictionary<string, string> Changes)
+	/// <summary>A random world: its subjects in <see cref="QueryWorld.Pages"/>, its class targets, and what was done to each page.</summary>
+	private sealed record RandomWorld(QueryWorld World, IReadOnlyList<string> Targets, string Hot, IReadOnlyDictionary<string, string> Changes)
 	{
 		/// <summary>The pages one answer has and the other lacks, each with what the world did to it, for a failure message.</summary>
 		internal string Explain(IEnumerable<string> actual, IEnumerable<string> expected)
@@ -79,7 +79,20 @@ public partial class IntegratedWikiMutationTests
 			pages.Add(new(id, title, i, level, traditions, target));
 		}
 
-		var imports = pages.Select(p => new SemanticFixtureFactImport(p.Id, new(AtomicWikiLayout.Schema.Version,
+		// Half the subjects state their facts as page metadata, the rest are imported; both end as the page's metadata.
+		var stated = pages.Where(_ => random.Next(2) == 0).ToHashSet();
+		foreach (var page in stated)
+		{
+			IEnumerable<WikiPageFact> facts =
+			[
+				.. page.Level == long.MinValue ? [] : new[] { new WikiPageFact("pf2e:level", page.Level.ToString(System.Globalization.CultureInfo.InvariantCulture)) },
+				.. page.Traditions.Select(t => new WikiPageFact("pf2e:tradition", t)),
+				.. page.Class is { } c ? [new WikiPageFact("pf2e:class", c)] : Array.Empty<WikiPageFact>()
+			];
+			if ((await wiki.SetFactsAsync(page.Id, facts)).Value is not WikiPage) throw new InvalidOperationException($"Could not state {page.Id}'s facts.");
+			changes[page.Id] += " stated";
+		}
+		var imports = pages.Where(p => !stated.Contains(p)).Select(p => new SemanticFixtureFactImport(p.Id, new(AtomicWikiLayout.Schema.Version,
 		[
 			.. p.Level == long.MinValue ? Array.Empty<SemanticFact>() : [new SemanticFact(new(p.Id), "pf2e:level", p.Level, QueryEvidence)],
 			.. p.Traditions.Select(t => new SemanticFact(new(p.Id), "pf2e:tradition", new Keyword(t), QueryEvidence)),
@@ -88,9 +101,8 @@ public partial class IntegratedWikiMutationTests
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		await Assert.That(await provider.ImportSemanticFixtureFactsAsync(imports, CancellationToken.None)).IsEqualTo(imports.Count);
 
-		// After import: deletes remove subjects and one target, and some pages move into or out of the secret
-		// category. Any edit, of the body or only of the categories, drops the facts imported for the page.
-		var edited = new HashSet<string>();
+		// After import: deletes remove subjects and one target, and some pages are edited or move into or out of
+		// the secret category. An edit keeps the page's facts.
 		foreach (var page in pages)
 		{
 			switch (random.Next(14))
@@ -98,7 +110,6 @@ public partial class IntegratedWikiMutationTests
 				case 0:
 					await wiki.UpdateAsync(page.Id, "# Edited", "#1");
 					changes[page.Id] += " edited";
-					edited.Add(page.Id);
 					break;
 				case 1:
 					await wiki.DeleteAsync(page.Id, "#1");
@@ -107,18 +118,16 @@ public partial class IntegratedWikiMutationTests
 				case 2:
 					await wiki.SetMetadataAsync(page.Id, ["Secret"], published: true);
 					changes[page.Id] += " then [Secret] published";
-					edited.Add(page.Id);
 					break;
 				case 3:
 					await wiki.SetMetadataAsync(page.Id, ["Spells"], published: true);
 					changes[page.Id] += " then [Spells] published";
-					edited.Add(page.Id);
 					break;
 			}
 		}
 		var doomed = targets.First(t => t != hot);
 		await wiki.DeleteAsync(doomed, "#1");
-		return new(new QueryWorld(host, pages, hot, doomed), targets, hot, edited, changes);
+		return new(new QueryWorld(host, pages, hot, doomed), targets, hot, changes);
 	}
 
 	/// <summary>Every shape, with what the oracle holds and whether a range drives the order.</summary>
@@ -200,7 +209,7 @@ public partial class IntegratedWikiMutationTests
 					await Assert.That(actual).IsNull().Because(because);
 					continue;
 				}
-				var expected = await OracleAsync(world.World, reader, holds, byLevel, world.Edited);
+				var expected = await OracleAsync(world.World, reader, holds, byLevel);
 				await Assert.That(actual).IsNotNull().Because(because);
 				await Assert.That(actual!).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 					.Because(because + ": " + world.Explain(actual!, expected));
@@ -224,7 +233,7 @@ public partial class IntegratedWikiMutationTests
 			foreach (var (query, holds, byLevel, target) in RandomShapes(world, random))
 			{
 				if (target is not null && !await TargetVisibleAsync(world.World, reader, target)) continue;
-				var expected = await OracleAsync(world.World, reader, holds, byLevel, world.Edited);
+				var expected = await OracleAsync(world.World, reader, holds, byLevel);
 				var budgets = new SemanticQueryBudgets(random.Next(1, 6), random.Next(0, 4));
 				var result = await SemanticWikiQueries.RunAsync(world.World.Provider, "#test", _ => ValueTask.FromResult(reader), query, null,
 					CancellationToken.None, budgets: budgets);

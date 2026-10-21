@@ -21,6 +21,15 @@ public sealed record WikiPageRecord
 	public string[]? Categories { get; init; }
 	public bool? Published { get; init; }
 	public string? SourceLocale { get; init; }
+	/// <summary>The facts the page states, sorted by property and then value; absent on a page that states none.</summary>
+	public WikiPageFactRecord[]? Facts { get; init; }
+}
+
+/// <summary>One fact a page states, as <c>WikiPageFact</c> holds it.</summary>
+public sealed record WikiPageFactRecord
+{
+	public string Property { get; init; } = "";
+	public string Value { get; init; } = "";
 }
 
 /// <summary>

@@ -13,6 +13,7 @@ public partial class WikiCategoryProjectionTests
 		void Json(string name, string json, string expected = "record") => cases.Add((name, Encoding.UTF8.GetBytes(json), expected));
 		void Invalid(string name, string prefix, string suffix, string expected = "record") => cases.Add((name, [.. Encoding.UTF8.GetBytes(prefix), 0xFF, .. Encoding.UTF8.GetBytes(suffix)], expected));
 		Json("ordinary", "{\"Title\":\"Guide\",\"Categories\":[\"A\",\"a\"]}");
+		Json("with-facts", "{\"Title\":\"Guide\",\"Categories\":[\"A\"],\"Facts\":[{\"Property\":\"pf2e:level\",\"Value\":\"3\"}]}");
 		Invalid("raw-invalid-known-body", "{\"MarkdownSource\":\"", "\"}", "reject");
 		Invalid("raw-invalid-unknown-value", "{\"unknown\":\"", "\"}");
 		Invalid("raw-invalid-root-name", "{\"", "\":0}");

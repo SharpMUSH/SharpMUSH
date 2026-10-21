@@ -3,6 +3,7 @@ using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -12,11 +13,11 @@ internal sealed record SemanticFixtureFactImport(string PageId, CanonicalFactSet
 public partial class LightningDatabase
 {
 	/// <summary>
-	/// Commits canonical facts for existing pages of an active, settled issued fixture: one page per writer job,
-	/// through the same projection planner as page edits, so its postings, forward rows, visibility class and
-	/// partition move atomically with the page's summary. This is not author-visible: there is no authoring
-	/// syntax and no package path. A later edit of the page drops its facts again, in the edit's own job.
-	/// Returns how many pages it committed; a missing page is skipped and not counted.
+	/// Commits canonical facts for existing pages of an active, settled issued fixture: one page per writer job.
+	/// Each page states the facts in its metadata, as <see cref="SetPageFactsAsync"/> would set them, and the same
+	/// projection planner as page edits moves its postings, forward rows, visibility class and partition with the
+	/// page's summary. The facts' own provenance is not kept: a page's facts come from the page. Returns how many
+	/// pages it committed; a missing page is skipped and not counted.
 	/// </summary>
 	internal async ValueTask<int> ImportSemanticFixtureFactsAsync(IReadOnlyList<SemanticFixtureFactImport> pages, CancellationToken ct)
 	{
@@ -55,16 +56,18 @@ public partial class LightningDatabase
 			var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries,
 				work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
 			if (state is null) throw new InvalidDataException("Imported page has no projection.");
-			var rules = ReadLegacyProjectionRules(work, pageId, record);
+			var stated = record with { Facts = WikiFactRecords(WikiPageFacts.FromCanonical(page.Facts.Facts)) };
+			var rules = ReadLegacyProjectionRules(work, pageId, stated);
 			// The page keeps its source: a package's page stays the package's.
 			var projection = new WikiPageProjection(new(pageId), state.Source, record.Title, "game",
 				new(record.Namespace, [.. record.Categories ?? []], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
-			if (PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, page.Facts, false, scope.Budget.CancellationToken)
+			if (PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, LegacyPageFacts(work, pageId, stated, true), false, scope.Budget.CancellationToken)
 				is not PreparedWikiProjection prepared)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.Quota);
 			if (WikiSemanticProjectionPlanner.PlanProjection(work, prepared, state.State.Summary.StateVersion, new AllocateNextSequence())
 				is not WikiProjectionPlanned)
 				throw SemanticFixtureCapability.Unavailable();
+			PlanLegacyPage(work, key, record, stated);
 			work.Delta.Apply(tx, scope.Budget.CancellationToken, AtomicLegacyPutApplied, AtomicLegacyDeleteApplied);
 			return true;
 		}

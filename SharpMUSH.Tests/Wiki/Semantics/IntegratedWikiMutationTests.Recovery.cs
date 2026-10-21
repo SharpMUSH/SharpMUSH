@@ -182,8 +182,7 @@ public partial class IntegratedWikiMutationTests
 			var provider = host.Services.GetRequiredService<LightningDatabase>();
 			var wiki = host.Services.GetRequiredService<IWikiService>();
 			var levels = SeededLevels(killed.Evidence);
-			// A committed edit dropped the page's facts in its own job; an uncommitted one changed nothing.
-			if (committed) levels[killed.Evidence.Victim] = null;
+			// The edit keeps the page's facts whether or not it committed; only the body tells them apart.
 			await AssertCanonicalFacts(provider, levels.Select(pair => (pair.Key, pair.Value)));
 			await Assert.That((await wiki.GetByIdAsync(killed.Evidence.Victim)).Value is WikiPage { MarkdownSource: var body }
 				&& body.StartsWith(committed ? "# Edited" : "# Recovery 0", StringComparison.Ordinal)).IsTrue();
