@@ -13,7 +13,8 @@ namespace SharpMUSH.Tests.Wiki.Semantics.Measurements;
 /// measured reader is paged to its end and compared with an oracle that never reads the projection. The oracle
 /// takes the dataset's facts, the live page and <see cref="IWikiAccessService"/>, in the order the query orders
 /// rows: subject (creation) order for an equality driver, the driving integer then subject for a range driver.
-/// Unlike the load passes this one judges: any difference fails it.
+/// Each query also asks for its count and tradition facet, which must equal the oracle's. Unlike the load passes
+/// this one judges: any difference fails it.
 /// </summary>
 public partial class SemanticLoadMeasurement
 {
@@ -69,6 +70,7 @@ public partial class SemanticLoadMeasurement
 			Comparisons = outcomes.Count,
 			Results = outcomes.GroupBy(o => o.Result).ToDictionary(g => g.Key, g => g.Count()),
 			RowsCompared = outcomes.Where(o => o.Result == "match").Sum(o => o.Rows),
+			AggregatesUnknown = outcomes.Count(o => o.Detail == "count unknown past the subject budget"),
 			Differing = differing,
 			Refined = outcomes.Where(o => o.Result == "refine").Select(o => $"{o.Shape} / reader {o.Reader}")
 		}, Json));
@@ -126,14 +128,27 @@ public partial class SemanticLoadMeasurement
 		};
 		var want = ordered.Select(e => e.Id).ToList();
 
+		var buckets = string.Join(",", ordered.SelectMany(e => e.Subject.Traditions).GroupBy(t => t).OrderBy(g => g.Key, StringComparer.Ordinal)
+			.Select(g => $"{g.Key}:{g.Count()}"));
+		var query = shape.Query with { IncludeCount = true, Facets = ["pf2e:tradition"] };
 		var got = new List<string>();
+		string? aggregate = null;
 		string? token = null;
 		do
 		{
-			var result = await SemanticWikiQueries.RunAsync(provider, $"#oracle{reader}", _ => ValueTask.FromResult(Readers[reader]), shape.Query, token, CancellationToken.None);
+			var result = await SemanticWikiQueries.RunAsync(provider, $"#oracle{reader}", _ => ValueTask.FromResult(Readers[reader]), query, token, CancellationToken.None);
 			switch (result)
 			{
 				case SemanticQueryResult.Page page:
+					// The first page's aggregate is checked against the oracle's count and tradition buckets; past the
+					// subject budget the only honest answer is Unknown.
+					aggregate ??= page.Aggregate switch
+					{
+						SemanticAggregate.Exact exact when exact.Count == want.Count
+							&& string.Join(",", exact.Facets.Single().Buckets.Select(b => $"{b.Value}:{b.Count}")) == buckets => "exact",
+						SemanticAggregate.Unknown { Reason: "subjects" } when want.Count > SemanticAggregateBudgets.Default.Subjects => "unknown",
+						var other => $"wrong {other} (want {want.Count}, {buckets})"
+					};
 					got.AddRange(page.Rows.Select(r => r.PageId));
 					token = page.Continuation;
 					break;
@@ -146,7 +161,8 @@ public partial class SemanticLoadMeasurement
 			}
 		} while (token is not null);
 		if (!targetVisible) return new(shape.Name, reader, "unexpected", got.Count, "Rows for a target the reader cannot see");
-		if (got.SequenceEqual(want)) return new(shape.Name, reader, "match", got.Count, null);
+		if (aggregate is not ("exact" or "unknown")) return new(shape.Name, reader, "mismatch", got.Count, "aggregate: " + aggregate);
+		if (got.SequenceEqual(want)) return new(shape.Name, reader, "match", got.Count, aggregate == "unknown" ? "count unknown past the subject budget" : null);
 		var first = Enumerable.Range(0, Math.Min(got.Count, want.Count)).FirstOrDefault(i => got[i] != want[i], Math.Min(got.Count, want.Count));
 		return new(shape.Name, reader, "mismatch", got.Count,
 			$"got {got.Count}, want {want.Count}; first difference at {first}: {got.ElementAtOrDefault(first)} vs {want.ElementAtOrDefault(first)}");

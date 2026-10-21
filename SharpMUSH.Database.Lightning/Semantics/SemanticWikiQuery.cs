@@ -25,10 +25,15 @@ internal abstract record SemanticPredicate(string Property)
 /// A supported query: one explicit collection, a conjunction of indexed predicates, requested scalar
 /// columns and a page size. Results are ordered by subject for an equality driver, and by the driving
 /// integer property then subject for a range driver. <c>OrderBy</c> names an integer property whose range
-/// predicate must then drive.
+/// predicate must then drive. <c>IncludeCount</c> and <c>Facets</c> ask for an aggregate over the whole answer;
+/// without them none is computed.
 /// </summary>
 internal sealed record SemanticWikiQuery(string Collection, IReadOnlyList<SemanticPredicate> Predicates,
-	IReadOnlyList<string> Columns, int PageSize, string Locale = "", string? OrderBy = null);
+	IReadOnlyList<string> Columns, int PageSize, string Locale = "", string? OrderBy = null,
+	bool IncludeCount = false, IReadOnlyList<string>? Facets = null)
+{
+	internal bool WantsAggregate => IncludeCount || Facets is { Count: > 0 };
+}
 
 /// <summary>A named, versioned query definition, evaluated at read time like any other query.</summary>
 internal sealed record SemanticListDefinition(string Name, int Version, SemanticWikiQuery Query);
@@ -44,6 +49,32 @@ internal static class SemanticLists
 /// <summary>One authorized row: the page, its title, and each requested column's visible values.</summary>
 internal sealed record SemanticQueryRow(string PageId, string Title, IReadOnlyDictionary<string, IReadOnlyList<string>> Columns);
 
+/// <summary>The work one aggregate may do (spec §10): distinct authorized subjects counted, and postings probed.</summary>
+internal sealed record SemanticAggregateBudgets(int Subjects, int Probes)
+{
+	internal static readonly SemanticAggregateBudgets Default = new(4096, 16_384);
+}
+
+/// <summary>One registered keyword and how many authorized matches carry it.</summary>
+internal sealed record SemanticFacetBucket(string Value, long Count);
+
+/// <summary>A facet's buckets, in keyword order; a keyword no match carries has no bucket.</summary>
+internal sealed record SemanticFacet(string Property, IReadOnlyList<SemanticFacetBucket> Buckets);
+
+/// <summary>A count and facets over the whole answer, never over one page.</summary>
+internal abstract record SemanticAggregate
+{
+	private SemanticAggregate() { }
+	/// <summary>Every authorized match was seen. <paramref name="Count"/> is null when no count was asked for.</summary>
+	internal sealed record Exact(long? Count, IReadOnlyList<SemanticFacet> Facets) : SemanticAggregate;
+	/// <summary>
+	/// Not every match was seen: <c>subjects</c>, <c>probes</c> or <c>work</c> (its budget or its read's limits),
+	/// <c>busy</c> (another aggregate was running), <c>changed</c> (the world moved after the page was read) or
+	/// <c>unavailable</c>. Never a partial total.
+	/// </summary>
+	internal sealed record Unknown(string Reason) : SemanticAggregate;
+}
+
 /// <summary>The work one query may do before it must ask to be refined; exceeding either is never a partial answer.</summary>
 internal sealed record SemanticQueryBudgets(int CandidateProbes, int DeniedSkips)
 {
@@ -54,8 +85,9 @@ internal sealed record SemanticQueryBudgets(int CandidateProbes, int DeniedSkips
 internal abstract record SemanticQueryResult
 {
 	private SemanticQueryResult() { }
-	/// <summary>Rows in order; a continuation only when one more authorized row was seen.</summary>
-	internal sealed record Page(IReadOnlyList<SemanticQueryRow> Rows, string? Continuation, SemanticReadStamp Stamp) : SemanticQueryResult;
+	/// <summary>Rows in order; a continuation only when one more authorized row was seen; the aggregate only when asked for.</summary>
+	internal sealed record Page(IReadOnlyList<SemanticQueryRow> Rows, string? Continuation, SemanticReadStamp Stamp,
+		SemanticAggregate? Aggregate = null) : SemanticQueryResult;
 	/// <summary>The query's work budget ran out before the page filled; it names the budget, not the data.</summary>
 	internal sealed record RefineRequired(string Budget) : SemanticQueryResult;
 	/// <summary>The continuation does not belong to this query, reader, world state or lease; start over.</summary>
@@ -80,19 +112,24 @@ internal static class SemanticWikiQueries
 	internal const int MaxPageSize = 50;
 	internal const long MaxRangeSpan = 1L << 31;
 	internal const int MaxQueryBytes = 4096;
+	internal const int MaxFacets = 2;
+	internal const int MaxFacetBuckets = 16;
 	private const int Sections = 3;
 	private const int TokenPayloadBytes = 192;
 	private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(10);
 	private static readonly SemanticReadLimits Limits = new(16_384, 8 * 1024 * 1024, 32_768, 16 * 1024 * 1024);
+	/// <summary>An aggregate's own read: its probes, each candidate's summary and predicate rows, and its facet rows, in 4 MiB.</summary>
+	private static readonly SemanticReadLimits AggregateLimits = new(131_072, 4 * 1024 * 1024, 131_072, 4 * 1024 * 1024);
 
 	/// <param name="principal">Who the query counts against in the admission queue: the account or character asking.</param>
 	internal static async Task<SemanticQueryResult> RunAsync(LightningDatabase provider, string principal,
 		Func<CancellationToken, ValueTask<WikiReader>> resolveReader, SemanticWikiQuery query, string? continuation,
 		CancellationToken cancellationToken, TimeProvider? clock = null, SemanticQueryBudgets? budgets = null,
-		Func<int, CancellationToken, ValueTask>? between = null)
+		Func<int, CancellationToken, ValueTask>? between = null, SemanticAggregateBudgets? aggregateBudgets = null)
 	{
 		clock ??= TimeProvider.System;
 		budgets ??= SemanticQueryBudgets.Default;
+		aggregateBudgets ??= SemanticAggregateBudgets.Default;
 		if (Validate(query) is { } rejection) return new SemanticQueryResult.Rejected(rejection);
 		SemanticQueryAdmission.Entry entry;
 		try { entry = await provider.SemanticQueries.EnterAsync(principal, cancellationToken); }
@@ -103,7 +140,7 @@ internal static class SemanticWikiQueries
 		return entry switch
 		{
 			SemanticQueryAdmission.Entry.Admitted admitted => await RunAdmittedAsync(admitted.Ticket, provider, resolveReader, query,
-				continuation, cancellationToken, clock, budgets, between),
+				continuation, cancellationToken, clock, budgets, between, aggregateBudgets),
 			SemanticQueryAdmission.Entry.Refused refused => new SemanticQueryResult.Busy(refused.Limit),
 			_ => throw new System.Diagnostics.UnreachableException()
 		};
@@ -112,7 +149,7 @@ internal static class SemanticWikiQueries
 	private static async Task<SemanticQueryResult> RunAdmittedAsync(SemanticQueryAdmission.Ticket admitted, LightningDatabase provider,
 		Func<CancellationToken, ValueTask<WikiReader>> resolveReader, SemanticWikiQuery query, string? continuation,
 		CancellationToken cancellationToken, TimeProvider clock, SemanticQueryBudgets budgets,
-		Func<int, CancellationToken, ValueTask>? between)
+		Func<int, CancellationToken, ValueTask>? between, SemanticAggregateBudgets aggregateBudgets)
 	{
 		using var ticket = admitted;
 		var digest = QueryDigest(query);
@@ -149,7 +186,33 @@ internal static class SemanticWikiQueries
 				stamp.RequirementsVersion, stamp.AuthorizationVersion, run.PartitionDigest, position.Order, position.Subject,
 				clock.GetUtcNow().Add(TokenLifetime).UtcTicks, LocaleHash(query.Locale)))
 			: null;
-		return new SemanticQueryResult.Page(answer.Rows, next, stamp);
+		var aggregate = query.WantsAggregate
+			? await AggregateAsync(provider, resolveReader, query, stamp, run.PartitionDigest, aggregateBudgets, cancellationToken, between)
+			: null;
+		return new SemanticQueryResult.Page(answer.Rows, next, stamp, aggregate);
+	}
+
+	/// <summary>
+	/// The aggregate, in a read of its own after the page: one at a time per world, under its own budget, and
+	/// exact only when that read saw every authorized match under the page's own stamp and partitions.
+	/// </summary>
+	private static async Task<SemanticAggregate> AggregateAsync(LightningDatabase provider,
+		Func<CancellationToken, ValueTask<WikiReader>> resolveReader, SemanticWikiQuery query, SemanticReadStamp stamp, byte[] partitions,
+		SemanticAggregateBudgets budgets, CancellationToken cancellationToken, Func<int, CancellationToken, ValueTask>? between)
+	{
+		using var slot = provider.SemanticQueries.TryEnterAggregate();
+		if (slot is null) return new SemanticAggregate.Unknown("busy");
+		var run = new Run(query, null, SemanticQueryBudgets.Default, budgets);
+		var read = await SemanticWikiReader.ReadAsync(provider, resolveReader, 2, run.AggregateSection, cancellationToken, AggregateLimits, between);
+		return read switch
+		{
+			SemanticReadResult<SemanticAggregate>.Certified certified when SameState(certified.Stamp, stamp) && run.PartitionDigest.AsSpan().SequenceEqual(partitions)
+				=> certified.Value,
+			SemanticReadResult<SemanticAggregate>.Certified or SemanticReadResult<SemanticAggregate>.DataChanged
+				or SemanticReadResult<SemanticAggregate>.AuthorizationChanged => new SemanticAggregate.Unknown("changed"),
+			SemanticReadResult<SemanticAggregate>.WorkLimit => new SemanticAggregate.Unknown("work"),
+			_ => new SemanticAggregate.Unknown("unavailable")
+		};
 	}
 
 	// ── Validation: every unsupported shape is refused in full before any read ──
@@ -165,6 +228,14 @@ internal static class SemanticWikiQueries
 		if (Encoding.UTF8.GetByteCount(QueryText(query)) > MaxQueryBytes) return "The query is too large.";
 		foreach (var column in query.Columns)
 			if (Property(column) is null) return $"Unknown property {column}.";
+		if (query.Facets is { } facets)
+		{
+			if (facets.Count > MaxFacets) return $"A query asks for at most {MaxFacets} facets.";
+			if (facets.Distinct(StringComparer.Ordinal).Count() != facets.Count) return "A facet is named twice.";
+			foreach (var facet in facets)
+				if (Property(facet) is not { Type: SemanticType.Keyword, AllowedKeywords.Length: >= 1 and <= MaxFacetBuckets })
+					return $"{facet} is not a registered enum of at most {MaxFacetBuckets} values.";
+		}
 		foreach (var predicate in query.Predicates)
 		{
 			if (Property(predicate.Property) is not { } definition) return $"Unknown property {predicate.Property}.";
@@ -197,13 +268,20 @@ internal static class SemanticWikiQueries
 		}).ThenBy(i => i).First();
 
 	private static string QueryText(SemanticWikiQuery query)
-		=> $"{query.Collection}\n{string.Join("\n", query.Predicates)}\n{string.Join(",", query.Columns)}\n{query.PageSize}\n{query.Locale}\n{query.OrderBy}";
+		=> $"{query.Collection}\n{string.Join("\n", query.Predicates)}\n{string.Join(",", query.Columns)}\n{query.PageSize}\n{query.Locale}\n{query.OrderBy}"
+			+ $"\n{query.IncludeCount}\n{string.Join(",", query.Facets ?? [])}";
 
 	private static byte[] QueryDigest(SemanticWikiQuery query) => SHA256.HashData(Encoding.UTF8.GetBytes(QueryText(query)));
 
 	private static byte[] ReaderHash(WikiReader reader)
 		=> SHA256.HashData(Encoding.UTF8.GetBytes((reader.Dbref ?? "") + "\n" + string.Join("\n",
 			reader.Scopes.Select(s => s.ToLowerInvariant()).Order(StringComparer.Ordinal))));
+
+	/// <summary>Whether two reads saw one world state for one reader; the reader is compared as a continuation compares it.</summary>
+	private static bool SameState(SemanticReadStamp first, SemanticReadStamp second)
+		=> first.Fixture == second.Fixture && first.PackageGeneration == second.PackageGeneration
+			&& first.ContentGeneration == second.ContentGeneration && first.RequirementsVersion == second.RequirementsVersion
+			&& first.AuthorizationVersion == second.AuthorizationVersion && ReaderHash(first.Reader).AsSpan().SequenceEqual(ReaderHash(second.Reader));
 
 	private static ulong LocaleHash(string locale) => BinaryPrimitives.ReadUInt64BigEndian(SHA256.HashData(Encoding.UTF8.GetBytes(locale)));
 
@@ -213,7 +291,7 @@ internal static class SemanticWikiQueries
 	private sealed record Answer(IReadOnlyList<SemanticQueryRow> Rows, Position? Next);
 	private sealed record Candidate(ulong Subject, byte[] Order, string PageId, string Title);
 
-	private sealed class Run(SemanticWikiQuery query, Cursor? cursor, SemanticQueryBudgets budgets)
+	private sealed class Run(SemanticWikiQuery query, Cursor? cursor, SemanticQueryBudgets budgets, SemanticAggregateBudgets? aggregateBudgets = null)
 	{
 		internal bool Restart { get; private set; }
 		internal string? Refine { get; private set; }
@@ -227,6 +305,70 @@ internal static class SemanticWikiQueries
 			1 => Seek(section),
 			_ => Project(section)
 		};
+
+		/// <summary>An aggregate's two sections: resolve as the page did, then count every authorized match.</summary>
+		internal SemanticSectionStep<SemanticAggregate> AggregateSection(SemanticReadSection section)
+		{
+			if (section.Index > 0) return SemanticSectionStep<SemanticAggregate>.Answer(Aggregate(section));
+			return Resolve(section).Kind == SemanticSectionKind.Unavailable
+				? SemanticSectionStep<SemanticAggregate>.Unavailable : SemanticSectionStep<SemanticAggregate>.Continue;
+		}
+
+		private SemanticAggregate Aggregate(SemanticReadSection section)
+		{
+			var resolved = _resolved!;
+			var budget = aggregateBudgets ?? SemanticAggregateBudgets.Default;
+			var facets = (query.Facets ?? []).Select(name => (Name: name, Property: RegistryId(section, WikiSemanticRegistryKind.Property, name))).ToList();
+			var buckets = facets.Select(_ => new SortedDictionary<string, long>(StringComparer.Ordinal)).ToList();
+			var counted = new HashSet<ulong>();
+			var probes = 0;
+			if (resolved.Driver is { } driver)
+				foreach (var classId in resolved.Admitted)
+				{
+					var prefix = new byte[25];
+					BinaryPrimitives.WriteUInt64BigEndian(prefix, resolved.Collection);
+					BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(8), classId);
+					BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(16), driver.Property);
+					prefix[24] = (byte)driver.Tag;
+					var start = Concat(prefix, driver.Low);
+					var end = Successor(Concat(prefix, driver.High));
+					byte[] resume = [];
+					while (true)
+					{
+						var rows = section.Range(section.Tables.Postings, prefix, start, end, resume, 128);
+						foreach (var row in rows)
+						{
+							resume = row.Key;
+							if (++probes > budget.Probes) return new SemanticAggregate.Unknown("probes");
+							var subject = BinaryPrimitives.ReadUInt64BigEndian(row.Key.AsSpan(33));
+							if (counted.Contains(subject) || Visible(section, resolved.Requirements, subject) is not { } summary
+								|| summary.CollectionId != resolved.Collection
+								|| !resolved.Predicates.Where(p => !ReferenceEquals(p, driver)).All(p => Holds(section, subject, p)))
+								continue;
+							if (counted.Count == budget.Subjects) return new SemanticAggregate.Unknown("subjects");
+							counted.Add(subject);
+							for (var i = 0; i < facets.Count; i++)
+								if (facets[i].Property != 0)
+									foreach (var keyword in KeywordValues(section, subject, facets[i].Property))
+										buckets[i][keyword] = buckets[i].GetValueOrDefault(keyword) + 1;
+						}
+						if (rows.Count < 128) break;
+					}
+				}
+			return new SemanticAggregate.Exact(query.IncludeCount ? counted.Count : null,
+				[.. facets.Select((facet, i) => new SemanticFacet(facet.Name, [.. buckets[i].Select(b => new SemanticFacetBucket(b.Key, b.Value))]))]);
+		}
+
+		private static IEnumerable<string> KeywordValues(SemanticReadSection section, ulong subject, ulong property)
+		{
+			var prefix = new byte[17];
+			BinaryPrimitives.WriteUInt64BigEndian(prefix, subject);
+			BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(8), property);
+			prefix[16] = (byte)WikiSemanticScalarTag.Keyword;
+			foreach (var row in section.Range(section.Tables.Forward, prefix, [], [], [], WikiSemanticLimits.MaxFacts))
+				if (Reverse(section, WikiSemanticRegistryKind.Keyword, BinaryPrimitives.ReadUInt64BigEndian(row.Key.AsSpan(17, 8))) is { } keyword)
+					yield return keyword;
+		}
 
 		private SemanticSectionStep<Answer> Resolve(SemanticReadSection section)
 		{

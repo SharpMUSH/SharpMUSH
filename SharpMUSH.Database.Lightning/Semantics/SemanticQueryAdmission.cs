@@ -56,6 +56,7 @@ internal sealed class SemanticQueryAdmission(SemanticQueryAdmissionLimits limits
 	private int _active;
 	private long _refused;
 	private TimeSpan _longestWait;
+	private int _aggregate;
 
 	internal ValueTask<Entry> EnterAsync(string principal, CancellationToken cancellationToken)
 	{
@@ -73,6 +74,20 @@ internal sealed class SemanticQueryAdmission(SemanticQueryAdmissionLimits limits
 		}
 		node.Value.Cancellation = cancellationToken.Register(() => Cancel(node, cancellationToken));
 		return new ValueTask<Entry>(node.Value.Started.Task);
+	}
+
+	/// <summary>The one aggregate slot (spec §10: one active aggregate), or null while another aggregate holds it.</summary>
+	internal IDisposable? TryEnterAggregate()
+		=> Interlocked.CompareExchange(ref _aggregate, 1, 0) == 0 ? new AggregateSlot(this) : null;
+
+	private sealed class AggregateSlot(SemanticQueryAdmission owner) : IDisposable
+	{
+		private int _released;
+
+		public void Dispose()
+		{
+			if (Interlocked.Exchange(ref _released, 1) == 0) Volatile.Write(ref owner._aggregate, 0);
+		}
 	}
 
 	internal SemanticQueryAdmissionStats Snapshot()

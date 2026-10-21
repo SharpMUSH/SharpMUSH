@@ -59,6 +59,11 @@ Rows are 50 per page, paged to the end. The run fails on any difference.
 The results are in [`2026-10-21-semantic-wiki-oracle/`](2026-10-21-semantic-wiki-oracle/). No query asked to
 be refined at these sizes.
 
+Each comparison also asks for the exact count and the `pf2e:tradition` facet, and both must equal the
+oracle's. They matched in every comparison but one. In that one, the administrator queried the sealed set's
+hot target, which has 4,580 matches, more than the 4,096-subject aggregate budget. The aggregate answered
+`Unknown("subjects")`, which is the only honest answer there.
+
 To check that the comparison can fail, one run used a native query that dropped every row whose subject id
 is a multiple of 97. It reported 112 mismatches out of 264 comparisons, and the run failed.
 
