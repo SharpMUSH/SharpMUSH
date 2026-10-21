@@ -10,6 +10,11 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-romance-kemono-administrator-invite", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-invite.png", 1024, 1536, "administrator-invite"),
+		new SharpieArt("sharpie-romance-kemono-administrator-rules", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-rules.png", 1024, 1536, "administrator-rules"),
+		new SharpieArt("sharpie-romance-kemono-administrator-identity", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-identity.png", 1024, 1536, "administrator-identity"),
+		new SharpieArt("sharpie-romance-kemono-shared-completion", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-shared-completion.png", 1024, 1536, "shared-completion"),
+		new SharpieArt("sharpie-romance-kemono-player-continue", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-continue.png", 1024, 1536, "player-continue"),
 		new SharpieArt("sharpie-romance-kemono-player-world", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-world.png", 1024, 1536, "player-world"),
 		new SharpieArt("sharpie-romance-kemono-player-character", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-character.png", 1024, 1536, "player-character"),
 		new SharpieArt("sharpie-romance-kemono-shared-welcome", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-shared-welcome.png", 1024, 1536, "shared-welcome"),
