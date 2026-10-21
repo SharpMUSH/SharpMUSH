@@ -227,6 +227,33 @@ public class LayoutFunctionTests
 		await Assert.That(fromList.Render(MarkupFormat.Html)).IsEqualTo(fromArguments.Render(MarkupFormat.Html));
 	}
 
+	/// <summary>
+	/// A layout in a place that holds one line (a title, a label, a heading, a grid item, a badge) is its text
+	/// there, as a screen reader hears it, in a terminal and in the portal.
+	/// </summary>
+	[Test]
+	[Arguments("box(The Very First Room,item(Room Zero),40)", "box(The Very First Room,Room Zero,40)")]
+	[Arguments("box(The Very First Room,item(Room Zero,-),40)", "box(The Very First Room,Room Zero,40)")]
+	[Arguments("box(Body,The [item(Room)] Zero,40)", "box(Body,The Room Zero,40)")]
+	[Arguments("box(Body,box(Inner,In),40)", "box(Body,In Inner,40)")]
+	[Arguments("rule(item(Title),30)", "rule(Title,30)")]
+	[Arguments("fields({{\"width\":30}},item(Name),Mannaz)", "fields({{\"width\":30}},Name,Mannaz)")]
+	[Arguments("lfields({{\"width\":30}},[item(Name)]|Race,Mannaz|Human,|)", "lfields({{\"width\":30}},Name|Race,Mannaz|Human,|)")]
+	[Arguments("gauge(3,10,item(HP),{{\"width\":30}})", "gauge(3,10,HP,{{\"width\":30}})")]
+	[Arguments("datatable({{\"width\":30,\"delim\":\";\"}},[item(Name)];Idle,Mannaz;0s)", "datatable({{\"width\":30,\"delim\":\";\"}},Name;Idle,Mannaz;0s)")]
+	[Arguments("datacolumns({{\"width\":30,\"delim\":\";\"}},[item(Name)];Mannaz,Idle;0s)", "datacolumns({{\"width\":30,\"delim\":\";\"}},Name;Mannaz,Idle;0s)")]
+	[Arguments("grid([box(North)]^South,^,{{\"width\":30}})", "grid(North^South,^,{{\"width\":30}})")]
+	[Arguments("badge(item(New),ok)", "badge(New,ok)")]
+	[Arguments("notice(item(Jobs),Done)", "notice(Jobs,Done)")]
+	public async Task ALayoutInALinesPlace_IsItsText(string nested, string flat)
+	{
+		var fromLayout = await Eval(nested);
+		var fromText = await Eval(flat);
+
+		await Assert.That(fromLayout.ToPlainText()).IsEqualTo(fromText.ToPlainText());
+		await Assert.That(fromLayout.Render(MarkupFormat.Html)).IsEqualTo(fromText.Render(MarkupFormat.Html));
+	}
+
 	/// <summary>An empty list draws nothing, a node alone or a table's headings alone, once the options are read.</summary>
 	[Test]
 	public async Task AListForm_GivenAnEmptyList_DrawsWhatItHas()

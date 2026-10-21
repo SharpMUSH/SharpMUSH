@@ -127,7 +127,7 @@ public partial class Functions
 	public ValueTask<CallState> Box(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var title = Arg(args, 1);
+		var title = Inline(Arg(args, 1));
 		var frame = new Frame(Body(Arg(args, 0))) { Title = title.Length == 0 ? null : title };
 		return ValueTask.FromResult(Laidout(parser, BoxSchema, Arg(args, 3), frame, Arg(args, 2)));
 	}
@@ -140,7 +140,7 @@ public partial class Functions
 	public ValueTask<CallState> Rule(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var title = Arg(args, 0);
+		var title = Inline(Arg(args, 0));
 		return ValueTask.FromResult(Laidout(parser, RuleSchema, Arg(args, 2), new Rule(title.Length == 0 ? null : title), Arg(args, 1)));
 	}
 
@@ -219,7 +219,7 @@ public partial class Functions
 		var shown = address.Length > 0
 			&& await CanSendImage(await parser.CurrentState.KnownExecutorObject(Mediator))
 			&& ImageAllowed(address);
-		var description = Arg(args, 1).ToPlainText();
+		var description = Inline(Arg(args, 1)).ToPlainText();
 		var image = new ImageMarkup(shown ? address : string.Empty, description.Length == 0 ? null : description);
 		var beside = Arg(args, 4);
 
@@ -239,7 +239,7 @@ public partial class Functions
 
 		var fields = new List<Field>();
 		for (var i = 1; i + 1 < args.Count; i += 2)
-			fields.Add(new Field(Arg(args, i), Body(Arg(args, i + 1))));
+			fields.Add(new Field(Inline(Arg(args, i)), Body(Arg(args, i + 1))));
 		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
 	}
 
@@ -257,7 +257,7 @@ public partial class Functions
 		var values = Arg(args, 2).Length == 0 && labels.Length == 0 ? [] : MushText.SplitList(delimiter, Arg(args, 2));
 		if (labels.Length != values.Length) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOfWordsMustBeEqual));
 
-		Field[] fields = [.. labels.Zip(values, (label, value) => new Field(label, Body(value)))];
+		Field[] fields = [.. labels.Zip(values, (label, value) => new Field(Inline(label), Body(value)))];
 		return ValueTask.FromResult(Laidout(parser, FieldsSchema, Arg(args, 0), new Fields([.. fields])));
 	}
 
@@ -453,6 +453,37 @@ public partial class Functions
 			1 => Adopt(blocks[0]),
 			_ => new Stack([.. blocks.Select(Adopt)]),
 		};
+	}
+
+	/// <summary>
+	/// Text for a place that holds one line (a title, a label, a heading): each layout in it as a screen
+	/// reader hears it, its lines joined by spaces. Drawn as it is, a layout would take the whole width
+	/// it was laid out at, as many lines as it has, inside that one line.
+	/// </summary>
+	private MString Inline(MString text)
+	{
+		var runs = text.Runs;
+		if (runs.IsDefaultOrEmpty) return text;
+
+		var edits = new List<(int Start, int Length, MString Replacement)>();
+		for (var i = 0; i < runs.Length; i++)
+		{
+			if (runs[i].Markups.OfType<LayoutMarkup>().LastOrDefault() is not { } layout) continue;
+			var last = i;
+			while (last + 1 < runs.Length && runs[last + 1].Start == runs[last].End && runs[last + 1].Markups.Contains(layout)) last++;
+			var (start, end) = (runs[i].Start, runs[last].End);
+			i = last;
+			if (!layout.Covers(text.Text.AsSpan(start, end - start))) continue;
+
+			var lines = BlockLayout.Lines(Adopt(layout.Root), layout.Width, new LayoutContext { Linear = true })
+				.Select(line => line.Trim(TrimType.TrimBoth))
+				.Where(line => line.Length > 0);
+			edits.Add((start, end - start, MarkupText.Join(MarkupText.Space, lines)));
+		}
+
+		for (var i = edits.Count - 1; i >= 0; i--)
+			text = text.Replace(edits[i].Start, edits[i].Length, edits[i].Replacement);
+		return text;
 	}
 
 	/// <summary>An enum's values by their lower-case names.</summary>
