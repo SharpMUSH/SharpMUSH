@@ -94,9 +94,9 @@ public static class BundledPackages
 		// jobs-app is for jobs.
 		new("chargen", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Offered, not installed: a new game reads its messages from the stored text until the administrator
-		// chooses the Messages object (the setup wizard or the package page).
-		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Installed: the stored texts are fixed, so a game renamed after its first boot would still greet players
+		// as SharpMUSH; the Messages object reads mudname() each time it is shown.
+		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +radio lands an object in the master room, and is the worked example of
 		// a system built on @feed.
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
