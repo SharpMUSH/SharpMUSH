@@ -11,8 +11,10 @@ public interface IQueueReleaseObserver
 	/// Rejected work has no release callback. Outcome describes this entry, not future descendants
 	/// or business success. A throwing observer is logged and cannot stop the consumer. The callback
 	/// can run before admission returns and runs synchronously: keep it short, use asynchronous task
-	/// continuations, and never wait for this queue's drain or disposal from inside it.
+	/// continuations, and never wait for this queue's drain or disposal from inside it. An entry
+	/// admitted with <paramref name="timed"/> false is not softcode: <c>queue_entry_cpu_time</c> does
+	/// not time it, and halt and shutdown still cancel it.
 	/// </summary>
 	ValueTask<QueueAdmissionResult> AdmitObservedSocketWork(Func<ValueTask<CallState?>> action,
-		string triggerName, string group, Action<QueueEntryRelease> onReleased);
+		string triggerName, string group, Action<QueueEntryRelease> onReleased, bool timed = true);
 }

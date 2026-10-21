@@ -187,7 +187,7 @@ public partial class PackageOperationLifetimeTests
 				.Returns(_ => mode == 2 ? Task.FromException<PackageLifecycleOutcome>(new IOException("Hook failure"))
 					: Task.FromException<PackageLifecycleOutcome>(new OperationCanceledException()));
 		var pid = 0L;
-		((IQueueReleaseObserver)scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>())
+		((IQueueReleaseObserver)scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>(), Arg.Any<bool>())
 			.Returns(call =>
 			{
 				var hook = call.ArgAt<string>(1) == "package-ainstall";
