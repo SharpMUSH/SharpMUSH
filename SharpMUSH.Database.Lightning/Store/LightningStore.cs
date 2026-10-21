@@ -785,6 +785,9 @@ public sealed partial class LightningStore : IDisposable
 	/// <summary>Tests only: runs once nothing is inside the environment, immediately before it is closed.</summary>
 	internal Action? BeforeNativeClose { get; set; }
 
+	/// <summary>Whether disposal has closed the environment; every native entry is refused from then on.</summary>
+	internal bool IsClosed => _closed;
+
 	/// <summary>Whether a disposal is waiting for admitted readers to leave.</summary>
 	internal bool DisposalWaitingForReaders => _gate.WaitingWriteCount > 0;
 

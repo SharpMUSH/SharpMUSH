@@ -1,3 +1,4 @@
+using LightningDB;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -30,6 +31,10 @@ internal abstract record SemanticReadResult<T>
 	internal sealed record AuthorizationChanged : SemanticReadResult<T> { internal static readonly AuthorizationChanged Value = new(); }
 	internal sealed record WorkLimit : SemanticReadResult<T> { internal static readonly WorkLimit Value = new(); }
 	internal sealed record Cancelled : SemanticReadResult<T> { internal static readonly Cancelled Value = new(); }
+	/// <summary>The world's storage closed before or while the read ran; nothing it read is reported.</summary>
+	internal sealed record StorageClosed : SemanticReadResult<T> { internal static readonly StorageClosed Value = new(); }
+	/// <summary>LMDB failed a section with <paramref name="Code"/>; nothing the read saw is reported.</summary>
+	internal sealed record StorageFailed(MDBResultCode Code) : SemanticReadResult<T>;
 }
 
 /// <summary>What a plan's section decided: keep reading, the target is unavailable, or the answer.</summary>
@@ -146,6 +151,12 @@ internal sealed class SemanticReadWorkLimitException() : Exception("A semantic r
 /// generation and the authorization versions; the reader is resolved after it, and again before a final
 /// section that rechecks every pin in one snapshot. A plan always runs its declared number of sections,
 /// whatever it found, so a denied target and a missing one take the same path.
+/// <para>
+/// A read never holds a native transaction between sections, so it does not keep the world open: a close
+/// that begins while it runs waits only for the section in progress, and the read then ends with
+/// <see cref="SemanticReadResult{T}.StorageClosed"/>. A section LMDB fails ends it with
+/// <see cref="SemanticReadResult{T}.StorageFailed"/>. Neither carries anything the read saw.
+/// </para>
 /// </summary>
 internal static class SemanticWikiReader
 {
@@ -161,7 +172,10 @@ internal static class SemanticWikiReader
 		ArgumentOutOfRangeException.ThrowIfLessThan(sections, 1);
 		limits ??= SemanticReadLimits.Default;
 		if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
-		using var lease = provider.AdmitSemanticRead(cancellationToken);
+		SemanticFixtureReadLease lease;
+		try { lease = provider.AdmitSemanticRead(); }
+		catch (WikiFixtureMutationException) when (provider.SemanticStorageClosed) { return SemanticReadResult<T>.StorageClosed.Value; }
+		using var admitted = lease;
 		var store = provider.Store;
 		var identity = lease.Lease.FixtureId;
 		var budget = new SemanticReadBudget(limits);
@@ -175,6 +189,7 @@ internal static class SemanticWikiReader
 			for (var index = 0; index < sections; index++)
 			{
 				if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
+				if (provider.SemanticStorageClosed) return SemanticReadResult<T>.StorageClosed.Value;
 				var step = store.Read(tx =>
 				{
 					if (Pins.Read(tx, identity) is not { } now) return (Changed: (SemanticReadResult<T>?)SemanticReadResult<T>.DataChanged.Value, Step: default(SemanticSectionStep<T>));
@@ -196,6 +211,7 @@ internal static class SemanticWikiReader
 			var last = store.Read<SemanticReadResult<T>?>(tx => Pins.Read(tx, identity) is { } now ? pins.Differs<T>(now) : SemanticReadResult<T>.DataChanged.Value);
 			if (last is not null) return last;
 			if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
+			if (provider.SemanticStorageClosed) return SemanticReadResult<T>.StorageClosed.Value;
 
 			return outcome.Kind switch
 			{
@@ -207,6 +223,10 @@ internal static class SemanticWikiReader
 		}
 		catch (SemanticReadWorkLimitException) { return SemanticReadResult<T>.WorkLimit.Value; }
 		catch (OperationCanceledException) when (Stopped(cancellationToken)) { return SemanticReadResult<T>.Cancelled.Value; }
+		// Whatever a closing world throws at a section or at the reader's resolution, the read only ends.
+		catch (Exception) when (provider.SemanticStorageClosed) { return SemanticReadResult<T>.StorageClosed.Value; }
+		catch (LightningStoreException error) { return new SemanticReadResult<T>.StorageFailed(error.Code); }
+		catch (LightningException error) { return new SemanticReadResult<T>.StorageFailed((MDBResultCode)error.StatusCode); }
 	}
 
 	private static bool Stopped(CancellationToken cancellationToken)

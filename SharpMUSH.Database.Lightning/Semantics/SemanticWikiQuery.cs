@@ -62,7 +62,7 @@ internal abstract record SemanticQueryResult
 	internal sealed record Restart : SemanticQueryResult { internal static readonly Restart Value = new(); }
 	/// <summary>An unsupported shape or bound, refused before any read.</summary>
 	internal sealed record Rejected(string Reason) : SemanticQueryResult;
-	/// <summary>Any non-certified read outcome: incomplete, unavailable, changed, limited or cancelled.</summary>
+	/// <summary>Any non-certified read outcome: incomplete, unavailable, changed, limited, cancelled, or storage closed or failed.</summary>
 	internal sealed record NotCertified(object Outcome) : SemanticQueryResult;
 }
 
@@ -93,7 +93,13 @@ internal static class SemanticWikiQueries
 		if (Validate(query) is { } rejection) return new SemanticQueryResult.Rejected(rejection);
 		var digest = QueryDigest(query);
 		Cursor? cursor = null;
-		var lease = provider.SemanticFixtureLeaseForQueries;
+		// A world that closed answers nothing, and a continuation sealed under its lease opens under no other.
+		SemanticFixtureLease lease;
+		try { lease = provider.SemanticFixtureLeaseForQueries; }
+		catch (WikiFixtureMutationException) when (provider.SemanticStorageClosed)
+		{
+			return new SemanticQueryResult.NotCertified(SemanticReadResult<Answer>.StorageClosed.Value);
+		}
 		if (continuation is not null)
 		{
 			cursor = OpenToken(lease, continuation, digest, clock);
@@ -102,8 +108,9 @@ internal static class SemanticWikiQueries
 
 		var run = new Run(query, cursor, budgets);
 		var read = await SemanticWikiReader.ReadAsync(provider, resolveReader, Sections, run.Section, cancellationToken, Limits, between);
-		// A read that was cancelled or saw the world change supports no hint about what its sections found.
-		if (read is SemanticReadResult<Answer>.Cancelled or SemanticReadResult<Answer>.DataChanged or SemanticReadResult<Answer>.AuthorizationChanged)
+		// A read that was cancelled, saw the world change or lost its storage supports no hint about what its sections found.
+		if (read is SemanticReadResult<Answer>.Cancelled or SemanticReadResult<Answer>.DataChanged or SemanticReadResult<Answer>.AuthorizationChanged
+			or SemanticReadResult<Answer>.StorageClosed or SemanticReadResult<Answer>.StorageFailed)
 			return new SemanticQueryResult.NotCertified(read);
 		if (run.Restart) return SemanticQueryResult.Restart.Value;
 		if (run.Refine is { } budget) return new SemanticQueryResult.RefineRequired(budget);

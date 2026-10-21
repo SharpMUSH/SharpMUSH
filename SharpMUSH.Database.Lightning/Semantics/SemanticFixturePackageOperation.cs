@@ -72,8 +72,12 @@ internal sealed partial class SemanticFixtureCapability
 				throw new SemanticFixtureOperationInProgressException();
 	}
 
+	/// <summary>
+	/// Whether a package operation is retained on <paramref name="lease"/>. Admitted semantic reads are not
+	/// counted: they hold nothing native between sections and end by themselves once the lease closes.
+	/// </summary>
 	private bool HasRetainedOperations(SemanticFixtureLease lease)
-		=> _packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0 || HasAdmittedReads(lease);
+		=> _packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0;
 	internal SemanticFixturePackageOperation RetainPackageOperation(SemanticFixtureLease lease, bool coordinated = false)
 	{
 		lock (_gate)

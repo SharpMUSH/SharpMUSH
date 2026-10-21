@@ -21,9 +21,9 @@ internal sealed record SemanticRebuildOptions(int BatchSize = 64, ulong JournalC
 internal abstract record SemanticRebuildOutcome
 {
 	private SemanticRebuildOutcome() { }
-	/// <summary>The staged generation is active and the previous one has been cleared.</summary>
+	/// <summary>The staged generation is active. The previous one has been cleared, or, if the world closed first, the next rebuild clears it.</summary>
 	internal sealed record Flipped(ulong Generation) : SemanticRebuildOutcome;
-	/// <summary>The staged generation was abandoned and cleared; the active one never changed.</summary>
+	/// <summary>The staged generation was abandoned and the active one never changed. Its rows are cleared now, or when the world reopens if it closed first.</summary>
 	internal sealed record Aborted(string Reason) : SemanticRebuildOutcome;
 }
 
@@ -43,6 +43,17 @@ public partial class LightningDatabase
 	internal Func<SemanticRebuildStage, ValueTask>? SemanticRebuildHook { get; set; }
 
 	internal async ValueTask<SemanticRebuildOutcome> RebuildSemanticProjectionAsync(SemanticRebuildOptions? options, CancellationToken ct)
+	{
+		// A world that closes under a rebuild keeps whatever it last committed: an unfinished staging is discarded when
+		// the world reopens, and a retired generation left uncleared is cleared by the next rebuild before it stages.
+		try { return await RebuildCoreAsync(options, ct); }
+		catch (Exception) when (SemanticStorageClosed)
+		{
+			return new SemanticRebuildOutcome.Aborted("The world closed during the rebuild; its staging is discarded when the world reopens.");
+		}
+	}
+
+	private async ValueTask<SemanticRebuildOutcome> RebuildCoreAsync(SemanticRebuildOptions? options, CancellationToken ct)
 	{
 		options ??= new();
 		ArgumentOutOfRangeException.ThrowIfLessThan(options.BatchSize, 1);
@@ -107,8 +118,13 @@ public partial class LightningDatabase
 			await AbandonAsync(admission, staged, options, "Cancelled.", CancellationToken.None);
 			throw;
 		}
-		if (SemanticRebuildHook is { } flipped) await flipped(SemanticRebuildStage.Flipped);
-		await ClearGenerationAsync(admission, AtomicWikiLayout.ForGeneration(active), options.RetireBatchSize, ct);
+		try
+		{
+			if (SemanticRebuildHook is { } flipped) await flipped(SemanticRebuildStage.Flipped);
+			await ClearGenerationAsync(admission, AtomicWikiLayout.ForGeneration(active), options.RetireBatchSize, ct);
+		}
+		// The flip committed; only the retired rows are left, and the next rebuild clears that slot first.
+		catch (Exception) when (SemanticStorageClosed) { }
 		return new SemanticRebuildOutcome.Flipped(staged);
 	}
 
