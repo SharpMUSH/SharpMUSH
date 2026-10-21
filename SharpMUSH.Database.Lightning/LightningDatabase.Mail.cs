@@ -413,4 +413,15 @@ public partial class LightningDatabase
 			yield return MapRecordToMail(mailId, record);
 		}
 	}
+
+	public IAsyncEnumerable<MailRecipient> GetAllMailRecipientsAsync(CancellationToken cancellationToken = default)
+		=> new FreshAsyncEnumerable<MailRecipient>(GetAllMailRecipientsCoreAsync);
+
+	private async IAsyncEnumerable<MailRecipient> GetAllMailRecipientsCoreAsync([EnumeratorCancellation] CancellationToken ct)
+	{
+		await foreach (var (key, value) in Store.RangeAsync(Tables.Mail, [], ct: ct))
+		{
+			yield return new MailRecipient(MailId(Keys.ReadDbref(key)), (int)Codec.Deserialize<MailRecord>(value).Recipient);
+		}
+	}
 }
