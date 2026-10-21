@@ -69,8 +69,7 @@ public class RollFunctionTests
 	[Test]
 	public async Task VariablesComeFromAnObjectsAttributes()
 	{
-		// '-' is minus in a formula, so the name keeps to letters, digits and _.
-		var root = TestIsolationHelpers.GenerateUniqueName("STAT").ToUpperInvariant().Replace('-', '_');
+		var root = TestIsolationHelpers.GenerateUniqueName("STAT").ToUpperInvariant();
 		await WebAppFactoryArg.CommandParser.CommandParse(MarkupText.Plain($"&{root} me=stats"));
 		await WebAppFactoryArg.CommandParser.CommandParse(MarkupText.Plain($"&{root}`SPEED me=2"));
 		await WebAppFactoryArg.CommandParser.CommandParse(MarkupText.Plain($"&{root}`DEX me=1d6+@{root.ToLowerInvariant()}.speed"));
@@ -84,7 +83,7 @@ public class RollFunctionTests
 	[Test]
 	public async Task AMissingAttributeIsNamed()
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("NOSTAT").ToUpperInvariant().Replace('-', '_');
+		var name = TestIsolationHelpers.GenerateUniqueName("NOSTAT").ToUpperInvariant();
 
 		await Assert.That(await Evaluate($"roll(1d6+{name},me)"))
 			.IsEqualTo(string.Format(ErrorMessages.Returns.RollNoSuchVariableFormat, name));

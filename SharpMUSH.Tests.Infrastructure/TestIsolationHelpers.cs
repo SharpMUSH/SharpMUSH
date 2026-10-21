@@ -48,8 +48,10 @@ public static class TestIsolationHelpers
 		new(name, TestPasswordHash, location, home, quota, Salt: string.Empty);
 
 	private static long _nextName;
-	private static readonly string RunId = System.Buffers.Text.Base64Url.EncodeToString(
-		System.Security.Cryptography.RandomNumberGenerator.GetBytes(8));
+	// Letters and digits only: a name is also used as a function, attribute or roll variable name,
+	// where '-' would end it.
+	private static readonly string RunId = System.Security.Cryptography.RandomNumberGenerator.GetString(
+		"abcdefghijklmnopqrstuvwxyz0123456789", 11);
 	/// <summary>
 	/// Generates a unique name from the readable prefix, a process-run identifier, and an
 	/// atomic sequence. Parallel calls never reuse a suffix within the run.
