@@ -99,7 +99,7 @@ public class BundledPackagesTests
 		await Assert.That(installed).IsEquivalentTo(new[]
 		{
 			"http-handler", "profile-handler", "room-contents", "comm-feed", "plus-help", "plus-config", "scene", "scene-help", "scene-config", "scene-here",
-			"onboarding", "onboarding-help", "onboarding-config", "onboarding-app"
+			"onboarding", "onboarding-help", "onboarding-config"
 		});
 	}
 
@@ -125,7 +125,6 @@ public class BundledPackagesTests
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("info"));
 		await Assert.That(order.IndexOf("plus-help")).IsLessThan(order.IndexOf("onboarding-help"));
 		await Assert.That(order.IndexOf("plus-config")).IsLessThan(order.IndexOf("onboarding-config"));
-		await Assert.That(order.IndexOf("onboarding")).IsLessThan(order.IndexOf("onboarding-app"));
 		await Assert.That(order.IndexOf("chargen")).IsLessThan(order.IndexOf("onboarding-chargen"));
 	}
 

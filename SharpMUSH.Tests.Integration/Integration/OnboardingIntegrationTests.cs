@@ -86,7 +86,7 @@ public class OnboardingIntegrationTests
 		var list = await As(ann, "+welcome");
 		await Assert.That(list).Contains("Getting started")
 			.And.Contains("Learn the basics")
-			.And.Contains("+welcome/done basics")
+			.And.Contains("+welcome/done 1")
 			.And.Contains("Read this game's help")
 			.And.Contains("Describe your character")
 			.And.Contains("Get approved")
@@ -106,12 +106,33 @@ public class OnboardingIntegrationTests
 		await Assert.That(await As(ann, "+welcome/done nosuch")).Contains("There is no step called 'nosuch' on your list.");
 		await Assert.That(await As(ann, "+welcome/done *")).Contains("There is no step called '*' on your list.");
 		await Assert.That(await As(ann, "+welcome/done basics`hint")).Contains("There is no step called 'basics`hint' on your list.");
-		await Assert.That(await As(ann, "+welcome/done")).Contains("Which step? +welcome/done <step>.");
+		await Assert.That(await As(ann, "+welcome/done")).Contains("Which step? +welcome/done <number or name>.");
+		await Assert.That(await As(ann, "+welcome/done 99")).Contains("There is no step 99 on your list.");
+		await Assert.That(await As(ann, "+welcome/done 0")).Contains("There is no step 0 on your list.");
 
-		await Assert.That(await As(ann, "+welcome/undo basics")).Contains("Learn the basics is open again.");
+		// A step by its number on the list, as well as by name.
+		await Assert.That(await As(ann, "+welcome/undo 1")).Contains("Learn the basics is open again.");
 		await Assert.That(await As(ann, "+welcome/undo basics")).Contains("You have not ticked off Learn the basics.");
 		await Assert.That(await As(ann, "+welcome/bogus")).Contains("+welcome has no /bogus switch.");
-		await Assert.That(await As(ann, "+welcome extra")).Contains("+welcome on its own shows your checklist.");
+		await Assert.That(await As(ann, "+welcome/bare")).Contains("+welcome has no /bare switch.");
+		await Assert.That(await As(ann, "+welcome extra")).Contains("There is no step called 'extra' on your list.");
+	}
+
+	[Test]
+	public async Task AStepByNumberShowsItsDetail()
+	{
+		var cal = await Player("ObCal");
+
+		var basics = await As(cal, "+welcome 1");
+		await Assert.That(basics).Contains("1. Learn the basics")
+			.And.Contains("help gs moving for")
+			.And.Contains("Done? +welcome/done 1");
+		await Assert.That(await As(cal, "+welcome DESCRIBE")).Contains("3. Describe your character")
+			.And.Contains("This ticks itself off once it is done");
+
+		await As(cal, "+welcome/done 1");
+		await Assert.That(await As(cal, "+welcome 1")).Contains("Ticked off: +welcome/undo 1 opens it again");
+		await Assert.That(await As(cal, "+welcome 99")).Contains("There is no step 99 on your list.");
 	}
 
 	[Test]
@@ -120,7 +141,9 @@ public class OnboardingIntegrationTests
 		var guide = await GuideAsync();
 		var bo = await Player("ObBo");
 
-		await Assert.That(await LogsIn(bo)).Contains("Getting started");
+		await Assert.That(await LogsIn(bo)).Contains("Getting started")
+			.And.Contains("Type +welcome to see this list again");
+		await Assert.That(await As(bo, "+welcome")).DoesNotContain("Type +welcome to see this list again");
 
 		await Assert.That(await As(bo, "+welcome/hide")).Contains("Your checklist no longer shows at login");
 		await Assert.That(await LogsIn(bo)).DoesNotContain("Getting started");
@@ -158,11 +181,14 @@ public class OnboardingIntegrationTests
 			await Assert.That(await As(staff, "+config/add onboarding/steps/zrules=Read the house rules")).Contains("onboarding/steps/zrules");
 			await As(staff, "+config onboarding/steps/zrules/hint=The Policies page on the wiki.");
 			await As(staff, "+config onboarding/steps/zrules/order=5");
+			await As(staff, "+config onboarding/steps/zrules/detail=Six short rules. The one that matters most: ask before you hurt another character.");
 
 			var list = await As(ed, "+welcome");
 			await Assert.That(list).Contains("Read the house rules").And.Contains("The Policies page on the wiki.");
 			await Assert.That(list.IndexOf("Read the house rules", StringComparison.Ordinal))
 				.IsLessThan(list.IndexOf("Learn the basics", StringComparison.Ordinal));
+			await Assert.That(await As(ed, "+welcome 1")).Contains("1. Read the house rules")
+				.And.Contains("ask before you hurt another");
 			await Assert.That(await As(ed, "+welcome/done zrules")).Contains("Done: Read the house rules.");
 		}
 		finally
@@ -173,20 +199,5 @@ public class OnboardingIntegrationTests
 		await Assert.That(await As(ed, "+welcome")).DoesNotContain("Read the house rules");
 		await Assert.That(await As(ed, "+help welcome")).Contains("+welcome/done <step>");
 		await Assert.That(await As(ed, "+help welcome staff")).Contains("+config/add onboarding/steps/rules=Read the house rules");
-	}
-
-	[Test]
-	public async Task ThePortalCardShowsOnlyWhileThereIsSomethingToDo()
-	{
-		var guide = await GuideAsync();
-		var fay = await Player("ObFay");
-		var number = fay.DbRef.Number;
-
-		await Assert.That(await Think($"json_query(u({guide}/WEB`SCHEMA,#{number}),extract,$.pages\\[0\\].sections\\[0\\].name)")).IsEqualTo("Getting started");
-		await Assert.That(await Think($"json_query(u({guide}/WEB`DATA,#{number}),extract,$.fields.steps.value\\[0\\].author)")).IsNotEmpty();
-		await Assert.That(await Think($"json_query(u({guide}/WEB`SCHEMA,),get,pages)")).IsEqualTo("[]");
-
-		await As(fay, "+welcome/hide");
-		await Assert.That(await Think($"json_query(u({guide}/WEB`SCHEMA,#{number}),get,pages)")).IsEqualTo("[]");
 	}
 }

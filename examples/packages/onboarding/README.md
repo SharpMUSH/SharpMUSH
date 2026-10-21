@@ -1,38 +1,54 @@
 # onboarding
 
-`+welcome`: a getting-started checklist for new characters. It shows at login while a step is still open, any
-time with `+welcome`, and on the portal's home page with `onboarding-app`. The game chooses the steps.
+`+welcome`: a getting-started checklist for new characters. It shows at login while a step is still open and any
+time with `+welcome`. Each step is numbered, and `+welcome <number>` tells you more about it. The game chooses the
+steps.
 
 ```
 > +welcome
 ╔═════════════════════════════╡ Getting started ╞════════════════════════════╗
 ║ A few things to do first. The list keeps track as you go.                  ║
-║          Step                     How                                      ║
+║ #           Step                     How                                   ║
 ║ -------------------------------------------------------------------------- ║
-║ [To do]  Learn the basics         help getting started walks you through   ║
-║                                   moving, talking and chat. Done?          ║
-║                                   +welcome/done basics                     ║
-║ [To do]  Read this game's help    +help lists this game's own commands and ║
-║                                   topics. Done? +welcome/done plushelp     ║
-║ [Done]   Describe your character                                           ║
-║ [To do]  Get approved             Staff approve characters before they     ║
-║                                   join scenes. Ask staff how to apply.     ║
+║ 1  [To do]  Learn the basics         help getting started walks you        ║
+║                                      through moving, talking and chat.     ║
+║                                      Done? +welcome/done 1                 ║
+║ 2  [To do]  Read this game's help    +help lists this game's own commands  ║
+║                                      and topics. Done? +welcome/done 2     ║
+║ 3  [Done]   Describe your character                                        ║
+║ 4  [To do]  Get approved             Staff approve characters before they  ║
+║                                      join scenes. Ask staff how to apply.  ║
 ╠════════════════════════════════════════════════════════════════════════════╣
-║ 3 steps to go. +welcome/hide stops it showing at login.                    ║
+║ 3 steps to go. +welcome <number> tells you more about a step.              ║
+║ +welcome/hide stops it showing at login.                                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+> +welcome 4
+╔═════════════════════════════╡ 4. Get approved ╞════════════════════════════╗
+║ [To do]                                                                    ║
+║                                                                            ║
+║ Staff approve characters before they join scenes. Ask staff how to apply.  ║
+║                                                                            ║
+║ Many games have staff look over a new character before it takes part in    ║
+║ the story, to check it fits the setting. How you apply differs from game   ║
+║ to game: the game's policies, its wiki or a member of staff can tell you.  ║
+╠════════════════════════════════════════════════════════════════════════════╣
+║ This ticks itself off once it is done · +welcome lists every step          ║
 ╚════════════════════════════════════════════════════════════════════════════╝
 ```
 
 - **Checked or ticked.** A step with a check ticks itself off: setting a description, joining a channel, getting
-  approved. Any other step the player ticks off with `+welcome/done <step>`, or **Mark done** on the portal.
-- **At login.** The list shows on the connection that logged in, at every login while a step is open. A game can
-  show it on the first login only, or never. `+welcome/hide` stops it for one player, on the portal too.
+  approved. Any other step the player ticks off with `+welcome/done <number>` (or the step's name).
+- **At login.** The list shows on the connection that logged in, at every login while a step is open, with a line
+  saying `+welcome` shows it again. A game can show it on the first login only, or never. `+welcome/hide` stops
+  it for one player.
 - **Per player.** A step can leave itself off a player's list: a guest gets no description or approval step, and
-  the channel step shows only where there is a channel to join.
+  the channel step shows only where there is a channel to join. Numbers follow the player's own list.
 
 ## Steps
 
 The steps are a `+config` table (with `onboarding-config`): `+config onboarding/steps`. Each is an entry on the
-Onboarding Steps object, `` STEP`<KEY> `` holding its label, with `HINT` and `ORDER` beneath.
+Onboarding Steps object, `` STEP`<KEY> `` holding its label, with `HINT` (one line, in the list), `DETAIL` (up to 1,000 characters, for
+`+welcome <number>`) and `ORDER` beneath. A step's key starts with a letter, so a number always means a position.
 
 | Step | Order | Ticks itself off when |
 |---|---|---|
@@ -64,7 +80,7 @@ object:
 | Setting | Type | Default | What it changes |
 |---|---|---|---|
 | `login` | choice: `open`, `first`, `off` | `open` | When the list shows at login: every login while a step is open, the first login only, or never. |
-| `title` | text, 1 to 60 | Getting started | The list's title, in the game and on the portal. |
+| `title` | text, 1 to 60 | Getting started | The list's title. |
 | `intro` | text, up to 400 | A few things to do first. The list keeps track as you go. | The line above the steps. Empty shows none. |
 | `steps` | table | the four above | The steps. |
 
@@ -80,14 +96,12 @@ object:
 | [`onboarding-help`](../onboarding-help/) | `+help welcome`, and a step: Read this game's help (`+help`), order 20 |
 | [`onboarding-config`](../onboarding-config/) | `+config onboarding`, and `+help welcome staff` |
 | [`onboarding-chargen`](../onboarding-chargen/) | The approval step says where the player's `+app` application stands |
-| [`onboarding-app`](../onboarding-app/) | The list on the portal's home page, for a signed-in character with a step still open |
 
 ## Objects
 
-- **Onboarding**, in the master room, `WIZARD`: the command, the settings, the step code, the login copy (from
-  `` PLAYER`CONNECT`ONBOARDING `` on the event handler) and the portal card's routes (`/http/onboarding/...` on
-  the HTTP handler).
+- **Onboarding**, in the master room, `WIZARD`: the command, the settings, the step code and the login copy (from
+  `` PLAYER`CONNECT`ONBOARDING `` on the event handler).
 - **Onboarding Steps**, inside it: the steps.
 - **Onboarding Help**, inside it: the `+help welcome` topics, registered by `onboarding-help`.
 
-Requires nothing but the event and HTTP handlers.
+Requires nothing but the event handler.

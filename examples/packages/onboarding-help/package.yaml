@@ -41,5 +41,7 @@ objects:
         Read this game's help
       STEP`PLUSHELP`HINT: |-
         +help lists this game's own commands and topics.
+      STEP`PLUSHELP`DETAIL: |-
+        help covers the commands every SharpMUSH game has. +help covers this game's own: the systems it installed and what its staff wrote down. +help on its own lists the topics, and +help <topic> reads one.
       STEP`PLUSHELP`ORDER: |-
         20

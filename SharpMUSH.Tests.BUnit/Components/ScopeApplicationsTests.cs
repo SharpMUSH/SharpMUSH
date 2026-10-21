@@ -35,15 +35,12 @@ public class ScopeApplicationsTests : ZoneRendererTestBase
 		new LayoutSettings(false, false));
 
 	/// <summary>Registers <paramref name="apps"/> the way startup does once the catalog is in; every route answers 404.</summary>
-	private void Install(params PortalApplication[] apps) => Install(new NotFoundHandler(), apps);
-
-	/// <summary>Registers <paramref name="apps"/> the way startup does once the catalog is in; <paramref name="routes"/> answers.</summary>
-	private void Install(HttpMessageHandler routes, params PortalApplication[] apps)
+	private void Install(params PortalApplication[] apps)
 	{
 		var registry = new WidgetRegistry();
 		foreach (var app in apps) registry.Register(new ApplicationPortalWidget(app));
 		Services.AddSingleton<IWidgetRegistry>(registry);
-		var api = Track(new HttpClient(routes) { BaseAddress = new Uri("https://localhost/") });
+		var api = Track(new HttpClient(new NotFoundHandler()) { BaseAddress = new Uri("https://localhost/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient(Arg.Any<string>()).Returns(api);
 		Services.AddSingleton(new SchemaAppService(factory, NullLogger<SchemaAppService>.Instance));
@@ -62,33 +59,11 @@ public class ScopeApplicationsTests : ZoneRendererTestBase
 			=> Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
 	}
 
-	/// <summary>Every route answers a view with no pages: an application with nothing to show this viewer.</summary>
-	private sealed class EmptyViewHandler : HttpMessageHandler
-	{
-		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-			=> Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
-			{
-				Content = new StringContent("""{"kind":"view","schema_version":1,"pages":[]}""", System.Text.Encoding.UTF8, "application/json")
-			});
-	}
-
 	private static List<string> Rendered(IRenderedComponent<IComponent> cut) =>
 		cut.FindComponents<WidgetErrorBoundary>().Select(b => b.Instance.WidgetName).ToList();
 
 	private IRenderedComponent<ScopedZone> RenderZone(WidgetZone zone) =>
 		Render<ScopedZone>(p => p.Add(x => x.Scope, LayoutScopes.Profile).Add(x => x.Zone, zone));
-
-	[Test]
-	public async Task A_scope_application_with_nothing_to_show_draws_nothing()
-	{
-		AddAuthorization();
-		Install(new EmptyViewHandler(), App("checklist", "profile"));
-
-		var cut = RenderZone(WidgetZone.MainContent);
-
-		cut.WaitForState(() => Rendered(cut).Contains("checklist") && !cut.Markup.Contains("mud-progress-circular"));
-		await Assert.That(cut.Markup).DoesNotContain("WidNothingToDisplay");
-	}
 
 	[Test]
 	public async Task A_scope_application_joins_the_zone_after_the_placed_widgets()

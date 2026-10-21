@@ -44,7 +44,8 @@ objects:
 
         - `+config onboarding/steps` lists the steps, and `+config onboarding/steps/<step>` shows one.
         - `+config/add onboarding/steps/rules=Read the house rules` adds a step. Players tick it off themselves.
-        - `+config onboarding/steps/rules/hint=The Policies page on the wiki.` sets how to do it.
+        - `+config onboarding/steps/rules/hint=The Policies page on the wiki.` sets how to do it, in a line.
+        - `+config onboarding/steps/rules/detail=<text>` sets more about it, up to 1,000 characters, which players read with `+welcome <number>`.
         - `+config onboarding/steps/rules/order=20` sets where it comes, lowest first.
         - `+config/remove onboarding/steps/approval` takes one away, such as approval on a game that does not approve characters.
 
@@ -58,7 +59,7 @@ objects:
 
         ```
         > +config/add onboarding/steps/rules=Read the house rules
-        \[CONFIG\] Done: added onboarding/steps/rules.
+        \[CONFIG\] Done: Added onboarding/steps/rules. +config onboarding/steps/rules shows it.
         ```
 
-        Output: one line saying what was added.
+        Output: one line saying what was added and how to see it.

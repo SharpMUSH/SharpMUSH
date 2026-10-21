@@ -2,7 +2,7 @@ format: "1.10"
 package: onboarding
 version: 1.0.0
 authors: [SharpMUSH]
-description: "A getting-started checklist for new characters: shown at login while a step is open, any time with +welcome, and on the portal's home page with onboarding-app. The game chooses the steps."
+description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [onboarding, welcome, newbie, checklist, getting started]
@@ -20,7 +20,7 @@ objects:
   # +welcome is added with /noparse/rsnoparse and hooked to CMD`WELCOME, so what a player types reaches the code exactly
   # as typed and is never evaluated.
   #
-  # A step is an entry on the Onboarding Steps store: STEP`<KEY> its label, with HINT and ORDER beneath. Code for a step
+  # A step is an entry on the Onboarding Steps store: STEP`<KEY> its label, with HINT, DETAIL and ORDER beneath. Code for a step
   # lives here, keyed the same way, and each piece is optional:
   #   CHECK`<KEY>  %0 the player: true once the step is done. Without one, the player ticks it off with +welcome/done.
   #   SHOW`<KEY>   %0 the player: false to leave the step off this player's list.
@@ -28,9 +28,8 @@ objects:
   # A player's progress is on the player: ONBOARDING`DONE`<KEY> (when they ticked it), ONBOARDING`HIDE (1: not at
   # login) and ONBOARDING`SEEN (when it was first shown at login).
   #
-  # Trees: CMD` the hooked command, INC`COMMAND` the dispatch, INC`WELCOME` one routine per switch, INC`EVENT` the login
-  # copy, FUN`STEP` the reads, FUN`DISPLAY` the screen, WEB` the portal card and its button. DATA` the settings and the
-  # routes, one leaf each.
+  # Trees: CMD` the hooked command, INC`COMMAND` the dispatch, INC`WELCOME` one routine per switch, EVENT` the login
+  # copy, FUN`STEP` the reads, FUN`DISPLAY` the screens. DATA` the settings and the routes, one leaf each.
   - ref: guide
     type: thing
     name: Onboarding
@@ -73,7 +72,7 @@ objects:
       DATA`CONFIG`TITLE`MAX: |-
         60
       DATA`CONFIG`TITLE`DESCRIPTION: |-
-        The checklist's title, in the game and on the portal.
+        The checklist's title.
       DATA`CONFIG`TITLE`LABEL: |-
         Title
       DATA`CONFIG`TITLE`EXAMPLE: |-
@@ -92,7 +91,8 @@ objects:
         Intro
       DATA`CONFIG`INTRO`EXAMPLE: |-
         New to the city? Start here, and ask on the Newbie channel.
-      # The steps, a +config table: entries on the store under STEP`, each holding its label, with HINT and ORDER beneath.
+      # The steps, a +config table: entries on the store under STEP`, each holding its label, with HINT, DETAIL and ORDER
+      # beneath.
       DATA`CONFIG`STEPS`TYPE: |-
         table
       DATA`CONFIG`STEPS`LABEL: |-
@@ -106,9 +106,9 @@ objects:
       DATA`CONFIG`STEPS`ENTRY: |-
         label
       DATA`CONFIG`STEPS`FIELDS: |-
-        label hint order
+        label hint detail order
       DATA`CONFIG`STEPS`KEYPATTERN: |-
-        ^[A-Za-z0-9_]{1,20}$
+        ^[A-Za-z][A-Za-z0-9_]{0,19}$
       DATA`CONFIG`STEPS`FIELD`LABEL`TYPE: |-
         text
       DATA`CONFIG`STEPS`FIELD`LABEL`MIN: |-
@@ -126,7 +126,15 @@ objects:
       DATA`CONFIG`STEPS`FIELD`HINT`LABEL: |-
         Hint
       DATA`CONFIG`STEPS`FIELD`HINT`DESCRIPTION: |-
-        How to do it: the command to type, or the page to read.
+        How to do it, in a line: the command to type, or the page to read.
+      DATA`CONFIG`STEPS`FIELD`DETAIL`TYPE: |-
+        text
+      DATA`CONFIG`STEPS`FIELD`DETAIL`MAX: |-
+        1000
+      DATA`CONFIG`STEPS`FIELD`DETAIL`LABEL: |-
+        Detail
+      DATA`CONFIG`STEPS`FIELD`DETAIL`DESCRIPTION: |-
+        More about it, for +welcome <number>: why it matters and what to do.
       DATA`CONFIG`STEPS`FIELD`ORDER`TYPE: |-
         integer
       DATA`CONFIG`STEPS`FIELD`ORDER`DEFAULT: |-
@@ -139,11 +147,10 @@ objects:
         Order
       DATA`CONFIG`STEPS`FIELD`ORDER`DESCRIPTION: |-
         Where it comes on the list, lowest first.
-      # Which INC` routine each switch runs: DATA`ROUTE`<switch>. BARE is the command with no switch.
+      # Which INC` routine each switch runs: DATA`ROUTE`<switch>. Without a switch, +welcome lists the steps and
+      # +welcome <step> shows one.
       DATA`ROUTE: |-
         Which routine each switch runs. One leaf per switch.
-      DATA`ROUTE`BARE: |-
-        WELCOME`LIST
       DATA`ROUTE`DONE: |-
         WELCOME`DONE
       DATA`ROUTE`UNDO: |-
@@ -190,11 +197,15 @@ objects:
       # Finds the routine for the switch and runs it. Only players have a checklist.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(WELCOME,Only players have a checklist.,warn); think setq(cmd_route,if(regmatch(%<switch>,^%[A-Za-z%]*$),get(%!/DATA`ROUTE`[firstof(%<switch>,BARE)]))); @assert strlen(%q<cmd_route>)=@pemit %#=notice(WELCOME,+welcome has no /%<switch> switch. It takes /done%, /undo%, /hide and /show.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(WELCOME,Only players have a checklist.,warn); think setq(cmd_route,if(strlen(%<switch>),if(regmatch(%<switch>,^%[A-Za-z%]+$),get(%!/DATA`ROUTE`%<switch>)),if(strlen(%<argument>),WELCOME`STEP,WELCOME`LIST))); @assert strlen(%q<cmd_route>)=@pemit %#=notice(WELCOME,+welcome has no /%<switch> switch. It takes /done%, /undo%, /hide and /show.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       INC`WELCOME`LIST:
         value: |-
-          @assert not(strlen(%<argument>))=@pemit %#=notice(WELCOME,+welcome on its own shows your checklist. +welcome/done <step> ticks one off.,warn); @pemit %#=u(%!/FUN`DISPLAY`SCREEN,%#)
+          @pemit %#=u(%!/FUN`DISPLAY`SCREEN,%#)
+        flags: [cmdsyntax]
+      INC`WELCOME`STEP:
+        value: |-
+          @include/args %!/INC`WELCOME`FIND=word,; @pemit %#=u(%!/FUN`DISPLAY`STEP,%q<step_key>,%#)
         flags: [cmdsyntax]
       INC`WELCOME`DONE:
         value: |-
@@ -204,15 +215,15 @@ objects:
         value: |-
           @include/args %!/INC`WELCOME`FIND=word,undo; @assert hasattr(%#,ONBOARDING`DONE`%q<step_key>)=@pemit %#=notice(WELCOME,You have not ticked off [u(%!/FUN`STEP`LABEL,%q<step_key>)].,warn); &ONBOARDING`DONE`%q<step_key> %#; @pemit %#=notice(WELCOME,[u(%!/FUN`STEP`LABEL,%q<step_key>)] is open again.,ok)
         flags: [cmdsyntax]
-      # Sets step_key to the step %<argument> names on the player's list, or stops with why. %<word> the switch, for the
-      # messages.
+      # Sets step_key to the step %<argument> names on the player's list, by number or name, or stops with why. %<word>
+      # the switch, for the messages.
       INC`WELCOME`FIND:
         value: |-
-          @assert strlen(%<argument>)=@pemit %#=notice(WELCOME,Which step? +welcome/%<word> <step>. +welcome lists them.,warn); think setq(step_key,u(%!/FUN`STEP`FIND,%<argument>,%#)); @assert strlen(%q<step_key>)=@pemit %#=notice(WELCOME,There is no step called '%<argument>' on your list. +welcome lists them.,warn)
+          @assert strlen(%<argument>)=@pemit %#=notice(WELCOME,Which step? +welcome/%<word> <number or name>. +welcome lists them.,warn); think setq(step_key,u(%!/FUN`STEP`FIND,%<argument>,%#)); @assert strlen(%q<step_key>)=@pemit %#=notice(WELCOME,There is no step [if(isint(%<argument>),%<argument>,called '%<argument>')] on your list. +welcome lists them.,warn)
         flags: [cmdsyntax]
       INC`WELCOME`HIDE:
         value: |-
-          @assert not(strlen(%<argument>))=@pemit %#=notice(WELCOME,+welcome/hide takes nothing after it.,warn); @assert not(get(%#/ONBOARDING`HIDE))=@pemit %#=notice(WELCOME,Your checklist is already hidden. +welcome/show brings it back.,warn); &ONBOARDING`HIDE %#=1; @pemit %#=notice(WELCOME,Your checklist no longer shows at login or on the portal's home page. +welcome still shows it%, and +welcome/show brings it back.,ok)
+          @assert not(strlen(%<argument>))=@pemit %#=notice(WELCOME,+welcome/hide takes nothing after it.,warn); @assert not(get(%#/ONBOARDING`HIDE))=@pemit %#=notice(WELCOME,Your checklist is already hidden. +welcome/show brings it back.,warn); &ONBOARDING`HIDE %#=1; @pemit %#=notice(WELCOME,Your checklist no longer shows at login. +welcome still shows it%, and +welcome/show brings it back.,ok)
         flags: [cmdsyntax]
       INC`WELCOME`SHOW:
         value: |-
@@ -224,7 +235,7 @@ objects:
       # connection alone, so a second connection does not repeat it on the first.
       EVENT`CONNECT:
         value: |-
-          @assert hastype(%<player>,player); @assert u(%!/FUN`LOGIN`SHOWS,%<player>); &ONBOARDING`SEEN %<player>=firstof(get(%<player>/ONBOARDING`SEEN),secs()); @pemit/port %<descriptor>=u(%!/FUN`DISPLAY`SCREEN,%<player>)
+          @assert hastype(%<player>,player); @assert u(%!/FUN`LOGIN`SHOWS,%<player>); &ONBOARDING`SEEN %<player>=firstof(get(%<player>/ONBOARDING`SEEN),secs()); @pemit/port %<descriptor>=u(%!/FUN`DISPLAY`SCREEN,%<player>,1)
         flags: [cmdsyntax]
       # %0 a player: whether the checklist shows as they log in.
       FUN`LOGIN`SHOWS:
@@ -277,29 +288,32 @@ objects:
         value: |-
           firstof(if(hasattr(%!,NOTE`%0),u(%!/NOTE`%0,%1)),if(not(%2),unmark(get({{store}}/STEP`%0`HINT))))
         flags: [funsyntax]
-      # %0 typed text, %1 a player: the key of the step on their list it names, in any case, or nothing.
+      # %0 typed text, %1 a player: the key of the step on their list it names, by its number there or its name in any
+      # case, or nothing. A key starts with a letter, so a number is never a name.
       FUN`STEP`FIND:
         value: |-
-          if(regmatch(%0,^%[A-Za-z0-9_%]+$),setq(find_keys,u(%!/FUN`STEP`KEYS,%1))[extract(%q<find_keys>,match(%q<find_keys>,%0),1)])
+          if(regmatch(%0,^%[A-Za-z0-9_%]+$),setq(find_keys,u(%!/FUN`STEP`KEYS,%1))[extract(%q<find_keys>,if(isint(%0),max(%0,0),match(%q<find_keys>,%0)),1)])
         flags: [funsyntax]
 
       # ---- display --------------------------------------------------------------
-      # %0 a player: the checklist in a box, one row per step.
+      # %0 a player, %1 1 at login: the checklist in a box, one numbered row per step.
       FUN`DISPLAY`SCREEN:
         value: |-
           setqm(screen_keys,u(%!/FUN`STEP`KEYS,%0),
-          screen_intro,unmark(v(DATA`CONFIG`INTRO)))[if(words(%q<screen_keys>),box([if(strlen(%q<screen_intro>),%q<screen_intro>%r)][ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1),grow,json(string,%r%r1)),%rStep%rHow,iter(%q<screen_keys>,uargs(%!/FUN`DISPLAY`ROW,key,%i0,player,%0),,%*<^>),%*<^>)]%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER,%0)],unmark(v(DATA`CONFIG`TITLE))),notice(WELCOME,This game has no steps on its checklist.,info))]
+          screen_intro,unmark(v(DATA`CONFIG`INTRO)))[if(words(%q<screen_keys>),box([if(strlen(%q<screen_intro>),%q<screen_intro>%r)][ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r2),grow,json(string,%r%r%r1)),>#%r%rStep%rHow,iter(%q<screen_keys>,uargs(%!/FUN`DISPLAY`ROW,key,%i0,player,%0,number,inum(0)),,%*<^>),%*<^>)]%r[rule()]%r[u(%!/FUN`DISPLAY`FOOTER,%0,%1)],unmark(v(DATA`CONFIG`TITLE))),notice(WELCOME,This game has no steps on its checklist.,info))]
         flags: [funsyntax]
-      # %<key> a step on %<player>'s list: its row. A step they tick off says how, as a link.
+      # %<key> a step on %<player>'s list, %<number> its place there: its row. A step they tick off says how, as a link
+      # by number, which wraps less than a name.
       FUN`DISPLAY`ROW:
         value: |-
           setqm(row_done,u(%!/FUN`STEP`DONE,%<key>,%<player>),
-          row_hint,u(%!/FUN`STEP`HINT,%<key>,%<player>,%q<row_done>))[if(%q<row_done>,badge(Done,ok),badge(To do,info))]%r[u(%!/FUN`STEP`LABEL,%<key>)]%r%q<row_hint>[if(cand(not(%q<row_done>),u(%!/FUN`STEP`TICKABLE,%<key>)),[if(strlen(%q<row_hint>),%b)]Done? [cmdlink(+welcome/done [lcstr(%<key>)],+welcome/done [lcstr(%<key>)])])]
+          row_hint,u(%!/FUN`STEP`HINT,%<key>,%<player>,%q<row_done>))%<number>%r[if(%q<row_done>,badge(Done,ok),badge(To do,info))]%r[u(%!/FUN`STEP`LABEL,%<key>)]%r%q<row_hint>[if(cand(not(%q<row_done>),u(%!/FUN`STEP`TICKABLE,%<key>)),[if(strlen(%q<row_hint>),%b)]Done? [cmdlink(+welcome/done %<number>,+welcome/done %<number>)])]
         flags: [funsyntax]
-      # %0 a player: how many steps are left, and whether the list shows at login.
+      # %0 a player, %1 1 at login: how many steps are left, how to read more, and how to see the list again or stop it
+      # showing at login.
       FUN`DISPLAY`FOOTER:
         value: |-
-          u(%!/FUN`DISPLAY`LEFT,%0)%b[if(get(%0/ONBOARDING`HIDE),Hidden at login: +welcome/show brings it back.,+welcome/hide stops it showing at login.)]
+          u(%!/FUN`DISPLAY`LEFT,%0) +welcome <number> tells you more about a step.%r[cond(get(%0/ONBOARDING`HIDE),Hidden at login: +welcome/show brings it back.,%1,Type +welcome to see this list again%, or +welcome/hide to stop it showing at login.,1,+welcome/hide stops it showing at login.)]
         flags: [funsyntax]
       # %0 a player: how many steps they have left.
       FUN`DISPLAY`LEFT:
@@ -307,44 +321,20 @@ objects:
           setq(left_count,words(u(%!/FUN`STEP`OPEN,%0)))[switch(%q<left_count>,0,Every step is done.,1,One step to go.,%q<left_count> steps to go.)]
         flags: [funsyntax]
 
-      # ---- the portal card (onboarding-app) -------------------------------------
-      # %0 the viewer: the card, a view with one timeline row per step and a button that hides it. A viewer with
-      # nothing to show (signed out, every step done, or hidden) gets a document with no pages, which draws nothing.
-      WEB`SCHEMA:
+      # %0 a key on %1's list: the step on its own. Its label, numbered as on the list; Done or To do; its note or else its
+      # hint, then its detail; and what to do about it.
+      FUN`DISPLAY`STEP:
         value: |-
-          if(cand(isdbref(%0),hastype(%0,player),not(get(%0/ONBOARDING`HIDE)),words(u(%!/FUN`STEP`OPEN,%0))),json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,main),order,json(number,1),sections,json(array,json(object,name,json(string,unmark(v(DATA`CONFIG`TITLE))),order,json(number,1),elements,json(array,json(object,kind,json(string,markdown),value,json(string,unmark(v(DATA`CONFIG`INTRO)))),json(object,kind,json(string,timeline),rows_field,json(string,steps)),json(object,kind,json(string,button),label,json(string,Hide this list),action,json(string,act),values,json(object,op,json(string,hide)),variant,json(string,text))))))),actions,json(object,act,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/onboarding/act),on_error,json(object,bind_field_errors,json(boolean,false))))),json(object,kind,json(string,view),schema_version,json(number,1),pages,json_array()))
+          setqm(step_done,u(%!/FUN`STEP`DONE,%0,%1),
+          step_tickable,u(%!/FUN`STEP`TICKABLE,%0),
+          step_hint,firstof(if(hasattr(%!,NOTE`%0),u(%!/NOTE`%0,%1)),unmark(get({{store}}/STEP`%0`HINT))),
+          step_detail,unmark(get({{store}}/STEP`%0`DETAIL)),
+          step_number,match(u(%!/FUN`STEP`KEYS,%1),%0))[box([if(%q<step_done>,badge(Done,ok),badge(To do,info))][if(strlen(%q<step_hint>),%r%r%q<step_hint>)][if(strlen(%q<step_detail>),%r%r%q<step_detail>)]%r[rule()]%r[u(%!/FUN`DISPLAY`STEPFOOTER,%0,%q<step_done>,%q<step_tickable>,%q<step_number>)] · +welcome lists every step,%q<step_number>. [u(%!/FUN`STEP`LABEL,%0)])]
         flags: [funsyntax]
-      # %0 the viewer: the rows.
-      WEB`DATA:
+      # %0 a key, %1 1 when done, %2 1 when the player ticks it off, %3 its number: what they can do about it.
+      FUN`DISPLAY`STEPFOOTER:
         value: |-
-          json(object,fields,json(object,steps,json(object,value,if(cand(isdbref(%0),hastype(%0,player)),json_array(iter(u(%!/FUN`STEP`KEYS,%0),uargs(%!/WEB`ROW,key,%i0,player,%0),,%*<^>),%*<^>),json_array()),visible,json(boolean,true))))
-        flags: [funsyntax]
-      # %<key> a step on %<player>'s list, as a timeline row: its label, the hint, Done or To do, and a button to tick
-      # it off when the player does that.
-      WEB`ROW:
-        value: |-
-          setqm(row_done,u(%!/FUN`STEP`DONE,%<key>,%<player>),
-          row_tickable,u(%!/FUN`STEP`TICKABLE,%<key>))[json(object,author,json(string,u(%!/FUN`STEP`LABEL,%<key>)),body,json(string,u(%!/FUN`STEP`HINT,%<key>,%<player>,%q<row_done>)),tag,json(string,if(%q<row_done>,Done,To do)),tag_color,json(string,if(%q<row_done>,success,default)),actions,if(cand(%q<row_tickable>,not(%q<row_done>)),json(array,json(object,label,json(string,Mark done),action,json(string,act),values,json(object,op,json(string,done),step,json(string,lcstr(%<key>))))),json_array()))]
-        flags: [funsyntax]
-      # The card's button, for %<viewer> with the posted %<body>: tick off a step or hide the card. Sets act_result to
-      # the response, which carries the card as it now stands: an empty view once it is hidden or every step is done.
-      INC`WEB`ACT:
-        value: |-
-          think setqm(act_op,json_query(%<body>,extract,$.op),
-          act_step,json_query(%<body>,extract,$.step),
-          act_result,u(%!/WEB`ERROR,Sign in with a character to use the checklist.)); @assert cand(isdbref(%<viewer>),hastype(%<viewer>,player)); @include/args %!/INC`WEB`ACT`[if(strmatch(%q<act_op>,hide),HIDE,DONE)]=viewer,%<viewer>
-        flags: [cmdsyntax]
-      INC`WEB`ACT`HIDE:
-        value: |-
-          &ONBOARDING`HIDE %<viewer>=1; think setq(act_result,json(object,ok,json(boolean,true),message,json(string,Hidden. +welcome in the game still shows the list.),schema,u(%!/WEB`SCHEMA,%<viewer>),data,u(%!/WEB`DATA,%<viewer>)))
-        flags: [cmdsyntax]
-      INC`WEB`ACT`DONE:
-        value: |-
-          think setq(step_key,u(%!/FUN`STEP`FIND,%q<act_step>,%<viewer>)); think setq(act_result,u(%!/WEB`ERROR,There is no such step on your list.)); @assert strlen(%q<step_key>); think setq(act_result,u(%!/WEB`ERROR,That step ticks itself off once it is done.)); @assert u(%!/FUN`STEP`TICKABLE,%q<step_key>); &ONBOARDING`DONE`%q<step_key> %<viewer>=firstof(get(%<viewer>/ONBOARDING`DONE`%q<step_key>),secs()); think setq(act_result,json(object,ok,json(boolean,true),message,json(string,Done: [u(%!/FUN`STEP`LABEL,%q<step_key>)].),schema,u(%!/WEB`SCHEMA,%<viewer>),data,u(%!/WEB`DATA,%<viewer>)))
-        flags: [cmdsyntax]
-      WEB`ERROR:
-        value: |-
-          json(object,ok,json(boolean,false),message,json(string,%0))
+          switch(%1%2,11,Ticked off: +welcome/undo %3 opens it again,10,Done,01,Done? [cmdlink(+welcome/done %3,+welcome/done %3)],This ticks itself off once it is done)
         flags: [funsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -362,7 +352,7 @@ objects:
           @trigger %!/STARTUP
         flags: [cmdsyntax]
 
-  # The steps, a +config table: STEP`<KEY> the label, HINT and ORDER beneath. Data only, never evaluated. The orders
+  # The steps, a +config table: STEP`<KEY> the label, HINT, DETAIL and ORDER beneath. Data only, never evaluated. The orders
   # leave room between them for steps the game or another package adds.
   - ref: store
     type: thing
@@ -376,24 +366,32 @@ objects:
         Learn the basics
       STEP`BASICS`HINT: |-
         help getting started walks you through moving, talking and chat.
+      STEP`BASICS`DETAIL: |-
+        The walkthrough has a page for each everyday skill: help gs moving for getting around, help gs talking for speaking to the people in your room, and help gs chat for channels. help newbie explains how the help pages are written, and help <command> covers any one command.
       STEP`BASICS`ORDER: |-
         10
       STEP`DESCRIBE: |-
         Describe your character
       STEP`DESCRIBE`HINT: |-
         @desc me=<what others see when they look at you>
+      STEP`DESCRIBE`DETAIL: |-
+        Your description is what others read when they look at you, so it is often the first thing they learn about your character. A few sentences about how they look right now is plenty; leave out what others could not see. look me shows it back to you.
       STEP`DESCRIBE`ORDER: |-
         30
       STEP`CHANNEL: |-
         Join a channel
       STEP`CHANNEL`HINT: |-
         @channel/list shows them, and @channel/on <name> joins one.
+      STEP`CHANNEL`DETAIL: |-
+        A channel reaches its members wherever they are in the game, not only the people in your room. Many games keep one for questions from new players. @chat <channel>=<message> speaks on one, and help gs chat has the rest.
       STEP`CHANNEL`ORDER: |-
         40
       STEP`APPROVAL: |-
         Get approved
       STEP`APPROVAL`HINT: |-
         Staff approve characters before they join scenes. Ask staff how to apply.
+      STEP`APPROVAL`DETAIL: |-
+        Many games have staff look over a new character before it takes part in the story, to check it fits the setting. How you apply differs from game to game: the game's policies, its wiki or a member of staff can tell you.
       STEP`APPROVAL`ORDER: |-
         60
 
@@ -409,10 +407,11 @@ objects:
       HELP`WELCOME: |-
         `+welcome` shows your getting-started checklist: what to do first on this game, and how. It keeps track as you go.
 
-        - `+welcome` shows the list.
-        - `+welcome/done <step>` ticks off a step you have done, such as `+welcome/done basics`. Some steps tick themselves off: setting a description, joining a channel, getting approved.
+        - `+welcome` shows the list, each step numbered.
+        - `+welcome <number>` tells you more about that step: why it matters and how to do it. `+welcome <step>` works too, such as `+welcome basics`.
+        - `+welcome/done <step>` ticks off a step you have done, by number or name. Some steps tick themselves off: setting a description, joining a channel, getting approved.
         - `+welcome/undo <step>` opens one you ticked off again.
-        - `+welcome/hide` stops the list showing at login and on the portal's home page. `+welcome/show` brings it back.
+        - `+welcome/hide` stops the list showing at login. `+welcome/show` brings it back.
 
         The list shows each time you log in while a step is open, unless the game shows it only once.
 
@@ -425,7 +424,7 @@ objects:
 
         Output: one line naming the step and how many are left.
       HELP`WELCOME`STEPS: |-
-        Each step on the checklist is an entry on the Onboarding Steps object, inside the Onboarding object in the master room: `` STEP`<STEP> `` holds its label, with `HINT` \(how to do it\) and `ORDER` \(where it comes, lowest first\) beneath. The steps that come with the game are `basics` \(10\), `describe` \(30\), `channel` \(40\) and `approval` \(60\).
+        Each step on the checklist is an entry on the Onboarding Steps object, inside the Onboarding object in the master room: `` STEP`<STEP> `` holds its label, with `HINT` \(how to do it, in a line\), `DETAIL` \(more about it, for `+welcome <number>`\) and `ORDER` \(where it comes, lowest first\) beneath. A step's name starts with a letter. The steps that come with the game are `basics` \(10\), `describe` \(30\), `channel` \(40\) and `approval` \(60\).
 
         Code for a step goes on the Onboarding object, keyed the same way, each given the player as `%%0`:
 
@@ -441,16 +440,3 @@ objects:
     attributes:
       PLAYER`CONNECT`ONBOARDING: |-
         @trigger/args {{guide}}/EVENT`CONNECT=player,%<objid>,descriptor,%<descriptor>
-
-  # The routes the portal card reads and posts to (onboarding-app shows it): GET /http/onboarding/schema and
-  # /http/onboarding/data, POST /http/onboarding/act. %<viewer> is the character the portal signed in as. The handler
-  # must be WIZARD, as the seeded one is, to @force the Onboarding object for a button press.
-  - ref: routes
-    target: "{{$http_handler}}"
-    attributes:
-      GET`ONBOARDING`SCHEMA: |-
-        @respond/type application/json; think u({{guide}}/WEB`SCHEMA,%<viewer>)
-      GET`ONBOARDING`DATA: |-
-        @respond/type application/json; think u({{guide}}/WEB`DATA,%<viewer>)
-      POST`ONBOARDING`ACT: |-
-        @force {{guide}}={@include/nobreak/args {{guide}}/INC`WEB`ACT=viewer,%<viewer>}; @respond/type application/json; think %q<act_result>

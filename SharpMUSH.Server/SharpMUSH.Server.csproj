@@ -351,10 +351,6 @@
       <Link>BundledPackages\onboarding-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-config.package.yaml</LogicalName>
     </EmbeddedResource>
-    <EmbeddedResource Include="..\examples\packages\onboarding-app\package.yaml">
-      <Link>BundledPackages\onboarding-app.package.yaml</Link>
-      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-app.package.yaml</LogicalName>
-    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\onboarding-chargen\package.yaml">
       <Link>BundledPackages\onboarding-chargen.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-chargen.package.yaml</LogicalName>

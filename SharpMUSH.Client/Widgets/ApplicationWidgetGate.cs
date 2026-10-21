@@ -116,13 +116,6 @@ public sealed class ApplicationWidgetGate(IWidgetRegistry? registry, IServicePro
 		if (widget.ComponentType == typeof(Components.Widgets.SchemaWidget))
 		{
 			parameters["WidgetName"] = name;
-			// An application decides per viewer whether it has anything to say (a checklist with every step done):
-			// one that shows nothing takes no room, rather than a "Nothing to display" line in someone's layout.
-			if (widget is ApplicationPortalWidget or UnresolvedApplicationWidget)
-			{
-				parameters["QuietWhenEmpty"] = true;
-			}
-
 			if (Fetched(name) is { } application)
 			{
 				parameters["Application"] = application;
