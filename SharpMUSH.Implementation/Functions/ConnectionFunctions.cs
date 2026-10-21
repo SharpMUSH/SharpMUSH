@@ -498,26 +498,26 @@ public partial class Functions
 			return new CallState(string.Join(" ", await online.ToArrayAsync()));
 		}
 
-		// "offline"/"all" reach the player table rather than the connection list, and are powered-only
+		// "offline"/"all" walk the connection list the way lports() does (bsd.c:6575), one entry per
+		// connection and #-1 for one not logged in, so the two lists line up. Both are powered-only
 		// (checked above), so no per-connection Hidden gate applies to them.
-		//
-		// Keyed on DBRef.Number, not on the whole DBRef: the bound reference is a bare #N on some login
-		// paths and a full #N:creation objid on others, and those two compare unequal - so a player
-		// bound the objid way counted as not connected, and "offline" listed them (see the same note on
-		// MortalWhoPlayers).
-		var connectedDbRefs = await ConnectionService
-			.GetAll()
-			.Where(x => x.Ref is not null)
-			.Select(x => x.Ref!.Value.Number)
-			.ToHashSetAsync();
-
-		var result = Mediator.CreateStream(new GetAllPlayersQuery())
-			.Where(player => status != "offline" || !connectedDbRefs.Contains(player.Object.DBRef.Number))
-			.Where(async (player, _) => await PermissionService.CanSee(looker, player))
-			.Select(player => objectIds ? player.Object.DBRef.ToString() : $"#{player.Object.DBRef.Number}");
+		var result = ConnectionService.GetAll()
+			.Where(x => status == "all" || x.State != IConnectionService.ConnectionState.LoggedIn)
+			.Select(async (x, cancellationToken) => x is { State: IConnectionService.ConnectionState.LoggedIn, Ref: { } dbref }
+				? await ConnectedEntryAsync(dbref, objectIds, cancellationToken)
+				: "#-1");
 
 		return new CallState(string.Join(" ", await result.ToArrayAsync()));
 	}
+
+	/// <summary>
+	/// A logged-in connection's lwho() entry: the bare <c>#N</c>, or for lwhoid() the player's full
+	/// objid, looked up because the bound reference is a bare <c>#N</c> on some login paths.
+	/// </summary>
+	private async ValueTask<string> ConnectedEntryAsync(DBRef dbref, bool objectIds, CancellationToken cancellationToken)
+		=> objectIds && await Mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is AnySharpObject found
+			? found.Object().DBRef.ToString()
+			: $"#{dbref.Number}";
 
 	/// <summary>
 	/// PennMUSH's shared victim/privilege resolution for the caller-scoped WHO family (fun_lwho

@@ -149,10 +149,13 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("numversion()", "20250102000000")]
-	public async Task Numversion(string str, string expected)
+	public async Task Numversion()
 	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		// PennMUSH's layout: 1.8.8p0 is 1008008000.
+		var version = Version.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion);
+		var expected = $"{version.Major}{version.Minor:000}{Math.Max(version.Build, 0):000}{Math.Max(version.Revision, 0):000}";
+
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("numversion()"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 

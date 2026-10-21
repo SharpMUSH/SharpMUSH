@@ -223,9 +223,7 @@ public class UtilityFunctionUnitTests
 	public async Task Benchmark(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
-		var value = result.ToPlainText();
-		await Assert.That(value).IsNotNull();
-		await Assert.That(double.TryParse(value, out _)).IsTrue();
+		await Assert.That(result.ToPlainText()).Matches(@"^Average: \d+\.\d\d   Min: \d+   Max: \d+$");
 	}
 
 	[Test]
