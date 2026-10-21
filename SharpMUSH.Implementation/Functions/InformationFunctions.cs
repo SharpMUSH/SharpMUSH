@@ -1301,30 +1301,52 @@ public partial class Functions
 		}
 
 		var iterations = (int)count;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var outputFormat = "ms";
-		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
+		// <sendto> is evaluated and matched like any object, and must be one the executor may @pemit
+		// (funmisc.c:1503-1520), before <expression> runs at all.
+		AnySharpObject? sendTo = null;
+		if (args.TryGetValue("2", out var sendToArg))
 		{
-			outputFormat = formatArg.Message.ToPlainText().ToLower();
+			var name = (await ParseRawArgument(parser, sendToArg.Message))?.Message?.ToPlainText() ?? string.Empty;
+			switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All))
+			{
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found when !await CommunicationService.MayPemitAsync(parser, executor, found):
+					return new CallState("#-1");
+				case AnySharpObject found:
+					sendTo = found;
+					break;
+			}
 		}
 
 		var hadErrors = false;
-		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-		for (int i = 0; i < iterations; i++)
+		CallState? last = null;
+		var min = long.MaxValue;
+		var max = 0L;
+		var total = 0L;
+		for (var i = 0; i < iterations; i++)
 		{
-			hadErrors |= (await ParseRawArgument(parser, code))?.HadErrors == true;
+			var start = System.Diagnostics.Stopwatch.GetTimestamp();
+			last = await ParseRawArgument(parser, code);
+			var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMicroseconds;
+			hadErrors |= last?.HadErrors == true;
+			min = Math.Min(min, elapsed);
+			max = Math.Max(max, elapsed);
+			total += elapsed;
 		}
-		stopwatch.Stop();
 
-		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
-		if (outputFormat == "s" || outputFormat == "seconds")
+		var timings = string.Create(CultureInfo.InvariantCulture,
+			$"Average: {(double)total / iterations:F2}   Min: {min}   Max: {max}");
+
+		if (sendTo is null)
 		{
-			return new CallState((elapsed / 1000.0).ToString("F6")) { HadErrors = hadErrors };
+			return new CallState(timings) { HadErrors = hadErrors };
 		}
-		else
-		{
-			return new CallState(elapsed.ToString("F3")) { HadErrors = hadErrors };
-		}
+
+		await NotifyService.Notify(sendTo, timings, executor);
+		return (last ?? CallState.Empty) with { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
