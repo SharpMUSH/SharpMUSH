@@ -342,14 +342,14 @@ public partial class Functions
 
 	/// <summary>
 	/// A gradient's stop: a tone() name for the colour it stands for in the game's layout_theme, or the
-	/// standard colour a reader without a theme is sent for it; ansi() codes otherwise.
+	/// standard colour a reader without a theme is sent for it (white for <c>foreground</c> and
+	/// <c>strong</c>, whose standard is the client's own colour, which a gradient cannot blend);
+	/// ansi() codes otherwise.
 	/// </summary>
 	private IColorMarkup? GradientStop(string codes) =>
 		!ToneMarkup.TryParse(codes, out var tone)
 			? AnsiCodes(codes)
-			: (HousePalette()?[tone.Role] ?? ToneMarkup.Standard(tone.Role)) is { } colour
-				? AnsiTheme.Paint(colour)
-				: null;
+			: AnsiTheme.Paint(HousePalette()?[tone.Role] ?? ToneMarkup.Standard(tone.Role) ?? ThemeColor.Standard(7));
 
 	/// <summary>
 	/// <paramref name="text"/> shaded: a layout as a <see cref="Shaded"/> block laid out again at its own

@@ -71,6 +71,14 @@ public partial class GradientHelpExampleTests
 		await Assert.That(stops.IsSubsetOf(shown)).IsTrue();
 	}
 
+	/// <summary>Every tone() name is a stop, <c>foreground</c> and <c>strong</c> included.</summary>
+	[Test]
+	[Arguments("foreground")]
+	[Arguments("strong")]
+	[Arguments("highlight")]
+	public async Task EveryToneIsAStop(string tone)
+		=> await Assert.That(Colours(Render(await Eval($"gradient(abcdefgh,{tone}|#ff0000)"), AnsiColorDepth.TrueColor)).Distinct().Count()).IsGreaterThanOrEqualTo(3);
+
 	/// <summary>
 	/// A gradient over a layout shades it borders and all, in the game's layout_theme and in a reader's
 	/// own @theme alike: the colours a theme gives a box's border and title do not win over it.
