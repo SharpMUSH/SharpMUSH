@@ -598,6 +598,11 @@
         _busy = true;
 
         var packages = await Wizard.SetPackagesAsync(Effective.ToList());
+        // The packages bring permissions (discord.admin, say) that open pages in the admin menu.
+        if (packages is SetupWizardResponse)
+        {
+            await AccountAuth.ReloadAuthorityAsync();
+        }
         var starterWiki = packages is SetupWizardResponse && _starterWiki && !_starterWikiApplied
             ? await Wizard.ApplyStarterWikiAsync()
             : new Success();

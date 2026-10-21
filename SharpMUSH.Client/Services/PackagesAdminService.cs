@@ -49,7 +49,8 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 		admissionToken = reviewToken;
 		Batch.SetAdmissionState(pending: true, unknown: false);
 		var result = await Changing(Client.PostApiAsync<PackageBatchApplyRequest, PackageBatchRunResponse>(
-			"api/packages/batches/apply", new(reviewToken), "The batch outcome is unknown. Refresh actual state before retrying."));
+			"api/packages/batches/apply", new(reviewToken), "The batch outcome is unknown. Refresh actual state before retrying."),
+			reloadAuthority: false);
 		if (authority != Batch.AuthorityRevision)
 		{
 			if (admissionToken == reviewToken) admissionToken = null;
@@ -107,10 +108,15 @@ public class PackagesAdminService(IHttpClientFactory httpClientFactory, ServerIn
 	/// A call that may install or remove packages: whatever its answer, the portal asks the server again which
 	/// applications are on, so its navigation follows what actually changed.
 	/// </summary>
-	private async Task<T> Changing<T>(Task<T> call)
+	/// <param name="reloadAuthority">
+	/// Read the session's permissions again: a package brings or takes away permissions (discord.admin, say)
+	/// and the pages they open. Not for a batch, whose draft a reload clears.
+	/// </param>
+	private async Task<T> Changing<T>(Task<T> call, bool reloadAuthority = true)
 	{
 		var result = await call;
 		serverInfo.Refresh();
+		if (reloadAuthority && accountAuth is not null) await accountAuth.ReloadAuthorityAsync();
 		return result;
 	}
 

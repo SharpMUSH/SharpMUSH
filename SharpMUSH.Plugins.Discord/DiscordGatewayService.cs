@@ -140,6 +140,7 @@ public sealed class DiscordGatewayService(
 		_sessions = 0;
 		_client = client;
 
+		_tokenShape = null;
 		try
 		{
 			await client.LoginAsync(TokenType.Bot, token);
@@ -178,7 +179,9 @@ public sealed class DiscordGatewayService(
 			or HttpException { HttpCode: HttpStatusCode.Unauthorized })
 		{
 			logger.LogWarning("[Discord] The bot token was refused: {Reason}", exception.Message);
-			_state = new DiscordGatewayState(DiscordGatewayStatus.BadToken);
+			// Why the token's shape is wrong (an OAuth client secret, say), when Discord.Net could tell.
+			var reason = exception as ArgumentException ?? _tokenShape;
+			_state = new DiscordGatewayState(DiscordGatewayStatus.BadToken, Detail: reason?.Message);
 		}
 		catch (Exception exception) when (exception is HttpException or HttpRequestException or TimeoutException)
 		{
@@ -299,8 +302,19 @@ public sealed class DiscordGatewayService(
 		}
 	}
 
+	/// <summary>
+	/// Discord.Net's check of the token's shape at login. It only logs what it finds and asks Discord all the
+	/// same, so the refusal that follows is Discord's; this is what can say why.
+	/// </summary>
+	private ArgumentException? _tokenShape;
+
 	private Task LogAsync(LogMessage message)
 	{
+		if (message.Exception is ArgumentException shape)
+		{
+			_tokenShape = shape;
+		}
+
 		var level = message.Severity switch
 		{
 			LogSeverity.Critical => LogLevel.Critical,
