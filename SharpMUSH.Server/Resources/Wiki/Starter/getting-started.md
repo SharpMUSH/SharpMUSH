@@ -8,8 +8,10 @@ players in real time. You don't need to know any code to play.
 
 ## Your first hour
 1. Connect from the web terminal or a MU* client.
-2. Create a character with `create <name> <password>`, then log in with
-   `connect <name> <password>`.
+   > **Fill in:** The address and port MU* clients connect to.
+2. Make an account with `register <name> [email] <password>`, then a character
+   with `make <character> <password>`. Next time, log in with
+   `connect <character> <password>`.
 3. Read the [[Theme]] and [[Policies]] pages.
 4. Make your character.
    > **Fill in:** How character creation works here, and whether staff approve characters.
