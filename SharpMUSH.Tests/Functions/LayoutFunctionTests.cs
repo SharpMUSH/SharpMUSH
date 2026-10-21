@@ -309,6 +309,15 @@ public class LayoutFunctionTests
 		=> await Assert.That(TrimLines(await Eval("box(a%r[rule()]%rb,,9,{{\"border\":\"double\"}})")))
 			.IsEqualTo(Lines("╔═══════╗", "║ a     ║", "╠═══════╣", "║ b     ║", "╚═══════╝"));
 
+	/// <summary>A string option may hold a newline as <c>%r</c> writes it, though JSON would have it escaped.</summary>
+	[Test]
+	public async Task ANewlineInAnOptionStringIsKept()
+	{
+		var inline = TrimLines(await Eval("datacolumns({{\"width\":30,\"delim\":\"%r\",\"grow\":\"%r1\"}},Name%rMannaz,Doing%rIn the garden)"));
+		await Assert.That(inline).IsEqualTo(Lines("Name    Doing", "------------------------------", "Mannaz  In the garden"));
+		await Assert.That(inline).IsEqualTo(TrimLines(await Eval("datacolumns(json(object,width,30,delim,json(string,%r),grow,json(string,%r1)),Name%rMannaz,Doing%rIn the garden)")));
+	}
+
 	/// <summary>Each layout function's help lists exactly the option keys its schema takes.</summary>
 	[Test]
 	public async Task TheHelpListsEveryOptionEachFunctionTakes()
@@ -345,7 +354,7 @@ public class LayoutFunctionTests
 	private static readonly string[] LayoutHelpFiles =
 	[
 		"layout.md", "layout-functions.md", "layout-borders.md", "layout-themes.md", "theme-command.md",
-		"box-function.md", "bullets-function.md", "datatable-function.md", "fields-function.md", "figure-function.md",
+		"box-function.md", "bullets-function.md", "datatable-function.md", "datacolumns-function.md", "fields-function.md", "figure-function.md",
 		"flex-function.md", "gauge-function.md", "gradient-function.md", "notice-function.md", "rule-function.md",
 		"swatch-function.md", "tone-function.md", "tree-function.md"
 	];
@@ -520,54 +529,59 @@ public class LayoutFunctionTests
 	[Test]
 	[Arguments("box(x,,20,{{\"colour\":\"red\"}})", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("box(x,,20,border:double)", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
-	[Arguments("box(x,,20,{{[\"border\"]}})", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
-	[Arguments("box(x,,20,{{\"pad\":{\"n\":1}}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("box(x,,20,{{\"pad\":1}} extra)", "#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT")]
+	[Arguments("box(x,,20,{{[\"border\"]}})", "#-1 LAYOUT OPTIONS: EXPECTED : AT CHARACTER 10")]
+	[Arguments("box(x,,20,{{\"pad\":{\"n\":1}}})", "#-1 LAYOUT OPTION PAD: INVALID ARGUMENT")]
+	[Arguments("box(x,,20,{{\"pad\":1}} extra)", "#-1 LAYOUT OPTIONS: TEXT AFTER THE OBJECT AT CHARACTER 11")]
 	[Arguments("box(x,,20,{{\"pad\":1,\"PAD\":2}})", "#-1 DUPLICATE LAYOUT OPTION PAD")]
-	[Arguments("flex({{\"gap\":\"2\"}},a,b)", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("box(x,,20,{{\"border\":true}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("flex({{\"gap\":\"2\"}},a,b)", "#-1 LAYOUT OPTION GAP: INVALID ARGUMENT")]
+	[Arguments("box(x,,20,{{\"border\":true}})", "#-1 LAYOUT OPTION BORDER: INVALID ARGUMENT")]
 	[Arguments("box(x,,20,{{\"border\":\"wavy\"}})", "#-1 UNKNOWN BORDER STYLE")]
-	[Arguments("box(x,,20,{{\"title\":\"middle\"}})", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("box(x,,20,{{\"title\":\"middle\"}})", "#-1 LAYOUT OPTION TITLE: INVALID ARGUMENT")]
 	[Arguments("box(x,,0)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("box(x,,1001)", ErrorMessages.Returns.ArgRange)]
 	[Arguments("rule(x,abc)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("rule(x,20,{{\"titles\":\"Scene 5\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"side\":\"up\"}]}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"priority\":0}]}})", ErrorMessages.Returns.ArgRange)]
+	[Arguments("rule(x,20,{{\"titles\":\"Scene 5\"}})", "#-1 LAYOUT OPTION TITLES: INVALID ARGUMENT")]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"side\":\"up\"}]}})", "#-1 LAYOUT OPTION TITLES: INVALID ARGUMENT")]
+	[Arguments("rule(x,20,{{\"titles\":\\[{\"text\":\"a\",\"priority\":0}]}})", "#-1 LAYOUT OPTION TITLES: ARGUMENT OUT OF RANGE")]
 	[Arguments("rule(x,20,{{\"bottomtitles\":\\[\"a\"]}})", "#-1 UNKNOWN LAYOUT OPTION BOTTOMTITLES")]
-	[Arguments("flex({{\"gap\":99}},a,b)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("flex({{\"vertical\":\"maybe\"}},a,b)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("flex({{\"gap\":99}},a,b)", "#-1 LAYOUT OPTION GAP: ARGUMENT OUT OF RANGE")]
+	[Arguments("flex({{\"vertical\":\"maybe\"}},a,b)", "#-1 LAYOUT OPTION VERTICAL: INVALID ARGUMENT")]
 	[Arguments("item(x,wide)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("figure(a.png,,,up)", ErrorMessages.Returns.InvalidArgument)]
 	[Arguments("fields(,Sex,Male,Species)", "#-1 FUNCTION (FIELDS) EXPECTS AN EVEN NUMBER OF ARGUMENTS")]
-	[Arguments("fields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("fields({{\"cols\":\"x\"}},Sex,Male)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("fields({{\"cols\":0}},Sex,Male)", "#-1 LAYOUT OPTION COLS: ARGUMENT OUT OF RANGE")]
+	[Arguments("fields({{\"cols\":\"x\"}},Sex,Male)", "#-1 LAYOUT OPTION COLS: INVALID ARGUMENT")]
 	[Arguments("lfields(,Sex Species,Male)", ErrorMessages.Returns.NumberOfWordsMustBeEqual)]
-	[Arguments("lfields({{\"cols\":0}},Sex,Male)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("lfields({{\"cols\":0}},Sex,Male)", "#-1 LAYOUT OPTION COLS: ARGUMENT OUT OF RANGE")]
 	[Arguments("tree({{\"guide\":\"wavy\"}},a)", "#-1 UNKNOWN GUIDE STYLE")]
 	[Arguments("tree({{\"colour\":\"red\"}},a)", "#-1 UNKNOWN LAYOUT OPTION COLOUR")]
 	[Arguments("gauge(a,12)", ErrorMessages.Returns.Numbers)]
 	[Arguments("gauge(1,0)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("gauge(1,2,,{{\"show\":\"all\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("bullets(a b,,{{\"style\":\"wavy\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("bullets(a b,,{{\"start\":0}})", ErrorMessages.Returns.ArgRange)]
-	[Arguments("grid(a b,,{{\"gap\":99}})", ErrorMessages.Returns.ArgRange)]
-	[Arguments("datatable({{\"nowrap\":\"4\"}},A|B,1|2)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("datatable({{\"priority\":\"1|2|3\"}},A|B,1|2)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("datatable({{\"min\":\"x\"}},A|B,1|2)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("gauge(1,2,,{{\"show\":\"all\"}})", "#-1 LAYOUT OPTION SHOW: INVALID ARGUMENT")]
+	[Arguments("bullets(a b,,{{\"style\":\"wavy\"}})", "#-1 LAYOUT OPTION STYLE: INVALID ARGUMENT")]
+	[Arguments("bullets(a b,,{{\"start\":0}})", "#-1 LAYOUT OPTION START: ARGUMENT OUT OF RANGE")]
+	[Arguments("grid(a b,,{{\"gap\":99}})", "#-1 LAYOUT OPTION GAP: ARGUMENT OUT OF RANGE")]
+	[Arguments("datatable({{\"nowrap\":\"4\"}},A|B,1|2)", "#-1 LAYOUT OPTION NOWRAP: ARGUMENT OUT OF RANGE")]
+	[Arguments("datatable({{\"priority\":\"1|2|3\"}},A|B,1|2)", "#-1 LAYOUT OPTION PRIORITY: ARGUMENT OUT OF RANGE")]
+	[Arguments("datatable({{\"min\":\"x\"}},A|B,1|2)", "#-1 LAYOUT OPTION MIN: INVALID ARGUMENT")]
 	[Arguments("badge(x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("notice(JOBS,x,purple)", "#-1 UNKNOWN BADGE KIND")]
 	[Arguments("tone(background,x)", "#-1 UNKNOWN TONE")]
 	[Arguments("tone(mauve,x)", "#-1 UNKNOWN TONE")]
 	[Arguments("gradient(x,h|r)", "#-1 UNKNOWN COLOR")]
 	[Arguments("gradient(x,r|g,{{\"rgb\":\"\"}})", "#-1 UNKNOWN LAYOUT OPTION RGB")]
-	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("gradient(x,r|g,{{\"flow\":\"sideways\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("gradient(x,r|g,{{\"repeat\":0}})", ErrorMessages.Returns.ArgRange)]
+	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", "#-1 LAYOUT OPTION SPACE: INVALID ARGUMENT")]
+	[Arguments("gradient(x,r|g,{{\"flow\":\"sideways\"}})", "#-1 LAYOUT OPTION FLOW: INVALID ARGUMENT")]
+	[Arguments("gradient(x,r|g,{{\"repeat\":0}})", "#-1 LAYOUT OPTION REPEAT: ARGUMENT OUT OF RANGE")]
+	[Arguments("gradient(x,r|g,{{\"target\":\"edges\"}})", "#-1 LAYOUT OPTION TARGET: INVALID ARGUMENT")]
 	[Arguments("gradient(x,r|g,{{\"gradient\":\"b\"}})", "#-1 UNKNOWN LAYOUT OPTION GRADIENT")]
-	[Arguments("gauge(1,2,,{{\"gradient\":\"r\",\"space\":\"rgb\"}})", ErrorMessages.Returns.InvalidArgument)]
-	[Arguments("datacolumns({{\"nowrap\":\"3\"}},A|1,B|2)", ErrorMessages.Returns.ArgRange)]
-	[Arguments("datatable({{\"grow\":\"101\"}},A|B,1|2)", ErrorMessages.Returns.ArgRange)]
+	[Arguments("gauge(1,2,,{{\"gradient\":\"r\",\"space\":\"rgb\"}})", "#-1 LAYOUT OPTION SPACE: INVALID ARGUMENT")]
+	[Arguments("datacolumns({{\"nowrap\":\"3\"}},A|1,B|2)", "#-1 LAYOUT OPTION NOWRAP: ARGUMENT OUT OF RANGE")]
+	[Arguments("datatable({{\"grow\":\"101\"}},A|B,1|2)", "#-1 LAYOUT OPTION GROW: ARGUMENT OUT OF RANGE")]
+	[Arguments("box(x,,20,{{width:3}})", "#-1 LAYOUT OPTIONS: EXPECTED A KEY IN DOUBLE QUOTES AT CHARACTER 2")]
+	[Arguments("box(x,,20,{{\"pad\":#-1 NO}})", "#-1 LAYOUT OPTIONS: EXPECTED A VALUE AT CHARACTER 8")]
+	[Arguments("box(x,,20,{{\"pad\":1 \"title\":\"left\"}})", "#-1 LAYOUT OPTIONS: EXPECTED , OR } AT CHARACTER 10")]
+	[Arguments("datacolumns({{\"delim\":\"%r\",\"grow\":\"1|2\"}},A%r1,B%r2)", "#-1 LAYOUT OPTION GROW: INVALID ARGUMENT")]
 	public async Task ABadArgumentIsRefused(string code, string error)
 		=> await Assert.That((await Eval(code)).ToPlainText()).IsEqualTo(error);
 }

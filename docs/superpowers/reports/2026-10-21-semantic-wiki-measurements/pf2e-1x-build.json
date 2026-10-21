@@ -1,0 +1,22 @@
+{
+  "Label": "pf2e-1x",
+  "WorldPath": "(removed after the run)",
+  "FixtureId": "82980fcf-e83d-4b5c-91ac-960f837af9f6",
+  "Pages": 4711,
+  "Refused": 0,
+  "ImportedPages": 4580,
+  "Facts": 10605,
+  "Timings": {
+    "open": 1.4219751,
+    "activate": 0.1091158,
+    "create": 37.6661523,
+    "import": 41.929669
+  },
+  "Storage": {
+    "MapSizeBytes": 68719476736,
+    "FileBytes": 15220736,
+    "AllocatedBytes": 15220736,
+    "LiveBytes": 14630912,
+    "FreeBytes": 589824
+  }
+}

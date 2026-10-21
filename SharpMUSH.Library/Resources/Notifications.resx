@@ -1885,116 +1885,59 @@
   <data name="FunctionLibraryUnavailable" xml:space="preserve">
     <value>Function library unavailable.</value>
   </data>
-  <data name="FunctionGlobalUserDefinedHeader" xml:space="preserve">
-    <value>Global user-defined functions:</value>
-  </data>
-  <data name="FunctionUserDefinedCountFormat" xml:space="preserve">
-    <value>  User-defined: {0}</value>
-  </data>
-  <data name="FunctionEntryFormat" xml:space="preserve">
-    <value>    {0}: {1}-{2} args, Flags: {3}</value>
-  </data>
-  <data name="FunctionAndMoreFormat" xml:space="preserve">
-    <value>    ... and {0} more</value>
-  </data>
-  <data name="FunctionBuiltInCountFormat" xml:space="preserve">
-    <value>  Built-in: {0}</value>
-  </data>
-  <data name="FunctionUserDefinedSummaryFormat" xml:space="preserve">
-    <value>  {0} user-defined functions</value>
-  </data>
-  <data name="FunctionBuiltInSummaryFormat" xml:space="preserve">
-    <value>  {0} built-in functions</value>
-  </data>
   <data name="FunctionMustSpecifyName" xml:space="preserve">
     <value>You must specify a function name.</value>
   </data>
   <data name="FunctionMustSpecifyAliasName" xml:space="preserve">
     <value>You must specify an alias name.</value>
   </data>
-  <data name="FunctionAliasWouldCreateFormat" xml:space="preserve">
-    <value>@function/alias: Would create alias '{0}' for function '{1}'.</value>
-  </data>
-  <data name="FunctionAliasingNotImplemented" xml:space="preserve">
-    <value>Note: Function aliasing not yet implemented.</value>
+  <data name="FunctionAliasAddedFormat" xml:space="preserve">
+    <value>Alias '{0}' added for function '{1}'.</value>
   </data>
   <data name="FunctionMustSpecifyCloneName" xml:space="preserve">
     <value>You must specify a clone name.</value>
   </data>
-  <data name="FunctionCloneWouldCloneFormat" xml:space="preserve">
-    <value>@function/clone: Would clone function '{0}' as '{1}'.</value>
+  <data name="FunctionDeletedFormat" xml:space="preserve">
+    <value>Function '{0}' deleted.</value>
   </data>
-  <data name="FunctionCloningNotImplemented" xml:space="preserve">
-    <value>Note: Function cloning not yet implemented.</value>
+  <data name="FunctionDisabledFormat" xml:space="preserve">
+    <value>Function '{0}' disabled.</value>
   </data>
-  <data name="FunctionDeleteWouldDeleteFormat" xml:space="preserve">
-    <value>@function/delete: Would delete function '{0}'.</value>
+  <data name="FunctionEnabledFormat" xml:space="preserve">
+    <value>Function '{0}' enabled.</value>
   </data>
-  <data name="FunctionDeletionNotImplemented" xml:space="preserve">
-    <value>Note: Function deletion not yet implemented.</value>
+  <data name="FunctionDefinedFormat" xml:space="preserve">
+    <value>Function '{0}' defined as {1}.</value>
   </data>
-  <data name="FunctionDisableWouldDisableFormat" xml:space="preserve">
-    <value>@function/disable: Would disable function '{0}'.</value>
+  <data name="FunctionRestrictedFormat" xml:space="preserve">
+    <value>Function '{0}' restricted to: {1}</value>
   </data>
-  <data name="FunctionDisablingNotImplemented" xml:space="preserve">
-    <value>Note: Function disabling not yet implemented.</value>
+  <data name="FunctionRestrictionClearedFormat" xml:space="preserve">
+    <value>Restriction cleared on function '{0}'.</value>
   </data>
-  <data name="FunctionEnableWouldEnableFormat" xml:space="preserve">
-    <value>@function/enable: Would enable function '{0}'.</value>
+  <data name="FunctionClonedFormat" xml:space="preserve">
+    <value>Function '{0}' cloned from '{1}'.</value>
   </data>
-  <data name="FunctionEnablingNotImplemented" xml:space="preserve">
-    <value>Note: Function enabling not yet implemented.</value>
+  <data name="FunctionBuiltinRestoredFormat" xml:space="preserve">
+    <value>Function '{0}' restored to its built-in implementation.</value>
   </data>
-  <data name="FunctionRestrictWouldRestrictFormat" xml:space="preserve">
-    <value>@function/restrict: Would restrict function '{0}' to: {1}</value>
+  <data name="FunctionPreservedFormat" xml:space="preserve">
+    <value>Function '{0}' marked as preserved.</value>
   </data>
-  <data name="FunctionRestrictionNotImplemented" xml:space="preserve">
-    <value>Note: Function restriction not yet implemented.</value>
+  <data name="FunctionRestoredOneFormat" xml:space="preserve">
+    <value>Function '{0}' restored to its built-in implementation.</value>
   </data>
-  <data name="FunctionDefineWouldDefineFormat" xml:space="preserve">
-    <value>@function: Would define function '{0}' as: {1}</value>
-  </data>
-  <data name="FunctionMinArgsFormat" xml:space="preserve">
-    <value>  Min args: {0}</value>
-  </data>
-  <data name="FunctionMaxArgsFormat" xml:space="preserve">
-    <value>  Max args: {0}</value>
-  </data>
-  <data name="FunctionRestrictionsArgFormat" xml:space="preserve">
-    <value>  Restrictions: {0}</value>
-  </data>
-  <data name="FunctionDynamicDefinitionNotImplemented" xml:space="preserve">
-    <value>Note: Dynamic function definition not yet implemented.</value>
+  <data name="FunctionRestoredResetFormat" xml:space="preserve">
+    <value>@function/restore: removed {0} unpreserved user function(s); preserved entries kept.</value>
   </data>
   <data name="FunctionNotFoundFormat" xml:space="preserve">
     <value>Function '{0}' not found.</value>
-  </data>
-  <data name="FunctionInfoNameFormat" xml:space="preserve">
-    <value>Function: {0}</value>
-  </data>
-  <data name="FunctionInfoTypeFormat" xml:space="preserve">
-    <value>  Type: {0}</value>
-  </data>
-  <data name="FunctionInfoMinArgsFormat" xml:space="preserve">
-    <value>  Min Args: {0}</value>
-  </data>
-  <data name="FunctionInfoMaxArgsFormat" xml:space="preserve">
-    <value>  Max Args: {0}</value>
-  </data>
-  <data name="FunctionInfoArgumentNamesFormat" xml:space="preserve">
-    <value>  Arguments: {0}</value>
   </data>
   <data name="FunctionArgumentNamesFormat" xml:space="preserve">
     <value>Function '{0}' passes its arguments as: {1}</value>
   </data>
   <data name="FunctionArgumentNamesClearedFormat" xml:space="preserve">
     <value>Function '{0}' passes its arguments by position only.</value>
-  </data>
-  <data name="FunctionInfoFlagsFormat" xml:space="preserve">
-    <value>  Flags: {0}</value>
-  </data>
-  <data name="FunctionInfoRestrictionsFormat" xml:space="preserve">
-    <value>  Restrictions: {0}</value>
   </data>
 
   <!-- @grep command -->
@@ -3003,7 +2946,6 @@
   <data name="QueueHistoryReport" xml:space="preserve"><value>Recent queue outcomes, from a 15-minute history.</value></data>
   <data name="QueueDiagnosticsError" xml:space="preserve"><value>Diagnostics unavailable: {0}.</value></data>
   <data name="LocalFunctionMessage" xml:space="preserve"><value>{0}</value></data>
-  <data name="LocalFunctionHeader" xml:space="preserve"><value>Owner-local functions (call with localfun):</value></data>
   <data name="LocalFunctionReset" xml:space="preserve"><value>Removed {0} unpreserved owner-local functions.</value></data>
   <data name="LocalFunctionChanged" xml:space="preserve"><value>Owner-local function {0}: {1}.</value></data>
   <data name="OemitTooManyRecipients" xml:space="preserve"><value>Too many people to oemit to.</value></data>

@@ -25,7 +25,16 @@ public partial class RecursiveMarkdownRenderer
 		};
 	}
 
-	private string ExtractTagName(string tag)
+	/// <summary>
+	/// Whether <paramref name="tag"/> is HTML that markdown here may use: a comment, a line break, or a
+	/// tag <see cref="ConvertHtmlTagToAnsi"/> styles. Any other tag is text, such as an argument name
+	/// written <c>&lt;width&gt;</c>, which would otherwise vanish as an unknown element.
+	/// </summary>
+	public static bool IsMarkupTag(string tag) =>
+		tag.StartsWith("<!", StringComparison.Ordinal) || tag.StartsWith("<?", StringComparison.Ordinal)
+		|| ExtractTagName(tag) is "br" or "b" or "strong" or "i" or "em" or "u" or "s" or "strike" or "del" or "font" or "span" or "color";
+
+	private static string ExtractTagName(string tag)
 	{
 		var start = tag.StartsWith("</") ? 2 : 1;
 		var end = tag.IndexOfAny([' ', '>', '/'], start);

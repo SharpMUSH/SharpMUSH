@@ -287,6 +287,7 @@ public static partial class SoftcodeDecomposer
 		var options = new Options();
 		if (shaded.Flow != GradientFlow.Characters) options.Text("flow", shaded.Flow.ToString().ToLowerInvariant());
 		GradientShape(options, shaded.Gradient);
+		if (shaded.Target != GradientTarget.All) options.Text("target", shaded.Target.ToString().ToLowerInvariant());
 		return Call("gradient", Child(shaded.Content, width, theme), Escape(stops), options.Write());
 	}
 

@@ -1142,7 +1142,10 @@ public partial class Commands : ICommandRestrictionApplier
 	private static readonly string[] FunctionActionSwitches =
 		["ALIAS", "CLONE", "RESTRICT", "BUILTIN", "PRESERVE", "RESTORE", "DELETE", "DISABLE", "ENABLE", "ARGS"];
 
-	/// <summary><c>@function</c> with no arguments: how many user-defined and built-in functions there are.</summary>
+	/// <summary>
+	/// <c>@function</c> with no arguments: every global user-defined function, with where it lives for whoever
+	/// may define them (PennMUSH's <c>do_function</c>), and how many built-ins there are.
+	/// </summary>
 	private async ValueTask<Option<CallState>> SummarizeFunctionsAsync(IMUSHCodeParser parser, AnySharpObject executor)
 	{
 		if (FunctionLibrary == null)
@@ -1151,35 +1154,16 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.LibraryUnavailable);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor);
-
-		var canSeeDetails = await executor.IsWizard();
-
 		// Global user-defined functions live in the in-memory registry (@function), not the
 		// FunctionLibrary; the library holds only built-ins (and any compiled-in defs).
-		var registry = parser.ServiceProvider.GetService<IUserDefinedFunctionService>();
-		var userFunctions = registry?.All().ToArray() ?? [];
+		var registry = parser.ServiceProvider.GetRequiredService<IUserDefinedFunctionService>();
+		var userFunctions = registry.All();
 		var builtinCount = FunctionLibrary.Count(kvp => kvp.Value.IsSystem);
+		var output = FunctionListing("Global functions", userFunctions, name => registry.Get(name), await SeesFunctionLocations(executor),
+			"No global user-defined functions exist.", $"{Counted(userFunctions.Count, "user-defined function")} · {builtinCount} built-in");
 
-		if (!canSeeDetails)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedSummaryFormat), executor, userFunctions.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInSummaryFormat), executor, builtinCount);
-			return CallState.Empty;
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionUserDefinedCountFormat), executor, userFunctions.Length);
-		foreach (var fn in userFunctions.Take(10))
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionEntryFormat), executor, fn.Name, fn.MinArgs, fn.MaxArgs, fn.Enabled ? "Enabled" : "Disabled");
-		}
-		if (userFunctions.Length > 10)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAndMoreFormat), executor, userFunctions.Length - 10);
-		}
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionBuiltInCountFormat), executor, builtinCount);
-		return CallState.Empty;
+		await NotifyService.Notify(executor, output, executor);
+		return new CallState(output);
 	}
 
 	/// <summary>
@@ -1206,7 +1190,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.FunctionNotFound);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasWouldCreateFormat), executor, functionName, aliasName);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionAliasAddedFormat), executor, functionName, aliasName);
 		return CallState.Empty;
 	}
 
@@ -1360,7 +1344,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.FunctionNotFound);
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeleteWouldDeleteFormat), executor, functionName);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDeletedFormat), executor, functionName);
 		return CallState.Empty;
 	}
 
@@ -1380,7 +1364,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		await NotifyService.NotifyLocalized(executor,
-			enabled ? nameof(ErrorMessages.Notifications.FunctionEnableWouldEnableFormat) : nameof(ErrorMessages.Notifications.FunctionDisableWouldDisableFormat),
+			enabled ? nameof(ErrorMessages.Notifications.FunctionEnabledFormat) : nameof(ErrorMessages.Notifications.FunctionDisabledFormat),
 			executor, functionName);
 		return CallState.Empty;
 	}
@@ -1567,7 +1551,7 @@ public partial class Commands : ICommandRestrictionApplier
 			Enabled: true,
 			AliasOf: null));
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefineWouldDefineFormat), executor, functionName, $"{targetObject.Object().DBRef}/{attributeLongName}");
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefinedFormat), executor, functionName, $"#{targetObject.Object().DBRef.Number}/{attributeLongName}");
 		return CallState.Empty;
 	}
 
@@ -1577,17 +1561,8 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (userFunctionService.Get(functionName) is { } registeredFunction)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, registeredFunction.Name);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, "User-defined");
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, registeredFunction.MinArgs);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, registeredFunction.MaxArgs);
-			if (registeredFunction.ArgumentNames.Length > 0)
-			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoArgumentNamesFormat), executor,
-					string.Join(" ", registeredFunction.ArgumentNames));
-			}
-
-			return CallState.Empty;
+			return await ReportFunctionAsync(executor,
+				UserFunctionReport(registeredFunction, name => userFunctionService.Get(name), await SeesFunctionLocations(executor)));
 		}
 
 		if (FunctionLibrary == null)
@@ -1602,28 +1577,14 @@ public partial class Commands : ICommandRestrictionApplier
 			return new CallState(ErrorMessages.Returns.FunctionNotFound);
 		}
 
-		await DescribeLibraryFunctionAsync(executor, functionInfo.LibraryInformation.Attribute, functionInfo.IsSystem);
-		return CallState.Empty;
+		return await ReportFunctionAsync(executor, BuiltinFunctionReport(functionInfo.LibraryInformation.Attribute, functionInfo.IsSystem,
+			userFunctionService.GetBuiltinRestriction(functionName)));
 	}
 
-	private async ValueTask DescribeLibraryFunctionAsync(AnySharpObject executor, SharpFunctionAttribute attr, bool isSystem)
+	private async ValueTask<Option<CallState>> ReportFunctionAsync(AnySharpObject executor, MarkupText report)
 	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, attr.Name);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoTypeFormat), executor, isSystem ? "Built-in" : "User-defined");
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMinArgsFormat), executor, attr.MinArgs);
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoMaxArgsFormat), executor, attr.MaxArgs);
-
-		var flags = Enum.GetValues<FunctionFlags>()
-			.Where(flag => flag != FunctionFlags.Regular && flag != FunctionFlags.Arg_Mask && attr.Flags.HasFlag(flag))
-			.Select(flag => flag.ToString()).ToList();
-		if (flags.Count == 0) flags.Add(nameof(FunctionFlags.Regular));
-
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoFlagsFormat), executor, string.Join(" | ", flags));
-
-		if (attr.Restrict != null && attr.Restrict.Length > 0)
-		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionInfoRestrictionsFormat), executor, string.Join(", ", attr.Restrict));
-		}
+		await NotifyService.Notify(executor, report, executor);
+		return new CallState(report);
 	}
 
 	/// <summary>

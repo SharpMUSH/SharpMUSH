@@ -14,8 +14,9 @@ internal enum SemanticRebuildStage { BatchApplied, CheckpointCommitted, ReplayCo
 /// <param name="JournalCapacity">Journal entries the staging may hold before it is abandoned.</param>
 /// <param name="MaxReplayPasses">Replay passes that may each find new writes before the rebuild gives up.</param>
 /// <param name="RetireBatchSize">Rows a retired or abandoned generation loses per writer job.</param>
+/// <param name="ValidationWorkingBytes">Working memory the reference evaluation may hold for any one subject.</param>
 internal sealed record SemanticRebuildOptions(int BatchSize = 64, ulong JournalCapacity = SemanticRebuildJournal.DefaultCapacity,
-	int MaxReplayPasses = 16, int RetireBatchSize = 256);
+	int MaxReplayPasses = 16, int RetireBatchSize = 256, long ValidationWorkingBytes = 32L << 20);
 
 internal abstract record SemanticRebuildOutcome
 {
@@ -88,7 +89,7 @@ public partial class LightningDatabase
 					if (StagingOverflowed()) return await AbandonAsync(admission, staged, options, "The journal filled before the rebuild caught up.", ct);
 				} while (replayed == options.BatchSize);
 				// A write journaled after the last replay can explain a difference; only an empty journal proves one.
-				var (pending, mismatch) = Store.Read(tx => (JournalCount(tx), ValidateStagedGeneration(tx, active, staged)));
+				var (pending, mismatch) = Store.Read(tx => (JournalCount(tx), ValidateStagedGeneration(tx, active, staged, options.ValidationWorkingBytes)));
 				if (pending == 0 && mismatch is not null)
 					return await AbandonAsync(admission, staged, options, "The staged generation disagrees with the reference evaluation: " + mismatch, ct);
 				if (pending == 0)
@@ -252,11 +253,10 @@ public partial class LightningDatabase
 	/// The slow reference evaluation: from the active summaries' identities, the live pages and requirements and
 	/// the canonical facts, every staged row the staged generation must hold, compared exactly. Null when it agrees.
 	/// </summary>
-	private string? ValidateStagedGeneration(ITx tx, ulong active, ulong staged)
+	private string? ValidateStagedGeneration(ITx tx, ulong active, ulong staged, long workingBytes)
 	{
 		var activeTables = AtomicWikiLayout.ForGeneration(active);
 		var stagedTables = AtomicWikiLayout.ForGeneration(staged);
-		using var work = WikiSemanticWork.Create(tx, stagedTables, new NativeReadBudget(1 << 20, 1L << 30, 1L << 30, CancellationToken.None));
 		var forward = new HashSet<string>(StringComparer.Ordinal);
 		var postings = new HashSet<string>(StringComparer.Ordinal);
 		var references = new Dictionary<string, long>(StringComparer.Ordinal);
@@ -264,6 +264,8 @@ public partial class LightningDatabase
 		foreach (var (key, value) in tx.Range(activeTables.Summaries, []))
 		{
 			subjects++;
+			// Each subject is evaluated under its own bounded work, so the reservations never accumulate with the world's size.
+			using var work = WikiSemanticWork.Create(tx, stagedTables, new NativeReadBudget(4096, 16L << 20, workingBytes, CancellationToken.None));
 			var expected = WikiSemanticStateCodec.ProjectionState(value);
 			if (!tx.TryGet(stagedTables.Summaries, key, out var stagedBytes)) return "a subject is missing";
 			var actual = WikiSemanticStateCodec.ProjectionState(stagedBytes);

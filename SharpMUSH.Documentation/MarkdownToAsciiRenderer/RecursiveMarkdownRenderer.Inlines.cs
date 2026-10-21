@@ -259,7 +259,11 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderHtmlInline(HtmlInline html)
 	{
 		var tag = html.Tag;
-		if (string.IsNullOrWhiteSpace(tag) || tag.StartsWith("</"))
+		if (string.IsNullOrWhiteSpace(tag))
+			return MarkupText.Empty;
+		if (!IsMarkupTag(tag))
+			return MarkupText.Plain(tag);
+		if (tag.StartsWith("</"))
 			return MarkupText.Empty;
 
 		var tagName = ExtractTagName(tag);

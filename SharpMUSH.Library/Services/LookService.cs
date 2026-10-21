@@ -248,9 +248,28 @@ public class LookService(
 			return defaultFormattedName;
 		}
 
+		return await EvaluateLookFormatAsync(look, "NAMEFORMAT", nameFormatArgs, defaultFormattedName);
+	}
+
+	/// <summary>
+	/// <c>fetch_ufun_attrib(..., UFUN_IGNORE_PERMS | UFUN_REQUIRE_ATTR)</c> (<c>unparse.c:185</c>,
+	/// <c>look.c:99</c>, <c>look.c:241</c>): only a missing format gives the default. A format that is
+	/// there is shown as it evaluates, so one that evaluates to nothing shows nothing.
+	/// </summary>
+	private async ValueTask<MString> EvaluateLookFormatAsync(Look look, string formatAttributeName,
+		Dictionary<string, CallState> formatArgs, MString defaultValue)
+	{
+		// After a tripped limit the format would show its code, as AttributeHelpers.EvaluateFormatAttribute says.
+		if (look.Parser.CurrentState.LimitExceeded?.IsExceeded == true
+				|| await attributeService.GetAttributeAsync(look.God, look.Viewing, formatAttributeName,
+					IAttributeService.AttributeMode.Read, true) is not SharpAttribute[])
+		{
+			return defaultValue;
+		}
+
 		return await AttributeHelpers.EvaluateFormatAttribute(
-			attributeService, look.Parser, look.Looker, look.Viewing, "NAMEFORMAT",
-			nameFormatArgs, defaultFormattedName);
+			attributeService, look.Parser, look.Looker, look.Viewing, formatAttributeName,
+			formatArgs, MarkupText.Empty);
 	}
 
 	private async ValueTask<MString> FormatDescriptionAsync(Look look, Description description)
@@ -291,7 +310,8 @@ public class LookService(
 
 	private async ValueTask ShowNameAndDescriptionAsync(Look look, MString formattedName, MString formattedDesc)
 	{
-		if (!look.LookThroughExit)
+		// notify_anything (notify.c:1033) sends nothing for an empty line.
+		if (!look.LookThroughExit && formattedName.Length > 0)
 		{
 			await notifyService.Notify(look.Looker, formattedName, look.Looker);
 		}
@@ -485,9 +505,7 @@ public class LookService(
 
 		var formattedContents = await SkipsFormatAsync(look, "CONFORMAT")
 			? defaultContents
-			: await AttributeHelpers.EvaluateFormatAttribute(
-				attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
-				conFormatArgs, defaultContents);
+			: await EvaluateLookFormatAsync(look, "CONFORMAT", conFormatArgs, defaultContents);
 
 		if (formattedContents.Length > 0)
 		{
@@ -510,9 +528,7 @@ public class LookService(
 
 		var formattedExits = await SkipsFormatAsync(look, "EXITFORMAT")
 			? defaultExits
-			: await AttributeHelpers.EvaluateFormatAttribute(
-				attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
-				exitFormatArgs, defaultExits);
+			: await EvaluateLookFormatAsync(look, "EXITFORMAT", exitFormatArgs, defaultExits);
 
 		if (formattedExits.Length == 0)
 		{
