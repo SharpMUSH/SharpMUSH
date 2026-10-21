@@ -15,9 +15,9 @@ namespace SharpMUSH.Library.Notifications;
 /// </param>
 /// <param name="RemainingConnections">
 /// For a QUIT-driven <see cref="ConnectionService.Disconnect"/> only: the player's remaining
-/// connection count, computed atomically with the disconnecting handle's removal so two concurrent
-/// disconnects of the same player's two handles can't both observe the other as "still connected"
-/// and both conclude one connection remains. Null for every other transition (including the LOGOUT
+/// play connection count (portal-class connections are not counted), computed atomically with the
+/// disconnecting handle's removal so two concurrent disconnects of the same player's two handles
+/// can't both observe the other as "still connected" and both conclude one connection remains. Null for every other transition (including the LOGOUT
 /// path through <see cref="ConnectionService.Unbind"/>, which does not need it - <c>Unbind</c> already
 /// nulls its handle's <c>Ref</c> before publishing, so a concurrent <c>Get(playerRef)</c> naturally
 /// excludes it without this field).

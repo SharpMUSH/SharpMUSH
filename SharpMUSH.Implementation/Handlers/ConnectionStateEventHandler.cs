@@ -79,7 +79,9 @@ public class ConnectionStateEventHandler(
 				notification.PlayerRef.HasValue)
 		{
 			var connectionData = notification.FormerConnection ?? connectionService.Get(notification.Handle);
-			if (connectionData != null)
+			// The portal's background terminal logged in quietly (SocketCommands.CompletePlayerLoginAsync),
+			// so it leaves quietly too.
+			if (connectionData != null && connectionData.PresenceClass != PresenceClasses.Portal)
 			{
 				var ipAddress = connectionData.Metadata.TryGetValue("InternetProtocolAddress", out var ip)
 					? ip : "unknown";
@@ -100,7 +102,7 @@ public class ConnectionStateEventHandler(
 				// field's doc comment), so it falls back to the same recomputation as before.
 				var remainingConnections = notification.RemainingConnections
 					?? await connectionService.Get(notification.PlayerRef.Value)
-						.CountAsync(c => c.Handle != notification.Handle);
+						.CountAsync(c => c.Handle != notification.Handle && c.PresenceClass != PresenceClasses.Portal);
 
 				var connectedSecs = connectionData.Connected?.TotalSeconds.ToString("F0") ?? "0";
 				var idleSecs = connectionData.Idle?.TotalSeconds.ToString("F0") ?? "0";

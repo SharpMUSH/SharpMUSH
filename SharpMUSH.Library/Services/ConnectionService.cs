@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Services.Interfaces;
@@ -72,7 +73,7 @@ public class ConnectionService(
 					Reindex(handle, current.Ref, null);
 
 					remainingConnections = current.Ref is { } playerRef
-						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count
+						? _handlesByPlayer.GetValueOrDefault(playerRef, []).Count(h => Get(h)?.PresenceClass != PresenceClasses.Portal)
 						: null;
 					break;
 				}
