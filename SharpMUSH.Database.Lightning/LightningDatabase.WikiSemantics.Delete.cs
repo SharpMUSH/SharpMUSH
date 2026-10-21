@@ -42,8 +42,9 @@ public partial class LightningDatabase
 		if (collection == 0) throw new InvalidDataException("Missing integrated collection.");
 		RequireDeleteRegistryIdentity(work, WikiSemanticRegistryKind.Collection, collection, "game");
 		if (state.Source is not LocalWikiSource || summary.Reference.Id != pageId || summary.NativeId != nativeId
-			|| summary.Collection != "game" || state.State.CollectionId != collection || state.State.ClassId != 0
-			|| facts.SchemaVersion != AtomicWikiLayout.Schema.Version || facts.Facts.IsDefault || !facts.Facts.IsEmpty
+			|| summary.Collection != "game" || state.State.CollectionId != collection
+			// An imported page has facts and the visibility class they index under; the tombstone's projection removes both.
+			|| facts.SchemaVersion != AtomicWikiLayout.Schema.Version || facts.Facts.IsDefault || facts.Facts.IsEmpty != (state.State.ClassId == 0)
 			|| summary.StateVersion <= 0 || state.State.CommitSequence <= 0 || summary.StateVersion > state.State.CommitSequence
 			|| (ulong)state.State.CommitSequence > work.Counter(work.Key(2)))
 			throw new InvalidDataException("Incompatible integrated delete state.");

@@ -102,6 +102,9 @@ internal static class SemanticWikiQueries
 
 		var run = new Run(query, cursor, budgets);
 		var read = await SemanticWikiReader.ReadAsync(provider, resolveReader, Sections, run.Section, cancellationToken, Limits, between);
+		// A read that was cancelled or saw the world change supports no hint about what its sections found.
+		if (read is SemanticReadResult<Answer>.Cancelled or SemanticReadResult<Answer>.DataChanged or SemanticReadResult<Answer>.AuthorizationChanged)
+			return new SemanticQueryResult.NotCertified(read);
 		if (run.Restart) return SemanticQueryResult.Restart.Value;
 		if (run.Refine is { } budget) return new SemanticQueryResult.RefineRequired(budget);
 		if (read is not SemanticReadResult<Answer>.Certified certified) return new SemanticQueryResult.NotCertified(read);
