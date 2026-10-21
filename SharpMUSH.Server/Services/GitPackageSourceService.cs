@@ -249,8 +249,9 @@ public class GitPackageSourceService(
 			// it is asked for, and only if it fits.
 			var directory = path.TrimEnd('/');
 			var blobs = new Dictionary<string, ObjectId>(StringComparer.Ordinal);
+			var visited = 0;
 			if ((directory.Length == 0 ? resolved.Tree : resolved[directory]?.Target as Tree) is { } tree
-				&& !IndexBlobs(tree, "", blobs, cancellationToken))
+				&& !IndexBlobs(tree, "", blobs, ref visited, cancellationToken))
 			{
 				return new Result<IPackageFileSource>(new Error<string>(
 					$"Remote '{remote.Name}': '{directory}' holds more than {MaxPackageFiles} files."));
@@ -265,24 +266,27 @@ public class GitPackageSourceService(
 
 	/// <summary>
 	/// Every blob under <paramref name="tree"/> by its path below it with <c>/</c> between folders, without reading
-	/// any of them; false when there are more than <see cref="MaxPackageFiles"/>. A symbolic link is left out.
+	/// any of them; false when there are more than <see cref="MaxPackageFiles"/> entries, folders included, since
+	/// a tree can name the same folder many times over. A symbolic link is left out.
 	/// </summary>
-	private static bool IndexBlobs(Tree tree, string prefix, Dictionary<string, ObjectId> blobs, CancellationToken cancellationToken)
+	private static bool IndexBlobs(Tree tree, string prefix, Dictionary<string, ObjectId> blobs, ref int visited,
+		CancellationToken cancellationToken)
 	{
 		foreach (var entry in tree)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			if (++visited > MaxPackageFiles)
+			{
+				return false;
+			}
+
 			switch (entry.TargetType)
 			{
 				case TreeEntryTargetType.Blob when entry.Mode != Mode.SymbolicLink:
-					if (blobs.Count == MaxPackageFiles)
-					{
-						return false;
-					}
-
 					blobs[prefix + entry.Name] = entry.Target.Id;
 					break;
-				case TreeEntryTargetType.Tree when !IndexBlobs((Tree)entry.Target, $"{prefix}{entry.Name}/", blobs, cancellationToken):
+				case TreeEntryTargetType.Tree
+					when !IndexBlobs((Tree)entry.Target, $"{prefix}{entry.Name}/", blobs, ref visited, cancellationToken):
 					return false;
 			}
 		}
@@ -320,15 +324,33 @@ public class GitPackageSourceService(
 			await _gate.WaitAsync(cancellationToken);
 			try
 			{
-				return await Task.Run(() => Open() is { } repository && repository.Lookup<Blob>(id) is { } blob
-					? ReadBlobBytes(repository, blob, maxBytes, cancellationToken)
-					: new NotFound(), cancellationToken);
+				return await Task.Run(() => Read(normalized, id, maxBytes, cancellationToken), cancellationToken);
 			}
 			finally
 			{
 				_idle ??= new Timer(_ => Close());
 				_idle.Change(IdleClose, Timeout.InfiniteTimeSpan);
 				_gate.Release();
+			}
+		}
+
+		/// <summary>
+		/// The file the commit holds at <paramref name="path"/>; an error, not <see cref="NotFound"/>, when the clone
+		/// can no longer give it, since the package does have the file.
+		/// </summary>
+		private PackageFileRead Read(string path, ObjectId id, long maxBytes, CancellationToken cancellationToken)
+		{
+			try
+			{
+				return Open() is not { } repository
+					? new Error<string>($"Remote '{remote.Name}': the cached clone is gone; refresh the remote.")
+					: repository.Lookup<Blob>(id) is { } blob
+						? ReadBlobBytes(repository, blob, maxBytes, cancellationToken)
+						: new Error<string>($"Remote '{remote.Name}': the cached clone is missing {path}; refresh the remote.");
+			}
+			catch (Exception ex) when (ex is LibGit2SharpException or IOException)
+			{
+				return new Error<string>($"Remote '{remote.Name}': {path} could not be read from the cached clone: {ex.Message}");
 			}
 		}
 

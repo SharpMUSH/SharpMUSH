@@ -142,6 +142,8 @@ public static class PackageWikiBodies
 					// Nothing more is read once the pages run past the total.
 					return new Error<string>(
 						$"Wiki pages cannot be read: the package's page files are larger than {MaxTotalBytes / (1024 * 1024)} MB in all.");
+				case Error<string> error:
+					return new Error<string>($"Wiki pages cannot be read: {error.Value}");
 			}
 		}
 

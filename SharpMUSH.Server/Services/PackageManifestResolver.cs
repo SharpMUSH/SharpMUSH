@@ -126,6 +126,8 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 						break;
 					case PackageFileTooLarge:
 						return new PackageManifestResolutionFailure(400, "The package's binary files exceed 64 MiB.");
+					case Error<string> error:
+						return new PackageManifestResolutionFailure(400, error.Value);
 					default:
 						return new PackageManifestResolutionFailure(400, $"{file.FileName} is not in the package.");
 				}

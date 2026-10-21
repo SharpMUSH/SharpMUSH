@@ -35,5 +35,8 @@ public interface IPackageFileSource
 /// <param name="Length">Its length in bytes.</param>
 public readonly record struct PackageFileTooLarge(long Length);
 
-/// <summary>A package file's bytes, or why there are none: no such file, or one too large to read.</summary>
-public union PackageFileRead(byte[], NotFound, PackageFileTooLarge);
+/// <summary>
+/// A package file's bytes, or why there are none: no such file, one too large to read, or a file the package has
+/// that its source could not read.
+/// </summary>
+public union PackageFileRead(byte[], NotFound, PackageFileTooLarge, Error<string>);

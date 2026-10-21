@@ -122,6 +122,55 @@ public class PackageFileReadBoundsTests
 
 		await Assert.That(await PackageReadme.ReadAsync(files) is string readme && readme == "# Pack\n").IsTrue();
 		await Assert.That(await files.ReadFileAsync("missing.md")).IsNull();
+		// A file the package has but the clone has lost is a damaged cache, not a missing file.
+		await Assert.That((await files.ReadFileAsync("missing.md", long.MaxValue)).Value).IsTypeOf<NotFound>();
+		var lost = (await files.ReadFileAsync("unused/big.bin", long.MaxValue)).Expect<Error<string>>();
+		await Assert.That(lost.Value).Contains("unused/big.bin");
+	}
+
+	[Test]
+	public async Task GitSource_CountsFoldersAgainstTheFileLimit()
+	{
+		using var fixture = NewFixture();
+		// Each level names the level below it 50 times: three levels hold no file at all, yet are 127,550 folders.
+		// The same shape a few levels deeper is billions, and a limit on files alone never stops it.
+		var level = GitWithInput(fixture.Origin, "", "mktree");
+		for (var depth = 0; depth < 3; depth++)
+		{
+			var entries = string.Concat(Enumerable.Range(0, 50).Select(i => $"040000 tree {level}\td{i}\n"));
+			level = GitWithInput(fixture.Origin, entries, "mktree");
+		}
+
+		var root = GitWithInput(fixture.Origin, $"040000 tree {level}\tpack\n", "mktree");
+		var commit = Git(fixture.Origin, "commit-tree", root, "-m", "folders");
+		Git(fixture.Origin, "update-ref", "refs/heads/main", commit);
+		var service = fixture.Service();
+		await service.RefreshAsync(fixture.Remote);
+
+		var refused = (await service.GetFileSourceAsync(fixture.Remote, "pack", commit)).Expect<Error<string>>();
+
+		await Assert.That(refused.Value).Contains($"more than {GitPackageSourceService.MaxPackageFiles}");
+	}
+
+	private static string GitWithInput(string directory, string input, params string[] args)
+	{
+		var psi = new ProcessStartInfo("git")
+		{
+			WorkingDirectory = directory,
+			RedirectStandardInput = true,
+			RedirectStandardOutput = true
+		};
+		foreach (var arg in args)
+		{
+			psi.ArgumentList.Add(arg);
+		}
+
+		using var process = Process.Start(psi)!;
+		process.StandardInput.Write(input);
+		process.StandardInput.Close();
+		var output = process.StandardOutput.ReadToEnd();
+		process.WaitForExit();
+		return output.Trim();
 	}
 
 	[Test]
