@@ -80,7 +80,7 @@ public class SemanticRecoveryChild
 		}
 		await provider.ImportSemanticFixtureFactsAsync([.. pages.Select(p => new SemanticFixtureFactImport(p.Id,
 			new(AtomicWikiLayout.Schema.Version, [new(new(p.Id), "pf2e:level", p.Level, Evidence)])))], CancellationToken.None);
-		var first = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(Admin), TokenQuery, null, CancellationToken.None);
+		var first = await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(Admin), TokenQuery, null, CancellationToken.None);
 		var token = (first as SemanticQueryResult.Page)?.Continuation ?? throw new InvalidOperationException("Expected a continuation.");
 		File.WriteAllText(Path.Combine(_spec.Evidence, "evidence.json"),
 			JsonSerializer.Serialize(new SemanticRecoveryEvidence(host.WorldPath, host.FixtureId, pages[0].Id, token, pages)));

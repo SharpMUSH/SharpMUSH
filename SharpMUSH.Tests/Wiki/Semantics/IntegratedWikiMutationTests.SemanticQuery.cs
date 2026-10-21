@@ -109,7 +109,7 @@ public partial class IntegratedWikiMutationTests
 		var pages = 0;
 		do
 		{
-			var result = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(reader), query, token, CancellationToken.None);
+			var result = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(reader), query, token, CancellationToken.None);
 			if (result is not SemanticQueryResult.Page page) throw new InvalidOperationException($"Expected a page, got {result}.");
 			ids.AddRange(page.Rows.Select(r => r.PageId));
 			token = page.Continuation;
@@ -178,13 +178,13 @@ public partial class IntegratedWikiMutationTests
 	{
 		await using var world = await QueryWorldAsync();
 		var query = Query(new SemanticPredicate.KeywordEquals("pf2e:tradition", "arcane"));
-		var first = (SemanticQueryResult.Page)await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(SecretReader), query, null, CancellationToken.None);
+		var first = (SemanticQueryResult.Page)await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(SecretReader), query, null, CancellationToken.None);
 		var token = first.Continuation!;
-		var resumed = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(SecretReader), query, token, CancellationToken.None);
+		var resumed = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(SecretReader), query, token, CancellationToken.None);
 		await Assert.That(resumed is SemanticQueryResult.Page).IsTrue();
 
 		async Task<SemanticQueryResult> Resume(WikiReader reader, SemanticWikiQuery q, string t, TimeProvider? clock = null, LightningDatabase? provider = null)
-			=> await SemanticWikiQueries.RunAsync(provider ?? world.Provider, _ => ValueTask.FromResult(reader), q, t, CancellationToken.None, clock);
+			=> await SemanticWikiQueries.RunAsync(provider ?? world.Provider, "#test", _ => ValueTask.FromResult(reader), q, t, CancellationToken.None, clock);
 		// The same dbref with other scopes is another reader.
 		await Assert.That(await Resume(WikiReader.From(["wiki.read", "char.read", "secret.read"], SecretReader.Dbref), query, token) is SemanticQueryResult.Restart).IsTrue();
 		await Assert.That(await Resume(SecretReader, Query(new SemanticPredicate.KeywordEquals("pf2e:tradition", "divine")), token) is SemanticQueryResult.Restart).IsTrue();
@@ -208,7 +208,7 @@ public partial class IntegratedWikiMutationTests
 		var wiki = world.Host.Services.GetRequiredService<IWikiService>();
 		var victim = world.Pages.Values.First(p => p.Order >= 0 && p.Traditions.Contains("arcane") && p.Order % 5 != 0 && p.Order % 7 != 0 && p.Order % 11 != 3);
 		var query = Query(new SemanticPredicate.KeywordEquals("pf2e:tradition", "arcane"));
-		var changed = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(PublicReader), query, null, CancellationToken.None,
+		var changed = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(PublicReader), query, null, CancellationToken.None,
 			between: async (_, _) => { await wiki.UpdateAsync(victim.Id, "edited", "#1"); });
 		await Assert.That(changed is SemanticQueryResult.NotCertified { Outcome: var outcome } && outcome.GetType().Name == "DataChanged").IsTrue();
 
@@ -228,13 +228,13 @@ public partial class IntegratedWikiMutationTests
 		// Many arcane candidates, of which only level 10 survives the second predicate.
 		var query = Query(new SemanticPredicate.KeywordEquals("pf2e:tradition", "arcane"), new SemanticPredicate.IntegerEquals("pf2e:level", 10));
 		var budgets = skips ? new SemanticQueryBudgets(4096, 2) : new SemanticQueryBudgets(3, 8192);
-		var result = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None, budgets: budgets);
+		var result = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None, budgets: budgets);
 		await Assert.That(result is SemanticQueryResult.RefineRequired { Budget: var budget } && budget == (skips ? "denied candidates" : "candidate probes")).IsTrue();
 		// Honest: answering really needs more than that budget; the admin sees every arcane page.
 		var arcane = world.Pages.Values.Count(p => p.Traditions.Contains("arcane"));
 		var matching = world.Pages.Values.Count(p => p.Traditions.Contains("arcane") && p.Level == 10);
 		await Assert.That(skips ? arcane - matching > 2 : arcane > 3).IsTrue();
-		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None)
+		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None)
 			is SemanticQueryResult.Page).IsTrue();
 		await world.Host.CloseAsync();
 	}
@@ -264,9 +264,9 @@ public partial class IntegratedWikiMutationTests
 	{
 		await using var world = await QueryWorldAsync();
 		var hidden = world.Pages.Values.First(p => p.Order % 5 == 0).Id;
-		var denied = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(PublicReader),
+		var denied = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(PublicReader),
 			Query(new SemanticPredicate.PageEquals("pf2e:class", hidden)), null, CancellationToken.None);
-		var missing = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(PublicReader),
+		var missing = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(PublicReader),
 			Query(new SemanticPredicate.PageEquals("pf2e:class", "wiki:page:999999")), null, CancellationToken.None);
 		await Assert.That(denied is SemanticQueryResult.NotCertified { Outcome: var a } && missing is SemanticQueryResult.NotCertified { Outcome: var b }
 			&& ReferenceEquals(a, b)).IsTrue();

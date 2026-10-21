@@ -46,7 +46,7 @@ public partial class IntegratedWikiMutationTests
 	{
 		await using var world = await QueryWorldAsync(spells: 12);
 		var provider = world.Provider;
-		var before = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, null, CancellationToken.None);
+		var before = await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, null, CancellationToken.None);
 		var token = ((SemanticQueryResult.Page)before).Continuation;
 		await Assert.That(token).IsNotNull();
 
@@ -58,7 +58,7 @@ public partial class IntegratedWikiMutationTests
 		await AssertNoStaging(provider);
 		await AssertQueriesMatchOracle(world, p => p.Level is >= 1 and <= 10);
 		// A continuation names the generation it was issued under; after the flip it restarts.
-		await Assert.That(await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, token,
+		await Assert.That(await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, token,
 			CancellationToken.None) is SemanticQueryResult.Restart).IsTrue();
 
 		// A second rebuild fills the first slot again.
