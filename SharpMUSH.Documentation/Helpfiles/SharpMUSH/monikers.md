@@ -32,7 +32,7 @@ The "monikers" `@config` option is a list of places where a name is shown with i
      movement - Movement messages (exit @osucc and @odrop, get, drop, teleport)
          look - In look: the name, contents and exits
       unparse - In examine, which shows Name(#123flags)
-          who - In WHO and DOING
+          who - In WHO, DOING and SESSION
        system - Other messages the game writes with a name in them
 announcements - Connection messages and GAME: announcements
    everywhere - All of the above

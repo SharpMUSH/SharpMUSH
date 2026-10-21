@@ -166,6 +166,102 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>do_who_session</c> columns (<c>src/bsd.c</c>): the wizard WHO with the host replaced by
+	/// the connection's bytes. Penn heads the bytes the client sent <c>Sent</c> and the bytes written to it
+	/// <c>Recv</c>, as the player sees them.
+	/// </summary>
+	private static readonly ImmutableArray<TableColumn> SessionColumns =
+	[
+		new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false },
+		new(MarkupText.Plain("Loc #")) { Min = 6, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("On For")) { Min = 9, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Idle")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Cmds")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Des")) { Min = 4, Wrap = false },
+		new(MarkupText.Plain("Sent")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Recv")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Pend")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+	];
+
+	/// <summary>
+	/// PennMUSH's <c>cmd_session</c> (<c>src/cmds.c</c>): <c>Priv_Who</c> gets every connection with its byte
+	/// counts (<c>do_who_session</c>), anyone else the <c>DOING</c> listing. The counts come from the
+	/// connection server; a connection it does not report shows <c>-</c>.
+	/// </summary>
+	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["pattern"])]
+	public async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute command)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.IsPriv() && !await executor.IsSee_All())
+		{
+			return await Doing(parser, command);
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var pattern = args.TryGetValue("0", out var argument) ? argument.Message.ToPlainText() : string.Empty;
+		var traffic = await ConnectionTraffic.GetAsync();
+
+		var rows = new List<ImmutableArray<Block>>();
+		var count = 0;
+		await foreach (var connection in ConnectionService.GetAll())
+		{
+			var known = connection.Ref is { } dbref && await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
+				? found
+				: null;
+			if (known is not null)
+			{
+				count++;
+			}
+
+			if (!string.IsNullOrEmpty(pattern) && (known is null || !await MatchesPattern(known, pattern)))
+			{
+				continue;
+			}
+
+			var name = known is null
+				? MarkupText.Plain("Connecting...")
+				: await new NameFormatter(AttributeService, Configuration).NameAsync(known, MonikerPlace.Who);
+			rows.Add([name, .. (await SessionCells(connection, known, traffic.GetValueOrDefault(connection.Handle)))
+				.Select(cell => (Block)MarkupText.Plain(cell))]);
+		}
+
+		var footer = count switch
+		{
+			0 => "There are no players connected.",
+			1 => "There is one player connected.",
+			_ => $"There are {count} players connected."
+		};
+
+		var listing = ServerLayout.Build(new Table(SessionColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		await NotifyService.Notify(executor, MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]), executor);
+		return new None();
+	}
+
+	/// <summary>A <see cref="SessionColumns"/> row after the name, which is <c>Connecting...</c> for a connection no player is
+	/// bound to, as in PennMUSH.</summary>
+	private static async ValueTask<string[]> SessionCells(IConnectionService.ConnectionData connection, AnySharpObject? player,
+		ConnectionTraffic? traffic)
+	{
+		var location = player?.AsOptionalContent is AnySharpContent content
+			? "#" + ((await content.Location())?.Object().DBRef.Number.ToString(CultureInfo.InvariantCulture) ?? "-1")
+			: "#-1";
+		var secure = connection.Metadata.GetValueOrDefault("SSL", "0") == "1" ? "S" : "";
+		return
+		[
+			location,
+			TimeHelpers.TimeString(connection.Connected ?? TimeSpan.Zero, accuracy: 3),
+			TimeHelpers.TimeString(connection.Idle ?? TimeSpan.Zero),
+			connection.CommandCount.ToString(CultureInfo.InvariantCulture),
+			$"{connection.Handle,3}{secure}",
+			Bytes(traffic?.Received),
+			Bytes(traffic?.Sent),
+			Bytes(traffic?.Pending)
+		];
+
+		static string Bytes(long? count) => count?.ToString(CultureInfo.InvariantCulture) ?? "-";
+	}
+
+	/// <summary>
 	/// PennMUSH's alternate login words (<c>bsd.c:4431-4497</c>): <c>cd</c> connects and forces the
 	/// player's <c>DARK</c> flag on (and hides the connection if the player has permission), <c>cv</c>
 	/// connects and forces <c>DARK</c> off, <c>ch</c> connects and hides the connection if permitted

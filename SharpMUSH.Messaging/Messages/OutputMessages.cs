@@ -152,6 +152,12 @@ public record UpdateTerminalFeaturesMessage(long Handle, SharpMUSH.Library.Utili
 public record ProbeTerminalMessage(long Handle) : IHandleMessage;
 
 /// <summary>
+/// Asks the connection server for every connection's byte counts (<c>SESSION</c>). It answers with a
+/// <see cref="ConnectionTrafficReportMessage"/> carrying the same <paramref name="RequestId"/>.
+/// </summary>
+public record ConnectionTrafficRequestMessage(Guid RequestId);
+
+/// <summary>
 /// Carries <c>SOCKSET pueblo</c> to the socket owner. Turned on, a connection not already writing a markup dialect is
 /// sent the Pueblo start sequence and rendered as Pueblo from then on, as PennMUSH's <c>sockset()</c> does; turned
 /// off, a Pueblo connection goes back to ANSI. An MXP connection keeps MXP either way, the rule

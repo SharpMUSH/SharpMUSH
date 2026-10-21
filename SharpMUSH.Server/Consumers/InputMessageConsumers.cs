@@ -564,3 +564,13 @@ public class MSSPReportRequestConsumer(Services.MsspReportPublisher publisher) :
 		return Task.CompletedTask;
 	}
 }
+
+/// <summary>The connection server's byte counts, for the <c>SESSION</c> waiting on them.</summary>
+public class ConnectionTrafficReportConsumer(IConnectionTrafficService traffic) : IMessageConsumer<ConnectionTrafficReportMessage>
+{
+	public Task HandleAsync(ConnectionTrafficReportMessage message, CancellationToken cancellationToken = default)
+	{
+		traffic.Complete(message.RequestId, message.Connections);
+		return Task.CompletedTask;
+	}
+}

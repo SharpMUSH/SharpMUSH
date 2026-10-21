@@ -40,7 +40,7 @@ public class ImportRestartAuditTests
 			var feature = new CompletionFeature();
 			var http = new DefaultHttpContext();
 			http.Features.Set<IHttpResponseFeature>(feature);
-			var controller = new DatabaseConversionController(null!, journal, null!, Substitute.For<IStorageCapacityService>(),
+			var controller = new DatabaseConversionController(null!, journal, null!, null!, Substitute.For<IStorageCapacityService>(),
 				audit, lifetime, NullLogger<DatabaseConversionController>.Instance)
 			{ ControllerContext = new ControllerContext { HttpContext = http } };
 			var confirmation = new DatabaseConversionController.RestartConfirmation(true);

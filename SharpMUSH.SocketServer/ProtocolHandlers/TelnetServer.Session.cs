@@ -26,6 +26,7 @@ public partial class TelnetServer
 		ConnectionCloser closer,
 		long handle,
 		RegistrationHold held,
+		TrafficCounter traffic,
 		CancellationToken ct)
 	{
 		// Assigned once BuildAsync returns; the callbacks below only run after that, since the
@@ -52,7 +53,7 @@ public partial class TelnetServer
 			};
 			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)));
 
-			builder.UsePipe(connection.Transport);
+			builder.UsePipe(new CountingDuplexPipe(connection.Transport, traffic));
 			var telnet = await builder.BuildAsync();
 
 			// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
@@ -178,20 +179,25 @@ public partial class TelnetServer
 		{
 			// A client ends its list by repeating an entry. The library reports the list again then: unchanged, or
 			// with the MTTS bitvector expanded into the names of what it claims.
-			if (_publishedTerminalTypes.SequenceEqual(terminalTypes)
-					|| (HasMtts(_publishedTerminalTypes) && !HasMtts(terminalTypes)))
+			var unchanged = _publishedTerminalTypes.SequenceEqual(terminalTypes);
+			var complete = unchanged || (HasMtts(_publishedTerminalTypes) && !HasMtts(terminalTypes));
+			var snapshot = unchanged ? null : terminalTypes.ToArray();
+			if (snapshot is not null)
+			{
+				// Before settling: registration reads this list as soon as negotiation settles.
+				_publishedTerminalTypes = snapshot;
+			}
+
+			if (complete)
 			{
 				_terminalTypesComplete = true;
 				CheckNegotiationSettled();
 			}
 
-			if (_publishedTerminalTypes.SequenceEqual(terminalTypes))
+			if (snapshot is null)
 			{
 				return;
 			}
-
-			var snapshot = terminalTypes.ToArray();
-			_publishedTerminalTypes = snapshot;
 
 			// MTTS is the only thing that ever tells us a client can render more than 16 colours.
 			// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of

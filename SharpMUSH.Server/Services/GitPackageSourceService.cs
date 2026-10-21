@@ -4,6 +4,7 @@ using System.Text;
 using LibGit2Sharp;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services;
@@ -213,13 +214,18 @@ public class GitPackageSourceService(
 			}
 
 			var directory = path.TrimEnd('/');
-			foreach (var candidate in (string[])["README.md", "README.MD", "readme.md", "Readme.md"])
+			foreach (var candidate in PackageReadme.FileNames)
 			{
 				var readmePath = directory.Length == 0 ? candidate : $"{directory}/{candidate}";
-				var content = ReadBlob(commit, readmePath);
-				if (content is not null)
+				switch (ReadBlobBytes(repository, commit, readmePath, PackageReadme.MaxBytes, cancellationToken))
 				{
-					return content;
+					case byte[] bytes:
+						return PackageReadme.Decode(bytes) is string content
+							? content
+							: new Result<string>(new Error<string>($"{readmePath} is not UTF-8 text."));
+					case PackageFileTooLarge:
+						return new Result<string>(new Error<string>(
+							$"{readmePath} is larger than {PackageReadme.MaxBytes / 1024} KB."));
 				}
 			}
 
@@ -233,56 +239,191 @@ public class GitPackageSourceService(
 	{
 		return await WithRepoAsync(remote, repository =>
 		{
-			var resolved = repository.Lookup<Commit>(commit);
-			if (resolved is null)
+			if (repository.Lookup<Commit>(commit) is not { } resolved)
 			{
 				return new Result<IPackageFileSource>(
 					new Error<string>($"Remote '{remote.Name}': commit '{commit}' is not in the cache."));
 			}
 
-			// Snapshot the bytes of every blob under the package directory at this commit, by its path within
-			// it, so the reader needs no further repo access (and the repo handle here is disposed when
-			// WithRepoAsync returns).
+			// Only the directory's trees are read here, for each file's object id; a file's bytes are read when
+			// it is asked for, and only if it fits.
 			var directory = path.TrimEnd('/');
-			var tree = directory.Length == 0 ? resolved.Tree : resolved[directory]?.Target as Tree;
-			var files = new Dictionary<string, byte[]>(StringComparer.Ordinal);
-			if (tree is not null)
+			var blobs = new Dictionary<string, ObjectId>(StringComparer.Ordinal);
+			var visited = 0;
+			if ((directory.Length == 0 ? resolved.Tree : resolved[directory]?.Target as Tree) is { } tree
+				&& !IndexBlobs(tree, "", blobs, ref visited, cancellationToken))
 			{
-				Snapshot(tree, "", files);
+				return new Result<IPackageFileSource>(new Error<string>(
+					$"Remote '{remote.Name}': '{directory}' holds more than {MaxPackageFiles} files."));
 			}
 
-			return new Result<IPackageFileSource>(new GitCommitFileSource(files));
+			return new Result<IPackageFileSource>(new GitCommitFileSource(this, remote, blobs));
 		}, cancellationToken);
 	}
 
-	/// <summary>Every blob under <paramref name="tree"/>, keyed by its path below it with <c>/</c> between folders.</summary>
-	private static void Snapshot(Tree tree, string prefix, Dictionary<string, byte[]> files)
+	/// <summary>The most files a package directory may hold.</summary>
+	public const int MaxPackageFiles = 100_000;
+
+	/// <summary>
+	/// Every blob under <paramref name="tree"/> by its path below it with <c>/</c> between folders, without reading
+	/// any of them; false when there are more than <see cref="MaxPackageFiles"/> entries, folders included, since
+	/// a tree can name the same folder many times over. A symbolic link is left out.
+	/// </summary>
+	private static bool IndexBlobs(Tree tree, string prefix, Dictionary<string, ObjectId> blobs, ref int visited,
+		CancellationToken cancellationToken)
 	{
 		foreach (var entry in tree)
 		{
-			switch (entry.Target)
+			cancellationToken.ThrowIfCancellationRequested();
+			if (++visited > MaxPackageFiles)
 			{
-				case Blob blob when entry.TargetType == TreeEntryTargetType.Blob && entry.Mode != Mode.SymbolicLink:
-					using (var stream = blob.GetContentStream())
-					using (var memory = new MemoryStream())
-					{
-						stream.CopyTo(memory);
-						files[prefix + entry.Name] = memory.ToArray();
-					}
+				return false;
+			}
 
+			switch (entry.TargetType)
+			{
+				case TreeEntryTargetType.Blob when entry.Mode != Mode.SymbolicLink:
+					blobs[prefix + entry.Name] = entry.Target.Id;
 					break;
-				case Tree subtree:
-					Snapshot(subtree, $"{prefix}{entry.Name}/", files);
-					break;
+				case TreeEntryTargetType.Tree
+					when !IndexBlobs((Tree)entry.Target, $"{prefix}{entry.Name}/", blobs, ref visited, cancellationToken):
+					return false;
+			}
+		}
+
+		return true;
+	}
+
+	/// <summary>
+	/// The files under one package directory at one commit, read from the cached clone one at a time and never
+	/// fetched again, so what is read is what the commit holds. A file is copied only when it fits the reader's
+	/// limit; anything the package does not ask for is never read. A pack reads its files one after another, so
+	/// the clone stays open between reads and is closed once they stop.
+	/// </summary>
+	private sealed class GitCommitFileSource(GitPackageSourceService service, PackageRemoteRecord remote,
+		IReadOnlyDictionary<string, ObjectId> blobs) : IPackageFileSource
+	{
+		private static readonly TimeSpan IdleClose = TimeSpan.FromSeconds(2);
+
+		private readonly SemaphoreSlim _gate = RepoLocks.GetOrAdd(remote.Url, _ => new SemaphoreSlim(1, 1));
+
+		// Used and replaced only while _gate is held.
+		private Repository? _open;
+		private Timer? _idle;
+
+		public async Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+			=> await ReadFileAsync(path, Array.MaxLength, cancellationToken) is byte[] bytes ? bytes : null;
+
+		public async Task<PackageFileRead> ReadFileAsync(string path, long maxBytes, CancellationToken cancellationToken = default)
+		{
+			if (PackageFilePath.Normalize(path) is not { } normalized || !blobs.TryGetValue(normalized, out var id))
+			{
+				return new NotFound();
+			}
+
+			await _gate.WaitAsync(cancellationToken);
+			try
+			{
+				return await Task.Run(() => Read(normalized, id, maxBytes, cancellationToken), cancellationToken);
+			}
+			finally
+			{
+				_idle ??= new Timer(_ => Close());
+				_idle.Change(IdleClose, Timeout.InfiniteTimeSpan);
+				_gate.Release();
+			}
+		}
+
+		/// <summary>
+		/// The file the commit holds at <paramref name="path"/>; an error, not <see cref="NotFound"/>, when the clone
+		/// can no longer give it, since the package does have the file.
+		/// </summary>
+		private PackageFileRead Read(string path, ObjectId id, long maxBytes, CancellationToken cancellationToken)
+		{
+			try
+			{
+				return Open() is not { } repository
+					? new Error<string>($"Remote '{remote.Name}': the cached clone is gone; refresh the remote.")
+					: repository.Lookup<Blob>(id) is { } blob
+						? ReadBlobBytes(repository, blob, maxBytes, cancellationToken)
+						: new Error<string>($"Remote '{remote.Name}': the cached clone is missing {path}; refresh the remote.");
+			}
+			catch (Exception ex) when (ex is LibGit2SharpException or IOException)
+			{
+				return new Error<string>($"Remote '{remote.Name}': {path} could not be read from the cached clone: {ex.Message}");
+			}
+		}
+
+		/// <summary>The cached clone, without fetching or cloning; null when there is none.</summary>
+		private Repository? Open()
+		{
+			var directory = service.CacheDirectoryFor(remote.Url);
+			return _open ??= Repository.IsValid(directory) ? new Repository(directory) : null;
+		}
+
+		private void Close()
+		{
+			// A read in progress keeps it open; that read schedules the next close.
+			if (!_gate.Wait(0))
+			{
+				return;
+			}
+
+			try
+			{
+				_open?.Dispose();
+				_open = null;
+			}
+			finally
+			{
+				_gate.Release();
 			}
 		}
 	}
 
-	/// <summary>An in-memory snapshot of a package directory's blob bytes at one commit.</summary>
-	private sealed class GitCommitFileSource(IReadOnlyDictionary<string, byte[]> files) : IPackageFileSource
+	/// <summary>
+	/// The blob at <paramref name="path"/> in <paramref name="commit"/>, when it is at most <paramref name="maxBytes"/>
+	/// long. A symbolic link is not a file the package carries.
+	/// </summary>
+	private static PackageFileRead ReadBlobBytes(Repository repository, Commit commit, string path, long maxBytes,
+		CancellationToken cancellationToken)
+		=> commit[path] is { TargetType: TreeEntryTargetType.Blob, Target: Blob blob } entry && entry.Mode != Mode.SymbolicLink
+			? ReadBlobBytes(repository, blob, maxBytes, cancellationToken)
+			: new NotFound();
+
+	/// <summary>
+	/// <paramref name="blob"/>'s bytes when it is at most <paramref name="maxBytes"/> long. Its length comes from the
+	/// object header, so a larger blob is refused before it is copied.
+	/// </summary>
+	private static PackageFileRead ReadBlobBytes(Repository repository, Blob blob, long maxBytes, CancellationToken cancellationToken)
 	{
-		public Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default) =>
-			Task.FromResult(Library.Services.PackageFilePath.Normalize(path) is { } normalized ? files.GetValueOrDefault(normalized) : null);
+		var length = repository.ObjectDatabase.RetrieveObjectMetadata(blob.Id).Size;
+		if (length > maxBytes || length > Array.MaxLength)
+		{
+			return new PackageFileTooLarge(length);
+		}
+
+		var bytes = new byte[length];
+		using var stream = blob.GetContentStream();
+		var offset = 0;
+		while (offset < bytes.Length)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			var read = stream.Read(bytes, offset, Math.Min(81920, bytes.Length - offset));
+			if (read == 0)
+			{
+				break;
+			}
+
+			offset += read;
+		}
+
+		if (offset != bytes.Length || stream.ReadByte() != -1)
+		{
+			throw new IOException($"Blob {blob.Sha} did not have the length its header gave.");
+		}
+
+		return bytes;
 	}
 
 	private async Task<Result<T>> WithRepoAsync<T>(

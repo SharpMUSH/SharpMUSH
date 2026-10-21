@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Tests;
@@ -37,6 +38,38 @@ public static class TestHostServices
 	{
 		services.AddSingleton<RecordingFeedLineListener>();
 		services.AddSingleton<IFeedLineListener>(provider => provider.GetRequiredService<RecordingFeedLineListener>());
+	}
+
+	/// <summary>
+	/// A test host has no connection server to count bytes, so <c>SESSION</c> reads the counts tests give a
+	/// <see cref="FixedConnectionTraffic"/>.
+	/// </summary>
+	public static void FixConnectionTraffic(IServiceCollection services)
+	{
+		services.RemoveAll<IConnectionTrafficService>();
+		services.AddSingleton<FixedConnectionTraffic>();
+		services.AddSingleton<IConnectionTrafficService>(provider => provider.GetRequiredService<FixedConnectionTraffic>());
+	}
+}
+
+/// <summary>
+/// An <see cref="IConnectionTrafficService"/> answering with the counts tests set, one handle each, since the host
+/// is shared.
+/// </summary>
+public sealed class FixedConnectionTraffic : IConnectionTrafficService
+{
+	private readonly ConcurrentDictionary<long, ConnectionTraffic> _connections = new();
+
+	/// <summary>Reports <paramref name="traffic"/> for its handle from now on.</summary>
+	public void Set(ConnectionTraffic traffic) => _connections[traffic.Handle] = traffic;
+
+	/// <inheritdoc />
+	public ValueTask<IReadOnlyDictionary<long, ConnectionTraffic>> GetAsync(CancellationToken cancellationToken = default) =>
+		ValueTask.FromResult<IReadOnlyDictionary<long, ConnectionTraffic>>(new Dictionary<long, ConnectionTraffic>(_connections));
+
+	/// <inheritdoc />
+	public void Complete(Guid requestId, IReadOnlyList<ConnectionTraffic> connections)
+	{
 	}
 }
 
