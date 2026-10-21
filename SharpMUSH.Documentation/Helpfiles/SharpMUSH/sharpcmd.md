@@ -609,7 +609,7 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 # @away
 `@away <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: someone who pages `<player>` while she is not connected is not shown `<message>`.
+If `<message>` evaluates to something non-null, it is shown to anyone who pages `<player>` while `<player>` is not connected, in place of "`<player>` is not connected."
 
 ### Example
 ```sharp
@@ -1270,7 +1270,7 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 # @haven
 `@haven <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: when someone cannot page `<player>`, because `<player>` is set HAVEN or because of his page lock, they are not shown `<message>`.
+When someone tries to page `<player>` and cannot, either because `<player>` is set HAVEN or because of `<player>`'s page lock, they are shown `<message>`, if it evaluates to something non-null.
 
 ### Example
 ```sharp
@@ -1360,7 +1360,7 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 # @idle
 `@idle <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: it is not sent back to those who page you.
+This message is sent in return to every page which reaches you, if it evaluates non-null. It is useful if you are idle for long periods of time and wish to tell people where you are, or if you are in a meeting and cannot quickly return pages.
 
 ### Example
 ```sharp
