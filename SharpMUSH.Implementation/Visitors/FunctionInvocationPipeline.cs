@@ -95,6 +95,13 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			// is carried on the synthesized attribute's Restrict (see ResolveUserDefinedFunction);
 			// for built-ins it lives in the registry overlay keyed by name.
 			var builtinRestriction = services.UserFunctions?.GetBuiltinRestriction(name);
+			// The overlay's words that change how the built-in runs (logname, localize, ...) apply too.
+			if (FunctionRestrictionFlags.Apply(attribute.Flags, builtinRestriction, userFunction: false) is var flags
+				&& flags != attribute.Flags)
+			{
+				attribute = attribute.WithFlags(flags);
+				definition = definition with { Attribute = attribute };
+			}
 
 			// nobody is FN_DISABLED, which answers e_disabled before any permission check, so the
 			// permission gate below does not turn it into e_perm (src/parse.c).
@@ -200,7 +207,8 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 			var result = await FunctionDispatcher.InvokeValidatedAsync(newParser,
 				definition, executor,
-				configuration.CurrentValue.Function.FunctionSideEffects, services.NotifyService, visitor.Logger,
+				configuration.CurrentValue.Function.FunctionSideEffects && !FunctionRestrictionFlags.ForbidsSideEffects(builtinRestriction),
+				services.NotifyService, visitor.Logger,
 				argumentCount: args.Length, sideEffectsNeedGrant: configuration.CurrentValue.Compatibility.SidefxFlag);
 
 			return Bounded(result, currentState, limitExceeded, contextDepth);
@@ -244,6 +252,13 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 	private bool TryResolveFunction(IMUSHCodeParser parser, string name, out FunctionDefinition definition)
 	{
+		// fn()'s call names the built-in even when @function/delete has a user function in its place.
+		if (parser.CurrentState.BuiltinCall is { } builtin && builtin.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+		{
+			definition = builtin;
+			return true;
+		}
+
 		if (parser.FunctionLibrary.TryGetValue(name, out var libraryMatch))
 		{
 			definition = libraryMatch.LibraryInformation;
@@ -446,7 +461,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 			Name = name,
 			MinArgs = entry.MinArgs,
 			MaxArgs = entry.MaxArgs,
-			Flags = FunctionFlags.Regular,
+			Flags = FunctionRestrictionFlags.Apply(FunctionFlags.Regular, entry.Restriction, userFunction: true),
 			// Carry any @function/restrict restriction onto the synthesized attribute so the
 			// permission check in InvokeAsync enforces it before evaluating the attribute.
 			Restrict = string.IsNullOrWhiteSpace(entry.Restriction) ? [] : [entry.Restriction]

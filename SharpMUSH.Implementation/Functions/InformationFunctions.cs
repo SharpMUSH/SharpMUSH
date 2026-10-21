@@ -1336,9 +1336,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoFunctionNameGiven);
 		}
 
-		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
+		if (FnTarget(parser, functionName) is (var targetFunction, var deleted))
 		{
-			EvaluationRestrictions.Demand(targetFunction.LibraryInformation, parser.CurrentState.Restrictions);
+			EvaluationRestrictions.Demand(targetFunction, parser.CurrentState.Restrictions);
 			using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState);
 			if (retainedSource is not null)
 			{
@@ -1357,7 +1357,8 @@ public partial class Functions
 				.Skip(1)
 				.Select(x => x.Value.Message.ToPlainText());
 			var callString = $"{functionName}({string.Join(",", fnArgs)})";
-			var result = await parser.FunctionParse(MarkupText.Plain(callString));
+			var calling = deleted ? parser.Push(parser.CurrentState with { BuiltinCall = targetFunction }) : parser;
+			var result = await calling.FunctionParse(MarkupText.Plain(callString));
 			return result ?? CallState.Empty;
 		}
 
@@ -1381,6 +1382,17 @@ public partial class Functions
 
 		return result2;
 	}
+
+	/// <summary>
+	/// The built-in fn() calls, and whether @function/delete has taken it out of the function table. PennMUSH's
+	/// fn() reaches a deleted built-in all the same (builtin_func_hash_lookup, src/funufun.c:92).
+	/// </summary>
+	private (FunctionDefinition Definition, bool Deleted)? FnTarget(IMUSHCodeParser parser, string functionName)
+		=> parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var found)
+			? (found.LibraryInformation, false)
+			: Builtins.TryGetValue(functionName.ToLowerInvariant(), out var deleted)
+				? (deleted, true)
+				: null;
 
 	/// <summary>
 	/// PennMUSH's <c>functions([&lt;type&gt;])</c> (<c>src/function.c</c> <c>list_functions</c>): the type is
