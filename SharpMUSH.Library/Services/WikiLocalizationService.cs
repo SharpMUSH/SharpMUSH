@@ -51,10 +51,8 @@ public sealed class WikiLocalizationService(
 		for (var skip = 0; ; skip += CategoryNameBatch)
 		{
 			var pages = await wikiService.GetAllPagesAsync(skip, CategoryNameBatch, WikiNamespace.Category, published);
-			foreach (var page in await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false))
-			{
-				if (page.Title.Length > 0) names[page.Page.Slug] = page.Title;
-			}
+			foreach (var page in (await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false)).Where(p => p.Title.Length > 0))
+				names[page.Page.Slug] = page.Title;
 			if (pages.Count < CategoryNameBatch) return names;
 		}
 	}
