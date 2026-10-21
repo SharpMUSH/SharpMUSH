@@ -989,7 +989,7 @@ setting, rather than PennMUSH's dump_interval.
 `@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`<br>
 `@lalias <object>[=<leave alias1>[; ... ; <leave aliasN>]]`
 
-These attributes can be set, but they are not used yet: their "enter aliases" and "leave aliases" do not work in place of "enter `<object>`" and "leave `<object>`".
+These attributes contain lists of "enter aliases" and "leave aliases" for `<object>` - any of the aliases can be used in place of "enter `<object>`" and "leave `<object>`" to enter/leave the object.
 
 These attributes only have meaning for players and things (as rooms/exits cannot be "enter"ed) - the aliases for exits are stored in @alias.
 

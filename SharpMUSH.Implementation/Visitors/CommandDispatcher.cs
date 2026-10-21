@@ -153,8 +153,6 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 				}
 			}
 
-			// Step 7: Enter Aliases
-			// Step 8: Leave Aliases
 			return await DispatchUnmatchedAsync(visitor, src, commandText, executorObject);
 		}
 		catch (OperationCanceledException)
@@ -462,6 +460,12 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		// whether a $-command, HUH_COMMAND or its hook ends up handling the command.
 		parser.CurrentState.CommandText?.Evaluated = evaluatedCommandText;
 
+		if (await MoveAliasCommandAsync(parser, evaluatedCommandText.ToPlainText().Trim(), executorObject) is { } moveCommand)
+		{
+			var moved = await parser.CommandParse(MarkupText.Plain(moveCommand));
+			return moved.HadErrors ? moved : CallState.Empty;
+		}
+
 		// Objects whose @lock/command or @lock/use refused a match are process_command's errdblist.
 		var lockFailures = new List<AnySharpObject>();
 		var result = await RunUserDefinedCommandAsync(visitor, evaluatedCommandText, executorObject, lockFailures) switch
@@ -474,6 +478,52 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		if (evaluatedCommandResult?.HadErrors != true) return result;
 		return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
 	}
+
+	/// <summary>
+	/// Steps 7 and 8, game.c process_command: before any <c>$</c>-command, a player or thing whose line
+	/// matches the EALIAS of something beside it enters that thing, and one whose line matches its
+	/// location's LALIAS leaves it. Neither alias is inherited, and a disabled ENTER or LEAVE skips its
+	/// alias. Returns the command to run instead, or <see langword="null"/>.
+	/// </summary>
+	private async ValueTask<string?> MoveAliasCommandAsync(IMUSHCodeParser parser, string line,
+		AnySharpObject executor)
+	{
+		if (!(executor.IsPlayer || executor.IsThing) || executor.AsOptionalContent is not AnySharpContent mobile)
+			return null;
+
+		var location = await mobile.Location();
+		if (parser.CommandLibrary.ContainsKey("ENTER"))
+		{
+			await foreach (var item in location.Content(services.Mediator).WithCancellation(ExecutionBudget.CurrentToken))
+			{
+				if (await MatchesAliasAttributeAsync(executor, item.WithRoomOption(), "EALIAS", line))
+					return $"ENTER #{item.Object().DBRef.Number}";
+			}
+		}
+
+		return !location.IsRoom
+			&& parser.CommandLibrary.ContainsKey("LEAVE")
+			&& await MatchesAliasAttributeAsync(executor, location.WithExitOption(), "LALIAS", line)
+				? "LEAVE"
+				: null;
+	}
+
+	/// <summary>Whether <paramref name="line"/> is one of the ';'-separated aliases in the object's own attribute.</summary>
+	private async ValueTask<bool> MatchesAliasAttributeAsync(AnySharpObject executor, AnySharpObject target,
+		string attributeName, string line)
+		=> await services.AttributeService.GetAttributeAsync(executor, target, attributeName,
+				IAttributeService.AttributeMode.SystemSet, false) is SharpAttribute[] { Length: > 0 } chain
+			&& MatchesAlias(line, chain[^1].Value.ToPlainText());
+
+	/// <summary>
+	/// game.c check_alias: the line, case-insensitively, is one word of the ';'-separated list. Spaces
+	/// before a word after the first, and after any word, are ignored.
+	/// </summary>
+	private static bool MatchesAlias(string line, string aliases)
+		=> !line.Contains(';')
+			&& aliases.Split(';')
+				.Select((word, index) => index == 0 ? word : word.TrimStart())
+				.Any(word => word.TrimEnd().Equals(line, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// Steps 9 and 11-15: $-commands nearby, then on the location's zone master room, the location
