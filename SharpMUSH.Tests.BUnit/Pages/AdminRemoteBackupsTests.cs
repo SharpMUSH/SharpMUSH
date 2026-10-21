@@ -80,9 +80,21 @@ public class AdminRemoteBackupsTests : TrackingBunitContext
 		Setup(new(new(true, 24, "b2:bucket:path"), true, true, true, null, null,
 			[new(Guid.NewGuid(), "manual", "ready", DateTimeOffset.UtcNow)]));
 		var page = Render<AdminRemoteBackups>();
-		page.WaitForAssertion(() => { if (!page.Markup.Contains("AdmRemoteBackupAgentMissing")) throw new Exception("Missing agent was not shown"); });
+		page.WaitForAssertion(() => { if (!page.Markup.Contains("AdmRemoteBackupAgentNever")) throw new Exception("Missing agent was not shown"); });
+		await Assert.That(page.Find(".remote-backups-agent").ClassList).Contains("mud-alert-text-warning")
+			.Because("managed scheduling is on, and its jobs cannot run without an agent");
 		await Assert.That(page.Markup.Contains("AdmRemoteBackupNever")).IsTrue();
 		await Assert.That(page.FindAll("input[type=password]").All(input => string.IsNullOrEmpty(input.GetAttribute("value")))).IsTrue();
+	}
+
+	/// <summary>A default install has no agent and no managed scheduling: that is information, not a warning.</summary>
+	[Test]
+	public async Task NoAgentWithoutManagedSchedulingIsNotAWarning()
+	{
+		Setup(new(new(false, 24, ""), false, false, false, null, null, []));
+		var page = Render<AdminRemoteBackups>();
+		page.WaitForAssertion(() => { if (!page.Markup.Contains("AdmRemoteBackupAgentNever")) throw new Exception("No-agent notice missing"); });
+		await Assert.That(page.Find(".remote-backups-agent").ClassList).Contains("mud-alert-text-info");
 	}
 
 	[Test]
