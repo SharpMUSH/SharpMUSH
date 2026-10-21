@@ -100,6 +100,8 @@ public partial class LightningDatabase
 						var snapshot = ReadBootstrapSnapshot(tx, checkBudget, null, decode: false);
 						if (snapshot.Digest != plan.SnapshotDigest) throw SemanticFixtureCapability.Unavailable();
 						delta.Apply(tx, ct);
+						// Activation is refused after any package admission, so an untouched history certifies itself.
+						LightningStore.CertifyEmptyFixturePackageHistory(tx, lease.FixtureId);
 					}, ct);
 					finalCompleted = true;
 				}
@@ -154,7 +156,7 @@ public partial class LightningDatabase
 				new(record.Namespace, [.. categories], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
 			try { lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 			catch (InvalidDataException) { throw new WikiSemanticCapacityException("bootstrap-projection"); }
-			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(1, []), false, ct);
+			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, ct);
 			if (prepared is ValidationFailure) throw new WikiSemanticCapacityException("bootstrap-projection");
 			if (prepared is not PreparedWikiProjection edit) throw new InvalidDataException("Invalid bootstrap preparation.");
 			if (WikiSemanticProjectionPlanner.PlanProjection(work, edit, 0, sequence) is not WikiProjectionPlanned planned)

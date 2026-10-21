@@ -69,6 +69,7 @@ internal static class WikiSemanticStateCodec
 	internal static byte[] Registry(WikiSemanticRegistryEntry entry) => Encode(w => { w.Write(entry.Id); w.Write(entry.Identity); });
 	internal static WikiSemanticRegistryEntry Registry(byte[] bytes) => Decode(bytes, r => new WikiSemanticRegistryEntry(r.ReadUInt64(), String(r)));
 	internal static byte[] Descriptor(VisibilityDescriptor value) => Encode(w => Visibility(w, value));
+	internal static VisibilityDescriptor DescriptorValue(byte[] bytes) => Decode(bytes, Visibility);
 	internal static byte[] Catalog(WikiSemanticCatalogEntry entry) => Encode(w => { w.Write(entry.References); w.Write(entry.Descriptor.Length); w.Write(entry.Descriptor); });
 	internal static WikiSemanticCatalogEntry Catalog(byte[] bytes) => Decode(bytes, r => new WikiSemanticCatalogEntry(r.ReadInt64(), Blob(r, WikiSemanticLimits.MaxDescriptorBytes)));
 	internal static byte[] Summary(WikiSemanticSummaryState state) => Encode(w =>

@@ -115,7 +115,7 @@ public sealed class WikiAccessService(
 		=> reader.Dbref is { Length: > 0 } me && string.Equals(page.AuthorDbref, me, StringComparison.Ordinal);
 
 	/// <summary>The global scope for the action (and for reading), then, unless the reader bypasses them, every requirement.</summary>
-	private static WikiDecision Decide(WikiReader reader, WikiRequirements requirements, string ns,
+	internal static WikiDecision Decide(WikiReader reader, WikiRequirements requirements, string ns,
 		IEnumerable<string> categories, string? pageId, WikiAction action)
 	{
 		foreach (var global in new[] { WikiRequirements.GlobalScope(WikiAction.Read), WikiRequirements.GlobalScope(action) }.Distinct())

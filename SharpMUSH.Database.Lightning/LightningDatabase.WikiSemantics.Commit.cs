@@ -160,7 +160,7 @@ public partial class LightningDatabase
 			new(updated.Namespace, [.. updated.Categories ?? []], rules, updated.Published ?? true, updated.Published == false ? updated.AuthorDbref : null));
 		try { work.Lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 		catch (InvalidDataException) { throw new WikiSemanticCapacityException("projection"); }
-		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(1, []), false, work.Budget.CancellationToken);
+		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, work.Budget.CancellationToken);
 		if (prepared is not PreparedWikiProjection editProjection) throw new WikiSemanticCapacityException("projection");
 		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
 		var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries,
