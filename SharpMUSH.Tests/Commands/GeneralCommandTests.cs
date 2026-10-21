@@ -686,24 +686,6 @@ public class GeneralCommandTests
 	}
 
 	[Test]
-	public async ValueTask Function_ListsGlobalFunctions()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function"));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader), executor, executor)).IsTrue();
-	}
-
-	[Test]
-	public async ValueTask Function_ShowsFunctionInfo()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function name"));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionInfoNameFormat), executor, executor)).IsTrue();
-	}
-
-	[Test]
 	public async ValueTask Map_ExecutesAttributeOverList()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

@@ -53,6 +53,12 @@ The mark is data, not display. The separator prints as its text, `stripansi()` k
 
 Marked separators are opt-in. Every list function still defaults to a space, and a plain delimiter splits on every occurrence, marked or not, as it does in PennMUSH.
 
+- [list separators writing]: what a separator can be
+- [list separators keeping]: where a result keeps the mark
+- [list separators nesting]: lists inside lists
+- [list separators players]: text a player typed, and unmark()
+- [list separators seeing]: showing which characters are marked
+
 ## Writing a separator
 
 `%*<text>` evaluates `text` first, so a separator can be anything a function can return:

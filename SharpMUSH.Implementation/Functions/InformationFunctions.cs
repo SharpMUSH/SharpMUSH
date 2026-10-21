@@ -326,7 +326,7 @@ public partial class Functions
 			{
 				var name = found.Object().Name;
 				return ValueTask.FromResult(new CallState(
-					string.Join(" ", found switch
+					string.Join(PlayerAliases.Delimiter, found switch
 					{
 						SharpExit exit => [name, .. exit.Aliases ?? []],
 						SharpPlayer or SharpRoom or SharpThing => [name]

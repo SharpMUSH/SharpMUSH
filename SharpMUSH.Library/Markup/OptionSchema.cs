@@ -104,7 +104,7 @@ public sealed class OptionSchema<T> where T : class
 				return new Error<string>($"#-1 UNKNOWN LAYOUT OPTION {member.Key.ToUpperInvariant()}");
 			if (pairs.Any(pair => pair.Option == option))
 				return new Error<string>($"#-1 DUPLICATE LAYOUT OPTION {member.Key.ToUpperInvariant()}");
-			if ((option.Accepts & member.Kind) == 0) return Invalid;
+			if ((option.Accepts & member.Kind) == 0) return OptionObject.Named(option.Key, new Error<string>(ErrorMessages.Returns.InvalidArgument));
 			pairs.Add((option, member.Value));
 		}
 
@@ -133,7 +133,7 @@ public sealed class OptionSchema<T> where T : class
 				// A pattern on a union whose case is a type parameter is refused (CS8780), so the case is read
 				// from the boxed value; T is a class, so it cannot be the error.
 				T applied => Run(pairs, index + 1, applied),
-				Error<string> error => error,
+				Error<string> error => OptionObject.Named(pairs[index].Option.Key, error),
 				_ => throw new InvalidOperationException("A layout option returned neither settings nor an error."),
 			};
 
@@ -164,22 +164,27 @@ public enum ValueKind
 /// <summary>
 /// A layout function's options read as one JSON object. Read over the marked-up text rather than its
 /// plain text, so a string value keeps the colour it was written in; an escape becomes a plain character.
+/// A string may hold a newline or a tab as it is, so <c>%r</c> and <c>%t</c> work inside the braces.
 /// </summary>
 public static class OptionObject
 {
 	/// <summary>One member: its key, lower-cased, the kind of value, and the value as text.</summary>
 	public sealed record Member(string Key, ValueKind Kind, MString Value);
 
-	/// <summary>The members of the object <paramref name="text"/> holds, in order; none for empty text.</summary>
+	/// <summary>
+	/// The members of the object <paramref name="text"/> holds, in order; none for empty text. Text that does not
+	/// begin as an object is <see cref="OptionSchema{T}.NotAnObject"/>; an object that breaks off says what was
+	/// expected and at which character.
+	/// </summary>
 	public static Result<IReadOnlyList<Member>> Read(MString text)
 	{
-		var source = text.Text;
-		var position = 0;
-		SkipSpace(source, ref position);
-		if (position == source.Length) return new List<Member>();
-		if (ReadObject(text, ref position) is not { } members) return NotAnObject;
-		SkipSpace(source, ref position);
-		return position == source.Length ? members : NotAnObject;
+		var reader = new Reader(text);
+		reader.SkipSpace();
+		if (reader.AtEnd) return new List<Member>();
+		if (reader.Peek != '{') return new Error<string>(OptionSchema<object>.NotAnObject);
+		if (reader.ReadObject() is not { } members) return reader.Failure;
+		reader.SkipSpace();
+		return reader.AtEnd ? members : reader.Fail("TEXT AFTER THE OBJECT");
 	}
 
 	/// <summary>
@@ -188,28 +193,23 @@ public static class OptionObject
 	/// </summary>
 	public static IReadOnlyList<IReadOnlyList<Member>>? ReadArray(MString text)
 	{
-		var source = text.Text;
-		var position = 0;
+		var reader = new Reader(text);
 		var items = new List<IReadOnlyList<Member>>();
-		SkipSpace(source, ref position);
-		if (position == source.Length || source[position++] != '[') return null;
-		SkipSpace(source, ref position);
-		if (position < source.Length && source[position] == ']')
-		{
-			position++;
-		}
-		else
+		reader.SkipSpace();
+		if (!reader.Take('[')) return null;
+		reader.SkipSpace();
+		if (!reader.Take(']'))
 		{
 			while (true)
 			{
-				SkipSpace(source, ref position);
-				if (position == source.Length) return null;
-				if (source[position] == '"')
+				reader.SkipSpace();
+				if (reader.AtEnd) return null;
+				if (reader.Peek == '"')
 				{
-					if (ReadString(text, ref position) is not { } value) return null;
+					if (reader.ReadString() is not { } value) return null;
 					items.Add([new Member("text", ValueKind.String, value)]);
 				}
-				else if (ReadObject(text, ref position) is { } members)
+				else if (reader.ReadObject() is { } members)
 				{
 					items.Add(members);
 				}
@@ -217,159 +217,219 @@ public static class OptionObject
 				{
 					return null;
 				}
-				SkipSpace(source, ref position);
-				if (position == source.Length) return null;
-				var next = source[position++];
-				if (next == ']') break;
-				if (next != ',') return null;
+				reader.SkipSpace();
+				if (reader.Take(']')) break;
+				if (!reader.Take(',')) return null;
 			}
 		}
-		SkipSpace(source, ref position);
-		return position == source.Length ? items : null;
-	}
-
-	/// <summary>The object at <paramref name="position"/>, its members in order; null when it is not one.</summary>
-	private static List<Member>? ReadObject(MString text, ref int position)
-	{
-		var source = text.Text;
-		var members = new List<Member>();
-		if (position == source.Length || source[position++] != '{') return null;
-
-		SkipSpace(source, ref position);
-		if (position < source.Length && source[position] == '}')
-		{
-			position++;
-			return members;
-		}
-
-		while (true)
-		{
-			SkipSpace(source, ref position);
-			if (ReadString(text, ref position) is not { } key) return null;
-			SkipSpace(source, ref position);
-			if (position == source.Length || source[position++] != ':') return null;
-			SkipSpace(source, ref position);
-			if (ReadValue(text, ref position) is not var (kind, value)) return null;
-			members.Add(new Member(key.ToPlainText().ToLowerInvariant(), kind, value));
-			SkipSpace(source, ref position);
-			if (position == source.Length) return null;
-			var next = source[position++];
-			if (next == '}') return members;
-			if (next != ',') return null;
-		}
-	}
-
-	private static Error<string> NotAnObject => new(OptionSchema<object>.NotAnObject);
-
-	private static void SkipSpace(string source, ref int position)
-	{
-		while (position < source.Length && source[position] is ' ' or '\t' or '\n' or '\r') position++;
-	}
-
-	private static (ValueKind Kind, MString Value)? ReadValue(MString text, ref int position)
-	{
-		var source = text.Text;
-		if (position == source.Length) return null;
-		if (source[position] == '"') return ReadString(text, ref position) is { } value ? (ValueKind.String, value) : null;
-		if (source[position] is '{' or '[')
-		{
-			// Kept with its markup, so a title in an array of titles keeps its colour.
-			var opened = position;
-			return ReadNested(source, ref position) is not null ? (ValueKind.Json, text.Substring(opened, position - opened)) : null;
-		}
-
-		foreach (var literal in (ReadOnlySpan<string>)["true", "false"])
-		{
-			if (string.CompareOrdinal(source, position, literal, 0, literal.Length) != 0) continue;
-			position += literal.Length;
-			return (ValueKind.Boolean, MarkupText.Plain(literal));
-		}
-
-		var start = position;
-		if (position < source.Length && source[position] == '-') position++;
-		var digits = position;
-		while (position < source.Length && (char.IsAsciiDigit(source[position]) || source[position] is '.' or 'e' or 'E' or '+' or '-')) position++;
-		var number = source[start..position];
-		return position > digits && double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _)
-			? (ValueKind.Number, MarkupText.Plain(number))
-			: null;
+		reader.SkipSpace();
+		return reader.AtEnd ? items : null;
 	}
 
 	/// <summary>
-	/// The object or array at <paramref name="position"/> as written, up to the bracket that closes it,
-	/// strings skipped whole; whether it is valid JSON is for the option reading it to say.
+	/// <paramref name="error"/> with the option it came from named, when it is one of the two errors any option
+	/// can give (<see cref="ErrorMessages.Returns.InvalidArgument"/>, <see cref="ErrorMessages.Returns.ArgRange"/>):
+	/// <c>#-1 LAYOUT OPTION GROW: INVALID ARGUMENT</c>. An error of an option's own already says what is wrong.
 	/// </summary>
-	private static string? ReadNested(string source, ref int position)
+	public static Error<string> Named(string key, Error<string> error) =>
+		error.Value is ErrorMessages.Returns.InvalidArgument or ErrorMessages.Returns.ArgRange
+			? new Error<string>($"#-1 LAYOUT OPTION {key.ToUpperInvariant()}: {error.Value["#-1 ".Length..]}")
+			: error;
+
+	/// <summary>A walk over the text of the options, which remembers the first place it could not read.</summary>
+	private sealed class Reader(MString text)
 	{
-		var start = position;
-		var depth = 0;
-		var inString = false;
-		for (; position < source.Length; position++)
+		private readonly string _source = text.Text;
+		private int _position;
+		private (string Expected, int Position)? _failed;
+
+		public bool AtEnd => _position == _source.Length;
+
+		public char Peek => _source[_position];
+
+		/// <summary>Why the text could not be read, and the character (from 1) where reading stopped.</summary>
+		public Error<string> Failure => _failed is var (expected, position)
+			? new Error<string>($"#-1 LAYOUT OPTIONS: {expected} AT CHARACTER {position + 1}")
+			: new Error<string>(OptionSchema<object>.NotAnObject);
+
+		/// <summary>Notes, the first time, what was expected here; <see cref="Failure"/> reports it.</summary>
+		public Error<string> Fail(string expected)
 		{
-			var c = source[position];
-			if (inString)
-			{
-				if (c == '\\') position++;
-				else if (c == '"') inString = false;
-				continue;
-			}
-			if (c == '"') inString = true;
-			else if (c is '{' or '[') depth++;
-			else if (c is '}' or ']' && --depth == 0) return source[start..++position];
-		}
-		return null;
-	}
-
-	/// <summary>The string at <paramref name="position"/>, its unescaped runs cut from the text with their markup.</summary>
-	private static MString? ReadString(MString text, ref int position)
-	{
-		var source = text.Text;
-		if (position == source.Length || source[position] != '"') return null;
-		position++;
-
-		var parts = new List<MString>();
-		var run = position;
-		while (position < source.Length)
-		{
-			var c = source[position];
-			if (c == '"')
-			{
-				parts.Add(text.Substring(run, position - run));
-				position++;
-				return MarkupText.Concat([.. parts]);
-			}
-
-			if (char.IsControl(c)) return null;
-			if (c != '\\')
-			{
-				position++;
-				continue;
-			}
-
-			parts.Add(text.Substring(run, position - run));
-			if (++position == source.Length) return null;
-			var escaped = source[position++] switch
-			{
-				'"' => "\"",
-				'\\' => "\\",
-				'/' => "/",
-				'b' => "\b",
-				'f' => "\f",
-				'n' => "\n",
-				'r' => "\r",
-				't' => "\t",
-				'u' when position + 4 <= source.Length
-					&& int.TryParse(source.AsSpan(position, 4), System.Globalization.NumberStyles.AllowHexSpecifier, null, out var code)
-					=> ((char)code).ToString(),
-				_ => null,
-			};
-			if (escaped is null) return null;
-			if (source[position - 1] == 'u') position += 4;
-			parts.Add(MarkupText.Plain(escaped));
-			run = position;
+			_failed ??= (expected, _position);
+			return Failure;
 		}
 
-		return null;
+		public void SkipSpace()
+		{
+			while (!AtEnd && Peek is ' ' or '\t' or '\n' or '\r') _position++;
+		}
+
+		/// <summary>Steps over <paramref name="c"/> when it is next.</summary>
+		public bool Take(char c)
+		{
+			if (AtEnd || Peek != c) return false;
+			_position++;
+			return true;
+		}
+
+		/// <summary>The object here, its members in order; null when it is not one.</summary>
+		public List<Member>? ReadObject()
+		{
+			var members = new List<Member>();
+			if (!Take('{'))
+			{
+				Fail("EXPECTED {");
+				return null;
+			}
+
+			SkipSpace();
+			if (Take('}')) return members;
+
+			while (true)
+			{
+				SkipSpace();
+				if (AtEnd || Peek != '"')
+				{
+					Fail("EXPECTED A KEY IN DOUBLE QUOTES");
+					return null;
+				}
+				if (ReadString() is not { } key) return null;
+				SkipSpace();
+				if (!Take(':'))
+				{
+					Fail("EXPECTED :");
+					return null;
+				}
+				SkipSpace();
+				if (ReadValue() is not var (kind, value)) return null;
+				members.Add(new Member(key.ToPlainText().ToLowerInvariant(), kind, value));
+				SkipSpace();
+				if (Take('}')) return members;
+				if (!Take(','))
+				{
+					Fail("EXPECTED , OR }");
+					return null;
+				}
+			}
+		}
+
+		private (ValueKind Kind, MString Value)? ReadValue()
+		{
+			if (AtEnd)
+			{
+				Fail("EXPECTED A VALUE");
+				return null;
+			}
+			if (Peek == '"') return ReadString() is { } value ? (ValueKind.String, value) : null;
+			if (Peek is '{' or '[')
+			{
+				// Kept with its markup, so a title in an array of titles keeps its colour.
+				var opened = _position;
+				return SkipNested() ? (ValueKind.Json, text.Substring(opened, _position - opened)) : null;
+			}
+
+			foreach (var literal in (ReadOnlySpan<string>)["true", "false"])
+			{
+				if (string.CompareOrdinal(_source, _position, literal, 0, literal.Length) != 0) continue;
+				_position += literal.Length;
+				return (ValueKind.Boolean, MarkupText.Plain(literal));
+			}
+
+			var start = _position;
+			if (!AtEnd && Peek == '-') _position++;
+			var digits = _position;
+			while (!AtEnd && (char.IsAsciiDigit(Peek) || Peek is '.' or 'e' or 'E' or '+' or '-')) _position++;
+			var number = _source[start.._position];
+			if (_position > digits && double.TryParse(number, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _))
+				return (ValueKind.Number, MarkupText.Plain(number));
+			_position = start;
+			Fail("EXPECTED A VALUE");
+			return null;
+		}
+
+		/// <summary>
+		/// Steps over the object or array here, up to the bracket that closes it, strings skipped whole; whether it
+		/// is valid JSON is for the option reading it to say.
+		/// </summary>
+		private bool SkipNested()
+		{
+			var depth = 0;
+			var inString = false;
+			for (; !AtEnd; _position++)
+			{
+				var c = Peek;
+				if (inString)
+				{
+					if (c == '\\') _position++;
+					else if (c == '"') inString = false;
+					continue;
+				}
+				if (c == '"') inString = true;
+				else if (c is '{' or '[') depth++;
+				else if (c is '}' or ']' && --depth == 0)
+				{
+					_position++;
+					return true;
+				}
+			}
+			Fail("EXPECTED ] OR }");
+			return false;
+		}
+
+		/// <summary>The string here, its unescaped runs cut from the text with their markup.</summary>
+		public MString? ReadString()
+		{
+			if (!Take('"')) return null;
+
+			var parts = new List<MString>();
+			var run = _position;
+			while (!AtEnd)
+			{
+				var c = Peek;
+				if (c == '"')
+				{
+					parts.Add(text.Substring(run, _position - run));
+					_position++;
+					return MarkupText.Concat([.. parts]);
+				}
+
+				if (c != '\\')
+				{
+					_position++;
+					continue;
+				}
+
+				parts.Add(text.Substring(run, _position - run));
+				if (++_position == _source.Length) break;
+				var escaped = _source[_position] switch
+				{
+					'"' => "\"",
+					'\\' => "\\",
+					'/' => "/",
+					'b' => "\b",
+					'f' => "\f",
+					'n' => "\n",
+					'r' => "\r",
+					't' => "\t",
+					'u' when _position + 5 <= _source.Length
+						&& int.TryParse(_source.AsSpan(_position + 1, 4), System.Globalization.NumberStyles.AllowHexSpecifier, null, out var code)
+						=> ((char)code).ToString(),
+					_ => null,
+				};
+				if (escaped is null)
+				{
+					_position--;
+					Fail("UNKNOWN ESCAPE");
+					return null;
+				}
+				_position += Peek == 'u' ? 5 : 1;
+				parts.Add(MarkupText.Plain(escaped));
+				run = _position;
+			}
+
+			Fail("EXPECTED \" TO CLOSE THE STRING");
+			return null;
+		}
 	}
 }
 
