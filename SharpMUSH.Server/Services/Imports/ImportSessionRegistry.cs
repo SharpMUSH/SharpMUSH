@@ -13,7 +13,8 @@ public sealed class ImportSessionRegistry(ImportPreviewCoordinator previews, Imp
 {
 	private readonly ConcurrentDictionary<string, (CancellationTokenSource Cancellation, Task Work)> _running = new();
 
-	public string Start(DatabaseImportFiles files, string? configuration, ConfigurationSnapshot baseline, string uploadDirectory)
+	public string Start(DatabaseImportFiles files, string? configuration, ConfigurationSnapshot baseline,
+		PortalAdministrator? administrator, string uploadDirectory)
 	{
 		var session = journal.Create();
 		var cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.ApplicationStopping);
@@ -21,7 +22,7 @@ public sealed class ImportSessionRegistry(ImportPreviewCoordinator previews, Imp
 		if (!_running.TryAdd(session.Id, (cancellation, completion.Task))) throw new InvalidOperationException("Duplicate import identifier.");
 		_ = Task.Run(async () =>
 		{
-			try { await previews.PreviewSessionAsync(session, files, configuration, baseline, cancellation.Token); }
+			try { await previews.PreviewSessionAsync(session, files, configuration, baseline, administrator, cancellation.Token); }
 			catch (Exception error) { logger.LogError("Import {SessionId} worker cleanup failed: {ErrorType}", session.Id, error.GetType().Name); }
 			finally
 			{
