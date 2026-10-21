@@ -4,7 +4,8 @@
 
 @* An application page joins the section its NavPlacement names (README §3): Build and Manage apps
    sit in Build & manage with its sidebar; an app in a section of its own gets that section's list of
-   apps as its sidebar; Play and World apps (and unplaced ones) have no section sidebar. *@
+   apps as its sidebar. Play and World apps (and unplaced ones) have no section sidebar, but one that
+   serves links of its own (nav_url) gets them as its sidebar, or nobody could reach its other pages. *@
 @if (App?.NavPlacement is { } placement && IsBuild(placement))
 {
     <SectionShell Key="build" Class="build-shell" NavLabel="@Loc["NavBuildManage"]" PadBody="false">
@@ -16,6 +17,13 @@ else if (App?.NavPlacement is { } novel && !PortalNavSections.BuiltInSections.Co
 {
     <SectionShell Key="@($"apps-{novel.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@novel" PadBody="false">
         <Nav Context="collapsed"><AppSectionSidebar Section="@novel" Collapsed="@collapsed" /></Nav>
+        <ChildContent>@ChildContent</ChildContent>
+    </SectionShell>
+}
+else if (App is { NavUrl: { Length: > 0 }, NavPlacement: { } builtIn })
+{
+    <SectionShell Key="@($"app-{App.Slug.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@App.DisplayName" PadBody="false">
+        <Nav Context="collapsed"><AppSectionSidebar Section="@builtIn" Slug="@App.Slug" Collapsed="@collapsed" /></Nav>
         <ChildContent>@ChildContent</ChildContent>
     </SectionShell>
 }
