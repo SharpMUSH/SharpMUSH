@@ -16,13 +16,24 @@ public partial class LightningDatabase
 		var pageId = WikiPageId(key);
 		var pageKey = LegacyBytes(work, 8, () => WikiPageKey(key));
 		var old = work.Read(Tables.WikiPage, pageKey, DecodeLegacyPage, 32, 2048);
-		// Activation forbids these entire tables; every later writer remains fenced. Never silently
-		// turn an unexpected row into an unsupported locale/package cascade.
-		foreach (var table in new[] { Tables.WikiTr, Tables.PkgWiki })
+		// Activation forbids translations entirely and every later writer remains fenced. Never silently
+		// turn an unexpected row into an unsupported locale cascade.
+		using (var translations = work.Reader.ReadRange(Tables.WikiTr, [], [], [], [], work.Budget))
 		{
-			using var forbidden = work.Reader.ReadRange(table, [], [], [], [], work.Budget);
-			if (!forbidden.Exhausted) throw new NativeReadLimitException("records");
-			if (!forbidden.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki ownership or translations.");
+			if (!translations.Exhausted) throw new NativeReadLimitException("records");
+			if (!translations.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki translations.");
+		}
+		// A package's page is the package's to delete: it releases the page first, which makes it the game's again.
+		using (var owned = work.Reader.ReadRange(Tables.PkgWiki, [], [], [], [], work.Budget))
+		{
+			if (!owned.Exhausted) throw new NativeReadLimitException("records");
+			foreach (var row in owned.Entries)
+			{
+				work.Lifetime.ReserveAdditional(checked(2048 + 24L * row.Value.Length));
+				var ownership = Codec.Deserialize<Records.PackageWikiPageRecord>(row.Value) ?? throw new InvalidDataException("Invalid package page row.");
+				if (TryParseWikiPageId(ownership.PageId, out var ownedKey) && ownedKey == key)
+					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
+			}
 		}
 		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
 		if (nativeId == 0)

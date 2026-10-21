@@ -45,12 +45,12 @@ public sealed partial class LightningStore
 	{
 		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
 			throw SemanticFixtureCapability.Unavailable();
-		tracking.Owner.RequirePackageAttempt(lease);
+		tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 		ct.ThrowIfCancellationRequested();
 		return _writer.EnqueueRawAsync(tx =>
 		{
 			// The raw writer has acquired this store's native lifetime gate before this recheck.
-			tracking.Owner.RequirePackageAttempt(lease);
+			tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 			ct.ThrowIfCancellationRequested();
 			var meta = _tables[Tables.Meta];
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId)
@@ -118,6 +118,18 @@ public sealed partial class LightningStore
 	}
 
 	/// <summary>
+	/// Whether a package history may be activated over: settled at any generation, or untouched (UNKNOWN at 0).
+	/// An unsettled history cannot prove its operations ended, so it still precludes activation.
+	/// </summary>
+	internal static bool IsActivatableFixturePackageState(ReadOnlySpan<byte> marker, Guid identity)
+	{
+		if (IsSettledFixturePackageState(marker, identity)) return true;
+		Span<byte> untouched = stackalloc byte[32];
+		EncodeUnknownPackageState(untouched, identity, 0);
+		return marker.SequenceEqual(untouched);
+	}
+
+	/// <summary>
 	/// What a reader may conclude from the package marker it read in its own snapshot: SETTLED only for a
 	/// well-formed version-1 marker of <paramref name="identity"/> whose state is settled; anything else,
 	/// missing or malformed included, is UNKNOWN.
@@ -179,7 +191,8 @@ public sealed partial class LightningStore
 				if (ClassifyFixtureTable(table.Name) is { } version) AdvanceFixtureVersion(version);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
 				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
-				if (!tracking.Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
+				if (!tracking.Owner.AdmitPackageMutation(tracking.Owner.IsLiveRoot(tracking.Lease, PackageSubmitter?.Root ?? PackageSubmitter)))
+					throw SemanticFixtureCapability.Unavailable();
 				var meta = Db(Tables.Meta);
 				var identity = tracking.Owner.FixtureId;
 				if (!TryReadFixtureIdentity(tx, meta, out var actual) || actual != identity)

@@ -10,6 +10,8 @@ namespace SharpMUSH.Tests;
 internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 {
 	private const string Refusal = "Package mutations are unavailable in this atomic wiki fixture slice.";
+	private const string ReadRequirementRefusal = "A package that declares read requirements for its wiki pages cannot be applied to an active semantic wiki yet: "
+		+ "a read requirement changes which readers see a page, and that rewrite is not supported.";
 	private readonly PackageInstallService _inner;
 	private readonly LightningDatabase _provider;
 	internal SemanticFixtureCapability Owner { get; }
@@ -20,6 +22,9 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		Owner = owner;
 		owner.RegisterPackageFence(runner: false);
 	}
+	/// <summary>An active fixture admits installer work only inside a live coordinated operation.</summary>
+	private bool Admit() => Owner.AdmitPackageMutation(coordinated: _provider.CurrentSemanticFixturePackageOperation is not null);
+
 	/// <summary>Test seam: runs after the attempt is retained and immediately before the installer's own work.</summary>
 	internal Func<Task>? BeforeInstallerWorkForTests { get; set; }
 
@@ -65,17 +70,20 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 	public async Task<Result<PackageApplyResult>> ApplyAsync(PackageManifest manifest, PackageApplyRequest request,
 		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
-		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
+		// Refused before admission, so a refused apply begins nothing and writes nothing.
+		if (Owner.Phase == SemanticFixturePhase.Active && manifest.WikiPages.Any(page => page.Requires.View.Count > 0))
+			return new Error<string>(ReadRequirementRefusal);
+		if (!Admit()) return new Error<string>(Refusal);
 		return await AttemptAsync(() => _inner.ApplyAsync(manifest, request, cancellationToken, fileSource), cancellationToken);
 	}
 	public async Task<Result<Success>> UninstallAsync(string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
-		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
+		if (!Admit()) return new Error<string>(Refusal);
 		return await AttemptAsync(() => _inner.UninstallAsync(packageId, force, cancellationToken), cancellationToken);
 	}
 	public async Task<Result<PackageRollbackResult>> RollbackAsync(string packageId, int revision, CancellationToken cancellationToken = default)
 	{
-		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
+		if (!Admit()) return new Error<string>(Refusal);
 		return await AttemptAsync(() => _inner.RollbackAsync(packageId, revision, cancellationToken), cancellationToken);
 	}
 }

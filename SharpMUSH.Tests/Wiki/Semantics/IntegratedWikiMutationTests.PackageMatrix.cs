@@ -100,7 +100,7 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task EarlierRunnerDeferredHookRetainsPermanentAdmissionAcrossCancelledWaiter()
+	public async Task ARunnersDeferredHookPreventsActivationUntilItsOperationSettles()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
@@ -135,7 +135,11 @@ public partial class IntegratedWikiMutationTests
 			await finished.Task.WaitAsync(TimeSpan.FromSeconds(30));
 		}
 		await Assert.That((await parent).Expect<PackageOperationRan<int>>().Result).IsEqualTo(9);
-		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
+		// Its coordinator joined the hook and certified the operation, so the history is settled and activatable.
+		await ((SemanticWikiPackageOperationRunner)host.Services.GetRequiredService<IPackageOperationRunner>()).WhenIdleAsync();
+		await Assert.That(Settled(host)).IsTrue();
+		await host.ActivateAtomicWikiProjectionAsync();
+		await host.CloseAsync();
 	}
 
 	[Test]
@@ -154,7 +158,7 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task ActiveEntriesRefuseBeforeHeldQueueGateBackupAndProvenance()
+	public async Task ActiveDirectEntriesRefuseBeforeHeldQueueGateBackupAndProvenance()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
@@ -175,11 +179,6 @@ public partial class IntegratedWikiMutationTests
 		{
 			var files = BackupFiles(host);
 			var invoked = false;
-			var runner = host.Services.GetRequiredService<IPackageOperationRunner>().RunAsync("fixture-active-held",
-				_ => { invoked = true; return Task.FromResult(1); }, provenance: _ => { invoked = true; throw new ActivationFault(); });
-			pending.Add(runner);
-			await Assert.That(runner.IsCompleted).IsTrue();
-			await Assert.That(await runner is PackageOperationRefused).IsTrue();
 			var installer = host.Services.GetRequiredService<IPackageInstallService>();
 			var apply = installer.ApplyAsync(MatrixManifest(), MatrixRequest());
 			var uninstall = installer.UninstallAsync("fixture-matrix-missing");
@@ -189,8 +188,13 @@ public partial class IntegratedWikiMutationTests
 			await Assert.That(await apply is Error<string>).IsTrue();
 			await Assert.That(await uninstall is Error<string>).IsTrue();
 			await Assert.That(await rollback is Error<string>).IsTrue();
-			await Assert.That(invoked).IsFalse();
 			await Assert.That(BackupFiles(host)).IsEquivalentTo(files);
+			// A coordinated operation is admitted on an active projection, and waits behind the held gate.
+			var runner = host.Services.GetRequiredService<IPackageOperationRunner>().RunAsync("fixture-active-held",
+				_ => { invoked = true; return Task.FromResult(1); });
+			pending.Add(runner);
+			await Assert.That(runner.IsCompleted).IsFalse();
+			await Assert.That(invoked).IsFalse();
 		}
 		finally
 		{

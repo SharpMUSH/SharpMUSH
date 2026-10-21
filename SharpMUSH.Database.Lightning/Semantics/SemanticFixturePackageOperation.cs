@@ -64,13 +64,21 @@ internal sealed partial class SemanticFixtureCapability
 {
 	private readonly Dictionary<SemanticFixtureLease, HashSet<SemanticFixturePackageOperation>> _packageOperations = new(ReferenceEqualityComparer.Instance);
 
+	/// <summary>Refuses while any package operation is retained on <paramref name="lease"/>.</summary>
+	internal void RequireNoPackageOperation(SemanticFixtureLease lease)
+	{
+		lock (_gate)
+			if (_packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0)
+				throw new SemanticFixtureOperationInProgressException();
+	}
+
 	private bool HasRetainedOperations(SemanticFixtureLease lease)
 		=> _packageOperations.TryGetValue(lease, out var operations) && operations.Count != 0 || HasAdmittedReads(lease);
-	internal SemanticFixturePackageOperation RetainPackageOperation(SemanticFixtureLease lease)
+	internal SemanticFixturePackageOperation RetainPackageOperation(SemanticFixtureLease lease, bool coordinated = false)
 	{
 		lock (_gate)
 		{
-			RequirePackageAttempt(lease);
+			RequirePackageAttempt(lease, coordinated);
 			var operation = new SemanticFixturePackageOperation(lease);
 			if (!_packageOperations.TryGetValue(lease, out var operations))
 				_packageOperations.Add(lease, operations = new(ReferenceEqualityComparer.Instance));
@@ -90,7 +98,7 @@ internal sealed partial class SemanticFixtureCapability
 			if (root is not { IsRoot: true, IsReleased: false } || !ReferenceEquals(root.Lease, lease)
 				|| !_packageOperations.TryGetValue(lease, out var operations) || !operations.Contains(root))
 				return null;
-			RequirePackageAttempt(lease);
+			RequirePackageAttempt(lease, coordinated: true);
 			var child = new SemanticFixturePackageOperation(lease, root);
 			operations.Add(child);
 			root.OpenChildren++;
@@ -148,7 +156,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			RequirePackageAttempt(lease);
+			RequirePackageAttempt(lease, coordinated: true);
 			return root is { IsRoot: true, IsReleased: false, Tainted: false, OpenChildren: 0, ChildFailed: false }
 				&& root.CommittedChildren > 0 && root.ExpectedGeneration == generation && ReferenceEquals(root.Lease, lease)
 				&& _packageOperations.TryGetValue(lease, out var operations) && operations.Count == 1 && operations.Contains(root);

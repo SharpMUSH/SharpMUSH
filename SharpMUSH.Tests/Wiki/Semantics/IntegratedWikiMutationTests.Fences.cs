@@ -27,9 +27,11 @@ public partial class IntegratedWikiMutationTests
 			page.MarkdownSource, page.Categories, page.Published, PackageWikiRequires.None, false, "1.0.0");
 		foreach (var operation in new Func<Task>[]
 		{
-			async () => { await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id), WikiRequirementSet.Protection, "#1"); },
+			// A read requirement would move the page to another visibility class; edit and delete ones are plain rows.
+			async () => { await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id), new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = ["lore.read"] }, "#1"); },
 			async () => { await wiki.UpsertTranslationAsync(page.Id, "fr", "Translated target", "translation", "#1", null, true, null); },
 			async () => { await wiki.DeleteTranslationAsync(page.Id, "fr", "#1"); },
+			// Outside a coordinated operation's flow, a package's wiki ownership is not taken.
 			() => provider.UpsertPackageWikiPageAsync(owner),
 			() => provider.RemovePackageWikiPageAsync(owner.PackageId, owner.Namespace, owner.Slug),
 			() => provider.RemoveInstalledPackageAsync(owner.PackageId),
@@ -95,7 +97,7 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task CancelledRunnerAdmissionPermanentlyPreventsActivationBeforeDelegates()
+	public async Task ACoordinatedRunnerCancelledBeforeItsDelegatesLeavesTheHistoryActivatable()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
@@ -106,9 +108,11 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(() => runner.RunAsync("cancelled-fixture-admission", _ => { invoked = true; return Task.FromResult(1); }, cancellation.Token))
 			.Throws<OperationCanceledException>();
 		await Assert.That(invoked).IsFalse();
-		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
+		// It wrote nothing, so the history is still untouched; only uncoordinated or unsettled work precludes activation.
+		await Assert.That(PackageState(host.Services.GetRequiredService<LightningDatabase>()).SequenceEqual(UnknownPackageState(host.FixtureId, 0))).IsTrue();
+		await host.ActivateAtomicWikiProjectionAsync();
+		await Assert.That(Settled(host)).IsTrue();
 		await host.CloseAsync();
-		await AssertNoSemanticTables(host.WorldPath);
 	}
 
 	[Test]

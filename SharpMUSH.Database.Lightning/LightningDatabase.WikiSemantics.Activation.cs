@@ -30,7 +30,17 @@ public partial class LightningDatabase
 			throw SemanticFixtureCapability.Unavailable();
 		var budget = ActivationBudget(ct);
 		// Refusal here cannot change fixture phase, fingerprint or native layout.
-		try { Store.Read(tx => { RequireWikiCategoryReady(tx, budget); return true; }); }
+		try
+		{
+			Store.Read(tx =>
+			{
+				RequireWikiCategoryReady(tx, budget);
+				if (!tx.TryGet(Tables.Meta, LightningStore.FixturePackageStateKeyBytes, out var marker)
+					|| !LightningStore.IsActivatableFixturePackageState(marker, lease.FixtureId))
+					throw SemanticFixtureCapability.Unavailable();
+				return true;
+			});
+		}
 		catch (NativeReadLimitException limit)
 		{
 			throw new WikiFixtureMutationException(limit.Dimension == "working-bytes" ? WikiFixtureMutationFailure.Quota : WikiFixtureMutationFailure.WorkLimit);
