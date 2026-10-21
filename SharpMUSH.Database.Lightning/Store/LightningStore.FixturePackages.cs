@@ -38,6 +38,13 @@ public sealed partial class LightningStore
 		};
 	}
 
+	/// <summary>
+	/// A rebuild's write of a staged generation, a journal it consumed, or a retired generation: rows no reader
+	/// pins, so they advance no fixture version. The job must touch nothing a reader of the active generation reads.
+	/// </summary>
+	internal ValueTask<T> WriteStagedSemanticAsync<T>(Func<ITx, T> job, CancellationToken ct = default)
+		=> WriteAsync(tx => { ((Tx)tx).StagedSemanticWrite = true; return job(tx); }, ct);
+
 	// A conservative attempt fence: successful return proves only a committed UNKNOWN marker.
 	// The writer owns completion through commit; cancellation never detaches an in-flight transaction.
 	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct,
@@ -45,12 +52,12 @@ public sealed partial class LightningStore
 	{
 		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
 			throw SemanticFixtureCapability.Unavailable();
-		tracking.Owner.RequirePackageAttempt(lease);
+		tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 		ct.ThrowIfCancellationRequested();
 		return _writer.EnqueueRawAsync(tx =>
 		{
 			// The raw writer has acquired this store's native lifetime gate before this recheck.
-			tracking.Owner.RequirePackageAttempt(lease);
+			tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 			ct.ThrowIfCancellationRequested();
 			var meta = _tables[Tables.Meta];
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId)
@@ -118,6 +125,18 @@ public sealed partial class LightningStore
 	}
 
 	/// <summary>
+	/// Whether a package history may be activated over: settled at any generation, or untouched (UNKNOWN at 0).
+	/// An unsettled history cannot prove its operations ended, so it still precludes activation.
+	/// </summary>
+	internal static bool IsActivatableFixturePackageState(ReadOnlySpan<byte> marker, Guid identity)
+	{
+		if (IsSettledFixturePackageState(marker, identity)) return true;
+		Span<byte> untouched = stackalloc byte[32];
+		EncodeUnknownPackageState(untouched, identity, 0);
+		return marker.SequenceEqual(untouched);
+	}
+
+	/// <summary>
 	/// What a reader may conclude from the package marker it read in its own snapshot: SETTLED only for a
 	/// well-formed version-1 marker of <paramref name="identity"/> whose state is settled; anything else,
 	/// missing or malformed included, is UNKNOWN.
@@ -161,6 +180,8 @@ public sealed partial class LightningStore
 		internal LmdbDb MetaHandle => Db(Tables.Meta);
 		/// <summary>The root package operation whose flow submitted this job; null for none.</summary>
 		internal SemanticFixturePackageOperation? PackageSubmitter { get; set; }
+		/// <summary>A rebuild's own job: its semantic rows are a staged or retired generation no reader pins.</summary>
+		internal bool StagedSemanticWrite { get; set; }
 		private bool _fixtureWritePoisoned;
 		private bool _fixturePackageInvalidated;
 		internal void RequireFixtureWriteNotPoisoned()
@@ -176,10 +197,13 @@ public sealed partial class LightningStore
 				if (table.Name == Tables.Meta.Name && (Protects(FixturePackageStateKey, key, prefixDelete)
 					|| Protects("prototype.semantic.fixture.identity/v1"u8, key, prefixDelete) || IsFixtureVersionKey(key, prefixDelete)))
 					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
-				if (ClassifyFixtureTable(table.Name) is { } version) AdvanceFixtureVersion(version);
+				if (ClassifyFixtureTable(table.Name) is { } version
+					&& !(StagedSemanticWrite && table.Name.StartsWith(AtomicWikiLayout.Prefix, StringComparison.Ordinal)))
+					AdvanceFixtureVersion(version);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
 				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
-				if (!tracking.Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
+				if (!tracking.Owner.AdmitPackageMutation(tracking.Owner.IsLiveRoot(tracking.Lease, PackageSubmitter?.Root ?? PackageSubmitter)))
+					throw SemanticFixtureCapability.Unavailable();
 				var meta = Db(Tables.Meta);
 				var identity = tracking.Owner.FixtureId;
 				if (!TryReadFixtureIdentity(tx, meta, out var actual) || actual != identity)

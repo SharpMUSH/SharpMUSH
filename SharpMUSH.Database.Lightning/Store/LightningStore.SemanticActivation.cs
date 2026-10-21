@@ -13,7 +13,7 @@ public sealed partial class LightningStore
 		var marker = ReadFixed(tx, meta, AtomicWikiLayout.MarkerKey);
 		var found = 0;
 		LmdbDb? metadata = null;
-		var opened = new List<LmdbDb>(9);
+		var opened = new List<LmdbDb>(AtomicWikiLayout.All.Length);
 		try
 		{
 			foreach (var definition in AtomicWikiLayout.All)
@@ -45,7 +45,7 @@ public sealed partial class LightningStore
 				var length = Tx.CheckedLength(key);
 				if (length > 256) throw new InvalidOperationException("Semantic catalog name exceeds bound.");
 				if (!key.AsSpan().StartsWith(prefix)) break;
-				if (++names > 9) throw new InvalidOperationException("Unexpected reserved semantic layout.");
+				if (++names > AtomicWikiLayout.All.Length) throw new InvalidOperationException("Unexpected reserved semantic layout.");
 				var name = Encoding.UTF8.GetString(key.AsSpan()).TrimEnd('\0');
 				if (!AtomicWikiLayout.All.Any(table => table.Name == name)) throw new InvalidOperationException("Unknown reserved semantic table.");
 				position = cursor.Next().resultCode;
@@ -56,7 +56,7 @@ public sealed partial class LightningStore
 				return null;
 			}
 			var state = AtomicWikiLayout.Decode(marker, expected);
-			if (!state.Active || found != 9 || names != 9 || metadata is null)
+			if (!state.Active || found != AtomicWikiLayout.All.Length || names != AtomicWikiLayout.All.Length || metadata is null)
 				throw new InvalidOperationException("Semantic activation layout is incomplete.");
 			var certificate = ReadFixed(tx, metadata, AtomicWikiLayout.CertificateKey);
 			var rootState = ReadFixed(tx, metadata, AtomicWikiLayout.RootKey);

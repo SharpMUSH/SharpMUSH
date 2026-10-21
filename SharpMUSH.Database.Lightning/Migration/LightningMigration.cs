@@ -61,6 +61,8 @@ public partial class LightningDatabase
 			using var categoryStartupAdmission = HasCompleteWikiCategoryAuthority(categoryOptions, cancellationToken)
 				? null : EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 			await InitializeSemanticFixtureIdentityAsync(cancellationToken);
+			// A rebuild a previous process left staged is discarded before anything else writes; resume is not implemented.
+			await DiscardIncompleteSemanticRebuildAsync(cancellationToken);
 			using var migrationAdmission = EnterFixtureMutation(SemanticFixtureMutation.Pin);
 			await Store.WriteAsync(tx =>
 			{

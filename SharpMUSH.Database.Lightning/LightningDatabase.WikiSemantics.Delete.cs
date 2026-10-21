@@ -16,13 +16,24 @@ public partial class LightningDatabase
 		var pageId = WikiPageId(key);
 		var pageKey = LegacyBytes(work, 8, () => WikiPageKey(key));
 		var old = work.Read(Tables.WikiPage, pageKey, DecodeLegacyPage, 32, 2048);
-		// Activation forbids these entire tables; every later writer remains fenced. Never silently
-		// turn an unexpected row into an unsupported locale/package cascade.
-		foreach (var table in new[] { Tables.WikiTr, Tables.PkgWiki })
+		// Activation forbids translations entirely and every later writer remains fenced. Never silently
+		// turn an unexpected row into an unsupported locale cascade.
+		using (var translations = work.Reader.ReadRange(Tables.WikiTr, [], [], [], [], work.Budget))
 		{
-			using var forbidden = work.Reader.ReadRange(table, [], [], [], [], work.Budget);
-			if (!forbidden.Exhausted) throw new NativeReadLimitException("records");
-			if (!forbidden.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki ownership or translations.");
+			if (!translations.Exhausted) throw new NativeReadLimitException("records");
+			if (!translations.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki translations.");
+		}
+		// A package's page is the package's to delete: it releases the page first, which makes it the game's again.
+		using (var owned = work.Reader.ReadRange(Tables.PkgWiki, [], [], [], [], work.Budget))
+		{
+			if (!owned.Exhausted) throw new NativeReadLimitException("records");
+			foreach (var row in owned.Entries)
+			{
+				work.Lifetime.ReserveAdditional(checked(2048 + 24L * row.Value.Length));
+				var ownership = Codec.Deserialize<Records.PackageWikiPageRecord>(row.Value) ?? throw new InvalidDataException("Invalid package page row.");
+				if (TryParseWikiPageId(ownership.PageId, out var ownedKey) && ownedKey == key)
+					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
+			}
 		}
 		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
 		if (nativeId == 0)
@@ -33,9 +44,9 @@ public partial class LightningDatabase
 		}
 		RequireDeleteRegistryIdentity(work, WikiSemanticRegistryKind.Page, nativeId, pageId);
 		var subjectKey = work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId));
-		var state = work.Read(AtomicWikiLayout.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState)
+		var state = work.Read(work.Tables.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState)
 			?? throw new InvalidDataException("Missing integrated summary.");
-		var facts = work.Read(AtomicWikiLayout.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
+		var facts = work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
 			?? throw new InvalidDataException("Missing integrated facts.");
 		var summary = state.State.Summary;
 		var collection = work.Registry(WikiSemanticRegistryKind.Collection, "game", false);
@@ -115,7 +126,7 @@ public partial class LightningDatabase
 				if (WikiSemanticStateCodec.Registry(row.Value).Identity == pageId) throw new InvalidDataException("Orphaned page identity.");
 			}
 		}
-		using var summaries = work.Reader.ReadRange(AtomicWikiLayout.Summaries, [], [], [], [], work.Budget);
+		using var summaries = work.Reader.ReadRange(work.Tables.Summaries, [], [], [], [], work.Budget);
 		if (!summaries.Exhausted) throw new NativeReadLimitException("records");
 		foreach (var row in summaries.Entries)
 		{

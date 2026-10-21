@@ -191,6 +191,14 @@ public partial class IntegratedWikiMutationTests
 				"prototype.semantic.b2.v1.postings",
 				"prototype.semantic.b2.v1.catalog",
 				"prototype.semantic.b2.v1.partitions",
-				"prototype.semantic.b2.v1.mutations"
+				"prototype.semantic.b2.v1.mutations",
+				"prototype.semantic.b2.v1.journal",
+				"prototype.semantic.b2.v1.s1.summaries",
+				"prototype.semantic.b2.v1.s1.forward",
+				"prototype.semantic.b2.v1.s1.postings",
+				"prototype.semantic.b2.v1.s1.catalog",
+				"prototype.semantic.b2.v1.s1.partitions",
+				"prototype.semantic.b2.v1.s1.classes",
+				"prototype.semantic.b2.v1.s1.counters"
 			});
 }

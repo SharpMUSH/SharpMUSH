@@ -186,6 +186,69 @@ declared number of sections, so a denied target and a missing one return the sam
 value along the same path. The final section is the answer's authorization point: a change after it
 cannot retract what has already been sent.
 
+#### Package operations on an active projection
+
+Activation admits a package history that is untouched (UNKNOWN at generation 0) or SETTLED at any
+generation. Package work that ran without a coordinator, or a history left UNKNOWN, cannot prove its
+operations ended, so it still precludes activation.
+
+Once the projection is active, the fixture admits package work only inside a live coordinated
+operation; direct installer work, and work whose root was released before it started, is refused.
+Edit and delete requirements are plain requirement rows, and so is any requirement write that leaves a
+target's read list as it was. A read requirement decides which visibility class a page projects under, so a
+write that changes a target's read list rewrites every page the target applies to in the same writer job:
+the pages are found through the legacy namespace and category indexes and counted before anything is
+written, more than `ReadRewritePageCap` (256) is refused as a work limit, and each page whose descriptor
+changed is planned again under its new class, keeping its source and facts. A package's `view`
+requirements take this same path, so an active install that declares them settles like any other.
+
+A package's ownership row and its page's projection source move in the same writer job. While a package
+owns a page, the page projects as that package's portable source (package, namespace, slug); an edit,
+or a fact import, keeps that source. Releasing the page, removing its row, or uninstalling the package
+moves it back to the game's local source; a page already deleted only loses its row. A package's page
+cannot be deleted directly: the package releases it first. A fact import is refused while any package
+operation is retained, so no import can land between an operation's writes and its settlement.
+
+Limitation: an active operation that fails (a returned error, an exception, cancellation, or a hook
+that ran code) leaves the world UNKNOWN, and every certified read then answers `Incomplete`. There is
+no operation that verifies an UNKNOWN world back to SETTLED; only a later coordinated operation that
+itself settles does.
+
+#### Rebuilding an active projection
+
+The projection's secondary state, every summary's class and collection ids, Forward, Postings, the
+catalog, partition versions and class identities, can be rebuilt from canonical sources into a new
+generation (`RebuildSemanticProjectionAsync`, internal). Canonical state is shared by every generation:
+the live pages and requirements, the imported fact sets, the page, property, keyword and collection
+identities, and the commit sequence. Generations alternate between two table slots, odd ones in the
+original tables and even ones under `prototype.semantic.b2.v1.s1.`, so the layout never grows. The
+activation marker names the active generation; a reader pins it in section 0 and rechecks it in the final
+section, so a read across a flip is `DataChanged` and a continuation issued before it restarts.
+
+1. Staging starts in one job that records the staged generation and an empty after-image journal. From
+   that commit on, every projection write also appends (commit sequence, subject) to the journal in its
+   own job. Replay copies that subject's current state, which is at least the journaled after-image.
+2. Subjects are copied in short ID batches, each its own job with a durable checkpoint. A copy derives the
+   descriptor again from the live page and requirements and indexes the canonical facts; it does not
+   copy index rows.
+3. The journal is replayed in sequence, consuming what it replays, until a pass finds it empty.
+4. A slow reference evaluation recomputes, from canonical sources alone, every row the staged generation
+   must hold and compares them exactly. A disagreement abandons the rebuild before publication.
+5. One short writer job flips: it refuses while any journaled write is unconsumed, then moves the
+   generation in the marker and both its metadata copies. If writes keep landing between validation and
+   flip, the rebuild backs off and replays again, and gives up after a bounded number of passes.
+6. The retired generation's rows are cleared in bounded jobs after the flip.
+
+Writes are never held back or dropped. A full journal (`SemanticRebuildJournal.DefaultCapacity`
+entries) only marks the staging overflowed, and the rebuild abandons it; writes that keep outrunning
+replay abandon it too. Abandoning ends the staging first, so writes stop journaling, then clears the
+journal and the staged rows in bounded jobs. Rebuild jobs write only the staged generation, the journal
+they consume, and a retired generation, none of which a reader pins, so they advance no fixture version:
+a reader during staging is unaffected.
+
+Limitation: an unfinished staging, left by a process that stopped mid-rebuild, is discarded when the
+world reopens. Resuming one from its checkpoint is not implemented.
+
 ### Follow-ups this decision left
 
 Both are done:

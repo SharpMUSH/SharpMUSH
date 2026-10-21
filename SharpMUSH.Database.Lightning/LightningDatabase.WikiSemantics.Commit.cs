@@ -17,6 +17,8 @@ public partial class LightningDatabase
 {
 	// Immutable prepared input observation outside native ownership; no callback can bypass planning.
 	internal Action<PreparedLegacyWikiMutation>? AtomicLegacyPrepared { get; set; }
+	/// <summary>Recovery tests only: after the commit is durable and before the caller invalidates anything.</summary>
+	internal Action<IntegratedWikiCommitResult>? AtomicLegacyCommitted { get; set; }
 	// Test-friend diagnostics: scalars/table identity only, no transaction, keys or values escape.
 	internal Action<string>? AtomicLegacyCapacityObserved { get; set; }
 	internal Action<TableDef>? AtomicLegacyPutApplied { get; set; }
@@ -48,7 +50,7 @@ public partial class LightningDatabase
 			throw SemanticFixtureCapability.Unavailable();
 		using var cancellation = PrepareLegacyIntent(() => scope.ObserveParentCancellation(ct));
 		AtomicLegacyPrepared?.Invoke(mutation);
-		return await Store.WriteAsync(tx =>
+		var committed = await Store.WriteAsync(tx =>
 		{
 			// Authority failures must precede receipt replay and retain their readiness diagnostics.
 			try { RequireWikiCategoryReady(tx, scope.Budget); }
@@ -75,6 +77,8 @@ public partial class LightningDatabase
 				work.Delta.Apply(tx, scope.Budget.CancellationToken, AtomicLegacyPutApplied, AtomicLegacyDeleteApplied);
 			return result;
 		}, ct);
+		AtomicLegacyCommitted?.Invoke(committed);
+		return committed;
 	}
 
 	private IntegratedWikiCommitResult PlanLegacyFixtureMutation(ITx tx, PreparedLegacyWikiMutation mutation, WikiSemanticWork work)
@@ -156,16 +160,17 @@ public partial class LightningDatabase
 		var pageId = WikiPageId(key);
 		work.Lifetime.ReserveAdditional(checked(4096 + 128L * (updated.Categories?.Length ?? 0)));
 		var rules = ReadLegacyProjectionRules(work, pageId, updated);
-		var projection = new WikiPageProjection(new(pageId), new LocalWikiSource(), updated.Title, "game",
+		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
+		var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries,
+			work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
+		if ((old is null && state is not null) || (old is not null && state is null)) throw new InvalidDataException("Legacy/projection identity disagreement.");
+		// An edit keeps the page's source: a package page stays the package's until its ownership row moves.
+		var projection = new WikiPageProjection(new(pageId), state?.Source ?? new LocalWikiSource(), updated.Title, "game",
 			new(updated.Namespace, [.. updated.Categories ?? []], rules, updated.Published ?? true, updated.Published == false ? updated.AuthorDbref : null));
 		try { work.Lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 		catch (InvalidDataException) { throw new WikiSemanticCapacityException("projection"); }
 		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, work.Budget.CancellationToken);
 		if (prepared is not PreparedWikiProjection editProjection) throw new WikiSemanticCapacityException("projection");
-		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
-		var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries,
-			work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
-		if ((old is null && state is not null) || (old is not null && state is null)) throw new InvalidDataException("Legacy/projection identity disagreement.");
 		if (WikiSemanticProjectionPlanner.PlanProjection(work, editProjection, state?.State.Summary.StateVersion ?? 0, new AllocateNextSequence()) is not WikiProjectionPlanned planned)
 			throw SemanticFixtureCapability.Unavailable();
 		PlanLegacyPage(work, key, old, updated);
@@ -181,9 +186,20 @@ public partial class LightningDatabase
 		return new IntegratedWikiCommitted(committed, MapWikiPage(key, updated));
 	}
 	private static byte[] LegacyBytes(WikiSemanticWork work, long estimate, Func<byte[]> encode) => work.Bytes(estimate, encode);
-	private static WikiSemanticWork CreateLegacyWork(ITx tx, LegacyWikiPreparationScope scope)
+	/// <summary>
+	/// Work over the active generation's tables. While a rebuild is staged it also journals every projection
+	/// write it plans, in this same job, so the staged generation can replay it.
+	/// </summary>
+	private WikiSemanticWork CreateLegacyWork(ITx tx, LegacyWikiPreparationScope scope)
 	{
-		try { return WikiSemanticWork.Create(tx, AtomicWikiLayout.Tables, scope.Budget, scope.Lifetime); }
+		try
+		{
+			var fixture = _fixtureLease?.FixtureId ?? throw SemanticFixtureCapability.Unavailable();
+			var generation = ReadActivation(tx, fixture, scope.Budget, scope.Lifetime)?.Generation ?? 1;
+			var work = WikiSemanticWork.Create(tx, AtomicWikiLayout.ForGeneration(generation), scope.Budget, scope.Lifetime);
+			work.Journal = SemanticRebuildJournal.Open(work);
+			return work;
+		}
 		catch (NativeReadLimitException) { throw new WikiFixtureMutationException(WikiFixtureMutationFailure.WorkLimit); }
 	}
 	private static WikiRevisionRecord LegacyRevision(string pageId, WikiPageRecord page, string editor, string? summary, DateTimeOffset at)

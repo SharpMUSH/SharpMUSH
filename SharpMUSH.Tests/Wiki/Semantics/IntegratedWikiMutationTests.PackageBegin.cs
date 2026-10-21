@@ -172,7 +172,9 @@ public partial class IntegratedWikiMutationTests
 		await host.Services.GetRequiredService<ITaskScheduler>().DrainImmediateQueueForTests(TimeSpan.FromSeconds(30));
 		await Assert.That(entered).IsFalse();
 		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 0))).IsTrue();
-		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
+		// A coordinated BEGIN that never entered left the history untouched, so activation is still admitted.
+		await host.ActivateAtomicWikiProjectionAsync();
+		await Assert.That(Settled(host)).IsTrue();
 	}
 
 	[Test]

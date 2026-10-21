@@ -37,6 +37,8 @@ public partial class LightningDatabase
 	{
 		try
 		{
+			// A package operation still running could settle a generation this import never saw it make.
+			admission.Owner.RequireNoPackageOperation(_fixtureLease!);
 			RequireWikiCategoryReady(tx, scope.Budget);
 			using var work = CreateLegacyWork(tx, scope);
 			RequireFixtureMutation(tx, admission, scope.Budget, scope.Lifetime);
@@ -49,16 +51,17 @@ public partial class LightningDatabase
 			var record = work.Read(Tables.WikiPage, LegacyBytes(work, 8, () => WikiPageKey(key)), bytes => DecodeLegacyPage(bytes), 32, 2048);
 			if (record is null) return false;
 			var pageId = WikiPageId(key);
+			var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
+			var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries,
+				work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
+			if (state is null) throw new InvalidDataException("Imported page has no projection.");
 			var rules = ReadLegacyProjectionRules(work, pageId, record);
-			var projection = new WikiPageProjection(new(pageId), new LocalWikiSource(), record.Title, "game",
+			// The page keeps its source: a package's page stays the package's.
+			var projection = new WikiPageProjection(new(pageId), state.Source, record.Title, "game",
 				new(record.Namespace, [.. record.Categories ?? []], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
 			if (PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, page.Facts, false, scope.Budget.CancellationToken)
 				is not PreparedWikiProjection prepared)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.Quota);
-			var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
-			var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries,
-				work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
-			if (state is null) throw new InvalidDataException("Imported page has no projection.");
 			if (WikiSemanticProjectionPlanner.PlanProjection(work, prepared, state.State.Summary.StateVersion, new AllocateNextSequence())
 				is not WikiProjectionPlanned)
 				throw SemanticFixtureCapability.Unavailable();

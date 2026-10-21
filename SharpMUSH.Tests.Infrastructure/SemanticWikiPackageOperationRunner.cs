@@ -32,7 +32,7 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 	public async Task<PackageOperationOutcome<T>> RunAsync<T>(string operation, Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
 	{
-		if (!Owner.AdmitPackageMutation())
+		if (!Owner.AdmitPackageMutation(coordinated: true))
 			return new PackageOperationRefused("Package mutations are unavailable in this atomic wiki fixture slice.");
 		var execution = await StartOwnedAsync(operation, body, cancellationToken, provenance);
 		return await execution.Completion.WaitAsync(cancellationToken);
@@ -41,14 +41,14 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 	public async Task<PackageOperationExecution<T>> StartAsync<T>(string operation, Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
 	{
-		if (!Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
+		if (!Owner.AdmitPackageMutation(coordinated: true)) throw SemanticFixtureCapability.Unavailable();
 		return await StartOwnedAsync(operation, body, cancellationToken, provenance);
 	}
 
 	private async Task<PackageOperationExecution<T>> StartOwnedAsync<T>(string operation, Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
 	{
-		var root = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
+		var root = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken, coordinated: true);
 		PackageOperationExecution<T>? inner = null;
 		try
 		{

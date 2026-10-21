@@ -54,17 +54,21 @@ internal sealed class SemanticReadSection
 	private int _rows;
 	private long _bytes;
 
-	internal SemanticReadSection(ITx tx, SemanticReadLimits limits, SemanticReadBudget request, WikiReader reader, int index)
+	internal SemanticReadSection(ITx tx, SemanticReadLimits limits, SemanticReadBudget request, WikiReader reader, int index,
+		WikiSemanticTables? tables = null)
 	{
 		_tx = tx;
 		_limits = limits;
 		_request = request;
 		Reader = reader;
 		Index = index;
+		Tables = tables ?? AtomicWikiLayout.Tables;
 	}
 
 	internal WikiReader Reader { get; }
 	internal int Index { get; }
+	/// <summary>The tables of the generation this read pinned in section 0.</summary>
+	internal WikiSemanticTables Tables { get; }
 
 	/// <summary>
 	/// The row under <paramref name="key"/>. Its native length is charged before the copy is allocated, so a
@@ -177,7 +181,7 @@ internal static class SemanticWikiReader
 					if (pins.Differs<T>(now) is { } changed) return (changed, default);
 					// After an answer or an unavailable target the remaining sections still run, unread.
 					return (null, outcome.Kind == SemanticSectionKind.Continue
-						? plan(new SemanticReadSection(tx, limits, budget, reader, index))
+						? plan(new SemanticReadSection(tx, limits, budget, reader, index, AtomicWikiLayout.ForGeneration(pins.Generation)))
 						: outcome);
 				});
 				if (step.Changed is { } difference) return difference;
@@ -211,22 +215,27 @@ internal static class SemanticWikiReader
 	private static bool SameReader(WikiReader first, WikiReader second)
 		=> string.Equals(first.Dbref, second.Dbref, StringComparison.Ordinal) && first.Scopes.SetEquals(second.Scopes);
 
-	private sealed record Pins(ulong Package, ulong Content, ulong Requirements, ulong Authorization)
+	private sealed record Pins(ulong Package, ulong Content, ulong Requirements, ulong Authorization, ulong Generation)
 	{
-		/// <summary>The pins in <paramref name="tx"/>'s snapshot, or null when the package state is not settled for this fixture.</summary>
+		/// <summary>
+		/// The pins in <paramref name="tx"/>'s snapshot, or null when the package state is not settled for this
+		/// fixture. The generation names the tables the read uses throughout; before activation it is the first.
+		/// </summary>
 		internal static Pins? Read(ITx tx, Guid identity)
 		{
 			if (!tx.TryGet(Tables.Meta, LightningStore.FixturePackageStateKeyBytes, out var marker)
 				|| !LightningStore.IsSettledFixturePackageState(marker, identity))
 				return null;
+			var generation = tx.TryGet(Tables.Meta, AtomicWikiLayout.MarkerKey, out var activation)
+				? AtomicWikiLayout.Decode(activation, identity).Generation : 1;
 			return new(System.Buffers.Binary.BinaryPrimitives.ReadUInt64BigEndian(marker.AsSpan(24)),
 				LightningStore.ReadFixtureVersion(tx, FixtureVersionClass.Content),
 				LightningStore.ReadFixtureVersion(tx, FixtureVersionClass.Requirements),
-				LightningStore.ReadFixtureVersion(tx, FixtureVersionClass.Authorization));
+				LightningStore.ReadFixtureVersion(tx, FixtureVersionClass.Authorization), generation);
 		}
 
 		internal SemanticReadResult<T>? Differs<T>(Pins now)
-			=> Package != now.Package || Content != now.Content ? SemanticReadResult<T>.DataChanged.Value
+			=> Package != now.Package || Content != now.Content || Generation != now.Generation ? SemanticReadResult<T>.DataChanged.Value
 				: Requirements != now.Requirements || Authorization != now.Authorization ? SemanticReadResult<T>.AuthorizationChanged.Value
 				: null;
 	}

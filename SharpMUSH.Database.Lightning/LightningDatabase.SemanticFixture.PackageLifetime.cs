@@ -5,12 +5,12 @@ namespace SharpMUSH.Database.Lightning;
 public partial class LightningDatabase
 {
 	internal async ValueTask<SemanticFixturePackageOperation> BeginRetainedSemanticFixturePackageOperationAsync(
-		SemanticFixtureCapability owner, CancellationToken cancellationToken)
+		SemanticFixtureCapability owner, CancellationToken cancellationToken, bool coordinated = false)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		if (_fixtureLease is not { } lease || !ReferenceEquals(lease.Owner, owner) || _fixtureClosed)
 			throw SemanticFixtureCapability.Unavailable();
-		var operation = owner.RetainPackageOperation(lease);
+		var operation = owner.RetainPackageOperation(lease, coordinated);
 		try
 		{
 			await BeginSemanticFixturePackageAttemptAsync(owner, cancellationToken, operation);

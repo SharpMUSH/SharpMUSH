@@ -121,15 +121,27 @@ public partial class IntegratedWikiMutationTests
 	private static SemanticWikiQuery Query(params SemanticPredicate[] predicates) => new("game", predicates, ["pf2e:level", "pf2e:class"], 7);
 
 	[Test]
-	public async Task ActivationCertifiesOnlyAnUntouchedPackageHistory()
+	public async Task ActivationAdmitsOnlyAnUntouchedOrASettledCoordinatedPackageHistory()
 	{
 		await using (var world = await QueryWorldAsync(spells: 1))
 			await Assert.That(PackageState(world.Provider)[5]).IsEqualTo((byte)1);
 
+		// Coordinated and settled: its operations are known to have ended.
+		await using (var settled = NewHost())
+		{
+			await settled.OpenAsync();
+			var installer = settled.Services.GetRequiredService<IPackageInstallService>();
+			await Coordinated(settled, _ => installer.ApplyAsync(MatrixManifest(), MatrixRequest()));
+			await Assert.That(Settled(settled)).IsTrue();
+			await settled.ActivateAtomicWikiProjectionAsync();
+			await Assert.That(Settled(settled)).IsTrue();
+			await settled.CloseAsync();
+		}
+
+		// Direct installer work has no coordinator to prove it ended.
 		await using var touched = NewHost();
 		await touched.OpenAsync();
-		var installer = touched.Services.GetRequiredService<IPackageInstallService>();
-		await Coordinated(touched, _ => installer.ApplyAsync(MatrixManifest(), MatrixRequest()));
+		await touched.Services.GetRequiredService<IPackageInstallService>().ApplyAsync(MatrixManifest(), MatrixRequest());
 		await AssertFixtureFailure(() => touched.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
 		await touched.CloseAsync();
 	}

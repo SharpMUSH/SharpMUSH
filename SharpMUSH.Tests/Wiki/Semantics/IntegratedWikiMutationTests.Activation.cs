@@ -283,16 +283,17 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task ActivePackageRunnerRefusesBeforeBodyAndProvenance()
+	public async Task AnActivePackageRunnerRunsACoordinatedBody()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
 		await host.ActivateAtomicWikiProjectionAsync();
 		var invoked = false;
 		var outcome = await host.Services.GetRequiredService<IPackageOperationRunner>().RunAsync("fixture-test",
-			_ => { invoked = true; return Task.FromResult(1); }, provenance: _ => { invoked = true; throw new ActivationFault(); });
-		await Assert.That(outcome is PackageOperationRefused).IsTrue();
-		await Assert.That(invoked).IsFalse();
+			_ => { invoked = true; return Task.FromResult(1); });
+		await Assert.That(outcome.Expect<PackageOperationRan<int>>().Result).IsEqualTo(1);
+		await Assert.That(invoked).IsTrue();
+		await host.CloseAsync();
 	}
 
 	[Test]
@@ -311,16 +312,19 @@ public partial class IntegratedWikiMutationTests
 	private sealed class ActivationFault : Exception { }
 	private sealed record ProjectionObservation(byte[] SummaryBytes, WikiSemanticProjectionState State, CanonicalFactSet Facts);
 	private static ProjectionObservation ObserveProjection(LightningDatabase provider, string id)
-		=> provider.Store.Read(tx =>
+	{
+		var tables = AtomicWikiLayout.ForGeneration(provider.ActiveSemanticGeneration());
+		return provider.Store.Read(tx =>
 		{
-			using var work = WikiSemanticWork.Create(tx, AtomicWikiLayout.Tables, new NativeReadBudget(128, 128 * 1024, 4 * 1024 * 1024, CancellationToken.None));
+			using var work = WikiSemanticWork.Create(tx, tables, new NativeReadBudget(128, 128 * 1024, 4 * 1024 * 1024, CancellationToken.None));
 			var nativeId = work.Registry(WikiSemanticRegistryKind.Page, id, false);
 			if (nativeId == 0) throw new InvalidOperationException("Expected a committed real page projection.");
 			var key = WikiSemanticKeys.Subject(nativeId);
-			var bytes = work.ReadBytes(AtomicWikiLayout.Summaries, key) ?? throw new InvalidOperationException("Expected projection summary.");
-			var facts = work.Read(AtomicWikiLayout.Facts, key, value => WikiSemanticCodec.DecodeFacts(value)) ?? throw new InvalidOperationException("Expected canonical facts.");
+			var bytes = work.ReadBytes(work.Tables.Summaries, key) ?? throw new InvalidOperationException("Expected projection summary.");
+			var facts = work.Read(work.Tables.Facts, key, value => WikiSemanticCodec.DecodeFacts(value)) ?? throw new InvalidOperationException("Expected canonical facts.");
 			return new ProjectionObservation(bytes, WikiSemanticStateCodec.ProjectionState(bytes), facts);
 		});
+	}
 	private static long ObserveSequence(LightningDatabase provider) => provider.Store.Read(tx =>
 	{
 		using var work = WikiSemanticWork.Create(tx, AtomicWikiLayout.Tables, new NativeReadBudget(16, 4096, 64 * 1024, CancellationToken.None));
