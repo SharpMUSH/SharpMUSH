@@ -59,6 +59,8 @@
     [Parameter] public string? MembersCollection { get; set; }
     [Parameter] public int MembersSkip { get; set; }
     [Parameter] public WikiBrowseState? BrowseState { get; set; }
+    /// <summary>Show members without links while the reader's return origin is still being checked.</summary>
+    [Parameter] public bool HoldLinks { get; set; }
     private string? EffectiveLocale => Locale ?? WikiLocaleLinks.FromUri(Nav.Uri);
     private (string Category, string? Collection, string? Locale, int Skip)? _loaded;
     private bool _loading = true;
@@ -171,7 +173,7 @@
         }
     }
 
-    private string MemberHref(WikiPageSummary page) => WikiJourneyLinks.Page(page.Namespace, page.Slug, BrowseState,
+    private string? MemberHref(WikiPageSummary page) => HoldLinks ? null : WikiJourneyLinks.Page(page.Namespace, page.Slug, BrowseState,
         MembersCollection, _skip, EffectiveLocale);
 
     private string PageHref(int offset)
