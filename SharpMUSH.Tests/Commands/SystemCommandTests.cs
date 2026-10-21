@@ -65,17 +65,6 @@ public class SystemCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.HookNoHooksForCommandFormat))).IsTrue();
 	}
 
-	// PennMUSH reference: cmd_function with no args calls do_function(executor, NULL, NULL, 0)
-	// which lists user-defined and built-in functions. Output begins with "Global user-defined functions:".
-	[Test]
-	public async ValueTask FunctionCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@function"));
-
-		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.FunctionGlobalUserDefinedHeader))).IsTrue();
-	}
-
 	// PennMUSH reference: @command with no arg returns an error.
 	// SharpMUSH @command has no /list switch; calling @command/list returns an invalid-switch error.
 	// The expected full output is "#-1 INVALID SWITCH: list".

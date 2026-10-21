@@ -84,6 +84,19 @@ A theme colours the parts of a layout: borders and gauge bars, titles, table hea
 
 That box is drawn in Nord's blue, its title in Nord's purple and bold. The examples in these topics show the text a client is sent, without its colour.
 
+- [layout theme kinds]: a name, a seed colour, base16, or a preset changed
+- [layout theme portal]: `sharpmush` and the web portal's themes
+- [layout theme genres]: one for each MSSP genre, with its own shapes
+- [layout theme one colour]: themes made from one seed colour
+- [layout theme colours]: the colours a theme names
+- [layout theme looks]: the shapes a theme draws: border, bullet, gauge and more
+- [layout themes sixteen colours]: what a sixteen-colour client is sent
+- [layout themes making]: making a theme of your own
+- [layout themes contrast]: checking each colour stands out
+- [layout themes from another theme]: starting from a base16 scheme
+- [layout themes changing a look]: a genre with its shapes changed
+- [layout themes using]: themes in options and with @theme
+
 ## Kinds of theme
 
 A theme is one of these:

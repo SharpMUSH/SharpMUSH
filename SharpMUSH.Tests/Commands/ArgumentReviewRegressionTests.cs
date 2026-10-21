@@ -48,12 +48,9 @@ public class ArgumentReviewRegressionTests : ServerTestBase
 		await Run($"@function/local/args {name}=who count");
 		try
 		{
-			var before = Notifications.CountFor(actor.DbRef);
-			await Run("@function/local");
-			var listing = Notifications.For(actor.DbRef).Skip(before).ToList();
-			var aliasRow = listing.FindIndex(line => line.Contains(alias, StringComparison.OrdinalIgnoreCase));
-			await Assert.That(aliasRow).IsGreaterThanOrEqualTo(0);
-			await Assert.That(listing[aliasRow + 1]).Contains("who count");
+			var listing = (await Run("@function/local")).Split('\n');
+			var aliasRow = listing.First(line => line.Contains(alias, StringComparison.OrdinalIgnoreCase));
+			await Assert.That(aliasRow).Contains($"{alias}(who, count)");
 		}
 		finally
 		{
