@@ -81,9 +81,9 @@ public partial class GradientHelpExampleTests
 		if (!ThemePalette.TryParse("fantasy", out var fantasy, out _)) throw new InvalidOperationException("fantasy does not read");
 		var box = await Eval("gradient(box(Sheet,Mannaz,20),#ff0000|#0000ff,{{\"flow\":\"diagonal\"}})");
 
-		foreach (var text in new[] { box, BlockLayout.Relayout(box, 20, new LayoutContext { Theme = fantasy!.ToLayoutTheme() }) })
+		foreach (var lines in new[] { box, BlockLayout.Relayout(box, 20, new LayoutContext { Theme = fantasy!.ToLayoutTheme() }) }
+			.Select(text => Render(text, AnsiColorDepth.TrueColor).Split('\n')))
 		{
-			var lines = Render(text, AnsiColorDepth.TrueColor).Split('\n');
 			await Assert.That(lines[0]).StartsWith("\u001b[38;2;255;0;0m");
 			await Assert.That(Colours(lines[0]).Distinct().Count()).IsGreaterThanOrEqualTo(4);
 			await Assert.That(lines[^1]).Contains("\u001b[38;2;0;0;255m");
@@ -115,14 +115,16 @@ public partial class GradientHelpExampleTests
 		var at = 0;
 		foreach (Match sgr in Sgr().Matches(ansi))
 		{
-			foreach (var character in ansi[at..sgr.Index])
-				if (!char.IsWhiteSpace(character) && colour is not null) yield return colour;
+			foreach (var shown in Shown(ansi[at..sgr.Index], colour)) yield return shown;
 			at = sgr.Index + sgr.Length;
 			colour = Foreground(sgr.Groups[1].Value.Split(';'), colour);
 		}
-		foreach (var character in ansi[at..])
-			if (!char.IsWhiteSpace(character) && colour is not null) yield return colour;
+		foreach (var shown in Shown(ansi[at..], colour)) yield return shown;
 	}
+
+	/// <summary><paramref name="colour"/> once for each character of <paramref name="text"/> that shows.</summary>
+	private static IEnumerable<string> Shown(string text, string? colour) =>
+		colour is null ? [] : text.Where(character => !char.IsWhiteSpace(character)).Select(_ => colour);
 
 	private static string? Foreground(string[] parameters, string? colour)
 	{
