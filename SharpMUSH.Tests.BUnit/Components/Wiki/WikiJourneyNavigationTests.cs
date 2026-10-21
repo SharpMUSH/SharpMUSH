@@ -898,6 +898,8 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				return Json(refs.ToDictionary(reference => reference, reference => reference != "main/missing"));
 			}
 			if (uri.AbsolutePath == "/api/wiki/category-names") return Json(new Dictionary<string, string> { ["guides"] = "Guides" });
+			if (uri.AbsolutePath == "/api/wiki/category/guides/newest")
+				return Json(new WikiCategoryNewestDto([new WikiPageSummaryDto("related", "related", "Related article", "main", DateTimeOffset.UnixEpoch, false, 1, ["guides"], true, "en", true, null, null)], 2));
 			if (uri.AbsolutePath == "/api/wiki/category/guides")
 				return Json(new[] { new WikiPageSummaryDto("related", "related", "Related article", "main", DateTimeOffset.UnixEpoch, false, 1, ["guides"], true, "en", true, null, null) });
 			return new HttpResponseMessage(HttpStatusCode.NotFound);

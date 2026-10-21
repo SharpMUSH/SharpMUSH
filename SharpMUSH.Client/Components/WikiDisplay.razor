@@ -685,13 +685,9 @@ else
         }
 
         _moreLoadedFor = key;
-        var siblings = (await Wiki.GetAllByCategoryAsync(key))
-            .Where(p => p.Namespace.Equals(Namespace, StringComparison.OrdinalIgnoreCase))
-            .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToList();
-        _moreTotal = siblings.Count + 1;
-        _more = siblings.Take(3).ToList();
+        var newest = await Wiki.GetNewestInCategoryAsync(key, Namespace ?? "main", Slug, 3);
+        _moreTotal = newest.Total;
+        _more = [.. newest.Pages];
     }
 
     /// <summary>
