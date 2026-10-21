@@ -53,17 +53,9 @@ evaluationString__Call_SEA
     : function__Call_SEA callTail__Call_SEA?
     | explicitEvaluationString__Call_SEA
     ;
-evaluationString__Call_SEA2
-    : function__Call_SEA2 callTail__Call_SEA2?
-    | explicitEvaluationString__Call_SEA2
-    ;
 evaluationString__Call_SEA_G
     : function__Call_SEA_G callTail__Call_SEA_G?
     | explicitEvaluationString__Call_SEA_G
-    ;
-evaluationString__Call_SEA_G2
-    : function__Call_SEA_G2 callTail__Call_SEA_G2?
-    | explicitEvaluationString__Call_SEA_G2
     ;
 evaluationString__Top_RCEA
     : function__Call_EA callTail__Top_RCEA?
@@ -74,11 +66,11 @@ evaluationString__Top_RCEA_G
     | explicitEvaluationString__Top_RCEA_G
     ;
 evaluationString__Top_RSCA
-    : function__Call_SEA2 callTail__Top_RSCA?
+    : function__Call_SEA callTail__Top_RSCA?
     | explicitEvaluationString__Top_RSCA
     ;
 evaluationString__Top_RSCA_G
-    : function__Call_SEA_G2 callTail__Top_RSCA_G?
+    : function__Call_SEA_G callTail__Top_RSCA_G?
     | explicitEvaluationString__Top_RSCA_G
     ;
 evaluationString__Top_RSCEA
@@ -162,25 +154,6 @@ explicitEvaluationString__Call_SEA
         | genericText__Call_SEA
     )*
     ;
-explicitEvaluationString__Call_SEA2
-    : (
-          bracePattern__Top_RSCA
-        | bracketPattern__Top_RSCEA
-        | beginGenericText__Call_SEA
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-    ) (
-          bracePattern__Top_RSCA
-        | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-        | genericText__Call_SEA
-    )*
-    ;
 explicitEvaluationString__Call_SEA_G
     : (
           bracePattern__Top_RSCEA_G
@@ -200,27 +173,6 @@ explicitEvaluationString__Call_SEA_G
         | switchSubject
         | genericText__Call_SEA_G
         | closedGroup__Group_SCEA_G
-    )*
-    ;
-explicitEvaluationString__Call_SEA_G2
-    : (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | beginGenericText__Call_SEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | closedGroupFirst__CallGroup_SCEA_G
-    ) (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Call_SEA_G
-        | closedGroup__CallGroup_SCEA_G
     )*
     ;
 explicitEvaluationString__Top_RCEA
@@ -266,7 +218,7 @@ explicitEvaluationString__Top_RCEA_G
     ;
 explicitEvaluationString__Top_RSCA
     : (
-          bracePattern__Top_RSCA
+          bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Top_RSCA
         | PERCENT validSubstitution__Top_RSCE
@@ -274,7 +226,7 @@ explicitEvaluationString__Top_RSCA
         | iterationToken
         | switchSubject
     ) (
-          bracePattern__Top_RSCA
+          bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | PERCENT validSubstitution__Top_RSCE
         | regexpCapture__Top_RSCE
@@ -285,7 +237,7 @@ explicitEvaluationString__Top_RSCA
     ;
 explicitEvaluationString__Top_RSCA_G
     : (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RSCA_G
         | PERCENT validSubstitution__Top_RSCE_G
@@ -294,7 +246,7 @@ explicitEvaluationString__Top_RSCA_G
         | switchSubject
         | closedGroupFirst__TopGroup_SCA_G
     ) (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G
@@ -485,17 +437,6 @@ callTail__Call_SEA
         | genericText__Call_SEA
     )+
     ;
-callTail__Call_SEA2
-    : (
-          bracePattern__Top_RSCA
-        | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-        | genericText__Call_SEA
-    )+
-    ;
 callTail__Call_SEA_G
     : (
           bracePattern__Top_RSCEA_G
@@ -506,18 +447,6 @@ callTail__Call_SEA_G
         | switchSubject
         | genericText__Call_SEA_G
         | closedGroup__Group_SCEA_G
-    )+
-    ;
-callTail__Call_SEA_G2
-    : (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Call_SEA_G
-        | closedGroup__CallGroup_SCEA_G
     )+
     ;
 callTail__Top_RCEA
@@ -546,7 +475,7 @@ callTail__Top_RCEA_G
     ;
 callTail__Top_RSCA
     : (
-          bracePattern__Top_RSCA
+          bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | PERCENT validSubstitution__Top_RSCE
         | regexpCapture__Top_RSCE
@@ -557,7 +486,7 @@ callTail__Top_RSCA
     ;
 callTail__Top_RSCA_G
     : (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G
@@ -630,30 +559,6 @@ callTail__Top_RSEA_G_closed
     ;
 
 // braceExplicitEvaluationString__*: what a {} holds.
-braceExplicitEvaluationString__Top_RSCA
-    : (
-          bracePattern__Top_RSCA
-        | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-        | genericText__Top_RSCA
-    )+
-    ;
-braceExplicitEvaluationString__Top_RSCA_G
-    : (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Top_RSCA_G
-        | closedGroup__TopGroup_SCA_G
-    )+ openTail__TopGroup_SCA_G?
-    | openTail__TopGroup_SCA_G
-    ;
 braceExplicitEvaluationString__Top_RSCE
     : (
           bracePattern__Top_RSCE
@@ -707,13 +612,9 @@ braceExplicitEvaluationString__Top_RSCE_G
 function__Call_EA: FUNCHAR evaluationString__Call_EA? (COMMAWS evaluationString__Call_EA?)* CPAREN;
 function__Call_EA_G: FUNCHAR evaluationString__Call_EA_G? (COMMAWS evaluationString__Call_EA_G?)* CPAREN;
 function__Call_SEA: FUNCHAR evaluationString__Call_SEA? (COMMAWS evaluationString__Call_SEA?)* CPAREN;
-function__Call_SEA2: FUNCHAR evaluationString__Call_SEA2? (COMMAWS evaluationString__Call_SEA2?)* CPAREN;
 function__Call_SEA_G: FUNCHAR evaluationString__Call_SEA_G? (COMMAWS evaluationString__Call_SEA_G?)* CPAREN;
-function__Call_SEA_G2: FUNCHAR evaluationString__Call_SEA_G2? (COMMAWS evaluationString__Call_SEA_G2?)* CPAREN;
 
 // bracePattern__*: {...}, read as a string in which a call starts over.
-bracePattern__Top_RSCA: OBRACE braceExplicitEvaluationString__Top_RSCA? CBRACE;
-bracePattern__Top_RSCA_G: OBRACE braceExplicitEvaluationString__Top_RSCA_G? CBRACE;
 bracePattern__Top_RSCE: OBRACE braceExplicitEvaluationString__Top_RSCE? CBRACE;
 bracePattern__Top_RSCEA: OBRACE braceExplicitEvaluationString__Top_RSCEA? CBRACE;
 bracePattern__Top_RSCEA_G: OBRACE braceExplicitEvaluationString__Top_RSCEA_G? CBRACE;
@@ -786,16 +687,6 @@ beginGenericText__Top_RSEA: CPAREN | SEMICOLON | EQUALS | CCARET | OPAREN | esca
 beginGenericText__Top_RSEA_G: CPAREN | SEMICOLON | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 
 // closedGroupFirst__*: a paren group that starts a string and closes.
-closedGroupFirst__CallGroup_SCEA_G: beginGenericText__Open (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Group_SCEA_G
-        | closedGroup__CallGroup_SCEA_G
-    )* genericText__Close;
 closedGroupFirst__Group_CEA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
@@ -817,7 +708,7 @@ closedGroupFirst__Group_SCEA_G: beginGenericText__Open (
         | closedGroup__Group_SCEA_G
     )* genericText__Close;
 closedGroupFirst__TopGroup_SCA_G: beginGenericText__Open (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G
@@ -838,16 +729,6 @@ closedGroupFirst__TopGroup_SCE_G: beginGenericText__Open (
     )* genericText__Close;
 
 // closedGroup__*: a paren group that closes.
-closedGroup__CallGroup_SCEA_G: genericText__Open (
-          bracePattern__Top_RSCA_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Group_SCEA_G
-        | closedGroup__CallGroup_SCEA_G
-    )* genericText__Close;
 closedGroup__Group_CEA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
@@ -869,7 +750,7 @@ closedGroup__Group_SCEA_G: genericText__Open (
         | closedGroup__Group_SCEA_G
     )* genericText__Close;
 closedGroup__TopGroup_SCA_G: genericText__Open (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G
@@ -901,7 +782,7 @@ openTailFirst__TopGroup_CEA_G: beginGenericText__Open (
         | closedGroup__Group_CEA_G
     )* openTail__TopGroup_CEA_G?;
 openTailFirst__TopGroup_SCA_G: beginGenericText__Open (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G
@@ -943,7 +824,7 @@ openTail__TopGroup_CEA_G: genericText__Open (
         | closedGroup__Group_CEA_G
     )* openTail__TopGroup_CEA_G?;
 openTail__TopGroup_SCA_G: genericText__Open (
-          bracePattern__Top_RSCA_G
+          bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | PERCENT validSubstitution__Top_RSCE_G
         | regexpCapture__Top_RSCE_G

@@ -52,7 +52,7 @@ def text_tokens(c):
 		tokens.append('SEMICOLON')
 	if c.P or (not c.F and (c.mode != 'args' or c.B)):  # not separating arguments
 		tokens.append('COMMAWS')
-	if c.mode != 'eq' or c.F:  # not the '=' that splits a command
+	if c.mode != 'eq' or c.F or c.B:  # not the '=' that splits a command
 		tokens.append('EQUALS')
 	if not c.K:  # not ending a register name
 		tokens.append('CCARET')

@@ -36,7 +36,7 @@ A context is the set of facts that decide what the five tokens mean:
 |---|---|
 | mode | the entry point: plain, command list (`;` separates), command args (`,` separates), or before the `=` of an `=` split |
 | F | inside a function call, since the last brace (a brace starts over) |
-| B | inside a brace, at any depth |
+| B | inside a brace, at any depth: a `;`, `,` or `=` there ends no command or argument outside the brace |
 | K | inside a register, argument or capture name (`%q<...>`, `%<...>`, `$<...>`) |
 | P | with paren_groups: inside a group (its `)` closes it) |
 | G | paren_groups is on |
@@ -50,7 +50,7 @@ That leaves 60 reachable combinations. The generator writes every rule for each 
 keeps one copy of each set of copies that have the same body and refer to copies that are alike in
 turn. A rule has as many copies as there are different ways to read it: `beginGenericText` depends
 only on which tokens are text, while `evaluationString` also depends on what its calls, braces and
-names hold. That gives 158 rules.
+names hold. That gives 144 rules.
 
 A copy is named for what is true of every context it is read in: `Top` or `Call` (outside or
 inside a call; neither when the copy is read the same either way), `Group` inside a paren group,
