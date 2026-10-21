@@ -36,6 +36,7 @@
 		<InternalsVisibleTo Include="SharpMUSH.Tests" />
 		<InternalsVisibleTo Include="SharpMUSH.Tests.Infrastructure" />
 		<InternalsVisibleTo Include="SharpMUSH.Database.Lightning" />
+		<InternalsVisibleTo Include="SharpMUSH.CodeAnalysis" />
 	</ItemGroup>
 
 	<PropertyGroup>
