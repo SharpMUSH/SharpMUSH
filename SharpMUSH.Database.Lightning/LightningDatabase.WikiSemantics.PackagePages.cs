@@ -33,6 +33,16 @@ public partial class LightningDatabase
 	/// </summary>
 	private bool MovePackagePageSource(ITx tx, SemanticFixtureMutationLease admission, string pageId,
 		WikiSemanticSource source, WikiSemanticSource? from, CancellationToken ct)
+		=> ReprojectPage(tx, admission, pageId, source, from, ct);
+
+	/// <summary>
+	/// Plans <paramref name="pageId"/>'s projection again from its live page and the requirements now in this
+	/// job, keeping its source unless <paramref name="source"/> names another. A page that is deleted, that does
+	/// not project from <paramref name="from"/> when given, or whose source and visibility are unchanged is left
+	/// alone. Facts and title are kept. Returns whether it was planned again.
+	/// </summary>
+	private bool ReprojectPage(ITx tx, SemanticFixtureMutationLease admission, string pageId,
+		WikiSemanticSource? source, WikiSemanticSource? from, CancellationToken ct)
 	{
 		using var scope = new LegacyWikiPreparationScope(admission, ct);
 		try
@@ -50,12 +60,17 @@ public partial class LightningDatabase
 			var subjectKey = work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId));
 			var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState);
 			if (state is null) throw new InvalidDataException("Package page has no projection.");
-			if (state.State.Summary.Deleted || SameSource(state.Source, source) || from is { } expected && !SameSource(state.Source, expected)) return false;
+			if (state.State.Summary.Deleted || from is { } expected && !SameSource(state.Source, expected)) return false;
+			var target = source ?? state.Source;
+			var rules = ReadLegacyProjectionRules(work, id, record);
+			var visibility = new VisibilityDescriptor(record.Namespace, [.. record.Categories ?? []], rules, record.Published ?? true,
+				record.Published == false ? record.AuthorDbref : null);
+			if (SameSource(state.Source, target) && WikiSemanticStateCodec.Descriptor(PreparedWikiProjection.FreezeVisibility(visibility, ct))
+				.AsSpan().SequenceEqual(WikiSemanticStateCodec.Descriptor(state.State.Summary.Visibility)))
+				return false;
 			var facts = work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
 				?? throw new InvalidDataException("Package page has no facts.");
-			var rules = ReadLegacyProjectionRules(work, id, record);
-			var projection = new WikiPageProjection(new(id), source, record.Title, "game",
-				new(record.Namespace, [.. record.Categories ?? []], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
+			var projection = new WikiPageProjection(new(id), target, record.Title, "game", visibility);
 			if (PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, facts, false, scope.Budget.CancellationToken)
 				is not PreparedWikiProjection prepared)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.Quota);

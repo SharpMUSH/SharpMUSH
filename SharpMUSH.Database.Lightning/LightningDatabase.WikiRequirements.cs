@@ -33,16 +33,20 @@ public partial class LightningDatabase
 			if (set.Target.Scope == WikiRuleScope.Page && TryReadWikiPage(tx, key) is null) return new NotFound();
 
 			var rowKey = WikiRequirementKey(set.Target.Scope, key);
-			// An active projection admits only edit and delete requirements, which no visibility descriptor holds.
+			// On an active projection a read requirement decides which visibility class a page projects under, so
+			// changing one rewrites every page it applies to, in this job. They are counted before anything is
+			// written, and more than the cap is refused. Edit and delete requirements are plain rows.
+			IReadOnlyList<long> rewrite = [];
 			if (admission is { Phase: SemanticFixturePhase.Active })
 			{
 				var current = tx.TryGet(Tables.WikiRequirement, rowKey, out var bytes)
 					? MapWikiRequirement(Codec.Deserialize<WikiRequirementRecord>(bytes)) : null;
-				if (!SameRead(current, set)) throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
+				if (!SameRead(current, set)) rewrite = ReadRewriteTargets(tx, set.Target.Scope, key);
 			}
 			if (set.IsEmpty)
 			{
 				tx.Delete(Tables.WikiRequirement, rowKey);
+				RewriteReadVisibility(tx, admission, rewrite);
 				return new None();
 			}
 
@@ -56,6 +60,7 @@ public partial class LightningDatabase
 				UpdatedBy = set.UpdatedBy,
 				UpdatedAt = set.UpdatedAt.ToUnixTimeMilliseconds(),
 			}));
+			RewriteReadVisibility(tx, admission, rewrite);
 			return new None();
 		});
 	}

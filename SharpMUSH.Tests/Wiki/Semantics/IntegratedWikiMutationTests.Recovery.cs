@@ -285,6 +285,25 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	[Skip("The Read-requirement rewrite job is not built yet; its kill point lands with it.")]
-	public Task AKillInsideAReadRequirementRewriteLeavesEveryPageInItsOldOrItsNewClass() => Task.CompletedTask;
+	public async Task AKillInsideAReadRequirementRewriteLeavesEveryPageInItsOldClass()
+	{
+		var killed = await KillChildAtAsync("rewrite", "rewrite");
+		try
+		{
+			await using var host = Adopt(killed);
+			await host.OpenAsync();
+			var provider = host.Services.GetRequiredService<LightningDatabase>();
+			var wiki = host.Services.GetRequiredService<IWikiService>();
+			// The rule and every page it moved shared one job, which never committed: no page moved without the rule.
+			await Assert.That((await provider.GetRequirementsAsync()).Any(set => set.Target == WikiRuleTarget.ForNamespace("main"))).IsFalse();
+			foreach (var page in killed.Evidence.Pages)
+				await Assert.That(ObserveProjection(provider, page.Id).State.State.Summary.Visibility.RuleIds).DoesNotContain(WikiRuleTarget.ForNamespace("main").ToString());
+			var levels = SeededLevels(killed.Evidence);
+			await AssertCanonicalFacts(provider, levels.Select(pair => (pair.Key, pair.Value)));
+			await AssertIndexesMatchFacts(provider);
+			await AssertReadersAfterRecovery(host, killed.Evidence, levels, settled: true);
+			await host.CloseAsync();
+		}
+		finally { RemoveEvidence(killed); }
+	}
 }

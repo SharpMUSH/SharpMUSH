@@ -86,32 +86,27 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	[Arguments(false, false)]
-	[Arguments(true, false)]
-	[Arguments(true, true)]
-	public async Task AnActiveInstallThatIsUncoordinatedOrDeclaresAReadRequirementIsRefusedBeforeAnyWrite(bool read, bool coordinated)
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task AnUncoordinatedActiveInstallIsRefusedBeforeAnyWrite(bool read)
 	{
 		await using var host = await ActiveHostAsync();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		var installer = host.Services.GetRequiredService<IPackageInstallService>();
 		var before = Task3Snapshot(provider, Tables.Pkg);
 		var manifest = WikiPackage("active-refused", RoadPage("refused", read ? "      view: [wiki.admin]" : "      edit: [wiki.admin]"));
-		var result = coordinated
-			? (await Coordinated(host, _ => installer.ApplyAsync(manifest, MatrixRequest()))).Value is PackageOperationRan<Result<PackageApplyResult>> { Result: var ran }
-				? ran : throw new InvalidOperationException("The coordinated operation did not run.")
-			: await installer.ApplyAsync(manifest, MatrixRequest());
-		await Assert.That(result.Value is Error<string> { Value: var reason }
-			&& reason.Contains(read ? "read requirements" : "unavailable", StringComparison.Ordinal)).IsTrue();
-		// The installer wrote nothing. A coordinated attempt's own BEGIN moved only the package marker, to UNKNOWN.
+		var result = await installer.ApplyAsync(manifest, MatrixRequest());
+		await Assert.That(result.Value is Error<string> { Value: var reason } && reason.Contains("unavailable", StringComparison.Ordinal)).IsTrue();
+		// The installer wrote nothing, and neither did any coordinator.
 		static bool Compared(string row) => !IsFixtureVersionRow(row)
 			&& !row.StartsWith(Tables.Meta.Name + ":" + Convert.ToHexString(LightningStore.FixturePackageStateKeyBytes) + ":", StringComparison.Ordinal);
 		await Assert.That(Task3Snapshot(provider, Tables.Pkg).Where(Compared)).IsEquivalentTo(before.Where(Compared));
-		await Assert.That(PackageState(provider)[5]).IsEqualTo(coordinated ? (byte)0 : (byte)1);
+		await Assert.That(PackageState(provider)[5]).IsEqualTo((byte)1);
 		await host.CloseAsync();
 	}
 
 	[Test]
-	public async Task EditAndDeleteRequirementsAreRowWritesAndAReadRequirementIsRefused()
+	public async Task EditAndDeleteRequirementsAreRowWritesThatChangeNoDescriptor()
 	{
 		await using var host = await ActiveHostAsync();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
@@ -123,11 +118,6 @@ public partial class IntegratedWikiMutationTests
 			await Assert.That(await wiki.SetRequirementsAsync(target, guarded, "#1") is None).IsTrue();
 		await Assert.That((await wiki.GetRequirementsAsync()).HasPageRules(page.Id)).IsTrue();
 		await Assert.That(ObserveProjection(provider, page.Id).SummaryBytes).IsEquivalentTo(descriptor);
-
-		var before = Task3Snapshot(provider);
-		await Assert.That(async () => await wiki.SetRequirementsAsync(WikiRuleTarget.ForNamespace("main"),
-			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = ["lore.read"] }, "#1")).Throws<WikiFixtureMutationException>();
-		await Assert.That(Task3Snapshot(provider)).IsEquivalentTo(before);
 		await host.CloseAsync();
 	}
 

@@ -194,11 +194,13 @@ operations ended, so it still precludes activation.
 
 Once the projection is active, the fixture admits package work only inside a live coordinated
 operation; direct installer work, and work whose root was released before it started, is refused.
-An active install whose manifest declares a read (`view`) requirement on any wiki page is refused
-before it begins or writes anything: a read requirement decides which visibility class a page projects
-under, and rewriting a class is not supported yet. Edit and delete requirements are plain requirement
-rows, and so is any requirement write that leaves a target's read list as it was; one that changes it
-is refused.
+Edit and delete requirements are plain requirement rows, and so is any requirement write that leaves a
+target's read list as it was. A read requirement decides which visibility class a page projects under, so a
+write that changes a target's read list rewrites every page the target applies to in the same writer job:
+the pages are found through the legacy namespace and category indexes and counted before anything is
+written, more than `ReadRewritePageCap` (256) is refused as a work limit, and each page whose descriptor
+changed is planned again under its new class, keeping its source and facts. A package's `view`
+requirements take this same path, so an active install that declares them settles like any other.
 
 A package's ownership row and its page's projection source move in the same writer job. While a package
 owns a page, the page projects as that package's portable source (package, namespace, slug); an edit,

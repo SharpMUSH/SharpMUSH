@@ -27,8 +27,6 @@ public partial class IntegratedWikiMutationTests
 			page.MarkdownSource, page.Categories, page.Published, PackageWikiRequires.None, false, "1.0.0");
 		foreach (var operation in new Func<Task>[]
 		{
-			// A read requirement would move the page to another visibility class; edit and delete ones are plain rows.
-			async () => { await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id), new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = ["lore.read"] }, "#1"); },
 			async () => { await wiki.UpsertTranslationAsync(page.Id, "fr", "Translated target", "translation", "#1", null, true, null); },
 			async () => { await wiki.DeleteTranslationAsync(page.Id, "fr", "#1"); },
 			// Outside a coordinated operation's flow, a package's wiki ownership is not taken.
