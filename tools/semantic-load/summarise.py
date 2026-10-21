@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 
 def ms(value) -> str:
-    return "–" if value in (None, "NaN") or value != value else f"{value:.1f}"
+    return "–" if value in (None, "NaN") or math.isnan(value) else f"{value:.1f}"
 
 
 def main() -> None:
