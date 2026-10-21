@@ -68,6 +68,37 @@ internal sealed partial class SemanticFixtureCapability : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// Recovery tests only: adopts the issued world at <paramref name="path"/> after the process that owned it
+	/// has exited. The reservation's exclusive lock is the proof: it is free only once its holder is gone. The
+	/// marker must name this exact path, and the first open still checks the identity stored in the world.
+	/// </summary>
+	internal static SemanticFixtureCapability AdoptAfterOwnerExit(string path)
+	{
+		var canonical = Path.GetFullPath(path);
+		RejectLinkedAncestors(canonical);
+		var reservationPath = canonical + ".semantic-reservation";
+		var reservation = new FileStream(reservationPath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+		try
+		{
+			var markerPath = Path.Combine(canonical, MarkerName);
+			if ((File.GetAttributes(markerPath) & FileAttributes.ReparsePoint) != 0 || new FileInfo(markerPath).Length > 4096)
+				throw new InvalidOperationException("Invalid fixture marker.");
+			var marker = JsonSerializer.Deserialize<Marker>(File.ReadAllText(markerPath));
+			if (marker is not { Version: 1 } || marker.CanonicalPath != canonical)
+				throw new InvalidOperationException("Fixture marker does not name the adopted path.");
+			// The world was initialized by its first owner, and an active one was activated behind both package
+			// fences, which activation requires: every open from here on is a reopen of that lineage.
+			return new(canonical, marker.FixtureId, reservation, reservationPath)
+			{ _claimed = true, _initialized = true, _installerFenceInstalled = true, _runnerFenceInstalled = true };
+		}
+		catch
+		{
+			reservation.Dispose();
+			throw;
+		}
+	}
+
 	private ulong _leaseEpoch;
 
 	internal SemanticFixtureLease Claim(LightningStoreOptions options)

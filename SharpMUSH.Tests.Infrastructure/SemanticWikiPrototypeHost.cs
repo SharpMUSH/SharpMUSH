@@ -33,9 +33,22 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 
 	internal SemanticWikiPrototypeHost(string ownedScratchRoot, string sqlConnectionString, string configFile,
 		INotifyService? notifier, string sqlPlatform, Action<IServiceCollection>? configureTestServices)
+		: this(new SemanticWikiPrototypeFixture(ownedScratchRoot), sqlConnectionString, configFile, notifier, sqlPlatform, configureTestServices) { }
+
+	/// <summary>Recovery tests only: hosts the world a killed process issued, once that process has exited.</summary>
+	internal static SemanticWikiPrototypeHost AdoptAfterOwnerExit(string worldPath, string sqlConnectionString, string configFile,
+		Action<IServiceCollection>? configureTestServices = null)
+		=> new(SemanticWikiPrototypeFixture.AdoptAfterOwnerExit(worldPath), sqlConnectionString, configFile, null, "mysql", configureTestServices)
+		{ _adoptsAuxiliaryPaths = true };
+
+	// The owner that created an adopted world's auxiliary paths has exited, so the adopter cleans them up.
+	private bool _adoptsAuxiliaryPaths;
+
+	private SemanticWikiPrototypeHost(SemanticWikiPrototypeFixture fixture, string sqlConnectionString, string configFile,
+		INotifyService? notifier, string sqlPlatform, Action<IServiceCollection>? configureTestServices)
 	{
 		_configureTestServices = configureTestServices;
-		_fixture = new SemanticWikiPrototypeFixture(ownedScratchRoot);
+		_fixture = fixture;
 		_sqlConnectionString = sqlConnectionString;
 		_configFile = configFile;
 		_notifier = notifier;
@@ -129,7 +142,11 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 		ReserveDirectory(WorldPath + ".backups");
 		var engineLock = WorldPath + ".engine.lock";
 		SemanticFixtureCapability.RejectLinkedAncestors(engineLock);
-		if (Path.Exists(engineLock)) return;
+		if (Path.Exists(engineLock))
+		{
+			if (_adoptsAuxiliaryPaths && File.Exists(engineLock)) _ownedAuxiliaryPaths.TryAdd(engineLock, false);
+			return;
+		}
 		using (new FileStream(engineLock, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
 		_ownedAuxiliaryPaths.Add(engineLock, false);
 	}
@@ -137,7 +154,11 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 	private void ReserveDirectory(string path)
 	{
 		SemanticFixtureCapability.RejectLinkedAncestors(path);
-		if (Path.Exists(path)) return;
+		if (Path.Exists(path))
+		{
+			if (_adoptsAuxiliaryPaths && Directory.Exists(path)) _ownedAuxiliaryPaths.TryAdd(path, true);
+			return;
+		}
 		Directory.CreateDirectory(path);
 		_ownedAuxiliaryPaths.Add(path, true);
 	}
