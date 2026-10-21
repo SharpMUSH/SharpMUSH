@@ -22,7 +22,7 @@ namespace SharpMUSH.Tests.Services;
 /// </summary>
 public class ImportAdministratorTransferTests
 {
-	private readonly string _root = Path.Combine(Path.GetTempPath(), "import-admin-" + Guid.NewGuid().ToString("N"));
+	private readonly string _root = Path.Join(Path.GetTempPath(), "import-admin-" + Guid.NewGuid().ToString("N"));
 
 	[After(Test)]
 	public async Task Cleanup() => await FixtureDirectoryCleanup.DeleteAsync(_root);
@@ -43,9 +43,9 @@ public class ImportAdministratorTransferTests
 	private async Task<(ImportPromotionJournal Journal, string Source)> SetupAsync()
 	{
 		Directory.CreateDirectory(_root);
-		var source = Path.Combine(_root, "source.flat");
-		File.Copy(Path.Combine(AppContext.BaseDirectory, "Services", "TestData", "rhost-sample.flat"), source);
-		return (new ImportPromotionJournal(Path.Combine(_root, "live")), source);
+		var source = Path.Join(_root, "source.flat");
+		File.Copy(Path.Join(AppContext.BaseDirectory, "Services", "TestData", "rhost-sample.flat"), source);
+		return (new ImportPromotionJournal(Path.Join(_root, "live")), source);
 	}
 
 	[Test]
@@ -92,15 +92,16 @@ public class ImportAdministratorTransferTests
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
 		await Assert.That(preview.Result!.Warnings).Contains("The imported world has no role 'live-only', so Claimer does not hold it.");
-		await Assert.That(File.Exists(Path.Combine(preview.Directory, "request.json"))).IsFalse();
+		await Assert.That(File.Exists(Path.Join(preview.Directory, "request.json"))).IsFalse();
 
 		journal.RequestPromotion(preview.Id);
 		journal.ApplyPendingBeforeHostConstruction();
 		await using var promoted = Open(journal.LiveWorldPath);
 		await Assert.That((await promoted.GetServerStateAsync()).SetupCompleted).IsTrue();
-		var carried = await promoted.GetAccountForCharacterAsync(new DBRef(1));
-		await Assert.That(carried?.Username).IsEqualTo("Claimer");
-		await Assert.That(carried!.Email).IsEqualTo("claimer@example.com");
+		if (await promoted.GetAccountForCharacterAsync(new DBRef(1)) is not { } carried)
+			throw new InvalidOperationException("#1 has no account in the promoted world.");
+		await Assert.That(carried.Username).IsEqualTo("Claimer");
+		await Assert.That(carried.Email).IsEqualTo("claimer@example.com");
 		await Assert.That(carried.PasswordHash).IsEqualTo("claimed-password-hash");
 		await Assert.That(carried.AllowCharacterPasswordAccountLogin).IsFalse();
 		var passkey = await promoted.GetAccountPasskeyAsync(credential);
