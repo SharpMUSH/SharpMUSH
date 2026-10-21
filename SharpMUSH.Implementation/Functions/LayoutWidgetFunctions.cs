@@ -99,7 +99,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		if (maximum <= 0) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
-		var label = Arg(args, 2);
+		var label = Inline(Arg(args, 2));
 		var gauge = new Gauge(value, maximum) { Label = label.Length == 0 ? null : label };
 		return ValueTask.FromResult(Laidout(parser, GaugeOptions(GradientStop), Arg(args, 3), gauge));
 	}
@@ -129,7 +129,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
-		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
+		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items.Select(Inline)]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
@@ -199,7 +199,7 @@ public partial class Functions
 	private CallState BuildDataTable(IMUSHCodeParser parser, TableSettings settings, Func<MString, (MString[] Headings, MString[][] Rows)> read)
 	{
 		var (headings, cells) = read(settings.Delimiter);
-		var columns = headings.Select(Heading).ToArray();
+		var columns = headings.Select(heading => Heading(Inline(heading))).ToArray();
 		foreach (var (key, list) in settings.ColumnLists)
 		{
 			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure)
@@ -262,7 +262,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (BadgeKindOf(Arg(args, 1)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
-		return ValueTask.FromResult(new CallState(Bracketed(Arg(args, 0), BadgeColour(kind))));
+		return ValueTask.FromResult(new CallState(Bracketed(Inline(Arg(args, 0)), BadgeColour(kind))));
 	}
 
 	/// <summary>
@@ -277,7 +277,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (BadgeKindOf(Arg(args, 2)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
 
-		var lead = NoticeMarkup.Build(Arg(args, 0), kind.Word, BadgeColour(kind));
+		var lead = NoticeMarkup.Build(Inline(Arg(args, 0)), kind.Word, BadgeColour(kind));
 		var text = Arg(args, 1);
 		return ValueTask.FromResult(new CallState(lead.Length == 0 ? text : MarkupText.Concat([lead, MarkupText.Space, text])));
 	}
