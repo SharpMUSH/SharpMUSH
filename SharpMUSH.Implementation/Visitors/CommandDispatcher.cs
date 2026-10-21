@@ -205,7 +205,6 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	private static MString CommandSlice(MString src, IEvaluationStringContext firstCommandMatch)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
 
-	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
 	/// <summary>
 	/// PennMUSH's <c>LT_CMD</c> line (<c>src/game.c:1232</c>, <c>src/log.c:547</c>): every command when
 	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
@@ -256,6 +255,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex NewPasswordCommand();
 
+	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
 	private void RecordConnectionActivity(IMUSHCodeParser parser, string command)
 	{
 		if (parser.CurrentState.Handle is null || command == "IDLE")
