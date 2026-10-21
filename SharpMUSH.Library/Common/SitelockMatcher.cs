@@ -21,6 +21,9 @@ public static class SitelockMatcher
 	/// <summary>Surface flag gating guest logins specifically (on top of, not instead of, <see cref="ConnectFlag"/>).</summary>
 	public const string GuestFlag = "!guest";
 
+	/// <summary>Access option marking players who connect or are created from the site SUSPECT.</summary>
+	public const string SuspectFlag = "suspect";
+
 	/// <summary>
 	/// True if any rule in <paramref name="rules"/> both matches <paramref name="ip"/>/<paramref name="host"/>
 	/// (via <see cref="Matches"/>) and carries <paramref name="surfaceFlag"/> among its access flags.

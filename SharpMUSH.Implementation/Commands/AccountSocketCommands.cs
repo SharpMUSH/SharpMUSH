@@ -331,6 +331,15 @@ public partial class Commands
 			return new None();
 		}
 
+		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
+		var created = new AnySharpObject(foundPlayer);
+		await MarkSuspectSiteAsync(handle, created, logConnection: false);
+		if (await created.HasFlag("SUSPECT"))
+		{
+			await GameBroadcastService.BroadcastToFlagAsync("WIZARD",
+				string.Format(ErrorMessages.Notifications.GameSuspectCreated, foundPlayer.Object.Name));
+		}
+
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
 
 		Logger?.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via MAKE",

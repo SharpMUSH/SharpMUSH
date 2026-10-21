@@ -722,6 +722,8 @@ A STICKY room with a drop-to keeps what is dropped in it until the last connecte
 
 When a SUSPECT player connects or disconnects, wizards are told, as in `GAME: Suspect Walker has connected.`
 
+A player who connects, or makes a character, from a site whose [@sitelock] rule includes `suspect` is set SUSPECT. Wizards are told when a SUSPECT character is made, as in `GAME: Suspect Walker created.`
+
 Only wizards can set or clear SUSPECT, and only wizards and objects with See_All see it.
 
 # TERSE

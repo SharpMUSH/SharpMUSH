@@ -671,6 +671,32 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>Suspect_Site</c> check in <c>connect_player</c> and <c>create_player</c>
+	/// (<c>src/player.c:317</c>, <c>:562</c>): a player who connects or is created from a site whose
+	/// sitelock rule carries <c>suspect</c> is set SUSPECT. Only a connection is logged.
+	/// </summary>
+	private async ValueTask MarkSuspectSiteAsync(long handle, AnySharpObject player, bool logConnection)
+	{
+		if (ConnectionService.Get(handle) is not { } connection
+			|| !SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, connection.InternetProtocolAddress,
+				connection.HostName, SitelockMatcher.SuspectFlag)
+			|| await player.HasFlag("SUSPECT")
+			|| await Mediator.Send(new GetObjectFlagQuery("SUSPECT")) is not { } suspect)
+		{
+			return;
+		}
+
+		await Mediator.Send(new SetObjectFlagCommand(player, suspect));
+		if (!logConnection) return;
+
+		using (Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Connection" }))
+		{
+			Logger.LogInformation("Connection from Suspect site. Setting {Name}(#{Number}) suspect.",
+				player.Object().Name, player.Object().DBRef.Number);
+		}
+	}
+
+	/// <summary>
 	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
 	/// syncs output preferences, shows login messages, announces the connection, queues the connect
 	/// events and hooks, and performs auto-look. Identical across
@@ -684,6 +710,7 @@ public partial class Commands
 		// ACONNECT hooks, then the look runs in place. The events and hooks below are queue entries of
 		// their own, each with its own time limit, so none of them can run the login out of time; they
 		// run after the look.
+		await MarkSuspectSiteAsync(handle, new AnySharpObject(player), logConnection: true);
 		await SyncPlayerOutputPreferences(handle, player.Object);
 		// After the flags, which set the preferences the theme joins; null clears a theme the socket kept.
 		// A THEME that no longer reads (set by hand, naming a theme since disabled or removed, or code that
