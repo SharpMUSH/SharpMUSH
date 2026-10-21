@@ -78,7 +78,7 @@ internal sealed class PackageWriteTransactionFactory(
 	}
 
 	/// <summary>A transaction writing as <paramref name="manager"/> that releases <paramref name="retained"/> when it closes.</summary>
-	internal PackageWriteTransaction Issue(SharpPlayer manager, IAsyncDisposable retained, TimeProvider? recoveryClock = null)
+	internal PackageWriteTransaction Issue(SharpPlayer manager, IPackageWriteHold retained, TimeProvider? recoveryClock = null)
 		=> new(this, mediator, objects, attributes, flags, registry, applications, locks, manager, retained)
 		{
 			RecoveryClock = recoveryClock ?? TimeProvider.System
@@ -112,13 +112,15 @@ internal sealed class PackageWriteTransactionFactory(
 		if (!same) throw new InvalidOperationException("A package service does not belong to the world its transaction writes.");
 	}
 
-	private sealed class CompletedLifetime : IPackageWriteTransactionLifetime, IAsyncDisposable
+	private sealed class CompletedLifetime : IPackageWriteTransactionLifetime, IPackageWriteHold
 	{
-		public ValueTask<IAsyncDisposable> BeginPackageWritesAsync(CancellationToken cancellationToken)
+		public ValueTask<IPackageWriteHold> BeginPackageWritesAsync(CancellationToken cancellationToken)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			return ValueTask.FromResult<IAsyncDisposable>(this);
+			return ValueTask.FromResult<IPackageWriteHold>(this);
 		}
+
+		public void Report(PackageWriteVerdict verdict) { }
 
 		public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 	}

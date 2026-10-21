@@ -196,7 +196,7 @@ public partial class PackageInstallService
 	/// </summary>
 	private async Task<CommittedApply> AfterCommitAsync(ApplyRun run, PackageApplyResult applied)
 	{
-		await wiki.DeleteReleasedAsync(run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
+		await wiki.DeleteReleasedAsync(run.Writes, run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
 		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
 		return new CommittedApply(applied, run.Changeset);
 	}

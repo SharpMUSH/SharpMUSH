@@ -22,9 +22,25 @@ public sealed partial class LightningStore
 		_fixturePackageTracking = new(lease);
 	}
 
+	/// <summary>
+	/// Captures, in the submitting flow, the root package operation that flow belongs to, so each job in a
+	/// group commit attributes its own package-state bump. Ordinary stores pay nothing.
+	/// </summary>
+	private Func<ITx, T> AttributeFixtureWrite<T>(Func<ITx, T> job)
+	{
+		if (_fixturePackageTracking is null) return job;
+		var submitter = SemanticFixturePackageOperation.Ambient;
+		return tx =>
+		{
+			((Tx)tx).PackageSubmitter = submitter;
+			return job(tx);
+		};
+	}
+
 	// A conservative attempt fence: successful return proves only a committed UNKNOWN marker.
 	// The writer owns completion through commit; cancellation never detaches an in-flight transaction.
-	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct)
+	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct,
+		SemanticFixturePackageOperation? attribution = null)
 	{
 		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
 			throw SemanticFixtureCapability.Unavailable();
@@ -38,16 +54,57 @@ public sealed partial class LightningStore
 			var meta = _tables[Tables.Meta];
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId)
 				throw SemanticFixtureCapability.Unavailable();
-			var generation = checked(ReadFixturePackageGeneration(tx, meta, lease.FixtureId) + 1);
+			var previous = ReadFixturePackageGeneration(tx, meta, lease.FixtureId);
+			var generation = checked(previous + 1);
 			Span<byte> state = stackalloc byte[32];
 			EncodeUnknownPackageState(state, lease.FixtureId, generation);
 			var code = tx.Put(meta, FixturePackageStateKey, state);
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "begin fixture package attempt");
 			ct.ThrowIfCancellationRequested();
+			tracking.Owner.RecordPackageBump(lease, attribution, previous, generation);
 			Commit(tx);
 			return generation;
 		}, ct);
 	}
+
+	/// <summary>
+	/// Marks the current generation SETTLED for <paramref name="root"/>, in one writer transaction, only when
+	/// the marker is still UNKNOWN at exactly that root's expected generation and the capability agrees the
+	/// root may settle it. False, writing nothing, otherwise. Only the package coordinator calls this, after
+	/// it has joined the operation's completion and observation.
+	/// </summary>
+	internal ValueTask<bool> SettleFixturePackageAttemptAsync(SemanticFixtureLease lease, SemanticFixturePackageOperation root)
+	{
+		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
+			throw SemanticFixtureCapability.Unavailable();
+		return _writer.EnqueueRawAsync(tx =>
+		{
+			var meta = _tables[Tables.Meta];
+			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId) return false;
+			var (found, _, value) = tx.Get(meta, FixturePackageStateKey);
+			if (!FoundNative(found, "read fixture package state") || Tx.CheckedLength(value) != 32) return false;
+			var current = value.AsSpan();
+			if (current[5] != 0) return false;
+			var generation = ReadFixturePackageGeneration(tx, meta, lease.FixtureId);
+			if (!tracking.Owner.MaySettlePackageOperation(lease, root, generation)) return false;
+			Span<byte> state = stackalloc byte[32];
+			EncodeUnknownPackageState(state, lease.FixtureId, generation);
+			state[5] = 1;
+			var code = tx.Put(meta, FixturePackageStateKey, state);
+			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "settle fixture package attempt");
+			Commit(tx);
+			return true;
+		}, CancellationToken.None);
+	}
+
+	/// <summary>
+	/// What a reader may conclude from the package marker it read in its own snapshot: SETTLED only for a
+	/// well-formed version-1 marker of <paramref name="identity"/> whose state is settled; anything else,
+	/// missing or malformed included, is UNKNOWN.
+	/// </summary>
+	internal static bool IsSettledFixturePackageState(ReadOnlySpan<byte> marker, Guid identity)
+		=> marker.Length == 32 && marker[..4].SequenceEqual("FPKG"u8) && marker[4] == 1 && marker[5] == 1
+			&& marker[6] == 0 && marker[7] == 0 && new Guid(marker.Slice(8, 16), bigEndian: true) == identity;
 
 	private void RefuseUnclassifiedFixtureWrite()
 	{
@@ -80,6 +137,8 @@ public sealed partial class LightningStore
 
 	private sealed partial class Tx
 	{
+		/// <summary>The root package operation whose flow submitted this job; null for none.</summary>
+		internal SemanticFixturePackageOperation? PackageSubmitter { get; set; }
 		private bool _fixtureWritePoisoned;
 		private bool _fixturePackageInvalidated;
 		internal void RequireFixtureWriteNotPoisoned()
@@ -102,11 +161,13 @@ public sealed partial class LightningStore
 				var identity = tracking.Owner.FixtureId;
 				if (!TryReadFixtureIdentity(tx, meta, out var actual) || actual != identity)
 					throw SemanticFixtureCapability.Unavailable();
-				var generation = checked(ReadFixturePackageGeneration(tx, meta, identity) + 1);
+				var previous = ReadFixturePackageGeneration(tx, meta, identity);
+				var generation = checked(previous + 1);
 				Span<byte> state = stackalloc byte[32];
 				EncodeUnknownPackageState(state, identity, generation);
 				var code = tx.Put(meta, FixturePackageStateKey, state);
 				if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "invalidate fixture package state");
+				tracking.Owner.RecordPackageBump(tracking.Lease, PackageSubmitter, previous, generation);
 				_fixturePackageInvalidated = true;
 			}
 			catch { _fixtureWritePoisoned = true; throw; }

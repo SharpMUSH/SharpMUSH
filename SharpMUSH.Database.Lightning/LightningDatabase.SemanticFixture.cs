@@ -62,11 +62,12 @@ public partial class LightningDatabase
 		return ValueTask.CompletedTask;
 	}
 
-	internal ValueTask<ulong> BeginSemanticFixturePackageAttemptAsync(SemanticFixtureCapability owner, CancellationToken ct)
+	internal ValueTask<ulong> BeginSemanticFixturePackageAttemptAsync(SemanticFixtureCapability owner, CancellationToken ct,
+		SemanticFixturePackageOperation? attribution = null)
 	{
 		if (_fixtureLease is not { } lease || !ReferenceEquals(lease.Owner, owner) || _fixtureClosed)
 			throw SemanticFixtureCapability.Unavailable();
-		return Store.BeginFixturePackageAttemptAsync(lease, ct);
+		return Store.BeginFixturePackageAttemptAsync(lease, ct, attribution);
 	}
 
 	private void DisposeSemanticFixture(SemanticFixtureLease lease)

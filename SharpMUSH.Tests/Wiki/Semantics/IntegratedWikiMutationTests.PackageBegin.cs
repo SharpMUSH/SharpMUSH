@@ -225,12 +225,11 @@ public partial class IntegratedWikiMutationTests
 		{
 			beforeInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 1));
 			await host.Services.GetRequiredService<IPackageInstallService>().UninstallAsync("begin-nested-missing");
-			// The inner runner and the inner transaction's retained BEGIN each count an attempt.
-			afterInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 3));
+			afterInner = PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 2));
 			return false;
 		});
 		await Assert.That(beforeInner && afterInner).IsTrue();
-		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 3))).IsTrue();
+		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 2))).IsTrue();
 	}
 
 	[Test]

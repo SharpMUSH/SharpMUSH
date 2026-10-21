@@ -20,6 +20,45 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		Owner = owner;
 		owner.RegisterPackageFence(runner: false);
 	}
+	/// <summary>Test seam: runs after the attempt is retained and immediately before the installer's own work.</summary>
+	internal Func<Task>? BeforeInstallerWorkForTests { get; set; }
+
+	/// <summary>
+	/// One attempt per installer operation. Inside a coordinated operation the attempt is that operation's
+	/// own, so the coordinator can still settle it; otherwise it is a retained attempt of its own that owns
+	/// the installer's flow, so its transactions join it, and it never settles.
+	/// </summary>
+	private async Task<T> AttemptAsync<T>(Func<Task<T>> run, CancellationToken cancellationToken)
+	{
+		// Joining is atomic with the root's liveness: a root released after the ambient was captured is not
+		// joined, and the work falls back to an attempt of its own. Either way it runs under a retained hold.
+		if (_provider.JoinSemanticFixturePackageOperation() is { } joined)
+		{
+			await using (joined)
+			{
+				var verdict = PackageWriteVerdict.Abandoned;
+				try
+				{
+					await _provider.BeginSemanticFixturePackageAttemptAsync(Owner, cancellationToken, joined.Root);
+					cancellationToken.ThrowIfCancellationRequested();
+					if (BeforeInstallerWorkForTests is { } joinedSeam) await joinedSeam();
+					var result = await run();
+					verdict = PackageWriteVerdict.Committed;
+					return result;
+				}
+				finally { joined.Report(verdict); }
+			}
+		}
+
+		await using var attempt = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
+		cancellationToken.ThrowIfCancellationRequested();
+		using (SemanticFixturePackageOperation.EnterAmbient(attempt))
+		{
+			if (BeforeInstallerWorkForTests is { } ownSeam) await ownSeam();
+			return await run();
+		}
+	}
+
 	public Task<PackageChangeset> PlanAsync(PackageManifest manifest, IReadOnlyDictionary<string, string>? configureAnswers = null, CancellationToken cancellationToken = default)
 		=> _inner.PlanAsync(manifest, configureAnswers, cancellationToken);
 	public Task<Found<string>> GetReadmeAsync(string packageId) => _inner.GetReadmeAsync(packageId);
@@ -27,28 +66,16 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		// Retained through the whole installer call, including a managed package's file deployment, which
-		// opens no package transaction of its own.
-		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.ApplyAsync(manifest, request, cancellationToken, fileSource);
+		return await AttemptAsync(() => _inner.ApplyAsync(manifest, request, cancellationToken, fileSource), cancellationToken);
 	}
 	public async Task<Result<Success>> UninstallAsync(string packageId, bool force = false, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		// Retained through the whole installer call, including a managed package's file deployment, which
-		// opens no package transaction of its own.
-		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.UninstallAsync(packageId, force, cancellationToken);
+		return await AttemptAsync(() => _inner.UninstallAsync(packageId, force, cancellationToken), cancellationToken);
 	}
 	public async Task<Result<PackageRollbackResult>> RollbackAsync(string packageId, int revision, CancellationToken cancellationToken = default)
 	{
 		if (!Owner.AdmitPackageMutation()) return new Error<string>(Refusal);
-		// Retained through the whole installer call, including a managed package's file deployment, which
-		// opens no package transaction of its own.
-		await using var held = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
-		cancellationToken.ThrowIfCancellationRequested();
-		return await _inner.RollbackAsync(packageId, revision, cancellationToken);
+		return await AttemptAsync(() => _inner.RollbackAsync(packageId, revision, cancellationToken), cancellationToken);
 	}
 }

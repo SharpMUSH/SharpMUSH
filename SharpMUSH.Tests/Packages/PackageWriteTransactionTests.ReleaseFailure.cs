@@ -7,8 +7,9 @@ namespace SharpMUSH.Tests.Packages;
 public partial class PackageWriteTransactionTests
 {
 	/// <summary>Throws before it returns a task, as an inconsistent fixture ownership does.</summary>
-	private sealed class SynchronouslyFailingRetention : IAsyncDisposable
+	private sealed class SynchronouslyFailingRetention : IPackageWriteHold
 	{
+		public void Report(PackageWriteVerdict verdict) { }
 		public ValueTask DisposeAsync() => throw new InvalidOperationException("Fixture operation ownership is inconsistent.");
 	}
 

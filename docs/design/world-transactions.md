@@ -127,6 +127,44 @@ only, not the plugins folder, so restoring a backup does not repair this. Both s
 repeat, since deploy replaces the whole folder and removal checks it exists. To recover, re-run
 the install of the version you want, or re-run the uninstall, before relying on the plugin again.
 
+### Package settlement on issued semantic fixtures
+
+Compensation says nothing about whether a world has *settled*: whether every package operation that
+touched it finished, its hooks ran, and nothing it started is still running. A reader that wants to
+certify package-derived facts needs that. Issued semantic-wiki fixtures (and only those, for now)
+record it in one 32-byte Meta marker, `prototype.semantic.package-settlement/v1`:
+`FPKG`, version 1, a state byte, the fixture's identity, and a generation.
+
+- **UNKNOWN (state 0)** is the default and the safe answer. Every package attempt's BEGIN, and the
+  first `pkg`/`pkg.*` write of every writer job, advances the generation and writes UNKNOWN.
+- **SETTLED (state 1)** rewrites the same generation. Only the package coordinator writes it, and
+  only after it has joined the operation's completion and its observation, in one writer
+  transaction that checks the marker is still UNKNOWN at the generation this operation's own flow
+  produced. The store attributes each job's bump to the coordinated operation whose flow submitted
+  it, per job inside a group commit. A bump from anywhere else, or from work that captured the
+  operation's flow but ran after the operation was released, taints the operation.
+- It also requires the operation to be the only one retained on the current lease, every
+  transaction and lifecycle hold it joined to have been released, each of them to have reported a
+  clean commit (a reverted transaction, failed compensation, or failed post-commit work such as a
+  wiki page deletion does not), and at least one to have committed.
+- From the observation it requires the body and every hook to have run, been released and been
+  observed with a completed queue outcome, and **no hook to have run code**: only `Absent` and
+  `Empty` hooks certify. A hook that parsed softcode can queue descendants, and fail commands, that
+  nothing observes yet, so it leaves the world UNKNOWN. Returned errors, exceptions, cancellation
+  and refused hooks never certify; a BEGIN, an UNKNOWN marker, or a callback's or helper's return
+  is never evidence of settlement.
+
+A reader treats the marker it reads in its own snapshot as SETTLED only when it is well formed,
+version 1, state 1 and the open fixture's identity; anything else is UNKNOWN, and the reader reports
+an incomplete result instead of certifying. A later package write cannot change an older snapshot.
+
+Known gaps, all of which leave the world UNKNOWN rather than wrongly SETTLED:
+
+- Hook entries run on the queue, which does not carry the coordinator's flow, so a hook takes an
+  attempt of its own and taints the operation. An operation that collected any hook (every package
+  with objects) does not settle until the coordinator hands its root to its hook entries.
+- Hooks that ran code stay UNKNOWN until queued descendants and command failures are observed.
+
 ### Follow-ups this decision left
 
 Both are done:

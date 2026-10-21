@@ -18,6 +18,19 @@ internal static class TestPackageWrites
 		=> ((PackageWriteTransactionFactory)services.GetRequiredService<IPackageWriteTransactionFactory>())
 			.Issue(manager, NoRetention.Instance, recoveryClock);
 
+	/// <summary>Issued by the world's own factory, reporting to and released through <paramref name="hold"/>.</summary>
+	public static PackageWriteTransaction Issue(IServiceProvider services, SharpPlayer manager, IPackageWriteHold hold)
+		=> ((PackageWriteTransactionFactory)services.GetRequiredService<IPackageWriteTransactionFactory>()).Issue(manager, hold);
+
+	/// <summary>Records the verdict a transaction reports and when it releases its hold.</summary>
+	public sealed class RecordingHold : IPackageWriteHold
+	{
+		public List<PackageWriteVerdict> Verdicts { get; } = [];
+		public bool Released { get; private set; }
+		public void Report(PackageWriteVerdict verdict) { lock (Verdicts) Verdicts.Add(verdict); }
+		public ValueTask DisposeAsync() { Released = true; return ValueTask.CompletedTask; }
+	}
+
 	/// <summary>Issued by a factory composed over <paramref name="services"/> with a replacement application registry.</summary>
 	public static PackageWriteTransaction Compose(IServiceProvider services, IApplicationRegistryService applications, SharpPlayer manager)
 		=> Factory(services, applications).Issue(manager, NoRetention.Instance);
@@ -51,9 +64,10 @@ internal static class TestPackageWrites
 		services.GetRequiredService<IRoleRegistryService>(), services.GetRequiredService<IAccountClaimsInvalidator>(),
 		services.GetRequiredService<IAttributeIndexBuilder>(), services.GetRequiredService<IConfigOptionWriter>());
 
-	private sealed class NoRetention : IAsyncDisposable
+	private sealed class NoRetention : IPackageWriteHold
 	{
 		public static readonly NoRetention Instance = new();
+		public void Report(PackageWriteVerdict verdict) { }
 		public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 	}
 }
