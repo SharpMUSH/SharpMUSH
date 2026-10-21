@@ -93,11 +93,11 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "unconnected_idle_timeout",
 		Category = "Limit",
-		Description = "Seconds before unconnected sessions are dropped",
+		Description = "Seconds before unconnected sessions are dropped (0 for no limit)",
 		ValidationPattern = @"^\d+$",
 		Group = "Connections",
 		Order = 5,
-		Min = 10,
+		Min = 0,
 		Max = 3600)]
 	uint UnconnectedIdleTimeout,
 
