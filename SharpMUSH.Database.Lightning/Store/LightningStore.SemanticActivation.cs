@@ -92,7 +92,7 @@ public sealed partial class LightningStore
 
 	private T ReadNative<T>(Func<LightningTransaction, T> read)
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
