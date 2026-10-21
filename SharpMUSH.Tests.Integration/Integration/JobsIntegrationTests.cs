@@ -422,6 +422,12 @@ public class JobsIntegrationTests
 			await God($"@role/assign {bld}=job-admin-building");
 			await Assert.That(await God($"think [permission({bld},softcode.jobs.building)]")).IsEqualTo("1")
 				.Because("each preloaded bucket has a Job Admin - <Bucket> role allowing its permission");
+			foreach (var staffRole in new[] { "wizard", "royalty" })
+			{
+				var staff = await Objid(await Player("JobsRole", staffRole));
+				await Assert.That(await God($"think [permission({staff},softcode.jobs.admin)]")).IsEqualTo("1")
+					.Because($"the package grants softcode.jobs.admin to the {staffRole} role");
+			}
 
 			var created = await As(admin, "+bucket/create Mod Mail=Messages to the moderators.");
 			await Assert.That(created).Contains("Bucket Mod Mail is ready.");
