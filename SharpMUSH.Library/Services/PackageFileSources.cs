@@ -33,6 +33,25 @@ public sealed class DirectoryPackageFileSource(string directory) : IPackageFileS
 	private readonly string _root = Path.GetFullPath(directory);
 
 	public async Task<byte[]?> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+		=> Find(path) is { } file ? await File.ReadAllBytesAsync(file.FullName, cancellationToken) : null;
+
+	public async Task<PackageFileRead> ReadFileAsync(string path, long maxBytes, CancellationToken cancellationToken = default)
+	{
+		if (Find(path) is not { } file)
+		{
+			return new NotFound();
+		}
+
+		if (file.Length > maxBytes)
+		{
+			return new PackageFileTooLarge(file.Length);
+		}
+
+		var bytes = await File.ReadAllBytesAsync(file.FullName, cancellationToken);
+		return bytes.LongLength > maxBytes ? new PackageFileTooLarge(bytes.LongLength) : bytes;
+	}
+
+	private FileInfo? Find(string path)
 	{
 		if (PackageFilePath.Normalize(path) is not { } normalized)
 		{
@@ -44,12 +63,8 @@ public sealed class DirectoryPackageFileSource(string directory) : IPackageFileS
 		var full = Path.GetFullPath(Path.Join(_root, normalized.Replace('/', Path.DirectorySeparatorChar)));
 		var inside = full.StartsWith(_root.EndsWith(Path.DirectorySeparatorChar) ? _root : _root + Path.DirectorySeparatorChar,
 			StringComparison.Ordinal);
-		if (!inside || !File.Exists(full) || new FileInfo(full).LinkTarget is not null)
-		{
-			return null;
-		}
-
-		return await File.ReadAllBytesAsync(full, cancellationToken);
+		var file = new FileInfo(full);
+		return inside && file.Exists && file.LinkTarget is null ? file : null;
 	}
 }
 
@@ -61,6 +76,9 @@ public static class PackageWikiBodies
 {
 	/// <summary>The largest page body a package may carry.</summary>
 	public const int MaxBodyBytes = 1024 * 1024;
+
+	/// <summary>The most page body bytes one package may carry in all; the largest pack shipped has under 5 MiB.</summary>
+	public const long MaxTotalBytes = 64L * 1024 * 1024;
 
 	/// <summary>True when a <c>file:</c> page has yet to be read.</summary>
 	public static bool NeedsFiles(PackageManifest manifest) => manifest.WikiPages.Any(page => page.Markdown is null);
@@ -87,24 +105,43 @@ public static class PackageWikiBodies
 		var problems = new List<string>();
 		var pages = new List<PackageWikiPageSpec>();
 		var read = new List<(PackageWikiPageSpec Page, string File)>();
+		var remaining = MaxTotalBytes;
 		foreach (var page in manifest.WikiPages)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			if (page.Markdown is not null || page.File is null)
 			{
 				pages.Add(page);
 				continue;
 			}
 
-			switch (await ReadBodyAsync(files, page.File, cancellationToken))
+			switch (await files.ReadFileAsync(page.File, Math.Min(MaxBodyBytes, remaining), cancellationToken))
 			{
-				case string markdown:
-					var loaded = page with { Markdown = markdown };
-					pages.Add(loaded);
-					read.Add((loaded, page.File));
+				case byte[] bytes:
+					remaining -= bytes.LongLength;
+					switch (Decode(page.File, bytes))
+					{
+						case string markdown:
+							var loaded = page with { Markdown = markdown };
+							pages.Add(loaded);
+							read.Add((loaded, page.File));
+							break;
+						case Error<string> error:
+							problems.Add($"{page.Label}: {error.Value}");
+							break;
+					}
+
 					break;
-				case Error<string> error:
-					problems.Add($"{page.Label}: {error.Value}");
+				case NotFound:
+					problems.Add($"{page.Label}: {page.File} is not in the package.");
 					break;
+				case PackageFileTooLarge large when large.Length > MaxBodyBytes:
+					problems.Add($"{page.Label}: {page.File} is larger than {MaxBodyBytes / 1024} KB.");
+					break;
+				case PackageFileTooLarge:
+					// Nothing more is read once the pages run past the total.
+					return new Error<string>(
+						$"Wiki pages cannot be read: the package's page files are larger than {MaxTotalBytes / (1024 * 1024)} MB in all.");
 			}
 		}
 
@@ -117,18 +154,8 @@ public static class PackageWikiBodies
 				issues.Where(i => i.Severity != PackageManifestIssueSeverity.Error).ToList());
 	}
 
-	private static async Task<Result<string>> ReadBodyAsync(IPackageFileSource files, string path, CancellationToken cancellationToken)
+	private static Result<string> Decode(string path, byte[] bytes)
 	{
-		if (await files.ReadFileAsync(path, cancellationToken) is not { } bytes)
-		{
-			return new Error<string>($"{path} is not in the package.");
-		}
-
-		if (bytes.Length > MaxBodyBytes)
-		{
-			return new Error<string>($"{path} is larger than {MaxBodyBytes / 1024} KB.");
-		}
-
 		try
 		{
 			var text = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes);
@@ -171,9 +198,12 @@ public static class PackageReadme
 
 		foreach (var name in FileNames)
 		{
-			if (await files.ReadFileAsync(name, cancellationToken) is { } bytes)
+			switch (await files.ReadFileAsync(name, MaxBytes, cancellationToken))
 			{
-				return Decode(bytes);
+				case byte[] bytes:
+					return Decode(bytes);
+				case PackageFileTooLarge:
+					return new NotFound();
 			}
 		}
 
