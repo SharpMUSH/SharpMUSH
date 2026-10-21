@@ -16,8 +16,8 @@ internal static class AtomicWikiLayout
 	internal static readonly byte[] CertificateKey = [3];
 	internal static readonly byte[] RawEpochKey = System.Text.Encoding.UTF8.GetBytes("prototype.semantic.raw-epoch/v1");
 	/// <summary>
-	/// Prototype schema 2: the pinned PF2e extractor's properties, for fixture-only canonical fact imports.
-	/// Ordinary page edits commit no facts under it; only an explicit import does.
+	/// Prototype schema 2: the pinned PF2e extractor's properties. A page's facts (its metadata) are typed against
+	/// it whenever the page is written, and a fixture import states them on the page as metadata.
 	/// </summary>
 	internal static readonly SemanticSchema Schema = new(2,
 	[

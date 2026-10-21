@@ -116,7 +116,7 @@ public static class CanonicalFacts
 		_ => "invalid"
 	};
 
-	private static bool QualifiedProperty(string? value)
+	internal static bool QualifiedProperty(string? value)
 	{
 		if (value is null)
 			return false;

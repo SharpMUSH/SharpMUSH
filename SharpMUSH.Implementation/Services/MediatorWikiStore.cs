@@ -62,6 +62,9 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 		=> mediator.Send(new SetWikiPageMetadataCommand(id, categories, published)).AsTask();
 
+	public Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
+		=> mediator.Send(new SetWikiPageFactsCommand(id, facts)).AsTask();
+
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> mediator.Send(new GetPinnedWikiCategoriesQuery()).AsTask();
 

@@ -42,6 +42,12 @@ public sealed class SetWikiPageMetadataCommandHandler(IWikiStore store) : IComma
 		=> new(store.SetPageMetadataAsync(command.Id, command.Categories, command.Published));
 }
 
+public sealed class SetWikiPageFactsCommandHandler(IWikiStore store) : ICommandHandler<SetWikiPageFactsCommand, FoundResult<WikiPage>>
+{
+	public ValueTask<FoundResult<WikiPage>> Handle(SetWikiPageFactsCommand command, CancellationToken cancellationToken)
+		=> new(store.SetPageFactsAsync(command.Id, command.Facts));
+}
+
 public sealed class SetWikiCategoryPinnedCommandHandler(IWikiStore store) : ICommandHandler<SetWikiCategoryPinnedCommand, bool>
 {
 	public ValueTask<bool> Handle(SetWikiCategoryPinnedCommand command, CancellationToken cancellationToken)

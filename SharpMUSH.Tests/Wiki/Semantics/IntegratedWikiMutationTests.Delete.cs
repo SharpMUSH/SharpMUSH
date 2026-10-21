@@ -217,7 +217,7 @@ public partial class IntegratedWikiMutationTests
 	{
 		// Decode rejects QueryReady=true, unknown schema/generation and mismatched fixture identities.
 		await Assert.That(ObserveActivation(provider, fixtureId).Active).IsTrue();
-		// The prototype schema 2: ordinary edits and deletes commit no facts under it; only a fixture import does.
+		// The prototype schema 2, which every page write types its facts against.
 		await Assert.That(AtomicWikiLayout.Schema.Version).IsEqualTo(2L);
 		await Assert.That(provider.AtomicWikiPhase).IsEqualTo(SemanticFixturePhase.Active);
 	}

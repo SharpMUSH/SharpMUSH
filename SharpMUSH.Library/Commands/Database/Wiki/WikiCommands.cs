@@ -31,6 +31,9 @@ public sealed record SetWikiPageTitleCommand(string Id, string Title) : ICommand
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetPageMetadataAsync"/>.</summary>
 public sealed record SetWikiPageMetadataCommand(string Id, IReadOnlyList<string> Categories, bool Published) : ICommand<Found<WikiPage>>;
 
+/// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetPageFactsAsync"/>.</summary>
+public sealed record SetWikiPageFactsCommand(string Id, IReadOnlyList<WikiPageFact> Facts) : ICommand<FoundResult<WikiPage>>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetCategoryPinnedAsync"/>.</summary>
 public sealed record SetWikiCategoryPinnedCommand(string Category, bool Pinned) : ICommand<bool>;
 

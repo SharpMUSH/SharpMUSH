@@ -113,7 +113,8 @@ public partial class IntegratedWikiMutationTests
 		{
 			if (stage != SemanticRebuildStage.ReplayCommitted || ++replays != 1) return;
 			// Every subject is already copied: only the journal can carry these into the staged generation. An
-			// edit drops facts, an import changes them, a delete tombstones, and a create adds a subject.
+			// edit moves the page's state and keeps its facts, an import changes them, a delete tombstones, and a
+			// create adds a subject.
 			await wiki.UpdateAsync(edited.Id, "# Edited during the rebuild", "#1");
 			await provider.ImportSemanticFixtureFactsAsync([new(reimported.Id, new(AtomicWikiLayout.Schema.Version,
 				[new(new(reimported.Id), "pf2e:level", 9L, QueryEvidence)]))], CancellationToken.None);
@@ -125,11 +126,12 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(created).IsNotNull();
 		await AssertIndexesMatchFacts(provider);
 		await AssertNoStaging(provider);
-		await Assert.That(ObserveProjection(provider, edited.Id).Facts.Facts).IsEmpty();
+		await Assert.That(ObserveProjection(provider, edited.Id).Facts.Facts.Single(f => f.Property == "pf2e:level").Value is long level
+			&& level == edited.Level).IsTrue();
 		await Assert.That(ObserveProjection(provider, deleted.Id).State.State.Summary.Deleted).IsTrue();
 		await Assert.That(ObserveProjection(provider, created!.Id).State.State.Summary.Deleted).IsFalse();
 		// The oracle's facts after those writes; it reads the live pages, so the deleted one drops out by itself.
-		var after = new QueryWorld(world.Host, [.. world.Pages.Values.Select(p => p with { Level = p.Id == edited.Id ? 0 : p.Id == reimported.Id ? 9 : p.Level })], "", "");
+		var after = new QueryWorld(world.Host, [.. world.Pages.Values.Select(p => p with { Level = p.Id == reimported.Id ? 9 : p.Level })], "", "");
 		await AssertQueriesMatchOracle(after, p => p.Level is >= 1 and <= 10);
 		await world.Host.CloseAsync();
 	}
