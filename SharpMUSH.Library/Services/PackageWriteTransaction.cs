@@ -165,7 +165,7 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 
 		// Physical ownership ends only after actual forward work and compensation have joined.
 		// Commit alone cannot release it, and every closer shares this same terminal completion.
-		var release = _lifetime.DisposeAsync().AsTask();
+		var release = ReleaseLifetimeAsync();
 		await release.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 		var failure = Failure(recovery) is { } recoveryFailure
 			? Failure(release) is { } releaseFailure ? new AggregateException(recoveryFailure, releaseFailure) : recoveryFailure
@@ -173,6 +173,9 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 		if (failure is not null) completion.SetException(failure);
 		else completion.SetResult(recovery.Result);
 	}
+
+	/// <summary>A release that throws before returning its task still faults this one, so recovery completes.</summary>
+	private async Task ReleaseLifetimeAsync() => await _lifetime.DisposeAsync();
 
 	private async Task<IReadOnlyList<string>> RevertJoinedAsync(Task pending)
 	{
