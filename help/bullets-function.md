@@ -22,7 +22,7 @@
 
 `bullets(<list>[, <delimiter>[, <options>]])`
 
-Each item of *<list>* on its own line after a bullet or a number. An item too long for its line wraps under its own text, not under the bullet; numbers line up on their right. In the web portal it is a bulleted or numbered list.
+Each item of *<list>* on its own line after a bullet or a number. *<delimiter>* splits the list; a space when none is given. An item too long for its line wraps under its own text, not under the bullet; numbers line up on their right. In the web portal it is a bulleted or numbered list.
 
 - [bullets() options]: borders, theme, width, style, start and marker
 - [bullets() examples]: wrapped, numbered, roman and marked lists
@@ -35,7 +35,7 @@ Each item of *<list>* on its own line after a bullet or a number. An item too lo
 
 ## Options
 
-Options (the last argument):
+Options (the last argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].

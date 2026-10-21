@@ -611,6 +611,12 @@
         "aliases": []
       },
       {
+        "id": "nesting-examples",
+        "lookup": "box() nesting examples",
+        "heading": "Layouts inside a box",
+        "aliases": []
+      },
+      {
         "id": "border-examples",
         "lookup": "box() border examples",
         "heading": "Border examples",
@@ -2149,6 +2155,27 @@
       }
     ],
     "file": "database.md"
+  },
+  {
+    "id": "datacolumns-function",
+    "lookup": "datacolumns()",
+    "title": "datacolumns()",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "datacolumns() examples",
+        "heading": "Examples",
+        "aliases": []
+      },
+      {
+        "id": "lists",
+        "lookup": "datacolumns() lists",
+        "heading": "Lists from other functions",
+        "aliases": []
+      }
+    ],
+    "file": "datacolumns-function.md"
   },
   {
     "id": "datatable-function",
@@ -4237,14 +4264,6 @@
     "id": "legacy:ldatatable()",
     "lookup": "ldatatable()",
     "title": "ldatatable()",
-    "aliases": [],
-    "sections": [],
-    "file": "layout-functions.md"
-  },
-  {
-    "id": "legacy:datacolumns()",
-    "lookup": "datacolumns()",
-    "title": "datacolumns()",
     "aliases": [],
     "sections": [],
     "file": "layout-functions.md"

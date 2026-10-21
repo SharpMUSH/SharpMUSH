@@ -142,7 +142,7 @@ Written straight into an argument, a JSON list needs `\[` in place of its openin
 | `"theme"` | a string or an object; see [LAYOUT THEMES] |
 | every other option | a string |
 
-A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`.
+A string keeps its colour, so `"top":"[ansi(hb,=)]"` draws a blue edge; a double quote inside one is written `\\"`. A string may hold `%r` and `%t` as they are: `{{"delim":"%r"}}` is a newline.
 
 Options apply in the order written, except a preset (`"border"`, `"guide"`), which applies first so the pieces written beside it change it whatever their order.
 
@@ -152,11 +152,12 @@ Every function answers bad options the same way:
 
 | Error | When |
 |---|---|
-| `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` | the text is not one JSON object |
+| `#-1 LAYOUT OPTIONS MUST BE A JSON OBJECT` | the text does not begin with `{` |
+| `#-1 LAYOUT OPTIONS: <what> AT CHARACTER <n>` | the object breaks off; says what was expected there |
 | `#-1 UNKNOWN LAYOUT OPTION <KEY>` | a key the function does not take |
 | `#-1 DUPLICATE LAYOUT OPTION <KEY>` | a key given twice |
-| `#-1 ARGUMENT OUT OF RANGE` | a number outside its range |
-| `#-1 INVALID ARGUMENT` | any other value it cannot read |
+| `#-1 LAYOUT OPTION <KEY>: ARGUMENT OUT OF RANGE` | a number outside its range |
+| `#-1 LAYOUT OPTION <KEY>: INVALID ARGUMENT` | any other value it cannot read |
 
 ## Examples
 

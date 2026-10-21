@@ -35,7 +35,7 @@ A bar filled to *<value>*'s share of *<maximum>*, with *<label>* before it and t
 
 ## Options
 
-Options (the last argument):
+Options (the last argument, which may be empty):
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"bar":<n>` - the bar's own width, in cells.
 - `"show":"percent"`, `"show":"value"` or `"show":"none"` - the figures after the bar: `50%` (the default), `6/12`, or nothing.
