@@ -12,6 +12,11 @@ results these tools produced.
   own fresh process (mode `measure`): a pass straight after process start, then a warm pass, each
   `seconds` long, with commands through the real command queue alongside and one rebuild during each warm
   pass. Semantic queries only ever run against these fixture worlds.
+- Mode `oracle` of `SemanticLoadMeasurement` compares every supported shape for every measured reader on a
+  world mode `build` made with an oracle that reads only the dataset's facts, the live pages and
+  `IWikiAccessService`. It writes `oracle.json` and fails on any difference. Give it a spec with
+  `"Mode":"oracle"`, the `Dataset`, and `World` set to the build's output directory. See
+  [the oracle report](../../docs/superpowers/reports/2026-10-21-semantic-wiki-oracle.md).
 - `command_load.py` measures ordinary command latency on a disposable SharpMUSH built the parity harness's
   way, with wiki reads off, and samples the server's memory, page faults and `/metrics`.
 

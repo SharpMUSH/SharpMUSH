@@ -1,0 +1,12 @@
+{
+  "Label": "sealed1x",
+  "Subjects": 4580,
+  "Comparisons": 272,
+  "Results": {
+    "unavailable": 144,
+    "match": 128
+  },
+  "RowsCompared": 14667,
+  "Differing": [],
+  "Refined": []
+}
