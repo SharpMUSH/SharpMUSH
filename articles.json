@@ -3207,6 +3207,24 @@
         "lookup": "gradient() examples",
         "heading": "Examples",
         "aliases": []
+      },
+      {
+        "id": "theme-examples",
+        "lookup": "gradient() theme examples",
+        "heading": "Theme colour examples",
+        "aliases": []
+      },
+      {
+        "id": "layout-examples",
+        "lookup": "gradient() layout examples",
+        "heading": "Layout examples",
+        "aliases": []
+      },
+      {
+        "id": "target-examples",
+        "lookup": "gradient() target examples",
+        "heading": "Border and text examples",
+        "aliases": []
       }
     ],
     "file": "gradient-function.md"
