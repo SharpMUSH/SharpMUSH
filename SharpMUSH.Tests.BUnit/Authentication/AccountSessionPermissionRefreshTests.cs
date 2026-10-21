@@ -158,6 +158,60 @@ public class AccountSessionPermissionRefreshTests : TrackingBunitContext
 		await Assert.That(service.Role).IsEqualTo("Player");
 	}
 
+	/// <summary>The session holds discord.admin once the discord package is installed, as the server resolves it.</summary>
+	private sealed class PackageHandler : HttpMessageHandler
+	{
+		private bool _installed;
+
+		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+		{
+			var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+			if (request.Method == HttpMethod.Post && path == "api/packages/apply")
+			{
+				_installed = true;
+				return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = JsonContent.Create(new { revision = 1, createdObjects = new Dictionary<string, string>(), notes = Array.Empty<string>() })
+				});
+			}
+			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+			{
+				Content = JsonContent.Create(new
+				{
+					username = "grave",
+					role = "God",
+					mustChangePassword = false,
+					permissions = _installed ? new[] { "config.admin", "discord.admin" } : ["config.admin"]
+				})
+			});
+		}
+	}
+
+	/// <summary>
+	/// Installing a package that defines a permission opens the pages gated on it in this tab: the Discord page
+	/// stayed out of the admin menu until a reload after the discord package was installed.
+	/// </summary>
+	[Test]
+	public async Task ApplyingAPackage_LoadsThePermissionsItBrings()
+	{
+		JSInterop.Mode = JSRuntimeMode.Loose;
+		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.sessionToken").SetResult("session");
+		var factory = Substitute.For<IHttpClientFactory>();
+		var service = new AccountAuthService(factory, JSInterop.JSRuntime, NullLogger<AccountAuthService>.Instance, []);
+		using var http = new HttpClient(new PackageHandler()) { BaseAddress = new Uri("https://localhost/") };
+		factory.CreateClient(Arg.Any<string>()).Returns(http);
+		await service.InitAsync();
+		await Assert.That(service.Permissions).DoesNotContain("discord.admin");
+
+		var packages = new PackagesAdminService(factory, new ServerInfoService(factory), service);
+		var notified = 0;
+		service.AuthStateChanged += () => notified++;
+		await packages.ApplyAsync(new SharpMUSH.Library.API.ApplyRequest("bundled", "discord", null, null, null));
+
+		await Assert.That(service.Permissions).Contains("discord.admin");
+		await Assert.That(notified).IsGreaterThanOrEqualTo(1).Because("the admin menu re-checks its pages when the auth state changes");
+	}
+
 	private sealed class FailedTransportHandler(bool timeout) : HttpMessageHandler
 	{
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
