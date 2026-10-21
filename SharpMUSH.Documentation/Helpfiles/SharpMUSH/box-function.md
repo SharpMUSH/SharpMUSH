@@ -86,7 +86,7 @@ Two columns in a box, with [FLEX()]:
 
 ## Layouts inside a box
 
-The body can be a layout, or several on lines of their own. To centre the body, give it as an [ITEM()] with `-` as its width; each line is centred, at any width:
+The body can be a layout, or several on lines of their own. To centre the body, wrap it in [ITEM()] with `-` as its width; each line is centred, at any width:
 
 ```sharp
 > think box(item(Hello there.%rWelcome to the garden.,-),,30)
