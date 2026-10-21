@@ -57,7 +57,7 @@ public class LayoutThemeFunctionTests
 	[Test]
 	[Arguments("box(Hi,,12,{{\"theme\":\"nowhere\"}})", "#-1 UNKNOWN THEME")]
 	[Arguments("box(Hi,,12,{{\"theme\":{\"seed\":\"blue\"}}})", "#-1 INVALID THEME: seed is a colour like #7aa2f7")]
-	[Arguments("box(Hi,,12,{{\"pad\":{\"x\":1}}})", "#-1 INVALID ARGUMENT")]
+	[Arguments("box(Hi,,12,{{\"pad\":{\"x\":1}}})", "#-1 LAYOUT OPTION PAD: INVALID ARGUMENT")]
 	[Arguments("theme(nowhere)", "#-1 UNKNOWN THEME")]
 	[Arguments("swatch({{\"mode\":\"grey\"}})", "#-1 INVALID THEME: mode is dark or light")]
 	public async Task ABadTheme_SaysWhy(string code, string error)

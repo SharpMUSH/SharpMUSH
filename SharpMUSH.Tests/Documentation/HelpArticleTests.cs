@@ -34,7 +34,7 @@ public class HelpArticleTests
 		await Assert.That(article.Sections.Select(section => section.Id)).IsEquivalentTo(new[] { "examples", "options" });
 		await Assert.That(article.Markdown.IndexOf("## Examples", StringComparison.Ordinal))
 			.IsLessThan(article.Markdown.IndexOf("## Options", StringComparison.Ordinal));
-		await Assert.That(article.Entry().Markdown).Contains("help sample examples");
+		await Assert.That(article.Entry().Markdown).Contains("[sample examples]");
 		await Assert.That(article.Entry().Markdown).DoesNotContain("Option details");
 		await Assert.That(article.Entry(article.Sections[0]).Markdown).Contains("Local explanation");
 		await Assert.That(article.Entry(article.Sections[0]).Markdown).DoesNotContain("Option details");
@@ -48,8 +48,8 @@ public class HelpArticleTests
 		var article = HelpArticleParser.Parse(Article.Replace("Overview.", "Overview: see [sample options] for the options."), "help")
 			.Single().Article;
 		var overview = article.Entry().Markdown;
-		await Assert.That(overview).Contains("- `help sample examples`");
-		await Assert.That(overview).DoesNotContain("`help sample options`");
+		await Assert.That(overview).Contains("- [sample examples]");
+		await Assert.That(overview.Split("[sample options]").Length).IsEqualTo(2);
 	}
 
 	[Test]

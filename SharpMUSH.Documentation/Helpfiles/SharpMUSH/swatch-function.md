@@ -17,7 +17,7 @@
 
 `swatch(<theme>[, <width>])`
 
-A table of *<theme>*'s colours: each colour's name, a sample drawn in it, the colour, the standard colour a sixteen-colour client is sent, and how far it stands out from the background. A colour that stands out less than its use needs is marked with what it needs. A standard colour on its own shows `client`, since it looks however the reader's client draws it. The table is drawn in the theme.
+A table of *<theme>*'s colours: each colour's name, a sample drawn in it, the colour, the standard colour a sixteen-colour client is sent, and how far it stands out from the background. A colour that stands out less than its use needs is marked with what it needs. A standard colour on its own shows `client`, since it looks however the reader's client draws it. The table is drawn in the theme. *<width>* is the table's width; see [LAYOUT FUNCTIONS] for leaving it out.
 
 - [swatch() example]: the colours of nord, with what each needs
 

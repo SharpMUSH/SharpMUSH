@@ -79,7 +79,7 @@ Raya  a|b
 ```
 
 - A space, for lists other functions made: `{{"delim":" "}}`. A run of spaces splits once, so no cell can be empty.
-- A newline: build the options with `json(object,delim,json(string,%r))`. Inline, `%r` is not valid JSON and `\n` is the letter `n`.
+- A newline: `{{"delim":"%r"}}`. The lists in the other options are then split by `%r` too: `"grow":"%r1"`.
 - Text a player typed: a marked delimiter, written inline as `{{"delim":"%*<^>"}}`, splits only at a marked `^`. `json()` drops the mark. See [LIST SEPARATORS].
 
 ## Examples
