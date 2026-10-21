@@ -142,7 +142,8 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 3,
 		Min = 0,
-		Max = 1000000)]
+		Max = 1000000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint StartingMoney,
 
 	[property: SharpConfig(
@@ -153,7 +154,8 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 4,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint Paycheck,
 
 	[property: SharpConfig(
@@ -164,7 +166,8 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 5,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint GuestPaycheck,
 
 	[property: SharpConfig(
@@ -175,7 +178,8 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 6,
 		Min = 0,
-		Max = 2147483647)]
+		Max = 2147483647,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint MaxPennies,
 
 	[property: SharpConfig(
@@ -186,7 +190,8 @@ public record LimitOptions(
 		Group = "Economy",
 		Order = 7,
 		Min = 0,
-		Max = 2147483647)]
+		Max = 2147483647,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint MaxGuestPennies,
 
 	[property: SharpConfig(
