@@ -63,7 +63,8 @@ public class PackageWikiLandingPageAdmissionTests
 			services.GetRequiredService<ILockService>(), services.GetRequiredService<IPackageDeclarationService>(),
 			services.GetRequiredService<IPackageSettingService>(), services.GetRequiredService<IPackageWikiService>(),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(), services.GetRequiredService<EngineVersion>(),
-			services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>());
+			services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>(),
+			TestPackageWrites.Factory(services, (IApplicationRegistryService)database));
 	}
 
 	[Test]

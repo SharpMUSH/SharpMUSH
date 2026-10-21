@@ -91,11 +91,11 @@ public class PluginDiscoveryTests
 	[Test]
 	public Task OlderContractMajor_IsIncompatible() => InScratch(async directories =>
 	{
-		Folder(directories.Installed, "past", """{ "id": "past", "minServerVersion": ">=1.0" }""", "A.dll");
+		Folder(directories.Installed, "past", """{ "id": "past", "minServerVersion": ">=2.0" }""", "A.dll");
 
 		var candidate = DiscoverOne(directories.Installed);
 		await Assert.That(candidate.Problem).IsEqualTo(PluginBootStatus.Incompatible)
-			.Because("a plugin built against 1.x does not bind to the 2.x contract");
+			.Because("a plugin built against 2.x does not bind to the 3.x contract");
 	});
 
 	[Test]

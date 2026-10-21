@@ -191,15 +191,7 @@ public class PackageDeclarationInstallTests
 		try
 		{
 			var god = (await Services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
-			await using (var writes = new PackageWriteTransaction(
-				Services.GetRequiredService<IMediator>(),
-				Services.GetRequiredService<IObjectStore>(),
-				Services.GetRequiredService<IAttributeStore>(),
-				Services.GetRequiredService<IFlagAndPowerStore>(),
-				Registry,
-				Services.GetRequiredService<IApplicationRegistryService>(),
-				Services.GetRequiredService<ILockService>(),
-				god))
+			await using (var writes = TestPackageWrites.Issue(Services, god))
 			{
 				// What an uninstall does to the declarations, then a later step of it failing.
 				(await Services.GetRequiredService<IPackageDeclarationService>()

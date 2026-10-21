@@ -37,7 +37,12 @@ cover.
 This covers softcode and application packages. Plugin packages (plugin binaries) are outside it;
 see *Plugin packages* below.
 
-An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. The
+An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. A
+transaction comes only from the world's `IPackageWriteTransactionFactory` (plugin contract 3.0.0
+removed its public constructor). The factory retains the world before it looks up the Package
+Manager and holds it until the transaction closes. The installer and each package helper check that
+their own services are the ones that world registered, before they read or call back, so a service
+from another world is refused. The
 operation commits with its last write, made straight to the registry: the revision record for an
 apply or rollback, the removal of the package's rows for an uninstall. Then:
 
@@ -51,6 +56,15 @@ apply or rollback, the removal of the package's rows for an uninstall. Then:
   policy: expiry prevents starting further inverses and reports them as unattempted, but every
   already-started inverse is awaited even beyond expiry. It is not a hard native completion SLA,
   and a noncooperative inverse can still hold the queue/gate while it settles.
+- **A transaction accepts sequential writes until commit or recovery begins.** Await each forward
+  write before starting another; a concurrent write or a commit while one is pending is rejected.
+  Disposal stops new admissions and waits for an admitted write to finish registering its inverse
+  before recovery. Every closer joins the same recovery, without replaying inverses. An implicit
+  recovery failure remains observable on repeated disposal; explicit rollback returns its combined
+  error and later disposal only joins. A write or inverse callback cannot await closure of its own
+  transaction: that self-join is rejected rather than leaving recovery waiting indefinitely. These
+  rules cover writes through the transaction; external helpers still need ownership spanning their
+  source write through `Track`. They do not supply native isolation or durable settlement.
 - **Package operations are serialized with each other.** Apply, uninstall, rollback and the
   profile-handler reset hold one process-wide gate (`IPackageOperationGate`, #1484) from their
   first registry read to their last write.
@@ -112,6 +126,65 @@ The plugin loader reads `<installed plugins>/<id>/` on the next start. `@backup`
 only, not the plugins folder, so restoring a backup does not repair this. Both steps are safe to
 repeat, since deploy replaces the whole folder and removal checks it exists. To recover, re-run
 the install of the version you want, or re-run the uninstall, before relying on the plugin again.
+
+### Package settlement on issued semantic fixtures
+
+Compensation says nothing about whether a world has *settled*: whether every package operation that
+touched it finished, its hooks ran, and nothing it started is still running. A reader that wants to
+certify package-derived facts needs that. Issued semantic-wiki fixtures (and only those, for now)
+record it in one 32-byte Meta marker, `prototype.semantic.package-settlement/v1`:
+`FPKG`, version 1, a state byte, the fixture's identity, and a generation.
+
+- **UNKNOWN (state 0)** is the default and the safe answer. Every package attempt's BEGIN, and the
+  first `pkg`/`pkg.*` write of every writer job, advances the generation and writes UNKNOWN.
+- **SETTLED (state 1)** rewrites the same generation. Only the package coordinator writes it, and
+  only after it has joined the operation's completion and its observation, in one writer
+  transaction that checks the marker is still UNKNOWN at the generation this operation's own flow
+  produced. The store attributes each job's bump to the coordinated operation whose flow submitted
+  it, per job inside a group commit. A bump from anywhere else, or from work that captured the
+  operation's flow but ran after the operation was released, taints the operation.
+- It also requires the operation to be the only one retained on the current lease, every
+  transaction and lifecycle hold it joined to have been released, each of them to have reported a
+  clean commit (a reverted transaction, failed compensation, or failed post-commit work such as a
+  wiki page deletion does not), and at least one to have committed.
+- From the observation it requires the body and every hook to have run, been released and been
+  observed with a completed queue outcome, and **no hook to have run code**: only `Absent` and
+  `Empty` hooks certify. A hook that parsed softcode can queue descendants, and fail commands, that
+  nothing observes yet, so it leaves the world UNKNOWN. Returned errors, exceptions, cancellation
+  and refused hooks never certify; a BEGIN, an UNKNOWN marker, or a callback's or helper's return
+  is never evidence of settlement.
+
+A reader treats the marker it reads in its own snapshot as SETTLED only when it is well formed,
+version 1, state 1 and the open fixture's identity; anything else is UNKNOWN, and the reader reports
+an incomplete result instead of certifying. A later package write cannot change an older snapshot.
+
+Queue entries do not run in the flow that started an operation, so `PackageOperationRunner`
+captures an optional `IPackageOperationScope` when the operation starts and enters it in the body
+entry and in each hook entry it admits. On a fixture that hands those entries the coordinator's
+operation; a hold joins it only while it is still live, so an entry that runs after the operation
+was released takes an attempt of its own, which invalidates.
+
+Known gap, which leaves the world UNKNOWN rather than wrongly SETTLED: hooks that ran code stay
+UNKNOWN until queued descendants and command failures are observed.
+
+#### Reading a settled fixture
+
+A semantic read (`SemanticWikiReader`, internal) is admitted as a read lease on the exact issued
+lease; while one is admitted, close, reopen, revoke and activation refuse busy, and a lease that has
+begun closing admits no new read. The lease never holds a native transaction: the read runs in short
+synchronous sections, each one `Store.Read` that copies bounded rows out, with its own row and byte
+limit inside the request's. Section 0 pins the settled package generation and three fixture
+counters, each advanced in the same writer job as any change of its class: *content* (wiki pages,
+revisions, slugs, translations, namespaces, categories, pins and the semantic projection),
+*requirements*, and *authorization* (accounts, their characters, roles, grants, overrides and
+permission definitions). The reader's scopes are resolved after that section and again before a
+final section that rechecks every pin in one snapshot. A moved package or content pin is
+`DataChanged`, a moved requirements or authorization pin or a different reader is
+`AuthorizationChanged`, an unsettled world is `Incomplete`, a limit is `WorkLimit`, and cancellation
+or an expired execution budget is `Cancelled`; none carries a partial answer. A plan always runs its
+declared number of sections, so a denied target and a missing one return the same `Unavailable`
+value along the same path. The final section is the answer's authorization point: a change after it
+cannot retract what has already been sent.
 
 ### Follow-ups this decision left
 

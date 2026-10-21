@@ -122,7 +122,7 @@ public class ListSeparatorTests
 	[Arguments("ldatatable({{\"border\":\"ascii\",\"delim\":\"%*<^>\"}},Name%*<^>Motto,Raya%*<^>a^b%*<|>Mannaz%*<^>c,%*<|>)", "Name    Motto\n-------------\nRaya    a^b\nMannaz  c")]
 	// The option lists split on the same marked delimiter.
 	[Arguments("ldatatable({{\"border\":\"ascii\",\"delim\":\"%*<^>\",\"priority\":\"1%*<^>9\"}},Name%*<^>Motto,Raya%*<^>a^b%*<|>Mannaz%*<^>c,%*<|>)", "Name    Motto\n-------------\nRaya    a^b\nMannaz  c")]
-	[Arguments("ldatatable({{\"border\":\"ascii\",\"delim\":\"%*<^>\",\"priority\":\"1^9\"}},Name%*<^>Motto,Raya%*<^>a^b%*<|>Mannaz%*<^>c,%*<|>)", "#-1 INVALID ARGUMENT")]
+	[Arguments("ldatatable({{\"border\":\"ascii\",\"delim\":\"%*<^>\",\"priority\":\"1^9\"}},Name%*<^>Motto,Raya%*<^>a^b%*<|>Mannaz%*<^>c,%*<|>)", "#-1 LAYOUT OPTION PRIORITY: INVALID ARGUMENT")]
 	public async Task LayoutsSplitOnMarkedDelimiters(string code, string expected)
 		=> await Assert.That(string.Join("\n", (await Eval(code)).Split('\n').Select(line => line.TrimEnd()))).IsEqualTo(expected);
 

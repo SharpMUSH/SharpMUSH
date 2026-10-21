@@ -68,7 +68,7 @@ Given a layout, such as a [BOX()] or a [DATATABLE()], the whole block is shaded,
 
 ## Options
 
-Options (the last argument):
+Options (the last argument, which may be empty):
 - `"flow":"characters"`, `"flow":"words"`, `"flow":"across"`, `"flow":"down"` or `"flow":"diagonal"` - which way the colours run. `characters` (the default) runs along the characters that show, on through every line; `words` gives each word one colour; `across` runs left to right by column, every line alike; `down` gives each line one colour; `diagonal` runs from the top-left corner to the bottom-right. The portal runs `characters` and `words` across.
 - `"space":"oklch"`, `"space":"oklab"` or `"space":"hsl"` - the space the colours blend in.
 - `"mirror":true` - run there and back: red to blue to red.

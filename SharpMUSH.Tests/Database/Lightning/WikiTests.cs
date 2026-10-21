@@ -30,6 +30,7 @@ public class WikiTests
 		var db = Create(path);
 		try
 		{
+			await db.Migrate();
 			await body(db, new WikiStoreService(db, new WikiMarkdigPipeline()));
 		}
 		finally

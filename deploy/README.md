@@ -761,6 +761,8 @@ count toward it.
 
 ## Updating
 
+Before deploying the category index format upgrade, follow the [wiki category upgrade guide](../docs/guides/wiki-category-upgrade.md). Preserve a verified pre-upgrade recovery point: this format change has no supported in-place downgrade.
+
 The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
 
 

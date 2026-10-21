@@ -1,6 +1,6 @@
 namespace SharpMUSH.Database.Lightning.Records;
 
-/// <summary>One applied schema migration, keyed by <see cref="Id"/> in a dedicated migrations table.</summary>
+/// <summary>One applied schema migration, stored under <c>mig:&lt;id&gt;</c> in the core metadata table.</summary>
 public sealed record MigrationRecord
 {
 	public string Id { get; init; } = "";

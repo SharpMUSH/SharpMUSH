@@ -36,9 +36,11 @@ public partial class LightningDatabase
 		var lease = capability.Claim(options);
 		try
 		{
+			capability.BeginNativeOpen(lease);
 			var provider = new LightningDatabase(logger, options, passwordService, relations, migrationSources,
 				pluginFlags, credentialGate, credentialRevokers)
 			{ _fixtureLease = lease };
+			provider.Store.AttachFixturePackageTracking(lease);
 			try { if (capability.Phase == SemanticFixturePhase.Active) provider.Store.RegisterExistingAtomicLayout(); }
 			catch { provider.DisposeAsync().GetAwaiter().GetResult(); throw; }
 			return provider;
@@ -60,12 +62,23 @@ public partial class LightningDatabase
 		return ValueTask.CompletedTask;
 	}
 
+	internal ValueTask<ulong> BeginSemanticFixturePackageAttemptAsync(SemanticFixtureCapability owner, CancellationToken ct,
+		SemanticFixturePackageOperation? attribution = null)
+	{
+		if (_fixtureLease is not { } lease || !ReferenceEquals(lease.Owner, owner) || _fixtureClosed)
+			throw SemanticFixtureCapability.Unavailable();
+		return Store.BeginFixturePackageAttemptAsync(lease, ct, attribution);
+	}
+
 	private void DisposeSemanticFixture(SemanticFixtureLease lease)
 	{
+		Store.RequireExternalDisposal();
 		lock (_fixtureDisposeGate)
 		{
 			_fixtureCloseFailure?.Throw();
 			if (_fixtureClosed) return;
+			// Busy close refusal leaves the provider live and retryable, never quarantined.
+			lease.Owner.BeginNativeClose(lease);
 			try { Store.Dispose(); }
 			catch (Exception error)
 			{

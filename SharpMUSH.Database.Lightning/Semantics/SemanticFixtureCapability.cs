@@ -68,6 +68,8 @@ internal sealed partial class SemanticFixtureCapability : IDisposable
 		}
 	}
 
+	private ulong _leaseEpoch;
+
 	internal SemanticFixtureLease Claim(LightningStoreOptions options)
 	{
 		ArgumentNullException.ThrowIfNull(options);
@@ -110,7 +112,7 @@ internal sealed partial class SemanticFixtureCapability : IDisposable
 			lock (_gate)
 			{
 				_phase = activation is null ? SemanticFixturePhase.Inactive : SemanticFixturePhase.Active;
-				_active = new SemanticFixtureLease(this, firstOpen);
+				_active = new SemanticFixtureLease(this, firstOpen, ++_leaseEpoch);
 				_claimed = true;
 				return _active;
 			}
@@ -157,6 +159,9 @@ internal sealed partial class SemanticFixtureCapability : IDisposable
 		lock (_gate)
 		{
 			if (_active != lease || !_ownership.MayReleaseLease) return;
+			if (HasRetainedOperations(lease)) throw new SemanticFixtureOperationInProgressException();
+			if (lease.NativeOpenAttempted && !lease.NativeClosed)
+				throw new InvalidOperationException("Close native fixture storage before releasing its lease.");
 			if (!_initialized) _poisoned = true;
 			_active = null;
 		}
@@ -182,15 +187,26 @@ internal sealed class SemanticFixtureLease : IDisposable
 {
 	private readonly SemanticFixtureCapability _owner;
 	internal SemanticFixtureCapability Owner => _owner;
-	internal SemanticFixtureLease(SemanticFixtureCapability owner, bool firstOpen)
+	internal SemanticFixtureLease(SemanticFixtureCapability owner, bool firstOpen, ulong epoch = 0)
 	{
 		_owner = owner;
 		IsFirstOpen = firstOpen;
+		Epoch = epoch;
 	}
+	/// <summary>Which claim of this fixture's storage this is; a reopen is a new epoch.</summary>
+	internal ulong Epoch { get; }
+	/// <summary>
+	/// This lease's continuation key: random, in memory only, never persisted, so a reopen refuses every
+	/// earlier continuation.
+	/// </summary>
+	internal byte[] ContinuationKey { get; } = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
 	internal Guid FixtureId => _owner.FixtureId;
 	internal string CanonicalPath => _owner.CanonicalPath;
 	internal bool IsFirstOpen { get; }
 	internal bool IsInitialized { get; private set; }
+	internal bool IsClosing { get; set; }
+	internal bool NativeOpenAttempted { get; set; }
+	internal bool NativeClosed { get; set; }
 	internal void MarkInitialized() => IsInitialized = true;
 	internal void Initialized() => _owner.Initialized(this);
 	internal void InitializationFailed() => _owner.InitializationFailed(this);

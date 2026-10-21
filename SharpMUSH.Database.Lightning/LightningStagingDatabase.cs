@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Plugins;
@@ -58,6 +59,7 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 		{
 			if (IsPromoted) throw new InvalidOperationException("Staging already promoted.");
 			if (_aborted) throw new InvalidOperationException("Staging was aborted.");
+			var categoryOptions = WikiCategoryMigrationOptions.FromEnvironment();
 
 			// Must be fully closed before the move: LMDB writes its lock file and pending pages into this
 			// directory, and the live environment is about to open it as its own.
@@ -70,6 +72,9 @@ public sealed class LightningStagingDatabase : LightningDatabase, IStagingDataba
 			// The live instance now fronts a world whose ids it never allocated — rebuild its allocators or
 			// the next @create would overwrite an imported object.
 			await _live.RecomputeCountersAsync(ct);
+			// The live provider's ready epoch belongs to the outgoing environment. Validate the
+			// incoming authority and publish readiness for its epoch before reporting promotion.
+			await _live.MigrateWikiCategoryValuesAsync(categoryOptions, ct);
 
 			IsPromoted = true;
 			_logger.LogInformation("Lightning staging database {StagingId} promoted to live at {Path}; the world it replaced is kept at {PreviousPath}",

@@ -46,43 +46,41 @@ public static class StartupAttributeRunner
 	}
 
 	/// <summary>
-	/// Runs a single object's non-inherited attribute as a <b>command list</b> under the object's
-	/// own authority (Executor = Enactor = <paramref name="obj"/>, Caller = <paramref name="caller"/>).
-	/// Command-parsing (not function evaluation) is required because these attributes — <c>STARTUP</c>,
-	/// package <c>AINSTALL</c>/<c>AUPDATE</c> — typically contain commands such as <c>@function</c> and
-	/// <c>@hook</c>. Returns <c>false</c> (a no-op) when the attribute is absent or empty.
+	/// Runs the attribute and reports its local read/parse verdict. Exceptions retain their original
+	/// meaning. No raw attribute, parser state or error text is retained in the returned metadata.
 	/// </summary>
-	public static async ValueTask<bool> RunObjectAttributeAsync(
-		IMUSHCodeParser parser,
-		IAttributeService attributeService,
-		AnySharpObject obj,
-		string attribute,
-		AnySharpObject caller)
+	public static async ValueTask<ObjectAttributeRunStatus> RunObjectAttributeObservedAsync(
+		IMUSHCodeParser parser, IAttributeService attributeService, AnySharpObject obj, string attribute, AnySharpObject caller)
 	{
-		var attr = await attributeService.GetAttributeAsync(
-			caller, obj, attribute, IAttributeService.AttributeMode.Read, parent: false);
-
-		if (attr is not SharpAttribute[] chain)
-		{
-			return false;
-		}
-
-		var value = chain.Last().Value;
-		if (value.Length == 0)
-		{
-			return false;
-		}
-
-		// Run under the object itself so `%!`/`me` resolve to the object whose attribute this is
-		// (e.g. `@function header=%!,HEADER` targets the package object, which controls its own attrs).
+		var found = await attributeService.GetAttributeAsync(caller, obj, attribute, IAttributeService.AttributeMode.Read, parent: false);
+		if (found is not SharpAttribute[] chain)
+			return found is None ? ObjectAttributeRunStatus.Absent : ObjectAttributeRunStatus.Unavailable;
+		if (chain.Length == 0 || chain.Any(row => row.IsUnreadable || row.IsMetadataUnreadable))
+			return ObjectAttributeRunStatus.Unavailable;
+		var value = chain[^1].Value;
+		if (value.Length == 0) return ObjectAttributeRunStatus.Empty;
 		var runParser = parser.Push(parser.CurrentState with
 		{
 			Executor = obj.Object().DBRef,
 			Enactor = obj.Object().DBRef,
 			Caller = caller.Object().DBRef
 		});
-
-		await runParser.CommandListParse(value);
-		return true;
+		return await runParser.CommandListParse(value) switch
+		{
+			null => ObjectAttributeRunStatus.NoVerdict,
+			{ IsParseFailure: true } => ObjectAttributeRunStatus.ParseFailure,
+			{ HadErrors: true } => ObjectAttributeRunStatus.CommandFailure,
+			_ => ObjectAttributeRunStatus.Parsed
+		};
 	}
+
+	/// <summary>
+	/// Legacy projection: true means parsing was attempted, including an error or absent parser
+	/// verdict. Absent, empty and unavailable attributes are false; execution exceptions propagate.
+	/// </summary>
+	public static async ValueTask<bool> RunObjectAttributeAsync(IMUSHCodeParser parser,
+		IAttributeService attributeService, AnySharpObject obj, string attribute, AnySharpObject caller)
+		=> await RunObjectAttributeObservedAsync(parser, attributeService, obj, attribute, caller) is
+			ObjectAttributeRunStatus.Parsed or ObjectAttributeRunStatus.NoVerdict
+			or ObjectAttributeRunStatus.ParseFailure or ObjectAttributeRunStatus.CommandFailure;
 }

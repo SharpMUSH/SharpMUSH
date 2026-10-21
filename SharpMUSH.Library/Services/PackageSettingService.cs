@@ -42,6 +42,8 @@ public sealed class PackageSettingService(
 		Func<PackageRef, string?> resolve,
 		List<string> notes)
 	{
+		writes.Origin.RequireSettings(config, packages);
+		using var admitted = writes.AdmitHelper();
 		var plan = await PlanCoreAsync(packageId, declared, owned, resolve);
 		if (plan.Where(p => p.Change.Action == PackageSettingAction.Blocked).ToArray() is { Length: > 0 } blocked)
 		{

@@ -379,16 +379,9 @@ public class IntegratedWikiBoundaryTests
 	public async Task IdentityPrimitiveRequiresExactlySixteenBytes(int length)
 	{
 		await using var fixture = new SemanticWikiPrototypeFixture(ScratchRoot);
-		await using (var provider = Open(fixture))
-		{
-			await provider.Migrate();
-			await provider.Store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str(IdentityKey), new byte[length]));
-		}
-		var before = File.ReadAllBytes(Path.Combine(fixture.WorldPath, "data.mdb"));
-		var rejected = await Rejected(fixture);
-		var after = File.ReadAllBytes(Path.Combine(fixture.WorldPath, "data.mdb"));
-		await Assert.That(rejected).IsTrue();
-		await Assert.That(after).IsEquivalentTo(before);
+		await using (var provider = Open(fixture)) { await provider.Migrate(); }
+		CorruptClosedIdentity(fixture.WorldPath, new byte[length]);
+		await AssertIdentityAdmissionRejectsWithoutWriting(fixture, "Fixture identity must contain exactly 16 bytes.");
 	}
 
 	[Test]
@@ -423,20 +416,9 @@ public class IntegratedWikiBoundaryTests
 	public async Task MissingOrMismatchedMetaRejectsBeforeWritingConstructor(bool mismatch)
 	{
 		await using var fixture = new SemanticWikiPrototypeFixture(ScratchRoot);
-		await using (var provider = Open(fixture))
-		{
-			await provider.Migrate();
-			await provider.Store.WriteAsync(tx =>
-			{
-				if (mismatch) tx.Put(Tables.Meta, Keys.Str(IdentityKey), Guid.NewGuid().ToByteArray(bigEndian: true));
-				else tx.Delete(Tables.Meta, Keys.Str(IdentityKey));
-			});
-		}
-		var before = File.ReadAllBytes(Path.Combine(fixture.WorldPath, "data.mdb"));
-		var rejected = await Rejected(fixture);
-		var after = File.ReadAllBytes(Path.Combine(fixture.WorldPath, "data.mdb"));
-		await Assert.That(rejected).IsTrue();
-		await Assert.That(after).IsEquivalentTo(before);
+		await using (var provider = Open(fixture)) { await provider.Migrate(); }
+		CorruptClosedIdentity(fixture.WorldPath, mismatch ? Guid.NewGuid().ToByteArray(bigEndian: true) : null);
+		await AssertIdentityAdmissionRejectsWithoutWriting(fixture, "Existing fixture Meta identity does not match issuance.");
 	}
 
 	[Test]
@@ -467,6 +449,37 @@ public class IntegratedWikiBoundaryTests
 		await Assert.That(ownership.IsQuarantined).IsTrue();
 		await Assert.That(ownership.MayReleaseLease).IsFalse();
 		await Assert.That(ownership.MayRemoveArtifacts).IsFalse();
+	}
+
+	/// <summary>Simulates external corruption only after the issued provider is fully closed.</summary>
+	private static void CorruptClosedIdentity(string path, byte[]? replacement)
+	{
+		using var environment = new LightningEnvironment(path, new EnvironmentConfiguration { MapSize = 256L << 20, MaxDatabases = 256 });
+		environment.Open(EnvironmentOpenFlags.NoThreadLocalStorage);
+		using var tx = environment.BeginTransaction();
+		using var meta = tx.OpenDatabase(Tables.Meta.Name, new DatabaseConfiguration { Flags = DatabaseOpenFlags.None });
+		var key = Keys.Str(IdentityKey);
+		var edit = replacement is null ? tx.Delete(meta, key) : tx.Put(meta, key, replacement);
+		if (edit != MDBResultCode.Success) throw new InvalidOperationException($"Native identity fixture edit failed: {edit}.");
+		var (read, _, bytes) = tx.Get(meta, key);
+		if (replacement is null ? read != MDBResultCode.NotFound
+			: read != MDBResultCode.Success || !bytes.AsSpan().SequenceEqual(replacement))
+			throw new InvalidOperationException("Native identity fixture edit did not read back exactly.");
+		var commit = tx.Commit();
+		if (commit != MDBResultCode.Success) throw new InvalidOperationException($"Native identity fixture commit failed: {commit}.");
+	}
+
+	private static async Task AssertIdentityAdmissionRejectsWithoutWriting(SemanticWikiPrototypeFixture fixture, string expectedReason)
+	{
+		var path = Path.Combine(fixture.WorldPath, "data.mdb");
+		var before = File.ReadAllBytes(path);
+		LightningDatabase? admitted = null;
+		string? reason = null;
+		try { admitted = Open(fixture); }
+		catch (InvalidOperationException error) { reason = error.Message; }
+		finally { if (admitted is not null) await admitted.DisposeAsync(); }
+		await Assert.That(reason).IsEqualTo(expectedReason);
+		await Assert.That(File.ReadAllBytes(path).SequenceEqual(before)).IsTrue();
 	}
 
 	private sealed class FixtureMigrationException : Exception { }
