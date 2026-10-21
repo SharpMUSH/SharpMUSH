@@ -272,7 +272,7 @@ public partial class PackageOperationLifetimeTests
 		{
 			Scheduler = observed ? Substitute.For<ITaskScheduler, IQueueReleaseObserver>() : Substitute.For<ITaskScheduler>();
 			if (observed)
-				((IQueueReleaseObserver)Scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>())
+				((IQueueReleaseObserver)Scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>(), Arg.Any<bool>())
 					.Returns(call =>
 					{
 						ObservedAdmissionCount++;

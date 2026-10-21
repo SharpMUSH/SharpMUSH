@@ -30,6 +30,45 @@ public partial class QueueDiagnosticsSchedulerTests
 	}
 
 	[Test]
+	public async Task UntimedObservedWorkIsNotChargedTheSoftcodeDeadline()
+	{
+		var recorder = new QueueDiagnosticsRecorder();
+		await using var queue = Create(recorder, milliseconds: 1);
+		var released = ReleaseSignal();
+		var expired = true;
+		await queue.AdmitObservedSocketWork(async () =>
+		{
+			// Well past the 1 ms queue_entry_cpu_time a timed entry would get.
+			await Task.Delay(50);
+			expired = ExecutionBudget.Current is not { IsExpired: false };
+			return null;
+		}, "untimed-body", "package", result => released.TrySetResult(result), timed: false);
+		var result = await released.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		await Assert.That(result.Outcome).IsEqualTo(QueueOutcome.Completed);
+		await Assert.That(expired).IsFalse();
+		await HistoryCount(recorder, 1);
+		await Assert.That(recorder.Recent().Single().Outcome).IsEqualTo(QueueOutcome.Completed);
+	}
+
+	[Test]
+	public async Task UntimedObservedWorkIsStillHalted()
+	{
+		await using var queue = Create(null, milliseconds: 1);
+		var entered = ReleaseBarrier();
+		var released = ReleaseSignal();
+		var admission = await queue.AdmitObservedSocketWork(async () =>
+		{
+			entered.TrySetResult();
+			await Task.Delay(Timeout.InfiniteTimeSpan, ExecutionBudget.CurrentToken);
+			return null;
+		}, "untimed-halt", "package", result => released.TrySetResult(result), timed: false);
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		await queue.HaltByPid(admission.Pid!.Value);
+		var result = await released.Task.WaitAsync(TimeSpan.FromSeconds(10));
+		await Assert.That(result.Outcome).IsEqualTo(QueueOutcome.Cancelled);
+	}
+
+	[Test]
 	public async Task ObservedCancellationJoinsActualUnwindBeforeRelease()
 	{
 		await using var queue = Create(null, milliseconds: 30000);

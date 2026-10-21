@@ -117,7 +117,7 @@ public sealed class PackageOperationRunner(
 
 		// Admitted like an HTTP handler command: it arrived on a socket, not from an object, so it is
 		// charged to no owner's quota (AdmitSocketWork), and the queue's single consumer runs it with
-		// nothing else beside it.
+		// nothing else beside it. It is not softcode, so queue_entry_cpu_time does not time it.
 		QueueAdmissionResult admission;
 		try
 		{
@@ -144,7 +144,7 @@ public sealed class PackageOperationRunner(
 				completion.TrySetResult(new Finished<T>(
 					new PackageOperationRefused($"The package {operation} was halted before it ran; nothing was changed."), []));
 				released.TrySetResult();
-			});
+			}, timed: false);
 		}
 		catch (Exception) { report.BodyAdmissionFailed(); throw; }
 		report.BodyAdmission(admission);
@@ -178,9 +178,9 @@ public sealed class PackageOperationRunner(
 	// The optional observer signals after reservation removal and CTS disposal. Third-party schedulers
 	// retain their existing release callback contract; neither path certifies business/hook success.
 	private ValueTask<QueueAdmissionResult> AdmitReleasedWorkAsync(Func<ValueTask<CallState?>> action,
-		string trigger, string group, Action<QueueEntryRelease?> onReleased)
+		string trigger, string group, Action<QueueEntryRelease?> onReleased, bool timed = true)
 		=> scheduler is IQueueReleaseObserver observed
-			? observed.AdmitObservedSocketWork(action, trigger, group, release => onReleased(release))
+			? observed.AdmitObservedSocketWork(action, trigger, group, release => onReleased(release), timed)
 			: scheduler.AdmitSocketWork(action, trigger, group, () => onReleased(null));
 
 	/// <summary>The operation's queue entry: the backup and then the operation, in one hold of the gate.</summary>
@@ -188,8 +188,9 @@ public sealed class PackageOperationRunner(
 		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken,
 		Func<CancellationToken, Task<BackupProvenance>>? provenance, PackageOperationObservationBuilder report)
 	{
-		// Replace only the softcode deadline. Halt/shutdown still owns the entry, and caller
-		// cancellation still asks the operation to unwind. Await that unwind before releasing it.
+		// No softcode deadline, whichever scheduler admitted the entry. Halt/shutdown still owns the
+		// entry, and caller cancellation still asks the operation to unwind. Await that unwind before
+		// releasing it.
 		using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
 			ExecutionBudget.Current?.CancelledBy ?? CancellationToken.None);
 		cancellationToken = lifetime.Token;

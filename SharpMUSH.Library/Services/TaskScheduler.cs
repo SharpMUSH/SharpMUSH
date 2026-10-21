@@ -93,6 +93,12 @@ public partial class TaskScheduler(
 		public bool ChargesOwner { get; init; } = true;
 
 		/// <summary>
+		/// Whether <c>queue_entry_cpu_time</c> can time this entry. False for host work that is not
+		/// softcode, such as a package operation, which owns its own lifetime.
+		/// </summary>
+		public bool Timed { get; init; } = true;
+
+		/// <summary>
 		/// The object whose own <c>player_queue_limit</c> count this entry is in when <c>owner_queues</c>
 		/// is off: its executor, or <see cref="Owner"/> for an entry with no executor. With
 		/// <c>owner_queues</c> on, <see cref="Owner"/>'s count is the one admission reads (PennMUSH
@@ -312,7 +318,7 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
-	 bool chargesOwner = true, DBRef? enactor = null, Action<QueueEntryRelease>? onObservedRelease = null)
+	 bool chargesOwner = true, DBRef? enactor = null, Action<QueueEntryRelease>? onObservedRelease = null, bool timed = true)
 	{
 		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
@@ -390,7 +396,8 @@ public partial class TaskScheduler(
 					PendingInput = pendingInput,
 					Enactor = enactor ?? executor,
 					ChargesOwner = chargesOwner,
-					ChargedObject = chargedObject
+					ChargedObject = chargedObject,
+					Timed = timed
 				};
 				StoreEntry(entry);
 				_orderedPids.Add(pid);
@@ -827,7 +834,7 @@ public partial class TaskScheduler(
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
-					var milliseconds = RunsSoftcode(entry)
+					var milliseconds = entry.Timed && RunsSoftcode(entry)
 						? configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime
 						: 0;
 					lock (_admissionLock)
@@ -909,11 +916,11 @@ public partial class TaskScheduler(
 	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);
 
 	public ValueTask<QueueAdmissionResult> AdmitObservedSocketWork(Func<ValueTask<CallState?>> action,
-		string triggerName, string group, Action<QueueEntryRelease> onReleased)
+		string triggerName, string group, Action<QueueEntryRelease> onReleased, bool timed = true)
 	{
 		ArgumentNullException.ThrowIfNull(onReleased);
 		return Admit(action, triggerName, group, null, notifyOnRejection: false, chargesOwner: false,
-			onObservedRelease: onReleased);
+			onObservedRelease: onReleased, timed: timed);
 	}
 
 	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
