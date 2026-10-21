@@ -20,8 +20,11 @@ public sealed partial class LightningStore : IDisposable
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 
-	/// <summary>The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size.</summary>
-	internal int MaxKeySize => _env.MaxKeySize;
+	/// <summary>
+	/// The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size. Read
+	/// once when the environment opens, so callers inside a section and after disposal touch no native state.
+	/// </summary>
+	internal int MaxKeySize { get; private set; }
 
 	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> publish a whole
 	/// handle/flag snapshot. Readers outside the gate's write lock must see matching metadata and handles.</summary>
@@ -40,6 +43,9 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	private bool _disposed;
+	private volatile bool _closed;
+	private readonly Lock _disposeGate = new();
+	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _disposeFailure;
 	private readonly object _fixtureStoreDisposeGate = new();
 	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _fixtureStoreCloseFailure;
 
@@ -135,7 +141,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </summary>
 	public int CheckStaleReaders()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			return Cleared(_env.CheckStaleReaders());
@@ -163,7 +169,7 @@ public sealed partial class LightningStore : IDisposable
 	/// unhandled exception there is process death.</summary>
 	private void CheckStaleReadersOnTick()
 	{
-		if (_disposed || !_gate.TryEnterReadLock(0)) return;
+		if (_disposed || !TryEnterNative()) return;
 		try
 		{
 			Cleared(_env.CheckStaleReaders());
@@ -184,7 +190,7 @@ public sealed partial class LightningStore : IDisposable
 	private void FlushIfDirty()
 	{
 		if (_disposed || Interlocked.Exchange(ref _unflushed, 0) == 0) return;
-		if (!_gate.TryEnterReadLock(0)) { Interlocked.Exchange(ref _unflushed, 1); return; }
+		if (!TryEnterNative()) { Interlocked.Exchange(ref _unflushed, 1); return; }
 		try
 		{
 			var code = _env.Flush(force: true);
@@ -221,6 +227,7 @@ public sealed partial class LightningStore : IDisposable
 			PageSize = _options.PageSize
 		});
 		_env.Open(FlagsFor(_options.Sync));
+		MaxKeySize = _env.MaxKeySize;
 		Cleared(_env.CheckStaleReaders());
 
 		using var tx = _env.BeginTransaction();
@@ -332,7 +339,7 @@ public sealed partial class LightningStore : IDisposable
 
 	public T Read<T>(Func<ITx, T> read)
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		var opened = System.Diagnostics.Stopwatch.GetTimestamp();
 		LightningMetrics.ReadsActive.Add(1);
 		lock (_readStatisticsGate) _readsPeak = Math.Max(_readsPeak, ++_readsActive);
@@ -422,7 +429,7 @@ public sealed partial class LightningStore : IDisposable
 	private void WriteBatch(IReadOnlyList<LightningWriter.BatchItem> items)
 	{
 		ThrowIfFlushFailed();
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var parent = _env.BeginTransaction();
@@ -494,7 +501,7 @@ public sealed partial class LightningStore : IDisposable
 	private T WriteRawInternal<T>(Func<LightningTransaction, T> job)
 	{
 		ThrowIfFlushFailed();
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction();
@@ -593,6 +600,7 @@ public sealed partial class LightningStore : IDisposable
 			_gate.EnterWriteLock();
 			try
 			{
+				if (_closed) throw new ObjectDisposedException(nameof(LightningStore));
 				var closed = Close();
 				try
 				{
@@ -627,7 +635,7 @@ public sealed partial class LightningStore : IDisposable
 	public void CopyTo(string path, bool compact = true)
 	{
 		Directory.CreateDirectory(path);
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			var code = _env.CopyTo(path, compact);
@@ -650,7 +658,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </remarks>
 	public LightningEnvironmentUsage Usage()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			var info = _env.Info;
@@ -674,7 +682,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </summary>
 	internal IReadOnlyDictionary<string, long> EntryCounts()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
@@ -695,6 +703,9 @@ public sealed partial class LightningStore : IDisposable
 	public void Dispose()
 	{
 		RequireExternalDisposal();
+		// Disposal joins every admitted reader, so one of them disposing would wait on itself.
+		if (_gate.IsReadLockHeld || _gate.IsWriteLockHeld)
+			throw new InvalidOperationException("A store cannot be disposed from inside its own read or write.");
 		if (_fixturePackageTracking is not { } tracking)
 		{
 			DisposeCore();
@@ -720,29 +731,79 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	/// <summary>
+	/// The one cleanup every disposer joins: concurrent callers wait for it, and later ones see its outcome,
+	/// including a failed close. Timers stop and the writer drains and joins first; then taking the gate's write
+	/// lock stops new native admission and waits out every admitted read, copy and diagnostic, so the
+	/// environment is closed only once nothing is inside it. The gate itself is left undisposed: a caller that
+	/// arrives later is refused by <see cref="EnterNative"/>, not by a disposed lock.
+	/// </summary>
 	private void DisposeCore()
 	{
-		if (_disposed) return;
-		_disposed = true;
-		if (_readerCheckTimer is not null)
+		lock (_disposeGate)
 		{
-			using var checkedReaders = new ManualResetEvent(false);
-			if (_readerCheckTimer.Dispose(checkedReaders)) checkedReaders.WaitOne();
-		}
+			_disposeFailure?.Throw();
+			if (_disposed) return;
+			_disposed = true;
+			try
+			{
+				if (_readerCheckTimer is not null)
+				{
+					using var checkedReaders = new ManualResetEvent(false);
+					if (_readerCheckTimer.Dispose(checkedReaders)) checkedReaders.WaitOne();
+				}
 
-		if (_flushTimer is not null)
-		{
-			// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
-			// closed underneath a flush in flight.
-			using var ticked = new ManualResetEvent(false);
-			if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
+				if (_flushTimer is not null)
+				{
+					// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
+					// closed underneath a flush in flight.
+					using var ticked = new ManualResetEvent(false);
+					if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
+				}
+				_writer.Dispose();
+				MDBResultCode closed;
+				_gate.EnterWriteLock();
+				try
+				{
+					_closed = true;
+					BeforeNativeClose?.Invoke();
+					closed = Close();
+				}
+				finally { _gate.ExitWriteLock(); }
+				// Every handle is released first; a failed final flush is then the one thing left to say, and
+				// silence here would let committed writes go non-durable with nobody told.
+				if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
+			}
+			catch (Exception error)
+			{
+				_disposeFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error);
+				throw;
+			}
 		}
-		_writer.Dispose();
-		var closed = Close();
-		_gate.Dispose();
-		// Every handle is released first; a failed final flush is then the one thing left to say, and
-		// silence here would let committed writes go non-durable with nobody told.
-		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
+	}
+
+	/// <summary>Tests only: runs once nothing is inside the environment, immediately before it is closed.</summary>
+	internal Action? BeforeNativeClose { get; set; }
+
+	/// <summary>Whether a disposal is waiting for admitted readers to leave.</summary>
+	internal bool DisposalWaitingForReaders => _gate.WaitingWriteCount > 0;
+
+	/// <summary>Enters a native section; refused once disposal has closed the environment.</summary>
+	private void EnterNative()
+	{
+		_gate.EnterReadLock();
+		if (!_closed) return;
+		_gate.ExitReadLock();
+		throw new ObjectDisposedException(nameof(LightningStore));
+	}
+
+	/// <summary>A timer's non-blocking <see cref="EnterNative"/>: false when the gate is busy or the store is closed.</summary>
+	private bool TryEnterNative()
+	{
+		if (!_gate.TryEnterReadLock(0)) return false;
+		if (!_closed) return true;
+		_gate.ExitReadLock();
+		return false;
 	}
 
 	// A native cursor failure must never look like end-of-data, including in diagnostics and counts.
