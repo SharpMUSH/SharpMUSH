@@ -30,7 +30,7 @@
     {
         <a href="/play" class="phosphor-rail-item @(IsUnder("/play") ? "phosphor-rail-item--on" : null)"
            aria-current="@(IsUnder("/play") ? "page" : null)" aria-label="@PlayLabel" title="@PlayLabel">
-            <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
+            <MudIcon Icon="@Icons.Material.Outlined.SportsEsports" />
             @if (_playActive)
             {
                 <span class="phosphor-rail-dot @(_playUnread ? "phosphor-rail-dot--unread" : null)" aria-hidden="true"></span>
@@ -57,7 +57,7 @@
     {
         <a href="@_build[0].Href" class="phosphor-rail-item phosphor-rail-build @(IsBuildSection ? "phosphor-rail-item--on" : null)"
            aria-current="@(IsBuildSection ? "page" : null)" aria-label="@Loc["NavBuildManage"]" title="@Loc["NavBuildManage"]">
-            <MudIcon Icon="@Icons.Material.Outlined.Shield" />
+            <MudIcon Icon="@Icons.Material.Outlined.Construction" />
         </a>
     }
     <button type="button" class="phosphor-rail-item phosphor-rail-search" aria-label="@Loc["NavSearchOpen"]" title="@Loc["NavSearchOpen"]"
@@ -67,7 +67,7 @@
     <button type="button" class="phosphor-rail-item phosphor-rail-terminal @(TerminalOpen ? "phosphor-rail-item--on" : null)"
             aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]"
             @onclick="OnToggleTerminal">
-        <MudIcon Icon="@Icons.Material.Outlined.Keyboard" />
+        <MudIcon Icon="@Icons.Material.Outlined.Terminal" />
     </button>
     <div class="phosphor-rail-lang"><LanguagePicker AnchorOrigin="Origin.CenterRight" TransformOrigin="Origin.CenterLeft" /></div>
     <AccountButton Compact="true" />

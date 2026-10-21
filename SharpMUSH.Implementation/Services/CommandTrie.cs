@@ -98,7 +98,7 @@ public class CommandTrie
 			// SOCKET commands (CONNECT/WHO/QUIT/REGISTER/LOGIN/MAKE/PLAY) are dispatched exclusively
 			// by the dedicated pre-login SOCKET blocks in the visitor (exact match for any Handle,
 			// unambiguous-prefix abbreviation only while pre-login). They must NOT enter the general
-			// in-game command trie: FindShortestMatch would otherwise abbreviate them for a logged-in
+			// in-game command trie: FindAbbreviation would otherwise abbreviate them for a logged-in
 			// player (e.g. bare "q" -> QUIT), silently disconnecting them. The trie is only ever
 			// consulted post-login, so SOCKET commands never belong here.
 			if (commandInfo.IsSystem
@@ -136,12 +136,17 @@ public class CommandTrie
 	}
 
 	/// <summary>
-	/// Finds the shortest command name that starts with the given prefix.
-	/// This implements PennMUSH-compatible command abbreviation where "@tel" matches "@teleport".
+	/// The command <paramref name="prefix"/> names: the command spelled exactly that way, else the only
+	/// command that begins with it. A prefix two or more commands begin with names none of them, so it
+	/// falls through to exits, <c>$</c>-commands and <c>huh</c>.
+	/// <para>This is PennMUSH's <c>ptab_find</c> (src/ptab.c), which every typed command goes through:
+	/// <c>@tel</c> is <c>@teleport</c> while nothing else begins <c>@tel</c>, a lone <c>s</c> is not
+	/// <c>say</c> (<c>score</c>, <c>semipose</c> and <c>session</c> begin with it too), and adding a command
+	/// can take an abbreviation away from another, as it does in PennMUSH.</para>
 	/// </summary>
-	/// <param name="prefix">The command prefix to search for (case-insensitive)</param>
-	/// <returns>The shortest matching command definition, or null if no match found</returns>
-	public (string CommandName, CommandDefinition Definition)? FindShortestMatch(string prefix)
+	/// <param name="prefix">The command name or abbreviation (case-insensitive)</param>
+	/// <returns>The command it names, or null when it names none or more than one</returns>
+	public (string CommandName, CommandDefinition Definition)? FindAbbreviation(string prefix)
 	{
 		if (string.IsNullOrEmpty(prefix))
 			return null;
@@ -155,26 +160,37 @@ public class CommandTrie
 				return null;
 		}
 
-		if (node.Command is CommandDefinition cmd)
-			return (node.CommandName!, cmd);
+		if (node.Command is CommandDefinition exact)
+			return (node.CommandName!, exact);
 
-		var queue = new Queue<TrieNode>();
-		queue.Enqueue(node);
+		return SoleCommandUnder(node);
+	}
 
-		while (queue.Count > 0)
+	/// <summary>The one command in <paramref name="node"/>'s subtree, or null when it holds none or several.</summary>
+	private static (string CommandName, CommandDefinition Definition)? SoleCommandUnder(TrieNode node)
+	{
+		(string, CommandDefinition)? found = null;
+		var pending = new Stack<TrieNode>();
+		pending.Push(node);
+
+		while (pending.Count > 0)
 		{
-			var current = queue.Dequeue();
+			var current = pending.Pop();
 
-			if (current.Command is CommandDefinition cmd2)
-				return (current.CommandName!, cmd2);
-
-			foreach (var child in current.Children.OrderBy(kvp => kvp.Key))
+			if (current.Command is CommandDefinition command)
 			{
-				queue.Enqueue(child.Value);
+				if (found is not null)
+					return null;
+				found = (current.CommandName!, command);
+			}
+
+			foreach (var child in current.Children.Values)
+			{
+				pending.Push(child);
 			}
 		}
 
-		return null;
+		return found;
 	}
 
 	/// <summary>

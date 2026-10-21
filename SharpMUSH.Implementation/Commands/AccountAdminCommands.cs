@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Implementation.Commands;
 
@@ -90,9 +91,9 @@ public partial class Commands
 				return CallState.Empty;
 			}
 
-			if (arg1.Length < 8)
+			if (!AccountPasswordRule.Accepts(arg1))
 			{
-				await NotifyService.Notify(executor, "Password must be at least 8 characters.");
+				await NotifyService.Notify(executor, AccountPasswordRule.Requirement);
 				return CallState.Empty;
 			}
 

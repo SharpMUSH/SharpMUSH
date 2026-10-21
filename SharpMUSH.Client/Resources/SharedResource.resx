@@ -1388,7 +1388,7 @@
     <value>No character</value>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Account Management</value>
+    <value>My Account</value>
   </data>
   <data name="AuthLogout" xml:space="preserve">
     <value>Logout</value>
@@ -3678,17 +3678,11 @@
   <data name="NavSearchPlaceholder" xml:space="preserve">
     <value>Search…</value>
   </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Open Terminal</value>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Close Terminal</value>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>command terminal</value>
-  </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
+    <value>Command terminal</value>
   </data>
   <data name="NavMenuLabel" xml:space="preserve">
     <value>Menu</value>
@@ -4770,13 +4764,13 @@
     <value>Join #{0}</value>
   </data>
   <data name="NavPlayChannelsGag" xml:space="preserve">
-    <value>Gag #{0}</value>
+    <value>Mute #{0}</value>
   </data>
   <data name="NavPlayChannelsGagged" xml:space="preserve">
-    <value>Gagged: you stay on the channel but hear nothing. Select to hear it again.</value>
+    <value>Muted: you stay on the channel but hear nothing. Select to hear it again.</value>
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
-    <value>Gag: stay on the channel but hear nothing.</value>
+    <value>Mute: stay on the channel but hear nothing.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>The game didn't make that change.</value>
@@ -4958,8 +4952,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>This game doesn't keep page history, so only pages from this visit are shown.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Back to the scene</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Back to the game</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Play</value>

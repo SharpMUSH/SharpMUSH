@@ -403,7 +403,15 @@ else
             }
             <span class="wiki-meta-sep"> · </span>
         }
-        <span class="wiki-meta-edit">@(Article?.IsRestricted == true ? Loc["WikiRestrictedNote"] : Loc["ResAnyoneCanEdit"])</span>
+        @* The note answers "can I edit this?" for the reader, so it is said only where the answer is yes or the page is restricted. *@
+        @if (Article?.IsRestricted == true)
+        {
+            <span class="wiki-meta-edit">@Loc["WikiRestrictedNote"]</span>
+        }
+        else if (Article?.Access?.Edit == true)
+        {
+            <span class="wiki-meta-edit">@Loc["ResAnyoneCanEdit"]</span>
+        }
     };
 
     private RenderFragment HeaderActions => __builder =>

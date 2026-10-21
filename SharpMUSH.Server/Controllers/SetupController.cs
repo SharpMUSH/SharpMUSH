@@ -58,8 +58,8 @@ public class SetupController(
 
 		if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 			return BadRequest("Username and Password are required.");
-		if (request.Password.Length < 8)
-			return BadRequest("Password must be at least 8 characters.");
+		if (!AccountPasswordRule.Accepts(request.Password))
+			return BadRequest(AccountPasswordRule.Requirement);
 
 		return await setupService.CompleteAsync(request.Username.Trim(), request.Password) switch
 		{

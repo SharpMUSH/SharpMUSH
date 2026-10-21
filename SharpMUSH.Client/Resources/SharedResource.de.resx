@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Kontoverwaltung</value>
+    <value>Mein Konto</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,10 +1869,6 @@
     <value>{count, plural, one {# Charakter registriert} other {# Charaktere registriert}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
-    <comment>MT — bottom-tab abbreviation; "Chars" is the usual German MU* short form and fits the fixed-width tab.</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Terminal schließen</value>
     <comment>MT</comment>
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Terminal öffnen</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dieses Spiel speichert keinen Page-Verlauf, daher werden nur Pages aus diesem Besuch angezeigt.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Zurück zur Szene</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Zurück zum Spiel</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Spielen</value>

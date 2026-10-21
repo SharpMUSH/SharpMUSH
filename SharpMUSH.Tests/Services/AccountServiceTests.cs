@@ -1,4 +1,5 @@
 using NSubstitute;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Models;
@@ -161,7 +162,7 @@ public class AccountServiceTests
 			.Returns(created);
 		pw.HashPassword(Arg.Any<string>()).Returns("hash");
 
-		var result = await svc.CreateAccountAsync("Bob", null, "pass");
+		var result = await svc.CreateAccountAsync("Bob", null, "password");
 
 		await Assert.That(result.Value).IsTypeOf<SharpAccount>();
 		await db.DidNotReceive().GetAccountByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
@@ -238,9 +239,9 @@ public class AccountServiceTests
 		var account = MakeAccount();
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(account);
 		pw.PasswordIsValid("oldpass", "hash").Returns(true);
-		pw.HashPassword("newpass").Returns("new-hash");
+		pw.HashPassword("new-password").Returns("new-hash");
 
-		var result = await svc.ChangePasswordAsync("accounts/1", "oldpass", "newpass");
+		var result = await svc.ChangePasswordAsync("accounts/1", "oldpass", "new-password");
 
 		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "new-hash", Arg.Any<CancellationToken>());
@@ -533,9 +534,9 @@ public class AccountServiceTests
 		var (svc, db, pw, _) = Build();
 
 		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
-		pw.HashPassword("newpass").Returns("new-hash");
+		pw.HashPassword("new-password").Returns("new-hash");
 
-		var result = await svc.SetPasswordAsync("accounts/1", "newpass", true);
+		var result = await svc.SetPasswordAsync("accounts/1", "new-password", true);
 
 		await Assert.That(result.Value).IsTypeOf<Success>();
 		await db.Received(1).UpdateAccountPasswordAsync("accounts/1", "new-hash", Arg.Any<CancellationToken>());
@@ -569,5 +570,24 @@ public class AccountServiceTests
 
 		await Assert.That(result.Count).IsEqualTo(1);
 		await db.Received(1).GetAllAccountsAsync(Arg.Any<CancellationToken>());
+	}
+
+	[Test]
+	public async ValueTask EveryWayToSetAnAccountPassword_RefusesOneUnderTheRule()
+	{
+		var (svc, db, pw, _) = Build();
+		db.GetAccountByIdAsync("accounts/1", Arg.Any<CancellationToken>()).Returns(MakeAccount());
+		db.GetAccountByUsernameAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns((SharpAccount?)null);
+		pw.PasswordIsValid("oldpass", "hash").Returns(true);
+
+		var created = await svc.CreateAccountAsync("Short", null, "short");
+		var changed = await svc.ChangePasswordAsync("accounts/1", "oldpass", "short");
+		var set = await svc.SetPasswordAsync("accounts/1", "short", false);
+
+		await Assert.That(created.Expect<Error<string>>().Value).IsEqualTo(AccountPasswordRule.Requirement);
+		await Assert.That(changed.Expect<Error<string>>().Value).IsEqualTo(AccountPasswordRule.Requirement);
+		await Assert.That(set.Expect<Error<string>>().Value).IsEqualTo(AccountPasswordRule.Requirement);
+		await db.DidNotReceive().UpdateAccountPasswordAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+		await db.DidNotReceive().CreateAccountAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
 	}
 }

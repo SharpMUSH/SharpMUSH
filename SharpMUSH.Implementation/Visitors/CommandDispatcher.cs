@@ -414,7 +414,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 
 		var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
 			? null
-			: CommandTrie.For(parser.CommandLibrary).FindShortestMatch(rootCommand);
+			: CommandTrie.For(parser.CommandLibrary).FindAbbreviation(rootCommand);
 
 		// If no match found and rootCommand contains '=', try matching just the part before '='
 		// This handles cases like "addcom=Public" where the command name and args have no space separator.
@@ -424,7 +424,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
-				matchResult = CommandTrie.For(parser.CommandLibrary).FindShortestMatch(commandPart);
+				matchResult = CommandTrie.For(parser.CommandLibrary).FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
 					rootCommand = commandPart;

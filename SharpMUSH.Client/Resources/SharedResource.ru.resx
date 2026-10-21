@@ -324,7 +324,7 @@
     <comment>MT — «аккаунт» used consistently across the auth surface.</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Управление аккаунтом</value>
+    <value>Мой аккаунт</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {зарегистрирован # персонаж} few {зарегистрировано # персонажа} many {зарегистрировано # персонажей} other {зарегистрировано # персонажа}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Перс.</value>
-    <comment>MT — abbreviation of «персонажи», matching the abbreviated English label in fixed-width chrome.</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Закрыть терминал</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>командный терминал</value>
+    <value>Командный терминал</value>
     <comment>MT — lower-case as in the English source.</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>в сети</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Открыть терминал</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Эта игра не хранит историю личных сообщений, поэтому показаны только сообщения за этот визит.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Вернуться к сцене</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Вернуться в игру</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Игра</value>
