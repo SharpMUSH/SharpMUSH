@@ -17,6 +17,8 @@ public partial class LightningDatabase
 {
 	// Immutable prepared input observation outside native ownership; no callback can bypass planning.
 	internal Action<PreparedLegacyWikiMutation>? AtomicLegacyPrepared { get; set; }
+	/// <summary>Recovery tests only: after the commit is durable and before the caller invalidates anything.</summary>
+	internal Action<IntegratedWikiCommitResult>? AtomicLegacyCommitted { get; set; }
 	// Test-friend diagnostics: scalars/table identity only, no transaction, keys or values escape.
 	internal Action<string>? AtomicLegacyCapacityObserved { get; set; }
 	internal Action<TableDef>? AtomicLegacyPutApplied { get; set; }
@@ -48,7 +50,7 @@ public partial class LightningDatabase
 			throw SemanticFixtureCapability.Unavailable();
 		using var cancellation = PrepareLegacyIntent(() => scope.ObserveParentCancellation(ct));
 		AtomicLegacyPrepared?.Invoke(mutation);
-		return await Store.WriteAsync(tx =>
+		var committed = await Store.WriteAsync(tx =>
 		{
 			// Authority failures must precede receipt replay and retain their readiness diagnostics.
 			try { RequireWikiCategoryReady(tx, scope.Budget); }
@@ -75,6 +77,8 @@ public partial class LightningDatabase
 				work.Delta.Apply(tx, scope.Budget.CancellationToken, AtomicLegacyPutApplied, AtomicLegacyDeleteApplied);
 			return result;
 		}, ct);
+		AtomicLegacyCommitted?.Invoke(committed);
+		return committed;
 	}
 
 	private IntegratedWikiCommitResult PlanLegacyFixtureMutation(ITx tx, PreparedLegacyWikiMutation mutation, WikiSemanticWork work)

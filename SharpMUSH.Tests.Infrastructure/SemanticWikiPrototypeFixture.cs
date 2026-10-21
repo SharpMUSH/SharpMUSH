@@ -10,11 +10,18 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests;
 
 /// <summary>Owns one disposable world lineage; actual-host projection activation is explicit.</summary>
-public sealed class SemanticWikiPrototypeFixture(string ownedScratchRoot) : IAsyncDisposable
+public sealed class SemanticWikiPrototypeFixture : IAsyncDisposable
 {
 	private readonly object _disposeGate = new();
 	private bool _disposed;
-	internal SemanticFixtureCapability Capability { get; } = SemanticFixtureCapability.IssueNew(ownedScratchRoot);
+
+	public SemanticWikiPrototypeFixture(string ownedScratchRoot) : this(SemanticFixtureCapability.IssueNew(ownedScratchRoot)) { }
+	private SemanticWikiPrototypeFixture(SemanticFixtureCapability capability) => Capability = capability;
+
+	/// <summary>Recovery tests only: the world a killed process issued, adopted once that process has exited.</summary>
+	internal static SemanticWikiPrototypeFixture AdoptAfterOwnerExit(string worldPath) => new(SemanticFixtureCapability.AdoptAfterOwnerExit(worldPath));
+
+	internal SemanticFixtureCapability Capability { get; }
 	public string WorldPath => Capability.CanonicalPath;
 	public Guid FixtureId => Capability.FixtureId;
 	public bool HasQuarantinedArtifacts => Capability.IsQuarantined;

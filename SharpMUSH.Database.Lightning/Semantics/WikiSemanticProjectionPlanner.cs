@@ -71,6 +71,19 @@ internal static class WikiSemanticProjectionPlanner
 	}
 	private static void Index(WikiSemanticWork work, ulong subject, ulong collection, ulong classId, SemanticFact fact, bool remove)
 	{
+		var (forward, posting) = IndexKeys(work, subject, collection, classId, fact, !remove);
+		if (remove) { work.Delta.Delete(work.Tables.Forward, forward); work.Delta.Delete(work.Tables.Postings, posting); }
+		else { work.Delta.Put(work.Tables.Forward, forward, []); work.Delta.Put(work.Tables.Postings, posting, []); }
+	}
+
+	/// <summary>
+	/// The forward and posting keys <paramref name="fact"/> indexes under for <paramref name="subject"/>. With
+	/// <paramref name="create"/> false every identity must already exist, as when removing or verifying.
+	/// </summary>
+	internal static (byte[] Forward, byte[] Posting) IndexKeys(WikiSemanticWork work, ulong subject, ulong collection, ulong classId,
+		SemanticFact fact, bool create)
+	{
+		var remove = !create;
 		if (classId == 0) throw new InvalidDataException("Fact without source class.");
 		var property = work.Registry(WikiSemanticRegistryKind.Property, fact.Property, !remove);
 		if (property == 0) throw new InvalidDataException("Missing property identity.");
@@ -94,8 +107,7 @@ internal static class WikiSemanticProjectionPlanner
 		}
 		var forward = work.Bytes(25, () => WikiSemanticKeys.Forward(subject, property, tag, value));
 		var posting = work.Bytes(41, () => WikiSemanticKeys.Posting(collection, classId, property, tag, value, subject));
-		if (remove) { work.Delta.Delete(work.Tables.Forward, forward); work.Delta.Delete(work.Tables.Postings, posting); }
-		else { work.Delta.Put(work.Tables.Forward, forward, []); work.Delta.Put(work.Tables.Postings, posting, []); }
+		return (forward, posting);
 	}
 	private static void BumpPartition(WikiSemanticWork work, ulong collection, ulong classId)
 	{
