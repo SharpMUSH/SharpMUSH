@@ -55,4 +55,40 @@ public class ExecutionBudgetCancellationTests
 		await Assert.That(budget.IsCancelled).IsTrue();
 		await Assert.That(budget.IsExpired).IsFalse();
 	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task WorkThatOutlivesItsBudgetSeesCancellationNotDisposal(bool withCaller)
+	{
+		using var caller = new CancellationTokenSource();
+		var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), withCaller ? caller.Token : CancellationToken.None);
+		var captured = budget.Token;
+		var waiting = Task.Delay(Timeout.InfiniteTimeSpan, captured);
+		using (budget.Enter())
+		{
+			budget.Dispose();
+			await Assert.That(budget.Token.IsCancellationRequested).IsTrue();
+			await Assert.That(budget.IsCancelled).IsTrue();
+			await Assert.That(budget.IsExpired).IsFalse();
+			await Assert.That(budget.ThrowIfExceeded).Throws<OperationCanceledException>();
+			await Assert.That(() => budget.RemainingOrThrow()).Throws<OperationCanceledException>();
+			await Assert.That(() => ExecutionBudget.EnterLinked(caller.Token)).Throws<OperationCanceledException>();
+		}
+		await Assert.That(async () => await waiting).Throws<OperationCanceledException>();
+		await Assert.That(caller.IsCancellationRequested).IsFalse();
+		budget.Dispose();
+	}
+
+	[Test]
+	public async Task ABudgetThatEndedPastItsDeadlineStaysExpired()
+	{
+		var timer = new ManualTimerProvider();
+		var budget = new ExecutionBudget(TimeSpan.FromMinutes(1), CancellationToken.None, timer);
+		timer.FireDeadline();
+		budget.Dispose();
+		await Assert.That(budget.IsExpired).IsTrue();
+		await Assert.That(() => budget.RemainingOrThrow()).Throws<OperationCanceledException>()
+			.WithMessage(ExecutionBudget.Error);
+	}
 }
