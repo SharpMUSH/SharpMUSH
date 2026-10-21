@@ -740,6 +740,97 @@ public partial class PageCommandTests
 		}
 	}
 
+	/// <summary>
+	/// speech.c:932 and predicat.c page_return: an offline player's AWAY is evaluated with the pager as
+	/// enactor and replaces "is not connected.".
+	/// </summary>
+	[Test]
+	public async ValueTask Page_OfflinePlayersAwayMessageReplacesNotConnected()
+	{
+		var sender = await CreatePlayerAsync("PageAwaySender");
+		try
+		{
+			var offlineRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+				WebAppFactoryArg.Services, Mediator, "PageAwayTarget");
+			var offlineName = (await Mediator.Send(new GetObjectNodeQuery(offlineRef)))
+				.Expect<AnySharpObject>().Object().Name;
+			await GodCommandAsync($"&AWAY {offlineRef}=Gone fishing, %n.");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			await PageAsync(sender, offlineName, "away test");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"Away message from {offlineName}: Gone fishing, {sender.Name}.",
+				$"Unable to page: {offlineName}");
+			await Assert.That(Notifications.For(sender.DbRef).Skip(senderStart))
+				.DoesNotContain($"{offlineName} is not connected.");
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+		}
+	}
+
+	/// <summary>speech.c:941 — a HAVEN player's HAVEN message, and a HAVEN target is not told it went out.</summary>
+	[Test]
+	public async ValueTask Page_HavenRecipientsHavenMessageReplacesTheRefusal()
+	{
+		var sender = await CreatePlayerAsync("PageHavenMsgSender");
+		var recipient = await CreatePlayerAsync("PageHavenMsgRecipient");
+		try
+		{
+			await GodCommandAsync($"@set {recipient.DbRef}=HAVEN");
+			await GodCommandAsync($"&HAVEN {recipient.DbRef}=Do not disturb.");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			var recipientStart = Notifications.CountFor(recipient.DbRef);
+			await PageAsync(sender, recipient.Name, "haven message test");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"Haven message from {recipient.Name}: Do not disturb.",
+				$"Unable to page: {recipient.Name}");
+			await Assert.That(Notifications.For(recipient.DbRef).Skip(recipientStart)
+				.Any(line => line.Contains("message sent to"))).IsFalse();
+		}
+		finally
+		{
+			await GodCommandAsync($"@set {recipient.DbRef}=!HAVEN");
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
+	/// <summary>
+	/// speech.c:1120 — every page that reaches a player returns its IDLE message, and the player is told
+	/// it was sent.
+	/// </summary>
+	[Test]
+	public async ValueTask Page_RecipientsIdleMessageReturnsToThePager()
+	{
+		var sender = await CreatePlayerAsync("PageIdleSender");
+		var recipient = await CreatePlayerAsync("PageIdleRecipient");
+		try
+		{
+			await GodCommandAsync($"&IDLE {recipient.DbRef}=Back soon.");
+
+			var senderStart = Notifications.CountFor(sender.DbRef);
+			var recipientStart = Notifications.CountFor(recipient.DbRef);
+			await PageAsync(sender, recipient.Name, "idle test");
+
+			await AssertLinesAsync(sender, senderStart,
+				$"You paged {recipient.Name} with 'idle test'",
+				$"Idle message from {recipient.Name}: Back soon.");
+			await Assert.That(Notifications.For(recipient.DbRef).Skip(recipientStart)
+				.Any(line => System.Text.RegularExpressions.Regex.IsMatch(line,
+					$@"^\[\d{{1,2}}:\d{{2}}\] Idle message sent to {sender.Name}\.$"))).IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(sender.Handle);
+			await ConnectionService.Disconnect(recipient.Handle);
+		}
+	}
+
 	private async Task<string> DigRoomAsync(string prefix)
 	{
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(30));

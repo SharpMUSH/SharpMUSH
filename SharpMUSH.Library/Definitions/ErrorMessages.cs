@@ -758,6 +758,12 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>src/speech.c:939</c>: the target is HAVEN, so it refuses every pager.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotAcceptingAnyPages = "{0} is not accepting any pages.";
+		/// <summary>PennMUSH <c>src/predicat.c:1206</c>: the target's AWAY, HAVEN or IDLE message, to the pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PageReturnMessage = "{0} message from {1}: {2}";
+		/// <summary>PennMUSH <c>src/predicat.c:1209</c>: the target is told its AWAY, HAVEN or IDLE message went out.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PageReturnSent = "[{0}:{1:00}] {2} message sent to {3}.";
 		/// <summary>PennMUSH <c>src/speech.c:930</c>: the named player holds no connection.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotConnected = "{0} is not connected.";
