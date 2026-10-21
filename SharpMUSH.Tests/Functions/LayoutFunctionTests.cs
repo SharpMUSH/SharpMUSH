@@ -573,6 +573,7 @@ public class LayoutFunctionTests
 	[Arguments("gradient(x,r|g,{{\"space\":\"rgb\"}})", "#-1 LAYOUT OPTION SPACE: INVALID ARGUMENT")]
 	[Arguments("gradient(x,r|g,{{\"flow\":\"sideways\"}})", "#-1 LAYOUT OPTION FLOW: INVALID ARGUMENT")]
 	[Arguments("gradient(x,r|g,{{\"repeat\":0}})", "#-1 LAYOUT OPTION REPEAT: ARGUMENT OUT OF RANGE")]
+	[Arguments("gradient(x,r|g,{{\"target\":\"edges\"}})", "#-1 LAYOUT OPTION TARGET: INVALID ARGUMENT")]
 	[Arguments("gradient(x,r|g,{{\"gradient\":\"b\"}})", "#-1 UNKNOWN LAYOUT OPTION GRADIENT")]
 	[Arguments("gauge(1,2,,{{\"gradient\":\"r\",\"space\":\"rgb\"}})", "#-1 LAYOUT OPTION SPACE: INVALID ARGUMENT")]
 	[Arguments("datacolumns({{\"nowrap\":\"3\"}},A|1,B|2)", "#-1 LAYOUT OPTION NOWRAP: ARGUMENT OUT OF RANGE")]
