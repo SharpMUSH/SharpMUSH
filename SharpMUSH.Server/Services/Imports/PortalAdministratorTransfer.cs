@@ -89,7 +89,7 @@ public sealed class PortalAdministratorTransfer(IServerStateStore state, IAccoun
 			await roles.SetAccountOverrideAsync(id, scope, permission);
 
 		if (await services.GetRequiredService<IObjectStore>().GetObjectNodeAsync(God, cancellationToken) is AnySharpObject and SharpPlayer)
-			await accounts.LinkCharacterToAccountAsync(id, God, cancellationToken);
+			await services.GetRequiredService<IAccountService>().LinkCharacterAsync(id, God, cancellationToken);
 		else
 			result.Warnings.Add($"#1 is not a player in the imported world, so {administrator.Username} has no character there.");
 
