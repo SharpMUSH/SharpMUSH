@@ -157,16 +157,17 @@ public class GenderCommandTests
 	}
 
 	/// <summary>
-	/// Adding <c>@gender</c> leaves <c>@ge</c> where it was: the shortest command it begins is still the
-	/// <c>@gedit</c> alias of <c>@edit</c>. <c>@gen</c>, which named no command before, is now <c>@gender</c>.
+	/// Abbreviations follow PennMUSH's prefix table: <c>@ge</c> begins both <c>@gedit</c> and
+	/// <c>@gender</c>, so it names neither; one more letter picks each.
 	/// </summary>
 	[Test]
-	public async Task GeStillAbbreviatesGedit()
+	public async Task GeNamesNeitherGeditNorGender()
 	{
 		var trie = CommandTrie.For(GodParser.CommandLibrary);
 
-		await Assert.That(trie.FindShortestMatch("@ge")?.CommandName).IsEqualTo("@GEDIT").IgnoringCase();
-		await Assert.That(trie.FindShortestMatch("@gen")?.CommandName).IsEqualTo("@GENDER").IgnoringCase();
+		await Assert.That(trie.FindAbbreviation("@ge")).IsNull();
+		await Assert.That(trie.FindAbbreviation("@ged")?.CommandName).IsEqualTo("@GEDIT").IgnoringCase();
+		await Assert.That(trie.FindAbbreviation("@gen")?.CommandName).IsEqualTo("@GENDER").IgnoringCase();
 	}
 
 	private static IDisposable GenderAttr(string? attribute) => TestOptionsOverride.Scope(options => options with

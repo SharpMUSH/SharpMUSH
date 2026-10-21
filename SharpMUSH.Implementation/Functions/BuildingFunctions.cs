@@ -323,7 +323,7 @@ public partial class Functions
 		// game that registers an exact @TEL (@command/add, or a plugin) puts that command in front of
 		// it for typed dispatch, and tel() has to be held to the same one. A name that resolves to
 		// nothing is refused, as command_check_byname's null COMMAND_INFO is.
-		var telCommand = CommandTrie.For(parser.CommandLibrary).FindShortestMatch("@TEL")?.CommandName ?? "@TEL";
+		var telCommand = CommandTrie.For(parser.CommandLibrary).FindAbbreviation("@TEL")?.CommandName ?? "@TEL";
 
 		if (!await CanInvokeLockCommandAsync(parser, executor, telCommand))
 		{
