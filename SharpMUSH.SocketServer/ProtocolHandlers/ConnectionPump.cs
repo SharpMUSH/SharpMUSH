@@ -231,9 +231,9 @@ public sealed class ConnectionPump(
 				try { await connectionService.DisconnectAsync(handle); }
 				finally
 				{
+					_traffic.End(handle);
 					descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 					sinkRegistry.Remove(handle);
-					_traffic.End(handle);
 				}
 			}
 			finally { sink.ResumeGate.Release(); }
