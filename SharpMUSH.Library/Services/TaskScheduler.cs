@@ -48,7 +48,8 @@ public partial class TaskScheduler(
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
 	INotifyService? notifyService = null,
 	IInputSessionService? inputSessions = null,
-	IQueueDiagnosticsRecorder? diagnostics = null)
+	IQueueDiagnosticsRecorder? diagnostics = null,
+	QueueLoad? queueLoad = null)
 	: ITaskScheduler, IQueueReleaseObserver, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
 {
 	private long _nextPid = 0;
@@ -848,6 +849,7 @@ public partial class TaskScheduler(
 					try
 					{
 						budget.ThrowIfExceeded();
+						queueLoad?.Record();
 						await entry.Action();
 						outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
 							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed;

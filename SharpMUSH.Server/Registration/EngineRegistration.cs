@@ -126,6 +126,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IFlagAndPowerService, FlagAndPowerService>();
 		services.AddSingleton<IObjectRelationshipService, ObjectRelationshipService>();
 		// One scheduler, seen through the four questions callers ask of it.
+		services.AddSingleton<QueueLoad>();
 		services.AddSingleton<TaskScheduler>();
 		services.AddSingleton<ITaskScheduler>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<ISemaphoreQueue>(sp => sp.GetRequiredService<TaskScheduler>());
