@@ -52,7 +52,7 @@ public partial class LightningDatabase
 			if (record is null) return false;
 			var pageId = WikiPageId(key);
 			var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
-			var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries,
+			var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries,
 				work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
 			if (state is null) throw new InvalidDataException("Imported page has no projection.");
 			var rules = ReadLegacyProjectionRules(work, pageId, record);

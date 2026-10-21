@@ -44,9 +44,9 @@ public partial class LightningDatabase
 		}
 		RequireDeleteRegistryIdentity(work, WikiSemanticRegistryKind.Page, nativeId, pageId);
 		var subjectKey = work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId));
-		var state = work.Read(AtomicWikiLayout.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState)
+		var state = work.Read(work.Tables.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState)
 			?? throw new InvalidDataException("Missing integrated summary.");
-		var facts = work.Read(AtomicWikiLayout.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
+		var facts = work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
 			?? throw new InvalidDataException("Missing integrated facts.");
 		var summary = state.State.Summary;
 		var collection = work.Registry(WikiSemanticRegistryKind.Collection, "game", false);
@@ -126,7 +126,7 @@ public partial class LightningDatabase
 				if (WikiSemanticStateCodec.Registry(row.Value).Identity == pageId) throw new InvalidDataException("Orphaned page identity.");
 			}
 		}
-		using var summaries = work.Reader.ReadRange(AtomicWikiLayout.Summaries, [], [], [], [], work.Budget);
+		using var summaries = work.Reader.ReadRange(work.Tables.Summaries, [], [], [], [], work.Budget);
 		if (!summaries.Exhausted) throw new NativeReadLimitException("records");
 		foreach (var row in summaries.Entries)
 		{

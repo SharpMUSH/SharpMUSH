@@ -212,6 +212,41 @@ that ran code) leaves the world UNKNOWN, and every certified read then answers `
 no operation that verifies an UNKNOWN world back to SETTLED; only a later coordinated operation that
 itself settles does.
 
+#### Rebuilding an active projection
+
+The projection's secondary state, every summary's class and collection ids, Forward, Postings, the
+catalog, partition versions and class identities, can be rebuilt from canonical sources into a new
+generation (`RebuildSemanticProjectionAsync`, internal). Canonical state is shared by every generation:
+the live pages and requirements, the imported fact sets, the page, property, keyword and collection
+identities, and the commit sequence. Generations alternate between two table slots, odd ones in the
+original tables and even ones under `prototype.semantic.b2.v1.s1.`, so the layout never grows. The
+activation marker names the active generation; a reader pins it in section 0 and rechecks it in the final
+section, so a read across a flip is `DataChanged` and a continuation issued before it restarts.
+
+1. Staging starts in one job that records the staged generation and an empty after-image journal. From
+   that commit on, every projection write also appends (commit sequence, subject) to the journal in its
+   own job. Replay copies that subject's current state, which is at least the journaled after-image.
+2. Subjects are copied in short ID batches, each its own job with a durable checkpoint. A copy derives the
+   descriptor again from the live page and requirements and indexes the canonical facts; it does not
+   copy index rows.
+3. The journal is replayed in sequence, consuming what it replays, until a pass finds it empty.
+4. A slow reference evaluation recomputes, from canonical sources alone, every row the staged generation
+   must hold and compares them exactly. A disagreement abandons the rebuild before publication.
+5. One short writer job flips: it refuses while any journaled write is unconsumed, then moves the
+   generation in the marker and both its metadata copies. If writes keep landing between validation and
+   flip, the rebuild backs off and replays again, and gives up after a bounded number of passes.
+6. The retired generation's rows are cleared in bounded jobs after the flip.
+
+Writes are never held back or dropped. A full journal (`SemanticRebuildJournal.DefaultCapacity`
+entries) only marks the staging overflowed, and the rebuild abandons it; writes that keep outrunning
+replay abandon it too. Abandoning ends the staging first, so writes stop journaling, then clears the
+journal and the staged rows in bounded jobs. Rebuild jobs write only the staged generation, the journal
+they consume, and a retired generation, none of which a reader pins, so they advance no fixture version:
+a reader during staging is unaffected.
+
+Limitation: an unfinished staging, left by a process that stopped mid-rebuild, is discarded when the
+world reopens. Resuming one from its checkpoint is not implemented.
+
 ### Follow-ups this decision left
 
 Both are done:

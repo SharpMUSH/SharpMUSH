@@ -7,7 +7,9 @@ internal sealed record WikiProjectionPlanned(ulong NativeId, long StateVersion, 
 internal sealed record WikiProjectionConflict(long CurrentStateVersion);
 internal union WikiProjectionPlanResult(WikiProjectionPlanned, WikiProjectionConflict);
 internal readonly record struct AllocateNextSequence;
-internal union ProjectionSequence(AllocateNextSequence, ExistingBootstrapSequence);
+/// <summary>A rebuild's copy of the active state into a staged generation: same version and sequence, any prior copy replaced.</summary>
+internal readonly record struct CopiedProjection(long StateVersion, long Sequence);
+internal union ProjectionSequence(AllocateNextSequence, ExistingBootstrapSequence, CopiedProjection);
 
 /// <summary>Only the activation owner allocates a bootstrap sequence, once for all seed contributions.</summary>
 internal sealed class ExistingBootstrapSequence
@@ -37,24 +39,28 @@ internal static class WikiSemanticProjectionPlanner
 			else
 			{
 				var previous = work.Read(work.Tables.Summaries, key, WikiSemanticStateCodec.ProjectionState);
-				if (previous is not null && !allowSourceMove && !SameSource(previous.Source, edit.Page.Source))
+				if (previous is not null && !allowSourceMove && sequenceMode is not CopiedProjection && !SameSource(previous.Source, edit.Page.Source))
 					return new WikiProjectionConflict(previous.State.Summary.StateVersion);
 				old = previous?.State;
 			}
 		}
 		var currentVersion = old?.Summary.StateVersion ?? 0;
-		if (currentVersion != expectedStateVersion) return new WikiProjectionConflict(currentVersion);
-		if (old?.Summary.Deleted == true) return new WikiProjectionConflict(currentVersion);
+		var copy = sequenceMode is CopiedProjection copied ? copied : (CopiedProjection?)null;
+		if (copy is null && currentVersion != expectedStateVersion) return new WikiProjectionConflict(currentVersion);
+		if (copy is null && old?.Summary.Deleted == true) return new WikiProjectionConflict(currentVersion);
 		subject = subject == 0 ? work.Registry(WikiSemanticRegistryKind.Page, edit.Page.Reference.Id) : subject;
 		var subjectKey = work.Bytes(8, () => WikiSemanticKeys.Subject(subject));
-		var oldFacts = old is null ? null : work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024);
-		if (old is not null && oldFacts is null) throw new InvalidDataException("Missing canonical fact bundle.");
+		// Canonical facts are shared by every generation, so a copy neither reads its old index from them nor
+		// writes them: the caller clears the subject's staged index rows first, and the copy only indexes.
+		var oldFacts = old is null || copy is not null ? null
+			: work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024);
+		if (old is not null && copy is null && oldFacts is null) throw new InvalidDataException("Missing canonical fact bundle.");
 		var collection = work.Registry(WikiSemanticRegistryKind.Collection, edit.Page.Collection);
 		var classId = WikiSemanticVisibilityCatalog.Move(work, old, edit.Page, collection, !edit.Facts.Facts.IsEmpty && !edit.Deleted);
 		if (oldFacts is not null)
 			foreach (var fact in oldFacts.Facts) { ct.ThrowIfCancellationRequested(); Index(work, subject, old!.CollectionId, old.ClassId, fact, true); }
 		foreach (var fact in edit.Facts.Facts) { ct.ThrowIfCancellationRequested(); Index(work, subject, collection, classId, fact, false); }
-		var version = checked(currentVersion + 1);
+		var version = copy?.StateVersion ?? checked(currentVersion + 1);
 		var sequence = Sequence(work, sequenceMode);
 		var summary = new WikiSemanticSummary(edit.Page.Reference, subject, edit.Page.Title, edit.Page.Visibility, edit.Page.Collection, edit.Deleted, version);
 		var state = new WikiSemanticSummaryState(summary, collection, classId, sequence);
@@ -63,10 +69,11 @@ internal static class WikiSemanticProjectionPlanner
 			() => work.Tables.LegacyB1Summary ? WikiSemanticStateCodec.Summary(state)
 				: WikiSemanticStateCodec.ProjectionState(new WikiSemanticProjectionState(state, edit.Page.Source)));
 		if (summaryBytes.Length > WikiSemanticLimits.MaxSummaryBytes) throw new WikiSemanticCapacityException("summary-bytes");
-		work.Delta.Put(work.Tables.Facts, subjectKey, factBytes);
+		if (copy is null) work.Delta.Put(work.Tables.Facts, subjectKey, factBytes);
 		work.Delta.Put(work.Tables.Summaries, subjectKey, summaryBytes);
 		if (old is { ClassId: > 0 }) BumpPartition(work, old.CollectionId, old.ClassId);
 		if (classId > 0 && (old is null || old.ClassId != classId || old.CollectionId != collection)) BumpPartition(work, collection, classId);
+		work.Journal?.Append(work, sequence, subject);
 		return new WikiProjectionPlanned(subject, version, sequence);
 	}
 	private static void Index(WikiSemanticWork work, ulong subject, ulong collection, ulong classId, SemanticFact fact, bool remove)
@@ -138,6 +145,7 @@ internal static class WikiSemanticProjectionPlanner
 	{
 		AllocateNextSequence => AllocateSequence(work),
 		ExistingBootstrapSequence existing when existing.Sequence > 0 && work.Counter(work.Key(2)) == (ulong)existing.Sequence => existing.Sequence,
+		CopiedProjection copied when copied.Sequence > 0 && (ulong)copied.Sequence <= work.Counter(work.Key(2)) => copied.Sequence,
 		_ => throw new InvalidDataException("Invalid or unallocated bootstrap sequence.")
 	};
 }
