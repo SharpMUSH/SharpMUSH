@@ -295,7 +295,7 @@ For players and things, this means failure to get/take. For exits, it means fail
 `@ofollow <object>[=<message>]`<br>
 `@afollow <object>[=<action list>]`
 
-These attributes can be set, but the follow command does not use them yet: it only tells the follower "You are now following" and the name, and tells `<object>` who is following.
+Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
 
 ::: seealso
 - [follow]
@@ -312,7 +312,7 @@ These attributes can be set, but the follow command does not use them yet: it on
 `@ounfollow <object>[=<message>]`<br>
 `@aunfollow <object>[=<action list>]`
 
-These attributes can be set, but the unfollow command does not use them yet: it only tells you "You stop following."
+Sets the message shown to someone who stops following `<object>` with "unfollow `<object>`", the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
 
 ::: seealso
 - [follow]
@@ -613,7 +613,7 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 # @away
 `@away <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: someone who pages `<player>` while she is not connected is not shown `<message>`.
+If `<message>` evaluates to something non-null, it is shown to anyone who pages `<player>` while `<player>` is not connected, in place of "`<player>` is not connected."
 
 ### Example
 ```sharp
@@ -993,7 +993,7 @@ setting, rather than PennMUSH's dump_interval.
 `@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`<br>
 `@lalias <object>[=<leave alias1>[; ... ; <leave aliasN>]]`
 
-These attributes can be set, but they are not used yet: their "enter aliases" and "leave aliases" do not work in place of "enter `<object>`" and "leave `<object>`".
+These attributes contain lists of "enter aliases" and "leave aliases" for `<object>` - any of the aliases can be used in place of "enter `<object>`" and "leave `<object>`" to enter/leave the object.
 
 These attributes only have meaning for players and things (as rooms/exits cannot be "enter"ed) - the aliases for exits are stored in @alias.
 
@@ -1274,7 +1274,7 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 # @haven
 `@haven <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: when someone cannot page `<player>`, because `<player>` is set HAVEN or because of his page lock, they are not shown `<message>`.
+When someone tries to page `<player>` and cannot, either because `<player>` is set HAVEN or because of `<player>`'s page lock, they are shown `<message>`, if it evaluates to something non-null.
 
 ### Example
 ```sharp
@@ -1364,7 +1364,7 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 # @idle
 `@idle <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: it is not sent back to those who page you.
+This message is sent in return to every page which reaches you, if it evaluates non-null. It is useful if you are idle for long periods of time and wish to tell people where you are, or if you are in a meeting and cannot quickly return pages.
 
 ### Example
 ```sharp
@@ -2512,7 +2512,7 @@ The `/opaque` switch omits contents listings.
 # follow
 `follow <object>`
 
-You begin following `<object>`, a player or thing; its follow lock is not checked. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
+You begin following `<object>`, a player or thing, if you pass its follow lock (see [@lock/follow]). As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
 
 
 ::: seealso

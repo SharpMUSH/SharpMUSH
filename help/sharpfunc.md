@@ -991,7 +991,7 @@ think config(command_aliases)
 # controls()
 `controls(<object>, <victim>[/<attribute>])`
 
-  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
+  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If `<object>` or `<victim>` cannot be matched, it returns #-1 ARG1 NOT FOUND or #-1 ARG2 NOT FOUND, and an `<attribute>` that is not a valid name returns #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or be See_All; otherwise it returns #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -1752,7 +1752,7 @@ Kept: 12 7 / Dropped: apples pears
 # findable()
 `findable(<object>, <victim>)`
 
-  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
+  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If `<object>` or `<victim>` cannot be matched, it returns #-1 ARG1 NOT FOUND or #-1 ARG2 NOT FOUND, and an `<attribute>` that is not a valid name returns #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or be See_All; otherwise it returns #-1 PERMISSION DENIED.
 
   The object executing the function needs to be see_all or control either `<object>` or `<victim>`.
 
@@ -2306,7 +2306,7 @@ You typed abc.
 # iname()
 `iname(<object>)`
 
-  iname() returns the name of `<object>`. It currently returns the plain name, the same as name(); NAMEFORMAT and NAMEACCENT attributes are not used.
+  iname() returns the name of `<object>` as seen from inside it: its NAMEFORMAT evaluated with %0 the object's dbref and %1 its accented name, or the accented name when it has no NAMEFORMAT. You must control `<object>`, be See_All, or be inside it; otherwise it returns #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -3373,7 +3373,7 @@ You say, "es"
 
   msecs() returns the time as the number of seconds since the epoch.
 
-  Every type of object, players included, has a modification time. Any object you can locate can be checked; no examine permission is needed.
+  Every type of object, players included, has a modification time. You must be able to examine `<object>`; otherwise both return #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -3871,7 +3871,7 @@ think objevals(me,v(DATA`TEXT))
 
   Given just an object, it returns the owner of the object. Given an object/attribute pair, it returns the owner of that attribute, or #-1 if the attribute is missing or you cannot read it.
 
-  owner() does not change ownership: <new owner> and preserve are accepted and ignored. Use @chown or @atrchown for that.
+  Given a `<new owner>`, owner() changes the owner as @chown does, or as @atrchown does for an object/attribute pair, and returns 1 if it changed and 0 if it did not. `preserve` is @chown/preserve. Changing ownership needs function side effects and permission to use @chown.
 
 
 ::: seealso
@@ -5035,7 +5035,7 @@ You say, "foo moof baz"
 # sqlescape()
 `sqlescape(<string>)`
 
-  This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks.
+  This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks. Like sql(), it needs the SQL_OK power.
 
   Example:
 ```sharp
