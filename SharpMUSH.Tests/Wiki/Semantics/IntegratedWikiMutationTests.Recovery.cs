@@ -94,16 +94,17 @@ public partial class IntegratedWikiMutationTests
 	/// </summary>
 	private static async Task AssertIndexesMatchFacts(LightningDatabase provider)
 	{
+		var tables = AtomicWikiLayout.ForGeneration(provider.ActiveSemanticGeneration());
 		var (expectedForward, expectedPostings, expectedReferences, forward, postings, references) = provider.Store.Read(tx =>
 		{
-			using var work = WikiSemanticWork.Create(tx, AtomicWikiLayout.Tables, new NativeReadBudget(65536, 64L << 20, 256L << 20, CancellationToken.None));
+			using var work = WikiSemanticWork.Create(tx, tables, new NativeReadBudget(65536, 64L << 20, 256L << 20, CancellationToken.None));
 			var wantForward = new HashSet<string>(StringComparer.Ordinal);
 			var wantPostings = new HashSet<string>(StringComparer.Ordinal);
 			var wantReferences = new Dictionary<string, long>(StringComparer.Ordinal);
-			foreach (var (key, value) in tx.Range(AtomicWikiLayout.Summaries, []))
+			foreach (var (key, value) in tx.Range(tables.Summaries, []))
 			{
 				var state = WikiSemanticStateCodec.ProjectionState(value).State;
-				var facts = WikiSemanticCodec.DecodeFacts(tx.TryGet(AtomicWikiLayout.Facts, key, out var bytes) ? bytes : throw new InvalidDataException("A summary has no facts."));
+				var facts = WikiSemanticCodec.DecodeFacts(tx.TryGet(tables.Facts, key, out var bytes) ? bytes : throw new InvalidDataException("A summary has no facts."));
 				if (state.Summary.Deleted || facts.Facts.IsEmpty)
 				{
 					if (state.ClassId != 0 || !facts.Facts.IsEmpty) throw new InvalidDataException("A page without live facts holds a class.");
@@ -118,9 +119,9 @@ public partial class IntegratedWikiMutationTests
 					wantPostings.Add(Convert.ToHexString(p));
 				}
 			}
-			var haveForward = tx.Range(AtomicWikiLayout.Forward, []).Select(row => Convert.ToHexString(row.Key)).ToHashSet(StringComparer.Ordinal);
-			var havePostings = tx.Range(AtomicWikiLayout.Postings, []).Select(row => Convert.ToHexString(row.Key)).ToHashSet(StringComparer.Ordinal);
-			var haveReferences = tx.Range(AtomicWikiLayout.Catalog, [])
+			var haveForward = tx.Range(tables.Forward, []).Select(row => Convert.ToHexString(row.Key)).ToHashSet(StringComparer.Ordinal);
+			var havePostings = tx.Range(tables.Postings, []).Select(row => Convert.ToHexString(row.Key)).ToHashSet(StringComparer.Ordinal);
+			var haveReferences = tx.Range(tables.Catalog, [])
 				.ToDictionary(row => Convert.ToHexString(row.Key), row => WikiSemanticStateCodec.Catalog(row.Value).References, StringComparer.Ordinal);
 			return (wantForward, wantPostings, wantReferences, haveForward, havePostings, haveReferences);
 		});
@@ -148,7 +149,7 @@ public partial class IntegratedWikiMutationTests
 					is SemanticQueryResult.NotCertified { Outcome: var outcome } && outcome.GetType().Name == "Incomplete").IsTrue();
 				continue;
 			}
-			var oracle = await OracleAsync(world, reader, p => p.Level is >= 1 and <= 10, false);
+			var oracle = await OracleAsync(world, reader, p => p.Level is >= 1 and <= 10, byLevel: true);
 			await Assert.That((await PageThroughAsync(world, reader, query)).Ids).IsEquivalentTo(oracle, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		}
 	}
@@ -249,6 +250,38 @@ public partial class IntegratedWikiMutationTests
 		});
 		await Assert.That(async () => await AssertIndexesMatchFacts(provider)).Throws<TUnit.Assertions.Exceptions.AssertionException>();
 		await host.CloseAsync();
+	}
+
+	[Test]
+	[Arguments("rebuild-batch", false)]
+	[Arguments("rebuild-checkpoint", false)]
+	[Arguments("rebuild-flip", false)]
+	[Arguments("rebuild-flipped", true)]
+	public async Task AKillDuringARebuildLeavesOneConsistentActiveGeneration(string scenario, bool flipped)
+	{
+		var killed = await KillChildAtAsync(scenario, scenario);
+		try
+		{
+			await using var host = Adopt(killed);
+			await host.OpenAsync();
+			var provider = host.Services.GetRequiredService<LightningDatabase>();
+			var levels = SeededLevels(killed.Evidence);
+			// Before the flip committed, the old generation is still the one; after it, the staged one is. Either
+			// way reopening discarded the staging, and the active generation holds exactly what the facts imply.
+			await Assert.That(provider.ActiveSemanticGeneration()).IsEqualTo(flipped ? 2UL : 1UL);
+			await AssertNoStaging(provider);
+			if (!flipped) await AssertGenerationCleared(provider, 2);
+			await AssertCanonicalFacts(provider, levels.Select(pair => (pair.Key, pair.Value)));
+			await AssertIndexesMatchFacts(provider);
+			await AssertReadersAfterRecovery(host, killed.Evidence, levels, settled: true);
+			// The next rebuild clears whatever an interrupted retirement left in its slot and publishes cleanly.
+			await Assert.That(await provider.RebuildSemanticProjectionAsync(null, CancellationToken.None)
+				is SemanticRebuildOutcome.Flipped { Generation: var next } && next == (flipped ? 3UL : 2UL)).IsTrue();
+			await AssertGenerationCleared(provider, flipped ? 2UL : 1UL);
+			await AssertIndexesMatchFacts(provider);
+			await host.CloseAsync();
+		}
+		finally { RemoveEvidence(killed); }
 	}
 
 	[Test]

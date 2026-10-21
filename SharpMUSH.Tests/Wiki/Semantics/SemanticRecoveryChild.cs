@@ -121,6 +121,30 @@ public class SemanticRecoveryChild
 					return 0;
 				});
 				break;
+			case "rebuild-batch":
+				provider.SemanticRebuildJobHook = stage => { if (stage == SemanticRebuildStage.BatchApplied) Hold("rebuild-batch"); };
+				await provider.RebuildSemanticProjectionAsync(new(BatchSize: 2), CancellationToken.None);
+				break;
+			case "rebuild-checkpoint":
+				provider.SemanticRebuildHook = stage =>
+				{
+					if (stage == SemanticRebuildStage.CheckpointCommitted) Hold("rebuild-checkpoint");
+					return ValueTask.CompletedTask;
+				};
+				await provider.RebuildSemanticProjectionAsync(new(BatchSize: 2), CancellationToken.None);
+				break;
+			case "rebuild-flip":
+				provider.SemanticRebuildJobHook = stage => { if (stage == SemanticRebuildStage.FlipApplied) Hold("rebuild-flip"); };
+				await provider.RebuildSemanticProjectionAsync(new(BatchSize: 2), CancellationToken.None);
+				break;
+			case "rebuild-flipped":
+				provider.SemanticRebuildHook = stage =>
+				{
+					if (stage == SemanticRebuildStage.Flipped) Hold("rebuild-flipped");
+					return ValueTask.CompletedTask;
+				};
+				await provider.RebuildSemanticProjectionAsync(new(BatchSize: 2), CancellationToken.None);
+				break;
 			default: throw new InvalidOperationException("Unknown recovery scenario.");
 		}
 		Checkpoint("ended-without-kill");

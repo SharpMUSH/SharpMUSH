@@ -48,10 +48,10 @@ public partial class LightningDatabase
 			var id = WikiPageId(key);
 			var nativeId = work.Registry(WikiSemanticRegistryKind.Page, id, false);
 			var subjectKey = work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId));
-			var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState);
+			var state = nativeId == 0 ? null : work.Read(work.Tables.Summaries, subjectKey, WikiSemanticStateCodec.ProjectionState);
 			if (state is null) throw new InvalidDataException("Package page has no projection.");
 			if (state.State.Summary.Deleted || SameSource(state.Source, source) || from is { } expected && !SameSource(state.Source, expected)) return false;
-			var facts = work.Read(AtomicWikiLayout.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
+			var facts = work.Read(work.Tables.Facts, subjectKey, bytes => WikiSemanticCodec.DecodeFacts(bytes), 8, 1024)
 				?? throw new InvalidDataException("Package page has no facts.");
 			var rules = ReadLegacyProjectionRules(work, id, record);
 			var projection = new WikiPageProjection(new(id), source, record.Title, "game",

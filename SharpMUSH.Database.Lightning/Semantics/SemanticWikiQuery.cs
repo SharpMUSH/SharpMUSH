@@ -203,7 +203,7 @@ internal static class SemanticWikiQueries
 			var requirements = Requirements(section);
 			var admitted = new List<ulong>();
 			if (collection != 0)
-				foreach (var row in section.Range(AtomicWikiLayout.Catalog, Id(collection), [], [], [], (int)WikiSemanticVisibilityCatalog.MaximumClasses))
+				foreach (var row in section.Range(section.Tables.Catalog, Id(collection), [], [], [], (int)WikiSemanticVisibilityCatalog.MaximumClasses))
 				{
 					var classId = BinaryPrimitives.ReadUInt64BigEndian(row.Key.AsSpan(8));
 					var descriptor = WikiSemanticStateCodec.DescriptorValue(WikiSemanticStateCodec.Catalog(row.Value).Descriptor);
@@ -212,7 +212,7 @@ internal static class SemanticWikiQueries
 			using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
 			foreach (var classId in admitted)
 			{
-				section.TryGet(AtomicWikiLayout.Partitions, Pair(collection, classId), out var version);
+				section.TryGet(section.Tables.Partitions, Pair(collection, classId), out var version);
 				hash.AppendData(Id(classId));
 				hash.AppendData(version);
 			}
@@ -293,7 +293,7 @@ internal static class SemanticWikiQueries
 				// Read in small bounded steps until this class has supplied enough authorized candidates.
 				while (taken < wanted)
 				{
-					var rows = section.Range(AtomicWikiLayout.Postings, prefix, start, end, resume, wanted);
+					var rows = section.Range(section.Tables.Postings, prefix, start, end, resume, wanted);
 					if (rows.Count == 0) break;
 					foreach (var row in rows)
 					{
@@ -342,8 +342,8 @@ internal static class SemanticWikiQueries
 			BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(8), predicate.Property);
 			prefix[16] = (byte)predicate.Tag;
 			if (predicate.Low.AsSpan().SequenceEqual(predicate.High))
-				return section.TryGet(AtomicWikiLayout.Forward, Concat(prefix, predicate.Low), out _);
-			return section.Range(AtomicWikiLayout.Forward, prefix, Concat(prefix, predicate.Low), Successor(Concat(prefix, predicate.High)), [], 1).Count > 0;
+				return section.TryGet(section.Tables.Forward, Concat(prefix, predicate.Low), out _);
+			return section.Range(section.Tables.Forward, prefix, Concat(prefix, predicate.Low), Successor(Concat(prefix, predicate.High)), [], 1).Count > 0;
 		}
 
 		private static IReadOnlyList<string> ColumnValues(SemanticReadSection section, WikiRequirements requirements, ulong subject, ulong property)
@@ -352,7 +352,7 @@ internal static class SemanticWikiQueries
 			BinaryPrimitives.WriteUInt64BigEndian(prefix, subject);
 			BinaryPrimitives.WriteUInt64BigEndian(prefix.AsSpan(8), property);
 			var values = new List<string>();
-			foreach (var row in section.Range(AtomicWikiLayout.Forward, prefix, [], [], [], WikiSemanticLimits.MaxFacts))
+			foreach (var row in section.Range(section.Tables.Forward, prefix, [], [], [], WikiSemanticLimits.MaxFacts))
 			{
 				var tag = (WikiSemanticScalarTag)row.Key[16];
 				var value = row.Key.AsSpan(17, 8);
@@ -381,7 +381,7 @@ internal static class SemanticWikiQueries
 
 	private static WikiSemanticSummaryState? Visible(SemanticReadSection section, WikiRequirements requirements, ulong subject)
 	{
-		if (!section.TryGet(AtomicWikiLayout.Summaries, WikiSemanticKeys.Subject(subject), out var bytes)) return null;
+		if (!section.TryGet(section.Tables.Summaries, WikiSemanticKeys.Subject(subject), out var bytes)) return null;
 		var state = WikiSemanticStateCodec.ProjectionState(bytes).State;
 		return !state.Summary.Deleted && MaySee(section.Reader, requirements, state.Summary.Visibility, state.Summary.Reference.Id) ? state : null;
 	}
@@ -402,13 +402,13 @@ internal static class SemanticWikiQueries
 
 	private static ulong RegistryId(SemanticReadSection section, WikiSemanticRegistryKind kind, string identity)
 	{
-		if (!section.TryGet(AtomicWikiLayout.Registry, WikiSemanticKeys.RegistryLookup(kind, identity), out var bytes)) return 0;
+		if (!section.TryGet(section.Tables.RegistryFor(kind), WikiSemanticKeys.RegistryLookup(kind, identity), out var bytes)) return 0;
 		var entry = WikiSemanticStateCodec.Registry(bytes);
 		return entry.Identity == identity ? entry.Id : 0;
 	}
 
 	private static string? Reverse(SemanticReadSection section, WikiSemanticRegistryKind kind, ulong id)
-		=> section.TryGet(AtomicWikiLayout.Registry, WikiSemanticKeys.RegistryReverse(kind, id), out var bytes)
+		=> section.TryGet(section.Tables.RegistryFor(kind), WikiSemanticKeys.RegistryReverse(kind, id), out var bytes)
 			? WikiSemanticStateCodec.Registry(bytes).Identity : null;
 
 	// ── Keys ──

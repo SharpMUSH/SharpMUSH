@@ -38,6 +38,13 @@ public sealed partial class LightningStore
 		};
 	}
 
+	/// <summary>
+	/// A rebuild's write of a staged generation, a journal it consumed, or a retired generation: rows no reader
+	/// pins, so they advance no fixture version. The job must touch nothing a reader of the active generation reads.
+	/// </summary>
+	internal ValueTask<T> WriteStagedSemanticAsync<T>(Func<ITx, T> job, CancellationToken ct = default)
+		=> WriteAsync(tx => { ((Tx)tx).StagedSemanticWrite = true; return job(tx); }, ct);
+
 	// A conservative attempt fence: successful return proves only a committed UNKNOWN marker.
 	// The writer owns completion through commit; cancellation never detaches an in-flight transaction.
 	internal ValueTask<ulong> BeginFixturePackageAttemptAsync(SemanticFixtureLease lease, CancellationToken ct,
@@ -173,6 +180,8 @@ public sealed partial class LightningStore
 		internal LmdbDb MetaHandle => Db(Tables.Meta);
 		/// <summary>The root package operation whose flow submitted this job; null for none.</summary>
 		internal SemanticFixturePackageOperation? PackageSubmitter { get; set; }
+		/// <summary>A rebuild's own job: its semantic rows are a staged or retired generation no reader pins.</summary>
+		internal bool StagedSemanticWrite { get; set; }
 		private bool _fixtureWritePoisoned;
 		private bool _fixturePackageInvalidated;
 		internal void RequireFixtureWriteNotPoisoned()
@@ -188,7 +197,9 @@ public sealed partial class LightningStore
 				if (table.Name == Tables.Meta.Name && (Protects(FixturePackageStateKey, key, prefixDelete)
 					|| Protects("prototype.semantic.fixture.identity/v1"u8, key, prefixDelete) || IsFixtureVersionKey(key, prefixDelete)))
 					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
-				if (ClassifyFixtureTable(table.Name) is { } version) AdvanceFixtureVersion(version);
+				if (ClassifyFixtureTable(table.Name) is { } version
+					&& !(StagedSemanticWrite && table.Name.StartsWith(AtomicWikiLayout.Prefix, StringComparison.Ordinal)))
+					AdvanceFixtureVersion(version);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
 				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
 				if (!tracking.Owner.AdmitPackageMutation(tracking.Owner.IsLiveRoot(tracking.Lease, PackageSubmitter?.Root ?? PackageSubmitter)))

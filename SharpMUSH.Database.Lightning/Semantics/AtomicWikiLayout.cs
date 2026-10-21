@@ -5,7 +5,7 @@ using SharpMUSH.Library.Plugins.Storage.Lightning;
 namespace SharpMUSH.Database.Lightning.Semantics;
 
 internal sealed record AtomicWikiActivation(bool Active, Guid FixtureId, string SchemaDigest,
-	long Sequence, int Count, string IdentityDigest, string RequirementsDigest);
+	long Sequence, int Count, string IdentityDigest, string RequirementsDigest, ulong Generation = 1);
 
 internal static class AtomicWikiLayout
 {
@@ -39,13 +39,40 @@ internal static class AtomicWikiLayout
 	internal static readonly TableDef Catalog = TableDef.Node(Prefix + "catalog");
 	internal static readonly TableDef Partitions = TableDef.Node(Prefix + "partitions");
 	internal static readonly TableDef Mutations = TableDef.Node(Prefix + "mutations");
-	internal static readonly TableDef[] All = [Metadata, Registry, Summaries, Facts, Forward, Postings, Catalog, Partitions, Mutations];
-	internal static WikiSemanticTables Tables => new(Metadata, Registry, Summaries, Facts, Forward, Postings, Catalog, Partitions);
+	/// <summary>While a rebuild is staged: (commit sequence, subject) for every projection write, in that write's own job.</summary>
+	internal static readonly TableDef Journal = TableDef.Node(Prefix + "journal");
+
+	// A generation's secondary state lives in one of two slots: odd generations in the tables above, even ones in
+	// these. A rebuild fills the slot the active generation is not using, so the layout never grows.
+	internal const string AlternatePrefix = Prefix + "s1.";
+	internal static readonly TableDef AlternateSummaries = TableDef.Node(AlternatePrefix + "summaries");
+	internal static readonly TableDef AlternateForward = TableDef.Node(AlternatePrefix + "forward");
+	internal static readonly TableDef AlternatePostings = TableDef.Node(AlternatePrefix + "postings");
+	internal static readonly TableDef AlternateCatalog = TableDef.Node(AlternatePrefix + "catalog");
+	internal static readonly TableDef AlternatePartitions = TableDef.Node(AlternatePrefix + "partitions");
+	internal static readonly TableDef AlternateClasses = TableDef.Node(AlternatePrefix + "classes");
+	internal static readonly TableDef AlternateCounters = TableDef.Node(AlternatePrefix + "counters");
+
+	internal static readonly TableDef[] All = [Metadata, Registry, Summaries, Facts, Forward, Postings, Catalog, Partitions, Mutations, Journal,
+		AlternateSummaries, AlternateForward, AlternatePostings, AlternateCatalog, AlternatePartitions, AlternateClasses, AlternateCounters];
+
+	/// <summary>Generation 1's tables, the layout every activation starts with.</summary>
+	internal static WikiSemanticTables Tables => ForGeneration(1);
+
+	/// <summary>The tables <paramref name="generation"/>'s secondary state lives in; canonical tables are shared.</summary>
+	internal static WikiSemanticTables ForGeneration(ulong generation)
+	{
+		ArgumentOutOfRangeException.ThrowIfZero(generation);
+		return generation % 2 == 1
+			? new(Metadata, Registry, Summaries, Facts, Forward, Postings, Catalog, Partitions)
+			: new(Metadata, Registry, AlternateSummaries, Facts, AlternateForward, AlternatePostings, AlternateCatalog, AlternatePartitions,
+				classes: AlternateClasses, counters: AlternateCounters);
+	}
 	internal static byte[] Encode(AtomicWikiActivation state) => WikiSemanticCodec.Encode(w =>
 	{
 		w.Byte(1); w.Byte(7); w.Byte(state.Active ? (byte)1 : (byte)0);
 		w.String(state.FixtureId.ToString("N")); w.Int64(1); w.String(state.SchemaDigest);
-		w.Int64(1); w.Byte(0); // generation 1, QueryReady=false
+		w.Int64(checked((long)state.Generation)); w.Byte(0); // active generation, QueryReady=false
 		w.Int64(state.Sequence); w.Int32(state.Count); w.String(state.IdentityDigest); w.String(state.RequirementsDigest);
 		w.Int64(1); // baseline requirements snapshot version
 	}, 512);
@@ -55,7 +82,8 @@ internal static class AtomicWikiLayout
 		var reader = new WikiSemanticCodec.Reader(bytes, 7);
 		var active = reader.Boolean();
 		if (!Guid.TryParseExact(reader.String(), "N", out var id) || id != fixtureId || reader.Int64() != 1
-			|| reader.String() != SchemaDigest || reader.Int64() != 1 || reader.Boolean()) throw new InvalidDataException("Invalid activation identity.");
+			|| reader.String() != SchemaDigest || reader.Int64() is not (>= 1 and var generation) || reader.Boolean())
+			throw new InvalidDataException("Invalid activation identity.");
 		var sequence = reader.Int64();
 		var count = reader.Count(128, 1);
 		var identities = reader.String();
@@ -63,6 +91,6 @@ internal static class AtomicWikiLayout
 		if (reader.Int64() != 1) throw new InvalidDataException("Unsupported requirements snapshot version.");
 		reader.End();
 		if (sequence <= 0 || identities.Length != 64 || requirements.Length != 64) throw new InvalidDataException("Invalid activation certificate.");
-		return new(active, id, SchemaDigest, sequence, count, identities, requirements);
+		return new(active, id, SchemaDigest, sequence, count, identities, requirements, (ulong)generation);
 	}
 }
