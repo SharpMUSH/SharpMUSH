@@ -131,6 +131,7 @@ public partial class TelnetServer : ConnectionHandler
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await session.AnnounceTelnetIfNegotiatedAsync();
+			await session.WaitForNegotiationAsync(TimeSpan.FromMilliseconds(_options.NegotiationWaitMilliseconds));
 			await session.RegisterAsync();
 
 			// The handle exists in the main process from here on, so everything negotiation produced before
@@ -261,20 +262,7 @@ public partial class TelnetServer : ConnectionHandler
 		}
 
 		var reported = TerminalCapabilityReader.Read(terminalTypes);
-
-		// Only the fields this report speaks to: the record also carries the negotiated output format
-		// and any SOCKSET colorstyle pin, which have their own writers and must survive this one. The colour
-		// claims are kept as reported: a screen reader is sent plain text by the colour style, which a
-		// SCREENREADER pin can turn back off.
-		var updated = _connectionService.UpdateCapabilities(handle, current => current with
-		{
-			SupportsAnsi = reported.Ansi,
-			SupportsXterm256 = reported.Xterm256,
-			SupportsTruecolor = reported.Truecolor,
-			SupportsUtf8 = reported.Utf8,
-			ScreenReader = reported.ScreenReader,
-			TerminalTypes = terminalTypes
-		});
+		var updated = _connectionService.UpdateCapabilities(handle, current => WithTerminalTypes(current, terminalTypes));
 
 		if (updated)
 		{
@@ -282,6 +270,26 @@ public partial class TelnetServer : ConnectionHandler
 				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}, screenreader={ScreenReader}",
 				handle, reported.Ansi, reported.Xterm256, reported.Truecolor, reported.Utf8, reported.ScreenReader);
 		}
+	}
+
+	/// <summary>
+	/// <paramref name="current"/> with what <paramref name="terminalTypes"/> say. Only the fields this report
+	/// speaks to: the record also carries the negotiated output format and any SOCKSET colorstyle pin, which have
+	/// their own writers and must survive this one. The colour claims are kept as reported: a screen reader is
+	/// sent plain text by the colour style, which a SCREENREADER pin can turn back off.
+	/// </summary>
+	private static ProtocolCapabilities WithTerminalTypes(ProtocolCapabilities current, IReadOnlyList<string> terminalTypes)
+	{
+		var reported = TerminalCapabilityReader.Read(terminalTypes);
+		return current with
+		{
+			SupportsAnsi = reported.Ansi,
+			SupportsXterm256 = reported.Xterm256,
+			SupportsTruecolor = reported.Truecolor,
+			SupportsUtf8 = reported.Utf8,
+			ScreenReader = reported.ScreenReader,
+			TerminalTypes = terminalTypes
+		};
 	}
 
 	/// <summary>
