@@ -15,8 +15,10 @@ public static class DateExpressionParser
 {
 	public const int MaximumLength = 512;
 	private static readonly CultureInfo English = CultureInfo.InvariantCulture;
-	private static Match Match(string input, string pattern) => Regex.Match(input, pattern,
-		RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
+	// No wall-clock timeout, which a busy machine trips on valid input: the input is capped at
+	// MaximumLength and no pattern nests ambiguous quantifiers, so a match is at worst quadratic in it.
+	private const RegexOptions Options = RegexOptions.IgnoreCase | RegexOptions.CultureInvariant;
+	private static Match Match(string input, string pattern) => Regex.Match(input, pattern, Options);
 	private static DateExpressionFailure Fail(string message, DateExpressionFailureKind kind = DateExpressionFailureKind.Invalid) => new(kind, message);
 	private const string Weekday = @"(?:mon(?:day)?|tue(?:sday)?|wed(?:nesday)?|thu(?:rsday)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?)";
 	private const string Number = @"(?:[0-9]{1,6}|a|an|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve)";
@@ -30,7 +32,6 @@ public static class DateExpressionParser
 		try { return ParseCore(text, zoneName, reference); }
 		catch (ArgumentOutOfRangeException) { return Fail("DATE OR OFFSET OUT OF RANGE"); }
 		catch (OverflowException) { return Fail("DATE OR OFFSET OUT OF RANGE"); }
-		catch (RegexMatchTimeoutException) { return Fail("EXPRESSION TOO COMPLEX"); }
 	}
 
 	private static DateExpressionResult ParseCore(string text, string zoneName, DateTimeOffset reference)
@@ -108,7 +109,7 @@ public static class DateExpressionParser
 			var days = 0L;
 			var seconds = 0L;
 			var direction = dateText.EndsWith(" ago", StringComparison.OrdinalIgnoreCase) || body.StartsWith('-') ? -1 : 1;
-			var tokens = Regex.Matches(body, $@"(?<number>{Number})\s*(?<unit>{Unit})", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant, TimeSpan.FromMilliseconds(100));
+			var tokens = Regex.Matches(body, $@"(?<number>{Number})\s*(?<unit>{Unit})", Options);
 			if (tokens.Count > 16) return Fail("TOO MANY OFFSET COMPONENTS");
 			foreach (Match token in tokens)
 			{

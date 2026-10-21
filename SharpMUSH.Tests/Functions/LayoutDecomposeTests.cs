@@ -36,6 +36,7 @@ public class LayoutDecomposeTests
 		"[datatable({{\"priority\":\"|2\",\"nowrap\":\"1\"}},Name|>Score,Ann|10,Bob|7)]")]
 	[Arguments("datacolumns(,Name|Ann|Bob,Score|10|7)", "[datatable(,Name|Score,Ann|10,Bob|7)]")]
 	[Arguments("gradient(box(Hi,T,12),#ff0000|#0000ff,{{\"flow\":\"diagonal\"}})", "[gradient([box(Hi,T,12)],#ff0000|#0000ff,{{\"flow\":\"diagonal\"}})]")]
+	[Arguments("gradient(box(Hi,T,12),#ff0000|#0000ff,{{\"target\":\"borders\"}})", "[gradient([box(Hi,T,12)],#ff0000|#0000ff,{{\"target\":\"borders\"}})]")]
 	[Arguments("box(a%r[rule()]%rb,,9)", "[box(a%r[rule()]%rb,,9)]")]
 	[Arguments("box(fields(,Sex,Male)%r[rule(Quote)]%rHooo,Name)", "[box([fields(,Sex,Male)]%r[rule(Quote)]%rHooo,Name)]")]
 	[Arguments("figure(,A cat,=^.^=,left,The cat sits.,30)", "[figure(,A cat,=\\^.\\^=,left,The cat sits.,30)]")]

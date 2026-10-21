@@ -469,6 +469,14 @@ public static class LayoutOptionGroups
 		["diagonal"] = GradientFlow.Diagonal,
 	};
 
+	/// <summary>The parts of a layout a gradient falls on.</summary>
+	public static readonly IReadOnlyDictionary<string, GradientTarget> Targets = new Dictionary<string, GradientTarget>
+	{
+		["all"] = GradientTarget.All,
+		["borders"] = GradientTarget.Borders,
+		["text"] = GradientTarget.Text,
+	};
+
 	/// <summary>
 	/// <c>theme:</c> a theme by name, or one written out as a JSON object, read by <paramref name="read"/> (the game's
 	/// themes, <c>ILayoutThemeService.Read</c>), for the layout and everything inside it.
