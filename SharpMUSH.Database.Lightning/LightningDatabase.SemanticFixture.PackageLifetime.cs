@@ -24,6 +24,14 @@ public partial class LightningDatabase
 		}
 	}
 
+	/// <summary>
+	/// A retained child of the live coordinated operation whose flow this is, joined atomically under the
+	/// capability gate; null when there is none, or it has been released, and the caller takes its own attempt.
+	/// </summary>
+	internal SemanticFixturePackageOperation? JoinSemanticFixturePackageOperation()
+		=> _fixtureLease is { } lease && !_fixtureClosed
+			? lease.Owner.TryJoinPackageOperation(lease, SemanticFixturePackageOperation.Ambient) : null;
+
 	/// <summary>The live coordinated operation whose flow this is, on this provider's current lease; null otherwise.</summary>
 	internal SemanticFixturePackageOperation? CurrentSemanticFixturePackageOperation
 		=> _fixtureLease is { } lease && SemanticFixturePackageOperation.Ambient is { IsReleased: false } root

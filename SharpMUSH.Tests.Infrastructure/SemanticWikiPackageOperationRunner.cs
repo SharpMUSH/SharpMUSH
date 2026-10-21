@@ -49,7 +49,7 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
 	{
 		var root = await _provider.BeginRetainedSemanticFixturePackageOperationAsync(Owner, cancellationToken);
-		PackageOperationExecution<T> inner;
+		PackageOperationExecution<T>? inner = null;
 		try
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -62,10 +62,9 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 					using (SemanticFixturePackageOperation.EnterAmbient(root)) return await body(ct);
 				}, cancellationToken, provenance);
 		}
-		catch
+		finally
 		{
-			await root.DisposeAsync();
-			throw;
+			if (inner is null) await root.DisposeAsync();
 		}
 
 		var settlement = SettleAsync(root, inner, cancellationToken);
@@ -90,14 +89,11 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 	{
 		try
 		{
-			PackageOperationOutcome<T> outcome;
-			try { outcome = await execution.Completion; }
-			catch
-			{
-				try { await execution.Observation; } catch { /* the completion's own failure is reported */ }
-				throw;
-			}
-
+			// A failed completion still joins the observation, whose own failure the completion's supersedes.
+			await ((Task)execution.Completion).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			if (!execution.Completion.IsCompletedSuccessfully)
+				await ((Task)execution.Observation).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			var outcome = await execution.Completion;
 			var observation = await execution.Observation;
 			if (outcome.Value is PackageOperationRan<T> && !cancellationToken.IsCancellationRequested && Certifies(observation))
 			{
@@ -114,9 +110,10 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 	}
 
 	/// <summary>
-	/// Whether the coordinator's frozen observation certifies the operation: its body and every hook it
-	/// admitted ran, were released and were observed, and no hook ran code. A hook that parsed softcode
-	/// can have queued descendants nothing here observes, so it keeps the world UNKNOWN.
+	/// Whether the coordinator's frozen observation certifies the operation: the scheduler observes releases,
+	/// the body's own entry was released as Completed, its body and every hook it admitted ran, were released
+	/// and were observed, and no hook ran code. A hook that parsed softcode can have queued descendants nothing
+	/// here observes, so it keeps the world UNKNOWN.
 	/// </summary>
 	internal static bool Certifies(PackageOperationObservation observation)
 		=> observation is
@@ -124,6 +121,8 @@ internal sealed class SemanticWikiPackageOperationRunner : IPackageOperationRunn
 			Coordinator: PackageTaskObservation.Returned,
 			Body: PackageTaskObservation.Returned,
 			BodyAdmission: PackageAdmissionObservation.Accepted,
+			SchedulerReleaseObservationSupported: true,
+			BodyRelease: { Outcome: QueueOutcome.Completed },
 			HooksRefused: 0,
 			HookAdmissionFailures: 0,
 			HooksWithoutReleaseObservation: 0,
