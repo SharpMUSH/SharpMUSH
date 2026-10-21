@@ -225,6 +225,28 @@ public class HelpArticleTests
 	}
 
 	/// <summary>
+	/// An argument name written as a tag is text in both renderers; only a line break, a comment and the
+	/// styling tags the terminal reads stay HTML. A browser would hide <c>&lt;value&gt;</c> as an unknown
+	/// element, and <c>&lt;title&gt;</c> or <c>&lt;body&gt;</c> would swallow the rest of the page.
+	/// </summary>
+	[Test]
+	[Arguments("A bar filled to *<value>*'s share of *<maximum>*, with *<label>* before it.",
+		"<p>A bar filled to <em>&lt;value&gt;</em>'s share of <em>&lt;maximum&gt;</em>, with <em>&lt;label&gt;</em> before it.</p>\n",
+		"A bar filled to <value>'s share of <maximum>, with <label> before it.")]
+	[Arguments("A box with *<title>* above *<body>*.<br>\nAfter.",
+		"<p>A box with <em>&lt;title&gt;</em> above <em>&lt;body&gt;</em>.<br>After.</p>\n",
+		"A box with <title> above <body>.\nAfter.")]
+	[Arguments("Kept <b>bold</b><!-- note -->.", "<p>Kept <b>bold</b><!-- note -->.</p>\n", "Kept bold.")]
+	[Arguments("Intro.\n\n<title> opens the line.\nNext.",
+		"<p>Intro.</p>\n<p>&lt;title&gt; opens the line.<br>Next.</p>\n",
+		"Intro.\n\n<title> opens the line.\nNext.")]
+	public async Task ArgumentNamesWrittenAsTagsAreText(string markdown, string html, string terminal)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(html);
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).IsEqualTo(terminal);
+	}
+
+	/// <summary>
 	/// A topic shows one title. Stacked headings name one topic several ways: the first H1 of a stack is
 	/// the title and the rest are its aliases, which the reader never sees as headings. A heading with
 	/// nothing under it but one other heading (<c>## Trigger examples</c>, then <c>### Examples</c>)
