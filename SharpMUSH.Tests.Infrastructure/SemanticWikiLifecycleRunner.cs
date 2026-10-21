@@ -35,16 +35,13 @@ internal sealed class SemanticWikiLifecycleRunner(IPackageLifecycleRunner inner,
 	private async Task<T> HeldAsync<T>(Func<Task<T>> run, CancellationToken cancellationToken)
 	{
 		await using var hold = await provider.BeginSemanticFixturePackageHoldAsync(cancellationToken);
+		var verdict = PackageWriteVerdict.Abandoned;
 		try
 		{
 			var result = await run();
-			hold.Report(PackageWriteVerdict.Committed);
+			verdict = PackageWriteVerdict.Committed;
 			return result;
 		}
-		catch
-		{
-			hold.Report(PackageWriteVerdict.Abandoned);
-			throw;
-		}
+		finally { hold.Report(verdict); }
 	}
 }

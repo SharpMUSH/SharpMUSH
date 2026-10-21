@@ -84,6 +84,7 @@ public sealed class PackageWikiService(
 
 		writes.Origin.RequireWiki(wiki, localization, packages, roles);
 		using var admitted = writes.AdmitReleased();
+		var finished = false;
 		try
 		{
 			var pinned = (await wiki.GetPinnedCategoriesAsync()).ToHashSet(StringComparer.Ordinal);
@@ -109,11 +110,11 @@ public sealed class PackageWikiService(
 					notes.Add($"Wiki page {deletion.Title} could not be deleted and is left as the game's: {ex.Message}");
 				}
 			}
+			finished = true;
 		}
-		catch
+		finally
 		{
-			writes.ReleasedWorkFailed();
-			throw;
+			if (!finished) writes.ReleasedWorkFailed();
 		}
 	}
 

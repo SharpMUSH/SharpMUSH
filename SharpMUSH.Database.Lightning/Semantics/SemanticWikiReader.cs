@@ -1,4 +1,5 @@
 using SharpMUSH.Database.Lightning.Store;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services.Interfaces;
@@ -65,11 +66,26 @@ internal sealed class SemanticReadSection
 	internal WikiReader Reader { get; }
 	internal int Index { get; }
 
+	/// <summary>
+	/// The row under <paramref name="key"/>. Its native length is charged before the copy is allocated, so a
+	/// row larger than what this section and the request have left is refused unread.
+	/// </summary>
 	internal bool TryGet(TableDef table, ReadOnlySpan<byte> key, out byte[] value)
 	{
-		var found = _tx.TryGet(table, key, out value);
-		Charge(found ? value.Length : 0);
-		return found;
+		var allowance = Math.Max(0, Math.Min(_limits.SectionBytes - _bytes, _request.RemainingBytes));
+		var budget = new NativeReadBudget(1, Math.Max(1, key.Length + allowance), 16 * 1024 * 1024, CancellationToken.None);
+		Found<NativeReadValue> read;
+		try { read = ((IBoundedReadTx)_tx).ReadValue(table, key, budget); }
+		catch (NativeReadLimitException) { throw new SemanticReadWorkLimitException(); }
+		if (read is not NativeReadValue found)
+		{
+			value = [];
+			Charge(0);
+			return false;
+		}
+		using (found) value = found.Value;
+		Charge(value.Length);
+		return true;
 	}
 
 	/// <summary>
@@ -110,6 +126,8 @@ internal sealed class SemanticReadBudget(SemanticReadLimits limits)
 {
 	private int _rows;
 	private long _bytes;
+
+	internal long RemainingBytes => limits.RequestBytes - _bytes;
 
 	internal void Charge(long bytes)
 	{
@@ -169,9 +187,11 @@ internal static class SemanticWikiReader
 
 			if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
 			var final = await resolveReader(cancellationToken);
+			if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
 			if (!SameReader(reader, final)) return SemanticReadResult<T>.AuthorizationChanged.Value;
 			var last = store.Read<SemanticReadResult<T>?>(tx => Pins.Read(tx, identity) is { } now ? pins.Differs<T>(now) : SemanticReadResult<T>.DataChanged.Value);
 			if (last is not null) return last;
+			if (Stopped(cancellationToken)) return SemanticReadResult<T>.Cancelled.Value;
 
 			return outcome.Kind switch
 			{

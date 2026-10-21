@@ -55,9 +55,7 @@ public sealed class PackageOperationRunner(
 		await _sequence.WaitAsync(cancellationToken);
 		var observation = new TaskCompletionSource<PackageOperationObservation>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var report = new PackageOperationObservationBuilder(scheduler is IQueueReleaseObserver);
-		// Captured in the starting flow; each queue entry the operation owns re-enters it.
-		var flow = scope?.Capture();
-		var settlement = SettleAsync(operation, body, cancellationToken, provenance, report, observation, flow);
+		var settlement = SettleAsync(operation, body, cancellationToken, provenance, report, observation);
 		lock (_settlements) _settlements.Add(settlement);
 		_ = ObserveSettlementAsync(settlement, operation);
 		return new PackageOperationExecution<T>(settlement, observation.Task);
@@ -86,11 +84,15 @@ public sealed class PackageOperationRunner(
 	private async Task<PackageOperationOutcome<T>> SettleAsync<T>(
 		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken,
 		Func<CancellationToken, Task<BackupProvenance>>? provenance, PackageOperationObservationBuilder report,
-		TaskCompletionSource<PackageOperationObservation> observation, object? flow)
+		TaskCompletionSource<PackageOperationObservation> observation)
 	{
 		var status = PackageTaskObservation.Unknown;
 		try
 		{
+			// Captured in the starting flow, which this runs in until its first await; each queue entry
+			// the operation owns re-enters it. A capture that fails fails this operation and still
+			// releases the sequence.
+			var flow = scope?.Capture();
 			var result = await RunInSequenceAsync(operation, body, cancellationToken, provenance, report, flow);
 			status = PackageTaskObservation.Returned;
 			return result;
