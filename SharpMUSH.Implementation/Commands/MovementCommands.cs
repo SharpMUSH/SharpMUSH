@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -394,14 +395,14 @@ public partial class Commands
 		// runs with the room being LEFT in %0. did_it's loc of NOTHING resolves to the mover's
 		// location, which is still that room (predicat.c:230).
 		await DidItService.DidIt(parser, new DidItRequest(
-			Player: executor, Thing: exitObject,
+			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
 			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString()));
 
 		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
 		// is var_dest, not the room being left (move.c:483).
 		await DidItService.DidIt(parser, new DidItRequest(
-			Player: executor, Thing: exitObject,
+			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "DROP", OWhat: "ODROP", AWhat: "ADROP",
 			Loc: destination));
 

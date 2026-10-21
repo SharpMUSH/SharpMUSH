@@ -208,6 +208,8 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateColorStyleMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateThemeMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateTerminalFeaturesMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePuebloModeMessage>();
+				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateTelnetModeMessage>();
 				x.AddConsumer<ProbeTerminalConsumer, ProbeTerminalMessage>();
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();

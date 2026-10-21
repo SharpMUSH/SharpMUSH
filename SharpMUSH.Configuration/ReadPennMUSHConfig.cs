@@ -137,7 +137,7 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CosmeticOptions.PlayerNameSpaces)), d.Cosmetic.PlayerNameSpaces),
 				Boolean(Get(nameof(CosmeticOptions.AnsiNames)), d.Cosmetic.AnsiNames),
 				Boolean(Get(nameof(CosmeticOptions.OnlyAsciiInNames)), d.Cosmetic.OnlyAsciiInNames),
-				Boolean(Get(nameof(CosmeticOptions.Monikers)), d.Cosmetic.Monikers),
+				MonikerPlaces.Normalize(Message(nameof(CosmeticOptions.MonikerList), d.Cosmetic.MonikerList)),
 				UnsignedInteger(Get(nameof(CosmeticOptions.FloatPrecision)), d.Cosmetic.FloatPrecision),
 				Boolean(Get(nameof(CosmeticOptions.CommaExitList)), d.Cosmetic.CommaExitList),
 				Boolean(Get(nameof(CosmeticOptions.CountAll)), d.Cosmetic.CountAll),

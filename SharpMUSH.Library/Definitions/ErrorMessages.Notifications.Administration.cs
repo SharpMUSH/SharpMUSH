@@ -49,6 +49,10 @@ public static partial class ErrorMessages
 		public const string SocksetPromptNewlinesOff = "No newline will be sent after a prompt.";
 		public const string SocksetStripAccentsOn = "Accents will be stripped.";
 		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
+		public const string SocksetPuebloSet = "Pueblo flag set.";
+		public const string SocksetPuebloCleared = "Pueblo flag cleared.";
+		public const string SocksetTelnetSet = "Telnet flag set.";
+		public const string SocksetTelnetCleared = "Telnet flag cleared.";
 		public const string SocksetUnknownColorStyle =
 			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256', 'truecolor'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

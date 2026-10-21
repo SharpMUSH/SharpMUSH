@@ -24,11 +24,30 @@ By default, anyone can use the `@moniker` command to set a moniker for themselve
 
 ## Display configuration
 
-The "monikers" `@config` option is yes or no. When it is yes, the speaker's moniker colors their name in say, pose and semipose. Other messages (channels, movement, look, examine, WHO) show plain names.
+The "monikers" `@config` option is a list of places where a name is shown with its moniker:
 
-When it is no, monikers are not displayed automatically, and are only available via softcode (`moniker()` and %k).
+```
+         chat - In @chat messages
+          say - Speech: say, pose and semipose
+     movement - Movement messages (exit @osucc and @odrop, get, drop, teleport)
+         look - In look: the name, contents and exits
+      unparse - In examine, which shows Name(#123flags)
+          who - In WHO and DOING
+       system - Other messages the game writes with a name in them
+announcements - Connection messages and GAME: announcements
+   everywhere - All of the above
+```
+
+It also names the types of object monikered: players, things, rooms, exits, or alltypes. An object set MONIKER is monikered in the listed places whatever its type.
+
+Words may be shortened, and !<word> removes one. The default is "alltypes say"; an empty list leaves only `moniker()` and %k. Where a name is not monikered, look and examine hilight it.
+
+```
+@config/set monikers=everywhere players !who
+```
 
 ::: seealso
 - [@moniker]
 - [MONIKER()]
+- [MONIKER]
 :::

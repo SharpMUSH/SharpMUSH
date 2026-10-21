@@ -77,6 +77,9 @@ public static class OutputFormatNegotiation
 /// The GMCP modules the client listed in Core.Supports, as <see cref="GmcpSupports.Format"/> keeps them: empty
 /// while GMCP is agreed and nothing is listed, null while it is not agreed.
 /// </param>
+/// <param name="Telnet">
+/// False after <c>SOCKSET telnet=no</c>: a prompt is then written as a line, with no <c>IAC GA</c> or <c>IAC EOR</c>.
+/// </param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -94,7 +97,8 @@ public record ProtocolCapabilities(
 	TerminalPins? Pins = null,
 	int CellWidth = 0,
 	int CellHeight = 0,
-	string? GmcpModules = null
+	string? GmcpModules = null,
+	bool Telnet = true
 )
 {
 	/// <summary>

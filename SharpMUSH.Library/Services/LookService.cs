@@ -2,6 +2,7 @@
 using System.Text;
 using Mediator;
 using MarkupString;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -232,7 +233,8 @@ public class LookService(
 		}
 
 		var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
-			await FlagView.ForAsync(look.Looker, connectionService));
+			await FlagView.ForAsync(look.Looker, connectionService),
+			name: await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
 
 		if (!look.Viewing.IsRoom || !look.ViewingFromInside)
 		{
@@ -486,14 +488,23 @@ public class LookService(
 			plain.Append('\n');
 			if (flagView is null)
 			{
-				plain.Append(obj.Name);
+				var name = await Names.NameAsync(seen.Item.WithRoomOption(), MonikerPlace.Look);
+				if (name.Runs.Length == 0)
+				{
+					plain.Append(obj.Name);
+					continue;
+				}
+
+				parts.Add(MarkupText.Plain(plain.ToString()));
+				parts.Add(name);
+				plain.Clear();
 				continue;
 			}
 
 			var flags = new ObjectFlagSet(obj.DBRef, seen.Flags, await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken));
 			var symbols = await MessageFormatting.FlagSymbolsAsync(obj, flagView, flags);
 			parts.Add(MarkupText.Plain(plain.ToString()));
-			parts.Add(obj.Name.Hilight());
+			parts.Add(await Names.UnparseNameAsync(seen.Item.WithRoomOption(), MonikerPlace.Look));
 			plain.Clear().Append("(#").Append(obj.DBRef.Number).Append(symbols).Append(')');
 		}
 		parts.Add(MarkupText.Plain(plain.ToString()));
@@ -524,7 +535,7 @@ public class LookService(
 			: isTransparent
 			? await TransparentExitListAsync(look.Looker, visibleExits)
 			: MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"),
-				MessageFormatting.FormatMStringsWithOxfordComma(visibleExits.Select(x => ExitLink(x.Object().Name)).ToList()));
+				MessageFormatting.FormatMStringsWithOxfordComma(await ExitLinksAsync(visibleExits)));
 
 		var formattedExits = await SkipsFormatAsync(look, "EXITFORMAT")
 			? defaultExits
@@ -556,7 +567,7 @@ public class LookService(
 		foreach (var exit in visibleExits)
 		{
 			var destName = await DestinationNameAsync(exit);
-			var exitMString = ExitLink(exit.Object().Name);
+			var exitMString = await ExitLinkAsync(exit);
 
 			exitParts.Add(await exit.WithRoomOption().IsOpaque()
 				? exitMString
@@ -572,7 +583,7 @@ public class LookService(
 		foreach (var exit in visibleExits)
 		{
 			var destName = await DestinationNameAsync(exit);
-			var exitMString = ExitLink(exit.Object().Name);
+			var exitMString = await ExitLinkAsync(exit);
 
 			if (await exit.WithRoomOption().IsOpaque())
 			{
@@ -647,15 +658,27 @@ public class LookService(
 	/// in the portal — and as the bare name for everyone else. The first alias (before ';') is the
 	/// command; every alias, pipe-delimited, is the hint, which BeipMU offers as a right-click menu.
 	/// </summary>
-	private static MString ExitLink(string exitName)
+	private async ValueTask<MString> ExitLinkAsync(AnySharpContent exit)
 	{
-		var aliases = exitName.Split(';');
+		var aliases = exit.Object().Name.Split(';');
 		var command = aliases[0];
 		var hint = aliases.Length > 1 ? string.Join("|", aliases) : $"Go {command}";
 		return MarkupText.Wrap(
 			AnsiMarkup.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint),
-			MarkupText.Plain(command));
+			await Names.NameAsync(exit.WithRoomOption(), MonikerPlace.Look, command));
 	}
+
+	private async ValueTask<List<MString>> ExitLinksAsync(List<AnySharpContent> exits)
+	{
+		var links = new List<MString>(exits.Count);
+		foreach (var exit in exits)
+		{
+			links.Add(await ExitLinkAsync(exit));
+		}
+		return links;
+	}
+
+	private NameFormatter Names => new(attributeService, configuration);
 
 	private MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
 	{

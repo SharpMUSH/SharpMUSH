@@ -25,12 +25,13 @@ public static class MessageFormatting
 			: target.Object().Name;
 
 	/// <inheritdoc cref="UnparseObjectAsync"/>
-	/// <remarks>The name portion is hilighted, as <see cref="FormatObjectWithDbrefMString"/> does.</remarks>
+	/// <remarks><paramref name="name"/> is the name as shown, hilighted or monikered
+	/// (<see cref="Services.NameFormatter.UnparseNameAsync"/>).</remarks>
 	public static async ValueTask<MString> UnparseObjectMStringAsync(IPermissionService permissions,
-		AnySharpObject viewer, AnySharpObject target, IConnectionService connections)
+		AnySharpObject viewer, AnySharpObject target, IConnectionService connections, MString name)
 		=> await ShowsReferenceAsync(permissions, viewer, target)
-			? await FormatObjectWithDbrefMString(target.Object(), await FlagView.ForAsync(viewer, connections))
-			: target.Object().Name.Hilight();
+			? await FormatObjectWithDbrefMString(target.Object(), await FlagView.ForAsync(viewer, connections), name: name)
+			: name;
 
 	/// <summary><c>real_unparse</c>'s dbref visibility test (<c>src/unparse.c:118-119</c>).</summary>
 	private static async ValueTask<bool> ShowsReferenceAsync(IPermissionService permissions,
@@ -136,12 +137,13 @@ public static class MessageFormatting
 	/// <param name="obj">The sharp object to format</param>
 	/// <param name="view">Whose view of the flags to show; see <see cref="VisibleFlagsAsync"/>.</param>
 	/// <param name="read">The object's flags when the caller has read them already.</param>
+	/// <param name="name">The name to show in place of the hilighted one, such as a monikered name.</param>
 	/// <returns>A task yielding the formatted MString with the name hilighted</returns>
 	public static async ValueTask<MString> FormatObjectWithDbrefMString(SharpObject obj, FlagView? view = null,
-		ObjectFlagSet? read = null)
+		ObjectFlagSet? read = null, MString? name = null)
 	{
 		var flagSymbols = await FlagSymbolsAsync(obj, view, read);
-		return MarkupText.Concat(obj.Name.Hilight(), MarkupText.Plain($"(#{obj.DBRef.Number}{flagSymbols})"));
+		return MarkupText.Concat(name ?? obj.Name.Hilight(), MarkupText.Plain($"(#{obj.DBRef.Number}{flagSymbols})"));
 	}
 
 	/// <summary>

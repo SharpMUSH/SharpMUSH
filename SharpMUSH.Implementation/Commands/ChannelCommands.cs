@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
@@ -105,7 +107,7 @@ public partial class Commands
 			chatType,
 			chatMessage,
 			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
+			await new NameFormatter(AttributeService, Configuration).NameAsync(executor, MonikerPlace.Chat),
 			MarkupText.Plain("says"),
 			[]
 		));

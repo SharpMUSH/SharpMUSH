@@ -477,8 +477,15 @@ public partial class TelnetServer
 			// and adds the appropriate prompt terminator (EOR, GA, or CRLF) based on
 			// what the client has negotiated.
 			// Write serialization is handled by the library's internal write lock.
+			// After SOCKSET telnet=no a prompt is a line, as PennMUSH writes one without CONN_TELNET.
 			try
 			{
+				if (server._connectionService.Get(handle)?.Capabilities.Telnet == false)
+				{
+					await _telnet!.SendAsync(data);
+					return;
+				}
+
 				await _telnet!.SendPromptAsync(data);
 			}
 			catch (ObjectDisposedException ode)

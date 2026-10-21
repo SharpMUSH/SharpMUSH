@@ -2851,6 +2851,18 @@
   <data name="SocksetStripAccentsOff" xml:space="preserve">
     <value>Accents will not be stripped.</value>
   </data>
+  <data name="SocksetPuebloSet" xml:space="preserve">
+    <value>Pueblo flag set.</value>
+  </data>
+  <data name="SocksetPuebloCleared" xml:space="preserve">
+    <value>Pueblo flag cleared.</value>
+  </data>
+  <data name="SocksetTelnetSet" xml:space="preserve">
+    <value>Telnet flag set.</value>
+  </data>
+  <data name="SocksetTelnetCleared" xml:space="preserve">
+    <value>Telnet flag cleared.</value>
+  </data>
   <data name="SocksetUnknownColorStyle" xml:space="preserve">
     <value>Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256'.</value>
   </data>

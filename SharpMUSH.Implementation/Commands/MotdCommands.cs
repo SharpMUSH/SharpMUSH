@@ -11,6 +11,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -254,8 +255,6 @@ public partial class Commands
 				continue;
 			}
 
-			var playerName = obj.Object().Name;
-
 			if (!isAdmin && await obj.HasFlag("DARK"))
 			{
 				continue;
@@ -269,7 +268,7 @@ public partial class Commands
 			var doingText = await GetDoingText(parser, executor, obj);
 
 			playerList.Add([
-				MarkupText.Plain(playerName),
+				await new NameFormatter(AttributeService, Configuration).NameAsync(obj, MonikerPlace.Who),
 				MarkupText.Plain(TimeHelpers.TimeString(connection.Connected!.Value, accuracy: 3)),
 				MarkupText.Plain(TimeHelpers.TimeString(connection.Idle!.Value) + " "),
 				MarkupText.Plain(doingText)]);
