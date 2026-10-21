@@ -40,7 +40,7 @@ public class BundledBridgeBootstrapTests
 	[Test]
 	public async Task ABridge_WaitsForBothOfThePackagesItJoins()
 	{
-		string[] installed = ["plus-help", "plus-config"];
+		string[] installed = ["plus-help", "plus-config", "messages"];
 		var registry = Substitute.For<IPackageRegistryService>();
 		registry.GetInstalledPackageAsync(Arg.Any<string>()).Returns(call =>
 			installed.Contains(call.Arg<string>())
