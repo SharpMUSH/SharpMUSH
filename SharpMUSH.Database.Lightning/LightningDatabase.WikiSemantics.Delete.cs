@@ -16,13 +16,24 @@ public partial class LightningDatabase
 		var pageId = WikiPageId(key);
 		var pageKey = LegacyBytes(work, 8, () => WikiPageKey(key));
 		var old = work.Read(Tables.WikiPage, pageKey, DecodeLegacyPage, 32, 2048);
-		// Activation forbids these entire tables; every later writer remains fenced. Never silently
-		// turn an unexpected row into an unsupported locale/package cascade.
-		foreach (var table in new[] { Tables.WikiTr, Tables.PkgWiki })
+		// Activation forbids translations entirely and every later writer remains fenced. Never silently
+		// turn an unexpected row into an unsupported locale cascade.
+		using (var translations = work.Reader.ReadRange(Tables.WikiTr, [], [], [], [], work.Budget))
 		{
-			using var forbidden = work.Reader.ReadRange(table, [], [], [], [], work.Budget);
-			if (!forbidden.Exhausted) throw new NativeReadLimitException("records");
-			if (!forbidden.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki ownership or translations.");
+			if (!translations.Exhausted) throw new NativeReadLimitException("records");
+			if (!translations.Entries.IsEmpty) throw new InvalidDataException("Unsupported wiki translations.");
+		}
+		// A package's page is the package's to delete: it releases the page first, which makes it the game's again.
+		using (var owned = work.Reader.ReadRange(Tables.PkgWiki, [], [], [], [], work.Budget))
+		{
+			if (!owned.Exhausted) throw new NativeReadLimitException("records");
+			foreach (var row in owned.Entries)
+			{
+				work.Lifetime.ReserveAdditional(checked(2048 + 24L * row.Value.Length));
+				var ownership = Codec.Deserialize<Records.PackageWikiPageRecord>(row.Value) ?? throw new InvalidDataException("Invalid package page row.");
+				if (TryParseWikiPageId(ownership.PageId, out var ownedKey) && ownedKey == key)
+					throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
+			}
 		}
 		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
 		if (nativeId == 0)
@@ -42,8 +53,9 @@ public partial class LightningDatabase
 		if (collection == 0) throw new InvalidDataException("Missing integrated collection.");
 		RequireDeleteRegistryIdentity(work, WikiSemanticRegistryKind.Collection, collection, "game");
 		if (state.Source is not LocalWikiSource || summary.Reference.Id != pageId || summary.NativeId != nativeId
-			|| summary.Collection != "game" || state.State.CollectionId != collection || state.State.ClassId != 0
-			|| facts.SchemaVersion != AtomicWikiLayout.Schema.Version || facts.Facts.IsDefault || !facts.Facts.IsEmpty
+			|| summary.Collection != "game" || state.State.CollectionId != collection
+			// An imported page has facts and the visibility class they index under; the tombstone's projection removes both.
+			|| facts.SchemaVersion != AtomicWikiLayout.Schema.Version || facts.Facts.IsDefault || facts.Facts.IsEmpty != (state.State.ClassId == 0)
 			|| summary.StateVersion <= 0 || state.State.CommitSequence <= 0 || summary.StateVersion > state.State.CommitSequence
 			|| (ulong)state.State.CommitSequence > work.Counter(work.Key(2)))
 			throw new InvalidDataException("Incompatible integrated delete state.");

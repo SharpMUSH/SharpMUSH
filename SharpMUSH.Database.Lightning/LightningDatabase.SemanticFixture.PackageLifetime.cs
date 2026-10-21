@@ -5,12 +5,12 @@ namespace SharpMUSH.Database.Lightning;
 public partial class LightningDatabase
 {
 	internal async ValueTask<SemanticFixturePackageOperation> BeginRetainedSemanticFixturePackageOperationAsync(
-		SemanticFixtureCapability owner, CancellationToken cancellationToken)
+		SemanticFixtureCapability owner, CancellationToken cancellationToken, bool coordinated = false)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		if (_fixtureLease is not { } lease || !ReferenceEquals(lease.Owner, owner) || _fixtureClosed)
 			throw SemanticFixtureCapability.Unavailable();
-		var operation = owner.RetainPackageOperation(lease);
+		var operation = owner.RetainPackageOperation(lease, coordinated);
 		try
 		{
 			await BeginSemanticFixturePackageAttemptAsync(owner, cancellationToken, operation);
@@ -47,6 +47,10 @@ public partial class LightningDatabase
 			throw SemanticFixtureCapability.Unavailable();
 		return Store.SettleFixturePackageAttemptAsync(lease, root);
 	}
+
+	/// <summary>The current issued lease, whose epoch and in-memory key seal query continuations.</summary>
+	internal SemanticFixtureLease SemanticFixtureLeaseForQueries
+		=> _fixtureLease is { } lease && !_fixtureClosed ? lease : throw SemanticFixtureCapability.Unavailable();
 
 	/// <summary>Admits a semantic read on this provider's current issued lease; see <see cref="SemanticFixtureReadLease"/>.</summary>
 	internal SemanticFixtureReadLease AdmitSemanticRead(CancellationToken deadline)

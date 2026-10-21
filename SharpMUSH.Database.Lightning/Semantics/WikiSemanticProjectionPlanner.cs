@@ -21,8 +21,9 @@ internal sealed class ExistingBootstrapSequence
 /// <summary>Contributes only projection rows to the owner's unapplied delta. Never opens tables or writes a receipt.</summary>
 internal static class WikiSemanticProjectionPlanner
 {
+	/// <param name="allowSourceMove">Only an ownership write may move a page between local and package sources, in its own job.</param>
 	internal static WikiProjectionPlanResult PlanProjection(WikiSemanticWork work, PreparedWikiProjection edit,
-		long expectedStateVersion, ProjectionSequence sequenceMode)
+		long expectedStateVersion, ProjectionSequence sequenceMode, bool allowSourceMove = false)
 	{
 		var ct = work.Budget.CancellationToken;
 		ct.ThrowIfCancellationRequested();
@@ -36,7 +37,8 @@ internal static class WikiSemanticProjectionPlanner
 			else
 			{
 				var previous = work.Read(work.Tables.Summaries, key, WikiSemanticStateCodec.ProjectionState);
-				if (previous is not null && !SameSource(previous.Source, edit.Page.Source)) return new WikiProjectionConflict(previous.State.Summary.StateVersion);
+				if (previous is not null && !allowSourceMove && !SameSource(previous.Source, edit.Page.Source))
+					return new WikiProjectionConflict(previous.State.Summary.StateVersion);
 				old = previous?.State;
 			}
 		}

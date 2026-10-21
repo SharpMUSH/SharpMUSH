@@ -283,16 +283,17 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task ActivePackageRunnerRefusesBeforeBodyAndProvenance()
+	public async Task AnActivePackageRunnerRunsACoordinatedBody()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
 		await host.ActivateAtomicWikiProjectionAsync();
 		var invoked = false;
 		var outcome = await host.Services.GetRequiredService<IPackageOperationRunner>().RunAsync("fixture-test",
-			_ => { invoked = true; return Task.FromResult(1); }, provenance: _ => { invoked = true; throw new ActivationFault(); });
-		await Assert.That(outcome is PackageOperationRefused).IsTrue();
-		await Assert.That(invoked).IsFalse();
+			_ => { invoked = true; return Task.FromResult(1); });
+		await Assert.That(outcome.Expect<PackageOperationRan<int>>().Result).IsEqualTo(1);
+		await Assert.That(invoked).IsTrue();
+		await host.CloseAsync();
 	}
 
 	[Test]

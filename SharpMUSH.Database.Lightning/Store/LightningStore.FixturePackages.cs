@@ -45,12 +45,12 @@ public sealed partial class LightningStore
 	{
 		if (_fixturePackageTracking is not { } tracking || !ReferenceEquals(tracking.Lease, lease))
 			throw SemanticFixtureCapability.Unavailable();
-		tracking.Owner.RequirePackageAttempt(lease);
+		tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 		ct.ThrowIfCancellationRequested();
 		return _writer.EnqueueRawAsync(tx =>
 		{
 			// The raw writer has acquired this store's native lifetime gate before this recheck.
-			tracking.Owner.RequirePackageAttempt(lease);
+			tracking.Owner.RequirePackageAttempt(lease, coordinated: attribution is not null);
 			ct.ThrowIfCancellationRequested();
 			var meta = _tables[Tables.Meta];
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != lease.FixtureId)
@@ -99,6 +99,37 @@ public sealed partial class LightningStore
 	}
 
 	/// <summary>
+	/// Activation's own certificate: when no package attempt has ever been made (the marker is exactly UNKNOWN
+	/// at generation 0), the empty package history is settled. Any other marker is left unchanged. Activation
+	/// already refuses a fixture with any admitted package history, and an active fixture refuses package writes.
+	/// </summary>
+	internal static void CertifyEmptyFixturePackageHistory(ITx tx, Guid identity)
+	{
+		var raw = ((Tx)tx).Native;
+		var meta = ((Tx)tx).MetaHandle;
+		var (found, _, value) = raw.Get(meta, FixturePackageStateKey);
+		if (!FoundNative(found, "read fixture package state") || Tx.CheckedLength(value) != 32) return;
+		Span<byte> unknown = stackalloc byte[32];
+		EncodeUnknownPackageState(unknown, identity, 0);
+		if (!value.AsSpan().SequenceEqual(unknown)) return;
+		unknown[5] = 1;
+		var code = raw.Put(meta, FixturePackageStateKey, unknown);
+		if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "certify fixture package history");
+	}
+
+	/// <summary>
+	/// Whether a package history may be activated over: settled at any generation, or untouched (UNKNOWN at 0).
+	/// An unsettled history cannot prove its operations ended, so it still precludes activation.
+	/// </summary>
+	internal static bool IsActivatableFixturePackageState(ReadOnlySpan<byte> marker, Guid identity)
+	{
+		if (IsSettledFixturePackageState(marker, identity)) return true;
+		Span<byte> untouched = stackalloc byte[32];
+		EncodeUnknownPackageState(untouched, identity, 0);
+		return marker.SequenceEqual(untouched);
+	}
+
+	/// <summary>
 	/// What a reader may conclude from the package marker it read in its own snapshot: SETTLED only for a
 	/// well-formed version-1 marker of <paramref name="identity"/> whose state is settled; anything else,
 	/// missing or malformed included, is UNKNOWN.
@@ -138,6 +169,8 @@ public sealed partial class LightningStore
 
 	private sealed partial class Tx
 	{
+		internal LightningTransaction Native => tx;
+		internal LmdbDb MetaHandle => Db(Tables.Meta);
 		/// <summary>The root package operation whose flow submitted this job; null for none.</summary>
 		internal SemanticFixturePackageOperation? PackageSubmitter { get; set; }
 		private bool _fixtureWritePoisoned;
@@ -158,7 +191,8 @@ public sealed partial class LightningStore
 				if (ClassifyFixtureTable(table.Name) is { } version) AdvanceFixtureVersion(version);
 				if (_fixturePackageInvalidated || !(table.Name == "pkg" || table.Name.StartsWith("pkg.", StringComparison.Ordinal))) return;
 				tracking.Owner.RequireCurrentMutationLease(tracking.Lease);
-				if (!tracking.Owner.AdmitPackageMutation()) throw SemanticFixtureCapability.Unavailable();
+				if (!tracking.Owner.AdmitPackageMutation(tracking.Owner.IsLiveRoot(tracking.Lease, PackageSubmitter?.Root ?? PackageSubmitter)))
+					throw SemanticFixtureCapability.Unavailable();
 				var meta = Db(Tables.Meta);
 				var identity = tracking.Owner.FixtureId;
 				if (!TryReadFixtureIdentity(tx, meta, out var actual) || actual != identity)

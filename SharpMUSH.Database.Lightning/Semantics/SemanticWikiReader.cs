@@ -88,6 +88,33 @@ internal sealed class SemanticReadSection
 		return true;
 	}
 
+	/// <summary>
+	/// At most <paramref name="max"/> rows under <paramref name="prefix"/>, from inclusive <paramref name="start"/>
+	/// to exclusive <paramref name="end"/> (empty is unbounded), strictly after <paramref name="after"/>, in key
+	/// order. Every row counts against this section's and the request's limits.
+	/// </summary>
+	internal List<NativeReadEntry> Range(TableDef table, ReadOnlySpan<byte> prefix, ReadOnlySpan<byte> start,
+		ReadOnlySpan<byte> end, ReadOnlySpan<byte> after, int max)
+	{
+		var rows = new List<NativeReadEntry>();
+		var resume = after.ToArray();
+		var reader = (IBoundedReadTx)_tx;
+		while (rows.Count < max)
+		{
+			var budget = new NativeReadBudget(1024, 8 * 1024 * 1024, 16 * 1024 * 1024, CancellationToken.None, maxRecords: NativeReadBudget.MaxBatchRecords);
+			using var batch = reader.ReadRange(table, prefix, start, end, resume, budget);
+			foreach (var entry in batch.Entries)
+			{
+				if (rows.Count == max) break;
+				Charge(entry.Key.Length + entry.Value.Length);
+				rows.Add(entry);
+			}
+			if (batch.Exhausted || batch.Entries.Length == 0) break;
+			resume = batch.Entries[^1].Key;
+		}
+		return rows;
+	}
+
 	private void Charge(long bytes)
 	{
 		if (++_rows > _limits.SectionRows || (_bytes += bytes) > _limits.SectionBytes) throw new SemanticReadWorkLimitException();

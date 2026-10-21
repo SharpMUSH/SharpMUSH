@@ -156,16 +156,17 @@ public partial class LightningDatabase
 		var pageId = WikiPageId(key);
 		work.Lifetime.ReserveAdditional(checked(4096 + 128L * (updated.Categories?.Length ?? 0)));
 		var rules = ReadLegacyProjectionRules(work, pageId, updated);
-		var projection = new WikiPageProjection(new(pageId), new LocalWikiSource(), updated.Title, "game",
-			new(updated.Namespace, [.. updated.Categories ?? []], rules, updated.Published ?? true, updated.Published == false ? updated.AuthorDbref : null));
-		try { work.Lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
-		catch (InvalidDataException) { throw new WikiSemanticCapacityException("projection"); }
-		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(1, []), false, work.Budget.CancellationToken);
-		if (prepared is not PreparedWikiProjection editProjection) throw new WikiSemanticCapacityException("projection");
 		var nativeId = work.Registry(WikiSemanticRegistryKind.Page, pageId, false);
 		var state = nativeId == 0 ? null : work.Read(AtomicWikiLayout.Summaries,
 			work.Bytes(8, () => WikiSemanticKeys.Subject(nativeId)), WikiSemanticStateCodec.ProjectionState);
 		if ((old is null && state is not null) || (old is not null && state is null)) throw new InvalidDataException("Legacy/projection identity disagreement.");
+		// An edit keeps the page's source: a package page stays the package's until its ownership row moves.
+		var projection = new WikiPageProjection(new(pageId), state?.Source ?? new LocalWikiSource(), updated.Title, "game",
+			new(updated.Namespace, [.. updated.Categories ?? []], rules, updated.Published ?? true, updated.Published == false ? updated.AuthorDbref : null));
+		try { work.Lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
+		catch (InvalidDataException) { throw new WikiSemanticCapacityException("projection"); }
+		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, work.Budget.CancellationToken);
+		if (prepared is not PreparedWikiProjection editProjection) throw new WikiSemanticCapacityException("projection");
 		if (WikiSemanticProjectionPlanner.PlanProjection(work, editProjection, state?.State.Summary.StateVersion ?? 0, new AllocateNextSequence()) is not WikiProjectionPlanned planned)
 			throw SemanticFixtureCapability.Unavailable();
 		PlanLegacyPage(work, key, old, updated);

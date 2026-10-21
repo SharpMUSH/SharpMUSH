@@ -186,6 +186,32 @@ declared number of sections, so a denied target and a missing one return the sam
 value along the same path. The final section is the answer's authorization point: a change after it
 cannot retract what has already been sent.
 
+#### Package operations on an active projection
+
+Activation admits a package history that is untouched (UNKNOWN at generation 0) or SETTLED at any
+generation. Package work that ran without a coordinator, or a history left UNKNOWN, cannot prove its
+operations ended, so it still precludes activation.
+
+Once the projection is active, the fixture admits package work only inside a live coordinated
+operation; direct installer work, and work whose root was released before it started, is refused.
+An active install whose manifest declares a read (`view`) requirement on any wiki page is refused
+before it begins or writes anything: a read requirement decides which visibility class a page projects
+under, and rewriting a class is not supported yet. Edit and delete requirements are plain requirement
+rows, and so is any requirement write that leaves a target's read list as it was; one that changes it
+is refused.
+
+A package's ownership row and its page's projection source move in the same writer job. While a package
+owns a page, the page projects as that package's portable source (package, namespace, slug); an edit,
+or a fact import, keeps that source. Releasing the page, removing its row, or uninstalling the package
+moves it back to the game's local source; a page already deleted only loses its row. A package's page
+cannot be deleted directly: the package releases it first. A fact import is refused while any package
+operation is retained, so no import can land between an operation's writes and its settlement.
+
+Limitation: an active operation that fails (a returned error, an exception, cancellation, or a hook
+that ran code) leaves the world UNKNOWN, and every certified read then answers `Incomplete`. There is
+no operation that verifies an UNKNOWN world back to SETTLED; only a later coordinated operation that
+itself settles does.
+
 ### Follow-ups this decision left
 
 Both are done:

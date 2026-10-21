@@ -15,7 +15,19 @@ internal static class AtomicWikiLayout
 	internal static readonly byte[] RootKey = [0];
 	internal static readonly byte[] CertificateKey = [3];
 	internal static readonly byte[] RawEpochKey = System.Text.Encoding.UTF8.GetBytes("prototype.semantic.raw-epoch/v1");
-	internal static readonly SemanticSchema Schema = new(1, []);
+	/// <summary>
+	/// Prototype schema 2: the pinned PF2e extractor's properties, for fixture-only canonical fact imports.
+	/// Ordinary page edits commit no facts under it; only an explicit import does.
+	/// </summary>
+	internal static readonly SemanticSchema Schema = new(2,
+	[
+		new("pf2e:level", 2, SemanticType.Integer, Cardinality.Single, []),
+		new("pf2e:rank", 2, SemanticType.Integer, Cardinality.Single, []),
+		new("pf2e:tradition", 2, SemanticType.Keyword, Cardinality.Multiple, [new("arcane"), new("divine"), new("occult"), new("primal")]),
+		new("pf2e:class", 2, SemanticType.PageRef, Cardinality.Multiple, []),
+		new("pf2e:ancestry", 2, SemanticType.PageRef, Cardinality.Single, []),
+		new("pf2e:source-book", 2, SemanticType.Keyword, Cardinality.Single, [new("player core"), new("player core 2"), new("gm core")])
+	]);
 	internal static readonly byte[] SchemaBytes = WikiSemanticCodec.SchemaIdentity(Schema);
 	internal static readonly string SchemaDigest = Convert.ToHexStringLower(SHA256.HashData(SchemaBytes));
 	internal static readonly TableDef Metadata = TableDef.Node(Prefix + "metadata");

@@ -143,7 +143,7 @@ public static class CanonicalFacts
 		_ => false
 	};
 
-	private static bool TryKeyword(Keyword keyword, out Keyword normalized)
+	internal static bool TryKeyword(Keyword keyword, out Keyword normalized)
 	{
 		normalized = default;
 		if (keyword.Value is null)
