@@ -74,6 +74,18 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
+	public async Task ValidationBoundsEachSubjectRatherThanTheWholeWorld()
+	{
+		await using var world = await QueryWorldAsync(spells: 150);
+		var provider = world.Provider;
+		// Enough for any one subject, far too little for all of them together.
+		var outcome = await provider.RebuildSemanticProjectionAsync(new(ValidationWorkingBytes: 2L << 20), CancellationToken.None);
+		await Assert.That(outcome is SemanticRebuildOutcome.Flipped).IsTrue();
+		await AssertIndexesMatchFacts(provider);
+		await world.Host.CloseAsync();
+	}
+
+	[Test]
 	public async Task ARebuildRepairsIndexRowsThatDriftedFromTheFacts()
 	{
 		await using var world = await QueryWorldAsync(spells: 6);

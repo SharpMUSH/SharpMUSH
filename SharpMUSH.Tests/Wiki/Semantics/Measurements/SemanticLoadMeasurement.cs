@@ -342,14 +342,17 @@ public class SemanticLoadMeasurement
 			var subjects = provider.Store.Read(tx => tx.Count(active.Summaries));
 			var started = phase.Elapsed.TotalSeconds;
 			var clock = Stopwatch.StartNew();
-			var outcome = await provider.RebuildSemanticProjectionAsync(null, CancellationToken.None);
+			string outcome;
+			// A rebuild that fails is a result to record, not a reason to lose the phase's other measurements.
+			try { outcome = (await provider.RebuildSemanticProjectionAsync(null, CancellationToken.None)).ToString(); }
+			catch (Exception error) { outcome = "Failed: " + error.GetType().Name + ": " + error.Message; }
 			rebuild = new
 			{
 				StartedAt = started,
 				Seconds = clock.Elapsed.TotalSeconds,
 				Subjects = subjects,
 				SubjectsPerSecond = subjects / Math.Max(clock.Elapsed.TotalSeconds, 1e-9),
-				Outcome = outcome.ToString()
+				Outcome = outcome
 			};
 		}
 
