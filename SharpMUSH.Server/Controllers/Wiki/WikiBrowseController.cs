@@ -143,9 +143,9 @@ public class WikiBrowseController(
 		{
 			var batch = await Wiki.GetByCategoryAsync(category, skip, NewestBatch, visibility);
 			var visible = await FilterVisibleAsync(batch);
-			foreach (var page in await Localization.LocalizeAllAsync(visible, lang, includeDrafts))
+			var localized = await Localization.LocalizeAllAsync(visible, lang, includeDrafts);
+			foreach (var page in localized.Where(page => page.Page.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)))
 			{
-				if (!page.Page.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)) continue;
 				total++;
 				if (exclude is not null && page.Page.Slug.Equals(exclude, StringComparison.OrdinalIgnoreCase)) continue;
 				var at = newest.FindIndex(kept => kept.UpdatedAt < page.UpdatedAt);
