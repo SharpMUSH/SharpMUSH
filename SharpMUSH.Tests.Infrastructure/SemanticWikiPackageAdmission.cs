@@ -10,8 +10,6 @@ namespace SharpMUSH.Tests;
 internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 {
 	private const string Refusal = "Package mutations are unavailable in this atomic wiki fixture slice.";
-	private const string ReadRequirementRefusal = "A package that declares read requirements for its wiki pages cannot be applied to an active semantic wiki yet: "
-		+ "a read requirement changes which readers see a page, and that rewrite is not supported.";
 	private readonly PackageInstallService _inner;
 	private readonly LightningDatabase _provider;
 	internal SemanticFixtureCapability Owner { get; }
@@ -70,9 +68,6 @@ internal sealed class SemanticWikiPackageAdmission : IPackageInstallService
 	public async Task<Result<PackageApplyResult>> ApplyAsync(PackageManifest manifest, PackageApplyRequest request,
 		CancellationToken cancellationToken = default, IPackageFileSource? fileSource = null)
 	{
-		// Refused before admission, so a refused apply begins nothing and writes nothing.
-		if (Owner.Phase == SemanticFixturePhase.Active && manifest.WikiPages.Any(page => page.Requires.View.Count > 0))
-			return new Error<string>(ReadRequirementRefusal);
 		if (!Admit()) return new Error<string>(Refusal);
 		return await AttemptAsync(() => _inner.ApplyAsync(manifest, request, cancellationToken, fileSource), cancellationToken);
 	}

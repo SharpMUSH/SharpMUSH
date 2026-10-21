@@ -145,6 +145,11 @@ public class SemanticRecoveryChild
 				};
 				await provider.RebuildSemanticProjectionAsync(new(BatchSize: 2), CancellationToken.None);
 				break;
+			case "rewrite":
+				provider.ReadRewriteJobHook = () => Hold("rewrite");
+				await wiki.SetRequirementsAsync(WikiRuleTarget.ForNamespace("main"),
+					new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = ["lore.read"] }, "#1");
+				break;
 			default: throw new InvalidOperationException("Unknown recovery scenario.");
 		}
 		Checkpoint("ended-without-kill");
