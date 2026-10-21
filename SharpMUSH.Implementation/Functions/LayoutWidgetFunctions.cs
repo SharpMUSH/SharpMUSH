@@ -201,7 +201,8 @@ public partial class Functions
 		var columns = headings.Select(Heading).ToArray();
 		foreach (var (key, list) in settings.ColumnLists)
 		{
-			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure) return new CallState(failure);
+			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure)
+				return new CallState(OptionObject.Named(key, new Error<string>(failure)).Value);
 		}
 
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
