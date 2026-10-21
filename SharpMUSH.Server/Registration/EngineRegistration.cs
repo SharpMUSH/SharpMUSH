@@ -115,6 +115,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IDidItService, DidItService>();
 		services.AddSingleton<IMsspReportService, Implementation.Services.MsspReportService>();
+		services.AddSingleton<IConnectionTrafficService, Implementation.Services.ConnectionTrafficService>();
 		services.AddSingleton<ILookService, LookService>();
 		services.AddSingleton<IObjectDestructionService, ObjectDestructionService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
@@ -451,6 +452,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.TerminalReportConsumer, TerminalReportMessage>();
 				x.AddConsumer<Consumers.TelnetNegotiatedConsumer, TelnetNegotiatedMessage>();
 				x.AddConsumer<Consumers.MSSPReportRequestConsumer, MSSPReportRequestMessage>();
+				x.AddConsumer<Consumers.ConnectionTrafficReportConsumer, ConnectionTrafficReportMessage>();
 			});
 
 		// The engine cache. Its own bounded memory cache rather than the registered one (which the

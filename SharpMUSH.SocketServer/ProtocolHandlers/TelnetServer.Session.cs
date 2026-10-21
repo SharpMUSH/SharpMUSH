@@ -26,6 +26,7 @@ public partial class TelnetServer
 		ConnectionCloser closer,
 		long handle,
 		RegistrationHold held,
+		TrafficCounter traffic,
 		CancellationToken ct)
 	{
 		// Assigned once BuildAsync returns; the callbacks below only run after that, since the
@@ -52,7 +53,7 @@ public partial class TelnetServer
 			};
 			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)));
 
-			builder.UsePipe(connection.Transport);
+			builder.UsePipe(new CountingDuplexPipe(connection.Transport, traffic));
 			var telnet = await builder.BuildAsync();
 
 			// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
