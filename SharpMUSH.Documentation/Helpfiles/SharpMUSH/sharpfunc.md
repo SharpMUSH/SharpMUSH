@@ -3871,7 +3871,7 @@ think objevals(me,v(DATA`TEXT))
 
   Given just an object, it returns the owner of the object. Given an object/attribute pair, it returns the owner of that attribute, or #-1 if the attribute is missing or you cannot read it.
 
-  owner() does not change ownership: <new owner> and preserve are accepted and ignored. Use @chown or @atrchown for that.
+  Given a `<new owner>`, owner() changes the owner as @chown does, or as @atrchown does for an object/attribute pair, and returns 1 if it changed and 0 if it did not. `preserve` is @chown/preserve. Changing ownership needs function side effects and permission to use @chown.
 
 
 ::: seealso

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Common;
@@ -830,9 +831,19 @@ public partial class Functions
 	public ValueTask<CallState> ObjectMemory(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>("0");
 
-	[SharpFunction(Name = "owner", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
+	/// <remarks>
+	/// <c>fun_owner</c> (<c>src/fundb.c:1712-1755</c>): with a new owner it is <c>@chown</c>, or
+	/// <c>@atrchown</c> for an <c>&lt;object&gt;/&lt;attribute&gt;</c>, and answers 1 or 0.
+	/// </remarks>
+	[SharpFunction(Name = "owner", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX | FunctionFlags.StripAnsi,
+		SideEffectMinArgs = 2, ParameterNames = ["object", "new owner", "preserve"])]
 	public async ValueTask<CallState> Owner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
+		if (parser.CurrentState.Arguments.ContainsKey("1"))
+		{
+			return await ChangeOwnerAsync(parser);
+		}
+
 		var dbrefAndMaybeArg =
 			HelperFunctions.SplitDbRefAndOptionalAttr(parser.CurrentState.Arguments["0"].Message.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -866,6 +877,47 @@ public partial class Functions
 					: new CallState("#-1");
 			}
 		);
+	}
+
+	/// <summary>
+	/// The side-effect half of <c>fun_owner</c> (<c>src/fundb.c:1739-1753</c>): the caller must be
+	/// allowed <c>@chown</c>, and then the command runs as typed, telling the caller what it tells them.
+	/// <c>preserve</c> is read the way <c>string_prefix("preserve", args[2])</c> reads it, so any
+	/// prefix of the word, an empty one included, keeps privileged flags.
+	/// </summary>
+	private async ValueTask<CallState> ChangeOwnerAsync(IMUSHCodeParser parser)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(executor, "@CHOWN"))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var target = args["0"].Message.ToPlainText();
+		var attributeForm = target.Contains('/');
+		var preserve = !attributeForm && args.TryGetValue("2", out var preserveArg)
+			&& "preserve".StartsWith(preserveArg.Message.ToPlainText(), StringComparison.OrdinalIgnoreCase);
+		var command = attributeForm ? "@ATRCHOWN" : "@CHOWN";
+
+		var commandParser = parser.Push(parser.CurrentState with
+		{
+			Command = command,
+			Switches = preserve ? ["PRESERVE"] : [],
+			Arguments = new Dictionary<string, CallState>
+			{
+				{ "0", new CallState(target) },
+				{ "1", new CallState(args["1"].Message.ToPlainText()) }
+			},
+			Function = null
+		});
+
+		// Both commands answer a refusal with a #-1 or #-2 error and say why to the caller; anything
+		// else is a change made.
+		var result = await commandParser.CommandLibrary[command].LibraryInformation.Command.Invoke(commandParser);
+		return result is CallState { Message: { } message } && !message.ToPlainText().StartsWith("#-", StringComparison.Ordinal)
+			? new CallState("1")
+			: new CallState("0");
 	}
 
 	[SharpFunction(Name = "poss", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
