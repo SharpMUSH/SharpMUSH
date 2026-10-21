@@ -95,7 +95,7 @@ internal static class ForwardListRestriction
 	}
 
 	/// <summary><c>Can_MailForward(thing, forward)</c> or <c>Can_Forward(thing, forward)</c>.</summary>
-	private static async ValueTask<bool> MayForwardToAsync(IPermissionService permissionService,
+	internal static async ValueTask<bool> MayForwardToAsync(IPermissionService permissionService,
 		AnySharpObject thing, AnySharpObject forward, bool isMail)
 	{
 		if (isMail && forward is not SharpPlayer)
