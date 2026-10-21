@@ -3,6 +3,7 @@ using SharpMUSH.Database.Lightning;
 using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
@@ -112,6 +113,86 @@ public partial class IntegratedWikiMutationTests
 				if (budget) await budgetCancellation.CancelAsync(); else await request.CancelAsync();
 			}, request.Token);
 		await Assert.That(result is SemanticReadResult<string>.Cancelled).IsTrue();
+		await host.CloseAsync();
+	}
+
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task CancellationDuringTheFinalReaderResolutionIsCancelled(bool budget)
+	{
+		await using var host = await SettledHostAsync();
+		using var request = new CancellationTokenSource();
+		using var budgetCancellation = new CancellationTokenSource();
+		using var deadline = new ExecutionBudget(TimeSpan.FromMinutes(5), budgetCancellation.Token);
+		var calls = 0;
+		SemanticReadResult<string> result;
+		using (deadline.Enter())
+			result = await ProbeReadAsync(host, cancellationToken: request.Token, reader: async _ =>
+			{
+				if (++calls == 2)
+				{
+					if (budget) await budgetCancellation.CancelAsync(); else await request.CancelAsync();
+				}
+				return ProbeReader;
+			});
+		await Assert.That(calls).IsEqualTo(2);
+		await Assert.That(result is SemanticReadResult<string>.Cancelled).IsTrue();
+		await host.CloseAsync();
+	}
+
+	/// <summary>Reads through the store, but fails any unbounded copy.</summary>
+	private sealed class BoundedOnlyTx(ITx inner) : ITx, IBoundedReadTx
+	{
+		internal long? RefusedAt { get; private set; }
+		public bool TryGet(TableDef table, ReadOnlySpan<byte> key, out byte[] value) => throw new InvalidOperationException("An unbounded copy.");
+		public void Put(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value) => throw new NotSupportedException();
+		public bool Delete(TableDef table, ReadOnlySpan<byte> key) => throw new NotSupportedException();
+		public bool Delete(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value) => throw new NotSupportedException();
+		public int DeletePrefix(TableDef table, byte[] prefix) => throw new NotSupportedException();
+		public long Count(TableDef table) => inner.Count(table);
+		public IEnumerable<(byte[] Key, byte[] Value)> Range(TableDef table, byte[] prefix) => throw new InvalidOperationException("An unbounded copy.");
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeFrom(TableDef table, byte[] prefix, byte[] afterKey, byte[]? afterValue) => throw new InvalidOperationException("An unbounded copy.");
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeFromKey(TableDef table, byte[] startKey) => throw new InvalidOperationException("An unbounded copy.");
+		public IEnumerable<(byte[] Key, byte[] Value)> RangeReverse(TableDef table, byte[] prefix) => throw new InvalidOperationException("An unbounded copy.");
+		public IEnumerable<byte[]> Dups(TableDef table, byte[] key) => throw new InvalidOperationException("An unbounded copy.");
+		public Result<long> CountDups(TableDef table, ReadOnlySpan<byte> key) => inner.CountDups(table, key);
+		public Found<NativeReadValue> ReadValue(TableDef table, ReadOnlySpan<byte> key, NativeReadBudget budget)
+		{
+			try { return ((IBoundedReadTx)inner).ReadValue(table, key, budget); }
+			catch (NativeReadLimitException) { RefusedAt = budget.WorkingBytes; throw; }
+		}
+		public NativeReadBatch ReadRange(TableDef table, ReadOnlySpan<byte> prefix, ReadOnlySpan<byte> inclusiveStart, ReadOnlySpan<byte> exclusiveEnd, ReadOnlySpan<byte> afterKey, NativeReadBudget budget)
+			=> ((IBoundedReadTx)inner).ReadRange(table, prefix, inclusiveStart, exclusiveEnd, afterKey, budget);
+	}
+
+	[Test]
+	public async Task AnOversizedRowIsAWorkLimitRefusedBeforeItsCopyIsAllocated()
+	{
+		await using var host = await SettledHostAsync();
+		var provider = host.Services.GetRequiredService<LightningDatabase>();
+		await provider.Store.WriteAsync(tx => tx.Put(Tables.Meta, Keys.Str("semantic-read-oversized"), new byte[4096]));
+		var limits = new SemanticReadLimits(8, 1024, 64, 4096);
+		var (outcome, refusedAt) = provider.Store.Read(tx =>
+		{
+			var bounded = new BoundedOnlyTx(tx);
+			var section = new SemanticReadSection(bounded, limits, new SemanticReadBudget(limits), ProbeReader, 0);
+			try
+			{
+				section.TryGet(Tables.Meta, Keys.Str("semantic-read-oversized"), out _);
+				return ("read", bounded.RefusedAt);
+			}
+			catch (SemanticReadWorkLimitException) { return ("work-limit", bounded.RefusedAt); }
+		});
+		await Assert.That(outcome).IsEqualTo("work-limit");
+		// Refused by the native length check: no working allocation was reserved for the copy.
+		await Assert.That(refusedAt).IsEqualTo(0L);
+		var result = await SemanticWikiReader.ReadAsync(provider, _ => ValueTask.FromResult(ProbeReader), 1, section =>
+		{
+			section.TryGet(Tables.Meta, Keys.Str("semantic-read-oversized"), out _);
+			return SemanticSectionStep<string>.Answer("never");
+		}, CancellationToken.None, limits);
+		await Assert.That(result is SemanticReadResult<string>.WorkLimit).IsTrue();
 		await host.CloseAsync();
 	}
 
