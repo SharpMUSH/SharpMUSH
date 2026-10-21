@@ -1202,7 +1202,7 @@ You may wish to use the @search command instead, which can filter the results mo
 # FORWARDLIST
 `@forwardlist <object>[=<list of dbrefs>]`
 
-This attribute holds the dbrefs an AUDIBLE `<object>` is meant to forward what it hears to. Forwarding is not implemented yet: nothing is sent to them, though an object with a @forwardlist counts as listening (for @sweep and similar).
+If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @lock/filter is forwarded (prefixed with its @prefix) to each of the dbrefs given in its @forwardlist attribute, in much the same way as puppets forward sound to their owners. A room in the list passes the sound to everything in it.
 
 In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward. (If you want to allow all objects you own to forward to you, regardless of whether or not they control you, use `@lock/forward me=$me`)
 
@@ -1840,7 +1840,7 @@ This command sets `<player>`'s building quota to 0, so they cannot build until i
 # @prefix
 `@prefix <object>[=<message>]`
 
-This attribute is meant to be used with the AUDIBLE flag, prepended to messages propagated via AUDIBLE. SharpMUSH does not propagate sound through AUDIBLE objects or exits yet, so @prefix is never used.
+This attribute is meant to be used with the AUDIBLE flag. It is evaluated, with %0 the message, and prepended to the sound an AUDIBLE object passes on to its @forwardlist; without one, the sound starts "From `<object>`, ". SharpMUSH does not propagate sound through AUDIBLE exits yet, so @prefix is not used for them.
 
 
 ::: seealso
