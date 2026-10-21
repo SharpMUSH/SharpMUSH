@@ -278,7 +278,7 @@ public class SemanticLoadMeasurement
 					string outcome;
 					try
 					{
-						var result = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(reader), QueryFor(index, targets, hot), null, CancellationToken.None);
+						var result = await SemanticWikiQueries.RunAsync(provider, $"#player{index % 64}", _ => ValueTask.FromResult(reader), QueryFor(index, targets, hot), null, CancellationToken.None);
 						outcome = result switch
 						{
 							SemanticQueryResult.NotCertified { Outcome: var o } => "NotCertified." + o.GetType().Name,

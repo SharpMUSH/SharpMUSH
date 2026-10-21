@@ -111,10 +111,10 @@ public partial class IntegratedWikiMutationTests
 		var moving = await ProbeReadAsync(world.Host, async (_, _) =>
 			await wiki.SetRequirementsAsync(WikiRuleTarget.ForCategory("spells"), ReadOnly("lore.read"), "#1"));
 		await Assert.That(moving is SemanticReadResult<string>.DataChanged).IsTrue();
-		var first = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, null, CancellationToken.None);
+		var first = await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, null, CancellationToken.None);
 		var token = ((SemanticQueryResult.Page)first).Continuation;
 		await wiki.SetRequirementsAsync(WikiRuleTarget.ForCategory("spells"), new Dictionary<WikiAction, IReadOnlyList<string>>(), "#1");
-		await Assert.That(await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, token,
+		await Assert.That(await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), LevelQuery with { PageSize = 2 }, token,
 			CancellationToken.None) is SemanticQueryResult.Restart).IsTrue();
 		await world.Host.CloseAsync();
 	}

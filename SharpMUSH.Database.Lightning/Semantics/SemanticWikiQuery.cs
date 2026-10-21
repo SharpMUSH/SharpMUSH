@@ -62,6 +62,8 @@ internal abstract record SemanticQueryResult
 	internal sealed record Restart : SemanticQueryResult { internal static readonly Restart Value = new(); }
 	/// <summary>An unsupported shape or bound, refused before any read.</summary>
 	internal sealed record Rejected(string Reason) : SemanticQueryResult;
+	/// <summary>The admission queue refused the query before any read: <paramref name="Limit"/> is <c>principal</c> or <c>queue</c>.</summary>
+	internal sealed record Busy(string Limit) : SemanticQueryResult;
 	/// <summary>Any non-certified read outcome: incomplete, unavailable, changed, limited, cancelled, or storage closed or failed.</summary>
 	internal sealed record NotCertified(object Outcome) : SemanticQueryResult;
 }
@@ -83,7 +85,8 @@ internal static class SemanticWikiQueries
 	private static readonly TimeSpan TokenLifetime = TimeSpan.FromMinutes(10);
 	private static readonly SemanticReadLimits Limits = new(16_384, 8 * 1024 * 1024, 32_768, 16 * 1024 * 1024);
 
-	internal static async Task<SemanticQueryResult> RunAsync(LightningDatabase provider,
+	/// <param name="principal">Who the query counts against in the admission queue: the account or character asking.</param>
+	internal static async Task<SemanticQueryResult> RunAsync(LightningDatabase provider, string principal,
 		Func<CancellationToken, ValueTask<WikiReader>> resolveReader, SemanticWikiQuery query, string? continuation,
 		CancellationToken cancellationToken, TimeProvider? clock = null, SemanticQueryBudgets? budgets = null,
 		Func<int, CancellationToken, ValueTask>? between = null)
@@ -91,6 +94,27 @@ internal static class SemanticWikiQueries
 		clock ??= TimeProvider.System;
 		budgets ??= SemanticQueryBudgets.Default;
 		if (Validate(query) is { } rejection) return new SemanticQueryResult.Rejected(rejection);
+		SemanticQueryAdmission.Entry entry;
+		try { entry = await provider.SemanticQueries.EnterAsync(principal, cancellationToken); }
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			return new SemanticQueryResult.NotCertified(SemanticReadResult<Answer>.Cancelled.Value);
+		}
+		return entry switch
+		{
+			SemanticQueryAdmission.Entry.Admitted admitted => await RunAdmittedAsync(admitted.Ticket, provider, resolveReader, query,
+				continuation, cancellationToken, clock, budgets, between),
+			SemanticQueryAdmission.Entry.Refused refused => new SemanticQueryResult.Busy(refused.Limit),
+			_ => throw new System.Diagnostics.UnreachableException()
+		};
+	}
+
+	private static async Task<SemanticQueryResult> RunAdmittedAsync(SemanticQueryAdmission.Ticket admitted, LightningDatabase provider,
+		Func<CancellationToken, ValueTask<WikiReader>> resolveReader, SemanticWikiQuery query, string? continuation,
+		CancellationToken cancellationToken, TimeProvider clock, SemanticQueryBudgets budgets,
+		Func<int, CancellationToken, ValueTask>? between)
+	{
+		using var ticket = admitted;
 		var digest = QueryDigest(query);
 		Cursor? cursor = null;
 		// A world that closed answers nothing, and a continuation sealed under its lease opens under no other.

@@ -25,6 +25,8 @@ internal abstract record SemanticRebuildOutcome
 	internal sealed record Flipped(ulong Generation) : SemanticRebuildOutcome;
 	/// <summary>The staged generation was abandoned and the active one never changed. Its rows are cleared now, or when the world reopens if it closed first.</summary>
 	internal sealed record Aborted(string Reason) : SemanticRebuildOutcome;
+	/// <summary>Another rebuild of this world is running; this one did nothing.</summary>
+	internal sealed record AlreadyRunning : SemanticRebuildOutcome { internal static readonly AlreadyRunning Value = new(); }
 }
 
 /// <summary>
@@ -42,8 +44,12 @@ public partial class LightningDatabase
 	/// <summary>Tests only: runs after a rebuild step has committed.</summary>
 	internal Func<SemanticRebuildStage, ValueTask>? SemanticRebuildHook { get; set; }
 
+	/// <summary>1 while a rebuild runs: rebuilds have one admission of their own (spec §9), and a second would discard the first's staging.</summary>
+	private int _semanticRebuildRunning;
+
 	internal async ValueTask<SemanticRebuildOutcome> RebuildSemanticProjectionAsync(SemanticRebuildOptions? options, CancellationToken ct)
 	{
+		if (Interlocked.Exchange(ref _semanticRebuildRunning, 1) == 1) return SemanticRebuildOutcome.AlreadyRunning.Value;
 		// A world that closes under a rebuild keeps whatever it last committed: an unfinished staging is discarded when
 		// the world reopens, and a retired generation left uncleared is cleared by the next rebuild before it stages.
 		try { return await RebuildCoreAsync(options, ct); }
@@ -51,6 +57,7 @@ public partial class LightningDatabase
 		{
 			return new SemanticRebuildOutcome.Aborted("The world closed during the rebuild; its staging is discarded when the world reopens.");
 		}
+		finally { Volatile.Write(ref _semanticRebuildRunning, 0); }
 	}
 
 	private async ValueTask<SemanticRebuildOutcome> RebuildCoreAsync(SemanticRebuildOptions? options, CancellationToken ct)
