@@ -83,10 +83,11 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			RecordConnectionActivity(parser, command);
 
 			if (await RefuseHaltedExecutor(parser)) return new None();
-			await LogCommandAsync(visitor, commandText);
 
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
+
+			await LogCommandAsync(visitor, commandText);
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
@@ -208,15 +209,14 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// <summary>
 	/// PennMUSH's <c>LT_CMD</c> line (<c>src/game.c:1232</c>, <c>src/log.c:547</c>): every command when
 	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
-	/// Passwords are starred out first.
+	/// Socket commands are not logged, as in Penn. Passwords are starred out first.
 	/// </summary>
 	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText)
 	{
 		var parser = visitor.Parser;
-		if (parser.CurrentState.Executor is null)
+		if (await parser.CurrentState.ExecutorObject(services.Mediator) is not AnySharpObject executor)
 			return;
 
-		var executor = await parser.CurrentState.KnownExecutorObject(services.Mediator);
 		var suspect = await executor.HasFlag("SUSPECT");
 		if (!(visitor.Configuration.CurrentValue.Log.LogCommands || suspect) || await executor.HasFlag("NO_LOG"))
 			return;
