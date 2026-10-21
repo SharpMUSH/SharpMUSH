@@ -369,7 +369,6 @@ def bridge(grammar):
 	for rule in rules:
 		families.setdefault(rule.split('__')[0], []).append(rule)
 	shared = [f for f, copies in families.items() if f not in GROUPS and copies != [f]]
-	leaves = [f for f, copies in families.items() if copies == [f]]
 
 	def iface(family):
 		return f'I{pascal(family)}Context'
@@ -439,7 +438,10 @@ def main():
 	stale = []
 	for name, text in {'SharpMUSHParser.g4': grammar, 'SharpMUSHParser.Contexts.cs': bridge(grammar)}.items():
 		path = os.path.join(here, name)
-		current = open(path, encoding='utf-8').read() if os.path.exists(path) else None
+		current = None
+		if os.path.exists(path):
+			with open(path, encoding='utf-8') as f:
+				current = f.read()
 		if current != text:
 			stale.append(name)
 			if not check:
