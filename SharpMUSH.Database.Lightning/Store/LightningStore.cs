@@ -315,9 +315,27 @@ public sealed partial class LightningStore : IDisposable
 		return _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
 	}
 
+	/// <summary>What this store's writer has done since it opened.</summary>
+	internal LightningWriter.Statistics WriterStatistics => _writer.Snapshot();
+
+	/// <summary>Read transactions open now, the most ever open at once, how many there were, and how long they stayed open.</summary>
+	internal sealed record ReadStatistics(long Active, long PeakActive, long Reads, double TotalMs, double MaxMs);
+
+	private readonly Lock _readStatisticsGate = new();
+	private long _readsActive, _readsPeak, _reads;
+	private double _readTotal, _readMax;
+
+	internal ReadStatistics ReaderStatistics
+	{
+		get { lock (_readStatisticsGate) return new(_readsActive, _readsPeak, _reads, _readTotal, _readMax); }
+	}
+
 	public T Read<T>(Func<ITx, T> read)
 	{
 		_gate.EnterReadLock();
+		var opened = System.Diagnostics.Stopwatch.GetTimestamp();
+		LightningMetrics.ReadsActive.Add(1);
+		lock (_readStatisticsGate) _readsPeak = Math.Max(_readsPeak, ++_readsActive);
 		try
 		{
 			var tx = RentReader();
@@ -340,6 +358,10 @@ public sealed partial class LightningStore : IDisposable
 		}
 		finally
 		{
+			var held = LightningMetrics.Since(opened);
+			lock (_readStatisticsGate) { _readsActive--; _reads++; _readTotal += held; _readMax = Math.Max(_readMax, held); }
+			LightningMetrics.ReadsActive.Add(-1);
+			LightningMetrics.ReadDuration.Record(held);
 			_gate.ExitReadLock();
 		}
 	}

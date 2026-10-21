@@ -40,7 +40,11 @@ internal sealed class LightningWriter : IDisposable
 		public Exception? Error { get; set; }
 	}
 
-	private abstract record Job(TaskCompletionSource<object?> Completion, CancellationToken Token);
+	private abstract record Job(TaskCompletionSource<object?> Completion, CancellationToken Token)
+	{
+		/// <summary>When the job was queued, for <see cref="LightningMetrics.WriterWait"/>.</summary>
+		public long Queued { get; } = System.Diagnostics.Stopwatch.GetTimestamp();
+	}
 	private sealed record TypedJob(Func<ITx, object?> Work, TaskCompletionSource<object?> Completion, CancellationToken Token) : Job(Completion, Token);
 	/// <summary>Runs alone, outside any batch: a raw transaction job or the park job.</summary>
 	private sealed record SoloJob(Func<object?> Work, TaskCompletionSource<object?> Completion, CancellationToken Token) : Job(Completion, Token);
@@ -114,6 +118,7 @@ internal sealed class LightningWriter : IDisposable
 
 		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		await _queue.Writer.WriteAsync(new TypedJob(tx => job(tx), completion, ct), ct).ConfigureAwait(false);
+		Queue(1);
 		return (T)(await completion.Task.ConfigureAwait(false))!;
 	}
 
@@ -125,6 +130,7 @@ internal sealed class LightningWriter : IDisposable
 		ct.ThrowIfCancellationRequested();
 		var completion = new TaskCompletionSource<object?>(TaskCreationOptions.RunContinuationsAsynchronously);
 		await _queue.Writer.WriteAsync(new SoloJob(() => _executeRaw(tx => job(tx)), completion, ct), ct).ConfigureAwait(false);
+		Queue(1);
 		return (T)(await completion.Task.ConfigureAwait(false))!;
 	}
 
@@ -152,6 +158,8 @@ internal sealed class LightningWriter : IDisposable
 				return false;
 			}
 
+			Waited(0);
+			var held = System.Diagnostics.Stopwatch.GetTimestamp();
 			try
 			{
 				using var execution = new ExecutionFrame(this);
@@ -162,6 +170,7 @@ internal sealed class LightningWriter : IDisposable
 				// The commit itself failed, as in RunBatch.
 				item.Error ??= ex;
 			}
+			finally { Held(held); }
 		}
 		finally
 		{
@@ -215,6 +224,7 @@ internal sealed class LightningWriter : IDisposable
 		}, completion, CancellationToken.None);
 
 		await _queue.Writer.WriteAsync(park, ct).ConfigureAwait(false);
+		Queue(1);
 		await parked.Task.ConfigureAwait(false);
 	}
 
@@ -239,11 +249,14 @@ internal sealed class LightningWriter : IDisposable
 				// Dequeued only under the turn, so a caller running its own job never overtakes one submitted
 				// before it.
 				if (!reader.TryRead(out var first)) continue;
+				Started(first);
 
 				using var execution = new ExecutionFrame(this);
+				var held = System.Diagnostics.Stopwatch.GetTimestamp();
 				if (first is SoloJob solo)
 				{
-					RunSolo(solo);
+					try { RunSolo(solo); }
+					finally { Held(held); }
 					continue;
 				}
 
@@ -253,16 +266,55 @@ internal sealed class LightningWriter : IDisposable
 				batch.Add((TypedJob)first);
 				while (batch.Count < _maxBatch && reader.TryPeek(out var next) && next is TypedJob && reader.TryRead(out var taken))
 				{
+					Started(taken);
 					batch.Add((TypedJob)taken);
 				}
 
-				RunBatch(batch);
+				try { RunBatch(batch); }
+				finally { Held(held); }
 			}
 			finally
 			{
 				_turn.Release();
 			}
 		}
+	}
+
+	/// <summary>What this writer has done since it started: jobs queued now, and every wait and hold so far.</summary>
+	internal sealed record Statistics(long Queued, long Waits, double TotalWaitMs, double MaxWaitMs, long Holds, double TotalHoldMs, double MaxHoldMs);
+
+	private readonly Lock _statisticsGate = new();
+	private long _queuedNow, _waits, _holds;
+	private double _totalWait, _maxWait, _totalHold, _maxHold;
+
+	internal Statistics Snapshot()
+	{
+		lock (_statisticsGate) return new(_queuedNow, _waits, _totalWait, _maxWait, _holds, _totalHold, _maxHold);
+	}
+
+	private void Queue(long delta)
+	{
+		lock (_statisticsGate) _queuedNow += delta;
+		LightningMetrics.WriterQueued.Add(delta);
+	}
+
+	private void Waited(double ms)
+	{
+		lock (_statisticsGate) { _waits++; _totalWait += ms; _maxWait = Math.Max(_maxWait, ms); }
+		LightningMetrics.WriterWait.Record(ms);
+	}
+
+	private void Held(long since)
+	{
+		var ms = LightningMetrics.Since(since);
+		lock (_statisticsGate) { _holds++; _totalHold += ms; _maxHold = Math.Max(_maxHold, ms); }
+		LightningMetrics.WriterHold.Record(ms);
+	}
+
+	private void Started(Job job)
+	{
+		Queue(-1);
+		Waited(LightningMetrics.Since(job.Queued));
 	}
 
 	private static void RunSolo(SoloJob job)
