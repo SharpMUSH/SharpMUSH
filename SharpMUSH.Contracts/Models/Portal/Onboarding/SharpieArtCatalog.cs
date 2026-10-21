@@ -10,6 +10,20 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-detective-anime-shared-completion", "anime", "Detective", "images/sharpie/sharpie-detective-anime-shared-completion.png", 1024, 1536, "shared-completion"),
+		new SharpieArt("sharpie-detective-anime-player-continue", "anime", "Detective", "images/sharpie/sharpie-detective-anime-player-continue.png", 1024, 1536, "player-continue"),
+		new SharpieArt("sharpie-detective-anime-player-channels", "anime", "Detective", "images/sharpie/sharpie-detective-anime-player-channels.png", 1099, 1431, "player-channels"),
+		new SharpieArt("sharpie-romance-kemono-administrator-capabilities", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-capabilities.png", 1024, 1536, "administrator-capabilities"),
+		new SharpieArt("sharpie-gothic-kemono-player-speak-act", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-gothic-kemono-player-place", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-gothic-kemono-player-world", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-gothic-kemono-player-character", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-gothic-kemono-player-sign-in", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-gothic-kemono-shared-welcome", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-romance-kemono-administrator-joining", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-joining.png", 1024, 1536, "administrator-joining"),
+		new SharpieArt("sharpie-romance-kemono-player-channels", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-channels.png", 1024, 1536, "player-channels"),
+		new SharpieArt("sharpie-romance-kemono-player-speak-act", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-speak-act.png", 1024, 1536, "player-speak-act"),
+		new SharpieArt("sharpie-romance-kemono-player-useful-action", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-useful-action.png", 1024, 1536, "player-useful-action"),
 		new SharpieArt("sharpie-romance-kemono-administrator-invite", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-invite.png", 1024, 1536, "administrator-invite"),
 		new SharpieArt("sharpie-romance-kemono-administrator-rules", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-rules.png", 1024, 1536, "administrator-rules"),
 		new SharpieArt("sharpie-romance-kemono-administrator-identity", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-administrator-identity.png", 1024, 1536, "administrator-identity"),
