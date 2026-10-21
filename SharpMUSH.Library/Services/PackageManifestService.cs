@@ -28,7 +28,7 @@ public partial class PackageManifestService : IPackageManifestService
 		"category", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
-		"attributes"
+		"attributes", "grants"
 	};
 
 	private static readonly IReadOnlySet<string> KnownBinaryFileKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -192,6 +192,11 @@ public partial class PackageManifestService : IPackageManifestService
 		if (ReadAttributeEntries(doc, kind, format, issues) is { Count: > 0 } attributeEntries)
 		{
 			declarations = declarations with { Attributes = attributeEntries };
+		}
+
+		if (ReadGrants(doc, kind, format, declarations, issues) is { Count: > 0 } grants)
+		{
+			declarations = declarations with { Grants = grants };
 		}
 
 		var settings = ReadSettings(doc, kind, issues);

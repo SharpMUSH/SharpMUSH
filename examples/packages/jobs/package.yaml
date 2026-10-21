@@ -1,6 +1,6 @@
-format: "1.10"
+format: "1.15"
 package: jobs
-version: 1.12.0
+version: 1.13.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -33,8 +33,8 @@ depends:
 
 # Who works which bucket is a permission, so it moves with roles. softcode.jobs.admin works every
 # bucket and manages them; softcode.jobs.<bucket> works one. Each comes with a role a game assigns:
-# @role/assign <player>=job-admin, or =job-admin-applications. Nobody holds a custom permission
-# until something allows it, wizards included; God and administrator holders hold them all.
+# @role/assign <player>=job-admin, or =job-admin-applications. The wizard and royalty roles are
+# granted softcode.jobs.admin below; God and administrator holders hold them all.
 categories:
   roles:
     - name: Jobs
@@ -119,6 +119,11 @@ roles:
 
 # Indexes on what the lists filter by, so a list reads the jobs it can show instead of every job
 # ever filed (FUN`SELECT`CANDIDATES). Only things carry them; the lists still check each job is in the store.
+# Wizards and royalty work every bucket. A game that takes this back with
+# @role/clear wizard=softcode.jobs.admin keeps it that way through updates.
+grants:
+  wizard: [softcode.jobs.admin]
+  royalty: [softcode.jobs.admin]
 attributes:
   JOB`STATE:
     index: type:thing
@@ -2511,7 +2516,8 @@ objects:
         Give someone a bucket with `@role/assign <player>=job-admin-applications`. A role of your own
         can allow the same permission: `@role/allow helper=softcode.jobs.requests`.
 
-        Nobody holds these until something allows them, and that includes wizards.
+        The `wizard` and `royalty` roles hold `softcode.jobs.admin`. Nobody else holds these until
+        something allows them.
 
         A bucket's **work lock** is what is actually checked: by default
         `perm^softcode.jobs.admin|perm^softcode.jobs.<bucket>`. Change it with `+bucket/lock` to add
