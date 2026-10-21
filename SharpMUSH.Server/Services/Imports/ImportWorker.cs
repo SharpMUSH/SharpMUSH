@@ -92,9 +92,9 @@ public static class ImportWorker
 		catch (Exception error)
 		{
 			var diagnostic = Path.Combine(session.Directory, "worker-error.log");
-			await File.WriteAllTextAsync(diagnostic, error.GetType().FullName + "\n" + error.StackTrace);
+			await File.WriteAllTextAsync(diagnostic, error.GetType().FullName + ": " + error.Message + "\n" + error.StackTrace);
 			if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(diagnostic, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-			var message = error is OperationCanceledException ? "Import worker was cancelled." : "Import worker failed: " + error.GetType().Name;
+			var message = error is OperationCanceledException ? "Import worker was cancelled." : "Import worker failed: " + error.Message;
 			journal.Save(session with { State = ImportSessionState.Aborted, Failure = message, Result = new ConversionResult { Aborted = true, Errors = [message] } });
 			return 0;
 		}
@@ -114,8 +114,10 @@ public static class ImportWorker
 		if (configured is { } number
 			&& await mediator.Send(new GetObjectNodeQuery(new DBRef((int)number)), ct) is AnySharpObject and SharpPlayer)
 			return;
-		if (configured is not null)
-			throw new InvalidOperationException("The imported package manager setting does not identify a player.");
+		// A mush.cnf written for SharpMUSH (the shipped mushcnf.dst among them) names its own seeded #7, which
+		// in the imported database is whatever the source game had there.
+		if (configured is { } named)
+			result.Warnings.Add($"package_manager names #{named}, which is not a player in the imported database.");
 		// No bundled packages have run in this private host. The converter therefore had no packages
 		// to reinstall, but it still removed the seeded manager to preserve source object numbers.
 		var name = "Package Manager";
