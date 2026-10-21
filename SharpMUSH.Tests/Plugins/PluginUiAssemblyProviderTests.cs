@@ -14,7 +14,7 @@ namespace SharpMUSH.Tests.Plugins;
 /// hash mismatch, or a path-traversal attempt. The controller layers the <c>allow_browser_code</c> gate on
 /// top; this proves the verification/serving core.
 /// </summary>
-public class PluginUiAssemblyProviderTests
+public class PluginUiAssemblyProviderTests : IDisposable
 {
 	private const string PluginId = "ui-sample";
 	private const string Assembly = "Sample.Ui.dll";
@@ -22,9 +22,18 @@ public class PluginUiAssemblyProviderTests
 	private static string Sha256Of(byte[] bytes) =>
 		Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
 
-	private static string StagePlugin(byte[] assemblyBytes, bool writeSidecar = true, string? sidecarHash = null)
+	private readonly List<string> _roots = [];
+
+	public void Dispose()
+	{
+		foreach (var root in _roots.Where(Directory.Exists))
+			Directory.Delete(root, recursive: true);
+	}
+
+	private string StagePlugin(byte[] assemblyBytes, bool writeSidecar = true, string? sidecarHash = null)
 	{
 		var root = Path.Combine(Path.GetTempPath(), $"ui-prov-{Guid.NewGuid():N}");
+		_roots.Add(root);
 		var dir = Path.Combine(root, PluginId);
 		Directory.CreateDirectory(dir);
 		File.WriteAllBytes(Path.Combine(dir, Assembly), assemblyBytes);

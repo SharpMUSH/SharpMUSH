@@ -83,7 +83,7 @@ public class ConfigurationDefaultsTests
 	public async Task EveryDefaultIsWrittenDownInOnePlace()
 	{
 		var created = OptionsService.Default();
-		var imported = ReadPennMushConfig.Create(EmptyConfigFile());
+		var imported = ReadPennMushConfig.Create(TestPaths.EmptyConfigFile);
 
 		var mismatches = ConfigMetadata.PropertyNames
 			.Where(name => !ImportDifferences.ContainsKey(name))
@@ -101,7 +101,7 @@ public class ConfigurationDefaultsTests
 	public async Task EveryRecordedImportDifferenceStillDiffers()
 	{
 		var created = OptionsService.Default();
-		var imported = ReadPennMushConfig.Create(EmptyConfigFile());
+		var imported = ReadPennMushConfig.Create(TestPaths.EmptyConfigFile);
 
 		var stale = ImportDifferences.Keys
 			.Where(name => Same(ConfigAccessor.GetValue(created, name), ConfigAccessor.GetValue(imported, name)))
@@ -259,11 +259,4 @@ public class ConfigurationDefaultsTests
 		IEnumerable items => $"[{string.Join(" ", items.Cast<object?>())}]",
 		_ => value.ToString() ?? "nothing"
 	};
-
-	private static string EmptyConfigFile()
-	{
-		var path = Path.Join(Path.GetTempPath(), $"sharpmush-defaults-{Guid.NewGuid():N}.cnf");
-		File.WriteAllText(path, string.Empty);
-		return path;
-	}
 }

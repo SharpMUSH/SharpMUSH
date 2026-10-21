@@ -22,7 +22,7 @@ namespace SharpMUSH.Tests.Server;
 /// </summary>
 public class PortalStartupPageTests
 {
-	private sealed class Harness(WebApplication app, HttpClient client, NatsConsumerRegistry consumers,
+	private sealed class Harness(string root, WebApplication app, HttpClient client, NatsConsumerRegistry consumers,
 		CancellationTokenSource started, ServerReadiness readiness) : IAsyncDisposable
 	{
 		public HttpClient Client => client;
@@ -41,6 +41,7 @@ public class PortalStartupPageTests
 			client.Dispose();
 			await app.DisposeAsync();
 			started.Dispose();
+			Directory.Delete(root, recursive: true);
 		}
 	}
 
@@ -76,7 +77,7 @@ public class PortalStartupPageTests
 		app.MapPortal(manifestPath: null);
 
 		await app.StartAsync();
-		return new Harness(app, app.GetTestClient(), consumers, started, readiness);
+		return new Harness(root, app, app.GetTestClient(), consumers, started, readiness);
 	}
 
 	[Test]

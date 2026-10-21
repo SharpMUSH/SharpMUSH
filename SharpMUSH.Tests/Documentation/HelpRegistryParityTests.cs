@@ -83,7 +83,7 @@ public class HelpRegistryParityTests
 	[Test]
 	public async Task TheShippedAliasesAreOneTable()
 	{
-		var imported = ReadPennMushConfig.Create(EmptyPennMushConfig()).Alias;
+		var imported = ReadPennMushConfig.Create(TestPaths.EmptyConfigFile).Alias;
 
 		await Assert.That(Flatten(Configurable.DefaultFunctionAliases))
 			.IsEquivalentTo(Flatten(AliasOptions.Default.FunctionAliases));
@@ -93,14 +93,6 @@ public class HelpRegistryParityTests
 			.IsEquivalentTo(Flatten(AliasOptions.Default.FunctionAliases));
 		await Assert.That(Flatten(imported.CommandAliases))
 			.IsEquivalentTo(Flatten(AliasOptions.Default.CommandAliases));
-	}
-
-	/// <summary>A config file that sets nothing, so every option comes back at its default.</summary>
-	private static string EmptyPennMushConfig()
-	{
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-alias-parity-{Guid.NewGuid():N}.cnf");
-		File.WriteAllText(path, string.Empty);
-		return path;
 	}
 
 	private static List<string> Flatten(Dictionary<string, string[]> aliases) =>

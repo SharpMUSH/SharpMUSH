@@ -916,7 +916,7 @@ public class RecursiveMarkdownRendererWithParserTests
 	}
 
 	[Test]
-	public async Task RenderCommandLines_WithRealParser_WritesAnsiToFile()
+	public async Task RenderCommandLines_WithRealParser_EmitsAnsi()
 	{
 		var markdown = """
 			# SharpMUSH Command Highlighting Demo
@@ -934,9 +934,6 @@ public class RecursiveMarkdownRendererWithParserTests
 			.RenderMarkdown(markdown, 78, parser);
 		var ansi = result.Render(MarkupFormat.Ansi);
 
-		// Write ANSI output so the terminal screenshot can be taken
-		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_commands_demo.txt"), ansi);
-
 		await Assert.That(result.ToPlainText()).Contains("@assert");
 		await Assert.That(result.ToPlainText()).Contains("@break");
 		await Assert.That(result.ToPlainText()).Contains("@pemit");
@@ -945,7 +942,7 @@ public class RecursiveMarkdownRendererWithParserTests
 	}
 
 	[Test]
-	public async Task RenderSyntaxHighlightingDemo_WithRealParser_WritesAnsiToFile()
+	public async Task RenderSyntaxHighlightingDemo_WithRealParser_EmitsAnsi()
 	{
 		var markdown = """
 			# Syntax Highlighting Demo
@@ -980,9 +977,6 @@ public class RecursiveMarkdownRendererWithParserTests
 		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper
 			.RenderMarkdown(markdown, 78, parser);
 		var ansi = result.Render(MarkupFormat.Ansi);
-
-		// Write ANSI output to a temp file so the snapshot can be captured externally
-		await File.WriteAllTextAsync(Path.Combine(Path.GetTempPath(), "sharp_demo_ansi.txt"), ansi);
 
 		await Assert.That(result.ToPlainText()).Contains("name");
 		await Assert.That(result.ToPlainText()).Contains("hello");

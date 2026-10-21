@@ -38,6 +38,8 @@ public partial class IntegratedWikiMutationTests
 		start.ArgumentList.Add(Path.Join(AppContext.BaseDirectory, "SharpMUSH.Tests.dll"));
 		foreach (var arg in new[] { "--treenode-filter", $"/*/*/{nameof(SemanticRecoveryChild)}/*", "--no-ansi" }) start.ArgumentList.Add(arg);
 		start.Environment[SemanticRecoveryChild.Variable] = spec;
+		// SIGKILL skips the runtime's exit path, which is what removes its diagnostic socket from the temp directory.
+		start.Environment["DOTNET_EnableDiagnostics"] = "0";
 		using var process = Process.Start(start) ?? throw new InvalidOperationException("The recovery child did not start.");
 		using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(3));
 		var errors = process.StandardError.ReadToEndAsync(deadline.Token);
