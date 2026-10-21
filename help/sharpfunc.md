@@ -6405,7 +6405,7 @@ think words(1 2%b%b3, %b)
 
  This is the same mechanism used to suggest help entries, function names, etc. when an unknown one is encountered.
 
- Categories and their words are added with @suggest; the example assumes a 'words' category has been added.
+ Categories and their words are added with @suggest. If the dict_file @config option is set, the server loads that file into the 'words' category at startup, one word per line.
 
  Example:
 ```sharp
