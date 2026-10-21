@@ -107,9 +107,9 @@ internal static class CategoryCommitFailureScenario
 			}
 			if (failure is null || (int)failure.Code != 27 || !failure.Message.StartsWith("commit:", StringComparison.Ordinal))
 				throw new InvalidDataException("Expected actual native EFBIG at commit");
-			var commitStack = failure.StackTrace ?? "";
-			Check(commitStack.Contains("LightningStore.Commit", StringComparison.Ordinal) && commitStack.Length <= 2048,
-				"Missing or oversized native commit stack");
+			// All original producers have settled and native restrictions are restored. Keep actual
+			// causal frames, rather than bounding source paths and the shared exception's async tail.
+			var commitStack = CategoryCommitStack.Capture(failure.StackTrace ?? "", grouped);
 			mark("category-commit-failed");
 			mark("category-limits-restored");
 			var commitsAfterFailure = db.Store.CommitCount;
