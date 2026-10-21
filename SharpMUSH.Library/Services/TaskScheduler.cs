@@ -1081,7 +1081,7 @@ public partial class TaskScheduler(
 	}
 
 	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
-	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
+	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, SemaphoreTimeout.None, manageSemaphoreCount);
 
 	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
 	{
@@ -1188,10 +1188,11 @@ public partial class TaskScheduler(
 					throw new OperationCanceledException("Semaphore reservation was released before activation.");
 				}
 			}
+			var untimed = timeout >= SemaphoreTimeout.None;
 			timeout = Nonnegative(timeout);
 			var due = DateTimeOffset.UtcNow + timeout;
 			lock (_admissionLock) StoreEntry(_pendingEntries[pid] with
-			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) });
+			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) { Untimed = untimed } });
 			scheduleWriteAttempted = true;
 			await Schedule(due, 0);
 			return admission;
@@ -1585,7 +1586,7 @@ public partial class TaskScheduler(
 			delay = Nonnegative(delay);
 			if (entry.Deferred.Paused)
 			{
-				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay } });
+				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay, Untimed = false } });
 				return;
 			}
 		}
