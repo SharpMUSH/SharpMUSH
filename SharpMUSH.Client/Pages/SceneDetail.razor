@@ -18,12 +18,12 @@
 <div class="scene-detail-page">
     @if (_loading)
     {
-        <PageTitle>@Loc["RolScene"] — @Loc["AppTitle"]</PageTitle>
+        <PageTitle>@Loc["RolScene"] — <GameName /></PageTitle>
         <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
     }
     else if (_error is not null)
     {
-        <PageTitle>@Loc["RolScene"] — @Loc["AppTitle"]</PageTitle>
+        <PageTitle>@Loc["RolScene"] — <GameName /></PageTitle>
         <MudAlert Severity="Severity.Error" Class="scene-load-error">@_error</MudAlert>
         <div class="scene-detail-back">
             <CapsuleButton Href="/scenes" Icon="@Icons.Material.Outlined.ArrowBack">@Loc["RolBackToScenes"]</CapsuleButton>
@@ -41,7 +41,7 @@
     {
         var scene = _scene;
         var visible = FilteredPoses();
-        <PageTitle>@Loc.Title(scene) — @Loc["AppTitle"]</PageTitle>
+        <PageTitle>@Loc.Title(scene) — <GameName /></PageTitle>
         <PlainPageHeader Kicker="@scene.RoomName" Title="@Loc.Title(scene)">
             <DescriptionContent>
                 <span class="scene-detail-meta">

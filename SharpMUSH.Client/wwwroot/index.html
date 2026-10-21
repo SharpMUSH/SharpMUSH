@@ -71,6 +71,13 @@
         </div>
     </div>
 
+    <style>
+        .insecure-origin { position: fixed; inset: 0; overflow: auto; padding: 15vh 16px 0; background: #0e0f11; color: #e9edf0; font-family: system-ui, sans-serif; line-height: 1.5; }
+        .insecure-origin > * { max-width: 36rem; margin-inline: auto; }
+        .insecure-origin h1 { font-size: 1.5rem; margin-block: 0 1rem; }
+        .insecure-origin p { margin-block: 0 0.75rem; }
+    </style>
+
     <div id="blazor-error-ui">
         An unhandled error has occurred.
         <a href="." class="reload">Reload</a>
@@ -119,7 +126,28 @@
             } catch { /* storage unavailable — fall through */ }
             return 'en';
         })();
-        Blazor.start({ applicationCulture: locale });
+        // The .NET runtime needs the Web Crypto API, which browsers give only to a secure context: https, or
+        // localhost. Over plain http from any other address it would never start and the logo would spin for
+        // ever, which is exactly where a new game is before its certificate is set up.
+        if (window.isSecureContext && window.crypto && window.crypto.subtle) {
+            Blazor.start({ applicationCulture: locale });
+        } else {
+            const app = document.getElementById('app');
+            app.innerHTML = '';
+            const notice = document.createElement('main');
+            notice.className = 'insecure-origin';
+            notice.setAttribute('role', 'alert');
+            const heading = document.createElement('h1');
+            heading.textContent = 'This portal needs a secure connection';
+            const reason = document.createElement('p');
+            reason.textContent = 'Browsers only run the portal over https, or on this computer at localhost. '
+                + 'It was opened at ' + location.origin + '.';
+            const next = document.createElement('p');
+            next.textContent = 'Put the game behind a certificate (the deploy guide covers Caddy and Cloudflare), '
+                + 'or open the portal on the server itself at http://localhost. Telnet clients can connect without it.';
+            notice.append(heading, reason, next);
+            app.append(notice);
+        }
     </script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
 

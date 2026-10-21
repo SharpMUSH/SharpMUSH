@@ -92,8 +92,8 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 		Nav.NavigateTo(startingUri);
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
-		await cut.Find("#login-username").ChangeAsync("newbie");
-		await cut.Find("#login-password").ChangeAsync("hunter2");
+		await cut.Find("#login-username").InputAsync(new ChangeEventArgs { Value = "newbie" });
+		await cut.Find("#login-password").InputAsync(new ChangeEventArgs { Value = "hunter2" });
 		await cut.Find("button.login-submit").ClickAsync();
 		return cut;
 	}

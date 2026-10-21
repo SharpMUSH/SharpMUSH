@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Localization;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
 using SharpMUSH.Client;
@@ -70,6 +71,8 @@ builder.Services.AddSingleton<AdminConfigService>();
 builder.Services.AddSingleton<ConfigSchemaService>();
 builder.Services.AddSingleton<RestrictionsService>();
 builder.Services.AddSingleton<ServerInfoService>();
+// AppTitle is the game's name: the resource value only until the server has said what the game is called.
+builder.Services.AddSingleton<IStringLocalizer<SharedResource>, GameNamedLocalizer>();
 builder.Services.AddSingleton<SetupWizardService>();
 builder.Services.AddSingleton<PackagesAdminService>();
 builder.Services.AddSingleton<BannedNamesService>();
@@ -216,6 +219,10 @@ _ = app.Services.GetRequiredService<AccountAuthService>().InitAsync();
 // Web push: whether this tab is in view and which character it plays, and the character a tab opened from a
 // notification asks for. Started here so a tab reports from its first render; nothing waits on it.
 _ = app.Services.GetRequiredService<PushInterop>().StartAsync();
+
+// The game's name, asked now so the first page's titles name the game once its own reads come back
+// (GameNamedLocalizer). The shell asks the same cached read for the guest and application links.
+_ = app.Services.GetRequiredService<ServerInfoService>().GameNameAsync();
 
 // The last theme applied in this browser, read before the first render so ThemeProvider renders it once
 // instead of rendering the default and then re-rendering the whole tree in the stored one. The game's

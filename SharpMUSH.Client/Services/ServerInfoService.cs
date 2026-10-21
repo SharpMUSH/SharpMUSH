@@ -55,6 +55,13 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	public virtual async Task<string> GameNameAsync() => (await FetchAsync()).MudName;
 
 	/// <summary>
+	/// The game name from the last answer the server gave, without asking; <c>null</c> until it has answered.
+	/// For text that is drawn at once and cannot wait for <see cref="GameNameAsync"/>: the page titles
+	/// (<see cref="Resources.GameNamedLocalizer"/>).
+	/// </summary>
+	public string? KnownGameName => _lastAnswer is { } answer && !ReferenceEquals(answer, Fallback) ? answer.MudName : null;
+
+	/// <summary>
 	/// The game's <c>portal_logo</c>, or <c>null</c> when it has none and the portal draws the SharpMUSH logo. On
 	/// any fetch failure this degrades to <c>null</c>.
 	/// </summary>

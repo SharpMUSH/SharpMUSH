@@ -16,7 +16,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @implements IAsyncDisposable
 
-<PageTitle>@Loc["TermSoftcodeEditorTitle"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["TermSoftcodeEditorTitle"] — <GameName /></PageTitle>
 <PalettePage Kind="editor" Subject="@(_selectedObject is null ? null : $"#{_selectedObject.Dbref}")" Rows="@PaletteRows" />
 
 @* Three-pane layout. IMPORTANT: no CSS transition on widths — Chrome freezes when
