@@ -99,7 +99,20 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitCommand: Test message")),
+				TestHelpers.MessagePlainTextEquals(msg, "CemitCommand: Test message")),
+				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
+	}
+
+	[Test]
+	public async ValueTask CemitNoisyCommand()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@cemit/noisy {TestChannelName}=CemitNoisyCommand: Test message"));
+
+		await NotifyService
+			.Received()
+			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
+				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> CemitNoisyCommand: Test message")),
 				TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Emit);
 	}
 
@@ -112,7 +125,7 @@ public class ChannelCommandTests
 		await NotifyService
 			.Received()
 			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextEquals(msg, $"<{TestChannelName}> NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
+				TestHelpers.MessagePlainTextEquals(msg, "NscemitCommand: Test message")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.NSEmit);
 	}
 
 	/// <summary>

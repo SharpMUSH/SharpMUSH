@@ -28,12 +28,13 @@ public static class ChannelEmit
 		AnySharpObject executor,
 		MString channelName,
 		MString message,
-		bool spoof)
+		bool spoof,
+		bool silent)
 		=> await ChannelHelper.GetVisibleChannelOrError(channelPermissions, mediator,
 				notifyService, executor, channelName, notify: true) switch
 		{
 			SharpChannel channel => await EmitAsync(permissionService, channelPermissions, mediator, notifyService, executor, channel, message,
-				spoof),
+				spoof, silent),
 			Error<CallState> error => error.Value
 		};
 
@@ -45,7 +46,8 @@ public static class ChannelEmit
 		AnySharpObject executor,
 		SharpChannel channel,
 		MString message,
-		bool spoof)
+		bool spoof,
+		bool silent)
 	{
 		var check = await ChannelHelper.CemitRefusal(channelPermissions, executor, channel);
 		if (check.Refused)
@@ -86,7 +88,8 @@ public static class ChannelEmit
 			// An emit carries no speech verb — channel_send's CB_EMIT does not take one. The default
 			// format ignores it, but a mogrifier or @chatformat is handed it as %6.
 			MarkupText.Empty,
-			[]
+			// extchat.c:1656: PEMIT_SILENT is CB_QUIET, which leaves the channel name off the line.
+			[silent ? "silent" : "noisy"]
 		));
 
 		return new CallState(string.Empty);
