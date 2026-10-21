@@ -26,6 +26,8 @@ public partial class LightningWriterTests
 		release.Set();
 		await blocker;
 		await queued;
+		// A batch's jobs complete inside it, so the writer may record the second hold just after the await returns.
+		SpinWait.SpinUntil(() => store.WriterStatistics.Holds == before.Holds + 2, TimeSpan.FromSeconds(30));
 		var after = store.WriterStatistics;
 		await Assert.That(after.Queued).IsEqualTo(before.Queued);
 		await Assert.That(after.Waits).IsEqualTo(before.Waits + 2);
