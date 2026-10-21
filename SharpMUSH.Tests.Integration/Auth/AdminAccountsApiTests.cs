@@ -512,20 +512,20 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 
 		foreach (var key in new[] { $"node_accounts%2F{looked.AccountKey}", $"node_accounts%252F{looked.AccountKey}", "no-such-account" })
 		{
-			using var refused = await godHttp.SendAsync(AsGod(
-				new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{key}/overrides")
-				{
-					Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
-				}, godSessionToken));
+			using var refusedRequest = new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{key}/overrides")
+			{
+				Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
+			};
+			using var refused = await godHttp.SendAsync(AsGod(refusedRequest, godSessionToken));
 			await Assert.That(refused.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
 		}
 		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).Overrides).IsEmpty();
 
-		using var set = await godHttp.SendAsync(AsGod(
-			new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{looked.AccountKey}/overrides")
-			{
-				Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
-			}, godSessionToken));
+		using var setRequest = new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{looked.AccountKey}/overrides")
+		{
+			Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
+		};
+		using var set = await godHttp.SendAsync(AsGod(setRequest, godSessionToken));
 		await Assert.That(set.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).Overrides["wiki.create"])
 			.IsEqualTo("Allow");
