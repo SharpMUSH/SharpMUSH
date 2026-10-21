@@ -3935,18 +3935,24 @@ think permission(me, wiki.delete)
 
   Returns the value of "pi" (3.14159265358979323846264338327, rounded to the game's float_precision setting).
 # pidinfo()
-`pidinfo(<pid>[, <field>[, <output separator>]])`
+`pidinfo(<pid>[, <list of fields>[, <output separator>]])`
 
-  This function returns information about a process id if the player has permission to see the process. The second argument names one field:
+  This function returns information about a process id if the player has permission to see the process. The `<list of fields>` is a space-separated list that may contain the following elements:
 
-    pid         the process id<br>
-    command     the queued command<br>
-    executor    the queueing object<br>
-    status      always "waiting"<br>
-    delay       remaining delay in seconds (or 0)<br>
-    semaphore   the semaphore source
+    queue       the queue ("wait" or "semaphore") for the process<br>
+    executor    the queueing object (also "player")<br>
+    time        remaining time for timed queued entries (or -1)<br>
+    object      the semaphore object for semaphores (or #-1)<br>
+    attribute   the semaphore attribute for semaphores (or #-1)<br>
+    command     the queued command
 
-  Any other value, including a list of several fields, returns #-1 INVALID FIELD. With no field, it returns pid, command, executor, status and delay, separated by `<output separator>`, which defaults to a space.
+  A field may be shortened to any prefix of its name, and an unknown one is left out. If `<list of fields>` is not provided, all fields are returned. The fields are separated by `<output separator>`, which defaults to a space. A pid that is not queued returns #-1 INVALID PID.
+
+```sharp
+@wait me/SEMAPHORE=think Done
+think pidinfo(lpids(me,semaphore),queue object command,|)
+```
+  Output: `semaphore|<your dbref>|think Done`.
 
 
 ::: seealso
@@ -4023,13 +4029,13 @@ think permission(me, wiki.delete)
 # lpids()
 `lpids([<object>[, <queue types>]])`
 
-  This function returns a list of queue process ids (pids) for commands queued by `<object>` itself. Objects with the same owner are not included, and "all" is not a special value. `<object>` defaults to the caller. You must control `<object>`, unless you are a Wizard or Royalty or have the See_Queue power.
+  This function returns a list of queue process ids (pids). Only commands queued by objects with the same owner as `<object>` are listed. If you are a Wizard or Royalty or have the See_Queue power, you can specify "all" for `<object>` to get pids for everyone's queue entries. `<object>` defaults to the caller, or "all" for those privileged callers. Otherwise you must own or control `<object>`.
 
   `<queue types>` should be a list of one or more of the following words, to filter the pids returned:<br>
     wait        --  Only return wait queues<br>
     semaphore   --  Only return semaphore queues<br>
-    independent --  Accepted, but changes nothing: only `<object>`'s own entries are ever returned.<br>
-  If not specified, it defaults to "wait semaphore".
+    independent --  Only return commands queued by `<object>` specifically, instead of all objects with the same owner as `<object>`.<br>
+  If not specified, it defaults to "wait semaphore". Wait queue pids come first, soonest first, then semaphore pids. Any other word returns #-1 INVALID ARGUMENT.
 
 
 ::: seealso
