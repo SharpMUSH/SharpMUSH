@@ -11,6 +11,41 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class GuideMascotTests : TrackingBunitContext
 {
 	[Test]
+	public async Task ApprovedTopicImagesStayWithinTheirStyleAndTopic()
+	{
+		await Assert.That(SharpieArtCatalog.Resolve("comicbook", "Science Fiction", null, null, GuideImagery.Full, SharpieArtMoment.Welcome)?.Id).IsEqualTo("sharpie-science-fiction-comicbook-welcome");
+		await Assert.That(SharpieArtCatalog.Resolve("chibi", "Fantasy", null, null, GuideImagery.Reduced, topic: "player-world")?.Id).IsEqualTo("sharpie-fantasy-chibi-world");
+		await Assert.That(SharpieArtCatalog.Resolve("chibi", "Fantasy", null, null, GuideImagery.Full, topic: "player-sign-in")?.Id).IsEqualTo("sharpie-fantasy-chibi-player-sign-in");
+		await Assert.That(SharpieArtCatalog.Resolve("comicbook", "Science Fiction", null, null, GuideImagery.Full, topic: "player-world")?.Id).IsEqualTo("sharpie-science-fiction-comicbook-player-world");
+		await Assert.That(SharpieArtCatalog.Resolve("chibi", "Fantasy", null, null, GuideImagery.None, topic: "player-world")).IsNull();
+	}
+
+	[Test]
+	public async Task TopicArtworkUsesSubgenreThenGenreAndNeverAnotherLesson()
+	{
+		var general = new SharpieArt("general", "chibi", "Fantasy", "general.png", 100, 100);
+		var genre = new SharpieArt("genre-channels", "chibi", "Fantasy", "genre.png", 100, 100, "player-channels");
+		var subgenre = new SharpieArt("subgenre-channels", "chibi", "High Fantasy", "subgenre.png", 100, 100, "player-channels");
+		var other = new SharpieArt("other-topic", "chibi", "High Fantasy", "other.png", 100, 100, "player-character");
+		SharpieArt[] approved = [general, genre, subgenre, other];
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Fantasy", "High Fantasy", other.Id, GuideImagery.Full, topic: "player-channels")).IsEqualTo(subgenre);
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Fantasy", "unknown", null, GuideImagery.Full, topic: "player-channels")).IsEqualTo(genre);
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Fantasy", "High Fantasy", other.Id, GuideImagery.Full, topic: "player-world")).IsEqualTo(general);
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "anime", "Fantasy", "High Fantasy", subgenre.Id, GuideImagery.Full, topic: "player-channels")).IsNull();
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Fantasy", "High Fantasy", null, GuideImagery.None, topic: "player-channels")).IsNull();
+	}
+
+	[Test]
+	public async Task SharedMomentsSelectTheirOwnTopicAndReducedImageryKeepsSelection()
+	{
+		var welcome = new SharpieArt("welcome", "chibi", "Science Fiction", "welcome.png", 100, 100, "shared-welcome");
+		var complete = new SharpieArt("complete", "chibi", "Science Fiction", "complete.png", 100, 100, "shared-completion");
+		SharpieArt[] approved = [welcome, complete];
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Science Fiction", null, null, GuideImagery.Reduced, SharpieArtMoment.Welcome)).IsEqualTo(welcome);
+		await Assert.That(SharpieArtCatalog.ResolveFrom(approved, "chibi", "Science Fiction", null, welcome.Id, GuideImagery.Full, SharpieArtMoment.Completion)).IsEqualTo(complete);
+	}
+
+	[Test]
 	public async Task GenreApprovalDoesNotCrossStyleBoundaries()
 	{
 		foreach (var genre in new[] { "Fantasy", "Science Fiction" })

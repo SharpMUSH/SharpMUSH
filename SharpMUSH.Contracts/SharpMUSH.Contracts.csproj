@@ -34,6 +34,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="SharpMUSH.Tests.BUnit" />
 		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj" />
 	</ItemGroup>
 
