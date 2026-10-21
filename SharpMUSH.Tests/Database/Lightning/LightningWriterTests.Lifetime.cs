@@ -47,12 +47,10 @@ public partial class LightningWriterTests
 			var errors = new List<Exception>();
 			await ((Task)job).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			if (job.Exception is { } failed) errors.AddRange(failed.InnerExceptions);
-			try
-			{
-				if (close is not null) await close;
-				else writer.Dispose();
-			}
-			catch (Exception error) { errors.Add(error); }
+			var closing = close ?? Task.Run(writer.Dispose);
+			await closing.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			if (closing.Exception is { } closeFailed) errors.AddRange(closeFailed.InnerExceptions);
+			else if (closing.IsCanceled) errors.Add(new TaskCanceledException(closing));
 			// Join actual execution even if either public task faulted. Cleanup cannot mask the
 			// primary assertion, and every independently owned operation is still joined.
 			if (!inline && executionThread is { } thread && !thread.Join(TimeSpan.FromSeconds(10)))
@@ -75,7 +73,7 @@ public partial class LightningWriterTests
 		await Task.Run(async () => await writer.EnqueueAsync(_ =>
 		{
 			try { writer.Dispose(); }
-			catch (Exception error) { refused = error; }
+			catch (InvalidOperationException error) { refused = error; }
 			return 1;
 		}, CancellationToken.None));
 		await Assert.That(refused is InvalidOperationException).IsTrue();
@@ -92,7 +90,7 @@ public partial class LightningWriterTests
 		await outer.EnqueueAsync(_ => inner.EnqueueAsync(_ =>
 		{
 			try { outer.Dispose(); }
-			catch (Exception error) { refused = error; }
+			catch (InvalidOperationException error) { refused = error; }
 			return 1;
 		}, CancellationToken.None).GetAwaiter().GetResult(), CancellationToken.None);
 		await Assert.That(refused is InvalidOperationException).IsTrue();
@@ -156,7 +154,7 @@ public partial class LightningWriterTests
 		void Close()
 		{
 			try { store.Dispose(); }
-			catch (Exception error) { refused = error; }
+			catch (InvalidOperationException error) { refused = error; }
 		}
 		if (inline)
 			await store.WriteAsync(tx => { Close(); tx.Put(Tables.Meta, Keys.Str("after-refusal"), Keys.Str("kept")); });
