@@ -458,7 +458,42 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found => ValueTask.FromResult(new CallState(found.Object().Name)));
+			async found => await MaySeeInsideName(executor, found)
+				? new CallState(await InsideNameAsync(parser, executor, found))
+				: new CallState(ErrorMessages.Returns.PermissionDenied));
+	}
+
+	/// <summary>
+	/// <c>fun_iname</c> (<c>src/fundb.c:1868-1890</c>): the caller controls the object, is See_All, or
+	/// stands inside it.
+	/// </summary>
+	private async ValueTask<bool> MaySeeInsideName(AnySharpObject executor, AnySharpObject found)
+		=> await PermissionService.Controls(executor, found)
+			|| await executor.IsSee_All()
+			|| (executor.AsOptionalContent is AnySharpContent content
+				&& (await content.Location()).Object().DBRef == found.Object().DBRef);
+
+	/// <summary>
+	/// <c>nameformat()</c> (<c>src/unparse.c:175-195</c>) with the accented name as the default: the
+	/// object's NAMEFORMAT, ignoring permissions, given the dbref and that name. A NAMEFORMAT that is
+	/// there is shown as it evaluates, empty or not; only a missing one gives the plain name.
+	/// </summary>
+	private async ValueTask<MString> InsideNameAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject found)
+	{
+		var defaultName = found.IsExit
+			? MString.Plain(found.Object().Name)
+			: await new NameFormatter(AttributeService, Configuration).FormatAsync(found, NameContext.Accented);
+
+		var god = await HelperFunctions.GetGod(Mediator);
+		if (await AttributeService.GetAttributeAsync(god, found, "NAMEFORMAT",
+				IAttributeService.AttributeMode.Read, true) is not SharpAttribute[])
+		{
+			return defaultName;
+		}
+
+		return await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, "NAMEFORMAT",
+			CallbackArguments.Of(("object", found.Object().DBRef.ToString()), ("name", defaultName)),
+			evalParent: true, ignorePermissions: true);
 	}
 
 	[SharpFunction(Name = "lpids", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]

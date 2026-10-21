@@ -104,7 +104,9 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => FormatInstant(found.Object().ModifiedTime, utc));
+			async found => await PermissionService.CanExamine(executor, found)
+				? new CallState(FormatInstant(found.Object().ModifiedTime, utc))
+				: new CallState(ErrorMessages.Returns.PermissionDenied));
 	}
 
 	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -705,7 +707,9 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, targetArg,
 			LocateFlags.All,
-			found => TimePrecisions.Format(found.Object().ModifiedTime, precision));
+			async found => await PermissionService.CanExamine(executor, found)
+				? new CallState(TimePrecisions.Format(found.Object().ModifiedTime, precision))
+				: new CallState(ErrorMessages.Returns.PermissionDenied));
 	}
 
 	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,

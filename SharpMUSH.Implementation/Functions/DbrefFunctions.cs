@@ -122,74 +122,59 @@ public partial class Functions
 	public async ValueTask<CallState> Con(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await WalkFirst(parser, WalkType.Contents);
 
+	/// <remarks>
+	/// <c>fun_controls</c> (<c>src/fundb.c:915-950</c>): each side that does not match is named in the
+	/// error, the caller must control either side or be See_All, and an attribute name is checked before
+	/// it is judged.
+	/// </remarks>
 	[SharpFunction(Name = "controls", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "victim"])]
 	public async ValueTask<CallState> Controls(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var arg1 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var arg1Split = parser.CurrentState.Arguments["1"].Message.ToPlainText().Split('/', 2);
+		var attribute = arg1Split.Length > 1 ? arg1Split[1] : null;
 
-		var arg1Split = arg1.Split('/', 2);
-		var isAttributeCheck = arg1Split.Length > 1;
-
-		var maybeLocateObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-			executor,
-			executor,
-			arg0,
-			LocateFlags.All);
-
-		return maybeLocateObject switch
+		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg0,
+				LocateFlags.All) is not AnySharpObject locateObject)
 		{
-			Error<CallState> error => error.Value,
-			AnySharpObject locateObject when isAttributeCheck => await ControlsAttribute(locateObject, arg1Split[0], arg1Split[1]),
-			AnySharpObject locateObject => await ControlsVictim(locateObject)
+			return new CallState(ErrorMessages.Returns.Arg1NotFound);
+		}
+
+		if (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, arg1Split[0],
+				LocateFlags.All) is not AnySharpObject victim)
+		{
+			return new CallState(ErrorMessages.Returns.Arg2NotFound);
+		}
+
+		if (!await PermissionService.Controls(executor, locateObject)
+			&& !await PermissionService.Controls(executor, victim)
+			&& !await executor.IsSee_All())
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
+		if (attribute is null)
+		{
+			return await PermissionService.Controls(locateObject, victim);
+		}
+
+		if (!await ValidateService.Valid(IValidateService.ValidationType.AttributeName,
+				MString.Plain(attribute.ToUpperInvariant()), new None()))
+		{
+			return new CallState(ErrorMessages.Returns.BadAttrName);
+		}
+
+		// can_edit_attr (attrib.c:414-421) looks only at the object's own attribute list; an attribute
+		// it does not hold yet is judged as one about to be created, which comes down to control.
+		var god = await HelperFunctions.GetGod(Mediator);
+		return await AttributeService.GetAttributeAsync(god, victim, attribute,
+				IAttributeService.AttributeMode.Read, parent: false) switch
+		{
+			SharpAttribute[] foundAttribute => await PermissionService.Controls(locateObject, victim, foundAttribute),
+			None => await PermissionService.Controls(locateObject, victim),
+			Error<string> error => error.Value
 		};
-
-		async ValueTask<CallState> ControlsAttribute(AnySharpObject locateObject, string attributeObj, string attribute)
-		{
-			var maybeLocateAttributeObject = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor,
-				executor,
-				attributeObj,
-				LocateFlags.All);
-
-			return maybeLocateAttributeObject switch
-			{
-				Error<CallState> error => error.Value,
-				AnySharpObject attributeObject => await ControlsAttributeOn(locateObject, attributeObject, attribute)
-			};
-		}
-
-		async ValueTask<CallState> ControlsAttributeOn(AnySharpObject locateObject, AnySharpObject attributeObject, string attribute)
-		{
-			// can_edit_attr (attrib.c:414-421) looks only at the object's own attribute list; an attribute
-			// it does not hold yet is judged as one about to be created, which comes down to control.
-			var god = await HelperFunctions.GetGod(Mediator);
-			var locateAttribute = await AttributeService.GetAttributeAsync(god, attributeObject, attribute,
-				IAttributeService.AttributeMode.Read, parent: false);
-
-			return locateAttribute switch
-			{
-				SharpAttribute[] foundAttribute => await PermissionService.Controls(locateObject, attributeObject, foundAttribute),
-				None => await PermissionService.Controls(locateObject, attributeObject),
-				Error<string> error => error.Value
-			};
-		}
-
-		async ValueTask<CallState> ControlsVictim(AnySharpObject locateObject)
-		{
-			var maybeLocateVictim = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor,
-				executor,
-				arg1,
-				LocateFlags.All);
-
-			return maybeLocateVictim switch
-			{
-				Error<CallState> error => error.Value,
-				AnySharpObject locateVictim => await PermissionService.Controls(locateObject, locateVictim)
-			};
-		}
 	}
 
 	/// <summary>An <c>entrances()</c> bound: a strict integer or a dbref (<c>src/wiz.c:1809-1812</c>).</summary>

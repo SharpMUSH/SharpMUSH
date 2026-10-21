@@ -91,6 +91,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
+		public const string Arg1NotFound = "#-1 ARG1 NOT FOUND";
+		public const string Arg2NotFound = "#-1 ARG2 NOT FOUND";
+		public const string BadAttrName = "#-1 BAD ATTR NAME";
 		/// <summary>PennMUSH's <c>chr()</c> answer for a control character (<c>fun_chr</c>, src/funstr.c).</summary>
 		public const string UnprintableCharacter = "#-1 UNPRINTABLE CHARACTER";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
