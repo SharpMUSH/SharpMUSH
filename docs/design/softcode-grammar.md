@@ -46,11 +46,17 @@ so only the bracket's `]` or the name's `>` ends them, as PennMUSH's `process_ex
 `[` with `PT_BRACKET` alone and a name with `PT_GT` alone. `cat(a,[x,y])` is `a x,y`, `think [x;y]`
 does not split the command, and the comma in `cat(a,%q<x,y>)` is part of the name.
 
-That leaves 60 reachable combinations. Many treat the five tokens alike and have the same
-successors, so the generator merges them into 26 classes, giving 172 rules. A copy is named for its
-class: `Top_` or `Call_`, then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then
-`_G` with paren_groups. `beginGenericText__Top_RSCEA` takes all five as text;
-`function__Call_SEA` is a call whose `)` and `,` are structure.
+That leaves 60 reachable combinations. The generator writes every rule for each of them, then
+keeps one copy of each set of copies that have the same body and refer to copies that are alike in
+turn. A rule has as many copies as there are different ways to read it: `beginGenericText` depends
+only on which tokens are text, while `evaluationString` also depends on what its calls, braces and
+names hold. That gives 158 rules.
+
+A copy is named for what is true of every context it is read in: `Top` or `Call` (outside or
+inside a call; neither when the copy is read the same either way), `Group` inside a paren group,
+then the letters of the tokens that are text there (R `)`, S `;`, C `,`, E `=`, A `>`), then `_G`
+with paren_groups. Two copies that would get the same name are numbered. `beginGenericText__Top_RSCEA`
+takes all five as text; `function__Call_SEA` is a call whose `)` and `,` are structure.
 
 Entry points come in pairs: `startPlainString` and `startPlainString__G`. The parser's
 `ParenGroups` property picks one; `SoftcodeParsePipeline.Enter` calls `StartPlainString()` and the
@@ -77,7 +83,10 @@ text is part of the run of text around it.
 
 `SharpMUSHParser.Contexts.cs` is generated with the grammar. It gives each family of copies one
 interface: every `function__*` context is an `IFunctionContext`, with the accessors the evaluator
-uses (`evaluationString()`, `FUNCHAR()`, `CPAREN()`). `SharpMUSHParserRuleVisitor<T>` sends every
+uses (`evaluationString()`, `FUNCHAR()`, `CPAREN()`). The generator reads the accessors off the
+grammar as ANTLR does: an element that can occur more than once in a rule gets an array accessor
+and an indexed one. What does not depend on the grammar (`ISoftcodeContext`, the paren-group splice,
+`ParenGroups`) is written by hand in `SharpMUSHParser.Tree.cs`. `SharpMUSHParserRuleVisitor<T>` sends every
 copy to one method (`VisitFunction(IFunctionContext)`), so the visitor, the syntax analyzer and the
 layout code are written against the base rule names and never see a context suffix.
 
