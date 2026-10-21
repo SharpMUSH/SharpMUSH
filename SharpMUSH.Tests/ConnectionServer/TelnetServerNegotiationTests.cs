@@ -271,7 +271,8 @@ public partial class TelnetServerNegotiationTests
 			bus,
 			descriptors,
 			new ServerBuilderFactory(),
-			options ?? new ConnectionServerOptions(),
+			// Registration is immediate unless a test is about the wait for negotiation.
+			options ?? new ConnectionServerOptions { NegotiationWaitMilliseconds = 0 },
 			new MsspReportHolder(),
 			new TerminalProbes(),
 			settings);
@@ -561,7 +562,7 @@ public partial class TelnetServerNegotiationTests
 		// A deadline past the test's own, so a loop stalled until the deadline fails here rather than
 		// recording the answer late.
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
 		using var cts = cancellation;
 		try
 		{
@@ -621,7 +622,7 @@ public partial class TelnetServerNegotiationTests
 			});
 
 		var (toServer, fromServer, handler, _, cancellation) = StartServer(
-			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000, NegotiationWaitMilliseconds = 0 }, connectionService);
 		using var cts = cancellation;
 		try
 		{
