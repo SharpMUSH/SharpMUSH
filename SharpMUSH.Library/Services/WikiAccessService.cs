@@ -24,7 +24,7 @@ public sealed class WikiAccessService(
 	}
 
 	public async ValueTask<WikiReader> ForObjectAsync(AnySharpObject obj, CancellationToken ct = default)
-		=> WikiReader.From((await obj.GrantsAsync(ct)).Granted, $"#{obj.Object().Key}");
+		=> WikiReader.From((await obj.GrantsAsync(ct)).Granted, obj.Object().DBRef.ToString());
 
 	public Task<WikiRequirements> RequirementsAsync() => wiki.GetRequirementsAsync();
 
