@@ -323,6 +323,7 @@ public partial class Commands
 		// credential parsing so a blocked site never learns whether a name it tried is valid.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag))
 		{
+			LogSitelockRefusal(username.Length > 0 ? username : "a player", ipAddress, hostName);
 			await NotifyService.Notify(handle, "Access from your location is restricted.");
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -455,6 +456,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (await SitelockRefusesPlayerAsync(handle, foundDB))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 		await ApplyConnectModeAsync(handle, foundDB, mode);
@@ -549,6 +555,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (await SitelockRefusesPlayerAsync(handle, foundPlayer))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		await ConnectionService.Bind(handle, playerDbRef.Value);
 
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef.Value);
@@ -572,6 +583,7 @@ public partial class Commands
 		// already applied in Connect() above — a site can allow normal logins but disallow guests.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.GuestFlag))
 		{
+			LogSitelockRefusal("a guest", ipAddress, hostName);
 			await NotifyService.Notify(handle, "Access from your location is restricted.");
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -773,6 +785,7 @@ public partial class Commands
 	private async ValueTask CompletePlayerLoginAsync(
 		IMUSHCodeParser parser, long handle, SharpPlayer player, DBRef playerRef, bool isGuest = false)
 	{
+		await MarkSuspectSiteAsync(handle, player);
 		// PennMUSH check_connect (src/bsd.c:4369-4377): announce_connect queues PLAYER`CONNECT and the
 		// ACONNECT hooks, then the look runs in place. The events and hooks below are queue entries of
 		// their own, each with its own time limit, so none of them can run the login out of time; they

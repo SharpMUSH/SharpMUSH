@@ -26,6 +26,11 @@ public partial class Commands
 			{
 				if (await Mediator.Send(new GetObjectNodeQuery(character)) is not (AnySharpObject and SharpPlayer player)) return false;
 				if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag)) return false;
+				if (await SitelockRefusesPlayerAsync(handle, player))
+				{
+					policyNotified = true;
+					return false;
+				}
 				if (await AccountRefusalAsync(character) is { } refusal)
 				{
 					await NotifyService.Notify(handle, refusal);

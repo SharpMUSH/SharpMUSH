@@ -178,4 +178,43 @@ public class SitelockMatcherIsBlockedTests
 		await Assert.That(SitelockMatcher.IsBlocked(rules, "203.0.113.5", "h", SitelockMatcher.GuestFlag)).IsTrue();
 		await Assert.That(SitelockMatcher.IsBlocked(rules, "10.0.0.5", "h", SitelockMatcher.ConnectFlag)).IsFalse();
 	}
+
+	/// <summary>A <c>regexp</c> rule is a case-sensitive regular expression (PennMUSH <c>src/access.c:161</c>).</summary>
+	[Test]
+	[Arguments(@"^x\.evil\.com$", "1.2.3.4", "x.evil.com", true)]
+	[Arguments(@"^x\.evil\.com$", "1.2.3.4", "X.EVIL.COM", false)]
+	[Arguments(@"^10\.0\.", "10.0.3.4", "h", true)]
+	[Arguments("*.evil.com", "1.2.3.4", "x.evil.com", false)] // not a regular expression: matches nothing
+	public async Task Matches_RegexpRules(string rulePattern, string ip, string host, bool expected)
+	{
+		var result = SitelockMatcher.Matches(rulePattern, ["REGEXP"], ip, host);
+
+		await Assert.That(result).IsEqualTo(expected);
+	}
+
+	/// <summary>PennMUSH <c>site_can_access</c>'s class checks (<c>src/access.c:409-417</c>).</summary>
+	[Test]
+	[Arguments("!god", true, true, true, true)]
+	[Arguments("!god", false, true, true, false)]
+	[Arguments("!wizard", false, true, true, true)]
+	[Arguments("!wizard", false, false, true, false)]
+	[Arguments("!admin", false, false, true, true)]
+	[Arguments("!admin", false, false, false, false)]
+	public async Task RefusesPrivileged_ByClass(string flag, bool isGod, bool isWizard, bool isAdmin, bool expected)
+	{
+		var rules = new Dictionary<string, string[]> { ["*.evil.com"] = [flag] };
+
+		await Assert.That(SitelockMatcher.RefusesPrivileged(rules, "1.2.3.4", "x.evil.com", isGod, isWizard, isAdmin)).IsEqualTo(expected);
+		await Assert.That(SitelockMatcher.RefusesPrivileged(rules, "1.2.3.4", "x.good.com", isGod, isWizard, isAdmin)).IsFalse();
+	}
+
+	[Test]
+	public async Task Applies_FindsAnOptionOnAMatchingRule()
+	{
+		var rules = new Dictionary<string, string[]> { ["*.evil.com"] = ["Suspect", "deny_silent"] };
+
+		await Assert.That(SitelockMatcher.Applies(rules, "1.2.3.4", "x.evil.com", SitelockMatcher.SuspectOption)).IsTrue();
+		await Assert.That(SitelockMatcher.Applies(rules, "1.2.3.4", "x.evil.com", SitelockMatcher.DenySilentOption)).IsTrue();
+		await Assert.That(SitelockMatcher.Applies(rules, "1.2.3.4", "x.good.com", SitelockMatcher.SuspectOption)).IsFalse();
+	}
 }

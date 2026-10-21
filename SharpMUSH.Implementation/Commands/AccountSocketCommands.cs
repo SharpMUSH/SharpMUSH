@@ -388,6 +388,11 @@ public partial class Commands
 			return new None();
 		}
 
+		if (await SitelockRefusesPlayerAsync(handle, character))
+		{
+			return new None();
+		}
+
 		var playerDbRef = new DBRef(character.Object.Key, character.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 
@@ -485,15 +490,14 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<bool> IsSitelockedAsync(long handle, string surfaceFlag)
 	{
-		var connectionData = ConnectionService.Get(handle);
-		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
-		var hostName = connectionData?.HostName ?? ipAddress;
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
 
 		if (!SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, surfaceFlag))
 		{
 			return false;
 		}
 
+		LogSitelockRefusal(surfaceFlag == SitelockMatcher.CreateFlag ? "a new player" : "an account", ipAddress, hostName);
 		await NotifyService.Notify(handle, "Access from your location is restricted.");
 		return true;
 	}
