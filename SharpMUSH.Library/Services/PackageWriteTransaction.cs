@@ -177,6 +177,7 @@ public sealed class PackageWriteTransaction : IAsyncDisposable
 		else completion.SetResult(recovery.Result);
 	}
 
+	/// <summary>A release that throws before returning its task still faults this one, so recovery completes.</summary>
 	private async Task ReleaseAsync(bool restored)
 	{
 		_lifetime.Report(_committed
