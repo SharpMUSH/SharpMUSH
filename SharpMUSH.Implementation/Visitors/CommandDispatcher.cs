@@ -13,6 +13,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -24,7 +25,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// finally <c>HUH_COMMAND</c> — and hands it to <see cref="CommandInvocationPipeline"/> to run.
 /// </summary>
 /// <remarks>Stateless: one instance serves every evaluation of a parser.</remarks>
-internal sealed class CommandDispatcher(EvaluationServices services)
+internal sealed partial class CommandDispatcher(EvaluationServices services)
 {
 	/// <summary>
 	/// Evaluates the command, with the parser info given.
@@ -82,6 +83,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			RecordConnectionActivity(parser, command);
 
 			if (await RefuseHaltedExecutor(parser)) return new None();
+			await LogCommandAsync(visitor, commandText);
 
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
@@ -204,6 +206,56 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
 
 	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
+	/// <summary>
+	/// PennMUSH's <c>LT_CMD</c> line (<c>src/game.c:1232</c>, <c>src/log.c:547</c>): every command when
+	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
+	/// Passwords are starred out first.
+	/// </summary>
+	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText)
+	{
+		var parser = visitor.Parser;
+		if (parser.CurrentState.Executor is null)
+			return;
+
+		var executor = await parser.CurrentState.KnownExecutorObject(services.Mediator);
+		var suspect = await executor.HasFlag("SUSPECT");
+		if (!(visitor.Configuration.CurrentValue.Log.LogCommands || suspect) || await executor.HasFlag("NO_LOG"))
+			return;
+
+		var location = (await executor.Where()).Object();
+		using (visitor.Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Command" }))
+		{
+			visitor.Logger.LogInformation("CMD: {Suspect} {Executor} in {Location}: {Command}",
+				suspect ? "SUSPECT" : "", Unparse(executor.Object()), Unparse(location),
+				PasswordFilter(commandText.ToPlainText()));
+		}
+	}
+
+	private static string Unparse(SharpObject obj) => $"{obj.Name}(#{obj.DBRef.Number})";
+
+	/// <summary>
+	/// PennMUSH's <c>passwd_filter</c> (<c>src/game.c:1053</c>): <c>@password old=new</c> keeps the
+	/// command and stars out both passwords; <c>@newpassword</c> and <c>@pcreate</c> star out what
+	/// follows the <c>=</c>.
+	/// </summary>
+	internal static string PasswordFilter(string command)
+	{
+		var password = PasswordCommand().Match(command);
+		if (password.Success)
+			return $"{password.Groups[1].Value} {new string('*', password.Groups[2].Length)}={new string('*', password.Groups[3].Length)}";
+
+		var newPassword = NewPasswordCommand().Match(command);
+		return newPassword.Success
+			? $"{newPassword.Groups[1].Value}={new string('*', newPassword.Groups[2].Length)}"
+			: command;
+	}
+
+	[GeneratedRegex(@"^(@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex PasswordCommand();
+
+	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex NewPasswordCommand();
+
 	private void RecordConnectionActivity(IMUSHCodeParser parser, string command)
 	{
 		if (parser.CurrentState.Handle is null || command == "IDLE")
