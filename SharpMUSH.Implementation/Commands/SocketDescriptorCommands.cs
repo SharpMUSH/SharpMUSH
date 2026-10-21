@@ -498,42 +498,6 @@ public partial class Commands
 	private ValueTask<IConnectionService.ConnectionData?> LeastIdleConnection(DBRef who)
 		=> ArgHelpers.LeastIdleConnectionAsync(ConnectionService, who);
 
-	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
-	public async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-
-		var connection = await ConnectionService.Get(executor.Object().DBRef).FirstOrDefaultAsync();
-
-		if (connection == null)
-		{
-			await NotifyService.Notify(executor, "No session information available.", executor);
-			return CallState.Empty;
-		}
-
-		var output = new System.Text.StringBuilder();
-		output.AppendLine("Session Information:");
-		output.AppendLine($"  Player: {executor.Object().Name} (#{executor.Object().DBRef.Number})");
-
-		if (connection.Connected.HasValue)
-		{
-			output.AppendLine($"  Connected: {TimeHelpers.TimeString(connection.Connected.Value)} ago");
-		}
-
-		if (connection.Idle.HasValue)
-		{
-			output.AppendLine($"  Idle: {TimeHelpers.TimeString(connection.Idle.Value)}");
-		}
-
-		if (!string.IsNullOrEmpty(connection.HostName))
-		{
-			output.AppendLine($"  Host: {connection.HostName}");
-		}
-
-		await NotifyService.Notify(executor, output.ToString().TrimEnd(), executor);
-		return CallState.Empty;
-	}
-
 	/// <summary>
 	/// <c>OUTPUTPREFIX &lt;text&gt;</c> — PennMUSH src/bsd.c, <c>set_userstring(&amp;d-&gt;output_prefix, ...)</c>.
 	/// A descriptor setting, not a player one: it is handled above the <c>d-&gt;connected</c> branch in
