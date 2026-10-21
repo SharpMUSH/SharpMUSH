@@ -508,16 +508,24 @@ public partial class Commands
 	/// player to log in reads as a bug in their own session and invites them to try a login that will be
 	/// refused as well. Telnet is one session per character by design — no in-session character switching —
 	/// so the honest answer is that switching means reconnecting.</para>
+	///
+	/// <para>A connection that never authenticated is most often a newcomer who read <c>make</c> on the
+	/// connect screen, so while player creation is on the refusal names <c>register</c> before <c>login</c>.</para>
 	/// </summary>
 	/// <param name="handle">The connection to notify.</param>
 	/// <param name="state">The connection's current state; <c>LoggedIn</c> selects the in-game wording.</param>
 	/// <param name="inGameReason">One sentence saying why this command has no meaning once in play.</param>
 	private async ValueTask NotifyNotInAccountModeAsync(
 		long handle, IConnectionService.ConnectionState? state, string inGameReason) =>
-		await NotifyService.Notify(handle, state is IConnectionService.ConnectionState.LoggedIn
-			? $"You are already playing a character. {inGameReason} " +
-				"To play a different one, disconnect and connect again."
-			: "You must be logged in to an account first. Log in with: login <name-or-email> <password>");
+		await NotifyService.Notify(handle, state switch
+		{
+			IConnectionService.ConnectionState.LoggedIn => $"You are already playing a character. {inGameReason} " +
+				"To play a different one, disconnect and connect again.",
+			_ when Configuration.CurrentValue.Net.PlayerCreation =>
+				"You must be logged in to an account first. New here? Create one with: register <name> [email] <password>. " +
+				"Have one? Log in with: login <name-or-email> <password>",
+			_ => "You must be logged in to an account first. Log in with: login <name-or-email> <password>"
+		});
 
 	/// <summary>
 	/// PennMUSH-style refusal for a disabled <c>Net.PlayerCreation</c>: the register message, or the fixed line when
