@@ -33,7 +33,9 @@ public class Program
 			var metricsPort = app.Services.GetRequiredService<ConnectionServerOptions>().MetricsPort;
 			app.Use((context, next) =>
 			{
-				if (metricsPort > 0 && context.Connection.LocalPort == metricsPort && context.Request.Path != "/metrics")
+				if (metricsPort > 0 && (context.Connection.LocalPort == metricsPort
+					? context.Request.Path != "/metrics"
+					: context.Request.Path.StartsWithSegments("/metrics")))
 				{
 					context.Response.StatusCode = StatusCodes.Status404NotFound;
 					return Task.CompletedTask;
