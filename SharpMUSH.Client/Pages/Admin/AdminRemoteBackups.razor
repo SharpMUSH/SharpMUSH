@@ -18,9 +18,18 @@
     }
     @if (_status is { } status)
     {
-        <MudAlert Severity="@(AgentHealthy(status) ? Severity.Info : Severity.Warning)">
-            @Loc[AgentHealthy(status) ? "AdmRemoteBackupAgentSeen" : "AdmRemoteBackupAgentMissing"]
-            @status.AgentSeenAt?.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+        @* A default install has no agent: the backup service keeps its own schedule until the remote-backups
+           overlay replaces it. That is only a problem once managed scheduling is on. *@
+        <MudAlert Class="remote-backups-agent" Severity="@(AgentHealthy(status) || status is { AgentSeenAt: null, Settings.Enabled: false } ? Severity.Info : Severity.Warning)">
+            @if (status.AgentSeenAt is { } seen)
+            {
+                @Loc[AgentHealthy(status) ? "AdmRemoteBackupAgentSeen" : "AdmRemoteBackupAgentMissing"]
+                @(" ")@seen.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'")
+            }
+            else
+            {
+                @Loc["AdmRemoteBackupAgentNever"]
+            }
         </MudAlert>
         <MudText>@Loc["AdmRemoteBackupLastSuccess"]: @(status.LastSuccessAt?.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'") ?? Loc["AdmRemoteBackupNever"].Value)</MudText>
         <MudText Typo="Typo.caption">@Loc["AdmRemoteBackupCopyRetention"]</MudText>

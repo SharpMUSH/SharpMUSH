@@ -809,9 +809,9 @@ Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compo
 
 ### Manage remote backups in the website
 
-The optional `docker-compose.remote-backups.yml` overlay replaces the legacy cron entrypoint on
+The optional `docker-compose.remote-backups.yml` overlay replaces the cron entrypoint (`BACKUP_CRON`) on
 **the existing `backup` service** with a narrowly scoped SharpMUSH worker. Do not run a second
-legacy cron container against the same configuration. The default stacks retain their existing
+cron container against the same configuration. The default stacks retain their existing
 `.env`/`BACKUP_CRON` behavior until you choose this overlay; they do not report remote results.
 
 1. Initialize the repository using the existing Restic instructions above and save the password
@@ -823,7 +823,7 @@ legacy cron container against the same configuration. The default stacks retain 
 4. Open **Administration → Remote backups** (`/admin/backups`, `server.admin` permission).
    Enter the repository, encryption password and storage account credentials from the old `.env`
    configuration, choose the interval in hours (1–8760), and enable managed scheduling. Those
-   repository settings are now managed in the website; the worker ignores inherited legacy
+   repository settings are now managed in the website; the worker ignores inherited
    `RESTIC_*`, `B2_*` and cron settings. Its subprocess environment is explicitly constructed.
 
 Supported repositories are `b2:bucket:path`, `s3:https://host/bucket`, and
