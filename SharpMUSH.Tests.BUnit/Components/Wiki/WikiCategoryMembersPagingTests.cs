@@ -47,6 +47,26 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task MembersAreNotLinkedUntilTheReturnOriginIsChecked()
+	{
+		var origin = new TaskCompletionSource<HttpResponseMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.Directory = uri => Query(uri)["collection"] == "package:origin"
+			? origin.Task
+			: Task.FromResult(CategoryApi.Navigation(Query(uri)["collection"] ?? "package:owner"));
+		var cut = Open("/wiki/category/guides?" + Journey);
+		try
+		{
+			WaitForMember(cut, "Package member 000");
+			await Assert.That(MemberLinks(cut)).IsEmpty();
+
+			await cut.InvokeAsync(() => origin.TrySetResult(CategoryApi.Navigation("package:origin")));
+			cut.WaitForAssertion(() => Require(MemberLinks(cut).Count > 0, "Members stayed unlinked after the origin was confirmed."));
+			await Assert.That(MemberLinks(cut).All(link => Query(Address(link))["browseCollection"] == "package:origin")).IsTrue();
+		}
+		finally { origin.TrySetResult(CategoryApi.Navigation("package:origin")); }
+	}
+
+	[Test]
 	public async Task ArticleSidebarIntroductionReturnsToOriginalSearchWhileMembersUseAuthorizedSidebarOwner()
 	{
 		_nav.NavigateTo("/wiki/main/intro?" + Journey);
