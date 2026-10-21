@@ -24,6 +24,7 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 	private readonly Dictionary<string, bool> _ownedAuxiliaryPaths = new(StringComparer.Ordinal);
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private IServiceProvider? _services;
+	private LightningDatabase? _openedProvider;
 	private bool _disposed;
 
 	public SemanticWikiPrototypeHost(string ownedScratchRoot, string sqlConnectionString, string configFile,
@@ -94,6 +95,7 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
 				catalog.MigrationSources, catalog.AllFlags, sp.GetRequiredService<AccountCredentialGate>(),
 				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => sp.GetServices<IAccountCredentialRevocation>().ToArray()));
+			_openedProvider = provider;
 			ProviderOpened?.Invoke(provider);
 			return provider;
 		});
@@ -101,8 +103,8 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 		services.AddSingleton<PackageOperationRunner>();
 		services.RemoveAll<IPackageInstallService>();
 		services.RemoveAll<IPackageOperationRunner>();
-		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability));
-		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability));
+		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
+		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
 		_configureTestServices?.Invoke(services);
 	}
 
@@ -145,12 +147,16 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 
 	private async ValueTask CloseCoreAsync()
 	{
+		// Never resolve a failed startup graph here. Capture the actual opened provider, and
+		// refuse a busy close before hiding Services or initiating host/container shutdown.
+		_openedProvider?.PrepareSemanticFixtureClose();
 		Volatile.Write(ref _services, null);
 		if (_server is not { } server) return;
 		// The lower factory owns one shared actual-host shutdown/disposal completion, including failed
 		// startup. Retain its reference until the entire lifetime has completed successfully.
 		await server.DisposeAsync();
 		_server = null;
+		_openedProvider = null;
 	}
 
 	public async ValueTask DisposeAsync()

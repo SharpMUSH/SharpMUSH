@@ -37,7 +37,12 @@ cover.
 This covers softcode and application packages. Plugin packages (plugin binaries) are outside it;
 see *Plugin packages* below.
 
-An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. The
+An operation's writes go through `PackageWriteTransaction`, each recorded with its inverse. A
+transaction comes only from the world's `IPackageWriteTransactionFactory` (plugin contract 3.0.0
+removed its public constructor). The factory retains the world before it looks up the Package
+Manager and holds it until the transaction closes. The installer and each package helper check that
+their own services are the ones that world registered, before they read or call back, so a service
+from another world is refused. The
 operation commits with its last write, made straight to the registry: the revision record for an
 apply or rollback, the removal of the package's rows for an uninstall. Then:
 
@@ -51,6 +56,15 @@ apply or rollback, the removal of the package's rows for an uninstall. Then:
   policy: expiry prevents starting further inverses and reports them as unattempted, but every
   already-started inverse is awaited even beyond expiry. It is not a hard native completion SLA,
   and a noncooperative inverse can still hold the queue/gate while it settles.
+- **A transaction accepts sequential writes until commit or recovery begins.** Await each forward
+  write before starting another; a concurrent write or a commit while one is pending is rejected.
+  Disposal stops new admissions and waits for an admitted write to finish registering its inverse
+  before recovery. Every closer joins the same recovery, without replaying inverses. An implicit
+  recovery failure remains observable on repeated disposal; explicit rollback returns its combined
+  error and later disposal only joins. A write or inverse callback cannot await closure of its own
+  transaction: that self-join is rejected rather than leaving recovery waiting indefinitely. These
+  rules cover writes through the transaction; external helpers still need ownership spanning their
+  source write through `Track`. They do not supply native isolation or durable settlement.
 - **Package operations are serialized with each other.** Apply, uninstall, rollback and the
   profile-handler reset hold one process-wide gate (`IPackageOperationGate`, #1484) from their
   first registry read to their last write.

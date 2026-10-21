@@ -111,17 +111,20 @@ public sealed partial class LightningStore
 	internal TableDef OpenTableOwned(string name, bool duplicates, Action<ITx, bool>? guard, bool create = true)
 	{
 		NativeTableName.Validate(name);
-		return WriteRaw(tx =>
+		return WriteClassifiedFixtureRaw(tx =>
 		{
 			var existing = FindTable(name);
-			guard?.Invoke(new Tx(tx, _tableSnapshot), false);
+			var callback = new Tx(tx, _tableSnapshot, null, _fixturePackageTracking);
+			guard?.Invoke(callback, false);
+			callback.RequireFixtureWriteNotPoisoned();
 			if (existing is not null) { Commit(tx); return existing; }
 			var definition = duplicates ? TableDef.Index(name, duplicates: true) : TableDef.Node(name);
 			LmdbDb handle;
 			try { handle = tx.OpenDatabase(name, new DatabaseConfiguration { Flags = DatabaseOpenFlags.None }); }
 			catch (LightningException error) when (create && error.StatusCode == (int)MDBResultCode.NotFound)
 			{
-				guard?.Invoke(new Tx(tx, _tableSnapshot), true);
+				guard?.Invoke(callback, true);
+				callback.RequireFixtureWriteNotPoisoned();
 				handle = tx.OpenDatabase(name, new DatabaseConfiguration { Flags = FlagsFor(definition) | DatabaseOpenFlags.Create });
 			}
 			try

@@ -40,6 +40,8 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	private bool _disposed;
+	private readonly object _fixtureStoreDisposeGate = new();
+	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _fixtureStoreCloseFailure;
 
 	/// <summary>Forces a sync every <see cref="LightningStoreOptions.FlushInterval"/> under
 	/// <see cref="LightningSyncMode.Periodic"/>; null in the other modes, where every commit syncs itself.</summary>
@@ -245,7 +247,7 @@ public sealed partial class LightningStore : IDisposable
 	/// modes need on the way out (<see cref="MDBResultCode.Success"/> under Full, which has nothing
 	/// unflushed). The environment is disposed whichever way that flush went; the caller decides how to
 	/// report a failure once its own cleanup is complete.</summary>
-	internal MDBResultCode Close()
+	private MDBResultCode Close()
 	{
 		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
@@ -407,7 +409,9 @@ public sealed partial class LightningStore : IDisposable
 				var only = items[0];
 				try
 				{
-					only.Result = only.Work(new Tx(parent, _tableSnapshot));
+					var callback = new Tx(parent, _tableSnapshot, null, _fixturePackageTracking);
+					only.Result = only.Work(callback);
+					callback.RequireFixtureWriteNotPoisoned();
 				}
 				catch (Exception ex)
 				{
@@ -425,7 +429,9 @@ public sealed partial class LightningStore : IDisposable
 				using var child = _env.BeginTransaction(parent);
 				try
 				{
-					item.Result = item.Work(new Tx(child, _tableSnapshot));
+					var callback = new Tx(child, _tableSnapshot, null, _fixturePackageTracking);
+					item.Result = item.Work(callback);
+					callback.RequireFixtureWriteNotPoisoned();
 					var code = child.Commit();
 					if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
 				}
@@ -496,6 +502,13 @@ public sealed partial class LightningStore : IDisposable
 	/// wait forever on the writer thread that is running it.
 	/// </summary>
 	internal T WriteRaw<T>(Func<LightningTransaction, T> job)
+	{
+		RefuseUnclassifiedFixtureWrite();
+		return WriteClassifiedFixtureRaw(job);
+	}
+
+	// Identity binding and owned table layout may enter here on issued fixtures; ordinary raw callers pass the refusal above.
+	private T WriteClassifiedFixtureRaw<T>(Func<LightningTransaction, T> job)
 		=> _writer.EnqueueRawAsync(job, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	internal void PauseWriter() => _writer.Pause();
@@ -550,6 +563,7 @@ public sealed partial class LightningStore : IDisposable
 	/// read and write that follows.</summary>
 	private void WhileClosed(Action onDisk)
 	{
+		RefuseUnclassifiedFixtureWrite();
 		_writer.PauseAndDrainAsync().GetAwaiter().GetResult();
 		try
 		{
@@ -651,9 +665,39 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	internal void RequireExternalDisposal() => _writer.RequireExternalDisposal();
+
 	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
 	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()
+	{
+		RequireExternalDisposal();
+		if (_fixturePackageTracking is not { } tracking)
+		{
+			DisposeCore();
+			return;
+		}
+
+		lock (_fixtureStoreDisposeGate)
+		{
+			_fixtureStoreCloseFailure?.Throw();
+			if (_disposed) return;
+			tracking.Owner.BeginNativeClose(tracking.Lease);
+			try
+			{
+				DisposeCore();
+				tracking.Owner.ConfirmNativeClose(tracking.Lease);
+			}
+			catch (Exception error)
+			{
+				_fixtureStoreCloseFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error);
+				tracking.Lease.Quarantine();
+				throw;
+			}
+		}
+	}
+
+	private void DisposeCore()
 	{
 		if (_disposed) return;
 		_disposed = true;
@@ -686,7 +730,8 @@ public sealed partial class LightningStore : IDisposable
 		return true;
 	}
 
-	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables, ulong? readTransactionId) : ITx
+	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables, ulong? readTransactionId,
+		FixturePackageWriteTracking? fixturePackageTracking = null) : ITx
 	{
 		// The owned native cipher probe constructs this exact managed bounded-reader shape.
 		// Its ordinary bounded reads do not opt into the callback-scoped snapshot capabilities.
@@ -709,12 +754,14 @@ public sealed partial class LightningStore : IDisposable
 
 		public void Put(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Put(Db(table), key, value);
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"put {table}");
 		}
 
 		public bool Delete(TableDef table, ReadOnlySpan<byte> key)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Delete(Db(table), key);
 			if (code == MDBResultCode.NotFound) return false;
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"delete {table}");
@@ -723,6 +770,7 @@ public sealed partial class LightningStore : IDisposable
 
 		public bool Delete(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Delete(Db(table), key, value);
 			if (code == MDBResultCode.NotFound) return false;
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"delete {table}");
@@ -892,6 +940,7 @@ public sealed partial class LightningStore : IDisposable
 
 		public int DeletePrefix(TableDef table, byte[] prefix)
 		{
+			BeforeFixtureMutation(table, prefix, prefixDelete: true);
 			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
 			var keys = Range(table, prefix).ToList();
 			var duplicates = (tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) != 0;

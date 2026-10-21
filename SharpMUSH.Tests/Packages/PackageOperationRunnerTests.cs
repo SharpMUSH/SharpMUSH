@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Packages;
 /// runner here has a gate of its own and a stand-in backup service, so nothing it holds or writes
 /// reaches another test.
 /// </summary>
-public class PackageOperationRunnerTests
+public partial class PackageOperationRunnerTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }

@@ -15,7 +15,7 @@ namespace SharpMUSH.Library.Services;
 /// that fails is reverted by replaying the inverses newest first, which returns everything it
 /// touched to what it was before, however often it was written:
 /// <code>
-/// await using var writes = BeginWrites(packageManager);
+/// await using var writes = await transactions.CreateAsync(packageManager, cancellationToken);
 /// // ... writes through `writes` ...
 /// await registry.AddPackageRevisionAsync(revision); // the commit write
 /// writes.Commit();
@@ -24,28 +24,61 @@ namespace SharpMUSH.Library.Services;
 /// could not be; an exception is reverted by <see cref="DisposeAsync"/>.
 /// </summary>
 /// <remarks>
+/// Forward writes must be awaited sequentially. Closing rejects new writes and joins the admitted
+/// write before compensation; commit rejects a pending write. A transaction cannot be reused.
+/// A write or inverse callback cannot close its own transaction; independent closers join it.
 /// This is compensation, not isolation: nothing spans the stores, so other writers see intermediate
 /// state, and a process that dies part way through keeps what it had written. An operation commits
 /// with its last write, made straight to the registry and not through here, because it cannot be
 /// reversed: a revision record, or the package's removal. This is the permanent contract (#1186):
 /// docs/design/world-transactions.md §0 says what a crash leaves behind and how an operator recovers.
 /// </remarks>
-public sealed class PackageWriteTransaction(
-	IMediator mediator,
-	IObjectStore objects,
-	IAttributeStore attributes,
-	IFlagAndPowerStore flags,
-	IPackageRegistryService registry,
-	IApplicationRegistryService applications,
-	ILockService locks,
-	SharpPlayer packageManager) : IAsyncDisposable
+public sealed class PackageWriteTransaction : IAsyncDisposable
 {
+	private readonly IMediator mediator;
+	private readonly IObjectStore objects;
+	private readonly IAttributeStore attributes;
+	private readonly IFlagAndPowerStore flags;
+	private readonly IPackageRegistryService registry;
+	private readonly IApplicationRegistryService applications;
+	private readonly ILockService locks;
+	private readonly SharpPlayer packageManager;
+	private readonly IAsyncDisposable _lifetime;
+
+	/// <summary>Issued only by <see cref="PackageWriteTransactionFactory"/>; obtain one through <see cref="IPackageWriteTransactionFactory"/>.</summary>
+	internal PackageWriteTransaction(PackageWriteTransactionFactory origin, IMediator transactionMediator,
+		IObjectStore transactionObjects, IAttributeStore transactionAttributes, IFlagAndPowerStore transactionFlags,
+		IPackageRegistryService transactionRegistry, IApplicationRegistryService transactionApplications,
+		ILockService transactionLocks, SharpPlayer manager, IAsyncDisposable lifetime)
+	{
+		Origin = origin;
+		mediator = transactionMediator;
+		objects = transactionObjects;
+		attributes = transactionAttributes;
+		flags = transactionFlags;
+		registry = transactionRegistry;
+		applications = transactionApplications;
+		locks = transactionLocks;
+		packageManager = manager;
+		_lifetime = lifetime;
+	}
+
+	/// <summary>The world this transaction was issued for; helpers check their own services against it.</summary>
+	internal PackageWriteTransactionFactory Origin { get; }
+
 	/// <summary>The Package Manager wizard this operation writes as.</summary>
 	public SharpPlayer PackageManager => packageManager;
 
 	private readonly Stack<(string What, Func<Task> Revert)> _undo = new();
 	private readonly HashSet<int> _created = [];
-	private bool _settled;
+	// Source writes are sequential. Closing stops admissions before waiting for the actual
+	// admitted write, including its undo registration, then publishes one shared recovery result.
+	private readonly object _stateGate = new();
+	private static readonly AsyncLocal<OwnedExecution?> CurrentExecution = new();
+	private bool _committed;
+	private TaskCompletionSource? _forward;
+	private Task<IReadOnlyList<string>>? _recovery;
+	private bool _reportImplicitFailure;
 
 	// A recovery dispatch/cooperative deadline, not a hard completion limit for a started inverse.
 	internal static readonly TimeSpan RecoveryTimeout = TimeSpan.FromSeconds(30);
@@ -59,8 +92,13 @@ public sealed class PackageWriteTransaction(
 	/// </summary>
 	public void Commit()
 	{
-		_undo.Clear();
-		_settled = true;
+		lock (_stateGate)
+		{
+			RequireOpen();
+			RequireIdle();
+			_undo.Clear();
+			_committed = true;
+		}
 	}
 
 	/// <summary>
@@ -69,7 +107,7 @@ public sealed class PackageWriteTransaction(
 	/// </summary>
 	public async Task<Error<string>> RevertAsync(Error<string> failure)
 	{
-		var unrestored = await RevertAllAsync();
+		var unrestored = await BeginRecovery(explicitRevert: true);
 		return new Error<string>(unrestored.Count == 0
 			? $"{failure.Value} Its changes were undone."
 			: $"{failure.Value} Its changes were undone except: {string.Join("; ", unrestored)}.");
@@ -79,20 +117,150 @@ public sealed class PackageWriteTransaction(
 	/// Reverts an operation that neither committed nor reverted: one an exception is unwinding. A
 	/// failure to restore is reported by <see cref="PackageCompensationException"/>, which can
 	/// supersede the original unwinding exception. An explicit <see cref="RevertAsync"/> instead
-	/// combines the original failure and unrestored steps in its returned error.
+	/// combines the original failure and unrestored steps in its returned error. Repeated disposal
+	/// joins the same recovery without replay; an implicit recovery failure remains observable.
 	/// </summary>
 	public async ValueTask DisposeAsync()
 	{
-		if (!_settled)
+		var unrestored = await BeginRecovery(explicitRevert: false);
+		if (_reportImplicitFailure && unrestored.Count != 0)
 		{
-			var unrestored = await RevertAllAsync();
-			if (unrestored.Count != 0) throw new PackageCompensationException(unrestored);
+			throw new PackageCompensationException(unrestored);
+		}
+	}
+
+	private Task<IReadOnlyList<string>> BeginRecovery(bool explicitRevert)
+	{
+		for (var execution = CurrentExecution.Value; execution is not null; execution = execution.Parent)
+		{
+			if (execution.IsActive && ReferenceEquals(execution.Transaction, this))
+			{
+				throw new InvalidOperationException("A package transaction cannot close from its own active write or inverse.");
+			}
+		}
+
+		TaskCompletionSource<IReadOnlyList<string>> completion;
+		Task pending;
+		lock (_stateGate)
+		{
+			if (_committed && explicitRevert) throw new InvalidOperationException("The package transaction has committed.");
+
+			if (_recovery is not null) return _recovery;
+			completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+			_recovery = completion.Task;
+			_reportImplicitFailure = !explicitRevert && !_committed;
+			pending = _forward?.Task ?? Task.CompletedTask;
+		}
+
+		// Publish before invoking any external inverse, including synchronous callbacks. Every
+		// closer observes and joins this task; the runner captures all failures into it.
+		_ = RecoverAsync(pending, completion);
+		return completion.Task;
+	}
+
+	private async Task RecoverAsync(Task pending, TaskCompletionSource<IReadOnlyList<string>> completion)
+	{
+		var recovery = RevertJoinedAsync(pending);
+		await ((Task)recovery).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+
+		// Physical ownership ends only after actual forward work and compensation have joined.
+		// Commit alone cannot release it, and every closer shares this same terminal completion.
+		var release = ReleaseLifetimeAsync();
+		await release.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+		var failure = Failure(recovery) is { } recoveryFailure
+			? Failure(release) is { } releaseFailure ? new AggregateException(recoveryFailure, releaseFailure) : recoveryFailure
+			: Failure(release);
+		if (failure is not null) completion.SetException(failure);
+		else completion.SetResult(recovery.Result);
+	}
+
+	/// <summary>A release that throws before returning its task still faults this one, so recovery completes.</summary>
+	private async Task ReleaseLifetimeAsync() => await _lifetime.DisposeAsync();
+
+	private async Task<IReadOnlyList<string>> RevertJoinedAsync(Task pending)
+	{
+		await pending;
+		if (_committed) return [];
+		using (new OwnedExecution(this)) return await RevertAllAsync();
+	}
+
+	/// <summary>The exception a finished task ended with, unwrapped as an await would throw it; null when it succeeded.</summary>
+	private static Exception? Failure(Task task) => task switch
+	{
+		{ IsCanceled: true } => new TaskCanceledException(task),
+		{ Exception: { InnerExceptions.Count: 1 } single } => single.InnerException,
+		{ Exception: { } many } => many,
+		_ => null
+	};
+
+	private void RequireOpen()
+	{
+		if (_committed || _recovery is not null)
+		{
+			throw new InvalidOperationException("The package transaction is no longer open.");
+		}
+	}
+
+	private void RequireIdle()
+	{
+		if (_forward is not null)
+		{
+			throw new InvalidOperationException("A package transaction write is already in progress; await it before starting another.");
+		}
+	}
+
+	private IDisposable AdmitWrite()
+	{
+		lock (_stateGate)
+		{
+			RequireOpen();
+			RequireIdle();
+			_forward = new(TaskCreationOptions.RunContinuationsAsynchronously);
+			return new ForwardWrite(this, _forward, new OwnedExecution(this));
+		}
+	}
+
+	private sealed class ForwardWrite(PackageWriteTransaction transaction, TaskCompletionSource completion, OwnedExecution execution) : IDisposable
+	{
+		private PackageWriteTransaction? _transaction = transaction;
+
+		public void Dispose()
+		{
+			if (Interlocked.Exchange(ref _transaction, null) is not { } owner) return;
+			execution.Dispose();
+			lock (owner._stateGate) owner._forward = null;
+			completion.SetResult();
+		}
+	}
+
+	/// <summary>
+	/// Distinguishes a self-join through an extensible callback from an independent closer. Linked
+	/// frames also detect A → B → A callbacks; expired captured contexts retain no active ownership.
+	/// Enter synchronously in the async operation, so the frame flows through its actual awaits.
+	/// </summary>
+	private sealed class OwnedExecution : IDisposable
+	{
+		public PackageWriteTransaction Transaction { get; }
+		public OwnedExecution? Parent { get; }
+		private bool _active = true;
+		public bool IsActive => Volatile.Read(ref _active);
+
+		public OwnedExecution(PackageWriteTransaction transaction)
+		{
+			Transaction = transaction;
+			Parent = CurrentExecution.Value;
+			CurrentExecution.Value = this;
+		}
+
+		public void Dispose()
+		{
+			Volatile.Write(ref _active, false);
+			if (ReferenceEquals(CurrentExecution.Value, this)) CurrentExecution.Value = Parent;
 		}
 	}
 
 	private async Task<IReadOnlyList<string>> RevertAllAsync()
 	{
-		_settled = true;
 		var unrestored = new List<string>();
 		// Recovery must not inherit the cancelled execution/request lifetime it is repairing.
 		using var recovery = new ExecutionBudget(RecoveryTimeout, CancellationToken.None, RecoveryClock);
@@ -121,13 +289,24 @@ public sealed class PackageWriteTransaction(
 		return unrestored;
 	}
 
-	private void OnRevert(string what, Func<Task> revert) => _undo.Push((what, revert));
+	private void OnRevert(string what, Func<Task> revert)
+	{
+		lock (_stateGate) _undo.Push((what, revert));
+	}
 
 	/// <summary>
 	/// Records a write made outside this class with its inverse, for a store it does not cover: the
 	/// role registry (<see cref="IPackageDeclarationService"/>).
 	/// </summary>
-	public void Track(string what, Func<Task> revert) => OnRevert(what, revert);
+	public void Track(string what, Func<Task> revert)
+	{
+		lock (_stateGate)
+		{
+			RequireOpen();
+			RequireIdle();
+			_undo.Push((what, revert));
+		}
+	}
 
 	private async Task<AnySharpObject?> CurrentAsync(DBRef dbref) =>
 		await objects.GetObjectNodeAsync(dbref) is AnySharpObject node ? node : null;
@@ -137,6 +316,7 @@ public sealed class PackageWriteTransaction(
 	/// <summary>Creates an object; reverted by marking it GOING, the @destroy convention.</summary>
 	public async Task<AnySharpObject?> CreateAsync(ICommand<DBRef> create, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		var dbref = await mediator.Send(create, cancellationToken);
 		if (await objects.GetObjectNodeAsync(dbref, cancellationToken) is not AnySharpObject node)
 		{
@@ -159,6 +339,7 @@ public sealed class PackageWriteTransaction(
 	/// <summary>Links an exit this transaction created: reverting its creation retires the link with it.</summary>
 	public async Task LinkCreatedExitAsync(SharpExit exit, AnySharpContainer destination, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		if (!_created.Contains(exit.Object.DBRef.Number))
 		{
 			throw new InvalidOperationException(
@@ -170,6 +351,7 @@ public sealed class PackageWriteTransaction(
 
 	public async Task SetNameAsync(AnySharpObject node, string name, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		var dbref = node.Object().DBRef;
 		if (await CurrentAsync(dbref) is not { } current || current.Object().Name == name)
 		{
@@ -189,6 +371,7 @@ public sealed class PackageWriteTransaction(
 
 	public async Task SetParentAsync(AnySharpObject node, AnySharpObject parent, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		var dbref = node.Object().DBRef;
 		var previous = await node.Object().Parent.WithCancellation(cancellationToken);
 		await mediator.Send(new SetObjectParentCommand(node, parent), cancellationToken);
@@ -218,6 +401,7 @@ public sealed class PackageWriteTransaction(
 
 	private async Task WriteFlagAsync(DBRef dbref, SharpObjectFlag flag, bool set, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		if (await CurrentAsync(dbref) is not { } current
 			|| (await current.Object().ReadOwnFlagNamesAsync(cancellationToken)).Contains(flag.Name) == set)
 		{
@@ -254,6 +438,7 @@ public sealed class PackageWriteTransaction(
 
 	private async Task WritePowerAsync(DBRef dbref, SharpPower power, bool set, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		if (await CurrentAsync(dbref) is not { } current
 			|| (await current.Object().ReadOwnPowerNamesAsync(cancellationToken)).Contains(power.Name) == set)
 		{
@@ -296,6 +481,7 @@ public sealed class PackageWriteTransaction(
 	/// </summary>
 	private async Task<Result<Success>> WriteLockAsync(DBRef dbref, Func<ValueTask<Result<Success>>> write)
 	{
+		using var forward = AdmitWrite();
 		if (await CurrentAsync(dbref) is not { } current)
 		{
 			return await write();
@@ -351,6 +537,7 @@ public sealed class PackageWriteTransaction(
 
 	public async Task SetAttributeAsync(DBRef dbref, string[] path, MString value, SharpPlayer owner, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		var previous = await AttributeStateAsync(dbref, path, cancellationToken);
 		await mediator.Send(new SetAttributeCommand(dbref, path, value, owner), cancellationToken);
 		OnRevert($"{dbref}/{string.Join('`', path)}", () => RestoreAttributeAsync(dbref, path, previous));
@@ -358,6 +545,7 @@ public sealed class PackageWriteTransaction(
 
 	public async Task ClearAttributeAsync(DBRef dbref, string[] path, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		if (await AttributeStateAsync(dbref, path, cancellationToken) is not AttributeState previous)
 		{
 			return;
@@ -414,6 +602,7 @@ public sealed class PackageWriteTransaction(
 	private async Task<bool> WriteAttributeFlagAsync(
 		DBRef dbref, string[] path, SharpAttributeFlag flag, bool set, CancellationToken cancellationToken)
 	{
+		using var forward = AdmitWrite();
 		if (await LeafAsync(dbref, path, cancellationToken) is not SharpAttribute leaf)
 		{
 			return false;
@@ -458,6 +647,7 @@ public sealed class PackageWriteTransaction(
 		string what, Func<Task<TRow?>> read, Func<Task> write, Func<TRow, Task> restore, Func<Task> remove)
 		where TRow : class
 	{
+		using var forward = AdmitWrite();
 		var previous = await read();
 		await write();
 		OnRevert(what, () => previous is null ? remove() : restore(previous));
@@ -545,6 +735,7 @@ public sealed class PackageWriteTransaction(
 
 	public async Task SetPackageDependenciesAsync(string packageId, IReadOnlyList<PackageDependencyRecord> dependencies)
 	{
+		using var forward = AdmitWrite();
 		var previous = await registry.GetPackageDependenciesAsync(packageId);
 		await registry.SetPackageDependenciesAsync(packageId, dependencies);
 		OnRevert($"{packageId} dependencies", () => registry.SetPackageDependenciesAsync(packageId, previous));

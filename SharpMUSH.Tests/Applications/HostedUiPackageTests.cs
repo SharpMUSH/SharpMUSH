@@ -13,7 +13,7 @@ public class HostedUiPackageTests
 			version: 1.0.0
 			kind: ui
 			binaries:
-			  min_server_version: ">=2.0"
+			  min_server_version: ">=3.0"
 			  files:
 			    - file: ui.json
 			      sha256: {new string('a', 64)}

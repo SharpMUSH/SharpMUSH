@@ -267,7 +267,7 @@ public class PluginPackageInstallerTests
 				version: "1.0.0"
 				kind: plugin
 				binaries:
-				  min_server_version: ">=2.0"
+				  min_server_version: ">=3.0"
 				  files:
 				    - file: {PluginPackageFixture.DllName}
 				      sha256: {PluginPackageFixture.DllSha}
@@ -321,9 +321,9 @@ public class PluginPackageInstallerTests
 		var directories = PluginPackageFixture.ScratchDirectories();
 		try
 		{
-			var result = await DeployAsync(NewInstaller(directories), PluginPackageFixture.Yaml(PackageId, minServerVersion: ">=1.0"));
+			var result = await DeployAsync(NewInstaller(directories), PluginPackageFixture.Yaml(PackageId, minServerVersion: ">=2.0"));
 
-			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a DLL built against contract 1.x does not bind to 2.x");
+			await Assert.That(result.Value).IsTypeOf<Error<string>>().Because("a DLL built against contract 2.x does not bind to 3.x");
 			await Assert.That(Directory.Exists(Path.Combine(directories.Installed, PackageId))).IsFalse();
 		}
 		finally

@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Portal.Applications;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.Packages;
 using SharpMUSH.Tests.Server;
 using SharpMUSH.Tests.Shared;
 
@@ -27,12 +28,15 @@ public class UiUninstallFailureTests
 				RenderKind: ApplicationRenderKind.Hosted, DefinitionId: "graph-proof", Config: JsonSerializer.SerializeToElement(new { rooms = new[] { room } })));
 		var files = Substitute.For<IPluginPackageInstaller>();
 		files.RemoveAsync("graph-proof", Arg.Any<IReadOnlyList<string>>(), Arg.Any<CancellationToken>()).Returns(new Error<string>("Removal refused: ambiguous directories."));
-		var service = new PackageInstallService(Substitute.For<IObjectStore>(), Substitute.For<IAttributeStore>(), Substitute.For<IFlagAndPowerStore>(), Substitute.For<INavigationStore>(),
+		var (objects, attributes, flags, mediator, locks) = (Substitute.For<IObjectStore>(), Substitute.For<IAttributeStore>(),
+			Substitute.For<IFlagAndPowerStore>(), Substitute.For<IMediator>(), Substitute.For<ILockService>());
+		var service = new PackageInstallService(objects, attributes, flags, Substitute.For<INavigationStore>(),
 			registry, apps, Substitute.For<IPackagePlanService>(), new TestSharpMushOptions.FixedWrapper(TestSharpMushOptions.Create()), Substitute.For<IPackageLifecycleRunner>(), files,
-			Substitute.For<IMediator>(), new PackageOperationGate(), Substitute.For<ILockService>(), Substitute.For<IPackageDeclarationService>(), Substitute.For<IPackageSettingService>(), Substitute.For<IPackageWikiService>(),
+			mediator, new PackageOperationGate(), locks, Substitute.For<IPackageDeclarationService>(), Substitute.For<IPackageSettingService>(), Substitute.For<IPackageWikiService>(),
 			new Lazy<IRuntimeRegistrationService>(() => Substitute.For<IRuntimeRegistrationService>()), new EngineVersion(new PackageVersion(2, 0, 0)),
 			new Lazy<IPluginManager>(() => Substitute.For<IPluginManager>()),
-			new Lazy<IPluginAdministration>(() => Substitute.For<IPluginAdministration>()));
+			new Lazy<IPluginAdministration>(() => Substitute.For<IPluginAdministration>()),
+			TestPackageWrites.Factory(objects, attributes, flags, registry, apps, locks, mediator));
 		await Assert.That(await service.UninstallAsync("graph-proof", force: true) is Error<string>).IsTrue();
 		await Assert.That((await apps.GetApplicationsAsync()).Count).IsEqualTo(2);
 		await Assert.That((await apps.GetApplicationAsync("east")).Expect<RegisteredApplication>().Config!.Value.GetProperty("rooms")[0].GetInt32()).IsEqualTo(10);

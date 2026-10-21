@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Packages;
 /// returns to the state before its first write, a commit keeps everything, and an exception that
 /// unwinds past an uncommitted transaction reverts it.
 /// </summary>
-public class PackageWriteTransactionTests
+public partial class PackageWriteTransactionTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -27,9 +27,8 @@ public class PackageWriteTransactionTests
 	private async Task<SharpPlayer> PackageManagerAsync() =>
 		(await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
 
-	private async Task<PackageWriteTransaction> BeginAsync() => new(
-		Mediator, Database, Database, Database, Registry, (IApplicationRegistryService)Database,
-		WebAppFactoryArg.Services.GetRequiredService<ILockService>(), await PackageManagerAsync());
+	private async Task<PackageWriteTransaction> BeginAsync()
+		=> await WebAppFactoryArg.Services.GetRequiredService<IPackageWriteTransactionFactory>().CreateAsync(new DBRef(7));
 
 	/// <summary>A thing with a name, one attribute, no DARK flag and no use lock, and a baseline row for it.</summary>
 	private async Task<(AnySharpObject Node, DBRef DBRef, string Objid)> SubjectAsync(string name, string package)

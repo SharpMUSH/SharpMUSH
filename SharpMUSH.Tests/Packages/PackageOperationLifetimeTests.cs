@@ -12,7 +12,7 @@ namespace SharpMUSH.Tests.Packages;
 /// Tests the runner's ownership of work independently of database/provider behavior.
 /// Deadlines guard hangs; neither assertion depends on elapsed time.
 /// </summary>
-public class PackageOperationLifetimeTests
+public partial class PackageOperationLifetimeTests
 {
 	private static readonly TimeSpan TestDeadline = TimeSpan.FromSeconds(10);
 
@@ -235,10 +235,10 @@ public class PackageOperationLifetimeTests
 		await Assert.That(mutated).IsFalse();
 	}
 
-	private static PackageOperationRunner CreateRunner(ControlledScheduler scheduler, IPackageLifecycleRunner? lifecycle = null)
+	private static PackageOperationRunner CreateRunner(ControlledScheduler scheduler, IPackageLifecycleRunner? lifecycle = null, IWorldBackupService? backupService = null)
 	{
-		var backups = Substitute.For<IWorldBackupService>();
-		backups.IsSupported.Returns(false);
+		var backups = backupService ?? Substitute.For<IWorldBackupService>();
+		if (backupService is null) backups.IsSupported.Returns(false);
 		return new PackageOperationRunner(scheduler.Scheduler, new PackageOperationGate(), backups,
 			lifecycle ?? Substitute.For<IPackageLifecycleRunner>(), NullLogger<PackageOperationRunner>.Instance);
 	}
@@ -263,16 +263,37 @@ public class PackageOperationLifetimeTests
 		private readonly Channel<ControlledEntry> _entries = Channel.CreateUnbounded<ControlledEntry>();
 		private int _admissionCount;
 
-		public ITaskScheduler Scheduler { get; } = Substitute.For<ITaskScheduler>();
+		public ITaskScheduler Scheduler { get; }
+		public int ObservedAdmissionCount { get; private set; }
 		public int AdmissionCount => Volatile.Read(ref _admissionCount);
+		public TaskCompletionSource AdmissionFailure { get; } = Signal();
 
-		public ControlledScheduler()
+		public ControlledScheduler(string? failTrigger = null, bool observed = false, bool refuse = false, string? refuseTrigger = null)
 		{
+			Scheduler = observed ? Substitute.For<ITaskScheduler, IQueueReleaseObserver>() : Substitute.For<ITaskScheduler>();
+			if (observed)
+				((IQueueReleaseObserver)Scheduler).AdmitObservedSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action<QueueEntryRelease>>())
+					.Returns(call =>
+					{
+						ObservedAdmissionCount++;
+						if (refuse || call.ArgAt<string>(1) == refuseTrigger) return ValueTask.FromResult(new QueueAdmissionResult(null, QueueRejectionReason.GlobalLimit));
+						var pid = Interlocked.Increment(ref _admissionCount);
+						var release = call.Arg<Action<QueueEntryRelease>>();
+						var entry = new ControlledEntry(call.Arg<Func<ValueTask<CallState?>>>(),
+							() => release(new(pid, SharpMUSH.Library.Models.Diagnostics.QueueOutcome.Completed, null)), call.ArgAt<string>(1));
+						if (!_entries.Writer.TryWrite(entry)) throw new InvalidOperationException("Test admission channel closed.");
+						return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
+					});
 			Scheduler.AdmitSocketWork(Arg.Any<Func<ValueTask<CallState?>>>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Action?>())
 				.Returns(call =>
 				{
+					if (call.ArgAt<string>(1) == failTrigger)
+					{
+						AdmissionFailure.TrySetResult();
+						throw new IOException("Synthetic hook admission failure");
+					}
 					var pid = Interlocked.Increment(ref _admissionCount);
-					var entry = new ControlledEntry(call.Arg<Func<ValueTask<CallState?>>>(), call.Arg<Action?>());
+					var entry = new ControlledEntry(call.Arg<Func<ValueTask<CallState?>>>(), call.Arg<Action?>(), call.ArgAt<string>(1));
 					if (!_entries.Writer.TryWrite(entry)) throw new InvalidOperationException("Test admission channel closed.");
 					return ValueTask.FromResult(new QueueAdmissionResult(pid, QueueRejectionReason.None));
 				});
@@ -282,7 +303,7 @@ public class PackageOperationLifetimeTests
 			_entries.Reader.ReadAsync(cancellationToken);
 	}
 
-	private sealed record ControlledEntry(Func<ValueTask<CallState?>> Action, Action? OnReleased)
+	private sealed record ControlledEntry(Func<ValueTask<CallState?>> Action, Action? OnReleased, string Trigger)
 	{
 		public async Task RunAsync(CancellationToken entryCancellation)
 		{

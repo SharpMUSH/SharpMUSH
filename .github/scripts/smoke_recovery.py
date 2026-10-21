@@ -63,7 +63,7 @@ def package_fixture(output: Path, plugin_id: str, assembly: str, destination: Pa
         {"id": plugin_id, "version": "1.0.0", "entry": assembly + ".dll"}
     ).encode()
     manifest = [f"package: {plugin_id}", 'version: "1.0.0"', "kind: plugin",
-                "binaries:", '  min_server_version: ">=2.0"', "  files:"]
+                "binaries:", '  min_server_version: ">=3.0"', "  files:"]
     for name, content in files.items():
         manifest.extend((f"    - file: {name}",
                          "      sha256: " + hashlib.sha256(content).hexdigest()))

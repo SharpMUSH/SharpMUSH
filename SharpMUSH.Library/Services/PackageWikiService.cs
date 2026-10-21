@@ -35,6 +35,7 @@ public sealed class PackageWikiService(
 		List<string> notes,
 		CancellationToken cancellationToken = default)
 	{
+		writes.Origin.RequireWiki(wiki, localization, packages, roles);
 		var steps = PackageWikiPlanner.Plan(await GatherAsync(packageId, version, pages, declaredPermissions, cancellationToken));
 		if (steps.Where(s => s.Change.Action == PackageWikiAction.Blocked).ToList() is { Count: > 0 } blocked)
 		{

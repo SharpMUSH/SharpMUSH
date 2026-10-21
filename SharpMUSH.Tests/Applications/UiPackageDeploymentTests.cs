@@ -99,7 +99,7 @@ public class UiPackageDeploymentTests
 
 	internal static PackageManifest Manifest(Dictionary<string, byte[]> files)
 	{
-		var yaml = "package: graph-proof\nversion: 1.0.0\nkind: ui\nbinaries:\n  min_server_version: \">=2.0\"\n  files:\n"
+		var yaml = "package: graph-proof\nversion: 1.0.0\nkind: ui\nbinaries:\n  min_server_version: \">=3.0\"\n  files:\n"
 			+ string.Concat(files.Select(f => $"    - file: {f.Key}\n      sha256: {PluginPackageFixture.Sha256Of(f.Value)}\n"));
 		return new PackageManifestService().ParseManifest(yaml) switch
 		{

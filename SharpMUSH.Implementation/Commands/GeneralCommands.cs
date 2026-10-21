@@ -54,7 +54,7 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HuhTypeHelp), executor);
 		await LogHuhAsync(executor, parser.CurrentState.CommandText?.Raw.ToPlainText() ?? string.Empty);
 
-		return new CallState(ErrorMessages.Returns.Huh);
+		return new CallState(ErrorMessages.Returns.Huh) { HadErrors = true };
 	}
 
 	/// <summary>

@@ -59,7 +59,8 @@ public partial class IntegratedWikiMutationTests
 		else
 			await wiki.UpsertTranslationAsync(page.Id, "fr", "Titre", "legacy translation", "#1", null, true, null);
 		var before = WikiFingerprint(provider, false);
-		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.UnsupportedOperation);
+		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(),
+			ownership ? WikiFixtureMutationFailure.Unavailable : WikiFixtureMutationFailure.UnsupportedOperation);
 		await Assert.That(WikiFingerprint(provider, false)).IsEqualTo(before);
 		await Assert.That(provider.AtomicWikiPhase).IsEqualTo(SemanticFixturePhase.Inactive);
 		await wiki.SetTitleAsync(page.Id, "Legacy title remains writable");

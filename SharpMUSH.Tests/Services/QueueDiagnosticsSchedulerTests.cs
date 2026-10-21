@@ -15,7 +15,7 @@ using Scheduler = SharpMUSH.Library.Services.TaskScheduler;
 
 namespace SharpMUSH.Tests.Services;
 
-public class QueueDiagnosticsSchedulerTests
+public partial class QueueDiagnosticsSchedulerTests
 {
 	private static Scheduler Create(QueueDiagnosticsRecorder? recorder, uint capacity = 10, uint milliseconds = 1000,
 		IMUSHCodeParser? parser = null, IScheduler? scheduled = null, IMediator? mediator = null)
