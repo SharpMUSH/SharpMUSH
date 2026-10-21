@@ -71,7 +71,7 @@
     [Parameter] public EventCallback OnSaved { get; set; }
     [Parameter] public string? SaveLabel { get; set; }
     private string _name = "", _introduction = "", _genres = "", _subgenres = "", _welcome = "", _rules = "", _character = "", _style = "minimalist", _override = "";
-    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full);
+    private SharpieArt? PreviewArt => SharpieArtCatalog.Resolve(_style, _genres, _subgenres, _override, GuideImagery.Full, SharpieArtMoment.Welcome);
     private bool _loaded, _busy, _saved;
     private string? _error;
     protected override Task OnInitializedAsync() => Load();

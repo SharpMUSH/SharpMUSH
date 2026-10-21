@@ -42,6 +42,23 @@ public class SetupIdentityTests : BunitContext
 		public HttpClient CreateClient(string name) => new(handler, false) { BaseAddress = new("https://example.test/") };
 	}
 	[Test]
+	public async Task IdentityPreviewUsesTheWelcomeArtworkMoment()
+	{
+		using var handler = new Handler();
+		Services.AddSingleton<IHttpClientFactory>(new Factory(handler));
+		Services.AddSingleton<ServerInfoService>();
+		Services.AddLocalization();
+		var form = Render<GameIdentityForm>();
+		form.WaitForElement(".identity-preview img");
+		var expected = SharpieArtCatalog.Resolve("chibi", "Fantasy", "High Fantasy", null, GuideImagery.Full, SharpieArtMoment.Welcome);
+		await Assert.That(form.Find(".identity-preview img").GetAttribute("src")).Contains(expected!.Url);
+		await form.Find("#guide-art-style").ChangeAsync("minimalist");
+		expected = SharpieArtCatalog.Resolve("minimalist", "Fantasy", "High Fantasy", null, GuideImagery.Full, SharpieArtMoment.Welcome);
+		await Assert.That(form.Find(".identity-preview img").GetAttribute("src")).Contains(expected!.Url);
+		await Assert.That(handler.Writes).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task ImportedIdentityIsPrefilledAndOnlySavedExplicitly()
 	{
 		using var handler = new Handler();

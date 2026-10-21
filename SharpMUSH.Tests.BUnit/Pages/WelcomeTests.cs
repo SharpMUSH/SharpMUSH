@@ -31,12 +31,35 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
+	public async Task AdminChecklistShowsMascotForEachTopicAndRespectsImagery()
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		var guide = Services.GetRequiredService<OnboardingService>();
+		page.WaitForAssertion(() =>
+		{
+			if (page.FindAll(".admin-checklist img").Count != GuideStepIds.Administrator.Count)
+				throw new InvalidOperationException("Each administrator topic must show its mascot.");
+		});
+		foreach (var step in GuideStepIds.Administrator)
+		{
+			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
+			await Assert.That(image.GetAttribute("src")).Contains($"sharpie-fantasy-minimalist-administrator-{step}.png");
+			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
+		}
+		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
+		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(GuideStepIds.Administrator.Count);
+		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
+		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
+	}
+
+	[Test]
 	public async Task InactiveCompanionRespectsGenreAndReducedImagery()
 	{
 		var guide = Services.GetRequiredService<OnboardingService>();
 		await guide.LoadAsync(GuideJourney.Player);
 		var panel = Render<GuideCompanion>(p => p.Add(x => x.Guide, guide));
-		await Assert.That(panel.Find("img").GetAttribute("src")).Contains("sharpie-fantasy-minimalist.png");
+		await Assert.That(panel.Find("img").GetAttribute("src")).Contains("sharpie-fantasy-minimalist-shared-welcome.png");
 		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
 		await Assert.That(panel.Find("img").GetAttribute("width")).IsEqualTo("40");
 		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
@@ -165,10 +188,10 @@ public class WelcomeTests : BunitContext
 	{
 		((Info)Services.GetRequiredService<ServerInfoService>()).Genre = genre;
 		var page = Render<Welcome>();
-		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist.png");
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-shared-welcome.png");
 		await page.Find("[data-guide-path=mush]").ClickAsync();
 		await Assert.That(page.FindAll("img").Count).IsEqualTo(1);
-		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist.png");
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-player-place.png");
 		await page.Find(".welcome-imagery select").ChangeAsync("None");
 		await Assert.That(page.FindAll("img").Count).IsEqualTo(0);
 	}

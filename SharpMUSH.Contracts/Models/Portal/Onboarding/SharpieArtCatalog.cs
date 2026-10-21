@@ -10,6 +10,23 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-spiritual-chibi-administrator-invite", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-spiritual-chibi-player-speak-act", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-spiritual-chibi-player-character", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-spiritual-chibi-administrator-capabilities", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-spiritual-chibi-administrator-identity", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-spiritual-chibi-player-continue", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-spiritual-chibi-player-channels", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-spiritual-chibi-player-useful-action", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-spiritual-chibi-player-place", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-spiritual-chibi-player-sign-in", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-invite", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-walkthrough", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-capabilities", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-rules", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-joining", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-alternate-history-chibi-administrator-identity", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-alternate-history-chibi-player-speak-act", "chibi", "Alternate History", "images/sharpie/sharpie-alternate-history-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-spiritual-kemono-player-channels", "kemono", "Spiritual", "images/sharpie/sharpie-spiritual-kemono-player-channels.png", 1254, 1254, "player-channels"),
 		new SharpieArt("sharpie-spiritual-chibi-administrator-walkthrough", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-spiritual-chibi-administrator-rules", "chibi", "Spiritual", "images/sharpie/sharpie-spiritual-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),

@@ -2,7 +2,9 @@
 .admin-onboarding h1 { font-size: 2rem; }
 .admin-onboarding p { line-height: 1.65; max-width: 70ch; margin-block: .75rem; }
 .admin-checklist { margin-top: 2rem; padding-left: 1.5rem; }
-.admin-checklist li { border-top: 1px solid var(--border); padding: 1.25rem 0; }
+.admin-checklist li { border-top: 1px solid var(--border); padding: 1.25rem 0; display: flow-root; }
+.admin-topic-mascot { float: right; width: 7rem; height: 7rem; object-fit: contain; margin: 0 0 1rem 1.25rem; }
+.admin-topic-mascot-reduced { width: 2.5rem; height: 2.5rem; }
 .admin-checklist h2 { font-size: 1.25rem; }
 .admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 .admin-check-actions button { padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
@@ -12,4 +14,5 @@
 @container page (max-width: 48rem) {
     .admin-onboarding { padding: 1rem; }
     .admin-check-actions { flex-direction: column; align-items: stretch; }
+    .admin-topic-mascot:not(.admin-topic-mascot-reduced) { width: 5rem; height: 5rem; margin-left: .75rem; }
 }

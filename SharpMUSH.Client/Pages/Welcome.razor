@@ -114,7 +114,7 @@
         : Lessons[CurrentIndex];
     private string Destination => LocalReturn(ReturnUrl);
     private string ResumeUrl => "/welcome?returnUrl=" + Uri.EscapeDataString(Destination);
-    private SharpieArt? Art => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery);
+    private SharpieArt? Art => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery, topic: $"player-{Current.Id}");
     private bool JourneyCompleted => Lessons.All(lesson => Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));
     private SharpieArt? HeaderArt => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery,
         JourneyCompleted ? SharpieArtMoment.Completion : SharpieArtMoment.Welcome);

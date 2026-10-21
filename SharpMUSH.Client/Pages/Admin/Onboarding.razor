@@ -18,7 +18,12 @@
         <ol class="admin-checklist">
             @foreach (var step in GuideLocalization.Administrator(Loc))
             {
-                <li>
+                <li data-art-topic="@($"administrator-{step.Id}")">
+                    @if (TopicArt(step.Id) is { } art)
+                    {
+                        <img class="admin-topic-mascot @(Guide.Progress.Imagery == GuideImagery.Reduced ? "admin-topic-mascot-reduced" : "")"
+                             src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" loading="lazy" />
+                    }
                     <h2>@step.Title</h2><p>@step.Body</p>
                     @if (step.ActionUrl is not null && step.Id != "identity") { <a href="@step.ActionUrl">@step.ActionLabel</a> }
                     <p class="admin-check-state">@(Guide.Progress.CompletedStepIds.Contains(step.Id) ? Loc["GuideAdminVerified"] : Guide.Progress.SkippedStepIds.Contains(step.Id) ? Loc["GuideAdminDeferred"] : Loc["GuideAdminTodo"])</p>
@@ -36,6 +41,9 @@
 </div>
 
 @code {
+    private SharpieArt? TopicArt(string step) => SharpieArtCatalog.Resolve(
+        Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre,
+        Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"administrator-{step}");
     protected override async Task OnInitializedAsync() { Guide.Changed += Changed; await Reload(); }
     private Task Reload() => Guide.LoadAsync(GuideJourney.Administrator);
     private Task IdentitySaved() => Guide.CompleteStepAsync("identity");
