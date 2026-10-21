@@ -172,6 +172,18 @@ public class DatabaseFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
 	}
 
+	/// <summary><c>fun_sql_escape</c> (<c>src/sql.c:345-348</c>) refuses a caller without SQL_OK.</summary>
+	[Test]
+	public async Task Test_Sqlescape_NeedsSqlOk()
+	{
+		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services,
+			WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>(), ConnectionService, "SqlEscapeMortal");
+		var result = await WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle)
+			.EvaluateAsync(MarkupText.Plain("sqlescape(text)"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+	}
+
 	[Test]
 	[Arguments("sqlescape(test_string_no_special_chars)", "test_string_no_special_chars")]
 	public async Task Test_Sqlescape_NoSpecialChars(string str, string expected)
