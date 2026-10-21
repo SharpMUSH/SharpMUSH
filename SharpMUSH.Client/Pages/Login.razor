@@ -2,6 +2,7 @@
 @layout OnboardingLayout
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Authorization
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @inject AccountAuthService AccountAuth
@@ -44,7 +45,7 @@
                                Disabled="_busy" OnClick="LoginAsync" Class="login-submit"
                                Style="font-weight:600;font-size:0.9375rem;height:42px;">
                         @if (_busy) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
-                        @Loc["Connect"]
+                        @Loc["AuthSignIn"]
                     </MudButton>
 
                     @if (_passkeysSupported)
@@ -70,7 +71,7 @@
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
                                   Disabled="_busy" />
                     <MudTextField @bind-Value="_regPassword" Label="@Loc["AuthPassword"]"
-                                  InputType="InputType.Password"
+                                  InputType="InputType.Password" HelperText="@Loc["AuthPasswordTooShort"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
                                   Disabled="_busy" />
@@ -236,6 +237,11 @@
         if (string.IsNullOrWhiteSpace(_regUsername) || string.IsNullOrWhiteSpace(_regPassword))
         {
             _error = Loc["AuthUsernamePasswordRequired"];
+            return;
+        }
+        if (!AccountPasswordRule.Accepts(_regPassword))
+        {
+            _error = Loc["AuthPasswordTooShort"];
             return;
         }
         _busy = true;

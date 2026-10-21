@@ -306,4 +306,20 @@ public class CommandMatchParityTests
 		await Run(owner, $"@set {child}=LISTEN_PARENT");
 		await Assert.That(await Found(owner, $"lsearch(me,listen,plugh{id} now)")).Contains(child.Number);
 	}
+
+	/// <summary>
+	/// A built-in is abbreviated only to a prefix no other command shares (<c>ptab_find</c>,
+	/// <c>src/ptab.c</c>). <c>s</c> begins <c>say</c>, <c>score</c>, <c>semipose</c> and more, so a player in
+	/// a room with no <c>s</c> exit is told Huh?, and nothing is said aloud.
+	/// </summary>
+	[Test]
+	public async Task ALoneSharedPrefix_IsHuh_NotTheShortestCommand()
+	{
+		var player = await Player("AbbrevS");
+
+		var told = await Told(player, "s");
+
+		await Assert.That(told).Contains(Huh);
+		await Assert.That(told.Any(line => line.StartsWith("You say", StringComparison.Ordinal))).IsFalse();
+	}
 }

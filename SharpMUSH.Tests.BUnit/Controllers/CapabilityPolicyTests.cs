@@ -51,7 +51,7 @@ public class CapabilityPolicyTests
 	public async Task RefusedAssignmentAnswersWithTheRefusalKind(RoleRefusalKind kind, int status)
 	{
 		var management = Substitute.For<IRoleManagementService>();
-		management.AssignAsync(new CapabilityActor("a"), "b", "operator", Arg.Any<CancellationToken>())
+		management.AssignAsync(new CapabilityActor("a"), "node_accounts/b", "operator", Arg.Any<CancellationToken>())
 			.Returns(new RoleOutcome<Success>(new RoleRefusal(kind, "no")));
 		var result = await Controller(management).AssignRole("b", "operator");
 		await Assert.That(result).IsAssignableTo<ObjectResult>();
@@ -62,7 +62,7 @@ public class CapabilityPolicyTests
 	public async Task AcceptedAssignmentIsOk()
 	{
 		var management = Substitute.For<IRoleManagementService>();
-		management.AssignAsync(new CapabilityActor("a"), "b", "operator", Arg.Any<CancellationToken>())
+		management.AssignAsync(new CapabilityActor("a"), "node_accounts/b", "operator", Arg.Any<CancellationToken>())
 			.Returns(new RoleOutcome<Success>(new Success()));
 		await Assert.That(await Controller(management).AssignRole("b", "operator")).IsTypeOf<OkResult>();
 	}

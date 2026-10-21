@@ -75,7 +75,7 @@
             <span class="phosphor-lang"><LanguagePicker /></span>
             <button class="@($"phosphor-icon-btn{(_terminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     @onclick="ToggleTerminal" aria-pressed="@(_terminalOpen ? "true" : "false")"
-                    aria-label="@Loc["NavCommandTerminal"]" title="@(_terminalOpen ? Loc["NavCloseTerminal"] : Loc["NavOpenTerminal"])">
+                    aria-label="@Loc["NavCommandTerminal"]" title="@Loc["NavCommandTerminal"]">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
         </header>
@@ -135,7 +135,7 @@
                     @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
                 }
                 @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
-                @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["NavCharsShort"])
+                @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
                         aria-expanded="@(_mobileNavOpen ? "true" : "false")" @onclick="ToggleMobileNav">

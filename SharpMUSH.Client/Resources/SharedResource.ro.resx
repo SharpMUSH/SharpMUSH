@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Gestionare cont</value>
+    <value>Contul meu</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# personaj înregistrat} few {# personaje înregistrate} other {# de personaje înregistrate}}</value>
     <comment>MT — ICU categories one+few+other; the "de" form now covers 20+</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Pers.</value>
-    <comment>MT — short nav label for "characters"; abbreviated to fit fixed-width chrome</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Închidere terminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>terminal de comenzi</value>
+    <value>Terminal de comenzi</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Deschidere terminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Acest joc nu păstrează istoricul mesajelor, așa că se văd doar mesajele din această vizită.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Înapoi la scenă</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Înapoi la joc</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Joc</value>

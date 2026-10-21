@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>账号管理</value>
+    <value>我的账号</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,10 +1869,6 @@
     <value>{count, plural, other {已注册 # 个角色}}</value>
     <comment>MT — Chinese has a single CLDR plural category, so one `other` branch is correct.</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>角色</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>关闭终端</value>
     <comment>MT</comment>
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>在线</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>打开终端</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>本游戏不保存私信记录，因此只显示本次访问期间的私信。</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>返回场景</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>返回游戏</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>游戏</value>

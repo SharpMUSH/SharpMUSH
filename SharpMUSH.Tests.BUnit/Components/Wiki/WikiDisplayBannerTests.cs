@@ -81,7 +81,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 	private static readonly string BodyHtmlWithoutLeadImage =
 		BodyHtml.Replace("<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"A ward of slate roofs beside the harbour\" loading=\"lazy\" /></p>", string.Empty);
 
-	private static WikiArticle Ward(string? image, string? html = null) =>
+	private static WikiArticle Ward(string? image, string? html = null, bool canEdit = true) =>
 		new("Harbour Ward", "![Harbour Ward](/api/wiki-assets/h/ward.jpg)\n\nIntro\n\n## Geography\n\ntext\n\n## Notable residents\n\ntext", image, html ?? BodyHtml)
 		{
 			Id = "1",
@@ -93,7 +93,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 			LastEditedBy = "Ilsa Varn",
 			UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-12),
 			// What the server says this reader may do; the Edit button follows it.
-			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: true, Delete: false, Manage: false),
+			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: canEdit, Delete: false, Manage: false),
 		};
 
 	private IRenderedComponent<WikiDisplay> RenderWard(string? image = "/api/wiki-assets/h/ward.jpg", bool embedded = false) =>
@@ -313,5 +313,14 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".wiki-page-aside").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-capsule").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".wiki-article-body").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AReaderWhoCannotEdit_IsNotToldAnyoneCanEdit()
+	{
+		var cut = RenderArticle(Ward("/api/wiki-assets/h/ward.jpg", canEdit: false));
+
+		await Assert.That(cut.Find(".kit-banner-secondary").TextContent).DoesNotContain("anyone can edit")
+			.Because("the note answers whether this reader can edit, and this one has no Edit button");
 	}
 }

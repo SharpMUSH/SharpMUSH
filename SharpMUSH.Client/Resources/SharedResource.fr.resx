@@ -503,7 +503,7 @@
     <value>Aucun personnage</value>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Gestion du compte</value>
+    <value>Mon compte</value>
   </data>
   <data name="AuthLogout" xml:space="preserve">
     <value>Déconnexion</value>
@@ -2517,17 +2517,11 @@
   <data name="NavSearchPlaceholder" xml:space="preserve">
     <value>Rechercher…</value>
   </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Ouvrir le terminal</value>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Fermer le terminal</value>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>terminal de commande</value>
-  </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Persos</value>
+    <value>Terminal de commande</value>
   </data>
   <data name="NavMenuLabel" xml:space="preserve">
     <value>Menu</value>
@@ -4525,13 +4519,13 @@
     <value>Rejoindre #{0}</value>
   </data>
   <data name="NavPlayChannelsGag" xml:space="preserve">
-    <value>Bâillonner #{0}</value>
+    <value>Mettre #{0} en sourdine</value>
   </data>
   <data name="NavPlayChannelsGagged" xml:space="preserve">
-    <value>Bâillonné : vous restez sur le canal mais n'entendez rien. Sélectionnez pour l'entendre à nouveau.</value>
+    <value>En sourdine : vous restez sur le canal mais n'entendez rien. Sélectionnez pour l'entendre à nouveau.</value>
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
-    <value>Bâillonner : rester sur le canal sans rien entendre.</value>
+    <value>Mettre en sourdine : rester sur le canal sans rien entendre.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Le jeu n'a pas effectué ce changement.</value>
@@ -4713,8 +4707,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ce jeu ne conserve pas l'historique des messages privés : seuls ceux de cette visite sont affichés.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Retour à la scène</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Retour au jeu</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Jouer</value>

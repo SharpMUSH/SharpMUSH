@@ -92,4 +92,22 @@ public class AccountModeRefusalTests
 			await DisconnectAsync(handle);
 		}
 	}
+
+	[Test]
+	public async ValueTask Make_WhenNeverAuthenticated_PointsToRegister()
+	{
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
+		try
+		{
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make Newbie secretpassword"));
+
+			await Assert.That(Saw(handle, LoginPrompt)).IsTrue();
+			await Assert.That(Saw(handle, "register <name> [email] <password>")).IsTrue()
+				.Because("a newcomer who read make on the connect screen has no account to log in to yet");
+		}
+		finally
+		{
+			await DisconnectAsync(handle);
+		}
+	}
 }

@@ -44,7 +44,7 @@
                     }
                 </NavLink>
             }
-            <FeatureGate Feature="@GameFeatures.Scenes">@NavItem("/scenes", Icons.Material.Filled.Movie, Loc["SceneArchive"])</FeatureGate>
+            <FeatureGate Feature="@GameFeatures.Scenes">@NavItem("/scenes", Icons.Material.Filled.Theaters, Loc["SceneArchive"])</FeatureGate>
             @if (_characterActive)
             {
                 @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])
@@ -118,7 +118,7 @@
             <span class="phosphor-lang"><LanguagePicker /></span>
             <button type="button" class="@($"phosphor-icon-btn{(TerminalOpen ? " phosphor-icon-btn--active" : "")}")"
                     aria-pressed="@(TerminalOpen ? "true" : "false")" aria-label="@Loc["NavCommandTerminal"]"
-                    title="@(TerminalOpen ? Loc["NavCloseTerminal"] : Loc["NavOpenTerminal"])" @onclick="OnToggleTerminal">
+                    title="@Loc["NavCommandTerminal"]" @onclick="OnToggleTerminal">
                 <MudIcon Icon="@Icons.Material.Filled.Terminal" Style="font-size:1.125rem;" />
             </button>
         </div>
