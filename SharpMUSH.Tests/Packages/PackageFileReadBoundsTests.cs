@@ -23,7 +23,7 @@ public class PackageFileReadBoundsTests
 		public GitPackageSourceService Service() => new(new PackageManifestService(), Cache);
 
 		/// <summary>The service's clone of <see cref="Origin"/>, at the path it keeps it.</summary>
-		public string Cached => Path.Combine(Cache,
+		public string Cached => Path.Join(Cache,
 			Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(Origin)))[..16].ToLowerInvariant());
 
 		public void Dispose() => Directory.Delete(Path.GetDirectoryName(Origin)!, recursive: true);
@@ -31,8 +31,8 @@ public class PackageFileReadBoundsTests
 
 	private static Fixture NewFixture()
 	{
-		var root = Path.Combine(Path.GetTempPath(), $"sharpmush-filebounds-{Guid.NewGuid():N}");
-		var fixture = new Fixture(Path.Combine(root, "origin"), Path.Combine(root, "cache"));
+		var root = Path.Join(Path.GetTempPath(), $"sharpmush-filebounds-{Guid.NewGuid():N}");
+		var fixture = new Fixture(Path.Join(root, "origin"), Path.Join(root, "cache"));
 		Directory.CreateDirectory(fixture.Origin);
 		Git(fixture.Origin, "init", "-b", "main");
 		Git(fixture.Origin, "config", "user.email", "test@example.com");
@@ -64,7 +64,7 @@ public class PackageFileReadBoundsTests
 
 	private static void Write(Fixture fixture, string path, byte[] bytes)
 	{
-		var full = Path.Combine(fixture.Origin, path);
+		var full = Path.Join(fixture.Origin, path);
 		Directory.CreateDirectory(Path.GetDirectoryName(full)!);
 		File.WriteAllBytes(full, bytes);
 	}
@@ -80,10 +80,10 @@ public class PackageFileReadBoundsTests
 	private static void RemoveFromClone(Fixture fixture, string path)
 	{
 		var id = Git(fixture.Cached, "rev-parse", $"HEAD:{path}");
-		var packs = Path.Combine(fixture.Cached, ".git", "objects", "pack");
+		var packs = Path.Join(fixture.Cached, ".git", "objects", "pack");
 		foreach (var pack in Directory.Exists(packs) ? Directory.GetFiles(packs, "*.pack") : [])
 		{
-			var moved = Path.Combine(Path.GetDirectoryName(fixture.Origin)!, Path.GetFileName(pack));
+			var moved = Path.Join(Path.GetDirectoryName(fixture.Origin)!, Path.GetFileName(pack));
 			File.Move(pack, moved);
 			foreach (var index in Directory.GetFiles(packs))
 			{
@@ -102,7 +102,7 @@ public class PackageFileReadBoundsTests
 			process.WaitForExit();
 		}
 
-		File.Delete(Path.Combine(fixture.Cached, ".git", "objects", id[..2], id[2..]));
+		File.Delete(Path.Join(fixture.Cached, ".git", "objects", id[..2], id[2..]));
 	}
 
 	[Test]
@@ -178,7 +178,7 @@ public class PackageFileReadBoundsTests
 		var directory = Directory.CreateTempSubdirectory("sharpmush-filebounds-").FullName;
 		try
 		{
-			await File.WriteAllBytesAsync(Path.Combine(directory, "big.md"), new byte[2048]);
+			await File.WriteAllBytesAsync(Path.Join(directory, "big.md"), new byte[2048]);
 			var files = new DirectoryPackageFileSource(directory);
 
 			await Assert.That((await files.ReadFileAsync("big.md", 1024)).Expect<PackageFileTooLarge>().Length).IsEqualTo(2048);
