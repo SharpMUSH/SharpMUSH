@@ -262,7 +262,7 @@ Raya      5m
 
 ### Lists from other functions
 
-With lists from other functions, set `delim` to the space they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. A cell holding a space then needs another delimiter, such as a newline; see [datatable() delimiters].
+With lists from other functions, set `delim` to the delimiter they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. A cell holding a space then needs another delimiter, such as a newline; see [datatable() delimiters].
 
 ::: seealso
 - [DATATABLE()]
