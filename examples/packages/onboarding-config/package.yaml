@@ -1,0 +1,65 @@
+format: "1.10"
+package: onboarding-config
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the checklist's settings into +config: registers the Onboarding object with the +config registry, so staff choose the steps and when the list shows with +config onboarding."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [onboarding, config, settings, bridge]
+category: Essentials
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. The onboarding package declares its settings on
+# the Onboarding object as DATA`CONFIG`<NAME>, with their types and limits, and reads them with v() whether or not
+# +config is installed. This package is the one leaf that tells the +config registry where they are, and the +help
+# topic that says how to use them.
+depends:
+  - package: onboarding
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/onboarding/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`ONBOARDING: |-
+        {{onboarding/guide}}
+
+  # +help welcome staff, beside the onboarding package's own topics. Bodies are evaluated, so brackets, parentheses
+  # and percent signs are escaped.
+  - ref: config_help
+    target: "{{onboarding/onboarding_help}}"
+    attributes:
+      HELP`WELCOME`STAFF: |-
+        Staff who can change the game's configuration \(the `config.admin` permission\) choose the steps and settings with `+config`:
+
+        - `+config onboarding/steps` lists the steps, and `+config onboarding/steps/<step>` shows one.
+        - `+config/add onboarding/steps/rules=Read the house rules` adds a step. Players tick it off themselves.
+        - `+config onboarding/steps/rules/hint=The Policies page on the wiki.` sets how to do it, in a line.
+        - `+config onboarding/steps/rules/detail=<text>` sets more about it, up to 1,000 characters, which players read with `+welcome <number>`.
+        - `+config onboarding/steps/rules/order=20` sets where it comes, lowest first.
+        - `+config/remove onboarding/steps/approval` takes one away, such as approval on a game that does not approve characters.
+
+        ## Settings
+
+        - `login`: when the list shows at login. `open` \(every login while a step is open, the default\), `first` \(the first login only\) or `off`.
+        - `title`: the list's title. Getting started by default.
+        - `intro`: the line above the steps. Empty shows none.
+
+        Example:
+
+        ```
+        > +config/add onboarding/steps/rules=Read the house rules
+        \[CONFIG\] Done: Added onboarding/steps/rules. +config onboarding/steps/rules shows it.
+        ```
+
+        Output: one line saying what was added and how to see it.

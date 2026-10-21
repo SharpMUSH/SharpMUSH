@@ -293,6 +293,10 @@
       <Link>BundledPackages\alts.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.alts.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\onboarding\README.md">
+      <Link>BundledPackages\onboarding.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\softcode-editor\package.yaml">
       <Link>BundledPackages\softcode-editor.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.softcode-editor.package.yaml</LogicalName>
@@ -334,6 +338,22 @@
     <EmbeddedResource Include="..\examples\packages\scene-config\package.yaml">
       <Link>BundledPackages\scene-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\onboarding\package.yaml">
+      <Link>BundledPackages\onboarding.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\onboarding-help\package.yaml">
+      <Link>BundledPackages\onboarding-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\onboarding-config\package.yaml">
+      <Link>BundledPackages\onboarding-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\onboarding-chargen\package.yaml">
+      <Link>BundledPackages\onboarding-chargen.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.onboarding-chargen.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- Shipped but NOT installed at first boot: the offline catalogue an admin can install
          from without a git remote. See BundledPackages.Descriptor.InstallAtFirstBoot. -->

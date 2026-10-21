@@ -1,0 +1,38 @@
+format: "1.10"
+package: onboarding-chargen
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Joins the checklist to character applications: the Get approved step says where the player's +app application stands and what to do next."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [onboarding, chargen, approval, bridge]
+category: Characters
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. The onboarding package's approval step checks
+# isapproved() and says to ask staff; this adds the line that replaces that hint with the state of the player's
+# application on the Chargen Store. Uninstalling it brings the plain hint back; neither package changes.
+depends:
+  - package: onboarding
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/onboarding/
+      branch: main
+  - package: chargen
+    version: ">=2.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/chargen/
+      branch: main
+
+objects:
+  # NOTE`APPROVAL runs as the Onboarding object, which is WIZARD and so reads the Chargen Store. %0 the player: the
+  # line under Get approved, or nothing once they are approved.
+  - ref: approval_note
+    target: "{{onboarding/guide}}"
+    attributes:
+      NOTE`APPROVAL:
+        value: |-
+          if(not(isapproved(%0)),switch(get({{chargen/store}}/APP`[u({{chargen/chargen}}/FUN`APP`KEY,%0)]`STATE),,+app starts your application.,draft,Your application is a draft. +app/submit sends it to staff.,submitted,Staff have your application. +app shows where it stands.,changes,Staff asked for changes. +app shows what they said.,waitlist,Approved. You get a place when one opens.,retired,Your application was retired. Ask staff about it.,+app shows your application.))
+        flags: [funsyntax]
