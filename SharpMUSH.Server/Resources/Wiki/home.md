@@ -6,10 +6,10 @@ by any authorised user.
 :::
 
 ## Getting started
-- Connect with a MU* client on port **4201**
-- Or use the terminal panel below
-- Create a character with `create <name> <password>`
-- Then log in with `connect <name> <password>`
+- Connect with a MU* client, or use the terminal on this site
+- Make an account with `register <name> [email] <password>`
+- Make a character with `make <character> <password>`
+- Next time, log in with `connect <character> <password>`
 
 ## About SharpMUSH
 SharpMUSH is a modern, open-source MUSH server written in .NET, targeting
