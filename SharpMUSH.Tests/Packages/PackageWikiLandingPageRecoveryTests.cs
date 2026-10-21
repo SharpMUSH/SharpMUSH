@@ -100,12 +100,17 @@ public class PackageWikiLandingPageRecoveryTests
 			services.GetRequiredService<IMediator>(),
 			services.GetRequiredService<IPackageOperationGate>(),
 			services.GetRequiredService<ILockService>(),
-			services.GetRequiredService<IPackageDeclarationService>(),
-			services.GetRequiredService<IPackageSettingService>(),
-			services.GetRequiredService<IPackageWikiService>(),
+			// One world: every helper reads the same boundary registry the installer and its factory write through.
+			new PackageDeclarationService(services.GetRequiredService<IRoleRegistryService>(), registry,
+				services.GetRequiredService<IAccountClaimsInvalidator>(), services.GetRequiredService<IMediator>(),
+				services.GetRequiredService<IAttributeIndexBuilder>()),
+			new PackageSettingService(services.GetRequiredService<IConfigOptionWriter>(), registry),
+			new PackageWikiService(services.GetRequiredService<IWikiService>(), services.GetRequiredService<IWikiLocalizationService>(),
+				registry, services.GetRequiredService<IRoleRegistryService>()),
 			services.GetRequiredService<Lazy<IRuntimeRegistrationService>>(),
 			services.GetRequiredService<EngineVersion>(),
-			services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>());
+			services.GetRequiredService<Lazy<IPluginManager>>(), services.GetRequiredService<Lazy<IPluginAdministration>>(),
+			TestPackageWrites.Factory(services, (IApplicationRegistryService)database, registry));
 	}
 
 	[Test]

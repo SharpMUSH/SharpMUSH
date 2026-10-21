@@ -141,20 +141,27 @@ public class ImportPortalIsolationTests
 	}
 	// Failure diagnostics only: keep the strict file assertion and identify concurrent native writes
 	// without logging account/configuration values. All reads use the already-open live provider.
-	private sealed record CoreState(ulong TransactionId, IReadOnlyDictionary<string, string[]> Rows);
+	private sealed record CoreState(ulong TransactionId, IReadOnlyDictionary<string, string[]> Rows, string? CaptureError);
 
 	private CoreState CaptureCoreState() => Factory.Services.GetRequiredService<LightningDatabase>().Store.Read(tx =>
 	{
 		var id = ((IReadSnapshotTx)tx).ReadTransactionId;
 		var rows = new Dictionary<string, string[]>(StringComparer.Ordinal);
+		var oversized = new List<string>();
 		foreach (var table in Tables.All)
 		{
 			var entries = tx.Range(table, []).Take(10_001).Select(row =>
 				Convert.ToHexString(SHA256.HashData(row.Key)) + ":" + Convert.ToHexString(SHA256.HashData(row.Value))).ToArray();
-			if (entries.Length > 10_000) throw new InvalidOperationException("Import isolation diagnostic exceeds its per-table fixture bound.");
+			// A diagnostic must not replace the isolation assertion it explains: record the bound and keep going.
+			if (entries.Length > 10_000)
+			{
+				oversized.Add(table.Name);
+				entries = entries[..10_000];
+			}
 			rows.Add(table.Name, entries);
 		}
-		return new CoreState(id, rows);
+		return new CoreState(id, rows, oversized.Count == 0 ? null
+			: "Tables over the 10,000-entry diagnostic bound, truncated: " + string.Join(", ", oversized));
 	});
 
 	private ulong ReadSnapshotId() => Factory.Services.GetRequiredService<LightningDatabase>().Store.Read(tx => ((IReadSnapshotTx)tx).ReadTransactionId);
@@ -177,6 +184,7 @@ public class ImportPortalIsolationTests
 			AfterPost = post.TransactionId,
 			Ready = ready.TransactionId,
 			FinalHashEnd = finalId,
+			CaptureErrors = new[] { before.CaptureError, post.CaptureError, ready.CaptureError }.OfType<string>().ToArray(),
 			PostChanges = Changes(post),
 			ReadyChanges = Changes(ready)
 		});

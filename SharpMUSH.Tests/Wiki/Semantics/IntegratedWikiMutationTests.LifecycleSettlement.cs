@@ -193,11 +193,62 @@ public partial class IntegratedWikiMutationTests
 	public async Task OnlyHooksThatRanNoCodeCertify(PackageLifecycleOutcome hook, QueueOutcome queue, bool certifies)
 	{
 		var observation = new PackageOperationObservation(PackageTaskObservation.Returned, PackageTaskObservation.Returned,
-			PackageAdmissionObservation.Accepted, default, true, null, 1, 1, 0, 0, 1, 0,
+			PackageAdmissionObservation.Accepted, default, true, new QueueEntryRelease(1, QueueOutcome.Completed, 0), 1, 1, 0, 0, 1, 0,
 			new Dictionary<PackageLifecycleOutcome, long> { [hook] = 1 }, new Dictionary<QueueOutcome, long> { [queue] = 1 });
 		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation)).IsEqualTo(certifies);
 		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation with { HooksRefused = 1 })).IsFalse();
 		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation with { Body = PackageTaskObservation.Faulted })).IsFalse();
+	}
+
+	[Test]
+	public async Task OnlyAnObservedCompletedBodyReleaseCertifies()
+	{
+		var observation = new PackageOperationObservation(PackageTaskObservation.Returned, PackageTaskObservation.Returned,
+			PackageAdmissionObservation.Accepted, default, true, new QueueEntryRelease(1, QueueOutcome.Completed, 0), 0, 0, 0, 0, 0, 0,
+			new Dictionary<PackageLifecycleOutcome, long>(), new Dictionary<QueueOutcome, long>());
+		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation)).IsTrue();
+		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation with { SchedulerReleaseObservationSupported = false })).IsFalse();
+		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation with { BodyRelease = null })).IsFalse();
+		await Assert.That(SemanticWikiPackageOperationRunner.Certifies(observation with { BodyRelease = new(1, QueueOutcome.InvocationFailure, 1) })).IsFalse();
+	}
+
+	[Test]
+	public async Task CloseWaitsForInstallerWorkWhoseRootWasReleasedUnderIt()
+	{
+		await using var host = NewHost();
+		await host.OpenAsync();
+		var installer = host.Services.GetRequiredService<IPackageInstallService>();
+		var admission = (SemanticWikiPackageAdmission)installer;
+		var entered = NewSignal();
+		var release = NewSignal();
+		admission.BeforeInstallerWorkForTests = async () =>
+		{
+			entered.TrySetResult();
+			await release.Task;
+		};
+		Task<Result<PackageApplyResult>>? captured = null;
+		await Coordinated(host, async _ =>
+		{
+			// Joined while the root is live; the body then returns and the coordinator releases the root.
+			captured = Task.Run(async () =>
+			{
+				// It outlives the entry, whose own execution budget ends with it.
+				using var budget = new ExecutionBudget(Timeout.InfiniteTimeSpan);
+				using var scope = budget.Enter();
+				return await installer.ApplyAsync(MatrixManifest(), MatrixRequest());
+			});
+			await entered.Task;
+			return 0;
+		});
+		admission.BeforeInstallerWorkForTests = null;
+		try
+		{
+			await Assert.That(async () => await host.CloseAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10))).Throws<SemanticFixtureOperationInProgressException>();
+		}
+		finally { release.TrySetResult(); }
+		await captured!;
+		await Assert.That(Settled(host)).IsFalse();
+		await host.CloseAsync();
 	}
 
 	private static ulong PackageGeneration(SemanticWikiPrototypeHost host)
