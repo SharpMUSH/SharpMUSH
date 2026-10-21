@@ -1372,6 +1372,27 @@
   <data name="NowAppearOnWho" xml:space="preserve">
     <value>You now appear on the WHO list.</value>
   </data>
+  <data name="PlayerNoLongerAppearsOnWho" xml:space="preserve">
+    <value>{0} no longer appears on the WHO list.</value>
+  </data>
+  <data name="PlayerNowAppearsOnWho" xml:space="preserve">
+    <value>{0} now appears on the WHO list.</value>
+  </data>
+  <data name="ConnectionHidden" xml:space="preserve">
+    <value>Connection hidden.</value>
+  </data>
+  <data name="ConnectionUnhidden" xml:space="preserve">
+    <value>Connection unhidden.</value>
+  </data>
+  <data name="HideDescriptorNotFound" xml:space="preserve">
+    <value>Couldn't find that descriptor.</value>
+  </data>
+  <data name="HideDescriptorNotConnected" xml:space="preserve">
+    <value>Noone is connected to that descriptor.</value>
+  </data>
+  <data name="HidePlayerNotOnline" xml:space="preserve">
+    <value>That player is not online.</value>
+  </data>
   <data name="NeedAnnouncePower" xml:space="preserve">
     <value>Permission denied. You need the Announce power.</value>
   </data>

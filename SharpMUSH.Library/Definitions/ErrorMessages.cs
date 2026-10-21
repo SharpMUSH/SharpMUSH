@@ -1162,9 +1162,16 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
-		// PennMUSH bsd.c:7239,7246 (hide_player's self-target branch, the only one @hide implements).
+		// PennMUSH hide_player, bsd.c:7161-7251.
 		public const string NoLongerAppearOnWho = "You no longer appear on the WHO list.";
 		public const string NowAppearOnWho = "You now appear on the WHO list.";
+		public const string PlayerNoLongerAppearsOnWho = "{0} no longer appears on the WHO list.";
+		public const string PlayerNowAppearsOnWho = "{0} now appears on the WHO list.";
+		public const string ConnectionHidden = "Connection hidden.";
+		public const string ConnectionUnhidden = "Connection unhidden.";
+		public const string HideDescriptorNotFound = "Couldn't find that descriptor.";
+		public const string HideDescriptorNotConnected = "Noone is connected to that descriptor.";
+		public const string HidePlayerNotOnline = "That player is not online.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
 
 		public const string NoSuicideAllowed = "Sorry, no suicide allowed.";

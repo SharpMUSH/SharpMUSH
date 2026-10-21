@@ -1280,13 +1280,14 @@ This attribute can be set, but page does not use it yet: when someone cannot pag
 - [@idle]
 :::
 # @hide
-`@hide[/<switch>]`
+`@hide[/<switch>] <descriptor>`<br>
+`@hide[/<switch>] [<player>]`
 
 This command allows players to hide their online status. Hidden connections don't show up on WHO, in lwho(), etc, when used by players without see_all.
 
-It takes no argument and always affects all of your own connections. You must be a Wizard, Royalty, or have the Hide @power.
+The first form of this command affects the single connection specified by *\<descriptor\>* (as returned by ports(), or shown on the admin WHO). The second affects all connections for the given *\<player\>*, or the enactor if no *\<player\>* is given. You must be a Wizard, Royalty, or have the Hide @power to affect your own connections; only Wizards can affect other players' connections.
 
-The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhide them. If no switch is given, the command acts as a toggle: if all your connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
+The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide connections. If no switch is given, the command acts as a toggle: for a single descriptor, the hide status is reversed. For a player, if all their connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
 
 
 ::: seealso
@@ -1294,7 +1295,7 @@ The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhi
 - [who]
 - [LWHO()]
 - [LPORTS()]
-- [LPORTS()]
+- [PORTS()]
 :::
 # @idescribe
 # @oidescribe
