@@ -15,6 +15,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
+using System.Globalization;
 using System.Collections.Immutable;
 using MarkupString.Layout;
 using SharpMUSH.Library.Markup;
@@ -528,17 +529,13 @@ public partial class Commands
 
 	/// <summary>
 	/// PennMUSH <c>@hide</c> (<c>hide_player</c>, <c>bsd.c:7161-7251</c>): a permission-gated,
-	/// per-CONNECTION toggle — unrelated to the <c>DARK</c> object flag. With no target (the only
-	/// form SharpMUSH implements; Penn's numeric-descriptor and named-player-target forms are out of
-	/// scope), it acts on every one of the executor's own currently-open connections. A bare
-	/// <c>@hide</c> with no switch reproduces Penn's <c>status == 2</c> aggregate toggle
-	/// (<c>bsd.c:7224-7232</c>): hide all connections if any of them is currently visible, otherwise
-	/// unhide all of them (i.e. only flip to "all unhidden" once every connection was already
-	/// hidden). The notify text mirrors Penn's self-target branch (<c>bsd.c:7239,7246</c>) — not its
-	/// numeric-descriptor branch's "Connection hidden."/"Connection unhidden." (<c>bsd.c:7205,7207</c>),
-	/// which SharpMUSH doesn't implement here.
+	/// per-CONNECTION toggle, unrelated to the <c>DARK</c> object flag. A number is one descriptor
+	/// (found as <c>lookup_desc</c> finds it); a name is every connection of that player; nothing is
+	/// every connection of the executor's owner. Only a Wizard may hide another player's connections,
+	/// as the help says (Penn checks this for a descriptor only). Without a switch it toggles: one
+	/// descriptor flips, and a player's connections all hide unless every one is already hidden.
 	/// </summary>
-	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 0, ParameterNames = ["on-off"])]
+	[SharpCommand(Name = "@HIDE", Switches = ["NO", "OFF", "YES", "ON"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["descriptor-or-player"])]
 	public async ValueTask<Option<CallState>> Hide(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -550,37 +547,108 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var playerRef = executor.Object().DBRef;
+		bool? hide = switches.Contains("YES") || switches.Contains("ON") ? true
+			: switches.Contains("NO") || switches.Contains("OFF") ? false
+			: null;
+		var victim = parser.CurrentState.Arguments.TryGetValue("0", out var arg)
+			? arg.Message?.ToPlainText().Trim() ?? string.Empty
+			: string.Empty;
+
+		if (victim.Length == 0)
+		{
+			var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+			return await HidePlayerAsync(executor, owner.Object.DBRef, hide);
+		}
+
+		if (long.TryParse(victim, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var handle))
+		{
+			return await HideDescriptorAsync(executor, handle, hide);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, victim, HideMatchFlags) switch
+		{
+			AnySharpObject and SharpPlayer player => await HideOtherPlayerAsync(executor, player, hide),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
+
+	/// <summary><c>MAT_ABSOLUTE | MAT_PMATCH | MAT_ME | MAT_TYPE</c> with <c>TYPE_PLAYER</c>.</summary>
+	private const LocateFlags HideMatchFlags = LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference
+		| LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch | LocateFlags.MatchMeForLooker;
+
+	private async ValueTask<Option<CallState>> HideOtherPlayerAsync(AnySharpObject executor, SharpPlayer player, bool? hide)
+	{
+		if (player.Object.DBRef != executor.Object().DBRef && !await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return CallState.Empty;
+		}
+
+		return await HidePlayerAsync(executor, player.Object.DBRef, hide);
+	}
+
+	private async ValueTask<Option<CallState>> HideDescriptorAsync(AnySharpObject executor, long handle, bool? hide)
+	{
+		var connection = ConnectionService.Get(handle);
+		var privWho = await executor.IsPriv() || await executor.IsSee_All();
+		if (connection is null || !privWho && connection.Ref != executor.Object().DBRef)
+		{
+			await NotifyService.NotifyLocalized(executor, privWho
+				? nameof(ErrorMessages.Notifications.HideDescriptorNotFound)
+				: nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return CallState.Empty;
+		}
+
+		if (connection.Ref != executor.Object().DBRef && !await executor.IsWizard())
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			return CallState.Empty;
+		}
+
+		if (connection.Ref is null)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HideDescriptorNotConnected), executor);
+			return CallState.Empty;
+		}
+
+		var hidden = hide ?? !connection.IsHidden;
+		ConnectionService.Update(handle, "Hidden", hidden ? "1" : "0");
+		await NotifyService.NotifyLocalized(executor, hidden
+			? nameof(ErrorMessages.Notifications.ConnectionHidden)
+			: nameof(ErrorMessages.Notifications.ConnectionUnhidden), executor);
+		return CallState.Empty;
+	}
+
+	private async ValueTask<Option<CallState>> HidePlayerAsync(AnySharpObject executor, DBRef playerRef, bool? hide)
+	{
 		var connections = await ConnectionService.Get(playerRef).ToListAsync();
-
-		bool shouldBeHidden;
-		if (switches.Contains("YES") || switches.Contains("ON"))
+		if (connections.Count == 0)
 		{
-			shouldBeHidden = true;
-		}
-		else if (switches.Contains("NO") || switches.Contains("OFF"))
-		{
-			shouldBeHidden = false;
-		}
-		else
-		{
-			// No switch = aggregate toggle: hide all connections unless every one of them is
-			// already hidden, in which case unhide all of them (bsd.c:7224-7232).
-			var allHidden = connections.Count != 0 && connections.All(c => c.IsHidden);
-			shouldBeHidden = !allHidden;
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HidePlayerNotOnline), executor);
+			return CallState.Empty;
 		}
 
+		var hidden = hide ?? connections.Any(c => !c.IsHidden);
 		foreach (var connection in connections)
 		{
-			ConnectionService.Update(connection.Handle, "Hidden", shouldBeHidden ? "1" : "0");
+			ConnectionService.Update(connection.Handle, "Hidden", hidden ? "1" : "0");
 		}
 
-		await NotifyService.NotifyLocalized(executor,
-			shouldBeHidden
+		if (playerRef == executor.Object().DBRef)
+		{
+			await NotifyService.NotifyLocalized(executor, hidden
 				? nameof(ErrorMessages.Notifications.NoLongerAppearOnWho)
-				: nameof(ErrorMessages.Notifications.NowAppearOnWho),
-			executor);
+				: nameof(ErrorMessages.Notifications.NowAppearOnWho), executor);
+			return CallState.Empty;
+		}
 
+		var name = await Mediator.Send(new GetObjectNodeQuery(playerRef)) is AnySharpObject target
+			? target.Object().Name
+			: playerRef.ToString();
+		await NotifyService.NotifyLocalized(executor, hidden
+			? nameof(ErrorMessages.Notifications.PlayerNoLongerAppearsOnWho)
+			: nameof(ErrorMessages.Notifications.PlayerNowAppearsOnWho), executor, name);
 		return CallState.Empty;
 	}
 
