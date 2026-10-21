@@ -9,7 +9,7 @@
 
 @if (!_redirecting)
 {
-    <PageTitle>@Slug — Wiki — SharpMUSH</PageTitle>
+    <PageTitle>@Slug — Wiki — <GameName /></PageTitle>
     <PalettePage Kind="wiki" Subject="@($"{Ns}/{Slug}")" Rows="@PaletteRows" />
 
     <WikiView @key="(Ns, Slug, Lang, ExpectedPageId)" Slug="@Slug" Namespace="@Ns"

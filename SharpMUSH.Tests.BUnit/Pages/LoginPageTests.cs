@@ -10,6 +10,7 @@ using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Tests.BUnit.Resources;
+using SharpMUSH.Tests.Shared;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
@@ -118,6 +119,55 @@ public class LoginPageRenderTests : BunitContext
 		await Assert.That(cut.FindAll("button.login-passkey").Count).IsEqualTo(supported ? 1 : 0);
 		if (supported)
 			await Assert.That(cut.Find("button.login-passkey").TextContent).Contains("AuthPasskeySignIn");
+	}
+
+	private sealed class SingleClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+	{
+		public HttpClient CreateClient(string name) =>
+			new(handler, disposeHandler: false) { BaseAddress = new Uri("https://localhost/") };
+	}
+
+	/// <summary>
+	/// Renders Login once the account session has been restored, so the page does not draw itself again (and
+	/// replace its handlers) between a test finding an element and acting on it.
+	/// </summary>
+	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.Login>> RenderSettledAsync()
+	{
+		await Services.GetRequiredService<AccountAuthService>().InitAsync();
+		return Render<SharpMUSH.Client.Pages.Login>();
+	}
+
+	/// <summary>
+	/// Enter straight after typing the password signs in with what was typed. The fields used to commit their
+	/// value on change, which comes after the keydown, so the first Enter found them empty.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Login_EnterAfterTyping_SubmitsWhatWasTyped()
+	{
+		SeedServices();
+		var wire = CapturingHttpHandler.WithJson(System.Net.HttpStatusCode.Unauthorized, """{"error":"Wrong password."}""");
+		Services.AddSingleton<IHttpClientFactory>(new SingleClientFactory(wire));
+		var cut = await RenderSettledAsync();
+
+		await cut.Find("#login-username").InputAsync(new ChangeEventArgs { Value = "Marguerite" });
+		await cut.Find("#login-password").InputAsync(new ChangeEventArgs { Value = "Wizard1996!" });
+		await cut.Find("#login-password").KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Enter" });
+
+		cut.WaitForAssertion(() => cut.Find("[role=alert]"), TimeSpan.FromSeconds(5));
+		await Assert.That(wire.LastRequest).IsNotNull();
+		await Assert.That(cut.Markup).DoesNotContain("AuthEnterCredentials");
+	}
+
+	/// <summary>A refused sign-in is announced: its alert has the alert role.</summary>
+	[TUnit.Core.Test]
+	public async Task Login_EmptySubmit_AnnouncesTheError()
+	{
+		SeedServices();
+		var cut = await RenderSettledAsync();
+
+		await cut.Find("button.login-submit").ClickAsync(new Microsoft.AspNetCore.Components.Web.MouseEventArgs());
+
+		await Assert.That(cut.Find("[role=alert]").TextContent).Contains("AuthEnterCredentials");
 	}
 
 	[TUnit.Core.Test]

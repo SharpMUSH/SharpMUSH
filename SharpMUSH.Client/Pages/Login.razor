@@ -7,7 +7,7 @@
 @inject AccountAuthService AccountAuth
 @inject ITerminalService Terminal
 
-<PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AuthSignIn"] — <GameName /></PageTitle>
 
 @* Single centered card — no marketing hero, no scrolling. Mirrors Setup.razor's visual family
    (logo + title above a card) inside OnboardingLayout's shell, which already supplies the
@@ -15,7 +15,7 @@
 <div class="login-page">
     <div class="login-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="login-logo" />
-        <h1 class="login-brand-title">@Loc["AppTitle"]</h1>
+        <h1 class="login-brand-title"><GameName /></h1>
     </div>
 
     <MudPaper Elevation="4" Class="login-card">
@@ -26,18 +26,18 @@
                     <MudTextField id="login-username" @bind-Value="_loginIdentifier" Label="@Loc["AuthUsernameOrEmail"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                                  Disabled="_busy" OnKeyDown="OnKeyDown" />
+                                  Disabled="_busy" Immediate="true" OnKeyDown="OnKeyDown" />
                     <MudTextField id="login-password" @bind-Value="_loginPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                                  Disabled="_busy" OnKeyDown="OnKeyDown" />
+                                  Disabled="_busy" Immediate="true" OnKeyDown="OnKeyDown" />
                     <MudCheckBox id="login-remember" @bind-Value="_rememberMe" Label="@Loc["AuthRememberMe"]"
                                  Color="Color.Primary" Dense="true" Class="mb-2" Disabled="_busy" />
 
                     @if (_error is not null)
                     {
-                        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" role="alert">@_error</MudAlert>
                     }
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"
@@ -79,7 +79,7 @@
 
                     @if (_error is not null)
                     {
-                        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3">@_error</MudAlert>
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="mb-3" role="alert">@_error</MudAlert>
                     }
 
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true"

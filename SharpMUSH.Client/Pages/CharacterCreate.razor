@@ -9,7 +9,7 @@
 @inject ICharacterUpgradeService Upgrade
 @inject NavigationManager Nav
 
-<PageTitle>@(Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"]) — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@(Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"]) — <GameName /></PageTitle>
 
 <div class="charcreate-page">
     <MudPaper Elevation="0" Class="charcreate-card pa-6">
