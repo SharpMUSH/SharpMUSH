@@ -2749,6 +2749,18 @@
   <data name="SitelockRuleNotImplemented" xml:space="preserve">
     <value>@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.</value>
   </data>
+  <data name="SitelockBadRegexpFormat" xml:space="preserve">
+    <value>Unable to add sitelock entry: {0} is not a valid regular expression.</value>
+  </data>
+  <data name="SitelockPlayerAddedFormat" xml:space="preserve">
+    <value>Sitelocked {0} known addresses for {1}</value>
+  </data>
+  <data name="SitelockPlayerNoAddressFormat" xml:space="preserve">
+    <value>Unable to sitelock {0}: No known ip/host to ban.</value>
+  </data>
+  <data name="SitelockPlayerRemovedFormat" xml:space="preserve">
+    <value>{0} sitelocks removed.</value>
+  </data>
   <data name="SitelockInvalidSyntax" xml:space="preserve">
     <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>
   </data>

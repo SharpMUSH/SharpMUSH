@@ -229,7 +229,7 @@ public partial class Commands
 			var hostToCheck = args["0"].Message.ToPlainText();
 
 			KeyValuePair<string, string[]>? matchingRule = sitelockRules.Rules
-				.FirstOrDefault(rule => SitelockMatcher.Matches(rule.Key, hostToCheck, hostToCheck));
+				.FirstOrDefault(rule => SitelockMatcher.Matches(rule.Key, rule.Value, hostToCheck, hostToCheck));
 
 			if (matchingRule.HasValue)
 			{
@@ -242,6 +242,11 @@ public partial class Commands
 			}
 
 			return CallState.Empty;
+		}
+
+		if (switches.Contains("PLAYER"))
+		{
+			return await SitelockPlayerAsync(parser, executor, args, switches);
 		}
 
 		// @sitelock/ban <pattern> - shorthand for !connect !create !guest
@@ -301,6 +306,11 @@ public partial class Commands
 			var rulePattern = args["0"].Message.ToPlainText();
 			var ruleFlags = args["1"].Message.ToPlainText()
 				.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+			if (!await SitelockRegexpCompilesAsync(executor, rulePattern, ruleFlags))
+			{
+				return new CallState(ErrorMessages.Returns.InvalidArguments);
+			}
+
 			await AddSitelockRuleAsync(executor, rulePattern, ruleFlags);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockRuleAddedFormat), executor, rulePattern, string.Join(" ", ruleFlags));
 			return CallState.Empty;
@@ -328,6 +338,104 @@ public partial class Commands
 		await Audit.RecordAsync(executor, AuditActions.SitelockAdd, AuditTargets.Of(AuditTargetKinds.Host, pattern),
 			string.Join(" ", flags));
 		await BanEnforcer.EnforceHostRuleAsync(pattern);
+	}
+
+	/// <summary>
+	/// PennMUSH refuses a <c>regexp</c> rule whose pattern does not compile (<c>add_access_sitelock</c>,
+	/// <c>src/access.c:549</c>).
+	/// </summary>
+	private async ValueTask<bool> SitelockRegexpCompilesAsync(AnySharpObject executor, string pattern, string[] flags)
+	{
+		if (!flags.Contains(SitelockMatcher.RegexpOption, StringComparer.OrdinalIgnoreCase) || SitelockMatcher.IsValidRegexp(pattern))
+		{
+			return true;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockBadRegexpFormat), executor, pattern);
+		return false;
+	}
+
+	/// <summary>
+	/// <c>@sitelock/player</c>: the rule is added for, or removed from, the player's <c>LASTIP</c> and
+	/// <c>LASTSITE</c> (PennMUSH <c>sitelock_player</c>, <c>src/wiz.c:1900</c>, and the
+	/// <c>SITELOCK_REMOVE</c> branch of <c>do_sitelock</c>). <c>/ban</c> and <c>/register</c> pick their
+	/// usual options; otherwise the options follow <c>=</c>.
+	/// </summary>
+	private async ValueTask<Option<CallState>> SitelockPlayerAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		Dictionary<string, CallState> args, IEnumerable<string> switches)
+	{
+		var name = args.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? string.Empty;
+		var options = args.GetValueOrDefault("1")?.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? [];
+		string[]? flags = switches.Contains("REMOVE") ? null
+			: switches.Contains("BAN") ? ["!connect", "!create", "!guest"]
+			: switches.Contains("REGISTER") ? ["!create", "register"]
+			: options;
+
+		if (flags is { Length: 0 })
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockInvalidSyntax), executor);
+			return new CallState(ErrorMessages.Returns.InvalidArguments);
+		}
+
+		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, SitelockPlayerMatchFlags) switch
+		{
+			AnySharpObject and SharpPlayer player => flags is null
+				? await RemovePlayerSitelocksAsync(executor, player)
+				: await AddPlayerSitelocksAsync(executor, player, flags),
+			AnySharpObject => throw new InvalidOperationException("A player lookup found something that is not a player."),
+			Error<CallState> error => error.Value
+		};
+	}
+
+	/// <summary><c>MAT_ABSOLUTE | MAT_PMATCH | MAT_TYPE</c> with <c>TYPE_PLAYER</c>.</summary>
+	private const LocateFlags SitelockPlayerMatchFlags = LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference
+		| LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.AbsoluteMatch;
+
+	private async ValueTask<string[]> KnownAddressesAsync(SharpPlayer player)
+	{
+		var addresses = new List<string>();
+		foreach (var attribute in (string[])["LASTIP", "LASTSITE"])
+		{
+			if (await Mediator.CreateStream(new GetAttributeQuery(player.Object.DBRef, [attribute])).LastOrDefaultAsync() is { } found
+				&& found.Value.ToPlainText().Trim() is { Length: > 0 } address)
+			{
+				addresses.Add(address);
+			}
+		}
+
+		return [.. addresses];
+	}
+
+	private async ValueTask<Option<CallState>> AddPlayerSitelocksAsync(AnySharpObject executor, SharpPlayer player, string[] flags)
+	{
+		var addresses = await KnownAddressesAsync(player);
+		if (addresses.Length == 0)
+		{
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockPlayerNoAddressFormat), executor,
+				player.Object.Name);
+			return CallState.Empty;
+		}
+
+		foreach (var address in addresses)
+		{
+			await AddSitelockRuleAsync(executor, address, flags);
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockPlayerAddedFormat), executor,
+			addresses.Length, player.Object.Name);
+		return CallState.Empty;
+	}
+
+	private async ValueTask<Option<CallState>> RemovePlayerSitelocksAsync(AnySharpObject executor, SharpPlayer player)
+	{
+		var removed = 0;
+		foreach (var address in await KnownAddressesAsync(player))
+		{
+			removed += await RemoveSitelockRuleAsync(executor, address) ? 1 : 0;
+		}
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SitelockPlayerRemovedFormat), executor, removed);
+		return CallState.Empty;
 	}
 
 	/// <summary>

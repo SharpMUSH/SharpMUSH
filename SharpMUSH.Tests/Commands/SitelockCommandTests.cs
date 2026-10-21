@@ -320,4 +320,105 @@ public class SitelockCommandTests
 		await Assert.That(await Valid(mortal.Handle, mortal.DbRef, ownName)).IsEqualTo("1").Because("a player may keep a name they already have");
 		await Assert.That(await Valid(1, WebAppFactoryArg.ExecutorDBRef, $"{stem}x")).IsEqualTo("1").Because("a wizard is exempt");
 	}
+
+	private async Task<TestIsolationHelpers.TestPlayer> PlayerWithAddressesAsync(string prefix, string? ip, string? site)
+	{
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>();
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, mediator, ConnectionService, prefix);
+		var god = (await HelperFunctions.GetGod(mediator)).Expect<SharpPlayer>();
+		foreach (var (name, value) in new[] { ("LASTIP", ip), ("LASTSITE", site) })
+		{
+			if (value is not null)
+			{
+				await mediator.Send(new SetAttributeCommand(player.DbRef, [name], MarkupText.Plain(value), god));
+			}
+		}
+
+		return player;
+	}
+
+	/// <summary>
+	/// <c>sitelock_player</c> (<c>src/wiz.c:1900</c>) adds the rule for the player's LASTIP and LASTSITE,
+	/// and <c>@sitelock/remove/player</c> removes the rules whose patterns are exactly those.
+	/// </summary>
+	[Test]
+	public async ValueTask Player_BansAndRemovesTheKnownAddresses()
+	{
+		var site = $"{TestIsolationHelpers.GenerateUniqueName("lastsite")}.test".ToLowerInvariant();
+		var ip = $"198.51.100.{Random.Shared.Next(1, 255)}";
+		var player = await PlayerWithAddressesAsync("SitelockPlayer", ip, site);
+
+		try
+		{
+			var heard = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+				() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/ban/player {player.Name}")).AsTask());
+
+			await Assert.That(heard).Contains($"Sitelocked 2 known addresses for {player.Name}");
+			var rules = Configuration.CurrentValue.SitelockRules.Rules;
+			await Assert.That(rules[ip]).IsEquivalentTo(["!connect", "!create", "!guest"]);
+			await Assert.That(rules[site]).IsEquivalentTo(["!connect", "!create", "!guest"]);
+
+			heard = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+				() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/remove/player {player.Name}")).AsTask());
+
+			await Assert.That(heard).Contains("2 sitelocks removed.");
+			rules = Configuration.CurrentValue.SitelockRules.Rules;
+			await Assert.That(rules.ContainsKey(ip)).IsFalse();
+			await Assert.That(rules.ContainsKey(site)).IsFalse();
+		}
+		finally
+		{
+			await CleanupRuleAsync(ip);
+			await CleanupRuleAsync(site);
+		}
+	}
+
+	[Test]
+	public async ValueTask Player_WithOptionsUsesThem()
+	{
+		var ip = $"198.51.100.{Random.Shared.Next(1, 255)}";
+		var player = await PlayerWithAddressesAsync("SitelockPlayerOpts", ip, null);
+
+		try
+		{
+			await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/player {player.Name}=!wizard suspect"));
+
+			await Assert.That(Configuration.CurrentValue.SitelockRules.Rules[ip]).IsEquivalentTo(["!wizard", "suspect"]);
+		}
+		finally
+		{
+			await CleanupRuleAsync(ip);
+		}
+	}
+
+	[Test]
+	public async ValueTask Player_WithoutAddressesSaysSo()
+	{
+		var player = await PlayerWithAddressesAsync("SitelockPlayerNone", null, null);
+
+		var heard = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+			() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock/ban/player {player.Name}")).AsTask());
+
+		await Assert.That(heard).Contains($"Unable to sitelock {player.Name}: No known ip/host to ban.");
+	}
+
+	/// <summary><c>add_access_sitelock</c> refuses a <c>regexp</c> rule that does not compile (<c>src/access.c:549</c>).</summary>
+	[Test]
+	public async ValueTask Regexp_RuleThatDoesNotCompileIsRefused()
+	{
+		var pattern = $"({TestIsolationHelpers.GenerateUniqueName("badre")}";
+
+		try
+		{
+			var heard = await MessagesWhile(WebAppFactoryArg.ExecutorDBRef,
+				() => Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@sitelock {pattern}=regexp !connect")).AsTask());
+
+			await Assert.That(heard).Contains($"Unable to add sitelock entry: {pattern} is not a valid regular expression.");
+			await Assert.That(Configuration.CurrentValue.SitelockRules.Rules.ContainsKey(pattern)).IsFalse();
+		}
+		finally
+		{
+			await CleanupRuleAsync(pattern);
+		}
+	}
 }
