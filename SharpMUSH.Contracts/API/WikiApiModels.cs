@@ -227,3 +227,9 @@ public record SetRequirementsRequest(IReadOnlyDictionary<string, IReadOnlyList<s
 /// <summary>One action's answer for <c>GET /api/wiki/{slug}/access</c>: whether it is allowed, and why.</summary>
 public record WikiAccessExplanationDto(string Action, bool Allowed, string Reason);
 
+/// <summary>
+/// The newest few pages of one category in one namespace, and how many pages that category holds there.
+/// </summary>
+/// <param name="Pages">The newest pages, newest first, the excluded page left out.</param>
+/// <param name="Total">Every page of the category in the namespace the caller may see, the excluded page included.</param>
+public sealed record WikiCategoryNewestDto(IReadOnlyList<WikiPageSummaryDto> Pages, int Total);

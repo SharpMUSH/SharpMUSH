@@ -166,22 +166,26 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 	}
 
-	/// <summary>Batch size for <see cref="GetAllByCategoryAsync"/>.</summary>
-	private const int CategoryBatch = 200;
-
 	/// <summary>
-	/// Every page in a category, read in batches. The server pages over the rows this caller may see,
-	/// so a batch shorter than the one asked for is the last. A failed request ends the listing too,
-	/// with what was read so far.
+	/// The <paramref name="take"/> most recently updated pages of a category in one namespace, leaving out
+	/// <paramref name="exclude"/>, and how many pages the category holds there. The server reads the rows;
+	/// only these come back. A failed request returns none.
 	/// </summary>
-	public async ValueTask<IReadOnlyList<WikiPageSummary>> GetAllByCategoryAsync(string category, string? lang = null)
+	public async ValueTask<(IReadOnlyList<WikiPageSummary> Pages, int Total)> GetNewestInCategoryAsync(
+		string category, string ns, string? exclude, int take, string? lang = null)
 	{
-		var all = new List<WikiPageSummary>();
-		for (var skip = 0; ; skip += CategoryBatch)
+		try
 		{
-			var batch = await GetByCategoryAsync(category, skip, CategoryBatch, lang);
-			all.AddRange(batch);
-			if (batch.Count < CategoryBatch) return all;
+			var http = httpClientFactory.CreateClient("api");
+			var dto = await http.GetFromJsonAsync<WikiCategoryNewestDto>(
+				$"api/wiki/category/{Uri.EscapeDataString(category)}/newest?ns={Uri.EscapeDataString(ns)}&take={take}"
+				+ (exclude is null ? "" : $"&exclude={Uri.EscapeDataString(exclude)}") + LangQuery(lang, first: false));
+			return dto is null ? ([], 0) : ([.. dto.Pages.Select(ToSummary)], dto.Total);
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "GetNewestInCategoryAsync failed for category={Category}", category);
+			return ([], 0);
 		}
 	}
 
