@@ -139,7 +139,9 @@ public partial class Functions
 		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor,
 			parser.CurrentState.Arguments["0"].Message,
 			parser.CurrentState.Arguments["1"].Message,
-			spoof);
+			spoof,
+			// fun_cemit (src/extchat.c:3454): silent unless the third argument is true.
+			silent: !(parser.CurrentState.Arguments.TryGetValue("2", out var noisy) && noisy.Message.Truthy()));
 	}
 
 	[SharpFunction(Name = "cflags", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
