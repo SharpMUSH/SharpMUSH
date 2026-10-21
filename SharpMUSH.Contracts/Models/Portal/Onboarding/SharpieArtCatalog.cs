@@ -10,6 +10,23 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-spiritual-pixel-administrator-rules", "pixel", "Spiritual", "images/sharpie/sharpie-spiritual-pixel-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-spiritual-pixel-administrator-identity", "pixel", "Spiritual", "images/sharpie/sharpie-spiritual-pixel-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-classical-fantasy-kemono-player-sign-in", "kemono", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-classical-fantasy-kemono-shared-welcome", "kemono", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-kemono-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-detective-anime-administrator-invite", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-invite.png", 1024, 1536, "administrator-invite"),
+		new SharpieArt("sharpie-detective-anime-administrator-walkthrough", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-detective-anime-administrator-capabilities", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-capabilities.png", 1224, 1285, "administrator-capabilities"),
+		new SharpieArt("sharpie-detective-anime-administrator-rules", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-rules.png", 1199, 1312, "administrator-rules"),
+		new SharpieArt("sharpie-detective-anime-administrator-joining", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-joining.png", 1241, 1268, "administrator-joining"),
+		new SharpieArt("sharpie-detective-anime-administrator-identity", "anime", "Detective", "images/sharpie/sharpie-detective-anime-administrator-identity.png", 1024, 1536, "administrator-identity"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-invite", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-walkthrough", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-capabilities", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-rules", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-joining", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-gothic-kemono-administrator-identity", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-gothic-kemono-shared-completion", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-detective-anime-shared-completion", "anime", "Detective", "images/sharpie/sharpie-detective-anime-shared-completion.png", 1024, 1536, "shared-completion"),
 		new SharpieArt("sharpie-detective-anime-player-continue", "anime", "Detective", "images/sharpie/sharpie-detective-anime-player-continue.png", 1024, 1536, "player-continue"),
 		new SharpieArt("sharpie-detective-anime-player-channels", "anime", "Detective", "images/sharpie/sharpie-detective-anime-player-channels.png", 1099, 1431, "player-channels"),
