@@ -39,7 +39,7 @@ Limits and other constants.
 - `max_named_qregs=<number>`: The maximum number of qregs except for a-z and 0-9. The limit is per-localize()-call.
 - `connect_fail_limit=<count>`: Once an IP address has failed this many logins in ten minutes, its login attempts are refused until the oldest failure is ten minutes old, from 1 to 100.
 - `idle_timeout=<time>`: The number of seconds a player can be idle before getting booted, from 0 to 86400. 0 means no limit.
-- `unconnected_idle_timeout=<time>`: The number of seconds a connection can sit at the login screen before getting booted, from 10 to 3600. The server does not enforce it yet.
+- `unconnected_idle_timeout=<time>`: The number of seconds a connection can sit at the login screen before getting booted, from 0 to 3600. 0 means no limit.
 
 ## Communication and economy limits
 
