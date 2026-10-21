@@ -671,6 +671,14 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// move.c:1085: the leader's follow lock, failing with the follower's location as the triad's.
+		if (!await PermissionService.PassesLock(executor, target, LockType.Follow))
+		{
+			await DidItService.FailLock(parser, executor, target, LockType.Follow,
+				MarkupText.Plain("You're not allowed to follow."), await executor.Where());
+			return CallState.Empty;
+		}
+
 		// PennMUSH add_follow (move.c:1246) writes both halves: FOLLOWING on the follower and
 		// FOLLOWERS on the leader. SharpMUSH's FOLLOWING holds one leader, so switching leaders has
 		// to come off the previous one's list first or the two lists drift apart.
@@ -690,8 +698,13 @@ public partial class Commands
 
 		await AddFollowerAsync(target, executor);
 
-		await NotifyService.Notify(executor, $"You are now following {target.Object().Name}.", executor);
-		await NotifyService.Notify(target, $"{executor.Object().Name} is now following you.", executor);
+		// add_follow (move.c:1253-1259): the leader is told, then the FOLLOW triad on the leader.
+		await NotifyService.Notify(target, $"{executor.Object().Name} begins following you.", executor);
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: target,
+			What: "FOLLOW", Def: MarkupText.Plain($"You begin following {target.Object().Name}."),
+			OWhat: "OFOLLOW",
+			AWhat: "AFOLLOW"));
 
 		return CallState.Empty;
 	}
@@ -701,6 +714,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> UnFollow(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var args = parser.CurrentState.Arguments;
 
 		var followingAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrFollowing,
 			IAttributeService.AttributeMode.Read, false);
@@ -711,6 +725,26 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		var leader = await LeaderOfAsync(executor);
+		AnySharpObject? named = null;
+		if (args.TryGetValue("0", out var nameArg) && !string.IsNullOrWhiteSpace(nameArg.Message?.ToPlainText()))
+		{
+			if (await LocateService.LocateAndNotifyIfInvalid(parser, executor, executor, nameArg.Message!.ToPlainText(),
+						LocateFlags.All) is not AnySharpObject target)
+			{
+				return CallState.Empty;
+			}
+
+			// move.c:1123.
+			if (leader is null || !leader.Object().DBRef.Equals(target.Object().DBRef))
+			{
+				await NotifyService.Notify(executor, $"You're not following {target.Object().Name}.", executor);
+				return CallState.Empty;
+			}
+
+			named = target;
+		}
+
 		// del_follow removes from both lists (move.c:1292).
 		var unfollowed = await StopFollowingAsync(executor);
 		if (unfollowed is Error<string> error)
@@ -719,7 +753,24 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		await NotifyService.Notify(executor, "You stop following.", executor);
+		if (leader is not null)
+		{
+			await NotifyService.Notify(leader, $"{executor.Object().Name} stops following you.", executor);
+		}
+
+		// Only unfollow <object> is del_follow's noisy path with the UNFOLLOW triad (move.c:1301-1307);
+		// a bare unfollow is clear_following, which tells the leader and nothing more (move.c:1132-1133).
+		if (named is null)
+		{
+			await NotifyService.Notify(executor, "You stop following anyone.", executor);
+			return CallState.Empty;
+		}
+
+		await DidItService.DidIt(parser, new DidItRequest(
+			Player: executor, Thing: named,
+			What: "UNFOLLOW", Def: MarkupText.Plain($"You stop following {named.Object().Name}."),
+			OWhat: "OUNFOLLOW",
+			AWhat: "AUNFOLLOW"));
 		return CallState.Empty;
 	}
 

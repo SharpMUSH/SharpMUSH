@@ -81,7 +81,7 @@ public class FollowCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowLeaderB");
 
 		var firstReport = await FollowAndReport(follower, first.DbRef);
-		await Assert.That(firstReport.Any(m => m.Contains("now following")))
+		await Assert.That(firstReport.Any(m => m.Contains("begin following")))
 			.IsTrue()
 			.Because($"FOLLOW must resolve the leader by name and report success; it said: {string.Join(" | ", firstReport)}");
 
@@ -96,7 +96,7 @@ public class FollowCommandTests
 			.Because("FOLLOWING is seeded wizard-flagged - that is the gate the second follow must cross");
 
 		var secondReport = await FollowAndReport(follower, second.DbRef);
-		await Assert.That(secondReport.Any(m => m.Contains("now following")))
+		await Assert.That(secondReport.Any(m => m.Contains("begin following")))
 			.IsTrue()
 			.Because($"the second FOLLOW must also resolve and report; it said: {string.Join(" | ", secondReport)}");
 
@@ -164,7 +164,7 @@ public class FollowCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "UnfollowLeader");
 
 		var report = await FollowAndReport(follower, leader.DbRef);
-		await Assert.That(report.Any(m => m.Contains("now following")))
+		await Assert.That(report.Any(m => m.Contains("begin following")))
 			.IsTrue()
 			.Because($"FOLLOW must resolve the leader by name and report success; it said: {string.Join(" | ", report)}");
 
@@ -198,7 +198,7 @@ public class FollowCommandTests
 		foreach (var follower in new[] { earlier, later })
 		{
 			var report = await FollowAndReport(follower, leader.DbRef);
-			await Assert.That(report.Any(m => m.Contains("now following")))
+			await Assert.That(report.Any(m => m.Contains("begin following")))
 				.IsTrue()
 				.Because($"FOLLOW must resolve the leader and report success; it said: {string.Join(" | ", report)}");
 		}
@@ -212,5 +212,52 @@ public class FollowCommandTests
 			MarkupText.Plain($"followers(#{leader.DbRef.Number})"))).ToPlainText();
 		await Assert.That(followers).IsEqualTo(later.DbRef.ToString())
 			.Because("del_follower takes the follower off the leader's list");
+	}
+	/// <summary>move.c:1085 — a follow lock the follower fails refuses the follow and writes nothing.</summary>
+	[Test]
+	public async ValueTask Follow_RefusedByTheLeadersFollowLock()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowLocked");
+		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowLockLeader");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@lock/follow #{leader.DbRef.Number}=#{leader.DbRef.Number}"));
+
+		var report = await FollowAndReport(follower, leader.DbRef);
+
+		await Assert.That(report).Contains("You're not allowed to follow.");
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse();
+	}
+
+	/// <summary>
+	/// add_follow and del_follow (move.c:1248, 1296): the leader is told, and the FOLLOW and UNFOLLOW
+	/// triads on the leader run, their messages replacing the defaults.
+	/// </summary>
+	[Test]
+	public async ValueTask FollowAndUnfollow_RunTheLeadersMessages()
+	{
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowMsg");
+		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowMsgLeader");
+		var token = TestIsolationHelpers.GenerateUniqueName("fmsg");
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&FOLLOW #{leader.DbRef.Number}=FOLLOW_{token}"));
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"&UNFOLLOW #{leader.DbRef.Number}=UNFOLLOW_{token}"));
+		var followerName = await NameOf(follower.DbRef);
+		var recorder = WebAppFactoryArg.Notifications;
+
+		var report = await FollowAndReport(follower, leader.DbRef);
+		await Assert.That(report).Contains($"FOLLOW_{token}");
+		await Assert.That(recorder.For(leader.DbRef)).Contains($"{followerName} begins following you.");
+
+		var before = recorder.CountFor(follower.DbRef);
+		await Parser.CommandParse(follower.Handle, ConnectionService,
+			MarkupText.Plain($"unfollow {await NameOf(leader.DbRef)}"));
+		await Assert.That(recorder.For(follower.DbRef).Skip(before)).Contains($"UNFOLLOW_{token}");
+		await Assert.That(recorder.For(leader.DbRef)).Contains($"{followerName} stops following you.");
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse();
 	}
 }
