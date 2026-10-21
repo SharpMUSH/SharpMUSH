@@ -7,12 +7,17 @@ public sealed class ExecutionBudget : IDisposable
 	private static readonly AsyncLocal<ExecutionBudget?> Ambient = new();
 	private readonly CancellationTokenSource _cancellation;
 	private readonly CancellationTokenSource _deadline;
+	// Read from the source once: a source's Token throws once it is disposed, and work that outlives
+	// the budget still asks for it.
+	private readonly CancellationToken _token;
 	private readonly CancellationToken _cancelledBy;
 	private readonly TimeProvider _clock;
 	private readonly long _started;
 	private readonly TimeSpan _duration;
 	// The deadline in Environment.TickCount64 milliseconds.
 	private readonly long _expiresAt;
+	// 0 while running, 1 once ended within the deadline, 2 once ended past it.
+	private int _ended;
 	public const string Error = "#-1 EXECUTION TIME LIMIT EXCEEDED";
 	public static ExecutionBudget? Current => Ambient.Value;
 	public static CancellationToken CurrentToken => Current?.Token ?? CancellationToken.None;
@@ -34,8 +39,9 @@ public sealed class ExecutionBudget : IDisposable
 		_cancellation = cancellationToken.CanBeCanceled
 			? CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _deadline.Token)
 			: _deadline;
+		_token = _cancellation.Token;
 	}
-	public CancellationToken Token => _cancellation.Token;
+	public CancellationToken Token => _token;
 	/// <summary>What cancels this budget other than its own deadline: a budget that replaces it for
 	/// part of the work (a timer of its own, not the rest of this one) still stops with it.</summary>
 	public CancellationToken CancelledBy => _cancelledBy;
@@ -45,7 +51,11 @@ public sealed class ExecutionBudget : IDisposable
 	// Timer callbacks and the clock can cross their boundary at different granularities. Every function call
 	// asks this several times, so it reads the coarse tick count rather than the precise clock: a tick or so
 	// of slack against the deadline timer, which still fires on time.
-	public bool IsExpired => _deadline.IsCancellationRequested || Environment.TickCount64 >= _expiresAt;
+	public bool IsExpired => Volatile.Read(ref _ended) switch
+	{
+		0 => _deadline.IsCancellationRequested || Environment.TickCount64 >= _expiresAt,
+		var ended => ended == 2
+	};
 	public bool IsCancelled => _cancellation.IsCancellationRequested;
 	public bool IsExceeded => IsExpired || IsCancelled;
 	public void ThrowIfExceeded()
@@ -58,7 +68,8 @@ public sealed class ExecutionBudget : IDisposable
 	public TimeSpan RemainingOrThrow()
 	{
 		var remaining = Remaining;
-		if (_deadline.IsCancellationRequested || remaining == TimeSpan.Zero) throw new OperationCanceledException(Error, Token);
+		var expired = Volatile.Read(ref _ended) == 0 ? _deadline.IsCancellationRequested || remaining == TimeSpan.Zero : IsExpired;
+		if (expired) throw new OperationCanceledException(Error, Token);
 		Token.ThrowIfCancellationRequested();
 		return remaining;
 	}
@@ -105,8 +116,12 @@ public sealed class ExecutionBudget : IDisposable
 	{
 		public void Dispose() => Ambient.Value = previous;
 	}
+	/// <summary>Ends the budget. Work that outlives it, such as a continuation or a <c>Task.Run</c> that captured
+	/// it as <see cref="Current"/>, sees it cancelled from here on, never disposed.</summary>
 	public void Dispose()
 	{
+		if (Interlocked.CompareExchange(ref _ended, IsExpired ? 2 : 1, 0) != 0) return;
+		_cancellation.Cancel();
 		if (!ReferenceEquals(_cancellation, _deadline)) _cancellation.Dispose();
 		_deadline.Dispose();
 	}
