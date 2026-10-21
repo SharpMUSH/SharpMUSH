@@ -88,6 +88,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
+			if (HasAdmittedReads(lease)) throw new SemanticFixtureOperationInProgressException();
 			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease) || !_initialized || !lease.IsInitialized || _poisoned
 				|| _ownership.IsRevoked || _ownership.IsQuarantined || lease.IsClosing || lease.NativeClosed || _phase != SemanticFixturePhase.Inactive
 				|| _legacyMutationsInFlight != 0 || _everMutatingPackageAdmitted || !_installerFenceInstalled || !_runnerFenceInstalled)

@@ -48,6 +48,13 @@ public partial class LightningDatabase
 		return Store.SettleFixturePackageAttemptAsync(lease, root);
 	}
 
+	/// <summary>Admits a semantic read on this provider's current issued lease; see <see cref="SemanticFixtureReadLease"/>.</summary>
+	internal SemanticFixtureReadLease AdmitSemanticRead(CancellationToken deadline)
+	{
+		if (_fixtureLease is not { } lease || _fixtureClosed) throw SemanticFixtureCapability.Unavailable();
+		return lease.Owner.AdmitRead(lease, deadline);
+	}
+
 	internal void PrepareSemanticFixtureClose()
 	{
 		Store.RequireExternalDisposal();

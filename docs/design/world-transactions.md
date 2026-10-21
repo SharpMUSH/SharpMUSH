@@ -167,6 +167,25 @@ was released takes an attempt of its own, which invalidates.
 Known gap, which leaves the world UNKNOWN rather than wrongly SETTLED: hooks that ran code stay
 UNKNOWN until queued descendants and command failures are observed.
 
+#### Reading a settled fixture
+
+A semantic read (`SemanticWikiReader`, internal) is admitted as a read lease on the exact issued
+lease; while one is admitted, close, reopen, revoke and activation refuse busy, and a lease that has
+begun closing admits no new read. The lease never holds a native transaction: the read runs in short
+synchronous sections, each one `Store.Read` that copies bounded rows out, with its own row and byte
+limit inside the request's. Section 0 pins the settled package generation and three fixture
+counters, each advanced in the same writer job as any change of its class: *content* (wiki pages,
+revisions, slugs, translations, namespaces, categories, pins and the semantic projection),
+*requirements*, and *authorization* (accounts, their characters, roles, grants, overrides and
+permission definitions). The reader's scopes are resolved after that section and again before a
+final section that rechecks every pin in one snapshot. A moved package or content pin is
+`DataChanged`, a moved requirements or authorization pin or a different reader is
+`AuthorizationChanged`, an unsettled world is `Incomplete`, a limit is `WorkLimit`, and cancellation
+or an expired execution budget is `Cancelled`; none carries a partial answer. A plan always runs its
+declared number of sections, so a denied target and a missing one return the same `Unavailable`
+value along the same path. The final section is the answer's authorization point: a change after it
+cannot retract what has already been sent.
+
 ### Follow-ups this decision left
 
 Both are done:

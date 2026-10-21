@@ -234,6 +234,17 @@ public partial class IntegratedWikiMutationTests
 
 	private static string DeleteRowIdentity(TableDef table, byte[] key) => table.Name + ":" + Convert.ToHexString(key);
 
+	private static readonly string FixtureVersionRowPrefix = "meta:" + Convert.ToHexString(Encoding.UTF8.GetBytes("prototype.semantic.version."));
+
+	private static bool IsFixtureVersionRow(string row) => row.StartsWith(FixtureVersionRowPrefix, StringComparison.Ordinal);
+
+	private static ulong FixtureVersion(IEnumerable<string> rows, string name)
+	{
+		var prefix = "meta:" + Convert.ToHexString(Encoding.UTF8.GetBytes($"prototype.semantic.version.{name}/v1")) + ":";
+		return rows.FirstOrDefault(row => row.StartsWith(prefix, StringComparison.Ordinal)) is { } row
+			? BinaryPrimitives.ReadUInt64BigEndian(Convert.FromHexString(row[prefix.Length..])) : 0;
+	}
+
 	private static async Task AssertDeleteDelta(LightningDatabase provider, WikiPage page, ProjectionObservation previous,
 		string[] before, long sequence, long receipts, long allocator)
 	{
@@ -296,9 +307,14 @@ public partial class IntegratedWikiMutationTests
 		var after = Task3Snapshot(provider);
 		var addedReceipt = after.Except(before).Single(row => row.StartsWith(AtomicWikiLayout.Mutations.Name + ":", StringComparison.Ordinal));
 		expected.Add(addedReceipt);
+		// The fixture's reader counters advance in the delete's own job: content once, requirements at most
+		// once (only a page rule can go), authorization not at all. Every other row is compared exactly.
+		await Assert.That(FixtureVersion(after, "content")).IsEqualTo(FixtureVersion(before, "content") + 1);
+		await Assert.That(FixtureVersion(after, "requirements") - FixtureVersion(before, "requirements")).IsBetween(0UL, 1UL);
+		await Assert.That(FixtureVersion(after, "authorization")).IsEqualTo(FixtureVersion(before, "authorization"));
 		// Exact row bytes for every observed table: registry, zero facts, neighbors, pins, other rules,
 		// activation identities, old receipts and allocator all remain unchanged.
-		await Assert.That(after).IsEquivalentTo(expected);
+		await Assert.That(after.Where(row => !IsFixtureVersionRow(row))).IsEquivalentTo(expected.Where(row => !IsFixtureVersionRow(row)));
 		await Assert.That(DeleteCertificateSnapshot(provider).Length).IsEqualTo(3);
 		await Assert.That(Encoding.UTF8.GetString(projection.SummaryBytes)).DoesNotContain(page.MarkdownSource);
 	}
