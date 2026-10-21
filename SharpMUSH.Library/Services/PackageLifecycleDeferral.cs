@@ -48,12 +48,8 @@ public static class PackageLifecycleDeferral
 		Pending.Value = hooks;
 		try
 		{
-			Task<T> completion;
-			try
-			{
-				completion = operation() ?? Task.FromException<T>(new InvalidOperationException("The package operation returned no completion."));
-			}
-			catch (Exception exception) { completion = Task.FromException<T>(exception); }
+			// A synchronous throw becomes the completion's fault, as an asynchronous one would.
+			var completion = InvokeAsync(operation);
 			await ((Task)completion).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 			return new(completion, hooks.Close());
 		}
@@ -70,6 +66,9 @@ public static class PackageLifecycleDeferral
 	/// </summary>
 	public static bool TryDefer(string objId, string attribute)
 		=> Pending.Value?.TryAdd(new PackageLifecycleHook(objId, attribute)) ?? false;
+
+	private static async Task<T> InvokeAsync<T>(Func<Task<T>> operation)
+		=> await (operation() ?? throw new InvalidOperationException("The package operation returned no completion."));
 }
 
 // An actual body task plus the hooks retained on every terminal path. This is not a success grant.

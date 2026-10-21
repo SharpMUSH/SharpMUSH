@@ -54,7 +54,8 @@ public class PrivilegedCommandPermissionTests
 	[Test]
 	public async Task AHolderOfTheFunctionsPowerCanDefineAGlobalFunction()
 	{
-		var name = TestIsolationHelpers.GenerateUniqueName("fnpower").ToLowerInvariant();
+		// The run id is Base64Url, and a function name cannot contain its "-".
+		var name = new string([.. TestIsolationHelpers.GenerateUniqueName("fnpower").Where(char.IsAsciiLetterOrDigit)]).ToLowerInvariant();
 		var holder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "FnPower");
 		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@power {holder.DbRef}=Functions"));
 		try
