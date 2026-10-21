@@ -16,8 +16,11 @@ spec() { # mode output rates-json final
   printf '{"Mode":"%s","Label":"%s","Dataset":"%s","Output":"%s","World":"%s","Rates":%s,"PhaseSeconds":%s,"CommandsPerSecond":10,"Rebuild":true,"Final":%s}\n' \
     "$1" "$label" "$dataset" "$2" "$out/build" "$3" "$seconds" "$4"
 }
-spec build "$out/build" '[]' false > "$out/build.spec.json"
-run "$out/build.spec.json" "$out/build.log" || { echo "build failed: $out/build.log"; exit 1; }
+# A world already built for this label is measured again rather than rebuilt.
+if [ ! -f "$out/build/build.json" ]; then
+  spec build "$out/build" '[]' false > "$out/build.spec.json"
+  run "$out/build.spec.json" "$out/build.log" || { echo "build failed: $out/build.log"; exit 1; }
+fi
 last=${rates[-1]}
 for rate in "${rates[@]}"; do
   final=false; [ "$rate" = "$last" ] && final=true
