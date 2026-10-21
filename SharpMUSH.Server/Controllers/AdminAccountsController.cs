@@ -111,7 +111,7 @@ public class AdminAccountsController(
 	public Task<IActionResult> ResetPassword(string key, [FromBody] ResetPasswordRequest request)
 	=> AsModeratorAsync(async adminId =>
 	{
-		if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 8) return BadRequest("NewPassword must be at least 8 characters.");
+		if (!AccountPasswordRule.Accepts(request.NewPassword)) return BadRequest(AccountPasswordRule.Requirement);
 		if (security is null || recovery is null) return StatusCode(StatusCodes.Status403Forbidden, "Fresh account verification is required.");
 		var ct = HttpContext.RequestAborted;
 		var sourceToken = SharpMUSH.Server.Authentication.External.ExternalLoginJourney.Bearer(HttpContext);

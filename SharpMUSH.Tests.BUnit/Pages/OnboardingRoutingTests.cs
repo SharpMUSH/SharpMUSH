@@ -151,12 +151,29 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
 		var inputs = cut.FindAll("input");
 		await inputs[0].ChangeAsync("newbie");
-		await inputs[2].ChangeAsync("hunter2");
+		await inputs[2].ChangeAsync("hunter2-hunter2");
 		await cut.Find("button.register-submit").ClickAsync();
 
 		WaitForNavigation(cut, "/characters/new");
 
 		await Assert.That(Nav.Uri).EndsWith("/characters/new");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Registration_WithAShortPassword_StaysAndSaysTheRule()
+	{
+		SeedServices(characters: []);
+		Nav.NavigateTo("/login?tab=register");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		var inputs = cut.FindAll("input");
+		await inputs[0].ChangeAsync("newbie");
+		await inputs[2].ChangeAsync("hunter2");
+		await cut.Find("button.register-submit").ClickAsync();
+
+		await Assert.That(Nav.Uri).EndsWith("/login?tab=register");
+		await Assert.That(cut.Find(".mud-alert").TextContent).Contains("AuthPasswordTooShort")
+			.Because("the portal checks the same account password rule the server enforces");
 	}
 
 	[TUnit.Core.Test]

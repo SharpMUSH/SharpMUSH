@@ -347,6 +347,9 @@ public class AuthController(
 					if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
 						return BadRequest("Username and Password are required.");
 
+					if (!AccountPasswordRule.Accepts(request.Password))
+						return BadRequest(AccountPasswordRule.Requirement);
+
 					return await accountService.CreateAccountAsync(request.Username, request.Email, request.Password) switch
 					{
 						SharpAccount account => await RegisteredAsync(account, request.RememberMe),
