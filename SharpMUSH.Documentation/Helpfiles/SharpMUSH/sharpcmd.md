@@ -291,7 +291,7 @@ For players and things, this means failure to get/take. For exits, it means fail
 `@ofollow <object>[=<message>]`<br>
 `@afollow <object>[=<action list>]`
 
-These attributes can be set, but the follow command does not use them yet: it only tells the follower "You are now following" and the name, and tells `<object>` who is following.
+Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
 
 ::: seealso
 - [follow]
@@ -308,7 +308,7 @@ These attributes can be set, but the follow command does not use them yet: it on
 `@ounfollow <object>[=<message>]`<br>
 `@aunfollow <object>[=<action list>]`
 
-These attributes can be set, but the unfollow command does not use them yet: it only tells you "You stop following."
+Sets the message shown to someone who stops following `<object>` with "unfollow `<object>`", the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
 
 ::: seealso
 - [follow]
@@ -2501,7 +2501,7 @@ The `/opaque` switch omits contents listings.
 # follow
 `follow <object>`
 
-You begin following `<object>`, a player or thing; its follow lock is not checked. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
+You begin following `<object>`, a player or thing, if you pass its follow lock (see [@lock/follow]). As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
 
 
 ::: seealso
