@@ -14,13 +14,13 @@ public sealed class StartupImportCoordinator(ImportPreviewCoordinator previews, 
 	ILogger<StartupImportCoordinator> logger)
 {
 	public async Task<StartupImportOutcome> PrepareAsync(DatabaseImportFiles files, string? configuration = null,
-		ConfigurationSnapshot? baseline = null, PortalAdministrator? administrator = null, CancellationToken cancellationToken = default)
+		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default)
 	{
 		try
 		{
 			var fingerprint = await FingerprintAsync(files, configuration, cancellationToken);
 			if (journal.AppliedStartupFingerprint == fingerprint) return new(StartupImportState.AlreadyApplied);
-			var preview = await previews.PreviewAsync(files, configuration, baseline, administrator, cancellationToken);
+			var preview = await previews.PreviewAsync(files, configuration, baseline, cancellationToken);
 			if (preview.State != ImportSessionState.Ready)
 				return new(StartupImportState.Failed, preview.Id, preview.Failure ?? "Startup import did not validate.");
 			journal.Save(preview with { StartupFingerprint = fingerprint });

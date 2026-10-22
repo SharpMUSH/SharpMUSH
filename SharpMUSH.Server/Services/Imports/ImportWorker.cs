@@ -68,8 +68,6 @@ public static class ImportWorker
 					return 0;
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, deadline.Token);
-				if (request.Administrator is { } administrator)
-					await PortalAdministratorTransfer.RestoreAsync(administrator, services, result, deadline.Token);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
 					throw new IOException("The staged object count is below the conversion's reported count.");
