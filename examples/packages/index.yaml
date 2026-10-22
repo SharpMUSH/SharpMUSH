@@ -67,7 +67,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.13.0
+    version: 1.13.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -77,7 +77,7 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.2.1
+    version: 1.2.2
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: radio/
     name: Radio
@@ -117,7 +117,7 @@ packages:
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.1.0
+    version: 1.1.1
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
   - path: highlights-app/
     name: Highlights in the portal
@@ -127,7 +127,7 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.4.0
+    version: 1.4.1
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help, http-handler and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
@@ -167,17 +167,17 @@ packages:
   - path: health/
     name: Health
     package: health
-    version: 1.0.3
+    version: 1.0.4
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-jobs/
     name: Health Staff Load
     package: health-jobs
-    version: 1.0.2
+    version: 1.0.3
     description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: relationships/
     name: Relationships
     package: relationships
-    version: 1.1.0
+    version: 1.1.1
     description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
   - path: relationships-scene/
     name: Relationships Scene
@@ -217,7 +217,7 @@ packages:
   - path: notifications/
     name: Notifications
     package: notifications
-    version: 1.1.0
+    version: 1.1.1
     description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
   - path: notifications-app/
     name: Notifications in the portal

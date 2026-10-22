@@ -1,6 +1,6 @@
 format: "1.10"
 package: health
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -295,7 +295,7 @@ objects:
       FUN`SCREEN`COHORTS:
         value: |-
           setqm(as_of,u(%!/FUN`READ`AT,%0,$.asOf),
-          rows,u(%!/FUN`READ`INDEXES,%0,$.cohorts))[box(if(words(%q<rows>),ldatatable(json(object,nowrap,json(string,1|2|3|4|5|6|7|8|9),priority,json(string,1|1|1|1|2|2|3|3|3)),Month|>Approved|>Active|>30d|>60d|>90d|>120d|>150d|>180d,iter(%q<rows>,uargs(%!/FUN`SCREEN`COHORTROW,report,%0,row,%i0),,^),^),tone(muted,Nobody was approved in these months.))%r[rule()]%rActive: posed in the last %q<days> days. 30d to 180d: the share who posed in each 30 days after their approval month ended.[if(u(%!/FUN`READ`AT,%0,$.undated),%r[u(%!/FUN`READ`AT,%0,$.undated)] approved with no date on record are counted by the month they were created.)]%r[u(%!/FUN`DISPLAY`FOOTER)],Cohorts)]
+          rows,u(%!/FUN`READ`INDEXES,%0,$.cohorts))[box(if(words(%q<rows>),ldatatable(lit({"nowrap":"1|2|3|4|5|6|7|8|9","priority":"1|1|1|1|2|2|3|3|3"}),Month|>Approved|>Active|>30d|>60d|>90d|>120d|>150d|>180d,iter(%q<rows>,uargs(%!/FUN`SCREEN`COHORTROW,report,%0,row,%i0),,^),^),tone(muted,Nobody was approved in these months.))%r[rule()]%rActive: posed in the last %q<days> days. 30d to 180d: the share who posed in each 30 days after their approval month ended.[if(u(%!/FUN`READ`AT,%0,$.undated),%r[u(%!/FUN`READ`AT,%0,$.undated)] approved with no date on record are counted by the month they were created.)]%r[u(%!/FUN`DISPLAY`FOOTER)],Cohorts)]
         flags: [funsyntax]
       FUN`SCREEN`COHORTROW:
         value: |-

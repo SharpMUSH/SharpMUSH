@@ -203,7 +203,7 @@ A package declares the roles, permissions and categories it needs in `package.ya
 - **Nesting is by line.** A `fields()`/`datatable()`/`flex()`/`tree()` on a line of its own inside `box()` keeps its layout; a `rule()` on its own line becomes a divider meeting the box's sides. After other text on the same line, a block layout falls apart. Inline pieces (`badge()`, `cmdlink()`) are fine anywhere.
 - **Tables: say what to keep.** Too wide, wrapping columns shrink first, then the highest `"priority"` number is dropped. A wrapping column with no `"min"` shrinks to a letter per line before anything drops. Mark names, numbers, times and statuses `"nowrap"` (shown whole or not at all), leave free text wrapping with a `"min"`, give droppable columns priority 2+. `<` `-` `>` before a heading aligns its column. Give the free-text column a `"grow"` share (`"grow":"|1"`) to span the screen; without one a table is as wide as its cells.
 - **Player text in a table needs a marked delimiter.** Cells split at `|`, and a title can hold one. Write the cell delimiter marked into the options, `{{"delim":"%*<^>"}}`, and separate cells with `%*<^>`; `json()` drops the mark. Put typed text through `unmark()` first, or a player's own `%*<^>` splits the cell. The option lists (`nowrap`, `priority`, ...) split on the same delimiter. See `help list separators`.
-- **In `package.yaml`, `{{` is an object reference**, so `{{"title":"left"}}` fails the install. Build options there with `json(object,…)`.
+- **In `package.yaml`, `{{` is an object reference**, so `{{"title":"left"}}` fails the install. Write constant options there as `lit({"title":"left"})`, and `json(object,…)` only when a value is computed.
 - **An empty table still draws its headings** — `if(words(%q<l>),<table>,No scenes.)`.
 - **Build the layout last.** `left()`, `edit()` or other text surgery on a layout leaves plain text: no per-reader width, no portal structure. Colour goes in the cells, a border piece (`"top":"[ansi(hb,=)]"`) or `gradient()`.
 - **Don't pick the game's border.** `layout_border` is the default style; pass `"border"` only where a box should differ from the rest.
@@ -243,6 +243,7 @@ The verb routers (`&GET`, `&POST`, …) are pre-installed on `#8`. URLs live und
 - Everything `think`/`@pemit`-ed to the handler during the run IS the response body; queued work (`@wait`, $-commands) never reaches the client — write inline.
 - `@respond <code> <text>`, `@respond/type <ctype>`, `@respond/header <name>=<value>` control the response; default is 404 for unmatched routes.
 - Build JSON with `json()`, `json_array()`, `json_group_by()`, `json_query()` — never hand-concatenate escaped brackets.
+- JSON whose shape is fixed is a literal: `lit({...})` returns its text exactly. Braces do not: they only stop function names, so `[` `]`, `%` and `\` inside still evaluate (`{{"a":[1,2]}}` gives `{"a":1,2}`). A fixed shape with a few computed values is `json_fill(lit({"kind":"field","key":"title","default":""}),/default,get(%0/TITLE))`, not nested `json(object,…)`.
 - To *observe* HTTP traffic, use the `` http` `` events on `#9`; to *answer* it, sub-handlers on `#8`.
 
 ## Persistence — what needs @startup

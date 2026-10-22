@@ -1,6 +1,6 @@
 format: "1.10"
 package: health-jobs
-version: 1.0.2
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Staff load in +health: how many open jobs each staffer handles, how many wait on staff, and the oldest one waiting. Joins the health and jobs packages."
 license: MIT
@@ -87,7 +87,7 @@ objects:
           setqm(open,u(%!/FUN`JOBS`OPEN),
           pairs,iter(%q<open>,iter(u(%!/FUN`JOBS`HANDLERS,%i0),%i0~%i1)),
           handlers,setunion(iter(%q<pairs>,before(%i0,~)),),
-          rows,iter(%q<handlers>,uargs(%!/FUN`SCREEN`ROW,handler,%i0,pairs,%q<pairs>),,^))[box(if(words(%q<open>),ldatatable(json(object,nowrap,json(string,2|3|4),priority,json(string,1|1|1|2),grow,json(string,1)),Staff|>Open|>Waiting|Oldest waiting,revwords(sortby(%!/FUN`SCREEN`ORDER,%q<rows>,^),^),^),tone(muted,No job is open.))%r[rule()]%rA job with several handlers counts for each. Waiting: new\, or waiting on staff.,Staff load)]
+          rows,iter(%q<handlers>,uargs(%!/FUN`SCREEN`ROW,handler,%i0,pairs,%q<pairs>),,^))[box(if(words(%q<open>),ldatatable(lit({"nowrap":"2|3|4","priority":"1|1|1|2","grow":"1"}),Staff|>Open|>Waiting|Oldest waiting,revwords(sortby(%!/FUN`SCREEN`ORDER,%q<rows>,^),^),^),tone(muted,No job is open.))%r[rule()]%rA job with several handlers counts for each. Waiting: new\, or waiting on staff.,Staff load)]
         flags: [funsyntax]
       # %<handler> and %<pairs>, the open jobs as <handler>~<job>: Staff|Open|Waiting|Oldest waiting.
       FUN`SCREEN`ROW:
