@@ -10,6 +10,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-epic-fantasy-chibi-shared-completion", "chibi", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-epic-fantasy-chibi-player-useful-action", "chibi", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-epic-fantasy-chibi-player-place", "chibi", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-gothic-chibi-player-speak-act", "chibi", "Gothic", "images/sharpie/sharpie-gothic-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-gothic-chibi-player-channels", "chibi", "Gothic", "images/sharpie/sharpie-gothic-chibi-player-channels.png", 1254, 1254, "player-channels"),
 		new SharpieArt("sharpie-gothic-chibi-player-place", "chibi", "Gothic", "images/sharpie/sharpie-gothic-chibi-player-place.png", 1254, 1254, "player-place"),
 		new SharpieArt("sharpie-epic-fantasy-chibi-player-world", "chibi", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-chibi-player-world.png", 1254, 1254, "player-world"),
