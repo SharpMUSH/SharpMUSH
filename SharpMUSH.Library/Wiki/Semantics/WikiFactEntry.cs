@@ -54,6 +54,24 @@ public static class WikiFactEntry
 		return shown;
 	}
 
+	/// <summary>
+	/// <paramref name="stated"/>, from a reader who was shown only some of <paramref name="stored"/>, with the page
+	/// references they were not shown kept: a fact naming a page they may not see stays, unless they stated a
+	/// single-valued property's value themselves.
+	/// </summary>
+	public static async Task<IReadOnlyList<WikiPageFact>> KeepingUnseenAsync(IWikiService wiki, SemanticSchema schema,
+		IEnumerable<WikiPageFact> stored, IReadOnlyList<WikiPageFact> stated, WikiVisibility visibility)
+	{
+		var kept = new List<WikiPageFact>(stated);
+		foreach (var fact in stored)
+		{
+			if (Definition(schema, fact.Property) is not { Type: SemanticType.PageRef } definition) continue;
+			if (definition.Cardinality != Cardinality.Multiple && stated.Any(s => s.Property == fact.Property)) continue;
+			if (await wiki.GetByIdAsync(fact.Value) is WikiPage target && !visibility.Admits(target)) kept.Add(fact);
+		}
+		return kept;
+	}
+
 	/// <summary>The schema's definition of <paramref name="property"/>, or null when it defines none.</summary>
 	public static PropertyDefinition? Definition(SemanticSchema schema, string property)
 		=> schema.Properties.IsDefault ? null : schema.Properties.FirstOrDefault(p => p.Id == property);

@@ -6,6 +6,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -115,5 +116,24 @@ public class WikiFactCommandTests
 		await Assert.That(Told(player, $"{marker} pf2e:level//")).IsEqualTo(1);
 		await RunAsync(player, $"@wiki/fact {spell.Slug}");
 		await Assert.That(Told(player, draft.Title)).IsEqualTo(0);
+	}
+
+	[Test]
+	public async Task APageReferenceTheEditorCouldNotSeeOutlivesTheirEdit()
+	{
+		var spell = await PageAsync("UnseenFactSpell");
+		var draftClass = await PageAsync("UnseenClass", published: false);
+		var draftAncestry = await PageAsync("UnseenAncestry", published: false);
+		var ancestry = await PageAsync("SeenAncestry");
+		var stored = (await WikiService.SetFactsAsync(spell.Id,
+			[new("pf2e:ancestry", draftAncestry.Id), new("pf2e:class", draftClass.Id), new("pf2e:level", "1")])).Expect<WikiPage>().Facts;
+
+		// What a reader without drafts sends back after editing what they were shown: the level, changed, and an
+		// ancestry of their own in place of the one they could not see, which takes one value.
+		var kept = await WikiFactEntry.KeepingUnseenAsync(WikiService, await WikiService.GetFactSchemaAsync(), stored,
+			[new("pf2e:level", "2"), new("pf2e:ancestry", ancestry.Id)], WikiVisibility.PublishedOnly);
+
+		await Assert.That(kept).IsEquivalentTo(new WikiPageFact[]
+			{ new("pf2e:level", "2"), new("pf2e:ancestry", ancestry.Id), new("pf2e:class", draftClass.Id) });
 	}
 }
