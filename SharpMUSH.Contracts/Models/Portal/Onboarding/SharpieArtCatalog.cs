@@ -10,6 +10,13 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-pulp-chibi-player-character", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-pulp-chibi-player-sign-in", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-suspense-chibi-administrator-identity", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-dark-fantasy-kemono-administrator-walkthrough", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-suspense-chibi-administrator-capabilities", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-suspense-chibi-player-place", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-dark-fantasy-kemono-administrator-capabilities", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-dark-fantasy-kemono-administrator-joining", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-suspense-chibi-shared-completion", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-suspense-chibi-player-channels", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-player-channels.png", 1254, 1254, "player-channels"),
