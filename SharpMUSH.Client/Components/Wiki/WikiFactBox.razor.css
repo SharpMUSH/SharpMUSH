@@ -25,3 +25,9 @@
     overflow-wrap: anywhere;
 }
 .wiki-facts-sep { color: var(--text-faint); }
+.wiki-facts-list a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.wiki-facts-list a:hover,
+.wiki-facts-list a:focus-visible { text-decoration: underline; }
