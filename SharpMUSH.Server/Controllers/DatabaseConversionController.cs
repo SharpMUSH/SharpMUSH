@@ -18,7 +18,7 @@ namespace SharpMUSH.Server.Controllers;
 [Route("api/[controller]")]
 [Authorize(Policy = PortalPermission.ServerAdmin)]
 public class DatabaseConversionController(ImportSessionRegistry sessions, ImportPromotionJournal journal,
-	MushCnfImportService configuration, PortalAdministratorTransfer administrator, IStorageCapacityService capacity, IAuditLog audit,
+	MushCnfImportService configuration, IStorageCapacityService capacity, IAuditLog audit,
 	IHostApplicationLifetime lifetime, ILogger<DatabaseConversionController> logger) : ControllerBase
 {
 	private const long MaxUploadFileSize = 100 * 1024 * 1024;
@@ -62,8 +62,7 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 				using var reader = new StreamReader(configFile.OpenReadStream());
 				text = await reader.ReadToEndAsync(cancellationToken);
 			}
-			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken),
-				await administrator.CaptureAsync(cancellationToken), directory);
+			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken), directory);
 			started = true;
 			logger.LogInformation("Import preview {SessionId} started by account {AccountId}", id, User.FindFirstValue(ClaimTypes.NameIdentifier));
 			return Ok(new { sessionId = id, message = "Isolated import preview started; promotion requires a separate restart confirmation." });

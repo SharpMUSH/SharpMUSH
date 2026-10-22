@@ -6,7 +6,7 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>Startup imports prepare privately before hosted services start; committing requires a second process start.</summary>
 public sealed class PennMUSHDatabaseConversionService(StartupImportCoordinator imports, MushCnfImportService configuration,
-	PortalAdministratorTransfer administrator, ILogger<PennMUSHDatabaseConversionService> logger)
+	ILogger<PennMUSHDatabaseConversionService> logger)
 {
 	public async Task<StartupImportOutcome> RunBeforeServingAsync(CancellationToken cancellationToken = default)
 	{
@@ -24,8 +24,7 @@ public sealed class PennMUSHDatabaseConversionService(StartupImportCoordinator i
 				if (new FileInfo(config).Length > 1024 * 1024) throw new IOException("Startup configuration exceeds 1 MiB.");
 				text = await File.ReadAllTextAsync(config, cancellationToken);
 			}
-			return await imports.PrepareAsync(files, text, await configuration.SnapshotAsync(cancellationToken),
-				await administrator.CaptureAsync(cancellationToken), cancellationToken);
+			return await imports.PrepareAsync(files, text, await configuration.SnapshotAsync(cancellationToken), cancellationToken);
 		}
 		catch (Exception error)
 		{
