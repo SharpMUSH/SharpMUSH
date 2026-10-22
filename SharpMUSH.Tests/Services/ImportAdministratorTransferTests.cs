@@ -16,9 +16,9 @@ using SharpMUSH.Tests.Database;
 namespace SharpMUSH.Tests.Services;
 
 /// <summary>
-/// The portal administrator who claimed the game keeps their sign-in through an import's promotion (#2078): the real
-/// worker writes the account into the world it builds, linked to the imported #1, and the promoted world neither
-/// offers the claim again nor needs a new unclaimed administrator.
+/// The portal administrator who claimed the game keeps their sign-in through an import's promotion (#2078): the
+/// promotion carries the live world's accounts into the imported one, linked to the imported #1, and the promoted
+/// world neither offers the claim again nor needs a new unclaimed administrator.
 /// </summary>
 public class ImportAdministratorTransferTests
 {
@@ -30,16 +30,6 @@ public class ImportAdministratorTransferTests
 	private static LightningDatabase Open(string path) => new(NullLogger<LightningDatabase>.Instance,
 		new LightningStoreOptions { Path = path, MapSize = 256L << 20 }, Substitute.For<IPasswordService>(), relations: null);
 
-	private static IExpandedObjectDataService Wizard(bool pending)
-	{
-		var data = Substitute.For<IExpandedObjectDataService>();
-		data.GetExpandedServerDataAsync<SetupWizardState>().Returns(new SetupWizardState { Pending = pending });
-		return data;
-	}
-
-	private static PortalAdministratorTransfer Transfer(LightningDatabase world, bool pending = false)
-		=> new(world, world, world, world, Wizard(pending));
-
 	private async Task<(ImportPromotionJournal Journal, string Source)> SetupAsync()
 	{
 		Directory.CreateDirectory(_root);
@@ -49,26 +39,11 @@ public class ImportAdministratorTransferTests
 	}
 
 	[Test]
-	public async Task UnclaimedGameCarriesNoAdministrator()
-	{
-		var (journal, _) = await SetupAsync();
-		await using var live = Open(journal.LiveWorldPath);
-		await live.Migrate();
-		var account = await live.CreateAccountAsync("admin", null, "");
-		await live.LinkCharacterToAccountAsync(account.Id!, new DBRef(1));
-
-		await Assert.That(await Transfer(live).CaptureAsync()).IsNull();
-		await live.SetServerSetupCompletedAsync(true);
-		await Assert.That(await Transfer(live).CaptureAsync()).IsNull().Because("an account with no way to sign in has nothing to carry");
-	}
-
-	[Test]
 	public async Task ClaimedAdministratorSignsInToThePromotedWorld()
 	{
 		var (journal, source) = await SetupAsync();
 		var credential = RandomNumberGenerator.GetBytes(32);
 		var identity = new ExternalIdentityKey("github", "https://github.com", "4242");
-		PortalAdministrator administrator;
 		await using (var live = Open(journal.LiveWorldPath))
 		{
 			await live.Migrate();
@@ -83,15 +58,13 @@ public class ImportAdministratorTransferTests
 			await live.AssignRoleToAccountAsync(account.Id!, "live-only");
 			await live.SetAccountOverrideAsync(account.Id!, "wiki.admin", PermissionState.Allow);
 			await live.SetServerSetupCompletedAsync(true);
-			administrator = (await Transfer(live, pending: true).CaptureAsync())!;
+			await live.SetExpandedServerData(nameof(SetupWizardState), new SetupWizardState { Pending = true });
 		}
-		await Assert.That(administrator).IsNotNull();
 
 		var preview = await new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance)
-			.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH), administrator: administrator);
+			.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH));
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
-		await Assert.That(preview.Result!.Warnings).Contains("The imported world has no role 'live-only', so Claimer does not hold it.");
 		await Assert.That(File.Exists(Path.Join(preview.Directory, "request.json"))).IsFalse();
 
 		journal.RequestPromotion(preview.Id);
@@ -109,7 +82,7 @@ public class ImportAdministratorTransferTests
 		await Assert.That(passkey!.SignCount).IsEqualTo(7u);
 		await Assert.That((await promoted.GetExternalIdentityAsync(identity)).Expect<ExternalIdentity>().AccountId).IsEqualTo(carried.Id);
 		await Assert.That((await promoted.GetRolesForAccountAsync(carried.Id!)).Select(role => role.Slug).ToArray())
-			.IsEquivalentTo([BuiltInRoles.WizardSlug]);
+			.IsEquivalentTo([BuiltInRoles.WizardSlug, "live-only"]);
 		await Assert.That((await promoted.GetAccountOverridesAsync(carried.Id!))["wiki.admin"]).IsEqualTo(PermissionState.Allow);
 		await Assert.That((await promoted.GetExpandedServerData<SetupWizardState>(nameof(SetupWizardState)))?.Pending).IsTrue();
 		// BootstrapService makes an unclaimed administrator only when no one has an account.
