@@ -31,27 +31,38 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
-	public async Task AdminChecklistShowsMascotForEachTopicAndRespectsImagery()
+	public async Task AdminChecklistShowsMascotOnceBesideTheNextStepAndFoldsHandledSteps()
 	{
 		ComponentFactories.AddStub<GameIdentityForm>();
 		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
 		var guide = Services.GetRequiredService<OnboardingService>();
-		page.WaitForAssertion(() =>
-		{
-			if (page.FindAll(".admin-checklist img").Count != GuideStepIds.Administrator.Count)
-				throw new InvalidOperationException("Each administrator topic must show its mascot.");
-		});
+		page.WaitForAssertion(() => page.Find(".admin-checklist img"));
 		foreach (var step in GuideStepIds.Administrator)
 		{
+			await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(1);
 			// A topic without its own illustration shows the genre's general one.
 			var illustrated = SharpieArtCatalog.Approved.Any(art => art.Topic == $"administrator-{step}");
 			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
 			await Assert.That(image.GetAttribute("src")).Contains(illustrated
 				? $"sharpie-fantasy-minimalist-administrator-{step}.png" : "sharpie-fantasy-minimalist.png");
 			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
+			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsTrue();
+			await page.InvokeAsync(() => guide.CompleteStepAsync(step));
+			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsFalse();
 		}
+		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
+		await Assert.That(page.Find(".checklist-progress progress").GetAttribute("value")).IsEqualTo(GuideStepIds.Administrator.Count.ToString());
+	}
+
+	[Test]
+	public async Task AdminChecklistMascotRespectsImagery()
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		var guide = Services.GetRequiredService<OnboardingService>();
+		page.WaitForAssertion(() => page.Find(".admin-checklist img"));
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
-		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(GuideStepIds.Administrator.Count);
+		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(1);
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
 		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
 	}

@@ -12,30 +12,36 @@
 <div class="admin-onboarding">
     <h1>@Loc["GuideAdminHeading"]</h1>
     <p>@Loc["GuideAdminIntro"]</p>
-    <GameIdentityForm OnSaved="IdentitySaved" />
     @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideAdminReload"]</button></p> }
     @if (Guide.Ready)
     {
+        <ChecklistProgress Progress="Guide.Progress" />
+        @* A verified or deferred step folds to its title, so the open steps are what is left to do. Sharpie
+           appears once, beside the first of them. *@
         <ol class="admin-checklist">
             @foreach (var step in GuideLocalization.Administrator(Loc))
             {
-                <li data-art-topic="@($"administrator-{step.Id}")">
-                    @if (TopicArt(step.Id) is { } art)
-                    {
-                        <img class="admin-topic-mascot @(Guide.Progress.Imagery == GuideImagery.Reduced ? "admin-topic-mascot-reduced" : "")"
-                             src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" loading="lazy" />
-                    }
-                    <h2>@step.Title</h2><p>@step.Body</p>
-                    @if (step.Id == "staff-character" && Auth.ActiveCharacter is { DbrefNumber: 1 })
-                    {
-                        <p class="admin-check-warning" role="note">@Loc["GuideAdminPlayingGod"]</p>
-                    }
-                    @if (step.ActionUrl is not null && step.Id != "identity") { <a href="@step.ActionUrl">@step.ActionLabel</a> }
-                    <p class="admin-check-state">@(Guide.Progress.CompletedStepIds.Contains(step.Id) ? Loc["GuideAdminVerified"] : Guide.Progress.SkippedStepIds.Contains(step.Id) ? Loc["GuideAdminDeferred"] : Loc["GuideAdminTodo"])</p>
-                    <div class="admin-check-actions">
-                        <button type="button" @onclick="() => Guide.CompleteStepAsync(step.Id)">@(step.Id == "walkthrough" ? Loc["GuideAdminPlayerChecked"] : Loc["GuideAdminChecked"])</button>
-                        <button type="button" @onclick="() => Guide.SkipStepAsync(step.Id)">@Loc["GuideAdminDefer"]</button>
-                    </div>
+                var handled = ChecklistProgress.IsHandled(Guide.Progress, step.Id);
+                <li data-art-topic="@($"administrator-{step.Id}")" class="@(handled ? "admin-check-handled" : null)">
+                    <details open="@(!handled)">
+                        <summary><h2>@step.Title</h2> <span class="admin-check-state">@State(step.Id)</span></summary>
+                        @if (step.Id == NextStep && TopicArt(step.Id) is { } art)
+                        {
+                            <img class="admin-topic-mascot @(Guide.Progress.Imagery == GuideImagery.Reduced ? "admin-topic-mascot-reduced" : "")"
+                                 src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" loading="lazy" />
+                        }
+                        <p>@step.Body</p>
+                        @if (step.Id == "staff-character" && Auth.ActiveCharacter is { DbrefNumber: 1 })
+                        {
+                            <p class="admin-check-warning" role="note">@Loc["GuideAdminPlayingGod"]</p>
+                        }
+                        @if (step.Id == "identity") { <GameIdentityForm OnSaved="IdentitySaved" /> }
+                        else if (step.ActionUrl is not null) { <a href="@step.ActionUrl">@step.ActionLabel</a> }
+                        <div class="admin-check-actions">
+                            <button type="button" @onclick="() => Guide.CompleteStepAsync(step.Id)">@(step.Id == "walkthrough" ? Loc["GuideAdminPlayerChecked"] : Loc["GuideAdminChecked"])</button>
+                            <button type="button" @onclick="() => Guide.SkipStepAsync(step.Id)">@Loc["GuideAdminDefer"]</button>
+                        </div>
+                    </details>
                 </li>
             }
         </ol>
@@ -46,6 +52,10 @@
 </div>
 
 @code {
+    /// <summary>The first step neither verified nor deferred.</summary>
+    private string? NextStep => GuideStepIds.Administrator.FirstOrDefault(step => !ChecklistProgress.IsHandled(Guide.Progress, step));
+    private string State(string step) => Guide.Progress.CompletedStepIds.Contains(step) ? Loc["GuideAdminVerified"]
+        : Guide.Progress.SkippedStepIds.Contains(step) ? Loc["GuideAdminDeferred"] : Loc["GuideAdminTodo"];
     private SharpieArt? TopicArt(string step) => SharpieArtCatalog.Resolve(
         Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre,
         Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"administrator-{step}");
