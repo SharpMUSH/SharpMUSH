@@ -189,9 +189,9 @@ public class ChargenIntegrationTests
 			await Assert.That(diff).Contains("round 1 to").And.Contains("Born on the river barges.")
 				.And.Contains("Born on the barges of the Sallow.").And.DoesNotContain("A ferry pilot")
 				.Because("only what changed is shown");
-			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND)]")).IsEqualTo("Born on the river barges.")
+			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND`1)]")).IsEqualTo("Born on the river barges.")
 				.Because("each round is kept on the character");
-			await Assert.That(await As(applicant, "&CHARGEN`ROUND`1`BACKGROUND me=Rewritten")).Contains("NO PERMISSION")
+			await Assert.That(await As(applicant, "&CHARGEN`ROUND`1`BACKGROUND`1 me=Rewritten")).Contains("NO PERMISSION")
 				.Because("a character cannot rewrite what it submitted");
 
 			await Assert.That(await As(reviewer, $"+app/approve {applicant.Name}=Welcome.")).Contains($"Approved {applicant.Name}.");
@@ -360,7 +360,6 @@ public class ChargenIntegrationTests
 		try
 		{
 			await InstallAsync("chargen");
-			await God("+apps/field/attribute background=BG*");
 			var applicant = await Player("CgWebChap");
 
 			var empty = (await Http("GET", "/chargen/schema?at=", "", applicant)).ToString();
@@ -408,7 +407,7 @@ public class ChargenIntegrationTests
 				.Because("the portal's own Submit button checks the required fields first");
 
 			var saved = await Http("POST", "/chargen/act",
-				"""{"op":"save","field_concept":"A pilot, {who} never misses a tide","field_archetype":"rogue","field_background":""}""", applicant);
+				"""{"op":"save","field_concept":"A pilot, {who} never misses a tide","field_archetype":"rogue","field_background.1":""}""", applicant);
 			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_concept").GetString()).IsEqualTo("A pilot, {who} never misses a tide")
 				.Because("a value reaches the character whole, commas and braces too");
@@ -418,10 +417,10 @@ public class ChargenIntegrationTests
 			var tooLong = await Http("POST", "/chargen/act", $$"""{"op":"save","field_concept":"{{new string('x', 121)}}"}""", applicant);
 			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_concept").GetString()).IsEqualTo("Keep concept to 120 characters.");
 			var missing = await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background":""}""", applicant);
-			await Assert.That(missing.GetProperty("errors").GetProperty("field_background").GetString()).IsEqualTo("Fill this in before you submit.");
+				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background.1":""}""", applicant);
+			await Assert.That(missing.GetProperty("errors").GetProperty("field_background.1").GetString()).IsEqualTo("Fill this in before you submit.");
 			var submitted = await Http("POST", "/chargen/act",
-				"""{"field_concept":"A pilot","field_archetype":"Rogue","field_background":"Born on the barges."}""", applicant);
+				"""{"field_concept":"A pilot","field_archetype":"Rogue","field_background.1":"Born on the barges."}""", applicant);
 			await Assert.That(submitted.GetProperty("message").GetString()).StartsWith("Submitted. Number 1 of 1 in the queue.")
 				.Because("the portal's own Submit button posts no op");
 
@@ -454,13 +453,13 @@ public class ChargenIntegrationTests
 			await Assert.That(returned.GetProperty("message").GetString()).IsEqualTo($"Returned to {applicant.Name} for changes.");
 
 			await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background":"Born on the Sallow."}""", applicant);
+				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background.1":"Born on the Sallow."}""", applicant);
 			var diff = Datum(await Http("GET", $"/chargen/data?at={key}", "", reviewer), "diff_history");
 			await Assert.That(diff[0].GetProperty("before").GetString()).IsEqualTo("Born on the barges.");
 			await Assert.That(diff[0].GetProperty("after").GetString()).IsEqualTo("Born on the Sallow.");
 
 			await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A reviewer","field_archetype":"Scholar","field_background":"Reads."}""", reviewer);
+				"""{"op":"submit","field_concept":"A reviewer","field_archetype":"Scholar","field_background.1":"Reads."}""", reviewer);
 			var self = await Http("POST", "/chargen/act", $$"""{"op":"approve","key":"{{await Key(reviewer)}}"}""", reviewer);
 			await Assert.That(self.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Someone else decides your own application.");
 			var refused = await Http("POST", "/chargen/act", $$"""{"op":"approve","key":"{{key}}"}""", applicant);
