@@ -152,7 +152,7 @@ public partial class CommunicationService
 		return false;
 	}
 
-	private async ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true)
+	public async ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true)
 	{
 		if (await speaker.IsWizard() || await speaker.HasPower("Pemit_All")) return true;
 		var refusal = new LocalizedNotification(nameof(ErrorMessages.Notifications.PemitTargetWishesAlone), target.Object().Name);
@@ -174,7 +174,10 @@ public partial class CommunicationService
 		var observed = false;
 		var context = new NotificationContext(location.Object().DBRef, location.Object().DBRef, omitted?.ToArray() ?? [])
 		{
-			Executor = executor.Object().DBRef
+			Executor = executor.Object().DBRef,
+			// Deliver below asks can_interact of each target before notifying it. Listener routing would ask it
+			// again with the speaker as the one interacting, which is the same question unless the emit is spoofed.
+			HearingChecked = speaker.Object().DBRef == executor.Object().DBRef
 		};
 		await Deliver(location.WithExitOption());
 		await foreach (var content in location.Content(mediator))

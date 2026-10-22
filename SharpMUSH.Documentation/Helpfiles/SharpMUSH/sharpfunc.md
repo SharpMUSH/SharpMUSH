@@ -699,15 +699,18 @@ You say, "foo b"
 - [FIRST()]
 :::
 # benchmark()
-`benchmark(<expression>, <number>[, <unit>])`
+`benchmark(<expression>, <number>[, <sendto>])`
 
-  Evaluates `<expression>` `<number>` times, and returns the total time all the evaluations took, in milliseconds with three decimals. If `<unit>` is `s` or `seconds`, the time is given in seconds with six decimals instead. `<number>` must be at least 1.
+  Evaluates `<expression>` `<number>` times, and returns the average, minimum, and maximum time one evaluation took, in microseconds. `<number>` must be at least 1.
 
-  Example:
+  If a `<sendto>` object is given, benchmark() instead sends the times to `<sendto>`, and returns the result of the last evaluation of `<expression>`. You must be able to @pemit `<sendto>`; if you can't, benchmark() returns #-1 without evaluating anything.
+
+  Examples:
 ```sharp
 think benchmark(iter(lnum(1,100), %i0), 200)
+think benchmark(add(1,2), 10, me)
 ```
-  Output: the total time in milliseconds, such as 21.734.
+  Output: the first prints the timings, such as "Average: 110.27   Min: 106   Max: 281". The second prints 3, and you are sent a line of timings in the same form.
 # brackets()
 `brackets(<string>)`
 
@@ -991,7 +994,7 @@ think config(command_aliases)
 # controls()
 `controls(<object>, <victim>[/<attribute>])`
 
-  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
+  With no `<attribute>`, this function returns 1 if `<object>` controls `<victim>`, or 0, if it does not. With an `<attribute>`, it will return 1 if `<object>` could successfully set `<attribute>` on `<victim>` (or alter `<attribute>`, if it already exists). If `<object>` or `<victim>` cannot be matched, it returns #-1 ARG1 NOT FOUND or #-1 ARG2 NOT FOUND, and an `<attribute>` that is not a valid name returns #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or be See_All; otherwise it returns #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -1752,7 +1755,7 @@ Kept: 12 7 / Dropped: apples pears
 # findable()
 `findable(<object>, <victim>)`
 
-  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If one of the objects does not exist, it returns the normal error for an object that cannot be matched.
+  This function returns 1 if `<object>` can locate `<victim>`, or 0 if it cannot. If `<object>` or `<victim>` cannot be matched, it returns #-1 ARG1 NOT FOUND or #-1 ARG2 NOT FOUND, and an `<attribute>` that is not a valid name returns #-1 BAD ATTR NAME. You must control `<object>` or `<victim>`, or be See_All; otherwise it returns #-1 PERMISSION DENIED.
 
   The object executing the function needs to be see_all or control either `<object>` or `<victim>`.
 
@@ -2306,7 +2309,7 @@ You typed abc.
 # iname()
 `iname(<object>)`
 
-  iname() returns the name of `<object>`. It currently returns the plain name, the same as name(); NAMEFORMAT and NAMEACCENT attributes are not used.
+  iname() returns the name of `<object>` as seen from inside it: its NAMEFORMAT evaluated with %0 the object's dbref and %1 its accented name, or the accented name when it has no NAMEFORMAT. You must control `<object>`, be See_All, or be inside it; otherwise it returns #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -3177,7 +3180,7 @@ th lt(1,3,2)
 
   If a `<viewer>` is given, and used by a See_All object, lwho() returns the output of lwho() from `<viewer>`'s point of view.
 
-  `<status>` must be one of "online" (the default), "offline" or "all". "offline" lists the players who are not connected, and "all" lists every player, connected or not, that `<viewer>` can see. Only See_All players can use "offline" or "all".
+  `<status>` can be used to include "#-1" dbrefs for unconnected ports, and must be one of "all", "online" (the default) or "offline". It is primarily useful when using a `<status>` with lports(), to make the dbrefs and ports match up. Only See_All players can see offline dbrefs.
 
   lwhoid() returns a list of objid's instead.
 
@@ -3373,7 +3376,7 @@ You say, "es"
 
   msecs() returns the time as the number of seconds since the epoch.
 
-  Every type of object, players included, has a modification time. Any object you can locate can be checked; no examine permission is needed.
+  Every type of object, players included, has a modification time. You must be able to examine `<object>`; otherwise both return #-1 PERMISSION DENIED.
 
 
 ::: seealso
@@ -3871,7 +3874,7 @@ think objevals(me,v(DATA`TEXT))
 
   Given just an object, it returns the owner of the object. Given an object/attribute pair, it returns the owner of that attribute, or #-1 if the attribute is missing or you cannot read it.
 
-  owner() does not change ownership: <new owner> and preserve are accepted and ignored. Use @chown or @atrchown for that.
+  Given a `<new owner>`, owner() changes the owner as @chown does, or as @atrchown does for an object/attribute pair, and returns 1 if it changed and 0 if it did not. `preserve` is @chown/preserve. Changing ownership needs function side effects and permission to use @chown.
 
 
 ::: seealso
@@ -3935,18 +3938,24 @@ think permission(me, wiki.delete)
 
   Returns the value of "pi" (3.14159265358979323846264338327, rounded to the game's float_precision setting).
 # pidinfo()
-`pidinfo(<pid>[, <field>[, <output separator>]])`
+`pidinfo(<pid>[, <list of fields>[, <output separator>]])`
 
-  This function returns information about a process id if the player has permission to see the process. The second argument names one field:
+  This function returns information about a process id if the player has permission to see the process. The `<list of fields>` is a space-separated list that may contain the following elements:
 
-    pid         the process id<br>
-    command     the queued command<br>
-    executor    the queueing object<br>
-    status      always "waiting"<br>
-    delay       remaining delay in seconds (or 0)<br>
-    semaphore   the semaphore source
+    queue       the queue ("wait" or "semaphore") for the process<br>
+    executor    the queueing object (also "player")<br>
+    time        remaining time for timed queued entries (or -1)<br>
+    object      the semaphore object for semaphores (or #-1)<br>
+    attribute   the semaphore attribute for semaphores (or #-1)<br>
+    command     the queued command
 
-  Any other value, including a list of several fields, returns #-1 INVALID FIELD. With no field, it returns pid, command, executor, status and delay, separated by `<output separator>`, which defaults to a space.
+  A field may be shortened to any prefix of its name, and an unknown one is left out. If `<list of fields>` is not provided, all fields are returned. The fields are separated by `<output separator>`, which defaults to a space. A pid that is not queued returns #-1 INVALID PID.
+
+```sharp
+@wait me/SEMAPHORE=think Done
+think pidinfo(lpids(me,semaphore),queue object command,|)
+```
+  Output: `semaphore|<your dbref>|think Done`.
 
 
 ::: seealso
@@ -4023,13 +4032,13 @@ think permission(me, wiki.delete)
 # lpids()
 `lpids([<object>[, <queue types>]])`
 
-  This function returns a list of queue process ids (pids) for commands queued by `<object>` itself. Objects with the same owner are not included, and "all" is not a special value. `<object>` defaults to the caller. You must control `<object>`, unless you are a Wizard or Royalty or have the See_Queue power.
+  This function returns a list of queue process ids (pids). Only commands queued by objects with the same owner as `<object>` are listed. If you are a Wizard or Royalty or have the See_Queue power, you can specify "all" for `<object>` to get pids for everyone's queue entries. `<object>` defaults to the caller, or "all" for those privileged callers. Otherwise you must own or control `<object>`.
 
   `<queue types>` should be a list of one or more of the following words, to filter the pids returned:<br>
     wait        --  Only return wait queues<br>
     semaphore   --  Only return semaphore queues<br>
-    independent --  Accepted, but changes nothing: only `<object>`'s own entries are ever returned.<br>
-  If not specified, it defaults to "wait semaphore".
+    independent --  Only return commands queued by `<object>` specifically, instead of all objects with the same owner as `<object>`.<br>
+  If not specified, it defaults to "wait semaphore". Wait queue pids come first, soonest first, then semaphore pids. Any other word returns #-1 INVALID ARGUMENT.
 
 
 ::: seealso
@@ -5035,7 +5044,7 @@ You say, "foo moof baz"
 # sqlescape()
 `sqlescape(<string>)`
 
-  This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks.
+  This function performs SQL-server-implemented escaping of `<string>`. It's important to escape arbitrary data before passing it to the sql() and mapsql() functions, or @sql command, to prevent SQL injection attacks. Like sql(), it needs the SQL_OK power.
 
   Example:
 ```sharp
@@ -5983,14 +5992,14 @@ think words(unmark(a%*<|>b), %*<|>)
 `version()`<br>
 `numversion()`
 
-  version() returns "PennMUSH emulated in SharpMUSH " followed by the server's assembly version. numversion() returns a fixed number in YYYYMMDDHHMMSS form, 20250102000000; it does not change between releases.
+  version() returns "PennMUSH emulated in SharpMUSH " followed by the server's version. numversion() returns the same version as one integer, for comparing versions in softcode: the major version, then three digits each for the next three parts. Version 2.1.3.0 is 2001003000.
 
   Example:
 ```sharp
 say version()
 You say, "PennMUSH emulated in SharpMUSH 2.0.0.0"
 say numversion()
-You say, "20250102000000"
+You say, "2000000000"
 ```
 
 
@@ -6396,7 +6405,7 @@ think words(1 2%b%b3, %b)
 
  This is the same mechanism used to suggest help entries, function names, etc. when an unknown one is encountered.
 
- Categories and their words are added with @suggest; the example assumes a 'words' category has been added.
+ Categories and their words are added with @suggest. If the dict_file @config option is set, the server loads that file into the 'words' category at startup, one word per line.
 
  Example:
 ```sharp

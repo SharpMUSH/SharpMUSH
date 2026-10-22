@@ -1,3 +1,5 @@
+using SharpMUSH.Library.DiscriminatedUnions;
+
 namespace SharpMUSH.Library.Services.Interfaces;
 
 /// <summary>
@@ -11,7 +13,7 @@ public interface IGameBroadcastService
 	/// Broadcast a message to all connected (logged-in) players.
 	/// Equivalent to PennMUSH's <c>flag_broadcast(0, 0, T("..."))</c>.
 	/// </summary>
-	ValueTask BroadcastAsync(string message);
+	ValueTask BroadcastAsync(SharpMessage message);
 
 	/// <summary>
 	/// Broadcast a message only to connected players who have a specific flag.
@@ -19,7 +21,7 @@ public interface IGameBroadcastService
 	/// </summary>
 	/// <param name="flagName">Flag that the recipient must have (e.g., "WIZARD").</param>
 	/// <param name="message">The message text to send.</param>
-	ValueTask BroadcastToFlagAsync(string flagName, string message);
+	ValueTask BroadcastToFlagAsync(string flagName, SharpMessage message);
 
 	/// <summary>
 	/// Broadcast a message to connected players who have any flag in <paramref name="anyOfFlags"/>
@@ -29,7 +31,7 @@ public interface IGameBroadcastService
 	/// <param name="anyOfFlags">Optional "any of these" flag group; null means no restriction on this group.</param>
 	/// <param name="requiredFlag">Flag that the recipient must have (e.g., "HEAR_CONNECT"); empty requires none.</param>
 	/// <param name="message">The message text to send.</param>
-	ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, string message);
+	ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, SharpMessage message);
 
 	/// <summary>
 	/// Broadcast a shutdown or reboot notification to all connected players.

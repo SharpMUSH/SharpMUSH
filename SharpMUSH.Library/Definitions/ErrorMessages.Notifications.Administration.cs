@@ -49,6 +49,10 @@ public static partial class ErrorMessages
 		public const string SocksetPromptNewlinesOff = "No newline will be sent after a prompt.";
 		public const string SocksetStripAccentsOn = "Accents will be stripped.";
 		public const string SocksetStripAccentsOff = "Accents will not be stripped.";
+		public const string SocksetPuebloSet = "Pueblo flag set.";
+		public const string SocksetPuebloCleared = "Pueblo flag cleared.";
+		public const string SocksetTelnetSet = "Telnet flag set.";
+		public const string SocksetTelnetCleared = "Telnet flag cleared.";
 		public const string SocksetUnknownColorStyle =
 			"Unknown color style. Valid color styles: 'auto', 'plain', 'hilite', '16color', 'xterm256', 'truecolor'.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -252,6 +256,10 @@ public static partial class ErrorMessages
 		public const string SitelockRegisterRequiresPattern = "@SITELOCK/REGISTER requires a host pattern.";
 		public const string SitelockRemoveRequiresPattern = "@SITELOCK/REMOVE requires a host pattern.";
 		public const string SitelockInvalidSyntax = "Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.";
+		public const string SitelockBadRegexpFormat = "Unable to add sitelock entry: {0} is not a valid regular expression.";
+		public const string SitelockPlayerAddedFormat = "Sitelocked {0} known addresses for {1}";
+		public const string SitelockPlayerNoAddressFormat = "Unable to sitelock {0}: No known ip/host to ban.";
+		public const string SitelockPlayerRemovedFormat = "{0} sitelocks removed.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SitelockRuleAddedFormat = "Sitelock rule for '{0}' added: {1}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

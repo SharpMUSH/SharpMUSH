@@ -21,7 +21,7 @@ public enum DiscordGatewayStatus
 /// <param name="MissingIntents">The privileged intents turned off in the developer portal, by their names there.</param>
 /// <param name="PublicBot">Whether anyone, not only the application's owner, may add the bot to a server.</param>
 /// <param name="Guilds">How many servers the bot is in, while connected.</param>
-/// <param name="Detail">What Discord said, when it is not one of the cases above.</param>
+/// <param name="Detail">What Discord said, when it is not one of the cases above, or what is wrong with a refused token.</param>
 /// <param name="CannotBanIn">The servers where the bot lacks Ban Members, while connected.</param>
 public sealed record DiscordGatewayState(
 	DiscordGatewayStatus Status,
@@ -147,6 +147,8 @@ public static class DiscordSetup
 	{
 		DiscordGatewayStatus.NoToken => new("token", "Bot token", false,
 			"Create an application in the Discord developer portal, add a bot to it, and set its token as discord.token.", DeveloperPortal),
+		DiscordGatewayStatus.BadToken when state.Detail is { } reason => new("token", "Bot token", false,
+			$"Discord refused the token. {reason} Reset it on the application's Bot page and set the new one.", BotPage(state)),
 		DiscordGatewayStatus.BadToken => new("token", "Bot token", false,
 			"Discord refused the token. Reset it on the application's Bot page and set the new one.", BotPage(state)),
 		_ => new("token", "Bot token", true),

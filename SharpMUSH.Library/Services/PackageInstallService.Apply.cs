@@ -98,6 +98,8 @@ public partial class PackageInstallService
 				return error;
 		}
 
+		// Planning, its guard reads and the writes share one retained world.
+		await using var writes = await BeginWritesAsync(cancellationToken);
 		var inputs = await GatherInputsAsync(manifest, request.ConfigureAnswers, cancellationToken);
 		var landingIssues = await CheckPreviousWikiLandingAsync(manifest, inputs.Installed, cancellationToken);
 		if (landingIssues.Count > 0)
@@ -137,8 +139,7 @@ public partial class PackageInstallService
 		var decisions = request.ConflictDecisions.ToDictionary(
 			d => DecisionKey(d.TargetRef, d.Attribute), d => d, StringComparer.Ordinal);
 
-		var pmWizard = await GetPackageManagerWizardAsync(cancellationToken);
-		await using var writes = BeginWrites(pmWizard);
+		var pmWizard = writes.PackageManager;
 		var run = new ApplyRun(manifest, request, inputs, changeset, decisions, pmWizard, writes);
 
 		foreach (var change in changeset.Objects.Where(c => c.Action
@@ -195,7 +196,7 @@ public partial class PackageInstallService
 	/// </summary>
 	private async Task<CommittedApply> AfterCommitAsync(ApplyRun run, PackageApplyResult applied)
 	{
-		await wiki.DeleteReleasedAsync(run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
+		await wiki.DeleteReleasedAsync(run.Writes, run.WikiDeletions, WikiEditor(run.PackageManager), run.Notes);
 		await registry.PrunePackageRevisionsAsync(run.Manifest.Name, run.Request.KeepRevisions);
 		return new CommittedApply(applied, run.Changeset);
 	}

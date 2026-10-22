@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration.Options;
 using Mediator;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
@@ -16,7 +17,7 @@ namespace SharpMUSH.Implementation.Services;
 /// Parser-layer implementation of <see cref="IPackageLifecycleRunner"/>: after a
 /// successful apply, runs a package's <c>AINSTALL</c> (first install) / <c>AUPDATE</c>
 /// (upgrade) attribute as a <b>command list</b> under the package object itself, via
-/// the shared <see cref="StartupAttributeRunner.RunObjectAttributeAsync"/> (the same
+/// the shared <see cref="StartupAttributeRunner.RunObjectAttributeObservedAsync"/> (the same
 /// path <c>@STARTUP</c> uses). Command-parsing — not function evaluation — is required
 /// because lifecycle scripts contain commands (<c>@function</c>, <c>@hook</c>, …).
 /// Lives here (not in <c>SharpMUSH.Library</c>) because running softcode requires the parser.
@@ -25,10 +26,12 @@ public class PackageLifecycleRunner(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IMUSHCodeParser parser,
-	ILogger<PackageLifecycleRunner> logger) : IPackageLifecycleRunner
+	ILogger<PackageLifecycleRunner> logger,
+	IOptionsWrapper<SharpMUSHOptions> options) : IPackageLifecycleRunner, IPackageLifecycleObserver
 {
-	/// <summary>God (#1): the identity every lifecycle script runs as.</summary>
+	/// <summary>God (#1): the base parser identity and caller for lifecycle scripts.</summary>
 	private static readonly DBRef God = new(1);
+
 
 	/// <inheritdoc />
 	public async Task RunLifecycleAsync(
@@ -62,50 +65,87 @@ public class PackageLifecycleRunner(
 
 	/// <inheritdoc />
 	public async Task RunLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default)
-	{
-		// A portal operation running as a queue entry runs its hooks in entries of their own, after it.
-		if (PackageLifecycleDeferral.TryDefer(objId, attribute))
-		{
-			return;
-		}
+		=> await RunObservedLifecycleAsync(objId, attribute, cancellationToken);
 
+	/// <inheritdoc />
+	public async Task<PackageLifecycleOutcome> RunObservedLifecycleAsync(string objId, string attribute, CancellationToken cancellationToken = default)
+	{
+		if (PackageLifecycleDeferral.TryDefer(objId, attribute)) return PackageLifecycleOutcome.Deferred;
+		var parent = ExecutionBudget.Current;
 		try
 		{
-			if (HelperFunctions.ParseDbRef(objId) is not DBRef dbref)
-			{
-				return;
-			}
+			// Without an ambient budget, merely linking a request would install an infinite budget
+			// and suppress the parser's configured default. Own that same default explicitly here.
+			using var configured = parent is null
+				? ExecutionBudget.FromMilliseconds(options.CurrentValue.Limit.QueueEntryCpuTime, cancellationToken) : null;
+			using var scope = configured is not null ? configured.Enter() : ExecutionBudget.EnterLinked(cancellationToken);
+			return await RunGuardedAsync(objId, attribute, parent);
+		}
+		catch (OperationCanceledException exception) { return ReportFailure(exception, objId, attribute, CancellationOutcome(parent)); }
+		catch (Exception exception)
+		{
+			return ReportFailure(exception, objId, attribute, PackageLifecycleOutcome.Failed);
+		}
+	}
 
-			if (await mediator.Send(new GetObjectNodeQuery(God), cancellationToken) is not AnySharpObject god)
+	private PackageLifecycleOutcome ReportFailure(Exception exception, string objId, string attribute, PackageLifecycleOutcome outcome)
+	{
+		logger.LogError(exception, "Package lifecycle '{Attribute}' on {ObjId} threw; install continues.", attribute, objId);
+		return outcome;
+	}
+
+	private static void CheckBudget(ExecutionBudget? parent)
+	{
+		parent?.ThrowIfExceeded();
+		ExecutionBudget.Current?.ThrowIfExceeded();
+	}
+
+	private static PackageLifecycleOutcome CancellationOutcome(ExecutionBudget? parent)
+		=> ExecutionBudget.Current?.IsExpired == true || parent?.IsExpired == true
+			? PackageLifecycleOutcome.ExecutionLimit : PackageLifecycleOutcome.Cancelled;
+
+	// Classify while the linked/owned budget is still alive, before the caller restores its parent.
+	private async Task<PackageLifecycleOutcome> RunGuardedAsync(string objId, string attribute, ExecutionBudget? parent)
+	{
+		try
+		{
+			CheckBudget(parent);
+			if (HelperFunctions.ParseDbRef(objId) is not DBRef dbref) return PackageLifecycleOutcome.InvalidTarget;
+			var foundGod = await mediator.Send(new GetObjectNodeQuery(God), ExecutionBudget.CurrentToken);
+			CheckBudget(parent);
+			if (foundGod is not AnySharpObject god)
 			{
 				logger.LogWarning("Package lifecycle '{Attribute}' on {ObjId} skipped: God (#1) not found.", attribute, objId);
-				return;
+				return PackageLifecycleOutcome.MissingExecutor;
 			}
-
-			if (await mediator.Send(new GetObjectNodeQuery(dbref), cancellationToken) is not AnySharpObject target)
-			{
-				return;
-			}
-
-			// Establish a God base parser state (there is no ambient parser on the install path),
-			// then run the lifecycle attribute as a COMMAND LIST under the package object itself.
-			// AINSTALL/AUPDATE contain commands (@function/@hook/@set/&attr) — they must be
-			// command-parsed, not function-evaluated — and run as the object so `%!`/`me` resolve
-			// to it (e.g. `@function header=%!,HEADER` targets the package object's own attribute).
+			var foundTarget = await mediator.Send(new GetObjectNodeQuery(dbref), ExecutionBudget.CurrentToken);
+			CheckBudget(parent);
+			if (foundTarget is not AnySharpObject target)
+				return PackageLifecycleOutcome.MissingTarget;
 			var basedParser = parser.Push(ParserState.RootFor(god.Object().DBRef));
-
-			var ran = await StartupAttributeRunner.RunObjectAttributeAsync(
-				basedParser, attributeService, target, attribute, god);
-
-			if (ran)
-			{
+			var verdict = await StartupAttributeRunner.RunObjectAttributeObservedAsync(basedParser, attributeService, target, attribute, god);
+			// The parser can return a deadline failure instead of throwing; cancellation wins over
+			// its ordinary verdict. Check the original deadline too when a linked timer races it.
+			if (verdict is ObjectAttributeRunStatus.Parsed or ObjectAttributeRunStatus.NoVerdict
+				or ObjectAttributeRunStatus.ParseFailure or ObjectAttributeRunStatus.CommandFailure)
 				logger.LogInformation("Ran package lifecycle '{Attribute}' on {ObjId}.", attribute, objId);
-			}
+			CheckBudget(parent);
+			return verdict switch
+			{
+				ObjectAttributeRunStatus.Absent => PackageLifecycleOutcome.Absent,
+				ObjectAttributeRunStatus.Empty => PackageLifecycleOutcome.Empty,
+				ObjectAttributeRunStatus.Unavailable => PackageLifecycleOutcome.AttributeUnavailable,
+				ObjectAttributeRunStatus.NoVerdict => PackageLifecycleOutcome.NoVerdict,
+				ObjectAttributeRunStatus.Parsed => PackageLifecycleOutcome.Parsed,
+				ObjectAttributeRunStatus.ParseFailure => PackageLifecycleOutcome.ParseFailure,
+				ObjectAttributeRunStatus.CommandFailure => PackageLifecycleOutcome.CommandFailure,
+				_ => PackageLifecycleOutcome.Unknown
+			};
 		}
-		catch (Exception ex)
+		catch (OperationCanceledException exception) { return ReportFailure(exception, objId, attribute, CancellationOutcome(parent)); }
+		catch (Exception exception)
 		{
-			// A bad lifecycle script must never fail the install — log and move on.
-			logger.LogError(ex, "Package lifecycle '{Attribute}' on {ObjId} threw; install continues.", attribute, objId);
+			return ReportFailure(exception, objId, attribute, PackageLifecycleOutcome.Failed);
 		}
 	}
 }

@@ -296,7 +296,8 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(categoryKeys.All(indexKey => indexKey.Length <= provider.Store.MaxKeySize)).IsTrue();
 		await Assert.That(pageBytes.Length + key.Length < 128 * 1024).IsTrue();
 		await Assert.That(revisionBytes.Length + revisionKey.Length < 128 * 1024).IsTrue();
-		var categoryDeltaBytes = categoryKeys.Sum(indexKey => (long)indexKey.Length + visibility.Length);
+		// Category v1 appends a four-byte label boundary and four-byte sentinel to visibility.
+		var categoryDeltaBytes = categoryKeys.Sum(indexKey => (long)indexKey.Length + visibility.Length + 8);
 		var exactLowerBound = pageBytes.LongLength + key.Length + revisionBytes.LongLength + revisionKey.Length + categoryDeltaBytes;
 		await Assert.That(exactLowerBound > 256 * 1024).IsTrue();
 		var before = Task3Snapshot(provider);

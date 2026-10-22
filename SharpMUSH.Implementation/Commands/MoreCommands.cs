@@ -25,8 +25,11 @@ public partial class Commands
 		MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> WarnOnMissing(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		// Internal no-op command for warning system
-		await ValueTask.CompletedTask;
+		// cmd_warn_on_missing (src/cmds.c:1799): the executor's owner is told.
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var owner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
+		await NotifyService.Notify(owner,
+			$"No command found in code by #{executor.Object().DBRef.Number} - don't start code with functions.", executor);
 		return new None();
 	}
 

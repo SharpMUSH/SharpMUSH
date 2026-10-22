@@ -217,7 +217,8 @@ public partial class IntegratedWikiMutationTests
 	{
 		// Decode rejects QueryReady=true, unknown schema/generation and mismatched fixture identities.
 		await Assert.That(ObserveActivation(provider, fixtureId).Active).IsTrue();
-		await Assert.That(AtomicWikiLayout.Schema.Properties.Length).IsEqualTo(0);
+		// The prototype schema 2: ordinary edits and deletes commit no facts under it; only a fixture import does.
+		await Assert.That(AtomicWikiLayout.Schema.Version).IsEqualTo(2L);
 		await Assert.That(provider.AtomicWikiPhase).IsEqualTo(SemanticFixturePhase.Active);
 	}
 
@@ -234,8 +235,23 @@ public partial class IntegratedWikiMutationTests
 
 	private static string DeleteRowIdentity(TableDef table, byte[] key) => table.Name + ":" + Convert.ToHexString(key);
 
+	private static readonly string FixtureVersionRowPrefix = "meta:" + Convert.ToHexString(Encoding.UTF8.GetBytes("prototype.semantic.version."));
+
+	private static bool IsFixtureVersionRow(string row) => row.StartsWith(FixtureVersionRowPrefix, StringComparison.Ordinal);
+
+	private static ulong FixtureVersion(IEnumerable<string> rows, string name)
+	{
+		var prefix = "meta:" + Convert.ToHexString(Encoding.UTF8.GetBytes($"prototype.semantic.version.{name}/v1")) + ":";
+		return rows.FirstOrDefault(row => row.StartsWith(prefix, StringComparison.Ordinal)) is { } row
+			? BinaryPrimitives.ReadUInt64BigEndian(Convert.FromHexString(row[prefix.Length..])) : 0;
+	}
+
+	/// <param name="beforeImport">
+	/// For a page whose facts were imported after this snapshot, and no other page's: its fact, index and class
+	/// rows are expected back exactly as they were, and its partition's version advanced once.
+	/// </param>
 	private static async Task AssertDeleteDelta(LightningDatabase provider, WikiPage page, ProjectionObservation previous,
-		string[] before, long sequence, long receipts, long allocator)
+		string[] before, long sequence, long receipts, long allocator, string[]? beforeImport = null)
 	{
 		var projection = ObserveProjection(provider, page.Id);
 		var old = previous.State.State;
@@ -285,6 +301,7 @@ public partial class IntegratedWikiMutationTests
 		{
 			State = old with
 			{
+				ClassId = 0,
 				Summary = old.Summary with { Deleted = true, StateVersion = old.Summary.StateVersion + 1 },
 				CommitSequence = sequence + 1
 			}
@@ -293,12 +310,46 @@ public partial class IntegratedWikiMutationTests
 		var sequenceBytes = new byte[8];
 		BinaryPrimitives.WriteUInt64BigEndian(sequenceBytes, checked((ulong)(sequence + 1)));
 		expected.Add(sequenceIdentity + ":" + Convert.ToHexString(sequenceBytes));
+		if (beforeImport is not null)
+		{
+			string[] restored = [AtomicWikiLayout.Facts.Name + ":", AtomicWikiLayout.Forward.Name + ":", AtomicWikiLayout.Postings.Name + ":", AtomicWikiLayout.Catalog.Name + ":"];
+			bool Restored(string row) => restored.Any(prefix => row.StartsWith(prefix, StringComparison.Ordinal));
+			expected.RemoveAll(Restored);
+			expected.AddRange(beforeImport.Where(Restored));
+			var partitionPrefix = AtomicWikiLayout.Partitions.Name + ":";
+			var partition = expected.Single(row => row.StartsWith(partitionPrefix, StringComparison.Ordinal));
+			var split = partition.LastIndexOf(':');
+			var bumped = new byte[8];
+			BinaryPrimitives.WriteUInt64BigEndian(bumped, BinaryPrimitives.ReadUInt64BigEndian(Convert.FromHexString(partition[(split + 1)..])) + 1);
+			expected[expected.IndexOf(partition)] = partition[..(split + 1)] + Convert.ToHexString(bumped);
+			// Its last reference gone, the class's forward lookup goes; its 9-byte reverse identity stays, never reused.
+			var classLookup = AtomicWikiLayout.Registry.Name + ":" + Convert.ToHexString([(byte)WikiSemanticRegistryKind.Class]);
+			expected.RemoveAll(row => row.StartsWith(classLookup, StringComparison.Ordinal)
+				&& row.Split(':')[1].Length != 18 && !beforeImport.Contains(row));
+			// And the collection's class count and bytes return to what they were before the import, zero if unset.
+			foreach (var counter in new byte[] { 30, 31 })
+			{
+				var prefix = AtomicWikiLayout.Metadata.Name + ":" + Convert.ToHexString([counter]);
+				for (var index = 0; index < expected.Count; index++)
+				{
+					if (!expected[index].StartsWith(prefix, StringComparison.Ordinal)) continue;
+					var identity = expected[index][..(expected[index].LastIndexOf(':') + 1)];
+					expected[index] = beforeImport.FirstOrDefault(row => row.StartsWith(identity, StringComparison.Ordinal))
+						?? identity + Convert.ToHexString(new byte[8]);
+				}
+			}
+		}
 		var after = Task3Snapshot(provider);
 		var addedReceipt = after.Except(before).Single(row => row.StartsWith(AtomicWikiLayout.Mutations.Name + ":", StringComparison.Ordinal));
 		expected.Add(addedReceipt);
+		// The fixture's reader counters advance in the delete's own job: content once, requirements at most
+		// once (only a page rule can go), authorization not at all. Every other row is compared exactly.
+		await Assert.That(FixtureVersion(after, "content")).IsEqualTo(FixtureVersion(before, "content") + 1);
+		await Assert.That(FixtureVersion(after, "requirements") - FixtureVersion(before, "requirements")).IsBetween(0UL, 1UL);
+		await Assert.That(FixtureVersion(after, "authorization")).IsEqualTo(FixtureVersion(before, "authorization"));
 		// Exact row bytes for every observed table: registry, zero facts, neighbors, pins, other rules,
 		// activation identities, old receipts and allocator all remain unchanged.
-		await Assert.That(after).IsEquivalentTo(expected);
+		await Assert.That(after.Where(row => !IsFixtureVersionRow(row))).IsEquivalentTo(expected.Where(row => !IsFixtureVersionRow(row)));
 		await Assert.That(DeleteCertificateSnapshot(provider).Length).IsEqualTo(3);
 		await Assert.That(Encoding.UTF8.GetString(projection.SummaryBytes)).DoesNotContain(page.MarkdownSource);
 	}

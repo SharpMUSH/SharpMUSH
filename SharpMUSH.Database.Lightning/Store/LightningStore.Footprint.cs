@@ -14,7 +14,7 @@ public sealed partial class LightningStore
 	/// </summary>
 	public Footprint TableFootprint(TableDef table)
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
@@ -33,7 +33,7 @@ public sealed partial class LightningStore
 	/// </summary>
 	public (long Entries, long KeyBytes) PrefixFootprint(TableDef table, byte[] prefix)
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);

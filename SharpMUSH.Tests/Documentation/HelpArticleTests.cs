@@ -34,7 +34,7 @@ public class HelpArticleTests
 		await Assert.That(article.Sections.Select(section => section.Id)).IsEquivalentTo(new[] { "examples", "options" });
 		await Assert.That(article.Markdown.IndexOf("## Examples", StringComparison.Ordinal))
 			.IsLessThan(article.Markdown.IndexOf("## Options", StringComparison.Ordinal));
-		await Assert.That(article.Entry().Markdown).Contains("help sample examples");
+		await Assert.That(article.Entry().Markdown).Contains("[sample examples]");
 		await Assert.That(article.Entry().Markdown).DoesNotContain("Option details");
 		await Assert.That(article.Entry(article.Sections[0]).Markdown).Contains("Local explanation");
 		await Assert.That(article.Entry(article.Sections[0]).Markdown).DoesNotContain("Option details");
@@ -48,8 +48,8 @@ public class HelpArticleTests
 		var article = HelpArticleParser.Parse(Article.Replace("Overview.", "Overview: see [sample options] for the options."), "help")
 			.Single().Article;
 		var overview = article.Entry().Markdown;
-		await Assert.That(overview).Contains("- `help sample examples`");
-		await Assert.That(overview).DoesNotContain("`help sample options`");
+		await Assert.That(overview).Contains("- [sample examples]");
+		await Assert.That(overview.Split("[sample options]").Length).IsEqualTo(2);
 	}
 
 	[Test]
@@ -222,6 +222,28 @@ public class HelpArticleTests
 	public async Task WebKeepsTheIndentationOfALineAfterABreak(string markdown, string expected)
 	{
 		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(expected);
+	}
+
+	/// <summary>
+	/// An argument name written as a tag is text in both renderers; only a line break, a comment and the
+	/// styling tags the terminal reads stay HTML. A browser would hide <c>&lt;value&gt;</c> as an unknown
+	/// element, and <c>&lt;title&gt;</c> or <c>&lt;body&gt;</c> would swallow the rest of the page.
+	/// </summary>
+	[Test]
+	[Arguments("A bar filled to *<value>*'s share of *<maximum>*, with *<label>* before it.",
+		"<p>A bar filled to <em>&lt;value&gt;</em>'s share of <em>&lt;maximum&gt;</em>, with <em>&lt;label&gt;</em> before it.</p>\n",
+		"A bar filled to <value>'s share of <maximum>, with <label> before it.")]
+	[Arguments("A box with *<title>* above *<body>*.<br>\nAfter.",
+		"<p>A box with <em>&lt;title&gt;</em> above <em>&lt;body&gt;</em>.<br>After.</p>\n",
+		"A box with <title> above <body>.\nAfter.")]
+	[Arguments("Kept <b>bold</b><!-- note -->.", "<p>Kept <b>bold</b><!-- note -->.</p>\n", "Kept bold.")]
+	[Arguments("Intro.\n\n<title> opens the line.\nNext.",
+		"<p>Intro.</p>\n<p>&lt;title&gt; opens the line.<br>Next.</p>\n",
+		"Intro.\n\n<title> opens the line.\nNext.")]
+	public async Task ArgumentNamesWrittenAsTagsAreText(string markdown, string html, string terminal)
+	{
+		await Assert.That(HelpHtmlRenderer.RenderToHtml(markdown, topic => "/help/" + topic)).IsEqualTo(html);
+		await Assert.That(RecursiveMarkdownHelper.RenderMarkdown(markdown).ToPlainText()).IsEqualTo(terminal);
 	}
 
 	/// <summary>

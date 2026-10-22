@@ -52,4 +52,7 @@ public interface IMailStore
 	/// WARNING: This bypasses all access controls and should only be used in God-level administrative operations.
 	/// </summary>
 	IAsyncEnumerable<SharpMail> GetAllSystemMailAsync(CancellationToken cancellationToken = default);
+
+	/// <summary>Every stored message's id and recipient, without decoding the message.</summary>
+	IAsyncEnumerable<MailRecipient> GetAllMailRecipientsAsync(CancellationToken cancellationToken = default);
 }

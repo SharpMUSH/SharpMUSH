@@ -134,6 +134,9 @@ internal sealed class WikiSemanticWork : IDisposable
 		return work;
 	}
 
+	/// <summary>Set while a rebuild is staged: every projection this work plans is journaled for the staged generation.</summary>
+	internal SemanticRebuildJournal? Journal { get; set; }
+
 	internal byte[] Bytes(long estimate, Func<byte[]> encode)
 	{
 		Lifetime.ReserveAdditional(checked(512 + estimate * 4));
@@ -170,9 +173,9 @@ internal sealed class WikiSemanticWork : IDisposable
 		}
 	}
 	internal byte[]? ReadBytes(TableDef table, byte[] key) => Read(table, key, b => b.ToArray());
-	internal ulong Counter(byte[] key, ulong absent = 0)
+	internal ulong Counter(byte[] key, ulong absent = 0, TableDef? table = null)
 	{
-		var bytes = ReadBytes(Tables.Metadata, key);
+		var bytes = ReadBytes(table ?? Tables.Metadata, key);
 		if (bytes is null) return absent;
 		if (bytes.Length != 8) throw new InvalidDataException("Malformed counter.");
 		return BinaryPrimitives.ReadUInt64BigEndian(bytes);
@@ -185,9 +188,10 @@ internal sealed class WikiSemanticWork : IDisposable
 	}
 	internal ulong Registry(WikiSemanticRegistryKind kind, string identity, bool create = true)
 	{
-		if (_registry.TryGetValue((kind, identity), out var known) && known.Revision == Delta.RevisionFor(Tables.Registry, known.Key)) return known.Id;
+		var table = Tables.RegistryFor(kind);
+		if (_registry.TryGetValue((kind, identity), out var known) && known.Revision == Delta.RevisionFor(table, known.Key)) return known.Id;
 		var key = Lookup(kind, identity);
-		var entry = Read(Tables.Registry, key, WikiSemanticStateCodec.Registry);
+		var entry = Read(table, key, WikiSemanticStateCodec.Registry);
 		if (entry is not null)
 		{
 			if (entry.Identity != identity || entry.Id == 0) throw new InvalidDataException("Registry hash collision or invalid ID.");
@@ -202,15 +206,15 @@ internal sealed class WikiSemanticWork : IDisposable
 		var counterKey = Key((byte)(20 + (byte)kind));
 		Delta.Put(Tables.Metadata, counterKey, Number(next + 1));
 		var value = Bytes(32L + Encoding.UTF8.GetByteCount(identity), () => WikiSemanticStateCodec.Registry(new WikiSemanticRegistryEntry(next, identity)));
-		Delta.Put(Tables.Registry, key, value);
-		Delta.Put(Tables.Registry, Bytes(9, () => WikiSemanticKeys.RegistryReverse(kind, next)), value);
+		Delta.Put(table, key, value);
+		Delta.Put(table, Bytes(9, () => WikiSemanticKeys.RegistryReverse(kind, next)), value);
 		_next[kind] = (checked(next + 1), counterKey, Delta.RevisionFor(Tables.Metadata, counterKey));
 		Remember(kind, identity, next, key); return next;
 	}
 	private void Remember(WikiSemanticRegistryKind kind, string identity, ulong id, byte[] key)
 	{
 		if (!_registry.ContainsKey((kind, identity))) Lifetime.ReserveAdditional(192);
-		_registry[(kind, identity)] = (id, key, Delta.RevisionFor(Tables.Registry, key));
+		_registry[(kind, identity)] = (id, key, Delta.RevisionFor(Tables.RegistryFor(kind), key));
 	}
 	public void Dispose() { if (_ownsDelta) Delta.Clear(); _registry.Clear(); _next.Clear(); if (_ownsLifetime) Lifetime.Dispose(); }
 }

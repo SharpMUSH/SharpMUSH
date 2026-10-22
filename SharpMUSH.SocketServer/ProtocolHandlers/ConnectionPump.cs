@@ -22,8 +22,11 @@ public sealed class ConnectionPump(
 	DetachedSessionTracker detachedTracker,
 	TimeSpan grace,
 	SharpMUSH.Library.Services.Interfaces.IConnectionStateStore? stateStore = null,
-	ISessionResumeAuthorizationService? authorization = null)
+	ISessionResumeAuthorizationService? authorization = null,
+	ConnectionTrafficCounters? traffic = null)
 {
+	private readonly ConnectionTrafficCounters _traffic = traffic ?? new ConnectionTrafficCounters();
+
 	public async Task RunAsync(IDuplexTransport transport, long candidateHandle, CancellationToken ct)
 	{
 		try { await RunCoreAsync(transport, candidateHandle, ct); }
@@ -228,6 +231,7 @@ public sealed class ConnectionPump(
 				try { await connectionService.DisconnectAsync(handle); }
 				finally
 				{
+					_traffic.End(handle);
 					descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 					sinkRegistry.Remove(handle);
 				}
@@ -276,9 +280,16 @@ public sealed class ConnectionPump(
 				return;
 			}
 			if (sink.Current is not { } current) return;
-			try { await SendTransportAsync(current, wrapped); }
+			var counter = _traffic.For(handle);
+			counter.Writing(wrapped.Length);
+			try
+			{
+				await SendTransportAsync(current, wrapped);
+				counter.Written(wrapped.Length);
+			}
 			catch (Exception ex)
 			{
+				counter.Dropped(wrapped.Length);
 				logger.LogWarning(ex, "Socket output failed for {Handle}; preserving replay and detaching transport", handle);
 				if (sink.Detach(current))
 				{
@@ -297,6 +308,7 @@ public sealed class ConnectionPump(
 	{
 		var current = sink.End();
 		sinkRegistry.Remove(handle);
+		_traffic.End(handle);
 		descriptorGenerator.ReleaseWebSocketDescriptor(handle);
 		detachedTracker.Reattach(handle);
 		TimerGraceScheduler.Fire(async () =>
@@ -357,6 +369,7 @@ public sealed class ConnectionPump(
 
 		var sink = sinkRegistry.GetOrCreate(handle);
 		sink.Attach(transport);
+		_traffic.Start(handle);
 
 		sink.SessionId = session;
 		var output = CreateOutput(handle, session, sink);
@@ -372,6 +385,7 @@ public sealed class ConnectionPump(
 
 	private async Task PublishInputAsync(long handle, string message, CancellationToken ct)
 	{
+		_traffic.For(handle).Received(Encoding.UTF8.GetByteCount(message));
 		if (WebSocketControlFrame.TryParseNaws(message, out var cols, out var rows))
 			await ConnectionInputPublisher.PublishAsync(publishEndpoint, connectionService, logger,
 				handle, new NAWSUpdateMessage(handle, rows, cols), ct);

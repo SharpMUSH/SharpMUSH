@@ -61,6 +61,7 @@ SharpMUSH.Guide repository, under `Examples/Packages/`.
 | [`mudlet-client/`](mudlet-client/) | Mudlet's own packages: Client.GUI and Client.Map answering ``SOCKET`GMCP``'s Core.Hello, External.Discord.Info and Status, a `+gui on/off` command, and every URL a `+config` setting (requires plus-help and plus-config) |
 | [`mud-kit/`](mud-kit/) | A meta package: depends on the five above and adds a `+help gmcp` overview, so one install sets a game up for Mudlet |
 | [`alts/`](alts/) | Privacy by account: `+alts` reads `account()` and `accountchars()` from a WIZARD object and decides itself who sees what, keeps each account's choices on a store keyed by account id rather than on a character, and hears `` PLAYER`UNLINK `` beside other packages through ``PLAYER`UNLINK`ALTS`` on the event handler |
+| [`onboarding/`](onboarding/) | A getting-started checklist that depends on nothing: `+welcome`, steps kept as a `+config` table, steps that tick themselves off through a ``CHECK`<KEY>`` beside them, the copy shown at login on the connection that logged in (``PLAYER`CONNECT`` on the event handler), and other packages adding steps through bridges: [`onboarding-help`](onboarding-help/), [`onboarding-config`](onboarding-config/) and [`onboarding-chargen`](onboarding-chargen/) |
 
 ## The manifest: `package.yaml`
 
@@ -370,6 +371,33 @@ What install, upgrade and uninstall do:
   permission also clears every account and object override of it.
 - **Rollback** restores objects and attributes only; roles, permissions and
   categories stay as they are.
+
+### Grants on the game's roles (format 1.15)
+
+`grants:` allows the package's own permissions on roles the game already has,
+such as `wizard` and `royalty`, which a package cannot declare. Each role maps
+to a list of permissions the package declares under `permissions:`.
+
+```yaml
+format: "1.15"
+package: requests
+version: 1.1.0
+
+grants:
+  wizard: [requests.handle]
+  royalty: [requests.handle]
+```
+
+A role the package declares sets its permissions under `roles:` instead, and a
+built-in or another package's permission cannot be granted. The review screen
+lists each grant before the apply.
+
+- **Install and upgrade.** The permission is allowed where the role leaves it
+  unset, and that grant is the package's. A role that already allows or denies
+  it is left alone. A grant the game has since cleared
+  (`@role/clear wizard=requests.handle`) stays cleared through upgrades.
+- **Dropped grants and uninstall.** The permission is cleared from the role if
+  the role still allows it, so the permission itself can go with the package.
 
 ## Configuration options (format 1.3)
 

@@ -17,7 +17,7 @@ internal static class WikiSemanticVisibilityCatalog
 		(ulong Count, ulong Bytes) Totals(ulong id)
 		{
 			if (counts.TryGetValue(id, out var found)) return found;
-			var totals = (work.Counter(work.Key(30, id)), work.Counter(work.Key(31, id)));
+			var totals = (work.Counter(work.Key(30, id), table: work.Tables.Counters), work.Counter(work.Key(31, id), table: work.Tables.Counters));
 			work.Lifetime.ReserveAdditional(128); counts.Add(id, totals); return totals;
 		}
 		string ClassIdentity(ulong id, byte[] bytes)
@@ -45,7 +45,7 @@ internal static class WikiSemanticVisibilityCatalog
 				counts[previous.CollectionId] = (totals.Count - 1, totals.Bytes - bytes);
 				work.Delta.Delete(work.Tables.Catalog, oldKey);
 				// Retain the reverse identity history and old partition version; never reuse this ID.
-				work.Delta.Delete(work.Tables.Registry, work.Lookup(WikiSemanticRegistryKind.Class, identity));
+				work.Delta.Delete(work.Tables.Classes, work.Lookup(WikiSemanticRegistryKind.Class, identity));
 			}
 			else work.Delta.Put(work.Tables.Catalog, oldKey, work.Bytes(old.Descriptor.Length + 32L, () => WikiSemanticStateCodec.Catalog(old with { References = old.References - 1 })));
 		}
@@ -76,8 +76,8 @@ internal static class WikiSemanticVisibilityCatalog
 			work.Budget.CancellationToken.ThrowIfCancellationRequested();
 			if (totals.Count > MaximumClasses) throw new WikiSemanticCapacityException("catalog-classes");
 			if (totals.Bytes > MaximumBytes) throw new WikiSemanticCapacityException("catalog-bytes");
-			work.Delta.Put(work.Tables.Metadata, work.Key(30, id), work.Number(totals.Count));
-			work.Delta.Put(work.Tables.Metadata, work.Key(31, id), work.Number(totals.Bytes));
+			work.Delta.Put(work.Tables.Counters, work.Key(30, id), work.Number(totals.Count));
+			work.Delta.Put(work.Tables.Counters, work.Key(31, id), work.Number(totals.Bytes));
 		}
 		return result;
 	}

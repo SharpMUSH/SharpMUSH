@@ -1,0 +1,89 @@
+{
+  "Rate": 0,
+  "Pass": "cold",
+  "Label": "first run after process start, page cache not dropped",
+  "OpenSeconds": 1.0199883,
+  "Seconds": 600.0097143,
+  "Queries": {
+    "Count": 0,
+    "P50": "NaN",
+    "P95": "NaN",
+    "P99": "NaN",
+    "Max": "NaN"
+  },
+  "QueryOutcomes": {},
+  "QueriesByKind": {},
+  "Commands": {
+    "Count": 6000,
+    "P50": 2.6221000000077765,
+    "P95": 26.443399999989197,
+    "P99": 68.16859999999997,
+    "Max": 281.7801000000036
+  },
+  "CommandsRefused": 0,
+  "CommandsByKind": {
+    "look": {
+      "Count": 1500,
+      "P50": 3.2713000000221655,
+      "P95": 5.040399999998044,
+      "P99": 21.644599999999627,
+      "Max": 211.1002
+    },
+    "@set": {
+      "Count": 1500,
+      "P50": 11.698900000017602,
+      "P95": 53.158399999985704,
+      "P99": 115.28010000000359,
+      "Max": 281.7801000000036
+    },
+    "pose": {
+      "Count": 1500,
+      "P50": 1.781200000026729,
+      "P95": 2.5702000000164844,
+      "P99": 3.915900000021793,
+      "Max": 35.35159999999999
+    },
+    "say": {
+      "Count": 1500,
+      "P50": 1.9802999999992608,
+      "P95": 2.8708000000042375,
+      "P99": 4.784099999989849,
+      "Max": 133.035
+    }
+  },
+  "WriterWaitMs": {
+    "Count": 1574,
+    "P50": 0,
+    "P95": 0,
+    "P99": 0,
+    "Max": 93.7831
+  },
+  "WriterHoldMs": {
+    "Count": 1572,
+    "P50": 9.7524,
+    "P95": 50.5962,
+    "P99": 112.9541,
+    "Max": 286.925
+  },
+  "ReadTransactionMs": {
+    "Count": 34380,
+    "P50": 0.008,
+    "P95": 0.0447,
+    "P99": 0.1142,
+    "Max": 5.19
+  },
+  "PeakReadsActive": 2,
+  "PeakWorkingSet": 443092992,
+  "MinorFaults": 32843,
+  "MajorFaults": 0,
+  "AllocatedBytes": 2677403976,
+  "GcPauseMs": 426.323,
+  "Storage": {
+    "MapSizeBytes": 68719476736,
+    "FileBytes": 156745728,
+    "AllocatedBytes": 156745728,
+    "LiveBytes": 156090368,
+    "FreeBytes": 655360
+  },
+  "Drained": true
+}

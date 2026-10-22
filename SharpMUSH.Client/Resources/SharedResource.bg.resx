@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Управление на акаунта</value>
+    <value>Моят акаунт</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# регистриран герой} other {# регистрирани герои}}</value>
     <comment>MT — «герой» denotes a person, so the ordinary plural is used after the numeral, not the бройна форма</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Герои</value>
-    <comment>MT — abbreviation-length label; Bulgarian has no shorter natural form</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Затвори терминала</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>команден терминал</value>
+    <value>Команден терминал</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>онлайн</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Отвори терминала</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Тази игра не пази история на личните съобщения, затова се показват само съобщенията от това посещение.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Обратно към сцената</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Обратно към играта</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Игра</value>

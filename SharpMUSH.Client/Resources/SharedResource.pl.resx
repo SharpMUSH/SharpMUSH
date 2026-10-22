@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Zarządzanie kontem</value>
+    <value>Moje konto</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {Zarejestrowano # postać} few {Zarejestrowano # postacie} many {Zarejestrowano # postaci} other {Zarejestrowano # postaci}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Postacie</value>
-    <comment>MT — no natural Polish abbreviation; the full word is still short</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Zamknij terminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>terminal komend</value>
+    <value>Terminal komend</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1964,10 +1960,6 @@
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
     <comment>MT — standard in Polish UI usage</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Otwórz terminal</value>
-    <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Sesja gry jest aktywna</value>
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Ta gra nie przechowuje historii wiadomości, więc widać tylko wiadomości z tej wizyty.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Wróć do sceny</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Wróć do gry</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Gra</value>

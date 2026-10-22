@@ -273,8 +273,8 @@ public partial class Commands
 			{
 				// speech.c:927-935: a DARK player who would have refused the page is indistinguishable
 				// from one who is not logged in, which is the point of hiding behind DARK.
-				await NotifyService.Notify(executor,
-					string.Format(ErrorMessages.Notifications.NotConnected, targetName), executor);
+				await PageReturn(parser, executor, recipient, "Away", "AWAY",
+					string.Format(ErrorMessages.Notifications.NotConnected, targetName));
 
 				if (failsLock)
 				{
@@ -287,8 +287,8 @@ public partial class Commands
 
 			if (isHaven)
 			{
-				await NotifyService.Notify(executor,
-					string.Format(ErrorMessages.Notifications.NotAcceptingAnyPages, targetName), executor);
+				await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
+					string.Format(ErrorMessages.Notifications.NotAcceptingAnyPages, targetName));
 				unable.Add(SafeStringWithSpace(targetName));
 				continue;
 			}
@@ -316,8 +316,8 @@ public partial class Commands
 				// `OFAILURE / `AFAILURE (lock.c:861-870) that LockMessages.FailureAttributes
 				// builds, and FailLock evaluates them as the recipient. No default: Penn passes
 				// NULL.
-				await NotifyService.Notify(executor,
-					string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName), executor);
+				await PageReturn(parser, executor, recipient, "Haven", "HAVEN",
+					string.Format(ErrorMessages.Notifications.NotAcceptingYourPages, targetName));
 
 				await DidItService.FailLock(parser, executor, recipient, LockType.Page);
 
@@ -422,6 +422,7 @@ public partial class Commands
 						AttributeService, pageParser, recipient, recipient, "PAGEFORMAT",
 						pageFormatArgs, incomingDefault));
 				await NotifyService.Notify(recipient, incoming, executor, INotifyService.NotificationType.Say);
+				await PageReturn(parser, executor, recipient, "Idle", "IDLE", null);
 				// Replace legacy text and establish its protection/owner in the same transaction. This internal
 				// context deliberately uses the batch's watch bypass: arbitrary legacy custom watches are not
 				// part of paging. Outgoing LASTPAGED and PAGE`MESSAGE keep their existing paths.
@@ -452,6 +453,51 @@ public partial class Commands
 		}
 
 		return CallState.Empty;
+	}
+
+	/// <summary>
+	/// predicat.c page_return: the target's <paramref name="attribute"/> (AWAY, HAVEN or IDLE), evaluated
+	/// by the target with the pager as enactor. A non-empty result goes to the pager as
+	/// "&lt;type&gt; message from &lt;target&gt;: ...", and a target that is not HAVEN hears that it was
+	/// sent. Without the attribute the pager is told <paramref name="fallback"/>, when there is one.
+	/// </summary>
+	private async ValueTask PageReturn(IMUSHCodeParser parser, AnySharpObject pager, AnySharpObject target,
+		string type, string attribute, string? fallback)
+	{
+		if (await AttributeService.GetAttributeAsync(target, target, attribute,
+					IAttributeService.AttributeMode.SystemSet, true) is not SharpAttribute[])
+		{
+			if (fallback is not null)
+			{
+				await NotifyService.Notify(pager, fallback, pager);
+			}
+
+			return;
+		}
+
+		var returned = await parser.With(
+			state => state with
+			{
+				Executor = target.Object().DBRef,
+				Caller = target.Object().DBRef,
+				Enactor = pager.Object().DBRef
+			},
+			returnParser => AttributeHelpers.EvaluateFormatAttribute(
+				AttributeService, returnParser, target, target, attribute, [], MarkupText.Empty));
+		if (returned.Length == 0)
+		{
+			return;
+		}
+
+		await NotifyService.Notify(pager, MarkupText.Concat(
+			MarkupText.Plain(string.Format(ErrorMessages.Notifications.PageReturnMessage, type, target.Object().Name, string.Empty)),
+			returned), pager);
+		if (!await target.HasFlag("HAVEN"))
+		{
+			var now = DateTime.Now;
+			await NotifyService.Notify(target, string.Format(ErrorMessages.Notifications.PageReturnSent,
+				now.Hour, now.Minute, type, pager.Object().Name), pager);
+		}
 	}
 
 	/// <summary>

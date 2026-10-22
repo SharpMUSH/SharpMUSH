@@ -100,7 +100,7 @@ public class NumericCompatibilityTests
 	// pidinfo: a strict unsigned integer, else e_uint (src/cque.c:1747-1749).
 	[Arguments(false, false, "pidinfo(-1)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	// A PID past int.MaxValue is still a PID to look up (unsigned int range).
-	[Arguments(false, false, "pidinfo(3000000000)", "#-1 NO SUCH PID")]
+	[Arguments(false, false, "pidinfo(3000000000)", "#-1 INVALID PID")]
 	// benchmark: is_number, truncated, at least 1, else e_uint (src/funmisc.c:1492-1501).
 	[Arguments(false, false, "benchmark(1,0)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	[Arguments(false, false, "benchmark(1,0.5)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]

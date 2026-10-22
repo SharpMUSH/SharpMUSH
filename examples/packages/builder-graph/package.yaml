@@ -5,7 +5,7 @@ kind: ui
 authors: [SharpMUSH]
 description: Builder topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place.
 binaries:
-  min_server_version: ">=2.0"
+  min_server_version: ">=3.0"
   files:
     - file: ui.json
       sha256: ca8d7de593a16bf150bc0a57665cad77385f05d27d8fda63bc333fde6f8939f7

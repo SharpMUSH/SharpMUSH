@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Kontohantering</value>
+    <value>Mitt konto</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# karaktär registrerad} other {# karaktärer registrerade}}</value>
     <comment>MT — participle agrees in number: registrerad / registrerade</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
-    <comment>MT — deliberately identical to English: Swedish has no natural short form of 'karaktärer', and 'chars' is live MU* shorthand in Swedish groups too. de.resx made the same call. Worth a human decision.</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Stäng terminalen</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>kommandoterminal</value>
+    <value>Kommandoterminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1964,10 +1960,6 @@
   <data name="NavOnline" xml:space="preserve">
     <value>uppkopplad</value>
     <comment>MT — corpus term; overrides the modern loanword 'online'.</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Öppna terminalen</value>
-    <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Spelsession aktiv</value>
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Det här spelet sparar ingen historik över privata meddelanden, så bara meddelanden från det här besöket visas.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Tillbaka till scenen</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Tillbaka till spelet</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Spela</value>

@@ -1,4 +1,5 @@
 using MarkupString;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Services;
 
@@ -49,7 +50,7 @@ public partial class SpeechTransformationTests
 		await Admin($"@name {actor.DbRef}=A{suffix}");
 		await Admin($"&NAMEACCENT {actor.DbRef}='{new string('-', suffix.Length)}");
 		await Admin($"@moniker {actor.DbRef}=[ansi(r,x)][ansi(g,y)]");
-		var configuration = new FixedOptions(Options with { Cosmetic = Options.Cosmetic with { Monikers = enabled } });
+		var configuration = new FixedOptions(Options with { Cosmetic = Options.Cosmetic with { MonikerList = enabled ? "alltypes say" : "" } });
 		var names = new NameFormatter(Attributes, configuration);
 		var node = await Node(actor.DbRef);
 		var speech = await names.FormatAsync(node, NameContext.Speech);
@@ -62,6 +63,48 @@ public partial class SpeechTransformationTests
 		await Assert.That(functionName.ToPlainText()).IsEqualTo("Á" + suffix);
 		await Assert.That(functionName.Runs.Length > 0).IsTrue();
 		await Assert.That((await names.FormatAsync(node, NameContext.NoSpoof)).ToPlainText()).IsEqualTo("A" + suffix);
+	}
+
+	/// <summary>
+	/// The <c>monikers</c> list decides where a name is monikered and for which types; a place it leaves out
+	/// shows the plain name, and an unparsed name is hilighted unless it is monikered (PennMUSH <c>real_unparse</c>).
+	/// </summary>
+	[Test]
+	[Arguments("players look", MonikerPlace.Look, true)]
+	[Arguments("players look", MonikerPlace.Who, false)]
+	[Arguments("things look", MonikerPlace.Look, false)]
+	[Arguments("everywhere alltypes !look", MonikerPlace.Look, false)]
+	[Arguments("", MonikerPlace.Say, false)]
+	public async Task MonikersListChoosesPlacesAndTypes(string list, MonikerPlace place, bool monikered)
+	{
+		var actor = await Player();
+		await Admin($"@moniker {actor.DbRef}=[ansi(r,x)]");
+		var configuration = new FixedOptions(Options with { Cosmetic = Options.Cosmetic with { MonikerList = list } });
+		var names = new NameFormatter(Attributes, configuration);
+		var node = await Node(actor.DbRef);
+		var plain = node.Object().Name;
+
+		var name = await names.NameAsync(node, place);
+		await Assert.That(name.ToPlainText()).IsEqualTo(plain);
+		await Assert.That(name.Runs.Length > 0).IsEqualTo(monikered);
+
+		var unparsed = await names.UnparseNameAsync(node, place);
+		await Assert.That(unparsed.Render(MarkupFormat.Ansi))
+			.IsEqualTo((monikered ? name : plain.Hilight()).Render(MarkupFormat.Ansi));
+	}
+
+	/// <summary>The MONIKER flag shows an object's moniker in the listed places whatever its type.</summary>
+	[Test]
+	public async Task MonikerFlagStandsInForTheType()
+	{
+		var actor = await Player();
+		await Admin($"@moniker {actor.DbRef}=[ansi(r,x)]");
+		var configuration = new FixedOptions(Options with { Cosmetic = Options.Cosmetic with { MonikerList = "things chat" } });
+		var names = new NameFormatter(Attributes, configuration);
+
+		await Assert.That((await names.NameAsync(await Node(actor.DbRef), MonikerPlace.Chat)).Runs.Length).IsEqualTo(0);
+		await Flag(actor.DbRef, "MONIKER");
+		await Assert.That((await names.NameAsync(await Node(actor.DbRef), MonikerPlace.Chat)).Runs.Length).IsGreaterThan(0);
 	}
 
 	[Test]

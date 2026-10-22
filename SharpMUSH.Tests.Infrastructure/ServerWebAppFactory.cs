@@ -254,10 +254,7 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		if (Interlocked.Exchange(ref _server, null) is { } server)
 			await server.DisposeAsync();
 		if (Interlocked.Exchange(ref _ownWorldPath, null) is { } world)
-		{
-			foreach (var path in new[] { world, world + ".backups", world + ".dataprotection-keys" }.Where(Directory.Exists))
-				Directory.Delete(path, recursive: true);
-		}
+			TestWorldFiles.Delete(world);
 		GC.SuppressFinalize(this);
 	}
 

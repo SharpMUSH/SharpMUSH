@@ -93,6 +93,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("look-me", "look me", true),
 		new("locate", "[locate(me,Profile Thing 0,*)]", false),
 		new("tel", "[tel(Profile Thing 0,me)]", false),
+		new("remit-me", "[remit(me,hello)]", false),
+		new("scan-me", "[scan(me,zzzz,inventory)]", false),
 		// Command piping (help piping): a list that pipes against the same list without, typed and from an attribute.
 		new("list2", "think hello;think %>", true, IsCommandList: true),
 		new("pipe", "think hello ;| think %|", true, IsCommandList: true),
@@ -181,6 +183,11 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("ls-eval20-m", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,approved\\)\\],COUNT,20)]", false, AsMortal: true),
 		new("ls-eval20-s", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,approved\\)\\],COUNT,20)]", false, AsStranger: true),
 		new("ls-rare", "[lsearch(all,ETHING,\\[strmatch\\(get\\(##/STATUS\\)\\,rare\\)\\])]", false),
+		new("ls-type", "[words(lsearch(all,type,thing))]", false),
+		new("ls-power", "[lsearch(all,powers,Builder)]", false),
+		new("ls-lflags", "[lsearch(all,lflags,WIZARD)]", false),
+		new("ls-elock", "[lsearch(all,elock,FLAG^WIZARD)]", false),
+		new("ls-power-m", "[lsearch(all,powers,Builder)]", false, AsMortal: true),
 		new("set-idx", "&STATUS {IDXW}=[rand(100000)]", true),
 		new("set-plain", "&NOTE {IDXW}=[rand(100000)]", true),
 	];

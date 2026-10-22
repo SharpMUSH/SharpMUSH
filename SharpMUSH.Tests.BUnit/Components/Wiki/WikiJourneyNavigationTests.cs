@@ -644,6 +644,29 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task PendingOriginCheckHoldsCrossArticleLinksUntilTheReturnContextIsKnown()
+	{
+		var pending = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+		_api.NavigationGate = pending.Task;
+		_nav.NavigateTo("/wiki/main/intro?" + Origin);
+		var cut = RenderRoute(this);
+		try
+		{
+			WaitForBody(cut, "Introduction body");
+			cut.WaitForAssertion(() => Require(_api.NavigationRequests.Count > 0, "The origin check did not start."));
+			await Assert.That(cut.Find("#guide").HasAttribute("href")).IsFalse();
+			await Assert.That(cut.FindAll(".wiki-catlink")).IsNotEmpty();
+			await Assert.That(cut.FindAll(".wiki-catlink[href]")).IsEmpty();
+
+			await cut.InvokeAsync(() => pending.TrySetResult(true));
+			cut.WaitForAssertion(() => Require(cut.Find("#guide").HasAttribute("href"), "The held body link was not released."));
+			await AssertJourney(cut.Find("#guide"), "fr-CA");
+			foreach (var category in cut.FindAll(".wiki-catlink")) await AssertJourney(category, "fr-CA");
+		}
+		finally { pending.TrySetResult(false); }
+	}
+
+	[Test]
 	[Arguments(true)]
 	[Arguments(false)]
 	public async Task InitialPendingNavigationKeepsSameArticleHintsWithoutAuthorizingReturn(bool allowed)
@@ -875,6 +898,8 @@ public class WikiJourneyNavigationTests : TrackingBunitContext
 				return Json(refs.ToDictionary(reference => reference, reference => reference != "main/missing"));
 			}
 			if (uri.AbsolutePath == "/api/wiki/category-names") return Json(new Dictionary<string, string> { ["guides"] = "Guides" });
+			if (uri.AbsolutePath == "/api/wiki/category/guides/newest")
+				return Json(new WikiCategoryNewestDto([new WikiPageSummaryDto("related", "related", "Related article", "main", DateTimeOffset.UnixEpoch, false, 1, ["guides"], true, "en", true, null, null)], 2));
 			if (uri.AbsolutePath == "/api/wiki/category/guides")
 				return Json(new[] { new WikiPageSummaryDto("related", "related", "Related article", "main", DateTimeOffset.UnixEpoch, false, 1, ["guides"], true, "en", true, null, null) });
 			return new HttpResponseMessage(HttpStatusCode.NotFound);

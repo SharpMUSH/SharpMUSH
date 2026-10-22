@@ -256,6 +256,30 @@ public class SocketCommandTests
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>sockset</c> (<c>src/bsd.c</c>): any PUEBLO value turns Pueblo on and an empty one turns it
+	/// off; TELNET takes yes or no.
+	/// </summary>
+	[Test]
+	public async Task SocksetPuebloAndTelnetFollowPennMUSH()
+	{
+		var handle = await LoggedInHandleAsync("SocksetPueblo");
+		var metadata = ConnectionService.Get(handle)!.Metadata;
+
+		await Assert.That(await RunAsync(handle, "SOCKSET PUEBLO=PUEBLOCLIENT 2.50")).Contains("Pueblo flag set.");
+		await Assert.That(metadata.GetValueOrDefault("PUEBLO")).IsEqualTo("1");
+		await Assert.That(metadata.GetValueOrDefault("OUTPUT_FORMAT")).IsEqualTo("pueblo");
+
+		await Assert.That(await RunAsync(handle, "SOCKSET PUEBLO=")).Contains("Pueblo flag cleared.");
+		await Assert.That(metadata.ContainsKey("PUEBLO")).IsFalse();
+		await Assert.That(metadata.ContainsKey("OUTPUT_FORMAT")).IsFalse();
+
+		await Assert.That(await RunAsync(handle, "SOCKSET TELNET=no")).Contains("Telnet flag cleared.");
+		await Assert.That(metadata.ContainsKey("TELNET")).IsFalse();
+		await Assert.That(await RunAsync(handle, "SOCKSET TELNET=yes")).Contains("Telnet flag set.");
+		await Assert.That(metadata.GetValueOrDefault("TELNET")).IsEqualTo("1");
+	}
+
+	/// <summary>
 	/// The terminal-feature settings: each is stored and shown; "auto" hands a link back to what the terminal
 	/// reported, and pictures stay off until set. An unknown value is refused rather than stored.
 	/// </summary>

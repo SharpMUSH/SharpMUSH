@@ -1,6 +1,7 @@
 using SharpMUSH.Implementation.Handlers.Database;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
@@ -723,7 +724,7 @@ public partial class Commands
 
 	private ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1, ParserState? callbackState = null)
-		=> QueueSemaphoreWithDelay(parser, located, attribute, TimeSpan.FromDays(36500), arg1, callbackState);
+		=> QueueSemaphoreWithDelay(parser, located, attribute, SemaphoreTimeout.None, arg1, callbackState);
 
 	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
@@ -944,6 +945,30 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>log_forces</c> (<c>src/wiz.c:640</c>): a wizard's force, marked <c>**</c> when the
+	/// victim belongs to someone else, and anyone's force of a wizard-owned object.
+	/// </summary>
+	private async ValueTask LogForceAsync(AnySharpObject executor, AnySharpObject found, MString command)
+	{
+		var victimOwner = await found.Object().Owner.WithCancellation(CancellationToken.None);
+		var executorOwner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var prefix = await executor.IsWizard()
+			? victimOwner.Object.DBRef != executorOwner.Object.DBRef ? "** FORCE" : "FORCE"
+			: await ((AnySharpObject)victimOwner).IsWizard()
+				? "** FORCE WIZ-OWNED"
+				: null;
+		if (prefix is null)
+			return;
+
+		using (Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Wizard" }))
+		{
+			Logger.LogInformation("WIZ: {Executor} --> {Victim}: {Prefix}: {Command}",
+				$"{executor.Object().Name}(#{executor.Object().DBRef.Number})",
+				$"{found.Object().Name}(#{found.Object().DBRef.Number})", prefix, command.ToPlainText());
+		}
+	}
+
 	private async ValueTask<Option<CallState>> ForceAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		AnySharpObject found, MString cmdListArg)
 	{
@@ -962,6 +987,9 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceSorry), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
+
+		if (Configuration.CurrentValue.Log.LogForces)
+			await LogForceAsync(executor, found, cmdListArg);
 
 		if (cmdListArg.Length < 1)
 		{
@@ -1143,7 +1171,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
+			var (oneMinute, fiveMinutes, fifteenMinutes) = parser.ServiceProvider.GetRequiredService<QueueLoad>().Averages();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageFormat), executor,
+				oneMinute.ToString("F2", CultureInfo.InvariantCulture), fiveMinutes.ToString("F2", CultureInfo.InvariantCulture),
+				fifteenMinutes.ToString("F2", CultureInfo.InvariantCulture));
 			return CallState.Empty;
 		}
 

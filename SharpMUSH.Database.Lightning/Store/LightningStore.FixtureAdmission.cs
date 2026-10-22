@@ -34,6 +34,7 @@ public sealed partial class LightningStore
 			using var meta = tx.OpenDatabase(Tables.Meta.Name, new DatabaseConfiguration { Flags = DatabaseOpenFlags.None });
 			if (!Tx.TryReadFixtureIdentity(tx, meta, out var actual) || actual != expected)
 				throw new InvalidOperationException("Existing fixture Meta identity does not match issuance.");
+			_ = ReadFixturePackageGeneration(tx, meta, expected);
 			return RequireAtomicLayout(tx, meta, expected);
 		}
 		catch (Exception error) when (error is not InvalidOperationException)
@@ -44,7 +45,7 @@ public sealed partial class LightningStore
 
 	internal void BindFixtureIdentity(Guid expected, bool firstOpen, CancellationToken ct)
 	{
-		WriteRaw(tx =>
+		WriteClassifiedFixtureRaw(tx =>
 		{
 			ct.ThrowIfCancellationRequested();
 			var meta = _tables[Tables.Meta];
@@ -59,6 +60,14 @@ public sealed partial class LightningStore
 				var code = tx.Put(meta, Keys.Str(FixtureIdentityKey), expected.ToByteArray(bigEndian: true));
 				if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "bind fixture identity");
 			}
+			if (!exists)
+			{
+				Span<byte> state = stackalloc byte[32];
+				EncodeUnknownPackageState(state, expected, 0);
+				var code = tx.Put(meta, FixturePackageStateKey, state);
+				if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "initialize fixture package state");
+			}
+			else _ = ReadFixturePackageGeneration(tx, meta, expected);
 			ct.ThrowIfCancellationRequested();
 			Commit(tx);
 			return true;

@@ -20,8 +20,11 @@ public sealed partial class LightningStore : IDisposable
 	private readonly LightningWriter _writer;
 	private LightningEnvironment _env = null!;
 
-	/// <summary>The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size.</summary>
-	internal int MaxKeySize => _env.MaxKeySize;
+	/// <summary>
+	/// The longest key, and dupsort value, the environment takes; LMDB 1.0 derives it from the page size. Read
+	/// once when the environment opens, so callers inside a section and after disposal touch no native state.
+	/// </summary>
+	internal int MaxKeySize { get; private set; }
 
 	/// <summary>Volatile: <see cref="Open"/>, <see cref="Close"/> and <see cref="OpenTable"/> publish a whole
 	/// handle/flag snapshot. Readers outside the gate's write lock must see matching metadata and handles.</summary>
@@ -40,6 +43,11 @@ public sealed partial class LightningStore : IDisposable
 	}
 
 	private bool _disposed;
+	private volatile bool _closed;
+	private readonly Lock _disposeGate = new();
+	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _disposeFailure;
+	private readonly object _fixtureStoreDisposeGate = new();
+	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _fixtureStoreCloseFailure;
 
 	/// <summary>Forces a sync every <see cref="LightningStoreOptions.FlushInterval"/> under
 	/// <see cref="LightningSyncMode.Periodic"/>; null in the other modes, where every commit syncs itself.</summary>
@@ -133,7 +141,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </summary>
 	public int CheckStaleReaders()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			return Cleared(_env.CheckStaleReaders());
@@ -161,7 +169,7 @@ public sealed partial class LightningStore : IDisposable
 	/// unhandled exception there is process death.</summary>
 	private void CheckStaleReadersOnTick()
 	{
-		if (_disposed || !_gate.TryEnterReadLock(0)) return;
+		if (_disposed || !TryEnterNative()) return;
 		try
 		{
 			Cleared(_env.CheckStaleReaders());
@@ -182,7 +190,7 @@ public sealed partial class LightningStore : IDisposable
 	private void FlushIfDirty()
 	{
 		if (_disposed || Interlocked.Exchange(ref _unflushed, 0) == 0) return;
-		if (!_gate.TryEnterReadLock(0)) { Interlocked.Exchange(ref _unflushed, 1); return; }
+		if (!TryEnterNative()) { Interlocked.Exchange(ref _unflushed, 1); return; }
 		try
 		{
 			var code = _env.Flush(force: true);
@@ -219,6 +227,7 @@ public sealed partial class LightningStore : IDisposable
 			PageSize = _options.PageSize
 		});
 		_env.Open(FlagsFor(_options.Sync));
+		MaxKeySize = _env.MaxKeySize;
 		Cleared(_env.CheckStaleReaders());
 
 		using var tx = _env.BeginTransaction();
@@ -245,7 +254,7 @@ public sealed partial class LightningStore : IDisposable
 	/// modes need on the way out (<see cref="MDBResultCode.Success"/> under Full, which has nothing
 	/// unflushed). The environment is disposed whichever way that flush went; the caller decides how to
 	/// report a failure once its own cleanup is complete.</summary>
-	internal MDBResultCode Close()
+	private MDBResultCode Close()
 	{
 		DisposeReaders();
 		foreach (var db in _tables.Values) db.Dispose();
@@ -313,16 +322,36 @@ public sealed partial class LightningStore : IDisposable
 		return _tableSnapshot.ByName.TryGetValue(name, out var entry) ? entry.Definition : null;
 	}
 
+	/// <summary>What this store's writer has done since it opened.</summary>
+	internal LightningWriter.Statistics WriterStatistics => _writer.Snapshot();
+
+	/// <summary>Read transactions open now, the most ever open at once, how many there were, and how long they stayed open.</summary>
+	internal sealed record ReadStatistics(long Active, long PeakActive, long Reads, double TotalMs, double MaxMs);
+
+	private readonly Lock _readStatisticsGate = new();
+	private long _readsActive, _readsPeak, _reads;
+	private double _readTotal, _readMax;
+
+	internal ReadStatistics ReaderStatistics
+	{
+		get { lock (_readStatisticsGate) return new(_readsActive, _readsPeak, _reads, _readTotal, _readMax); }
+	}
+
 	public T Read<T>(Func<ITx, T> read)
 	{
-		_gate.EnterReadLock();
+		EnterNative();
+		var opened = System.Diagnostics.Stopwatch.GetTimestamp();
+		LightningMetrics.ReadsActive.Add(1);
+		lock (_readStatisticsGate) _readsPeak = Math.Max(_readsPeak, ++_readsActive);
 		try
 		{
 			var tx = RentReader();
 			T result;
 			try
 			{
-				result = read(new Tx(tx, _tableSnapshot));
+				var callback = new Tx(tx, _tableSnapshot, checked((ulong)tx.Id));
+				try { result = read(callback); }
+				finally { callback.EndReadCallback(); }
 			}
 			catch
 			{
@@ -336,6 +365,10 @@ public sealed partial class LightningStore : IDisposable
 		}
 		finally
 		{
+			var held = LightningMetrics.Since(opened);
+			lock (_readStatisticsGate) { _readsActive--; _reads++; _readTotal += held; _readMax = Math.Max(_readMax, held); }
+			LightningMetrics.ReadsActive.Add(-1);
+			LightningMetrics.ReadDuration.Record(held);
 			_gate.ExitReadLock();
 		}
 	}
@@ -396,7 +429,7 @@ public sealed partial class LightningStore : IDisposable
 	private void WriteBatch(IReadOnlyList<LightningWriter.BatchItem> items)
 	{
 		ThrowIfFlushFailed();
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var parent = _env.BeginTransaction();
@@ -405,7 +438,9 @@ public sealed partial class LightningStore : IDisposable
 				var only = items[0];
 				try
 				{
-					only.Result = only.Work(new Tx(parent, _tableSnapshot));
+					var callback = new Tx(parent, _tableSnapshot, null, _fixturePackageTracking);
+					only.Result = only.Work(callback);
+					callback.RequireFixtureWriteNotPoisoned();
 				}
 				catch (Exception ex)
 				{
@@ -423,7 +458,9 @@ public sealed partial class LightningStore : IDisposable
 				using var child = _env.BeginTransaction(parent);
 				try
 				{
-					item.Result = item.Work(new Tx(child, _tableSnapshot));
+					var callback = new Tx(child, _tableSnapshot, null, _fixturePackageTracking);
+					item.Result = item.Work(callback);
+					callback.RequireFixtureWriteNotPoisoned();
 					var code = child.Commit();
 					if (code != MDBResultCode.Success) throw LightningStoreException.From(code, "commit");
 				}
@@ -464,7 +501,7 @@ public sealed partial class LightningStore : IDisposable
 	private T WriteRawInternal<T>(Func<LightningTransaction, T> job)
 	{
 		ThrowIfFlushFailed();
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction();
@@ -480,10 +517,11 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
-	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default) => _writer.EnqueueAsync(job, ct);
+	public ValueTask<T> WriteAsync<T>(Func<ITx, T> job, CancellationToken ct = default)
+		=> _writer.EnqueueAsync(AttributeFixtureWrite(job), ct);
 
 	public async ValueTask WriteAsync(Action<ITx> job, CancellationToken ct = default)
-		=> await _writer.EnqueueAsync<object?>(tx => { job(tx); return null; }, ct).ConfigureAwait(false);
+		=> await _writer.EnqueueAsync(AttributeFixtureWrite<object?>(tx => { job(tx); return null; }), ct).ConfigureAwait(false);
 
 	/// <summary>
 	/// Queues <paramref name="job"/> onto the writer thread like any other write, but hands it the raw
@@ -494,6 +532,13 @@ public sealed partial class LightningStore : IDisposable
 	/// wait forever on the writer thread that is running it.
 	/// </summary>
 	internal T WriteRaw<T>(Func<LightningTransaction, T> job)
+	{
+		RefuseUnclassifiedFixtureWrite();
+		return WriteClassifiedFixtureRaw(job);
+	}
+
+	// Identity binding and owned table layout may enter here on issued fixtures; ordinary raw callers pass the refusal above.
+	private T WriteClassifiedFixtureRaw<T>(Func<LightningTransaction, T> job)
 		=> _writer.EnqueueRawAsync(job, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	internal void PauseWriter() => _writer.Pause();
@@ -549,12 +594,14 @@ public sealed partial class LightningStore : IDisposable
 	/// read and write that follows.</summary>
 	private void WhileClosed(Action onDisk)
 	{
+		RefuseUnclassifiedFixtureWrite();
 		_writer.PauseAndDrainAsync().GetAwaiter().GetResult();
 		try
 		{
 			_gate.EnterWriteLock();
 			try
 			{
+				if (_closed) throw new ObjectDisposedException(nameof(LightningStore));
 				var closed = Close();
 				try
 				{
@@ -589,7 +636,7 @@ public sealed partial class LightningStore : IDisposable
 	public void CopyTo(string path, bool compact = true)
 	{
 		Directory.CreateDirectory(path);
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			var code = _env.CopyTo(path, compact);
@@ -612,7 +659,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </remarks>
 	public LightningEnvironmentUsage Usage()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			var info = _env.Info;
@@ -636,7 +683,7 @@ public sealed partial class LightningStore : IDisposable
 	/// </summary>
 	internal IReadOnlyDictionary<string, long> EntryCounts()
 	{
-		_gate.EnterReadLock();
+		EnterNative();
 		try
 		{
 			using var tx = _env.BeginTransaction(TransactionBeginFlags.ReadOnly);
@@ -650,31 +697,117 @@ public sealed partial class LightningStore : IDisposable
 		}
 	}
 
+	internal void RequireExternalDisposal() => _writer.RequireExternalDisposal();
+
 	/// <summary>Idempotent: the store is owned by <c>LightningDatabase</c>, which the host's container also
 	/// disposes, so a second call has to be a no-op rather than an <see cref="ObjectDisposedException"/>.</summary>
 	public void Dispose()
 	{
-		if (_disposed) return;
-		_disposed = true;
-		if (_readerCheckTimer is not null)
+		RequireExternalDisposal();
+		// Disposal joins every admitted reader, so one of them disposing would wait on itself.
+		if (_gate.IsReadLockHeld || _gate.IsWriteLockHeld)
+			throw new InvalidOperationException("A store cannot be disposed from inside its own read or write.");
+		if (_fixturePackageTracking is not { } tracking)
 		{
-			using var checkedReaders = new ManualResetEvent(false);
-			if (_readerCheckTimer.Dispose(checkedReaders)) checkedReaders.WaitOne();
+			DisposeCore();
+			return;
 		}
 
-		if (_flushTimer is not null)
+		lock (_fixtureStoreDisposeGate)
 		{
-			// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
-			// closed underneath a flush in flight.
-			using var ticked = new ManualResetEvent(false);
-			if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
+			_fixtureStoreCloseFailure?.Throw();
+			if (_disposed) return;
+			tracking.Owner.BeginNativeClose(tracking.Lease);
+			try
+			{
+				DisposeCore();
+				tracking.Owner.ConfirmNativeClose(tracking.Lease);
+			}
+			catch (Exception error)
+			{
+				_fixtureStoreCloseFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error);
+				tracking.Lease.Quarantine();
+				throw;
+			}
 		}
-		_writer.Dispose();
-		var closed = Close();
-		_gate.Dispose();
-		// Every handle is released first; a failed final flush is then the one thing left to say, and
-		// silence here would let committed writes go non-durable with nobody told.
-		if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
+	}
+
+	/// <summary>
+	/// The one cleanup every disposer joins: concurrent callers wait for it, and later ones see its outcome,
+	/// including a failed close. Timers stop and the writer drains and joins first; then taking the gate's write
+	/// lock stops new native admission and waits out every admitted read, copy and diagnostic, so the
+	/// environment is closed only once nothing is inside it. The gate itself is left undisposed: a caller that
+	/// arrives later is refused by <see cref="EnterNative"/>, not by a disposed lock.
+	/// </summary>
+	private void DisposeCore()
+	{
+		lock (_disposeGate)
+		{
+			_disposeFailure?.Throw();
+			if (_disposed) return;
+			_disposed = true;
+			try
+			{
+				if (_readerCheckTimer is not null)
+				{
+					using var checkedReaders = new ManualResetEvent(false);
+					if (_readerCheckTimer.Dispose(checkedReaders)) checkedReaders.WaitOne();
+				}
+
+				if (_flushTimer is not null)
+				{
+					// Dispose(WaitHandle) waits for a tick already inside FlushIfDirty, so the environment is never
+					// closed underneath a flush in flight.
+					using var ticked = new ManualResetEvent(false);
+					if (_flushTimer.Dispose(ticked)) ticked.WaitOne();
+				}
+				_writer.Dispose();
+				MDBResultCode closed;
+				_gate.EnterWriteLock();
+				try
+				{
+					_closed = true;
+					BeforeNativeClose?.Invoke();
+					closed = Close();
+				}
+				finally { _gate.ExitWriteLock(); }
+				// Every handle is released first; a failed final flush is then the one thing left to say, and
+				// silence here would let committed writes go non-durable with nobody told.
+				if (closed != MDBResultCode.Success) throw LightningStoreException.From(closed, "flush on close");
+			}
+			catch (Exception error)
+			{
+				_disposeFailure = System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(error);
+				throw;
+			}
+		}
+	}
+
+	/// <summary>Tests only: runs once nothing is inside the environment, immediately before it is closed.</summary>
+	internal Action? BeforeNativeClose { get; set; }
+
+	/// <summary>Whether disposal has closed the environment; every native entry is refused from then on.</summary>
+	internal bool IsClosed => _closed;
+
+	/// <summary>Whether a disposal is waiting for admitted readers to leave.</summary>
+	internal bool DisposalWaitingForReaders => _gate.WaitingWriteCount > 0;
+
+	/// <summary>Enters a native section; refused once disposal has closed the environment.</summary>
+	private void EnterNative()
+	{
+		_gate.EnterReadLock();
+		if (!_closed) return;
+		_gate.ExitReadLock();
+		throw new ObjectDisposedException(nameof(LightningStore));
+	}
+
+	/// <summary>A timer's non-blocking <see cref="EnterNative"/>: false when the gate is busy or the store is closed.</summary>
+	private bool TryEnterNative()
+	{
+		if (!_gate.TryEnterReadLock(0)) return false;
+		if (!_closed) return true;
+		_gate.ExitReadLock();
+		return false;
 	}
 
 	// A native cursor failure must never look like end-of-data, including in diagnostics and counts.
@@ -685,8 +818,13 @@ public sealed partial class LightningStore : IDisposable
 		return true;
 	}
 
-	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables) : ITx
+	private sealed partial class Tx(LightningTransaction tx, TableSnapshot tables, ulong? readTransactionId,
+		FixturePackageWriteTracking? fixturePackageTracking = null) : ITx
 	{
+		// The owned native cipher probe constructs this exact managed bounded-reader shape.
+		// Its ordinary bounded reads do not opt into the callback-scoped snapshot capabilities.
+		public Tx(LightningTransaction tx, TableSnapshot tables) : this(tx, tables, null) { }
+
 		private LmdbDb Db(TableDef t)
 		{
 			NativeTableName.Validate(t.Name);
@@ -704,12 +842,14 @@ public sealed partial class LightningStore : IDisposable
 
 		public void Put(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Put(Db(table), key, value);
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"put {table}");
 		}
 
 		public bool Delete(TableDef table, ReadOnlySpan<byte> key)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Delete(Db(table), key);
 			if (code == MDBResultCode.NotFound) return false;
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"delete {table}");
@@ -718,6 +858,7 @@ public sealed partial class LightningStore : IDisposable
 
 		public bool Delete(TableDef table, ReadOnlySpan<byte> key, ReadOnlySpan<byte> value)
 		{
+			BeforeFixtureMutation(table, key);
 			var code = tx.Delete(Db(table), key, value);
 			if (code == MDBResultCode.NotFound) return false;
 			if (code != MDBResultCode.Success) throw LightningStoreException.From(code, $"delete {table}");
@@ -887,6 +1028,7 @@ public sealed partial class LightningStore : IDisposable
 
 		public int DeletePrefix(TableDef table, byte[] prefix)
 		{
+			BeforeFixtureMutation(table, prefix, prefixDelete: true);
 			// Materialized: the cursor behind Range must not be walked while its rows are being deleted.
 			var keys = Range(table, prefix).ToList();
 			var duplicates = (tables.ByName[table.Name].Flags & DatabaseOpenFlags.DuplicatesSort) != 0;

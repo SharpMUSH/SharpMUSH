@@ -147,7 +147,7 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(observation.WorkingBytes).IsLessThan(4L * 1024 * 1024);
 		await AssertRejectedActivationKeepsLegacyWritable(host, provider, wiki, page);
 		// Actual checked native copy-admission count, not a count inferred from page inputs.
-		await Assert.That(observation.Records).IsLessThanOrEqualTo(128);
+		await Assert.That(observation.Records).IsEqualTo(128);
 	}
 
 	[Test]
@@ -161,12 +161,16 @@ public partial class IntegratedWikiMutationTests
 		var pages = provider.Store.Read(tx => tx.Count(Tables.WikiPage));
 		var requirements = provider.Store.Read(tx => tx.Count(Tables.WikiRequirement));
 		var pins = provider.Store.Read(tx => tx.Count(Tables.WikiPin));
-		var additionalPins = checked((int)(128 - 3 * pages - requirements - pins));
+		// Two state/marker copies before BeginActivation plus two in native preflight share
+		// this budget. Leave exactly 128 admitted copies before the final next_wiki point.
+		const long authorityCopies = 4;
+		var additionalPins = checked((int)(128 - authorityCopies - 3 * pages - requirements - pins));
 		await Assert.That(additionalPins).IsGreaterThanOrEqualTo(0);
 		for (var i = 0; i < additionalPins; i++) await wiki.SetCategoryPinnedAsync("record-budget-pin-" + i, true);
-		var precedingCopies = 3 * provider.Store.Read(tx => tx.Count(Tables.WikiPage))
+		var precedingCopies = authorityCopies + 3 * provider.Store.Read(tx => tx.Count(Tables.WikiPage))
 			+ provider.Store.Read(tx => tx.Count(Tables.WikiRequirement)) + provider.Store.Read(tx => tx.Count(Tables.WikiPin));
 		await Assert.That(precedingCopies).IsEqualTo(128L);
+		await Assert.That(provider.Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("next_wiki"), out _))).IsTrue();
 		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.WorkLimit);
 		var observation = provider.AtomicWikiPreflightRead ?? throw new InvalidOperationException("Expected actual final-point failure observation.");
 		await Assert.That(observation.Completed).IsFalse();
@@ -174,7 +178,7 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(observation.Bytes).IsLessThan(128L * 1024);
 		await Assert.That(observation.WorkingBytes).IsLessThan(4L * 1024 * 1024);
 		await AssertRejectedActivationKeepsLegacyWritable(host, provider, wiki, page);
-		await Assert.That(observation.Records).IsLessThanOrEqualTo(128);
+		await Assert.That(observation.Records).IsEqualTo(128);
 	}
 
 	[Test]
@@ -193,8 +197,10 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(final.Completed).IsTrue();
 		await Assert.That(preflight.LimitDimension).IsNull();
 		await Assert.That(final.LimitDimension).IsNull();
-		await Assert.That((long)preflight.Records).IsEqualTo(3 * pages + requirements + pins + 1);
-		await Assert.That((long)final.Records).IsEqualTo(2 * pages + requirements + pins + 1);
+		// Preflight's shared budget includes both initial and in-transaction readiness pairs.
+		// Final validation has its own budget and admits one readiness pair before the snapshot.
+		await Assert.That((long)preflight.Records).IsEqualTo(4 + 3 * pages + requirements + pins + 1);
+		await Assert.That((long)final.Records).IsEqualTo(2 + 2 * pages + requirements + pins + 1);
 		await Assert.That(preflight.Records).IsLessThanOrEqualTo(128);
 		await Assert.That(final.Records).IsLessThanOrEqualTo(128);
 	}

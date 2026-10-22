@@ -761,6 +761,8 @@ count toward it.
 
 ## Updating
 
+Before deploying the category index format upgrade, follow the [wiki category upgrade guide](../docs/guides/wiki-category-upgrade.md). Preserve a verified pre-upgrade recovery point: this format change has no supported in-place downgrade.
+
 The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
 
 
@@ -807,9 +809,9 @@ Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compo
 
 ### Manage remote backups in the website
 
-The optional `docker-compose.remote-backups.yml` overlay replaces the legacy cron entrypoint on
+The optional `docker-compose.remote-backups.yml` overlay replaces the cron entrypoint (`BACKUP_CRON`) on
 **the existing `backup` service** with a narrowly scoped SharpMUSH worker. Do not run a second
-legacy cron container against the same configuration. The default stacks retain their existing
+cron container against the same configuration. The default stacks retain their existing
 `.env`/`BACKUP_CRON` behavior until you choose this overlay; they do not report remote results.
 
 1. Initialize the repository using the existing Restic instructions above and save the password
@@ -821,7 +823,7 @@ legacy cron container against the same configuration. The default stacks retain 
 4. Open **Administration → Remote backups** (`/admin/backups`, `server.admin` permission).
    Enter the repository, encryption password and storage account credentials from the old `.env`
    configuration, choose the interval in hours (1–8760), and enable managed scheduling. Those
-   repository settings are now managed in the website; the worker ignores inherited legacy
+   repository settings are now managed in the website; the worker ignores inherited
    `RESTIC_*`, `B2_*` and cron settings. Its subprocess environment is explicitly constructed.
 
 Supported repositories are `b2:bucket:path`, `s3:https://host/bucket`, and

@@ -30,6 +30,9 @@ public class ConfigurationDefaultsTests
 		["BannedNames"] =
 			"A new game is seeded with example banned names so the admin page shows what they look " +
 			"like; an imported game brings its own names.cnf.",
+		["CommandRestrictions"] =
+			"A new game disables WARN_ON_MISSING, as PennMUSH's shipped restrict.cnf does; an imported " +
+			"game brings its own restrict_command lines.",
 		["Rules"] =
 			"A new game is seeded with example sitelock rules; seeding an imported game with them " +
 			"would lock sites nobody asked to lock."
@@ -83,7 +86,7 @@ public class ConfigurationDefaultsTests
 	public async Task EveryDefaultIsWrittenDownInOnePlace()
 	{
 		var created = OptionsService.Default();
-		var imported = ReadPennMushConfig.Create(EmptyConfigFile());
+		var imported = ReadPennMushConfig.Create(TestPaths.EmptyConfigFile);
 
 		var mismatches = ConfigMetadata.PropertyNames
 			.Where(name => !ImportDifferences.ContainsKey(name))
@@ -101,7 +104,7 @@ public class ConfigurationDefaultsTests
 	public async Task EveryRecordedImportDifferenceStillDiffers()
 	{
 		var created = OptionsService.Default();
-		var imported = ReadPennMushConfig.Create(EmptyConfigFile());
+		var imported = ReadPennMushConfig.Create(TestPaths.EmptyConfigFile);
 
 		var stale = ImportDifferences.Keys
 			.Where(name => Same(ConfigAccessor.GetValue(created, name), ConfigAccessor.GetValue(imported, name)))
@@ -259,11 +262,4 @@ public class ConfigurationDefaultsTests
 		IEnumerable items => $"[{string.Join(" ", items.Cast<object?>())}]",
 		_ => value.ToString() ?? "nothing"
 	};
-
-	private static string EmptyConfigFile()
-	{
-		var path = Path.Join(Path.GetTempPath(), $"sharpmush-defaults-{Guid.NewGuid():N}.cnf");
-		File.WriteAllText(path, string.Empty);
-		return path;
-	}
 }

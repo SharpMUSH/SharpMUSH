@@ -32,6 +32,16 @@ public class ExternalProviderCatalogTests
 		await Assert.That(statuses.Any(status => status.Ready)).IsFalse();
 		(await catalog.EffectiveAsync("google")).Expect<Error<string>>();
 	}
+	/// <summary>A refused save says which setting is wrong, and stores nothing.</summary>
+	[Test]
+	public async Task RefusedSettingsNameWhatIsWrong()
+	{
+		Dictionary<string, ExternalProviderSettings> settings = [];
+		var (catalog, _, _) = Create(settings);
+		var refused = (await catalog.SaveAsync("google", Enabled with { PublicOrigin = "game.example", RegistrationId = "" }, true)).Expect<Error<string>>();
+		await Assert.That(refused.Value).StartsWith("Public origin must be");
+		await Assert.That(settings.ContainsKey("google")).IsFalse();
+	}
 	[Test]
 	public async Task EveryRegistrationMapsBackToItsProvider()
 	{

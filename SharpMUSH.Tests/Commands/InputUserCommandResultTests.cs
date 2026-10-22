@@ -95,8 +95,11 @@ public class InputUserCommandResultTests
 			await Get<ITaskScheduler>().SettleForTestsAsync();
 			TestDiagnostics.WriteLine($"{scope}/{mode}: errors={result?.HadErrors}, capture={sessions.GetCapturing(player.Handle)?.Id}");
 			await Assert.That(Factory.Notifications.For(host.Object().DBRef).Contains(marker)).IsEqualTo(scope != "unmatched");
-			await Assert.That(result?.HadErrors).IsEqualTo(mode == "syntax");
-			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(mode == "syntax" ? null : session.Id);
+			// An unmatched callback reaches default HUH and fails even when its argument is valid or
+			// literal error-looking text. A matched command still treats that literal text as data.
+			var failed = mode == "syntax" || scope == "unmatched";
+			await Assert.That(result?.HadErrors).IsEqualTo(failed);
+			await Assert.That(sessions.GetCapturing(player.Handle)?.Id).IsEqualTo(failed ? null : session.Id);
 		}
 		finally
 		{

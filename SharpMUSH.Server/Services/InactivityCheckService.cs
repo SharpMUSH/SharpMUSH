@@ -15,7 +15,8 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// PennMUSH's inactivity check (src/timer.c:253, <c>sq_register_loop(60, idle_event, ...)</c>): every minute, players
-/// idle past <c>idle_timeout</c> are disconnected or hidden, and <c>PLAYER`INACTIVITY</c> is raised.
+/// idle past <c>idle_timeout</c> are disconnected or hidden, sockets at the login screen idle past
+/// <c>unconnected_idle_timeout</c> are dropped, and <c>PLAYER`INACTIVITY</c> is raised.
 /// </summary>
 public sealed class InactivityCheckService(
 	IOptionsWrapper<SharpMUSHOptions> options,
@@ -40,7 +41,8 @@ public sealed class InactivityCheckService(
 			{
 				try
 				{
-					await InactivityCheckAsync(options.CurrentValue.Limit.IdleTimeout);
+					var limits = options.CurrentValue.Limit;
+					await InactivityCheckAsync(limits.IdleTimeout, limits.UnconnectedIdleTimeout);
 				}
 				catch (Exception ex) when (ex is not OperationCanceledException)
 				{
@@ -55,45 +57,62 @@ public sealed class InactivityCheckService(
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>inactivity_check</c> (src/bsd.c:7258-7312) for players: one idle past <c>idle_timeout</c> is
+	/// PennMUSH's <c>inactivity_check</c> (src/bsd.c:7258-7312). A socket at the login screen idle past
+	/// <c>unconnected_idle_timeout</c> is dropped without a message. A player idle past <c>idle_timeout</c> is
 	/// disconnected unless they may idle (the Idle power, or wizard or royalty); one who may idle, is UNFINDABLE and
-	/// may hide is hidden instead. <c>PLAYER`INACTIVITY</c> follows when anyone was disconnected or hidden. A
-	/// portal tab is not a play connection and is never disconnected for idling.
+	/// may hide is hidden instead. <c>PLAYER`INACTIVITY</c> follows when anyone was dropped, disconnected or hidden.
+	/// A portal tab is not a play connection and is never disconnected for idling.
 	/// </summary>
-	/// <param name="idleTimeout">Seconds; 0 disconnects nobody.</param>
-	public async ValueTask InactivityCheckAsync(uint idleTimeout)
+	/// <param name="idleTimeout">Seconds; 0 disconnects no player.</param>
+	/// <param name="unconnectedIdleTimeout">Seconds; 0 drops no socket at the login screen.</param>
+	public async ValueTask InactivityCheckAsync(uint idleTimeout, uint unconnectedIdleTimeout)
 	{
-		if (idleTimeout == 0)
+		if (idleTimeout == 0 && unconnectedIdleTimeout == 0)
 		{
 			return;
 		}
 
-		var limit = TimeSpan.FromSeconds(idleTimeout);
 		var acted = false;
 		await foreach (var connection in connections.GetAll())
 		{
-			if (connection is not { State: IConnectionService.ConnectionState.LoggedIn, Ref: { } playerRef }
-				|| connection.PresenceClass != PresenceClasses.Play
-				|| connection.Idle is not { } idle
-				|| idle <= limit)
+			if (connection.PresenceClass != PresenceClasses.Play || connection.Idle is not { } idle)
 			{
 				continue;
 			}
 
-			if (await mediator.Send(new GetObjectNodeQuery(playerRef)) is not AnySharpObject player)
+			acted |= connection switch
 			{
-				continue;
-			}
-
-			acted |= await permissions.CanIdle(player)
-				? await HideAsync(connection, player)
-				: await DisconnectAsync(connection, player);
+				{ State: IConnectionService.ConnectionState.LoggedIn, Ref: { } playerRef }
+					=> IsPast(idle, idleTimeout) && await PlayerIdleAsync(connection, playerRef),
+				{ State: IConnectionService.ConnectionState.Connected or IConnectionService.ConnectionState.AccountMode }
+					=> IsPast(idle, unconnectedIdleTimeout) && await DropAsync(connection),
+				_ => false
+			};
 		}
 
 		if (acted)
 		{
 			await events.TriggerEventAsync(SharpEvents.PlayerInactivity, null);
 		}
+	}
+
+	private static bool IsPast(TimeSpan idle, uint limitSeconds)
+		=> limitSeconds != 0 && idle > TimeSpan.FromSeconds(limitSeconds);
+
+	private async ValueTask<bool> PlayerIdleAsync(IConnectionService.ConnectionData connection, DBRef playerRef)
+		=> await mediator.Send(new GetObjectNodeQuery(playerRef)) is AnySharpObject player
+			&& (await permissions.CanIdle(player)
+				? await HideAsync(connection, player)
+				: await DisconnectAsync(connection, player));
+
+	/// <summary>Penn's <c>shutdownsock(d, "idle", ...)</c>: no message, the socket just closes.</summary>
+	private async ValueTask<bool> DropAsync(IConnectionService.ConnectionData connection)
+	{
+		logger.LogInformation("Dropping descriptor {Handle}: idle at the login screen past unconnected_idle_timeout",
+			connection.Handle);
+		await connections.Disconnect(connection.Handle);
+		await messageBus.Publish(new DisconnectConnectionMessage(connection.Handle, "idle"));
+		return true;
 	}
 
 	private async ValueTask<bool> DisconnectAsync(IConnectionService.ConnectionData connection, AnySharpObject player)

@@ -9,9 +9,11 @@ players in real time. You don't need to know any code to play.
 ## Your first hour
 1. Open [Sharpie's optional introduction](/welcome). Choose the path that fits your
    experience, or head straight to [Play](/play).
-2. [Sign in or register](/login), then create, select or link your character. With a
-   separate MU* client, follow the game's connection screen; ask staff for the
-   correct address and port.
+2. [Sign in or register](/login), then create, select or link your character.
+   From a MU* client, make an account with `register <name> [email] <password>`,
+   then a character with `make <character> <password>`. Next time, log in with
+   `connect <character> <password>`.
+   > **Fill in:** The address and port MU* clients connect to.
 3. Read the [[Theme]] and [[Policies]] pages.
 4. Complete this game's character requirements.
    > **Fill in:** How character creation works here, and whether staff approve characters.

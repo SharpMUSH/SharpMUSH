@@ -129,3 +129,9 @@ public record TerminalReportMessage(long Handle, SharpMUSH.Library.Utilities.Ter
 /// the telnet port is not enough on its own: a raw socket never negotiates anything.
 /// </summary>
 public record TelnetNegotiatedMessage(long Handle) : IHandleMessage;
+
+/// <summary>
+/// The connection server's answer to a <see cref="ConnectionTrafficRequestMessage"/>: the bytes each of its
+/// connections has moved.
+/// </summary>
+public record ConnectionTrafficReportMessage(Guid RequestId, ConnectionTraffic[] Connections);

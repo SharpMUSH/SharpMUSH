@@ -1,4 +1,6 @@
+using System.Text;
 using SharpMUSH.SocketServer.Models;
+using TelnetNegotiationCore.Protocols;
 using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
 using SharpMUSH.Messaging.Abstractions;
@@ -15,7 +17,9 @@ public class UpdatePlayerPreferencesConsumer(
 		IMessageConsumer<ClearPlayerOutputPreferencesMessage>,
 		IMessageConsumer<UpdateColorStyleMessage>,
 		IMessageConsumer<UpdateThemeMessage>,
-		IMessageConsumer<UpdateTerminalFeaturesMessage>
+		IMessageConsumer<UpdateTerminalFeaturesMessage>,
+		IMessageConsumer<UpdatePuebloModeMessage>,
+		IMessageConsumer<UpdateTelnetModeMessage>
 {
 	public Task HandleAsync(UpdatePlayerPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
@@ -99,6 +103,46 @@ public class UpdatePlayerPreferencesConsumer(
 		}
 
 		connectionService.UpdateCapabilities(message.Handle, current => current with { Pins = message.Pins });
+
+		return Task.CompletedTask;
+	}
+
+	public async Task HandleAsync(UpdatePuebloModeMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connectionService.Get(message.Handle) is not { } connection)
+		{
+			logger.LogWarning("Could not set Pueblo mode for unknown connection handle: {Handle}", message.Handle);
+			return;
+		}
+
+		if (!message.Enabled)
+		{
+			connectionService.UpdateCapabilities(message.Handle, current => current with
+			{
+				Format = current.Format == OutputFormat.Pueblo ? OutputFormat.Ansi : current.Format
+			});
+			return;
+		}
+
+		// The start sequence goes out before the format changes, so nothing written as Pueblo reaches a client that
+		// has not been told to read it. The sequence is a telnet client's; PennMUSH sends it on the socket.
+		if (connection.Capabilities.Format == OutputFormat.Ansi && connection.ConnectionType == "telnet")
+		{
+			await connection.OutputFunction(Encoding.ASCII.GetBytes(PuebloProtocol.Start.TrimEnd('\n')));
+		}
+
+		connectionService.UpdateCapabilities(message.Handle, current => current with
+		{
+			Format = current.Format.Negotiate(OutputFormat.Pueblo)
+		});
+	}
+
+	public Task HandleAsync(UpdateTelnetModeMessage message, CancellationToken cancellationToken = default)
+	{
+		if (!connectionService.UpdateCapabilities(message.Handle, current => current with { Telnet = message.Enabled }))
+		{
+			logger.LogWarning("Could not set telnet mode for unknown connection handle: {Handle}", message.Handle);
+		}
 
 		return Task.CompletedTask;
 	}

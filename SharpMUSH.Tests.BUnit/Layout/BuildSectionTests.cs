@@ -31,11 +31,17 @@ public class BuildSectionTests : TrackingBunitContext
 				 {"slug":"crafting","displayName":"Crafting","icon":null,"kind":"Page","schemaUrl":"x","dataUrl":null,"submitRoute":null,
 				  "minimumRole":"Guest","navPlacement":"Workshop","zones":[],"order":2,"owningPackage":null},
 				 {"slug":"recipes","displayName":"Recipes","icon":null,"kind":"Page","schemaUrl":"x","dataUrl":null,"submitRoute":null,
-				  "minimumRole":"Guest","navPlacement":"Workshop","zones":[],"order":3,"owningPackage":null}]
+				  "minimumRole":"Guest","navPlacement":"Workshop","zones":[],"order":3,"owningPackage":null},
+				 {"slug":"chargen","displayName":"Character Application","icon":null,"kind":"Page","schemaUrl":"x","dataUrl":null,"submitRoute":null,
+				  "minimumRole":"Guest","navPlacement":"Play","zones":[],"order":4,"owningPackage":null,"navUrl":"http/chargen/nav"}]
 				""";
-			return Task.FromResult(request.RequestUri!.AbsolutePath == "/api/applications"
-				? new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(apps, Encoding.UTF8, "application/json") }
-				: new HttpResponseMessage(HttpStatusCode.NotFound));
+			const string nav = """{"groups":[{"label":"Review","items":[{"label":"Waiting","path":"/apps/chargen/queue","count":2}]}]}""";
+			return Task.FromResult(request.RequestUri!.AbsolutePath switch
+			{
+				"/api/applications" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(apps, Encoding.UTF8, "application/json") },
+				"/http/chargen/nav" => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(nav, Encoding.UTF8, "application/json") },
+				_ => new HttpResponseMessage(HttpStatusCode.NotFound)
+			});
 		}
 	}
 
@@ -128,6 +134,22 @@ public class BuildSectionTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".test-pagebar .app-section-side a.kit-row[href='/apps/recipes']"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".test-pagebar .kit-side-title").TextContent).IsEqualTo("Workshop");
 		await Assert.That(cut.Find("a.kit-row[href='/apps/crafting']").GetAttribute("aria-current")).IsEqualTo("page");
+	}
+
+	/// <summary>
+	/// A Play app that serves links of its own (chargen's review queue) gets them as its sidebar; without
+	/// one, a reviewer could reach the queue only by typing its address.
+	/// </summary>
+	[Test]
+	public async Task APlayApplicationWithANavUrl_ShowsItsOwnLinks()
+	{
+		var app = new PortalApplication("chargen", "Character Application", null, "Page", "x", null, null, "Guest", "Play", [], 4,
+			NavUrl: "http/chargen/nav");
+		Nav.NavigateTo("/apps/chargen/queue");
+		var cut = Render<PageSidebarHost>(h => h.AddChildContent<AppSectionFrame>(p => p.Add(x => x.App, app)));
+		cut.WaitForAssertion(() => cut.Find(".test-pagebar .app-section-side a.kit-row[href='/apps/chargen/queue']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".test-pagebar .kit-side-title").TextContent).IsEqualTo("Character Application");
+		await Assert.That(cut.Find("a.kit-row[href='/apps/chargen/queue']").GetAttribute("aria-current")).IsEqualTo("page");
 	}
 
 	[Test]

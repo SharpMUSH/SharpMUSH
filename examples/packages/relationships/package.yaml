@@ -1,6 +1,6 @@
 format: "1.10"
 package: relationships
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -687,7 +687,7 @@ objects:
       # The web: a graph of the character and the relationships the viewer may see, and the same as a table.
       WEB`GRAPH`SCHEMA:
         value: |-
-          json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,main),order,json(number,1),sections,json(array,json(object,name,json(string,Relationships),order,json(number,1),elements,json(array,json(object,kind,json(string,graph),src_field,json(string,web),link,json(string,/character/\{label\}),empty,json(string,No relationships yet.)),json(object,kind,json(string,table),rows_field,json(string,list),empty,json(string,),columns,json(array,json(object,key,json(string,name),label,json(string,Name),link,json(string,/character/\{name\})),json(object,key,json(string,type),label,json(string,Relationship),type,json(string,chip),color_key,json(string,color)),json(object,key,json(string,text),label,json(string,About)),json(object,key,json(string,since),label,json(string,Since))))))))))
+          lit({"kind":"view","schema_version":1,"pages":[{"key":"main","order":1,"sections":[{"name":"Relationships","order":1,"elements":[{"kind":"graph","src_field":"web","link":"/character/{label}","empty":"No relationships yet."},{"kind":"table","rows_field":"list","empty":"","columns":[{"key":"name","label":"Name","link":"/character/{name}"},{"key":"type","label":"Relationship","type":"chip","color_key":"color"},{"key":"text","label":"About"},{"key":"since","label":"Since"}]}]}]}]})
         flags: [funsyntax]
       WEB`GRAPH`DATA:
         value: |-
@@ -740,7 +740,7 @@ objects:
       # The card: the same LINE` lines +rel <name> shows, one keyvalue each, by label.
       WEB`CARD`SCHEMA:
         value: |-
-          json(object,kind,json(string,view),schema_version,json(number,1),pages,json(array,json(object,key,json(string,main),order,json(number,1),sections,json(array,json(object,name,json(string,),order,json(number,1),elements,json(array,json(object,kind,json(string,keyvalue),fields,json_array(iter(sort(lattr(%!/LINE`*`*)),json(string,get(%!/%i0)),,chr(30)),chr(30)))))))))
+          json_fill(lit({"kind":"view","schema_version":1,"pages":[{"key":"main","order":1,"sections":[{"name":"","order":1,"elements":[{"kind":"keyvalue","fields":[]}]}]}]}),/pages/0/sections/0/elements/0/fields,json_array(iter(sort(lattr(%!/LINE`*`*)),json(string,get(%!/%i0)),,chr(30)),chr(30)))
         flags: [funsyntax]
       WEB`CARD`DATA:
         value: |-

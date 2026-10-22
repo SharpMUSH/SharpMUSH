@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -23,10 +24,45 @@ public sealed class NameFormatter(IAttributeService attributes, IOptionsWrapper<
 			&& await attributes.GetAttributeAsync(obj, obj, "NAMEACCENT", IAttributeService.AttributeMode.Read) is SharpAttribute[] accent)
 			name = AccentTemplate.Apply(name, accent.Last().Value.ToPlainText());
 		var moniker = context is NameContext.UnaccentedMoniker or NameContext.AccentedMoniker
-			|| context == NameContext.Speech && configuration.CurrentValue.Cosmetic.Monikers;
-		return moniker && await attributes.GetAttributeAsync(obj, obj, "MONIKER", IAttributeService.AttributeMode.Read) is SharpAttribute[] style
-			? ApplyMoniker(name, style.Last().Value) : MString.Plain(name);
+			|| context == NameContext.Speech && await ShowsMonikerAsync(obj, MonikerPlace.Say);
+		return moniker ? await MonikeredAsync(obj, name) : MString.Plain(name);
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>AName</c>: the object's name, coloured by its <c>@moniker</c> when the <c>monikers</c> option
+	/// names <paramref name="place"/> and the object's type, or names the place and the object is set MONIKER.
+	/// </summary>
+	public async ValueTask<MString> NameAsync(AnySharpObject obj, MonikerPlace place, string? name = null)
+		=> (await MonikerAsync(obj, place, name ?? obj.Object().Name)).Name;
+
+	/// <summary>
+	/// The name as PennMUSH's <c>real_unparse</c> writes it: coloured by its <c>@moniker</c> where
+	/// <paramref name="place"/> shows one, hilighted otherwise.
+	/// </summary>
+	public async ValueTask<MString> UnparseNameAsync(AnySharpObject obj, MonikerPlace place)
+		=> await MonikerAsync(obj, place, obj.Object().Name) is (var styled, true) ? styled : obj.Object().Name.Hilight();
+
+	/// <summary>Whether the <c>monikers</c> option shows <paramref name="obj"/>'s moniker in <paramref name="place"/>.</summary>
+	public async ValueTask<bool> ShowsMonikerAsync(AnySharpObject obj, MonikerPlace place)
+	{
+		var shown = MonikerPlaces.Parse(configuration.CurrentValue.Cosmetic.MonikerList);
+		if ((shown & place) == 0) return false;
+		var type = obj.IsPlayer ? MonikerPlace.Players : obj.IsRoom ? MonikerPlace.Rooms : obj.IsExit ? MonikerPlace.Exits : MonikerPlace.Things;
+		return (shown & type) != 0 || await obj.HasFlag("MONIKER");
+	}
+
+	/// <summary><paramref name="name"/> coloured by the object's <c>@moniker</c> where <paramref name="place"/>
+	/// shows one, and whether it was: an unset or uncoloured <c>@moniker</c> leaves the name as it is.</summary>
+	private async ValueTask<(MString Name, bool Monikered)> MonikerAsync(AnySharpObject obj, MonikerPlace place, string name)
+		=> await ShowsMonikerAsync(obj, place)
+			&& await attributes.GetAttributeAsync(obj, obj, "MONIKER", IAttributeService.AttributeMode.Read) is SharpAttribute[] style
+			&& style.Last().Value.Runs.Length > 0
+				? (ApplyMoniker(name, style.Last().Value), true)
+				: (MString.Plain(name), false);
+
+	private async ValueTask<MString> MonikeredAsync(AnySharpObject obj, string name)
+		=> await attributes.GetAttributeAsync(obj, obj, "MONIKER", IAttributeService.AttributeMode.Read) is SharpAttribute[] style
+			? ApplyMoniker(name, style.Last().Value) : MString.Plain(name);
 
 	/// <summary>Uses each grapheme's UTF-16 start position to select template styling, extending the
 	/// final template position for longer names without splitting surrogate pairs or combining clusters.</summary>

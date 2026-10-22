@@ -26,6 +26,7 @@ public partial class TelnetServer
 		ConnectionCloser closer,
 		long handle,
 		RegistrationHold held,
+		TrafficCounter traffic,
 		CancellationToken ct)
 	{
 		// Assigned once BuildAsync returns; the callbacks below only run after that, since the
@@ -34,6 +35,12 @@ public partial class TelnetServer
 		private int _telnetAnnounced;
 		private IReadOnlyList<string> _publishedTerminalTypes = [];
 		private IReadOnlyList<string> _publishedGmcpSupports = [];
+		// What negotiation has said so far, for the capabilities the connection registers with: the updates
+		// themselves are held until registration, and the connect screen must not be drawn before they land.
+		private volatile string? _charset;
+		private volatile int _width;
+		private volatile bool _terminalTypesComplete;
+		private readonly TaskCompletionSource _negotiationSettled = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		public async ValueTask<TelnetInterpreter> BuildInterpreterAsync()
 		{
@@ -46,7 +53,7 @@ public partial class TelnetServer
 			};
 			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)));
 
-			builder.UsePipe(connection.Transport);
+			builder.UsePipe(new CountingDuplexPipe(connection.Transport, traffic));
 			var telnet = await builder.BuildAsync();
 
 			// Before the read loop starts, not after: the loop can deliver a line — a Pueblo handshake buffered
@@ -154,6 +161,7 @@ public partial class TelnetServer
 		private async ValueTask OnSubmitAsync(string input)
 		{
 			// By the time a client has sent a line, whatever it was going to negotiate has settled.
+			_negotiationSettled.TrySetResult();
 			await AnnounceTelnetIfNegotiatedAsync();
 
 			// Held like the negotiation messages: a client that types as soon as it connects can
@@ -169,13 +177,27 @@ public partial class TelnetServer
 
 		private async ValueTask OnTerminalTypesAsync(IReadOnlyList<string> terminalTypes)
 		{
-			if (_publishedTerminalTypes.SequenceEqual(terminalTypes))
+			// A client ends its list by repeating an entry. The library reports the list again then: unchanged, or
+			// with the MTTS bitvector expanded into the names of what it claims.
+			var unchanged = _publishedTerminalTypes.SequenceEqual(terminalTypes);
+			var complete = unchanged || (HasMtts(_publishedTerminalTypes) && !HasMtts(terminalTypes));
+			var snapshot = unchanged ? null : terminalTypes.ToArray();
+			if (snapshot is not null)
+			{
+				// Before settling: registration reads this list as soon as negotiation settles.
+				_publishedTerminalTypes = snapshot;
+			}
+
+			if (complete)
+			{
+				_terminalTypesComplete = true;
+				CheckNegotiationSettled();
+			}
+
+			if (snapshot is null)
 			{
 				return;
 			}
-
-			var snapshot = terminalTypes.ToArray();
-			_publishedTerminalTypes = snapshot;
 
 			// MTTS is the only thing that ever tells us a client can render more than 16 colours.
 			// Until it was read, ProtocolCapabilities.SupportsXterm256 sat at its default of
@@ -288,6 +310,7 @@ public partial class TelnetServer
 
 		private async ValueTask OnNawsAsync(int newHeight, int newWidth)
 		{
+			_width = newWidth;
 			await AnnounceTelnetIfNegotiatedAsync();
 			await held.PublishAsync(() =>
 			{
@@ -299,15 +322,58 @@ public partial class TelnetServer
 
 		private async ValueTask OnCharsetChangeAsync(Encoding encoding)
 		{
+			var charset = TerminalCharsets.Parse(encoding.WebName) ?? encoding.WebName;
+			_charset = charset;
+			CheckNegotiationSettled();
 			await AnnounceTelnetIfNegotiatedAsync();
 			await held.PublishAsync(() =>
 			{
-				server._connectionService.UpdateCapabilities(handle, current => current with
-				{
-					Charset = TerminalCharsets.Parse(encoding.WebName) ?? encoding.WebName
-				});
+				server._connectionService.UpdateCapabilities(handle, current => current with { Charset = charset });
 				return Task.CompletedTask;
 			});
+		}
+
+		/// <summary>
+		/// Waits, at most <paramref name="limit"/>, for the client to say what it can show before the connection
+		/// registers and the game sends its connect screen, as Evennia does: it waits for its handshakes, two
+		/// seconds at most. The wait ends early once the terminal-type list is complete and any character set the
+		/// client agreed to talk about is chosen, or once the client types a line. A client that answers nothing
+		/// waits the whole limit.
+		/// </summary>
+		public async Task WaitForNegotiationAsync(TimeSpan limit)
+		{
+			if (limit <= TimeSpan.Zero)
+			{
+				return;
+			}
+
+			CheckNegotiationSettled();
+			await Task.WhenAny(_negotiationSettled.Task, Task.Delay(limit, ct));
+		}
+
+		// Settled when either answer is in and the other is not still under way: a client that agreed to TTYPE
+		// or CHARSET and has not finished is waited for, and one that never took either up is not.
+		private void CheckNegotiationSettled()
+		{
+			var plugins = _telnet?.PluginManager;
+			var terminalTypesOpen = plugins?.GetPlugin<TerminalTypeProtocol>() is { IsNegotiated: true } && !_terminalTypesComplete;
+			var charsetOpen = plugins?.GetPlugin<CharsetProtocol>() is { IsNegotiated: true } && _charset is null;
+			if ((_terminalTypesComplete || _charset is not null) && !terminalTypesOpen && !charsetOpen)
+			{
+				_negotiationSettled.TrySetResult();
+			}
+		}
+
+		private static bool HasMtts(IReadOnlyList<string> terminalTypes) =>
+			terminalTypes.Any(type => type.StartsWith("MTTS ", StringComparison.OrdinalIgnoreCase));
+
+		/// <summary>What the connection registers with: what negotiation has said by then, else ASCII.</summary>
+		private ProtocolCapabilities RegisteredCapabilities()
+		{
+			var capabilities = new ProtocolCapabilities(SupportsUtf8: false, Charset: _charset, Width: _width);
+			return _publishedTerminalTypes.Count == 0
+				? capabilities
+				: WithTerminalTypes(capabilities, _publishedTerminalTypes);
 		}
 
 		private async ValueTask OnTerminalReportAsync(TerminalProbeResult answered) =>
@@ -383,6 +449,9 @@ public partial class TelnetServer
 				{
 					await telnet.SendGMCPCommand(Encoding.UTF8.GetBytes(module), Encoding.UTF8.GetBytes(message));
 				},
+				// Without the client's word for UTF-8 (CHARSET, MTTS, or a terminal SharpMUSH knows) the connection
+				// is written in ASCII: the clients that never answer are the ones least likely to show Unicode.
+				capabilities: RegisteredCapabilities(),
 				isSecure: isSecure, cancellationToken: ct);
 		}
 
@@ -414,8 +483,15 @@ public partial class TelnetServer
 			// and adds the appropriate prompt terminator (EOR, GA, or CRLF) based on
 			// what the client has negotiated.
 			// Write serialization is handled by the library's internal write lock.
+			// After SOCKSET telnet=no a prompt is a line, as PennMUSH writes one without CONN_TELNET.
 			try
 			{
+				if (server._connectionService.Get(handle)?.Capabilities.Telnet == false)
+				{
+					await _telnet!.SendAsync(data);
+					return;
+				}
+
 				await _telnet!.SendPromptAsync(data);
 			}
 			catch (ObjectDisposedException ode)

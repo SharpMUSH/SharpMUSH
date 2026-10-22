@@ -64,6 +64,7 @@ public static class HelpHtmlRenderer
 		ArgumentNullException.ThrowIfNull(topicHref);
 
 		var document = Markdown.Parse(markdown, Pipeline);
+		KeepTagsAsText(document);
 		var sectionLabels = new Dictionary<string, string>(StringComparer.Ordinal);
 		if (article is not null)
 		{
@@ -110,6 +111,43 @@ public static class HelpHtmlRenderer
 			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
 				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>")) + "</ul></nav>";
 		return toc + writer;
+	}
+
+	/// <summary>
+	/// Turns raw HTML that is not markup (<see cref="RecursiveMarkdownRenderer.IsMarkupTag"/>) back into
+	/// the text it was written as, as the terminal prints it. Helpfiles write argument names as tags,
+	/// <c>*&lt;width&gt;*</c>: passed through, a browser hides them as unknown elements, and
+	/// <c>&lt;title&gt;</c> or <c>&lt;body&gt;</c> swallow the rest of the page. A line that opens with
+	/// such a tag starts an HTML block, which becomes a paragraph of its lines.
+	/// </summary>
+	private static void KeepTagsAsText(MarkdownDocument document)
+	{
+		foreach (var html in document.Descendants<HtmlInline>().Where(html => !RecursiveMarkdownRenderer.IsMarkupTag(html.Tag)).ToList())
+		{
+			html.ReplaceBy(new LiteralInline(html.Tag));
+		}
+
+		foreach (var block in document.Descendants<HtmlBlock>().Where(block => block.Type != HtmlBlockType.Comment).ToList())
+		{
+			if (block.Parent is not { } parent)
+			{
+				continue;
+			}
+
+			var inline = new ContainerInline();
+			for (var i = 0; i < block.Lines.Count; i++)
+			{
+				if (i > 0)
+				{
+					inline.AppendChild(new HtmlInline("<br>"));
+				}
+				inline.AppendChild(new LiteralInline(block.Lines.Lines[i].Slice.ToString()));
+			}
+
+			var index = parent.IndexOf(block);
+			parent.RemoveAt(index);
+			parent.Insert(index, new ParagraphBlock { Inline = inline, Column = block.Column, Span = block.Span });
+		}
 	}
 
 	/// <summary>
@@ -293,6 +331,7 @@ public static class HelpHtmlRenderer
 		ArgumentNullException.ThrowIfNull(markdown);
 
 		var document = Markdown.Parse(markdown, Pipeline);
+		KeepTagsAsText(document);
 		var sb = new StringBuilder();
 
 		foreach (var literal in document.Descendants<LiteralInline>())

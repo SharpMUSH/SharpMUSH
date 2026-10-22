@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using NSubstitute;
 using SharpMUSH.Server;
@@ -55,5 +56,41 @@ public class MetricsListenerTests
 		var urls = ListenedUrls([]);
 
 		await Assert.That(urls).IsNull();
+	}
+
+	private static bool Refuses(int localPort, string path, int metricsPort = 9092)
+	{
+		var context = new DefaultHttpContext();
+		context.Connection.LocalPort = localPort;
+		context.Request.Path = path;
+		return MetricsListener.Refuses(context, metricsPort);
+	}
+
+	[Test]
+	[Arguments(9092, "/metrics", false)]
+	[Arguments(9092, "/", true)]
+	[Arguments(9092, "/api/health", true)]
+	[Arguments(8080, "/metrics", true)]
+	[Arguments(8080, "/METRICS/", true)]
+	[Arguments(8081, "/metrics", true)]
+	[Arguments(8080, "/", false)]
+	[Arguments(8080, "/metricsboard", false)]
+	public async Task ServesTheScrapeOnTheMetricsPortOnly(int localPort, string path, bool refused)
+	{
+		await Assert.That(Refuses(localPort, path)).IsEqualTo(refused);
+	}
+
+	[Test]
+	public async Task NoMetricsPortKeepsTheScrapeOnTheMainListener()
+	{
+		await Assert.That(Refuses(8080, "/metrics", metricsPort: 0)).IsFalse();
+	}
+
+	[Test]
+	public async Task ListenedPortIsZeroWhenKestrelsDefaultIsLeftAlone()
+	{
+		var configuration = new ConfigurationBuilder().AddInMemoryCollection([]).Build();
+
+		await Assert.That(MetricsListener.ListenedPort(configuration)).IsEqualTo(0);
 	}
 }

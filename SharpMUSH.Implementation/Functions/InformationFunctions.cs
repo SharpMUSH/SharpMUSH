@@ -148,7 +148,11 @@ public partial class Functions
 			.ToString("ddd MMM dd HH:mm:ss yyyy", CultureInfo.InvariantCulture);
 	}
 
-	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "field", "delimiter"])]
+	/// <remarks>
+	/// <c>fun_pidinfo</c> (<c>src/cque.c:1738-1819</c>): the fields asked for, in the order asked, joined
+	/// by the output separator. A field is named by any prefix of its name; an unknown one is skipped.
+	/// </remarks>
+	[SharpFunction(Name = "pidinfo", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["pid", "fields", "delimiter"])]
 	public async ValueTask<CallState> PIDInfo(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -160,16 +164,12 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.UInteger);
 		}
 
-		var field = args.TryGetValue("1", out var fieldArg)
-			? fieldArg.Message.ToPlainText().ToLowerInvariant()
-			: null;
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
-
-		var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
-		if (task is null) return new CallState(ErrorMessages.Returns.NoSuchPid);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		QueueEntrySnapshot? entry;
 		try
 		{
+			entry = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>().GetQueueEntry(pid);
+			if (entry is null) return new CallState(ErrorMessages.Returns.InvalidPid);
 			if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
 				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
 				return new CallState(ErrorMessages.Returns.PermissionDenied);
@@ -178,34 +178,33 @@ public partial class Functions
 		{
 			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
 		}
-		return FormatTaskInfo(task, field, delimiter);
+
+		var fields = args.TryGetValue("1", out var fieldArg) && fieldArg.Message.ToPlainText().Trim() is { Length: > 0 } asked
+			? asked
+			: "queue player time object attribute command";
+		var delimiter = args.TryGetValue("2", out var delimiterArg) ? delimiterArg.Message.ToPlainText() : " ";
+
+		var values = fields.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+			.Select(field => PidField(entry, field))
+			.OfType<string>();
+		return new CallState(string.Join(delimiter, values));
 	}
 
-	private CallState FormatTaskInfo(SemaphoreTaskData task, string? field, string delimiter)
+	/// <summary>One <c>pidinfo()</c> field, matched as <c>string_prefix(&lt;name&gt;, field)</c> matches it.</summary>
+	private static string? PidField(QueueEntrySnapshot entry, string field)
 	{
-		if (field == null)
-		{
-			var parts = new List<string>
-			{
-				task.Pid.ToString(),
-				task.Command.ToPlainText(),
-				task.Owner.ToString(),
-				"waiting",
-				task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"
-			};
-			return new CallState(string.Join(delimiter, parts));
-		}
+		bool Names(string name) => name.StartsWith(field, StringComparison.OrdinalIgnoreCase);
 
-		return field switch
-		{
-			"pid" => new CallState(task.Pid.ToString()),
-			"command" => new CallState(task.Command.ToPlainText()),
-			"executor" => new CallState(task.Owner.ToString()),
-			"status" => new CallState("waiting"),
-			"delay" => new CallState(task.RunDelay?.TotalSeconds.ToString("F2") ?? "0"),
-			"semaphore" => new CallState(task.SemaphoreSource.ToString()),
-			_ => new CallState(ErrorMessages.Returns.InvalidField)
-		};
+		if (Names("queue")) return entry.Semaphore is null ? "wait" : "semaphore";
+		if (Names("player") || Names("executor")) return $"#{entry.Source?.Number ?? -1}";
+		if (Names("time"))
+			return entry is { Timed: true, RemainingDelay: { } remaining }
+				? ((long)remaining.TotalSeconds).ToString(CultureInfo.InvariantCulture)
+				: "-1";
+		if (Names("object")) return $"#{entry.Semaphore?.DbRef.Number ?? -1}";
+		if (Names("attribute")) return entry.Semaphore is { } semaphore ? string.Join('`', semaphore.Attribute) : "#-1";
+		if (Names("command")) return entry.Command?.ToPlainText() ?? string.Empty;
+		return null;
 	}
 
 	/// <summary>
@@ -326,7 +325,7 @@ public partial class Functions
 			{
 				var name = found.Object().Name;
 				return ValueTask.FromResult(new CallState(
-					string.Join(" ", found switch
+					string.Join(PlayerAliases.Delimiter, found switch
 					{
 						SharpExit exit => [name, .. exit.Aliases ?? []],
 						SharpPlayer or SharpRoom or SharpThing => [name]
@@ -458,68 +457,141 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, obj, LocateFlags.All,
-			found => ValueTask.FromResult(new CallState(found.Object().Name)));
+			async found => await MaySeeInsideName(executor, found)
+				? new CallState(await InsideNameAsync(parser, executor, found))
+				: new CallState(ErrorMessages.Returns.PermissionDenied));
 	}
 
-	[SharpFunction(Name = "lpids", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = [])]
+	/// <summary>
+	/// <c>fun_iname</c> (<c>src/fundb.c:1868-1890</c>): the caller controls the object, is See_All, or
+	/// stands inside it.
+	/// </summary>
+	private async ValueTask<bool> MaySeeInsideName(AnySharpObject executor, AnySharpObject found)
+		=> await PermissionService.Controls(executor, found)
+			|| await executor.IsSee_All()
+			|| (executor.AsOptionalContent is AnySharpContent content
+				&& (await content.Location()).Object().DBRef == found.Object().DBRef);
+
+	/// <summary>
+	/// <c>nameformat()</c> (<c>src/unparse.c:175-195</c>) with the accented name as the default: the
+	/// object's NAMEFORMAT, ignoring permissions, given the dbref and that name. A NAMEFORMAT that is
+	/// there is shown as it evaluates, empty or not; only a missing one gives the plain name.
+	/// </summary>
+	private async ValueTask<MString> InsideNameAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject found)
+	{
+		var defaultName = found.IsExit
+			? MString.Plain(found.Object().Name)
+			: await new NameFormatter(AttributeService, Configuration).FormatAsync(found, NameContext.Accented);
+
+		var god = await HelperFunctions.GetGod(Mediator);
+		if (await AttributeService.GetAttributeAsync(god, found, "NAMEFORMAT",
+				IAttributeService.AttributeMode.Read, true) is not SharpAttribute[])
+		{
+			return defaultName;
+		}
+
+		return await AttributeService.EvaluateAttributeFunctionAsync(parser, executor, found, "NAMEFORMAT",
+			CallbackArguments.Of(("object", found.Object().DBRef.ToString()), ("name", defaultName)),
+			evalParent: true, ignorePermissions: true);
+	}
+
+	/// <remarks>
+	/// <c>fun_lpids</c> (<c>src/cque.c:1825-1923</c>): the wait queue's pids, then the semaphore
+	/// queue's, of every object owned by the player's owner. <c>independent</c> keeps only the object's
+	/// own, and <c>all</c>, or no object for a caller who can see the whole queue, lists every one.
+	/// </remarks>
+	[SharpFunction(Name = "lpids", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "types"])]
 	public async ValueTask<CallState> LPIDs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var args = parser.CurrentState.ArgumentsOrdered;
-		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, "me");
-		var queueTypesStr = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, "wait semaphore").ToPlainText()
-			.ToUpperInvariant();
+		var target = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, string.Empty).ToPlainText();
+		var types = ArgHelpers.NoParseDefaultNoParseArgument(args, 1, string.Empty).ToPlainText()
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-		var queueTypes = queueTypesStr.Split(' ', StringSplitOptions.RemoveEmptyEntries).ToHashSet();
-
-		if (queueTypes.Any(type => type is not "WAIT" and not "SEMAPHORE" and not "INDEPENDENT"))
+		var lookQueue = await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
+		AnySharpObject? player = null;
+		if (target.Equals("all", StringComparison.OrdinalIgnoreCase) || target.Length == 0)
 		{
-			return new CallState(ErrorMessages.Returns.InvalidQueueType);
+			player = lookQueue ? null : executor;
+		}
+		else
+		{
+			switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, target, LocateFlags.All))
+			{
+				case Error<CallState>:
+					return new CallState(ErrorMessages.Returns.NotVisible);
+				case AnySharpObject found when !lookQueue && !await OwnsOrControls(found):
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				case AnySharpObject found:
+					player = found;
+					break;
+			}
 		}
 
-		var maybeLocate = await
-			LocateService.LocateAndNotifyIfInvalidWithCallState(parser,
-				executor, executor, target.ToPlainText(),
-				LocateFlags.All);
-
-		return maybeLocate switch
+		if (types.Any(type => !type.Equals("wait", StringComparison.OrdinalIgnoreCase)
+			&& !type.Equals("semaphore", StringComparison.OrdinalIgnoreCase)
+			&& !type.Equals("independent", StringComparison.OrdinalIgnoreCase)))
 		{
-			Error<CallState> error => error.Value,
-			AnySharpObject located when !await CanSeeQueueOf(executor, located) => new CallState(ErrorMessages.Returns.PermissionDenied),
-			AnySharpObject located => await PidsOf(located.Object().DBRef)
-		};
-
-		async ValueTask<CallState> PidsOf(DBRef locationDBRef)
-		{
-			bool includeWait = queueTypes.Contains("WAIT");
-			bool includeSemaphore = queueTypes.Contains("SEMAPHORE");
-			bool independent = queueTypes.Contains("INDEPENDENT");
-
-			if (!includeWait && !includeSemaphore)
-			{
-				includeWait = true;
-				includeSemaphore = true;
-			}
-
-			var allPids = AsyncEnumerable.Empty<long>();
-
-			if (includeWait)
-			{
-				allPids = allPids.Concat(Mediator.CreateStream(new ScheduleDelayQuery(locationDBRef)));
-			}
-
-			if (includeSemaphore)
-			{
-				allPids = allPids.Concat(Mediator.CreateStream(new ScheduleSemaphoreQuery(locationDBRef)).Select(x => x.Pid));
-			}
-
-			// Note: INDEPENDENT filtering would require owner-based filtering
-			// Current implementation returns PIDs for the specific DBRef
-			// In PennMUSH, INDEPENDENT filters out tasks from objects with same owner but different DBRef
-			// This would require extending the query to check task executor owner vs target owner
-
-			return new CallState(string.Join(' ', await allPids.OrderBy(x => x).ToArrayAsync()));
+			return new CallState(ErrorMessages.Returns.InvalidArgument);
 		}
+
+		var wait = types.Contains("wait", StringComparer.OrdinalIgnoreCase);
+		var semaphore = types.Contains("semaphore", StringComparer.OrdinalIgnoreCase);
+		if (!wait && !semaphore) wait = semaphore = true;
+		var independent = types.Contains("independent", StringComparer.OrdinalIgnoreCase);
+
+		var playerRef = player?.Object().DBRef;
+		var playerOwner = player is null ? (DBRef?)null : (await player.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+
+		IReadOnlyList<QueueEntrySnapshot> entries;
+		try
+		{
+			entries = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>().GetQueueEntries();
+		}
+		catch (NotSupportedException)
+		{
+			return new CallState(ErrorMessages.Returns.ErrorNotSupported);
+		}
+
+		// Penn lists qwait and qsemfirst: entries still waiting, not ones already moved to the run queue.
+		var listed = new List<QueueEntrySnapshot>();
+		var owners = new Dictionary<int, int>();
+		foreach (var entry in entries.Where(entry => entry.Kind is "delay" or "semaphore"
+			&& entry.State is QueueEntryState.Pending or QueueEntryState.Paused))
+		{
+			if (await Belongs(entry)) listed.Add(entry);
+		}
+
+		var waitPids = wait
+			? listed.Where(entry => entry.Kind == "delay").OrderBy(entry => entry.RemainingDelay).Select(entry => entry.Pid)
+			: [];
+		var semaphorePids = semaphore
+			? listed.Where(entry => entry.Kind == "semaphore").Select(entry => entry.Pid)
+			: [];
+		return new CallState(string.Join(' ', waitPids.Concat(semaphorePids)));
+
+		// An entry whose executor is gone is listed for everyone, as Penn's GoodObject test leaves it in.
+		async ValueTask<bool> Belongs(QueueEntrySnapshot entry)
+		{
+			if (playerRef is null || entry.Source is not { } source) return true;
+			if (independent) return source.Number == playerRef.Value.Number;
+			return await OwnerOf(source) is not { } owner || owner == playerOwner!.Value.Number;
+		}
+
+		async ValueTask<int?> OwnerOf(DBRef source)
+		{
+			if (owners.TryGetValue(source.Number, out var known)) return known;
+			if (await Mediator.Send(new GetObjectNodeQuery(source)) is not AnySharpObject sourceObject) return null;
+			var owner = (await sourceObject.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number;
+			owners[source.Number] = owner;
+			return owner;
+		}
+
+		async ValueTask<bool> OwnsOrControls(AnySharpObject found)
+			=> (await found.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number
+				== (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef.Number
+				|| await PermissionService.Controls(executor, found);
 	}
 
 	/// <summary>
@@ -1301,30 +1373,52 @@ public partial class Functions
 		}
 
 		var iterations = (int)count;
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		var outputFormat = "ms";
-		if (args.Count >= 3 && args.TryGetValue("2", out var formatArg))
+		// <sendto> is evaluated and matched like any object, and must be one the executor may @pemit
+		// (funmisc.c:1503-1520), before <expression> runs at all.
+		AnySharpObject? sendTo = null;
+		if (args.TryGetValue("2", out var sendToArg))
 		{
-			outputFormat = formatArg.Message.ToPlainText().ToLower();
+			var name = (await ParseRawArgument(parser, sendToArg.Message))?.Message?.ToPlainText() ?? string.Empty;
+			switch (await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, name, LocateFlags.All))
+			{
+				case Error<CallState> error:
+					return error.Value;
+				case AnySharpObject found when !await CommunicationService.MayPemitAsync(parser, executor, found):
+					return new CallState("#-1");
+				case AnySharpObject found:
+					sendTo = found;
+					break;
+			}
 		}
 
 		var hadErrors = false;
-		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-		for (int i = 0; i < iterations; i++)
+		CallState? last = null;
+		var min = long.MaxValue;
+		var max = 0L;
+		var total = 0L;
+		for (var i = 0; i < iterations; i++)
 		{
-			hadErrors |= (await ParseRawArgument(parser, code))?.HadErrors == true;
+			var start = System.Diagnostics.Stopwatch.GetTimestamp();
+			last = await ParseRawArgument(parser, code);
+			var elapsed = (long)System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMicroseconds;
+			hadErrors |= last?.HadErrors == true;
+			min = Math.Min(min, elapsed);
+			max = Math.Max(max, elapsed);
+			total += elapsed;
 		}
-		stopwatch.Stop();
 
-		var elapsed = stopwatch.Elapsed.TotalMilliseconds;
-		if (outputFormat == "s" || outputFormat == "seconds")
+		var timings = string.Create(CultureInfo.InvariantCulture,
+			$"Average: {(double)total / iterations:F2}   Min: {min}   Max: {max}");
+
+		if (sendTo is null)
 		{
-			return new CallState((elapsed / 1000.0).ToString("F6")) { HadErrors = hadErrors };
+			return new CallState(timings) { HadErrors = hadErrors };
 		}
-		else
-		{
-			return new CallState(elapsed.ToString("F3")) { HadErrors = hadErrors };
-		}
+
+		await NotifyService.Notify(sendTo, timings, executor);
+		return (last ?? CallState.Empty) with { HadErrors = hadErrors };
 	}
 
 	[SharpFunction(Name = "fn", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse)]
@@ -1336,9 +1430,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoFunctionNameGiven);
 		}
 
-		if (parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var targetFunction))
+		if (FnTarget(parser, functionName) is (var targetFunction, var deleted))
 		{
-			EvaluationRestrictions.Demand(targetFunction.LibraryInformation, parser.CurrentState.Restrictions);
+			EvaluationRestrictions.Demand(targetFunction, parser.CurrentState.Restrictions);
 			using var retainedSource = RestrictedTextRetention.Enter(parser.CurrentState);
 			if (retainedSource is not null)
 			{
@@ -1357,7 +1451,8 @@ public partial class Functions
 				.Skip(1)
 				.Select(x => x.Value.Message.ToPlainText());
 			var callString = $"{functionName}({string.Join(",", fnArgs)})";
-			var result = await parser.FunctionParse(MarkupText.Plain(callString));
+			var calling = deleted ? parser.Push(parser.CurrentState with { BuiltinCall = targetFunction }) : parser;
+			var result = await calling.FunctionParse(MarkupText.Plain(callString));
 			return result ?? CallState.Empty;
 		}
 
@@ -1381,6 +1476,17 @@ public partial class Functions
 
 		return result2;
 	}
+
+	/// <summary>
+	/// The built-in fn() calls, and whether @function/delete has taken it out of the function table. PennMUSH's
+	/// fn() reaches a deleted built-in all the same (builtin_func_hash_lookup, src/funufun.c:92).
+	/// </summary>
+	private (FunctionDefinition Definition, bool Deleted)? FnTarget(IMUSHCodeParser parser, string functionName)
+		=> parser.FunctionLibrary.TryGetValue(functionName.ToLower(), out var found)
+			? (found.LibraryInformation, false)
+			: Builtins.TryGetValue(functionName.ToLowerInvariant(), out var deleted)
+				? (deleted, true)
+				: null;
 
 	/// <summary>
 	/// PennMUSH's <c>functions([&lt;type&gt;])</c> (<c>src/function.c</c> <c>list_functions</c>): the type is

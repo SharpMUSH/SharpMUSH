@@ -248,8 +248,7 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 
 			await _serverFactory.DisposeAsync();
 		}
-		foreach (var path in new[] { _worldPath, _worldPath + ".backups", _worldPath + ".dataprotection-keys" }.Where(Directory.Exists))
-			Directory.Delete(path, recursive: true);
+		TestWorldFiles.Delete(_worldPath);
 
 		GC.SuppressFinalize(this);
 	}

@@ -8,8 +8,9 @@ by any authorised user.
 ## Getting started
 - [Get started with Sharpie](/welcome) for an optional guide matched to your experience.
 - [Sign in or register](/login), then create or select a character to open [Play](/play).
-- Prefer a MU* client? Ask this game for its connection address and port, then follow
-  the connection screen's account and character instructions.
+- Prefer a MU* client? Make an account with `register <name> [email] <password>`,
+  a character with `make <character> <password>`, and next time log in with
+  `connect <character> <password>`.
 - Read this game's rules and character requirements before joining a scene.
 
 ## About SharpMUSH

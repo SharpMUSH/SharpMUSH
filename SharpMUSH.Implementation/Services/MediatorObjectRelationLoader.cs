@@ -8,8 +8,8 @@ namespace SharpMUSH.Implementation.Services;
 
 /// <summary>
 /// The host's <see cref="IObjectRelationLoader"/>: relations resolve through the Mediator's cached
-/// queries, so a provider-built object follows the same invalidation as every other read. Grants, owner
-/// and location, which every permission check reads, and flags answer from <see cref="ObjectRelationMemo"/>
+/// queries, so a provider-built object follows the same invalidation as every other read. Grants, owner,
+/// location and parent, which every permission and lock check reads, and flags answer from <see cref="ObjectRelationMemo"/>
 /// until the object is written.
 /// </summary>
 public class MediatorObjectRelationLoader(IMediator mediator, ObjectRelationMemo memo) : IObjectRelationLoader
@@ -30,8 +30,8 @@ public class MediatorObjectRelationLoader(IMediator mediator, ObjectRelationMemo
 			None => throw new InvalidOperationException($"No owner found for #{number}")
 		};
 
-	public async Task<AnyOptionalSharpObject> ParentOf(string objectId, int number, CancellationToken cancellationToken)
-		=> await mediator.Send(new GetParentOfQuery(objectId, number), cancellationToken);
+	public Task<AnyOptionalSharpObject> ParentOf(string objectId, int number, CancellationToken cancellationToken)
+		=> memo.ParentAsync(number, async ct => await mediator.Send(new GetParentOfQuery(objectId, number), ct), cancellationToken);
 
 	public async Task<AnyOptionalSharpObject> ZoneOf(string objectId, int number, CancellationToken cancellationToken)
 		=> await mediator.Send(new GetZoneOfQuery(objectId, number), cancellationToken);

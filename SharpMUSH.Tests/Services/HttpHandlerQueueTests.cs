@@ -48,6 +48,8 @@ public class HttpHandlerQueueTests
 		await Assert.That(result.Body.TrimEnd()).IsEqualTo("own response");
 	}
 
+	// This test parks the session-wide consumer; other tests must not queue beside it.
+	[NotInParallel]
 	[Test]
 	public async Task AHandlerRequestWaitsForTheQueueEntryAlreadyRunningAndSeesItsWrites()
 	{
@@ -59,14 +61,15 @@ public class HttpHandlerQueueTests
 		var dispatcher = WebAppFactoryArg.Services.GetRequiredService<IHttpHandlerCommandDispatcher>();
 		var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-		var running = await scheduler.AdmitWork(async () =>
+		var blockerReleased = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var running = await scheduler.AdmitSocketWork(async () =>
 		{
 			started.TrySetResult();
 			await release.Task;
 			// Half-way through: the entry has written, and is not finished.
 			await Parser.FunctionParse(MarkupText.Plain($"attrib_set({handler}/WITNESS,after)"));
 			return null;
-		}, "http-queue-test", "test");
+		}, "http-queue-test", "test", () => blockerReleased.TrySetResult());
 		await Assert.That(running.Accepted).IsTrue();
 
 		Task<Found<HttpHandlerResult>>? request = null;
@@ -95,8 +98,20 @@ public class HttpHandlerQueueTests
 		finally
 		{
 			release.TrySetResult();
-			// Only to let the request finish before the next test; its outcome was asserted above.
-			if (request is not null) await ((Task)request.WaitAsync(TimeSpan.FromSeconds(10))).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+			try
+			{
+				// Join the actual request even after an assertion failed, but don't hide a cleanup timeout.
+				if (request is not null)
+				{
+					try { await request.WaitAsync(TimeSpan.FromSeconds(10)); }
+					catch (Exception) when (request.IsCompleted) { }
+				}
+			}
+			finally
+			{
+				// Startup failure can leave request null while the accepted blocker still owns work.
+				await blockerReleased.Task.WaitAsync(TimeSpan.FromSeconds(10));
+			}
 		}
 	}
 

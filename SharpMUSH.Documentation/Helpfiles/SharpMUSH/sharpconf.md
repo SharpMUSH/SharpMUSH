@@ -18,7 +18,7 @@ These options control chat system settings.
 - `chan_cost=<number>`: Accepted but ignored; channels cost nothing to create.
 - `max_channels=<number>`: How many channels each non-admin player may own.
 - `max_player_chans=<number>`: Accepted but ignored; see max_channels.
-- `noisy_cemit=<boolean>`: Accepted but ignored.
+- `noisy_cemit=<boolean>`: Is @cemit/noisy the default?
 - `chan_title_len=<number>`: How long can @channel/title's be?
 - `use_muxcomm=<boolean>`: Accepted but ignored; MUX-style channel aliases always work. See [MUXCOMSYS]
 - `chat_token_alias=<character>`: A single character that can be used as well as + for talking on channels (+<chan> <msg>)
@@ -104,5 +104,5 @@ These options affect the behavior of some functions.
 # @config log
 These options affect logging.
 
-- `log_commands=<boolean>`: Accepted but ignored.
-- `log_forces=<boolean>`: Accepted but ignored.
+- `log_commands=<boolean>`: Should every command be written to the command log? Commands by SUSPECT players are always written, and commands by NO_LOG objects never are. Passwords are starred out.
+- `log_forces=<boolean>`: Should @force by wizards, and @force of wizard-owned objects, be written to the wizard log?

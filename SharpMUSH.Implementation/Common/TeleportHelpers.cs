@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using Mediator;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
@@ -281,7 +282,7 @@ public static class TeleportHelpers
 		if (!options.Silent && changesRoom)
 		{
 			await services.DidItService.DidIt(parser, new DidItRequest(
-				Player: target, Thing: target, OWhat: "OXTPORT",
+				Place: MonikerPlace.Movement, Player: target, Thing: target, OWhat: "OXTPORT",
 				Loc: currentLocation, Env0: executor.Object().DBRef.ToString()));
 		}
 
@@ -297,7 +298,7 @@ public static class TeleportHelpers
 		if (!options.Silent && changesRoom)
 		{
 			await services.DidItService.DidIt(parser, new DidItRequest(
-				Player: target, Thing: target,
+				Place: MonikerPlace.Movement, Player: target, Thing: target,
 				What: "TPORT", OWhat: "OTPORT", AWhat: "ATPORT",
 				Loc: destinationContainer,
 				Env0: executor.Object().DBRef.ToString(), Env1: currentLocation.Object().DBRef.ToString()));

@@ -248,7 +248,7 @@ public class ConnectionAnnounceServiceTests
 			null, null);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
-			null, "HEAR_CONNECT", "GAME: Bob has connected.");
+			null, "HEAR_CONNECT", Says("GAME: Bob has connected."));
 	}
 
 	[Test]
@@ -268,7 +268,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(player, connectionCount: 2, isHiddenConnection: false);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
-			null, "HEAR_CONNECT", "GAME: Bob has reconnected.");
+			null, "HEAR_CONNECT", Says("GAME: Bob has reconnected."));
 	}
 
 	[Test]
@@ -523,7 +523,7 @@ public class ConnectionAnnounceServiceTests
 
 		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: false);
 
-		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has disconnected.");
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", Says("GAME: Bob has disconnected."));
 		await mediator.Received(1).Send(
 			Arg.Is<SetAttributeCommand>(c =>
 				c.DBRef.Equals(player.Object().DBRef) &&
@@ -549,7 +549,7 @@ public class ConnectionAnnounceServiceTests
 
 		await service.AnnounceDisconnectAsync(player, remainingConnections: 1, isHiddenConnection: false);
 
-		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", "GAME: Bob has partially disconnected.");
+		await gameBroadcastService.Received(1).BroadcastToFlagAsync(null, "HEAR_CONNECT", Says("GAME: Bob has partially disconnected."));
 		await mediator.DidNotReceive().Send(Arg.Any<SetAttributeCommand>(), Arg.Any<CancellationToken>());
 	}
 
@@ -724,7 +724,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceConnectAsync(player, connectionCount: 1, isHiddenConnection: true);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
-			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-connected.");
+			null, "HEAR_CONNECT", Says("GAME: Bob has HIDDEN-connected."));
 	}
 
 	/// <summary>
@@ -748,7 +748,7 @@ public class ConnectionAnnounceServiceTests
 		await service.AnnounceDisconnectAsync(player, remainingConnections: 0, isHiddenConnection: true);
 
 		await gameBroadcastService.Received(1).BroadcastToFlagAsync(
-			null, "HEAR_CONNECT", "GAME: Bob has HIDDEN-disconnected.");
+			null, "HEAR_CONNECT", Says("GAME: Bob has HIDDEN-disconnected."));
 	}
 
 	/// <summary>
@@ -913,5 +913,14 @@ public class ConnectionAnnounceServiceTests
 	{
 		DBRef dbref => dbref.Number,
 		AnySharpContainer loaded => loaded.Object().DBRef.Number
+	};
+
+	/// <summary>A broadcast whose text reads <paramref name="text"/>, whatever markup it carries.</summary>
+	private static SharpMessage Says(string text) => Arg.Is<SharpMessage>(message => PlainText(message) == text);
+
+	private static string PlainText(SharpMessage message) => message switch
+	{
+		MString markup => markup.ToPlainText(),
+		string plain => plain
 	};
 }

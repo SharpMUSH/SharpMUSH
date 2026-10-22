@@ -12,6 +12,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Authentication.External;
 using SharpMUSH.Server.Authentication.Passkeys;
+using SharpMUSH.Library.Authorization;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -110,7 +111,8 @@ public sealed class AccountSecurityController(IMediator mediator, IAccountServic
 		|| await accounts.GetByIdAsync(id) is not { IsActive: true, MustChangePassword: false, AllowCharacterPasswordAccountLogin: true } account
 		|| !string.IsNullOrEmpty(account.PasswordHash) || (await passkeys.ListAsync(id)).Count != 0
 		|| (await mediator.Send(new GetExternalIdentitiesQuery(id))).Count != 0) return Conflict("This account already has a dedicated sign-in method.");
-		if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length is < 8 or > 1024 || request.NewPassword != request.Confirmation) return BadRequest("A matching new password and confirmation are required.");
+		if (!AccountPasswordRule.Accepts(request.NewPassword)) return BadRequest(AccountPasswordRule.Requirement);
+		if (request.NewPassword != request.Confirmation) return BadRequest("A matching new password and confirmation are required.");
 		var character = (await accounts.GetCharactersAsync(id)).FirstOrDefault(c => c.Object.Key == request.CharacterKey && c.Object.CreationTime == request.CharacterCreationTime);
 		if (character is null || string.IsNullOrEmpty(character.PasswordHash) || !passwords.PasswordIsValid(request.CharacterPassword, character.PasswordHash)) return Unauthorized("Character credentials were not verified.");
 		var result = await accounts.SetPasswordAsync(id, request.NewPassword, false);

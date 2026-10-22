@@ -47,6 +47,14 @@ public interface ICommunicationService
 	/// OEMIT location. Other delivery refusals notify through the normal lock/locate paths.</returns>
 	ValueTask<CallState> EmitAsync(IMUSHCodeParser parser, EmitRequest request);
 
+	/// <summary>
+	/// PennMUSH's okay_pemit: whether <paramref name="speaker"/> may @pemit <paramref name="target"/>.
+	/// Wizards and Pemit_All pass; a HAVEN player or a failed @lock/page refuses, running the page
+	/// lock's failure messages, and <paramref name="showDefault"/> adds the default refusal when there
+	/// is none of its own.
+	/// </summary>
+	ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true);
+
 	/// <summary>Runs the same emit operation with explicit admission and target-failure metadata
 	/// for payload-returning commands. A refused target does not prevent other targets receiving output.</summary>
 	ValueTask<EmitOutcome> EmitWithOutcomeAsync(IMUSHCodeParser parser, EmitRequest request);

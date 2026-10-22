@@ -37,6 +37,7 @@ public class WikiHistoryRetentionTests
 			relations: null);
 		try
 		{
+			await db.Migrate();
 			await body(db, new WikiStoreService(db, new WikiMarkdigPipeline()));
 		}
 		finally

@@ -1,0 +1,27 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+@inject IServiceProvider Services
+@implements IDisposable
+
+@* The game's name in a page title. A page drawn before server-info has answered would otherwise keep
+   "SharpMUSH" there, since its <PageTitle> is not drawn again; this draws itself again on the answer. *@
+@Loc["AppTitle"]
+
+@code {
+    private ServerInfoService? _serverInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _serverInfo = Services.GetService<ServerInfoService>();
+        if (_serverInfo is null) return;
+        _serverInfo.Changed += OnServerInfoChanged;
+        await _serverInfo.GameNameAsync();
+    }
+
+    private void OnServerInfoChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (_serverInfo is not null) _serverInfo.Changed -= OnServerInfoChanged;
+    }
+}

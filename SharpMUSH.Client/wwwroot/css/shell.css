@@ -764,6 +764,15 @@ pre.ms-preformatted {
     white-space: pre-wrap;
 }
 
+/* Inline, each line's background covers only the glyphs, so a shaded block (a help example) showed the
+   terminal's line spacing between its lines as stripes. Shaded text lays out its own lines, at the font's
+   own height, and sits on the line it starts on; unshaded text keeps the line's flow, as a telnet client shows it. */
+pre.ms-preformatted:has(> [style*="background-color"]) {
+    display: inline-block;
+    vertical-align: text-top;
+    line-height: normal;
+}
+
 /* Portal-only: LayoutCss.Fixed leaves its title gap in a rule or divider with no title, which splits the line in two. */
 .ms-rule:empty, .ms-divider:empty { gap: 0; }
 /* The terminal uses word-break: break-word for plain output. Reset it on tables: that

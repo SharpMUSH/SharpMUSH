@@ -65,7 +65,7 @@ public partial class IntegratedWikiMutationTests
 		host.ProviderOpened = _ => published = true;
 		await Assert.That(() => host.OpenAsync()).Throws<InvalidOperationException>();
 		await Assert.That(published).IsFalse();
-		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb")))).IsEquivalentTo(before);
+		await Assert.That(SHA256.HashData(File.ReadAllBytes(Path.Join(host.WorldPath, "data.mdb"))).SequenceEqual(before)).IsTrue();
 	}
 
 	[Test]
@@ -106,7 +106,12 @@ public partial class IntegratedWikiMutationTests
 			await Assert.That(provider.AtomicWikiLegacyMutationsInFlight).IsEqualTo(0);
 		}
 		await Assert.That((await wiki.GetRevisionsAsync(page.Id)).Count).IsEqualTo(1);
-		await host.ActivateAtomicWikiProjectionAsync();
+		// Removing ownership rows cannot erase the admitted package history.
+		await Assert.That(PackageState(provider).SequenceEqual(UnknownPackageState(host.FixtureId, 3))).IsTrue();
+		var beforeRefusal = WikiFingerprint(provider, false);
+		await AssertFixtureFailure(() => host.ActivateAtomicWikiProjectionAsync(), WikiFixtureMutationFailure.Unavailable);
+		await Assert.That(WikiFingerprint(provider, false)).IsEqualTo(beforeRefusal);
+		await Assert.That(provider.AtomicWikiPhase).IsEqualTo(SemanticFixturePhase.Inactive);
 	}
 
 	[Test]

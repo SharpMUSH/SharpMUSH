@@ -50,7 +50,7 @@ The result is read back as it is, so it can be edited and passed on.
 
 `lflex(<options>, <items>[, <delimiter>])`
 
-[FLEX()] with its items given as one list, split on *<delimiter>* (a space when none is given), so a row can be as long as a list another function made. Each item is text, a layout or an [ITEM()], as in flex(). It takes flex()'s options. An empty list draws nothing.
+[FLEX()] with its items given as one list, split on *<delimiter>* (a space when none is given), so a row can be as long as a list another function made. Each item is text, a layout or an [ITEM()], as in flex(). It takes [flex() options]. An empty list draws nothing.
 
 The text of a layout is its box art, so a list of layouts needs a delimiter its art never holds: `^` rather than `|` or a space.
 
@@ -93,7 +93,7 @@ Used on its own, item() draws its content as a single column.
 
 *<delimiter>* splits both lists; a space by default. Labels such as `Full Name` need another one. The two lists must have as many items as each other, or it returns `#-1 NUMBER OF WORDS MUST BE EQUAL`. Two empty lists draw nothing.
 
-*<options>* are [FIELDS()]'s.
+*<options>* are [fields() options].
 
 ### Examples
 ```sharp
@@ -118,7 +118,7 @@ Origin:  Super Robot Wars AG
 
 `ltree(<options>, <items>[, <delimiter>])`
 
-[TREE()] with its top-level items given as one list, split on *<delimiter>* (a space when none is given). Each item is text, a layout or a [NODE()] or [LNODE()], as in tree(). It takes tree()'s options. An empty list draws nothing.
+[TREE()] with its top-level items given as one list, split on *<delimiter>* (a space when none is given). Each item is text, a layout or a [NODE()] or [LNODE()], as in tree(). It takes [tree() options]. An empty list draws nothing.
 
 A tree's guide lines hold `|` and spaces, so a list of nodes needs another delimiter, such as `^`.
 
@@ -182,9 +182,9 @@ Mail
 
 `grid(<list>[, <delimiter>[, <options>]])`
 
-Short items, such as names, in as many columns as fit the width, each column as wide as the longest item. The items run down each column, the way `ls` lists files, or across each row with `across`. In the web portal the columns follow the width of the page.
+Short items, such as names, in as many columns as fit the width. *<delimiter>* splits *<list>*; a space when none is given. Each column is as wide as its longest item. The items run down each column, the way `ls` lists files, or across each row with `across`. In the web portal the columns follow the width of the page.
 
-Options (the last argument):
+Options (the last argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. They set the border of every box and rule inside that names none.
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
@@ -213,7 +213,11 @@ Bram
 
 `ldatatable(<options>, <headings>, <rows>[, <delimiter>])`
 
-[DATATABLE()] with its rows given as one list, split on *<delimiter>* (a space when none is given), so one [ITER()] can make a row for each record. The headings and each row's cells are split by `|`, or by the `delim` option, as in datatable(). It takes datatable()'s options and gives way on a narrow screen the same way. An empty list draws the headings alone.
+[DATATABLE()] with its rows given as one list, so one [ITER()] can make a row for each record. It has two delimiters:
+- *<delimiter>* splits *<rows>* into rows. A space when none is given.
+- The `delim` option splits the headings and each row's cells. `|` by default; see [datatable() delimiters].
+
+It takes [datatable() options] and gives way on a narrow screen the same way. An empty list draws the headings alone.
 
 ### Examples
 ```sharp
@@ -238,30 +242,6 @@ Raya    Writing a scene
 - [DATATABLE()]
 - [DATACOLUMNS()]
 - [ITER()]
-- [LAYOUT FUNCTIONS]
-:::
-
-# datacolumns()
-
-`datacolumns(<options>, <column1>[, ... , <columnN>])`
-
-The same table as [DATATABLE()], given a column at a time instead of a row at a time. Each column is its heading and then its cells, split by `|`, so a list another function made is a column as it stands. A column shorter than the others is filled out with empty cells. It takes the same options, and gives way on a narrow screen the same way.
-
-### Example
-```sharp
-> think datacolumns({{"width":30,"nowrap":"2"}},Name|Mannaz|Raya,>Idle|0s|5m,Doing|Hooooo?)
-Name    Idle  Doing
----------------------
-Mannaz    0s  Hooooo?
-Raya      5m
-```
-
-### Lists from other functions
-
-With lists from other functions, change the delimiter to the space they use: `datacolumns({{"delim":" "}},Name [lwho()],Idle [iter(lwho(),idle(##))])`. The space is quoted: `"delim":"%b"` would leave the option empty. A cell holding a space then needs another delimiter.
-
-::: seealso
-- [DATATABLE()]
 - [LAYOUT FUNCTIONS]
 :::
 

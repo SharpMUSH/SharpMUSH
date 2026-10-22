@@ -90,20 +90,25 @@ public partial class Functions
 		}
 	}
 
+	/// <remarks><c>fun_sql_escape</c> (<c>src/sql.c:337-348</c>) asks for SQL_OK, as sql() does.</remarks>
 	[SharpFunction(Name = "sqlescape", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
-	public ValueTask<CallState> SqlEscape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	public async ValueTask<CallState> SqlEscape(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		if (SqlService is not { IsAvailable: true })
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.SqlNotEnabled));
+			return new CallState(ErrorMessages.Returns.SqlNotEnabled);
+		}
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
 		var args = parser.CurrentState.Arguments;
 		var input = args["0"].Message.ToPlainText();
 
-		var escaped = SqlService.Escape(input);
-
-		return ValueTask.FromResult(new CallState(escaped));
+		return new CallState(SqlService.Escape(input));
 	}
 
 	/// <summary>

@@ -9,7 +9,8 @@ public record CostOptions(
 		Group = "Building Costs",
 		Order = 1,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint ObjectCost,
 
 	[property: SharpConfig(
@@ -20,7 +21,8 @@ public record CostOptions(
 		Group = "Building Costs",
 		Order = 2,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint ExitCost,
 
 	[property: SharpConfig(
@@ -31,7 +33,8 @@ public record CostOptions(
 		Group = "Building Costs",
 		Order = 3,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint LinkCost,
 
 	[property: SharpConfig(
@@ -42,7 +45,8 @@ public record CostOptions(
 		Group = "Building Costs",
 		Order = 4,
 		Min = 0,
-		Max = 100000)]
+		Max = 100000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint RoomCost,
 
 	[property: SharpConfig(
@@ -53,7 +57,8 @@ public record CostOptions(
 		Group = "Command Costs",
 		Order = 1,
 		Min = 0,
-		Max = 1000)]
+		Max = 1000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint QueueCost,
 
 	[property: SharpConfig(

@@ -16,12 +16,25 @@ var scenario = options["--scenario"];
 var world = Path.GetFullPath(options["--world"]);
 var evidence = Path.GetFullPath(options["--evidence"]);
 if (world == evidence || evidence.StartsWith(world + Path.DirectorySeparatorChar, StringComparison.Ordinal)) throw new ArgumentException("Evidence must be outside world");
-if (scenario != "cipher-cursor-error") Directory.CreateDirectory(evidence);
+if (scenario is not ("cipher-cursor-error" or "category-commit-failure-initial" or "category-commit-failure-resume"
+	or "category-group-commit-failure-initial" or "category-group-commit-failure-resume")) Directory.CreateDirectory(evidence);
 using var watchdog = new Timer(_ => Environment.Exit(124), null, TimeSpan.FromSeconds(90), Timeout.InfiniteTimeSpan);
 void Mark(string phase, Guid mutation = default)
 {
 	Console.WriteLine(JsonSerializer.Serialize(new { phase, pid = Environment.ProcessId, scenario, world, mutation }));
 	Console.Out.Flush();
+}
+if (scenario is "category-commit-failure-initial" or "category-commit-failure-resume")
+{
+	if (options.ContainsKey("--fixture-id")) throw new ArgumentException("Category probe requires a new owned world");
+	await CategoryCommitFailureScenario.RunAsync(world, evidence, scenario == "category-commit-failure-resume", phase => Mark(phase));
+	return;
+}
+if (scenario is "category-group-commit-failure-initial" or "category-group-commit-failure-resume")
+{
+	if (options.ContainsKey("--fixture-id")) throw new ArgumentException("Category probe requires a new owned world");
+	await CategoryCommitFailureScenario.RunGroupedAsync(world, evidence, scenario == "category-group-commit-failure-resume", phase => Mark(phase));
+	return;
 }
 if (scenario == "cipher-cursor-error")
 {

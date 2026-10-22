@@ -29,6 +29,15 @@ public class DeleteMailHandler(IMailStore database) : ICommandHandler<DeleteMail
 	}
 }
 
+public class DeleteMailByIdHandler(IMailStore database) : ICommandHandler<DeleteMailByIdCommand>
+{
+	public async ValueTask<Unit> Handle(DeleteMailByIdCommand command, CancellationToken cancellationToken)
+	{
+		await database.DeleteMailAsync(command.MailId, cancellationToken);
+		return Unit.Value;
+	}
+}
+
 public class RenameMailFolderHandler(IMailStore database) : ICommandHandler<RenameMailFolderCommand>
 {
 	public async ValueTask<Unit> Handle(RenameMailFolderCommand command, CancellationToken cancellationToken)

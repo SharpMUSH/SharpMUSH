@@ -231,11 +231,11 @@ public class PackageWikiLandingPageTests
 	[Test]
 	public async Task NewerMinorWarningIsIndependentOfTheLandingFieldFloor()
 	{
-		var parsed = Parse(null, "1.15").Expect<ParsedPackageManifest>();
+		var parsed = Parse(null, "1.99").Expect<ParsedPackageManifest>();
 		await Assert.That(parsed.Warnings.Count).IsEqualTo(1);
 		await Assert.That(parsed.Warnings.Single().Path).IsEqualTo("format");
 		await Assert.That(parsed.Warnings.Single().Message.Contains("newer", StringComparison.OrdinalIgnoreCase)).IsTrue();
-		await Assert.That(PackageManifestWriter.Write(parsed.Manifest)).Contains("format: 1.15");
+		await Assert.That(PackageManifestWriter.Write(parsed.Manifest)).Contains("format: 1.99");
 	}
 
 	[Test]

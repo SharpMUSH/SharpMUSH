@@ -35,13 +35,13 @@ A bar filled to *<value>*'s share of *<maximum>*, with *<label>* before it and t
 
 ## Options
 
-Options (the last argument):
+Options (the last argument, which may be empty):
 - `"width":<n>` - see [LAYOUT FUNCTIONS].
 - `"bar":<n>` - the bar's own width, in cells.
 - `"show":"percent"`, `"show":"value"` or `"show":"none"` - the figures after the bar: `50%` (the default), `6/12`, or nothing.
 - `"filled":"<text>"` and `"empty":"<text>"` - the pieces the bar is drawn with. A solid block and a light shade by default, sent as `#` and `-` to a client without Unicode.
 - `"open":"<text>"` and `"close":"<text>"` - the ends. `[` and `]` by default; leave one empty for none.
-- `"gradient":"<colors>"` - shade the bar through these colours, [ANSI()] codes split by `|`: `"gradient":"r|y|g"` or `"gradient":"#ff4040|#40ff80"`. See [GRADIENT()] for how they blend.
+- `"gradient":"<colors>"` - shade the bar through these colours, [ANSI()] codes or theme colours split by `|`: `"gradient":"r|y|g"`, `"gradient":"#ff4040|#40ff80"` or `"gradient":"error|warning|success"`. See [GRADIENT()] for how they blend.
 - `"shade":"cells"` or `"shade":"value"` - with `cells` (the default) each cell takes the colour at its place along the whole bar, so a fuller bar reaches further along the gradient. With `value` the whole filled part takes one colour, the one at the value's place: red when nearly empty, green when full.
 - `"space":"oklch"`, `"space":"oklab"` or `"space":"hsl"`, `"mirror":true` and `"repeat":<n>` - how the colours blend and run; see [GRADIENT()].
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].

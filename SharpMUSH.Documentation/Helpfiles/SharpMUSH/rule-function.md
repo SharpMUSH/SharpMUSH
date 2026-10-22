@@ -35,7 +35,7 @@ A line across the width, with *<title>* set into it. On a line of its own inside
 
 ## Options
 
-Options:
+Options (the last argument, which may be empty):
 - `"border":"<style>"` and the border pieces - see [LAYOUT BORDERS]. Inside a box, a rule with none of these takes the box's border.
 - `"theme":"<theme>"` - colours for the layout and everything inside it; see [LAYOUT THEMES].
 - `"title":"left"`, `"title":"center"` or `"title":"right"` - where the title sits. Centred by default.

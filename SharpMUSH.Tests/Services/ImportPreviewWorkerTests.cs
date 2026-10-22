@@ -60,6 +60,27 @@ public class ImportPreviewWorkerTests
 		await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(source))).IsEquivalentTo(sourceHash);
 	}
 
+	/// <summary>
+	/// The shipped mushcnf.dst names the seeded #7 as package manager; in the sample world #7 is an exit. The preview
+	/// says so and makes a manager of its own instead of failing.
+	/// </summary>
+	[Test]
+	public async Task PackageManagerNamingANonPlayerWarnsAndCreatesOne()
+	{
+		var (journal, source, _) = await SetupAsync();
+		var coordinator = new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance);
+		var preview = await coordinator.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH),
+			"package_manager 7");
+		await Assert.That(preview.Failure).IsNull();
+		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
+		await Assert.That(preview.Result!.Warnings).Contains("package_manager names #7, which is not a player in the imported database.");
+		await using var staged = Open(preview.WorldPath);
+		var configuration = await staged.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
+		await Assert.That(configuration?.Database.PackageManager).IsNotEqualTo(7u);
+		var manager = await staged.GetObjectNodeAsync(new DBRef((int)configuration!.Database.PackageManager!.Value));
+		await Assert.That(manager is AnySharpObject and SharpPlayer).IsTrue();
+	}
+
 	[Test]
 	public async Task MalformedDeclaredMailAbortsBeforeWorldWritesAndPreservesBothSources()
 	{

@@ -185,6 +185,45 @@ public class PermissionResolverTests
 		await Assert.That(Resolver.Resolve(owner)).Contains("scene.close");
 	}
 
+	/// <summary>Resolve decides each scope without building an explanation; it must reach Explain's verdict on every one.</summary>
+	[Test]
+	public async ValueTask Resolve_AgreesWithExplain_OnEveryScope()
+	{
+		var customScopes = new HashSet<string>(["scene.close", "scene.open"], StringComparer.OrdinalIgnoreCase);
+		var objectOverrides = new Dictionary<string, PermissionState>
+		{
+			[PortalPermission.WikiEdit] = PermissionState.Deny, ["GAME.SEE_ALL"] = PermissionState.Allow, ["scene.open"] = PermissionState.Deny
+		};
+		var accountOverrides = new Dictionary<string, PermissionState>
+		{
+			[PortalPermission.MediaAdmin] = PermissionState.Allow, [PortalPermission.WikiRead] = PermissionState.Deny
+		};
+		SharpRole[] roles =
+		[
+			Everyone(Allow(PortalPermission.WikiRead), Allow("scene.close"), Allow(PortalPermission.JobsManageOwn)),
+			Role("staff", 10, Allow("WIKI.ADMIN"), Deny(PortalPermission.WikiDelete), Allow(PortalPermission.GameWizard)),
+			Role("muted", 5, Deny(PortalPermission.JobsManage), Deny("scene.close"), Allow(PortalPermission.QueueInspect)),
+			Role("players", 1, Deny(PortalPermission.PlayersModerate), Allow(PortalPermission.PlayersView))
+		];
+		var contexts = new List<PermissionContext>();
+		for (var mask = 0; mask < 1 << roles.Length; mask++)
+		{
+			var held = roles.Where((_, i) => (mask & (1 << i)) != 0).ToArray();
+			contexts.Add(new PermissionContext(held, NoOverrides, false) { CustomScopes = customScopes });
+			contexts.Add(new PermissionContext(held, accountOverrides, false) { ObjectOverrides = objectOverrides, CustomScopes = customScopes });
+		}
+
+		contexts.Add(new PermissionContext([Role("admin", 1, Allow(PortalPermission.Administrator)), roles[2]], accountOverrides, false) { CustomScopes = customScopes });
+		contexts.Add(new PermissionContext([roles[2]], accountOverrides, true) { CustomScopes = customScopes });
+
+		foreach (var context in contexts)
+		{
+			var expected = PortalPermission.AllScopes.Concat(context.CustomScopes)
+				.Where(scope => Resolver.Explain(context, scope).Allowed).ToHashSet(StringComparer.Ordinal);
+			await Assert.That(Resolver.Resolve(context).Order(StringComparer.Ordinal)).IsEquivalentTo(expected.Order(StringComparer.Ordinal));
+		}
+	}
+
 	[Test]
 	public async ValueTask CustomPermission_WizardMayGrantIt()
 	{

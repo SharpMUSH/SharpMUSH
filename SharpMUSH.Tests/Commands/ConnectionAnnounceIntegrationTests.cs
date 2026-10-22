@@ -214,6 +214,63 @@ public class ConnectionAnnounceIntegrationTests
 		await Assert.That(messages).Contains($"{playerName} {ErrorMessages.Notifications.GameHasPartiallyDisconnected}");
 	}
 
+	// --- Portal-class connections: the web portal's background terminal ---------------------------
+
+	/// <summary>A handle on the connect screen that declared itself the portal's background terminal.</summary>
+	private async ValueTask<long> PortalHandleAsync()
+	{
+		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService, "websocket");
+		ConnectionService.Get(handle)?.Metadata["PresenceClass"] = PresenceClasses.Portal;
+		return handle;
+	}
+
+	[Test]
+	public async ValueTask PortalConnection_LogsInAndOutQuietly_AndPlayCountsOnlyPlayConnections()
+	{
+		var witness = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "AnnounceWitnessPortal");
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "AnnouncePortal");
+
+		var room = await DigRoomAsync("AnnounceRoomPortal");
+		await TeleportAsync(witness.DbRef, room);
+		await TeleportAsync(playerRef, room);
+
+		var playerName = (await KnownObjectAsync(playerRef)).Object().Name;
+		var before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+		var playerBefore = WebAppFactoryArg.Notifications.CountFor(playerRef);
+
+		var portal = await PortalHandleAsync();
+		await Parser.CommandParse(portal, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+
+		await Assert.That(ConnectionService.Get(portal)?.Ref).IsEqualTo(playerRef);
+		await Assert.That((await MessagesTo(witness.DbRef, before)).Where(m => m.Contains(playerName))).IsEmpty();
+		var roomName = (await KnownObjectAsync(room)).Object().Name;
+		await Assert.That((await MessagesTo(playerRef, playerBefore)).Where(m => m.Contains(roomName))).IsEmpty()
+			.Because("a portal login runs no look");
+		var player = await KnownObjectAsync(playerRef);
+		await Assert.That(await AttributeService.GetAttributeAsync(player, player, "LAST",
+				IAttributeService.AttributeMode.Read, false) is SharpAttribute[])
+			.IsFalse().Because("a portal login is not a login for LAST");
+
+		// Opening Play while the portal is connected is the player's first play connection.
+		before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+		var play = await AnonymousHandleAsync();
+		await Parser.CommandParse(play, ConnectionService, MarkupText.Plain($"CONNECT {playerName} TestPassword123"));
+		await Assert.That(await MessagesTo(witness.DbRef, before))
+			.Contains($"{playerName} {ErrorMessages.Notifications.GameHasConnected}");
+
+		// Leaving Play while the portal stays is leaving the game.
+		before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+		await Parser.CommandParse(play, ConnectionService, MarkupText.Plain("QUIT"));
+		await Assert.That(await MessagesTo(witness.DbRef, before))
+			.Contains($"{playerName} {ErrorMessages.Notifications.GameHasDisconnected}");
+
+		before = WebAppFactoryArg.Notifications.CountFor(witness.DbRef);
+		await Parser.CommandParse(portal, ConnectionService, MarkupText.Plain("QUIT"));
+		await Assert.That((await MessagesTo(witness.DbRef, before)).Where(m => m.Contains(playerName))).IsEmpty();
+	}
+
 	// --- Test 5: "ch" hidden-connect wording + WHO visibility ---------------------------------------
 
 	[Test]

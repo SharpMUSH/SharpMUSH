@@ -230,6 +230,9 @@ public static partial class PackageDeclarationPlanner
 			}
 		}
 
+		// ── Grants ──────────────────────────────────────────────────────────
+		var ownedGrants = PlanGrants(declared, owned, live, usable, roleWrites, changes, now);
+
 		// ── What the package drops ──────────────────────────────────────────
 		var roleRemovals = new List<string>();
 		foreach (var baseline in owned.Roles.Where(b => declared.Roles.All(d => d.Slug != b.Slug) && live.Roles.Any(r => r.Slug == b.Slug)))
@@ -308,7 +311,7 @@ public static partial class PackageDeclarationPlanner
 			changes, categoryWrites, permissionWrites, roleWrites, roleRemovals, permissionRemovals, categoryRemovals,
 			attributeWrites, attributeRemovals,
 			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles,
-				ownedAttributes.Count == 0 ? null : ownedAttributes));
+				ownedAttributes.Count == 0 ? null : ownedAttributes, ownedGrants.Count == 0 ? null : ownedGrants));
 	}
 
 	/// <summary>The three-way merge of one field: the package's new value when it changed it, else the game's.</summary>

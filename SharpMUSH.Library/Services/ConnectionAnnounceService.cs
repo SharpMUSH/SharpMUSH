@@ -1,6 +1,7 @@
 using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Commands.Database;
@@ -36,7 +37,7 @@ public class ConnectionAnnounceService(
 		try
 		{
 			var isDark = await player.IsDark();
-			var name = player.Object().Name;
+			var name = await new NameFormatter(attributeService, configuration).NameAsync(player, MonikerPlace.Announcements);
 			var wording = (isHiddenConnection, connectionCount > 1) switch
 			{
 				(true, true) => ErrorMessages.Notifications.GameHasHiddenReconnected,
@@ -44,15 +45,15 @@ public class ConnectionAnnounceService(
 				(false, true) => ErrorMessages.Notifications.GameHasReconnected,
 				(false, false) => ErrorMessages.Notifications.GameHasConnected,
 			};
-			var fullMessage = $"{name} {wording}";
+			var fullMessage = MarkupText.Concat(name, MarkupText.Plain($" {wording}"));
 
 			if (await player.HasFlag("SUSPECT"))
 			{
 				await gameBroadcastService.BroadcastToFlagAsync(
-					"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
+					"WIZARD", MarkupText.Concat(MarkupText.Plain(string.Format(ErrorMessages.Notifications.GameSuspectActivity, string.Empty)), fullMessage));
 			}
 
-			var gameLine = $"GAME: {fullMessage}";
+			var gameLine = MarkupText.Concat(MarkupText.Plain("GAME: "), fullMessage);
 			if (isDark)
 			{
 				await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
@@ -96,7 +97,7 @@ public class ConnectionAnnounceService(
 		try
 		{
 			var isDark = await player.IsDark();
-			var name = player.Object().Name;
+			var name = await new NameFormatter(attributeService, configuration).NameAsync(player, MonikerPlace.Announcements);
 			var wording = (isHiddenConnection, remainingConnections > 0) switch
 			{
 				(true, true) => ErrorMessages.Notifications.GameHasPartiallyHiddenDisconnected,
@@ -104,15 +105,15 @@ public class ConnectionAnnounceService(
 				(false, true) => ErrorMessages.Notifications.GameHasPartiallyDisconnected,
 				(false, false) => ErrorMessages.Notifications.GameHasDisconnected,
 			};
-			var fullMessage = $"{name} {wording}";
+			var fullMessage = MarkupText.Concat(name, MarkupText.Plain($" {wording}"));
 
 			if (await player.HasFlag("SUSPECT"))
 			{
 				await gameBroadcastService.BroadcastToFlagAsync(
-					"WIZARD", string.Format(ErrorMessages.Notifications.GameSuspectActivity, fullMessage));
+					"WIZARD", MarkupText.Concat(MarkupText.Plain(string.Format(ErrorMessages.Notifications.GameSuspectActivity, string.Empty)), fullMessage));
 			}
 
-			var gameLine = $"GAME: {fullMessage}";
+			var gameLine = MarkupText.Concat(MarkupText.Plain("GAME: "), fullMessage);
 			if (isDark)
 			{
 				await gameBroadcastService.BroadcastToFlagAsync(["ROYALTY", "WIZARD"], "HEAR_CONNECT", gameLine);
@@ -186,7 +187,7 @@ public class ConnectionAnnounceService(
 	/// sections are otherwise identical.
 	/// </summary>
 	private async ValueTask BroadcastAnnouncementAsync(
-		AnySharpObject player, string fullMessage, bool isDark, bool isHiddenConnection)
+		AnySharpObject player, MString fullMessage, bool isDark, bool isHiddenConnection)
 	{
 		if (!configuration.CurrentValue.Cosmetic.AnnounceConnects)
 		{
@@ -284,7 +285,7 @@ public class ConnectionAnnounceService(
 	/// CHATFORMAT/combine formatting remains out of scope for this port.
 	/// </summary>
 	private async ValueTask AnnounceOnChannelsAsync(
-		AnySharpObject player, string fullMessage, bool isHiddenConnection)
+		AnySharpObject player, MString fullMessage, bool isHiddenConnection)
 	{
 		var playerNumber = player.Object().DBRef.Number;
 
@@ -304,9 +305,9 @@ public class ConnectionAnnounceService(
 				channel,
 				player.WithNoneOption(),
 				INotifyService.NotificationType.Announce,
-				MarkupText.Plain(fullMessage),
+				fullMessage,
 				MarkupText.Empty,
-				MarkupText.Plain(player.Object().Name),
+				await new NameFormatter(attributeService, configuration).NameAsync(player, MonikerPlace.Chat),
 				MarkupText.Empty,
 				[],
 				SeeAllOnly: hiddenOnChannel,

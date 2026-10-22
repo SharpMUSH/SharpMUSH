@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using SharpMUSH.Library;
+using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -31,8 +32,9 @@ namespace SharpMUSH.Database.Lightning;
 /// </para>
 /// <para>
 /// Three list indexes answer the listings without reading page rows, whose Markdown, HTML and plain
-/// text dwarf what a listing filters and sorts on. Each value is the page's visibility (a published byte
-/// and the author dbref), and each key ends with the page key, the deterministic tie-break:
+/// text dwarf what a listing filters and sorts on. Each value carries the page's visibility (a published
+/// byte and the full author dbref); category values additionally carry their exact label boundary and
+/// schema trailer. Each key ends with the page key, the deterministic tie-break:
 /// <see cref="Tables.WikiRecent"/> is <c>(UpdatedAt UTC ticks, page)</c>, read backwards;
 /// <see cref="Tables.WikiByNamespace"/> is <c>(namespace, slug, page)</c>; <see cref="Tables.WikiByCategory"/>
 /// is <c>(upper-cased category, title, page)</c>, one entry per category the page is in. The ordered
@@ -102,14 +104,22 @@ public partial class LightningDatabase : IWikiStore
 	/// <summary>The stored visibility of a page: one published byte, then the author dbref.</summary>
 	private static byte[] WikiVisibilityValue(WikiPageRecord r) => Keys.Concat([(r.Published ?? true) ? (byte)1 : (byte)0], Keys.Str(r.AuthorDbref));
 
-	private static bool WikiVisibilityAdmits(WikiVisibility visibility, byte[] value)
-		=> visibility.Admits(value[0] == 1, Keys.ReadStr(value.AsSpan(1)));
+	private static bool WikiVisibilityAdmits(WikiVisibility visibility, ReadOnlySpan<byte> value)
+		=> visibility.Admits(value[0] == 1, Keys.ReadStr(value[1..]));
 
 	/// <summary>Whether <paramref name="visibility"/> admits an index entry, reading its page only when a hidden rule needs it.</summary>
 	private static bool WikiEntryAdmitted(ITx tx, (byte[] Key, byte[] Value) entry, WikiVisibility visibility)
-		=> WikiVisibilityAdmits(visibility, entry.Value)
-			&& visibility.AdmitsPageId(WikiPageId(WikiIndexPageKey(entry.Key)))
-			&& (!visibility.NeedsPageMetadata || ReadWikiPage(tx, WikiIndexPageKey(entry.Key)) is { } page && visibility.Admits(page));
+		=> WikiTryAdmitEntry(tx, WikiIndexPageKey(entry.Key), entry.Value, visibility, out _);
+
+	private static bool WikiTryAdmitEntry(ITx tx, long key, ReadOnlySpan<byte> value,
+		WikiVisibility visibility, out WikiPage? page)
+	{
+		page = null;
+		if (!WikiVisibilityAdmits(visibility, value) || !visibility.AdmitsPageId(WikiPageId(key))) return false;
+		if (!visibility.NeedsPageMetadata) return true;
+		page = ReadWikiPage(tx, key);
+		return page is not null && visibility.Admits(page);
+	}
 
 	private static long WikiIndexPageKey(byte[] key) => Keys.ReadDbref(key.AsSpan(key.Length - 8, 8));
 
@@ -119,10 +129,7 @@ public partial class LightningDatabase : IWikiStore
 	private static byte[] WikiNamespaceKey(long pageKey, WikiPageRecord r)
 		=> Keys.Concat(OrdinalBytes(r.Namespace), OrdinalSep, OrdinalBytes(r.Slug), OrdinalSep, Keys.Dbref(pageKey));
 
-	private static byte[] WikiLabelPrefix(string label) => Keys.Concat(Keys.Upper(label), Keys.Sep);
-
-	private static byte[] WikiLabelKey(string label, long pageKey, WikiPageRecord r)
-		=> Keys.Concat(WikiLabelPrefix(label), OrdinalBytes(r.Title), OrdinalSep, Keys.Dbref(pageKey));
+	private static byte[] WikiLabelPrefix(string label) => WikiCategoryValueCodec.LabelPrefix(label);
 
 	/// <summary>The categories a page is listed under, once each however many case variants it carries.</summary>
 	private static IEnumerable<string> WikiIndexCategories(WikiPageRecord r)
@@ -134,7 +141,13 @@ public partial class LightningDatabase : IWikiStore
 		var value = WikiVisibilityValue(r);
 		Apply(Tables.WikiRecent, WikiRecentKey(pageKey, r));
 		Apply(Tables.WikiByNamespace, WikiNamespaceKey(pageKey, r));
-		foreach (var category in WikiIndexCategories(r)) Apply(Tables.WikiByCategory, WikiLabelKey(category, pageKey, r));
+		foreach (var category in WikiIndexCategories(r))
+		{
+			var prefix = WikiLabelPrefix(category);
+			var key = WikiCategoryValueCodec.Key(prefix, r.Title, pageKey);
+			if (add) tx.Put(Tables.WikiByCategory, key, WikiCategoryValueCodec.Value(prefix, r.Published, r.AuthorDbref));
+			else tx.Delete(Tables.WikiByCategory, key);
+		}
 
 		void Apply(TableDef table, byte[] key)
 		{
@@ -197,15 +210,32 @@ public partial class LightningDatabase : IWikiStore
 	private static IEnumerable<(long Key, WikiPage? Page)> WikiAdmitted(ITx tx, IEnumerable<(byte[] Key, byte[] Value)> entries,
 		WikiVisibility visibility)
 	{
-		var admitted = entries
-			.Where(entry => WikiVisibilityAdmits(visibility, entry.Value))
-			.Select(entry => WikiIndexPageKey(entry.Key))
-			.Where(key => visibility.AdmitsPageId(WikiPageId(key)));
-		return !visibility.NeedsPageMetadata
-			? admitted.Select(key => (key, (WikiPage?)null))
-			: admitted
-				.Select(key => (Key: key, Page: ReadWikiPage(tx, key)))
-				.Where(entry => entry.Page is { } page && visibility.Admits(page));
+		foreach (var entry in entries)
+		{
+			var key = WikiIndexPageKey(entry.Key);
+			if (WikiTryAdmitEntry(tx, key, entry.Value, visibility, out var page)) yield return (key, page);
+		}
+	}
+
+	/// <summary>Strictly validates every reached category candidate before exact-label and visibility admission.</summary>
+	private static bool WikiTryAdmitCategoryEntry(ITx tx, (byte[] Key, byte[] Value) entry,
+		int labelByteLength, WikiVisibility visibility, out long key, out WikiPage? page)
+	{
+		var decoded = WikiCategoryValueCodec.Decode(entry.Key, entry.Value);
+		key = decoded.PageKey;
+		page = null;
+		return decoded.LabelByteLength == labelByteLength
+			&& WikiTryAdmitEntry(tx, key, decoded.Visibility, visibility, out page);
+	}
+
+	private static IEnumerable<(long Key, WikiPage? Page)> WikiCategoryAdmitted(ITx tx, byte[] prefix,
+		WikiVisibility visibility)
+	{
+		foreach (var entry in tx.Range(Tables.WikiByCategory, prefix))
+		{
+			if (WikiTryAdmitCategoryEntry(tx, entry, prefix.Length - 1, visibility, out var key, out var page))
+				yield return (key, page);
+		}
 	}
 
 	private static WikiPage? ReadWikiPage(ITx tx, long key)
@@ -364,12 +394,14 @@ public partial class LightningDatabase : IWikiStore
 	public Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyDictionary<string, int>>(Store.Read(tx =>
 		{
-			// The index key opens with the upper-cased category and a separator; category keys are lower case.
+			RequireWikiCategoryReady(tx);
 			var counts = new Dictionary<string, int>(StringComparer.Ordinal);
-			foreach (var (key, _) in tx.Range(Tables.WikiByCategory, []).Where(entry => WikiEntryAdmitted(tx, entry, visibility)))
+			foreach (var (key, value) in tx.Range(Tables.WikiByCategory, []))
 			{
-				var category = Keys.ReadStr(key.AsSpan(0, key.AsSpan().IndexOf(Keys.Sep[0]))).ToLowerInvariant();
-				counts[category] = counts.GetValueOrDefault(category) + 1;
+				var decoded = WikiCategoryValueCodec.Decode(key, value);
+				if (!WikiTryAdmitEntry(tx, decoded.PageKey, decoded.Visibility, visibility, out _)) continue;
+				var category = Keys.ReadStr(decoded.LabelBytes).ToLowerInvariant();
+				counts[category] = checked(counts.GetValueOrDefault(category) + 1);
 			}
 
 			return counts;
@@ -377,11 +409,22 @@ public partial class LightningDatabase : IWikiStore
 
 	public Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility)
 		=> Task.FromResult<IReadOnlyList<WikiPage>>(Store.Read(tx =>
-			WikiPagesFromIndex(tx, tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category)), visibility, skip, take)));
+		{
+			RequireWikiCategoryReady(tx);
+			return WikiCategoryAdmitted(tx, WikiLabelPrefix(category), visibility)
+				.Skip(skip)
+				.Take(take)
+				.Select(entry => entry.Page ?? ReadWikiPage(tx, entry.Key))
+				.OfType<WikiPage>()
+				.ToList();
+		}));
 
 	public Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
-		=> Task.FromResult(Store.Read(tx => tx.Range(Tables.WikiByCategory, WikiLabelPrefix(category))
-			.Count(entry => WikiEntryAdmitted(tx, entry, visibility))));
+		=> Task.FromResult(Store.Read(tx =>
+		{
+			RequireWikiCategoryReady(tx);
+			return WikiCategoryAdmitted(tx, WikiLabelPrefix(category), visibility).Count();
+		}));
 
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 	{
@@ -420,6 +463,7 @@ public partial class LightningDatabase : IWikiStore
 		// (namespace, slug) cannot both pass the check.
 		return await WriteFixtureAsync<Result<WikiPage>>(admission, tx =>
 		{
+			RequireWikiCategoryReady(tx);
 			var slugKey = WikiSlugKey(record.Namespace, record.Slug);
 			if (tx.TryGet(Tables.WikiSlug, slugKey, out _))
 			{
@@ -449,6 +493,7 @@ public partial class LightningDatabase : IWikiStore
 		}
 		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
+			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
 			var revision = found.Record.RevisionNumber + 1;
@@ -486,6 +531,7 @@ public partial class LightningDatabase : IWikiStore
 		}
 		return await WriteFixtureAsync<Found<None>>(admission, tx =>
 		{
+			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
 			var pageId = WikiPageId(found.Key);
@@ -513,6 +559,7 @@ public partial class LightningDatabase : IWikiStore
 		}
 		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
+			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
 			// The category index is ordered by title, so PutWikiPage moves the page's entries with it.
@@ -534,6 +581,7 @@ public partial class LightningDatabase : IWikiStore
 		}
 		return await WriteFixtureAsync<Found<WikiPage>>(admission, tx =>
 		{
+			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
 
 			var updated = found.Record with { Categories = [.. categories], Published = published };

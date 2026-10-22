@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Kontoadministrasjon</value>
+    <value>Min konto</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# karakter registrert} other {# karakterer registrert}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
-    <comment>MT — deliberately left in English: 'chars' is the jargon Norwegian MU* players use, and the only native abbreviation ('Kar.') is cryptic in a nav chip. Flagged for a human.</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Lukk terminalen</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>kommandoterminal</value>
+    <value>Kommandoterminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1964,10 +1960,6 @@
   <data name="NavOnline" xml:space="preserve">
     <value>tilkoblet</value>
     <comment>MT — corpus term for connected/online.</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Åpne terminalen</value>
-    <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Spilløkt aktiv</value>
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dette spillet lagrer ikke historikk for private meldinger, så bare meldinger fra dette besøket vises.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Tilbake til scenen</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Tilbake til spillet</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Spill</value>

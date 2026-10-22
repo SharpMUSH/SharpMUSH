@@ -339,9 +339,10 @@ public class AccountAuthService(
 
 	/// <summary>
 	/// Re-reads the role and grants after the account's characters change (the server derives them from
-	/// the characters) and tells the portal, so gated controls follow at once.
+	/// the characters), or after a package defines or removes permissions, and tells the portal, so gated
+	/// controls follow at once.
 	/// </summary>
-	private async Task ReloadAuthorityAsync()
+	public async Task ReloadAuthorityAsync()
 	{
 		if (AccountSessionToken is not { } token) return;
 		switch (await LoadSessionAuthorityAsync(token))

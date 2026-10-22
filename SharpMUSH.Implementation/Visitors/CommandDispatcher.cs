@@ -13,6 +13,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using System.Text.RegularExpressions;
 using static SharpMUSHParser;
 
 namespace SharpMUSH.Implementation.Visitors;
@@ -24,7 +25,7 @@ namespace SharpMUSH.Implementation.Visitors;
 /// finally <c>HUH_COMMAND</c> — and hands it to <see cref="CommandInvocationPipeline"/> to run.
 /// </summary>
 /// <remarks>Stateless: one instance serves every evaluation of a parser.</remarks>
-internal sealed class CommandDispatcher(EvaluationServices services)
+internal sealed partial class CommandDispatcher(EvaluationServices services)
 {
 	/// <summary>
 	/// Evaluates the command, with the parser info given.
@@ -86,6 +87,8 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			if (TryFindSocketCommand(parser, command, out var socketCommand))
 				return await services.Commands.SocketAsync(visitor, parser, src, context, command, socketCommand);
 
+			await LogCommandAsync(visitor, commandText);
+
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
 				await services.NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
@@ -94,6 +97,12 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			}
 
 			var tokenText = WithoutLeadingSpaces(commandText);
+
+			// command.c:1168: a line that starts with a function runs WARN_ON_MISSING instead, unless
+			// that command is disabled (the default, as PennMUSH's restrict.cnf has it).
+			if (tokenText.ToPlainText().StartsWith('[') && parser.CommandLibrary.ContainsKey("WARN_ON_MISSING"))
+				return await RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain("WARN_ON_MISSING "), tokenText));
+
 			if (SpeechTokenCommand(tokenText) is { } speechReplacer)
 				return await RedispatchSpeechAsync(parser, speechReplacer, tokenText);
 
@@ -153,8 +162,6 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 				}
 			}
 
-			// Step 7: Enter Aliases
-			// Step 8: Leave Aliases
 			return await DispatchUnmatchedAsync(visitor, src, commandText, executorObject);
 		}
 		catch (OperationCanceledException)
@@ -204,6 +211,55 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	/// </summary>
 	private static MString CommandSlice(MString src, IEvaluationStringContext firstCommandMatch)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
+
+	/// <summary>
+	/// PennMUSH's <c>LT_CMD</c> line (<c>src/game.c:1232</c>, <c>src/log.c:547</c>): every command when
+	/// <c>log_commands</c> is on, and always a SUSPECT executor's, unless the executor is NO_LOG.
+	/// Socket commands are not logged, as in Penn. Passwords are starred out first.
+	/// </summary>
+	private async ValueTask LogCommandAsync(SharpMUSHParserVisitor visitor, MString commandText)
+	{
+		var parser = visitor.Parser;
+		if (await parser.CurrentState.ExecutorObject(services.Mediator) is not AnySharpObject executor)
+			return;
+
+		var suspect = await executor.HasFlag("SUSPECT");
+		if (!(visitor.Configuration.CurrentValue.Log.LogCommands || suspect) || await executor.HasFlag("NO_LOG"))
+			return;
+
+		var location = (await executor.Where()).Object();
+		using (visitor.Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Command" }))
+		{
+			visitor.Logger.LogInformation("CMD: {Suspect} {Executor} in {Location}: {Command}",
+				suspect ? "SUSPECT" : "", Unparse(executor.Object()), Unparse(location),
+				PasswordFilter(commandText.ToPlainText()));
+		}
+	}
+
+	private static string Unparse(SharpObject obj) => $"{obj.Name}(#{obj.DBRef.Number})";
+
+	/// <summary>
+	/// PennMUSH's <c>passwd_filter</c> (<c>src/game.c:1053</c>): <c>@password old=new</c> keeps the
+	/// command and stars out both passwords; <c>@newpassword</c> and <c>@pcreate</c> star out what
+	/// follows the <c>=</c>.
+	/// </summary>
+	internal static string PasswordFilter(string command)
+	{
+		var password = PasswordCommand().Match(command);
+		if (password.Success)
+			return $"{password.Groups[1].Value} {new string('*', password.Groups[2].Length)}={new string('*', password.Groups[3].Length)}";
+
+		var newPassword = NewPasswordCommand().Match(command);
+		return newPassword.Success
+			? $"{newPassword.Groups[1].Value}={new string('*', newPassword.Groups[2].Length)}"
+			: command;
+	}
+
+	[GeneratedRegex(@"^(@pass.*?)\s([^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex PasswordCommand();
+
+	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
+	private static partial Regex NewPasswordCommand();
 
 	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
 	private void RecordConnectionActivity(IMUSHCodeParser parser, string command)
@@ -312,16 +368,21 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	/// Re-dispatching the rewritten line (rather than calling the command directly) keeps the
 	/// token forms on exactly the same path as the spelled-out commands, including @hook.
 	/// </summary>
-	private static async ValueTask<Option<CallState>> RedispatchSpeechAsync(IMUSHCodeParser parser,
+	private static ValueTask<Option<CallState>> RedispatchSpeechAsync(IMUSHCodeParser parser,
 		string speechReplacer, MString tokenText)
+		=> RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+
+	/// <summary>
+	/// Runs <paramref name="line"/> in place of the typed one. PennMUSH swaps the command name without
+	/// touching cmd_raw: %c stays what was typed (`"hi`, or the `[...]` WARN_ON_MISSING was run for).
+	/// </summary>
+	private static async ValueTask<Option<CallState>> RedispatchAsync(IMUSHCodeParser parser, MString line)
 	{
-		// PennMUSH swaps the token for the command name without touching cmd_raw: %c stays `"hi`.
 		var typed = parser.CurrentState.CommandText;
 		typed?.KeepRawThroughRedispatch();
 		try
 		{
-			var result = await parser.CommandParse(MarkupText.Concat(
-				MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+			var result = await parser.CommandParse(line);
 			return result.HadErrors ? result : CallState.Empty;
 		}
 		finally
@@ -414,7 +475,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 
 		var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
 			? null
-			: CommandTrie.For(parser.CommandLibrary).FindShortestMatch(rootCommand);
+			: CommandTrie.For(parser.CommandLibrary).FindAbbreviation(rootCommand);
 
 		// If no match found and rootCommand contains '=', try matching just the part before '='
 		// This handles cases like "addcom=Public" where the command name and args have no space separator.
@@ -424,7 +485,7 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
-				matchResult = CommandTrie.For(parser.CommandLibrary).FindShortestMatch(commandPart);
+				matchResult = CommandTrie.For(parser.CommandLibrary).FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
 					rootCommand = commandPart;
@@ -462,6 +523,12 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		// whether a $-command, HUH_COMMAND or its hook ends up handling the command.
 		parser.CurrentState.CommandText?.Evaluated = evaluatedCommandText;
 
+		if (await MoveAliasCommandAsync(parser, evaluatedCommandText.ToPlainText().Trim(), executorObject) is { } moveCommand)
+		{
+			var moved = await parser.CommandParse(MarkupText.Plain(moveCommand));
+			return moved.HadErrors ? moved : CallState.Empty;
+		}
+
 		// Objects whose @lock/command or @lock/use refused a match are process_command's errdblist.
 		var lockFailures = new List<AnySharpObject>();
 		var result = await RunUserDefinedCommandAsync(visitor, evaluatedCommandText, executorObject, lockFailures) switch
@@ -474,6 +541,52 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 		if (evaluatedCommandResult?.HadErrors != true) return result;
 		return (result is CallState value ? value : CallState.Empty) with { HadErrors = true };
 	}
+
+	/// <summary>
+	/// Steps 7 and 8, game.c process_command: before any <c>$</c>-command, a player or thing whose line
+	/// matches the EALIAS of something beside it enters that thing, and one whose line matches its
+	/// location's LALIAS leaves it. Neither alias is inherited, and a disabled ENTER or LEAVE skips its
+	/// alias. Returns the command to run instead, or <see langword="null"/>.
+	/// </summary>
+	private async ValueTask<string?> MoveAliasCommandAsync(IMUSHCodeParser parser, string line,
+		AnySharpObject executor)
+	{
+		if (!(executor.IsPlayer || executor.IsThing) || executor.AsOptionalContent is not AnySharpContent mobile)
+			return null;
+
+		var location = await mobile.Location();
+		if (parser.CommandLibrary.ContainsKey("ENTER"))
+		{
+			await foreach (var item in location.Content(services.Mediator).WithCancellation(ExecutionBudget.CurrentToken))
+			{
+				if (await MatchesAliasAttributeAsync(executor, item.WithRoomOption(), "EALIAS", line))
+					return $"ENTER #{item.Object().DBRef.Number}";
+			}
+		}
+
+		return !location.IsRoom
+			&& parser.CommandLibrary.ContainsKey("LEAVE")
+			&& await MatchesAliasAttributeAsync(executor, location.WithExitOption(), "LALIAS", line)
+				? "LEAVE"
+				: null;
+	}
+
+	/// <summary>Whether <paramref name="line"/> is one of the ';'-separated aliases in the object's own attribute.</summary>
+	private async ValueTask<bool> MatchesAliasAttributeAsync(AnySharpObject executor, AnySharpObject target,
+		string attributeName, string line)
+		=> await services.AttributeService.GetAttributeAsync(executor, target, attributeName,
+				IAttributeService.AttributeMode.SystemSet, false) is SharpAttribute[] { Length: > 0 } chain
+			&& MatchesAlias(line, chain[^1].Value.ToPlainText());
+
+	/// <summary>
+	/// game.c check_alias: the line, case-insensitively, is one word of the ';'-separated list. Spaces
+	/// before a word after the first, and after any word, are ignored.
+	/// </summary>
+	private static bool MatchesAlias(string line, string aliases)
+		=> !line.Contains(';')
+			&& aliases.Split(';')
+				.Select((word, index) => index == 0 ? word : word.TrimStart())
+				.Any(word => word.TrimEnd().Equals(line, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// Steps 9 and 11-15: $-commands nearby, then on the location's zone master room, the location

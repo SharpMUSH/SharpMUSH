@@ -189,8 +189,16 @@ public static class PortalPermission
 		};
 
 	/// <summary>The umbrella scopes that directly imply <paramref name="scope"/>.</summary>
-	public static IEnumerable<string> ParentScopes(string scope) =>
-		Implications.Where(pair => pair.Value.Contains(scope, StringComparer.OrdinalIgnoreCase)).Select(pair => pair.Key);
+	public static IEnumerable<string> ParentScopes(string scope) => ParentsOf(scope);
+
+	/// <inheritdoc cref="ParentScopes"/>
+	internal static string[] ParentsOf(string scope) => Parents.GetValueOrDefault(scope, []);
+
+	/// <summary><see cref="Implications"/> the other way round: each implied scope and the umbrellas that imply it.</summary>
+	private static readonly IReadOnlyDictionary<string, string[]> Parents = Implications
+		.SelectMany(pair => pair.Value.Select(child => (Child: child, Parent: pair.Key)))
+		.GroupBy(edge => edge.Child, StringComparer.OrdinalIgnoreCase)
+		.ToDictionary(group => group.Key, group => group.Select(edge => edge.Parent).ToArray(), StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The catalog spelling of <paramref name="scope"/>, or null when it is not a known scope.</summary>
 	public static string? Canonical(string scope) =>

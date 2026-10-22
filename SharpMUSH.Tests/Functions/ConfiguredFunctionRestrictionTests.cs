@@ -125,12 +125,13 @@ public class ConfiguredFunctionRestrictionTests
 	}
 
 	/// <summary>
-	/// Only who may call the function is applied: <c>nosidefx</c> and a <c>!</c> word would otherwise
-	/// sit in the restriction looking applied while doing nothing. Driven with its own registry, so the
-	/// shared host's function table is untouched.
+	/// Who may call the function and the words that change how a built-in runs (<c>nosidefx</c>) are
+	/// applied; <c>noparse</c> and a <c>!</c> word would otherwise sit in the restriction looking
+	/// applied while doing nothing. Driven with its own registry, so the shared host's function table
+	/// is untouched.
 	/// </summary>
 	[Test]
-	public async Task OnlyPermissionWords_ReachTheFunctionTable()
+	public async Task OnlyAppliedWords_ReachTheFunctionTable()
 	{
 		var registry = new UserDefinedFunctionService();
 		var applier = new ConfiguredFunctionRestrictions(
@@ -139,12 +140,12 @@ public class ConfiguredFunctionRestrictionTests
 
 		applier.Apply(new Dictionary<string, string[]>
 		{
-			["lstats"] = ["NoGuest nosidefx !admin"],
+			["lstats"] = ["NoGuest noparse !admin"],
 			["pemit"] = ["nosidefx"]
 		});
 
 		await Assert.That(registry.GetBuiltinRestriction("lstats")).IsEqualTo("NoGuest");
-		await Assert.That(registry.GetBuiltinRestriction("pemit")).IsNull();
+		await Assert.That(registry.GetBuiltinRestriction("pemit")).IsEqualTo("nosidefx");
 	}
 
 	/// <summary>

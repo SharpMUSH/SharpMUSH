@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Mcp;
+using SharpMUSH.Tests.Integration.AnalysisTransport;
 
 namespace SharpMUSH.Tests.Integration.Mcp;
 
@@ -79,10 +80,14 @@ public class McpAnalysisExecutorTests
 	[Test]
 	public async Task Timeout_DoesNotReleaseSlotUntilActualWorkerTerminates()
 	{
-		using var executor = new McpAnalysisExecutor(Options.Create(new McpOptions
+		var clock = new ManualClock();
+		var options = new McpOptions { MaxConcurrentAnalyses = 1, MaxQueuedAnalyses = 0 };
+		using var analysis = new AnalysisExecutor(Options.Create(new AnalysisExecutionOptions
 		{
-			MaxConcurrentAnalyses = 1, MaxQueuedAnalyses = 0
-		}));
+			MaxConcurrentAnalyses = options.MaxConcurrentAnalyses, MaxQueuedAnalyses = options.MaxQueuedAnalyses,
+			AnalysisTimeout = options.AnalysisTimeout
+		}), clock: clock);
+		using var executor = new McpAnalysisExecutor(analysis);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var deadlineObserved = new TaskCompletionSource<ExecutionBudget>(TaskCreationOptions.RunContinuationsAsynchronously);
 		var workerExited = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -101,11 +106,11 @@ public class McpAnalysisExecutorTests
 		});
 		try
 		{
-			await entered.Task.WaitAsync(TimeSpan.FromSeconds(3));
-			var expiredBudget = await deadlineObserved.Task.WaitAsync(TimeSpan.FromSeconds(10));
+			await entered.Task.WaitAsync(TimeSpan.FromSeconds(30));
+			await Assert.That(deadlineObserved.Task.IsCompleted).IsFalse();
+			clock.Advance(options.AnalysisTimeout);
+			var expiredBudget = await deadlineObserved.Task.WaitAsync(TimeSpan.FromSeconds(30));
 			await Assert.That(expiredBudget.IsExpired).IsTrue();
-			// Give cancellation continuations time to run while the worker ignores cancellation.
-			await Task.WhenAny(pending, Task.Delay(60));
 			await Assert.That(pending.IsCompleted).IsFalse();
 			await Assert.That(async () => await executor.ExecuteAsync(() => 2)).Throws<InvalidOperationException>();
 		}
