@@ -10,6 +10,23 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-walkthrough", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-identity", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-capabilities", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-joining", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-identity", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-shared-completion", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-continue", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-useful-action", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-place", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-world", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-character", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-sign-in", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-sign-in", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-invite", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-high-fantasy-kemono-administrator-invite", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-high-fantasy-kemono-administrator-walkthrough", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-high-fantasy-kemono-administrator-capabilities", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-high-fantasy-kemono-player-channels", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-channels.png", 1254, 1254, "player-channels"),
 		new SharpieArt("sharpie-high-fantasy-kemono-administrator-joining", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-high-fantasy-kemono-administrator-identity", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
