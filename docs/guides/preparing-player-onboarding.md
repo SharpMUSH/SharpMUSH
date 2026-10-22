@@ -33,18 +33,18 @@ install packages, publish pages or invite anybody.
 The account that claims the game plays #1, God. God passes every lock and
 permission check, so a mistake made as God has nothing to stop it. Create your
 own character for everyday staff work: open My characters and create one, then,
-connected as #1, type `@set *<name>=WIZARD` (or assign the `wizard` role under
-Roles). Connect as #1 only for what only God can do. Give other staff the
+connected as #1, type `@set *<name>=WIZARD`. Connect as #1 only for what only God can do. Give other staff the
 narrowest role that fits, such as `builder` or `moderator`. While #1 is your
 active character, the checklist says so beside this step.
 
 A new world has no channels, yet the player guide tells newcomers to look for
-one. Create a public channel for questions (`@channel/add Newbie=player`) and a staff
-one (`@channel/add Staff=admin`), and ask your staff to join the public one.
+one. Create a public channel for questions (`@channel/add Newbie=player`) and one for
+administrators (`@channel/add Staff=admin`, which only wizards and royalty can
+join), and ask your staff to join the public one.
 
 New characters start in the `player_start` room (#0 on a new world). Describe it
 and its exits, and point newcomers at help and the rules from there. Keep the
-master room (#2) for global commands, with no exits into it.
+master room (#2 on a new world) for global commands, with no exits into it.
 
 Use the player preview to inspect guide wording without changing your progress.
 Then test with an ordinary player account: administrator privileges can conceal
