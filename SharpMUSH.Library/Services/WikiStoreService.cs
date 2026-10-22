@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
@@ -182,6 +183,8 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 		};
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync() => store.GetPinnedCategoriesAsync();
+
+	public Task<SemanticSchema> GetFactSchemaAsync() => store.GetFactSchemaAsync();
 
 	public async Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned)
 		=> WikiHelpers.CategoryKey(category) is { Length: > 0 } key

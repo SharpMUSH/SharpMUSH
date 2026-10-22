@@ -1,3 +1,4 @@
+@using SharpMUSH.Client.Components.Wiki
 @using SharpMUSH.Client.Models
 @using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Client.Resources
@@ -140,6 +141,8 @@
             </label>
         </div>
 
+        <WikiFactEditor Facts="@Article.Facts" Properties="@FactProperties" Disabled="@IsTranslation" />
+
         @if (IsTranslation)
         {
             <div class="wiki-edit-inherited">
@@ -191,6 +194,9 @@
     /// with no page, or none given, shows its key.
     /// </summary>
     [Parameter] public IReadOnlyDictionary<string, string>? CategoryNames { get; set; }
+
+    /// <summary>The properties a page's facts may state; with none, the editor shows no facts row.</summary>
+    [Parameter] public IReadOnlyList<SharpMUSH.Library.API.WikiFactPropertyDto> FactProperties { get; set; } = [];
 
     /// <summary>The page's namespace; the categories it puts every page in are shown fixed.</summary>
     [Parameter] public string? Namespace { get; set; }

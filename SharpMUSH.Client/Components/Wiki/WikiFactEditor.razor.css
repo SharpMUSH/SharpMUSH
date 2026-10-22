@@ -1,0 +1,41 @@
+.wiki-edit-facts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.4375rem;
+    margin-top: 0.75rem;
+}
+.wiki-edit-facts-label {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+}
+.wiki-edit-fact {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-family: var(--font-mono);
+    font-size: 0.71875rem;
+    padding: 0.1875rem 0.3125rem 0.1875rem 0.5625rem;
+    border-radius: 99px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+}
+.wiki-edit-fact input,
+.wiki-edit-fact select,
+.wiki-edit-facts > select {
+    background: transparent; border: none; outline: none; color: var(--text);
+    font-family: var(--font-ui); font-size: 0.78125rem; max-width: 160px;
+}
+.wiki-edit-fact input { width: 120px; }
+.wiki-edit-fact button,
+.wiki-edit-fact-add {
+    border: none; background: transparent; color: inherit; cursor: pointer;
+    font-size: 0.875rem; line-height: 1; padding: 0 0.125rem; opacity: 0.7;
+}
+.wiki-edit-fact button:hover,
+.wiki-edit-fact-add:hover { opacity: 1; }
+.wiki-edit-facts :disabled { opacity: 0.55; cursor: not-allowed; }

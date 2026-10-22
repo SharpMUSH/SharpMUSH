@@ -596,6 +596,8 @@ public partial class LightningDatabase : IWikiStore
 		});
 	}
 
+	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(AtomicWikiLayout.Schema);
+
 	public async Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
 	{
 		facts = CanonicalPageReferences(facts);

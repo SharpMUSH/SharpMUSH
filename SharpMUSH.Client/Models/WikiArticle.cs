@@ -41,6 +41,9 @@ public class WikiArticle
 	/// <summary>The categories the page is in, as keys. Set in the editor and saved as page metadata, not text.</summary>
 	public List<string> Categories { get; set; } = [];
 
+	/// <summary>The facts the page states that the reader may see. Set in the editor and saved as page metadata, not text.</summary>
+	public List<SharpMUSH.Library.API.WikiFactDto> Facts { get; set; } = [];
+
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
 
