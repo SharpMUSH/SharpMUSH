@@ -1143,7 +1143,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
+			var (oneMinute, fiveMinutes, fifteenMinutes) = parser.ServiceProvider.GetRequiredService<QueueLoad>().Averages();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageFormat), executor,
+				oneMinute.ToString("F2", CultureInfo.InvariantCulture), fiveMinutes.ToString("F2", CultureInfo.InvariantCulture),
+				fifteenMinutes.ToString("F2", CultureInfo.InvariantCulture));
 			return CallState.Empty;
 		}
 

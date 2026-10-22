@@ -1739,8 +1739,8 @@
   <data name="PsSemaphoreQueueFormat" xml:space="preserve">
     <value>  Semaphore queue: {0}</value>
   </data>
-  <data name="PsLoadAverageZero" xml:space="preserve">
-    <value>  Load average: 0.0, 0.0, 0.0</value>
+  <data name="PsLoadAverageFormat" xml:space="preserve">
+    <value>  Load average (1/5/15 minutes): {0} {1} {2}</value>
   </data>
   <data name="PsQuickHeader" xml:space="preserve">
     <value>@ps/quick: Your queue totals</value>
