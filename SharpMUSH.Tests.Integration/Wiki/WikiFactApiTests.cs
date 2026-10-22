@@ -71,6 +71,10 @@ public class WikiFactApiTests(ServerWebAppFactory factory)
 		await Assert.That(await refused.Content.ReadAsStringAsync()).Contains("pf2e:level is a whole number, not 'two'.");
 		var missing = await http.PutAsJsonAsync(url, new SetFactsRequest([new("pf2e:class", "No Such Fact Page")]));
 		await Assert.That(missing.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+		// A body without a list is not a request to clear them; an empty list is.
+		foreach (var body in new[] { "{}", """{"facts":null}""", """{"facts":[null]}""" })
+			await Assert.That((await http.PutAsync(url, new StringContent(body, System.Text.Encoding.UTF8, "application/json"))).StatusCode)
+				.IsEqualTo(HttpStatusCode.BadRequest);
 
 		var fetched = (await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/{Uri.EscapeDataString(spell.Slug)}"))!;
 		await Assert.That(fetched.Facts.Select(f => (f.Property, f.Value))).IsEquivalentTo([("pf2e:level", "2")]);

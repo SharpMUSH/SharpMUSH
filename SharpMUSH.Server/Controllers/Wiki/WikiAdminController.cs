@@ -111,7 +111,7 @@ public class WikiAdminController(
 	/// <summary>
 	/// PUT /api/wiki/{slug}/facts
 	/// Replaces the facts a page states. An edit of the page, so its requirements apply; it adds no revision. A fact
-	/// the schema refuses is a 400 naming it, and nothing changes.
+	/// the schema refuses is a 400 naming it, and nothing changes. A fact naming a page the editor may not see stays.
 	/// </summary>
 	[HttpPut("{slug}/facts")]
 	[Authorize(Policy = PortalPermission.WikiEdit)]
@@ -122,10 +122,13 @@ public class WikiAdminController(
 		if (await RefusalAsync(existing, WikiAction.Edit) is { } refusal)
 			return refusal;
 
+		if (request.Facts is null || request.Facts.Any(f => f?.Property is null || f.Value is null))
+			return BadRequest("Facts must list each fact's property and value; an empty list clears them.");
+
 		var schema = await Wiki.GetFactSchemaAsync();
 		var visibility = await VisibilityAsync();
 		var stated = new List<WikiPageFact>();
-		foreach (var property in (request.Facts ?? []).GroupBy(f => f.Property.Trim()))
+		foreach (var property in request.Facts.GroupBy(f => f.Property.Trim()))
 		{
 			switch (await WikiFactEntry.ResolveAsync(Wiki, schema, property.Key, property.Select(f => f.Value), visibility))
 			{
@@ -137,7 +140,8 @@ public class WikiAdminController(
 			}
 		}
 
-		return await Wiki.SetFactsAsync(existing.Id, stated) switch
+		// A page the editor may not see was never shown to them, so leaving it out is not removing it.
+		return await Wiki.SetFactsAsync(existing.Id, await WikiFactEntry.KeepingUnseenAsync(Wiki, schema, existing.Facts, stated, visibility)) switch
 		{
 			WikiPage page => await FactsSetAsync(slug, page),
 			Error<string> error => BadRequest(error.Value),
