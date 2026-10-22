@@ -34,7 +34,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.1.0
+    version: 2.3.0
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -62,12 +62,12 @@ packages:
   - path: wiki-reader/
     name: Wiki Reader
     package: wiki-reader
-    version: 1.7.1
+    version: 1.7.2
     description: +wiki — paged listings, a rendered article view, and an editorial audit
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.12.0
+    version: 1.13.1
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -77,7 +77,7 @@ packages:
   - path: messages/
     name: Messages
     package: messages
-    version: 1.2.1
+    version: 1.2.2
     description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
   - path: radio/
     name: Radio
@@ -117,7 +117,7 @@ packages:
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.1.0
+    version: 1.1.1
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
   - path: highlights-app/
     name: Highlights in the portal
@@ -127,7 +127,7 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.4.0
+    version: 1.4.1
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help, http-handler and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
@@ -167,17 +167,17 @@ packages:
   - path: health/
     name: Health
     package: health
-    version: 1.0.3
+    version: 1.0.4
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
   - path: health-jobs/
     name: Health Staff Load
     package: health-jobs
-    version: 1.0.2
+    version: 1.0.3
     description: +health/staff — open jobs and the oldest waiting on staff, per staffer (requires health and jobs)
   - path: relationships/
     name: Relationships
     package: relationships
-    version: 1.1.0
+    version: 1.1.1
     description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
   - path: relationships-scene/
     name: Relationships Scene
@@ -217,7 +217,7 @@ packages:
   - path: notifications/
     name: Notifications
     package: notifications
-    version: 1.1.0
+    version: 1.1.1
     description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
@@ -279,3 +279,20 @@ packages:
     package: alts
     version: 1.0.2
     description: +alts — the characters on your account, private until you make the list public, with any one kept off it (requires plus-help)
+  - path: onboarding/
+    name: Onboarding
+    package: onboarding
+    version: 1.0.1
+    description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
+  - path: onboarding-help/
+    package: onboarding-help
+    version: 1.0.0
+    description: Bridge — the checklist's topics in +help, and a step pointing new players at +help (requires onboarding and plus-help)
+  - path: onboarding-config/
+    package: onboarding-config
+    version: 1.0.0
+    description: Bridge — the checklist's steps and settings in +config onboarding (requires onboarding and plus-config)
+  - path: onboarding-chargen/
+    package: onboarding-chargen
+    version: 1.0.0
+    description: Bridge — the Get approved step says where the player's +app application stands (requires onboarding and chargen)

@@ -84,7 +84,7 @@ public static class TerminalCharsets
 	/// <param name="pins">What the player set.</param>
 	/// <param name="negotiated">What CHARSET negotiation settled on, or null when it never did.</param>
 	/// <param name="claimsUtf8">
-	/// Whether the client claims UTF-8 (MTTS) or is a terminal known to show it, or has not reported its terminal yet.
+	/// Whether the client claims UTF-8 (MTTS) or is a terminal known to show it.
 	/// </param>
 	public static string Resolve(TerminalPins? pins, string? negotiated, bool claimsUtf8) =>
 		pins is { StripAccents: true } ? Ascii

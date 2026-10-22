@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
 using System.Collections.Immutable;
@@ -47,7 +49,12 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NothingToDo);
 		}
 
-		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, arg0, arg1, spoof);
+		// SILENT_OR_NOISY (hdrs/command.h:276): /silent, else /noisy, else silent unless noisy_cemit.
+		var switches = parser.CurrentState.Switches;
+		var silent = switches.Contains("SILENT")
+			|| !switches.Contains("NOISY") && !Configuration.CurrentValue.Chat.NoisyCEmit;
+		return await ChannelEmit.Handle(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, arg0, arg1,
+			spoof, silent);
 	}
 
 	[SharpCommand(Name = "@CHAT", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel", "message"])]
@@ -105,7 +112,7 @@ public partial class Commands
 			chatType,
 			chatMessage,
 			status.Title ?? MarkupText.Empty,
-			MarkupText.Plain(executor.Object().Name),
+			await new NameFormatter(AttributeService, Configuration).NameAsync(executor, MonikerPlace.Chat),
 			MarkupText.Plain("says"),
 			[]
 		));

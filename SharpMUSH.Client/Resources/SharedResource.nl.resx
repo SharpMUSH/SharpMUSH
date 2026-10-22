@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Accountbeheer</value>
+    <value>Mijn account</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# personage geregistreerd} other {# personages geregistreerd}}</value>
     <comment>MT</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
-    <comment>MT — abbreviation of "characters" in nav chrome; Dutch has no short form of "personages" that fits, and Dutch MU* players use the English "chars". Worth a native check.</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Terminal sluiten</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>commandoterminal</value>
+    <value>Commandoterminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Terminal openen</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dit spel bewaart geen geschiedenis van privéberichten, dus alleen berichten van dit bezoek worden getoond.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Terug naar de scène</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Terug naar het spel</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Spelen</value>

@@ -252,7 +252,12 @@ public abstract class WikiControllerBase(
 	protected async Task<IEnumerable<WikiPageSummaryDto>> LocalizedListAsync(IEnumerable<WikiPage> pages, string? lang)
 	{
 		var visible = await FilterVisibleAsync(pages);
-		var localized = await Localization.LocalizeAllAsync(visible, lang, await IncludeDraftsAsync());
+		return await SummariesAsync(await Localization.LocalizeAllAsync(visible, lang, await IncludeDraftsAsync()));
+	}
+
+	/// <summary>One body-less summary per page already localized and admitted.</summary>
+	protected async Task<IEnumerable<WikiPageSummaryDto>> SummariesAsync(IEnumerable<LocalizedWikiPage> localized)
+	{
 		var requirements = await Access.RequirementsAsync();
 		var dtos = new List<WikiPageSummaryDto>();
 		foreach (var page in localized)

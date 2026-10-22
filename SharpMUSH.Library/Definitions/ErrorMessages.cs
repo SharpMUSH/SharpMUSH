@@ -91,6 +91,9 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string BadArgumentFormat = "#-1 BAD ARGUMENT FORMAT TO {0}";
 		public const string ArgRange = "#-1 ARGUMENT OUT OF RANGE";
+		public const string Arg1NotFound = "#-1 ARG1 NOT FOUND";
+		public const string Arg2NotFound = "#-1 ARG2 NOT FOUND";
+		public const string BadAttrName = "#-1 BAD ATTR NAME";
 		/// <summary>PennMUSH's <c>chr()</c> answer for a control character (<c>fun_chr</c>, src/funstr.c).</summary>
 		public const string UnprintableCharacter = "#-1 UNPRINTABLE CHARACTER";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";
@@ -485,7 +488,6 @@ public static partial class ErrorMessages
 	public static partial class Notifications
 	{
 		public const string LocalFunctionMessage = "{0}";
-		public const string LocalFunctionHeader = "Owner-local functions (call with localfun):";
 		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
 		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -759,6 +761,12 @@ public static partial class ErrorMessages
 		/// <summary>PennMUSH <c>src/speech.c:939</c>: the target is HAVEN, so it refuses every pager.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotAcceptingAnyPages = "{0} is not accepting any pages.";
+		/// <summary>PennMUSH <c>src/predicat.c:1206</c>: the target's AWAY, HAVEN or IDLE message, to the pager.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PageReturnMessage = "{0} message from {1}: {2}";
+		/// <summary>PennMUSH <c>src/predicat.c:1209</c>: the target is told its AWAY, HAVEN or IDLE message went out.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PageReturnSent = "[{0}:{1:00}] {2} message sent to {3}.";
 		/// <summary>PennMUSH <c>src/speech.c:930</c>: the named player holds no connection.</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string NotConnected = "{0} is not connected.";
@@ -1163,9 +1171,16 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string SetQuotaForPlayersFormat = "Set quota to {0} for {1} players.";
 		public const string NotSupportedForSharpMUSH = "Not Supported for SharpMUSH.";
-		// PennMUSH bsd.c:7239,7246 (hide_player's self-target branch, the only one @hide implements).
+		// PennMUSH hide_player, bsd.c:7161-7251.
 		public const string NoLongerAppearOnWho = "You no longer appear on the WHO list.";
 		public const string NowAppearOnWho = "You now appear on the WHO list.";
+		public const string PlayerNoLongerAppearsOnWho = "{0} no longer appears on the WHO list.";
+		public const string PlayerNowAppearsOnWho = "{0} now appears on the WHO list.";
+		public const string ConnectionHidden = "Connection hidden.";
+		public const string ConnectionUnhidden = "Connection unhidden.";
+		public const string HideDescriptorNotFound = "Couldn't find that descriptor.";
+		public const string HideDescriptorNotConnected = "Noone is connected to that descriptor.";
+		public const string HidePlayerNotOnline = "That player is not online.";
 		public const string NeedAnnouncePower = "Permission denied. You need the Announce power.";
 
 		public const string NoSuicideAllowed = "Sorry, no suicide allowed.";

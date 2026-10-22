@@ -51,7 +51,7 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
-            <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" />
+            <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
         </div>
         <aside class="wiki-page-aside">
             <AuthorizeView Policy="wiki.admin">
@@ -122,7 +122,7 @@ else
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
-                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" />
+                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
                 }
             }
             else
@@ -258,6 +258,11 @@ else
     private WikiBrowseState? SameArticleBrowseState =>
         _returnState ?? (_navigationLoad.IsCompleted ? null : BrowseState?.Normalize());
 
+    // While a supplied origin is unchecked, links to other articles are held rather than rendered without it:
+    // a reader who follows one before the check answers would lose the return to their results.
+    private bool AwaitingReturnContext => !Embedded && _returnState is null && BrowseState?.Normalize() is not null
+        && (_navigationFor is null || !_navigationLoad.IsCompleted);
+
     private RenderFragment JourneyNavigation => __builder =>
     {
         @if (!Embedded)
@@ -374,7 +379,7 @@ else
                 <span class="wiki-catlinks-label">@Loc["NavWikiCategories"]</span>
                 @foreach (var category in Article.Categories)
                 {
-                    <a class="wiki-catlink" href="@JourneyHref(WikiCategories.Route(category))">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
+                    <a class="wiki-catlink" href="@(AwaitingReturnContext ? null : JourneyHref(WikiCategories.Route(category)))">@WikiHelpers.CategoryLabel(category, _categoryNames)</a>
                 }
             </nav>
         }
@@ -398,7 +403,15 @@ else
             }
             <span class="wiki-meta-sep"> · </span>
         }
-        <span class="wiki-meta-edit">@(Article?.IsRestricted == true ? Loc["WikiRestrictedNote"] : Loc["ResAnyoneCanEdit"])</span>
+        @* The note answers "can I edit this?" for the reader, so it is said only where the answer is yes or the page is restricted. *@
+        @if (Article?.IsRestricted == true)
+        {
+            <span class="wiki-meta-edit">@Loc["WikiRestrictedNote"]</span>
+        }
+        else if (Article?.Access?.Edit == true)
+        {
+            <span class="wiki-meta-edit">@Loc["ResAnyoneCanEdit"]</span>
+        }
     };
 
     private RenderFragment HeaderActions => __builder =>
@@ -602,6 +615,7 @@ else
         await navigation;
         if (_disposed || version != _renderVersion) return;
         _segments = WikiBody.Split(PresentHtml(marking.IsCompletedSuccessfully ? marking.Result : html));
+        StateHasChanged();
 
         var marked = await marking;
         if (_disposed || version != _renderVersion) return;
@@ -671,13 +685,9 @@ else
         }
 
         _moreLoadedFor = key;
-        var siblings = (await Wiki.GetAllByCategoryAsync(key))
-            .Where(p => p.Namespace.Equals(Namespace, StringComparison.OrdinalIgnoreCase))
-            .Where(p => !p.Slug.Equals(Slug, StringComparison.OrdinalIgnoreCase))
-            .OrderByDescending(p => p.UpdatedAt)
-            .ToList();
-        _moreTotal = siblings.Count + 1;
-        _more = siblings.Take(3).ToList();
+        var newest = await Wiki.GetNewestInCategoryAsync(key, Namespace ?? "main", Slug, 3);
+        _moreTotal = newest.Total;
+        _more = [.. newest.Pages];
     }
 
     /// <summary>
@@ -811,6 +821,7 @@ else
         var currentNamespace = string.IsNullOrWhiteSpace(Namespace) ? "main" : Namespace.Trim();
         var sameArticle = string.Equals(target.Reference[..separator], currentNamespace, StringComparison.OrdinalIgnoreCase)
             && target.Reference[(separator + 1)..] == WikiHelpers.Slugify(Slug);
+        if (!sameArticle && AwaitingReturnContext) return match.Value[..href.Index] + match.Value[(href.Index + href.Length)..];
         var destination = sameArticle
             ? WikiJourneyLinks.SameArticle(target.Href, ExpectedPageId, SameArticleBrowseState, MembersCollection, MembersSkip, Locale)
             : JourneyHref(target.Href);

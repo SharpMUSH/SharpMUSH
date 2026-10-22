@@ -15,7 +15,7 @@ namespace SharpMUSH.Tests.Commands;
 /// Each test captures the hook argument in the database and clears its global hook in finally.
 /// </summary>
 [NotInParallel]
-public class HookOverrideBehaviorTests
+public partial class HookOverrideBehaviorTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }

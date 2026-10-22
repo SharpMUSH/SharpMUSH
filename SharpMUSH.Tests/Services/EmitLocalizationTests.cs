@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -78,7 +79,8 @@ public class EmitLocalizationTests
 		IDidItService? didIt = null;
 		var service = ActivatorUtilities.CreateInstance<CommunicationService>(Factory.Services,
 			notify, connections, new Lazy<IDidItService>(() => didIt!));
-		didIt = new DidItService(Mediator, Factory.Services.GetRequiredService<IAttributeService>(), notify, service);
+		didIt = new DidItService(Mediator, Factory.Services.GetRequiredService<IAttributeService>(), notify, service,
+			Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>());
 		return (service, bus, didIt);
 	}
 

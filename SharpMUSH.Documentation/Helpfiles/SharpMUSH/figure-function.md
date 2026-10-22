@@ -46,6 +46,7 @@ A picture, the text art a terminal shows instead of it, and the text that goes b
 - *<art>* - the text art a telnet client sees; its lines keep their own spacing.
 - *<float>* - `none` (the default: the picture on its own lines, *<beside>* under it), `left` or `right`.
 - *<beside>* - the text beside the picture. It can be a layout, such as [FIELDS()].
+- *<width>* - the width of the whole figure; see [LAYOUT FUNCTIONS] for leaving it out.
 
 Floated, *<beside>* flows down the other side of the art in a telnet client and wraps back to the full width once past it; in the web portal, it flows round the picture.
 

@@ -8,7 +8,7 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["OAuthConsentTitle"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["OAuthConsentTitle"] — <GameName /></PageTitle>
 
 @* Where an app sends a player to ask for access (RFC 6749 §4.1.1). The question is the server's: this page shows it,
    sends the answer, and follows the server back to the app. The app never sees this page's session. *@

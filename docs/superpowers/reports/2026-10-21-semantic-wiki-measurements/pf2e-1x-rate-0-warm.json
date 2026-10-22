@@ -1,0 +1,96 @@
+{
+  "Rate": 0,
+  "Pass": "warm",
+  "Label": "warm: second pass in the same process",
+  "OpenSeconds": 0.9757003,
+  "Seconds": 600.0078268,
+  "Queries": {
+    "Count": 0,
+    "P50": "NaN",
+    "P95": "NaN",
+    "P99": "NaN",
+    "Max": "NaN"
+  },
+  "QueryOutcomes": {},
+  "QueriesByKind": {},
+  "Commands": {
+    "Count": 6000,
+    "P50": 2.593799999973271,
+    "P95": 42.688600000000406,
+    "P99": 103.8462999999756,
+    "Max": 776.2627000000211
+  },
+  "CommandsRefused": 0,
+  "CommandsByKind": {
+    "look": {
+      "Count": 1500,
+      "P50": 3.1024000000033993,
+      "P95": 5.485100000048988,
+      "P99": 56.73050000000512,
+      "Max": 678.0864999999758
+    },
+    "@set": {
+      "Count": 1500,
+      "P50": 24.566800000000512,
+      "P95": 88.33309999998892,
+      "P99": 154.33370000001742,
+      "Max": 776.2627000000211
+    },
+    "pose": {
+      "Count": 1500,
+      "P50": 1.7164999999949941,
+      "P95": 2.5653000000020256,
+      "P99": 3.9792000000015832,
+      "Max": 479.1144000000204
+    },
+    "say": {
+      "Count": 1500,
+      "P50": 2.0148000000044703,
+      "P95": 2.940500000026077,
+      "P99": 5.685800000000199,
+      "Max": 578.6282999999821
+    }
+  },
+  "WriterWaitMs": {
+    "Count": 1875,
+    "P50": 0,
+    "P95": 0,
+    "P99": 6.654,
+    "Max": 362.0609
+  },
+  "WriterHoldMs": {
+    "Count": 1864,
+    "P50": 20.2556,
+    "P95": 75.455,
+    "P99": 129.5441,
+    "Max": 773.776
+  },
+  "ReadTransactionMs": {
+    "Count": 34392,
+    "P50": 0.0078,
+    "P95": 0.0449,
+    "P99": 0.1121,
+    "Max": 54.0856
+  },
+  "PeakReadsActive": 2,
+  "PeakWorkingSet": 486584320,
+  "MinorFaults": 17420,
+  "MajorFaults": 5,
+  "AllocatedBytes": 2915706072,
+  "GcPauseMs": 435.057,
+  "Storage": {
+    "MapSizeBytes": 68719476736,
+    "FileBytes": 18038784,
+    "AllocatedBytes": 18038784,
+    "LiveBytes": 14876672,
+    "FreeBytes": 3162112
+  },
+  "Rebuild": {
+    "StartedAt": 300.0417033,
+    "Seconds": 4.4302159,
+    "Subjects": 4713,
+    "SubjectsPerSecond": 1063.830723742799,
+    "Outcome": "Flipped { Generation = 2 }"
+  },
+  "Drained": true
+}

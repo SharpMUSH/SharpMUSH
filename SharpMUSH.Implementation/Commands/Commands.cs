@@ -110,6 +110,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IMsspReportService MsspReport { get; }
 
+	private IConnectionTrafficService ConnectionTraffic { get; }
+
 	private IGameMessageService MessageService { get; }
 	private IConfigOptionWriter ConfigWriter { get; }
 
@@ -182,6 +184,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPageLogService pageLog,
 		IAuditLog audit,
 		IMsspReportService msspReport,
+		IConnectionTrafficService connectionTraffic,
 		IGameMessageService gameMessages,
 		IConfigOptionWriter configWriter,
 		ISecretStore secrets,
@@ -246,6 +249,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		PageLog = pageLog;
 		Audit = audit;
 		MsspReport = msspReport;
+		ConnectionTraffic = connectionTraffic;
 		MessageService = gameMessages;
 		ConfigWriter = configWriter;
 		Secrets = secrets;

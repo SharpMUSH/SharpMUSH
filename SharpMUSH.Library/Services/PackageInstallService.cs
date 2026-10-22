@@ -45,7 +45,8 @@ public partial class PackageInstallService(
 	Lazy<IRuntimeRegistrationService> registrations,
 	EngineVersion engine,
 	Lazy<IPluginManager> plugins,
-	Lazy<IPluginAdministration> pluginAdministration) : IPackageInstallService
+	Lazy<IPluginAdministration> pluginAdministration,
+	IPackageWriteTransactionFactory transactions) : IPackageInstallService
 {
 	private static readonly JsonSerializerOptions SnapshotJson = new(JsonSerializerDefaults.Web);
 
@@ -56,9 +57,21 @@ public partial class PackageInstallService(
 		=> manifest.RequiredPlugins.Where(id => plugins.Value.Registration(id) is not null)
 			.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>Opens the undo log one package operation writes through; see <see cref="PackageWriteTransaction"/>.</summary>
-	private PackageWriteTransaction BeginWrites(SharpPlayer packageManager) =>
-		new(mediator, database, attributeStore, flags, registry, applications, locks, packageManager);
+	/// <summary>
+	/// Opens the undo log one package operation reads and writes through, retained in this world until it
+	/// closes; see <see cref="PackageWriteTransaction"/>. Only this world's own factory is accepted.
+	/// </summary>
+	private ValueTask<PackageWriteTransaction> BeginWritesAsync(CancellationToken cancellationToken)
+	{
+		if (transactions is not PackageWriteTransactionFactory origin)
+		{
+			throw new InvalidOperationException("Package writes need the world's own transaction factory.");
+		}
+
+		origin.RequireInstaller(database, attributeStore, flags, registry, applications, locks, mediator);
+		var number = (int)DatabaseOptions.PackageManagerOrSeeded(configuration.CurrentValue.Database.PackageManager);
+		return origin.CreateAsync(new DBRef(number), cancellationToken);
+	}
 
 	/// <summary>
 	/// Lets go of an object the package no longer owns: GOING, so the purge frees it, and HALT, so it
@@ -135,18 +148,6 @@ public partial class PackageInstallService(
 			SharpPlayer player => player,
 			SharpRoom room => room,
 			SharpThing thing => thing
-		};
-	}
-
-	private async Task<SharpPlayer> GetPackageManagerWizardAsync(CancellationToken cancellationToken)
-	{
-		var number = (int)DatabaseOptions.PackageManagerOrSeeded(configuration.CurrentValue.Database.PackageManager);
-		var node = await database.GetObjectNodeAsync(new DBRef(number), cancellationToken);
-		return node switch
-		{
-			AnySharpObject and SharpPlayer player => player,
-			AnySharpObject => throw new InvalidOperationException($"#{number} is not a player."),
-			None => throw new InvalidOperationException($"Package Manager wizard #{number} does not exist.")
 		};
 	}
 

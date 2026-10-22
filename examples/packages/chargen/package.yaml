@@ -1,6 +1,6 @@
 format: "1.10"
 package: chargen
-version: 2.1.0
+version: 2.3.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -246,6 +246,8 @@ objects:
         APPS`FIELD`OPTION
       DATA`ROUTE`APPS`FIELD`ATTRIBUTE: |-
         APPS`FIELD`OPTION
+      DATA`ROUTE`APPS`FIELD`CHAPTERS: |-
+        APPS`FIELD`OPTION
       DATA`ROUTE`APPS`FIELD`REMOVE: |-
         APPS`FIELD`REMOVE
       # The routines that take a page as a last switch: +apps/2.
@@ -356,8 +358,14 @@ objects:
       # ---- the form -------------------------------------------------------------
       # The form is kept on the store: SECTION`<KEY> its title, with ORDER; FIELD`<KEY> its label, with
       # SECTION, TYPE (text, long or choice), CHOICES (split by |), REQUIRED (1 or 0), MAX (characters), ORDER
-      # HELP and ATTRIBUTE (the character's attribute that holds it; the key by default). Keys are upper case;
-      # players type them in any case.
+      # HELP, ATTRIBUTE (the character's attribute that holds it; the key by default) and CHAPTERS. Keys are upper
+      # case; players type them in any case.
+      #
+      # An ATTRIBUTE with a * in it is a pattern, and the field comes in chapters: the * stands for the chapter,
+      # so BG* keeps chapter 1 in BG1 and chapter 2 in BG2, and CHAPTERS is how many it may have. MAX is then
+      # the most characters in one chapter. Each submitted round keeps chapter <c> as CHARGEN`ROUND`<n>`<FIELD>`<c>.
+      # A slot is what one input fills: a field, or <FIELD>.<CHAPTER> for one chapter of a field in chapters.
+      # Neither a key nor a chapter can hold a ., so a slot splits at it.
       #
       # %0 a section: where it comes in the form.
       FUN`FORM`SECTION`ORDER:
@@ -417,10 +425,117 @@ objects:
         value: |-
           firstof(get({{store}}/FIELD`%0`ATTRIBUTE),%0)
         flags: [funsyntax]
-      # %0 a field: the most characters it takes.
+      # %0 a field: the most characters it takes, in each chapter for a field in chapters.
       FUN`FIELD`MAX:
         value: |-
-          firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),4000,200))
+          firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),8000,500))
+        flags: [funsyntax]
+      # %0 a field: 1 when it comes in chapters, its attribute a pattern.
+      FUN`FIELD`CHAPTERED:
+        value: |-
+          t(pos(*,u(%!/FUN`FIELD`ATTRIBUTE,%0)))
+        flags: [funsyntax]
+      # %0 a field in chapters: the most chapters it takes.
+      FUN`FIELD`CHAPTERS:
+        value: |-
+          firstof(get({{store}}/FIELD`%0`CHAPTERS),20)
+        flags: [funsyntax]
+      # %0 a field in chapters, %1 a round, or nothing for the draft: the pattern its chapters match on the character.
+      FUN`FIELD`PATTERN:
+        value: |-
+          if(strlen(%1),CHARGEN`ROUND`%1`%0`*,u(%!/FUN`FIELD`ATTRIBUTE,%0))
+        flags: [funsyntax]
+
+      # ---- chapters and slots ---------------------------------------------------
+      # %0 typed text: the chapter it names when it is a word of up to 20 letters, digits, - and _, upper case.
+      FUN`CHAPTER`KEY:
+        value: |-
+          if(cand(lte(strlen(%0),20),regmatch(%0,^%[A-Za-z0-9_-%]+$)),ucstr(%0))
+        flags: [funsyntax]
+      # %0 an attribute name, %1 the pattern it matched: the chapter, what the * stood for, when it is a chapter key.
+      FUN`CHAPTER`OF:
+        value: |-
+          u(%!/FUN`CHAPTER`KEY,mid(%0,strlen(before(%1,*)),sub(strlen(%0),dec(strlen(%1)))))
+        flags: [funsyntax]
+      # %0 chapters: the lowest whole number that is not one of them.
+      FUN`CHAPTER`NEXT:
+        value: |-
+          first(setdiff(lnum(1,inc(words(%0))),%0,,n))
+        flags: [funsyntax]
+      # %0 a character, %1 a field in chapters, %2 a round, or nothing for the draft: its chapters, in order.
+      FUN`APP`CHAPTERS:
+        value: |-
+          if(isdbref(%0),setq(chapters_pattern,u(%!/FUN`FIELD`PATTERN,%1,%2))[sort(squish(iter(lattr(%0/%q<chapters_pattern>),u(%!/FUN`CHAPTER`OF,%i0,%q<chapters_pattern>))),m)])
+        flags: [funsyntax]
+      # %0 a character, %1 a field in chapters, %2 a round, or nothing for the draft, %3 a chapter: what it says.
+      FUN`APP`CHAPTER`TEXT:
+        value: |-
+          get(%0/[edit(u(%!/FUN`FIELD`PATTERN,%1,%2),*,%3)])
+        flags: [funsyntax]
+      # %0 a character, %1 a field in chapters, %2 a round, or nothing for the draft: its chapters one after
+      # another, a blank line between them. A round kept before the field came in chapters is its one leaf.
+      FUN`APP`CHAPTERS`TEXT:
+        value: |-
+          setq(text_chapters,u(%!/FUN`APP`CHAPTERS,%0,%1,%2))[if(words(%q<text_chapters>),iter(%q<text_chapters>,u(%!/FUN`APP`CHAPTER`TEXT,%0,%1,%2,%i0),%b,%r%r),if(strlen(%2),get(%0/CHARGEN`ROUND`%2`%1)))]
+        flags: [funsyntax]
+      FUN`SLOT`FIELD:
+        value: |-
+          before(%0,.)
+        flags: [funsyntax]
+      FUN`SLOT`CHAPTER:
+        value: |-
+          after(%0,.)
+        flags: [funsyntax]
+      # %0 a slot: the attribute on the character that holds it.
+      FUN`SLOT`ATTRIBUTE:
+        value: |-
+          setq(slot_field,u(%!/FUN`SLOT`FIELD,%0))[if(strlen(u(%!/FUN`SLOT`CHAPTER,%0)),edit(u(%!/FUN`FIELD`ATTRIBUTE,%q<slot_field>),*,u(%!/FUN`SLOT`CHAPTER,%0)),u(%!/FUN`FIELD`ATTRIBUTE,%q<slot_field>))]
+        flags: [funsyntax]
+      # %0 a slot: the field's label, and the chapter.
+      FUN`SLOT`LABEL:
+        value: |-
+          u(%!/FUN`FIELD`LABEL,u(%!/FUN`SLOT`FIELD,%0))[if(strlen(u(%!/FUN`SLOT`CHAPTER,%0)),%bchapter [lcstr(u(%!/FUN`SLOT`CHAPTER,%0))])]
+        flags: [funsyntax]
+      # %0 a key, %1 a slot: what the draft says there.
+      FUN`SLOT`VALUE:
+        value: |-
+          if(isdbref(setr(slot_objid,get({{store}}/APP`%0))),get(%q<slot_objid>/[u(%!/FUN`SLOT`ATTRIBUTE,%1)]))
+        flags: [funsyntax]
+      # %0 a key, %1 a field: its slots on the draft. A field in chapters has one for each chapter it has, and
+      # one for the next chapter while there is room for it.
+      FUN`APP`SLOTS:
+        value: |-
+          if(u(%!/FUN`FIELD`CHAPTERED,%1),setq(slots_chapters,u(%!/FUN`APP`CHAPTERS,get({{store}}/APP`%0),%1,))[iter(trim(%q<slots_chapters> [if(lt(words(%q<slots_chapters>),u(%!/FUN`FIELD`CHAPTERS,%1)),u(%!/FUN`CHAPTER`NEXT,%q<slots_chapters>))]),%1.%i0)],%1)
+        flags: [funsyntax]
+      # %0 a key: every slot of its draft, in form order.
+      FUN`APP`ALLSLOTS:
+        value: |-
+          squish(iter(u(%!/FUN`FORM`ALLFIELDS),u(%!/FUN`APP`SLOTS,%0,%i0)))
+        flags: [funsyntax]
+      # %0 typed text, a field, with /<chapter> for a field in chapters: the slot it names, or #-1 and the
+      # reason. A field in chapters named alone is its chapter 1.
+      FUN`SLOT`FIND:
+        value: |-
+          setqm(slot_typed_field,before(%0,/),
+          slot_field,u(%!/FUN`FIELD`FIND,%q<slot_typed_field>),
+          slot_chapter,u(%!/FUN`CHAPTER`KEY,trim(after(%0,/))))[cond(not(strlen(%q<slot_field>)),#-1 There is no field '%q<slot_typed_field>'. +app lists them.,not(u(%!/FUN`FIELD`CHAPTERED,%q<slot_field>)),if(strmatch(%0,*/*),#-1 [u(%!/FUN`FIELD`LABEL,%q<slot_field>)] has no chapters.,%q<slot_field>),cand(strmatch(%0,*/*),not(strlen(%q<slot_chapter>))),#-1 A chapter is one word of up to 20 letters%, digits%, - and _.,%q<slot_field>.[firstof(%q<slot_chapter>,1)])]
+        flags: [funsyntax]
+      # %0 a key, %1 a slot, %2 typed text: nothing when the text fits the slot, else the reason. A new chapter
+      # needs room for it.
+      FUN`SLOT`PROBLEM:
+        value: |-
+          firstof(u(%!/FUN`FIELD`PROBLEM,u(%!/FUN`SLOT`FIELD,%1),%2),if(cand(strlen(%2),u(%!/FUN`SLOT`CROWDED,%0,%1)),u(%!/FUN`SLOT`CROWDED`TEXT,%1)))
+        flags: [funsyntax]
+      # %0 a slot of a field whose chapters are all taken: why it cannot have another.
+      FUN`SLOT`CROWDED`TEXT:
+        value: |-
+          setq(crowded_field,u(%!/FUN`SLOT`FIELD,%0))[u(%!/FUN`FIELD`LABEL,%q<crowded_field>)] has room for [u(%!/FUN`FIELD`CHAPTERS,%q<crowded_field>)] chapters. +app/set [lcstr(%q<crowded_field>)]/<chapter>= clears one.
+        flags: [funsyntax]
+      # %0 a key, %1 a slot: 1 when it is a chapter the draft does not have yet, and every chapter is taken.
+      FUN`SLOT`CROWDED:
+        value: |-
+          setqm(crowded_field,u(%!/FUN`SLOT`FIELD,%1),
+          crowded_chapters,u(%!/FUN`APP`CHAPTERS,get({{store}}/APP`%0),%q<crowded_field>,))[cand(strlen(u(%!/FUN`SLOT`CHAPTER,%1)),not(member(%q<crowded_chapters>,u(%!/FUN`SLOT`CHAPTER,%1))),gte(words(%q<crowded_chapters>),u(%!/FUN`FIELD`CHAPTERS,%q<crowded_field>)))]
         flags: [funsyntax]
       # %0 a choice field, %1 typed text: the choice it names, as the form writes it, or nothing.
       FUN`FIELD`CHOICE:
@@ -483,10 +598,11 @@ objects:
           setq(app_name_objid,get({{store}}/APP`%0))[if(isdbref(%q<app_name_objid>),name(%q<app_name_objid>),-)]
         flags: [funsyntax]
       # %0 a key, %1 a field, %2 a round, or nothing for the draft: what the field said. The draft is the
-      # character's own attribute; a round is the copy kept on the character when it was submitted.
+      # character's own attribute; a round is the copy kept on the character when it was submitted. A field in
+      # chapters says them all, one after another.
       FUN`APP`VALUE:
         value: |-
-          if(isdbref(setr(value_objid,get({{store}}/APP`%0))),get(%q<value_objid>/[if(strlen(%2),CHARGEN`ROUND`%2`%1,u(%!/FUN`FIELD`ATTRIBUTE,%1))]))
+          if(isdbref(setr(value_objid,get({{store}}/APP`%0))),if(u(%!/FUN`FIELD`CHAPTERED,%1),u(%!/FUN`APP`CHAPTERS`TEXT,%q<value_objid>,%1,%2),get(%q<value_objid>/[if(strlen(%2),CHARGEN`ROUND`%2`%1,u(%!/FUN`FIELD`ATTRIBUTE,%1))])))
         flags: [funsyntax]
       # %0 a field, %1 a key, %2 and %3 two rounds, either of them empty for the draft: 1 when the field differs.
       FUN`APP`DIFFERS:
@@ -590,7 +706,14 @@ objects:
       # a reviewer: the section's title, its answers and its comments. An empty answer shows the field's help.
       FUN`DISPLAY`SECTION:
         value: |-
-          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,u(%!/FUN`FIELD`NAME,%i0)[if(member(%3,%i0),%b[tone(warning,*)])],%b,%*<|>),iter(%q<section_fields>,firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%2)),tone(muted,firstof(get({{store}}/FIELD`%i0`HELP),-))),%b,%*<|>),%*<|>)])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
+          setq(section_fields,u(%!/FUN`FORM`FIELDS,%1))[rule(u(%!/FUN`SECTION`NAME,%1))][if(words(%q<section_fields>),%r[lfields(,iter(%q<section_fields>,u(%!/FUN`FIELD`NAME,%i0)[if(member(%3,%i0),%b[tone(warning,*)])],%b,%*<|>),iter(%q<section_fields>,u(%!/FUN`DISPLAY`ANSWER,%0,%i0,%2),%b,%*<|>),%*<|>)])][u(%!/FUN`DISPLAY`COMMENTS,%0,u(%!/FUN`APP`COMMENTS,%0,%1,%4))]
+        flags: [funsyntax]
+      # %0 a key, %1 a field, %2 the round shown (empty for the draft): the answer as +app shows it, each chapter
+      # of a field in chapters under its name, and the field's help when it is empty.
+      FUN`DISPLAY`ANSWER:
+        value: |-
+          setqm(answer_objid,get({{store}}/APP`%0),
+          answer_chapters,if(u(%!/FUN`FIELD`CHAPTERED,%1),u(%!/FUN`APP`CHAPTERS,%q<answer_objid>,%1,%2)))[if(words(%q<answer_chapters>),iter(%q<answer_chapters>,tone(muted,Chapter [lcstr(%i0)])%r[unmark(u(%!/FUN`APP`CHAPTER`TEXT,%q<answer_objid>,%1,%2,%i0))],%b,%r%r),firstof(unmark(u(%!/FUN`APP`VALUE,%0,%1,%2)),tone(muted,firstof(get({{store}}/FIELD`%1`HELP),-))))]
         flags: [funsyntax]
       # %0 a key, %1 1 when the reader is its owner, %2 1 for a reviewer, %3 the character: the whole application in a box.
       # The owner reads the draft and sees * on what they changed since they last submitted; a reviewer reads the
@@ -614,7 +737,24 @@ objects:
       # said and what it says.
       FUN`DISPLAY`DIFF:
         value: |-
-          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,rule(u(%!/FUN`FIELD`LABEL,%i0) · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`%i0`SECTION)]),-)])%r[lfields(,Was%*<|>Now,firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%1)),tone(muted,empty))%*<|>[firstof(unmark(u(%!/FUN`APP`VALUE,%0,%i0,%2)),tone(muted,empty))],%*<|>)],%b,%r),Nothing changed.),%3)]
+          setq(diff_fields,u(%!/FUN`APP`CHANGED,%0,%1,%2))[box(if(words(%q<diff_fields>),iter(%q<diff_fields>,u(%!/FUN`DISPLAY`DIFF`FIELD,%0,%i0,%1,%2),%b,%r),Nothing changed.),%3)]
+        flags: [funsyntax]
+      # %0 a key, %1 a field that differs, %2 and %3 two rounds, either empty for the draft: what it said and what
+      # it says, each chapter that differs on its own for a field in chapters.
+      FUN`DISPLAY`DIFF`FIELD:
+        value: |-
+          setqm(diff_objid,get({{store}}/APP`%0),
+          diff_chapters,if(u(%!/FUN`FIELD`CHAPTERED,%1),filterbool(%!/FUN`DIFF`CHAPTER`DIFFERS,sort(setunion(u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%2),u(%!/FUN`APP`CHAPTERS,%q<diff_objid>,%1,%3)),m),,,%q<diff_objid>,%1,%2,%3)))[if(words(%q<diff_chapters>),iter(%q<diff_chapters>,u(%!/FUN`DISPLAY`DIFF`BLOCK,%1.%i0,u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%2,%i0),u(%!/FUN`APP`CHAPTER`TEXT,%q<diff_objid>,%1,%3,%i0)),%b,%r),u(%!/FUN`DISPLAY`DIFF`BLOCK,%1,u(%!/FUN`APP`VALUE,%0,%1,%2),u(%!/FUN`APP`VALUE,%0,%1,%3)))]
+        flags: [funsyntax]
+      # %0 a chapter, %1 a character, %2 a field in chapters, %3 and %4 two rounds: 1 when the chapter differs.
+      FUN`DIFF`CHAPTER`DIFFERS:
+        value: |-
+          comp(u(%!/FUN`APP`CHAPTER`TEXT,%1,%2,%3,%0),u(%!/FUN`APP`CHAPTER`TEXT,%1,%2,%4,%0))
+        flags: [funsyntax]
+      # %0 a slot, %1 what it said, %2 what it says: a heading with its section, and the two.
+      FUN`DISPLAY`DIFF`BLOCK:
+        value: |-
+          rule(u(%!/FUN`SLOT`LABEL,%0) · [firstof(get({{store}}/SECTION`[get({{store}}/FIELD`[u(%!/FUN`SLOT`FIELD,%0)]`SECTION)]),-)])%r[lfields(,Was%*<|>Now,firstof(unmark(%1),tone(muted,empty))%*<|>[firstof(unmark(%2),tone(muted,empty))],%*<|>)]
         flags: [funsyntax]
 
       # ---- telling people -------------------------------------------------------
@@ -639,10 +779,10 @@ objects:
         value: |-
           @if not(hasattr({{store}},APP`%q<app_key>))={&APP`%q<app_key> {{store}}=%q<app_objid>; &APP`%q<app_key>`STATE {{store}}=draft; &APP`%q<app_key>`ROUND {{store}}=0; &APP`%q<app_key>`CREATED {{store}}=secs()}
         flags: [cmdsyntax]
-      # Sets field %<field> of the draft to %<value>, which already fits it; empty clears it.
+      # Sets slot %<slot> of the draft to %<value>, which already fits it; empty clears it.
       INC`DO`SET:
         value: |-
-          @include %!/INC`DO`TOUCH; think setq(set_attribute,u(%!/FUN`FIELD`ATTRIBUTE,%<field>)); @if strlen(%<value>)={&%q<set_attribute> %q<app_objid>=u(%!/FUN`FIELD`STORED,%<field>,%<value>); @set %q<app_objid>/%q<set_attribute>=wizard},{&%q<set_attribute> %q<app_objid>}
+          @include %!/INC`DO`TOUCH; think setq(set_attribute,u(%!/FUN`SLOT`ATTRIBUTE,%<slot>)); @if strlen(%<value>)={&%q<set_attribute> %q<app_objid>=u(%!/FUN`FIELD`STORED,u(%!/FUN`SLOT`FIELD,%<slot>),%<value>); @set %q<app_objid>/%q<set_attribute>=wizard},{&%q<set_attribute> %q<app_objid>}
         flags: [cmdsyntax]
       # Adds a comment by %<author> on section %<section> (empty for the whole application): %<text>, %<private> 1
       # for staff only, %<kind> comment, return, approve, waitlist or retire. Sets comment_number.
@@ -653,7 +793,12 @@ objects:
       # Submits the draft as the next round. The caller has checked it may be submitted.
       INC`DO`SUBMIT:
         value: |-
-          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,##))={&CHARGEN`ROUND`%q<submit_round>`## %q<app_objid>=u(%!/FUN`APP`VALUE,%q<app_key>,##); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`##=wizard}}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@include/args %!/INC`DO`SUBMIT`FIELD=field,##}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+        flags: [cmdsyntax]
+      # Keeps what field %<field> says in round %q<submit_round>, chapter by chapter for a field in chapters.
+      INC`DO`SUBMIT`FIELD:
+        value: |-
+          @if u(%!/FUN`FIELD`CHAPTERED,%<field>)={@dolist/inline u(%!/FUN`APP`CHAPTERS,%q<app_objid>,%<field>,)={&CHARGEN`ROUND`%q<submit_round>`%<field>`## %q<app_objid>=u(%!/FUN`APP`CHAPTER`TEXT,%q<app_objid>,%<field>,,##); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`%<field>`##=wizard}},{@if strlen(u(%!/FUN`APP`VALUE,%q<app_key>,%<field>))={&CHARGEN`ROUND`%q<submit_round>`%<field> %q<app_objid>=u(%!/FUN`APP`VALUE,%q<app_key>,%<field>); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>`%<field>=wizard}}
         flags: [cmdsyntax]
       # Records how long the application waited for its decision, keeping the latest 200.
       INC`DO`RECORDWAIT:
@@ -734,15 +879,15 @@ objects:
         value: |-
           @include %!/INC`NEED`REVIEWER; @include/args %!/INC`NEED`TARGET=name,%q<cmd_argument>; @pemit %#=u(%!/FUN`DISPLAY`APP,%q<app_key>,strmatch(%q<app_objid>,%q<viewer_objid>),1,%q<app_objid>)
         flags: [cmdsyntax]
-      # +app/set <field>=<text>
+      # +app/set <field>[/<chapter>]=<text>
       INC`APP`SET:
         value: |-
-          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert %q<cmd_has_equals>=@pemit %#=notice(APP,+app/set <field>=<text>. +app lists the fields.,warn); @assert strlen(setr(field_key,u(%!/FUN`FIELD`FIND,%q<cmd_left_side>)))=@pemit %#=notice(APP,There is no field '%q<cmd_left_side>'. +app lists them.,warn); @assert not(strlen(setr(field_problem,u(%!/FUN`FIELD`PROBLEM,%q<field_key>,%q<cmd_right_side>))))=@pemit %#=notice(APP,%q<field_problem>,warn); @include/args %!/INC`DO`SET=field,%q<field_key>,value,%q<cmd_right_side>; @pemit %#=notice(APP,if(strlen(%q<cmd_right_side>),u(%!/FUN`FIELD`LABEL,%q<field_key>) saved.,u(%!/FUN`FIELD`LABEL,%q<field_key>) cleared.),ok)
+          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert %q<cmd_has_equals>=@pemit %#=notice(APP,+app/set <field>=<text>. +app lists the fields.,warn); @assert not(strmatch(setr(field_slot,u(%!/FUN`SLOT`FIND,%q<cmd_left_side>)),#-1 *))=@pemit %#=notice(APP,after(%q<field_slot>,#-1%b),warn); @assert not(strlen(setr(field_problem,u(%!/FUN`SLOT`PROBLEM,%q<app_key>,%q<field_slot>,%q<cmd_right_side>))))=@pemit %#=notice(APP,%q<field_problem>,warn); @include/args %!/INC`DO`SET=slot,%q<field_slot>,value,%q<cmd_right_side>; @pemit %#=notice(APP,u(%!/FUN`SLOT`LABEL,%q<field_slot>) [if(strlen(%q<cmd_right_side>),saved,cleared)].,ok)
         flags: [cmdsyntax]
-      # +app/write <field>: collects lines until .done, then saves them as the field.
+      # +app/write <field>[/<chapter>]: collects lines until .done, then saves them as the field or the chapter.
       INC`APP`WRITE:
         value: |-
-          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert strlen(setr(field_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'. +app lists them.,warn); @include %!/INC`DO`TOUCH; &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}=%q<field_key>; @input/start Type [lcstr(u(%!/FUN`FIELD`LABEL,%q<field_key>))]%, as many lines as you like. It replaces what is there. Send .done on a line by itself to save it.=.done,INPUT`WRITE`DONE,*,INPUT`WRITE`LINE,1800
+          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert not(strmatch(setr(field_slot,u(%!/FUN`SLOT`FIND,%q<cmd_argument>)),#-1 *))=@pemit %#=notice(APP,after(%q<field_slot>,#-1%b),warn); @assert not(u(%!/FUN`SLOT`CROWDED,%q<app_key>,%q<field_slot>))=@pemit %#=notice(APP,u(%!/FUN`SLOT`CROWDED`TEXT,%q<field_slot>),warn); @include %!/INC`DO`TOUCH; &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}=%q<field_slot>; @input/start Type [lcstr(u(%!/FUN`SLOT`LABEL,%q<field_slot>))]%, as many lines as you like. It replaces what is there. Send .done on a line by itself to save it.=.done,INPUT`WRITE`DONE,*,INPUT`WRITE`LINE,1800
         flags: [cmdsyntax]
       # One line typed for +app/write: %0, never evaluated.
       INPUT`WRITE`LINE:
@@ -754,8 +899,8 @@ objects:
         value: |-
           think setqm(app_key,u(%!/FUN`APP`KEY,%#),
           app_objid,objid(%#),
-          field_key,get({{store}}/APP`%q<app_key>`WRITING`FIELD),
-          field_text,get({{store}}/APP`%q<app_key>`WRITING)); &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}; @assert strlen(%q<field_key>); @assert u(%!/FUN`STATE`EDITABLE,u(%!/FUN`APP`STATE,%q<app_key>))=@pemit %#=notice(APP,Your application cannot be changed now%, so nothing was saved.,warn); @assert not(strlen(setr(field_problem,u(%!/FUN`FIELD`PROBLEM,%q<field_key>,%q<field_text>))))=@pemit %#=notice(APP,%q<field_problem> Nothing was saved.,warn); @include/args %!/INC`DO`SET=field,%q<field_key>,value,%q<field_text>; @pemit %#=notice(APP,u(%!/FUN`FIELD`LABEL,%q<field_key>) saved[if(strmatch(r(reason,args),timeout),%b- time ran out%, so it was saved as it was)].,ok)
+          field_slot,get({{store}}/APP`%q<app_key>`WRITING`FIELD),
+          field_text,get({{store}}/APP`%q<app_key>`WRITING)); &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}; @assert strlen(%q<field_slot>); @assert u(%!/FUN`STATE`EDITABLE,u(%!/FUN`APP`STATE,%q<app_key>))=@pemit %#=notice(APP,Your application cannot be changed now%, so nothing was saved.,warn); @assert not(strlen(setr(field_problem,u(%!/FUN`SLOT`PROBLEM,%q<app_key>,%q<field_slot>,%q<field_text>))))=@pemit %#=notice(APP,%q<field_problem> Nothing was saved.,warn); @include/args %!/INC`DO`SET=slot,%q<field_slot>,value,%q<field_text>; @pemit %#=notice(APP,u(%!/FUN`SLOT`LABEL,%q<field_slot>) saved[if(strmatch(r(reason,args),timeout),%b- time ran out%, so it was saved as it was)].,ok)
         flags: [cmdsyntax]
       # +app/submit
       INC`APP`SUBMIT:
@@ -852,12 +997,23 @@ objects:
       # +apps/fields: every section and its fields.
       INC`APPS`FIELDS:
         value: |-
-          think setq(form_fields,u(%!/FUN`FORM`ALLFIELDS)); @pemit %#=box(iter(u(%!/FUN`FORM`SECTIONS),rule(u(%!/FUN`SECTION`NAME,%i0) [tone(muted,order [u(%!/FUN`FORM`SECTION`ORDER,%i0)])])%r[u(%!/FUN`DISPLAY`FIELDS,u(%!/FUN`FORM`FIELDS,%i0))],%b,%r)%r[rule()]%r[tone(muted,if(%q<viewer_admin>,+apps/field <key>=<section>/<label> adds or moves a field. +help app form has the rest.,+app/set <field>=<text> fills one in.))],Application form)
+          think setq(form_fields,u(%!/FUN`FORM`ALLFIELDS)); @pemit %#=box(iter(u(%!/FUN`FORM`SECTIONS),rule(u(%!/FUN`SECTION`NAME,%i0) [tone(muted,order [u(%!/FUN`FORM`SECTION`ORDER,%i0)])])%r[u(%!/FUN`DISPLAY`FIELDS,u(%!/FUN`FORM`FIELDS,%i0))],%b,%r)%r[rule()]%r[tone(muted,if(%q<viewer_admin>,+apps/field <key> shows one in full. +apps/field <key>=<section>/<label> adds or moves one. +help app form has the rest.,+apps/field <key> shows one in full. +app/set <field>=<text> fills one in.))],Application form)
         flags: [cmdsyntax]
       # %0 fields: a table of them, or a line saying there are none.
       FUN`DISPLAY`FIELDS:
         value: |-
-          if(words(%0),datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4,1%r1%r2%r2%r3,%r1%r%r%r1,%r10%r%r%r12),tone(strong,Field)%r[iter(%0,lcstr(%i0),,%r)],tone(strong,Label)%r[iter(%0,u(%!/FUN`FIELD`LABEL,%i0),,%r)],tone(strong,Type)%r[iter(%0,u(%!/FUN`FIELD`TYPE,%i0)[if(get({{store}}/FIELD`%i0`REQUIRED),%b· required)],,%r)],>[tone(strong,Max)]%r[iter(%0,u(%!/FUN`FIELD`MAX,%i0),,%r)],tone(strong,Notes)%r[iter(%0,firstof(if(strmatch(u(%!/FUN`FIELD`TYPE,%i0),choice),edit(get({{store}}/FIELD`%i0`CHOICES),|,%b/%b)),get({{store}}/FIELD`%i0`HELP),-),,%r)]),tone(muted,No fields.))
+          if(words(%0),datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1%r2%r3%r4%r5,1%r1%r2%r2%r2%r3,%r1%r%r%r%r1,%r10%r%r%r%r8),tone(strong,Field)%r[iter(%0,lcstr(%i0),,%r)],tone(strong,Label)%r[iter(%0,u(%!/FUN`FIELD`LABEL,%i0),,%r)],tone(strong,Type)%r[iter(%0,u(%!/FUN`FIELD`TYPE,%i0)[if(get({{store}}/FIELD`%i0`REQUIRED),%b· required)],,%r)],tone(strong,Attribute)%r[iter(%0,u(%!/FUN`DISPLAY`FIELD`ATTRIBUTE,%i0),,%r)],>[tone(strong,Max)]%r[iter(%0,u(%!/FUN`FIELD`MAX,%i0),,%r)],tone(strong,Notes)%r[iter(%0,u(%!/FUN`DISPLAY`FIELD`NOTES,%i0),,%r)]),tone(muted,No fields.))
+        flags: [funsyntax]
+      # %0 a field: the attribute that holds its answer on a character, and for a field in chapters how many.
+      FUN`DISPLAY`FIELD`ATTRIBUTE:
+        value: |-
+          u(%!/FUN`FIELD`ATTRIBUTE,%0)[if(u(%!/FUN`FIELD`CHAPTERED,%0),%b· [u(%!/FUN`FIELD`CHAPTERS,%0)] chapters)]
+        flags: [funsyntax]
+      # %0 a field: its choices and its help, or a dash.
+      FUN`DISPLAY`FIELD`NOTES:
+        value: |-
+          setqm(notes_choices,if(strmatch(u(%!/FUN`FIELD`TYPE,%0),choice),edit(get({{store}}/FIELD`%0`CHOICES),|,%b/%b)),
+          notes_help,get({{store}}/FIELD`%0`HELP))[firstof(%q<notes_choices>[if(cand(strlen(%q<notes_choices>),strlen(%q<notes_help>)),%b·%b)]%q<notes_help>,-)]
         flags: [funsyntax]
       # +apps/section <key>=<title>: adds a section at the end, or retitles one.
       INC`APPS`SECTION:
@@ -875,18 +1031,56 @@ objects:
           @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`SECTION`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no section '%q<cmd_argument>'.,warn); @assert not(words(u(%!/FUN`FORM`FIELDS,%q<form_key>)))=@pemit %#=notice(APP,Move or remove its fields first: [lcstr(u(%!/FUN`FORM`FIELDS,%q<form_key>))].,warn); think setq(form_title,get({{store}}/SECTION`%q<form_key>)); &SECTION`%q<form_key>`ORDER {{store}}; &SECTION`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the section %q<form_title>. Comments on it stay with each application.,ok)
         flags: [cmdsyntax]
       # +apps/field <key>=<section>/<label>: adds a text field at the end of the section, or moves and relabels one.
+      # Without the =, +apps/field <key> shows the field.
       INC`APPS`FIELD:
         value: |-
-          @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_right_side>,*/*))=@pemit %#=notice(APP,+apps/field <key>=<section>/<label>,warn); @assert strlen(setr(form_key,u(%!/FUN`FORM`KEY,%q<cmd_left_side>)))=@pemit %#=notice(APP,A field key is one word of up to 30 letters%, digits%, - and _.,warn); @assert strlen(setr(form_section,u(%!/FUN`SECTION`FIND,before(%q<cmd_right_side>,/))))=@pemit %#=notice(APP,There is no section '[before(%q<cmd_right_side>,/)]'. +apps/section <key>=<title> adds one.,warn); think setq(form_label,trim(after(%q<cmd_right_side>,/))); @assert cand(strlen(%q<form_label>),lte(strlen(%q<form_label>),60))=@pemit %#=notice(APP,A label is 1 to 60 characters.,warn); @include %!/INC`APPS`FIELD`STORE; @pemit %#=notice(APP,if(%q<form_new>,Added the field %q<form_label> to [get({{store}}/SECTION`%q<form_section>)]. +apps/field/type [lcstr(%q<form_key>)]=long makes it take many lines.,lcstr(%q<form_key>) is %q<form_label>%, in [get({{store}}/SECTION`%q<form_section>)].),ok)
+          @assert %q<cmd_has_equals>=@include %!/INC`APPS`FIELD`SHOW; @include %!/INC`NEED`ADMIN; @assert cand(%q<cmd_has_equals>,strmatch(%q<cmd_right_side>,*/*))=@pemit %#=notice(APP,+apps/field <key>=<section>/<label>,warn); @assert strlen(setr(form_key,u(%!/FUN`FORM`KEY,%q<cmd_left_side>)))=@pemit %#=notice(APP,A field key is one word of up to 30 letters%, digits%, - and _.,warn); @assert strlen(setr(form_section,u(%!/FUN`SECTION`FIND,before(%q<cmd_right_side>,/))))=@pemit %#=notice(APP,There is no section '[before(%q<cmd_right_side>,/)]'. +apps/section <key>=<title> adds one.,warn); think setq(form_label,trim(after(%q<cmd_right_side>,/))); @assert cand(strlen(%q<form_label>),lte(strlen(%q<form_label>),60))=@pemit %#=notice(APP,A label is 1 to 60 characters.,warn); @include %!/INC`APPS`FIELD`STORE; @pemit %#=notice(APP,if(%q<form_new>,Added the field %q<form_label> to [get({{store}}/SECTION`%q<form_section>)]. +apps/field/type [lcstr(%q<form_key>)]=long makes it take many lines.,lcstr(%q<form_key>) is %q<form_label>%, in [get({{store}}/SECTION`%q<form_section>)].),ok)
         flags: [cmdsyntax]
+      # +apps/field <key>: one field in full, and every attribute behind it.
+      INC`APPS`FIELD`SHOW:
+        value: |-
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(APP,+apps/field <key> shows a field. +apps/fields lists them.,warn); @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'. +apps/fields lists them.,warn); @pemit %#=u(%!/FUN`DISPLAY`FIELD,%q<form_key>,%q<viewer_admin>)
+        flags: [cmdsyntax]
+      # %0 a field, %1 1 for staff who change the form: what it is, where each character keeps its answer and
+      # each submission, and for staff the store's attributes that define it.
+      FUN`DISPLAY`FIELD:
+        value: |-
+          box(lfields(,u(%!/FUN`DISPLAY`FIELD`LABELS,%0),u(%!/FUN`DISPLAY`FIELD`VALUES,%0),%*<|>)%r[rule(On each character)]%r[u(%!/FUN`DISPLAY`FIELD`KEPT,%0)][if(%1,%r[rule(On [name({{store}})] %([num({{store}})]%))]%r[u(%!/FUN`DISPLAY`FIELD`STORE,%0)])]%r[rule()]%r[tone(muted,if(%1,+apps/field/<option> [lcstr(%0)]=<value> changes an option. +help app form lists them.,+app/set [lcstr(%0)][if(u(%!/FUN`FIELD`CHAPTERED,%0),/<chapter>)]=<text> fills it in.))],Field: [u(%!/FUN`FIELD`LABEL,%0)])
+        flags: [funsyntax]
+      # %0 a field: the labels of its options, %*<|> between them, in the order FUN`DISPLAY`FIELD`VALUES gives them.
+      FUN`DISPLAY`FIELD`LABELS:
+        value: |-
+          Key%*<|>Label%*<|>Section%*<|>Order%*<|>Type[if(strmatch(u(%!/FUN`FIELD`TYPE,%0),choice),%*<|>Choices)]%*<|>Required%*<|>Most characters[if(u(%!/FUN`FIELD`CHAPTERED,%0),%*<|>Chapters)]%*<|>Help
+        flags: [funsyntax]
+      # %0 a field: what each option is, a muted (default) after one the form leaves unset.
+      FUN`DISPLAY`FIELD`VALUES:
+        value: |-
+          lcstr(%0)%*<|>[u(%!/FUN`FIELD`LABEL,%0)]%*<|>[u(%!/FUN`SECTION`NAME,get({{store}}/FIELD`%0`SECTION))]%*<|>[u(%!/FUN`DISPLAY`FIELD`OPTION,%0,ORDER,u(%!/FUN`FORM`FIELD`ORDER,%0))]%*<|>[u(%!/FUN`DISPLAY`FIELD`OPTION,%0,TYPE,u(%!/FUN`FIELD`TYPE,%0))][if(strmatch(u(%!/FUN`FIELD`TYPE,%0),choice),%*<|>[firstof(edit(get({{store}}/FIELD`%0`CHOICES),|,%b/%b),tone(muted,none yet))])]%*<|>[if(get({{store}}/FIELD`%0`REQUIRED),yes,no)]%*<|>[u(%!/FUN`DISPLAY`FIELD`OPTION,%0,MAX,u(%!/FUN`FIELD`MAX,%0)[if(u(%!/FUN`FIELD`CHAPTERED,%0),%bin each chapter)])][if(u(%!/FUN`FIELD`CHAPTERED,%0),%*<|>[u(%!/FUN`DISPLAY`FIELD`OPTION,%0,CHAPTERS,up to [u(%!/FUN`FIELD`CHAPTERS,%0)])])]%*<|>[firstof(get({{store}}/FIELD`%0`HELP),-)]
+        flags: [funsyntax]
+      # %0 a field, %1 an option's leaf, %2 how it reads: that, and a muted (default) when the leaf is unset.
+      FUN`DISPLAY`FIELD`OPTION:
+        value: |-
+          %2[if(not(hasattr({{store}},FIELD`%0`%1)),%b[tone(muted,%(default%))])]
+        flags: [funsyntax]
+      # %0 a field: the attributes each character keeps it in, the draft and each submitted round.
+      FUN`DISPLAY`FIELD`KEPT:
+        value: |-
+          setq(kept_attribute,u(%!/FUN`FIELD`ATTRIBUTE,%0))[fields(,Answer,%q<kept_attribute>[if(u(%!/FUN`FIELD`CHAPTERED,%0),%b[tone(muted,%(the * is the chapter: [edit(%q<kept_attribute>,*,1)]%, [edit(%q<kept_attribute>,*,2)]...%))])][if(not(hasattr({{store}},FIELD`%0`ATTRIBUTE)),%b[tone(muted,%(default%))])],Each round,CHARGEN`ROUND`<n>`%0[if(u(%!/FUN`FIELD`CHAPTERED,%0),`<chapter>)])]
+        flags: [funsyntax]
+      # %0 a field: a table of the store's attributes that define it, with their values.
+      FUN`DISPLAY`FIELD`STORE:
+        value: |-
+          setq(store_attributes,FIELD`%0 [lattr({{store}}/FIELD`%0`*)])[datacolumns(u(%!/FUN`DISPLAY`TABLEOPTIONS,1,1%r2,%r1,%r10),tone(strong,Attribute)%r[iter(%q<store_attributes>,%i0,,%r)],tone(strong,Value)%r[iter(%q<store_attributes>,get({{store}}/%i0),,%r)])]
+        flags: [funsyntax]
       # Writes field %q<form_key> into section %q<form_section> as %q<form_label>: a new one at the end of the
       # section as a text field, one moving section at the end of its new one. Sets form_new.
       INC`APPS`FIELD`STORE:
         value: |-
           think setq(form_new,not(hasattr({{store}},FIELD`%q<form_key>))); &FIELD`%q<form_key> {{store}}=%q<form_label>; @if cor(%q<form_new>,comp(get({{store}}/FIELD`%q<form_key>`SECTION),%q<form_section>))={&FIELD`%q<form_key>`ORDER {{store}}=inc(words(u(%!/FUN`FORM`FIELDS,%q<form_section>)))}; &FIELD`%q<form_key>`SECTION {{store}}=%q<form_section>; @if %q<form_new>={&FIELD`%q<form_key>`TYPE {{store}}=text; &FIELD`%q<form_key>`REQUIRED {{store}}=0}
         flags: [cmdsyntax]
-      # +apps/field/<option> <key>=<value>: label, section, type, choices, required, max, order or help. Each
-      # option is its own check, FUN`FORM`OPTION`<OPTION>, which gives the value to keep, or #-1 and the reason.
+      # +apps/field/<option> <key>=<value>: label, section, type, choices, required, max, order, help, attribute or
+      # chapters. Each option is its own check, FUN`FORM`OPTION`<OPTION>, which gives the value to keep, or #-1
+      # and the reason.
       INC`APPS`FIELD`OPTION:
         value: |-
           @include %!/INC`NEED`ADMIN; think setq(form_option,ucstr(last(%q<cmd_switch_list>))); @assert %q<cmd_has_equals>=@pemit %#=notice(APP,+apps/field/[lcstr(%q<form_option>)] <key>=<value>,warn); @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_left_side>)))=@pemit %#=notice(APP,There is no field '%q<cmd_left_side>'. +apps/fields lists them.,warn); think setq(form_value,u(%!/FUN`FORM`OPTION`%q<form_option>,%q<cmd_right_side>,%q<form_key>)); @assert not(strmatch(%q<form_value>,#-1 *))=@pemit %#=notice(APP,after(%q<form_value>,#-1%b),warn); think setq(form_leaf,FIELD`%q<form_key>[if(comp(%q<form_option>,LABEL),`%q<form_option>)]); @if strlen(%q<form_value>)={&%q<form_leaf> {{store}}=%q<form_value>},{&%q<form_leaf> {{store}}}; @pemit %#=notice(APP,u(%!/FUN`FIELD`LABEL,%q<form_key>) [lcstr(%q<form_option>)]: [if(strlen(%q<form_value>),switch(%q<form_option>,REQUIRED,if(%q<form_value>,yes,no),SECTION,get({{store}}/SECTION`%q<form_value>),%q<form_value>),back to the default)],ok)
@@ -914,7 +1108,7 @@ objects:
         flags: [funsyntax]
       FUN`FORM`OPTION`MAX:
         value: |-
-          if(cor(not(strlen(%0)),cand(isint(%0),gte(%0,1),lte(%0,8000))),%0,#-1 Max is a number of characters from 1 to 8000%, or nothing for the default.)
+          if(cor(not(strlen(%0)),cand(isint(%0),gte(%0,1),lte(%0,32000))),%0,#-1 Max is a number of characters from 1 to 32000%, or nothing for the default.)
         flags: [funsyntax]
       FUN`FORM`OPTION`ORDER:
         value: |-
@@ -922,7 +1116,11 @@ objects:
         flags: [funsyntax]
       FUN`FORM`OPTION`ATTRIBUTE:
         value: |-
-          if(cor(not(strlen(%0)),cand(lte(strlen(%0),60),regmatch(%0,^%[A-Za-z0-9_-%]%[A-Za-z0-9_`-%]*$))),ucstr(%0),#-1 An attribute name is up to 60 letters%, digits%, -%, _ and `.)
+          if(cor(not(strlen(%0)),cand(lte(strlen(%0),60),regmatch(%0,^%[A-Za-z0-9_-%]%[A-Za-z0-9_`-%]*%(%[*%]%[A-Za-z0-9_`-%]*%)?$))),ucstr(%0),#-1 An attribute name is up to 60 letters%, digits%, -%, _ and `%, with at most one * for the chapter%, not first.)
+        flags: [funsyntax]
+      FUN`FORM`OPTION`CHAPTERS:
+        value: |-
+          if(cor(not(strlen(%0)),cand(isint(%0),gte(%0,1),lte(%0,100))),%0,#-1 Chapters is a number from 1 to 100%, or nothing for the default.)
         flags: [funsyntax]
       FUN`FORM`OPTION`HELP:
         value: |-
@@ -931,7 +1129,7 @@ objects:
       # +apps/field/remove <key>: the field leaves the form. What applications said in it stays with them.
       INC`APPS`FIELD`REMOVE:
         value: |-
-          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'.,warn); think setq(form_label,get({{store}}/FIELD`%q<form_key>)); @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP ATTRIBUTE={&FIELD`%q<form_key>`## {{store}}}; &FIELD`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the field %q<form_label>. What applications said in it stays with them.,ok)
+          @include %!/INC`NEED`ADMIN; @assert strlen(setr(form_key,u(%!/FUN`FIELD`FIND,%q<cmd_argument>)))=@pemit %#=notice(APP,There is no field '%q<cmd_argument>'.,warn); think setq(form_label,get({{store}}/FIELD`%q<form_key>)); @dolist/inline SECTION TYPE CHOICES REQUIRED MAX ORDER HELP ATTRIBUTE CHAPTERS={&FIELD`%q<form_key>`## {{store}}}; &FIELD`%q<form_key> {{store}}; @pemit %#=notice(APP,Removed the field %q<form_label>. What applications said in it stays with them.,ok)
         flags: [cmdsyntax]
 
       # ---- portal -----------------------------------------------------------------
@@ -1019,10 +1217,17 @@ objects:
         value: |-
           json(object,kind,json(string,field),key,json(string,%0),label,json(string,%1),type,json(string,%2),help,json(string,%3),options,firstof(%6,json_array()),validation,json(object,required,u(%!/WEB`JSON`BOOLEAN,%4),max_length,json(number,firstof(%5,100000))))
         flags: [funsyntax]
-      # %0 a field of the form: its input.
+      # %0 a key, %1 a field of the form: its inputs, one for each slot. A field in chapters has a box for each
+      # chapter and an empty one for the next; only the first carries the help and says the field is required.
       WEB`FORM`INPUT`FIELD:
         value: |-
-          setq(web_input_type,u(%!/FUN`FIELD`TYPE,%0))[u(%!/WEB`FORM`INPUT,field_[lcstr(%0)],u(%!/FUN`FIELD`LABEL,%0),switch(%q<web_input_type>,long,textarea,choice,select,text),get({{store}}/FIELD`%0`HELP),get({{store}}/FIELD`%0`REQUIRED),u(%!/FUN`FIELD`MAX,%0),if(strmatch(%q<web_input_type>,choice),u(%!/WEB`JSON`ARRAY,iter(get({{store}}/FIELD`%0`CHOICES),json(object,value,json(string,%i0),label,json(string,%i0)),|,%r))))]
+          iter(u(%!/FUN`APP`SLOTS,%0,%1),u(%!/WEB`FORM`INPUT`SLOT,%i0,eq(#@,1)),%b,%r)
+        flags: [funsyntax]
+      # %0 a slot, %1 1 for its field's first: its input, field_<slot>.
+      WEB`FORM`INPUT`SLOT:
+        value: |-
+          setqm(web_input_field,u(%!/FUN`SLOT`FIELD,%0),
+          web_input_type,u(%!/FUN`FIELD`TYPE,%q<web_input_field>))[u(%!/WEB`FORM`INPUT,field_[lcstr(%0)],u(%!/FUN`SLOT`LABEL,%0),switch(%q<web_input_type>,long,textarea,choice,select,text),if(%1,get({{store}}/FIELD`%q<web_input_field>`HELP)),cand(%1,get({{store}}/FIELD`%q<web_input_field>`REQUIRED)),u(%!/FUN`FIELD`MAX,%q<web_input_field>),if(strmatch(%q<web_input_type>,choice),u(%!/WEB`JSON`ARRAY,iter(get({{store}}/FIELD`%q<web_input_field>`CHOICES),json(object,value,json(string,%i0),label,json(string,%i0)),|,%r))))]
         flags: [funsyntax]
       # %0 a section key, or empty for the whole application, %1 1 for a reviewer: the comment box, and a
       # reviewer's Staff only switch.
@@ -1106,7 +1311,7 @@ objects:
       # its owner's page.
       WEB`SECTION`MINE:
         value: |-
-          setq(web_section_comments,words(u(%!/FUN`APP`COMMENTS,%0,%1,0)))[if(%2,iter(u(%!/FUN`FORM`FIELDS,%1),u(%!/WEB`FORM`INPUT`FIELD,%i0),%b,%r),u(%!/WEB`FORM`ANSWERS,%0,%1,))][if(%q<web_section_comments>,%r[u(%!/WEB`FORM`TIMELINE,comments_[lcstr(%1)],)][if(%3,%r[u(%!/WEB`FORM`INPUT`COMMENT,%1,0)])])]
+          setq(web_section_comments,words(u(%!/FUN`APP`COMMENTS,%0,%1,0)))[if(%2,iter(u(%!/FUN`FORM`FIELDS,%1),u(%!/WEB`FORM`INPUT`FIELD,%0,%i0),%b,%r),u(%!/WEB`FORM`ANSWERS,%0,%1,))][if(%q<web_section_comments>,%r[u(%!/WEB`FORM`TIMELINE,comments_[lcstr(%1)],)][if(%3,%r[u(%!/WEB`FORM`INPUT`COMMENT,%1,0)])])]
         flags: [funsyntax]
 
       # One application, key %1, for reviewer %0: the last submission section by section, what changed since
@@ -1193,7 +1398,7 @@ objects:
         value: |-
           setqm(web_data_state,u(%!/FUN`APP`STATE,%0),
           web_data_round,default({{store}}/APP`%0`ROUND,0),
-          web_data_queue,if(cor(%1,get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/FUN`QUEUE`TEXT,%0)))[u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,State,json(string,u(%!/FUN`STATE`LABEL,%q<web_data_state>)[if(%q<web_data_round>,%b· round %q<web_data_round>)]),1)%r[u(%!/WEB`JSON`MEMBER,Submitted,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))),1)]%r[u(%!/WEB`JSON`MEMBER,Queue,json(string,%q<web_data_queue>),strlen(%q<web_data_queue>))]%r[u(%!/WEB`JSON`MEMBER,comments_all,u(%!/WEB`DATA`COMMENTS,%0,,%1),1)][iter(u(%!/FUN`FORM`SECTIONS),%r[u(%!/WEB`JSON`MEMBER,comments_[lcstr(%i0)],u(%!/WEB`DATA`COMMENTS,%0,%i0,%1),1)][if(cand(%1,gt(%q<web_data_round>,1)),%r[u(%!/WEB`JSON`MEMBER,diff_[lcstr(%i0)],u(%!/WEB`DATA`DIFF,%0,%i0,dec(%q<web_data_round>),%q<web_data_round>),1)])],%b,)][if(%2,iter(u(%!/FUN`FORM`ALLFIELDS),%r[u(%!/WEB`JSON`MEMBER,field_[lcstr(%i0)],json(string,u(%!/FUN`APP`VALUE,%0,%i0)),1)],%b,))])]
+          web_data_queue,if(cor(%1,get(%!/DATA`CONFIG`SHOW-QUEUE)),u(%!/FUN`QUEUE`TEXT,%0)))[u(%!/WEB`JSON`OBJECT,u(%!/WEB`JSON`MEMBER,State,json(string,u(%!/FUN`STATE`LABEL,%q<web_data_state>)[if(%q<web_data_round>,%b· round %q<web_data_round>)]),1)%r[u(%!/WEB`JSON`MEMBER,Submitted,json(string,u(%!/FUN`DISPLAY`AGO,get({{store}}/APP`%0`SUBMITTED))),1)]%r[u(%!/WEB`JSON`MEMBER,Queue,json(string,%q<web_data_queue>),strlen(%q<web_data_queue>))]%r[u(%!/WEB`JSON`MEMBER,comments_all,u(%!/WEB`DATA`COMMENTS,%0,,%1),1)][iter(u(%!/FUN`FORM`SECTIONS),%r[u(%!/WEB`JSON`MEMBER,comments_[lcstr(%i0)],u(%!/WEB`DATA`COMMENTS,%0,%i0,%1),1)][if(cand(%1,gt(%q<web_data_round>,1)),%r[u(%!/WEB`JSON`MEMBER,diff_[lcstr(%i0)],u(%!/WEB`DATA`DIFF,%0,%i0,dec(%q<web_data_round>),%q<web_data_round>),1)])],%b,)][if(%2,iter(u(%!/FUN`APP`ALLSLOTS,%0),%r[u(%!/WEB`JSON`MEMBER,field_[lcstr(%i0)],json(string,u(%!/FUN`SLOT`VALUE,%0,%i0)),1)],%b,))])]
         flags: [funsyntax]
       # %0 a key, %1 a section (empty for the whole application), %2 1 for a reviewer: the comments there, as
       # timeline entries.
@@ -1276,15 +1481,15 @@ objects:
         value: |-
           @include %!/WEB`NEED`APP; @assert %q<viewer_staff>=think setq(web_response,u(%!/WEB`RESULT`ERROR,Only application reviewers can do that.)); @assert comp(%q<app_key>,%q<viewer_key>)=think setq(web_response,u(%!/WEB`RESULT`ERROR,Someone else decides your own application.))
         flags: [cmdsyntax]
-      # Checks every posted field (field_<field>) and saves the ones that changed. A problem is shown on its input.
+      # Checks every posted slot (field_<slot>) and saves the ones that changed. A problem is shown on its input.
       WEB`SAVE`FIELDS:
         value: |-
-          think setq(web_errors,iter(filterbool(%!/WEB`FIELD`WRONG,u(%!/FUN`FORM`ALLFIELDS)),json(object,field_[lcstr(%i0)],json(string,u(%!/FUN`FIELD`PROBLEM,%i0,u(%!/WEB`BODY`GET,field_[lcstr(%i0)])))),%b,%r)); @assert not(strlen(%q<web_errors>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_errors>)); @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@if comp(u(%!/WEB`BODY`GET,field_[lcstr(##)]),u(%!/FUN`APP`VALUE,%q<app_key>,##))={@include/args %!/INC`DO`SET=field,##,value,u(%!/WEB`BODY`GET,field_[lcstr(##)])}}
+          think setq(web_slots,u(%!/FUN`APP`ALLSLOTS,%q<app_key>)); think setq(web_errors,iter(filterbool(%!/WEB`FIELD`WRONG,%q<web_slots>),json(object,field_[lcstr(%i0)],json(string,u(%!/FUN`SLOT`PROBLEM,%q<app_key>,%i0,u(%!/WEB`BODY`GET,field_[lcstr(%i0)])))),%b,%r)); @assert not(strlen(%q<web_errors>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_errors>)); @dolist/inline %q<web_slots>={@if comp(u(%!/WEB`BODY`GET,field_[lcstr(##)]),u(%!/FUN`SLOT`VALUE,%q<app_key>,##))={@include/args %!/INC`DO`SET=slot,##,value,u(%!/WEB`BODY`GET,field_[lcstr(##)])}}
         flags: [cmdsyntax]
-      # %0 a field: 1 when what was posted for it does not fit.
+      # %0 a slot: 1 when what was posted for it does not fit.
       WEB`FIELD`WRONG:
         value: |-
-          t(strlen(u(%!/FUN`FIELD`PROBLEM,%0,u(%!/WEB`BODY`GET,field_[lcstr(%0)]))))
+          t(strlen(u(%!/FUN`SLOT`PROBLEM,%q<app_key>,%0,u(%!/WEB`BODY`GET,field_[lcstr(%0)]))))
         flags: [funsyntax]
       # %0 a comment box: 1 when what was posted in it is too long.
       WEB`COMMENT`LONG:
@@ -1314,7 +1519,7 @@ objects:
       # Submit: saves, then checks the required fields are filled in and sends it to staff.
       WEB`ACT`SUBMIT:
         value: |-
-          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; @include %!/INC`DO`TOUCH; think setq(web_missing,iter(filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>),json(object,field_[lcstr(%i0)],json(string,Fill this in before you submit.)),%b,%r)); @assert not(strlen(%q<web_missing>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_missing>)); @include %!/INC`DO`SUBMIT; think setq(web_response,u(%!/WEB`RESULT`DONE,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)]))
+          @include %!/WEB`NEED`APP; @include %!/WEB`NEED`MINE; @include %!/WEB`NEED`EDITABLE; @include %!/WEB`SAVE`FIELDS; @include %!/WEB`SAVE`COMMENTS; @include %!/INC`DO`TOUCH; think setq(web_missing,iter(filterbool(%!/FUN`APP`MISSES,u(%!/FUN`FORM`ALLFIELDS),,,%q<app_key>),json(object,field_[lcstr(first(u(%!/FUN`APP`SLOTS,%q<app_key>,%i0)))],json(string,Fill this in before you submit.)),%b,%r)); @assert not(strlen(%q<web_missing>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_missing>)); @include %!/INC`DO`SUBMIT; think setq(web_response,u(%!/WEB`RESULT`DONE,Submitted. [if(get(%!/DATA`CONFIG`SHOW-QUEUE),u(%!/FUN`QUEUE`TEXT,%q<app_key>),Staff will read it.)]))
         flags: [cmdsyntax]
       WEB`ACT`WITHDRAW:
         value: |-
@@ -1341,10 +1546,10 @@ objects:
         value: |-
           setq(web_own,not(comp(%q<app_key>,%q<viewer_key>)))[json(object,ok,json(boolean,true),message,json(string,%0),fields,if(%q<web_own>,u(%!/WEB`RESULT`FIELDS,%q<app_key>),u(%!/WEB`JSON`EMPTY)),schema,if(%q<web_own>,u(%!/WEB`SCHEMA`MINE,%q<viewer_objid>),u(%!/WEB`SCHEMA`APP,%q<viewer_objid>,%q<app_key>)),data,json(object,fields,if(%q<web_own>,u(%!/WEB`DATA`APP,%q<app_key>,0,1),u(%!/WEB`DATA`APP,%q<app_key>,1,0))))]
         flags: [funsyntax]
-      # %0 a key: the draft's fields as input values.
+      # %0 a key: the draft's slots as input values.
       WEB`RESULT`FIELDS:
         value: |-
-          u(%!/WEB`JSON`OBJECT,iter(u(%!/FUN`FORM`ALLFIELDS),json(object,field_[lcstr(%i0)],json(string,u(%!/FUN`APP`VALUE,%0,%i0))),%b,%r))
+          u(%!/WEB`JSON`OBJECT,iter(u(%!/FUN`APP`ALLSLOTS,%0),json(object,field_[lcstr(%i0)],json(string,u(%!/FUN`SLOT`VALUE,%0,%i0))),%b,%r))
         flags: [funsyntax]
 
       # ---- hooks ------------------------------------------------------------------
@@ -1440,6 +1645,8 @@ objects:
         1
       FIELD`BACKGROUND`HELP: |-
         Where they come from and what brought them here.
+      FIELD`BACKGROUND`ATTRIBUTE: |-
+        BG*
       FIELD`PERSONALITY: |-
         Personality
       FIELD`PERSONALITY`SECTION: |-
@@ -1480,7 +1687,11 @@ objects:
       SEE`APP`REVIEW: |-
         app settings
       SEE`APP`FORM: |-
-        app settings
+        app fields|app chapters|app settings
+      SEE`APP`FIELDS: |-
+        app form|app chapters
+      SEE`APP`CHAPTERS: |-
+        app|app fields
       SEE`APP`SETTINGS: |-
         app review|config
       HELP`APP: |-
@@ -1502,6 +1713,8 @@ objects:
         - `+app`: your application, with your place in the queue and the typical wait.
         - `+app/set <field>=<text>`: fill in a field. An empty text clears it.
         - `+app/write <field>`: write a long field over many lines. Send `.done` on a line by itself to save.
+        - `+app/set <field>/<chapter>=<text>` and `+app/write <field>/<chapter>`: one chapter of a field
+          that comes in chapters \(`+help app chapters`\).
         - `+app/submit`: send it to staff.
         - `+app/withdraw`: take a submitted application back to change it.
         - `+app/comment <section>=<text>`: answer staff about one section; `+app/comment =<text>` about the
@@ -1564,15 +1777,31 @@ objects:
         on the character too, in its CHARGEN tree. What was said stays on the character when a field
         moves or goes, and a new `attribute` does not move answers already given.
 
-        - `+apps/fields`: every section and field.
+        - `+apps/fields`: every section and field, with the attribute each answer is kept in.
+        - `+apps/field <key>`: one field in full: each option, the attributes every character keeps it in,
+          and for staff the attributes on the Chargen Store that define it.
         - `+apps/section <key>=<title>`: add a section at the end, or retitle one.
         - `+apps/section/order <key>=<number>`: lower comes first.
         - `+apps/section/remove <key>`: an empty section only.
         - `+apps/field <key>=<section>/<label>`: add a text field at the end of a section, or move and relabel one.
+        - `+apps/field/<option> <key>=<value>`: change one of its options \(`+help app fields`\).
         - `+apps/field/remove <key>`.
 
-        A key is one word of letters, digits, `-` and `_`. Each field has options, set with
-        `+apps/field/<option> <key>=<value>`; an empty value puts one back to its default:
+        A key is one word of letters, digits, `-` and `_`.
+
+        Example:
+
+        ```
+        +apps/field background
+        ```
+
+        Output: a box titled `Field: Background` with its key, section, order, type, whether it is required,
+        its most characters and its help, then `On each character` with the answer's attribute, `BG*`, in chapters,
+        and each round's, `` CHARGEN`ROUND`<n>`BACKGROUND`<chapter> ``, then a table of its attributes on the
+        Chargen Store.
+      HELP`APP`FIELDS: |-
+        Each field has options, set with `+apps/field/<option> <key>=<value>`. An empty value puts one back to
+        its default, and `+apps/field <key>` marks the options left at it.
 
         | Option | Value |
         |---|---|
@@ -1581,10 +1810,11 @@ objects:
         | `type` | `text` \(a line\), `long` \(paragraphs\) or `choice` |
         | `choices` | for a choice field: the choices, split by vertical bars |
         | `required` | `yes` when it must be filled in before submitting |
-        | `max` | the most characters: 200 for text and 4000 for long by default |
+        | `max` | the most characters: 500 for text and 8000 for long by default, in each chapter for a field in chapters |
         | `order` | where it comes in its section |
         | `help` | a line shown under an empty field |
-        | `attribute` | the attribute on the character that holds the answer: the key by default |
+        | `attribute` | the attribute on the character that holds the answer: the key by default. One with a `*` is a pattern, and the field comes in chapters \(`+help app chapters`\) |
+        | `chapters` | for a field in chapters, how many it may have: 20 by default, up to 100 |
 
         Example:
 
@@ -1593,6 +1823,37 @@ objects:
         ```
 
         Output: `\[APP\] Done: Archetype choices: Fighter|Scholar|Rogue|Mystic`
+      HELP`APP`CHAPTERS: |-
+        A long field can come in chapters, each kept in an attribute of its own, the way older games keep a
+        background in BG1, BG2 and so on. Staff give the field an attribute with a `*` in it, which stands for the
+        chapter: `BG*` keeps chapter 1 in BG1 and chapter 2 in BG2. A chapter is a word of up to 20 letters,
+        digits, `-` and `_`, usually a number.
+
+        ## Writing chapters
+
+        - `+app/set background/2=<text>`: write chapter 2. An empty text clears it.
+        - `+app/write background/2`: write it over many lines.
+        - `+app/set background=<text>` is chapter 1.
+
+        `+app` shows every chapter in order, each under its name. A submission keeps them all, and staff see
+        which changed. In the web portal each chapter has its own box, with an empty one for the next.
+
+        ## Setting it up
+
+        The form's Background field comes in chapters, as `BG*`. To put another long field in chapters, or to
+        allow Background 10 of them:
+
+        ```
+        +apps/field/attribute personality=PERS*
+        +apps/field/chapters background=10
+        ```
+
+        Output: `\[APP\] Done: Personality attribute: PERS*`, then `\[APP\] Done: Background chapters: 10`
+
+        `+apps/field/attribute background=BACKGROUND` puts Background back in one attribute.
+
+        A character who already has BG1 and BG2 from an imported database finds them as chapters 1 and 2.
+        The most characters, `max`, is for each chapter.
       HELP`APP`SETTINGS: |-
         `+config chargen` lists the settings; `+config chargen/<setting>=<value>` changes one.
 

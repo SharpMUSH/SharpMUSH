@@ -213,6 +213,7 @@ jobs:
         env:
           SHARPMUSH_ENABLE_TEST_TELEMETRY: true
           SHARPMUSH_TELEMETRY_OUTPUT_PATH: ${{ github.workspace }}/test-telemetry.md
+          SHARPMUSH_TEMP_LEAK_GATE: true
         # No retry: a test that fails once is an isolation or ordering bug to fix, not to re-roll.
         timeout-minutes: 30
         run: >-

@@ -74,15 +74,20 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		builder.ConfigureTestServices(TestHostServices.RemoveRecurringJobRunner);
 		builder.ConfigureTestServices(TestHostServices.RecordServerRestarts);
 		builder.ConfigureTestServices(TestHostServices.RecordFeedLines);
+		builder.ConfigureTestServices(TestHostServices.FixConnectionTraffic);
 
 		if (worldPath is not null)
 		{
 			// One database, one host: a host that needs a configuration of its own gets a world of its own
-			// rather than opening the session's.
+			// rather than opening the session's. Its connections are its own too: the shared NATS bucket holds
+			// every connection the session's world registered, and reconciling those at startup is one KV read
+			// per connection, which times out under full-suite load.
 			builder.ConfigureTestServices(services =>
 			{
 				services.RemoveAll<LightningWorldPath>();
 				services.AddSingleton(new LightningWorldPath(worldPath));
+				services.RemoveAll<IConnectionStateStore>();
+				services.AddSingleton<IConnectionStateStore, InMemoryConnectionStateStore>();
 			});
 		}
 

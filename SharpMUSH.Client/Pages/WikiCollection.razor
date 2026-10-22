@@ -7,7 +7,7 @@
 @inject NavigationManager Nav
 @implements IDisposable
 
-<PageTitle>@Loc["WikiCollections"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["WikiCollections"] — <GameName /></PageTitle>
 <div class="wiki-collection-route">
     <WikiCollectionBrowser Collection="@_state.Collection" Search="@_state.Search" Category="@_state.Category" Skip="@_state.Skip" Locale="@_state.Locale" />
 </div>

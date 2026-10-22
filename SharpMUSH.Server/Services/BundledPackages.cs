@@ -82,6 +82,11 @@ public static class BundledPackages
 		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
 		// because it needs the event handler and scene does not.
 		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
+		// The getting-started checklist at login and in +welcome, and its bridges to +help and +config. onboarding
+		// depends on nothing; each bridge installs only where both of its halves are.
+		new("onboarding", BundledPackageHandler.Event, InstallAtFirstBoot: true),
+		new("onboarding-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		new("onboarding-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -94,9 +99,11 @@ public static class BundledPackages
 		// jobs-app is for jobs.
 		new("chargen", BundledPackageHandler.Http, InstallAtFirstBoot: false),
 		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
-		// Offered, not installed: a new game reads its messages from the stored text until the administrator
-		// chooses the Messages object (the setup wizard or the package page).
-		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// The checklist's approval step says where the player's application stands.
+		new("onboarding-chargen", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Installed: the stored texts are fixed, so a game renamed after its first boot would still greet players
+		// as SharpMUSH; the Messages object reads mudname() each time it is shown.
+		new("messages", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Available, not installed: +radio lands an object in the master room, and is the worked example of
 		// a system built on @feed.
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),

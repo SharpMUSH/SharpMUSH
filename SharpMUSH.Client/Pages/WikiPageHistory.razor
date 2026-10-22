@@ -9,7 +9,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["WkHistoryPageTitle", Slug] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["WkHistoryPageTitle", Slug] — <GameName /></PageTitle>
 
 <div class="wikihist">
     <BackLink Href="@WithLang(WikiRoutes.PathFor(Ns, Slug))">@_displayTitle</BackLink>

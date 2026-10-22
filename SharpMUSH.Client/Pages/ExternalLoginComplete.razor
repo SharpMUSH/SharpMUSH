@@ -9,7 +9,7 @@
 @inject AccountAuthService Auth
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
-<PageTitle>@Loc["AuthSignIn"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AuthSignIn"] — <GameName /></PageTitle>
 <div class="external-complete">
     <h1>@Loc["AuthSignIn"]</h1>
     @if (_error is not null && !_signup)

@@ -965,7 +965,22 @@ public partial class Commands
 			.Select((AnySharpContent item, CancellationToken _) => MessageFormatting.FormatObjectWithDbref(item.Object(), flagView))
 			.ToListAsync(ExecutionBudget.CurrentToken);
 
-		if (items.Count == 0)
+		// look.c do_inventory: an INVFORMAT replaces the whole listing, evaluated by the player with %0 the
+		// carried dbrefs and %1 their names, '|'-separated. An empty result shows nothing.
+		if (await AttributeService.GetAttributeAsync(executor, executor, "INVFORMAT",
+					IAttributeService.AttributeMode.Read, true) is SharpAttribute[])
+		{
+			var formatArgs = CallbackArguments.Of(
+				("contents", string.Join(" ", carried.Select(item => $"#{item.Object().DBRef.Number}"))),
+				("names", string.Join("|", items)));
+			var formatted = await AttributeService.EvaluateAttributeFunctionAsync(
+				parser, executor, executor, "INVFORMAT", formatArgs);
+			if (formatted.Length > 0)
+			{
+				await NotifyService.Notify(executor, formatted, executor);
+			}
+		}
+		else if (items.Count == 0)
 		{
 			await NotifyService.Notify(executor, "You aren't carrying anything.", executor);
 		}

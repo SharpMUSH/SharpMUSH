@@ -984,9 +984,11 @@ public class QueueAdmissionTests
 		{
 			observedAtPublication = count;
 			var pid = long.Parse(call.Arg<ITrigger>().Key.Name.Split('-').Last());
-			// Quartz invokes jobs independently of ScheduleJob's return. Start the competing
-			// transition here, then await it after admission releases its deferred lease.
-			firing = queue!.ReleaseScheduledWork(pid, semaphoreTimeout: true).AsTask();
+			// Quartz invokes jobs on its own threads, independently of ScheduleJob's return and outside the
+			// admission's budget. Start the competing transition here, then await it after admission releases
+			// its deferred lease.
+			using (ExecutionContext.SuppressFlow())
+				firing = Task.Run(() => queue!.ReleaseScheduledWork(pid, semaphoreTimeout: true).AsTask());
 			return Task.FromResult(DateTimeOffset.UtcNow);
 		});
 		var executed = Signal();

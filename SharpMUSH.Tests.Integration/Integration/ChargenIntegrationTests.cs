@@ -189,9 +189,9 @@ public class ChargenIntegrationTests
 			await Assert.That(diff).Contains("round 1 to").And.Contains("Born on the river barges.")
 				.And.Contains("Born on the barges of the Sallow.").And.DoesNotContain("A ferry pilot")
 				.Because("only what changed is shown");
-			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND)]")).IsEqualTo("Born on the river barges.")
+			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND`1)]")).IsEqualTo("Born on the river barges.")
 				.Because("each round is kept on the character");
-			await Assert.That(await As(applicant, "&CHARGEN`ROUND`1`BACKGROUND me=Rewritten")).Contains("NO PERMISSION")
+			await Assert.That(await As(applicant, "&CHARGEN`ROUND`1`BACKGROUND`1 me=Rewritten")).Contains("NO PERMISSION")
 				.Because("a character cannot rewrite what it submitted");
 
 			await Assert.That(await As(reviewer, $"+app/approve {applicant.Name}=Welcome.")).Contains($"Approved {applicant.Name}.");
@@ -297,6 +297,93 @@ public class ChargenIntegrationTests
 	}
 
 	[Test]
+	public async Task AFieldWithAnAttributePatternComesInChapters()
+	{
+		try
+		{
+			await InstallAsync("chargen");
+			var player = await Player("CgChap");
+			var reviewer = await Player("CgChapR", "application-reviewer");
+			var admin = await Player("CgChapA");
+			await God($"@permission/allow #{admin.DbRef.Number}=config.admin");
+
+			await God("+apps/field/attribute hooks=*HOOK");
+			await God("+apps/field/attribute hooks=HOOK*S*");
+			await Assert.That(await Stored("FIELD`HOOKS`ATTRIBUTE")).IsEqualTo(string.Empty)
+				.Because("a pattern has one *, and not first");
+			await God("+apps/field/attribute background=bg*");
+			await God("+apps/field/chapters background=2");
+			await Assert.That(await Stored("FIELD`BACKGROUND`ATTRIBUTE")).IsEqualTo("BG*");
+
+			await God($"&BG2 #{player.DbRef.Number}=Then the war came.");
+			await As(player, "+app/set concept=A ferry pilot");
+			await As(player, "+app/set archetype=rogue");
+			await Assert.That(await As(player, "+app/set background=Born on the barges.")).Contains("Background chapter 1 saved.")
+				.Because("a field in chapters named alone is its chapter 1");
+			await Assert.That(await God($"think [get(#{player.DbRef.Number}/BG1)]")).IsEqualTo("Born on the barges.");
+			await Assert.That(await As(player, "+app/set background/3=More.")).Contains("Background has room for 2 chapters.");
+			await Assert.That(await As(player, "+app/set concept/2=More.")).Contains("Concept has no chapters.");
+			await Assert.That(await As(player, "+app/set background/two words=More.")).Contains("A chapter is one word");
+
+			var own = await As(player, "+app");
+			await Assert.That(own).Contains("Chapter 1").And.Contains("Born on the barges.").And.Contains("Chapter 2")
+				.And.Contains("Then the war came.").Because("an attribute the pattern matches is a chapter, whoever set it");
+			await Assert.That(await As(player, "+app/submit")).Contains("Submitted.");
+			await Assert.That(await God($"think [get(#{player.DbRef.Number}/CHARGEN`ROUND`1`BACKGROUND`2)]")).IsEqualTo("Then the war came.")
+				.Because("a round keeps each chapter");
+
+			await As(reviewer, $"+app/return {player.Name}=Less war.");
+			await Assert.That(await As(player, "+app/set background/2=Peace, for a while.")).Contains("Background chapter 2 saved.");
+			await As(player, "+app/submit");
+			var diff = await As(reviewer, $"+app/diff {player.Name}");
+			await Assert.That(diff).Contains("Background chapter 2").And.Contains("Then the war came.").And.Contains("Peace, for a while.")
+				.And.DoesNotContain("Born on the barges.").Because("a field in chapters shows only the chapters that changed");
+
+			await Assert.That(await As(player, "+apps/fields")).Contains("BG* · 2 chapters");
+			var shown = await As(player, "+apps/field background");
+			await Assert.That(shown).Contains("Field: Background").And.Contains("in each chapter").And.Contains("up to 2")
+				.And.Contains("BG*").And.Contains("CHARGEN`ROUND`<n>`BACKGROUND`<chapter>").And.DoesNotContain("FIELD`BACKGROUND`TYPE")
+				.Because("only staff who change the form see the store's attributes");
+			var staffView = await As(admin, "+apps/field background");
+			await Assert.That(staffView).Contains("FIELD`BACKGROUND`ATTRIBUTE").And.Contains("FIELD`BACKGROUND`CHAPTERS");
+			await Assert.That(await As(admin, "+apps/field nosuch")).Contains("There is no field 'nosuch'.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task ThePortalShowsABoxForEachChapter()
+	{
+		try
+		{
+			await InstallAsync("chargen");
+			var applicant = await Player("CgWebChap");
+
+			var empty = (await Http("GET", "/chargen/schema?at=", "", applicant)).ToString();
+			await Assert.That(empty).Contains("field_background.1").And.DoesNotContain("field_background.2");
+
+			var saved = await Http("POST", "/chargen/act",
+				"""{"op":"save","field_concept":"A pilot","field_archetype":"Rogue","field_background.1":"Born on the barges."}""", applicant);
+			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
+			await Assert.That(saved.GetProperty("fields").GetProperty("field_background.1").GetString()).IsEqualTo("Born on the barges.");
+			await Assert.That(saved.GetProperty("fields").GetProperty("field_background.2").GetString()).IsEqualTo(string.Empty)
+				.Because("the next chapter gets an empty box");
+			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/BG1)]")).IsEqualTo("Born on the barges.");
+
+			var tooLong = await Http("POST", "/chargen/act",
+				$$"""{"op":"save","field_background.1":"Born on the barges.","field_background.2":"{{new string('x', 8001)}}"}""", applicant);
+			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_background.2").GetString()).IsEqualTo("Keep background to 8000 characters.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task ThePortalRoutesFillCommentReturnAndApprove()
 	{
 		try
@@ -320,7 +407,7 @@ public class ChargenIntegrationTests
 				.Because("the portal's own Submit button checks the required fields first");
 
 			var saved = await Http("POST", "/chargen/act",
-				"""{"op":"save","field_concept":"A pilot, {who} never misses a tide","field_archetype":"rogue","field_background":""}""", applicant);
+				"""{"op":"save","field_concept":"A pilot, {who} never misses a tide","field_archetype":"rogue","field_background.1":""}""", applicant);
 			await Assert.That(saved.GetProperty("ok").GetBoolean()).IsTrue().Because(saved.ToString());
 			await Assert.That(saved.GetProperty("fields").GetProperty("field_concept").GetString()).IsEqualTo("A pilot, {who} never misses a tide")
 				.Because("a value reaches the character whole, commas and braces too");
@@ -330,10 +417,10 @@ public class ChargenIntegrationTests
 			var tooLong = await Http("POST", "/chargen/act", $$"""{"op":"save","field_concept":"{{new string('x', 121)}}"}""", applicant);
 			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_concept").GetString()).IsEqualTo("Keep concept to 120 characters.");
 			var missing = await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background":""}""", applicant);
-			await Assert.That(missing.GetProperty("errors").GetProperty("field_background").GetString()).IsEqualTo("Fill this in before you submit.");
+				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background.1":""}""", applicant);
+			await Assert.That(missing.GetProperty("errors").GetProperty("field_background.1").GetString()).IsEqualTo("Fill this in before you submit.");
 			var submitted = await Http("POST", "/chargen/act",
-				"""{"field_concept":"A pilot","field_archetype":"Rogue","field_background":"Born on the barges."}""", applicant);
+				"""{"field_concept":"A pilot","field_archetype":"Rogue","field_background.1":"Born on the barges."}""", applicant);
 			await Assert.That(submitted.GetProperty("message").GetString()).StartsWith("Submitted. Number 1 of 1 in the queue.")
 				.Because("the portal's own Submit button posts no op");
 
@@ -366,13 +453,13 @@ public class ChargenIntegrationTests
 			await Assert.That(returned.GetProperty("message").GetString()).IsEqualTo($"Returned to {applicant.Name} for changes.");
 
 			await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background":"Born on the Sallow."}""", applicant);
+				"""{"op":"submit","field_concept":"A pilot","field_archetype":"Rogue","field_background.1":"Born on the Sallow."}""", applicant);
 			var diff = Datum(await Http("GET", $"/chargen/data?at={key}", "", reviewer), "diff_history");
 			await Assert.That(diff[0].GetProperty("before").GetString()).IsEqualTo("Born on the barges.");
 			await Assert.That(diff[0].GetProperty("after").GetString()).IsEqualTo("Born on the Sallow.");
 
 			await Http("POST", "/chargen/act",
-				"""{"op":"submit","field_concept":"A reviewer","field_archetype":"Scholar","field_background":"Reads."}""", reviewer);
+				"""{"op":"submit","field_concept":"A reviewer","field_archetype":"Scholar","field_background.1":"Reads."}""", reviewer);
 			var self = await Http("POST", "/chargen/act", $$"""{"op":"approve","key":"{{await Key(reviewer)}}"}""", reviewer);
 			await Assert.That(self.GetProperty("errors").GetProperty("_global").GetString()).IsEqualTo("Someone else decides your own application.");
 			var refused = await Http("POST", "/chargen/act", $$"""{"op":"approve","key":"{{key}}"}""", applicant);

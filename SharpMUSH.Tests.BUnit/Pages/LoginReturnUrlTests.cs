@@ -93,8 +93,8 @@ public class LoginReturnUrlTests : TrackingBunitContext, IAsyncDisposable
 		nav.NavigateTo(startingUri);
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
-		await cut.Find("#login-username").ChangeAsync("headwiz");
-		await cut.Find("#login-password").ChangeAsync("hunter2");
+		await cut.Find("#login-username").InputAsync(new ChangeEventArgs { Value = "headwiz" });
+		await cut.Find("#login-password").InputAsync(new ChangeEventArgs { Value = "hunter2" });
 		await cut.Find("button.login-submit").ClickAsync();
 		return cut;
 	}

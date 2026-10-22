@@ -1,3 +1,4 @@
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -54,7 +55,8 @@ public record DidItRequest(
 	AnySharpContainer? Loc = null,
 	string? Env0 = null,
 	string? Env1 = null,
-	IPermissionService.InteractType Interact = IPermissionService.InteractType.Hear)
+	IPermissionService.InteractType Interact = IPermissionService.InteractType.Hear,
+	MonikerPlace Place = MonikerPlace.System)
 {
 	/// <summary>Used when What is absent and Def is empty, retaining Thing as the sender.</summary>
 	public LocalizedNotification? DefaultNotification { get; init; }

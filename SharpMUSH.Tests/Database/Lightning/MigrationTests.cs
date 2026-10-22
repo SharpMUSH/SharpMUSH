@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Database.Lightning;
+using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models;
@@ -62,8 +63,8 @@ public class MigrationTests
 			await Assert.That(godName).IsEqualTo("God");
 
 			var migrations = db.Store.Read(tx => tx.Range(Tables.Meta, Keys.Str("mig:")).Select(e => Codec.Deserialize<MigrationRecord>(e.Value).Id).ToArray());
-			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId, LightningDatabase.OnboardingMigrationId])
-				.Because("a new world records the initial seed, account credential, session digest and onboarding migrations");
+			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId, LightningDatabase.OnboardingMigrationId, WikiCategoryCheckpointCodec.MigrationId])
+				.Because("a new world records exactly the initial seed, account credential, session digest, onboarding and category value migrations");
 		}
 		finally
 		{

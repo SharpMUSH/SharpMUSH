@@ -28,6 +28,23 @@ public partial class LightningDatabase
 	{
 		if (_fixtureLease is not { } lease || !ReferenceEquals(lease.Owner, capability) || _fixtureClosed)
 			throw SemanticFixtureCapability.Unavailable();
+		var budget = ActivationBudget(ct);
+		// Refusal here cannot change fixture phase, fingerprint or native layout.
+		try
+		{
+			Store.Read(tx =>
+			{
+				RequireWikiCategoryReady(tx, budget);
+				if (!tx.TryGet(Tables.Meta, LightningStore.FixturePackageStateKeyBytes, out var marker)
+					|| !LightningStore.IsActivatableFixturePackageState(marker, lease.FixtureId))
+					throw SemanticFixtureCapability.Unavailable();
+				return true;
+			});
+		}
+		catch (NativeReadLimitException limit)
+		{
+			throw new WikiFixtureMutationException(limit.Dimension == "working-bytes" ? WikiFixtureMutationFailure.Quota : WikiFixtureMutationFailure.WorkLimit);
+		}
 		capability.BeginActivation(lease);
 		Volatile.Write(ref _atomicWikiPreflightRead, null);
 		Volatile.Write(ref _atomicWikiFinalValidationRead, null);
@@ -37,7 +54,6 @@ public partial class LightningDatabase
 			ct.ThrowIfCancellationRequested();
 			try { Store.RequireNoAtomicLayout(capability.FixtureId); }
 			catch (InvalidOperationException) { throw SemanticFixtureCapability.Unavailable(); }
-			var budget = ActivationBudget(ct);
 			using var lifetime = budget.ReserveWorking(2048 + 576 * 1024);
 			// 512 KiB owns the final raw read section; 64 KiB owns fixed marker reads/decoding.
 			var delta = new WikiSemanticPlannedDelta(lifetime, ct);
@@ -48,7 +64,11 @@ public partial class LightningDatabase
 				string? preflightLimit = null;
 				try
 				{
-					plan = Store.Read(tx => PlanAtomicBootstrap(tx, lease.FixtureId, budget, lifetime, delta, ct));
+					plan = Store.Read(tx =>
+					{
+						RequireWikiCategoryReady(tx, budget);
+						return PlanAtomicBootstrap(tx, lease.FixtureId, budget, lifetime, delta, ct);
+					});
 					preflightCompleted = true;
 				}
 				catch (NativeReadLimitException error) { preflightLimit = error.Dimension; throw; }
@@ -64,6 +84,7 @@ public partial class LightningDatabase
 				if (AtomicActivationHook is { } startingHook) await startingHook(AtomicWikiActivationStage.LayoutMutationStarting);
 				await Store.WriteAsync(tx =>
 				{
+					RequireWikiCategoryReady(tx, budget);
 					if (ReadActivation(tx, lease.FixtureId) is not null) throw SemanticFixtureCapability.Unavailable();
 					tx.Put(Tables.Meta, AtomicWikiLayout.MarkerKey, plan.Incomplete);
 				}, ct);
@@ -82,12 +103,15 @@ public partial class LightningDatabase
 				{
 					await Store.WriteAsync(tx =>
 					{
+						RequireWikiCategoryReady(tx, checkBudget);
 						var current = ReadActivation(tx, lease.FixtureId);
 						if (current is null || current.Active || current != (plan.Certificate with { Active = false }))
 							throw SemanticFixtureCapability.Unavailable();
 						var snapshot = ReadBootstrapSnapshot(tx, checkBudget, null, decode: false);
 						if (snapshot.Digest != plan.SnapshotDigest) throw SemanticFixtureCapability.Unavailable();
 						delta.Apply(tx, ct);
+						// Activation is refused after any package admission, so an untouched history certifies itself.
+						LightningStore.CertifyEmptyFixturePackageHistory(tx, lease.FixtureId);
 					}, ct);
 					finalCompleted = true;
 				}
@@ -142,7 +166,7 @@ public partial class LightningDatabase
 				new(record.Namespace, [.. categories], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
 			try { lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 			catch (InvalidDataException) { throw new WikiSemanticCapacityException("bootstrap-projection"); }
-			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(1, []), false, ct);
+			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, ct);
 			if (prepared is ValidationFailure) throw new WikiSemanticCapacityException("bootstrap-projection");
 			if (prepared is not PreparedWikiProjection edit) throw new InvalidDataException("Invalid bootstrap preparation.");
 			if (WikiSemanticProjectionPlanner.PlanProjection(work, edit, 0, sequence) is not WikiProjectionPlanned planned)

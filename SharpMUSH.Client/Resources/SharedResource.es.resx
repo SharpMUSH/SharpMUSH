@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Gestión de la cuenta</value>
+    <value>Mi cuenta</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# personaje registrado} other {# personajes registrados}}</value>
     <comment>MT — ICU categories one+other</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Pers.</value>
-    <comment>MT — abbreviation of "personajes" to match the short English label</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Cerrar terminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>terminal de comandos</value>
+    <value>Terminal de comandos</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>conectado</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Abrir terminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Este juego no guarda el historial de mensajes privados, así que solo se muestran los de esta visita.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Volver a la escena</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Volver al juego</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Jugar</value>

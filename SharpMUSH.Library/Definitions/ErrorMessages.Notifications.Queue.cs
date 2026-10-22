@@ -118,7 +118,8 @@ public static partial class ErrorMessages
 		public const string PsWaitQueueFormat = "  Wait queue: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PsSemaphoreQueueFormat = "  Semaphore queue: {0}";
-		public const string PsLoadAverageZero = "  Load average: 0.0, 0.0, 0.0";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PsLoadAverageFormat = "  Load average (1/5/15 minutes): {0} {1} {2}";
 		public const string PsQuickHeader = "@ps/quick: Your queue totals";
 		public const string PsAllHeader = "@ps/all: All queued tasks";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

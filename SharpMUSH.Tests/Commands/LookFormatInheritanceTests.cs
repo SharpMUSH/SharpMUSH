@@ -103,9 +103,10 @@ public class LookFormatInheritanceTests
 		var (player, parser, _) = await MortalInOwnRoom(token);
 
 		// Every room in the shared world inherits this; it only answers for this test's room, and
-		// anywhere else evaluates to nothing, which leaves the default name in place.
+		// anywhere else gives back the default name.
+		var original = (await GodParser.EvaluateAsync(MarkupText.Plain($"[get({AncestorRoom}/NAMEFORMAT)]"))).ToPlainText();
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}=[if(strmatch(name(%0),Room_{token}),ANAME_{token}:[name(%0)])]"));
+			MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}=[if(strmatch(name(%0),Room_{token}),ANAME_{token}:[name(%0)],%1)]"));
 		try
 		{
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
@@ -115,7 +116,7 @@ public class LookFormatInheritanceTests
 		}
 		finally
 		{
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}="));
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}={original}"));
 		}
 	}
 
@@ -126,8 +127,9 @@ public class LookFormatInheritanceTests
 		var token = TestIsolationHelpers.GenerateUniqueName("ofmt");
 		var (player, parser, _) = await MortalInOwnRoom(token);
 
+		var original = (await GodParser.EvaluateAsync(MarkupText.Plain($"[get({AncestorRoom}/NAMEFORMAT)]"))).ToPlainText();
 		await GodParser.CommandParse(1, ConnectionService,
-			MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}=[if(strmatch(name(%0),Room_{token}),ANAME_{token})]"));
+			MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}=[if(strmatch(name(%0),Room_{token}),ANAME_{token},%1)]"));
 		try
 		{
 			await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"&NAMEFORMAT here=OWN_{token}"));
@@ -139,7 +141,7 @@ public class LookFormatInheritanceTests
 		}
 		finally
 		{
-			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}="));
+			await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"&NAMEFORMAT {AncestorRoom}={original}"));
 		}
 	}
 
@@ -231,6 +233,34 @@ public class LookFormatInheritanceTests
 		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 		await Assert.That(heard).Contains($"NOEXITS_{token}:0");
 		await Assert.That(heard).Contains($"NOCONTENTS_{token}:0");
+	}
+
+	/// <summary>
+	/// <c>fetch_ufun_attrib(..., UFUN_REQUIRE_ATTR)</c> falls back only when the format is missing: one that
+	/// evaluates to nothing, or is stored empty, shows nothing in place of the name, contents or exits.
+	/// </summary>
+	[Test]
+	public async Task EmptyFormats_ShowNothing()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("nil");
+		var (player, parser, _) = await MortalInOwnRoom(token);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@create Thing_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"drop Thing_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@open Exit_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@describe here=Desc_{token}"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&NAMEFORMAT here=[null(%0)]"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&CONFORMAT here=[null(%0)]"));
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("&EXITFORMAT here="));
+
+		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+
+		var heard = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
+		await Assert.That(heard).Contains((string line) => line.Contains($"Desc_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Contains($"Room_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Contains($"Thing_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Contains($"Exit_{token}", StringComparison.Ordinal));
+		await Assert.That(heard).DoesNotContain((string line) => line.Length == 0);
 	}
 
 	/// <summary>Without a format, an empty room lists no headings, and a format that says nothing shows nothing.</summary>

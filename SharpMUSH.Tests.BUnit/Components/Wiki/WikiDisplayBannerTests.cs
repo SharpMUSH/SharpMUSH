@@ -15,24 +15,27 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
 /// <summary>
-/// Answers the two calls the page aside makes: the existence check (every link exists) and the
-/// category listing (three sibling pages plus this one).
+/// Answers the calls the page aside makes: the existence check (every link exists) and the category's
+/// newest pages (three siblings, four pages in all).
 /// </summary>
 file sealed class PageAsideHandler : HttpMessageHandler
 {
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var path = request.RequestUri!.AbsolutePath;
-		string? body = path switch
+		string? body = request.RequestUri.PathAndQuery switch
+		{
+			// The server's answer for this page: its siblings in main, newest first, and the category's count there.
+			"/api/wiki/category/theme/newest?ns=main&take=3&exclude=harbour_ward" => $$"""
+				{"pages":[{{WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace")}},
+				{{WikiApiFake.Page("3", "tone_and_content", "Tone and Content", "theme", null, "Wren")}},
+				{{WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren")}}],"total":4}
+				""",
+			_ => null,
+		} ?? path switch
 		{
 			"/api/wiki/exists" => """{"character/tomas_reyes":true,"character/magister_oake":true,"main/tidewater_chapel":false}""",
 			"/http/characters" => """[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":"","image":"/api/wiki-assets/t/tomas.jpg"},{"name":"Magister Oake","objid":"#316:1","created":1,"category":""}]""",
-			"/api/wiki/category/theme" => WikiApiFake.Paged(request, [
-				WikiApiFake.Page("1", "harbour_ward", "Harbour Ward", "theme", "/api/wiki-assets/h/ward.jpg", "Ilsa Varn"),
-				WikiApiFake.Page("2", "setting_overview", "Setting Overview", "theme", "/api/wiki-assets/h/overview.jpg", "Wren"),
-				WikiApiFake.Page("3", "tone_and_content", "Tone and Content", "theme", null, "Wren"),
-				WikiApiFake.Page("4", "the_tides", "The Tides", "theme", "/api/wiki-assets/h/tides.jpg", "Dace"),
-				WikiApiFake.Page("5", "harbour_ward", "Harbour Ward (help)", "theme", null, "Dace", ns: "help")]),
 			_ => null,
 		};
 		return Task.FromResult(body is null
@@ -81,7 +84,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 	private static readonly string BodyHtmlWithoutLeadImage =
 		BodyHtml.Replace("<p><img class=\"wiki-img\" src=\"/api/wiki-assets/h/ward.jpg\" alt=\"A ward of slate roofs beside the harbour\" loading=\"lazy\" /></p>", string.Empty);
 
-	private static WikiArticle Ward(string? image, string? html = null) =>
+	private static WikiArticle Ward(string? image, string? html = null, bool canEdit = true) =>
 		new("Harbour Ward", "![Harbour Ward](/api/wiki-assets/h/ward.jpg)\n\nIntro\n\n## Geography\n\ntext\n\n## Notable residents\n\ntext", image, html ?? BodyHtml)
 		{
 			Id = "1",
@@ -93,7 +96,7 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 			LastEditedBy = "Ilsa Varn",
 			UpdatedAt = DateTimeOffset.UtcNow.AddMinutes(-12),
 			// What the server says this reader may do; the Edit button follows it.
-			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: true, Delete: false, Manage: false),
+			Access = new SharpMUSH.Library.API.WikiAccessDto(Read: true, Edit: canEdit, Delete: false, Manage: false),
 		};
 
 	private IRenderedComponent<WikiDisplay> RenderWard(string? image = "/api/wiki-assets/h/ward.jpg", bool embedded = false) =>
@@ -313,5 +316,14 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".wiki-page-aside").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".kit-capsule").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".wiki-article-body").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AReaderWhoCannotEdit_IsNotToldAnyoneCanEdit()
+	{
+		var cut = RenderArticle(Ward("/api/wiki-assets/h/ward.jpg", canEdit: false));
+
+		await Assert.That(cut.Find(".kit-banner-secondary").TextContent).DoesNotContain("anyone can edit")
+			.Because("the note answers whether this reader can edit, and this one has no Edit button");
 	}
 }

@@ -166,8 +166,9 @@ public class PennMUSHEventsTests
 	}
 
 	/// <summary>A play connection whose last input was at the Unix epoch: idle past any limit.</summary>
-	private static IConnectionService.ConnectionData IdleConnection(DBRef player, string presence = PresenceClasses.Play)
-		=> new(TestIsolationHelpers.GenerateUniqueHandle(), player, IConnectionService.ConnectionState.LoggedIn,
+	private static IConnectionService.ConnectionData IdleConnection(DBRef? player, string presence = PresenceClasses.Play,
+		IConnectionService.ConnectionState state = IConnectionService.ConnectionState.LoggedIn)
+		=> new(TestIsolationHelpers.GenerateUniqueHandle(), player, state,
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
 			new ConcurrentDictionary<string, string>
 			{
@@ -182,7 +183,7 @@ public class PennMUSHEventsTests
 		var connection = IdleConnection(player);
 		var timers = CreateInactivity(connection);
 
-		await timers.Service.InactivityCheckAsync(60);
+		await timers.Service.InactivityCheckAsync(60, 0);
 
 		await timers.Connections.Received(1).Disconnect(connection.Handle);
 		await timers.Bus.Received(1).Publish(Arg.Is<DisconnectConnectionMessage>(message => message.Handle == connection.Handle && message.Reason == "idle"));
@@ -196,7 +197,7 @@ public class PennMUSHEventsTests
 		var connection = IdleConnection(player, PresenceClasses.Portal);
 		var timers = CreateInactivity(connection);
 
-		await timers.Service.InactivityCheckAsync(60);
+		await timers.Service.InactivityCheckAsync(60, 0);
 
 		await timers.Connections.DidNotReceive().Disconnect(Arg.Any<long>(), Arg.Any<string?>());
 		await timers.Events.DidNotReceive().TriggerEventAsync(SharpEvents.PlayerInactivity, null);
@@ -210,11 +211,37 @@ public class PennMUSHEventsTests
 		var connection = IdleConnection(player);
 		var timers = CreateInactivity(connection);
 
-		await timers.Service.InactivityCheckAsync(60);
+		await timers.Service.InactivityCheckAsync(60, 0);
 
 		await timers.Connections.DidNotReceive().Disconnect(Arg.Any<long>(), Arg.Any<string?>());
 		timers.Connections.Received(1).Update(connection.Handle, "Hidden", "1");
 		await timers.Events.Received(1).TriggerEventAsync(SharpEvents.PlayerInactivity, null);
+	}
+
+	[Test]
+	public async Task AnIdleSocketAtTheLoginScreenIsDroppedSilently()
+	{
+		var connection = IdleConnection(null, state: IConnectionService.ConnectionState.Connected);
+		var timers = CreateInactivity(connection);
+
+		await timers.Service.InactivityCheckAsync(0, 60);
+
+		await timers.Connections.Received(1).Disconnect(connection.Handle);
+		await timers.Bus.Received(1).Publish(Arg.Is<DisconnectConnectionMessage>(message => message.Handle == connection.Handle && message.Reason == "idle"));
+		await Assert.That(WebAppFactoryArg.Notifications.ForHandle(connection.Handle)).IsEmpty();
+		await timers.Events.Received(1).TriggerEventAsync(SharpEvents.PlayerInactivity, null);
+	}
+
+	[Test]
+	public async Task NoUnconnectedIdleTimeoutKeepsTheLoginScreen()
+	{
+		var connection = IdleConnection(null, state: IConnectionService.ConnectionState.Connected);
+		var timers = CreateInactivity(connection);
+
+		await timers.Service.InactivityCheckAsync(60, 0);
+
+		await timers.Connections.DidNotReceive().Disconnect(Arg.Any<long>(), Arg.Any<string?>());
+		await timers.Events.DidNotReceive().TriggerEventAsync(SharpEvents.PlayerInactivity, null);
 	}
 
 	[Test]
@@ -223,7 +250,7 @@ public class PennMUSHEventsTests
 		var player = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "IdleNoLimit");
 		var timers = CreateInactivity(IdleConnection(player));
 
-		await timers.Service.InactivityCheckAsync(0);
+		await timers.Service.InactivityCheckAsync(0, 0);
 
 		await timers.Connections.DidNotReceive().Disconnect(Arg.Any<long>(), Arg.Any<string?>());
 	}

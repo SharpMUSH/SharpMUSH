@@ -27,6 +27,7 @@ public partial class TelnetServer : ConnectionHandler
 	private readonly MsspReportHolder _mssp;
 	private readonly TerminalProbes _probes;
 	private readonly OutputSettingsHolder? _settings;
+	private readonly ConnectionTrafficCounters _traffic;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -44,7 +45,8 @@ public partial class TelnetServer : ConnectionHandler
 		ConnectionServerOptions options,
 		MsspReportHolder mssp,
 		TerminalProbes probes,
-		OutputSettingsHolder? settings = null)
+		OutputSettingsHolder? settings = null,
+		ConnectionTrafficCounters? traffic = null)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -56,6 +58,7 @@ public partial class TelnetServer : ConnectionHandler
 		_mssp = mssp;
 		_probes = probes;
 		_settings = settings;
+		_traffic = traffic ?? new ConnectionTrafficCounters();
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -116,7 +119,8 @@ public partial class TelnetServer : ConnectionHandler
 		using var readLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		ct = readLifetime.Token;
 		using var held = new RegistrationHold(nextPort, _logger, ct);
-		var session = new TelnetSession(this, connection, closer, nextPort, held, ct);
+		var traffic = _traffic.Start(nextPort);
+		var session = new TelnetSession(this, connection, closer, nextPort, held, traffic, ct);
 
 		var telnet = await session.BuildInterpreterAsync();
 		if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
@@ -125,12 +129,13 @@ public partial class TelnetServer : ConnectionHandler
 		}
 
 		var readTask = ReadAndObserveNegotiationAsync(
-			telnet, connection.Transport.Input, session.AnnounceTelnetIfNegotiatedAsync, ct);
+			telnet, connection.Transport.Input, traffic, session.AnnounceTelnetIfNegotiatedAsync, ct);
 		try
 		{
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
 			// above and found nothing to sample. Re-sampling here closes it without needing a lock.
 			await session.AnnounceTelnetIfNegotiatedAsync();
+			await session.WaitForNegotiationAsync(TimeSpan.FromMilliseconds(_options.NegotiationWaitMilliseconds));
 			await session.RegisterAsync();
 
 			// The handle exists in the main process from here on, so everything negotiation produced before
@@ -144,6 +149,7 @@ public partial class TelnetServer : ConnectionHandler
 		finally
 		{
 			_probes.Unregister(nextPort);
+			_traffic.End(nextPort, traffic);
 			await StopTelnetAsync(readLifetime, readTask, telnet, connection.ConnectionId);
 		}
 	}
@@ -218,12 +224,14 @@ public partial class TelnetServer : ConnectionHandler
 	private static async Task ReadAndObserveNegotiationAsync(
 		TelnetInterpreter interpreter,
 		PipeReader reader,
+		TrafficCounter traffic,
 		Func<ValueTask> onProcessed,
 		CancellationToken cancellationToken)
 	{
 		while (!cancellationToken.IsCancellationRequested)
 		{
 			var result = await reader.ReadAtLeastAsync(1, cancellationToken);
+			traffic.Received(result.Buffer.Length);
 
 			foreach (var segment in result.Buffer)
 			{
@@ -261,20 +269,7 @@ public partial class TelnetServer : ConnectionHandler
 		}
 
 		var reported = TerminalCapabilityReader.Read(terminalTypes);
-
-		// Only the fields this report speaks to: the record also carries the negotiated output format
-		// and any SOCKSET colorstyle pin, which have their own writers and must survive this one. The colour
-		// claims are kept as reported: a screen reader is sent plain text by the colour style, which a
-		// SCREENREADER pin can turn back off.
-		var updated = _connectionService.UpdateCapabilities(handle, current => current with
-		{
-			SupportsAnsi = reported.Ansi,
-			SupportsXterm256 = reported.Xterm256,
-			SupportsTruecolor = reported.Truecolor,
-			SupportsUtf8 = reported.Utf8,
-			ScreenReader = reported.ScreenReader,
-			TerminalTypes = terminalTypes
-		});
+		var updated = _connectionService.UpdateCapabilities(handle, current => WithTerminalTypes(current, terminalTypes));
 
 		if (updated)
 		{
@@ -282,6 +277,26 @@ public partial class TelnetServer : ConnectionHandler
 				"Terminal capabilities for handle {Handle}: ansi={Ansi}, xterm256={Xterm256}, truecolor={Truecolor}, utf8={Utf8}, screenreader={ScreenReader}",
 				handle, reported.Ansi, reported.Xterm256, reported.Truecolor, reported.Utf8, reported.ScreenReader);
 		}
+	}
+
+	/// <summary>
+	/// <paramref name="current"/> with what <paramref name="terminalTypes"/> say. Only the fields this report
+	/// speaks to: the record also carries the negotiated output format and any SOCKSET colorstyle pin, which have
+	/// their own writers and must survive this one. The colour claims are kept as reported: a screen reader is
+	/// sent plain text by the colour style, which a SCREENREADER pin can turn back off.
+	/// </summary>
+	private static ProtocolCapabilities WithTerminalTypes(ProtocolCapabilities current, IReadOnlyList<string> terminalTypes)
+	{
+		var reported = TerminalCapabilityReader.Read(terminalTypes);
+		return current with
+		{
+			SupportsAnsi = reported.Ansi,
+			SupportsXterm256 = reported.Xterm256,
+			SupportsTruecolor = reported.Truecolor,
+			SupportsUtf8 = reported.Utf8,
+			ScreenReader = reported.ScreenReader,
+			TerminalTypes = terminalTypes
+		};
 	}
 
 	/// <summary>

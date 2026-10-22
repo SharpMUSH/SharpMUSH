@@ -123,7 +123,6 @@ public class AttributeFunctionUnitTests
 		return result.ToString();
 	}
 
-
 	[Test]
 	[Arguments("[attrib_set(%!/Test_Grep_CaseSensitive_1,test_string_grep_case1)]" +
 						 "[attrib_set(%!/Test_Grep_CaseSensitive_2,another_test_value)]" +
@@ -943,14 +942,7 @@ public class AttributeFunctionUnitTests
 	[Test]
 	public async Task EmptyAttrsDefaultsOnEverywhereItIsWrittenDown()
 	{
-		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Attribute.EmptyAttributes).IsTrue();
+		await Assert.That(ReadPennMushConfig.Create(TestPaths.EmptyConfigFile).Attribute.EmptyAttributes).IsTrue();
 		await Assert.That(OptionsService.Default().Attribute.EmptyAttributes).IsTrue();
-	}
-
-	private static string EmptyConfigFile()
-	{
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-empty-attrs-{Guid.NewGuid():N}.cnf");
-		File.WriteAllText(path, string.Empty);
-		return path;
 	}
 }

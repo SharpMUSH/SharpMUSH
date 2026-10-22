@@ -125,11 +125,12 @@ public class Program
 		app.UseForwardedHeaders();
 
 		// The metrics port serves the scrape and nothing else, so the portal, the API and /http are never
-		// reachable over its plain HTTP.
-		var metricsPort = MetricsListener.Port(app.Configuration);
+		// reachable over its plain HTTP; and the scrape is served nowhere else, so a proxy in front of the
+		// portal port does not publish it.
+		var metricsPort = MetricsListener.ListenedPort(app.Configuration);
 		app.Use((context, next) =>
 		{
-			if (MetricsListener.Serves(context, metricsPort) && context.Request.Path != MetricsListener.Path)
+			if (MetricsListener.Refuses(context, metricsPort))
 			{
 				context.Response.StatusCode = StatusCodes.Status404NotFound;
 				return Task.CompletedTask;

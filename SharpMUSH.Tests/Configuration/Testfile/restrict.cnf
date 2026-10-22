@@ -1,0 +1,4 @@
+# If you turn this on, players who try to use functions in place
+# of commands (e.g. $foo: [pemit(%#,blah)] will get error messages.
+# Disabled by default for backward compatibility.
+restrict_command warn_on_missing nobody

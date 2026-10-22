@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -94,6 +95,9 @@ public class AccountService(
 		if (SystemAccount.IsReserved(username))
 			return new Error<string>($"Username '{username}' is reserved.");
 
+		if (!AccountPasswordRule.Accepts(password))
+			return new Error<string>(AccountPasswordRule.Requirement);
+
 		if (await database.GetAccountByUsernameAsync(username, ct) is not null)
 			return new Error<string>($"Username '{username}' is already taken.");
 
@@ -120,6 +124,9 @@ public class AccountService(
 
 		if (string.IsNullOrEmpty(account.PasswordHash) || !passwordService.PasswordIsValid(oldPassword, account.PasswordHash))
 			return new Error<string>("Current password is incorrect.");
+
+		if (!AccountPasswordRule.Accepts(newPassword))
+			return new Error<string>(AccountPasswordRule.Requirement);
 
 		var newHash = passwordService.HashPassword(newPassword);
 		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);
@@ -388,6 +395,9 @@ public class AccountService(
 		var account = await database.GetAccountByIdAsync(accountId, ct);
 		if (account is null)
 			return new Error<string>("Account not found.");
+
+		if (!AccountPasswordRule.Accepts(newPassword))
+			return new Error<string>(AccountPasswordRule.Requirement);
 
 		var newHash = passwordService.HashPassword(newPassword);
 		await database.UpdateAccountPasswordAsync(accountId, newHash, ct);

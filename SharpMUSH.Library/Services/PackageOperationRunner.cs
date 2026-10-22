@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.SchedulerModels;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -12,7 +14,8 @@ public sealed class PackageOperationRunner(
 	IPackageOperationGate gate,
 	IWorldBackupService backups,
 	IPackageLifecycleRunner lifecycle,
-	ILogger<PackageOperationRunner> logger) : IPackageOperationRunner
+	ILogger<PackageOperationRunner> logger,
+	IPackageOperationScope? scope = null) : IPackageOperationRunner, IPackageOperationLifetime
 {
 	/// <summary>The queue group package operations and their lifecycle hooks are admitted under.</summary>
 	public const string QueueGroup = "package";
@@ -29,7 +32,11 @@ public sealed class PackageOperationRunner(
 	private readonly HashSet<Task> _settlements = [];
 
 	/// <summary>What the operation's entry hands back: its outcome, and the hooks it held back.</summary>
-	private sealed record Finished<T>(PackageOperationOutcome<T> Outcome, IReadOnlyList<PackageLifecycleHook> Hooks);
+	private sealed record Finished<T>(Task<PackageOperationOutcome<T>> Completion, IReadOnlyList<PackageLifecycleHook> Hooks)
+	{
+		internal Finished(PackageOperationOutcome<T> outcome, IReadOnlyList<PackageLifecycleHook> hooks)
+			: this(Task.FromResult(outcome), hooks) { }
+	}
 
 	/// <inheritdoc />
 	public async Task<PackageOperationOutcome<T>> RunAsync<T>(
@@ -37,11 +44,21 @@ public sealed class PackageOperationRunner(
 		Func<CancellationToken, Task<T>> body,
 		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
 	{
+		var execution = await StartAsync(operation, body, cancellationToken, provenance);
+		return await execution.Completion.WaitAsync(cancellationToken);
+	}
+
+	/// <inheritdoc />
+	public async Task<PackageOperationExecution<T>> StartAsync<T>(string operation, Func<CancellationToken, Task<T>> body,
+		CancellationToken cancellationToken = default, Func<CancellationToken, Task<BackupProvenance>>? provenance = null)
+	{
 		await _sequence.WaitAsync(cancellationToken);
-		var settlement = SettleAsync(operation, body, cancellationToken, provenance);
+		var observation = new TaskCompletionSource<PackageOperationObservation>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var report = new PackageOperationObservationBuilder(scheduler is IQueueReleaseObserver);
+		var settlement = SettleAsync(operation, body, cancellationToken, provenance, report, observation);
 		lock (_settlements) _settlements.Add(settlement);
 		_ = ObserveSettlementAsync(settlement, operation);
-		return await settlement.WaitAsync(cancellationToken);
+		return new PackageOperationExecution<T>(settlement, observation.Task);
 	}
 
 	private async Task ObserveSettlementAsync(Task settlement, string operation)
@@ -66,29 +83,45 @@ public sealed class PackageOperationRunner(
 
 	private async Task<PackageOperationOutcome<T>> SettleAsync<T>(
 		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken,
-		Func<CancellationToken, Task<BackupProvenance>>? provenance)
+		Func<CancellationToken, Task<BackupProvenance>>? provenance, PackageOperationObservationBuilder report,
+		TaskCompletionSource<PackageOperationObservation> observation)
 	{
+		var status = PackageTaskObservation.Unknown;
 		try
 		{
-			return await RunInSequenceAsync(operation, body, cancellationToken, provenance);
+			// Captured in the starting flow, which this runs in until its first await; each queue entry
+			// the operation owns re-enters it. A capture that fails fails this operation and still
+			// releases the sequence.
+			var flow = scope?.Capture();
+			var result = await RunInSequenceAsync(operation, body, cancellationToken, provenance, report, flow);
+			status = PackageTaskObservation.Returned;
+			return result;
 		}
+		catch (OperationCanceledException) { status = PackageTaskObservation.Cancelled; throw; }
+		catch (Exception) { status = PackageTaskObservation.Faulted; throw; }
 		finally
 		{
-			_sequence.Release();
+			try { observation.TrySetResult(report.Snapshot(status)); }
+			finally { _sequence.Release(); }
 		}
 	}
 
 	private async Task<PackageOperationOutcome<T>> RunInSequenceAsync<T>(
 		string operation,
 		Func<CancellationToken, Task<T>> body,
-		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
+		CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance,
+		PackageOperationObservationBuilder report, object? flow)
 	{
 		var completion = new TaskCompletionSource<Finished<T>>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var released = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
 		// Admitted like an HTTP handler command: it arrived on a socket, not from an object, so it is
 		// charged to no owner's quota (AdmitSocketWork), and the queue's single consumer runs it with
-		// nothing else beside it.
-		var admission = await scheduler.AdmitSocketWork(async () =>
+		// nothing else beside it. It is not softcode, so queue_entry_cpu_time does not time it.
+		QueueAdmissionResult admission;
+		try
+		{
+			admission = await AdmitReleasedWorkAsync(async () =>
 			{
 				// A cancelled request which never started must not mutate. Still settle the owned
 				// coordinator so the sequence can be released when the queue skips its body.
@@ -97,15 +130,24 @@ public sealed class PackageOperationRunner(
 					completion.TrySetCanceled(cancellationToken);
 					return null;
 				}
-				var execution = ExecuteAsync(operation, body, cancellationToken, provenance);
+				using var entered = scope?.Enter(flow);
+				var execution = ExecuteAsync(operation, body, cancellationToken, provenance, report);
 				// The outcome, a fault included, belongs to the request waiting on it, not to the queue.
 				await ((Task)execution).ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 				completion.TrySetFromTask(execution);
 				return null;
 			}, $"package-{operation}", QueueGroup,
 			// An entry halted before it ran, or dropped at shutdown, still answers the request.
-			onReleased: () => completion.TrySetResult(new Finished<T>(
-				new PackageOperationRefused($"The package {operation} was halted before it ran; nothing was changed."), [])));
+			onReleased: release =>
+			{
+				report.BodyReleased(release);
+				completion.TrySetResult(new Finished<T>(
+					new PackageOperationRefused($"The package {operation} was halted before it ran; nothing was changed."), []));
+				released.TrySetResult();
+			}, timed: false);
+		}
+		catch (Exception) { report.BodyAdmissionFailed(); throw; }
+		report.BodyAdmission(admission);
 		if (!admission.Accepted)
 		{
 			logger.LogWarning("Package {Operation} refused by the queue: {Reason}.", operation, admission.Reason);
@@ -115,17 +157,40 @@ public sealed class PackageOperationRunner(
 
 		// Caller observation is cancellable, but this coordinator must join the body (including
 		// compensation) and every committed hook after the caller has abandoned its observation.
-		var finished = await completion.Task;
-		await RunHooksAsync(finished.Hooks);
-		return finished.Outcome;
+		Finished<T> finished;
+		try { finished = await completion.Task; }
+		finally
+		{
+			// Publication can precede release, including when backup/provenance or the gate faults.
+			// No hook or later operation may overtake the body reservation's actual release.
+			await released.Task;
+		}
+		try { await RunHooksAsync(finished.Hooks, report, flow); }
+		catch (Exception exception) when (finished.Completion.IsFaulted || finished.Completion.IsCanceled)
+		{
+			// Join hooks first, and preserve the original body failure/cancellation if their admission
+			// also failed. Both failures stay observed; a hook failure cannot turn the body into success.
+			logger.LogError(exception, "Package {Operation} hook admission failed after its body failed.", operation);
+		}
+		return await finished.Completion;
 	}
+
+	// The optional observer signals after reservation removal and CTS disposal. Third-party schedulers
+	// retain their existing release callback contract; neither path certifies business/hook success.
+	private ValueTask<QueueAdmissionResult> AdmitReleasedWorkAsync(Func<ValueTask<CallState?>> action,
+		string trigger, string group, Action<QueueEntryRelease?> onReleased, bool timed = true)
+		=> scheduler is IQueueReleaseObserver observed
+			? observed.AdmitObservedSocketWork(action, trigger, group, release => onReleased(release), timed)
+			: scheduler.AdmitSocketWork(action, trigger, group, () => onReleased(null));
 
 	/// <summary>The operation's queue entry: the backup and then the operation, in one hold of the gate.</summary>
 	private async Task<Finished<T>> ExecuteAsync<T>(
-		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken, Func<CancellationToken, Task<BackupProvenance>>? provenance)
+		string operation, Func<CancellationToken, Task<T>> body, CancellationToken cancellationToken,
+		Func<CancellationToken, Task<BackupProvenance>>? provenance, PackageOperationObservationBuilder report)
 	{
-		// Replace only the softcode deadline. Halt/shutdown still owns the entry, and caller
-		// cancellation still asks the operation to unwind. Await that unwind before releasing it.
+		// No softcode deadline, whichever scheduler admitted the entry. Halt/shutdown still owns the
+		// entry, and caller cancellation still asks the operation to unwind. Await that unwind before
+		// releasing it.
 		using var lifetime = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken,
 			ExecutionBudget.Current?.CancelledBy ?? CancellationToken.None);
 		cancellationToken = lifetime.Token;
@@ -166,17 +231,21 @@ public sealed class PackageOperationRunner(
 				}
 			}
 
-			var (result, hooks) = await PackageLifecycleDeferral.CollectAsync(() => body(cancellationToken));
-			return new Finished<T>(new PackageOperationRan<T>(result, backup), hooks);
+			var captured = await PackageLifecycleDeferral.CaptureCompletionAsync(() => body(cancellationToken));
+			report.BodyCompleted(captured.Completion, captured.Hooks.Count);
+			return new Finished<T>(BodyOutcomeAsync(captured.Completion, backup), captured.Hooks);
 		}, cancellationToken);
 	}
+
+	private static async Task<PackageOperationOutcome<T>> BodyOutcomeAsync<T>(Task<T> completion, WorldBackup? backup)
+		=> new PackageOperationRan<T>(await completion, backup);
 
 	/// <summary>
 	/// Runs each held-back lifecycle hook as a queue entry of its own, in order, and waits for them.
 	/// The operation's entry has finished by now, so they follow it rather than run inside it, and each
 	/// gets the time budget any queue entry gets.
 	/// </summary>
-	private async Task RunHooksAsync(IReadOnlyList<PackageLifecycleHook> hooks)
+	private async Task RunHooksAsync(IReadOnlyList<PackageLifecycleHook> hooks, PackageOperationObservationBuilder report, object? flow)
 	{
 		var pending = new List<Task>(hooks.Count);
 		try
@@ -184,12 +253,33 @@ public sealed class PackageOperationRunner(
 			foreach (var hook in hooks)
 			{
 				var done = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-				var admission = await scheduler.AdmitSocketWork(async () =>
+				var outcome = (int)PackageLifecycleOutcome.Unknown;
+				var releaseRecorded = 0;
+				QueueAdmissionResult admission;
+				try
+				{
+					admission = await AdmitReleasedWorkAsync(async () =>
 					{
-						await lifecycle.RunLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken);
+						using var entered = scope?.Enter(flow);
+						try
+						{
+							if (lifecycle is IPackageLifecycleObserver observer)
+								Volatile.Write(ref outcome, (int)await observer.RunObservedLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken));
+							else await lifecycle.RunLifecycleAsync(hook.ObjId, hook.Attribute, ExecutionBudget.CurrentToken);
+						}
+						catch (OperationCanceledException) { Volatile.Write(ref outcome, (int)PackageLifecycleOutcome.Cancelled); throw; }
+						catch (Exception) { Volatile.Write(ref outcome, (int)PackageLifecycleOutcome.Failed); throw; }
 						return null;
 					}, $"package-{hook.Attribute.ToLowerInvariant()}", QueueGroup,
-					onReleased: () => done.TrySetResult());
+						onReleased: release =>
+						{
+							if (Interlocked.Exchange(ref releaseRecorded, 1) != 0) return;
+							report.HookReleased((PackageLifecycleOutcome)Volatile.Read(ref outcome), release);
+							done.TrySetResult();
+						});
+				}
+				catch (Exception) { report.HookAdmissionFailed(); throw; }
+				report.HookAdmission(admission);
 				if (!admission.Accepted)
 				{
 					logger.LogWarning("Package lifecycle {Attribute} on {ObjId} refused by the queue: {Reason}.",

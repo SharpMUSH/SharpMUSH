@@ -10,11 +10,11 @@
 
 @* The sidebar of a section that exists only because applications name it (README §3: a novel
    section gets a rail item and its apps are its sidebar). An app with a nav_url draws the links its
-   route serves for the viewer in place of its own single link. *@
+   route serves for the viewer in place of its own single link. Given a Slug, it is that one app's sidebar. *@
 <SidebarPanel Class="app-section-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
-        <SidebarHead Title="@Section" />
+        <SidebarHead Title="@(Slug is null ? Section : _apps.FirstOrDefault()?.DisplayName ?? Section)" />
     }
     @foreach (var a in _apps)
     {
@@ -52,6 +52,9 @@
     [Parameter, EditorRequired] public string Section { get; set; } = string.Empty;
     [Parameter] public bool Collapsed { get; set; }
 
+    /// <summary>Only this app's links: the sidebar of an app placed in a built-in section.</summary>
+    [Parameter] public string? Slug { get; set; }
+
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
     private IReadOnlyList<PortalApplication> _apps = [];
@@ -76,7 +79,9 @@
         }
 
         var user = AuthState is null ? null : (await AuthState).User;
-        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, Section);
+        _apps = PortalNavSections.AppsForSection(await Registry.ListAsync(), user, Section)
+            .Where(a => Slug is null || string.Equals(a.Slug, Slug, StringComparison.OrdinalIgnoreCase))
+            .ToList();
         await LoadNavsAsync();
     }
 

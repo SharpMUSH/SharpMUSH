@@ -1,3 +1,4 @@
+using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Lightning.Semantics;
@@ -24,7 +25,8 @@ public partial class LightningDatabase
 	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, their
 	///    showcase image metadata, the ancestor player formats, the <c>system</c> wiki namespace's requirement
 	///    and the <c>character</c> category's pin to the wiki home;
-	/// 3. run every plugin's not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
+	/// 3. finish the core account, session, onboarding and category-value migrations, then run every plugin's
+	///    not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 5. ensure the singleton server-state row exists.
 	/// </summary>
@@ -49,7 +51,19 @@ public partial class LightningDatabase
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
 		{
+			var categoryOptions = WikiCategoryMigrationOptions.FromEnvironment();
+			// Execute exactly the immutable ordered snapshot that passed reserved-ID admission.
+			var pluginSteps = _migrationSources.SelectMany(source => source.LightningSteps).ToArray();
+			if (pluginSteps.Any(step => string.Equals(step.Id, WikiCategoryCheckpointCodec.MigrationId, StringComparison.Ordinal)))
+				throw new InvalidOperationException("A plugin migration uses the reserved wiki category migration ID.");
+			// Claim has already restored fixture phase. Refuse an incomplete Active world before
+			// identity binding or seed commits, retaining real admission until startup finishes.
+			// Identity does not exist yet on first open, so its transactional guard comes later.
+			using var categoryStartupAdmission = HasCompleteWikiCategoryAuthority(categoryOptions, cancellationToken)
+				? null : EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 			await InitializeSemanticFixtureIdentityAsync(cancellationToken);
+			// A rebuild a previous process left staged is discarded before anything else writes; resume is not implemented.
+			await DiscardIncompleteSemanticRebuildAsync(cancellationToken);
 			using var migrationAdmission = EnterFixtureMutation(SemanticFixtureMutation.Pin);
 			await Store.WriteAsync(tx =>
 			{
@@ -74,20 +88,18 @@ public partial class LightningDatabase
 			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
 			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
 			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
+			await MigrateWikiCategoryValuesAsync(categoryOptions, cancellationToken);
 
-			foreach (var source in _migrationSources)
+			foreach (var step in pluginSteps)
 			{
-				foreach (var step in source.LightningSteps)
+				var applied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + step.Id), out _));
+				if (applied)
 				{
-					var applied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + step.Id), out _));
-					if (applied)
-					{
-						continue;
-					}
-
-					await step.Apply(this);
-					await RecordMigrationAsync(step.Id, cancellationToken);
+					continue;
 				}
+
+				await step.Apply(this);
+				await RecordMigrationAsync(step.Id, cancellationToken);
 			}
 
 			await Store.WriteAsync(RecomputeNextDbref, cancellationToken);

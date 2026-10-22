@@ -89,7 +89,7 @@ public class FloatPrecisionTests
 		var shipped = Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Configuration", "mushcnf.dst");
 
 		await Assert.That(OptionsService.Default().Cosmetic.FloatPrecision).IsEqualTo(6u);
-		await Assert.That(ReadPennMushConfig.Create(EmptyConfigFile()).Cosmetic.FloatPrecision).IsEqualTo(6u);
+		await Assert.That(ReadPennMushConfig.Create(TestPaths.EmptyConfigFile).Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(ReadPennMushConfig.Create(shipped).Cosmetic.FloatPrecision).IsEqualTo(6u);
 		await Assert.That(Configurable.DefaultFloatPrecision).IsEqualTo(6u);
 		await Assert.That(Configurable.FloatPrecision).IsEqualTo(6);
@@ -144,13 +144,6 @@ public class FloatPrecisionTests
 		await Assert.That((await copy.EvaluateAsync(MarkupText.Plain("[fdiv(1,3)]"))).ToPlainText())
 			.IsEqualTo("0.333");
 		await Assert.That(await Evaluate("[fdiv(1,3)]")).IsEqualTo("0.333333");
-	}
-
-	private static string EmptyConfigFile()
-	{
-		var path = Path.Combine(Path.GetTempPath(), $"sharpmush-float-precision-{Guid.NewGuid():N}.cnf");
-		File.WriteAllText(path, string.Empty);
-		return path;
 	}
 
 	[Test]

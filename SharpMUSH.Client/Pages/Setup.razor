@@ -3,13 +3,14 @@
 @using SharpMUSH.Client.Layout
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Authorization
 @inject AccountAuthService AccountAuth
 @inject SetupWizardService Wizard
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
 
-<PageTitle>@Loc["AuthFirstRunSetup"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["AuthFirstRunSetup"] — <GameName /></PageTitle>
 
 @* The first-run wizard: claim the administrator account, then — as that administrator — bring in a
    PennMUSH database with its mush.cnf or start fresh, set the HTTP and event handlers the bundled packages
@@ -431,7 +432,7 @@
         if (string.IsNullOrWhiteSpace(_username)) { _error = Loc["AuthUsernameRequired"]; return; }
         if (string.IsNullOrWhiteSpace(_password)) { _error = Loc["AuthPasswordRequired"]; return; }
         if (_password != _confirm) { _error = Loc["AuthPasswordsDoNotMatch"]; return; }
-        if (_password.Length < 8) { _error = Loc["AuthPasswordTooShort"]; return; }
+        if (!AccountPasswordRule.Accepts(_password)) { _error = Loc["AuthPasswordTooShort"]; return; }
 
         _busy = true;
 
@@ -617,6 +618,11 @@
         _busy = true;
 
         var packages = await Wizard.SetPackagesAsync(Effective.ToList());
+        // The packages bring permissions (discord.admin, say) that open pages in the admin menu.
+        if (packages is SetupWizardResponse)
+        {
+            await AccountAuth.ReloadAuthorityAsync();
+        }
         var starterWiki = packages is SetupWizardResponse && _starterWiki && !_starterWikiApplied
             ? await Wizard.ApplyStarterWikiAsync()
             : new Success();

@@ -160,7 +160,7 @@ public partial class IntegratedWikiMutationTests
 		// Controlled application-row corruption in a disposable owned host. Native rows/handles remain valid.
 		await provider.Store.WriteAsync(tx =>
 		{
-			if (damage == 0) tx.Put(AtomicWikiLayout.Facts, subject, WikiSemanticCodec.EncodeFacts(new(2, [])));
+			if (damage == 0) tx.Put(AtomicWikiLayout.Facts, subject, WikiSemanticCodec.EncodeFacts(new(AtomicWikiLayout.Schema.Version + 1, [])));
 			else if (damage == 1) tx.Put(AtomicWikiLayout.Facts, subject, WikiSemanticCodec.EncodeFacts(new(1,
 				[new(new(page.Id), "fixture:unexpected", new Keyword("value"), new("fixture", "commit", "path", "field", false))])));
 			else if (damage == 2) tx.Put(AtomicWikiLayout.Summaries, subject, WikiSemanticStateCodec.ProjectionState(state with { State = state.State with { ClassId = 1 } }));
@@ -181,7 +181,7 @@ public partial class IntegratedWikiMutationTests
 			else if (damage == 13) tx.Put(AtomicWikiLayout.Summaries, subject, WikiSemanticStateCodec.ProjectionState(state with { State = state.State with { Summary = state.State.Summary with { Collection = "other" } } }));
 			else if (damage == 14) tx.Delete(AtomicWikiLayout.Registry, WikiSemanticKeys.RegistryReverse(WikiSemanticRegistryKind.Page, state.State.Summary.NativeId));
 			else if (damage == 15) tx.Delete(AtomicWikiLayout.Facts, subject);
-			else if (damage == 16) tx.Put(AtomicWikiLayout.Facts, subject, WikiSemanticCodec.EncodeFacts(new(2, [])));
+			else if (damage == 16) tx.Put(AtomicWikiLayout.Facts, subject, WikiSemanticCodec.EncodeFacts(new(AtomicWikiLayout.Schema.Version + 1, [])));
 			else if (damage == 17) tx.Put(AtomicWikiLayout.Summaries, subject, WikiSemanticStateCodec.ProjectionState(state with { State = state.State with { ClassId = 1 } }));
 			else if (damage == 18) tx.Put(AtomicWikiLayout.Summaries, subject, WikiSemanticStateCodec.ProjectionState(state with { Source = new PortableWikiSource(new("fixture", "main", "other")) }));
 			else if (damage == 19)

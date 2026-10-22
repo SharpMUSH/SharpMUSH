@@ -15,4 +15,4 @@
 
 ## Connect
 - On the web: use the terminal on this site.
-- With a MU* client: port **4201**.
+- With a MU* client: see [[Getting Started]] for the address.

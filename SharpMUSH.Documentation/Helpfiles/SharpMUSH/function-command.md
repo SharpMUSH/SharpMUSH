@@ -38,16 +38,15 @@
 # @function
 
 `@function [<function name>]`<br>
-`@function <name>=<obj>, <attrib>[, <min args>, <max args>]`<br>
+`@function <name>=<obj>, <attrib>[, <min args>, <max args>[, <restrictions>]]`<br>
+`@function <function name>=<object>/<attribute>`<br>
 `@function/<switch> <function name>`<br>
 `@function/restrict <function name>=<restrictions>`<br>
-`@function/alias <alias>=<function name>`<br>
-`@function/clone <clone>=<function name>`<br>
 `@function/args <function name>=[<name> ...]`
 
-When used without any arguments, this command shows how many global user-defined and built-in functions there are. Wizards also see the first ten user-defined functions, with their argument counts and whether each is enabled.
+When used without any arguments, this command lists the global user-defined functions and counts the built-in ones. A player with the `config.admin` permission or the Functions power also sees the object and attribute each function evaluates, its argument count and whether it is enabled; anyone else sees the names.
 
-When used with a function name, it displays some information about how that function is parsed, and how many arguments it takes.
+When used with a function name, it shows whether that function is a built-in or a @function, whether it is enabled, how many arguments it takes, and the names set with `/args`.
 
 Otherwise, this command defines a global function with the name `<function name>`, which evaluates to `<attribute>` on `<object>`.
 
@@ -82,7 +81,9 @@ A function defined using @function works just like any of the normal MUSH functi
 
 Functions defined via @function should follow the format used by UFUN() - %0 is the first argument passed, %1 is the second argument passed, and so forth. `@function/args` also passes them under names of their own; see [@function named arguments]. Optional third and fourth arguments to @function can be used to set a parser-enforced number of arguments for the function. A negative maximum is treated as the same number without its sign.
 
-Restriction flags are set afterwards with `@function/restrict`.
+An optional fifth argument sets restriction flags, the words `@function/restrict` takes (see [restrict]).
+
+`@function <function name>=<object>/<attribute>` is the same as `@function <function name>=<object>, <attribute>`; it takes no more arguments.
 
 ## Definition example
 

@@ -8,6 +8,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication.External;
+using SharpMUSH.Library.Authorization;
 namespace SharpMUSH.Server.Authentication;
 
 public sealed class AccountSecurityService(AccountRecentProofService proofs, IAccountService accounts,
@@ -58,7 +59,7 @@ public sealed class AccountSecurityService(AccountRecentProofService proofs, IAc
 	public Task<Result<Success>> PasswordAsync(HttpContext context, string accountId, string newPassword, string? grant, string? oldPassword, CancellationToken ct)
 	 => WithProofAsync(context, accountId, AccountSecurityOperation.AccountPassword, grant, oldPassword, async (_, authority) =>
 	 {
-		 if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length is < 8 or > 1024) return new Error<string>("A new password is required.");
+		 if (!AccountPasswordRule.Accepts(newPassword)) return new Error<string>(AccountPasswordRule.Requirement);
 		 var result = await accounts.SetPasswordAsync(accountId, newPassword, false, ct);
 		 if (result is Success) await RevokeAndReplaceAsync(context, accountId, authority, ct);
 		 return result;

@@ -48,8 +48,9 @@ public partial class TaskScheduler(
 	IOptionsWrapper<SharpMUSHOptions>? configuration = null,
 	INotifyService? notifyService = null,
 	IInputSessionService? inputSessions = null,
-	IQueueDiagnosticsRecorder? diagnostics = null)
-	: ITaskScheduler, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
+	IQueueDiagnosticsRecorder? diagnostics = null,
+	QueueLoad? queueLoad = null)
+	: ITaskScheduler, IQueueReleaseObserver, ISemaphoreQueue, ITaskQueueControl, ITaskQueueReader, IAsyncDisposable
 {
 	private long _nextPid = 0;
 	private long NextPid() => Interlocked.Increment(ref _nextPid);
@@ -72,6 +73,7 @@ public partial class TaskScheduler(
 	{
 		public DeferredSchedule? Deferred { get; init; }
 		public QueueObservation? Observation { get; init; }
+		public Action<QueueEntryRelease>? OnObservedRelease { get; init; }
 		public QueueOutcome? DeferredReleaseOutcome { get; init; }
 		public bool HaltAccountingSettled { get; init; }
 		public PendingInputCommand? PendingInput { get; init; }
@@ -90,6 +92,12 @@ public partial class TaskScheduler(
 		/// for host socket work, which PennMUSH's <c>add_to</c> tally never sees.
 		/// </summary>
 		public bool ChargesOwner { get; init; } = true;
+
+		/// <summary>
+		/// Whether <c>queue_entry_cpu_time</c> can time this entry. False for host work that is not
+		/// softcode, such as a package operation, which owns its own lifetime.
+		/// </summary>
+		public bool Timed { get; init; } = true;
 
 		/// <summary>
 		/// The object whose own <c>player_queue_limit</c> count this entry is in when <c>owner_queues</c>
@@ -269,12 +277,28 @@ public partial class TaskScheduler(
 		lock (_admissionLock) entry = RemoveEntry(pid);
 		if (entry is not null) DisposeEntry(entry, outcome);
 	}
-	private static void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
+	private void DisposeEntry(QueueEntry entry, QueueOutcome outcome = QueueOutcome.Cancelled)
 	{
-		entry.Observation?.Complete(entry.DeferredReleaseOutcome ?? outcome);
+		outcome = entry.DeferredReleaseOutcome ?? outcome;
+		var failedInvocations = entry.Observation?.FailedInvocations;
+		if (outcome == QueueOutcome.Completed && failedInvocations > 0) outcome = QueueOutcome.InvocationFailure;
+		entry.Observation?.Complete(outcome);
+		// A release callback's failure must not stop the consumer (see ObservedOrLegacyReleaseCallbackFailureCannotStopTheConsumer).
 		try { entry.OnReleased?.Invoke(); }
-		finally { entry.Cts.Dispose(); }
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{ logger.LogError(exception, "Queue release callback failed for PID {Pid}", entry.Pid); }
+		finally
+		{
+			try { entry.Cts.Dispose(); }
+			finally
+			{
+				try { entry.OnObservedRelease?.Invoke(new(entry.Pid, outcome, failedInvocations)); }
+				catch (Exception exception) when (exception is not OperationCanceledException)
+				{ logger.LogError(exception, "Queue release observer failed for PID {Pid}", entry.Pid); }
+			}
+		}
 	}
+
 	private bool ReleasePending(long pid)
 	{
 		QueueEntry? entry;
@@ -295,7 +319,7 @@ public partial class TaskScheduler(
 	private async ValueTask<QueueAdmissionResult> Admit(Func<ValueTask<CallState?>> action,
 	 string identity, string group, DBRef? executor, long? handle = null, bool ready = true, DBRef? semaphoreTarget = null,
 	 Action? onReleased = null, string? sourceAttribute = null, bool managesSemaphoreCount = false, bool notifyOnRejection = true, PendingInputCommand? pendingInput = null,
-	 bool chargesOwner = true, DBRef? enactor = null)
+	 bool chargesOwner = true, DBRef? enactor = null, Action<QueueEntryRelease>? onObservedRelease = null, bool timed = true)
 	{
 		// A typed line is invisible to the queue quota, as it is in PennMUSH: run_user_input builds its
 		// entry with QUEUE_SOCKET and hands it straight to do_entry (src/cque.c:1076-1088), so it never
@@ -369,10 +393,12 @@ public partial class TaskScheduler(
 				var entry = new QueueEntry(pid, SchedulerKeys.TriggerName(identity, pid), group, action, new CancellationTokenSource(), owner, executor, SemaphoreTarget: semaphoreTarget, OnReleased: onReleased, ManagesSemaphoreCount: managesSemaphoreCount)
 				{
 					Observation = diagnostics?.Admitted(pid, executor, diagnosticOwner, SchedulerKeys.KindOf(group), sourceAttribute),
+					OnObservedRelease = onObservedRelease,
 					PendingInput = pendingInput,
 					Enactor = enactor ?? executor,
 					ChargesOwner = chargesOwner,
-					ChargedObject = chargedObject
+					ChargedObject = chargedObject,
+					Timed = timed
 				};
 				StoreEntry(entry);
 				_orderedPids.Add(pid);
@@ -805,10 +831,11 @@ public partial class TaskScheduler(
 			await foreach (var entry in _immediateQueue.Reader.ReadAllAsync(shutdownToken))
 			{
 				await AwaitRunawayHalts();
+				var outcome = QueueOutcome.Cancelled;
 				try
 				{
 					lock (_admissionLock) _running.Add(entry.Pid);
-					var milliseconds = RunsSoftcode(entry)
+					var milliseconds = entry.Timed && RunsSoftcode(entry)
 						? configuration?.CurrentValue.Limit.QueueEntryCpuTime ?? LimitOptions.DefaultQueueEntryCpuTime
 						: 0;
 					lock (_admissionLock)
@@ -822,17 +849,18 @@ public partial class TaskScheduler(
 					try
 					{
 						budget.ThrowIfExceeded();
+						queueLoad?.Record();
 						await entry.Action();
-						var outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
+						outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
 							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed;
 						entry.Observation?.Complete(outcome);
 						if (outcome == QueueOutcome.ExecutionLimit) await NotifyExpired(entry);
 					}
-					catch (OperationCanceledException) when (budget.IsExpired) { entry.Observation?.Complete(QueueOutcome.ExecutionLimit); await NotifyExpired(entry); }
-					catch (OperationCanceledException) when (budget.IsCancelled) { entry.Observation?.Complete(QueueOutcome.Cancelled); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
+					catch (OperationCanceledException) when (budget.IsExpired) { outcome = QueueOutcome.ExecutionLimit; entry.Observation?.Complete(outcome); await NotifyExpired(entry); }
+					catch (OperationCanceledException) when (budget.IsCancelled) { outcome = QueueOutcome.Cancelled; entry.Observation?.Complete(outcome); logger.LogDebug("Queued command {Pid} cancelled", entry.Pid); }
 				}
-				catch (Exception ex) { entry.Observation?.Complete(QueueOutcome.Failed); logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
-				finally { Release(entry.Pid); }
+				catch (Exception ex) { outcome = QueueOutcome.Failed; entry.Observation?.Complete(outcome); logger.LogError(ex, "Error executing queued command (PID {Pid}, Group {Group})", entry.Pid, entry.Group); }
+				finally { Release(entry.Pid, outcome); }
 			}
 		}
 		catch (OperationCanceledException) when (shutdownToken.IsCancellationRequested) { }
@@ -888,6 +916,14 @@ public partial class TaskScheduler(
 
 	public ValueTask<QueueAdmissionResult> AdmitSocketWork(Func<ValueTask<CallState?>> action, string triggerName, string group, Action? onReleased = null)
 	 => Admit(action, triggerName, group, null, onReleased: onReleased, notifyOnRejection: false, chargesOwner: false);
+
+	public ValueTask<QueueAdmissionResult> AdmitObservedSocketWork(Func<ValueTask<CallState?>> action,
+		string triggerName, string group, Action<QueueEntryRelease> onReleased, bool timed = true)
+	{
+		ArgumentNullException.ThrowIfNull(onReleased);
+		return Admit(action, triggerName, group, null, notifyOnRejection: false, chargesOwner: false,
+			onObservedRelease: onReleased, timed: timed);
+	}
 
 	public ValueTask<QueueAdmissionResult> ReleaseScheduledWork(long pid, bool semaphoreTimeout = false)
 		=> ReleaseScheduledWork(pid, semaphoreTimeout, null);
@@ -1047,7 +1083,7 @@ public partial class TaskScheduler(
 	}
 
 	public ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbRefAttribute, int oldValue, bool manageSemaphoreCount = false)
-	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, TimeSpan.FromDays(36500), manageSemaphoreCount);
+	 => AdmitCommandList(command, state, dbRefAttribute, oldValue, SemaphoreTimeout.None, manageSemaphoreCount);
 
 	public async ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null)
 	{
@@ -1154,10 +1190,11 @@ public partial class TaskScheduler(
 					throw new OperationCanceledException("Semaphore reservation was released before activation.");
 				}
 			}
+			var untimed = timeout >= SemaphoreTimeout.None;
 			timeout = Nonnegative(timeout);
 			var due = DateTimeOffset.UtcNow + timeout;
 			lock (_admissionLock) StoreEntry(_pendingEntries[pid] with
-			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) });
+			{ Deferred = new(due, Schedule, dbRefAttribute, command, state) { Untimed = untimed } });
 			scheduleWriteAttempted = true;
 			await Schedule(due, 0);
 			return admission;
@@ -1551,7 +1588,7 @@ public partial class TaskScheduler(
 			delay = Nonnegative(delay);
 			if (entry.Deferred.Paused)
 			{
-				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay } });
+				StoreEntry(entry with { Deferred = entry.Deferred with { Remaining = delay, Untimed = false } });
 				return;
 			}
 		}

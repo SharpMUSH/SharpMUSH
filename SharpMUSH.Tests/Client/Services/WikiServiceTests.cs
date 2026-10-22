@@ -381,24 +381,25 @@ public class WikiServiceTests : TrackingTestContext
 	}
 
 	/// <summary>
-	/// The server pages over the rows this caller may see (#1478), so a batch shorter than the one
-	/// asked for is the last: the listing does not spend a request to learn that the next is empty.
+	/// The aside's newest pages are one request: the server reads the category and sends back only the
+	/// newest few and the count, however many members the category has.
 	/// </summary>
 	[Test]
-	public async Task GetAllByCategoryAsync_AShortBatchIsTheLast()
+	public async Task GetNewestInCategoryAsync_IsOneRequestForTheRowsAndTheTotal()
 	{
-		var calls = 0;
 		var handler = new CapturingHttpHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
 		{
-			Content = new StringContent(
-				calls++ == 0 ? $"[{PageDtoJson(slug: "a")},{PageDtoJson(slug: "b")}]" : "[]",
+			Content = new StringContent($"{{\"pages\":[{PageDtoJson(slug: "a")},{PageDtoJson(slug: "b")}],\"total\":742}}",
 				Encoding.UTF8, "application/json")
 		});
 		var service = BuildService(handler, out _);
 
-		var pages = await service.GetAllByCategoryAsync("Lore");
+		var (pages, total) = await service.GetNewestInCategoryAsync("Lore", "main", "dragons", 3);
 
 		await Assert.That(pages.Select(p => p.Slug)).IsEquivalentTo(["a", "b"]);
+		await Assert.That(total).IsEqualTo(742);
 		await Assert.That(handler.Requests.Count).IsEqualTo(1);
+		await Assert.That(handler.LastRequest!.RequestUri!.PathAndQuery)
+			.IsEqualTo("/api/wiki/category/Lore/newest?ns=main&take=3&exclude=dragons");
 	}
 }

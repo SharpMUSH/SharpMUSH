@@ -17,7 +17,7 @@ public class GameBroadcastService(
 	IMediator mediator) : IGameBroadcastService
 {
 	/// <inheritdoc />
-	public async ValueTask BroadcastAsync(string message)
+	public async ValueTask BroadcastAsync(SharpMessage message)
 	{
 		var loggedIn = connectionService.GetAll().Where(conn => conn.State == IConnectionService.ConnectionState.LoggedIn);
 		await foreach (var conn in loggedIn)
@@ -27,11 +27,11 @@ public class GameBroadcastService(
 	}
 
 	/// <inheritdoc />
-	public ValueTask BroadcastToFlagAsync(string flagName, string message)
+	public ValueTask BroadcastToFlagAsync(string flagName, SharpMessage message)
 		=> BroadcastToFlagAsync(null, flagName, message);
 
 	/// <inheritdoc />
-	public async ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, string message)
+	public async ValueTask BroadcastToFlagAsync(IReadOnlyCollection<string>? anyOfFlags, string requiredFlag, SharpMessage message)
 	{
 		// One decision per player, however many connections it has: its flags are read once.
 		var decided = new Dictionary<DBRef, bool>();

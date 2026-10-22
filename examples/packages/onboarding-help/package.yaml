@@ -1,0 +1,47 @@
+format: "1.10"
+package: onboarding-help
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the checklist into +help: registers the onboarding package's topics with the +help librarian, and adds a step pointing new players at +help."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [onboarding, help, bridge]
+category: Essentials
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. The onboarding package keeps its topics on its
+# own help object, and plus-help reads any object registered with its librarian. This package is that registration
+# and one more step on the checklist. Uninstalling it takes both away; neither package changes.
+depends:
+  - package: onboarding
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/onboarding/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`ONBOARDING: |-
+        {{onboarding/onboarding_help}}
+
+  # A step the player ticks off: nothing tells the game they read it.
+  - ref: help_step
+    target: "{{onboarding/store}}"
+    attributes:
+      STEP`PLUSHELP: |-
+        Read this game's help
+      STEP`PLUSHELP`HINT: |-
+        +help lists this game's own commands and topics.
+      STEP`PLUSHELP`DETAIL: |-
+        help covers the commands every SharpMUSH game has. +help covers this game's own: the systems it installed and what its staff wrote down. +help on its own lists the topics, and +help <topic> reads one.
+      STEP`PLUSHELP`ORDER: |-
+        20

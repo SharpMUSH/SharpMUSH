@@ -28,3 +28,11 @@
 h1:focus {
 	outline: none;
 }
+
+/* MudBlazor's stylesheet takes the browser's outline off every button and link (button:focus,
+   a:focus-visible), so a plain button the keyboard reached looked unfocused: every Setup button, the
+   account button. This puts a ring back for keyboard focus only: WCAG 2.4.7. */
+:is(button, a, [role="button"], [role="tab"]):focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}

@@ -224,6 +224,17 @@ public static class PackageManifestWriter
 				}
 			}
 		}
+
+		if (declared.RoleGrants.Count > 0)
+		{
+			yaml.AppendLine();
+			yaml.AppendLine("grants:");
+			foreach (var role in declared.RoleGrants.GroupBy(g => g.Role, StringComparer.Ordinal))
+			{
+				yaml.Append("  ").Append(Scalar(role.Key)).Append(": [")
+					.Append(string.Join(", ", role.Select(g => Scalar(g.Permission)))).AppendLine("]");
+			}
+		}
 	}
 
 	private static void WriteSettings(StringBuilder yaml, IReadOnlyList<PackageSettingSpec> settings)

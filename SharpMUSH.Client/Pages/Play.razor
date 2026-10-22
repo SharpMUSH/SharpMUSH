@@ -24,7 +24,7 @@
 @inject ScreenReaderMode ScreenReader
 @implements IAsyncDisposable
 
-<PageTitle>@Loc["Play"] — @Loc["AppTitle"]</PageTitle>
+<PageTitle>@Loc["Play"] — <GameName /></PageTitle>
 <PalettePage Kind="play" />
 
 @* Four states, resolved before anything mounts. An anonymous visitor and a player with a
@@ -234,7 +234,7 @@ else
         }
         else
         {
-            <PlayControl Class="play-conn--connect" Href="/login">@Loc["Login"]</PlayControl>
+            <PlayControl Class="play-conn--connect" Href="/login">@Loc["AuthSignIn"]</PlayControl>
         }
     };
 

@@ -471,7 +471,7 @@ Setting or clearing MISTRUST needs the same privilege as TRUST.
 
 **Flag: MONIKER (all types)**
 
-MONIKER can be set, but it has no effect. An object's name is colored by its `@moniker`, whatever its flags. Only royalty and wizards can set or clear the flag.
+An object set MONIKER has its name colored by its `@moniker` in every place the "monikers" `@config` option lists, even when the option leaves out the object's type. Only royalty and wizards can set or clear the flag.
 
 
 ::: seealso
@@ -721,6 +721,8 @@ A STICKY room with a drop-to keeps what is dropped in it until the last connecte
 **Flag: SUSPECT (all types)**
 
 When a SUSPECT player connects or disconnects, wizards are told, as in `GAME: Suspect Walker has connected.`
+
+A player who connects, or makes a character, from a site whose [@sitelock] rule includes `suspect` is set SUSPECT. Wizards are told when a SUSPECT character is made, as in `GAME: Suspect Walker created.`
 
 Only wizards can set or clear SUSPECT, and only wizards and objects with See_All see it.
 

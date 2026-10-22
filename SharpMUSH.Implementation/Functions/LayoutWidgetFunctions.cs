@@ -79,12 +79,13 @@ public partial class Functions
 		.Theme(settings => settings.ReadTheme, (settings, theme) => settings with { Theme = theme })
 		.Stripe((settings, codes) => settings with { Table = settings.Table with { Striped = codes is not null }, Stripe = codes });
 
-	/// <summary>A gradient's colours and the way it runs.</summary>
-	private sealed record Shading(ColorGradient Gradient, GradientFlow Flow);
+	/// <summary>A gradient's colours, the way it runs and what it falls on.</summary>
+	private sealed record Shading(ColorGradient Gradient, GradientFlow Flow, GradientTarget Target = GradientTarget.All);
 
 	private static OptionSchema<Shading> GradientSchema { get; } = OptionSchema<Shading>.Empty
 		.GradientShape(shading => shading.Gradient, (shading, gradient) => shading with { Gradient = gradient })
-		.Choice("flow", LayoutOptionGroups.Flows, (shading, flow) => shading with { Flow = flow });
+		.Choice("flow", LayoutOptionGroups.Flows, (shading, flow) => shading with { Flow = flow })
+		.Choice("target", LayoutOptionGroups.Targets, (shading, target) => shading with { Target = target });
 
 	/// <summary>
 	/// <c>gauge(&lt;value&gt;, &lt;maximum&gt;[, &lt;label&gt;[, &lt;options&gt;]])</c> — a bar filled to the
@@ -98,9 +99,9 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Numbers));
 		if (maximum <= 0) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgRange));
 
-		var label = Arg(args, 2);
+		var label = Inline(Arg(args, 2));
 		var gauge = new Gauge(value, maximum) { Label = label.Length == 0 ? null : label };
-		return ValueTask.FromResult(Laidout(parser, GaugeOptions(AnsiCodes), Arg(args, 3), gauge));
+		return ValueTask.FromResult(Laidout(parser, GaugeOptions(GradientStop), Arg(args, 3), gauge));
 	}
 
 	/// <summary>
@@ -128,7 +129,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var items = ListItems(Arg(args, 0), Arg(args, 1));
-		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
+		return ValueTask.FromResult(GridSchema.Apply(Arg(args, 2), new Laid<Grid>(new Grid([.. items.Select(Inline)]), MarkupText.Empty, DefaultBorder(), LayoutThemeService.Read)) switch
 		{
 			Laid<Grid> laid => items.Length == 0 ? EmptyUnlessBadWidth(parser, laid.Width) : Finish(parser, laid.Block, laid.Width, laid.Border, laid.Theme),
 			Error<string> error => new CallState(error.Value),
@@ -198,10 +199,11 @@ public partial class Functions
 	private CallState BuildDataTable(IMUSHCodeParser parser, TableSettings settings, Func<MString, (MString[] Headings, MString[][] Rows)> read)
 	{
 		var (headings, cells) = read(settings.Delimiter);
-		var columns = headings.Select(Heading).ToArray();
+		var columns = headings.Select(heading => Heading(Inline(heading))).ToArray();
 		foreach (var (key, list) in settings.ColumnLists)
 		{
-			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure) return new CallState(failure);
+			if (ApplyColumnList(columns, key, MushText.SplitList(settings.Delimiter, list)) is { } failure)
+				return new CallState(OptionObject.Named(key, new Error<string>(failure)).Value);
 		}
 
 		var rows = cells.Select(row => row.Select(cell => Body(cell)).ToImmutableArray()).ToImmutableArray();
@@ -260,7 +262,7 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (BadgeKindOf(Arg(args, 1)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
-		return ValueTask.FromResult(new CallState(Bracketed(Arg(args, 0), BadgeColour(kind))));
+		return ValueTask.FromResult(new CallState(Bracketed(Inline(Arg(args, 0)), BadgeColour(kind))));
 	}
 
 	/// <summary>
@@ -275,7 +277,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (BadgeKindOf(Arg(args, 2)) is not { } kind) return ValueTask.FromResult(new CallState("#-1 UNKNOWN BADGE KIND"));
 
-		var lead = NoticeMarkup.Build(Arg(args, 0), kind.Word, BadgeColour(kind));
+		var lead = NoticeMarkup.Build(Inline(Arg(args, 0)), kind.Word, BadgeColour(kind));
 		var text = Arg(args, 1);
 		return ValueTask.FromResult(new CallState(lead.Length == 0 ? text : MarkupText.Concat([lead, MarkupText.Space, text])));
 	}
@@ -329,7 +331,7 @@ public partial class Functions
 	public ValueTask<CallState> Gradient(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
-		if (LayoutOptionGroups.Stops(Arg(args, 1), AnsiCodes) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
+		if (LayoutOptionGroups.Stops(Arg(args, 1), GradientStop) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
 
 		return ValueTask.FromResult(GradientSchema.Apply(Arg(args, 2), new Shading(new ColorGradient(stops), GradientFlow.Characters)) switch
 		{
@@ -339,13 +341,25 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// A gradient's stop: a tone() name for the colour it stands for in the game's layout_theme, or the
+	/// standard colour a reader without a theme is sent for it (white for <c>foreground</c> and
+	/// <c>strong</c>, whose standard is the client's own colour, which a gradient cannot blend);
+	/// ansi() codes otherwise.
+	/// </summary>
+	private IColorMarkup? GradientStop(string codes) =>
+		!ToneMarkup.TryParse(codes, out var tone)
+			? AnsiCodes(codes)
+			: AnsiTheme.Paint(HousePalette()?[tone.Role] ?? ToneMarkup.Standard(tone.Role) ?? ThemeColor.Standard(7));
+
+	/// <summary>
 	/// <paramref name="text"/> shaded: a layout as a <see cref="Shaded"/> block laid out again at its own
-	/// width, any other text character by character.
+	/// width, any other text character by character. Text that is not a layout has no borders, so a
+	/// gradient on the borders alone leaves it as it is.
 	/// </summary>
 	private static MString Shade(MString text, Shading shading) =>
 		BlockLayout.AsBlock(text) is not TextBlock && LayoutOf(text) is { } layout
-			? BlockLayout.Build(layout.Root.Shaded(shading.Gradient, shading.Flow), layout.Width, layout.Fluid)
-			: shading.Gradient.Shade(text, shading.Flow);
+			? BlockLayout.Build(layout.Root.Shaded(shading.Gradient, shading.Flow) with { Target = shading.Target }, layout.Width, layout.Fluid)
+			: shading.Target == GradientTarget.Borders ? text : shading.Gradient.Shade(text, shading.Flow);
 
 	/// <summary>The layout that covers the whole of <paramref name="text"/>.</summary>
 	private static LayoutMarkup? LayoutOf(MString text) =>

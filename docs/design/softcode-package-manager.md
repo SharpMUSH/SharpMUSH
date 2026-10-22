@@ -124,6 +124,11 @@ permissions) and `roles:`. The reference is
   category unless something remaining relies on it (a holder, a role setting it, a member), in
   which case it is kept and released. Permission removal clears its overrides, so removals run last.
 - **Rollback** restores objects and attributes only.
+- **Grants (format 1.15).** `grants:` maps a role the package does not declare (`wizard`,
+  `royalty`) to the package's own permissions. The plan allows each where the role leaves it
+  unset and records it in `Owned.Grants`; a role that already sets it is the game's. An owned
+  grant the game cleared stays cleared. A dropped grant, or every grant on uninstall, is cleared
+  where the role still allows it, before the permission removals are judged.
 
 ### Configuration options (format 1.3)
 

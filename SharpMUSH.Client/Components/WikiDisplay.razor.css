@@ -74,7 +74,7 @@
 
 .WikiContent ::deep .wiki-next-step > :first-child { margin-top: 0; }
 .WikiContent ::deep .wiki-next-step > :last-child { margin-bottom: 0; }
-.WikiContent ::deep .wiki-next-step a:focus-visible {
+.WikiContent ::deep a:focus-visible {
 	outline: 2px solid var(--accent);
 	outline-offset: 3px;
 	border-radius: 2px;

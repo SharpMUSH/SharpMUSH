@@ -159,7 +159,7 @@
     {
         if (Lookup.Account is null) return;
 
-        switch (await RoleRegistry.AssignAsync(Lookup.Account.AccountId, slug))
+        switch (await RoleRegistry.AssignAsync(Lookup.Account.AccountKey, slug))
         {
             case Success:
                 Snackbar.Add(Loc["RolAssigned", slug], Severity.Success);
@@ -175,7 +175,7 @@
     {
         if (Lookup.Account is null) return;
 
-        switch (await RoleRegistry.RemoveAsync(Lookup.Account.AccountId, slug))
+        switch (await RoleRegistry.RemoveAsync(Lookup.Account.AccountKey, slug))
         {
             case Success:
                 Snackbar.Add(Loc["RolRemoved", slug], Severity.Success);
@@ -191,7 +191,7 @@
     {
         if (Lookup.Account is null || string.IsNullOrEmpty(scope)) return;
 
-        switch (await RoleRegistry.SetOverrideAsync(Lookup.Account.AccountId, scope, state))
+        switch (await RoleRegistry.SetOverrideAsync(Lookup.Account.AccountKey, scope, state))
         {
             case Success:
                 Snackbar.Add(Loc["RolOverrideSaved", scope], Severity.Success);

@@ -17,6 +17,9 @@ public record UpdateMailCommand(SharpMail Mail, MailUpdate Update) : ICommand;
 
 public record DeleteMailCommand(SharpMail Mail) : ICommand;
 
+/// <summary>Deletes the message with id <paramref name="MailId"/>, as <see cref="MailRecipient.Id"/> carries it.</summary>
+public record DeleteMailByIdCommand(string MailId) : ICommand;
+
 public record RenameMailFolderCommand(SharpPlayer Owner, string FolderName, string NewFolderName) : ICommand;
 
 public record MoveMailFolderCommand(SharpMail Mail, string NewFolderName) : ICommand;

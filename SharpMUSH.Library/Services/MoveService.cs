@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using SharpMUSH.Configuration;
 using Microsoft.Extensions.Options;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
@@ -175,14 +176,14 @@ public class MoveService(
 		if (!wizardSuppressed && !old.Equals(destination))
 		{
 			await didItService.DidIt(parser, new DidItRequest(
-				Player: mover, Thing: mover, OWhat: "OXMOVE",
+				Place: MonikerPlace.Movement, Player: mover, Thing: mover, OWhat: "OXMOVE",
 				Loc: oldContainer, Env0: destination.ToString(), Env1: old.ToString(),
 				Interact: IPermissionService.InteractType.Hear));
 
 			if (await permissionService.IsHearer(mover))
 			{
 				await didItService.DidIt(parser, new DidItRequest(
-					Player: mover, Thing: oldObject,
+					Place: MonikerPlace.Movement, Player: mover, Thing: oldObject,
 					What: "LEAVE", OWhat: "OLEAVE", ODef: ErrorMessages.Notifications.DefaultOLeave,
 					AWhat: "ALEAVE", Loc: oldContainer,
 					Env0: oldSeesWhat ? destination.ToString() : null,
@@ -194,7 +195,7 @@ public class MoveService(
 				{
 					// OXLEAVE lives on the container being left and is shown where the mover arrives.
 					await didItService.DidIt(parser, new DidItRequest(
-						Player: mover, Thing: oldObject, OWhat: "OXLEAVE",
+						Place: MonikerPlace.Movement, Player: mover, Thing: oldObject, OWhat: "OXLEAVE",
 						Loc: where,
 						Interact: IPermissionService.InteractType.See));
 				}
@@ -202,7 +203,7 @@ public class MoveService(
 				if (!destinationObject.IsRoom)
 				{
 					await didItService.DidIt(parser, new DidItRequest(
-						Player: mover, Thing: destinationObject, OWhat: "OXENTER",
+						Place: MonikerPlace.Movement, Player: mover, Thing: destinationObject, OWhat: "OXENTER",
 						Loc: oldContainer,
 						Interact: IPermissionService.InteractType.See));
 				}
@@ -210,7 +211,7 @@ public class MoveService(
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: false, loc: where);
 
 				await didItService.DidIt(parser, new DidItRequest(
-					Player: mover, Thing: destinationObject,
+					Place: MonikerPlace.Movement, Player: mover, Thing: destinationObject,
 					What: "ENTER", OWhat: "OENTER", ODef: ErrorMessages.Notifications.DefaultOEnter,
 					AWhat: "AENTER", Loc: where,
 					Env0: whereSeesWhat ? old.ToString() : null,
@@ -220,18 +221,18 @@ public class MoveService(
 			{
 				// A non-hearer triggers the actions and none of the messages.
 				await didItService.DidIt(parser, new DidItRequest(
-					Player: mover, Thing: oldObject, AWhat: "ALEAVE", Loc: oldContainer));
+					Place: MonikerPlace.Movement, Player: mover, Thing: oldObject, AWhat: "ALEAVE", Loc: oldContainer));
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer, actionsOnly: true);
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: false, loc: where, actionsOnly: true);
 				await didItService.DidIt(parser, new DidItRequest(
-					Player: mover, Thing: destinationObject, AWhat: "AENTER", Loc: where));
+					Place: MonikerPlace.Movement, Player: mover, Thing: destinationObject, AWhat: "AENTER", Loc: where));
 			}
 		}
 
 		if (!noMoveMsgs)
 		{
 			await didItService.DidIt(parser, new DidItRequest(
-				Player: mover, Thing: mover,
+				Place: MonikerPlace.Movement, Player: mover, Thing: mover,
 				What: "MOVE", OWhat: "OMOVE", AWhat: "AMOVE",
 				Loc: where, Env0: destination.ToString(), Env1: old.ToString(),
 				Interact: IPermissionService.InteractType.See));
@@ -313,7 +314,7 @@ public class MoveService(
 		}
 
 		await didItService.DidIt(parser, new DidItRequest(
-			Player: mover,
+			Place: MonikerPlace.Movement, Player: mover,
 			Thing: zone,
 			What: actionsOnly ? null : leaving ? "ZLEAVE" : "ZENTER",
 			OWhat: actionsOnly ? null : leaving ? "OZLEAVE" : "OZENTER",

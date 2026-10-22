@@ -24,7 +24,7 @@ public interface IPackageLifecycleRunner
 	/// <see cref="PackageChangeset.Kind"/> is <see cref="PackageRevisionKind.Install"/>.</item>
 	/// <item><c>AUPDATE</c> when it is <see cref="PackageRevisionKind.Upgrade"/>.</item>
 	/// </list>
-	/// The attribute is evaluated as God (#1). Objects lacking the attribute are
+	/// The attribute runs as its package object, with God (#1) as caller. Objects lacking the attribute are
 	/// skipped silently; a failing lifecycle script is swallowed/logged so a bad
 	/// script never fails the install.
 	/// </summary>
@@ -38,7 +38,7 @@ public interface IPackageLifecycleRunner
 
 	/// <summary>
 	/// Runs a single lifecycle <paramref name="attribute"/> on one object,
-	/// evaluated as God (#1). No-op when the object or attribute is absent;
+	/// run as that object, with God (#1) as caller. No-op when the object or attribute is absent;
 	/// errors are swallowed/logged.
 	/// </summary>
 	/// <param name="objId">The target object's objid (<c>#N</c> or <c>#N:created</c>).</param>

@@ -45,6 +45,10 @@ public class DiscordGatewayServiceTests
 		await gateway.StopAsync(cancellationToken);
 
 		await Assert.That(state.Status).IsEqualTo(DiscordGatewayStatus.BadToken);
+		// Discord.Net can tell what is wrong with this one; the setup page passes it on, not just the refusal.
+		var reason = state.Detail ?? throw new InvalidOperationException("A refused token that is the wrong shape carries the reason.");
+		var token = DiscordSetup.View(state).Steps.First(step => step.Key == "token");
+		await Assert.That(token.Todo).Contains(reason);
 	}
 
 	private static async Task<DiscordGatewayState> SettledAsync(DiscordGatewayService gateway, CancellationToken cancellationToken)

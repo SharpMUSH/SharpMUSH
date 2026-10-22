@@ -58,14 +58,17 @@ public class LegacyQueueCommandBoundaryTests
 
 	[Test]
 	[Arguments("unsupported", ErrorMessages.Returns.ErrorNotSupported)]
-	[Arguments("absent", ErrorMessages.Returns.NoSuchPid)]
+	[Arguments("absent", ErrorMessages.Returns.InvalidPid)]
 	[Arguments("denied", ErrorMessages.Returns.PermissionDenied)]
 	public async Task PidInfoPreservesLegacyInspectionBoundaries(string behavior, string expected)
 	{
 		var (_, parser, scheduler, mediator) = Create("PIDInfo", "SEMAPHORE");
-		if (behavior == "absent") mediator.CreateStream(Arg.Any<ScheduleSemaphoreQuery>(), Arg.Any<CancellationToken>())
-			.Returns(AsyncEnumerable.Empty<SemaphoreTaskData>());
-		scheduler.GetQueueEntry(42).Returns(_ => behavior == "unsupported" ? throw new NotSupportedException() : null);
+		scheduler.GetQueueEntry(42).Returns(_ => behavior switch
+		{
+			"unsupported" => throw new NotSupportedException(),
+			"denied" => new QueueEntrySnapshot(42, new DBRef(99), null, "semaphore", QueueEntryState.Pending, null, ""),
+			_ => null
+		});
 		var functions = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Functions.Functions>(Factory.Services, mediator);
 		var result = await functions.PIDInfo(parser, new SharpFunctionAttribute { Name = "pidinfo", Flags = FunctionFlags.Regular });
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);

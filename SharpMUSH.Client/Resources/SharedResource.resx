@@ -1388,7 +1388,7 @@
     <value>No character</value>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Account Management</value>
+    <value>My Account</value>
   </data>
   <data name="AuthLogout" xml:space="preserve">
     <value>Logout</value>
@@ -3678,17 +3678,11 @@
   <data name="NavSearchPlaceholder" xml:space="preserve">
     <value>Search…</value>
   </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Open Terminal</value>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Close Terminal</value>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>command terminal</value>
-  </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Chars</value>
+    <value>Command terminal</value>
   </data>
   <data name="NavMenuLabel" xml:space="preserve">
     <value>Menu</value>
@@ -4770,13 +4764,13 @@
     <value>Join #{0}</value>
   </data>
   <data name="NavPlayChannelsGag" xml:space="preserve">
-    <value>Gag #{0}</value>
+    <value>Mute #{0}</value>
   </data>
   <data name="NavPlayChannelsGagged" xml:space="preserve">
-    <value>Gagged: you stay on the channel but hear nothing. Select to hear it again.</value>
+    <value>Muted: you stay on the channel but hear nothing. Select to hear it again.</value>
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
-    <value>Gag: stay on the channel but hear nothing.</value>
+    <value>Mute: stay on the channel but hear nothing.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>The game didn't make that change.</value>
@@ -4958,8 +4952,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>This game doesn't keep page history, so only pages from this visit are shown.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Back to the scene</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Back to the game</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Play</value>
@@ -9060,12 +9054,13 @@
     <value>Verify a current account sign-in method before choosing an account to recover.</value>
   </data>
   <data name="AdmRemoteBackupTitle" xml:space="preserve"><value>Remote backups</value></data>
-  <data name="AdmRemoteBackupDescription" xml:space="preserve"><value>Configure encrypted remote snapshots. A local hot copy is not a completed remote backup. Disable the legacy sidecar cron before enabling managed scheduling.</value></data>
+  <data name="AdmRemoteBackupDescription" xml:space="preserve"><value>Configure encrypted remote snapshots. A local hot copy is not a completed remote backup. Managed scheduling replaces the backup service's own BACKUP_CRON schedule; never run both against one repository.</value></data>
   <data name="AdmRemoteBackupAgentSeen" xml:space="preserve"><value>Backup agent last seen:</value></data>
-  <data name="AdmRemoteBackupAgentMissing" xml:space="preserve"><value>Backup agent has not checked in recently. Jobs cannot complete without it. Last seen:</value></data>
+  <data name="AdmRemoteBackupAgentMissing" xml:space="preserve"><value>The backup agent has not checked in for two minutes, so jobs cannot complete. Last seen:</value></data>
+  <data name="AdmRemoteBackupAgentNever" xml:space="preserve"><value>No backup agent has checked in, so managed jobs cannot run. They need the docker-compose.remote-backups.yml overlay: see "Manage remote backups in the website" in deploy/README.md. Until then the backup service keeps its own BACKUP_CRON schedule from .env, which this page does not show.</value></data>
   <data name="AdmRemoteBackupLastSuccess" xml:space="preserve"><value>Last confirmed remote success</value></data>
   <data name="AdmRemoteBackupNever" xml:space="preserve"><value>Never</value></data>
-  <data name="AdmRemoteBackupEnabled" xml:space="preserve"><value>Enable managed scheduling (disable legacy cron first)</value></data>
+  <data name="AdmRemoteBackupEnabled" xml:space="preserve"><value>Enable managed scheduling</value></data>
   <data name="AdmRemoteBackupRepository" xml:space="preserve"><value>Repository</value></data>
   <data name="AdmRemoteBackupRepositoryHelp" xml:space="preserve"><value>b2:bucket:path, s3:https://host/bucket or rest:https://host/repository. Initialize the repository before use.</value></data>
   <data name="AdmRemoteBackupHours" xml:space="preserve"><value>Schedule interval (hours)</value></data>

@@ -291,7 +291,7 @@ For players and things, this means failure to get/take. For exits, it means fail
 `@ofollow <object>[=<message>]`<br>
 `@afollow <object>[=<action list>]`
 
-These attributes can be set, but the follow command does not use them yet: it only tells the follower "You are now following" and the name, and tells `<object>` who is following.
+Sets the message shown to someone who begins following `<object>`, the message shown to others in the room, and the actions to be taken by `<object>` when someone begins following it, respectively. The name of the person following `<object>` is automatically prepended to the @ofollow message.
 
 ::: seealso
 - [follow]
@@ -308,7 +308,7 @@ These attributes can be set, but the follow command does not use them yet: it on
 `@ounfollow <object>[=<message>]`<br>
 `@aunfollow <object>[=<action list>]`
 
-These attributes can be set, but the unfollow command does not use them yet: it only tells you "You stop following."
+Sets the message shown to someone who stops following `<object>` with "unfollow `<object>`", the message shown to others in the room, and the actions to be taken by `<object>` when someone stops following it, respectively. The name of the person stopping following `<object>` is automatically prepended to the @ounfollow message.
 
 ::: seealso
 - [follow]
@@ -609,7 +609,7 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 # @away
 `@away <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: someone who pages `<player>` while she is not connected is not shown `<message>`.
+If `<message>` evaluates to something non-null, it is shown to anyone who pages `<player>` while `<player>` is not connected, in place of "`<player>` is not connected."
 
 ### Example
 ```sharp
@@ -730,7 +730,14 @@ Show just the object names (with no ansi) in a table:
 # @invformat
 `@invformat <object>[=<format>]`
 
-This attribute can be set, but the "inventory" command does not use it yet: inventory always shows the usual "You are carrying:" list.
+When set, this attribute is evaluated and displayed instead of the usual "You are carrying:" list of objects when `<object>` uses the "inventory" command. The dbrefs of the objects that would appear in the inventory are passed as %0 or %`\<contents\>`, and a list of their names as they would appear in the usual list, |-delimited, as %1 or %`\<names\>` (see [named arguments]). If the result is empty, nothing is shown.
+
+### Example
+```sharp
+> @invformat me=You're holding: [itemize(iter(%0, name(%i0), %b, |), |)]
+> inventory
+You're holding: Red Ball, Pickle, and Piano
+```
 
 
 ::: seealso
@@ -982,7 +989,7 @@ setting, rather than PennMUSH's dump_interval.
 `@ealias <object>[=<enter alias1>[; ... ; <enter aliasN>]]`<br>
 `@lalias <object>[=<leave alias1>[; ... ; <leave aliasN>]]`
 
-These attributes can be set, but they are not used yet: their "enter aliases" and "leave aliases" do not work in place of "enter `<object>`" and "leave `<object>`".
+These attributes contain lists of "enter aliases" and "leave aliases" for `<object>` - any of the aliases can be used in place of "enter `<object>`" and "leave `<object>`" to enter/leave the object.
 
 These attributes only have meaning for players and things (as rooms/exits cannot be "enter"ed) - the aliases for exits are stored in @alias.
 
@@ -1191,7 +1198,7 @@ You may wish to use the @search command instead, which can filter the results mo
 # FORWARDLIST
 `@forwardlist <object>[=<list of dbrefs>]`
 
-This attribute holds the dbrefs an AUDIBLE `<object>` is meant to forward what it hears to. Forwarding is not implemented yet: nothing is sent to them, though an object with a @forwardlist counts as listening (for @sweep and similar).
+If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @lock/filter is forwarded (prefixed with its @prefix) to each of the dbrefs given in its @forwardlist attribute, in much the same way as puppets forward sound to their owners. A room in the list passes the sound to everything in it.
 
 In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward. (If you want to allow all objects you own to forward to you, regardless of whether or not they control you, use `@lock/forward me=$me`)
 
@@ -1263,7 +1270,7 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 # @haven
 `@haven <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: when someone cannot page `<player>`, because `<player>` is set HAVEN or because of his page lock, they are not shown `<message>`.
+When someone tries to page `<player>` and cannot, either because `<player>` is set HAVEN or because of `<player>`'s page lock, they are shown `<message>`, if it evaluates to something non-null.
 
 ### Example
 ```sharp
@@ -1280,13 +1287,14 @@ This attribute can be set, but page does not use it yet: when someone cannot pag
 - [@idle]
 :::
 # @hide
-`@hide[/<switch>]`
+`@hide[/<switch>] <descriptor>`<br>
+`@hide[/<switch>] [<player>]`
 
 This command allows players to hide their online status. Hidden connections don't show up on WHO, in lwho(), etc, when used by players without see_all.
 
-It takes no argument and always affects all of your own connections. You must be a Wizard, Royalty, or have the Hide @power.
+The first form of this command affects the single connection specified by *\<descriptor\>* (as returned by ports(), or shown on the admin WHO). The second affects all connections for the given *\<player\>*, or the enactor if no *\<player\>* is given. You must be a Wizard, Royalty, or have the Hide @power to affect your own connections; only Wizards can affect other players' connections.
 
-The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhide them. If no switch is given, the command acts as a toggle: if all your connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
+The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide connections. If no switch is given, the command acts as a toggle: for a single descriptor, the hide status is reversed. For a player, if all their connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
 
 
 ::: seealso
@@ -1294,7 +1302,7 @@ The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhi
 - [who]
 - [LWHO()]
 - [LPORTS()]
-- [LPORTS()]
+- [PORTS()]
 :::
 # @idescribe
 # @oidescribe
@@ -1353,7 +1361,7 @@ Announcement: Room Zero shouts, "Dunce wins his first typo trophy!"
 # @idle
 `@idle <player>[=<message>]`
 
-This attribute can be set, but page does not use it yet: it is not sent back to those who page you.
+This message is sent in return to every page which reaches you, if it evaluates non-null. It is useful if you are idle for long periods of time and wish to tell people where you are, or if you are in a meeting and cannot quickly return pages.
 
 ### Example
 ```sharp
@@ -1829,7 +1837,7 @@ This command sets `<player>`'s building quota to 0, so they cannot build until i
 # @prefix
 `@prefix <object>[=<message>]`
 
-This attribute is meant to be used with the AUDIBLE flag, prepended to messages propagated via AUDIBLE. SharpMUSH does not propagate sound through AUDIBLE objects or exits yet, so @prefix is never used.
+This attribute is meant to be used with the AUDIBLE flag. It is evaluated, with %0 the message, and prepended to the sound an AUDIBLE object passes on to its @forwardlist; without one, the sound starts "From `<object>`, ". SharpMUSH does not propagate sound through AUDIBLE exits yet, so @prefix is not used for them.
 
 
 ::: seealso
@@ -2501,7 +2509,7 @@ The `/opaque` switch omits contents listings.
 # follow
 `follow <object>`
 
-You begin following `<object>`, a player or thing; its follow lock is not checked. As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
+You begin following `<object>`, a player or thing, if you pass its follow lock (see [@lock/follow]). As the object moves around (except if it @teleports away or goes home), you will automatically move around with it, so long as you pass all the locks and enter/leave locks on the exits and things the object moves through. This doesn't prevent you from going somewhere else on your own.
 
 
 ::: seealso
@@ -2897,7 +2905,11 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 - [@aufail]
 :::
 # WARN_ON_MISSING
-This internal command does nothing. The engine never runs it, including when a command starts with a function, so hooking it with @hook has no effect.
+This internal command is run when someone attempts to run a command which starts with a function, for example:
+```sharp
+&test me=$test: [emit(test)]
+```
+By default it sends the owner of the offending object a message, so they can fix the code to use a command instead of a function, and the command line is not run. The command is disabled in a new game; enable it with `@command/enable warn_on_missing` (or the `restrict_command` configuration). It can be @hooked to set custom behaviour.
 
 
 ::: seealso
@@ -2939,9 +2951,11 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 - [@pemit]
 :::
 # SESSION
-`SESSION`
+`SESSION [<pattern>]`
 
-The SESSION command shows information about your own first connection: your name and dbref, how long ago you connected, how long you have been idle, and your host. It takes no argument.
+The SESSION command is the same as the admin WHO, but instead of showing the host, it shows how many bytes each connection has moved: `Sent` is what the client sent to the game, `Recv` what the game sent to it, and `Pend` what has been written but not yet taken by the network. A connection whose counts the connection server did not report shows `-`. *<pattern>* limits the output, only showing players whose name begins with *<pattern>*, or whose names or aliases match *<pattern>* if it's a wildcard pattern.
+
+Anyone who is not a wizard or royalty and lacks the See_All power gets the listing a mortal sees from [WHO] instead.
 
 
 ::: seealso
@@ -2981,7 +2995,7 @@ A variable with several values repeats its name on one line per value, the defau
 
 Given a list of known good words in a category, the mush can suggest ones based on misspelled or otherwise invalid words. This is used for suggesting function names, help entries, etc. @suggest provides a way to add custom categories and vocabulary words.
 
-When given no switches or `/list`, shows all available suggestion categories.
+When given no switches or `/list`, shows all available suggestion categories. If the dict_file config option is set, the 'words' category is filled from that file at startup, and refilled whenever the file has changed since.
 
 `/add` and `/delete` add or remove a word in a given category. They need the `config.admin` permission.
 

@@ -91,8 +91,15 @@ public sealed class ExternalProviderCatalog(IMediator mediator, ISecretStore sec
 	private async Task<Result<ExternalProviderStatus>> SaveCoreAsync(string provider, ExternalProviderSettings settings, bool acknowledgeAffectedAccounts, CancellationToken cancellationToken)
 	{
 		if (!ExternalProviderDefinition.IsKnown(provider)) return new Error<string>("Unknown sign-in provider.");
-		if (ExternalProviderValidation.Validate(provider, settings, environment.IsDevelopment()) is not ExternalProviderSettings valid)
-			return new Error<string>("Invalid sign-in provider settings.");
+		return ExternalProviderValidation.Validate(provider, settings, environment.IsDevelopment()) switch
+		{
+			ExternalProviderSettings valid => await SaveValidatedAsync(provider, valid, acknowledgeAffectedAccounts, cancellationToken),
+			// The reason names the setting that is wrong.
+			Error<string> invalid => invalid,
+		};
+	}
+	private async Task<Result<ExternalProviderStatus>> SaveValidatedAsync(string provider, ExternalProviderSettings valid, bool acknowledgeAffectedAccounts, CancellationToken cancellationToken)
+	{
 		await InitializeAsync(cancellationToken);
 		await gate.WaitAsync(cancellationToken);
 		try

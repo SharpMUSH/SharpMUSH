@@ -324,7 +324,7 @@
     <comment>MT</comment>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>Kontostyring</value>
+    <value>Min konto</value>
     <comment>MT</comment>
   </data>
   <data name="AuthChange" xml:space="preserve">
@@ -1869,16 +1869,12 @@
     <value>{count, plural, one {# karakter registreret} other {# karakterer registreret}}</value>
     <comment>MT — participle left uninflected in the plural, as in the counter idiom</comment>
   </data>
-  <data name="NavCharsShort" xml:space="preserve">
-    <value>Kar.</value>
-    <comment>MT — abbreviation of 'karakterer' for the narrow nav chip; expand to 'Karakterer' if the chrome allows</comment>
-  </data>
   <data name="NavCloseTerminal" xml:space="preserve">
     <value>Luk terminalen</value>
     <comment>MT</comment>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
-    <value>kommandoterminal</value>
+    <value>Kommandoterminal</value>
     <comment>MT</comment>
   </data>
   <data name="NavConnectToSeeWhoIsHere" xml:space="preserve">
@@ -1963,10 +1959,6 @@
   </data>
   <data name="NavOnline" xml:space="preserve">
     <value>online</value>
-    <comment>MT</comment>
-  </data>
-  <data name="NavOpenTerminal" xml:space="preserve">
-    <value>Åbn terminalen</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
@@ -5231,13 +5223,13 @@
     <value>Deltag i #{0}</value>
   </data>
   <data name="NavPlayChannelsGag" xml:space="preserve">
-    <value>Gag #{0}</value>
+    <value>Slå lyden fra for #{0}</value>
   </data>
   <data name="NavPlayChannelsGagged" xml:space="preserve">
-    <value>Gagget: du er stadig med i kanalen, men hører intet. Vælg for at høre den igen.</value>
+    <value>Lyd slået fra: du er stadig med i kanalen, men hører intet. Vælg for at høre den igen.</value>
   </data>
   <data name="NavPlayChannelsGagHint" xml:space="preserve">
-    <value>Gag: bliv i kanalen, men hør intet.</value>
+    <value>Slå lyden fra: bliv i kanalen, men hør intet.</value>
   </data>
   <data name="NavPlayChannelsUnchanged" xml:space="preserve">
     <value>Spillet foretog ikke den ændring.</value>
@@ -5419,8 +5411,8 @@
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>Dette spil gemmer ikke historik over private beskeder, så kun beskeder fra dette besøg vises.</value>
   </data>
-  <data name="NavPlayBackToScene" xml:space="preserve">
-    <value>Tilbage til scenen</value>
+  <data name="NavPlayBackToGame" xml:space="preserve">
+    <value>Tilbage til spillet</value>
   </data>
   <data name="LayScopePlay" xml:space="preserve">
     <value>Spil</value>

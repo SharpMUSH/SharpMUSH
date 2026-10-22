@@ -2,6 +2,7 @@
 using System.Text;
 using Mediator;
 using MarkupString;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -232,7 +233,8 @@ public class LookService(
 		}
 
 		var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
-			await FlagView.ForAsync(look.Looker, connectionService));
+			await FlagView.ForAsync(look.Looker, connectionService),
+			name: await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
 
 		if (!look.Viewing.IsRoom || !look.ViewingFromInside)
 		{
@@ -248,9 +250,28 @@ public class LookService(
 			return defaultFormattedName;
 		}
 
+		return await EvaluateLookFormatAsync(look, "NAMEFORMAT", nameFormatArgs, defaultFormattedName);
+	}
+
+	/// <summary>
+	/// <c>fetch_ufun_attrib(..., UFUN_IGNORE_PERMS | UFUN_REQUIRE_ATTR)</c> (<c>unparse.c:185</c>,
+	/// <c>look.c:99</c>, <c>look.c:241</c>): only a missing format gives the default. A format that is
+	/// there is shown as it evaluates, so one that evaluates to nothing shows nothing.
+	/// </summary>
+	private async ValueTask<MString> EvaluateLookFormatAsync(Look look, string formatAttributeName,
+		Dictionary<string, CallState> formatArgs, MString defaultValue)
+	{
+		// After a tripped limit the format would show its code, as AttributeHelpers.EvaluateFormatAttribute says.
+		if (look.Parser.CurrentState.LimitExceeded?.IsExceeded == true
+				|| await attributeService.GetAttributeAsync(look.God, look.Viewing, formatAttributeName,
+					IAttributeService.AttributeMode.Read, true) is not SharpAttribute[])
+		{
+			return defaultValue;
+		}
+
 		return await AttributeHelpers.EvaluateFormatAttribute(
-			attributeService, look.Parser, look.Looker, look.Viewing, "NAMEFORMAT",
-			nameFormatArgs, defaultFormattedName);
+			attributeService, look.Parser, look.Looker, look.Viewing, formatAttributeName,
+			formatArgs, MarkupText.Empty);
 	}
 
 	private async ValueTask<MString> FormatDescriptionAsync(Look look, Description description)
@@ -291,7 +312,8 @@ public class LookService(
 
 	private async ValueTask ShowNameAndDescriptionAsync(Look look, MString formattedName, MString formattedDesc)
 	{
-		if (!look.LookThroughExit)
+		// notify_anything (notify.c:1033) sends nothing for an empty line.
+		if (!look.LookThroughExit && formattedName.Length > 0)
 		{
 			await notifyService.Notify(look.Looker, formattedName, look.Looker);
 		}
@@ -466,14 +488,23 @@ public class LookService(
 			plain.Append('\n');
 			if (flagView is null)
 			{
-				plain.Append(obj.Name);
+				var name = await Names.NameAsync(seen.Item.WithRoomOption(), MonikerPlace.Look);
+				if (name.Runs.Length == 0)
+				{
+					plain.Append(obj.Name);
+					continue;
+				}
+
+				parts.Add(MarkupText.Plain(plain.ToString()));
+				parts.Add(name);
+				plain.Clear();
 				continue;
 			}
 
 			var flags = new ObjectFlagSet(obj.DBRef, seen.Flags, await obj.Grants.WithCancellation(ExecutionBudget.CurrentToken));
 			var symbols = await MessageFormatting.FlagSymbolsAsync(obj, flagView, flags);
 			parts.Add(MarkupText.Plain(plain.ToString()));
-			parts.Add(obj.Name.Hilight());
+			parts.Add(await Names.UnparseNameAsync(seen.Item.WithRoomOption(), MonikerPlace.Look));
 			plain.Clear().Append("(#").Append(obj.DBRef.Number).Append(symbols).Append(')');
 		}
 		parts.Add(MarkupText.Plain(plain.ToString()));
@@ -485,9 +516,7 @@ public class LookService(
 
 		var formattedContents = await SkipsFormatAsync(look, "CONFORMAT")
 			? defaultContents
-			: await AttributeHelpers.EvaluateFormatAttribute(
-				attributeService, look.Parser, look.Looker, look.Viewing, "CONFORMAT",
-				conFormatArgs, defaultContents);
+			: await EvaluateLookFormatAsync(look, "CONFORMAT", conFormatArgs, defaultContents);
 
 		if (formattedContents.Length > 0)
 		{
@@ -506,13 +535,11 @@ public class LookService(
 			: isTransparent
 			? await TransparentExitListAsync(look.Looker, visibleExits)
 			: MarkupText.Concat(MarkupText.Plain("Obvious exits:\n"),
-				MessageFormatting.FormatMStringsWithOxfordComma(visibleExits.Select(x => ExitLink(x.Object().Name)).ToList()));
+				MessageFormatting.FormatMStringsWithOxfordComma(await ExitLinksAsync(visibleExits)));
 
 		var formattedExits = await SkipsFormatAsync(look, "EXITFORMAT")
 			? defaultExits
-			: await AttributeHelpers.EvaluateFormatAttribute(
-				attributeService, look.Parser, look.Looker, look.Viewing, "EXITFORMAT",
-				exitFormatArgs, defaultExits);
+			: await EvaluateLookFormatAsync(look, "EXITFORMAT", exitFormatArgs, defaultExits);
 
 		if (formattedExits.Length == 0)
 		{
@@ -540,7 +567,7 @@ public class LookService(
 		foreach (var exit in visibleExits)
 		{
 			var destName = await DestinationNameAsync(exit);
-			var exitMString = ExitLink(exit.Object().Name);
+			var exitMString = await ExitLinkAsync(exit);
 
 			exitParts.Add(await exit.WithRoomOption().IsOpaque()
 				? exitMString
@@ -556,7 +583,7 @@ public class LookService(
 		foreach (var exit in visibleExits)
 		{
 			var destName = await DestinationNameAsync(exit);
-			var exitMString = ExitLink(exit.Object().Name);
+			var exitMString = await ExitLinkAsync(exit);
 
 			if (await exit.WithRoomOption().IsOpaque())
 			{
@@ -631,15 +658,27 @@ public class LookService(
 	/// in the portal — and as the bare name for everyone else. The first alias (before ';') is the
 	/// command; every alias, pipe-delimited, is the hint, which BeipMU offers as a right-click menu.
 	/// </summary>
-	private static MString ExitLink(string exitName)
+	private async ValueTask<MString> ExitLinkAsync(AnySharpContent exit)
 	{
-		var aliases = exitName.Split(';');
+		var aliases = exit.Object().Name.Split(';');
 		var command = aliases[0];
 		var hint = aliases.Length > 1 ? string.Join("|", aliases) : $"Go {command}";
 		return MarkupText.Wrap(
 			AnsiMarkup.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint),
-			MarkupText.Plain(command));
+			await Names.NameAsync(exit.WithRoomOption(), MonikerPlace.Look, command));
 	}
+
+	private async ValueTask<List<MString>> ExitLinksAsync(List<AnySharpContent> exits)
+	{
+		var links = new List<MString>(exits.Count);
+		foreach (var exit in exits)
+		{
+			links.Add(await ExitLinkAsync(exit));
+		}
+		return links;
+	}
+
+	private NameFormatter Names => new(attributeService, configuration);
 
 	private MString FormatExitNameToDestination(MString exitName, string destName, string? locale = null)
 	{

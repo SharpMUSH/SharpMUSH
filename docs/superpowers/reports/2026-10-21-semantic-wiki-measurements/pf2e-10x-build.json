@@ -1,0 +1,23 @@
+{
+  "Label": "pf2e-10x",
+  "WorldPath": "(removed after the run)",
+  "FixtureId": "7a319042-0614-46b1-bec0-8f4f05cd2538",
+  "Pages": 47111,
+  "Refused": 0,
+  "ImportedPages": 45800,
+  "Facts": 151850,
+  "Timings": {
+    "open": 1.6812804,
+    "activate": 0.3766385,
+    "create": 467.038683,
+    "import": 392.3197558
+  },
+  "HotTarget": "wiki_page/2",
+  "Storage": {
+    "MapSizeBytes": 68719476736,
+    "FileBytes": 156745728,
+    "AllocatedBytes": 156745728,
+    "LiveBytes": 156008448,
+    "FreeBytes": 737280
+  }
+}

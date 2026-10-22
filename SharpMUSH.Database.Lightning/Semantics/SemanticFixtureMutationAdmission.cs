@@ -9,7 +9,12 @@ public sealed class WikiFixtureMutationException(WikiFixtureMutationFailure reas
 }
 
 internal enum SemanticFixturePhase { Inactive, Activating, Active, Failed }
-internal enum SemanticFixtureMutation { LegacyWiki, Unsupported, Pin, Raw }
+/// <remarks>
+/// <see cref="PackageWiki"/> writes a package's wiki ownership rows, moving owned pages' projection sources with
+/// them. <see cref="Requirements"/> writes requirement rows; an active fixture admits only one that leaves every
+/// read requirement as it was, since read requirements decide which visibility class a page projects under.
+/// </remarks>
+internal enum SemanticFixtureMutation { LegacyWiki, Unsupported, Pin, Raw, PackageWiki, Requirements }
 
 internal sealed class SemanticFixtureMutationLease : IDisposable
 {
@@ -25,7 +30,8 @@ internal sealed partial class SemanticFixtureCapability
 {
 	private SemanticFixturePhase _phase;
 	private int _legacyMutationsInFlight;
-	private bool _everMutatingPackageAdmitted;
+	// Package work admitted without a coordinator that can prove it ended: it permanently precludes activation.
+	private bool _uncoordinatedPackageAdmitted;
 	private bool _installerFenceInstalled;
 	private bool _runnerFenceInstalled;
 	private bool _layoutMutationStarted;
@@ -39,20 +45,48 @@ internal sealed partial class SemanticFixtureCapability
 			if (runner) _runnerFenceInstalled = true; else _installerFenceInstalled = true;
 		}
 	}
-	internal bool AdmitPackageMutation()
+	/// <summary>
+	/// Admits package work. An inactive fixture admits any; work without a coordinator is remembered and then
+	/// precludes activation. An active fixture admits only coordinated work, whose settlement proves it ended.
+	/// </summary>
+	internal bool AdmitPackageMutation(bool coordinated = false)
 	{
 		lock (_gate)
 		{
-			if (_phase != SemanticFixturePhase.Inactive || _ownership.IsRevoked || _poisoned) return false;
-			_everMutatingPackageAdmitted = true;
-			return true;
+			if (_active is null || _active.IsClosing || _active.NativeClosed || _ownership.IsRevoked
+				|| _ownership.IsQuarantined || _poisoned) return false;
+			if (_phase == SemanticFixturePhase.Inactive)
+			{
+				if (!coordinated) _uncoordinatedPackageAdmitted = true;
+				return true;
+			}
+			return _phase == SemanticFixturePhase.Active && coordinated;
 		}
+	}
+	internal void RequirePackageAttempt(SemanticFixtureLease lease, bool coordinated = false)
+	{
+		lock (_gate)
+		{
+			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease)
+				|| !_initialized || !lease.IsInitialized || lease.IsClosing || lease.NativeClosed
+				|| !(_phase == SemanticFixturePhase.Inactive || _phase == SemanticFixturePhase.Active && coordinated)
+				|| _ownership.IsRevoked || _ownership.IsQuarantined || _poisoned) throw Unavailable();
+			if (_phase == SemanticFixturePhase.Inactive && !coordinated) _uncoordinatedPackageAdmitted = true;
+		}
+	}
+
+	/// <summary>Whether <paramref name="operation"/> is a live root package operation on <paramref name="lease"/>.</summary>
+	internal bool IsLiveRoot(SemanticFixtureLease lease, SemanticFixturePackageOperation? operation)
+	{
+		lock (_gate)
+			return operation is { IsRoot: true, IsReleased: false } && ReferenceEquals(operation.Lease, lease)
+				&& _packageOperations.TryGetValue(lease, out var operations) && operations.Contains(operation);
 	}
 	internal SemanticFixtureMutationLease EnterMutation(SemanticFixtureMutation operation)
 	{
 		lock (_gate)
 		{
-			if (_active is null || _ownership.IsRevoked || _poisoned || _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed)
+			if (_active is null || _active.IsClosing || _active.NativeClosed || _ownership.IsRevoked || _poisoned || _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed)
 				throw Unavailable();
 			if (_phase == SemanticFixturePhase.Active && operation == SemanticFixtureMutation.Unsupported)
 				throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
@@ -69,7 +103,7 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
-			if (!ReferenceEquals(lease.Owner, this) || _active is null || _poisoned || _phase != lease.Phase
+			if (!ReferenceEquals(lease.Owner, this) || _active is null || _active.IsClosing || _active.NativeClosed || _poisoned || _phase != lease.Phase
 				|| _phase is SemanticFixturePhase.Activating or SemanticFixturePhase.Failed) throw Unavailable();
 		}
 	}
@@ -77,9 +111,11 @@ internal sealed partial class SemanticFixtureCapability
 	{
 		lock (_gate)
 		{
+			if (HasAdmittedReads(lease)) throw new SemanticFixtureOperationInProgressException();
 			if (!ReferenceEquals(lease.Owner, this) || !ReferenceEquals(_active, lease) || !_initialized || !lease.IsInitialized || _poisoned
-				|| _ownership.IsRevoked || _ownership.IsQuarantined || _phase != SemanticFixturePhase.Inactive
-				|| _legacyMutationsInFlight != 0 || _everMutatingPackageAdmitted || !_installerFenceInstalled || !_runnerFenceInstalled)
+				|| _ownership.IsRevoked || _ownership.IsQuarantined || lease.IsClosing || lease.NativeClosed || _phase != SemanticFixturePhase.Inactive
+				|| _legacyMutationsInFlight != 0 || _uncoordinatedPackageAdmitted || HasRetainedOperations(lease)
+				|| !_installerFenceInstalled || !_runnerFenceInstalled)
 				throw Unavailable();
 			_phase = SemanticFixturePhase.Activating;
 			_layoutMutationStarted = false;

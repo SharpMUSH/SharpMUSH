@@ -69,3 +69,11 @@ public class GetAllSystemMailQueryHandler(IMailStore database)
 		Handle(GetAllSystemMailQuery query, CancellationToken cancellationToken) =>
 		database.GetAllSystemMailAsync(cancellationToken);
 }
+
+public class GetAllMailRecipientsQueryHandler(IMailStore database)
+	: IStreamQueryHandler<GetAllMailRecipientsQuery, MailRecipient>
+{
+	public IAsyncEnumerable<MailRecipient>
+		Handle(GetAllMailRecipientsQuery query, CancellationToken cancellationToken) =>
+		database.GetAllMailRecipientsAsync(cancellationToken);
+}

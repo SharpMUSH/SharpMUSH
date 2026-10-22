@@ -46,6 +46,7 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 	private record AdminAccountRow(string Id, string Username, string? Email, string Status, bool MustChangePassword, bool IsReserved,
 		bool IsGodsAccount);
 	private record CreateCharacterRequest(string Name, string Password);
+	private record AccountRolesResponse(string AccountKey, string Username, string[] RoleSlugs, Dictionary<string, string> Overrides);
 	private record CreatedCharacterResponse(int DbrefNumber, long CreationTime);
 
 	private const string Password = "Integration-Test-Pw-1!";
@@ -472,5 +473,69 @@ public class AdminAccountsApiTests(ServerWebAppFactory factory)
 		await Assert.That(freshLogin.StatusCode).IsEqualTo(HttpStatusCode.OK);
 		var body = await freshLogin.Content.ReadFromJsonAsync<AccountLoginResponse>();
 		await Assert.That(body!.Characters.Any(c => c.DbrefNumber == character.DbrefNumber)).IsFalse();
+	}
+
+	/// <summary>
+	/// The portal's Assignments tab looks an account up, then assigns and removes through the key it was
+	/// given. The account's full id has a <c>/</c>, which no route segment matches.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 6)]
+	public async Task RoleAssignment_ThroughTheLookedUpKey_AssignsAndRemoves()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+
+		var looked = await GetAccountRolesAsync(godHttp, godSessionToken, target.Username);
+		await Assert.That(looked.AccountKey).DoesNotContain("/");
+
+		using var assign = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Post, $"api/roles/account/{looked.AccountKey}/builder"), godSessionToken));
+		await Assert.That(assign.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).RoleSlugs).Contains("builder");
+
+		using var remove = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Delete, $"api/roles/account/{looked.AccountKey}/builder"), godSessionToken));
+		await Assert.That(remove.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).RoleSlugs).DoesNotContain("builder");
+	}
+
+	/// <summary>
+	/// An override set through the looked-up key lands on that account. The full id, escaped once or twice,
+	/// names no account: the route is never decoded again into another account's id.
+	/// </summary>
+	[Test, NotInParallel("SetupFlow", Order = 6)]
+	public async Task RoleOverride_ThroughTheLookedUpKey_SetsIt_AndTheEscapedFullIdIsNotFound()
+	{
+		var (godHttp, godSessionToken) = await LoginAsGodAccountAsync();
+		var (_, target) = await RegisterAccountAsync();
+		var looked = await GetAccountRolesAsync(godHttp, godSessionToken, target.Username);
+
+		foreach (var key in new[] { $"node_accounts%2F{looked.AccountKey}", $"node_accounts%252F{looked.AccountKey}", "no-such-account" })
+		{
+			using var refusedRequest = new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{key}/overrides")
+			{
+				Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
+			};
+			using var refused = await godHttp.SendAsync(AsGod(refusedRequest, godSessionToken));
+			await Assert.That(refused.StatusCode).IsEqualTo(HttpStatusCode.NotFound);
+		}
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).Overrides).IsEmpty();
+
+		using var setRequest = new HttpRequestMessage(HttpMethod.Put, $"api/roles/account/{looked.AccountKey}/overrides")
+		{
+			Content = JsonContent.Create(new { scope = "wiki.create", state = "Allow" })
+		};
+		using var set = await godHttp.SendAsync(AsGod(setRequest, godSessionToken));
+		await Assert.That(set.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		await Assert.That((await GetAccountRolesAsync(godHttp, godSessionToken, target.Username)).Overrides["wiki.create"])
+			.IsEqualTo("Allow");
+	}
+
+	private static async Task<AccountRolesResponse> GetAccountRolesAsync(HttpClient godHttp, string godSessionToken, string username)
+	{
+		using var response = await godHttp.SendAsync(AsGod(
+			new HttpRequestMessage(HttpMethod.Get, $"api/roles/account?username={username}"), godSessionToken));
+		await Assert.That(response.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		return (await response.Content.ReadFromJsonAsync<AccountRolesResponse>())!;
 	}
 }

@@ -24,6 +24,7 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 	private readonly Dictionary<string, bool> _ownedAuxiliaryPaths = new(StringComparer.Ordinal);
 	private ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>? _server;
 	private IServiceProvider? _services;
+	private LightningDatabase? _openedProvider;
 	private bool _disposed;
 
 	public SemanticWikiPrototypeHost(string ownedScratchRoot, string sqlConnectionString, string configFile,
@@ -32,9 +33,22 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 
 	internal SemanticWikiPrototypeHost(string ownedScratchRoot, string sqlConnectionString, string configFile,
 		INotifyService? notifier, string sqlPlatform, Action<IServiceCollection>? configureTestServices)
+		: this(new SemanticWikiPrototypeFixture(ownedScratchRoot), sqlConnectionString, configFile, notifier, sqlPlatform, configureTestServices) { }
+
+	/// <summary>Recovery tests only: hosts the world a killed process issued, once that process has exited.</summary>
+	internal static SemanticWikiPrototypeHost AdoptAfterOwnerExit(string worldPath, string sqlConnectionString, string configFile,
+		Action<IServiceCollection>? configureTestServices = null)
+		=> new(SemanticWikiPrototypeFixture.AdoptAfterOwnerExit(worldPath), sqlConnectionString, configFile, null, "mysql", configureTestServices)
+		{ _adoptsAuxiliaryPaths = true };
+
+	// The owner that created an adopted world's auxiliary paths has exited, so the adopter cleans them up.
+	private bool _adoptsAuxiliaryPaths;
+
+	private SemanticWikiPrototypeHost(SemanticWikiPrototypeFixture fixture, string sqlConnectionString, string configFile,
+		INotifyService? notifier, string sqlPlatform, Action<IServiceCollection>? configureTestServices)
 	{
 		_configureTestServices = configureTestServices;
-		_fixture = new SemanticWikiPrototypeFixture(ownedScratchRoot);
+		_fixture = fixture;
 		_sqlConnectionString = sqlConnectionString;
 		_configFile = configFile;
 		_notifier = notifier;
@@ -94,15 +108,20 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 				sp.GetRequiredService<IPasswordService>(), sp.GetRequiredService<IObjectRelationLoader>(),
 				catalog.MigrationSources, catalog.AllFlags, sp.GetRequiredService<AccountCredentialGate>(),
 				new Lazy<IEnumerable<IAccountCredentialRevocation>>(() => sp.GetServices<IAccountCredentialRevocation>().ToArray()));
+			_openedProvider = provider;
 			ProviderOpened?.Invoke(provider);
 			return provider;
 		});
 		services.AddSingleton<PackageInstallService>();
+		services.AddSingleton<IPackageOperationScope, SemanticWikiPackageOperationScope>();
 		services.AddSingleton<PackageOperationRunner>();
 		services.RemoveAll<IPackageInstallService>();
 		services.RemoveAll<IPackageOperationRunner>();
-		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability));
-		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability));
+		services.AddSingleton<IPackageInstallService>(sp => new SemanticWikiPackageAdmission(sp.GetRequiredService<PackageInstallService>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
+		services.AddSingleton<IPackageOperationRunner>(sp => new SemanticWikiPackageOperationRunner(sp.GetRequiredService<PackageOperationRunner>(), _fixture.Capability, sp.GetRequiredService<LightningDatabase>()));
+		services.AddSingleton<PackageLifecycleRunner>();
+		services.RemoveAll<IPackageLifecycleRunner>();
+		services.AddSingleton<IPackageLifecycleRunner>(sp => new SemanticWikiLifecycleRunner(sp.GetRequiredService<PackageLifecycleRunner>(), sp.GetRequiredService<LightningDatabase>()));
 		_configureTestServices?.Invoke(services);
 	}
 
@@ -123,7 +142,11 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 		ReserveDirectory(WorldPath + ".backups");
 		var engineLock = WorldPath + ".engine.lock";
 		SemanticFixtureCapability.RejectLinkedAncestors(engineLock);
-		if (Path.Exists(engineLock)) return;
+		if (Path.Exists(engineLock))
+		{
+			if (_adoptsAuxiliaryPaths && File.Exists(engineLock)) _ownedAuxiliaryPaths.TryAdd(engineLock, false);
+			return;
+		}
 		using (new FileStream(engineLock, FileMode.CreateNew, FileAccess.Write, FileShare.None)) { }
 		_ownedAuxiliaryPaths.Add(engineLock, false);
 	}
@@ -131,7 +154,11 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 	private void ReserveDirectory(string path)
 	{
 		SemanticFixtureCapability.RejectLinkedAncestors(path);
-		if (Path.Exists(path)) return;
+		if (Path.Exists(path))
+		{
+			if (_adoptsAuxiliaryPaths && Directory.Exists(path)) _ownedAuxiliaryPaths.TryAdd(path, true);
+			return;
+		}
 		Directory.CreateDirectory(path);
 		_ownedAuxiliaryPaths.Add(path, true);
 	}
@@ -145,12 +172,16 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 
 	private async ValueTask CloseCoreAsync()
 	{
+		// Never resolve a failed startup graph here. Capture the actual opened provider, and
+		// refuse a busy close before hiding Services or initiating host/container shutdown.
+		_openedProvider?.PrepareSemanticFixtureClose();
 		Volatile.Write(ref _services, null);
 		if (_server is not { } server) return;
 		// The lower factory owns one shared actual-host shutdown/disposal completion, including failed
 		// startup. Retain its reference until the entire lifetime has completed successfully.
 		await server.DisposeAsync();
 		_server = null;
+		_openedProvider = null;
 	}
 
 	public async ValueTask DisposeAsync()
