@@ -10,6 +10,22 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-high-fantasy-kemono-player-sign-in", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-romance-comicbook-administrator-rules", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-romance-comicbook-administrator-joining", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-romance-comicbook-administrator-identity", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-world", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-romance-comicbook-shared-completion", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-romance-comicbook-player-continue", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-character", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-walkthrough", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-rules", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-high-fantasy-kemono-shared-welcome", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-romance-comicbook-player-speak-act", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-romance-comicbook-player-useful-action", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-player-channels", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-player-place", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-shared-welcome", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-romance-comicbook-player-character", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-romance-comicbook-player-sign-in", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-sign-in.png", 1254, 1254, "player-sign-in"),
 		new SharpieArt("sharpie-gothic-kemono-player-channels", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-channels.png", 1254, 1254, "player-channels"),
