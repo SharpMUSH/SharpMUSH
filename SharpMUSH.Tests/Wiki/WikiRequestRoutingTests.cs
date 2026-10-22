@@ -351,7 +351,7 @@ public class WikiRequestRoutingTests
 		var titlesBefore = Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.SetPageTitleAsync));
 		await Wiki.SetTitleAsync(page.Id, " New title ");
 		await Assert.That(Factory.Provider.Calls[nameof(IWikiStore.SetPageTitleAsync)] - titlesBefore).IsEqualTo(1);
-		await Wiki.SetFactsAsync(page.Id, [new(" test:level ", " 3 "), new("test:level", "3")]);
+		await Wiki.SetFactsAsync(page.Id, [new(" pf2e:level ", " 3 "), new("pf2e:level", "3")]);
 		await Wiki.UpdateAsync(page.Id, "Changed *body*", "raw editor", "summary");
 		await Wiki.SetMetadataAsync(page.Id, [" Mixed Case "], false);
 		var stored = (await Factory.Provider.Inner.GetPageByIdAsync(page.Id)).Expect<WikiPage>();
@@ -361,7 +361,7 @@ public class WikiRequestRoutingTests
 		await Assert.That(stored.Published).IsFalse();
 		await Assert.That(stored.Categories).Contains("mixed_case");
 		// Facts are page metadata: trimmed and merged on the way in, and kept by the edits after.
-		await Assert.That(stored.Facts).IsEquivalentTo([new WikiPageFact("test:level", "3")]);
+		await Assert.That(stored.Facts).IsEquivalentTo([new WikiPageFact("pf2e:level", "3")]);
 		await Assert.That(stored.RenderedHtml).Contains("<em>body</em>");
 		var named = await Wiki.NameCategoriesAsync(["Named Category"], [], "category author", "en-US");
 		await Assert.That(named.Count).IsEqualTo(1);

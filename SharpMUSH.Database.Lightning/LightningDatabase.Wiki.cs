@@ -618,12 +618,28 @@ public partial class LightningDatabase : IWikiStore
 		{
 			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
+			if (RefusedFact(tx, id, facts) is { } refused) return new Error<string>(refused);
 
 			var updated = found.Record with { Facts = WikiFactRecords(facts) };
 			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});
 	}
+
+	/// <summary>
+	/// Why a world that does not index semantics yet refuses these facts, or null: the same schema and live-target
+	/// checks an indexed world makes, so a fact accepted now never leaves activation to refuse it.
+	/// </summary>
+	private static string? RefusedFact(ITx tx, string id, IReadOnlyList<WikiPageFact> facts)
+		=> WikiPageFacts.ToCanonical(AtomicWikiLayout.Schema, new(CanonicalWikiPageId(id)), facts, CancellationToken.None) switch
+		{
+			ValidationFailure failure => WikiFactRejectedException.Describe(failure),
+			CanonicalFactSet set => set.Facts.Select(f => f.Value is PageRef target
+					&& !(TryParseWikiPageId(target.Id, out var key) && TryReadWikiPage(tx, key) is not null)
+					? $"{f.Property} names a page that does not exist: '{target.Id}'."
+					: null)
+				.FirstOrDefault(refused => refused is not null),
+		};
 
 	/// <summary>
 	/// A page reference written as a bare key (<c>12</c>) stated as the page id it names (<c>wiki_page/12</c>), so
