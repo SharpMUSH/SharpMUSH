@@ -10,6 +10,19 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-detective-chibi-administrator-invite", "chibi", "Detective", "images/sharpie/sharpie-detective-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-detective-chibi-administrator-walkthrough", "chibi", "Detective", "images/sharpie/sharpie-detective-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-medieval-fantasy-chibi-administrator-capabilities", "chibi", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-detective-chibi-administrator-joining", "chibi", "Detective", "images/sharpie/sharpie-detective-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-detective-chibi-player-channels", "chibi", "Detective", "images/sharpie/sharpie-detective-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-alternate-history-pixel-player-speak-act", "pixel", "Alternate History", "images/sharpie/sharpie-alternate-history-pixel-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-alternate-history-pixel-player-sign-in", "pixel", "Alternate History", "images/sharpie/sharpie-alternate-history-pixel-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-alternate-history-pixel-shared-welcome", "pixel", "Alternate History", "images/sharpie/sharpie-alternate-history-pixel-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-detective-chibi-player-useful-action", "chibi", "Detective", "images/sharpie/sharpie-detective-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-dark-fantasy-chibi-administrator-walkthrough", "chibi", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-dark-fantasy-chibi-administrator-rules", "chibi", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-dark-fantasy-chibi-administrator-joining", "chibi", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-dark-fantasy-chibi-shared-welcome", "chibi", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-medieval-fantasy-chibi-player-speak-act", "chibi", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-medieval-fantasy-chibi-administrator-invite", "chibi", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
 		new SharpieArt("sharpie-medieval-fantasy-chibi-administrator-joining", "chibi", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
