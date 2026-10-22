@@ -63,12 +63,11 @@ public static class WikiFactEntry
 		IEnumerable<WikiPageFact> stored, IReadOnlyList<WikiPageFact> stated, WikiVisibility visibility)
 	{
 		var kept = new List<WikiPageFact>(stated);
-		foreach (var fact in stored)
-		{
-			if (Definition(schema, fact.Property) is not { Type: SemanticType.PageRef } definition) continue;
-			if (definition.Cardinality != Cardinality.Multiple && stated.Any(s => s.Property == fact.Property)) continue;
-			if (await wiki.GetByIdAsync(fact.Value) is WikiPage target && !visibility.Admits(target)) kept.Add(fact);
-		}
+		var references = stored.Where(fact => Definition(schema, fact.Property) is { Type: SemanticType.PageRef } definition
+			&& (definition.Cardinality == Cardinality.Multiple || stated.All(s => s.Property != fact.Property)));
+		foreach (var fact in references)
+			if (await wiki.GetByIdAsync(fact.Value) is WikiPage target && !visibility.Admits(target))
+				kept.Add(fact);
 		return kept;
 	}
 
