@@ -1,6 +1,6 @@
 format: "1.10"
 package: highlights
-version: 1.1.0
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -234,7 +234,7 @@ objects:
       WEB`HIGHLIGHT`PAGING: |-
         squish([if(gt(%1,1),\[Previous page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,dec(%1))]\))] [if(%q<highlight_more>,\[Next page\]\([u(%!/WEB`HIGHLIGHT`ADDRESS,%0,inc(%1))]\))])
       WEB`SCHEMA`HIGHLIGHTS: |-
-        setq(highlight_view,u(%!/WEB`HIGHLIGHT`VIEW,%<at>))[setq(page_number,u(%!/WEB`HIGHLIGHT`PAGENUM,%<at>))][null(u(%!/WEB`HIGHLIGHT`POSES,%<viewer>,%<at>))][setq(highlight_title,if(strmatch(%q<highlight_view>,mine),Your favourites,Highlights))][json(object,kind,json(string,view),schema_version,json(number,1),title,json(string,%q<highlight_title>),pages,json(array,json(object,key,json(string,main),title,json(string,%q<highlight_title>),order,json(number,1),sections,json_array(u(%!/WEB`HIGHLIGHT`SECTION,1,u(%!/WEB`HIGHLIGHT`MARKDOWN,u(%!/WEB`HIGHLIGHT`INTRO,%q<highlight_view>,%<viewer>)))%r[u(%!/WEB`HIGHLIGHT`SECTION,2,json(object,kind,json(string,timeline),rows_field,json(string,poses),empty,json(string,if(strmatch(%q<highlight_view>,mine),You have no favourite poses yet.,No pose is a favourite yet.))))][if(strlen(setr(paging_links,u(%!/WEB`HIGHLIGHT`PAGING,%q<highlight_view>,%q<page_number>))),%r[u(%!/WEB`HIGHLIGHT`SECTION,3,u(%!/WEB`HIGHLIGHT`MARKDOWN,%q<paging_links>))])],%r))),actions,json(object,favourite,json(object,transport,json(string,http),method,json(string,POST),route,json(string,/http/highlights/act),on_error,json(object,bind_field_errors,json(boolean,false)))))]
+        setq(highlight_view,u(%!/WEB`HIGHLIGHT`VIEW,%<at>))[setq(page_number,u(%!/WEB`HIGHLIGHT`PAGENUM,%<at>))][null(u(%!/WEB`HIGHLIGHT`POSES,%<viewer>,%<at>))][setq(highlight_title,if(strmatch(%q<highlight_view>,mine),Your favourites,Highlights))][json_fill(lit({"kind":"view","schema_version":1,"title":"","pages":[{"key":"main","title":"","order":1,"sections":[]}],"actions":{"favourite":{"transport":"http","method":"POST","route":"/http/highlights/act","on_error":{"bind_field_errors":false}}}}),/title,%q<highlight_title>,/pages/0/title,%q<highlight_title>,/pages/0/sections,json_array(u(%!/WEB`HIGHLIGHT`SECTION,1,u(%!/WEB`HIGHLIGHT`MARKDOWN,u(%!/WEB`HIGHLIGHT`INTRO,%q<highlight_view>,%<viewer>)))%r[u(%!/WEB`HIGHLIGHT`SECTION,2,json(object,kind,json(string,timeline),rows_field,json(string,poses),empty,json(string,if(strmatch(%q<highlight_view>,mine),You have no favourite poses yet.,No pose is a favourite yet.))))][if(strlen(setr(paging_links,u(%!/WEB`HIGHLIGHT`PAGING,%q<highlight_view>,%q<page_number>))),%r[u(%!/WEB`HIGHLIGHT`SECTION,3,u(%!/WEB`HIGHLIGHT`MARKDOWN,%q<paging_links>))])],%r))]
       # Pose %1 as a timeline row for viewer %0 on page %2: who wrote it, when, the pose in its colours, a link to
       # its scene, and a button that favourites it or takes it back.
       WEB`HIGHLIGHT`ROW: |-

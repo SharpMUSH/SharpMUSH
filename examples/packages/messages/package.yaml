@@ -1,6 +1,6 @@
 format: "1.10"
 package: messages
-version: 1.2.1
+version: 1.2.2
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -69,7 +69,7 @@ objects:
         Welcome to [tone(strong,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`LAYOUT`SECTION,New here?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,register),<name> \[email\] <password>,u(FUN`LAYOUT`COMMAND,make),<character> <password>)])][if(strmatch(config(guests),Yes),%r[u(FUN`LAYOUT`SECTION,Just looking?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),guest)])]%r[u(FUN`LAYOUT`SECTION,Have an account?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,login),<name-or-email> <password>,u(FUN`LAYOUT`COMMAND,play),<character>,u(FUN`LAYOUT`COMMAND,claim),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Playing a character?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Any time)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,WHO),who is online,u(FUN`LAYOUT`COMMAND,QUIT),leave the game)]
       # %0 heading: a light rule with the heading at its left.
       FUN`LAYOUT`SECTION: |-
-        rule(tone(strong,%0),,json(object,border,json(string,single),title,json(string,left)))
+        rule(tone(strong,%0),,lit({"border":"single","title":"left"}))
       # The options of a list of commands: the arguments after two spaces.
       FUN`LAYOUT`LIST: |-
         json(object,sep,json(string,%b%b))
