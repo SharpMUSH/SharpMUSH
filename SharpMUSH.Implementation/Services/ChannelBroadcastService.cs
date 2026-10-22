@@ -523,13 +523,15 @@ public class ChannelBroadcastService(
 	/// </summary>
 	private static MString BuildDefaultMessage(ChannelLine line)
 	{
-		var (chanName, playerName, title, says, message) = (line.ChanName, line.PlayerName, line.Title, line.Says, line.Message);
+		var (playerName, title, says, message) = (line.PlayerName, line.Title, line.Says, line.Message);
+		// extchat.c:3866: a silent line (CB_QUIET) leaves out the channel name.
+		var chanName = line.Options == "silent" ? MarkupText.Empty : MarkupText.Concat(line.ChanName, MarkupText.Space);
 		return line.ChatType switch
 		{
-			"@" or "|" => MarkupText.Concat([chanName, MarkupText.Space, message]),
-			":" => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, message]),
-			";" => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, message]),
-			_ => MarkupText.Concat([chanName, MarkupText.Space, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, says, MarkupText.Plain(", \""), message, MarkupText.Plain("\"")])
+			"@" or "|" => MarkupText.Concat([chanName, message]),
+			":" => MarkupText.Concat([chanName, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, message]),
+			";" => MarkupText.Concat([chanName, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, message]),
+			_ => MarkupText.Concat([chanName, title.Length > 0 ? MarkupText.Concat([title, MarkupText.Space]) : MarkupText.Empty, playerName, MarkupText.Space, says, MarkupText.Plain(", \""), message, MarkupText.Plain("\"")])
 		};
 	}
 }

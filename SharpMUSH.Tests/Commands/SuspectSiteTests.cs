@@ -11,9 +11,8 @@ using System.Text;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// A player who connects or is created from a site whose sitelock rule carries <c>suspect</c> is set
-/// SUSPECT, and wizards hear of a suspect player's creation (PennMUSH <c>src/player.c:317</c>, <c>:562</c>;
-/// <c>src/bsd.c:5912</c>). #2103.
+/// A character made from a site whose sitelock rule carries <c>suspect</c> is set SUSPECT, and wizards
+/// hear of it (PennMUSH <c>src/player.c:562</c>, <c>src/bsd.c:5912</c>). #2103.
 /// </summary>
 public class SuspectSiteTests
 {
@@ -39,26 +38,6 @@ public class SuspectSiteTests
 
 	private async Task<bool> IsSuspect(DBRef player)
 		=> await Mediator.Send(new GetObjectNodeQuery(player)) is AnySharpObject node && await node.HasFlag("SUSPECT");
-
-	[Test]
-	[Arguments(true)]
-	[Arguments(false)]
-	public async Task ConnectingFromASuspectSiteSetsSuspect(bool fromSuspectSite)
-	{
-		var name = TestIsolationHelpers.GenerateUniqueName("SuspConn");
-		var player = await TestIsolationHelpers.CreateNamedTestPlayerAsync(WebAppFactoryArg.Services, Mediator, name);
-		var suspectHost = TestIsolationHelpers.GenerateUniqueName("suspect") + ".example";
-		var handle = await ConnectFromAsync(fromSuspectSite ? suspectHost : TestIsolationHelpers.GenerateUniqueName("other") + ".example");
-
-		using (Suspecting(suspectHost))
-		{
-			await WebAppFactoryArg.CommandParser.CommandParse(handle, Connections,
-				MarkupText.Plain($"connect {name} {TestIsolationHelpers.TestPassword}"));
-		}
-
-		await Assert.That(Connections.Get(handle)?.Ref).IsEqualTo(player);
-		await Assert.That(await IsSuspect(player)).IsEqualTo(fromSuspectSite);
-	}
 
 	[Test]
 	public async Task ACharacterMadeFromASuspectSiteIsSuspectAndWizardsHear()

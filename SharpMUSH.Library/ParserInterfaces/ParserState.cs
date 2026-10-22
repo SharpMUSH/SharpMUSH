@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -754,6 +755,12 @@ public partial record ParserState
 
 	/// <summary>Restricted evaluation policy retained by nested parser state copies.</summary>
 	public EvaluationRestrictions? Restrictions { get; init; }
+
+	/// <summary>
+	/// The built-in fn() calls, which a user function of the same name does not hide (PennMUSH's
+	/// PE_BUILTINONLY). A function's own frame does not carry it.
+	/// </summary>
+	public FunctionDefinition? BuiltinCall { get; init; }
 
 	/// <summary>
 	/// The line a player typed, as plain text, carried by the states that run it; null for a state that

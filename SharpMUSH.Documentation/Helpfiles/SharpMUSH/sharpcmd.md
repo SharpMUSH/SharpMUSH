@@ -1198,7 +1198,7 @@ You may wish to use the @search command instead, which can filter the results mo
 # FORWARDLIST
 `@forwardlist <object>[=<list of dbrefs>]`
 
-This attribute holds the dbrefs an AUDIBLE `<object>` is meant to forward what it hears to. Forwarding is not implemented yet: nothing is sent to them, though an object with a @forwardlist counts as listening (for @sweep and similar).
+If `<object>` is set AUDIBLE, any sound it hears which passes its @filter and @lock/filter is forwarded (prefixed with its @prefix) to each of the dbrefs given in its @forwardlist attribute, in much the same way as puppets forward sound to their owners. A room in the list passes the sound to everything in it.
 
 In order to forward to an object, you must either control it, have the pemit_all power, or pass its @lock/forward. (If you want to allow all objects you own to forward to you, regardless of whether or not they control you, use `@lock/forward me=$me`)
 
@@ -1287,13 +1287,14 @@ When someone tries to page `<player>` and cannot, either because `<player>` is s
 - [@idle]
 :::
 # @hide
-`@hide[/<switch>]`
+`@hide[/<switch>] <descriptor>`<br>
+`@hide[/<switch>] [<player>]`
 
 This command allows players to hide their online status. Hidden connections don't show up on WHO, in lwho(), etc, when used by players without see_all.
 
-It takes no argument and always affects all of your own connections. You must be a Wizard, Royalty, or have the Hide @power.
+The first form of this command affects the single connection specified by *\<descriptor\>* (as returned by ports(), or shown on the admin WHO). The second affects all connections for the given *\<player\>*, or the enactor if no *\<player\>* is given. You must be a Wizard, Royalty, or have the Hide @power to affect your own connections; only Wizards can affect other players' connections.
 
-The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhide them. If no switch is given, the command acts as a toggle: if all your connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
+The `/on` and `/yes` switches hide connections, while `/off` and `/no` unhide connections. If no switch is given, the command acts as a toggle: for a single descriptor, the hide status is reversed. For a player, if all their connections are hidden, they will be unhidden. If any are unhidden, they will all be hidden.
 
 
 ::: seealso
@@ -1301,7 +1302,7 @@ The `/on` and `/yes` switches hide your connections, while `/off` and `/no` unhi
 - [who]
 - [LWHO()]
 - [LPORTS()]
-- [LPORTS()]
+- [PORTS()]
 :::
 # @idescribe
 # @oidescribe
@@ -1836,7 +1837,7 @@ This command sets `<player>`'s building quota to 0, so they cannot build until i
 # @prefix
 `@prefix <object>[=<message>]`
 
-This attribute is meant to be used with the AUDIBLE flag, prepended to messages propagated via AUDIBLE. SharpMUSH does not propagate sound through AUDIBLE objects or exits yet, so @prefix is never used.
+This attribute is meant to be used with the AUDIBLE flag. It is evaluated, with %0 the message, and prepended to the sound an AUDIBLE object passes on to its @forwardlist; without one, the sound starts "From `<object>`, ". SharpMUSH does not propagate sound through AUDIBLE exits yet, so @prefix is not used for them.
 
 
 ::: seealso
@@ -2904,7 +2905,11 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 - [@aufail]
 :::
 # WARN_ON_MISSING
-This internal command does nothing. The engine never runs it, including when a command starts with a function, so hooking it with @hook has no effect.
+This internal command is run when someone attempts to run a command which starts with a function, for example:
+```sharp
+&test me=$test: [emit(test)]
+```
+By default it sends the owner of the offending object a message, so they can fix the code to use a command instead of a function, and the command line is not run. The command is disabled in a new game; enable it with `@command/enable warn_on_missing` (or the `restrict_command` configuration). It can be @hooked to set custom behaviour.
 
 
 ::: seealso
@@ -2946,9 +2951,11 @@ The `/list` switch lets you whisper to multiple people at once. In this case, `<
 - [@pemit]
 :::
 # SESSION
-`SESSION`
+`SESSION [<pattern>]`
 
-The SESSION command shows information about your own first connection: your name and dbref, how long ago you connected, how long you have been idle, and your host. It takes no argument.
+The SESSION command is the same as the admin WHO, but instead of showing the host, it shows how many bytes each connection has moved: `Sent` is what the client sent to the game, `Recv` what the game sent to it, and `Pend` what has been written but not yet taken by the network. A connection whose counts the connection server did not report shows `-`. *<pattern>* limits the output, only showing players whose name begins with *<pattern>*, or whose names or aliases match *<pattern>* if it's a wildcard pattern.
+
+Anyone who is not a wizard or royalty and lacks the See_All power gets the listing a mortal sees from [WHO] instead.
 
 
 ::: seealso
@@ -2988,7 +2995,7 @@ A variable with several values repeats its name on one line per value, the defau
 
 Given a list of known good words in a category, the mush can suggest ones based on misspelled or otherwise invalid words. This is used for suggesting function names, help entries, etc. @suggest provides a way to add custom categories and vocabulary words.
 
-When given no switches or `/list`, shows all available suggestion categories.
+When given no switches or `/list`, shows all available suggestion categories. If the dict_file config option is set, the 'words' category is filled from that file at startup, and refilled whenever the file has changed since.
 
 `/add` and `/delete` add or remove a word in a given category. They need the `config.admin` permission.
 

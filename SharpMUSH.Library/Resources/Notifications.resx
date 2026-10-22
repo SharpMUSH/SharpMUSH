@@ -1372,6 +1372,27 @@
   <data name="NowAppearOnWho" xml:space="preserve">
     <value>You now appear on the WHO list.</value>
   </data>
+  <data name="PlayerNoLongerAppearsOnWho" xml:space="preserve">
+    <value>{0} no longer appears on the WHO list.</value>
+  </data>
+  <data name="PlayerNowAppearsOnWho" xml:space="preserve">
+    <value>{0} now appears on the WHO list.</value>
+  </data>
+  <data name="ConnectionHidden" xml:space="preserve">
+    <value>Connection hidden.</value>
+  </data>
+  <data name="ConnectionUnhidden" xml:space="preserve">
+    <value>Connection unhidden.</value>
+  </data>
+  <data name="HideDescriptorNotFound" xml:space="preserve">
+    <value>Couldn't find that descriptor.</value>
+  </data>
+  <data name="HideDescriptorNotConnected" xml:space="preserve">
+    <value>Noone is connected to that descriptor.</value>
+  </data>
+  <data name="HidePlayerNotOnline" xml:space="preserve">
+    <value>That player is not online.</value>
+  </data>
   <data name="NeedAnnouncePower" xml:space="preserve">
     <value>Permission denied. You need the Announce power.</value>
   </data>
@@ -1718,8 +1739,8 @@
   <data name="PsSemaphoreQueueFormat" xml:space="preserve">
     <value>  Semaphore queue: {0}</value>
   </data>
-  <data name="PsLoadAverageZero" xml:space="preserve">
-    <value>  Load average: 0.0, 0.0, 0.0</value>
+  <data name="PsLoadAverageFormat" xml:space="preserve">
+    <value>  Load average (1/5/15 minutes): {0} {1} {2}</value>
   </data>
   <data name="PsQuickHeader" xml:space="preserve">
     <value>@ps/quick: Your queue totals</value>
@@ -2748,6 +2769,18 @@
   </data>
   <data name="SitelockRuleNotImplemented" xml:space="preserve">
     <value>@SITELOCK rule modification is not yet implemented. Use the admin UI to modify sitelock rules.</value>
+  </data>
+  <data name="SitelockBadRegexpFormat" xml:space="preserve">
+    <value>Unable to add sitelock entry: {0} is not a valid regular expression.</value>
+  </data>
+  <data name="SitelockPlayerAddedFormat" xml:space="preserve">
+    <value>Sitelocked {0} known addresses for {1}</value>
+  </data>
+  <data name="SitelockPlayerNoAddressFormat" xml:space="preserve">
+    <value>Unable to sitelock {0}: No known ip/host to ban.</value>
+  </data>
+  <data name="SitelockPlayerRemovedFormat" xml:space="preserve">
+    <value>{0} sitelocks removed.</value>
   </data>
   <data name="SitelockInvalidSyntax" xml:space="preserve">
     <value>Invalid @SITELOCK syntax. Use '@help @sitelock' for usage information.</value>

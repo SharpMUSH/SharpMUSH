@@ -165,6 +165,99 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// PennMUSH's <c>do_who_session</c> columns (<c>src/bsd.c</c>): the wizard WHO with the host replaced by
+	/// the connection's bytes. Penn heads the bytes the client sent <c>Sent</c> and the bytes written to it
+	/// <c>Recv</c>, as the player sees them.
+	/// </summary>
+	private static readonly ImmutableArray<TableColumn> SessionColumns =
+	[
+		new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false },
+		new(MarkupText.Plain("Loc #")) { Min = 6, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("On For")) { Min = 9, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Idle")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Cmds")) { Min = 5, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Des")) { Min = 4, Wrap = false },
+		new(MarkupText.Plain("Sent")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Recv")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+		new(MarkupText.Plain("Pend")) { Min = 7, Alignment = Alignment.Right, Wrap = false },
+	];
+
+	/// <summary>
+	/// PennMUSH's <c>cmd_session</c> (<c>src/cmds.c</c>): <c>Priv_Who</c> gets every connection with its byte
+	/// counts (<c>do_who_session</c>), anyone else the <c>DOING</c> listing. The counts come from the
+	/// connection server; a connection it does not report shows <c>-</c>.
+	/// </summary>
+	[SharpCommand(Name = "SESSION", Switches = [], Behavior = CommandBehavior.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["pattern"])]
+	public async ValueTask<Option<CallState>> Session(IMUSHCodeParser parser, SharpCommandAttribute command)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (!await executor.IsPriv() && !await executor.IsSee_All())
+		{
+			return await Doing(parser, command);
+		}
+
+		var args = parser.CurrentState.Arguments;
+		var pattern = args.TryGetValue("0", out var argument) ? argument.Message.ToPlainText() : string.Empty;
+		var traffic = await ConnectionTraffic.GetAsync();
+
+		var rows = new List<ImmutableArray<Block>>();
+		var count = 0;
+		await foreach (var connection in ConnectionService.GetAll())
+		{
+			var known = connection.Ref is { } dbref && await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject found
+				? found
+				: null;
+			if (known is not null)
+			{
+				count++;
+			}
+
+			if (!string.IsNullOrEmpty(pattern) && (known is null || !await MatchesPattern(known, pattern)))
+			{
+				continue;
+			}
+
+			rows.Add([.. (await SessionCells(connection, known, traffic.GetValueOrDefault(connection.Handle)))
+				.Select(cell => (Block)MarkupText.Plain(cell))]);
+		}
+
+		var footer = count switch
+		{
+			0 => "There are no players connected.",
+			1 => "There is one player connected.",
+			_ => $"There are {count} players connected."
+		};
+
+		var listing = ServerLayout.Build(new Table(SessionColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		await NotifyService.Notify(executor, MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]), executor);
+		return new None();
+	}
+
+	/// <summary>One <see cref="SessionColumns"/> row; a connection no player is bound to is <c>Connecting...</c>, as in PennMUSH.</summary>
+	private static async ValueTask<string[]> SessionCells(IConnectionService.ConnectionData connection, AnySharpObject? player,
+		ConnectionTraffic? traffic)
+	{
+		var location = player?.AsOptionalContent is AnySharpContent content
+			? "#" + ((await content.Location())?.Object().DBRef.Number.ToString(CultureInfo.InvariantCulture) ?? "-1")
+			: "#-1";
+		var secure = connection.Metadata.GetValueOrDefault("SSL", "0") == "1" ? "S" : "";
+		return
+		[
+			player?.Object().Name ?? "Connecting...",
+			location,
+			TimeHelpers.TimeString(connection.Connected ?? TimeSpan.Zero, accuracy: 3),
+			TimeHelpers.TimeString(connection.Idle ?? TimeSpan.Zero),
+			connection.CommandCount.ToString(CultureInfo.InvariantCulture),
+			$"{connection.Handle,3}{secure}",
+			Bytes(traffic?.Received),
+			Bytes(traffic?.Sent),
+			Bytes(traffic?.Pending)
+		];
+
+		static string Bytes(long? count) => count?.ToString(CultureInfo.InvariantCulture) ?? "-";
+	}
+
+	/// <summary>
 	/// PennMUSH's alternate login words (<c>bsd.c:4431-4497</c>): <c>cd</c> connects and forces the
 	/// player's <c>DARK</c> flag on (and hides the connection if the player has permission), <c>cv</c>
 	/// connects and forces <c>DARK</c> off, <c>ch</c> connects and hides the connection if permitted
@@ -230,6 +323,7 @@ public partial class Commands
 		// credential parsing so a blocked site never learns whether a name it tried is valid.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.ConnectFlag))
 		{
+			LogSitelockRefusal(username.Length > 0 ? username : "a player", ipAddress, hostName);
 			await NotifyService.Notify(handle, "Access from your location is restricted.");
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -362,6 +456,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (await SitelockRefusesPlayerAsync(handle, foundDB))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		var playerDbRef = new DBRef(foundDB.Object.Key, foundDB.Object.CreationTime);
 		await ConnectionService.Bind(handle, playerDbRef);
 		await ApplyConnectModeAsync(handle, foundDB, mode);
@@ -456,6 +555,11 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
 
+		if (await SitelockRefusesPlayerAsync(handle, foundPlayer))
+		{
+			return new CallState(ErrorMessages.Returns.PermissionDenied);
+		}
+
 		await ConnectionService.Bind(handle, playerDbRef.Value);
 
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef.Value);
@@ -479,6 +583,7 @@ public partial class Commands
 		// already applied in Connect() above — a site can allow normal logins but disallow guests.
 		if (SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, SitelockMatcher.GuestFlag))
 		{
+			LogSitelockRefusal("a guest", ipAddress, hostName);
 			await NotifyService.Notify(handle, "Access from your location is restricted.");
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -671,29 +776,20 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// PennMUSH's <c>Suspect_Site</c> check in <c>connect_player</c> and <c>create_player</c>
-	/// (<c>src/player.c:317</c>, <c>:562</c>): a player who connects or is created from a site whose
-	/// sitelock rule carries <c>suspect</c> is set SUSPECT. Only a connection is logged.
+	/// PennMUSH <c>create_player</c> (<c>src/player.c:562</c>): a character made from a site whose sitelock
+	/// rule carries <c>suspect</c> is set SUSPECT, without the connection's log line.
 	/// </summary>
-	private async ValueTask MarkSuspectSiteAsync(long handle, AnySharpObject player, bool logConnection)
+	private async ValueTask MarkSuspectCreationAsync(long handle, AnySharpObject player)
 	{
-		if (ConnectionService.Get(handle) is not { } connection
-			|| !SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, connection.InternetProtocolAddress,
-				connection.HostName, SitelockMatcher.SuspectFlag)
-			|| await player.HasFlag("SUSPECT")
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
+		if (!SitelockMatcher.Applies(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName,
+				SitelockMatcher.SuspectOption)
 			|| await Mediator.Send(new GetObjectFlagQuery("SUSPECT")) is not { } suspect)
 		{
 			return;
 		}
 
 		await Mediator.Send(new SetObjectFlagCommand(player, suspect));
-		if (!logConnection) return;
-
-		using (Logger.BeginScope(new Dictionary<string, string> { ["Category"] = "Connection" }))
-		{
-			Logger.LogInformation("Connection from Suspect site. Setting {Name}(#{Number}) suspect.",
-				player.Object().Name, player.Object().DBRef.Number);
-		}
 	}
 
 	/// <summary>
@@ -706,11 +802,11 @@ public partial class Commands
 	private async ValueTask CompletePlayerLoginAsync(
 		IMUSHCodeParser parser, long handle, SharpPlayer player, DBRef playerRef, bool isGuest = false)
 	{
+		await MarkSuspectSiteAsync(handle, player);
 		// PennMUSH check_connect (src/bsd.c:4369-4377): announce_connect queues PLAYER`CONNECT and the
 		// ACONNECT hooks, then the look runs in place. The events and hooks below are queue entries of
 		// their own, each with its own time limit, so none of them can run the login out of time; they
 		// run after the look.
-		await MarkSuspectSiteAsync(handle, new AnySharpObject(player), logConnection: true);
 		await SyncPlayerOutputPreferences(handle, player.Object);
 		// After the flags, which set the preferences the theme joins; null clears a theme the socket kept.
 		// A THEME that no longer reads (set by hand, naming a theme since disabled or removed, or code that

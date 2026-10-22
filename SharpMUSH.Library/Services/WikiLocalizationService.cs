@@ -39,18 +39,22 @@ public sealed class WikiLocalizationService(
 		return results.AsReadOnly();
 	}
 
-	/// <summary>More category pages than any game will write; a name past it falls back to its key.</summary>
-	private const int MaxCategoryNames = 1000;
+	/// <summary>Category pages read and localized at a time, so a large wiki's bodies are not all held at once.</summary>
+	private const int CategoryNameBatch = 256;
 
 	public async Task<IReadOnlyDictionary<string, string>> GetCategoryNamesAsync(string? requestedLocale, WikiVisibility visibility)
 	{
-		// Published category pages only, whoever asks: a draft's title is not a category's name yet.
-		var pages = await wikiService.GetAllPagesAsync(0, MaxCategoryNames, WikiNamespace.Category,
-			visibility with { IncludeDrafts = false, AuthorDbref = null });
-		var localized = await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false);
-		return localized
-			.Where(p => p.Title.Length > 0)
-			.ToDictionary(p => p.Page.Slug, p => p.Title, StringComparer.Ordinal);
+		// Published category pages only, whoever asks: a draft's title is not a category's name yet. Every
+		// one is read: a name left out would fall back to its key, and a search would miss it.
+		var published = visibility with { IncludeDrafts = false, AuthorDbref = null };
+		var names = new Dictionary<string, string>(StringComparer.Ordinal);
+		for (var skip = 0; ; skip += CategoryNameBatch)
+		{
+			var pages = await wikiService.GetAllPagesAsync(skip, CategoryNameBatch, WikiNamespace.Category, published);
+			foreach (var page in (await LocalizeAllAsync(pages, requestedLocale, includeDrafts: false)).Where(p => p.Title.Length > 0))
+				names[page.Page.Slug] = page.Title;
+			if (pages.Count < CategoryNameBatch) return names;
+		}
 	}
 
 	public async Task<IReadOnlyList<WikiTranslationSummary>> GetVisibleTranslationsAsync(

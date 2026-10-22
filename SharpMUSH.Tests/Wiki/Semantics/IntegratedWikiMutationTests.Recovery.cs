@@ -137,7 +137,7 @@ public partial class IntegratedWikiMutationTests
 		IReadOnlyDictionary<string, long?> levels, bool settled)
 	{
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
-		var resumed = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(SemanticRecoveryChild.Admin),
+		var resumed = await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(SemanticRecoveryChild.Admin),
 			SemanticRecoveryChild.TokenQuery, evidence.Token, CancellationToken.None);
 		await Assert.That(resumed is SemanticQueryResult.Restart).IsTrue();
 		var world = new QueryWorld(host, [.. evidence.Pages.Select((p, i) => new QueryPage(p.Id, p.Title, i, levels[p.Id] ?? 0, [], null))], "", "");
@@ -147,7 +147,7 @@ public partial class IntegratedWikiMutationTests
 			if (!settled)
 			{
 				// An unsettled world certifies nothing: the reader gets no rows at all, private or public.
-				await Assert.That(await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(reader), query, null, CancellationToken.None)
+				await Assert.That(await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(reader), query, null, CancellationToken.None)
 					is SemanticQueryResult.NotCertified { Outcome: var outcome } && outcome.GetType().Name == "Incomplete").IsTrue();
 				continue;
 			}

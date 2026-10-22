@@ -58,10 +58,9 @@ public record FileOptions(
 	[property: SharpConfig(
 		Name = "dict_file",
 		Category = "File",
-		Description = "Dictionary file for spell checking and word lists",
+		Description = "A file of words, one per line, read at startup into the words suggestion category",
 		Group = "Resource Files",
-		Order = 1,
-		Unused = "suggest() reads its word lists from Spellcheck suggestions in the portal.")]
+		Order = 1)]
 	string? DictionaryFile,
 
 	[property: SharpConfig(

@@ -21,8 +21,23 @@ public static class SitelockMatcher
 	/// <summary>Surface flag gating guest logins specifically (on top of, not instead of, <see cref="ConnectFlag"/>).</summary>
 	public const string GuestFlag = "!guest";
 
-	/// <summary>Access option marking players who connect or are created from the site SUSPECT.</summary>
-	public const string SuspectFlag = "suspect";
+	/// <summary>God can't connect from the site (PennMUSH <c>ACS_GOD</c>).</summary>
+	public const string NoGodFlag = "!god";
+
+	/// <summary>Wizards can't connect from the site (PennMUSH <c>ACS_WIZARD</c>).</summary>
+	public const string NoWizardFlag = "!wizard";
+
+	/// <summary>Wizards and Royalty can't connect from the site (PennMUSH <c>ACS_ADMIN</c>).</summary>
+	public const string NoAdminFlag = "!admin";
+
+	/// <summary>Players who connect from the site are set SUSPECT (PennMUSH <c>ACS_SUSPECT</c>).</summary>
+	public const string SuspectOption = "suspect";
+
+	/// <summary>Refused attempts from the site are not logged (PennMUSH <c>ACS_DENY_SILENT</c>).</summary>
+	public const string DenySilentOption = "deny_silent";
+
+	/// <summary>The rule's pattern is a regular expression, not a wildcard (PennMUSH <c>ACS_REGEXP</c>).</summary>
+	public const string RegexpOption = "regexp";
 
 	/// <summary>
 	/// True if any rule in <paramref name="rules"/> both matches <paramref name="ip"/>/<paramref name="host"/>
@@ -31,14 +46,36 @@ public static class SitelockMatcher
 	/// anonymous browsing never calls this, so it never gates plain page views.
 	/// </summary>
 	public static bool IsBlocked(IReadOnlyDictionary<string, string[]> rules, string ip, string host, string surfaceFlag)
+		=> Applies(rules, ip, host, surfaceFlag);
+
+	/// <summary>
+	/// True if any rule in <paramref name="rules"/> both matches <paramref name="ip"/>/<paramref name="host"/>
+	/// and carries <paramref name="option"/> (compared without case, as PennMUSH's <c>parse_access_options</c>
+	/// reads them).
+	/// </summary>
+	public static bool Applies(IReadOnlyDictionary<string, string[]> rules, string ip, string host, string option)
 	{
 		// Parsed once per call rather than once per rule.
 		var ipAddress = ParseAddress(ip);
 
 		return rules
-			.Where(rule => Array.IndexOf(rule.Value, surfaceFlag) >= 0)
-			.Any(rule => Matches(rule.Key, ip, ipAddress, host));
+			.Where(rule => HasOption(rule.Value, option))
+			.Any(rule => Matches(rule.Key, rule.Value, ip, ipAddress, host));
 	}
+
+	/// <summary>
+	/// PennMUSH <c>site_can_access</c>'s class checks (<c>src/access.c:409-417</c>): a matching rule with
+	/// <see cref="NoGodFlag"/> refuses God, <see cref="NoWizardFlag"/> a Wizard, and <see cref="NoAdminFlag"/>
+	/// a Wizard or Royalty.
+	/// </summary>
+	public static bool RefusesPrivileged(IReadOnlyDictionary<string, string[]> rules, string ip, string host,
+		bool isGod, bool isWizard, bool isAdmin)
+		=> isGod && Applies(rules, ip, host, NoGodFlag)
+			|| isWizard && Applies(rules, ip, host, NoWizardFlag)
+			|| isAdmin && Applies(rules, ip, host, NoAdminFlag);
+
+	private static bool HasOption(IEnumerable<string> options, string option)
+		=> options.Any(candidate => string.Equals(candidate, option, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>
 	/// True if <paramref name="rulePattern"/> matches this connection. A rule matches when any of
@@ -50,13 +87,28 @@ public static class SitelockMatcher
 	/// empty arguments never match rather than throwing.
 	/// </summary>
 	public static bool Matches(string rulePattern, string ip, string host)
-		=> Matches(rulePattern, ip, ParseAddress(ip), host);
+		=> Matches(rulePattern, [], ip, ParseAddress(ip), host);
 
-	private static bool Matches(string rulePattern, string ip, IPAddress? ipAddress, string host)
+	/// <summary>
+	/// <see cref="Matches(string, string, string)"/> for a rule with <paramref name="options"/>: with
+	/// <see cref="RegexpOption"/> the pattern is a case-sensitive regular expression matched against the
+	/// host name and the address, as PennMUSH compiles it (<c>src/access.c:161-164</c>).
+	/// </summary>
+	public static bool Matches(string rulePattern, IReadOnlyCollection<string> options, string ip, string host)
+		=> Matches(rulePattern, options, ip, ParseAddress(ip), host);
+
+	private static bool Matches(string rulePattern, IReadOnlyCollection<string> options, string ip, IPAddress? ipAddress, string host)
 	{
 		if (string.IsNullOrEmpty(rulePattern))
 		{
 			return false;
+		}
+
+		if (HasOption(options, RegexpOption))
+		{
+			return RegexCache.GetOrAdd(rulePattern, static p => CompileRegexp(p)) is { } regex
+				&& (!string.IsNullOrEmpty(host) && SoftcodeRegex.IsMatch(regex, host)
+					|| !string.IsNullOrEmpty(ip) && SoftcodeRegex.IsMatch(regex, ip));
 		}
 
 		if (!string.IsNullOrEmpty(host) && WildcardMatch(host, rulePattern))
@@ -122,6 +174,25 @@ public static class SitelockMatcher
 	/// command's execution budget — a value that must not be cached for every later connection.
 	/// </remarks>
 	private static readonly ConcurrentDictionary<string, Regex> GlobCache = new();
+
+	/// <summary>Compiled <see cref="RegexpOption"/> patterns, cached for the same reason as <see cref="GlobCache"/>.</summary>
+	private static readonly ConcurrentDictionary<string, Regex?> RegexCache = new();
+
+	/// <summary>The rule's regular expression, or null when it does not compile (such a rule matches nothing).</summary>
+	private static Regex? CompileRegexp(string pattern)
+	{
+		try
+		{
+			return new Regex(pattern, RegexOptions.CultureInvariant, SoftcodeRegex.MatchTimeout);
+		}
+		catch (ArgumentException)
+		{
+			return null;
+		}
+	}
+
+	/// <summary>Whether <paramref name="pattern"/> compiles as a <see cref="RegexpOption"/> rule.</summary>
+	public static bool IsValidRegexp(string pattern) => CompileRegexp(pattern) is not null;
 
 	/// <summary>
 	/// Whether <paramref name="text"/> matches the sitelock rule <paramref name="pattern"/>, read as a

@@ -333,7 +333,7 @@ public partial class Commands
 
 		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
 		var created = new AnySharpObject(foundPlayer);
-		await MarkSuspectSiteAsync(handle, created, logConnection: false);
+		await MarkSuspectCreationAsync(handle, created);
 		if (await created.HasFlag("SUSPECT"))
 		{
 			await GameBroadcastService.BroadcastToFlagAsync("WIZARD",
@@ -394,6 +394,11 @@ public partial class Commands
 				$"No character named '{charName}' is linked to your account.\n" +
 				"Use: make <name> <password>    to create a new character\n" +
 				"Use: claim <name> <password>   to link a character you already have");
+			return new None();
+		}
+
+		if (await SitelockRefusesPlayerAsync(handle, character))
+		{
 			return new None();
 		}
 
@@ -494,15 +499,14 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<bool> IsSitelockedAsync(long handle, string surfaceFlag)
 	{
-		var connectionData = ConnectionService.Get(handle);
-		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
-		var hostName = connectionData?.HostName ?? ipAddress;
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
 
 		if (!SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, surfaceFlag))
 		{
 			return false;
 		}
 
+		LogSitelockRefusal(surfaceFlag == SitelockMatcher.CreateFlag ? "a new player" : "an account", ipAddress, hostName);
 		await NotifyService.Notify(handle, "Access from your location is restricted.");
 		return true;
 	}

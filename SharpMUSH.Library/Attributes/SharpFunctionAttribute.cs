@@ -53,4 +53,17 @@ public class SharpFunctionAttribute : Attribute
 	/// If not provided, generic names like "arg1", "arg2" will be used.
 	/// </summary>
 	public string[] ParameterNames { get; set; } = [];
+
+	/// <summary>A copy of this declaration with <paramref name="flags"/> in place of <see cref="Flags"/>.</summary>
+	public SharpFunctionAttribute WithFlags(FunctionFlags flags) => new()
+	{
+		Name = Name,
+		MinArgs = MinArgs,
+		EmptyCallMinArgs = EmptyCallMinArgs,
+		MaxArgs = MaxArgs,
+		Flags = flags,
+		SideEffectMinArgs = SideEffectMinArgs,
+		Restrict = Restrict,
+		ParameterNames = ParameterNames
+	};
 }

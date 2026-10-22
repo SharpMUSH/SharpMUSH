@@ -25,7 +25,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Wiki.Semantics.Measurements;
 
 /// <summary>
-/// What one measurement process does. <c>build</c> loads a dataset into a new issued fixture world and leaves
+/// What one measurement process does. <c>oracle</c> compares every supported shape on a built world with the
+/// oracle (<see cref="SemanticLoadMeasurement.CompareWithOracleAsync"/>). <c>build</c> loads a dataset into a new issued fixture world and leaves
 /// it for later processes; <c>measure</c> adopts that world in a fresh process and runs each rate twice: the
 /// first pass right after process start (the OS page cache is not dropped), then a second, warm pass.
 /// </summary>
@@ -44,7 +45,7 @@ internal sealed class RequiresEnvironmentAttribute(string variable) : SkipAttrib
 /// fixture-backed world, with ordinary commands through the real command queue alongside, and the storage,
 /// memory and GC figures sampled each second. Results are recorded, not judged: nothing here asserts a bound.
 /// </summary>
-public class SemanticLoadMeasurement
+public partial class SemanticLoadMeasurement
 {
 	internal const string Variable = "SHARPMUSH_SEMANTIC_LOAD";
 
@@ -74,8 +75,12 @@ public class SemanticLoadMeasurement
 		var spec = JsonSerializer.Deserialize<SemanticLoadSpec>(File.ReadAllText(Environment.GetEnvironmentVariable(Variable)!))!;
 		Directory.CreateDirectory(spec.Output);
 		Environment.SetEnvironmentVariable("NATS_URL", $"nats://localhost:{NatsTestServer.Instance.GetMappedPublicPort(4222)}");
-		if (spec.Mode == "build") await BuildAsync(spec);
-		else await MeasureAsync(spec);
+		switch (spec.Mode)
+		{
+			case "build": await BuildAsync(spec); break;
+			case "oracle": await CompareWithOracleAsync(spec); break;
+			default: await MeasureAsync(spec); break;
+		}
 	}
 
 	private static IEnumerable<T> Lines<T>(string path)
@@ -278,7 +283,7 @@ public class SemanticLoadMeasurement
 					string outcome;
 					try
 					{
-						var result = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(reader), QueryFor(index, targets, hot), null, CancellationToken.None);
+						var result = await SemanticWikiQueries.RunAsync(provider, $"#player{index % 64}", _ => ValueTask.FromResult(reader), QueryFor(index, targets, hot), null, CancellationToken.None);
 						outcome = result switch
 						{
 							SemanticQueryResult.NotCertified { Outcome: var o } => "NotCertified." + o.GetType().Name,

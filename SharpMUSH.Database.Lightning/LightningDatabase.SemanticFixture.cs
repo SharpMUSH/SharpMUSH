@@ -15,6 +15,9 @@ public partial class LightningDatabase
 	private bool _fixtureClosed;
 	private System.Runtime.ExceptionServices.ExceptionDispatchInfo? _fixtureCloseFailure;
 
+	/// <summary>This world's wiki-query admission queue; every semantic query enters it before it reads.</summary>
+	internal SemanticQueryAdmission SemanticQueries { get; } = new(SemanticQueryAdmissionLimits.Default, TimeProvider.System);
+
 	internal static LightningDatabase OpenSemanticFixture(SemanticFixtureCapability capability,
 		ILogger<LightningDatabase> logger, LightningStoreOptions options, IPasswordService passwordService,
 		IObjectRelationLoader? relations, IReadOnlyList<IMigrationSource> migrationSources,

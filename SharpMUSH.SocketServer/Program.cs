@@ -152,6 +152,7 @@ public class Program
 		// Detached-session pinning: hold a dropped session for a grace window and rebind on reconnect.
 		var graceSeconds = builder.Configuration.GetValue("Session:GraceSeconds", 120.0);
 		builder.Services.AddSingleton<SessionSinkRegistry>();
+		builder.Services.AddSingleton<ConnectionTrafficCounters>();
 		builder.Services.AddSingleton<IGraceScheduler, TimerGraceScheduler>();
 		builder.Services.AddSingleton<DetachedSessionTracker>();
 		builder.Services.AddSingleton<SessionResumeAuthorizationService>();
@@ -167,7 +168,8 @@ public class Program
 			sp.GetRequiredService<DetachedSessionTracker>(),
 			TimeSpan.FromSeconds(graceSeconds),
 			sp.GetRequiredService<IConnectionStateStore>(),
-			sp.GetRequiredService<ISessionResumeAuthorizationService>()));
+			sp.GetRequiredService<ISessionResumeAuthorizationService>(),
+			sp.GetRequiredService<ConnectionTrafficCounters>()));
 
 		builder.Services.AddSingleton<WebSocketServer>();
 		// Read inside the delegate so configuration a test host adds after this runs is still seen.
@@ -209,6 +211,7 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateThemeMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateTerminalFeaturesMessage>();
 				x.AddConsumer<ProbeTerminalConsumer, ProbeTerminalMessage>();
+				x.AddConsumer<ConnectionTrafficRequestConsumer, ConnectionTrafficRequestMessage>();
 				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
 				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();

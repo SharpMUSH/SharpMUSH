@@ -30,6 +30,9 @@ public class ConfigurationDefaultsTests
 		["BannedNames"] =
 			"A new game is seeded with example banned names so the admin page shows what they look " +
 			"like; an imported game brings its own names.cnf.",
+		["CommandRestrictions"] =
+			"A new game disables WARN_ON_MISSING, as PennMUSH's shipped restrict.cnf does; an imported " +
+			"game brings its own restrict_command lines.",
 		["Rules"] =
 			"A new game is seeded with example sitelock rules; seeding an imported game with them " +
 			"would lock sites nobody asked to lock."

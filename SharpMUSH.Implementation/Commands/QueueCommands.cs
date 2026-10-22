@@ -723,7 +723,7 @@ public partial class Commands
 
 	private ValueTask QueueSemaphore(IMUSHCodeParser parser, AnySharpObject located, string[] attribute,
 		MString arg1, ParserState? callbackState = null)
-		=> QueueSemaphoreWithDelay(parser, located, attribute, TimeSpan.FromDays(36500), arg1, callbackState);
+		=> QueueSemaphoreWithDelay(parser, located, attribute, SemaphoreTimeout.None, arg1, callbackState);
 
 	private async ValueTask QueueSemaphoreWithDelay(IMUSHCodeParser parser, AnySharpObject located,
 		string[] attribute, TimeSpan delay, MString arg1, ParserState? callbackState = null)
@@ -1143,7 +1143,10 @@ public partial class Commands
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsWaitQueueFormat), executor, delayTasks.Length);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSemaphoreQueueFormat), executor, semaphoreTasks.Length);
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageZero), executor);
+			var (oneMinute, fiveMinutes, fifteenMinutes) = parser.ServiceProvider.GetRequiredService<QueueLoad>().Averages();
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsLoadAverageFormat), executor,
+				oneMinute.ToString("F2", CultureInfo.InvariantCulture), fiveMinutes.ToString("F2", CultureInfo.InvariantCulture),
+				fifteenMinutes.ToString("F2", CultureInfo.InvariantCulture));
 			return CallState.Empty;
 		}
 

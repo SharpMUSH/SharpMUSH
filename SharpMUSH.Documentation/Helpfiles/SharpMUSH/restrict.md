@@ -57,7 +57,8 @@ For commands, `<restriction>` should be an `@lock`-style boolexp (though, for ba
     nofixed    Usable only by non-FIXED objects.<br>
     noguest    Usable only by non-guest `@powered` objects.<br>
     nobody     Nothing can use it. Same as the /disable switch to `@command` or `@function`.<br>
-    logname, logargs  Not supported: a function ignores them, and @command/restrict refuses them.
+    logname    When a built-in function is used, log its name, and who is using it.<br>
+    logargs    When a built-in function is used, log its name and arguments, and who is using it. @command/restrict refuses both.
 
 ## Restrictions for functions or commands only
 
@@ -79,16 +80,14 @@ The game keeps its `restrict_command` lines in the `command_restrictions` settin
 `restrict_function` lines in `function_restrictions`; a new game ships both empty (see
 [compatibility commands]). In `command_restrictions`, `noguest`, `nofixed`, `noplayer`, `nobody`, a
 flag or power name, a lock and the `" <message>` suffix all mean what they mean in `restrict.cnf`.
-`function_restrictions` takes `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god` and
-`nobody`.
+`function_restrictions` takes `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`,
+`nobody`, `logname`, `logargs`, `deprecated`, `localize` and `nosidefx`.
 
 An imported game keeps its own: reading a PennMUSH `mush.cnf` follows its `include` lines,
 as `config_file_startup` does, and carries each `restrict_command` line into `command_restrictions`
 and each `restrict_function` line into `function_restrictions`, and both are applied at startup, so
 an imported `restrict_function lstats noguest` answers a guest's `lstats()` with
-`#-1 PERMISSION DENIED` as PennMUSH does. Only the `restrict_function` words that say who may call
-a function are applied (`nobody`, `noguest`, `nogagged`, `nofixed`, `admin`, `wizard`, `god`). A
-word that changes how it runs (`nosidefx`, `logargs`, `noparse` and the like), or a `!` word that
+`#-1 PERMISSION DENIED` as PennMUSH does. Any other word (`noparse`, `userfn`), or a `!` word that
 clears one of a built-in's own restrictions, is kept but has no effect, and the import names it.
 A line that cannot be carried (an include that cannot be read, a restriction with no value,
 a `restrict_attribute`) is logged by name, and so is every `include` in a `mush.cnf` uploaded through

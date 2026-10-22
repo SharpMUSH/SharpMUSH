@@ -239,7 +239,8 @@ public partial class TelnetServerNegotiationTests
 			IConnectionServerService? connectionService = null,
 			Func<object, Task>? beforePublish = null,
 			Action<IReadOnlyList<object>>? afterPublish = null,
-			OutputSettingsHolder? settings = null)
+			OutputSettingsHolder? settings = null,
+			ConnectionTrafficCounters? traffic = null)
 	{
 		var clientToServer = new Pipe();
 		var serverToClient = new Pipe();
@@ -275,7 +276,8 @@ public partial class TelnetServerNegotiationTests
 			options ?? new ConnectionServerOptions { NegotiationWaitMilliseconds = 0 },
 			new MsspReportHolder(),
 			new TerminalProbes(),
-			settings);
+			settings,
+			traffic);
 
 		var context = new FakeConnectionContext(
 			new PipeDuplex(clientToServer.Reader, serverToClient.Writer), cts.Token);

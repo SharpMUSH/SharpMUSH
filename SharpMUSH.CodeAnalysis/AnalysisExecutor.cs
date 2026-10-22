@@ -18,10 +18,11 @@ public sealed class AnalysisExecutor : IDisposable
 	private readonly SemaphoreSlim _workers;
 	private readonly CancellationTokenSource _stopping = new();
 	private readonly CancellationTokenRegistration _hostStopping;
+	private readonly TimeProvider _clock;
 	private int _admitted;
 	private bool _disposed;
 
-	public AnalysisExecutor(IOptions<AnalysisExecutionOptions> options, CancellationToken stopping = default)
+	public AnalysisExecutor(IOptions<AnalysisExecutionOptions> options, CancellationToken stopping = default, TimeProvider? clock = null)
 	{
 		_options = options.Value;
 		if (_options.MaxConcurrentAnalyses <= 0 || _options.MaxQueuedAnalyses < 0 ||
@@ -30,6 +31,7 @@ public sealed class AnalysisExecutor : IDisposable
 			throw new ArgumentException("Analysis limits and elapsed timeout must be positive and finite.", nameof(options));
 		_workers = new SemaphoreSlim(_options.MaxConcurrentAnalyses);
 		_hostStopping = stopping.Register(() => _stopping.Cancel());
+		_clock = clock ?? TimeProvider.System;
 	}
 
 	public async Task<T> ExecuteAsync<T>(Func<Task<T>> work, CancellationToken cancellationToken = default)
@@ -46,7 +48,7 @@ public sealed class AnalysisExecutor : IDisposable
 			ExecutionBudget.Current?.ThrowIfExceeded();
 			using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, _stopping.Token, ExecutionBudget.CurrentToken);
 			var remaining = ExecutionBudget.Current?.Remaining ?? TimeSpan.MaxValue;
-			using var budget = new ExecutionBudget(remaining < _options.AnalysisTimeout ? remaining : _options.AnalysisTimeout, linked.Token);
+			using var budget = new ExecutionBudget(remaining < _options.AnalysisTimeout ? remaining : _options.AnalysisTimeout, linked.Token, _clock);
 			await _workers.WaitAsync(budget.Token);
 			try
 			{

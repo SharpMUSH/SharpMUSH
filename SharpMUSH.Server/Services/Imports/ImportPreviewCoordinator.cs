@@ -9,17 +9,17 @@ using SharpMUSH.Library.Services.DatabaseConversion;
 namespace SharpMUSH.Server.Services.Imports;
 
 public sealed record ImportWorkerRequest(string LiveWorldPath, string LiveKeyRingPath, DatabaseImportFiles Files,
-	ConfigurationSnapshot? Baseline);
+	ConfigurationSnapshot? Baseline, PortalAdministrator? Administrator = null);
 
 /// <summary>Owns input snapshots and a bounded child process; never resolves a live converter or forwards a live store.</summary>
 public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILogger<ImportPreviewCoordinator> logger)
 {
 	public Task<ImportSession> PreviewAsync(DatabaseImportFiles files, string? configuration = null,
-		ConfigurationSnapshot? baseline = null, CancellationToken cancellationToken = default)
-		=> PreviewSessionAsync(journal.Create(), files, configuration, baseline, cancellationToken);
+		ConfigurationSnapshot? baseline = null, PortalAdministrator? administrator = null, CancellationToken cancellationToken = default)
+		=> PreviewSessionAsync(journal.Create(), files, configuration, baseline, administrator, cancellationToken);
 
 	internal async Task<ImportSession> PreviewSessionAsync(ImportSession session, DatabaseImportFiles files, string? configuration,
-		ConfigurationSnapshot? baseline, CancellationToken cancellationToken)
+		ConfigurationSnapshot? baseline, PortalAdministrator? administrator, CancellationToken cancellationToken)
 	{
 		try
 		{
@@ -90,7 +90,7 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 					}
 			}
 
-			var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath, copied, baseline);
+			var request = new ImportWorkerRequest(journal.LiveWorldPath, journal.LiveKeyRingPath, copied, baseline, administrator);
 			await File.WriteAllTextAsync(Path.Combine(session.Directory, "request.json"), JsonSerializer.Serialize(request), cancellationToken);
 			if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(session.Directory, "request.json"), UnixFileMode.UserRead | UnixFileMode.UserWrite);
 			using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
