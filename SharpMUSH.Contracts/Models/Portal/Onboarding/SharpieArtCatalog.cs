@@ -10,6 +10,19 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-detective-comicbook-administrator-joining", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-detective-comicbook-administrator-walkthrough", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-detective-comicbook-administrator-invite", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-detective-comicbook-administrator-rules", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-exploration-chibi-player-useful-action", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-detective-comicbook-administrator-capabilities", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-exploration-chibi-administrator-invite", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-exploration-chibi-administrator-rules", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-exploration-chibi-administrator-joining", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-exploration-chibi-administrator-identity", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-exploration-chibi-player-speak-act", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-exploration-chibi-player-place", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-exploration-chibi-shared-completion", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-detective-comicbook-shared-completion", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-detective-comicbook-player-continue", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-player-continue.png", 1254, 1254, "player-continue"),
 		new SharpieArt("sharpie-exploration-chibi-administrator-walkthrough", "chibi", "Exploration", "images/sharpie/sharpie-exploration-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
