@@ -170,6 +170,14 @@ public class OnboardingIntegrationTests
 	}
 
 	[Test]
+	public async Task ItNeverShowsToGodAtLogin()
+	{
+		var guide = await GuideAsync();
+		await Assert.That(await Think($"u({guide}/FUN`STEP`OPEN,#1)")).IsNotEmpty();
+		await Assert.That(await Think($"u({guide}/FUN`LOGIN`SHOWS,#1)")).IsEqualTo("0");
+	}
+
+	[Test]
 	public async Task StaffAddAStepWithConfig()
 	{
 		var staff = await Player("ObStaff");

@@ -282,7 +282,7 @@ packages:
   - path: onboarding/
     name: Onboarding
     package: onboarding
-    version: 1.0.0
+    version: 1.0.1
     description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
   - path: onboarding-help/
     package: onboarding-help
