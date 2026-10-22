@@ -223,7 +223,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 		if (!_pagesById.TryGetValue(id, out var existing))
 			return Task.FromResult<FoundResult<WikiPage>>(new NotFound());
 
-		var updated = existing with { Facts = facts };
+		var updated = existing with { Facts = [.. facts] };
 		_pagesById[id] = updated;
 		return Task.FromResult<FoundResult<WikiPage>>(updated);
 	}
