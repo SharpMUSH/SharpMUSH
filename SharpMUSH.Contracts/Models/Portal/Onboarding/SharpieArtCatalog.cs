@@ -10,6 +10,23 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-high-fantasy-kemono-shared-completion", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-invite", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-walkthrough", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-capabilities", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-rules", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-joining", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-steampunk-chibi-administrator-identity", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-steampunk-chibi-player-speak-act", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-steampunk-chibi-player-useful-action", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-steampunk-chibi-player-world", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-steampunk-chibi-shared-completion", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-steampunk-chibi-player-continue", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-steampunk-chibi-player-place", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-gothic-kemono-player-useful-action", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-steampunk-chibi-player-character", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-steampunk-chibi-player-sign-in", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-steampunk-chibi-shared-welcome", "chibi", "Steampunk", "images/sharpie/sharpie-steampunk-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-detective-comicbook-administrator-joining", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-detective-comicbook-administrator-walkthrough", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-detective-comicbook-administrator-invite", "comicbook", "Detective", "images/sharpie/sharpie-detective-comicbook-administrator-invite.png", 1254, 1254, "administrator-invite"),
