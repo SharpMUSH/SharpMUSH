@@ -1,6 +1,6 @@
 format: "1.10"
 package: wiki-reader
-version: 1.7.1
+version: 1.7.2
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -134,10 +134,11 @@ objects:
           not(strmatch(wiki(%0,title),#-1*))
         flags: [funsyntax]
       # Categories are a list the page holds, the same in every translation; wiki() answers them
-      # as keys, space-separated.
+      # as keys, space-separated. A category namespace page defines a category rather than sitting
+      # in one, and main:home is the wiki's front page, reached without a category, so neither counts.
       FUN`IS`UNCATEGORISED:
         value: |-
-          not(words(wiki(%0,categories)))
+          cand(not(words(wiki(%0,categories))),not(match(category,lcstr(wiki(%0,namespace)))),not(match(main:home,lcstr(%0))))
         flags: [funsyntax]
       # %0 a category name — true when a published page is in it
       FUN`IS`CATEGORY:
@@ -407,7 +408,8 @@ objects:
         Drafts are invisible here — a page appears once it is published.
       HELP`WIKI`AUDIT: |-
         `+wiki/audit` is a staff verb. It counts the published pages and lists the ones in no
-        category, which is what makes a wiki hard to navigate as it grows.
+        category, which is what makes a wiki hard to navigate as it grows. Category pages and
+        `main:home` are left out: they are not reached through a category.
 
         It sees published pages only. For drafts, use `@wiki/list`.
 
