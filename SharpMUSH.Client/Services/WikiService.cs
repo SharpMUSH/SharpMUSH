@@ -340,6 +340,21 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			"SetMetadataAsync", slug);
 
 	/// <summary>
+	/// Replaces the facts a page states. A page value may be the page's title or its id. Returns the updated
+	/// <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> naming the fact the server refused.
+	/// </summary>
+	public async ValueTask<ApiResult<WikiArticle>> SetFactsAsync(string slug, IReadOnlyList<WikiFactDto> facts, string? ns = null) =>
+		Logged(Article(await Http.PutApiAsync<SetFactsRequest, WikiPageDto>(
+				$"api/wiki/{Uri.EscapeDataString(slug)}/facts{KeyQuery(ns)}",
+				new SetFactsRequest(facts), EmptyResponse)),
+			"SetFactsAsync", slug);
+
+	/// <summary>The properties a page's facts may state, ordered by id.</summary>
+	public async ValueTask<ApiResult<List<WikiFactPropertyDto>>> GetFactPropertiesAsync() =>
+		await httpClientFactory.CreateClient("api")
+			.GetApiAsync<List<WikiFactPropertyDto>>("api/wiki/fact-properties", "The server returned no wiki fact properties.");
+
+	/// <summary>
 	/// Restores the page body from an earlier revision. The restore is a normal
 	/// edit (new revision), so rollbacks are themselves recorded in history.
 	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
@@ -508,6 +523,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			UpdatedAt = dto.UpdatedAt,
 			Slug = dto.Slug,
 			Categories = dto.Categories.ToList(),
+			Facts = dto.Facts.ToList(),
 			Published = dto.Published,
 			IsRestricted = dto.IsRestricted,
 			Access = dto.Access,

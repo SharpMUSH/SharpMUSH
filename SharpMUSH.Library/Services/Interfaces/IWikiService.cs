@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
@@ -169,6 +170,9 @@ public interface IWikiService
 	/// category still has its page and its place in the sidebar. A new world pins <c>character</c>.
 	/// </summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
+
+	/// <summary>The properties a page's facts may state: each one's id, type, cardinality and allowed keywords.</summary>
+	Task<SemanticSchema> GetFactSchemaAsync();
 
 	/// <summary>
 	/// Pins <paramref name="category"/> to the wiki home or takes it off. The category need not have a page

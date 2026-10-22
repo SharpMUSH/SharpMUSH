@@ -7,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Middleware;
@@ -103,6 +104,50 @@ public class WikiAdminController(
 
 		Logger.LogInformation("Wiki page metadata updated: slug={Slug} categories={Categories} published={Published}",
 			LogSanitizer.Sanitize(slug), string.Join(',', page.Categories), page.Published);
+		prerenderCache.InvalidatePrefix("/wiki/");
+		return Ok(await ToDtoAsync(page));
+	}
+
+	/// <summary>
+	/// PUT /api/wiki/{slug}/facts
+	/// Replaces the facts a page states. An edit of the page, so its requirements apply; it adds no revision. A fact
+	/// the schema refuses is a 400 naming it, and nothing changes.
+	/// </summary>
+	[HttpPut("{slug}/facts")]
+	[Authorize(Policy = PortalPermission.WikiEdit)]
+	public async Task<IActionResult> SetFacts(string slug, [FromBody] SetFactsRequest request, [FromQuery] string? ns = null)
+	{
+		if (await Wiki.GetBySlugAsync(slug, ParseNamespace(ns)) is not WikiPage existing)
+			return NotFound();
+		if (await RefusalAsync(existing, WikiAction.Edit) is { } refusal)
+			return refusal;
+
+		var schema = await Wiki.GetFactSchemaAsync();
+		var visibility = await VisibilityAsync();
+		var stated = new List<WikiPageFact>();
+		foreach (var property in (request.Facts ?? []).GroupBy(f => f.Property.Trim()))
+		{
+			switch (await WikiFactEntry.ResolveAsync(Wiki, schema, property.Key, property.Select(f => f.Value), visibility))
+			{
+				case IReadOnlyList<string> values:
+					stated.AddRange(values.Select(value => new WikiPageFact(property.Key, value)));
+					break;
+				case Error<string> error:
+					return BadRequest(error.Value);
+			}
+		}
+
+		return await Wiki.SetFactsAsync(existing.Id, stated) switch
+		{
+			WikiPage page => await FactsSetAsync(slug, page),
+			Error<string> error => BadRequest(error.Value),
+			Library.DiscriminatedUnions.NotFound => NotFound(),
+		};
+	}
+
+	private async Task<IActionResult> FactsSetAsync(string slug, WikiPage page)
+	{
+		Logger.LogInformation("Wiki page facts updated: slug={Slug} facts={Count}", LogSanitizer.Sanitize(slug), page.Facts.Count);
 		prerenderCache.InvalidatePrefix("/wiki/");
 		return Ok(await ToDtoAsync(page));
 	}

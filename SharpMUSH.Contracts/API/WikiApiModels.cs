@@ -62,7 +62,33 @@ public record WikiPageDto(
 	/// <summary>The first image in the page's Markdown, or null. It is the page's banner only when it opens
 	/// the page (<c>WikiImages.LeadImageUrl</c>).</summary>
 	public string? Image { get; init; }
+
+	/// <summary>The facts the page states that this reader may see, ordered by property and then value.</summary>
+	public IReadOnlyList<WikiFactDto> Facts { get; init; } = [];
 }
+
+/// <summary>
+/// One fact a page states: a property and one of its values as stored. A value naming a page carries that page's
+/// title, slug and namespace, so a client shows and links the page; a page the reader may not read is left out.
+/// </summary>
+public record WikiFactDto(string Property, string Value)
+{
+	public string? PageTitle { get; init; }
+	public string? PageSlug { get; init; }
+	public string? PageNamespace { get; init; }
+}
+
+/// <summary>
+/// A property facts may state. <paramref name="Type"/> is <c>number</c>, <c>keyword</c>, <c>boolean</c> or
+/// <c>page</c>; <paramref name="Keywords"/> lists a keyword property's allowed values.
+/// </summary>
+public record WikiFactPropertyDto(string Id, string Type, bool Multiple, IReadOnlyList<string> Keywords);
+
+/// <summary>
+/// Request body for <c>PUT /api/wiki/{slug}/facts</c>: every fact the page states, replacing the ones it had. A page
+/// value may be the page's title or its id.
+/// </summary>
+public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 
 /// <summary>
 /// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page

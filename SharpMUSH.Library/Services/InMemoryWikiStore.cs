@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using System.Collections.Concurrent;
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -191,6 +192,9 @@ public sealed class InMemoryWikiStore : IWikiStore
 		else _requirements[set.Target] = set;
 		return Task.FromResult<Found<None>>(new None());
 	}
+
+	/// <summary>No property is defined, so no fact is stated here.</summary>
+	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(new SemanticSchema(0, []));
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());

@@ -8,6 +8,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Implementation.Functions;
 
@@ -199,6 +200,35 @@ public partial class Functions
 		var pages = await wikiService.GetRecentChangesAsync(count, visibility);
 
 		return new CallState(string.Join(" ", pages.Select(WikiCommandHelper.DisplayReference)));
+	}
+
+	/// <summary>
+	/// wikifact(&lt;page&gt;[, &lt;property&gt;[, &lt;delimiter&gt;]])
+	/// The properties a page states facts for, or one property's values. A value naming a page is that page's
+	/// reference, and a page the executor may not read is left out, as wikilist() leaves it out.
+	/// </summary>
+	[SharpFunction(Name = "wikifact", MinArgs = 1, MaxArgs = 3,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["page", "property", "delimiter"])]
+	public async ValueTask<CallState> wikifact(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
+		var (ns, slug) = WikiHelpers.ResolveTitle(args["0"].Message.ToPlainText());
+		if (await wikiService.GetBySlugAsync(slug, ns) is not WikiPage page || !visibility.Admits(page))
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchWikiPage);
+		}
+
+		var property = args.TryGetValue("1", out var propertyArg) ? propertyArg.Message.ToPlainText().Trim() : string.Empty;
+		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
+		var schema = await wikiService.GetFactSchemaAsync();
+		var stated = property.Length == 0 ? page.Facts : page.Facts.Where(f => f.Property == property);
+		var shown = await WikiFactEntry.ShownAsync(wikiService, schema, stated, visibility, WikiCommandHelper.DisplayReference);
+		return new CallState(property.Length == 0
+			? string.Join(delimiter, shown.Select(f => f.Property).Distinct())
+			: string.Join(delimiter, shown.Select(f => f.Value)));
 	}
 
 	/// <summary>

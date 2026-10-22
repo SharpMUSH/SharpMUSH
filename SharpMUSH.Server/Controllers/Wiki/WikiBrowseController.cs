@@ -5,6 +5,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
@@ -29,6 +30,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   GET  /api/wiki/categories      — every category, with its name, how many pages it holds and whether it is pinned
 ///   GET  /api/wiki/pinned-categories — the keys of the categories pinned to the wiki home
+///   GET  /api/wiki/fact-properties — the properties facts may state, with their types
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -194,6 +196,30 @@ public class WikiBrowseController(
 			.OrderBy(category => category.Name, StringComparer.OrdinalIgnoreCase)
 			.ToList());
 	}
+
+	/// <summary>
+	/// GET /api/wiki/fact-properties
+	/// The properties a page's facts may state: each one's id, type, whether it takes several values, and a keyword
+	/// property's allowed values.
+	/// </summary>
+	[HttpGet("fact-properties")]
+	public async Task<IActionResult> GetFactProperties()
+	{
+		var schema = await Wiki.GetFactSchemaAsync();
+		return Ok((schema.Properties.IsDefault ? [] : schema.Properties)
+			.Select(p => new WikiFactPropertyDto(p.Id, FactType(p.Type), p.Cardinality == Cardinality.Multiple,
+				[.. (p.AllowedKeywords.IsDefault ? [] : p.AllowedKeywords).Select(k => k.Value)]))
+			.OrderBy(p => p.Id, StringComparer.Ordinal)
+			.ToList());
+	}
+
+	private static string FactType(SemanticType type) => type switch
+	{
+		SemanticType.Integer => "number",
+		SemanticType.Boolean => "boolean",
+		SemanticType.PageRef => "page",
+		_ => "keyword",
+	};
 
 	/// <summary>
 	/// GET /api/wiki/pinned-categories

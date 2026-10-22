@@ -1,0 +1,94 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A page's facts, held beside its categories: one row per value, edited in place, saved as page metadata. *@
+@if (Properties.Count > 0)
+{
+    <div class="wiki-edit-facts" role="group" aria-label="@Loc["WkFacts"]">
+        <span class="wiki-edit-facts-label">@Loc["WkFacts"]</span>
+        @for (var i = 0; i < Facts.Count; i++)
+        {
+            var index = i;
+            var fact = Facts[index];
+            var property = Property(fact.Property);
+            var label = $"{fact.Property} {Loc["WkFactValue"]}";
+            <div class="wiki-edit-fact">
+                <span class="wiki-edit-fact-property">@fact.Property</span>
+                @switch (property?.Type)
+                {
+                    case "keyword":
+                        <select value="@fact.Value" disabled="@Disabled" aria-label="@label"
+                                @onchange="@(e => SetValue(index, e.Value?.ToString()))">
+                            @foreach (var keyword in KeywordsFor(property, fact.Value))
+                            {
+                                <option value="@keyword">@keyword</option>
+                            }
+                        </select>
+                        break;
+                    case "boolean":
+                        <select value="@fact.Value" disabled="@Disabled" aria-label="@label"
+                                @onchange="@(e => SetValue(index, e.Value?.ToString()))">
+                            <option value="true">true</option>
+                            <option value="false">false</option>
+                        </select>
+                        break;
+                    default:
+                        <input type="@(property?.Type == "number" ? "number" : "text")" value="@(fact.PageTitle ?? fact.Value)"
+                               disabled="@Disabled" aria-label="@label"
+                               @onchange="@(e => SetValue(index, e.Value?.ToString()))" />
+                        break;
+                }
+                <button type="button" disabled="@Disabled" aria-label="@Loc["WkRemoveFact"]" @onclick="@(() => Facts.RemoveAt(index))">×</button>
+            </div>
+        }
+        @if (Addable.Count > 0)
+        {
+            <select value="@_adding" disabled="@Disabled" aria-label="@Loc["WkAddFact"]"
+                    @onchange="@(e => _adding = e.Value?.ToString() ?? string.Empty)">
+                <option value="">@Loc["WkAddFact"]</option>
+                @foreach (var p in Addable)
+                {
+                    <option value="@p.Id">@p.Id</option>
+                }
+            </select>
+            <button type="button" class="wiki-edit-fact-add" disabled="@(Disabled || _adding.Length == 0)" @onclick="Add">+</button>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The draft's facts, changed in place: a page value edited here holds what was typed, its title or id.</summary>
+    [Parameter, EditorRequired] public required List<WikiFactDto> Facts { get; set; }
+
+    /// <summary>True for a translation, which has its page's facts.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The properties a fact may state; with none, nothing is shown.</summary>
+    [Parameter] public IReadOnlyList<WikiFactPropertyDto> Properties { get; set; } = [];
+
+    private string _adding = string.Empty;
+
+    private WikiFactPropertyDto? Property(string id) => Properties.FirstOrDefault(p => p.Id == id);
+
+    /// <summary>Every property but a single-valued one the page already states.</summary>
+    private List<WikiFactPropertyDto> Addable =>
+        [.. Properties.Where(p => p.Multiple || Facts.All(f => f.Property != p.Id))];
+
+    private static IEnumerable<string> KeywordsFor(WikiFactPropertyDto property, string current) =>
+        property.Keywords.Contains(current) || current.Length == 0 ? property.Keywords : [current, .. property.Keywords];
+
+    private void SetValue(int index, string? value) => Facts[index] = new WikiFactDto(Facts[index].Property, value?.Trim() ?? string.Empty);
+
+    private void Add()
+    {
+        if (Property(_adding) is not { } property) return;
+        Facts.Add(new WikiFactDto(property.Id, property.Type switch
+        {
+            "keyword" => property.Keywords.FirstOrDefault() ?? string.Empty,
+            "boolean" => "true",
+            _ => string.Empty,
+        }));
+        _adding = string.Empty;
+    }
+}

@@ -1,0 +1,43 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A page's facts under its body, one row per property, a value naming a page linking to it. *@
+@if (Facts.Count > 0)
+{
+    <section class="wiki-facts" aria-label="@Loc["WkFacts"]">
+        <span class="wiki-facts-label">@Loc["WkFacts"]</span>
+        <dl class="wiki-facts-list">
+            @foreach (var property in Facts.GroupBy(f => f.Property))
+            {
+                <dt>@property.Key</dt>
+                <dd>
+                    @foreach (var (fact, index) in property.Select((f, i) => (f, i)))
+                    {
+                        @if (index > 0)
+                        {
+                            <span class="wiki-facts-sep" aria-hidden="true"> · </span>
+                        }
+                        @if (fact is { PageSlug: { } slug, PageTitle: { } title })
+                        {
+                            <a href="@(HoldLinks ? null : WikiRoutes.WikiPathFor(fact.PageNamespace, slug))">@title</a>
+                        }
+                        else
+                        {
+                            <span>@fact.Value</span>
+                        }
+                    }
+                </dd>
+            }
+        </dl>
+    </section>
+}
+
+@code {
+    /// <summary>The facts the reader may see, ordered by property and then value.</summary>
+    [Parameter, EditorRequired] public required IReadOnlyList<WikiFactDto> Facts { get; set; }
+
+    /// <summary>True while the page waits for its return context, when its links do not navigate yet.</summary>
+    [Parameter] public bool HoldLinks { get; set; }
+}

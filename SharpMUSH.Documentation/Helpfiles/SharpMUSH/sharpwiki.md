@@ -89,6 +89,33 @@ an error.
 - [WIKILIST()]
 :::
 
+# wikifact()
+
+- `wikifact(<page>)`
+- `wikifact(<page>, <property>[, <delimiter>])`
+
+With only a page, returns the properties the page has facts for. With a
+property, returns that property's values. A value that names a page is
+returned as that page's reference. A fact that names a page you may not
+read is left out. The list is separated by spaces, or by `<delimiter>` if
+you give one.
+
+Set facts with `@wiki/fact <page>/<property>=<value>`.
+
+## Example
+
+```sharp
+> think wikifact(fireball)
+pf2e:level pf2e:tradition
+> think wikifact(fireball, pf2e:tradition, |)
+arcane|primal
+```
+
+::: seealso
+- [WIKI()]
+- [wiki facts]
+:::
+
 # wikiaccess()
 
 - `wikiaccess(<page>, <action>)`

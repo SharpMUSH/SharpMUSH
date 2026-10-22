@@ -5566,6 +5566,18 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Kategória leírása</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Tények</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Érték</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Tény eltávolítása</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Tény hozzáadása</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Kategória hozzáadása</value>
   </data>
