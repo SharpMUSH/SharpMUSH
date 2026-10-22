@@ -1850,7 +1850,7 @@ objects:
 
         Output: `\[APP\] Done: Personality attribute: PERS*`, then `\[APP\] Done: Background chapters: 10`
 
-        `+apps/field/attribute background=` puts Background back in one attribute, BACKGROUND.
+        `+apps/field/attribute background=BACKGROUND` puts Background back in one attribute.
 
         A character who already has BG1 and BG2 from an imported database finds them as chapters 1 and 2.
         The most characters, `max`, is for each chapter.
