@@ -316,6 +316,17 @@ public partial class Commands
 
 		await AccountService.LinkCharacterAsync(accountId, playerDbRef);
 
+		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
+		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
+		{
+			await NotifyService.Notify(handle, "Character creation succeeded but could not resolve player.");
+			return new None();
+		}
+
+		// create_player (src/player.c:562) sets SUSPECT before anything hears of the new character.
+		var created = new AnySharpObject(foundPlayer);
+		await MarkSuspectCreationAsync(handle, created);
+
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email); 'create' at the connect screen.
 		await EventService.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerDbRef.ToString(), charName, "create",
 			handle.ToString(), "");
@@ -324,16 +335,7 @@ public partial class Commands
 		// the first-login greeting, not "Welcome back".
 		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
 
-		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
-		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
-		{
-			await NotifyService.Notify(handle, "Character creation succeeded but could not resolve player.");
-			return new None();
-		}
-
 		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
-		var created = new AnySharpObject(foundPlayer);
-		await MarkSuspectCreationAsync(handle, created);
 		if (await created.HasFlag("SUSPECT"))
 		{
 			await GameBroadcastService.BroadcastToFlagAsync("WIZARD",
