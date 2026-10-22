@@ -5027,6 +5027,21 @@
   <data name="AdmSetupWikiGroup" xml:space="preserve">
     <value>In the wiki</value>
   </data>
+  <data name="AdmSetupWorldGroup" xml:space="preserve">
+    <value>In the game</value>
+  </data>
+  <data name="AdmSetupStarterWorldTitle" xml:space="preserve">
+    <value>Starter world</value>
+  </data>
+  <data name="AdmSetupStarterWorldDesc" xml:space="preserve">
+    <value>Describes the room new players arrive in, digs an Outside room with exits both ways, and adds a Newbie channel for questions. Anything the game already has is left alone.</value>
+  </data>
+  <data name="AdmSetupStarterWorldApplied" xml:space="preserve">
+    <value>Already added.</value>
+  </data>
+  <data name="AdmSetupStarterWorldFailed" xml:space="preserve">
+    <value>The applications were saved, but the starter world could not be finished: {0}</value>
+  </data>
   <data name="AdmSetupStarterWikiTitle" xml:space="preserve">
     <value>Starter wiki pages</value>
   </data>

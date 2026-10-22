@@ -234,6 +234,25 @@
                     </ul>
                 }
 
+                <h3 class="setup-group-title">@Loc["AdmSetupWorldGroup"]</h3>
+                <ul class="setup-apps">
+                    <li class="setup-app">
+                        <label class="setup-app-label">
+                            <input id="setup-starter-world" class="setup-app-check" type="checkbox"
+                                   checked="@(_starterWorld || _starterWorldApplied)" disabled="@(_busy || _starterWorldApplied)"
+                                   @onchange="@(e => _starterWorld = e.Value is true)" />
+                            <span class="setup-app-text">
+                                <span class="setup-app-title">@Loc["AdmSetupStarterWorldTitle"]</span>
+                                <span class="setup-app-desc">@Loc["AdmSetupStarterWorldDesc"]</span>
+                                @if (_starterWorldApplied)
+                                {
+                                    <span class="setup-app-note">@Loc["AdmSetupStarterWorldApplied"]</span>
+                                }
+                            </span>
+                        </label>
+                    </li>
+                </ul>
+
                 <h3 class="setup-group-title">@Loc["AdmSetupWikiGroup"]</h3>
                 <ul class="setup-apps">
                     <li class="setup-app">
@@ -356,6 +375,13 @@
     /// <summary>Whether the game already has the starter wiki pages, which are offered once.</summary>
     private bool _starterWikiApplied;
 
+    /// <summary>Whether the administrator wants the starting room described, an exit and a Newbie channel;
+    /// ticked until they untick it.</summary>
+    private bool _starterWorld = true;
+
+    /// <summary>Whether the starter world was already applied, which is offered once.</summary>
+    private bool _starterWorldApplied;
+
     /// <summary>
     /// Each step starts at its top. The shell, not the window, scrolls, and it kept the offset of the step
     /// before: a long step (handlers) left the next one opening below its heading.
@@ -417,6 +443,7 @@
         _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
 
         _starterWikiApplied = wizard.StarterWikiApplied;
+        _starterWorldApplied = wizard.StarterWorldApplied;
     }
 
     /// <summary>The two refusals the claim page words itself; anything else is the server's own sentence.</summary>
@@ -624,12 +651,23 @@
         {
             await AccountAuth.ReloadAuthorityAsync();
         }
+        var starterWorld = packages is SetupWizardResponse && _starterWorld && !_starterWorldApplied
+            ? await Wizard.ApplyStarterWorldAsync()
+            : new Success();
         var starterWiki = packages is SetupWizardResponse && _starterWiki && !_starterWikiApplied
             ? await Wizard.ApplyStarterWikiAsync()
             : new Success();
 
         switch (packages)
         {
+            case SetupWizardResponse when starterWorld is ApiFailure failure:
+                if (await Wizard.GetAsync() is SetupWizardResponse reloaded)
+                {
+                    Load(reloaded);
+                }
+
+                _error = Loc["AdmSetupStarterWorldFailed", failure.Message];
+                break;
             case SetupWizardResponse when starterWiki is ApiFailure failure:
                 // The packages are saved and the pages that could be written were. The step stays open with the
                 // reason; saving again finishes the wizard.

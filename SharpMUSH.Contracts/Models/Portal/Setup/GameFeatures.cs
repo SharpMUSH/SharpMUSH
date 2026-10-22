@@ -92,8 +92,12 @@ public record BundledPackageState(string Id, string Description, bool Installed,
 /// Whether the starter wiki pages (Getting Started, Theme, Setting, Policies and their categories) have been
 /// written to this game. They are offered once; an administrator who deletes one keeps it deleted.
 /// </param>
+/// <param name="StarterWorldApplied">
+/// Whether the starter world (a described arrival room with an exit to a second room, and a Newbie channel) has been
+/// made. It is offered once, and leaves out what the game already has.
+/// </param>
 public record SetupWizardResponse(bool Pending, IReadOnlyList<HandlerState> Handlers,
-	IReadOnlyList<BundledPackageState> Packages, bool StarterWikiApplied = false);
+	IReadOnlyList<BundledPackageState> Packages, bool StarterWikiApplied = false, bool StarterWorldApplied = false);
 
 /// <summary>The bundled packages the administrator wants installed; every other bundled package is removed.</summary>
 public record SetupPackagesRequest(IReadOnlyList<string> Installed);
