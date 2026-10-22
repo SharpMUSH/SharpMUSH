@@ -94,6 +94,12 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 			}
 
 			var tokenText = WithoutLeadingSpaces(commandText);
+
+			// command.c:1168: a line that starts with a function runs WARN_ON_MISSING instead, unless
+			// that command is disabled (the default, as PennMUSH's restrict.cnf has it).
+			if (tokenText.ToPlainText().StartsWith('[') && parser.CommandLibrary.ContainsKey("WARN_ON_MISSING"))
+				return await RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain("WARN_ON_MISSING "), tokenText));
+
 			if (SpeechTokenCommand(tokenText) is { } speechReplacer)
 				return await RedispatchSpeechAsync(parser, speechReplacer, tokenText);
 
@@ -310,16 +316,21 @@ internal sealed class CommandDispatcher(EvaluationServices services)
 	/// Re-dispatching the rewritten line (rather than calling the command directly) keeps the
 	/// token forms on exactly the same path as the spelled-out commands, including @hook.
 	/// </summary>
-	private static async ValueTask<Option<CallState>> RedispatchSpeechAsync(IMUSHCodeParser parser,
+	private static ValueTask<Option<CallState>> RedispatchSpeechAsync(IMUSHCodeParser parser,
 		string speechReplacer, MString tokenText)
+		=> RedispatchAsync(parser, MarkupText.Concat(MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+
+	/// <summary>
+	/// Runs <paramref name="line"/> in place of the typed one. PennMUSH swaps the command name without
+	/// touching cmd_raw: %c stays what was typed (`"hi`, or the `[...]` WARN_ON_MISSING was run for).
+	/// </summary>
+	private static async ValueTask<Option<CallState>> RedispatchAsync(IMUSHCodeParser parser, MString line)
 	{
-		// PennMUSH swaps the token for the command name without touching cmd_raw: %c stays `"hi`.
 		var typed = parser.CurrentState.CommandText;
 		typed?.KeepRawThroughRedispatch();
 		try
 		{
-			var result = await parser.CommandParse(MarkupText.Concat(
-				MarkupText.Plain(speechReplacer + " "), tokenText.Substring(1)));
+			var result = await parser.CommandParse(line);
 			return result.HadErrors ? result : CallState.Empty;
 		}
 		finally

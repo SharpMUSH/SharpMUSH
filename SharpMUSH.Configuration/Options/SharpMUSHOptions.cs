@@ -291,7 +291,8 @@ public record SharpMUSHOptions
 		),
 		Alias = AliasOptions.Default,
 		Restriction = new RestrictionOptions(
-			CommandRestrictions: new Dictionary<string, string[]>(),
+			// PennMUSH's shipped restrict.cnf: WARN_ON_MISSING stays off until a game enables it.
+			CommandRestrictions: new Dictionary<string, string[]> { ["WARN_ON_MISSING"] = ["nobody"] },
 			FunctionRestrictions: new Dictionary<string, string[]>()
 		),
 		// Seeded examples, so a new game shows what these two look like rather than an empty page.
