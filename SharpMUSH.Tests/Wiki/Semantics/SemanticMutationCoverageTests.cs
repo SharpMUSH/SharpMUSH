@@ -40,6 +40,7 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 		["SetRequirementsAsync"] = Impact.SemanticMutation,
 		["SetPageTitleAsync"] = Impact.SemanticMutation,
 		["SetPageMetadataAsync"] = Impact.SemanticMutation,
+		["SetPageFactsAsync"] = Impact.SemanticMutation,
 		["SetCategoryPinnedAsync"] = Impact.PresentationOnly,
 		["WriteTranslationAsync"] = Impact.SemanticMutation,
 		["DeleteTranslationAsync"] = Impact.SemanticMutation
