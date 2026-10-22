@@ -64,26 +64,38 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	[Arguments("pf2e:unknown", "1", "No property pf2e:unknown")]
-	[Arguments("pf2e:level", "three", "pf2e:level is a whole number")]
-	[Arguments("pf2e:tradition", "elemental", "pf2e:tradition does not allow")]
-	[Arguments("pf2e:class", "wiki_page/987654", "names a page that does not exist")]
-	[Arguments("not a key", "1", "is not a property key")]
-	public async Task FactsTheSchemaRefusesAreAnErrorAndChangeNothing(string property, string value, string message)
+	[Arguments("pf2e:unknown", "1", "No property pf2e:unknown", true)]
+	[Arguments("pf2e:level", "three", "pf2e:level is a whole number", true)]
+	[Arguments("pf2e:tradition", "elemental", "pf2e:tradition does not allow", true)]
+	[Arguments("pf2e:class", "wiki_page/987654", "names a page that does not exist", true)]
+	[Arguments("not a key", "1", "is not a property key", true)]
+	[Arguments("pf2e:unknown", "1", "No property pf2e:unknown", false)]
+	[Arguments("pf2e:level", "three", "pf2e:level is a whole number", false)]
+	[Arguments("pf2e:tradition", "elemental", "pf2e:tradition does not allow", false)]
+	[Arguments("pf2e:class", "wiki_page/987654", "names a page that does not exist", false)]
+	[Arguments("not a key", "1", "is not a property key", false)]
+	public async Task FactsTheSchemaRefusesAreAnErrorAndChangeNothing(string property, string value, string message, bool active)
 	{
-		var (host, wiki, provider) = await ActiveFactsHostAsync();
+		SemanticWikiPrototypeHost host;
+		if (active) host = (await ActiveFactsHostAsync()).Host;
+		else { host = NewHost(); await host.OpenAsync(); }
 		await using var _ = host;
+		var wiki = host.Services.GetRequiredService<IWikiService>();
+		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		var spell = (await wiki.CreateAsync("Refused spell", "# Spell", "#1")).Expect<WikiPage>();
 		await Assert.That((await wiki.SetFactsAsync(spell.Id, [new("pf2e:level", "5")])).Value is WikiPage).IsTrue();
-		var before = Task3Snapshot(provider);
-		var sequence = ObserveSequence(provider);
+		var before = active ? Task3Snapshot(provider) : null;
+		var sequence = active ? ObserveSequence(provider) : default;
 
 		var refused = await wiki.SetFactsAsync(spell.Id, [new("pf2e:level", "5"), new(property, value)]);
 		await Assert.That(refused.Value is Error<string> { Value: var error } && error.Contains(message)).IsTrue().Because($"got {refused.Value}");
-		await Assert.That(Task3Snapshot(provider)).IsEquivalentTo(before);
-		await Assert.That(ObserveSequence(provider)).IsEqualTo(sequence);
 		await Assert.That(((await wiki.GetByIdAsync(spell.Id)).Expect<WikiPage>()).Facts).IsEquivalentTo([new WikiPageFact("pf2e:level", "5")]);
-		await Assert.That(await QueryIdsAsync(provider, LevelEquals(5))).IsEquivalentTo([spell.Id]);
+		if (active)
+		{
+			await Assert.That(Task3Snapshot(provider)).IsEquivalentTo(before!);
+			await Assert.That(ObserveSequence(provider)).IsEqualTo(sequence);
+			await Assert.That(await QueryIdsAsync(provider, LevelEquals(5))).IsEquivalentTo([spell.Id]);
+		}
 		await host.CloseAsync();
 	}
 
@@ -112,10 +124,8 @@ public partial class IntegratedWikiMutationTests
 		var wiki = host.Services.GetRequiredService<IWikiService>();
 		var cleric = (await wiki.CreateAsync("Early cleric", "# Cleric", "#1")).Expect<WikiPage>();
 		var spell = (await wiki.CreateAsync("Early spell", "# Spell", "#1")).Expect<WikiPage>();
-		// No schema types facts before activation, so only their shape is checked here.
 		// A bare page key is stored as the page's id here too, so activation finds the page it names.
 		await Assert.That((await wiki.SetFactsAsync(spell.Id, [new("pf2e:level", "6"), new("pf2e:class", cleric.Id["wiki_page/".Length..])])).Value is WikiPage).IsTrue();
-		await Assert.That((await wiki.SetFactsAsync(spell.Id, [new("bad key", "6")])).Value is Error<string>).IsTrue();
 		await host.ActivateAtomicWikiProjectionAsync();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		await Assert.That(await QueryIdsAsync(provider, LevelEquals(6))).IsEquivalentTo([spell.Id]);
@@ -124,13 +134,15 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task ActivationRefusesFactsTheSchemaRefuses()
+	public async Task ActivationRefusesAFactNamingAPageDeletedSinceItWasStated()
 	{
 		await using var host = NewHost();
 		await host.OpenAsync();
 		var wiki = host.Services.GetRequiredService<IWikiService>();
+		var cleric = (await wiki.CreateAsync("Deleted cleric", "# Cleric", "#1")).Expect<WikiPage>();
 		var spell = (await wiki.CreateAsync("Early refused spell", "# Spell", "#1")).Expect<WikiPage>();
-		await Assert.That((await wiki.SetFactsAsync(spell.Id, [new("pf2e:level", "six")])).Value is WikiPage).IsTrue();
+		await Assert.That((await wiki.SetFactsAsync(spell.Id, [new("pf2e:class", cleric.Id)])).Value is WikiPage).IsTrue();
+		await Assert.That((await wiki.DeleteAsync(cleric.Id, "#1")).Value is None).IsTrue();
 		await Assert.That(async () => await host.ActivateAtomicWikiProjectionAsync()).Throws<WikiFixtureMutationException>();
 		await Assert.That(host.Services.GetRequiredService<LightningDatabase>().AtomicWikiPhase).IsEqualTo(SemanticFixturePhase.Inactive);
 		await host.CloseAsync();
