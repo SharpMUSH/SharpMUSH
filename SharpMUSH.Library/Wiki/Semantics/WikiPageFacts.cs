@@ -8,8 +8,8 @@ namespace SharpMUSH.Library.Wiki.Semantics;
 
 /// <summary>
 /// A page's facts as its metadata holds them, and the canonical facts a semantic projection indexes from them.
-/// The metadata form is checked for shape only, since a world without semantics has no schema to type it by;
-/// the projection types it against the schema the world indexes under.
+/// Normalizing checks the metadata form for shape only; a store with a fact schema types it against that schema
+/// when it writes it, and the projection indexes the typed form.
 /// </summary>
 public static class WikiPageFacts
 {
