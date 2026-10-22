@@ -10,6 +10,18 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-crime-chibi-administrator-walkthrough", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-crime-chibi-administrator-invite", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-crime-chibi-administrator-capabilities", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-crime-chibi-administrator-identity", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-dark-fantasy-kemono-player-character", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-walkthrough", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-capabilities", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-joining", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-identity", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-dark-fantasy-kemono-player-sign-in", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-crime-chibi-player-continue", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-crime-chibi-player-channels", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-channels.png", 1254, 1254, "player-channels"),
 		new SharpieArt("sharpie-crime-chibi-player-place", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-place.png", 1254, 1254, "player-place"),
 		new SharpieArt("sharpie-crime-chibi-player-sign-in", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
 		new SharpieArt("sharpie-crime-chibi-shared-welcome", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
