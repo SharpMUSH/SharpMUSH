@@ -43,14 +43,30 @@ public class WelcomeTests : BunitContext
 		});
 		foreach (var step in GuideStepIds.Administrator)
 		{
+			// A topic without its own illustration shows the genre's general one.
+			var illustrated = SharpieArtCatalog.Approved.Any(art => art.Topic == $"administrator-{step}");
 			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
-			await Assert.That(image.GetAttribute("src")).Contains($"sharpie-fantasy-minimalist-administrator-{step}.png");
+			await Assert.That(image.GetAttribute("src")).Contains(illustrated
+				? $"sharpie-fantasy-minimalist-administrator-{step}.png" : "sharpie-fantasy-minimalist.png");
 			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
 		}
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
 		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(GuideStepIds.Administrator.Count);
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
 		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(1, true)]
+	[Arguments(42, false)]
+	public async Task AdminChecklistWarnsOnlyWhileGodIsTheActiveCharacter(int dbref, bool warned)
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		Services.GetRequiredService<IAccountAuthState>().ActiveCharacter
+			.Returns(new AccountAuthService.CharacterSummary(dbref, 1L, "Staff", ""));
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		page.WaitForAssertion(() => page.Find("[data-art-topic='administrator-staff-character']"));
+		await Assert.That(page.FindAll("[data-art-topic='administrator-staff-character'] .admin-check-warning").Count).IsEqualTo(warned ? 1 : 0);
 	}
 
 	[Test]
