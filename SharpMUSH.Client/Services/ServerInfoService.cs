@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Models.Portal.Setup;
+using SharpMUSH.Library.Models.Portal.Onboarding;
 
 namespace SharpMUSH.Client.Services;
 
@@ -15,7 +16,10 @@ namespace SharpMUSH.Client.Services;
 public class ServerInfoService(IHttpClientFactory httpClientFactory)
 {
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string>? Features = null,
-		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null);
+		string? BuildId = null, string? ImageHosts = null, string? ImageHostList = null, string? Logo = null,
+		OnboardingPresentation? Onboarding = null);
+
+	public virtual async Task<OnboardingPresentation?> OnboardingAsync() => (await FetchAsync()).Onboarding;
 
 	private const string DefaultMudName = "SharpMUSH";
 
@@ -144,6 +148,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 		before.GuestsEnabled != now.GuestsEnabled
 		|| before.MudName != now.MudName
 		|| before.Logo != now.Logo
+		|| before.Onboarding != now.Onboarding
 		|| !(before.Features ?? []).ToHashSet(StringComparer.OrdinalIgnoreCase).SetEquals(now.Features ?? []);
 
 	private ServerInfoResponse Answered(ServerInfoResponse info)

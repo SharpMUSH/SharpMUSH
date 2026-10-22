@@ -89,7 +89,7 @@ public partial class IntegratedWikiMutationTests
 			async () => { await provider.WikiHistory.PurgeAsync(batch, rule, DateTimeOffset.UtcNow); }
 		})
 		{
-			provider.Store.PauseWriter();
+			await provider.Store.PauseAndDrainWriterAsync();
 			Task? parent = null;
 			try
 			{
@@ -150,7 +150,7 @@ public partial class IntegratedWikiMutationTests
 		var before = ObserveRawEpoch(provider);
 		var ready = NewSignal();
 		var arrivals = 0;
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		var tasks = Enumerable.Range(0, 2).Select(_ => Task.Run(() =>
 		{
 			if (Interlocked.Increment(ref arrivals) == 2) ready.TrySetResult();

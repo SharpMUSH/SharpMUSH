@@ -31,6 +31,25 @@ const body = { tagName: 'BODY', isContentEditable: false };
 const input = { tagName: 'INPUT', isContentEditable: false };
 const editor = { tagName: 'DIV', isContentEditable: true };
 
+test('guide insertion refuses a composing, nonempty or detached field', () => {
+    const { layout } = boot();
+    const events = new Map();
+    const field = { value: '', addEventListener: (name, callback) => events.set(name, callback), removeEventListener: name => events.delete(name) };
+    assert.equal(layout.formattedInputBusy(field), true);
+    layout.formattedInput(field, { invokeMethodAsync: () => Promise.resolve() });
+    assert.equal(layout.formattedInputBusy(field), false);
+    events.get('compositionstart')();
+    assert.equal(layout.formattedInputBusy(field), true);
+    events.get('compositionend')();
+    field.value = 'draft not yet delivered to Blazor';
+    assert.equal(layout.formattedInputBusy(field), true);
+    field.value = '';
+    assert.equal(layout.formattedInputBusy(field), false);
+    layout.unformattedInput(field);
+    assert.equal(events.size, 0);
+    assert.equal(layout.formattedInputBusy(field), true);
+});
+
 test('Ctrl+K and Cmd+K open the palette from the page', () => {
     const { layout, listeners } = boot();
     const calls = [];
@@ -704,4 +723,21 @@ test('configuration focus treats an option key as data rather than a selector', 
     const { layout, document } = boot();
     document.querySelectorAll = selector => { assert.ok(['[data-config-option]', '[data-config-selected]'].includes(selector)); return []; };
     assert.equal(layout.focusConfigurationOption('x\"] button, input'), false);
+});
+
+test('terminal guide insertion refuses composition and a draft not yet delivered to Blazor', () => {
+    const { layout } = boot();
+    const events = new Map();
+    const field = { value: '', dataset: {}, addEventListener: (name, handler) => events.set(name, handler) };
+    assert.equal(layout.terminalInputBusy(null), true);
+    assert.equal(layout.terminalInputBusy(field), true);
+    layout.reviewKeys(field, { invokeMethodAsync: () => Promise.resolve() });
+    assert.equal(layout.terminalInputBusy(field), false);
+    events.get('compositionstart')();
+    assert.equal(layout.terminalInputBusy(field), true);
+    events.get('compositionend')();
+    field.value = 'unfinished';
+    assert.equal(layout.terminalInputBusy(field), true);
+    field.value = '';
+    assert.equal(layout.terminalInputBusy(field), false);
 });

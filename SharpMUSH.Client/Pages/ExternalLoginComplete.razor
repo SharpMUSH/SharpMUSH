@@ -57,7 +57,7 @@
         }
         if (data.TryGetProperty("linked", out _)) { Nav.NavigateTo(_returnPath); return; }
         if (await Security.AdoptAsync(data) is ApiFailure adoption) { _error = adoption.Message; return; }
-        Nav.NavigateTo(Auth.MustChangePassword ? "/account" : Auth.Characters.Count == 0 ? "/characters/new" : _returnPath);
+        Nav.NavigateTo(Auth.MustChangePassword ? "/account" : Auth.Characters.Count == 0 ? OnboardingRoutes.FirstCharacter(_returnPath) : _returnPath);
     }
     private static bool Allowed(string path) => path.StartsWith('/') && !path.StartsWith("//", StringComparison.Ordinal) && !path.Contains('\\') && !path.Any(char.IsControl);
 }

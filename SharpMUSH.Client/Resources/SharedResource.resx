@@ -3912,7 +3912,7 @@
     <value>Account '{0}' status updated.</value>
   </data>
   <data name="OnboardingCreateFirstCharacter" xml:space="preserve">
-    <value>Your account is ready. Creating a character is the last step before you can play.</value>
+    <value>Your account is ready. Create or claim a character to start playing.</value>
   </data>
   <data name="HelpLoadFailed" xml:space="preserve">
     <value>The help files could not be loaded.</value>
@@ -9350,5 +9350,285 @@
   </data>
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Browse members</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Featured topics</value></data>
+  <data name="GuideContextAccount" xml:space="preserve"><value>Your account and character</value></data>
+  <data name="GuideContextSignedOut" xml:space="preserve"><value>You can read this guide without signing in. Sign in when you are ready to join the game.</value></data>
+  <data name="GuideContextCharacter" xml:space="preserve"><value>Your active character is {0}. Commands you send in play use this character.</value></data>
+  <data name="GuideContextChooseCharacter" xml:space="preserve"><value>You are signed in. Choose or create a character before joining play.</value></data>
+  <data name="GuideContextFeatures" xml:space="preserve"><value>Explore this game</value></data>
+  <data name="GuideContextScenes" xml:space="preserve"><value>Scenes</value></data>
+  <data name="GuideContextScenesDescription" xml:space="preserve"><value>Browse the stories recorded in this game. Joining a scene depends on its access rules.</value></data>
+  <data name="GuideContextWiki" xml:space="preserve"><value>Wiki</value></data>
+  <data name="GuideContextWikiDescription" xml:space="preserve"><value>Read the setting and the pages this game makes available to you.</value></data>
+  <data name="GuidePanelLabel" xml:space="preserve"><value>Getting started with Sharpie</value></data>
+  <data name="GuideWithSharpie" xml:space="preserve"><value>With Sharpie</value></data>
+  <data name="GuideClose" xml:space="preserve"><value>Close guide</value></data>
+  <data name="GuideInsertLook" xml:space="preserve"><value>Insert look into Command</value></data>
+  <data name="GuideDraftHint" xml:space="preserve"><value>You choose when to send. An existing draft stays untouched.</value></data>
+  <data name="GuideOpenPlay" xml:space="preserve"><value>Open Play to try it in the game</value></data>
+  <data name="GuideBack" xml:space="preserve"><value>Back</value></data>
+  <data name="GuideSkip" xml:space="preserve"><value>Skip for now</value></data>
+  <data name="GuideKnown" xml:space="preserve"><value>I already know this</value></data>
+  <data name="GuideUnderstood" xml:space="preserve"><value>I've got this</value></data>
+  <data name="GuideReference" xml:space="preserve"><value>Common commands and who sees them</value></data>
+  <data name="GuidePracticeLabel" xml:space="preserve"><value>Local command practice</value></data>
+  <data name="GuidePracticeHeading" xml:space="preserve"><value>Try it here first</value></data>
+  <data name="GuidePracticeLocal" xml:space="preserve"><value>Local practice — not sent to the game.</value></data>
+  <data name="GuidePracticeTry" xml:space="preserve"><value>Try locally</value></data>
+  <data name="GuidePracticeInvalid" xml:space="preserve"><value>For this practice, enter look. Nothing here runs on the game.</value></data>
+  <data name="GuidePracticeResult" xml:space="preserve"><value>Practice room: a sunlit courtyard. Sharpie is here. An archway leads to a garden. In the game, look describes your actual surroundings.</value></data>
+  <data name="GuidePracticeType" xml:space="preserve"><value>Type</value></data>
+  <data name="GuideWelcomeIntro" xml:space="preserve"><value>I'm Sharpie. I can help you find your way from your first sign-in to your first scene.</value></data>
+  <data name="GuidePreviewNotice" xml:space="preserve"><value>Player-guide preview. These choices do not change your progress. Test with an ordinary player account to verify permissions.</value></data>
+  <data name="GuideReload" xml:space="preserve"><value>Reload progress</value></data>
+  <data name="GuideLoading" xml:space="preserve"><value>Loading your guide…</value></data>
+  <data name="GuideContinueBrowser" xml:space="preserve"><value>Continue browser guide</value></data>
+  <data name="GuideContinueQuestion" xml:space="preserve"><value>You started a guide in this browser before signing in. Add that learning progress to your account?</value></data>
+  <data name="GuideContinueAccept" xml:space="preserve"><value>Continue that guide</value></data>
+  <data name="GuideContinueDecline" xml:space="preserve"><value>Keep my account progress</value></data>
+  <data name="GuideChoosePath" xml:space="preserve"><value>Choose your starting point</value></data>
+  <data name="GuideComingFrom" xml:space="preserve"><value>Where are you coming from?</value></data>
+  <data name="GuideGameGuides" xml:space="preserve"><value>This game's guides</value></data>
+  <data name="GuideSteps" xml:space="preserve"><value>Guide steps</value></data>
+  <data name="GuideReady" xml:space="preserve"><value>You're ready to explore. You can return here from Help at any time.</value></data>
+  <data name="GuideOpenGame" xml:space="preserve"><value>Open the game</value></data>
+  <data name="GuideArtwork" xml:space="preserve"><value>Sharpie artwork</value></data>
+  <data name="GuideArtworkFull" xml:space="preserve"><value>Full</value></data>
+  <data name="GuideArtworkReduced" xml:space="preserve"><value>Reduced</value></data>
+  <data name="GuideArtworkNone" xml:space="preserve"><value>No artwork</value></data>
+  <data name="GuideStraightToGame" xml:space="preserve"><value>Go straight to the game</value></data>
+  <data name="GuideHelpReturn" xml:space="preserve"><value>You can always find this guide in Help.</value></data>
+  <data name="GuidePageTitle" xml:space="preserve"><value>Getting started — {0}</value></data>
+  <data name="GuideWelcomeGame" xml:space="preserve"><value>Welcome to {0}</value></data>
+  <data name="GuideLesson_Discord_sign-in_Title" xml:space="preserve"><value>Your account opens the door</value></data>
+  <data name="GuideLesson_Discord_sign-in_Body" xml:space="preserve"><value>Your account is your private sign-in. Your character is who other players meet. Sign in or register using the options this game offers; you do not type your account password into the game command box.</value></data>
+  <data name="GuideLesson_Discord_sign-in_Action" xml:space="preserve"><value>Sign in or register</value></data>
+  <data name="GuideLesson_Discord_character_Title" xml:space="preserve"><value>Choose who you will play</value></data>
+  <data name="GuideLesson_Discord_character_Body" xml:space="preserve"><value>Use your existing character if you have one. If you played this game before, claim that character instead of creating a duplicate. Otherwise create a character when the game allows it. Your account can hold more than one; choose the one you want to play.</value></data>
+  <data name="GuideLesson_Discord_character_Action" xml:space="preserve"><value>My characters</value></data>
+  <data name="GuideLesson_Discord_world_Title" xml:space="preserve"><value>Find your bearings</value></data>
+  <data name="GuideLesson_Discord_world_Body" xml:space="preserve"><value>Play opens a terminal for game commands. When a scene is available, Story view offers a structured view of that scene on the same connection. Check your current character and connection status. Look for the room description, who is here, and the exits. An exit moves your character; reading a description does not.</value></data>
+  <data name="GuideLesson_Discord_world_Action" xml:space="preserve"><value>Open Play</value></data>
+  <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
+  <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
+  <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. Practice here is local; check the game's etiquette before speaking live.</value></data>
+  <data name="GuideLesson_Discord_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
+  <data name="GuideLesson_Discord_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
+  <data name="GuideLesson_Discord_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
+  <data name="GuideLesson_Discord_place_Title" xml:space="preserve"><value>A world you help write</value></data>
+  <data name="GuideLesson_Discord_place_Body" xml:space="preserve"><value>Imagine a roleplay server where your character can stand in a room, meet other characters, and leave through an exit. Rooms describe places in a shared world; they are not Discord channels. What you say usually reaches the people in your room.</value></data>
+  <data name="GuideLesson_Mush_place_Title" xml:space="preserve"><value>Just what's new</value></data>
+  <data name="GuideLesson_Mush_place_Body" xml:space="preserve"><value>Keep your MUSH knowledge: rooms, exits, objects and softcode still apply. This short tour covers the web account, character linking and the two Play views. Familiar command examples stay in the expandable reference; no command practice is required.</value></data>
+  <data name="GuideLesson_Mush_sign-in_Title" xml:space="preserve"><value>One account, your characters</value></data>
+  <data name="GuideLesson_Mush_sign-in_Body" xml:space="preserve"><value>The web account is separate from your existing in-game character password. Sign in, then claim an existing character instead of recreating it. Select a linked character to play; never enter your account password in the command composer.</value></data>
+  <data name="GuideLesson_Mush_sign-in_Action" xml:space="preserve"><value>Sign in or manage characters</value></data>
+  <data name="GuideLesson_Mush_world_Title" xml:space="preserve"><value>Story or Terminal: your choice</value></data>
+  <data name="GuideLesson_Mush_world_Body" xml:space="preserve"><value>Terminal retains the familiar scrolling interface. When a scene is available, Story offers separate Say, OOC, Emit and Command modes. Use Command for MUSH syntax and expressions; the other modes treat text literally. Switching views keeps the same game connection. Check your selected character before sending.</value></data>
+  <data name="GuideLesson_Mush_world_Action" xml:space="preserve"><value>Open Play</value></data>
+  <data name="GuideLesson_Mush_continue_Title" xml:space="preserve"><value>Explore this game's additions</value></data>
+  <data name="GuideLesson_Mush_continue_Body" xml:space="preserve"><value>Optional applications and packages vary by game. Use the sections this game exposes and their own help; do not assume commands from another SharpMUSH game are installed here. The common-command reference remains available below. You can change your starting point for a fuller introduction.</value></data>
+  <data name="GuideLesson_Mush_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Title" xml:space="preserve"><value>Your account opens the door</value></data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Body" xml:space="preserve"><value>Your account is your private sign-in. Your character is who other players meet. Sign in or register using the options this game offers; you do not type your account password into the game command box.</value></data>
+  <data name="GuideLesson_OtherRoleplay_sign-in_Action" xml:space="preserve"><value>Sign in or register</value></data>
+  <data name="GuideLesson_OtherRoleplay_character_Title" xml:space="preserve"><value>Choose who you will play</value></data>
+  <data name="GuideLesson_OtherRoleplay_character_Body" xml:space="preserve"><value>Use your existing character if you have one. If you played this game before, claim that character instead of creating a duplicate. Otherwise create a character when the game allows it. Your account can hold more than one; choose the one you want to play.</value></data>
+  <data name="GuideLesson_OtherRoleplay_character_Action" xml:space="preserve"><value>My characters</value></data>
+  <data name="GuideLesson_OtherRoleplay_world_Title" xml:space="preserve"><value>Find your bearings</value></data>
+  <data name="GuideLesson_OtherRoleplay_world_Body" xml:space="preserve"><value>Unlike a forum thread, a room is a place your character occupies now. Read its description and exits to establish the scene. When a scene is available, Story view separates dialogue and actions; Terminal keeps the scrolling text interface. Both use the same character and connection.</value></data>
+  <data name="GuideLesson_OtherRoleplay_world_Action" xml:space="preserve"><value>Open Play</value></data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
+  <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve"><value>As at a tabletop session, describe what your character attempts and leave other players room to respond. pose waves. adds your character's name; say Hello speaks to the current room. A private page reaches a named player. Agree on scene expectations and read this game's consent rules before joining.</value></data>
+  <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
+  <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
+  <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
+  <data name="GuideLesson_OtherRoleplay_place_Title" xml:space="preserve"><value>A world you help write</value></data>
+  <data name="GuideLesson_OtherRoleplay_place_Body" xml:space="preserve"><value>Bring your roleplay experience. Here, you play a character in a persistent text world. Rooms establish the setting, exits connect places, and players write dialogue and actions together. Read this game's rules before joining a scene.</value></data>
+  <data name="GuideLesson_Explore_sign-in_Title" xml:space="preserve"><value>Your account opens the door</value></data>
+  <data name="GuideLesson_Explore_sign-in_Body" xml:space="preserve"><value>Your account is your private sign-in. Your character is who other players meet. Sign in or register using the options this game offers; you do not type your account password into the game command box.</value></data>
+  <data name="GuideLesson_Explore_sign-in_Action" xml:space="preserve"><value>Sign in or register</value></data>
+  <data name="GuideLesson_Explore_character_Title" xml:space="preserve"><value>Choose who you will play</value></data>
+  <data name="GuideLesson_Explore_character_Body" xml:space="preserve"><value>Use your existing character if you have one. If you played this game before, claim that character instead of creating a duplicate. Otherwise create a character when the game allows it. Your account can hold more than one; choose the one you want to play.</value></data>
+  <data name="GuideLesson_Explore_character_Action" xml:space="preserve"><value>My characters</value></data>
+  <data name="GuideLesson_Explore_world_Title" xml:space="preserve"><value>Find your bearings</value></data>
+  <data name="GuideLesson_Explore_world_Body" xml:space="preserve"><value>Play opens a terminal for game commands. When a scene is available, Story view offers a structured view of that scene on the same connection. Check your current character and connection status. Look for the room description, who is here, and the exits. An exit moves your character; reading a description does not.</value></data>
+  <data name="GuideLesson_Explore_world_Action" xml:space="preserve"><value>Open Play</value></data>
+  <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
+  <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
+  <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. Practice here is local; check the game's etiquette before speaking live.</value></data>
+  <data name="GuideLesson_Explore_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
+  <data name="GuideLesson_Explore_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
+  <data name="GuideLesson_Explore_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
+  <data name="GuideLesson_Explore_place_Title" xml:space="preserve"><value>A world you help write</value></data>
+  <data name="GuideLesson_Explore_place_Body" xml:space="preserve"><value>Explore at your own pace. This guide stays available from Help whenever you want a command reference or a hand finding your way.</value></data>
+  <data name="GuideLesson_Administrator_identity_Title" xml:space="preserve"><value>Introduce your game</value></data>
+  <data name="GuideLesson_Administrator_identity_Body" xml:space="preserve"><value>Set the game name, a short introduction, genre and Sharpie style. Keep your game's logo prominent. Save only when the preview says what you intend.</value></data>
+  <data name="GuideLesson_Administrator_identity_Action" xml:space="preserve"><value>Game identity</value></data>
+  <data name="GuideLesson_Administrator_joining_Title" xml:space="preserve"><value>Check how players join</value></data>
+  <data name="GuideLesson_Administrator_joining_Body" xml:space="preserve"><value>Review registration, guest access and character creation. Try the sign-in route you plan to share. These settings determine who can enter; the checklist does not change them.</value></data>
+  <data name="GuideLesson_Administrator_joining_Action" xml:space="preserve"><value>Player access settings</value></data>
+  <data name="GuideLesson_Administrator_rules_Title" xml:space="preserve"><value>Give players a clear starting point</value></data>
+  <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve"><value>Publish readable welcome, rules and character guide pages, then link them here. Check them while signed out; private pages are deliberately omitted from the public guide.</value></data>
+  <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve"><value>Open wiki</value></data>
+  <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve"><value>Check what is installed</value></data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve"><value>Review your installed packages and their own help. A general scene or Discord feature does not prove a particular softcode command exists. Package installation still uses its normal review and confirmation.</value></data>
+  <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve"><value>Review packages</value></data>
+  <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve"><value>Walk in as an ordinary player</value></data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve"><value>Try joining, choosing a character, look, help, and the four familiarity paths using an ordinary player account. An administrator preview cannot verify ordinary-player permissions.</value></data>
+  <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve"><value>Preview player guide</value></data>
+  <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve"><value>Ready when you are</value></data>
+  <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve"><value>Review completed and deferred items before sharing your game link. Finishing this checklist does not publish the game, open registration, install packages, or send invitations.</value></data>
+  <data name="GuideCommand_look_Meaning" xml:space="preserve"><value>Describe your current room</value></data>
+  <data name="GuideCommand_look_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_help_Meaning" xml:space="preserve"><value>Read command help</value></data>
+  <data name="GuideCommand_help_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_inventory_Meaning" xml:space="preserve"><value>List what you carry</value></data>
+  <data name="GuideCommand_inventory_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_who_Meaning" xml:space="preserve"><value>See connected players the game lets you see</value></data>
+  <data name="GuideCommand_who_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_say_Meaning" xml:space="preserve"><value>Speak as your character</value></data>
+  <data name="GuideCommand_say_Audience" xml:space="preserve"><value>People in your room</value></data>
+  <data name="GuideCommand_pose_Meaning" xml:space="preserve"><value>Describe your character's action</value></data>
+  <data name="GuideCommand_pose_Audience" xml:space="preserve"><value>People in your room</value></data>
+  <data name="GuideCommand_page_Meaning" xml:space="preserve"><value>Send a private message</value></data>
+  <data name="GuideCommand_page_Audience" xml:space="preserve"><value>One named player</value></data>
+  <data name="GuidePackagesLabel" xml:space="preserve"><value>Package commands for your character</value></data>
+  <data name="GuidePackagesCheck" xml:space="preserve"><value>Check available commands for {0}</value></data>
+  <data name="GuidePackagesLoading" xml:space="preserve"><value>Loading game help…</value></data>
+  <data name="GuidePackagesError" xml:space="preserve"><value>Game help is unavailable right now. Type help in the game.</value></data>
+  <data name="GuidePackagesEmpty" xml:space="preserve"><value>No verified package suggestions are available for this character here. Other packages may still be installed; use the game’s own help.</value></data>
+  <data name="GuidePackagesExplanation" xml:space="preserve"><value>For this game's extra features, try:</value></data>
+  <data name="GuidePackagesVersion" xml:space="preserve"><value>{0}, version {1}</value></data>
+  <data name="GuidePackagesReference" xml:space="preserve"><value>Package reference (opens a new tab)</value></data>
+  <data name="GuideCharacterConnectionFailed" xml:space="preserve"><value>Your character is saved, but we could not connect to the game. Retry the connection, or return to your account and play later.</value></data>
+  <data name="GuideRetryConnection" xml:space="preserve"><value>Retry connection</value></data>
+  <data name="GuideCommand_help_say_Meaning" xml:space="preserve"><value>Read how a specific command works</value></data>
+  <data name="GuideCommand_help_say_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideAdminTitle" xml:space="preserve"><value>Prepare for players</value></data>
+  <data name="GuideAdminHeading" xml:space="preserve"><value>Prepare for your first players</value></data>
+  <data name="GuideAdminIntro" xml:space="preserve"><value>A separate checklist for your game. Complete what you can, defer what needs more thought, and return whenever you need it.</value></data>
+  <data name="GuideAdminReload" xml:space="preserve"><value>Reload checklist</value></data>
+  <data name="GuideAdminDefer" xml:space="preserve"><value>Defer</value></data>
+  <data name="GuideAdminPreview" xml:space="preserve"><value>Preview the player journey without changing your progress</value></data>
+  <data name="GuideAdminLoading" xml:space="preserve"><value>Loading your checklist…</value></data>
+  <data name="GuideAdminVerified" xml:space="preserve"><value>Verified</value></data>
+  <data name="GuideAdminDeferred" xml:space="preserve"><value>Deferred</value></data>
+  <data name="GuideAdminTodo" xml:space="preserve"><value>To do</value></data>
+  <data name="GuideAdminPlayerChecked" xml:space="preserve"><value>I checked with an ordinary player account</value></data>
+  <data name="GuideAdminChecked" xml:space="preserve"><value>I verified this</value></data>
+  <data name="GuideAdminSummary" xml:space="preserve"><value>{0} verified; {1} deferred. Your game settings and package permissions are unchanged by checklist choices.</value></data>
+  <data name="GuideCompanionTitle" xml:space="preserve"><value>With Sharpie: {0}</value></data>
+  <data name="GuideReloadProgress" xml:space="preserve"><value>Reload progress</value></data>
+  <data name="GuideOpenFull" xml:space="preserve"><value>Open the full guide or change my starting point</value></data>
+  <data name="GuideInserted" xml:space="preserve"><value>look is in the command box. Press Send when you're ready.</value></data>
+  <data name="GuideInsertUnavailable" xml:space="preserve"><value>Connect to the game and finish or clear your existing draft first. Nothing was changed or sent.</value></data>
+  <data name="GuidePathDiscordTitle" xml:space="preserve"><value>I'm used to Discord</value></data>
+  <data name="GuidePathDiscordDetail" xml:space="preserve"><value>Learn rooms, characters and commands.</value></data>
+  <data name="GuidePathMushTitle" xml:space="preserve"><value>I know MUSHes</value></data>
+  <data name="GuidePathMushDetail" xml:space="preserve"><value>See what's different in SharpMUSH.</value></data>
+  <data name="GuidePathRoleplayTitle" xml:space="preserve"><value>I roleplay elsewhere</value></data>
+  <data name="GuidePathRoleplayDetail" xml:space="preserve"><value>Bring your stories into a shared world.</value></data>
+  <data name="GuidePathExploreTitle" xml:space="preserve"><value>Let me figure it out myself</value></data>
+  <data name="GuidePathExploreDetail" xml:space="preserve"><value>Head in now. Help stays within reach.</value></data>
+  <data name="GuideSkipped" xml:space="preserve"><value>Skipped</value></data>
+  <data name="GuideMyAccount" xml:space="preserve"><value>My account</value></data>
+  <data name="GuideReturningCharacter" xml:space="preserve"><value>Already played here?</value></data>
+  <data name="GuideClaimCharacter" xml:space="preserve"><value>Claim your character</value></data>
+  <data name="GuideFreshCharacter" xml:space="preserve"><value>Starting fresh?</value></data>
+  <data name="GuideCreateCharacter" xml:space="preserve"><value>Create a character</value></data>
+  <data name="GuideCharacterOptions" xml:space="preserve"><value>The game decides which options are available.</value></data>
+  <data name="GuideCoreReference" xml:space="preserve"><value>These are core commands. Games can customize them; help is the place to check.</value></data>
+  <data name="GuideIdentityLabel" xml:space="preserve"><value>Game introduction</value></data>
+  <data name="GuideIdentityLoading" xml:space="preserve"><value>Loading the game's existing settings…</value></data>
+  <data name="GuideIdentityRetry" xml:space="preserve"><value>Retry settings</value></data>
+  <data name="GuideIdentityName" xml:space="preserve"><value>Game name</value></data>
+  <data name="GuideIdentityIntroduction" xml:space="preserve"><value>A short welcome for new players</value></data>
+  <data name="GuideIdentityGenres" xml:space="preserve"><value>Genre</value></data>
+  <data name="GuideIdentitySubgenres" xml:space="preserve"><value>Subgenre</value></data>
+  <data name="GuideIdentityGenreHint" xml:space="preserve"><value>Choose the game's MSSP genre and subgenre. Sharpie uses these selections for artwork; choose None when neither applies.</value></data>
+  <data name="GuideIdentityStyle" xml:space="preserve"><value>Sharpie style</value></data>
+  <data name="GuideIdentityAppearance" xml:space="preserve"><value>appearance settings</value></data>
+  <data name="GuideIdentityWelcomePage" xml:space="preserve"><value>Welcome wiki page</value></data>
+  <data name="GuideIdentityRulesPage" xml:space="preserve"><value>Rules wiki page</value></data>
+  <data name="GuideIdentityCharacterPage" xml:space="preserve"><value>Character guide wiki page</value></data>
+  <data name="GuideIdentityWikiHint" xml:space="preserve"><value>Use namespace/slug. Only pages readable while signed out appear in the public guide. Leave a field blank to omit it.</value></data>
+  <data name="GuideIdentityPreviewLabel" xml:space="preserve"><value>Player welcome preview</value></data>
+  <data name="GuideIdentityPreview" xml:space="preserve"><value>Player welcome preview</value></data>
+  <data name="GuideIdentityNoArt" xml:space="preserve"><value>No approved illustration is available for this style yet. The written guide remains available.</value></data>
+  <data name="GuideIdentityVisibility" xml:space="preserve"><value>Wiki links appear only after their visibility and the wiki reader are checked by the server.</value></data>
+  <data name="GuideIdentitySaved" xml:space="preserve"><value>Saved. The public guide uses these settings.</value></data>
+  <data name="GuideIdentityArtworkHint" xml:space="preserve"><value>Players can reduce or hide artwork. Your game logo stays separate in</value></data>
+  <data name="GuideIdentityYourGame" xml:space="preserve"><value>your game</value></data>
+  <data name="GuideIdentitySaving" xml:space="preserve"><value>Saving…</value></data>
+  <data name="GuideIdentitySave" xml:space="preserve"><value>Save game introduction</value></data>
+  <data name="GuideIdentityLoadEmpty" xml:space="preserve"><value>No guide settings were returned.</value></data>
+  <data name="GuideIdentitySaveEmpty" xml:space="preserve"><value>No saved settings were returned.</value></data>
+  <data name="GuideStyle_minimalist" xml:space="preserve"><value>Minimalist mascot</value></data>
+  <data name="GuideStyle_chibi" xml:space="preserve"><value>Chibi mascot</value></data>
+  <data name="GuideStyle_anime" xml:space="preserve"><value>Anime mascot</value></data>
+  <data name="GuideStyle_kemono" xml:space="preserve"><value>Kemono mascot</value></data>
+  <data name="GuideStyle_pixel" xml:space="preserve"><value>Pixel mascot</value></data>
+  <data name="GuideStyle_comicbook" xml:space="preserve"><value>Comicbook mascot</value></data>
+  <data name="GuideSetupIdentity" xml:space="preserve"><value>Introduce your game</value></data>
+  <data name="GuideSetupIdentityLead" xml:space="preserve"><value>Review the identity you imported, or give your new game a name and a welcoming first step.</value></data>
+  <data name="GuideSetupIdentitySave" xml:space="preserve"><value>Save and continue</value></data>
+  <data name="GuideSetupIdentityLater" xml:space="preserve"><value>Set this up later</value></data>
+  <data name="GuideErrorUnavailable" xml:space="preserve"><value>The game's guide information is unavailable. Retry when the connection returns.</value></data>
+  <data name="GuideErrorVersion" xml:space="preserve"><value>This saved guide uses an unsupported version. Your preferences have been kept; reload after updating the client.</value></data>
+  <data name="GuideErrorLoad" xml:space="preserve"><value>Could not load guide progress. Retry to continue.</value></data>
+  <data name="GuideErrorChoice" xml:space="preserve"><value>That guide choice is unavailable.</value></data>
+  <data name="GuideErrorBrowserSave" xml:space="preserve"><value>Your browser could not save this choice. It will last for this visit only.</value></data>
+  <data name="GuideErrorConflict" xml:space="preserve"><value>Your guide changed in another tab. Reload progress before making another choice.</value></data>
+  <data name="GuideErrorSave" xml:space="preserve"><value>Could not save that guide choice. Your previous progress is unchanged; retry when connected.</value></data>
+  <data name="GuideRecoveryTitle" xml:space="preserve"><value>Sharpie guide unavailable — retry when ready</value></data>
+  <data name="GuideRetryRoster" xml:space="preserve"><value>Retry character list</value></data>
+  <data name="GuideCharacterRosterUnavailable" xml:space="preserve"><value>We could not load your characters. Retry before creating or claiming one, so we can keep your existing characters and current choice.</value></data>
+  <data name="GuideCharacterRosterFailed" xml:space="preserve"><value>Your character is saved, but we could not refresh your character list. Retry to continue with that character; it will not be created again.</value></data>
+  <data name="GuidePackagesBundled" xml:space="preserve"><value>Included with this server</value></data>
+  <data name="GuideLoginEntry" xml:space="preserve"><value>New here? Get started with Sharpie</value></data>
+  <data name="GuideHomeEntry" xml:space="preserve"><value>Getting started with Sharpie</value></data>
+  <data name="GuideHomeDescription" xml:space="preserve"><value>— an optional guide to joining and playing.</value></data>
+  <data name="GuideHelpEntry" xml:space="preserve"><value>Getting started with Sharpie / Change my guide</value></data>
+  <data name="GuideAdminEntry" xml:space="preserve"><value>Prepare for new players</value></data>
+  <data name="GuideAdminDescription" xml:space="preserve"><value>— game introduction and onboarding checklist.</value></data>
+  <data name="GuideBackToGame" xml:space="preserve"><value>Back to game</value></data>
+  <data name="GuideStop" xml:space="preserve"><value>Stop this guide</value></data>
+  <data name="GuideChannelsTitle" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideChannelsDiscover" xml:space="preserve"><value>Channels connect people across rooms. In Play, Browse channels opens the channel browser. Games often have newbie, help or social channels; their names and access rules vary.</value></data>
+  <data name="GuideChannelsList" xml:space="preserve"><value>Find a channel.</value></data>
+  <data name="GuideChannelsDescription" xml:space="preserve"><value>Read its description before joining. Replace NAME with a channel shown by the game.</value></data>
+  <data name="GuideChannelsJoin" xml:space="preserve"><value>Join that channel.</value></data>
+  <data name="GuideChannelsChat" xml:space="preserve"><value>Ask your question.</value></data>
+  <data name="GuideChannelsAudience" xml:space="preserve"><value>Messages reach everyone listening on the channel, not just your room.</value></data>
+  <data name="GuideCommand_channel_list_Meaning" xml:space="preserve"><value>Discover visible channels</value></data>
+  <data name="GuideCommand_channel_list_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_channel_on_Meaning" xml:space="preserve"><value>Join a channel that permits you</value></data>
+  <data name="GuideCommand_channel_on_Audience" xml:space="preserve"><value>May announce your membership to the channel</value></data>
+  <data name="GuideCommand_chat_Meaning" xml:space="preserve"><value>Talk on a channel</value></data>
+  <data name="GuideCommand_chat_Audience" xml:space="preserve"><value>People listening to that channel, wherever they are</value></data>
+  <data name="GuideLesson_Discord_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Discord_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
+  <data name="GuideLesson_Mush_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Mush_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
+  <data name="GuideLesson_OtherRoleplay_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_OtherRoleplay_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
+  <data name="GuideLesson_Explore_channels_Title" xml:space="preserve"><value>Find people who can help</value></data>
+  <data name="GuideLesson_Explore_channels_Body" xml:space="preserve"><value>Find a help or newbie channel to ask other players a question.</value></data>
+  <data name="GuideIdentityArtFallback" xml:space="preserve"><value>Showing the default Sharpie until artwork for your selected style and genre is available.</value></data>
+  <data name="GuideChannelsName" xml:space="preserve"><value>Replace NAME with a channel from the list.</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Start here</value></data>
+  <data name="GuideIdentityStarterHint" xml:space="preserve"><value>Choose a starter to replace the welcome above, then edit it to make it yours. Save when ready.</value></data>
+  <data name="GuideIdentityStarters" xml:space="preserve"><value>Welcome starters</value></data>
+  <data name="GuideIdentityThisGame" xml:space="preserve"><value>this game</value></data>
+  <data name="GuideIdentityStarterStories" xml:space="preserve"><value>Collaborative stories</value></data>
+  <data name="GuideIdentityStarterAdventure" xml:space="preserve"><value>Adventure</value></data>
+  <data name="GuideIdentityStarterRelaxed" xml:space="preserve"><value>Relaxed roleplay</value></data>
+  <data name="GuideIdentityStarterNewPlayers" xml:space="preserve"><value>New players</value></data>
+  <data name="GuideIdentityStarterStoriesText" xml:space="preserve"><value>Welcome to {0}. Bring a character, share an idea, and imagine the stories we could tell together.</value></data>
+  <data name="GuideIdentityStarterAdventureText" xml:space="preserve"><value>Welcome to {0}. Who will your character become? Let your curiosity lead the way into a new story.</value></data>
+  <data name="GuideIdentityStarterRelaxedText" xml:space="preserve"><value>Welcome to {0}. Take a moment to settle in, imagine a character, and find a story you would like to tell.</value></data>
+  <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve"><value>Welcome to {0}. New to text roleplay? Start with a character idea and a little curiosity. Every story begins somewhere.</value></data>
 </root>

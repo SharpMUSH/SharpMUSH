@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Library.Models.Portal.Onboarding;
 
 namespace SharpMUSH.Server.Controllers;
 
@@ -15,7 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 [ApiController]
 [Route("api/server-info")]
 public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGameFeatureReader features,
-	PortalBuild build, IGuestAvailability guests) : ControllerBase
+	PortalBuild build, IGuestAvailability guests, OnboardingPresentationService onboarding) : ControllerBase
 {
 	/// <param name="GuestsEnabled">Whether a visitor can play as a guest now (<see cref="IGuestAvailability"/>):
 	/// guest logins on and a guest character to hand out, not <c>Net.Guests</c> alone.</param>
@@ -25,7 +26,7 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 	/// <param name="ImageHostList">The <c>image_host_list</c> option.</param>
 	/// <param name="Logo">The <c>portal_logo</c> option; empty for the SharpMUSH logo.</param>
 	public record ServerInfoResponse(bool GuestsEnabled, string MudName, IReadOnlyList<string> Features, string BuildId,
-		string ImageHosts, string ImageHostList, string Logo);
+		string ImageHosts, string ImageHostList, string Logo, OnboardingPresentation? Onboarding = null);
 
 	// Not rate-limited: every portal page load asks for this before it renders, and it reads options values,
 	// the installed-package registry and the (cached) guest roster. A limiter here only ever delayed the portal's boot.
@@ -34,7 +35,7 @@ public class ServerInfoController(IOptionsWrapper<SharpMUSHOptions> options, IGa
 		=> Ok(new ServerInfoResponse(await guests.CanLogInAsync(ct), options.CurrentValue.Net.MudName,
 			await features.EnabledAsync(), build.Id,
 			options.CurrentValue.Cosmetic.ImageHosts ?? "any", options.CurrentValue.Cosmetic.ImageHostList ?? string.Empty,
-			options.CurrentValue.Cosmetic.PortalLogo?.Trim() ?? string.Empty));
+			options.CurrentValue.Cosmetic.PortalLogo?.Trim() ?? string.Empty, await onboarding.PublicAsync(ct)));
 
 	/// <summary>
 	/// The portal's tab icon (<c>portal_favicon</c>, else <c>portal_logo</c>, else the SharpMUSH logo), as a

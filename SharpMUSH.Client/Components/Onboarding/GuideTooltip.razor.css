@@ -1,0 +1,19 @@
+.guide-tooltip { position: relative; display: inline-flex; }
+.guide-tooltip-label {
+    position: absolute;
+    top: 100%;
+    inset-inline-start: 0;
+    z-index: 5;
+    width: max-content;
+    max-width: min(13rem, 65vw);
+    padding: .55rem .75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: .875rem;
+    line-height: 1.4;
+    white-space: normal;
+    box-shadow: var(--shadow-pop);
+}
+.guide-tooltip-end .guide-tooltip-label { inset-inline-start: auto; inset-inline-end: 0; }

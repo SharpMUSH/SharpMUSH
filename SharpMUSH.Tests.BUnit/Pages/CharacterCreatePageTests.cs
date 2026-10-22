@@ -15,11 +15,30 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>Fakes the character-create endpoint (<c>POST api/account/characters</c>).</summary>
-file sealed class CharacterCreateApiHandler(bool succeed) : HttpMessageHandler
+file sealed class CharacterCreateApiHandler(bool succeed, bool existingCharacter) : HttpMessageHandler
 {
+	public bool FailRoster { get; set; }
+	public bool FailRosterAfterCreate { get; set; }
+	public int Creates { get; private set; }
+	private string _createdName = "Bob";
+	private int _createdId = 5;
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (request.Method == HttpMethod.Get && path == "api/account/characters")
+			return Task.FromResult(FailRoster || (FailRosterAfterCreate && Creates > 0)
+				? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+				: new HttpResponseMessage(HttpStatusCode.OK)
+				{
+					Content = JsonContent.Create(
+					(existingCharacter ? new[] { new AccountAuthService.CharacterSummary(2, 2, "Existing", "") } : [])
+					.Concat(Creates == 0 ? [] : new[] { new AccountAuthService.CharacterSummary(_createdId, _createdId, _createdName, "") }).ToArray())
+				});
+		if (request.Method == HttpMethod.Post && path is "api/account/characters" or "api/account/link-character")
+		{
+			Creates++;
+			if (path.EndsWith("link-character")) { _createdName = "Imported Bob"; _createdId = 7; }
+		}
 		if (request.Method == HttpMethod.Post && path == "api/account/link-character")
 			return Task.FromResult(succeed
 				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { dbrefNumber = 7, creationTime = 7L, name = "Imported Bob" }) }
@@ -43,11 +62,12 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private ICharacterUpgradeService _upgrade = null!;
 
-	private void SeedLoggedIn(bool createSucceeds)
+	private (Action<bool> FailRoster, Action<bool> FailAfterCreate, Func<int> Creates) SeedLoggedIn(bool createSucceeds, bool existingCharacter = false)
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");
 
-		var apiClient = Track(new HttpClient(new CharacterCreateApiHandler(createSucceeds)) { BaseAddress = new Uri("https://localhost:8081/") });
+		var handler = new CharacterCreateApiHandler(createSucceeds, existingCharacter);
+		var apiClient = Track(new HttpClient(handler) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -72,10 +92,72 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Wizard");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
+		return (value => handler.FailRoster = value, value => handler.FailRosterAfterCreate = value, () => handler.Creates);
 	}
 
 	private static Task ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
 		=> cut.FindAll("button").First(b => b.TextContent.Trim() == "NavCreateCharacter").ClickAsync();
+
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(false)]
+	[TUnit.Core.Arguments(true)]
+	public async Task Create_and_claim_have_a_page_level_heading(bool claim)
+	{
+		SeedLoggedIn(true);
+		Services.GetRequiredService<NavigationManager>().NavigateTo(claim ? "/characters/claim" : "/characters/new");
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await Assert.That(cut.Find("h1").TextContent).IsEqualTo(claim ? "NavClaimACharacter" : "NavCreateACharacter");
+	}
+
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(false)]
+	[TUnit.Core.Arguments(true)]
+	public async Task Additional_character_does_not_switch_the_active_character(bool returnToGuide)
+	{
+		SeedLoggedIn(true, existingCharacter: true);
+		var nav = Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo(returnToGuide ? "/characters/new?returnUrl=%2Fwelcome%3Fresume%3Dtrue" : "/characters/new");
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await ClickCreate(cut);
+		await Assert.That(nav.Uri).EndsWith(returnToGuide ? "/welcome?resume=true" : "/account");
+		await _upgrade.DidNotReceive().PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>());
+	}
+
+	[TUnit.Core.Test]
+	public async Task Passwordless_creation_keeps_saved_character_when_roster_refresh_fails()
+	{
+		var api = SeedLoggedIn(true);
+		api.FailAfterCreate(true);
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await cut.Find("input[type=checkbox]").ChangeAsync(true);
+		await ClickCreate(cut);
+		await Assert.That(cut.Markup).Contains("GuideCharacterRosterFailed");
+		await Assert.That(api.Creates()).IsEqualTo(1);
+		api.FailAfterCreate(false);
+		await cut.FindAll("button").Single(b => b.TextContent.Trim() == "GuideRetryConnection").ClickAsync();
+		await Assert.That(api.Creates()).IsEqualTo(1);
+		await _upgrade.Received(1).PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>());
+	}
+
+	[TUnit.Core.Test]
+	public async Task Initial_roster_failure_offers_retry_before_character_creation()
+	{
+		var api = SeedLoggedIn(true);
+		api.FailRoster(true);
+		await Services.GetRequiredService<AccountAuthService>().InitAsync();
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "NavCreateCharacter").HasAttribute("disabled")).IsTrue();
+		await cut.WaitForAssertionAsync(() =>
+		{
+			if (cut.FindAll("button").Single(b => b.TextContent.Trim() == "GuideRetryRoster").HasAttribute("disabled"))
+				throw new InvalidOperationException("Roster request is still running");
+		});
+		api.FailRoster(false);
+		await cut.InvokeAsync(() => cut.FindAll("button").Single(b => b.TextContent.Trim() == "GuideRetryRoster").ClickAsync());
+		await Assert.That(cut.FindAll("button").Single(b => b.TextContent.Trim() == "NavCreateCharacter").HasAttribute("disabled")).IsFalse();
+	}
 
 	[TUnit.Core.Test]
 	public async Task Renders_the_create_character_form()
@@ -127,6 +209,29 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		});
 		// The roster takes the name as the game spells it, not as it was typed.
 		await _upgrade.Received(1).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Imported Bob" && c.DbrefNumber == 7));
+	}
+
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(false)]
+	[TUnit.Core.Arguments(true)]
+	public async Task Connection_failure_preserves_created_character_and_retries_without_creating_again(bool throws)
+	{
+		SeedLoggedIn(createSucceeds: true);
+		var nav = Services.GetRequiredService<NavigationManager>();
+		nav.NavigateTo("/characters/new?returnUrl=%2Fwelcome%3Fresume%3Dtrue");
+		_upgrade.PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>()).Returns(_ => throws
+			? Task.FromException<bool>(new System.Net.WebSockets.WebSocketException("offline"))
+			: Task.FromResult(false));
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await ClickCreate(cut);
+		await Assert.That(cut.Markup).Contains("GuideCharacterConnectionFailed");
+		await Assert.That(nav.Uri).Contains("/characters/new");
+		await Assert.That(cut.FindAll("input").Count).IsEqualTo(0);
+		_upgrade.PlayAsAsync(Arg.Any<AccountAuthService.CharacterSummary>()).Returns(Task.FromResult(true));
+		await cut.FindAll("button").Single(b => b.TextContent.Trim() == "GuideRetryConnection").ClickAsync();
+		await Assert.That(nav.Uri).EndsWith("/welcome?resume=true");
+		await _upgrade.Received(2).PlayAsAsync(Arg.Is<AccountAuthService.CharacterSummary>(c => c.Name == "Bob"));
 	}
 
 	[TUnit.Core.Test]

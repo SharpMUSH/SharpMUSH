@@ -542,6 +542,7 @@ public sealed partial class LightningStore : IDisposable
 		=> _writer.EnqueueRawAsync(job, CancellationToken.None).AsTask().GetAwaiter().GetResult();
 
 	internal void PauseWriter() => _writer.Pause();
+	internal Task PauseAndDrainWriterAsync() => _writer.PauseAndDrainAsync();
 	internal void ResumeWriter() => _writer.Resume();
 
 	/// <summary>

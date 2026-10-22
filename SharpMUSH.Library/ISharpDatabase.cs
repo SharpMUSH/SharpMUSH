@@ -23,6 +23,7 @@ public interface ISharpDatabase :
 	IServerStateStore,
 	ISessionRecordStore,
 	IReadMarkerStore,
+	IOnboardingStore,
 	IPushSubscriptionStore,
 	IPageLogStore,
 	IFeedStore

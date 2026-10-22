@@ -186,6 +186,9 @@ window.sharpmushLayout = {
 	reviewKeys: function (input, dotnetRef) {
 		if (!input || input._reviewKeys) return;
 		input._reviewKeys = true;
+		input._guideComposing = false;
+		input.addEventListener('compositionstart', () => { input._guideComposing = true; });
+		input.addEventListener('compositionend', () => { input._guideComposing = false; });
 		input.addEventListener('keydown', event => {
 			if (input.dataset.reviewKeys !== 'on') return;
 			if (!event.altKey || event.ctrlKey || event.metaKey || event.repeat) return;
@@ -195,6 +198,10 @@ window.sharpmushLayout = {
 			const back = match[1] === '0' ? 10 : Number(match[1]);
 			dotnetRef.invokeMethodAsync('ReviewLine', back).catch(() => { });
 		});
+	},
+
+	terminalInputBusy: function (input) {
+		return !input || !input._reviewKeys || input._guideComposing || input.value.length > 0;
 	},
 
 	// A tab list that moves with the arrows, Home and End: those keys do not also scroll what it sits in. Every
@@ -495,7 +502,9 @@ window.sharpmushLayout = {
 
 	formattedInput: function (textarea, dotnetRef) {
 		if (!textarea || textarea._sharpmushFormatted) return;
-		const state = { overlay: null, observer: null };
+		const state = { overlay: null, observer: null, composing: false };
+		state.compositionstart = () => { state.composing = true; };
+		state.compositionend = () => { state.composing = false; };
 		const call = (action) => {
 			const pending = dotnetRef.invokeMethodAsync('Shortcut', action, textarea.selectionStart, textarea.selectionEnd);
 			if (pending && typeof pending.catch === 'function') pending.catch(() => { });
@@ -522,7 +531,16 @@ window.sharpmushLayout = {
 		textarea.addEventListener('keydown', state.keydown);
 		textarea.addEventListener('beforeinput', state.beforeinput);
 		textarea.addEventListener('scroll', state.scroll);
+		textarea.addEventListener('compositionstart', state.compositionstart);
+		textarea.addEventListener('compositionend', state.compositionend);
 		textarea._sharpmushFormatted = state;
+	},
+
+	// A guide may fill only an idle, empty composer. Read the DOM as well as the managed draft:
+	// an input/composition event may still be queued on its way to Blazor.
+	formattedInputBusy: function (textarea) {
+		const state = textarea && textarea._sharpmushFormatted;
+		return !state || state.composing || textarea.value.length > 0;
 	},
 
 	formattedOverlay: function (textarea, overlay) {
@@ -571,6 +589,8 @@ window.sharpmushLayout = {
 		textarea.removeEventListener('keydown', state.keydown);
 		textarea.removeEventListener('beforeinput', state.beforeinput);
 		textarea.removeEventListener('scroll', state.scroll);
+		textarea.removeEventListener('compositionstart', state.compositionstart);
+		textarea.removeEventListener('compositionend', state.compositionend);
 		if (state.observer) state.observer.disconnect();
 		textarea._sharpmushFormatted = null;
 	},

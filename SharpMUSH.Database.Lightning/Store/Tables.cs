@@ -54,6 +54,7 @@ public static class Tables
 	/// <summary>Sender + recipient + mail id → empty: what one sender sent one recipient, id-ordered.</summary>
 	public static readonly TableDef MailSentTo = TableDef.Index("mail.sent.to");
 	public static readonly TableDef MailAlias = TableDef.Node("malias");
+	public static readonly TableDef OnboardingProgress = TableDef.Node("onboarding.progress");
 	public static readonly TableDef Account = TableDef.Node("account");
 	/// <summary>Canonical length-prefixed registration/issuer/subject SHA-256 digest to full identity record.</summary>
 	public static readonly TableDef ExternalIdentity = TableDef.Node("acct.external");

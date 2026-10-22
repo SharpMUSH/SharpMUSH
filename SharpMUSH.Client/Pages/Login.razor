@@ -17,6 +17,7 @@
     <div class="login-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="login-logo" />
         <h1 class="login-brand-title"><GameName /></h1>
+        <p><a href="/welcome">@Loc["GuideLoginEntry"]</a></p>
     </div>
 
     <MudPaper Elevation="4" Class="login-card">
@@ -114,7 +115,7 @@
     /// `login` names the exact next command. This routes it to the one page that resolves the
     /// state, which explains itself on arrival.
     /// </summary>
-    private const string OnboardingUrl = "/characters/new";
+    private string OnboardingUrl => OnboardingRoutes.FirstCharacter(_returnUrl);
 
     private int _tabIndex = SignInTabIndex;
     private bool _busy;

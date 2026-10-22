@@ -18,7 +18,7 @@ public partial class IntegratedWikiMutationTests
 		await host.OpenAsync();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
 		var accessor = host.Services.GetRequiredService<ILightningStorageAccessor>();
-		provider.Store.PauseWriter();
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task? parent = null;
 		try
 		{
@@ -64,7 +64,7 @@ public partial class IntegratedWikiMutationTests
 			async () => { await wiki.DeleteAsync(page.Id, "#1"); }
 		})
 		{
-			provider.Store.PauseWriter();
+			await provider.Store.PauseAndDrainWriterAsync();
 			Task? parent = null;
 			try
 			{

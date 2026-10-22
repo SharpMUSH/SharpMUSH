@@ -6,4 +6,5 @@ public enum PlaySheet
 	Room,
 	Side,
 	Details,
+	Guide,
 }

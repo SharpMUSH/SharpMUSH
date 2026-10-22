@@ -1,0 +1,11 @@
+.guide-companion { flex: 0 0 auto; min-width: 0; color: var(--text); }
+.guide-recovery h2 { padding: .65rem .85rem; font-size: 1rem; }
+.guide-companion-content { padding: 0; }
+.guide-companion ::deep .guide-panel { border: 0; border-radius: 0; padding: 0; background: transparent; }
+.guide-companion-content > p { padding: .5rem; }
+.guide-companion :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.guide-start { color: var(--text); }
+.guide-start h2 { font-size: 1.35rem; margin-block: 1rem; }
+.guide-start button { display: block; width: 100%; min-height: 44px; text-align: left; padding: .7rem; margin-block: .6rem; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; }
+.guide-start :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

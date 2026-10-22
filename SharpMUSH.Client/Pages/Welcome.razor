@@ -1,0 +1,198 @@
+@page "/welcome"
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@using SharpMUSH.Client.Components.Onboarding
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject OnboardingService Guide
+@inject ServerInfoService ServerInfo
+@inject IAccountAuthState Auth
+@inject NavigationManager Nav
+@implements IDisposable
+
+<PageTitle>@Loc["GuidePageTitle", _game]</PageTitle>
+<div class="welcome" data-guide-imagery="@Progress.Imagery.ToString().ToLowerInvariant()">
+    <header class="welcome-intro">
+        <div>
+            <h1>@Loc["GuideWelcomeGame", _game]</h1>
+            @if (Guide.Presentation?.Introduction is { Length: > 0 } introduction) { <p>@introduction</p> }
+            <p>@Loc["GuideWelcomeIntro"]</p>
+        </div>
+        @if (!Progress.Active && !JourneyCompleted && HeaderArt is { } art && _failedArt != art.Url)
+        {
+            <img class="welcome-art" src="@ApiUrl.Resolve(art.Url)" width="@art.Width" height="@art.Height" alt="" @onerror="() => _failedArt = art.Url" />
+        }
+    </header>
+    @if (Preview)
+    {
+        <p role="status">@Loc["GuidePreviewNotice"]</p>
+    }
+    @if (Guide.Error is not null && !Preview)
+    {
+        <div class="welcome-notice" role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReload"]</button></div>
+    }
+    @if (Guide.Loading) { <p role="status">@Loc["GuideLoading"]</p> }
+    @if (Guide.Ready || Preview)
+    {
+        @if (Guide.HasAnonymousContinuation && !Preview)
+        {
+            <section class="welcome-notice" aria-label="@Loc["GuideContinueBrowser"]">
+                <p>@Loc["GuideContinueQuestion"]</p>
+                <button type="button" @onclick="Guide.AcceptAnonymousContinuationAsync">@Loc["GuideContinueAccept"]</button>
+                <button type="button" @onclick="Guide.DeclineAnonymousContinuationAsync">@Loc["GuideContinueDecline"]</button>
+            </section>
+        }
+        <section class="welcome-paths" aria-label="@Loc["GuideChoosePath"]">
+            <h2>@Loc["GuideComingFrom"]</h2>
+            <div class="welcome-path-list">
+                @foreach (var (path, title, detail) in Choices)
+                {
+                    <button type="button" data-guide-path="@path.ToString().ToLowerInvariant()" aria-pressed="@((Preview ? _previewSelection == path : Progress.Active && Progress.Path == path) ? "true" : "false")" @onclick="() => Choose(path)">
+                        <strong>@title</strong><span>@detail</span>
+                    </button>
+                }
+            </div>
+        </section>
+        <nav class="welcome-links" aria-label="@Loc["GuideGameGuides"]">
+            @foreach (var link in new[] { Guide.Presentation?.Welcome, Guide.Presentation?.Rules, Guide.Presentation?.CharacterGuide }.OfType<GuideLink>())
+            { <a href="@link.Url">@link.Title</a> }
+        </nav>
+        @if (Progress.Active)
+        {
+            <div class="welcome-journey">
+                <nav aria-label="@Loc["GuideSteps"]" class="welcome-steps">
+                    <ol>
+                        @foreach (var lesson in Lessons)
+                        {
+                            <li><button type="button" aria-current="@(lesson.Id == Current.Id ? "step" : null)" @onclick="() => Select(lesson.Id)">@lesson.Title <span>@(Progress.CompletedStepIds.Contains(lesson.Id) ? "✓" : Progress.SkippedStepIds.Contains(lesson.Id) ? Loc["GuideSkipped"] : "")</span></button></li>
+                        }
+                    </ol>
+                </nav>
+                <GuidePanel @ref="_panel" Art="Art" Imagery="Progress.Imagery" Lesson="Current" CanGoBack="@(CurrentIndex > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close">
+                    <Context><GuideContext LessonId="@Current.Id" /></Context>
+                </GuidePanel>
+            </div>
+            @if (Current.Id == "character")
+            {
+                <p>@Loc["GuideReturningCharacter"] <a href="@CharacterUrl(true)">@Loc["GuideClaimCharacter"]</a>. @Loc["GuideFreshCharacter"] <a href="@CharacterUrl(false)">@Loc["GuideCreateCharacter"]</a>. @Loc["GuideCharacterOptions"]</p>
+            }
+        }
+        else if (JourneyCompleted)
+        {
+            <div class="welcome-completed">
+                @if (HeaderArt is { } completedArt && _failedArt != completedArt.Url)
+                {
+                    <img class="welcome-completion-art" src="@ApiUrl.Resolve(completedArt.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = completedArt.Url" />
+                }
+                <div><p class="welcome-completion" tabindex="-1" @ref="_completion">@Loc["GuideReady"]</p><a class="welcome-explore" href="@Destination">@Loc["GuideOpenGame"]</a></div>
+            </div>
+        }
+        <label class="welcome-imagery">@Loc["GuideArtwork"]
+            <select value="@Progress.Imagery" @onchange="ChangeImagery">
+                <option value="Full">@Loc["GuideArtworkFull"]</option><option value="Reduced">@Loc["GuideArtworkReduced"]</option><option value="None">@Loc["GuideArtworkNone"]</option>
+            </select>
+        </label>
+    }
+    <p class="welcome-exit"><a href="@Destination">@Loc["GuideStraightToGame"]</a> · @Loc["GuideHelpReturn"]</p>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+    [Parameter, SupplyParameterFromQuery(Name = "preview")] public bool Preview { get; set; }
+    private string _game = "this game";
+    private string? _failedArt;
+    private ElementReference _completion;
+    private bool _focusCompletion;
+    private GuidePanel? _panel;
+    private bool _focusLesson;
+    private OnboardingProgress _preview = new();
+    private GuidePath? _previewSelection;
+    private OnboardingProgress Progress => Preview ? _preview : Guide.Progress;
+    private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Progress.Path, Loc);
+    private int CurrentIndex => Math.Max(0, Array.FindIndex(Lessons.ToArray(), lesson => lesson.Id == Progress.CurrentStepId));
+    private GuideLesson Current => Lessons[CurrentIndex] is { Id: "sign-in" } lesson
+        ? lesson with { ActionUrl = Auth.IsLoggedIn ? "/account" : "/login?returnUrl=" + Uri.EscapeDataString(ResumeUrl), ActionLabel = Auth.IsLoggedIn ? Loc["GuideMyAccount"] : lesson.ActionLabel }
+        : Lessons[CurrentIndex];
+    private string Destination => LocalReturn(ReturnUrl);
+    private string ResumeUrl => "/welcome?returnUrl=" + Uri.EscapeDataString(Destination);
+    private SharpieArt? Art => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery, topic: $"player-{Current.Id}");
+    private bool JourneyCompleted => Lessons.All(lesson => Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));
+    private SharpieArt? HeaderArt => SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Progress.Imagery,
+        JourneyCompleted ? SharpieArtMoment.Completion : SharpieArtMoment.Welcome);
+    private (GuidePath Path, string Title, string Detail)[] Choices =>
+    [
+        (GuidePath.Discord, Loc["GuidePathDiscordTitle"], Loc["GuidePathDiscordDetail"]),
+        (GuidePath.Mush, Loc["GuidePathMushTitle"], Loc["GuidePathMushDetail"]),
+        (GuidePath.OtherRoleplay, Loc["GuidePathRoleplayTitle"], Loc["GuidePathRoleplayDetail"]),
+        (GuidePath.Explore, Loc["GuidePathExploreTitle"], Loc["GuidePathExploreDetail"])
+    ];
+    protected override async Task OnInitializedAsync()
+    {
+        Guide.Changed += OnChanged;
+        _game = await ServerInfo.GameNameAsync();
+        await Reload();
+    }
+    private Task Reload() => Guide.LoadAsync(GuideJourney.Player);
+    private void OnChanged() => _ = InvokeAsync(StateHasChanged);
+    private async Task Choose(GuidePath path)
+    {
+        if (Preview)
+        {
+            _previewSelection = path;
+            _preview = _preview with { Path = path, Active = path != GuidePath.Explore, CurrentStepId = "place" };
+        }
+        else await Guide.ChoosePathAsync(path);
+        _focusLesson = Progress.Active && Progress.Path == path && (Preview || Guide.Error is null);
+        if (path == GuidePath.Explore && !Preview && Guide.Progress.Dismissed) Nav.NavigateTo(Destination);
+    }
+    private Task Select(string step)
+    {
+        if (!Preview) return Guide.SetCurrentStepAsync(step);
+        _preview = _preview with { CurrentStepId = step }; return Task.CompletedTask;
+    }
+    private Task Back() => Select(Lessons[Math.Max(0, CurrentIndex - 1)].Id);
+    private Task Complete() => Advance(false);
+    private Task Skip() => Advance(true);
+    private async Task Advance(bool skip)
+    {
+        if (Preview)
+        {
+            var step = Current.Id;
+            var completed = skip ? _preview.CompletedStepIds.Except([step]).ToArray() : _preview.CompletedStepIds.Union([step]).ToArray();
+            var skipped = skip ? _preview.SkippedStepIds.Union([step]).ToArray() : _preview.SkippedStepIds.Except([step]).ToArray();
+            var next = Lessons.FirstOrDefault(lesson => !completed.Contains(lesson.Id) && !skipped.Contains(lesson.Id));
+            _preview = _preview with { CompletedStepIds = completed, SkippedStepIds = skipped, CurrentStepId = next?.Id ?? step, Active = next is not null };
+        }
+        else if (skip) await Guide.SkipStepAsync(Current.Id);
+        else await Guide.CompleteStepAsync(Current.Id);
+        _focusCompletion = !Progress.Active && Lessons.All(lesson =>
+            Progress.CompletedStepIds.Contains(lesson.Id) || Progress.SkippedStepIds.Contains(lesson.Id));
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusCompletion)
+        {
+            _focusCompletion = false;
+            await _completion.FocusAsync();
+        }
+        else if (_focusLesson && _panel is not null)
+        {
+            _focusLesson = false;
+            await _panel.FocusHeadingAsync(preventScroll: false);
+        }
+    }
+    private async Task Close()
+    {
+        if (Preview) { _previewSelection = null; _preview = _preview with { Active = false }; return; }
+        await Guide.DismissAsync();
+        if (Guide.Progress.Dismissed) Nav.NavigateTo(Destination);
+    }
+    private Task ChangeImagery(ChangeEventArgs args)
+    {
+        if (!Enum.TryParse<GuideImagery>(args.Value?.ToString(), out var value)) return Task.CompletedTask;
+        if (!Preview) return Guide.SetImageryAsync(value);
+        _preview = _preview with { Imagery = value }; return Task.CompletedTask;
+    }
+    private string CharacterUrl(bool claim) => (claim ? "/characters/claim" : "/characters/new") + "?returnUrl=" + Uri.EscapeDataString(ResumeUrl);
+    internal static string LocalReturn(string? value) => OnboardingRoutes.LocalReturn(value);
+    public void Dispose() => Guide.Changed -= OnChanged;
+}

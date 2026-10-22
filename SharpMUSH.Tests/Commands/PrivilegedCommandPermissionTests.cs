@@ -52,10 +52,12 @@ public class PrivilegedCommandPermissionTests
 	}
 
 	[Test]
-	public async Task AHolderOfTheFunctionsPowerCanDefineAGlobalFunction()
+	[Arguments("fnpower")]
+	[Arguments("fnpower-sa5-ufap3f0")]
+	public async Task AHolderOfTheFunctionsPowerCanDefineAGlobalFunction(string prefix)
 	{
 		// The run id is Base64Url, and a function name cannot contain its "-".
-		var name = new string([.. TestIsolationHelpers.GenerateUniqueName("fnpower").Where(char.IsAsciiLetterOrDigit)]).ToLowerInvariant();
+		var name = new string([.. TestIsolationHelpers.GenerateUniqueName(prefix).Where(char.IsAsciiLetterOrDigit)]).ToLowerInvariant();
 		var holder = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(Factory.Services, Mediator, Connections, "FnPower");
 		await Factory.CommandParser.CommandParse(1, Connections, MarkupText.Plain($"@power {holder.DbRef}=Functions"));
 		try

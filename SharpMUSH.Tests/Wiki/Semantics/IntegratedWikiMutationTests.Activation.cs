@@ -115,7 +115,9 @@ public partial class IntegratedWikiMutationTests
 		var wiki = host.Services.GetRequiredService<IWikiService>();
 		var page = (await wiki.CreateAsync("Paused inactive write", "before", "#1", sourceLocale: "en")).Expect<WikiPage>();
 		var provider = host.Services.GetRequiredService<LightningDatabase>();
-		provider.Store.PauseWriter();
+		// Resetting the pause event alone can race a writer already past its wait.
+		// Establish a parked writer before submitting the mutation whose lease we inspect.
+		await provider.Store.PauseAndDrainWriterAsync();
 		Task<Found<WikiPage>>? parent = null;
 		try
 		{

@@ -400,6 +400,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find("a.setup-import").GetAttribute("href")).IsEqualTo("/admin/import?setup=1");
 
 		await cut.Find("button.setup-fresh").ClickAsync();
+		await cut.Find("button.setup-defer-identity").ClickAsync();
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
@@ -413,6 +414,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 			if (!cut.Markup.Contains("AdmSetupPackagesTitle"))
 				throw new InvalidOperationException("packages step not rendered yet");
 		});
+		await Assert.That(Services.GetRequiredService<NavigationManager>().Uri).EndsWith("/setup?step=packages");
 		await Assert.That(handler.HandlerChanges).IsEquivalentTo(["event {\"mode\":\"create\",\"dbref\":null}"])
 			.Because("keeping the HTTP handler changes nothing, so it is not sent");
 
@@ -573,6 +575,21 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("finished state not rendered yet");
 		});
 		await Assert.That(handler.StarterWikiCalls).IsEqualTo(1);
+	}
+
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_ResumeAfterHandlerSave()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out _, needsSetup: false, wizard: true));
+		var nav = Services.GetRequiredService<BunitNavigationManager>();
+		nav.NavigateTo("/setup?step=handlers");
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		await cut.Find("button.setup-save-handlers").ClickAsync();
+		await Assert.That(nav.Uri).EndsWith("/setup?step=packages");
+		cut.Dispose();
+		var resumed = Render<SharpMUSH.Client.Pages.Setup>();
+		resumed.WaitForAssertion(() => resumed.Find("#setup-pkg-scene"));
+		await Assert.That(resumed.Markup).Contains("AdmSetupPackagesTitle");
 	}
 
 	/// <summary>
