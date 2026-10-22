@@ -1,6 +1,6 @@
 format: "1.10"
 package: chargen
-version: 2.2.0
+version: 2.3.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -1645,6 +1645,8 @@ objects:
         1
       FIELD`BACKGROUND`HELP: |-
         Where they come from and what brought them here.
+      FIELD`BACKGROUND`ATTRIBUTE: |-
+        BG*
       FIELD`PERSONALITY: |-
         Personality
       FIELD`PERSONALITY`SECTION: |-
@@ -1794,8 +1796,9 @@ objects:
         ```
 
         Output: a box titled `Field: Background` with its key, section, order, type, whether it is required,
-        its most characters and its help, then `On each character` with the answer's attribute, BACKGROUND,
-        and each round's, `` CHARGEN`ROUND`<n>`BACKGROUND ``, then a table of its attributes on the Chargen Store.
+        its most characters and its help, then `On each character` with the answer's attribute, `BG*`, in chapters,
+        and each round's, `` CHARGEN`ROUND`<n>`BACKGROUND`<chapter> ``, then a table of its attributes on the
+        Chargen Store.
       HELP`APP`FIELDS: |-
         Each field has options, set with `+apps/field/<option> <key>=<value>`. An empty value puts one back to
         its default, and `+apps/field <key>` marks the options left at it.
@@ -1837,12 +1840,17 @@ objects:
 
         ## Setting it up
 
+        The form's Background field comes in chapters, as `BG*`. To put another long field in chapters, or to
+        allow Background 10 of them:
+
         ```
-        +apps/field/attribute background=BG*
+        +apps/field/attribute personality=PERS*
         +apps/field/chapters background=10
         ```
 
-        Output: `\[APP\] Done: Background attribute: BG*`, then `\[APP\] Done: Background chapters: 10`
+        Output: `\[APP\] Done: Personality attribute: PERS*`, then `\[APP\] Done: Background chapters: 10`
+
+        `+apps/field/attribute background=` puts Background back in one attribute, BACKGROUND.
 
         A character who already has BG1 and BG2 from an imported database finds them as chapters 1 and 2.
         The most characters, `max`, is for each chapter.
