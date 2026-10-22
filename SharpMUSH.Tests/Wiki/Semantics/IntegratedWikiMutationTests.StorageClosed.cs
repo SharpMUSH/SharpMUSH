@@ -83,20 +83,20 @@ public partial class IntegratedWikiMutationTests
 		await using var world = await QueryWorldAsync(spells: 8);
 		var provider = world.Provider;
 		var query = LevelQuery with { PageSize = 2 };
-		var first = await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None);
+		var first = await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None);
 		var token = ((SemanticQueryResult.Page)first).Continuation;
 		await Assert.That(token).IsNotNull();
 
 		await world.Host.CloseAsync();
-		await Assert.That(await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), query, token, CancellationToken.None)
+		await Assert.That(await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), query, token, CancellationToken.None)
 			is SemanticQueryResult.NotCertified { Outcome: var resumed } && resumed.GetType().Name == "StorageClosed").IsTrue();
-		await Assert.That(await SemanticWikiQueries.RunAsync(provider, _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None)
+		await Assert.That(await SemanticWikiQueries.RunAsync(provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null, CancellationToken.None)
 			is SemanticQueryResult.NotCertified { Outcome: var fresh } && fresh.GetType().Name == "StorageClosed").IsTrue();
 
 		await world.Host.OpenAsync();
-		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(AdminReader), query, token,
+		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(AdminReader), query, token,
 			CancellationToken.None) is SemanticQueryResult.Restart).IsTrue();
-		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(AdminReader), query, null,
+		await Assert.That(await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null,
 			CancellationToken.None) is SemanticQueryResult.Page).IsTrue();
 		await world.Host.CloseAsync();
 	}

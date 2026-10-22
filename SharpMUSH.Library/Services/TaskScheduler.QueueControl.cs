@@ -19,6 +19,8 @@ public partial class TaskScheduler
 		public long Generation { get; init; }
 		public bool ReleasePending { get; init; }
 		public JobKey? CleanupJob { get; init; }
+		/// <summary>A semaphore wait with no timeout of its own, until a reschedule gives it one.</summary>
+		public bool Untimed { get; init; }
 	}
 	private readonly HashSet<long> _running = [];
 	private readonly SemaphoreSlim _deferredChanges = new(1, 1);
@@ -96,7 +98,12 @@ public partial class TaskScheduler
 			WaitDuration = entry.Observation?.WaitDuration,
 			ExecutionDuration = entry.Observation?.ExecutionDuration,
 			InvocationCount = entry.Observation?.InvocationCount,
-			SourceAttribute = entry.Observation?.SourceAttribute
+			SourceAttribute = entry.Observation?.SourceAttribute,
+			Command = entry.Deferred?.Command,
+			Semaphore = entry.Deferred?.Semaphore is { } semaphore && entry.SemaphoreTarget is { } holder
+				? new DbRefAttribute(holder, semaphore.Attribute)
+				: null,
+			Timed = entry.Deferred is { Untimed: false }
 		};
 	}
 
@@ -190,7 +197,7 @@ public partial class TaskScheduler
 		lock (_admissionLock)
 		{
 			entry = _pendingEntries[entry.Pid];
-			deferred = entry.Deferred! with { Generation = entry.Deferred!.Generation + 1, Due = DateTimeOffset.UtcNow + delay };
+			deferred = entry.Deferred! with { Generation = entry.Deferred!.Generation + 1, Due = DateTimeOffset.UtcNow + delay, Untimed = false };
 			StoreEntry(entry with { Deferred = deferred });
 		}
 		await RemoveDeferredTrigger(entry);

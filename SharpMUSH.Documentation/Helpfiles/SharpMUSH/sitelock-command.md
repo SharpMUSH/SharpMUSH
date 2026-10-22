@@ -61,12 +61,14 @@ The @sitelock command adds rules controlling a host's level of access to the MUS
 
 ## Adding host rules
 
-`@sitelock <host-pattern>=<options>`<br>
-`@sitelock/<ban|register> <host-pattern>`
+`@sitelock[/player] <host-pattern>=<options>`<br>
+`@sitelock[/<ban|register>][/player] <host-pattern>`
 
-`@sitelock <host-pattern>=<options>` sets the access options, separated by spaces, for hosts which match `<host-pattern>`. The pattern may be a wildcard pattern using "*" and "?" (matched against the host name or the IP address), a bare IP address, or a CIDR block such as 10.0.0.0/8. Setting a rule for a pattern that already has one replaces it. Live connections that the new rule blocks are dropped. See help @sitelock allow and deny options for the list of options.
+`@sitelock <host-pattern>=<options>` sets the access options, separated by spaces, for hosts which match `<host-pattern>`. The pattern may be a wildcard pattern using "*" and "?" (matched against the host name or the IP address), a bare IP address, or a CIDR block such as 10.0.0.0/8. With the `regexp` option the pattern is a regular expression instead, matched with regard to case. Setting a rule for a pattern that already has one replaces it. Live connections that the new rule blocks are dropped. See help @sitelock allow and deny options for the list of options.
 
 `@sitelock/ban` is shorthand for setting options "!connect !create !guest", and `@sitelock/register` is shorthand for options "!create register".
+
+If the /player switch is given, `<host-pattern>` is treated as a player name, and sitelock rules are added for that player's LASTIP and LASTSITE, if set.
 
 ## Allow and deny options
 
@@ -74,11 +76,21 @@ Sitelock deny options:
 - !connect -- don't allow this site to connect to any player, guests included
 - !guest -- don't allow this site to connect to guest players
 - !create -- don't allow this site to create players or accounts
+- !god -- God can't connect from this site
+- !wizard -- Wizards can't connect from this site
+- !admin -- Wizards and Royalty can't connect from this site
 
-Options not set are allowed. Other words are stored with the rule and shown in the listing, but have no effect.
+Options not set are allowed.
+
+Sitelock special options:
+- suspect -- set all players who connect from this site SUSPECT
+- deny_silent -- don't log failed access attempts from this site
+- regexp -- treat the host pattern as a regular expression instead of a wildcard pattern
+
+Other words are stored with the rule and shown in the listing, but have no effect.
 
 ## Removing rules
 
-`@sitelock/remove <string>`
+`@sitelock/remove[/player] <string>`
 
-`@sitelock/remove` deletes the rule whose host-pattern matches `<string>` exactly.
+`@sitelock/remove` deletes the rule whose host-pattern matches `<string>` exactly. If the /player switch is given, `<string>` is treated as a player name, and rules whose host-patterns match the player's LASTIP or LASTSITE addresses exactly are deleted.

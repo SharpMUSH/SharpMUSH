@@ -1,4 +1,5 @@
 ﻿using MoreLinq.Extensions;
+using System.Globalization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -813,10 +814,18 @@ public partial class Functions
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// Format: YYYYMMDDHHMMSS (like PennMUSH)
-		return ValueTask.FromResult<CallState>("20250102000000");
-	}
+		=> ValueTask.FromResult<CallState>(NumericVersion(System.Version.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion)));
+
+	/// <summary>
+	/// PennMUSH's NUMVERSION layout (hdrs/version.h): three digits each for minor, patch and
+	/// patchlevel below the major version, so 1.8.8p0 is 1008008000. SharpMUSH's fourth version part
+	/// stands in for the patchlevel.
+	/// </summary>
+	private static string NumericVersion(System.Version version)
+		=> (version.Major * 1_000_000_000L
+			+ version.Minor * 1_000_000L
+			+ Math.Max(version.Build, 0) * 1_000L
+			+ Math.Max(version.Revision, 0)).ToString(CultureInfo.InvariantCulture);
 
 	/// <summary>
 	/// PennMUSH's <c>fun_parent</c> (<c>src/fundb.c</c>). With a second argument it first does what

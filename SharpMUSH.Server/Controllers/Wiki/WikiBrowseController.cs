@@ -121,6 +121,43 @@ public class WikiBrowseController(
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
+	/// <summary>Category rows read at a time by <see cref="NewestInCategory"/>.</summary>
+	private const int NewestBatch = 200;
+
+	/// <summary>
+	/// GET /api/wiki/category/{category}/newest?ns=main&amp;exclude=dragons&amp;take=3&amp;lang=fr
+	/// The <c>take</c> most recently updated pages of <c>{category}</c> in namespace <c>ns</c>, leaving out
+	/// <c>exclude</c>, and how many pages the category holds in that namespace. The rows are read here, a
+	/// batch at a time, so only the newest few and the count leave the server.
+	/// </summary>
+	[HttpGet("category/{category}/newest")]
+	public async Task<IActionResult> NewestInCategory(string category, [FromQuery] string ns = "main",
+		[FromQuery] string? exclude = null, [FromQuery] int take = 3, [FromQuery] string? lang = null)
+	{
+		take = Math.Clamp(take, 0, MaxListTake);
+		var visibility = await VisibilityAsync();
+		var includeDrafts = await IncludeDraftsAsync();
+		var total = 0;
+		var newest = new List<LocalizedWikiPage>(take + 1);
+		for (var skip = 0; ; skip += NewestBatch)
+		{
+			var batch = await Wiki.GetByCategoryAsync(category, skip, NewestBatch, visibility);
+			var visible = await FilterVisibleAsync(batch);
+			var localized = await Localization.LocalizeAllAsync(visible, lang, includeDrafts);
+			foreach (var page in localized.Where(page => page.Page.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)))
+			{
+				total++;
+				if (exclude is not null && page.Page.Slug.Equals(exclude, StringComparison.OrdinalIgnoreCase)) continue;
+				var at = newest.FindIndex(kept => kept.UpdatedAt < page.UpdatedAt);
+				newest.Insert(at < 0 ? newest.Count : at, page);
+				if (newest.Count > take) newest.RemoveAt(take);
+			}
+			if (batch.Count < NewestBatch) break;
+			HttpContext.RequestAborted.ThrowIfCancellationRequested();
+		}
+		return Ok(new WikiCategoryNewestDto([.. await SummariesAsync(newest)], total));
+	}
+
 	/// <summary>
 	/// GET /api/wiki/category-names?lang=fr
 	/// Each category's name, keyed by category key: the title of its published page in the category

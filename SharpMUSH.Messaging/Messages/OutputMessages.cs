@@ -150,3 +150,9 @@ public record UpdateTerminalFeaturesMessage(long Handle, SharpMUSH.Library.Utili
 /// The answers come back as a <see cref="TerminalReportMessage"/>.
 /// </summary>
 public record ProbeTerminalMessage(long Handle) : IHandleMessage;
+
+/// <summary>
+/// Asks the connection server for every connection's byte counts (<c>SESSION</c>). It answers with a
+/// <see cref="ConnectionTrafficReportMessage"/> carrying the same <paramref name="RequestId"/>.
+/// </summary>
+public record ConnectionTrafficRequestMessage(Guid RequestId);

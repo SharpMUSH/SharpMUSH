@@ -14,7 +14,8 @@ public sealed class ExecutionBudget : IDisposable
 	private readonly TimeProvider _clock;
 	private readonly long _started;
 	private readonly TimeSpan _duration;
-	// The deadline in Environment.TickCount64 milliseconds.
+	// The deadline in Environment.TickCount64 milliseconds, on the system clock only: any other clock
+	// expires the budget through its own timer.
 	private readonly long _expiresAt;
 	// 0 while running, 1 once ended within the deadline, 2 once ended past it.
 	private int _ended;
@@ -31,7 +32,7 @@ public sealed class ExecutionBudget : IDisposable
 		_duration = duration;
 		_clock = timeProvider;
 		_started = timeProvider.GetTimestamp();
-		_expiresAt = duration == Timeout.InfiniteTimeSpan ? long.MaxValue
+		_expiresAt = duration == Timeout.InfiniteTimeSpan || timeProvider != TimeProvider.System ? long.MaxValue
 			: Environment.TickCount64 + (long)Math.Ceiling(duration.TotalMilliseconds) + 1;
 		_cancelledBy = cancellationToken;
 		_deadline = new CancellationTokenSource(duration, timeProvider);

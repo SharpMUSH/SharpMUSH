@@ -18,7 +18,7 @@ These options control chat system settings.
 - `chan_cost=<number>`: Accepted but ignored; channels cost nothing to create.
 - `max_channels=<number>`: How many channels each non-admin player may own.
 - `max_player_chans=<number>`: Accepted but ignored; see max_channels.
-- `noisy_cemit=<boolean>`: Accepted but ignored.
+- `noisy_cemit=<boolean>`: Is @cemit/noisy the default?
 - `chan_title_len=<number>`: How long can @channel/title's be?
 - `use_muxcomm=<boolean>`: Accepted but ignored; MUX-style channel aliases always work. See [MUXCOMSYS]
 - `chat_token_alias=<character>`: A single character that can be used as well as + for talking on channels (+<chan> <msg>)

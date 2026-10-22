@@ -1090,7 +1090,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 	[SharpCommand(Name = "@FUNCTION",
 		Switches = ["ALIAS", "ARGS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL"],
-		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 5, ParameterNames = ["name", "object/attribute"])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 6, ParameterNames = ["name", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -1464,9 +1464,9 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	/// <summary>
-	/// Defining a new function: @function &lt;name&gt;=&lt;obj&gt;,&lt;attrib&gt;[,&lt;min&gt;,&lt;max&gt;]; otherwise
-	/// the function is described.
-	/// CB.RSArgs splits the RHS on commas: args["1"]=obj, ["2"]=attrib, ["3"]=min, ["4"]=max.
+	/// Defining a new function: @function &lt;name&gt;=&lt;obj&gt;,&lt;attrib&gt;[,&lt;min&gt;,&lt;max&gt;[,&lt;restrictions&gt;]]
+	/// or @function &lt;name&gt;=&lt;obj&gt;/&lt;attrib&gt;; otherwise the function is described.
+	/// CB.RSArgs splits the RHS on commas: args["1"]=obj, ["2"]=attrib, ["3"]=min, ["4"]=max, ["5"]=restrictions.
 	/// </summary>
 	private async ValueTask<Option<CallState>> DefineOrDescribeFunctionAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		IUserDefinedFunctionService userFunctionService, string functionName)
@@ -1489,6 +1489,18 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var attribSpec = parser.CurrentState.Arguments.GetValueOrDefault("2")?.Message.ToPlainText();
+		// cmd_function (src/cmds.c:615-623): with no second argument, the first is <obj>/<attrib>.
+		if (string.IsNullOrEmpty(attribSpec))
+		{
+			if (objSpec.IndexOf('/') is not (>= 0 and var slash))
+			{
+				await NotifyService.Notify(executor, ErrorMessages.Returns.InvalidSecondArgument, executor);
+				return new CallState(ErrorMessages.Returns.InvalidSecondArgument);
+			}
+
+			(objSpec, attribSpec) = (objSpec[..slash], objSpec[(slash + 1)..]);
+		}
+
 		if (string.IsNullOrEmpty(attribSpec))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionMustSpecifyName), executor);
@@ -1503,6 +1515,9 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 
 		var (minArgs, maxArgs) = UserFunctionArgumentBounds(parser.CurrentState.Arguments);
+		var restriction = parser.CurrentState.Arguments.GetValueOrDefault("5")?.Message.ToPlainText() is { Length: > 0 } words
+			? words
+			: null;
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objSpec, LocateFlags.All, async targetObject =>
@@ -1513,7 +1528,8 @@ public partial class Commands : ICommandRestrictionApplier
 					return new CallState(ErrorMessages.Returns.PermissionDenied);
 				}
 
-				return await DefineUserFunctionOnAsync(executor, userFunctionService, functionName, targetObject, attribSpec, minArgs, maxArgs);
+				return await DefineUserFunctionOnAsync(executor, userFunctionService, functionName, targetObject, attribSpec, minArgs, maxArgs,
+					restriction);
 			});
 	}
 
@@ -1536,7 +1552,7 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	private async ValueTask<CallState> DefineUserFunctionOnAsync(AnySharpObject executor, IUserDefinedFunctionService userFunctionService,
-		string functionName, AnySharpObject targetObject, string attribSpec, int minArgs, int maxArgs)
+		string functionName, AnySharpObject targetObject, string attribSpec, int minArgs, int maxArgs, string? restriction)
 	{
 		// do_function does not look for the attribute (function.c:1687-1692): it is read, parents
 		// and ancestor included, each time the function is called (parse.c:3048).
@@ -1549,7 +1565,8 @@ public partial class Commands : ICommandRestrictionApplier
 			MinArgs: minArgs,
 			MaxArgs: maxArgs,
 			Enabled: true,
-			AliasOf: null));
+			AliasOf: null,
+			Restriction: restriction));
 
 		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.FunctionDefinedFormat), executor, functionName, $"#{targetObject.Object().DBRef.Number}/{attributeLongName}");
 		return CallState.Empty;

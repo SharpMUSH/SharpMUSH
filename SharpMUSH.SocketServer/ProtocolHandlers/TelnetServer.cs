@@ -27,6 +27,7 @@ public partial class TelnetServer : ConnectionHandler
 	private readonly MsspReportHolder _mssp;
 	private readonly TerminalProbes _probes;
 	private readonly OutputSettingsHolder? _settings;
+	private readonly ConnectionTrafficCounters _traffic;
 
 	/// <summary>
 	/// How much a client may type before its connection is registered. Registration normally takes
@@ -44,7 +45,8 @@ public partial class TelnetServer : ConnectionHandler
 		ConnectionServerOptions options,
 		MsspReportHolder mssp,
 		TerminalProbes probes,
-		OutputSettingsHolder? settings = null)
+		OutputSettingsHolder? settings = null,
+		ConnectionTrafficCounters? traffic = null)
 	{
 		Console.OutputEncoding = Encoding.UTF8;
 		_logger = logger;
@@ -56,6 +58,7 @@ public partial class TelnetServer : ConnectionHandler
 		_mssp = mssp;
 		_probes = probes;
 		_settings = settings;
+		_traffic = traffic ?? new ConnectionTrafficCounters();
 	}
 
 	public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -116,7 +119,8 @@ public partial class TelnetServer : ConnectionHandler
 		using var readLifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		ct = readLifetime.Token;
 		using var held = new RegistrationHold(nextPort, _logger, ct);
-		var session = new TelnetSession(this, connection, closer, nextPort, held, ct);
+		var traffic = _traffic.Start(nextPort);
+		var session = new TelnetSession(this, connection, closer, nextPort, held, traffic, ct);
 
 		var telnet = await session.BuildInterpreterAsync();
 		if (telnet.PluginManager?.GetPlugin<TerminalQueryProtocol>() is { } terminalQueries)
@@ -125,7 +129,7 @@ public partial class TelnetServer : ConnectionHandler
 		}
 
 		var readTask = ReadAndObserveNegotiationAsync(
-			telnet, connection.Transport.Input, session.AnnounceTelnetIfNegotiatedAsync, ct);
+			telnet, connection.Transport.Input, traffic, session.AnnounceTelnetIfNegotiatedAsync, ct);
 		try
 		{
 			// The read loop is already running by now, so a fast client could have negotiated in the gap
@@ -145,6 +149,7 @@ public partial class TelnetServer : ConnectionHandler
 		finally
 		{
 			_probes.Unregister(nextPort);
+			_traffic.End(nextPort, traffic);
 			await StopTelnetAsync(readLifetime, readTask, telnet, connection.ConnectionId);
 		}
 	}
@@ -219,12 +224,14 @@ public partial class TelnetServer : ConnectionHandler
 	private static async Task ReadAndObserveNegotiationAsync(
 		TelnetInterpreter interpreter,
 		PipeReader reader,
+		TrafficCounter traffic,
 		Func<ValueTask> onProcessed,
 		CancellationToken cancellationToken)
 	{
 		while (!cancellationToken.IsCancellationRequested)
 		{
 			var result = await reader.ReadAtLeastAsync(1, cancellationToken);
+			traffic.Received(result.Buffer.Length);
 
 			foreach (var segment in result.Buffer)
 			{

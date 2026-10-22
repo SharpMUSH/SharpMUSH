@@ -316,6 +316,17 @@ public partial class Commands
 
 		await AccountService.LinkCharacterAsync(accountId, playerDbRef);
 
+		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
+		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
+		{
+			await NotifyService.Notify(handle, "Character creation succeeded but could not resolve player.");
+			return new None();
+		}
+
+		// create_player (src/player.c:562) sets SUSPECT before anything hears of the new character.
+		var created = new AnySharpObject(foundPlayer);
+		await MarkSuspectCreationAsync(handle, created);
+
 		// PennMUSH spec: player`create (objid, name, how, descriptor, email); 'create' at the connect screen.
 		await EventService.TriggerEventAsync(SharpEvents.PlayerCreate, null, playerDbRef.ToString(), charName, "create",
 			handle.ToString(), "");
@@ -324,11 +335,11 @@ public partial class Commands
 		// the first-login greeting, not "Welcome back".
 		await ConnectionService.Bind(handle, playerDbRef, firstLogin: true);
 
-		var playerNode = await Mediator.Send(new Library.Queries.Database.GetObjectNodeQuery(playerDbRef));
-		if (playerNode is not (AnySharpObject and SharpPlayer foundPlayer))
+		// announce_connect for a new player (src/bsd.c:5912): wizards hear of a SUSPECT one.
+		if (await created.HasFlag("SUSPECT"))
 		{
-			await NotifyService.Notify(handle, "Character creation succeeded but could not resolve player.");
-			return new None();
+			await GameBroadcastService.BroadcastToFlagAsync("WIZARD",
+				string.Format(ErrorMessages.Notifications.GameSuspectCreated, foundPlayer.Object.Name));
 		}
 
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
@@ -385,6 +396,11 @@ public partial class Commands
 				$"No character named '{charName}' is linked to your account.\n" +
 				"Use: make <name> <password>    to create a new character\n" +
 				"Use: claim <name> <password>   to link a character you already have");
+			return new None();
+		}
+
+		if (await SitelockRefusesPlayerAsync(handle, character))
+		{
 			return new None();
 		}
 
@@ -485,15 +501,14 @@ public partial class Commands
 	/// </summary>
 	private async ValueTask<bool> IsSitelockedAsync(long handle, string surfaceFlag)
 	{
-		var connectionData = ConnectionService.Get(handle);
-		var ipAddress = connectionData?.Metadata.TryGetValue("InternetProtocolAddress", out var ip) == true ? ip : "unknown";
-		var hostName = connectionData?.HostName ?? ipAddress;
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
 
 		if (!SitelockMatcher.IsBlocked(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName, surfaceFlag))
 		{
 			return false;
 		}
 
+		LogSitelockRefusal(surfaceFlag == SitelockMatcher.CreateFlag ? "a new player" : "an account", ipAddress, hostName);
 		await NotifyService.Notify(handle, "Access from your location is restricted.");
 		return true;
 	}

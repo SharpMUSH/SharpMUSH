@@ -130,6 +130,111 @@ public class ListenerRoutingService(
 
 		if (context.Relay != NotificationRelay.NoRelay || context.PuppetOk || IsPrivate(type))
 			await ProcessPuppetRelayAsync(listener, flags ?? await listener.ReadFlagsAsync(), matchingText, actualSender, type);
+
+		// notify.c:1549-1554: inside the same listening branch as @listen, an AUDIBLE object passes on
+		// what it heard to its @forwardlist.
+		if ((context.Relay != NotificationRelay.NoRelay || context.PuppetOk)
+			&& (!IsPrivate(type) || !listener.IsExit && (!listener.IsPlayer || options?.PlayerListen != false))
+			&& (flags ?? await listener.ReadFlagsAsync()).Has("AUDIBLE"))
+			await ProcessForwardListAsync(listener, matchingText, actualSender, context, type);
+	}
+
+	/// <summary>
+	/// notify.c notify_list: what <paramref name="forwarder"/> heard goes to each object on its
+	/// FORWARDLIST that it may forward to (<c>Can_Forward</c>), and to everything in a listed room,
+	/// prefixed with its evaluated PREFIX or "From &lt;name&gt;, ". Nothing it forwards is relayed again.
+	/// Its @lock/filter and FILTER stop the forwarding, as <c>filter_found</c> does.
+	/// </summary>
+	private async ValueTask ProcessForwardListAsync(AnySharpObject forwarder, MString heard, AnySharpObject speaker,
+		NotificationContext context, NotificationType type)
+	{
+		if (await AttributeService.GetAttributeAsync(forwarder, forwarder, "FORWARDLIST",
+					IAttributeService.AttributeMode.SystemSet, parent: true) is not SharpAttribute[] { Length: > 0 } list
+				|| await FilterFoundAsync(forwarder, speaker, heard, LockType.Filter, "FILTER"))
+			return;
+
+		var prefix = await ForwardPrefixAsync(forwarder, speaker, heard);
+		var forwarded = new NotificationContext(context.Target, null, [])
+		{
+			Executor = context.Executor,
+			Prefix = prefix,
+			PuppetOk = context.PuppetOk,
+			Relay = NotificationRelay.NoRelay
+		};
+
+		foreach (var entry in list.Last().Value.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			if (!DBRef.TryParse(entry, out var reference) || reference is not { } forwardRef
+					|| await mediator.Send(new GetObjectNodeQuery(forwardRef), ExecutionBudget.CurrentToken) is not AnySharpObject forward
+					|| forward.Object().DBRef.Number == forwarder.Object().DBRef.Number
+					|| !await ForwardListRestriction.MayForwardToAsync(permissionService, forwarder, forward, false))
+				continue;
+
+			AnySharpObject[] recipients = forward.AsOptionalContainer is AnySharpContainer { IsRoom: true } room
+				? [forward, .. await room.Content(mediator).Select(content => content.WithRoomOption())
+					.ToArrayAsync(ExecutionBudget.CurrentToken)]
+				: [forward];
+			foreach (var recipient in recipients)
+			{
+				if (!await permissionService.CanInteract(speaker, recipient, IPermissionService.InteractType.Hear)) continue;
+				await notifier.Value.NotifyWithContextAsync(forwarded with { Target = recipient.Object().DBRef }, heard, speaker, type);
+			}
+		}
+	}
+
+	/// <summary>
+	/// notify.c make_prefix_str: the forwarder's PREFIX, evaluated by it with the speaker as enactor and
+	/// %0 the message, and a space; or, when that is missing or empty, "From &lt;name&gt;, ", an exit
+	/// naming its source room.
+	/// </summary>
+	private async ValueTask<MString> ForwardPrefixAsync(AnySharpObject forwarder, AnySharpObject speaker, MString heard)
+	{
+		if (await AttributeService.GetAttributeAsync(forwarder, forwarder, "PREFIX",
+					IAttributeService.AttributeMode.SystemSet, parent: true) is SharpAttribute[] { Length: > 0 })
+		{
+			var parser = serviceProvider.GetRequiredService<IMUSHCodeParser>();
+			var state = parser.State.IsEmpty ? ParserState.RootFor(forwarder.Object().DBRef) : parser.CurrentState;
+			var arguments = new Dictionary<string, CallState> { ["0"] = new(heard) };
+			var scoped = parser.Push(state with
+			{
+				Executor = forwarder.Object().DBRef,
+				Enactor = speaker.Object().DBRef,
+				Caller = speaker.Object().DBRef,
+				Arguments = arguments,
+				EnvironmentRegisters = new(arguments),
+				Registers = new(state.Registers.Reverse().Select(frame => new Dictionary<string, MString>(frame, frame.Comparer))),
+				Restrictions = EvaluationRestrictions.Current ?? state.Restrictions
+			});
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(scoped, forwarder, forwarder,
+				"PREFIX", arguments, ignorePermissions: true);
+			ExecutionBudget.Current?.ThrowIfExceeded();
+			if (result.Message is { Length: > 0 } evaluated)
+				return MString.Concat(evaluated, MString.Plain(" "));
+		}
+
+		var named = forwarder.Object().Name;
+		if (forwarder is SharpExit exit)
+			named = (await exit.Location.WithCancellation(ExecutionBudget.CurrentToken)).Object().Name;
+		return MString.Plain($"From {named}, ");
+	}
+
+	/// <summary>
+	/// speech.c filter_found: the object refuses <paramref name="message"/> when the speaker fails its
+	/// <paramref name="lockType"/> lock (with %0 the message), or when one of the comma-separated patterns
+	/// in its <paramref name="attributeName"/> matches.
+	/// </summary>
+	private async ValueTask<bool> FilterFoundAsync(AnySharpObject thing, AnySharpObject speaker, MString message,
+		LockType lockType, string attributeName)
+	{
+		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))
+			if (!await lockService.Evaluate(lockType, thing, speaker)) return true;
+		var filter = await AttributeService.GetAttributeAsync(thing, thing, attributeName, IAttributeService.AttributeMode.Read, parent: true);
+		if (filter is not SharpAttribute[] { Length: > 0 } filters) return false;
+		var attribute = filters.Last();
+		var compatibility = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility;
+		var numeric = new NumericEvaluation(compatibility?.TinyMath ?? false, compatibility?.NullEqualsZero ?? false);
+		return IncomingFilterPatterns.Split(attribute.Value.ToPlainText(), ExecutionBudget.CurrentToken)
+			.Any(pattern => IncomingFilterPatterns.Matches(pattern, message.ToPlainText(), attribute.IsRegexp(), attribute.IsCase(), numeric));
 	}
 
 	private async ValueTask ProcessListenAttributeAsync(
@@ -170,17 +275,7 @@ public class ListenerRoutingService(
 		await using var contents = container.Content(mediator)
 			.Where(content => content.IsPlayer || content.IsThing).GetAsyncEnumerator(ExecutionBudget.CurrentToken);
 		if (!await contents.MoveNextAsync()) return;
-		using (LockEvaluationArguments.Enter(new Dictionary<string, MString> { ["0"] = message }))
-			if (!await lockService.Evaluate(LockType.InFilter, listener, speaker)) return;
-		var filter = await AttributeService.GetAttributeAsync(listener, listener, "INFILTER", IAttributeService.AttributeMode.Read, parent: true);
-		if (filter is SharpAttribute[] { Length: > 0 } filters)
-		{
-			var attribute = filters.Last();
-			var compatibility = serviceProvider.GetService<IOptionsWrapper<SharpMUSHOptions>>()?.CurrentValue.Compatibility;
-			var numeric = new NumericEvaluation(compatibility?.TinyMath ?? false, compatibility?.NullEqualsZero ?? false);
-			foreach (var pattern in IncomingFilterPatterns.Split(attribute.Value.ToPlainText(), ExecutionBudget.CurrentToken))
-				if (IncomingFilterPatterns.Matches(pattern, message.ToPlainText(), attribute.IsRegexp(), attribute.IsCase(), numeric)) return;
-		}
+		if (await FilterFoundAsync(listener, speaker, message, LockType.InFilter, "INFILTER")) return;
 
 		var prefix = MString.Empty;
 		var prefixAttribute = await AttributeService.GetAttributeAsync(listener, listener, "INPREFIX", IAttributeService.AttributeMode.Read, parent: true);

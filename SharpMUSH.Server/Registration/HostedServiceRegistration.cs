@@ -79,6 +79,9 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.DefaultApplicationsBootstrapService>();
 		// The game's own layout themes, before softcode can name one.
 		services.AddHostedService<Services.LayoutThemeBootstrapService>();
+		// dict_file's words, for suggest(words, ...).
+		services.AddSingleton<Services.DictionaryWordsBootstrapService>();
+		services.AddHostedService(sp => sp.GetRequiredService<Services.DictionaryWordsBootstrapService>());
 		// Run @STARTUP on all objects at boot — registered after the other bootstrap services so
 		// any objects/attributes they seed already exist. Re-establishes in-memory @function regs.
 		services.AddHostedService<Services.StartupAttributeBootstrapService>();

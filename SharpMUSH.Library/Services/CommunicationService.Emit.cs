@@ -152,7 +152,7 @@ public partial class CommunicationService
 		return false;
 	}
 
-	private async ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true)
+	public async ValueTask<bool> MayPemitAsync(IMUSHCodeParser parser, AnySharpObject speaker, AnySharpObject target, bool showDefault = true)
 	{
 		if (await speaker.IsWizard() || await speaker.HasPower("Pemit_All")) return true;
 		var refusal = new LocalizedNotification(nameof(ErrorMessages.Notifications.PemitTargetWishesAlone), target.Object().Name);

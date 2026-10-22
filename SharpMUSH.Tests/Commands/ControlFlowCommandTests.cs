@@ -400,6 +400,22 @@ public class ControlFlowCommandTests
 		await Assert.That(await WaitForMessage(executor, $"SwNoEval{id}_[add(1,1)]")).IsTrue();
 	}
 
+	/// <summary>
+	/// A brace keeps its '=' from splitting the command, as it keeps its ',' and ';': PennMUSH reads a
+	/// brace with PT_BRACE alone.
+	/// </summary>
+	[Test]
+	public async ValueTask EqSplit_EqualsInsideBraceIsText()
+	{
+		var executor = WebAppFactoryArg.ExecutorDBRef;
+		var id = Guid.NewGuid().ToString("N")[..8];
+
+		await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@switch/inline {{a=b}}=a=b,@pemit #1=SwBraceEq{id}_#$"));
+
+		await Assert.That(await WaitForMessage(executor, $"SwBraceEq{id}_a=b")).IsTrue();
+	}
+
 	[Test]
 	public async ValueTask Switch_NotifySwitch_RunsActionAndQueuesNotify()
 	{

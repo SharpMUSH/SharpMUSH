@@ -391,4 +391,80 @@ public class UserDefinedFunctionTests
 		await Cmd($"@function/restore {fn}");
 		await Assert.That(await Eval($"[{fn}()]")).Contains("NOT FOUND");
 	}
+	[Test]
+	[NotInParallel] // overrides add(), which every other test may call
+	public async ValueTask FnCallsADeletedBuiltin()
+	{
+		// PennMUSH's fn() calls the built-in even while @function/delete has a @function in its place.
+		Registry.Delete("add");
+		Registry.SetBuiltinRestriction("add", null);
+		var attr = $"ADDFN{U()}";
+		await Cmd($"&{attr} me=overridden");
+
+		try
+		{
+			await Cmd("@function/delete add");
+			await Cmd($"@function add=me,{attr}");
+
+			await Assert.That(await Eval("add(2,3)")).IsEqualTo("overridden");
+			await Assert.That(await Eval("fn(add,2,3)")).IsEqualTo("5");
+		}
+		finally
+		{
+			await Cmd("@function/builtin add");
+		}
+	}
+
+	[Test]
+	public async ValueTask DefinitionTakesRestrictionWords()
+	{
+		var fn = $"defrestrict{U()}";
+		var attr = $"DEFRESTRICT{U()}";
+		await Cmd($"&{attr} me=secret");
+		await Cmd($"@function {fn}=me,{attr},0,1,wizard");
+
+		await Assert.That(Registry.Get(fn)?.Restriction).IsEqualTo("wizard");
+		await Assert.That((await EvalAs(await NewNonWizardPlayer(), $"{fn}()")).ToUpperInvariant()).Contains("PERMISSION DENIED");
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("secret");
+	}
+
+	[Test]
+	public async ValueTask DefinitionTakesObjectSlashAttribute()
+	{
+		var fn = $"slashform{U()}";
+		var attr = $"SLASHFORM{U()}";
+		await Cmd($"&{attr} me=slashed");
+		await Cmd($"@function {fn}=me/{attr}");
+
+		await Assert.That(await Eval($"{fn}()")).IsEqualTo("slashed");
+	}
+
+	[Test]
+	public async ValueTask ASingleArgumentWithoutASlashDefinesNothing()
+	{
+		var fn = $"noslash{U()}";
+		await Cmd($"@function {fn}=me");
+
+		await Assert.That(Registry.Get(fn)).IsNull();
+	}
+
+	[Test]
+	public async ValueTask NosidefxOnABuiltinDisablesItsSideEffects()
+	{
+		var clone = $"pemitclone{U()}";
+		await Cmd($"@function/clone {clone}=pemit");
+		await Cmd($"@function/restrict {clone}=nosidefx");
+
+		await Assert.That(await Eval($"{clone}(me,hi)")).IsEqualTo(ErrorMessages.Returns.FunctionDisabled);
+	}
+
+	[Test]
+	public async ValueTask LocalizeOnABuiltinRestoresTheRegisters()
+	{
+		var clone = $"setrclone{U()}";
+		await Cmd($"@function/clone {clone}=setr");
+		await Cmd($"@function/restrict {clone}=localize");
+
+		await Assert.That(await Eval($"[setq(a,outer)][{clone}(a,inner)]-%qa")).IsEqualTo("inner-outer");
+	}
 }

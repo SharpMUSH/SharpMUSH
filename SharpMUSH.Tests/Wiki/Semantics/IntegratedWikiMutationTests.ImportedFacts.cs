@@ -58,7 +58,7 @@ public partial class IntegratedWikiMutationTests
 		using var cancellation = new CancellationTokenSource();
 		// The budget that ARefinementIsAskedOnlyWhenTheBudgetIsReallyTooSmall exhausts in the seek section.
 		var query = Query(new SemanticPredicate.KeywordEquals("pf2e:tradition", "arcane"), new SemanticPredicate.IntegerEquals("pf2e:level", 10));
-		var result = await SemanticWikiQueries.RunAsync(world.Provider, _ => ValueTask.FromResult(AdminReader), query, null, cancellation.Token,
+		var result = await SemanticWikiQueries.RunAsync(world.Provider, "#test", _ => ValueTask.FromResult(AdminReader), query, null, cancellation.Token,
 			budgets: new SemanticQueryBudgets(3, 8192), between: async (index, _) =>
 			{
 				if (index != 1) return;

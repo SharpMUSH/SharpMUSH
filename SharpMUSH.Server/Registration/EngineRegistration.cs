@@ -115,6 +115,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IMoveService, MoveService>();
 		services.AddSingleton<IDidItService, DidItService>();
 		services.AddSingleton<IMsspReportService, Implementation.Services.MsspReportService>();
+		services.AddSingleton<IConnectionTrafficService, Implementation.Services.ConnectionTrafficService>();
 		services.AddSingleton<ILookService, LookService>();
 		services.AddSingleton<IObjectDestructionService, ObjectDestructionService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
@@ -126,6 +127,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IFlagAndPowerService, FlagAndPowerService>();
 		services.AddSingleton<IObjectRelationshipService, ObjectRelationshipService>();
 		// One scheduler, seen through the four questions callers ask of it.
+		services.AddSingleton<QueueLoad>();
 		services.AddSingleton<TaskScheduler>();
 		services.AddSingleton<ITaskScheduler>(sp => sp.GetRequiredService<TaskScheduler>());
 		services.AddSingleton<ISemaphoreQueue>(sp => sp.GetRequiredService<TaskScheduler>());
@@ -451,6 +453,7 @@ internal static class EngineRegistration
 				x.AddConsumer<Consumers.TerminalReportConsumer, TerminalReportMessage>();
 				x.AddConsumer<Consumers.TelnetNegotiatedConsumer, TelnetNegotiatedMessage>();
 				x.AddConsumer<Consumers.MSSPReportRequestConsumer, MSSPReportRequestMessage>();
+				x.AddConsumer<Consumers.ConnectionTrafficReportConsumer, ConnectionTrafficReportMessage>();
 			});
 
 		// The engine cache. Its own bounded memory cache rather than the registered one (which the

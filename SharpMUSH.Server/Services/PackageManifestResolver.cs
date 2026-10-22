@@ -116,11 +116,21 @@ public sealed class PackageManifestResolver(IPackageRegistryService registry, IP
 			long size = 0;
 			foreach (var file in payload.Files)
 			{
-				if (files is null || await files.ReadFileAsync(file.FileName, cancellationToken) is not { } bytes)
-					return new PackageManifestResolutionFailure(400, $"{file.FileName} is not in the package.");
-				size += bytes.LongLength;
-				if (size > MaxBinaryBytes) return new PackageManifestResolutionFailure(400, "The package's binary files exceed 64 MiB.");
-				binaries.Add(file.FileName, bytes.ToArray());
+				if (files is null) return new PackageManifestResolutionFailure(400, $"{file.FileName} is not in the package.");
+				// Read only what still fits, so a file past the total is refused before it is copied.
+				switch (await files.ReadFileAsync(file.FileName, MaxBinaryBytes - size, cancellationToken))
+				{
+					case byte[] bytes:
+						size += bytes.LongLength;
+						binaries.Add(file.FileName, bytes.ToArray());
+						break;
+					case PackageFileTooLarge:
+						return new PackageManifestResolutionFailure(400, "The package's binary files exceed 64 MiB.");
+					case Error<string> error:
+						return new PackageManifestResolutionFailure(400, error.Value);
+					default:
+						return new PackageManifestResolutionFailure(400, $"{file.FileName} is not in the package.");
+				}
 			}
 			files = new BinarySnapshot(binaries);
 		}
