@@ -333,8 +333,8 @@ public static partial class ReadPennMushConfig
 		// as written (#1335).
 		work = ConfigBounds.ClampAll(work, correction => skipped.Add(correction.ToString()));
 
-		// Only who may call a function is applied (ConfiguredFunctionRestrictions.PermissionWords, which
-		// this project cannot reference); a word that changes how it runs is kept but does nothing.
+		// The words ConfiguredFunctionRestrictions applies, which this project cannot reference: who may call
+		// the function, and the ones that change how a built-in runs. Any other word is kept but does nothing.
 		foreach (var (name, restriction) in work.Restriction.FunctionRestrictions)
 		{
 			foreach (var word in restriction[0].Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries)
@@ -435,7 +435,8 @@ public static partial class ReadPennMushConfig
 	}
 
 	/// <summary>The <c>restrict_function</c> words SharpMUSH applies: the ones <c>check_func</c> tests (<c>src/function.c</c>).</summary>
-	private static readonly string[] FunctionPermissionWords = ["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god"];
+	private static readonly string[] FunctionPermissionWords =
+		["nobody", "noguest", "nogagged", "nofixed", "admin", "wizard", "god", "logname", "logargs", "deprecated", "localize", "nosidefx"];
 
 	/// <summary>
 	/// Every <paramref name="directive"/> line — <c>restrict_command</c> or <c>restrict_function</c> —

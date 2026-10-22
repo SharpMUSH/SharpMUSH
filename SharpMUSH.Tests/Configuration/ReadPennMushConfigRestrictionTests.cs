@@ -97,9 +97,8 @@ public class ReadPennMushConfigRestrictionTests
 	}
 
 	/// <summary>
-	/// Only the <c>restrict_function</c> words <c>check_func</c> tests are applied. A word that changes
-	/// how the function runs (<c>nosidefx</c>, <c>logargs</c>) or clears one of its own restrictions
-	/// (<c>!</c>) is kept, and reported as having no effect rather than claimed as working.
+	/// A <c>restrict_function</c> word that is not applied to a built-in (<c>noparse</c>) or clears one of
+	/// its own restrictions (<c>!</c>) is kept, and reported as having no effect rather than claimed as working.
 	/// </summary>
 	[Test]
 	public async Task FunctionRestrictionWordsThatAreNotApplied_AreReported()
@@ -107,16 +106,16 @@ public class ReadPennMushConfigRestrictionTests
 		var game = GameDirectory();
 		try
 		{
-			var mushCnf = Write(game, "mush.cnf", "restrict_function pemit nosidefx", "restrict_function lstats NoGuest !admin");
+			var mushCnf = Write(game, "mush.cnf", "restrict_function pemit noparse", "restrict_function lstats NoGuest !admin");
 
 			var import = ReadPennMushConfig.Import(mushCnf);
 
-			await Assert.That(import.Options.Restriction.FunctionRestrictions["pemit"]).IsEquivalentTo(new[] { "nosidefx" });
+			await Assert.That(import.Options.Restriction.FunctionRestrictions["pemit"]).IsEquivalentTo(new[] { "noparse" });
 			await Assert.That(import.Options.Restriction.FunctionRestrictions["lstats"]).IsEquivalentTo(new[] { "NoGuest !admin" });
-			const string applied = "nobody, noguest, nogagged, nofixed, admin, wizard, god";
+			const string applied = "nobody, noguest, nogagged, nofixed, admin, wizard, god, logname, logargs, deprecated, localize, nosidefx";
 			await Assert.That(import.Skipped).IsEquivalentTo(new[]
 			{
-				$"restrict_function pemit nosidefx: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect.",
+				$"restrict_function pemit noparse: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect.",
 				$"restrict_function lstats !admin: kept in function_restrictions, but SharpMUSH applies only {applied}, so it has no effect."
 			});
 		}

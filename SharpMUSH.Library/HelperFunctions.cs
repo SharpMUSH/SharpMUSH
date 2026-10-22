@@ -7,6 +7,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
 
@@ -157,7 +158,8 @@ public static partial class HelperFunctions
 		{
 			var negate = rawToken.StartsWith('!');
 			var keyword = (negate ? rawToken[1..] : rawToken).Trim().ToLowerInvariant();
-			if (keyword.Length == 0)
+			// The words that change how the function runs say nothing about who may call it.
+			if (keyword.Length == 0 || FunctionRestrictionFlags.IsFlagWord(keyword))
 			{
 				continue;
 			}
