@@ -10,6 +10,14 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-crime-chibi-player-place", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-crime-chibi-player-sign-in", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-crime-chibi-shared-welcome", "chibi", "Crime", "images/sharpie/sharpie-crime-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-mythology-chibi-player-channels", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-mythology-chibi-player-speak-act", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-mythology-chibi-player-place", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-rules", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-joining", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-walkthrough", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-rules", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
 		new SharpieArt("sharpie-urban-fantasy-chibi-player-channels", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-channels.png", 1254, 1254, "player-channels"),
