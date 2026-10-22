@@ -34,10 +34,26 @@ public class CommandManagementTests
 
 	/// <summary>
 	/// The seam startup applies <c>command_restrictions</c> through. The command table is the
-	/// <c>Commands</c> singleton, so the applier is that same singleton.
+	/// <c>Commands</c> singleton, so the applier is that same singleton. Each set a test applies keeps
+	/// the host's own configured restrictions under it: a set replaces the last one, and without them
+	/// WARN_ON_MISSING, disabled by default, would come back on for every other test.
 	/// </summary>
-	private ICommandRestrictionApplier Restrictions
-		=> (ICommandRestrictionApplier)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>();
+	private ICommandRestrictionApplier Restrictions => new KeepingConfigured(
+		(ICommandRestrictionApplier)WebAppFactoryArg.Services.GetRequiredService<ILibraryProvider<CommandDefinition>>(),
+		WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>());
+
+	private sealed class KeepingConfigured(ICommandRestrictionApplier applier, IOptionsWrapper<SharpMUSHOptions> options)
+		: ICommandRestrictionApplier
+	{
+		public ValueTask ApplyConfiguredRestrictionsAsync(IReadOnlyDictionary<string, string[]> restrictions)
+		{
+			var merged = new Dictionary<string, string[]>(options.CurrentValue.Restriction.CommandRestrictions);
+			foreach (var (name, words) in restrictions)
+				merged[name] = words;
+			return applier.ApplyConfiguredRestrictionsAsync(merged);
+		}
+	}
+
 	private DBRef God => WebAppFactoryArg.ExecutorDBRef;
 
 	private const string Huh = "Huh?  (Type \"help\" for help.)";

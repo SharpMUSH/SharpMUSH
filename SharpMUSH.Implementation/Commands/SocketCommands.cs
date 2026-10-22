@@ -776,6 +776,23 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// PennMUSH <c>create_player</c> (<c>src/player.c:562</c>): a character made from a site whose sitelock
+	/// rule carries <c>suspect</c> is set SUSPECT, without the connection's log line.
+	/// </summary>
+	private async ValueTask MarkSuspectCreationAsync(long handle, AnySharpObject player)
+	{
+		var (ipAddress, hostName) = ConnectionOrigin(handle);
+		if (!SitelockMatcher.Applies(Configuration.CurrentValue.SitelockRules.Rules, ipAddress, hostName,
+				SitelockMatcher.SuspectOption)
+			|| await Mediator.Send(new GetObjectFlagQuery("SUSPECT")) is not { } suspect)
+		{
+			return;
+		}
+
+		await Mediator.Send(new SetObjectFlagCommand(player, suspect));
+	}
+
+	/// <summary>
 	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
 	/// syncs output preferences, shows login messages, announces the connection, queues the connect
 	/// events and hooks, and performs auto-look. Identical across
