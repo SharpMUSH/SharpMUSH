@@ -160,6 +160,37 @@ public class CommandManagementTests
 	}
 
 	/// <summary>
+	/// The portal guide's command probe takes an added command's handler to be the attribute its override hook
+	/// names, as dispatch does, so a package command such as +welcome can be offered once it is unchanged.
+	/// </summary>
+	[Test]
+	public async ValueTask GuideProbe_FollowsAnAddedCommandToItsOverrideHook()
+	{
+		var wizard = await Wizard();
+		var greet = CommandName();
+		var machine = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "GreetMachine");
+		using var scope = WebAppFactoryArg.Services.CreateScope();
+		var probe = scope.ServiceProvider.GetRequiredService<SharpMUSH.Server.Services.IOnboardingCommandProbe>();
+		try
+		{
+			await As(wizard, $"&GREET {machine}=${greet}*:@pemit %#=Hello.");
+			await As(wizard, $"@command/add/noparse {greet}");
+			await Assert.That(await probe.MatchAsync(wizard.DbRef, greet, default)).IsEmpty();
+
+			await As(wizard, $"@hook/override {greet}={machine},GREET");
+			var matches = await probe.MatchAsync(wizard.DbRef, $"{greet}/done basics", default);
+
+			await Assert.That(matches.Select(match => (match.Attribute, match.Value)))
+				.IsEquivalentTo(new[] { ("GREET", $"${greet}*:@pemit %#=Hello.") });
+			await Assert.That(matches[0].Objid).StartsWith($"#{machine.Number}:");
+		}
+		finally
+		{
+			await HookService.ClearHookAsync(greet, "OVERRIDE");
+		}
+	}
+
+	/// <summary>
 	/// The second example: a command added without /noparse evaluates its arguments, and gets a /noeval
 	/// switch that turns that off.
 	/// </summary>

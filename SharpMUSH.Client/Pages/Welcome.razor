@@ -7,6 +7,7 @@
 @inject ServerInfoService ServerInfo
 @inject IAccountAuthState Auth
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 @implements IDisposable
 
 <PageTitle>@Loc["GuidePageTitle", _game]</PageTitle>
@@ -58,7 +59,7 @@
         </nav>
         @if (Progress.Active)
         {
-            <div class="welcome-journey">
+            <div class="welcome-journey" id="welcome-journey">
                 <nav aria-label="@Loc["GuideSteps"]" class="welcome-steps">
                     <ol>
                         @foreach (var lesson in Lessons)
@@ -67,7 +68,7 @@
                         }
                     </ol>
                 </nav>
-                <GuidePanel @ref="_panel" Art="Art" Imagery="Progress.Imagery" Lesson="Current" CanGoBack="@(CurrentIndex > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close">
+                <GuidePanel @ref="_panel" Art="Art" Imagery="Progress.Imagery" Lesson="Current" CanGoBack="@(CurrentIndex > 0)" StepNumber="@(CurrentIndex + 1)" StepCount="@Lessons.Count" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close">
                     <Context><GuideContext LessonId="@Current.Id" /></Context>
                 </GuidePanel>
             </div>
@@ -177,7 +178,11 @@
         else if (_focusLesson && _panel is not null)
         {
             _focusLesson = false;
-            await _panel.FocusHeadingAsync(preventScroll: false);
+            // Focus alone scrolls only as far as the heading's line, which left the lesson at the bottom
+            // edge of a desktop window; the lesson's top goes to the top instead.
+            try { await JS.InvokeVoidAsync("SharpMUSH.scrollToId", "welcome-journey"); }
+            catch (JSException) { }
+            await _panel.FocusHeadingAsync();
         }
     }
     private async Task Close()

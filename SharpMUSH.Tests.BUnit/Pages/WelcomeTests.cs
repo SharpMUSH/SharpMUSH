@@ -179,6 +179,26 @@ public class WelcomeTests : BunitContext
 		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier.Contains("setItem", StringComparison.Ordinal))).IsFalse();
 	}
 
+	/// <summary>
+	/// Picking a path brings the lesson to the top of the window and says where it stands; Back, Skip and Done
+	/// are written out rather than drawn as icons.
+	/// </summary>
+	[Test]
+	public async Task PickedPathScrollsToTheLessonAndLabelsItsControls()
+	{
+		var page = Render<Welcome>();
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "SharpMUSH.scrollToId"
+			&& (string?)call.Arguments[0] == "welcome-journey")).IsTrue();
+		var count = GuideCatalog.Player(GuidePath.Mush).Count;
+		await Assert.That(page.Find(".guide-step-count").TextContent).IsEqualTo($"Step 1 of {count}");
+		var labels = page.FindAll(".guide-panel-actions button").Select(button => button.TextContent.Trim()).ToList();
+		await Assert.That(labels).IsEquivalentTo(new[] { "Back", "Skip for now", "I've got this" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await page.Find(".guide-panel-actions .guide-action").ClickAsync();
+		await Assert.That(page.Find(".guide-step-count").TextContent).IsEqualTo($"Step 2 of {count}");
+	}
+
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
@@ -358,7 +378,7 @@ public class WelcomeTests : BunitContext
 		var companion = Render<GuideCompanion>(parameters => parameters
 			.Add(component => component.Guide, guide)
 			.Add(component => component.OnExplore, () => returns++));
-		await companion.Find("article button[aria-label='Explore the game']").ClickAsync();
+		await companion.FindAll("article button.guide-action").Single(button => button.TextContent.Trim() == "Explore the game").ClickAsync();
 		await Assert.That(returns).IsEqualTo(1);
 		await Assert.That(guide.Progress.Active).IsTrue();
 		await Assert.That(guide.Progress.CurrentStepId).IsEqualTo("continue");

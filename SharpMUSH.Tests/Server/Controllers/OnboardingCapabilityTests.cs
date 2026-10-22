@@ -75,4 +75,26 @@ public class OnboardingCapabilityTests
 			else await Assert.That(result[0].HelpUrl).IsEqualTo("https://github.com/SharpMUSH/SharpMUSH-Packages/blob/" + new string('a', 40) + "/plus-help/package.yaml");
 		}
 	}
+
+	/// <summary>The bundled +welcome checklist is offered once its handler is the reviewed one.</summary>
+	[Test]
+	[Arguments("1.0.1", 1)]
+	[Arguments("9.0.0", 0)]
+	public async Task TheBundledWelcomeChecklistIsOffered(string version, int expected)
+	{
+		var registry = Substitute.For<IPackageRegistryService>();
+		var probe = Substitute.For<IOnboardingCommandProbe>();
+		registry.GetInstalledPackagesAsync().Returns(new[]
+		{
+			new InstalledPackageRecord("onboarding", version, "bundled:sharpmush", "onboarding", "bundled", null, DateTimeOffset.UnixEpoch, 1)
+		});
+		registry.GetManagedAttributesAsync("onboarding").Returns(new[]
+		{
+			new ManagedAttributeRecord("onboarding", "#50:100", "CMD`WELCOME", "$+welcome*:@include me/INC", "", version)
+		});
+		probe.MatchAsync(Arg.Any<DBRef>(), "+welcome", Arg.Any<CancellationToken>())
+			.Returns(new[] { new OnboardingCommandMatch("#50:100", "CMD`WELCOME", "$+welcome*:@include me/INC") });
+		var result = await new OnboardingCapabilityService(registry, probe).ResolveAsync(new DBRef(5), default);
+		await Assert.That(result.Select(capability => capability.Command)).IsEquivalentTo(expected == 1 ? new[] { "+welcome" } : []);
+	}
 }

@@ -15,13 +15,21 @@
         else if (_error) { <p role="status">@Loc["GuidePackagesError"]</p> }
         else
         {
-            <p>@Loc["GuidePackagesExplanation"]</p>
-            <ul>
-                @foreach (var capability in _capabilities)
-                {
-                    <li><code>@capability.Command</code></li>
-                }
-            </ul>
+            @* The game's own getting-started list picks up where this guide ends, so it gets a sentence of its own. *@
+            @if (_capabilities.Any(capability => capability.Command == WelcomeChecklist.Command))
+            {
+                <p class="guide-packages-welcome">@Loc["GuideWelcomeChecklist"] <code>@WelcomeChecklist.Command</code></p>
+            }
+            @if (_capabilities.Any(capability => capability.Command != WelcomeChecklist.Command))
+            {
+                <p>@Loc["GuidePackagesExplanation"]</p>
+                <ul>
+                    @foreach (var capability in _capabilities.Where(capability => capability.Command != WelcomeChecklist.Command))
+                    {
+                        <li><code>@capability.Command</code></li>
+                    }
+                </ul>
+            }
         }
     </section>
 }
