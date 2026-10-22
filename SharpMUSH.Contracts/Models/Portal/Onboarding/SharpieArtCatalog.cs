@@ -10,6 +10,14 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-chibi-administrator-joining", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-cyberpunk-chibi-player-useful-action", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-cyberpunk-chibi-player-character", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-cyberpunk-chibi-shared-welcome", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-anime-kemono-administrator-invite", "kemono", "Anime", "images/sharpie/sharpie-anime-kemono-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-anime-kemono-administrator-capabilities", "kemono", "Anime", "images/sharpie/sharpie-anime-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-romance-pixel-player-sign-in", "pixel", "Romance", "images/sharpie/sharpie-romance-pixel-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-romance-pixel-shared-welcome", "pixel", "Romance", "images/sharpie/sharpie-romance-pixel-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-cyberpunk-chibi-administrator-invite", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
 		new SharpieArt("sharpie-cyberpunk-chibi-administrator-capabilities", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-cyberpunk-chibi-shared-completion", "chibi", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
