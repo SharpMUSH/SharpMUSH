@@ -10,6 +10,16 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-high-fantasy-kemono-player-channels", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-high-fantasy-kemono-administrator-joining", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-high-fantasy-kemono-administrator-identity", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-time-travel-chibi-administrator-invite", "chibi", "Time Travel", "images/sharpie/sharpie-time-travel-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-time-travel-chibi-administrator-rules", "chibi", "Time Travel", "images/sharpie/sharpie-time-travel-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-continue", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-speak-act", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-speak-act", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-shared-welcome", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-high-fantasy-kemono-player-useful-action", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
 		new SharpieArt("sharpie-time-travel-chibi-player-place", "chibi", "Time Travel", "images/sharpie/sharpie-time-travel-chibi-player-place.png", 1254, 1254, "player-place"),
 		new SharpieArt("sharpie-high-fantasy-kemono-player-character", "kemono", "High Fantasy", "images/sharpie/sharpie-high-fantasy-kemono-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-time-travel-chibi-administrator-capabilities", "chibi", "Time Travel", "images/sharpie/sharpie-time-travel-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
