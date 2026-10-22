@@ -10,6 +10,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-romance-comicbook-player-character", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-romance-comicbook-player-sign-in", "comicbook", "Romance", "images/sharpie/sharpie-romance-comicbook-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-gothic-kemono-player-channels", "kemono", "Gothic", "images/sharpie/sharpie-gothic-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-invite", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-romance-kemono-player-sign-in", "kemono", "Romance", "images/sharpie/sharpie-romance-kemono-player-sign-in.png", 1024, 1536, "player-sign-in"),
+		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-capabilities", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-joining", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-classical-fantasy-chibi-administrator-identity", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
 		new SharpieArt("sharpie-classical-fantasy-chibi-shared-completion", "chibi", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
