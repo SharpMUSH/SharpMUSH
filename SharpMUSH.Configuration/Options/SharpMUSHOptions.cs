@@ -131,7 +131,7 @@ public record SharpMUSHOptions
 			FloatPrecision: 6,
 			MoneyPlural: "Pennies",
 			MoneySingular: "Penny",
-			Monikers: true,
+			MonikerList: MonikerPlaces.Default,
 			OnlyAsciiInNames: true,
 			PageAliases: false,
 			PlayerNameSpaces: true,

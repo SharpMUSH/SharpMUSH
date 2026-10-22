@@ -1,3 +1,5 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using Mediator;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -13,7 +15,8 @@ public class DidItService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	INotifyService notifyService,
-	ICommunicationService communicationService) : IDidItService
+	ICommunicationService communicationService,
+	IOptionsWrapper<SharpMUSHOptions> configuration) : IDidItService
 {
 	public async ValueTask<bool> DidIt(IMUSHCodeParser parser, DidItRequest request)
 	{
@@ -101,7 +104,7 @@ public class DidItService(
 		// back to the default.
 		if (!oattrFound && !string.IsNullOrEmpty(request.ODef))
 		{
-			broadcast = MarkupText.Plain($"{request.Player.Object().Name} {request.ODef}");
+			broadcast = MarkupText.Concat(await ActorNameAsync(request), MarkupText.Plain($" {request.ODef}"));
 		}
 
 		if (broadcast is not null)
@@ -152,8 +155,12 @@ public class DidItService(
 		// the name alone is stripped back off.
 		return string.IsNullOrEmpty(evaluated.ToPlainText())
 			? (true, null)
-			: (true, MarkupText.Concat(MarkupText.Plain($"{request.Player.Object().Name} "), evaluated));
+			: (true, MarkupText.Concat([await ActorNameAsync(request), MarkupText.Plain(" "), evaluated]));
 	}
+
+	/// <summary>The actor's name in front of an o-message, as PennMUSH's <c>AName(player, an_flags)</c> writes it.</summary>
+	private ValueTask<MString> ActorNameAsync(DidItRequest request)
+		=> new NameFormatter(attributeService, configuration).NameAsync(request.Player, request.Place);
 
 	public async ValueTask<bool> FailLock(
 		IMUSHCodeParser parser,

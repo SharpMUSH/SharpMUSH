@@ -107,6 +107,18 @@
   <data name="SocksetStripAccentsOff" xml:space="preserve">
     <value>Les accents ne seront pas supprimés.</value>
   </data>
+  <data name="SocksetPuebloSet" xml:space="preserve">
+    <value>Indicateur Pueblo activé.</value>
+  </data>
+  <data name="SocksetPuebloCleared" xml:space="preserve">
+    <value>Indicateur Pueblo désactivé.</value>
+  </data>
+  <data name="SocksetTelnetSet" xml:space="preserve">
+    <value>Indicateur Telnet activé.</value>
+  </data>
+  <data name="SocksetTelnetCleared" xml:space="preserve">
+    <value>Indicateur Telnet désactivé.</value>
+  </data>
   <data name="SocksetUnknownColorStyle" xml:space="preserve">
     <value>Style de couleur inconnu. Styles valides : 'auto', 'plain', 'hilite', '16color', 'xterm256'.</value>
   </data>

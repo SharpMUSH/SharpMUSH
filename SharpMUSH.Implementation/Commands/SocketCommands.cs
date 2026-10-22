@@ -14,6 +14,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Configuration;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Messaging.Messages;
@@ -89,7 +90,7 @@ public partial class Commands
 				continue;
 			}
 
-			var name = known.Object().Name;
+			var name = await new NameFormatter(AttributeService, Configuration).NameAsync(known, MonikerPlace.Who);
 			var onFor = TimeHelpers.TimeString(player.Connected ?? TimeSpan.Zero, accuracy: 3);
 			var idle = TimeHelpers.TimeString(player.Idle ?? TimeSpan.Zero);
 			var isDark = await known.HasFlag("DARK");
@@ -113,7 +114,7 @@ public partial class Commands
 					? (hostName.Length > 20 && !keepWhole ? hostName[..20] : hostName) + " (Dark)"
 					: hostName.Length > 27 && !keepWhole ? hostName[..27] : hostName;
 				// "Des" is the descriptor (handle) plus connection-type flags: S=SSL, L=local, W=WebSocket.
-				cells = [name, location, onFor, idle, player.CommandCount.ToString(CultureInfo.InvariantCulture),
+				cells = [location, onFor, idle, player.CommandCount.ToString(CultureInfo.InvariantCulture),
 					$"{player.Handle,3}{ConnType(player)}", host];
 			}
 			else
@@ -121,7 +122,7 @@ public partial class Commands
 				// @doing is read without permission checks (get_doing, bsd.c:6251), so the connect
 				// screen, which has no executor, shows the same column a logged-in viewer sees.
 				var doingText = await GetDoingText(parser, executor ?? known, known);
-				cells = [name, onFor, idle + (isHiddenRow ? "D" : " "), doingText];
+				cells = [onFor, idle + (isHiddenRow ? "D" : " "), doingText];
 			}
 
 			// CanSee(viewer, target) is `viewer.IsPriv() || viewer.IsSee_All() || !target.IsDark()`,
@@ -135,7 +136,7 @@ public partial class Commands
 
 			if (visible)
 			{
-				rows.Add([.. cells.Select(cell => (Block)MarkupText.Plain(cell))]);
+				rows.Add([name, .. cells.Select(cell => (Block)MarkupText.Plain(cell))]);
 			}
 		}
 
@@ -217,7 +218,10 @@ public partial class Commands
 				continue;
 			}
 
-			rows.Add([.. (await SessionCells(connection, known, traffic.GetValueOrDefault(connection.Handle)))
+			var name = known is null
+				? MarkupText.Plain("Connecting...")
+				: await new NameFormatter(AttributeService, Configuration).NameAsync(known, MonikerPlace.Who);
+			rows.Add([name, .. (await SessionCells(connection, known, traffic.GetValueOrDefault(connection.Handle)))
 				.Select(cell => (Block)MarkupText.Plain(cell))]);
 		}
 
@@ -233,7 +237,8 @@ public partial class Commands
 		return new None();
 	}
 
-	/// <summary>One <see cref="SessionColumns"/> row; a connection no player is bound to is <c>Connecting...</c>, as in PennMUSH.</summary>
+	/// <summary>A <see cref="SessionColumns"/> row after the name, which is <c>Connecting...</c> for a connection no player is
+	/// bound to, as in PennMUSH.</summary>
 	private static async ValueTask<string[]> SessionCells(IConnectionService.ConnectionData connection, AnySharpObject? player,
 		ConnectionTraffic? traffic)
 	{
@@ -243,7 +248,6 @@ public partial class Commands
 		var secure = connection.Metadata.GetValueOrDefault("SSL", "0") == "1" ? "S" : "";
 		return
 		[
-			player?.Object().Name ?? "Connecting...",
 			location,
 			TimeHelpers.TimeString(connection.Connected ?? TimeSpan.Zero, accuracy: 3),
 			TimeHelpers.TimeString(connection.Idle ?? TimeSpan.Zero),

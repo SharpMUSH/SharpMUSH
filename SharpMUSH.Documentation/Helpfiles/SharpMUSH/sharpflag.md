@@ -471,7 +471,7 @@ Setting or clearing MISTRUST needs the same privilege as TRUST.
 
 **Flag: MONIKER (all types)**
 
-MONIKER can be set, but it has no effect. An object's name is colored by its `@moniker`, whatever its flags. Only royalty and wizards can set or clear the flag.
+An object set MONIKER has its name colored by its `@moniker` in every place the "monikers" `@config` option lists, even when the option leaves out the object's type. Only royalty and wizards can set or clear the flag.
 
 
 ::: seealso

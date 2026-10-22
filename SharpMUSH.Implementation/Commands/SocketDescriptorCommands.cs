@@ -328,7 +328,7 @@ public partial class Commands
 
 		var result = SocketOptions.Set(connection, argument[..separator], argument[(separator + 1)..]);
 		await NotifyService.NotifyLocalized(handle, result.Key, result.Arguments);
-		await PublishSocketPinsAsync(connection, result.Probe);
+		await PublishSocketPinsAsync(connection, result.Probe, result.Pueblo, result.Telnet);
 
 		return new None();
 	}
@@ -340,7 +340,10 @@ public partial class Commands
 	/// this stays correct for any option name that ends up writing the keys.
 	/// </summary>
 	/// <param name="probe">Also have the socket owner ask the terminal what it can draw.</param>
-	private async ValueTask PublishSocketPinsAsync(IConnectionService.ConnectionData connection, bool probe)
+	/// <param name="pueblo">Also tell the socket owner the Pueblo flag, which was set.</param>
+	/// <param name="telnet">Also tell the socket owner the telnet flag, which was set.</param>
+	private async ValueTask PublishSocketPinsAsync(IConnectionService.ConnectionData connection, bool probe,
+		bool pueblo = false, bool telnet = false)
 	{
 		if (MessageBus is null)
 		{
@@ -355,6 +358,20 @@ public partial class Commands
 		if (probe)
 		{
 			await MessageBus.Publish(new ProbeTerminalMessage(connection.Handle));
+		}
+
+		// Only when set: a connection that negotiated neither flag still speaks telnet and may still be MXP, and
+		// telling the socket owner "off" for an option nobody touched would change how it is written.
+		if (pueblo)
+		{
+			await MessageBus.Publish(new UpdatePuebloModeMessage(connection.Handle,
+				connection.Metadata.GetValueOrDefault(SocketOptions.PuebloKey) == "1"));
+		}
+
+		if (telnet)
+		{
+			await MessageBus.Publish(new UpdateTelnetModeMessage(connection.Handle,
+				connection.Metadata.GetValueOrDefault(SocketOptions.TelnetKey) == "1"));
 		}
 	}
 
@@ -376,7 +393,7 @@ public partial class Commands
 		var setting = SocketArgument(parser).Trim();
 		var result = SocketOptions.Set(connection, "SCREENREADER", setting.Length == 0 ? "on" : setting);
 		await NotifyService.NotifyLocalized(connection.Handle, result.Key, result.Arguments);
-		await PublishSocketPinsAsync(connection, result.Probe);
+		await PublishSocketPinsAsync(connection, result.Probe, result.Pueblo, result.Telnet);
 
 		return new None();
 	}
@@ -434,17 +451,19 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var probe = false;
+		var (probe, pueblo, telnet) = (false, false, false);
 		for (var i = 0; i + 1 < pairs.Length; i += 2)
 		{
 			var result = SocketOptions.Set(target, pairs[i], pairs[i + 1]);
 			await NotifyService.NotifyLocalized(executor, result.Key, result.Arguments);
 			probe |= result.Probe;
+			pueblo |= result.Pueblo;
+			telnet |= result.Telnet;
 		}
 
 		// Once, after the whole run: several pairs may be set in one command, and only the descriptor's
 		// final state is worth telling the socket owner about.
-		await PublishSocketPinsAsync(target, probe);
+		await PublishSocketPinsAsync(target, probe, pueblo, telnet);
 
 		// An odd trailing element means the last option arrived without a value; PennMUSH answers the
 		// same way it answers an empty option name.
@@ -645,6 +664,9 @@ public static class SocketOptions
 	internal const string StripAccentsKey = TerminalFeatureReader.StripAccentsKey;
 	internal const string NoQuotaKey = "NOQUOTA";
 	internal const string ColorStyleKey = "COLORSTYLE";
+	internal const string PuebloKey = "PUEBLO";
+	internal const string TelnetKey = "TELNET";
+	internal const string OutputFormatKey = "OUTPUT_FORMAT";
 
 	/// <summary>
 	/// The settings report: PennMUSH's rows, as labelled values in a panel. Like PennMUSH it omits the
@@ -671,10 +693,10 @@ public static class SocketOptions
 			Row("OUTPUTSUFFIX", suffix);
 		}
 
-		Row("Pueblo", YesNo(connection.Metadata.GetValueOrDefault("PUEBLO") == "1"));
+		Row("Pueblo", YesNo(connection.Metadata.GetValueOrDefault(PuebloKey) == "1"));
 		// Whether the client answered telnet negotiation, not which port it arrived on — the same
 		// CONN_TELNET terminfo() reports, so the two cannot disagree about a raw socket.
-		Row("Telnet", YesNo(connection.Metadata.GetValueOrDefault("TELNET") == "1"));
+		Row("Telnet", YesNo(connection.Metadata.GetValueOrDefault(TelnetKey) == "1"));
 		Row("Width", connection.Metadata.GetValueOrDefault("WIDTH", "78"));
 		Row("Height", connection.Metadata.GetValueOrDefault("HEIGHT", "24"));
 		Row("Terminal Type", connection.Metadata.GetValueOrDefault("TerminalType", "unknown"));
@@ -737,7 +759,10 @@ public static class SocketOptions
 	/// <c>@sockset</c> answers an object; both go through <c>NotifyLocalized</c>.
 	/// </summary>
 	/// <param name="Probe">The option asks the terminal what it can draw (<c>graphics=detect</c>).</param>
-	public readonly record struct SocksetResult(string Key, object[] Arguments, bool Probe = false)
+	/// <param name="Pueblo">The option set the Pueblo flag, which the socket owner has to act on.</param>
+	/// <param name="Telnet">The option set the telnet flag, which the socket owner has to act on.</param>
+	public readonly record struct SocksetResult(string Key, object[] Arguments, bool Probe = false,
+		bool Pueblo = false, bool Telnet = false)
 	{
 		public static SocksetResult Of(string key) => new(key, []);
 		public static SocksetResult Of(string key, params object[] arguments) => new(key, arguments);
@@ -788,6 +813,19 @@ public static class SocketOptions
 					? nameof(ErrorMessages.Notifications.SocksetPromptNewlinesOn)
 					: nameof(ErrorMessages.Notifications.SocksetPromptNewlinesOff));
 
+			case "PUEBLO":
+				return SetPueblo(value);
+
+			case "TELNET":
+				if (IsYes(value))
+				{
+					connection.Metadata[TelnetKey] = "1";
+					return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetTelnetSet)) with { Telnet = true };
+				}
+
+				connection.Metadata.TryRemove(TelnetKey, out _);
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetTelnetCleared)) with { Telnet = true };
+
 			case "STRIPACCENTS":
 			case "NOACCENTS":
 				connection.Metadata[StripAccentsKey] = IsYes(value) ? "1" : "0";
@@ -825,6 +863,26 @@ public static class SocketOptions
 
 			default:
 				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetInvalidOptionFormat), name);
+		}
+
+		SocksetResult SetPueblo(string newValue)
+		{
+			// PennMUSH turns Pueblo on for any value at all (the value is the client's PUEBLOCLIENT line) and off
+			// only for an empty one. The format follows the handshake's rule: MXP stays MXP.
+			if (newValue.Trim().Length == 0)
+			{
+				connection.Metadata.TryRemove(PuebloKey, out _);
+				if (connection.Metadata.GetValueOrDefault(OutputFormatKey) == "pueblo")
+				{
+					connection.Metadata.TryRemove(OutputFormatKey, out _);
+				}
+
+				return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetPuebloCleared)) with { Pueblo = true };
+			}
+
+			connection.Metadata[PuebloKey] = "1";
+			connection.Metadata[OutputFormatKey] = connection.Metadata.GetValueOrDefault(OutputFormatKey) == "mxp" ? "mxp" : "pueblo";
+			return SocksetResult.Of(nameof(ErrorMessages.Notifications.SocksetPuebloSet)) with { Pueblo = true };
 		}
 
 		SocksetResult SetOrClear(string key, string newValue, string setKey, string clearedKey)

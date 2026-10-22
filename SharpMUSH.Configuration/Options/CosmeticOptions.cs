@@ -44,10 +44,14 @@ public record CosmeticOptions(
 	[property: SharpConfig(
 		Name = "monikers",
 		Category = "Cosmetic",
-		Description = "Enable moniker (nickname) system for players",
+		Description = "Where @moniker colours a name, and for which types of object",
+		ValidationPattern = @"^\s*(!?(alltypes|players|things|rooms|exits|everywhere|chat|say|movement|look|unparse|who|system|announcements)(\s+|$))*$",
 		Group = "Names",
-		Order = 4)]
-	bool Monikers,
+		Order = 4,
+		Tooltip = "A space-separated list. Places: chat, say, movement, look, unparse, who, system, announcements, or "
+			+ "everywhere. Types: players, things, rooms, exits, or alltypes. !word takes one away, as in "
+			+ "everywhere !who. Empty for nowhere. See help MONIKERS2.")]
+	string MonikerList,
 
 	[property: SharpConfig(
 		Name = "float_precision",

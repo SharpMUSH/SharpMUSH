@@ -241,4 +241,65 @@ public class UpdatePlayerPreferencesConsumerTests
 		await consumer.HandleAsync(new UpdateThemeMessage(43, null));
 		await Assert.That(connectionService.Get(43)!.Preferences!.Theme).IsNull();
 	}
+
+	/// <summary>
+	/// <c>SOCKSET PUEBLO</c> on a telnet client in plain ANSI sends PennMUSH's start sequence before the format
+	/// changes, so nothing written as Pueblo arrives first; clearing it goes back to ANSI.
+	/// </summary>
+	[Test]
+	public async Task PuebloModeMessage_SendsTheStartSequenceAndSwitchesTheFormat()
+	{
+		var sent = new List<byte[]>();
+		var connectionService = new ConnectionServerService(
+			NullLogger<ConnectionServerService>.Instance, Substitute.For<IMessageBus>());
+		await connectionService.RegisterAsync(
+			42,
+			"127.0.0.1",
+			"localhost",
+			"telnet",
+			bytes =>
+			{
+				sent.Add(bytes);
+				return ValueTask.CompletedTask;
+			},
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8,
+			() => { });
+		var consumer = new UpdatePlayerPreferencesConsumer(
+			connectionService, NullLogger<UpdatePlayerPreferencesConsumer>.Instance);
+
+		await consumer.HandleAsync(new UpdatePuebloModeMessage(42, true));
+
+		await Assert.That(sent.Count).IsEqualTo(1);
+		await Assert.That(Encoding.ASCII.GetString(sent[0])).Contains("xch_mode=purehtml");
+		await Assert.That(connectionService.Get(42)!.Capabilities.Format).IsEqualTo(OutputFormat.Pueblo);
+
+		await consumer.HandleAsync(new UpdatePuebloModeMessage(42, false));
+
+		await Assert.That(connectionService.Get(42)!.Capabilities.Format).IsEqualTo(OutputFormat.Ansi);
+	}
+
+	[Test]
+	public async Task TelnetModeMessage_SetsTheCapability()
+	{
+		var connectionService = new ConnectionServerService(
+			NullLogger<ConnectionServerService>.Instance, Substitute.For<IMessageBus>());
+		await connectionService.RegisterAsync(
+			42,
+			"127.0.0.1",
+			"localhost",
+			"telnet",
+			_ => ValueTask.CompletedTask,
+			_ => ValueTask.CompletedTask,
+			() => Encoding.UTF8,
+			() => { });
+		var consumer = new UpdatePlayerPreferencesConsumer(
+			connectionService, NullLogger<UpdatePlayerPreferencesConsumer>.Instance);
+
+		await Assert.That(connectionService.Get(42)!.Capabilities.Telnet).IsTrue();
+		await consumer.HandleAsync(new UpdateTelnetModeMessage(42, false));
+		await Assert.That(connectionService.Get(42)!.Capabilities.Telnet).IsFalse();
+		await consumer.HandleAsync(new UpdateTelnetModeMessage(42, true));
+		await Assert.That(connectionService.Get(42)!.Capabilities.Telnet).IsTrue();
+	}
 }

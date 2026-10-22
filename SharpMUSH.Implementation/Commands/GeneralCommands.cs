@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Database;
+﻿using SharpMUSH.Configuration;
+using SharpMUSH.Database;
 using SharpMUSH.Implementation.Tools;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -254,10 +255,15 @@ public partial class Commands
 
 		var outputSections = new List<MString>();
 		var flagView = await FlagView.ForAsync(executor, ConnectionService);
+		var names = new NameFormatter(AttributeService, Configuration);
+		// object_header (hdrs/externs.h): unparse_object with AN_UNPARSE.
+		async ValueTask<MString> Header(AnySharpObject target)
+			=> await MessageFormatting.FormatObjectWithDbrefMString(target.Object(), flagView,
+				name: await names.UnparseNameAsync(target, MonikerPlace.Unparse));
 
 		if (canExamine)
 		{
-			outputSections.Add(await MessageFormatting.FormatObjectWithDbrefMString(obj, flagView));
+			outputSections.Add(await Header(viewingKnown));
 
 			if (Configuration.CurrentValue.Cosmetic.FlagsOnExamine)
 			{
@@ -278,12 +284,12 @@ public partial class Commands
 		{
 			var objParent = await obj.Parent.WithCancellation(CancellationToken.None);
 			var objZone = await obj.Zone.WithCancellation(CancellationToken.None);
-			var ownerObj = (await obj.Owner.WithCancellation(CancellationToken.None)).Object;
+			var owner = await obj.Owner.WithCancellation(CancellationToken.None);
 
 			MString zoneSection;
 			if (objZone is AnySharpObject zone)
 			{
-				var zoneLine = await MessageFormatting.FormatObjectWithDbrefMString(zone.Object(), flagView);
+				var zoneLine = await Header(zone);
 				zoneSection = Format($"  Zone: {zoneLine}");
 			}
 			else
@@ -291,17 +297,16 @@ public partial class Commands
 				zoneSection = MarkupText.Plain("  Zone: *NOTHING*");
 			}
 
-			var ownerLine = await MessageFormatting.FormatObjectWithDbrefMString(ownerObj, flagView);
+			var ownerLine = await Header(owner);
 			outputSections.Add(Format($"Owner: {ownerLine}{zoneSection}"));
 
-			var parentObject = objParent.Object();
-			if (parentObject == null)
+			if (objParent is not AnySharpObject parent)
 			{
 				outputSections.Add(MarkupText.Plain("Parent: *NOTHING*"));
 			}
 			else
 			{
-				var parentLine = await MessageFormatting.FormatObjectWithDbrefMString(parentObject, flagView);
+				var parentLine = await Header(parent);
 				outputSections.Add(Format($"Parent: {parentLine}"));
 			}
 
@@ -381,8 +386,9 @@ public partial class Commands
 				// not see a content's dbref gets its bare name, whatever they may do with the container.
 				var contentItems = await contents
 					.ToAsyncEnumerable()
-					.Select((AnySharpContent content, CancellationToken _) =>
-						MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, content.WithRoomOption(), ConnectionService))
+					.Select(async (AnySharpContent content, CancellationToken _) =>
+						await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, content.WithRoomOption(), ConnectionService,
+							await new NameFormatter(AttributeService, Configuration).UnparseNameAsync(content.WithRoomOption(), MonikerPlace.Unparse)))
 					.Prepend(MarkupText.Plain(contentsLabel))
 					.ToListAsync();
 				await NotifyService.Notify(enactor,
@@ -409,7 +415,7 @@ public partial class Commands
 			{
 				var exitLines = await exits
 					.ToAsyncEnumerable()
-					.Select((SharpExit exit, CancellationToken _) => MessageFormatting.FormatObjectWithDbrefMString(exit.Object, flagView))
+					.Select((SharpExit exit, CancellationToken _) => Header(exit))
 					.Prepend(MarkupText.Plain("Exits:"))
 					.ToListAsync();
 				await NotifyService.Notify(enactor,
@@ -422,12 +428,12 @@ public partial class Commands
 			var homeContainer = await viewedContent.Home();
 			var locationContainer = await viewedContent.Location();
 
-			var locationLine = await MessageFormatting.FormatObjectWithDbrefMString(locationContainer.Object(), flagView);
+			var locationLine = await Header(locationContainer.WithExitOption());
 
 			// An unlinked exit has no destination to report; PennMUSH shows #-1 for NOTHING.
 			if (homeContainer is AnySharpContainer home)
 			{
-				var homeLine = await MessageFormatting.FormatObjectWithDbrefMString(home.Object(), flagView);
+				var homeLine = await Header(home.WithExitOption());
 				await NotifyService.Notify(enactor, Format($"Home: {homeLine}"), enactor);
 			}
 			else
@@ -448,8 +454,11 @@ public partial class Commands
 	private async ValueTask NotifyOwnedByAsync(AnySharpObject enactor, AnySharpObject executor, AnySharpObject viewing)
 	{
 		var owner = await viewing.Object().Owner.WithCancellation(CancellationToken.None);
-		var viewedLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, viewing, ConnectionService);
-		var ownerLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, new AnySharpObject(owner), ConnectionService);
+		var names = new NameFormatter(AttributeService, Configuration);
+		var viewedLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, viewing, ConnectionService,
+			await names.UnparseNameAsync(viewing, MonikerPlace.Unparse));
+		var ownerLine = await MessageFormatting.UnparseObjectMStringAsync(PermissionService, executor, new AnySharpObject(owner), ConnectionService,
+			await names.UnparseNameAsync(new AnySharpObject(owner), MonikerPlace.Unparse));
 
 		await NotifyService.Notify(enactor, Format($"{viewedLine} is owned by {ownerLine}"), enactor);
 	}

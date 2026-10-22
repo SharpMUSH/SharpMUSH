@@ -22,7 +22,7 @@ With no args, SOCKSET shows the current value of the socket options. With an `<o
 @sockset is a similar in-game command, but can specify which descriptor to change options for, and can set multiple options at once. Only Wizards can change the options for other players' descriptors. `<descriptor>` defaults to your least-idle descriptor, when used by a player; for non-players, it has no default.
 
 - [@sockset display options]: colour, links, pictures, terminal, character set and screen size
-- [@sockset connection options]: prefixes and prompts
+- [@sockset connection options]: prefixes, prompts, Pueblo and telnet
 
 ## Display options
 
@@ -43,6 +43,10 @@ With no args, SOCKSET shows the current value of the socket options. With an `<o
 - outputprefix: Same as OUTPUTPREFIX
 - outputsuffix: Same as OUTPUTSUFFIX
 - prompt_newlines: Set whether a newline is shown after prompts from @prompt, same as PROMPT_NEWLINES
+- pueblo: Any value turns Pueblo mode on, and an empty value turns it off. See [pueblo]
+- telnet: Yes or no. When it is no, a prompt from @prompt ends with a newline instead of a telnet GA
+
+Changing pueblo or telnet may stop your client from reading or showing output correctly; only change them if you know what you're doing.
 
 ::: seealso
 - [socket commands]

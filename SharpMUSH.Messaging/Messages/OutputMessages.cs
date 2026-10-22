@@ -156,3 +156,17 @@ public record ProbeTerminalMessage(long Handle) : IHandleMessage;
 /// <see cref="ConnectionTrafficReportMessage"/> carrying the same <paramref name="RequestId"/>.
 /// </summary>
 public record ConnectionTrafficRequestMessage(Guid RequestId);
+
+/// <summary>
+/// Carries <c>SOCKSET pueblo</c> to the socket owner. Turned on, a connection not already writing a markup dialect is
+/// sent the Pueblo start sequence and rendered as Pueblo from then on, as PennMUSH's <c>sockset()</c> does; turned
+/// off, a Pueblo connection goes back to ANSI. An MXP connection keeps MXP either way, the rule
+/// <c>OutputFormatNegotiation.Negotiate</c> applies to the handshake.
+/// </summary>
+public record UpdatePuebloModeMessage(long Handle, bool Enabled) : IHandleMessage;
+
+/// <summary>
+/// Carries <c>SOCKSET telnet</c> to the socket owner. Turned off, a prompt ends as a line does instead of with
+/// <c>IAC GA</c> or <c>IAC EOR</c>, which is how PennMUSH writes to a connection without <c>CONN_TELNET</c>.
+/// </summary>
+public record UpdateTelnetModeMessage(long Handle, bool Enabled) : IHandleMessage;
