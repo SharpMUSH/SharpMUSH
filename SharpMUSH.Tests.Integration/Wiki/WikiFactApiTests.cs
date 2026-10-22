@@ -73,8 +73,10 @@ public class WikiFactApiTests(ServerWebAppFactory factory)
 		await Assert.That(missing.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 		// A body without a list is not a request to clear them; an empty list is.
 		foreach (var body in new[] { "{}", """{"facts":null}""", """{"facts":[null]}""" })
-			await Assert.That((await http.PutAsync(url, new StringContent(body, System.Text.Encoding.UTF8, "application/json"))).StatusCode)
-				.IsEqualTo(HttpStatusCode.BadRequest);
+		{
+			using var content = new StringContent(body, System.Text.Encoding.UTF8, "application/json");
+			await Assert.That((await http.PutAsync(url, content)).StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+		}
 
 		var fetched = (await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/{Uri.EscapeDataString(spell.Slug)}"))!;
 		await Assert.That(fetched.Facts.Select(f => (f.Property, f.Value))).IsEquivalentTo([("pf2e:level", "2")]);
