@@ -1,6 +1,6 @@
 format: "1.10"
 package: onboarding
-version: 1.0.0
+version: 1.0.1
 authors: [SharpMUSH]
 description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
@@ -237,10 +237,10 @@ objects:
         value: |-
           @assert hastype(%<player>,player); @assert u(%!/FUN`LOGIN`SHOWS,%<player>); &ONBOARDING`SEEN %<player>=firstof(get(%<player>/ONBOARDING`SEEN),secs()); @pemit/port %<descriptor>=u(%!/FUN`DISPLAY`SCREEN,%<player>,1)
         flags: [cmdsyntax]
-      # %0 a player: whether the checklist shows as they log in.
+      # %0 a player: whether the checklist shows as they log in. Never to God, who cannot hide it.
       FUN`LOGIN`SHOWS:
         value: |-
-          cand(not(get(%0/ONBOARDING`HIDE)),switch(v(DATA`CONFIG`LOGIN),open,words(u(%!/FUN`STEP`OPEN,%0)),first,not(hasattr(%0,ONBOARDING`SEEN)),0))
+          cand(not(strmatch(num(%0),#1)),not(get(%0/ONBOARDING`HIDE)),switch(v(DATA`CONFIG`LOGIN),open,words(u(%!/FUN`STEP`OPEN,%0)),first,not(hasattr(%0,ONBOARDING`SEEN)),0))
         flags: [funsyntax]
 
       # ---- steps ----------------------------------------------------------------
