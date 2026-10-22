@@ -10,6 +10,14 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-anime-kemono-administrator-joining", "kemono", "Anime", "images/sharpie/sharpie-anime-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-anime-kemono-player-world", "kemono", "Anime", "images/sharpie/sharpie-anime-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-anime-kemono-player-sign-in", "kemono", "Anime", "images/sharpie/sharpie-anime-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-anime-chibi-player-continue", "chibi", "Anime", "images/sharpie/sharpie-anime-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-detective-kemono-administrator-walkthrough", "kemono", "Detective", "images/sharpie/sharpie-detective-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-detective-kemono-administrator-rules", "kemono", "Detective", "images/sharpie/sharpie-detective-kemono-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-detective-kemono-administrator-joining", "kemono", "Detective", "images/sharpie/sharpie-detective-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-detective-kemono-player-continue", "kemono", "Detective", "images/sharpie/sharpie-detective-kemono-player-continue.png", 1254, 1254, "player-continue"),
 		new SharpieArt("sharpie-anime-chibi-administrator-capabilities", "chibi", "Anime", "images/sharpie/sharpie-anime-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-anime-chibi-administrator-rules", "chibi", "Anime", "images/sharpie/sharpie-anime-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
 		new SharpieArt("sharpie-anime-chibi-player-useful-action", "chibi", "Anime", "images/sharpie/sharpie-anime-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
