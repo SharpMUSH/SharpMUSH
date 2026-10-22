@@ -10,6 +10,18 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-walkthrough", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-rules", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-urban-fantasy-chibi-player-channels", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-invite", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-mythology-chibi-administrator-rules", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-mythology-chibi-player-continue", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-mythology-chibi-player-useful-action", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-mythology-chibi-player-world", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-mythology-chibi-player-character", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-mythology-chibi-player-sign-in", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-mythology-chibi-shared-completion", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-mythology-chibi-shared-welcome", "chibi", "Mythology", "images/sharpie/sharpie-mythology-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-walkthrough", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-epic-fantasy-kemono-administrator-identity", "kemono", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
 		new SharpieArt("sharpie-urban-fantasy-chibi-administrator-capabilities", "chibi", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
