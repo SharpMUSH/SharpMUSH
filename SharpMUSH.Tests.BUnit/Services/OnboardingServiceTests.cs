@@ -79,6 +79,40 @@ public class OnboardingServiceTests
 	}
 
 	[Test]
+	[Arguments(HttpStatusCode.OK)]
+	[Arguments(HttpStatusCode.InternalServerError)]
+	public async Task AdministratorChecklistTicksWhatTheServerDetects(HttpStatusCode detection)
+	{
+		var writes = 0;
+		using var handler = new Handler(async request =>
+		{
+			if (request.RequestUri!.AbsolutePath == "/api/onboarding/administrator/detected")
+				return detection == HttpStatusCode.OK
+					? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { "channels", "backups", "made-up" }) }
+					: new HttpResponseMessage(detection);
+			if (request.Method == HttpMethod.Get) return Reply(new() { Revision = 2, CompletedStepIds = ["identity"], SkippedStepIds = ["backups"] });
+			writes++;
+			var save = (await request.Content!.ReadFromJsonAsync<SaveOnboardingRequest>())!;
+			return Reply(save.Progress with { Revision = save.ExpectedRevision + 1 });
+		});
+		var factory = new Factory(handler);
+		using var guide = new OnboardingService(factory, Auth("A"), new Storage(), new Info(factory), SharpMUSH.Tests.BUnit.Resources.PortalLocalizer.Create());
+		await guide.LoadAsync(GuideJourney.Administrator);
+		await Assert.That(guide.Error).IsNull();
+		if (detection == HttpStatusCode.OK)
+		{
+			await Assert.That(writes).IsEqualTo(1);
+			await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "identity", "channels", "backups" });
+			await Assert.That(guide.Progress.SkippedStepIds).IsEmpty();
+		}
+		else
+		{
+			await Assert.That(writes).IsEqualTo(0);
+			await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "identity" });
+		}
+	}
+
+	[Test]
 	public async Task ConflictRequiresReload()
 	{
 		using var handler = new Handler(request => Task.FromResult(request.Method == HttpMethod.Get
