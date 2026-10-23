@@ -178,7 +178,7 @@ public static class WikiFactFacets
 	/// <summary>An order key written as a value of <paramref name="type"/> is (<see cref="WikiFactQueries.OrderKey"/>).</summary>
 	private static string Write(SemanticType type, long key) => type switch
 	{
-		SemanticType.Decimal => WikiFactQueries.DecimalOf(key).ToString("R", CultureInfo.InvariantCulture),
+		SemanticType.Decimal => WikiFactQueries.WriteDecimal(WikiFactQueries.DecimalOf(key)),
 		SemanticType.Date => DateOnly.FromDayNumber((int)key).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 		_ => key.ToString(CultureInfo.InvariantCulture)
 	};

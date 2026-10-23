@@ -166,4 +166,20 @@ public class WikiFactValueTypesTests : LightningDatabaseFixture
 		await Assert.That(keys.Select(WikiFactQueries.DecimalOf)).IsEquivalentTo(numbers, TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(WikiFactQueries.DecimalKey(-0.0)).IsEqualTo(WikiFactQueries.DecimalKey(0.0));
 	}
+
+	[Test]
+	[Arguments(0.00001, "0.00001")]
+	[Arguments(-1.25e-7, "-0.000000125")]
+	[Arguments(1e15, "1000000000000000")]
+	[Arguments(1.5, "1.5")]
+	public async Task ADecimalIsWrittenWithoutAnExponent(double number, string written)
+		=> await Assert.That(WikiFactQueries.WriteDecimal(number)).IsEqualTo(written);
+
+	[Test]
+	public async Task EveryDecimalIsWrittenAsAValueThatReadsBackToIt()
+	{
+		double[] numbers = [double.MinValue, -1e300, -1e-5, -double.Epsilon, 0, double.Epsilon, 1.234e-20, 0.1, 1e21, double.MaxValue];
+		await Assert.That(numbers.Select(n => WikiFactQueries.Decimal(WikiFactQueries.WriteDecimal(n)))).IsEquivalentTo(
+			numbers.Select(n => (double?)n), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
 }

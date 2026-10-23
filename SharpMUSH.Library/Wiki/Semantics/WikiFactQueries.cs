@@ -132,6 +132,27 @@ public static class WikiFactQueries
 			? number + 0.0
 			: null;
 
+	/// <summary>
+	/// <paramref name="number"/> written the way <see cref="Decimal"/> reads it back to the same number: the shortest
+	/// round-trip digits, with any exponent spelled out, so <c>1E-05</c> is <c>0.00001</c>.
+	/// </summary>
+	public static string WriteDecimal(double number)
+	{
+		var written = number.ToString("R", CultureInfo.InvariantCulture);
+		var at = written.IndexOf('E');
+		if (at < 0) return written;
+		var exponent = int.Parse(written[(at + 1)..], CultureInfo.InvariantCulture);
+		var sign = written[0] == '-' ? "-" : string.Empty;
+		var mantissa = written[sign.Length..at];
+		var digits = mantissa.Replace(".", string.Empty);
+		var whole = (mantissa.IndexOf('.') is var point and >= 0 ? point : mantissa.Length) + exponent;
+		return sign + (whole <= 0
+			? "0." + new string('0', -whole) + digits
+			: whole >= digits.Length
+				? digits + new string('0', whole - digits.Length)
+				: digits[..whole] + "." + digits[whole..]);
+	}
+
 	/// <summary>A calendar day written <c>yyyy-MM-dd</c>.</summary>
 	public static DateOnly? Date(string value)
 		=> DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
