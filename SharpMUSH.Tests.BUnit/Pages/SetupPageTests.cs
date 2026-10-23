@@ -224,6 +224,7 @@ file sealed class SetupApiHandler(
 	{
 		recommended,
 		id,
+		title = $"Title of {id}",
 		description = $"{id} manifest description",
 		installed = _installed.Contains(id),
 		requires,
@@ -407,7 +408,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
-		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("AdmSetupPkgHttpHandlerTitle, AdmSetupPkgProfileHandlerTitle");
+		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("Title of http-handler, Title of profile-handler");
 		await Assert.That(cut.FindAll("#setup-handler-event input[value='keep']")).IsEmpty();
 		await Assert.That(cut.Find("#setup-handler-event input[value='create']").HasAttribute("checked")).IsTrue();
 		await cut.Find("button.setup-save-handlers").ClickAsync();
@@ -595,6 +596,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		cut.WaitForAssertion(() => cut.Find("#setup-pkg-room-contents"));
 
 		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader")).IsEmpty();
+		await Assert.That(cut.FindAll(".setup-app-title").Select(title => title.TextContent)).Contains("Title of room-contents");
 		await Assert.That(cut.Find(".setup-pkg-summary").TextContent).Contains("AdmSetupPkgSummary");
 
 		await cut.Find("button.setup-pkg-all").ClickAsync();
@@ -602,6 +604,10 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		await cut.Find("button.setup-pkg-all").ClickAsync();
 		await cut.Find("#setup-pkg-search").InputAsync("WIKI");
+		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("#setup-pkg-scene")).IsEmpty();
+
+		await cut.Find("#setup-pkg-search").InputAsync("title of wiki");
 		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("#setup-pkg-scene")).IsEmpty();
 

@@ -1584,6 +1584,9 @@
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Description</value>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Title</value>
+  </data>
   <data name="PkgExportYaml" xml:space="preserve">
     <value>Export package.yaml</value>
   </data>
@@ -4988,14 +4991,8 @@
   <data name="AdmSetupStartFresh" xml:space="preserve">
     <value>Start a new game</value>
   </data>
-  <data name="AdmSetupAppScenesTitle" xml:space="preserve">
-    <value>Scene System</value>
-  </data>
   <data name="AdmSetupAppScenesDesc" xml:space="preserve">
     <value>Records poses, says and emits into scene logs and adds the +scene commands. The portal gets a scene archive, live scenes players can watch and join from the browser, and the scene panels on the home page and character profiles.</value>
-  </data>
-  <data name="AdmSetupAppWikiReaderTitle" xml:space="preserve">
-    <value>In-game wiki reader</value>
   </data>
   <data name="AdmSetupAppWikiReaderDesc" xml:space="preserve">
     <value>Adds a +wiki command, on an object in the master room, so players can list and read the portal's wiki articles from their MU* client. The wiki itself is part of the portal either way.</value>
@@ -5144,74 +5141,38 @@
   <data name="AdmSetupPkgNeedsEvent" xml:space="preserve">
     <value>Needs an event handler: set one in the previous step.</value>
   </data>
-  <data name="AdmSetupPkgHttpHandlerTitle" xml:space="preserve">
-    <value>HTTP routes</value>
-  </data>
   <data name="AdmSetupPkgHttpHandlerDesc" xml:space="preserve">
     <value>The GET, POST and other verb routers on the HTTP handler, which the packages below and your own softcode add /http/ routes to.</value>
-  </data>
-  <data name="AdmSetupPkgProfileHandlerTitle" xml:space="preserve">
-    <value>Character directory</value>
   </data>
   <data name="AdmSetupPkgProfileHandlerDesc" xml:space="preserve">
     <value>The portal's character list, who is online, and character profiles.</value>
   </data>
-  <data name="AdmSetupPkgRoomContentsTitle" xml:space="preserve">
-    <value>Room feed</value>
-  </data>
   <data name="AdmSetupPkgRoomContentsDesc" xml:space="preserve">
     <value>Tells the portal's Play page the room a player is in, who and what is there, and the exits.</value>
-  </data>
-  <data name="AdmSetupPkgCommFeedTitle" xml:space="preserve">
-    <value>Channel and page feed</value>
   </data>
   <data name="AdmSetupPkgCommFeedDesc" xml:space="preserve">
     <value>Gives the Play page's sidebar a player's channels, and each channel line and page to exactly the players who received it.</value>
   </data>
-  <data name="AdmSetupPkgPlusHelpTitle" xml:space="preserve">
-    <value>+help</value>
-  </data>
   <data name="AdmSetupPkgPlusHelpDesc" xml:space="preserve">
     <value>The game's own help, gathering the topics installed packages carry and keeping the ones you write.</value>
-  </data>
-  <data name="AdmSetupPkgPlusConfigTitle" xml:space="preserve">
-    <value>+config</value>
   </data>
   <data name="AdmSetupPkgPlusConfigDesc" xml:space="preserve">
     <value>One command for the settings your softcode systems keep for themselves, each checked against what the system says it accepts.</value>
   </data>
-  <data name="AdmSetupPkgJobsTitle" xml:space="preserve">
-    <value>Jobs</value>
-  </data>
   <data name="AdmSetupPkgJobsDesc" xml:space="preserve">
     <value>A request queue for players and staff: +request and +job, the commands AnomalyJobs players know, with buckets worked through roles, due dates, and hooks on each bucket. Needs the HTTP handler.</value>
-  </data>
-  <data name="AdmSetupPkgJobsAppTitle" xml:space="preserve">
-    <value>Jobs in the portal</value>
   </data>
   <data name="AdmSetupPkgJobsAppDesc" xml:space="preserve">
     <value>A Jobs page in the portal where players file and follow requests and staff answer, claim and close them.</value>
   </data>
-  <data name="AdmSetupPkgChargenTitle" xml:space="preserve">
-    <value>Character applications</value>
-  </data>
   <data name="AdmSetupPkgChargenDesc" xml:space="preserve">
     <value>+app: a character's application stays a draft until it is submitted, staff comment on each section and return or approve it, and applicants see their place in the queue. An optional cap on characters keeps a waitlist. Needs the HTTP handler.</value>
-  </data>
-  <data name="AdmSetupPkgChargenAppTitle" xml:space="preserve">
-    <value>Character applications in the portal</value>
   </data>
   <data name="AdmSetupPkgChargenAppDesc" xml:space="preserve">
     <value>An Application page in the portal where players fill in and submit their application, and reviewers read, compare, comment on and decide them.</value>
   </data>
-  <data name="AdmSetupPkgBBoardsTitle" xml:space="preserve">
-    <value>Bulletin boards</value>
-  </data>
   <data name="AdmSetupPkgBBoardsDesc" xml:space="preserve">
     <value>Boards that nest, with posts, comments and replies, read with +bbread and written with +bbpost, as Myrddin's boards are.</value>
-  </data>
-  <data name="AdmSetupPkgBBoardsAppTitle" xml:space="preserve">
-    <value>Boards in the portal</value>
   </data>
   <data name="AdmSetupPkgBBoardsAppDesc" xml:space="preserve">
     <value>A Boards page in the portal where players read boards, follow conversations, and post, comment and reply.</value>
@@ -6694,9 +6655,6 @@
   </data>
   <data name="AdmMsgQuitDesc" xml:space="preserve">
     <value>Shown after "GOODBYE." on QUIT and LOGOUT.</value>
-  </data>
-  <data name="AdmSetupPkgMessagesTitle" xml:space="preserve">
-    <value>Messages object</value>
   </data>
   <data name="AdmSetupPkgMessagesDesc" xml:space="preserve">
     <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: health
-version: 1.0.4
+title: "Game health"
+version: 1.0.5
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT

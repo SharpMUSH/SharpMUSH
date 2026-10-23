@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: jobs-app
-version: 1.0.3
+title: "Jobs in the portal"
+version: 1.0.4
 kind: application
 authors: [SharpMUSH]
 description: "Registers the job queue (the jobs package) as a portal page at /apps/jobs: the queue, each job's conversation with its staff buttons, and a new-request form."

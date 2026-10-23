@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: scene-safety
-version: 1.0.4
+title: "Scene safety tools"
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT

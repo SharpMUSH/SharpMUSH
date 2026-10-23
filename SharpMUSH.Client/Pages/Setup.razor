@@ -743,25 +743,7 @@
         ? PackageTitle(package)
         : id;
 
-    private string PackageTitle(BundledPackageState package) => package.Id switch
-    {
-        "http-handler" => Loc["AdmSetupPkgHttpHandlerTitle"],
-        "profile-handler" => Loc["AdmSetupPkgProfileHandlerTitle"],
-        "room-contents" => Loc["AdmSetupPkgRoomContentsTitle"],
-        "comm-feed" => Loc["AdmSetupPkgCommFeedTitle"],
-        "plus-help" => Loc["AdmSetupPkgPlusHelpTitle"],
-        "plus-config" => Loc["AdmSetupPkgPlusConfigTitle"],
-        "scene" => Loc["AdmSetupAppScenesTitle"],
-        "wiki-reader" => Loc["AdmSetupAppWikiReaderTitle"],
-        "jobs" => Loc["AdmSetupPkgJobsTitle"],
-        "jobs-app" => Loc["AdmSetupPkgJobsAppTitle"],
-        "chargen" => Loc["AdmSetupPkgChargenTitle"],
-        "chargen-app" => Loc["AdmSetupPkgChargenAppTitle"],
-        "bboards" => Loc["AdmSetupPkgBBoardsTitle"],
-        "bboards-app" => Loc["AdmSetupPkgBBoardsAppTitle"],
-        "messages" => Loc["AdmSetupPkgMessagesTitle"],
-        _ => package.Id,
-    };
+    private static string PackageTitle(BundledPackageState package) => package.Title;
 
     private string PackageDescription(BundledPackageState package) => package.Id switch
     {

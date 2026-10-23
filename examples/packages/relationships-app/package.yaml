@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: relationships-app
-version: 1.0.1
+title: "Relationships profile widget"
+version: 1.0.2
 kind: application
 authors: [SharpMUSH]
 description: "The relationships package as a profile widget: a character's confirmed relationships drawn as a web, with the same list under it."

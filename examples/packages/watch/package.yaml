@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: watch
-version: 1.1.0
+title: "Watch list"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT

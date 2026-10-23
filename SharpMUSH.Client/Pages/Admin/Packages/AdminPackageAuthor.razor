@@ -124,6 +124,10 @@
                         <MudTextField @bind-Value="_packageId" Label="@Loc["PkgPackageIdLabel"]"
                                       Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudItem>
+                    <MudItem xs="12" md="4">
+                        <MudTextField @bind-Value="_title" Label="@Loc["PkgTitleLabel"]" Required="true"
+                                      Variant="Variant.Outlined" Margin="Margin.Dense" Class="pkg-title" />
+                    </MudItem>
                     <MudItem xs="6" md="2">
                         <MudTextField @bind-Value="_version" Label="@Loc["PkgVersionLabel"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
                     </MudItem>
@@ -184,6 +188,7 @@
 
     private string _packageId = "";
     private string _version = "1.0.0";
+    private string _title = "";
     private string _description = "";
     private string _license = "";
     private IReadOnlyList<string> _authors = [];
@@ -290,7 +295,7 @@
         try
         {
             switch (await Packages.AuthorExportAsync(new PackageAuthoringRequest(
-                _packageId.Trim(), _version.Trim(), _description.Trim(),
+                _packageId.Trim(), _title.Trim(), _version.Trim(), _description.Trim(),
                 string.IsNullOrWhiteSpace(_license) ? null : _license.Trim(),
                 [.. _authors],
                 selections, wellKnown, configure)))

@@ -180,7 +180,7 @@ public partial class Commands
 		if (!args.TryGetValue("1", out var idArg) || string.IsNullOrWhiteSpace(idArg.Message.ToPlainText()))
 		{
 			await NotifyService.Notify(executor,
-				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>]]  (or @package/scan <objects>)",
+				"PACKAGE: Usage: @package <objects>=<package-id>[,<version>[,<description>[,<title>]]]  (or @package/scan <objects>)",
 				executor);
 			return new CallState(string.Empty);
 		}
@@ -208,6 +208,14 @@ public partial class Commands
 		if (string.IsNullOrEmpty(description))
 		{
 			description = $"Exported from {executor.Object().Name} via @package.";
+		}
+
+		var title = args.TryGetValue("4", out var titleArg)
+			? titleArg.Message.ToPlainText().Trim()
+			: string.Empty;
+		if (string.IsNullOrEmpty(title))
+		{
+			title = scanResult.Objects[0].Name;
 		}
 
 		// Give every object a unique manifest ref derived from its suggested slug, and
@@ -238,7 +246,7 @@ public partial class Commands
 		}
 
 		var reply = await authoring.ExportAsync(new PackageAuthoringRequest(
-			packageId, version, description, null, [executor.Object().Name],
+			packageId, title, version, description, null, [executor.Object().Name],
 			selections,
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>())) switch

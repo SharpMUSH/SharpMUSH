@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: plus-config
-version: 1.1.0
+title: "+config"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT

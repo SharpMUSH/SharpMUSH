@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: chargen-app
-version: 2.0.1
+title: "Character applications in the portal"
+version: 2.0.2
 kind: application
 authors: [SharpMUSH]
 description: "Registers character applications (the chargen package) as a portal page at /apps/chargen: the applicant's own application as a form, and for reviewers the queue, the waitlist and each application with its comments and what changed."

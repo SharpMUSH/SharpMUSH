@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: scene-availability
-version: 2.0.0
+title: "Availability in scenes"
+version: 2.0.1
 authors: [SharpMUSH]
 description: "Availability in scenes: +avail/scene finds a time a scene's cast is all free, a scheduled scene's card shows who of its cast is free at its time, and +avail/find offers to book the first time as a scene."
 license: MIT

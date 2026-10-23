@@ -77,6 +77,11 @@ public partial class PackageAuthoringService(
 	public async Task<Result<string>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default)
 	{
+		if (string.IsNullOrWhiteSpace(request.Title))
+		{
+			return new Error<string>("Give the package a title: the name it is listed under, such as \"Bulletin boards\".");
+		}
+
 		var selections = new List<(AuthoringObjectSelection Selection, AuthoringObject Object)>();
 		var tokenByNumber = new Dictionary<int, string>();
 		foreach (var selection in request.Objects)
@@ -205,7 +210,10 @@ public partial class PackageAuthoringService(
 			usedConfigure.Values
 				.OrderBy(c => c.Key, StringComparer.Ordinal)
 				.ToDictionary(c => c.Key, c => new PackageConfigureSpec(c.Key, c.Label), StringComparer.Ordinal),
-			objects);
+			objects)
+		{
+			Title = request.Title.Trim()
+		};
 
 		// The writer covers every field the reader reads, but the manifest is also built from live
 		// game state, so parse it back: an object whose name or attribute value cannot survive the

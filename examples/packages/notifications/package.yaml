@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: notifications
-version: 1.1.1
+title: "Push notifications"
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT

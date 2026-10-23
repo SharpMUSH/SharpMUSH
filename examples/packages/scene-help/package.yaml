@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: scene-help
-version: 1.0.0
+title: "Scene System: +help topics"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the scene topics into +help: registers the scene package's help with the +help librarian, and +scene/help points at +help scene."
 license: MIT

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: info
-version: 1.0.2
+title: "Info files and journals"
+version: 1.0.3
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT

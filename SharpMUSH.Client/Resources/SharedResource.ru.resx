@@ -2289,6 +2289,10 @@
     <value>Описание</value>
     <comment>MT — description → описание per locale sheet.</comment>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Название</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Подробности</value>
     <comment>MT</comment>

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: highlights-app
-version: 1.0.1
+title: "Highlights in the portal"
+version: 1.0.2
 kind: application
 authors: [SharpMUSH]
 description: "Registers the highlights (the highlights package) as a portal page at /apps/highlights: the poses players favourited most, each credited to its writer with a link to its scene, the viewer's own favourites at /apps/highlights/mine, and a button under each pose to favourite it or take it back."

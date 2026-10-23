@@ -72,6 +72,7 @@ public record SetHandlerRequest(string Mode, int? Dbref = null);
 /// <summary>A package the server ships, as the setup wizard offers it.</summary>
 /// <param name="Id">The package id.</param>
 /// <param name="Description">The manifest's description.</param>
+/// <param name="Title">The manifest's <c>title:</c>, the name the wizard lists it under.</param>
 /// <param name="Installed">Whether the game has it.</param>
 /// <param name="Requires">The <see cref="HandlerKinds"/> value of the handler it attaches to, or null.</param>
 /// <param name="Available">
@@ -83,7 +84,7 @@ public record SetHandlerRequest(string Mode, int? Dbref = null);
 /// without it — after a PennMUSH import, which removes the handlers it was built on — is offered it ticked.
 /// </param>
 /// <param name="Category">The manifest's <c>category:</c>, which the wizard groups packages by, or null for none.</param>
-public record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
+public record BundledPackageState(string Id, string Title, string Description, bool Installed, string? Requires, bool Available,
 	IReadOnlyList<string> DependsOn, bool Recommended = false, string? Category = null);
 
 /// <summary>The first-run wizard's state after the game has been claimed.</summary>

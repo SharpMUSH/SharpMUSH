@@ -2289,6 +2289,10 @@
     <value>Leírás</value>
     <comment>MT</comment>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Cím</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Részletek</value>
     <comment>MT</comment>

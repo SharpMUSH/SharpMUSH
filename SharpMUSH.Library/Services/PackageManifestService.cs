@@ -24,7 +24,7 @@ public partial class PackageManifestService : IPackageManifestService
 
 	private static readonly IReadOnlySet<string> KnownManifestKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
-		"format", "package", "version", "authors", "description", "license", "homepage", "keywords",
+		"format", "package", "title", "version", "authors", "description", "license", "homepage", "keywords",
 		"category", "wiki_collection_name", "wiki_landing_page",
 		"convention_prefix", "requires_server", "verified_server", "maximum_server", "replaces", "conflicts", "depends", "configure", "objects",
 		"kind", "application", "binaries", "categories", "permissions", "roles", "settings", "locale", "wiki", "plugins",
@@ -64,6 +64,7 @@ public partial class PackageManifestService : IPackageManifestService
 	private const int MaxPackageIdLength = 64;
 	private const int MaxKeywords = 5;
 	private const int MaxCategoryLength = 40;
+	private const int MaxTitleLength = 60;
 
 	[GeneratedRegex("^[a-z][a-z0-9-]*$")]
 	private static partial Regex PackageSlugRegex();
@@ -123,6 +124,7 @@ public partial class PackageManifestService : IPackageManifestService
 				$"'{name}' is not a valid package id (lowercase letters, digits, hyphens; must start with a letter; max {MaxPackageIdLength} chars)."));
 		}
 
+		var title = ReadTitle(doc, format, issues);
 		var version = ReadVersion(doc, issues);
 		var authors = ReadStringList(doc, "authors", issues);
 		var description = OptionalString(doc, "description", issues) ?? "";
@@ -239,6 +241,7 @@ public partial class PackageManifestService : IPackageManifestService
 			plugins.Count == 0 ? null : plugins,
 			category)
 		{
+			Title = title,
 			WikiCollectionName = wikiCollectionName,
 			WikiLandingPage = wikiLandingPage
 		};
@@ -272,6 +275,45 @@ public partial class PackageManifestService : IPackageManifestService
 		}
 
 		return plugins;
+	}
+
+	/// <summary>The first format that requires <c>title:</c>; below it the key is ignored.</summary>
+	public static PackageFormatVersion TitleFormat { get; } = new(1, 16);
+
+	/// <summary>
+	/// Reads <c>title:</c> (format 1.16): the name people choose the package by, such as <c>Bulletin boards</c> for
+	/// <c>bboards</c>. Required from that format, so every listing can show it; spaces are collapsed.
+	/// </summary>
+	private static string? ReadTitle(
+		Dictionary<string, object?> doc, PackageFormatVersion format, List<PackageManifestIssue> issues)
+	{
+		if (format.Major == TitleFormat.Major && format.Minor < TitleFormat.Minor)
+		{
+			if (doc.ContainsKey("title"))
+			{
+				issues.Add(PackageManifestIssue.Warning("title",
+					$"'title' needs format {TitleFormat} or later and is ignored; set format: \"{TitleFormat}\"."));
+			}
+
+			return null;
+		}
+
+		var title = string.Join(' ', (OptionalString(doc, "title", issues) ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+		if (title.Length == 0)
+		{
+			issues.Add(PackageManifestIssue.Error("title",
+				$"'title' is required from format {TitleFormat}: the name the package is listed under, such as \"Bulletin boards\"."));
+			return null;
+		}
+
+		if (title.Length > MaxTitleLength)
+		{
+			issues.Add(PackageManifestIssue.Error("title",
+				$"'title' is {title.Length} characters long; at most {MaxTitleLength} are allowed."));
+			return null;
+		}
+
+		return title;
 	}
 
 	/// <summary>The first format in which <c>category:</c> means something; below it the key is ignored.</summary>

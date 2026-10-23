@@ -77,6 +77,7 @@ public static class PackageManifestWriter
 		var format = manifest.Format.ToString();
 		yaml.Append("format: ").AppendLine(format.EndsWith('0') && format.Contains('.') ? $"\"{format}\"" : format);
 		yaml.Append("package: ").AppendLine(Scalar(manifest.Name));
+		AppendOptional(yaml, "title", manifest.Title);
 		yaml.Append("version: ").AppendLine(Scalar(manifest.Version.ToString()));
 
 		if (manifest.Kind != PackageKind.Softcode)
