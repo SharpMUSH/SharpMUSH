@@ -3,11 +3,9 @@
 	padding: 0 14px 0 12px;
 	border: 0;
 	border-radius: 18px;
-	background: var(--glass-bg);
-	backdrop-filter: var(--glass-filter);
-	-webkit-backdrop-filter: var(--glass-filter);
-	box-shadow: var(--glass-edge);
-	color: var(--text-over-image);
+	background: var(--surface-2);
+	box-shadow: inset 0 0 0 1px var(--border);
+	color: var(--text);
 	font: inherit;
 	font-size: 13px;
 	font-weight: 600;
@@ -19,6 +17,16 @@
 	text-decoration: none;
 	cursor: pointer;
 	transition: filter var(--motion-pop);
+}
+
+/* Glass only over a picture (D1 §4.3): a banner, the image viewer, the character sheet's portrait. On a
+   plain page the glass is a grey wash under light text, which reads as disabled in a light theme. */
+:is(.kit-banner, .kit-banner-strip, .kit-viewer, .sheet-hero) .kit-capsule:not(.kit-capsule--primary) {
+	background: var(--glass-bg);
+	backdrop-filter: var(--glass-filter);
+	-webkit-backdrop-filter: var(--glass-filter);
+	box-shadow: var(--glass-edge);
+	color: var(--text-over-image);
 }
 
 .kit-capsule:hover {

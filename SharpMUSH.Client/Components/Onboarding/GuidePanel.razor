@@ -61,7 +61,7 @@
         @* Words, not icons: an arrow, a skip glyph and a tick each read as something else to someone new. *@
         <button type="button" class="guide-back" disabled="@(!CanGoBack)" @onclick="OnBack"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" Size="Size.Small" />@Loc["GuideBack"]</button>
         <button type="button" class="guide-skip" @onclick="OnSkip">@Loc["GuideSkip"]</button>
-        <button type="button" class="guide-action" @onclick="OnComplete"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" />@CompleteLabel</button>
+        <button type="button" class="guide-action@(LessonHasAction ? " guide-action--quiet" : "")" @onclick="OnComplete"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" />@CompleteLabel</button>
     </div>
     <details class="guide-reference">
         <summary>@Loc["GuideReference"]</summary>
@@ -96,5 +96,8 @@
     public ValueTask FocusHeadingAsync(bool preventScroll = true) => _heading.FocusAsync(preventScroll: preventScroll);
     private static string CommandKey(string command) => command == "help say" ? "help_say" : command.Split(' ')[0].Replace("@", "").Replace("/", "_");
     private bool _practiced;
+    /// <summary>A lesson with its own action (Explore the game, Insert look) leads with it, so the footer's
+    /// "I've got this" steps back to the plain style rather than offering a second way on.</summary>
+    private bool LessonHasAction => Lesson.ActionUrl is not null || (Lesson.Id == "useful-action" && OnInsert.HasDelegate);
     private string CompleteLabel => Lesson.Id == "useful-action" && !_practiced ? Loc["GuideKnown"] : Loc["GuideUnderstood"];
 }

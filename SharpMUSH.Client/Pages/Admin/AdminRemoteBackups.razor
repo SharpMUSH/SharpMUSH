@@ -36,12 +36,12 @@
         <MudPaper Class="pa-4">
             <MudStack Spacing="3">
                 <MudSwitch T="bool" @bind-Value="_enabled" Label="@Loc["AdmRemoteBackupEnabled"]" />
-                <MudTextField T="string" @bind-Value="_repository" Label="@Loc["AdmRemoteBackupRepository"]" HelperText="@Loc["AdmRemoteBackupRepositoryHelp"]" />
-                <MudNumericField T="int" @bind-Value="_hours" Min="1" Max="8760" Label="@Loc["AdmRemoteBackupHours"]" />
-                <MudTextField T="string" @bind-Value="_password" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupPassword"]" HelperText="@(status.PasswordSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
-                <MudTextField T="string" @bind-Value="_accountId" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountId"]" HelperText="@(status.AccountIdSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="_repository" Label="@Loc["AdmRemoteBackupRepository"]" HelperText="@Loc["AdmRemoteBackupRepositoryHelp"]" />
+                <MudNumericField Variant="Variant.Outlined" T="int" @bind-Value="_hours" Min="1" Max="8760" Label="@Loc["AdmRemoteBackupHours"]" />
+                <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="_password" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupPassword"]" HelperText="@(status.PasswordSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="_accountId" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountId"]" HelperText="@(status.AccountIdSet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
                 <MudCheckBox T="bool" @bind-Value="_clearAccountId" Label="@Loc["AdmRemoteBackupClearAccountId"]" />
-                <MudTextField T="string" @bind-Value="_accountKey" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountKey"]" HelperText="@(status.AccountKeySet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
+                <MudTextField Variant="Variant.Outlined" T="string" @bind-Value="_accountKey" InputType="InputType.Password" Label="@Loc["AdmRemoteBackupAccountKey"]" HelperText="@(status.AccountKeySet ? Loc["AdmRemoteBackupSecretKept"] : Loc["AdmRemoteBackupSecretMissing"])" autocomplete="off" />
                 <MudCheckBox T="bool" @bind-Value="_clearAccountKey" Label="@Loc["AdmRemoteBackupClearAccountKey"]" />
                 <MudStack Row="true" Class="remote-backups-actions">
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="SaveAsync" Disabled="_busy">@Loc["AdmRemoteBackupSave"]</MudButton>

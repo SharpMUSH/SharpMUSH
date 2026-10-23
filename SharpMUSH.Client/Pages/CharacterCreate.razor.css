@@ -19,6 +19,11 @@
     margin-top: 1rem;
 }
 
+.charcreate-page ::deep .charcreate-switch a {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
 @container page (max-width: 48rem) {
     .charcreate-page {
         padding: var(--cpad-mobile);

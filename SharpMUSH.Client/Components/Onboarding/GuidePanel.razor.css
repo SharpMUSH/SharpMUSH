@@ -8,6 +8,7 @@
 .guide-panel button, .guide-action { min-height: 44px; padding: .55rem .85rem; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--surface); cursor: pointer; display: inline-flex; align-items: center; text-decoration: none; }
 .guide-panel button:disabled { opacity: .5; cursor: default; }
 .guide-panel .guide-action { font-weight: 650; border-color: var(--accent); }
+.guide-panel .guide-action--quiet { font-weight: inherit; border-color: var(--border); }
 .guide-panel :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .guide-reference { margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem; }
 .guide-reference summary { cursor: pointer; min-height: 36px; }

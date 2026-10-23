@@ -36,8 +36,8 @@
     <AuthorizeView Policy="snapshots.capture"><Authorized>
         <KitCard Title="@Loc["SnapshotsCapture"]">
             <div class="snapshots-body">
-                <MudTextField @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
-                <MudNumericField T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
+                <MudTextField Variant="Variant.Outlined" @bind-Value="_description" Label="@Loc["SnapshotsDescription"]" MaxLength="500" />
+                <MudNumericField Variant="Variant.Outlined" T="int" @bind-Value="_retain" Min="1" Max="20" Label="@Loc["SnapshotsRetention"]" />
                 <div>
                     <MudButton Variant="Variant.Filled" OnClick="Capture" Disabled="@(_busy || NoTarget)">@Loc["SnapshotsCapture"]</MudButton>
                 </div>
@@ -49,7 +49,7 @@
     {
         <KitCard Title="@Loc["SnapshotsChoose"]">
             <div class="snapshots-body">
-                <MudSelect T="string" Value="_selected" ValueChanged="Select" Label="@Loc["SnapshotsChoose"]">
+                <MudSelect Variant="Variant.Outlined" T="string" Value="_selected" ValueChanged="Select" Label="@Loc["SnapshotsChoose"]">
                     @foreach (var saved in _history.Snapshots)
                     {
                         <MudSelectItem T="string" Value="@saved.Id">@saved.Description — @DateTimeOffset.FromUnixTimeMilliseconds(saved.CreatedAt).ToLocalTime() (@saved.Id[..8])</MudSelectItem>
@@ -57,7 +57,7 @@
                 </MudSelect>
                 @if (_selected is not null)
                 {
-                    <MudTextField @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" ReadOnly="RecoverySelected" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
+                    <MudTextField Variant="Variant.Outlined" @bind-Value="_attributes" @bind-Value:after="ClearPreview" Lines="5" ReadOnly="RecoverySelected" Label="@Loc["SnapshotsAttributes"]" HelperText="@Loc["SnapshotsAttributesHelp"]" />
                     <MudCheckBox Disabled="RecoverySelected" @bind-Value="_locks" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsLocks"]" />
                     <MudCheckBox Disabled="RecoverySelected" @bind-Value="_flags" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsFlags"]" />
                     <MudCheckBox Disabled="RecoverySelected" @bind-Value="_name" @bind-Value:after="ClearPreview" Label="@Loc["SnapshotsName"]" />

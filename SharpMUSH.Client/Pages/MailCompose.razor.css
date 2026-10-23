@@ -13,10 +13,6 @@
 	padding: 16px;
 }
 
-.mc-fields ::deep .mc-field .mud-input-control-input-container .mud-input.mud-input-outlined {
-	background: var(--surface-3);
-}
-
 .mc-fields ::deep .mc-field .mud-input-outlined-border {
 	border-color: var(--border);
 }
