@@ -9545,6 +9545,9 @@
   <data name="GuideAdminPlayerChecked" xml:space="preserve"><value>I checked with an ordinary player account</value></data>
   <data name="GuideAdminChecked" xml:space="preserve"><value>I verified this</value></data>
   <data name="GuideAdminSummary" xml:space="preserve"><value>{0} verified; {1} deferred. Your game settings and package permissions are unchanged by checklist choices.</value></data>
+  <data name="GuideAdminProgress" xml:space="preserve"><value>{0} of {1} done</value></data>
+  <data name="GuideAdminContinue" xml:space="preserve"><value>Continue the checklist</value></data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve"><value>Work through these before you invite anyone. This box goes away once every step is verified or deferred.</value></data>
   <data name="GuideCompanionTitle" xml:space="preserve"><value>With Sharpie: {0}</value></data>
   <data name="GuideReloadProgress" xml:space="preserve"><value>Reload progress</value></data>
   <data name="GuideOpenFull" xml:space="preserve"><value>Open the full guide or change my starting point</value></data>

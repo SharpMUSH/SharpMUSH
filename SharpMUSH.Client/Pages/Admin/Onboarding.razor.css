@@ -5,10 +5,15 @@
 .admin-checklist li { border-top: 1px solid var(--border); padding: 1.25rem 0; display: flow-root; }
 .admin-topic-mascot { float: right; width: 7rem; height: 7rem; object-fit: contain; margin: 0 0 1rem 1.25rem; }
 .admin-topic-mascot-reduced { width: 2.5rem; height: 2.5rem; }
-.admin-checklist h2 { font-size: 1.25rem; }
-.admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+.admin-checklist summary { cursor: pointer; }
+.admin-checklist h2 { display: inline; margin: 0 .75rem 0 0; font-size: 1.25rem; }
+.admin-checklist .admin-check-handled { padding: .6rem 0; }
+.admin-check-handled summary { color: var(--text-dim); }
+.admin-check-handled h2 { font-size: 1rem; font-weight: 600; }
+.admin-onboarding a:not([class]) { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
+.admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; margin-top: .75rem; }
 .admin-check-actions button { padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
-.admin-check-state { font-weight: 650; }
+.admin-check-state { font-size: .875rem; font-weight: 650; }
 .admin-check-warning { padding: .6rem .8rem; border-left: 3px solid var(--warn); background: var(--warn-tint); border-radius: 4px; }
 .admin-onboarding :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
