@@ -12,6 +12,11 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-detective-pixel-administrator-joining", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-administrator-identity", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-player-channels", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-player-place", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-player-character", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-detective-pixel-player-continue", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-player-character", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-detective-pixel-player-speak-act", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
