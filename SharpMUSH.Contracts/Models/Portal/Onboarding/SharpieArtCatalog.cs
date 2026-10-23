@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-dragonlance-pixel-player-useful-action", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-kemono-administrator-walkthrough", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-kemono-administrator-capabilities", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-pixel-player-place", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-administrator-rules", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-pixel-player-world", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
