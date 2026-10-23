@@ -76,6 +76,18 @@ public class ResumeFrameParserTests
 		await Assert.That(playClass).IsEqualTo("play");
 	}
 
+	// --- Sign-in: a client that logs in as the socket opens says so, so the server leaves out the connect screen. ---
+
+	[Test]
+	public async Task Client_sign_in_is_read_by_the_server()
+	{
+		await Assert.That(SeqEnvelope.ReadsSignIn(ResumeFrameParser.Hello(signIn: true))).IsTrue();
+		await Assert.That(SeqEnvelope.ReadsSignIn(ResumeFrameParser.Resume("TOK", lastSeq: 3, signIn: true))).IsTrue();
+		await Assert.That(SeqEnvelope.ReadsSignIn(ResumeFrameParser.Hello())).IsFalse();
+		await Assert.That(SeqEnvelope.ReadsSignIn(ResumeFrameParser.Resume("TOK", lastSeq: 3))).IsFalse();
+		await Assert.That(SeqEnvelope.ReadsSignIn("say \"hello\"")).IsFalse();
+	}
+
 	[Test]
 	public async Task Hello_frame_without_a_class_field_defaults_to_play()
 	{

@@ -151,6 +151,9 @@ public class WebSocketClientService : IWebSocketClientService
 	// SharpMUSH.Library — see the ProjectReference note in SharpMUSH.Client.csproj. Keep in sync.
 	public string PresenceClass { get; set; } = "play";
 
+	/// <summary>Whether the caller logs this connection in itself as soon as it opens (a token or a guest login).</summary>
+	private bool _signIn;
+
 	public WebSocketClientService(ILogger<WebSocketClientService> logger, TerminalResumeStore resumeStore)
 	{
 		_logger = logger;
@@ -158,7 +161,7 @@ public class WebSocketClientService : IWebSocketClientService
 	}
 
 	/// <inheritdoc/>
-	public async Task ConnectAsync(string serverUri, TerminalIdentity? identity = null)
+	public async Task ConnectAsync(string serverUri, TerminalIdentity? identity = null, bool signIn = false)
 	{
 		if (_webSocket?.State == WebSocketState.Open)
 		{
@@ -167,6 +170,7 @@ public class WebSocketClientService : IWebSocketClientService
 		}
 
 		_serverUri = serverUri;
+		_signIn = signIn;
 		_intentionalDisconnect = false;
 		_serverTerminated = false;
 		// The caller logs this connection in itself, unless it resumes a session that already is.
@@ -254,9 +258,12 @@ public class WebSocketClientService : IWebSocketClientService
 				_lastSeq = 0;
 				if (_slot is { } stale) await stale.ClearAsync();
 			}
+			// A reconnect logs in only after it knows the session is fresh, and may find no token to log in
+			// with: the server keeps the connect screen for it, so a failed login leaves one to read.
+			var signIn = _signIn && !reconnect;
 			var firstFrame = _resumeToken is not null
-				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass)
-				: ResumeFrameParser.Hello(PresenceClass);
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass, signIn)
+				: ResumeFrameParser.Hello(PresenceClass, signIn);
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);

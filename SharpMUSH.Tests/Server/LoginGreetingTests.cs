@@ -2,6 +2,8 @@ using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.Core;
+using SharpMUSH.Library;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -60,12 +62,30 @@ public class LoginGreetingTests
 	{
 		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "GreetReturning");
+		await RecordEarlierLoginAsync(playerRef);
 
 		var handle = await RegisterHandleAsync();
 		await ConnectionService.Bind(handle, playerRef);
 
 		await Assert.That(GreetingKeyTo(handle))
 			.IsEqualTo(nameof(ErrorMessages.Notifications.WelcomeBackFormat));
+	}
+
+	/// <summary>
+	/// A character made in the portal is bound by a token login, not by <c>make</c>, so nothing marks it as
+	/// new; it has simply never connected, which its missing <c>LAST</c> says.
+	/// </summary>
+	[Test]
+	public async Task ACharacterThatHasNeverConnectedIsNotWelcomedBack()
+	{
+		var playerRef = await TestIsolationHelpers.CreateTestPlayerAsync(
+			WebAppFactoryArg.Services, Mediator, "GreetNever");
+
+		var handle = await RegisterHandleAsync();
+		await ConnectionService.Bind(handle, playerRef);
+
+		await Assert.That(GreetingKeyTo(handle))
+			.IsEqualTo(nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat));
 	}
 
 	[Test]
@@ -106,6 +126,14 @@ public class LoginGreetingTests
 		await Assert.That(GreetingKeyTo(handle))
 			.IsEqualTo(nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat));
 		await Assert.That(GreetingTo(handle)!).Contains(characterName);
+	}
+
+	/// <summary>What a login records once it is greeted (<c>CheckLastAsync</c>): the time in <c>LAST</c>.</summary>
+	private async ValueTask RecordEarlierLoginAsync(DBRef playerRef)
+	{
+		if (await HelperFunctions.GetGod(Mediator) is not SharpPlayer god)
+			throw new InvalidOperationException("God is not a player");
+		await Mediator.Send(new SetAttributeCommand(playerRef, ["LAST"], MarkupText.Plain("Thu Oct 22 10:00:00 2026"), god));
 	}
 
 	private async ValueTask<string> NameOfAsync(DBRef dbref) =>

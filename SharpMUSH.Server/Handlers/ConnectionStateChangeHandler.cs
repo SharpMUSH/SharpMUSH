@@ -100,7 +100,8 @@ public class ConnectionStateChangeHandler(
 	/// <see cref="DBRef"/> straight in as the format argument rendered its <c>ToString()</c>, so
 	/// players were greeted with "Welcome back, #12:1786227218582!". A character that has just been
 	/// created and walked straight into play has never been here, so it is welcomed rather than
-	/// welcomed back.
+	/// welcomed back. So is one created anywhere else, such as the portal: it has no <c>LAST</c> yet, the
+	/// attribute every login records once this greeting has gone out.
 	/// </summary>
 	private async ValueTask GreetAsync(ConnectionStateChangeNotification notification, CancellationToken cancellationToken)
 	{
@@ -113,7 +114,9 @@ public class ConnectionStateChangeHandler(
 			return;
 		}
 
-		var key = notification.FirstLogin
+		var firstLogin = notification.FirstLogin || notification.PlayerRef is { } player
+			&& !await attributes.GetAttributeAsync(player, ["LAST"], cancellationToken).AnyAsync(cancellationToken);
+		var key = firstLogin
 			? nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat)
 			: nameof(ErrorMessages.Notifications.WelcomeBackFormat);
 

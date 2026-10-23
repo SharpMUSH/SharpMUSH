@@ -33,7 +33,8 @@ public class ConnectionServerService(
 		string presenceClass = "play",
 		bool isSecure = false,
 		string? sessionId = null,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default,
+		bool signIn = false)
 	{
 		sessionId ??= Guid.NewGuid().ToString("N");
 		var connectedAt = DateTimeOffset.UtcNow;
@@ -81,7 +82,7 @@ public class ConnectionServerService(
 			// MarkupOutputConsumer writes prompts carried on the output subject, in order with output.
 			var established = new ConnectionEstablishedMessage(handle, ipAddress, hostname,
 				connectionType, connectedAt, presenceClass, isSecure, sessionId)
-			{ OrderedPrompts = true };
+			{ OrderedPrompts = true, SignIn = signIn };
 			publishAttempted = true;
 			// Publication may have succeeded when its acknowledgement was lost. Re-publish the
 			// idempotent event, but never overwrite KV again after the engine can bind a player.
@@ -356,7 +357,8 @@ public interface IConnectionServerService
 		string presenceClass = "play",
 		bool isSecure = false,
 		string? sessionId = null,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default,
+		bool signIn = false);
 
 	void RestoreDormant(ConnectionStateData data, Func<byte[], ValueTask> output, Action disconnect);
 
