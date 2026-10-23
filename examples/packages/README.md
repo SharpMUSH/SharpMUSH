@@ -71,8 +71,9 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.16 title)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
+title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
 authors: [Myrddin]              # optional — list (or single string)
 description: "Bulletin Board"   # optional

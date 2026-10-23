@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: mud-kit
-version: 1.0.0
+title: "MUD client kit"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Everything a MUD client such as Mudlet reads over GMCP, in one install: gmcp-room, gmcp-comm, gmcp-items, gmcp-char and mudlet-client."
 license: MIT

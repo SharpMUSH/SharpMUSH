@@ -91,7 +91,7 @@ public class PackageManifestServiceTests
 	[Test]
 	public async Task NewerFormatMinor_Warns_NewerMajor_Rejects()
 	{
-		var minor = _service.ParseManifest(MinimalManifest("format: 1.99")).Expect<ParsedPackageManifest>();
+		var minor = _service.ParseManifest(MinimalManifest("format: 1.99\ntitle: Test")).Expect<ParsedPackageManifest>();
 		await Assert.That(minor.Warnings.Any(w => w.Path == "format")).IsTrue();
 
 		var major = _service.ParseManifest(MinimalManifest("format: 2")).Expect<PackageManifestFailure>();
@@ -114,6 +114,26 @@ public class PackageManifestServiceTests
 		var tooLong = _service.ParseManifest(MinimalManifest($"format: \"1.10\"\ncategory: {new string('x', 41)}"))
 			.Expect<PackageManifestFailure>();
 		await Assert.That(tooLong.Errors.Any(e => e.Path == "category")).IsTrue();
+	}
+
+	[Test]
+	public async Task Title_IsRequiredFromFormat116_AndIgnoredBelowIt()
+	{
+		var parsed = _service.ParseManifest(MinimalManifest("format: \"1.16\"\ntitle: \"  Bulletin   boards \""))
+			.Expect<ParsedPackageManifest>();
+		await Assert.That(parsed.Manifest.Title).IsEqualTo("Bulletin boards");
+		await Assert.That(parsed.Warnings.Any(w => w.Path is "title" or "format")).IsFalse();
+
+		var older = _service.ParseManifest(MinimalManifest("format: \"1.15\"\ntitle: Boards")).Expect<ParsedPackageManifest>();
+		await Assert.That(older.Manifest.Title).IsNull();
+		await Assert.That(older.Warnings.Any(w => w.Path == "title")).IsTrue();
+
+		var missing = _service.ParseManifest(MinimalManifest("format: \"1.16\"")).Expect<PackageManifestFailure>();
+		await Assert.That(missing.Errors.Any(e => e.Path == "title")).IsTrue();
+
+		var tooLong = _service.ParseManifest(MinimalManifest($"format: \"1.16\"\ntitle: {new string('x', 61)}"))
+			.Expect<PackageManifestFailure>();
+		await Assert.That(tooLong.Errors.Any(e => e.Path == "title")).IsTrue();
 	}
 
 	[Test]

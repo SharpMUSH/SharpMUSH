@@ -85,6 +85,15 @@ public record ConnectionEstablishedMessage(
 
 	/// <summary>Connection metadata key recording <see cref="OrderedPrompts"/> ("1" or "0").</summary>
 	public const string OrderedPromptsMetadata = "OrderedPrompts";
+
+	/// <summary>
+	/// The client logs this connection in the moment it opens (the portal's terminal, with a login token or as a
+	/// guest), so the connect screen for the login prompt is not drawn.
+	/// </summary>
+	public bool SignIn { get; init; }
+
+	/// <summary>Connection metadata key recording <see cref="SignIn"/> ("1" or "0").</summary>
+	public const string SignInMetadata = "SignIn";
 }
 
 /// <summary>

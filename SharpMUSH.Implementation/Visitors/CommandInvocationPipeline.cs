@@ -1,5 +1,6 @@
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Implementation.Handlers.Database;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
@@ -570,7 +571,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 					new[] { targetObj }.ToAsyncEnumerable(),
 					input,
 					executorObj)
-				: await MatchOneCommandAsync(targetObj, executorObj, hook.AttributeName, input);
+				: await HookedCommandMatch.MatchAsync(services.AttributeService, services.LockService, targetObj, executorObj,
+					hook.AttributeName, input);
 
 			if (!matchResult.TryGetValue(out var matches))
 			{
@@ -599,43 +601,6 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		var arguments = new Dictionary<string, CallState>(hookArguments, StringComparer.OrdinalIgnoreCase);
 		foreach (var (name, value) in captures) arguments[name] = value;
 		return arguments;
-	}
-
-	/// <summary>
-	/// PennMUSH <c>one_comm_match</c> (<c>src/attrib.c:2132-2181</c>): the one <c>$</c>-command
-	/// <paramref name="attributeName"/> names on <paramref name="thing"/>, read through its parents and
-	/// type ancestor as <c>atr_get_with_parent</c> reads it, matched against <paramref name="input"/>.
-	/// A HALT or NO_COMMAND object, a no_command attribute or branch, a value that is not a
-	/// <c>$</c>-command, and a refusal by <paramref name="player"/>'s @lock/command or @lock/use on
-	/// <paramref name="thing"/> are all no match.
-	/// </summary>
-	private async ValueTask<Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>> MatchOneCommandAsync(
-		AnySharpObject thing, AnySharpObject player, string attributeName, MString input)
-	{
-		if (await thing.HasFlag("HALT") || await thing.HasFlag("NO_COMMAND"))
-		{
-			return new None();
-		}
-
-		// atr_get_with_parent with cmd set refuses AF_NOPROG on the attribute and on every branch above it.
-		if (await services.AttributeService.GetAttributeAsync(thing, thing, attributeName,
-					IAttributeService.AttributeMode.Read, parent: true) is not SharpAttribute[] { Length: > 0 } chain
-				|| chain.Any(segment => segment.IsNoprog())
-				|| CommandAttributeScanner.Compile(chain[^1]) is not CommandAttributeCache command)
-		{
-			return new None();
-		}
-
-		var trimmed = input.Trim(TrimType.TrimBoth);
-		if (SoftcodeRegex.Match(command.CompiledRegex, trimmed.ToPlainText()) is not { Success: true } match
-				|| !await services.LockService.Evaluate(LockType.Command, thing, player)
-				|| !await services.LockService.Evaluate(LockType.Use, thing, player))
-		{
-			return new None();
-		}
-
-		return Option<IEnumerable<(AnySharpObject SObject, SharpAttribute Attribute, Dictionary<string, CallState> Arguments)>>
-			.FromOption([(thing, command.Attribute, PatternArguments.Capture(command.CompiledRegex, match, command.IsRegexFlag, trimmed))]);
 	}
 
 	/// <summary>

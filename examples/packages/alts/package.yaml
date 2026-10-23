@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: alts
-version: 1.0.2
+title: "Alts"
+version: 1.0.3
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT

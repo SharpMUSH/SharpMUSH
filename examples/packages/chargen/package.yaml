@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: chargen
-version: 2.3.0
+title: "Character applications"
+version: 2.3.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT

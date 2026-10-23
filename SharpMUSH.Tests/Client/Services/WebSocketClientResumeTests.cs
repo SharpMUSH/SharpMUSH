@@ -519,7 +519,7 @@ public class WebSocketClientResumeTests
 
 	/// <summary>
 	/// When no token can be had (the tab signed out), the terminal says so and stays at the login screen;
-	/// what was typed meanwhile is not sent there as login-screen commands.
+	/// what was typed meanwhile is not sent there as login-screen commands, and the server draws its connect screen.
 	/// </summary>
 	[Test]
 	public async Task A_reconnect_without_a_token_asks_the_reader_to_log_in()
@@ -533,6 +533,9 @@ public class WebSocketClientResumeTests
 
 		await Assert.That(await Eventually.TrueAsync(() => terminal.Lines.Any(l => l.Text.StartsWith("Reconnected, but could not log back in", StringComparison.Ordinal)))).IsTrue();
 		await Assert.That(server.LaterFrames.Contains("look")).IsFalse();
+		// The first connection logged itself in; the reconnect could not, so it kept the connect screen.
+		await Assert.That(SharpMUSH.SocketServer.Services.SeqEnvelope.ReadsSignIn(server.FirstFrames.First())).IsTrue();
+		await Assert.That(SharpMUSH.SocketServer.Services.SeqEnvelope.ReadsSignIn(server.FirstFrames.Last())).IsFalse();
 
 		await terminal.DisposeAsync();
 	}

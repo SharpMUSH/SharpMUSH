@@ -697,6 +697,10 @@
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Description</value>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titre</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgExportYaml" xml:space="preserve">
     <value>Exporter package.yaml</value>
   </data>
@@ -2619,6 +2623,30 @@
   </data>
   <data name="NavCreateACharacter" xml:space="preserve">
     <value>Créer un personnage</value>
+  </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Donner aussi à ce personnage son propre mot de passe, pour se connecter depuis un client MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Saisissez un nom pour votre personnage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Saisissez un mot de passe pour votre personnage, ou décochez la case pour vous connecter uniquement via votre compte.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Saisissez le nom du personnage que vous voulez réclamer.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Saisissez le mot de passe du personnage.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Avant de choisir un nom, lisez</value>
+    <comment>MT</comment>
   </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Un personnage est une identité que vous incarnez dans le jeu. Il est lié à votre compte ; vous pourrez en créer d'autres plus tard.</value>
@@ -5715,9 +5743,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>L’accès au presse-papiers a échoué. Sélectionnez et copiez la commande affichée.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Créer sans choisir de mot de passe pour le personnage ; utilisez des accès à usage unique depuis un client ou définissez un mot de passe plus tard.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Fermer</value>

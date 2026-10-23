@@ -1,4 +1,5 @@
 .guide-panel { padding: clamp(1rem, 3vw, 2rem); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.guide-panel a:not([class]) { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
 .guide-panel-heading, .guide-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
 .guide-panel-heading { justify-content: space-between; color: var(--text-faint); }
 .guide-lesson { margin: 1.25rem 0; max-width: 68ch; }
@@ -26,7 +27,9 @@
 @container page (max-width: 48rem) { .guide-mascot-themed:not(.guide-mascot-reduced) { width: 96px; height: 96px; } }
 
 .guide-panel .guide-stop { width: 44px; height: 44px; padding: 8px; justify-content: center; }
-.guide-panel .guide-icon { width: 44px; height: 44px; padding: 8px; justify-content: center; }
+.guide-panel-actions button, .guide-lesson .guide-action { gap: .4rem; }
+.guide-panel-actions .guide-action { margin-left: auto; }
+.guide-step-count { font-size: .9rem; font-weight: 600; }
 
 .guide-channel-commands { margin: 1rem 0; padding: 0; display: grid; gap: 1rem; }
 .guide-channel-commands > div { min-width: 0; }

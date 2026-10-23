@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: profile-handler
-version: 1.1.0
+title: "Character directory"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Read-only character directory, online list, and profile API, served through the HTTP verb routers."
 license: MIT

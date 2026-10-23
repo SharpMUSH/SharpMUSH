@@ -72,7 +72,7 @@ public interface IWebSocketClientService : IAsyncDisposable
 	/// </summary>
 	/// <param name="serverUri">WebSocket server URI (e.g., ws://localhost:4202/ws)</param>
 	/// <param name="identity">Who the connection logs in as, or null to keep nothing (a guest).</param>
-	Task ConnectAsync(string serverUri, TerminalIdentity? identity = null);
+	Task ConnectAsync(string serverUri, TerminalIdentity? identity = null, bool signIn = false);
 
 	/// <summary>
 	/// Send a message to the server

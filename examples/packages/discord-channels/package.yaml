@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: discord-channels
-version: 1.1.0
+title: "Discord channel bridge"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Joins a game channel to a linked Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel links one, +discord/channels lists them."
 license: MIT

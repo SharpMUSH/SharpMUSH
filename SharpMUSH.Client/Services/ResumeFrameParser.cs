@@ -23,12 +23,14 @@ public static class ResumeFrameParser
 	/// the first frame so the server knows it at registration time; it survives reconnects because a
 	/// resume-to-dead re-registers fresh off its own first frame.
 	/// </summary>
-	public static string Hello(string presenceClass = "play")
-		=> JsonSerializer.Serialize(new HelloFrame("hello", presenceClass), Json);
+	/// <param name="signIn">The client logs in with a token or as a guest the moment the socket opens, so the
+	/// server leaves out the connect screen it would otherwise draw for the login prompt.</param>
+	public static string Hello(string presenceClass = "play", bool signIn = false)
+		=> JsonSerializer.Serialize(new HelloFrame("hello", presenceClass, signIn ? true : null), Json);
 
 	/// <summary>The reconnect first frame: <c>{"type":"resume","token":"...","lastSeq":n,"class":"..."}</c>.</summary>
-	public static string Resume(string token, long lastSeq, string presenceClass = "play")
-		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass), Json);
+	public static string Resume(string token, long lastSeq, string presenceClass = "play", bool signIn = false)
+		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass, signIn ? true : null), Json);
 
 	/// <summary>True if the frame is the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
 	public static bool IsReattached(string frame) => TypeEquals(frame, "reattached");
@@ -106,7 +108,9 @@ public static class ResumeFrameParser
 
 	private static bool LooksLikeJson(string frame) => frame.Length > 0 && frame[0] == '{';
 
-	private sealed record HelloFrame(string Type, string Class);
+	private sealed record HelloFrame(string Type, string Class,
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn);
 
-	private sealed record ResumeFrame(string Type, string Token, long LastSeq, string Class);
+	private sealed record ResumeFrame(string Type, string Token, long LastSeq, string Class,
+		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn);
 }

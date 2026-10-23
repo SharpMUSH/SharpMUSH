@@ -354,3 +354,59 @@
         padding: 1.25rem 1.125rem;
     }
 }
+
+/* The handlers step: what each handler is now, with the ways to change it folded under Advanced. */
+.setup-handler-summary {
+	margin: 0 0 1rem;
+	padding-left: 1.25rem;
+	font-size: 0.875rem;
+	line-height: 1.6;
+	color: var(--text);
+}
+
+.setup-advanced {
+	margin: 0 0 1rem;
+}
+
+.setup-advanced-summary {
+	margin-bottom: 0.75rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	color: var(--accent);
+	text-decoration: underline;
+}
+
+/* The packages step: a search over every package and the switch between recommended and all. */
+.setup-pkg-tools {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	align-items: center;
+	margin: 0 0 0.5rem;
+}
+
+.setup-pkg-search {
+	flex: 1 1 14rem;
+	min-height: 40px;
+	padding: 0.5rem 0.75rem;
+	border: 1px solid var(--border);
+	border-radius: var(--radius);
+	background: var(--surface);
+	color: var(--text);
+	font: inherit;
+	font-size: 0.875rem;
+}
+
+.setup-pkg-tools .setup-pkg-all {
+	width: auto;
+	height: 40px;
+	margin: 0;
+	padding: 0 1rem;
+}
+
+.setup-pkg-summary,
+.setup-pkg-none {
+	margin: 0 0 0.75rem;
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}

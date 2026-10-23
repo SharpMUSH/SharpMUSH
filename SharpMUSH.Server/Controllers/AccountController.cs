@@ -92,8 +92,10 @@ public class AccountController(
 		{
 			if (!options.CurrentValue.Net.PlayerCreation)
 				return StatusCode(StatusCodes.Status403Forbidden, "Player creation is disabled on this server.");
-			if (string.IsNullOrWhiteSpace(request.Name) || request.Password is not null && string.IsNullOrWhiteSpace(request.Password))
-				return BadRequest("A name and a nonempty chosen password are required; omit the password to use independent native logins.");
+			if (string.IsNullOrWhiteSpace(request.Name))
+				return BadRequest("Enter a name for your character.");
+			if (request.Password is not null && string.IsNullOrWhiteSpace(request.Password))
+				return BadRequest("Enter a password for your character, or leave it out to sign in through your account.");
 			if (request.Password is null && passwords is null)
 				return StatusCode(StatusCodes.Status503ServiceUnavailable, "Character credential service is unavailable.");
 			if (await mediator.CreateStream(new GetPlayerQuery(request.Name), cancellationToken)

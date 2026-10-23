@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Pages;
@@ -31,26 +32,64 @@ public class WelcomeTests : BunitContext
 	}
 
 	[Test]
-	public async Task AdminChecklistShowsMascotForEachTopicAndRespectsImagery()
+	public async Task AdminChecklistShowsMascotOnceBesideTheNextStepAndFoldsHandledSteps()
 	{
 		ComponentFactories.AddStub<GameIdentityForm>();
 		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
 		var guide = Services.GetRequiredService<OnboardingService>();
-		page.WaitForAssertion(() =>
-		{
-			if (page.FindAll(".admin-checklist img").Count != GuideStepIds.Administrator.Count)
-				throw new InvalidOperationException("Each administrator topic must show its mascot.");
-		});
+		page.WaitForAssertion(() => page.Find(".admin-checklist img"));
 		foreach (var step in GuideStepIds.Administrator)
 		{
+			await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(1);
+			// A topic without its own illustration shows the genre's general one.
+			var illustrated = SharpieArtCatalog.Approved.Any(art => art.Topic == $"administrator-{step}");
 			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
-			await Assert.That(image.GetAttribute("src")).Contains($"sharpie-fantasy-minimalist-administrator-{step}.png");
+			await Assert.That(image.GetAttribute("src")).Contains(illustrated
+				? $"sharpie-fantasy-minimalist-administrator-{step}.png" : "sharpie-fantasy-minimalist.png");
 			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
+			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsTrue();
+			await page.InvokeAsync(() => guide.CompleteStepAsync(step));
+			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsFalse();
 		}
+		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
+		await Assert.That(page.Find(".checklist-progress progress").GetAttribute("value")).IsEqualTo(GuideStepIds.Administrator.Count.ToString());
+	}
+
+	[Test]
+	public async Task AdminIdentitySettingsStayEditableWhenTheChecklistFailsToLoad()
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		((Info)Services.GetRequiredService<ServerInfoService>()).FailGuide = true;
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		page.WaitForAssertion(() => page.Find("[role=status] button"));
+		await Assert.That(page.FindAll(".admin-checklist").Count).IsEqualTo(0);
+		await Assert.That(page.FindComponents<Stub<GameIdentityForm>>().Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AdminChecklistMascotRespectsImagery()
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		var guide = Services.GetRequiredService<OnboardingService>();
+		page.WaitForAssertion(() => page.Find(".admin-checklist img"));
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
-		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(GuideStepIds.Administrator.Count);
+		await Assert.That(page.FindAll(".admin-topic-mascot-reduced").Count).IsEqualTo(1);
 		await page.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
 		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
+	}
+
+	[Test]
+	[Arguments(1, true)]
+	[Arguments(42, false)]
+	public async Task AdminChecklistWarnsOnlyWhileGodIsTheActiveCharacter(int dbref, bool warned)
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		Services.GetRequiredService<IAccountAuthState>().ActiveCharacter
+			.Returns(new AccountAuthService.CharacterSummary(dbref, 1L, "Staff", ""));
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		page.WaitForAssertion(() => page.Find("[data-art-topic='administrator-staff-character']"));
+		await Assert.That(page.FindAll("[data-art-topic='administrator-staff-character'] .admin-check-warning").Count).IsEqualTo(warned ? 1 : 0);
 	}
 
 	[Test]
@@ -161,6 +200,26 @@ public class WelcomeTests : BunitContext
 		await Assert.That(page.FindAll("[data-guide-path][aria-pressed=true]").Count).IsEqualTo(0);
 		await Assert.That(guide.Progress).IsEqualTo(original);
 		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier.Contains("setItem", StringComparison.Ordinal))).IsFalse();
+	}
+
+	/// <summary>
+	/// Picking a path brings the lesson to the top of the window and says where it stands; Back, Skip and Done
+	/// are written out rather than drawn as icons.
+	/// </summary>
+	[Test]
+	public async Task PickedPathScrollsToTheLessonAndLabelsItsControls()
+	{
+		var page = Render<Welcome>();
+		await page.Find("[data-guide-path=mush]").ClickAsync();
+		await Assert.That(JSInterop.Invocations.Any(call => call.Identifier == "SharpMUSH.scrollToId"
+			&& (string?)call.Arguments[0] == "welcome-journey")).IsTrue();
+		var count = GuideCatalog.Player(GuidePath.Mush).Count;
+		await Assert.That(page.Find(".guide-step-count").TextContent).IsEqualTo($"Step 1 of {count}");
+		var labels = page.FindAll(".guide-panel-actions button").Select(button => button.TextContent.Trim()).ToList();
+		await Assert.That(labels).IsEquivalentTo(new[] { "Back", "Skip for now", "I've got this" },
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await page.Find(".guide-panel-actions .guide-action").ClickAsync();
+		await Assert.That(page.Find(".guide-step-count").TextContent).IsEqualTo($"Step 2 of {count}");
 	}
 
 	[Test]
@@ -342,7 +401,7 @@ public class WelcomeTests : BunitContext
 		var companion = Render<GuideCompanion>(parameters => parameters
 			.Add(component => component.Guide, guide)
 			.Add(component => component.OnExplore, () => returns++));
-		await companion.Find("article button[aria-label='Explore the game']").ClickAsync();
+		await companion.FindAll("article button.guide-action").Single(button => button.TextContent.Trim() == "Explore the game").ClickAsync();
 		await Assert.That(returns).IsEqualTo(1);
 		await Assert.That(guide.Progress.Active).IsTrue();
 		await Assert.That(guide.Progress.CurrentStepId).IsEqualTo("continue");

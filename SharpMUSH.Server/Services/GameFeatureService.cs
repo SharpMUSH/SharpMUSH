@@ -83,9 +83,10 @@ public class GameFeatureService(
 		var states = new List<BundledPackageState>(BundledPackages.All.Count);
 		foreach (var package in BundledPackages.All)
 		{
-			var (description, dependsOn, _, category) = Catalogue.GetValueOrDefault(package.PackageId);
+			var (title, description, dependsOn, _, category) = Catalogue.GetValueOrDefault(package.PackageId);
 			states.Add(new BundledPackageState(
 				package.PackageId,
+				title ?? package.PackageId,
 				description ?? string.Empty,
 				await registry.GetInstalledPackageAsync(package.PackageId) is InstalledPackageRecord,
 				HandlerKind(package.Requires),
@@ -251,19 +252,19 @@ public class GameFeatureService(
 		return [.. entry.Plugins ?? [], .. (entry.DependsOn ?? []).SelectMany(dependency => PluginsUnder(dependency, seen)).ToList()];
 	}
 
-	/// <summary>Each bundled package's description, bundled dependencies, plugins and category, read from its embedded manifest once.</summary>
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)> Catalogue
+	/// <summary>Each bundled package's title, description, bundled dependencies, plugins and category, read from its embedded manifest once.</summary>
+	private IReadOnlyDictionary<string, (string? Title, string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)> Catalogue
 		=> _catalogue ??= BundledPackages.All.ToDictionary(
 			p => p.PackageId,
 			p => manifests.ParseManifest(BundledPackages.ManifestYaml(p.PackageId)) switch
 			{
-				ParsedPackageManifest parsed => ((string?)parsed.Manifest.Description,
+				ParsedPackageManifest parsed => (parsed.Manifest.Title, (string?)parsed.Manifest.Description,
 					(IReadOnlyList<string>?)parsed.Manifest.Dependencies.Select(d => d.PackageId)
 						.Where(BundledPackages.Contains).ToList(),
 					(IReadOnlyList<string>?)parsed.Manifest.RequiredPlugins,
 					parsed.Manifest.Category),
-				_ => (null, null, null, null)
+				_ => (null, null, null, null, null)
 			});
 
-	private IReadOnlyDictionary<string, (string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)>? _catalogue;
+	private IReadOnlyDictionary<string, (string? Title, string? Description, IReadOnlyList<string>? DependsOn, IReadOnlyList<string>? Plugins, string? Category)>? _catalogue;
 }

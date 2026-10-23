@@ -100,6 +100,22 @@ public static class SeqEnvelope
 		=> TryReadResume(frame, out token, out lastSeq, out _);
 
 	/// <summary>
+	/// Whether a hello or resume first frame says the client logs in the moment the socket opens (<c>"signIn":true</c>),
+	/// with a token or as a guest. Such a connection is never shown the connect screen.
+	/// </summary>
+	public static bool ReadsSignIn(string frame)
+	{
+		try
+		{
+			return JsonSerializer.Deserialize<HelloFrame>(frame, Json) is { Type: "hello" or "resume", SignIn: true };
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
+
+	/// <summary>
 	/// Reads a <c>{"type":"resume",...}</c> first frame, also yielding its presence class (default "play"
 	/// when absent) so a resume-to-dead re-registration still knows whether the connection is play or portal.
 	/// </summary>
@@ -123,11 +139,11 @@ public static class SeqEnvelope
 		}
 	}
 
-	private sealed record HelloFrame(string? Type, string? Class);
+	private sealed record HelloFrame(string? Type, string? Class, bool? SignIn = null);
 
 	private sealed record SeqFrame(string Type, long? Seq, string? Data);
 
-	private sealed record ResumeFrame(string Type, string? Token, long LastSeq, string? Class);
+	private sealed record ResumeFrame(string Type, string? Token, long LastSeq, string? Class, bool? SignIn = null);
 
 	private sealed record ResumeTokenFrame(string Type, string Token);
 

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: summary
-version: 1.0.2
+title: "Pose summaries"
+version: 1.0.3
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT

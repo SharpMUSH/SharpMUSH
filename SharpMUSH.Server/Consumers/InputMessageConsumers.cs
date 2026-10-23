@@ -333,7 +333,8 @@ public class ConnectionEstablishedConsumer(
 				// PennMUSH's CONN_SSL: what ssl() answers and terminfo()'s "ssl" token. Established at
 				// accept time from the transport, so it is known before the connection can ask.
 				{ "SSL", message.IsSecure ? "1" : "0" },
-				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" }
+				{ ConnectionEstablishedMessage.OrderedPromptsMetadata, message.OrderedPrompts ? "1" : "0" },
+				{ ConnectionEstablishedMessage.SignInMetadata, message.SignIn ? "1" : "0" }
 			}));
 	}
 }

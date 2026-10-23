@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: discord-scenes
-version: 1.1.0
+title: "Discord scheduled scenes"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Scheduled scenes in the Discord server's Events tab: a scene with a time still to come is published as a Discord event, moved when it is rescheduled, shown as happening when it starts, and ended when it finishes or is cancelled."
 license: MIT

@@ -7,7 +7,7 @@ namespace SharpMUSH.Tests.BUnit.Pages;
 public class SetupPackageGroupsTests
 {
 	private static BundledPackageState Package(string id, string? category, params string[] dependsOn)
-		=> new(id, "", Installed: false, Requires: null, Available: true, dependsOn, Category: category);
+		=> new(id, id, "", Installed: false, Requires: null, Available: true, dependsOn, Category: category);
 
 	[Test]
 	public async Task GroupsByCategory_InTheServersOrder_WithUncategorizedLast()

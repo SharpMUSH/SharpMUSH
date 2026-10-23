@@ -1889,6 +1889,30 @@
     <value>Skapa karaktär</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Ge också den här karaktären ett eget lösenord, för att logga in från en MU*-klient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Ange ett namn på din karaktär.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Ange ett lösenord för din karaktär, eller avmarkera rutan för att bara logga in via ditt konto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Ange namnet på karaktären du vill göra anspråk på.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Ange karaktärens lösenord.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Innan du väljer ett namn, läs</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>En karaktär är en rollperson du spelar i spelet. Den är kopplad till ditt konto och du kan skapa fler senare.</value>
     <comment>MT</comment>
@@ -2288,6 +2312,10 @@
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Beskrivning</value>
     <comment>MT — corpus term.</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titel</value>
+    <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Detaljer</value>
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Åtkomst till urklipp misslyckades. Markera och kopiera kommandot som visas.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Skapa utan valt karaktärslösenord; använd engångsinloggningar i klienten eller ange ett lösenord senare.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Stäng</value>

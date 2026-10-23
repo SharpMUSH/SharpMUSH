@@ -78,6 +78,86 @@ public class OnboardingServiceTests
 		await Assert.That(guide.Progress.Active).IsFalse();
 	}
 
+	/// <summary>
+	/// Finishing the guide ticks +welcome's "Learn the basics" for the character being played, once, and only where
+	/// the reviewed +welcome is installed. The tick names that character, so a switch while it runs cannot move it.
+	/// </summary>
+	[Test]
+	[Arguments(true, true, 1)]
+	[Arguments(false, true, 0)]
+	[Arguments(true, false, 0)]
+	public async Task FinishingTheGuideTicksTheWelcomeBasicsStep(bool installed, bool playing, int ticks)
+	{
+		var commands = new List<string>();
+		using var handler = new Handler(async request =>
+		{
+			switch (request.RequestUri!.AbsolutePath)
+			{
+				case "/api/onboarding/capabilities":
+					return new HttpResponseMessage(HttpStatusCode.OK)
+					{
+						Content = JsonContent.Create(installed
+						? new[] { new GuideCapability("onboarding", "+welcome", "", null, "onboarding", "1.0.1") } : [])
+					};
+				case "/api/commands":
+					var sent = (await request.Content!.ReadFromJsonAsync<SharpMUSH.Library.Models.Portal.PortalCommandRequest>())!;
+					commands.Add($"{sent.Command} as {sent.Character}");
+					return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { output = Array.Empty<string>() }) };
+			}
+			if (request.Method == HttpMethod.Get) return Reply(new() { Path = GuidePath.Mush, Active = true });
+			var save = (await request.Content!.ReadFromJsonAsync<SaveOnboardingRequest>())!;
+			return Reply(save.Progress with { Revision = save.ExpectedRevision + 1 });
+		});
+		var factory = new Factory(handler);
+		var auth = Auth("A");
+		auth.ActiveCharacter.Returns(playing ? new AccountAuthService.CharacterSummary(42, 1L, "Wren", "") : null);
+		using var guide = new OnboardingService(factory, auth, new Storage(), new Info(factory), SharpMUSH.Tests.BUnit.Resources.PortalLocalizer.Create());
+		await guide.LoadAsync(GuideJourney.Player);
+		var lessons = GuideCatalog.Player(GuidePath.Mush).Select(lesson => lesson.Id).ToArray();
+		await guide.SkipStepAsync(lessons[0]);
+		foreach (var lesson in lessons.Skip(1))
+		{
+			await Assert.That(commands).IsEmpty();
+			await guide.CompleteStepAsync(lesson);
+		}
+		await guide.CompleteStepAsync(lessons[^1]);
+		await Assert.That(commands).IsEquivalentTo(Enumerable.Repeat("+welcome/done basics as #42:1", ticks));
+	}
+
+	[Test]
+	[Arguments(HttpStatusCode.OK)]
+	[Arguments(HttpStatusCode.InternalServerError)]
+	public async Task AdministratorChecklistTicksWhatTheServerDetects(HttpStatusCode detection)
+	{
+		var writes = 0;
+		using var handler = new Handler(async request =>
+		{
+			if (request.RequestUri!.AbsolutePath == "/api/onboarding/administrator/detected")
+				return detection == HttpStatusCode.OK
+					? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new[] { "channels", "backups", "made-up" }) }
+					: new HttpResponseMessage(detection);
+			if (request.Method == HttpMethod.Get) return Reply(new() { Revision = 2, CompletedStepIds = ["identity"], SkippedStepIds = ["backups"] });
+			writes++;
+			var save = (await request.Content!.ReadFromJsonAsync<SaveOnboardingRequest>())!;
+			return Reply(save.Progress with { Revision = save.ExpectedRevision + 1 });
+		});
+		var factory = new Factory(handler);
+		using var guide = new OnboardingService(factory, Auth("A"), new Storage(), new Info(factory), SharpMUSH.Tests.BUnit.Resources.PortalLocalizer.Create());
+		await guide.LoadAsync(GuideJourney.Administrator);
+		await Assert.That(guide.Error).IsNull();
+		if (detection == HttpStatusCode.OK)
+		{
+			await Assert.That(writes).IsEqualTo(1);
+			await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "identity", "channels", "backups" });
+			await Assert.That(guide.Progress.SkippedStepIds).IsEmpty();
+		}
+		else
+		{
+			await Assert.That(writes).IsEqualTo(0);
+			await Assert.That(guide.Progress.CompletedStepIds).IsEquivalentTo(new[] { "identity" });
+		}
+	}
+
 	[Test]
 	public async Task ConflictRequiresReload()
 	{

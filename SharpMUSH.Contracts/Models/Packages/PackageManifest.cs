@@ -69,6 +69,12 @@ public sealed record PackageManifest(
 	string? Category = null)
 {
 	/// <summary>
+	/// The name the package is listed under where people choose packages (<c>title:</c>, required from format 1.16),
+	/// or null for a manifest of an earlier format.
+	/// </summary>
+	public string? Title { get; init; }
+
+	/// <summary>
 	/// Public display name for this package's wiki collection (<c>wiki_collection_name:</c>, format 1.13),
 	/// or null for the package-id-derived fallback. Does not change collection identity or page ownership.
 	/// </summary>
@@ -197,7 +203,7 @@ public enum PackageApplicationDisplay
 public sealed record PackageFormatVersion(int Major, int Minor)
 {
 	/// <summary>The format version this parser implements.</summary>
-	public static PackageFormatVersion Supported { get; } = new(1, 15);
+	public static PackageFormatVersion Supported { get; } = new(1, 16);
 
 	public override string ToString() => Minor == 0 ? $"{Major}" : $"{Major}.{Minor}";
 }

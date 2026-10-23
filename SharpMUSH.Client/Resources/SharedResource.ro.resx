@@ -1889,6 +1889,30 @@
     <value>Creare personaj</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Dă acestui personaj și o parolă proprie, pentru conectare dintr-un client MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Introdu un nume pentru personajul tău.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Introdu o parolă pentru personajul tău sau debifează caseta ca să te conectezi doar prin cont.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Introdu numele personajului pe care vrei să-l revendici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Introdu parola personajului.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Înainte să alegi un nume, citește</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Un personaj este un rol pe care îl interpretați în joc. Este asociat contului dumneavoastră; puteți crea altele mai târziu.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Descriere</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titlu</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Accesul la clipboard a eșuat. Selectează și copiază comanda afișată.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Creează fără a alege o parolă a personajului; folosește accesuri de unică folosință prin client sau stabilește o parolă mai târziu.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Închide</value>

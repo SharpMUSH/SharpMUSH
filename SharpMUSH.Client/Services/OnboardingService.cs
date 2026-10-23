@@ -97,6 +97,34 @@ public sealed class OnboardingService : IDisposable
 		{
 			if (Current(generation, token)) { Loading = false; Changed?.Invoke(); }
 		}
+		if (journey == GuideJourney.Administrator && token is not null && Ready && Current(generation, token))
+			await TickDetectedAsync(generation, token);
+	}
+
+	/// <summary>
+	/// Ticks the administrator steps the server can see are done (a channel exists, a backup is listed, ...).
+	/// A convenience: when the server cannot say, the checklist is left as it was.
+	/// </summary>
+	private async Task TickDetectedAsync(long generation, string token)
+	{
+		string[] detected;
+		try
+		{
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/administrator/detected");
+			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+			using var client = _http.CreateClient("api");
+			using var response = await client.SendAsync(request);
+			if (!response.IsSuccessStatusCode) return;
+			detected = await response.Content.ReadFromJsonAsync<string[]>() ?? [];
+		}
+		catch (Exception error) when (error is HttpRequestException or JsonException or TaskCanceledException) { return; }
+		var steps = detected.Where(GuideStepIds.Administrator.Contains).Except(Progress.CompletedStepIds).ToArray();
+		if (steps.Length == 0 || !Current(generation, token)) return;
+		await ChangeAsync(progress => progress with
+		{
+			CompletedStepIds = progress.CompletedStepIds.Union(steps).ToArray(),
+			SkippedStepIds = progress.SkippedStepIds.Except(steps).ToArray()
+		});
 	}
 
 	public Task ChoosePathAsync(GuidePath path) => ChangeAsync(progress => progress with
@@ -109,8 +137,20 @@ public sealed class OnboardingService : IDisposable
 	public Task DismissAsync() => ChangeAsync(progress => progress with { Active = false, Dismissed = true });
 	public Task SetImageryAsync(GuideImagery imagery) => ChangeAsync(progress => progress with { Imagery = imagery });
 	public Task SetCurrentStepAsync(string step) => ChangeAsync(progress => progress with { CurrentStepId = step });
-	public Task CompleteStepAsync(string step) => FinishStepAsync(step, false);
+	public async Task CompleteStepAsync(string step)
+	{
+		var token = Session;
+		var character = _auth.ActiveCharacter;
+		var finished = PlayerGuideFinished;
+		await FinishStepAsync(step, false);
+		// The guide's last lesson done: the game's own +welcome list stops asking about the basics, for the
+		// character that finished it even if the player switches while this runs.
+		if (!finished && PlayerGuideFinished && token is not null && token == Session && character is not null)
+			await WelcomeChecklist.TickBasicsAsync(_http, token, $"#{character.DbrefNumber}:{character.CreationTime}");
+	}
 	public Task SkipStepAsync(string step) => FinishStepAsync(step, true);
+	private bool PlayerGuideFinished => _journey == GuideJourney.Player && Ready && StepsFor(Progress.Path)
+		.All(id => Progress.CompletedStepIds.Contains(id) || Progress.SkippedStepIds.Contains(id));
 	private IReadOnlyList<string> StepsFor(GuidePath path) => _journey == GuideJourney.Player
 		? GuideCatalog.Player(path).Select(lesson => lesson.Id).ToArray() : GuideStepIds.Administrator;
 
