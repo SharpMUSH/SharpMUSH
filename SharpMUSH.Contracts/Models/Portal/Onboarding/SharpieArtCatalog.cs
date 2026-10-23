@@ -10,6 +10,17 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-weird-fiction-chibi-player-world", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-sign-in", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-administrator-invite", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-administrator-walkthrough", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-administrator-joining", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-administrator-identity", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-magical-realism-kemono-player-useful-action", "kemono", "Magical Realism", "images/sharpie/sharpie-magical-realism-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-magical-realism-kemono-player-place", "kemono", "Magical Realism", "images/sharpie/sharpie-magical-realism-kemono-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-continue", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-channels", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-speak-act", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-military-science-fiction-chibi-player-world", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-world.png", 1254, 1254, "player-world"),
 		new SharpieArt("sharpie-military-science-fiction-chibi-player-character", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-military-science-fiction-chibi-player-sign-in", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
