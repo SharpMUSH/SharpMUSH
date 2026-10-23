@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-pixel-player-channels", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-speak-act", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-useful-action", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-place", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-world", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-character", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-cyberpunk-pixel-shared-welcome", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-pixel-administrator-walkthrough", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-administrator-invite", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Genre),
