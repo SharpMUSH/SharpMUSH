@@ -12,6 +12,13 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-adult-kemono-administrator-capabilities", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-administrator-rules", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-player-character", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-player-sign-in", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-shared-welcome", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-adult-kemono-administrator-joining", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-administrator-identity", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-kemono-shared-completion", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-kemono-player-continue", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-kemono-player-channels", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Genre),
