@@ -1,9 +1,12 @@
 using Mediator;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Queries.Database.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
@@ -96,6 +99,10 @@ public sealed class PackageDeclarationService(
 		}
 
 		await ApplyAttributeEntriesAsync(writes, plan, notes, cancellationToken);
+		if (await ApplyWikiPropertiesAsync(writes, plan, cancellationToken) is Error<string> refused)
+		{
+			return refused;
+		}
 
 		await InvalidateAsync(holders, cancellationToken);
 		notes.AddRange(plan.Changes
@@ -113,6 +120,7 @@ public sealed class PackageDeclarationService(
 			foreach (var permission in package.Owned?.Permissions ?? []) otherOwners[(PackageDeclarationKind.Permission, permission.Name)] = package.Id;
 			foreach (var role in package.Owned?.Roles ?? []) otherOwners[(PackageDeclarationKind.Role, role.Slug)] = package.Id;
 			foreach (var entry in package.Owned?.AttributeEntries ?? []) otherOwners[(PackageDeclarationKind.Attribute, entry.Name)] = package.Id;
+			foreach (var property in package.Owned?.WikiFactProperties ?? []) otherOwners[(PackageDeclarationKind.WikiProperty, property.Id)] = package.Id;
 		}
 
 		var held = new HashSet<string>(StringComparer.Ordinal);
@@ -139,7 +147,10 @@ public sealed class PackageDeclarationService(
 				? await mediator.CreateStream(new GetAttributeFlagsQuery(), cancellationToken).Select(f => f.Name.ToLowerInvariant()).ToHashSetAsync(cancellationToken: cancellationToken)
 				: null,
 			await AttributeCopiesAsync(declared.AttributeEntries.Where(e => e.Retroactive).Select(e => e.Name).ToArray(), cancellationToken),
-			await IndexCopiesAsync(declared.AttributeEntries, cancellationToken));
+			await IndexCopiesAsync(declared.AttributeEntries, cancellationToken),
+			declared.WikiFactProperties.Count > 0 || owned?.WikiFactProperties.Count > 0
+				? (await mediator.Send(new GetWikiFactSchemaQuery(), cancellationToken)).Properties
+				: []);
 		return PackageDeclarationPlanner.Plan(declared, owned, live, _clock.GetUtcNow().ToUnixTimeMilliseconds());
 	}
 
@@ -205,6 +216,53 @@ public sealed class PackageDeclarationService(
 		}
 
 		notes.AddRange(changed.Select(c => $"Gave {c.Key}'s default flags to {c.Value} existing {(c.Value == 1 ? "copy" : "copies")} of it."));
+	}
+
+	/// <summary>
+	/// Defines and removes the wiki properties the plan names. Pages keep the facts they state either way. A definition
+	/// the store refuses is the error.
+	/// </summary>
+	private async Task<Result<None>> ApplyWikiPropertiesAsync(PackageWriteTransaction writes, PackageDeclarationPlan plan,
+		CancellationToken cancellationToken)
+	{
+		if (plan.WikiPropertyWrites.Count == 0 && plan.WikiPropertyRemovals.Count == 0)
+		{
+			return new None();
+		}
+
+		var before = (await mediator.Send(new GetWikiFactSchemaQuery(), cancellationToken)).Properties
+			.ToDictionary(p => p.Id, StringComparer.Ordinal);
+		foreach (var property in plan.WikiPropertyWrites)
+		{
+			if (await mediator.Send(new SetWikiFactPropertyCommand(property), cancellationToken) is Error<string> error)
+			{
+				return new Error<string>($"wiki property {property.Id}: {error.Value}");
+			}
+
+			var previous = before.GetValueOrDefault(property.Id);
+			writes.Track($"wiki property {property.Id}", () => RestoreWikiPropertyAsync(property.Id, previous));
+		}
+
+		foreach (var id in plan.WikiPropertyRemovals)
+		{
+			if (!before.TryGetValue(id, out var previous)) continue;
+			await mediator.Send(new DeleteWikiFactPropertyCommand(id), cancellationToken);
+			writes.Track($"wiki property {id}", () => RestoreWikiPropertyAsync(id, previous));
+		}
+
+		return new None();
+	}
+
+	/// <summary>Puts a wiki property back as it was before an apply: as it stood, or gone when there was none.</summary>
+	private async Task RestoreWikiPropertyAsync(string id, PropertyDefinition? previous)
+	{
+		if (previous is null)
+		{
+			await mediator.Send(new DeleteWikiFactPropertyCommand(id));
+			return;
+		}
+
+		await mediator.Send(new SetWikiFactPropertyCommand(previous));
 	}
 
 	/// <summary>Puts an attribute entry back as it was before an apply: as it stood, or gone when there was none.</summary>

@@ -80,9 +80,17 @@ public record WikiFactDto(string Property, string Value)
 
 /// <summary>
 /// A property facts may state. <paramref name="Type"/> is <c>number</c>, <c>keyword</c>, <c>boolean</c> or
-/// <c>page</c>; <paramref name="Keywords"/> lists a keyword property's allowed values.
+/// <c>page</c>; <paramref name="Keywords"/> lists a keyword property's allowed values. <paramref name="Label"/> and
+/// <paramref name="Description"/> are what a reader is shown, empty when unset.
 /// </summary>
-public record WikiFactPropertyDto(string Id, string Type, bool Multiple, IReadOnlyList<string> Keywords);
+public record WikiFactPropertyDto(string Id, string Type, bool Multiple, IReadOnlyList<string> Keywords,
+	string Label = "", string Description = "");
+
+/// <summary>
+/// Request body for <c>PUT /api/wiki/fact-properties/{id}</c>: the property's whole definition, replacing the one it
+/// had. <paramref name="Type"/> is written as <see cref="WikiFactPropertyDto.Type"/> is.
+/// </summary>
+public record SetFactPropertyRequest(string Type, bool Multiple, IReadOnlyList<string>? Keywords, string? Label, string? Description);
 
 /// <summary>
 /// Request body for <c>PUT /api/wiki/{slug}/facts</c>: every fact the page states, replacing the ones it had. A page

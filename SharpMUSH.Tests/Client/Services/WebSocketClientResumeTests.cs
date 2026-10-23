@@ -221,7 +221,7 @@ public class WebSocketClientResumeTests
 		await Assert.That(ServerTexts(terminal)).IsEquivalentTo(["old one", "old two", "six"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		// A resume is silent: no connection notices join the screen.
 		await Assert.That(terminal.Lines.Where(l => l.Source == SharpMUSH.Client.Models.TerminalLineSource.System
-			&& !l.Text.StartsWith("Connected to ", StringComparison.Ordinal))).IsEmpty();
+			&& l.Text != "Connecting…")).IsEmpty();
 
 		await Assert.That(await StoredTextsBecomeAsync(js, "old one", "old two", "six")).IsTrue();
 

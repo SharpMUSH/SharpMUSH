@@ -32,6 +32,18 @@ public sealed record WikiPageFactRecord
 	public string Value { get; init; } = "";
 }
 
+/// <summary>A property the world defines for its pages' facts, as <c>PropertyDefinition</c> holds it.</summary>
+public sealed record WikiPropertyRecord
+{
+	public string Id { get; init; } = "";
+	/// <summary>The <c>SemanticType</c> name.</summary>
+	public string Type { get; init; } = "";
+	public bool Multiple { get; init; }
+	public string[]? Keywords { get; init; }
+	public string? Label { get; init; }
+	public string? Description { get; init; }
+}
+
 /// <summary>
 /// What a namespace, category or page requires. <c>Required</c> maps an action name
 /// (<c>WikiAction</c>, lowercase) to the permissions it needs.

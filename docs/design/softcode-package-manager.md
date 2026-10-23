@@ -129,6 +129,13 @@ permissions) and `roles:`. The reference is
   unset and records it in `Owned.Grants`; a role that already sets it is the game's. An owned
   grant the game cleared stays cleared. A dropped grant, or every grant on uninstall, is cleared
   where the role still allows it, before the permission removals are judged.
+- **Wiki properties (format 1.17).** `wiki_properties:` maps a property key to its type,
+  `multiple`, keyword `values`, `label` and `description`, checked as `@wiki/property` checks
+  them. The plan defines a property the world lacks and records it in `Owned.WikiProperties`. A
+  property the world defines is the world's when it takes the package's values (same type and
+  number of values, and its keywords include the package's), and blocks otherwise. An owned
+  property merges field by field. A dropped property, or every one on uninstall, is removed;
+  pages keep the facts they state.
 
 ### Configuration options (format 1.3)
 

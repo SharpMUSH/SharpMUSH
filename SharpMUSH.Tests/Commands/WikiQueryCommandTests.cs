@@ -24,6 +24,9 @@ public class WikiQueryCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
 
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(WikiService);
+
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix)
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);

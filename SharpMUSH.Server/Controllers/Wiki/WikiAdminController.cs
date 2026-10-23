@@ -5,6 +5,7 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Wiki.Semantics;
@@ -23,6 +24,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   PUT  /api/wiki/{slug}/protection  — require wiki.admin to edit and delete the page, or not (wiki.admin)
 ///   PUT  /api/wiki/{slug}/metadata    — set categories/published (authenticated)
 ///   PUT  /api/wiki/categories/{category}/pin — pin a category to the wiki home, or unpin it (wiki.admin)
+///   PUT  /api/wiki/fact-properties/{id} — define a property facts may state, or change it (wiki.admin)
+///   DELETE /api/wiki/fact-properties/{id} — remove a property; pages keep the facts that state it (wiki.admin)
 ///   POST /api/wiki/batch/protect      — batch protection change (Wizard+)
 ///   POST /api/wiki/batch/delete       — batch deletion (Wizard+)
 ///   POST /api/wiki/invalidate-cache   — evict pre-render cache entries after an edit
@@ -74,6 +77,40 @@ public class WikiAdminController(
 		{
 			bool => Ok(await Wiki.GetPinnedCategoriesAsync()),
 			Error<string> error => BadRequest(error.Value),
+		};
+
+	/// <summary>
+	/// PUT /api/wiki/fact-properties/{id}
+	/// Defines a property facts may state, or replaces its definition, and returns it as stored. 400 for a definition
+	/// the wiki refuses. Pages that state the property keep their facts.
+	/// </summary>
+	[HttpPut("fact-properties/{id}")]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
+	public async Task<IActionResult> SetFactProperty(string id, [FromBody] SetFactPropertyRequest request)
+	{
+		if (WikiFactProperties.ParseType(request.Type) is not { } type)
+			return BadRequest($"'{request.Type}' is not a property type: number, keyword, boolean or page.");
+		var property = new PropertyDefinition(id, WikiFactProperties.SchemaVersion, type,
+			request.Multiple ? Cardinality.Multiple : Cardinality.Single,
+			[.. (request.Keywords ?? []).Select(keyword => new Keyword(keyword))], request.Label ?? string.Empty, request.Description ?? string.Empty);
+		return await Wiki.SetFactPropertyAsync(property) switch
+		{
+			PropertyDefinition stored => Ok(ToDto(stored)),
+			Error<string> error => BadRequest(error.Value),
+		};
+	}
+
+	/// <summary>
+	/// DELETE /api/wiki/fact-properties/{id}
+	/// Removes a property. Pages that state it keep their facts, and a property defined again with its id finds them.
+	/// </summary>
+	[HttpDelete("fact-properties/{id}")]
+	[Authorize(Policy = PortalPermission.WikiAdmin)]
+	public async Task<IActionResult> DeleteFactProperty(string id)
+		=> await Wiki.DeleteFactPropertyAsync(id) switch
+		{
+			None => NoContent(),
+			_ => NotFound(),
 		};
 
 	/// <summary>

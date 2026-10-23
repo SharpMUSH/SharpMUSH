@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Commands.Database.Wiki;
 
@@ -33,6 +34,12 @@ public sealed record SetWikiPageMetadataCommand(string Id, IReadOnlyList<string>
 
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetPageFactsAsync"/>.</summary>
 public sealed record SetWikiPageFactsCommand(string Id, IReadOnlyList<WikiPageFact> Facts) : ICommand<FoundResult<WikiPage>>;
+
+/// <summary>Forwards to <see cref="IWikiStore.SetFactPropertyAsync"/>.</summary>
+public sealed record SetWikiFactPropertyCommand(PropertyDefinition Property) : ICommand<Result<PropertyDefinition>>;
+
+/// <summary>Forwards to <see cref="IWikiStore.DeleteFactPropertyAsync"/>.</summary>
+public sealed record DeleteWikiFactPropertyCommand(string Id) : ICommand<Found<None>>;
 
 /// <summary>Forwards to <see cref="IWikiStore.BuildFactIndexBatchAsync"/>.</summary>
 public sealed record BuildWikiFactIndexBatchCommand(int BatchSize) : ICommand<WikiFactIndexStatus>;

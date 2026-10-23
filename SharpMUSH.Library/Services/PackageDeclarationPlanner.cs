@@ -1,6 +1,7 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Packages;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -20,6 +21,8 @@ namespace SharpMUSH.Library.Services;
 /// For each attribute the package declares retroactive: the flags, lowercase, of every copy of it already on an
 /// object.
 /// </param>
+/// <param name="IndexCopies">For each declared entry with an index, how many objects hold a copy for it to list.</param>
+/// <param name="WikiProperties">The world's wiki fact properties.</param>
 public sealed record PackageDeclarationLiveState(
 	IReadOnlyList<RoleCategory> RoleCategories,
 	IReadOnlyList<RoleCategory> PermissionCategories,
@@ -30,7 +33,8 @@ public sealed record PackageDeclarationLiveState(
 	IReadOnlyList<SharpAttributeEntry>? AttributeEntries = null,
 	IReadOnlySet<string>? AttributeFlags = null,
 	IReadOnlyDictionary<string, IReadOnlyList<IReadOnlyList<string>>>? AttributeCopies = null,
-	IReadOnlyDictionary<string, long>? IndexCopies = null);
+	IReadOnlyDictionary<string, long>? IndexCopies = null,
+	IReadOnlyList<PropertyDefinition>? WikiProperties = null);
 
 /// <summary>An attribute entry an apply writes, and whether its default flags then go to every existing copy.</summary>
 public sealed record PackageAttributeEntryWrite(PackageAttributeEntrySpec Entry, bool Retroactive);
@@ -46,6 +50,8 @@ public sealed record PackageDeclarationPlan(
 	IReadOnlyList<(CategoryKind Kind, string Name)> CategoryRemovals,
 	IReadOnlyList<PackageAttributeEntryWrite> AttributeEntryWrites,
 	IReadOnlyList<string> AttributeEntryRemovals,
+	IReadOnlyList<PropertyDefinition> WikiPropertyWrites,
+	IReadOnlyList<string> WikiPropertyRemovals,
 	PackageDeclarations Owned)
 {
 	/// <summary>True when an item cannot be applied.</summary>
@@ -306,12 +312,14 @@ public static partial class PackageDeclarationPlanner
 		}
 
 		var (attributeWrites, attributeRemovals, ownedAttributes) = PlanAttributeEntries(declared, owned, live, changes);
+		var (wikiPropertyWrites, wikiPropertyRemovals, ownedWikiProperties) = PlanWikiProperties(declared, owned, live, changes);
 
 		return new PackageDeclarationPlan(
 			changes, categoryWrites, permissionWrites, roleWrites, roleRemovals, permissionRemovals, categoryRemovals,
-			attributeWrites, attributeRemovals,
+			attributeWrites, attributeRemovals, wikiPropertyWrites, wikiPropertyRemovals,
 			new PackageDeclarations(ownedRoleCategories, ownedPermissionCategories, ownedPermissions, ownedRoles,
-				ownedAttributes.Count == 0 ? null : ownedAttributes, ownedGrants.Count == 0 ? null : ownedGrants));
+				ownedAttributes.Count == 0 ? null : ownedAttributes, ownedGrants.Count == 0 ? null : ownedGrants,
+				ownedWikiProperties.Count == 0 ? null : ownedWikiProperties));
 	}
 
 	/// <summary>The three-way merge of one field: the package's new value when it changed it, else the game's.</summary>

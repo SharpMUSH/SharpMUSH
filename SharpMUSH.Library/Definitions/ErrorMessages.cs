@@ -242,6 +242,9 @@ public static partial class ErrorMessages
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
 		/// <summary>A fact the wiki's schema refuses: an unknown property, a value of the wrong type, or a page that is not there.</summary>
 		public const string InvalidWikiFact = "#-1 INVALID WIKI FACT";
+		/// <summary>A property definition the wiki refuses: a malformed id, an unknown type, or a value list it cannot take.</summary>
+		public const string InvalidWikiProperty = "#-1 INVALID WIKI PROPERTY";
+		public const string NoSuchWikiProperty = "#-1 NO SUCH WIKI PROPERTY";
 		/// <summary>A fact query the wiki cannot answer: a condition it cannot read, or a property, value or page that is not there.</summary>
 		public const string InvalidWikiQuery = "#-1 INVALID WIKI QUERY";
 		/// <summary>The fact index is still building, so no fact query can be answered yet.</summary>

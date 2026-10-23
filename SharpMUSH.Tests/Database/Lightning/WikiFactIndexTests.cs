@@ -10,12 +10,15 @@ namespace SharpMUSH.Tests.Database.Lightning;
 
 /// <summary>
 /// The fact index: built in batches over the pages a world already has, kept in step by every page write from the
-/// moment it starts, resumed after a reopen, and started over when it was built for another schema. Every test
+/// moment it starts, resumed after a reopen, and started over when it was written in another key format. Every test
 /// compares the stored entries with the facts the pages state.
 /// </summary>
 public class WikiFactIndexTests : LightningDatabaseFixture
 {
 	private IWikiStore Wiki => Db;
+
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(Wiki);
 
 	private static readonly DateTimeOffset T0 = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
@@ -140,11 +143,11 @@ public class WikiFactIndexTests : LightningDatabaseFixture
 	}
 
 	[Test]
-	public async Task AnIndexBuiltForAnotherSchemaStartsOver()
+	public async Task AnIndexWrittenInAnotherFormatStartsOver()
 	{
 		var page = await AddAsync("shield", Level(1));
 		await BuildAsync();
-		// The state an older schema left, and an entry typed by it.
+		// The state an older format left, and an entry written in it.
 		await Db.Store.WriteAsync(tx =>
 		{
 			tx.TryGet(Tables.Meta, Keys.Str("wiki.fact.index"), out var state);
@@ -153,7 +156,7 @@ public class WikiFactIndexTests : LightningDatabaseFixture
 			tx.Put(Tables.WikiFact, Keys.Concat(Keys.Str("old:property"), Keys.Sep, [2], Keys.Str("x"), Keys.Sep, Keys.Dbref(99)), []);
 		});
 		await Assert.That((await Wiki.GetFactIndexStatusAsync()).Phase).IsEqualTo(WikiFactIndexPhase.Clearing);
-		// Writes leave an index typed by another schema alone; the rebuild picks them up.
+		// Writes leave an index in another format alone; the rebuild picks them up.
 		await Wiki.SetPageFactsAsync(page.Id, [Level(2)]);
 
 		await BuildAsync();

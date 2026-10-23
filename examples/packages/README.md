@@ -71,7 +71,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.16 title)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -539,6 +539,45 @@ page with what the install does to it.
   notes say so.
 - **Rollback** leaves wiki pages as they are; a page's own history is the way
   back for its text.
+
+## Wiki properties (format 1.17)
+
+A page's facts state only properties the game defines (`help wiki facts`).
+`wiki_properties:` defines the ones a package's pages state, as
+`@wiki/property` would. Each key is the property, `<group>:<name>`:
+
+```yaml
+format: "1.17"
+package: pf2e-remaster
+version: 1.4.0
+
+wiki_properties:
+  pf2e:level:
+    type: number
+    label: Level
+  pf2e:tradition:
+    type: keyword
+    multiple: true
+    values: [arcane, divine, occult, primal]
+    description: The magic traditions a spell belongs to.
+```
+
+- `type`: `number`, `keyword`, `page` or `boolean`. Required.
+- `multiple`: `true` if a page may state several values. Default `false`.
+- `values`: the keywords a keyword property allows. Omit it to allow any.
+- `label` and `description`: what readers see.
+
+The review screen lists each property before the apply.
+
+- **Install.** A property the game lacks is defined, and is the package's. One
+  the game already defines is left as it is when it takes what the package
+  states: the same type and number of values, and every keyword the package
+  lists. Otherwise the install is blocked until staff change or remove it with
+  `@wiki/property`. A property another package defines blocks.
+- **Upgrade.** Each field merges three ways, so a label staff changed stays
+  unless the new version changes it too.
+- **Dropped properties and uninstall.** The property is removed. Pages keep the
+  facts they state, and defining the property again finds them.
 
 ## Attribute entries (format 1.5)
 

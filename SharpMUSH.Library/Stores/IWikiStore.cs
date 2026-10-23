@@ -96,12 +96,22 @@ public interface IWikiStore
 	/// <summary>
 	/// Sets the page's facts (already <c>WikiPageFacts.Normalize</c>d) without a revision. A store with a fact schema
 	/// types them against it in the same write; facts that do not fit it, or a page reference to a page that does
-	/// not exist, are an error and change nothing.
+	/// not exist, are an error and change nothing. A property whose values the page already states is not checked
+	/// again, so a page keeps a fact its property no longer takes until that property's values change.
 	/// </summary>
 	Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts);
 
 	/// <summary>The properties a page's facts may state, with each one's type, cardinality and allowed keywords.</summary>
 	Task<SemanticSchema> GetFactSchemaAsync();
+
+	/// <summary>
+	/// Defines <paramref name="property"/>, or replaces its definition, as <see cref="Wiki.Semantics.WikiFactProperties.Checked"/>
+	/// writes it; an error for a definition it refuses. Pages that state the property keep their facts.
+	/// </summary>
+	Task<Result<PropertyDefinition>> SetFactPropertyAsync(PropertyDefinition property);
+
+	/// <summary>Removes the property <paramref name="id"/>. Pages that state it keep their facts.</summary>
+	Task<Found<None>> DeleteFactPropertyAsync(string id);
 
 	/// <summary>The fact index's phase and how far it has come.</summary>
 	Task<WikiFactIndexStatus> GetFactIndexStatusAsync();

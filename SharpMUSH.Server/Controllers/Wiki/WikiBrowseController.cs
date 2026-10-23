@@ -202,16 +202,15 @@ public class WikiBrowseController(
 
 	/// <summary>
 	/// GET /api/wiki/fact-properties
-	/// The properties a page's facts may state: each one's id, type, whether it takes several values, and a keyword
-	/// property's allowed values.
+	/// The properties a page's facts may state: each one's id, type, whether it takes several values, a keyword
+	/// property's allowed values, and its label and description.
 	/// </summary>
 	[HttpGet("fact-properties")]
 	public async Task<IActionResult> GetFactProperties()
 	{
 		var schema = await Wiki.GetFactSchemaAsync();
 		return Ok((schema.Properties.IsDefault ? [] : schema.Properties)
-			.Select(p => new WikiFactPropertyDto(p.Id, FactType(p.Type), p.Cardinality == Cardinality.Multiple,
-				[.. (p.AllowedKeywords.IsDefault ? [] : p.AllowedKeywords).Select(k => k.Value)]))
+			.Select(ToDto)
 			.OrderBy(p => p.Id, StringComparer.Ordinal)
 			.ToList());
 	}
@@ -243,14 +242,6 @@ public class WikiBrowseController(
 				$"The fact index is building: {building.Status.Indexed} of {building.Status.Pages} pages."),
 			Error<string> error => BadRequest(error.Value)
 		};
-
-	private static string FactType(SemanticType type) => type switch
-	{
-		SemanticType.Integer => "number",
-		SemanticType.Boolean => "boolean",
-		SemanticType.PageRef => "page",
-		_ => "keyword",
-	};
 
 	/// <summary>
 	/// GET /api/wiki/pinned-categories

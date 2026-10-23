@@ -186,6 +186,10 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 
 	public Task<SemanticSchema> GetFactSchemaAsync() => store.GetFactSchemaAsync();
 
+	public Task<Result<PropertyDefinition>> SetFactPropertyAsync(PropertyDefinition property) => store.SetFactPropertyAsync(property);
+
+	public Task<Found<None>> DeleteFactPropertyAsync(string id) => store.DeleteFactPropertyAsync(id);
+
 	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
 		=> store.QueryFactsAsync(query with { Category = query.Category is { } category ? WikiHelpers.CategoryKey(category) : null }, visibility);
 

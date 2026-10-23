@@ -69,6 +69,12 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<SemanticSchema> GetFactSchemaAsync()
 		=> mediator.Send(new GetWikiFactSchemaQuery()).AsTask();
 
+	public Task<Result<PropertyDefinition>> SetFactPropertyAsync(PropertyDefinition property)
+		=> mediator.Send(new SetWikiFactPropertyCommand(property)).AsTask();
+
+	public Task<Found<None>> DeleteFactPropertyAsync(string id)
+		=> mediator.Send(new DeleteWikiFactPropertyCommand(id)).AsTask();
+
 	public Task<WikiFactIndexStatus> GetFactIndexStatusAsync()
 		=> mediator.Send(new GetWikiFactIndexStatusQuery()).AsTask();
 

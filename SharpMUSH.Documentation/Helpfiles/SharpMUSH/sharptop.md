@@ -38,7 +38,7 @@ This is the index to the MUSH online help files.
 
   For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, see [gs mail].
 
-  If the game has a web portal, you can [register] an account there or at the login screen, then [make] characters and [play] them. The portal also serves the game's [wiki].
+  To make an account and a character at the login screen, see [register], [make] and [play]. A game with a web portal offers the same there, and serves its [wiki].
 
   To have the server address you in another language, see [@locale].
 
