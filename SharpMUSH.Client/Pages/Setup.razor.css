@@ -32,7 +32,7 @@
 
 .setup-card {
 	width: 100%;
-	max-width: 420px;
+	max-width: 560px;
 	background: var(--surface);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-lg);
@@ -125,9 +125,10 @@
 	cursor: not-allowed;
 }
 
-/* The applications step lists a description per application, which reads poorly at the claim form's width. */
-.setup-card--wide {
-	max-width: 560px;
+/* The identity form's save is this step's main action, so it takes the same full-width fill as the others. */
+.setup-card ::deep .identity-save {
+	width: 100%;
+	margin-top: 1.5rem;
 }
 
 /* The claim's confirmation, carried onto the first step it hands over to. */

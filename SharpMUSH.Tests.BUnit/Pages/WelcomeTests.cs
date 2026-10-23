@@ -406,4 +406,19 @@ public class WelcomeTests : BunitContext
 		await Assert.That(guide.Progress.Active).IsTrue();
 		await Assert.That(guide.Progress.CurrentStepId).IsEqualTo("continue");
 	}
+
+	[Test]
+	[Arguments("continue", true)]
+	[Arguments("channels", false)]
+	public async Task OnlyOneButtonLeadsWhenTheLessonHasItsOwnAction(string step, bool quiet)
+	{
+		var guide = Services.GetRequiredService<OnboardingService>();
+		await guide.LoadAsync(GuideJourney.Player);
+		await guide.ChoosePathAsync(GuidePath.Mush);
+		await guide.SetCurrentStepAsync(step);
+		var companion = Render<GuideCompanion>(parameters => parameters
+			.Add(component => component.Guide, guide)
+			.Add(component => component.OnExplore, () => { }));
+		await Assert.That(companion.Find(".guide-panel-actions .guide-action").ClassList.Contains("guide-action--quiet")).IsEqualTo(quiet);
+	}
 }
