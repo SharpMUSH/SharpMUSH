@@ -44,6 +44,8 @@ public static class WikiFactQueryText
 				if (WikiHelpers.ParseNamespace(value) is not { } parsed) return new Error<string>($"No namespace {value} exists.");
 				ns = WikiHelpers.NamespaceName(parsed);
 			}
+			else if (facts.Count == WikiFactQuery.MaxConditions)
+				return new Error<string>($"A query takes from 1 to {WikiFactQuery.MaxConditions} conditions.");
 			else
 				switch (await ConditionAsync(wiki, schema, key, value, visibility))
 				{

@@ -244,9 +244,9 @@ public partial class Functions
 		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
 		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
 		var conditions = parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText() ?? string.Empty);
-		return new CallState(await QueryWiki.RunAsync(wikiService, conditions, visibility) switch
+		return new CallState(await QueryWiki.RunAsync(wikiService, conditions, visibility, QueryWiki.MaxReturned) switch
 		{
-			WikiFactQueryPage found => string.Join(" ", found.Pages.Select(WikiCommandHelper.DisplayReference)),
+			WikiFactQueryListing found => string.Join(" ", found.Pages.Select(WikiCommandHelper.DisplayReference)),
 			WikiFactIndexBuilding => ErrorMessages.Returns.WikiIndexBuilding,
 			Error<string> => ErrorMessages.Returns.InvalidWikiQuery
 		});
