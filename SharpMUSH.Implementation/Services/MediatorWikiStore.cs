@@ -78,6 +78,9 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<WikiFactIndexStatus> RebuildFactIndexAsync()
 		=> mediator.Send(new RebuildWikiFactIndexCommand()).AsTask();
 
+	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> mediator.Send(new QueryWikiFactsQuery(query, visibility)).AsTask();
+
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> mediator.Send(new GetPinnedWikiCategoriesQuery()).AsTask();
 

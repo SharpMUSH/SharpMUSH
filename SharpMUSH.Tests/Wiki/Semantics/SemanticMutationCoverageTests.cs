@@ -45,6 +45,7 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 		["GetFactIndexStatusAsync"] = Impact.Read,
 		["BuildFactIndexBatchAsync"] = Impact.FactIndex,
 		["RebuildFactIndexAsync"] = Impact.FactIndex,
+		["QueryFactsAsync"] = Impact.Read,
 		["SetCategoryPinnedAsync"] = Impact.PresentationOnly,
 		["WriteTranslationAsync"] = Impact.SemanticMutation,
 		["DeleteTranslationAsync"] = Impact.SemanticMutation
