@@ -23,7 +23,7 @@ else if (_pages is { } pages)
         <ul class="wiki-fact-results" aria-live="polite">
             @foreach (var row in pages)
             {
-                <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
+                <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
             }
         </ul>
     }
@@ -44,7 +44,7 @@ else if (_pages is { } pages)
                     @foreach (var row in pages)
                     {
                         <tr>
-                            <th scope="row"><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></th>
+                            <th scope="row"><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></th>
                             @foreach (var property in _show)
                             {
                                 <td>@string.Join(" · ", Values(row.Id, property.Id))</td>

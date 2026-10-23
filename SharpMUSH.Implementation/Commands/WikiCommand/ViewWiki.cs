@@ -154,7 +154,8 @@ public static class ViewWiki
 			rendered = new WikiCommandRenderer(RenderWidth, parser)
 			{
 				ImageAllowed = source => ImageHostPolicy.Allows(source, cosmetic.ImageHosts, cosmetic.ImageHostList),
-				FactBlocks = await FactBlocksWiki.AnswerAsync(wikiService, document, await WikiCommandHelper.VisibilityAsync(parser, executor), RenderWidth),
+				FactBlocks = await FactBlocksWiki.AnswerAsync(wikiService, localization, document,
+					await WikiCommandHelper.VisibilityAsync(parser, executor), RenderWidth, locale, forceSource),
 			}.Render(document);
 		}
 

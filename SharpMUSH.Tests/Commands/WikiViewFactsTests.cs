@@ -59,9 +59,9 @@ public class WikiViewFactsTests
 	}
 
 	/// <summary>The latest <c>@wiki</c> view of <paramref name="page"/> the player was sent, as it was sent.</summary>
-	private async Task<MString> ViewAsync(TestIsolationHelpers.TestPlayer player, WikiPage page)
+	private async Task<MString> ViewAsync(TestIsolationHelpers.TestPlayer player, WikiPage page, string command = "@wiki")
 	{
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki main:{page.Slug}"));
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"{command} main:{page.Slug}"));
 		return WebAppFactoryArg.Notifications.RawFor(player.DbRef)
 			.Select(message => message switch { MString markup => markup, string text => MarkupText.Plain(text) })
 			.Last(message => message.ToPlainText().Contains($"Wiki: {page.Title} [main]", StringComparison.Ordinal));
@@ -138,5 +138,26 @@ public class WikiViewFactsTests
 		await Assert.That(view.Render(MarkupFormat.Mxp)).Contains($"@wiki main:{later.Slug}");
 		// A query the wiki cannot answer says why, where the block is.
 		await Assert.That(text).Contains($"[Query {School.Id}>2: {School.Id} is not a whole number, so it has no range.]");
+	}
+
+	[Test]
+	public async Task AFactsBlockTitlesItsPagesInTheReadersLocale()
+	{
+		var player = await PlayerAsync("WikiViewBlockLocale");
+		var school = TestIsolationHelpers.GenerateUniqueName("augury").ToLowerInvariant();
+		var found = await PageAsync("BlockSource", true, new WikiPageFact(School.Id, school));
+		var french = TestIsolationHelpers.GenerateUniqueName("Augure");
+		await Assert.That(await WikiService.UpsertTranslationAsync(found.Id, "fr", french, "Corps.", "#1", null, true,
+			expectedRevisionNumber: null) is WikiTranslation).IsTrue();
+		var listing = (await WikiService.CreateAsync(TestIsolationHelpers.GenerateUniqueName("BlockLocale"),
+			$"::: facts {School.Id}={school}\n:::", "#1")).Expect<WikiPage>();
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@locale fr"));
+		var read = (await ViewAsync(player, listing)).ToPlainText();
+		await Assert.That(read).Contains(french);
+		await Assert.That(read).DoesNotContain(found.Title);
+		var source = (await ViewAsync(player, listing, "@wiki/source")).ToPlainText();
+		await Assert.That(source).Contains(found.Title);
+		await Assert.That(source).DoesNotContain(french);
 	}
 }
