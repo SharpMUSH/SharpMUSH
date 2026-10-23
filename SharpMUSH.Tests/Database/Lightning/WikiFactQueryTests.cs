@@ -184,8 +184,7 @@ public class WikiFactQueryTests : LightningDatabaseFixture
 	public async Task ASortOrdersByThePropertyEitherWayAcrossContinuations()
 	{
 		var levels = new[] { 7, -1, 3, 12, 3, 0 };
-		var pages = new List<WikiPage>();
-		for (var i = 0; i < levels.Length; i++) pages.Add(await AddAsync($"sorted-{i}", facts: [Fact("pf2e:level", levels[i]), Fact("pf2e:rank", 1)]));
+		for (var i = 0; i < levels.Length; i++) await AddAsync($"sorted-{i}", facts: [Fact("pf2e:level", levels[i]), Fact("pf2e:rank", 1)]);
 		await AddAsync("unlevelled", facts: Fact("pf2e:rank", 1));
 		await BuildAsync();
 
