@@ -1,4 +1,5 @@
 .guide-panel { padding: clamp(1rem, 3vw, 2rem); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.guide-panel a:not([class]) { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
 .guide-panel-heading, .guide-panel-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .65rem; }
 .guide-panel-heading { justify-content: space-between; color: var(--text-faint); }
 .guide-lesson { margin: 1.25rem 0; max-width: 68ch; }

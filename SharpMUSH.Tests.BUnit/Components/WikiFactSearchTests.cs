@@ -93,11 +93,11 @@ public class WikiFactSearchTests : TrackingBunitContext
 	[Test]
 	public async Task ARefusalIsShownAsTheServerGaveIt()
 	{
-		_handler.Answers.Enqueue(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("No property pf2e:nope is defined.") });
+		_handler.Answers.Enqueue(Track(new HttpResponseMessage(HttpStatusCode.BadRequest) { Content = new StringContent("No property pf2e:nope is defined.") }));
 		var cut = await SearchAsync("pf2e:nope=1");
 		await Assert.That(cut.Find("[role=alert]").TextContent).IsEqualTo("No property pf2e:nope is defined.");
 
-		_handler.Answers.Enqueue(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("The fact index is building: 1 of 2 pages.") });
+		_handler.Answers.Enqueue(Track(new HttpResponseMessage(HttpStatusCode.ServiceUnavailable) { Content = new StringContent("The fact index is building: 1 of 2 pages.") }));
 		await cut.Find("form").SubmitAsync();
 		await Assert.That(cut.Find("[role=alert]").TextContent).IsEqualTo("WkFactSearchBuilding");
 	}
