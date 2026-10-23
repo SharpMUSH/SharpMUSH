@@ -84,10 +84,18 @@ public sealed partial class StarterWorldService(
 			return;
 		}
 
-		if (await attributes.GetAttributeAsync(arrival, arrival, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true)
-			is not SharpAttribute[] { Length: > 0 }
-			&& await attributes.SetAttributeAsync(god, arrival, "DESCRIBE", MarkupText.Plain(ArrivalDescription)) is Error<string>)
-			failures.Add("The arrival room could not be described.");
+		switch (await attributes.GetAttributeAsync(god, arrival, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true))
+		{
+			case Error<string>:
+				failures.Add("The arrival room's description could not be read.");
+				break;
+			case SharpAttribute[] { Length: > 0 }:
+				break;
+			default:
+				if (await attributes.SetAttributeAsync(god, arrival, "DESCRIBE", MarkupText.Plain(ArrivalDescription)) is Error<string>)
+					failures.Add("The arrival room could not be described.");
+				break;
+		}
 
 		if (await mediator.CreateStream(new GetExitsQuery(arrival.Object().DBRef)).AnyAsync(ct)) return;
 		var arrivalRef = $"#{arrival.Object().DBRef.Number}";
@@ -96,8 +104,9 @@ public sealed partial class StarterWorldService(
 			failures.Add("The room beyond the arrival room could not be dug.");
 			return;
 		}
-		if (Failed(await RunAsync("@OPEN", "Out;o", outside, null, arrivalRef))
-			|| Failed(await RunAsync("@OPEN", "In;i", arrivalRef, null, outside)))
+		var outFailed = Failed(await RunAsync("@OPEN", "Out;o", outside, null, arrivalRef));
+		var inFailed = Failed(await RunAsync("@OPEN", "In;i", arrivalRef, null, outside));
+		if (outFailed || inFailed)
 			failures.Add("The exits between the arrival room and Outside could not all be opened.");
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse(outside[1..], System.Globalization.CultureInfo.InvariantCulture))), ct) is AnySharpObject made
 			&& await attributes.SetAttributeAsync(god, made, "DESCRIBE", MarkupText.Plain(OutsideDescription)) is Error<string>)
@@ -112,7 +121,9 @@ public sealed partial class StarterWorldService(
 			failures.Add("The Newbie channel could not be made.");
 			return;
 		}
-		await RunAsync("@CHANNEL", ["DESCRIBE"], Channel, ChannelDescription);
+		if (await RunAsync("@CHANNEL", ["DESCRIBE"], Channel, ChannelDescription)
+			!= string.Format(ErrorMessages.Notifications.ChatChannelDescSet, Channel))
+			failures.Add("The Newbie channel could not be described.");
 	}
 
 	private Task<string?> RunAsync(string command, params string?[] arguments) => RunAsync(command, [], arguments);
