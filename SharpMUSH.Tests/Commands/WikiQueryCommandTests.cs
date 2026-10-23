@@ -69,6 +69,24 @@ public class WikiQueryCommandTests
 	}
 
 	[Test]
+	public async Task ATitleWithACommaIsOneConditionAndTheListingIsInTheReadersLocale()
+	{
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var player = await PlayerAsync("WikiQueryLocale");
+		var tag = Guid.NewGuid().ToString("N")[..6];
+		var elder = await PageAsync($"Elder, {tag}", "QueryLocale", true);
+		var spell = await PageAsync("QuerySpell", "QueryLocale", true, new WikiPageFact("pf2e:class", elder.Id));
+		await Assert.That(await WikiService.UpsertTranslationAsync(spell.Id, "fr", $"Sort {tag}", "Corps.", "#1", null, true,
+			expectedRevisionNumber: null) is WikiTranslation).IsTrue();
+
+		await RunAsync(player, "@locale fr");
+		await RunAsync(player, $"@wiki/query pf2e:class={elder.Title}");
+		await Assert.That(Told(player, $"Sort {tag}")).IsEqualTo(1);
+		await RunAsync(player, $"@wiki/query/source pf2e:class={elder.Title}");
+		await Assert.That(Told(player, spell.Title)).IsEqualTo(1);
+	}
+
+	[Test]
 	[Arguments("pf2e:unknown=1", "WIKI: No property pf2e:unknown is defined.")]
 	[Arguments("pf2e:level=1..x", "WIKI: pf2e:level is a whole number; '1..x' is not a range like '1..3'.")]
 	[Arguments("pf2e:class=No Such Query Page", "WIKI: pf2e:class names a page that does not exist: 'No Such Query Page'.")]

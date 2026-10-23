@@ -192,7 +192,7 @@ public static class ListWiki
 	/// translation's title appearing in it is exactly the leak the visibility filter exists to prevent. A
 	/// staffer who wants to see a draft translation opens the page.
 	/// </remarks>
-	private static async ValueTask<IReadOnlyCollection<string[]>> PageRowsAsync(
+	internal static async ValueTask<IReadOnlyCollection<string[]>> PageRowsAsync(
 		IWikiLocalizationService localization,
 		IReadOnlyList<WikiPage> pages,
 		string? locale,
