@@ -12,6 +12,20 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-time-travel-kemono-administrator-invite", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-administrator-walkthrough", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-administrator-capabilities", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-adult-chibi-administrator-joining", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-time-travel-kemono-administrator-rules", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-player-continue", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-player-continue.png", 1189, 1323, "player-continue", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-adult-chibi-player-useful-action", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-chibi-player-sign-in", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-chibi-shared-welcome", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-time-travel-kemono-administrator-joining", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-administrator-identity", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-shared-completion", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-time-travel-kemono-player-place", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-adult-chibi-player-character", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-time-travel-kemono-player-useful-action", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-time-travel-kemono-player-speak-act", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-time-travel-kemono-player-channels", "kemono", "Time Travel", "images/sharpie/sharpie-time-travel-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
