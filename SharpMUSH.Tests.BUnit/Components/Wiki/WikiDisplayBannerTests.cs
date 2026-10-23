@@ -16,7 +16,7 @@ namespace SharpMUSH.Tests.BUnit.Components.Wiki;
 
 /// <summary>
 /// Answers the calls the page aside makes: the existence check (every link exists) and the category's
-/// newest pages (three siblings, four pages in all).
+/// newest pages (three siblings, four pages in all); and any fact query, with The Tides.
 /// </summary>
 file sealed class PageAsideHandler : HttpMessageHandler
 {
@@ -34,6 +34,7 @@ file sealed class PageAsideHandler : HttpMessageHandler
 			_ => null,
 		} ?? path switch
 		{
+			"/api/wiki/query" => $$"""{"pages":[{{WikiApiFake.Page("4", "the_tides", "The Tides", "theme", null, "Dace")}}],"next":null}""",
 			"/api/wiki/exists" => """{"character/tomas_reyes":true,"character/magister_oake":true,"main/tidewater_chapel":false}""",
 			"/http/characters" => """[{"name":"Tomas Reyes","objid":"#312:1","created":1,"category":"","image":"/api/wiki-assets/t/tomas.jpg"},{"name":"Magister Oake","objid":"#316:1","created":1,"category":""}]""",
 			_ => null,
@@ -244,6 +245,19 @@ public class WikiDisplayBannerTests : TrackingBunitContext
 		var cut = RenderArticle(article);
 		await Assert.That(cut.FindAll(".wiki-article-card").Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll(".wiki-article-card .wiki-directive-block").Count).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AFactsBlock_ListsThePagesItsQueryFinds()
+	{
+		var article = new WikiArticle("Tides", "::: facts pf2e:tradition=arcane\n:::", null,
+			"<p>Spells:</p><div class=\"wiki-directive\" data-directive=\"facts\" data-arg=\"pf2e:tradition=arcane\"></div>")
+		{
+			Id = "11", Slug = "tides", Categories = ["theme"], Locale = "en", RequestedLocale = "en", AvailableLocales = ["en"],
+		};
+		var cut = RenderArticle(article);
+		cut.WaitForAssertion(() => cut.Find(".wiki-facts-block .wiki-fact-results a"));
+		await Assert.That(cut.Find(".wiki-facts-block .wiki-fact-results a").TextContent).IsEqualTo("The Tides");
 	}
 
 	[Test]

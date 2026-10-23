@@ -118,4 +118,25 @@ public class WikiViewFactsTests
 		await Assert.That(text).Contains("is not shown");
 		await Assert.That(text).DoesNotContain("abjuration");
 	}
+
+	[Test]
+	public async Task AFactsBlockListsThePagesItsQueryFindsWhenThePageIsRead()
+	{
+		var player = await PlayerAsync("WikiViewBlock");
+		var school = TestIsolationHelpers.GenerateUniqueName("divination").ToLowerInvariant();
+		var first = await PageAsync("BlockFound", true, new WikiPageFact(School.Id, school));
+		var markdown = $"Seers:\n\n::: facts {School.Id}={school}, show={School.Id}\n:::\n\n::: facts {School.Id}>2\n:::";
+		var listing = (await WikiService.CreateAsync(TestIsolationHelpers.GenerateUniqueName("BlockListing"), markdown, "#1")).Expect<WikiPage>();
+		var later = await PageAsync("BlockLater", true, new WikiPageFact(School.Id, school));
+
+		var view = await ViewAsync(player, listing);
+		var text = view.ToPlainText();
+		// Answered when read, so a page given the fact after the listing was written is listed too.
+		await Assert.That(text).Contains(first.Title);
+		await Assert.That(text).Contains(later.Title);
+		await Assert.That(text).Contains("School");
+		await Assert.That(view.Render(MarkupFormat.Mxp)).Contains($"@wiki main:{later.Slug}");
+		// A query the wiki cannot answer says why, where the block is.
+		await Assert.That(text).Contains($"[Query {School.Id}>2: {School.Id} is not a whole number, so it has no range.]");
+	}
 }

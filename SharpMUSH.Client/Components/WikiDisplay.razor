@@ -723,9 +723,9 @@ else
 
     private RenderFragment RenderSegments => RenderNodes(_segments);
 
-    /// <summary>The body's pieces: HTML as it is, a component for each live listing, and an element for
-    /// each block that holds one (<see cref="WikiBody"/>).</summary>
-    private static RenderFragment RenderNodes(IReadOnlyList<WikiBodyNode> nodes) => __builder =>
+    /// <summary>The body's pieces: HTML as it is, a component for each live listing (a facts block's query
+    /// answered when the page is read), and an element for each block that holds one (<see cref="WikiBody"/>).</summary>
+    private RenderFragment RenderNodes(IReadOnlyList<WikiBodyNode> nodes) => __builder =>
     {
         foreach (var node in nodes)
         {
@@ -733,6 +733,11 @@ else
             {
                 case WikiBodyHtml html:
                     @((MarkupString)html.Html)
+                    break;
+                case WikiBodyDirective { Directive: "facts" } facts:
+                    <div class="wiki-directive-block wiki-facts-block">
+                        <WikiFactResults Conditions="@(WikiFactConditions.Split(facts.Arg))" Locale="@Locale" />
+                    </div>
                     break;
                 case WikiBodyDirective directive:
                     <WikiDirectiveBlock Directive="@directive.Directive" Arg="@directive.Arg" />
