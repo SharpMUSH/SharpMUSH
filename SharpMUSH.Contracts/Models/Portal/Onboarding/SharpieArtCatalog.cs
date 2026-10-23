@@ -10,6 +10,16 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-capabilities", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-forgotten-realms-chibi-administrator-identity", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-forgotten-realms-chibi-player-channels", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-rules", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-identity", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-forgotten-realms-chibi-player-world", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-forgotten-realms-chibi-player-sign-in", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-joining", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-urban-fantasy-kemono-player-channels", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-urban-fantasy-kemono-shared-completion", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-urban-fantasy-kemono-player-continue", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-player-continue.png", 1254, 1254, "player-continue"),
 		new SharpieArt("sharpie-urban-fantasy-kemono-player-speak-act", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-dragonlance-chibi-administrator-walkthrough", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
