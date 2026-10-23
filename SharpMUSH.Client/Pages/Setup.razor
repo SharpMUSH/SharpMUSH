@@ -284,8 +284,10 @@
                 <div class="setup-kicker">@Loc["AuthFirstRunSetup"]</div>
                 <h2 class="setup-title">@Loc["AuthSetupComplete"]</h2>
                 <p class="setup-lead">@Loc["AdmSetupDoneLead"]</p>
-                <p class="setup-lead">@Loc["AdmSetupDoneStaff"] <a href="/admin/onboarding">@Loc["AdmSetupDoneChecklist"]</a></p>
-                <button class="setup-submit setup-signin" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
+                <p class="setup-lead">@Loc["AdmSetupDoneStaff"]</p>
+                @* The checklist is the next thing to do, so it is the filled button; the portal is the way out. *@
+                <a class="setup-submit setup-signin setup-checklist" href="/admin/onboarding">@Loc["AdmSetupDoneChecklist"]</a>
+                <button class="setup-secondary setup-enter" type="button" @onclick="EnterPortal">@Loc["AuthEnterPortal"]</button>
             </div>
             break;
 
