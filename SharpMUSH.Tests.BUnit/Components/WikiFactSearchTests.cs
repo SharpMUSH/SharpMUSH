@@ -66,11 +66,11 @@ public class WikiFactSearchTests : TrackingBunitContext
 		_handler.Answers.Enqueue(Found("second", "shield"));
 		_handler.Answers.Enqueue(Found(null, "fireball"));
 
-		var cut = await SearchAsync(" pf2e:level=1..3 , pf2e:tradition=arcane ");
+		var cut = await SearchAsync(" pf2e:level=1..3 , pf2e:class=Smith, John ");
 		// The first answer read its budget and found nothing, so the box read on by itself.
 		await Assert.That(_handler.Queries).IsEquivalentTo([
-			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:tradition=arcane",
-			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:tradition=arcane&after=first"],
+			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:class=Smith, John",
+			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:class=Smith, John&after=first"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll(".wiki-fact-search-results a").Select(a => (a.TextContent, a.GetAttribute("href"))))
 			.IsEquivalentTo([("SHIELD", "/wiki/main/shield")]);

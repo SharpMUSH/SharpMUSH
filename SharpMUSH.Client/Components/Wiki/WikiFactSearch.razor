@@ -61,7 +61,7 @@
 
     private async Task SearchAsync()
     {
-        _conditions = [$"category={Category}", .. _typed.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)];
+        _conditions = [$"category={Category}", .. WikiFactConditions.Split(_typed).Select(c => c.Trim()).Where(c => c.Length > 0)];
         _pages = [];
         _next = null;
         await ReadAsync(after: null);
