@@ -183,6 +183,10 @@ public class CommandManagementTests
 			await Assert.That(matches.Select(match => (match.Attribute, match.Value)))
 				.IsEquivalentTo(new[] { ("GREET", $"${greet}*:@pemit %#=Hello.") });
 			await Assert.That(matches[0].Objid).StartsWith($"#{machine.Number}:");
+
+			// Dispatch would refuse it, so the guide does not offer it.
+			await As(wizard, $"@set {machine}=NO_COMMAND");
+			await Assert.That(await probe.MatchAsync(wizard.DbRef, $"{greet}/done basics", default)).IsEmpty();
 		}
 		finally
 		{

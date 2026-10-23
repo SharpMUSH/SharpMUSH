@@ -14,7 +14,7 @@ namespace SharpMUSH.Server.Services;
 /// <summary>Read-only discovery in dispatch order. Never evaluates or queues the suggested command.</summary>
 public sealed class OnboardingCommandProbe(IMediator mediator, ICommandDiscoveryService discovery,
 	IMUSHCodeParser parser, IRealityPolicy reality, IOptionsWrapper<SharpMUSHOptions> options, ICommandPermission commands,
-	IHookService hooks, IAttributeService attributes) : IOnboardingCommandProbe
+	IHookService hooks, IAttributeService attributes, ILockService locks) : IOnboardingCommandProbe
 {
 	public async Task<IReadOnlyList<OnboardingCommandMatch>> MatchAsync(DBRef character, string command,
 		CancellationToken cancellationToken)
@@ -22,10 +22,10 @@ public sealed class OnboardingCommandProbe(IMediator mediator, ICommandDiscovery
 		// A built-in or registered alias wins before the softcode scopes. A command a package added with
 		// @command/add runs the attribute its override hook names, so that attribute is the handler.
 		var name = command.Split([' ', '/'], 2)[0];
-		if (commands.IsBuiltin(name)) return await HookedAsync(name, cancellationToken);
 		using var budget = new ExecutionBudget(TimeSpan.FromSeconds(3), cancellationToken);
 		using var entered = budget.Enter();
 		if (await mediator.Send(new GetObjectNodeQuery(character), cancellationToken) is not AnySharpObject player) return [];
+		if (commands.IsBuiltin(name)) return await HookedAsync(name, command, player, cancellationToken);
 		var perceive = reality is IRealityObservationProvider observations
 			? await observations.ObserveAsync(character, cancellationToken)
 			: (target, ct) => reality.CanPerceiveAsync(character, target, ct);
@@ -44,12 +44,17 @@ public sealed class OnboardingCommandProbe(IMediator mediator, ICommandDiscovery
 		return [];
 	}
 
-	private async Task<IReadOnlyList<OnboardingCommandMatch>> HookedAsync(string name, CancellationToken cancellationToken)
+	/// <summary>The hook's attribute, judged the way dispatch judges it: the line must reach and match it.</summary>
+	private async Task<IReadOnlyList<OnboardingCommandMatch>> HookedAsync(string name, string command, AnySharpObject player,
+		CancellationToken cancellationToken)
 	{
 		if (await hooks.GetHookAsync(name.ToUpperInvariant(), "OVERRIDE") is not CommandHook hook
 			|| await mediator.Send(new GetObjectNodeQuery(hook.TargetObject), cancellationToken) is not AnySharpObject target
-			|| await attributes.GetAttributeAsync(target, target, hook.AttributeName, IAttributeService.AttributeMode.Read, parent: false)
-				is not SharpAttribute[] { Length: > 0 } chain) return [];
-		return [new OnboardingCommandMatch(target.Object().DBRef.ToString(), chain[^1].LongName, chain[^1].Value.ToPlainText())];
+			|| !(string.IsNullOrEmpty(hook.AttributeName)
+				? await discovery.MatchUserDefinedCommand(parser, new[] { target }.ToAsyncEnumerable(), MString.Plain(command), player)
+				: await HookedCommandMatch.MatchAsync(attributes, locks, target, player, hook.AttributeName, MString.Plain(command)))
+				.TryGetValue(out var found)) return [];
+		return found.Select(match => new OnboardingCommandMatch(match.SObject.Object().DBRef.ToString(),
+			match.Attribute.LongName, match.Attribute.Value.ToPlainText())).ToArray();
 	}
 }
