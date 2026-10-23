@@ -91,6 +91,12 @@ public record WikiFactPropertyDto(string Id, string Type, bool Multiple, IReadOn
 public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 
 /// <summary>
+/// One page of <c>GET /api/wiki/query</c>'s answer. <paramref name="Next"/> continues it as <c>after</c>; null when
+/// nothing is left. A page may hold fewer rows than were asked for, even none, and still go on.
+/// </summary>
+public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next);
+
+/// <summary>
 /// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page
 /// without its body. A listing renders link rows and metadata columns, so the Markdown, HTML and plain
 /// text stay on the server; the banner image, the one thing a row takes from the body, is found there.

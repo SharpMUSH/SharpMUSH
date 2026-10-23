@@ -175,6 +175,12 @@ public interface IWikiService
 	Task<SemanticSchema> GetFactSchemaAsync();
 
 	/// <summary>
+	/// The pages <paramref name="visibility"/> admits that meet <paramref name="query"/>, one page of them at a time
+	/// (<see cref="IWikiStore.QueryFactsAsync"/>). Its category may be a name; it is matched as a key.
+	/// </summary>
+	Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility);
+
+	/// <summary>
 	/// Pins <paramref name="category"/> to the wiki home or takes it off. The category need not have a page
 	/// or any member yet. Returns whether anything changed, or <c>Error</c> for a blank name. Who may do this
 	/// is the caller's rule (wiki.admin).

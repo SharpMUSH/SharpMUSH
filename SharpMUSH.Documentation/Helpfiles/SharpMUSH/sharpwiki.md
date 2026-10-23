@@ -116,6 +116,39 @@ arcane|primal
 - [wiki facts]
 :::
 
+# wikiquery()
+
+- `wikiquery(<condition>[, <condition>...])`
+
+Returns a space-separated list of the references of the published pages
+whose facts meet every condition. You can give up to four fact conditions,
+plus a category and a namespace:
+
+- `<property>=<value>`: the page states that value. A page is named by its
+  title.
+- `<property>=<low>..<high>`: a whole number from *<low>* to *<high>*. Leave
+  one end off for no limit, as in `pf2e:level=..2`.
+- `category=<name>`: the page is in that category.
+- `namespace=<name>`: the page is in that namespace.
+
+A page you may not read is left out. A condition the wiki cannot answer
+returns `#-1 INVALID WIKI QUERY`. Until the fact index is built, the result
+is `#-1 WIKI INDEX BUILDING`.
+
+## Example
+
+```sharp
+> think wikiquery(pf2e:tradition=arcane, pf2e:level=1..3)
+main:shield main:fireball
+> think wikiquery(category=Spells, pf2e:class=Wizard)
+main:shield
+```
+
+::: seealso
+- [WIKIFACT()]
+- [wiki fact queries]
+:::
+
 # wikiaccess()
 
 - `wikiaccess(<page>, <action>)`
