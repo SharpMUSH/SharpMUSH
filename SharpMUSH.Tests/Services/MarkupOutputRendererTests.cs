@@ -610,6 +610,26 @@ public partial class MarkupOutputRendererTests
 		await Assert.That(rendered.Split('\n')[0].Length).IsEqualTo(12);
 	}
 
+	/// <summary>
+	/// A listing laid out wider than it needs (WHO's 200 cells) reaches a terminal no wider than its widest line,
+	/// not padded back out to the width it was laid out at.
+	/// </summary>
+	[Test]
+	public async Task AFixedListing_IsSentWithoutTheSpacesAfterIt()
+	{
+		var listing = ServerLayout.Build(new Table(
+			[new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false }, new(MarkupText.Plain("Doing")) { Max = 40, Wrap = false }],
+			[[(Block)MarkupText.Plain("Wren"), (Block)MarkupText.Plain("")]])
+		{ Gap = 1, HeaderRule = MarkupText.Empty }, 200, fluid: false);
+
+		var rendered = RenderFor(MarkupTextSerializer.Serialize(listing), new ProtocolCapabilities(Width: 80, SupportsUtf8: false));
+
+		var lines = rendered.TrimEnd('\n').Split('\n');
+		var expected = listing.ToPlainText().Split('\n');
+		await Assert.That(lines.Select(line => line.TrimEnd())).IsEquivalentTo(expected, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(lines.Max(line => line.Length)).IsEqualTo(expected.Max(line => line.Length));
+	}
+
 	[Test]
 	public async Task AClientWithoutUtf8_GetsAsciiBorders()
 	{

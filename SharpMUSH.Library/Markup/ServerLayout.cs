@@ -118,10 +118,13 @@ public static class ServerLayout
 	{
 		ArgumentNullException.ThrowIfNull(block);
 		block = block.ThemedUnder(House);
-		var text = MarkupText.Join(MarkupText.NewLine,
-			BlockLayout.Lines(block, width).Select(line => line.Trim(TrimType.TrimEnd, " ")));
-		return text.Length == 0
-			? text
-			: MarkupText.Preformatted(MarkupText.Wrap(new LayoutMarkup(block, width, fluid, text.Text), text));
+		var lines = BlockLayout.Lines(block, width).Select(line => line.Trim(TrimType.TrimEnd, " ")).ToList();
+		var text = MarkupText.Join(MarkupText.NewLine, lines);
+		if (text.Length == 0) return text;
+
+		// The rendering worker lays a fixed layout out again at the width it records, which would put back the
+		// spaces trimmed above, so it records the widest line instead.
+		var recorded = fluid ? width : lines.Max(line => line.DisplayWidth);
+		return MarkupText.Preformatted(MarkupText.Wrap(new LayoutMarkup(block, recorded, fluid, text.Text), text));
 	}
 }
