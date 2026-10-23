@@ -82,6 +82,9 @@ file sealed class SetupApiHandler(
 	/// <summary>Whether api/setup/wizard/starter-wiki refuses (409), as when some pages could not be written.</summary>
 	public bool StarterWikiFails { get; set; }
 
+	/// <summary>Whether api/setup/wizard/starter-world refuses (409), as when a part could not be made.</summary>
+	public bool StarterWorldFails { get; set; }
+
 	/// <summary>Whether api/setup/wizard/packages refuses (409).</summary>
 	public bool PackagesFail { get; set; }
 
@@ -140,7 +143,9 @@ file sealed class SetupApiHandler(
 		{
 			StarterWorldCalls++;
 			StarterWorldApplied = true;
-			return Json(Wizard(_wizardPending ?? true));
+			return StarterWorldFails
+				? new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("The tutorial room could not be dug.") }
+				: Json(Wizard(_wizardPending ?? true));
 		}
 
 		if (path == "api/setup/wizard/starter-wiki" && request.Method == HttpMethod.Post)
@@ -563,6 +568,25 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("finished state not rendered yet");
 		});
 		await Assert.That(handler.StarterWorldCalls).IsEqualTo(1);
+	}
+
+	/// <summary>When the starter world and the starter pages both fail, the step names both reasons.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWorldAndWikiFailures_AreBothShown()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.StarterWorldFails = true;
+		handler.StarterWikiFails = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
+		await cut.Find("button.setup-save").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".setup-error"));
+		var error = cut.Find(".setup-error").TextContent;
+		await Assert.That(error).Contains("AdmSetupStarterWorldFailed");
+		await Assert.That(error).Contains("AdmSetupStarterWikiFailed");
 	}
 
 	/// <summary>An unticked starter world is not applied.</summary>

@@ -697,7 +697,10 @@
                     Load(reloaded);
                 }
 
-                _error = Loc["AdmSetupStarterWorldFailed", failure.Message];
+                // The starter wiki was asked for after the world; when it failed too, say both.
+                _error = starterWiki is ApiFailure wikiFailure
+                    ? $"{Loc["AdmSetupStarterWorldFailed", failure.Message]} {Loc["AdmSetupStarterWikiFailed", wikiFailure.Message]}"
+                    : Loc["AdmSetupStarterWorldFailed", failure.Message];
                 break;
             case SetupWizardResponse when starterWiki is ApiFailure failure:
                 // The packages are saved and the pages that could be written were. The step stays open with the
