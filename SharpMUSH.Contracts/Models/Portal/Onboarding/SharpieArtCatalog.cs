@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-discworld-kemono-player-channels", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-pixel-player-speak-act", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-pixel-player-place", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-pixel-player-sign-in", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-pixel-player-world", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-pixel-player-character", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-player-useful-action", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
