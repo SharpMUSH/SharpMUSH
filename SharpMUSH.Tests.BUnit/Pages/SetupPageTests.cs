@@ -448,7 +448,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 			.Because("a new game is offered the starter wiki pages ticked");
 
 		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
-		var enterPortalButton = cut.Find("button.setup-signin");
+		await Assert.That(cut.Find("a.setup-submit.setup-checklist").GetAttribute("href")).IsEqualTo("/admin/onboarding")
+			.Because("the checklist is the next step, so it is the primary action");
+		var enterPortalButton = cut.Find("button.setup-enter");
 		await Assert.That(enterPortalButton.TextContent).Contains("AuthEnterPortal");
 		await enterPortalButton.ClickAsync();
 		await Assert.That(nav.Uri).IsEqualTo(nav.BaseUri);
