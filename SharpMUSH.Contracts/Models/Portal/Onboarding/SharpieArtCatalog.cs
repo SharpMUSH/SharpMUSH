@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-crime-pixel-administrator-invite", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-crime-pixel-administrator-capabilities", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-crime-pixel-administrator-rules", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-genre-none-kemono-player-speak-act", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-crime-pixel-player-world", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-crime-pixel-player-character", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-crime-pixel-administrator-identity", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
