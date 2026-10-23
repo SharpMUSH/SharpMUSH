@@ -156,10 +156,6 @@
     <value>Aktiver</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Dokumentasjon</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Bla i emner, søk i referanser og les manualen.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roller</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · server</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Velg en applikasjon, eller registrer en ny.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Bygge · egendefinerte widgeter</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Ny applikasjon</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Ordne widgetene på hver side ved å dra dem mellom soner. Endringene publiseres til alle besøkende.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Bygge · sidelayouter</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>Behold min</value>
     <comment>MT — merge-conflict choice.</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Bygge · pakkeforfatting</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Bygge · pakkeregister</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Bygge · pakkekilder</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Lisens (valgfritt)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Økter som pågår akkurat nå.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Stab · wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>alle kan redigere</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>endret</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · serverkonfigurasjon</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Arve</value>
     <comment>MT — permission tri-state alongside Tillat/Nekt; infinitive keeps the three parallel.</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Administrere · tilgangskontroll</value>
-    <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>LIVE</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (kilde)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Stab · media</value>
-    <comment>MT — 'staff' rendered as 'stab' throughout; the PennMUSH nb corpus has no attestation for it.</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Lagring brukt</value>
     <comment>MT — a stat-tile label; assumed 'amount of storage in use'.</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Administratoroversikt</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administrasjon · Stavekontroll</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Database</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Administrer · Diagnostikk</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Administrer · Automatisering</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Bygg · Gjenoppretting</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtrer etter type</value>

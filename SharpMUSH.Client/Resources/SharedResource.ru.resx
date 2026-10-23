@@ -156,10 +156,6 @@
     <value>Включить</value>
     <comment>MT — imperative button label.</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Документация</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Просматривайте темы, ищите справочные статьи и читайте руководство.</value>
     <comment>MT — formal вы imperatives.</comment>
@@ -258,10 +254,6 @@
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Роли</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Администрирование · сервер</value>
-    <comment>MT — «Администрирование ·» per the fixed Admin-kicker decision.</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Статус</value>
@@ -1461,10 +1453,6 @@
     <value>Выберите приложение или зарегистрируйте новое.</value>
     <comment>MT — formal вы imperative.</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Разработка · пользовательские виджеты</value>
-    <comment>MT — «Build» kicker rendered as «Разработка»; distinct from the Staff («Администрация ·») and Admin («Администрирование ·») kickers fixed in batches 001–006.</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Новое приложение</value>
     <comment>MT</comment>
@@ -1568,10 +1556,6 @@
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Расположите виджеты на каждой странице, перетаскивая их между зонами. изменения становятся видны всем посетителям.</value>
     <comment>MT — formal вы imperative.</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Разработка · макеты страниц</value>
-    <comment>MT — «Разработка ·» renders the Build kicker, consistent with LayAppsKicker.</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
     <value>Предпросмотр в реальном времени</value>
@@ -2381,18 +2365,6 @@
     <value>Оставить свою версию</value>
     <comment>MT — merge-conflict option, mirroring PkgDeleteTakeTheirs «принять их версию».</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Разработка · создание пакетов</value>
-    <comment>MT — «Разработка ·» renders the Build kicker, consistent with LayAppsKicker and LayLayoutsKicker.</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Разработка · реестр пакетов</value>
-    <comment>MT — consistent with LayAppsSchemaRegistry («реестр»).</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Разработка · источники пакетов</value>
-    <comment>MT — «источник» is the term used for remotes throughout this surface.</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Лицензия (необязательно)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Сессии, идущие прямо сейчас.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Администрация · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>редактировать может любой</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>изменено</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Администрирование · конфигурация сервера</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Наследовать</value>
     <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Управление · Контроль доступа</value>
-    <comment>MT — «Управление ·» renders the "Manage ·" kicker, matching NavSectionManage; the middot separator is preserved.</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>В ЭФИРЕ</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (источник)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Администрация · Медиа</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Занято места</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Оглавление для администраторов</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Администрирование · Орфография</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Админ · База данных</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Управление · Диагностика</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Управление · Автоматизация</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Строительство · Восстановление</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Фильтр по типу</value>

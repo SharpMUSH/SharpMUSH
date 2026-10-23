@@ -26,7 +26,7 @@ else if (_entry is not null && _entry.Topic is not null)
             <link rel="canonical" href="@Navigation.ToAbsoluteUri(_entry.CanonicalHref).GetLeftPart(UriPartial.Path)" />
         </HeadContent>
     }
-    <article class="help-entry" @ref="_articleElement">@((MarkupString)(_entry.Html ?? string.Empty))</article>
+    <article class="help-entry" @ref="_articleElement">@((MarkupString)PageHeadings.UnderPageTitle(_entry.Html ?? string.Empty, Topic))</article>
 }
 else if (_entry is not null && _entry.Candidates.Count > 0)
 {

@@ -49,7 +49,7 @@ public class SceneCardTests : TrackingBunitContext
 		var cut = Render<SceneCard>(p => p.Add(x => x.Scene, Scene()));
 		var live = cut.FindAll(".scene-card-actions a")[1];
 		await Assert.That(live.GetAttribute("href")).IsEqualTo("/scenes/S7/live");
-		await Assert.That(live.TextContent.Trim()).IsEqualTo("Watch Live");
+		await Assert.That(live.TextContent.Trim()).IsEqualTo("Watch live");
 	}
 
 	[Test]

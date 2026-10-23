@@ -81,7 +81,7 @@ public class SharedResourceLocalizationTests
 		using var culture = CultureScope.For("en");
 		var loc = PortalLocalizer.Create();
 
-		await Assert.That(loc[WidgetZone.MainContent.ResourceKey()].Value).IsEqualTo("Main Content");
+		await Assert.That(loc[WidgetZone.MainContent.ResourceKey()].Value).IsEqualTo("Main content");
 
 		var raw = Enum.GetValues<WidgetZone>()
 			.Where(z => Regex.IsMatch(loc[z.ResourceKey()].Value, "[a-z][A-Z]"))

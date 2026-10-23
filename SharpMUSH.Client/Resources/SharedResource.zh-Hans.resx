@@ -156,10 +156,6 @@
     <value>启用</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>文档</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>浏览主题、搜索参考资料并阅读手册。</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>权限组</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>管理 · 服务器</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>请选择一个应用程序，或注册一个新的。</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>构建 · 自定义小组件</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>新建应用程序</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>在各区域之间拖动小组件，即可排布每个页面。更改将发布给所有访客。</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>构建 · 页面布局</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>保留我的版本</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>构建 · 软件包制作</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>构建 · 软件包注册表</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>构建 · 软件包来源</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>许可证（可选）</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>当前正在进行的场景。</value>
     <comment>MT — "sessions" read as roleplay scenes, matching the surrounding scene-archive UI.</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>管理组 · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>任何人都可编辑</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>已更改</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>管理 · 服务器配置</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2990,10 +2954,6 @@
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>继承</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>管理 · 访问控制</value>
     <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
@@ -4463,10 +4423,6 @@
     <value>{0}（源）</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>管理组 · 媒体</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>已用存储</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>管理员索引</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>管理 · 拼写检查</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>管理 · 数据库</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>管理 · 诊断</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>管理 · 自动化</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>构建 · 恢复</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>按类型筛选</value>

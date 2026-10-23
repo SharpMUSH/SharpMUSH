@@ -631,9 +631,6 @@
   <data name="PkgUninstalled" xml:space="preserve">
     <value>{0} a été désinstallé.</value>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Développement · Création de paquets</value>
-  </data>
   <data name="PkgAuthorHeading" xml:space="preserve">
     <value>Créer un paquet</value>
   </data>
@@ -716,9 +713,6 @@
   <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
     <value>Classez {0} : les réfs configure nécessitent une clé et un libellé.</value>
   </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Développement · Registre des paquets</value>
-  </data>
   <data name="PkgBrowseHeading" xml:space="preserve">
     <value>Parcourir les paquets</value>
   </data>
@@ -751,9 +745,6 @@
   </data>
   <data name="PkgNoReleaseTags" xml:space="preserve">
     <value>Aucun tag de release — seul le canal dev est disponible.</value>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Développement · Sources de paquets</value>
   </data>
   <data name="PkgRemotesHeading" xml:space="preserve">
     <value>Dépôts distants de paquets</value>
@@ -1131,9 +1122,6 @@
   <data name="LayLayouts" xml:space="preserve">
     <value>Disposition</value>
   </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Construction · Dispositions de page</value>
-  </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Organisez les widgets de chaque page en les faisant glisser d'une zone à l'autre. Les modifications sont publiées pour tous les visiteurs.</value>
   </data>
@@ -1304,9 +1292,6 @@
   </data>
   <data name="LayApplications" xml:space="preserve">
     <value>Applications</value>
-  </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Construction · Widgets personnalisés</value>
   </data>
   <data name="LayAppsSchemaRegistry" xml:space="preserve">
     <value>Registre des schémas</value>
@@ -1485,9 +1470,6 @@
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>Administration · Joueur</value>
   </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Serveur</value>
-  </data>
   <data name="AdmAccountsSearchPlaceholder" xml:space="preserve">
     <value>Rechercher un nom d'utilisateur ou une adresse e-mail…</value>
   </data>
@@ -1577,9 +1559,6 @@
   </data>
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>La réinitialisation a échoué : {0}</value>
-  </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Documentation</value>
   </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Parcourez les rubriques, recherchez des références et lisez le manuel.</value>
@@ -1807,9 +1786,6 @@
   <data name="WkUrlCopied" xml:space="preserve">
     <value>URL copiée.</value>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Personnel · Médias</value>
-  </data>
   <data name="WkCopyMarkdown" xml:space="preserve">
     <value>Copier le Markdown</value>
   </data>
@@ -1827,9 +1803,6 @@
   </data>
   <data name="RolPageTitle" xml:space="preserve">
     <value>Rôles</value>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Gérer · Contrôle d'accès</value>
   </data>
   <data name="RolHeading" xml:space="preserve">
     <value>Rôles et permissions</value>
@@ -2323,9 +2296,6 @@
   <data name="ResViewLog" xml:space="preserve">
     <value>Voir le journal</value>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Personnel · wiki</value>
-  </data>
   <data name="ResWikiStatTotalPages" xml:space="preserve">
     <value>Pages au total</value>
   </data>
@@ -2340,9 +2310,6 @@
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
     <value>Admin · paramètres du serveur</value>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · configuration du serveur</value>
   </data>
   <data name="ResRoutingErrorHint" xml:space="preserve">
     <value>Ce message signifie que la page personnalisée n'est PAS reconnue par le routeur.</value>
@@ -4438,21 +4405,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Index d'administration</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administration · Orthographe</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Base de données</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Gérer · Diagnostic</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Gérer · Automatisation</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Construire · Récupération</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtrer par type</value>

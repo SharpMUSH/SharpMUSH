@@ -14,7 +14,7 @@
    opaque to the portal) as chips, and the characters as portrait tiles. The address filters it:
    ?q= by name (the sidebar search), ?online=1 to who is connected, ?new=1 to the last fortnight. *@
 <div class="char-page">
-    <PlainPageHeader Kicker="@HeaderKicker" Title="@Loc["Characters"]">
+    <PlainPageHeader Title="@Loc["Characters"]" Description="@HeaderDescription">
         <Actions>
             <input class="char-filter" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
                    value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
@@ -75,7 +75,7 @@
 
     // "0 characters registered" is the same lie as the 0 on the dashboard tile when the directory
     // request is what failed, so the count is only claimed for a roster that actually arrived.
-    private string HeaderKicker =>
+    private string HeaderDescription =>
         _loading
             ? Loc["Loading"].Value
             : _failed

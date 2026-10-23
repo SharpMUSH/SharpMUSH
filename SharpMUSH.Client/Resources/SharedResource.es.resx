@@ -156,10 +156,6 @@
     <value>Activar</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Documentación</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Explore temas, busque referencias y lea el manual.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roles</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Servidor</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Seleccione una aplicación o registre una nueva.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Crear · Widgets personalizados</value>
-    <comment>MT — assumed 'Build' names the authoring section of the portal</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Nueva aplicación</value>
     <comment>MT</comment>
@@ -1568,10 +1556,6 @@
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Organice los widgets de cada página arrastrándolos entre zonas. Los cambios se publican para todos los visitantes.</value>
     <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Crear · Diseños de página</value>
-    <comment>MT — assumed 'Build' names the authoring section of the portal, as in LayAppsKicker</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
     <value>Vista previa en vivo</value>
@@ -2381,18 +2365,6 @@
     <value>Conservar la mía</value>
     <comment>MT — merge-conflict wording; "mine" = the local version of the value</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Construcción · Creación de paquetes</value>
-    <comment>MT — assumed "Build" is the staff section name (building/creation area)</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Construcción · Registro de paquetes</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Construcción · Orígenes de paquetes</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licencia (opcional)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sesiones en curso ahora mismo.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Personal · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>cualquiera puede editar</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>modificado</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Administración · configuración del servidor</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2990,10 +2954,6 @@
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>Heredar</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Gestión · Control de acceso</value>
     <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
@@ -4463,10 +4423,6 @@
     <value>{0} (origen)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Personal · Multimedia</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Almacenamiento usado</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Índice de administración</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administración · Ortografía</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Base de datos</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Gestionar · Diagnóstico</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Gestionar · Automatización</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Construir · Recuperación</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtrar por tipo</value>

@@ -156,10 +156,6 @@
     <value>Włącz</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Dokumentacja</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Przeglądaj tematy, przeszukuj materiały referencyjne i czytaj podręcznik.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Role</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Serwer</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Wybierz aplikację lub zarejestruj nową.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Twórz · Widżety niestandardowe</value>
-    <comment>MT — assumed "Build" names a nav section (an action), not a software build</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Nowa aplikacja</value>
     <comment>MT</comment>
@@ -1568,10 +1556,6 @@
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Rozmieść widżety na każdej stronie, przeciągając je między strefami. Zmiany są publikowane dla wszystkich odwiedzających.</value>
     <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Twórz · Układy stron</value>
-    <comment>MT — "Build" read as a nav section name, consistent with LayAppsKicker</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
     <value>Podgląd na żywo</value>
@@ -2381,18 +2365,6 @@
     <value>Zachowaj moją wersję</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Twórz · Tworzenie pakietów</value>
-    <comment>MT — "Build" read as a nav section name, consistent with LayAppsKicker/LayLayoutsKicker</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Twórz · Rejestr pakietów</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Twórz · Źródła pakietów</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licencja (opcjonalnie)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sesje trwające w tej chwili.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Personel · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>każdy może edytować</value>
     <comment>MT</comment>
@@ -2792,10 +2760,6 @@
   <data name="ResChangedBadge" xml:space="preserve">
     <value>zmienione</value>
     <comment>MT — badge on a config field; neuter assumed (refers to 'ustawienie'/'pole')</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Administracja · konfiguracja serwera</value>
-    <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
     <value>Administracja · ustawienia serwera</value>
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Dziedzicz</value>
     <comment>MT — permission tri-state (Allow / Deny / Inherit)</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Zarządzanie · Kontrola dostępu</value>
-    <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>NA ŻYWO</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (język źródłowy)</value>
     <comment>MT — apposition in parentheses so the language name {0} stays in the nominative and no gender agreement is needed</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Personel · Multimedia</value>
-    <comment>MT — 'Staff' rendered as 'Personel' consistently across batches</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Wykorzystane miejsce</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Spis administracyjny</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administracja · Pisownia</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Baza danych</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Zarządzanie · Diagnostyka</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Zarządzanie · Automatyzacja</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Budowanie · Odzyskiwanie</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtruj według rodzaju</value>

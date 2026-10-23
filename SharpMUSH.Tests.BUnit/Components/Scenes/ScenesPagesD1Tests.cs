@@ -221,7 +221,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		var cut = RenderAt<ScenesActive>("/scenes/active", CharactersApiFake.Anonymous(this));
 		cut.WaitForAssertion(() => cut.Find(".scene-card"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".scene-card-actions a.kit-capsule--primary").TextContent.Trim()).IsEqualTo("Watch Live");
+		await Assert.That(cut.Find(".scene-card-actions a.kit-capsule--primary").TextContent.Trim()).IsEqualTo("Watch live");
 	}
 
 	[Test]

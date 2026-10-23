@@ -199,7 +199,8 @@ public class HelpPageTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
 
-		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("AdmHelpKicker");
+		await Assert.That(cut.FindAll(".kit-page-head .kit-page-kicker").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll("h1").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("Help");
 		await Assert.That(cut.Find(".kit-card .help-entry").TextContent).Contains("This is the index");
 		await Assert.That(cut.Find(".kit-card .help-topic-list")).IsNotNull();
@@ -267,7 +268,7 @@ public class HelpPageTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.HelpAdminTopic>(p => p.Add(c => c.Topic, "Security"));
 		WaitForMarkup(cut, "Wizard-only security notes.");
 
-		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Help / HelpAdminTitle");
+		await Assert.That(cut.Find(".kit-page-head .kit-page-kicker").TextContent).IsEqualTo("Help · HelpAdminTitle");
 		await Assert.That(cut.Find(".kit-page-head h1").TextContent).IsEqualTo("Security");
 		await Assert.That(cut.Find(".kit-card .help-entry").TextContent).Contains("Wizard-only security notes.");
 	}
