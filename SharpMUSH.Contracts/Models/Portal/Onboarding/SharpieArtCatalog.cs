@@ -10,6 +10,13 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-medieval-fantasy-kemono-administrator-identity", "kemono", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-frankenstein-chibi-administrator-capabilities", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-post-apocalyptic-chibi-shared-completion", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-channels", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-post-apocalyptic-chibi-player-channels", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-post-apocalyptic-chibi-player-useful-action", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-medieval-fantasy-kemono-player-channels", "kemono", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-kemono-player-channels.png", 1254, 1254, "player-channels"),
 		new SharpieArt("sharpie-medieval-fantasy-kemono-player-speak-act", "kemono", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-frankenstein-chibi-administrator-walkthrough", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-frankenstein-chibi-administrator-joining", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
