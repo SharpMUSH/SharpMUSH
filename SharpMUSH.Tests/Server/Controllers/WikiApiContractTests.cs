@@ -26,7 +26,8 @@ public class WikiApiContractTests
 		RequestedLocale = "fr-CA",
 		IsFallback = true,
 		AvailableLocales = ["en", "fr"],
-		Facts = [new("pf2e:class", "wiki_page/7") { PageTitle = "Wizard", PageSlug = "wizard", PageNamespace = "main" }, new("pf2e:level", "3")],
+		Facts = [new("pf2e:class", "wiki_page/7") { Label = "Class", PageTitle = "Wizard", PageSlug = "wizard", PageNamespace = "main" }, new("pf2e:level", "3")],
+		NamedBy = [new("pf2e:ancestry", "Ancestry", [new("Elf", "elf", "main")], More: true)],
 	};
 
 	/// <summary>
@@ -40,11 +41,14 @@ public class WikiApiContractTests
 
 		var round = JsonSerializer.Deserialize<WikiPageDto>(JsonSerializer.Serialize(original, Web), Web)!;
 
-		await Assert.That(round with { Categories = [], AvailableLocales = [], Facts = [] })
-			.IsEqualTo(original with { Categories = [], AvailableLocales = [], Facts = [] });
+		await Assert.That(round with { Categories = [], AvailableLocales = [], Facts = [], NamedBy = [] })
+			.IsEqualTo(original with { Categories = [], AvailableLocales = [], Facts = [], NamedBy = [] });
 		await Assert.That(round.Categories).IsEquivalentTo(original.Categories);
 		await Assert.That(round.AvailableLocales).IsEquivalentTo(original.AvailableLocales);
 		await Assert.That(round.Facts).IsEquivalentTo(original.Facts);
+		var named = round.NamedBy.Single();
+		await Assert.That(named with { Pages = [] }).IsEqualTo(original.NamedBy[0] with { Pages = [] });
+		await Assert.That(named.Pages).IsEquivalentTo(original.NamedBy[0].Pages);
 	}
 
 	/// <summary>

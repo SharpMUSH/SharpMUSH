@@ -56,6 +56,29 @@ public static class WikiFactEntry
 	}
 
 	/// <summary>
+	/// The pages whose facts name <paramref name="page"/>, for each page property that any does, in the schema's order:
+	/// at most <paramref name="limit"/> of them, and whether more do. Only pages <paramref name="visibility"/> admits
+	/// are counted, and a page naming itself is not. Nothing is listed while the fact index is building.
+	/// </summary>
+	public static async Task<IReadOnlyList<WikiFactNamers>> NamedByAsync(IWikiService wiki, SemanticSchema schema, WikiPage page,
+		WikiVisibility visibility, int limit)
+	{
+		var named = new List<WikiFactNamers>();
+		foreach (var property in (schema.Properties.IsDefault ? [] : schema.Properties).Where(p => p.Type == SemanticType.PageRef))
+		{
+			var query = new WikiFactQuery([new WikiFactEquals(property.Id, page.Id)], limit + 1);
+			if (await wiki.QueryFactsAsync(query, visibility) is not WikiFactQueryPage found) continue;
+			var pages = found.Pages.Where(p => p.Id != page.Id).ToList();
+			if (pages.Count > 0) named.Add(new(property.Id, pages[..Math.Min(limit, pages.Count)], pages.Count > limit || found.Next is not null));
+		}
+		return named;
+	}
+
+	/// <summary><paramref name="property"/>'s label, or the property itself when it has none or is not defined.</summary>
+	public static string Label(SemanticSchema schema, string property)
+		=> Definition(schema, property) is { Label.Length: > 0 } definition ? definition.Label : property;
+
+	/// <summary>
 	/// <paramref name="stated"/>, from a reader who was shown only some of <paramref name="stored"/>, with the page
 	/// references they were not shown kept: a fact naming a page they may not see stays, unless they stated a
 	/// single-valued property's value themselves.
@@ -98,3 +121,8 @@ public static class WikiFactEntry
 		return await wiki.GetBySlugAsync(slug, ns) is WikiPage byTitle && visibility.Admits(byTitle) ? byTitle : null;
 	}
 }
+
+/// <summary>
+/// Pages whose <paramref name="Property"/> names a page: up to a limit of them, and whether <paramref name="More"/> do.
+/// </summary>
+public sealed record WikiFactNamers(string Property, IReadOnlyList<WikiPage> Pages, bool More);

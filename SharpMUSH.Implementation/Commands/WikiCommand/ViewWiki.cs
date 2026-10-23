@@ -12,6 +12,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Implementation.Commands.WikiCommand;
 
@@ -131,7 +132,8 @@ public static class ViewWiki
 		// default a stray @wiki on a half-written page should perform. The gate is the same whether the
 		// body is rendered or raw — /MD is a presentation choice made after permission, never before it.
 		MString rendered;
-		if (!published && !(showDraft && maySeeDrafts))
+		var bodyShown = published || (showDraft && maySeeDrafts);
+		if (!bodyShown)
 		{
 			rendered = DraftWithheld("body", maySeeDrafts);
 		}
@@ -154,18 +156,62 @@ public static class ViewWiki
 			});
 		}
 
+		// A draft's facts are withheld with its body; the pages naming it are other pages, shown either way.
+		var facts = await FactsAsync(wikiService, await WikiCommandHelper.VisibilityAsync(parser, executor), page, bodyShown);
 		var output = MarkupText.Join(MarkupText.NewLine, [
 			line,
 			MarkupText.Plain($"Wiki: {title} [{page.Namespace}]{markers}"),
 			MarkupText.Plain($"Categories: {categories}   Rev {revision}{localeMarker} — {page.UpdatedAt:yyyy-MM-dd HH:mm}"),
 			line,
 			rendered,
+			.. facts is null ? [] : new[] { facts },
 			line,
 		]);
 
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
+
+	/// <summary>The most pages listed for each property under "Named by"; past it, a link runs the query listing all.</summary>
+	public const int MaxNamers = 20;
+
+	/// <summary>
+	/// The page's facts under their properties' labels, a page value linking to <c>@wiki</c> of that page and any other
+	/// value to <c>@wiki/query</c> for the pages sharing it; then, by property, the pages whose facts name this one.
+	/// Null when there is neither.
+	/// </summary>
+	private static async Task<MString?> FactsAsync(IWikiService wikiService, WikiVisibility visibility, WikiPage page, bool stated)
+	{
+		var schema = await wikiService.GetFactSchemaAsync();
+		var shown = new List<(string Property, MString Value)>();
+		foreach (var fact in stated ? page.Facts : [])
+		{
+			if (!WikiFactEntry.NamesPage(schema, fact))
+				shown.Add((fact.Property, ServerLayout.CommandLink(fact.Value, QueryCommand(fact.Property, fact.Value))));
+			else if (await wikiService.GetByIdAsync(fact.Value) is WikiPage target && visibility.Admits(target))
+				shown.Add((fact.Property, PageLink(target)));
+		}
+		var namedBy = await WikiFactEntry.NamedByAsync(wikiService, schema, page, visibility, MaxNamers);
+		if (shown.Count == 0 && namedBy.Count == 0) return null;
+
+		var separator = MarkupText.Plain(" · ");
+		List<Block> parts = [];
+		if (shown.Count > 0)
+			parts.AddRange(new Rule(MarkupText.Plain("Facts")), ServerLayout.KeyValues(shown.GroupBy(f => f.Property)
+				.Select(g => (WikiFactEntry.Label(schema, g.Key), MarkupText.Join(separator, g.Select(f => f.Value))))));
+		if (namedBy.Count > 0)
+			parts.AddRange(new Rule(MarkupText.Plain("Named by")), ServerLayout.KeyValues(namedBy
+				.Select(n => (WikiFactEntry.Label(schema, n.Property), MarkupText.Join(separator, [
+					.. n.Pages.Select(PageLink),
+					.. n.More ? [ServerLayout.CommandLink("more", QueryCommand(n.Property, WikiCommandHelper.DisplayReference(page)))] : Array.Empty<MString>(),
+				])))));
+		return ServerLayout.Build(new Stack([.. parts]), RenderWidth);
+	}
+
+	/// <summary>The command listing the pages that state <paramref name="value"/> for <paramref name="property"/>, unevaluated.</summary>
+	private static string QueryCommand(string property, string value) => $"@wiki/query/noeval {property}={value}";
+
+	private static MString PageLink(WikiPage page) => ServerLayout.CommandLink(page.Title, $"@wiki {WikiCommandHelper.DisplayReference(page)}");
 
 	/// <param name="locale">The reader's locale, or null for the configured default.</param>
 	/// <param name="forceSource"><c>/SOURCE</c>: show the source locale's stream whatever the reader's is.</param>

@@ -103,6 +103,17 @@ public class WikiFactSearchTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AQueryWithoutACategoryIsSearchedAtOnce()
+	{
+		_handler.Answers.Enqueue(Found(null, "fireball"));
+		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Query, "pf2e:tradition=arcane"));
+
+		cut.WaitForAssertion(() => cut.Find(".wiki-fact-search-results a"));
+		await Assert.That(_handler.Queries).IsEquivalentTo(["/api/wiki/query?condition=pf2e:tradition=arcane"]);
+		await Assert.That(cut.Find("input").GetAttribute("value")).IsEqualTo("pf2e:tradition=arcane");
+	}
+
+	[Test]
 	public async Task NoBoxIsShownWhereNoPropertyIsDefined()
 	{
 		_handler.Properties.Clear();

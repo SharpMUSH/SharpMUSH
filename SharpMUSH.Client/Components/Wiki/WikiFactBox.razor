@@ -3,34 +3,64 @@
 @using SharpMUSH.Library.Services
 @inject IStringLocalizer<SharedResource> Loc
 
-@* A page's facts under its body, one row per property, a value naming a page linking to it. *@
-@if (Facts.Count > 0)
+@* A page's facts under its body, one row per property under its label: a value naming a page links to it, and any
+   other value to the pages sharing it. Below them, by property, the pages whose facts name this one. *@
+@if (Facts.Count > 0 || NamedBy.Count > 0)
 {
     <section class="wiki-facts" aria-label="@Loc["WkFacts"]">
-        <span class="wiki-facts-label">@Loc["WkFacts"]</span>
-        <dl class="wiki-facts-list">
-            @foreach (var property in Facts.GroupBy(f => f.Property))
-            {
-                <dt>@property.Key</dt>
-                <dd>
-                    @foreach (var (fact, index) in property.Select((f, i) => (f, i)))
-                    {
-                        @if (index > 0)
+        @if (Facts.Count > 0)
+        {
+            <span class="wiki-facts-label">@Loc["WkFacts"]</span>
+            <dl class="wiki-facts-list">
+                @foreach (var property in Facts.GroupBy(f => f.Property))
+                {
+                    <dt title="@property.Key">@(property.First().Label ?? property.Key)</dt>
+                    <dd>
+                        @foreach (var (fact, index) in property.Select((f, i) => (f, i)))
+                        {
+                            @if (index > 0)
+                            {
+                                <span class="wiki-facts-sep" aria-hidden="true"> · </span>
+                            }
+                            @if (fact is { PageSlug: { } slug, PageTitle: { } title })
+                            {
+                                <a href="@Link(WikiRoutes.WikiPathFor(fact.PageNamespace, slug))">@title</a>
+                            }
+                            else
+                            {
+                                <a href="@Link(WikiRoutes.QueryPath($"{fact.Property}={fact.Value}"))"
+                                   title="@string.Format(Loc["WkFactSharing"], fact.Value)">@fact.Value</a>
+                            }
+                        }
+                    </dd>
+                }
+            </dl>
+        }
+        @if (NamedBy.Count > 0)
+        {
+            <span class="wiki-facts-label">@Loc["WkFactNamedBy"]</span>
+            <dl class="wiki-facts-list wiki-facts-named-by">
+                @foreach (var named in NamedBy)
+                {
+                    <dt title="@named.Property">@named.Label</dt>
+                    <dd>
+                        @foreach (var (namer, index) in named.Pages.Select((p, i) => (p, i)))
+                        {
+                            @if (index > 0)
+                            {
+                                <span class="wiki-facts-sep" aria-hidden="true"> · </span>
+                            }
+                            <a href="@Link(WikiRoutes.WikiPathFor(namer.Namespace, namer.Slug))">@namer.Title</a>
+                        }
+                        @if (named.More)
                         {
                             <span class="wiki-facts-sep" aria-hidden="true"> · </span>
+                            <a href="@Link(WikiRoutes.QueryPath($"{named.Property}={Page}"))">@Loc["WkFactNamedByAll"]</a>
                         }
-                        @if (fact is { PageSlug: { } slug, PageTitle: { } title })
-                        {
-                            <a href="@(HoldLinks ? null : WikiRoutes.WikiPathFor(fact.PageNamespace, slug))">@title</a>
-                        }
-                        else
-                        {
-                            <span>@fact.Value</span>
-                        }
-                    }
-                </dd>
-            }
-        </dl>
+                    </dd>
+                }
+            </dl>
+        }
     </section>
 }
 
@@ -38,6 +68,14 @@
     /// <summary>The facts the reader may see, ordered by property and then value.</summary>
     [Parameter, EditorRequired] public required IReadOnlyList<WikiFactDto> Facts { get; set; }
 
+    /// <summary>For each page property, the pages whose facts name this page.</summary>
+    [Parameter] public IReadOnlyList<WikiFactNamedByDto> NamedBy { get; set; } = [];
+
+    /// <summary>This page as a query names it, <c>main:wizard</c>, for the link to every page naming it.</summary>
+    [Parameter] public string Page { get; set; } = string.Empty;
+
     /// <summary>True while the page waits for its return context, when its links do not navigate yet.</summary>
     [Parameter] public bool HoldLinks { get; set; }
+
+    private string? Link(string path) => HoldLinks ? null : path;
 }

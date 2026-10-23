@@ -45,6 +45,40 @@ public class WikiFactTests : BunitContext
 	}
 
 	[Test]
+	public async Task TheBoxShowsLabelsAndLinksEachValueToThePagesSharingIt()
+	{
+		var cut = Render<WikiFactBox>(p => p.Add(c => c.Facts, new List<WikiFactDto>
+		{
+			new("pf2e:tradition", "arcane") { Label = "Tradition" },
+			new("pf2e:tradition", "primal") { Label = "Tradition" },
+		}));
+
+		await Assert.That(cut.Find("dt").TextContent).IsEqualTo("Tradition");
+		await Assert.That(cut.Find("dt").GetAttribute("title")).IsEqualTo("pf2e:tradition");
+		await Assert.That(cut.FindAll("dd a").Select(a => (a.TextContent, a.GetAttribute("href")))).IsEquivalentTo([
+			("arcane", "/wiki/query?q=pf2e%3Atradition%3Darcane"),
+			("primal", "/wiki/query?q=pf2e%3Atradition%3Dprimal")]);
+	}
+
+	[Test]
+	public async Task TheBoxListsThePagesNamingThisOneAndLinksTheRest()
+	{
+		var cut = Render<WikiFactBox>(p => p
+			.Add(c => c.Facts, new List<WikiFactDto>())
+			.Add(c => c.Page, "main:wizard")
+			.Add(c => c.NamedBy, new List<WikiFactNamedByDto>
+			{
+				new("pf2e:class", "Class", [new("Fireball", "fireball", "main"), new("Shield", "shield", "main")], More: true),
+			}));
+
+		await Assert.That(cut.Find(".wiki-facts-named-by dt").TextContent).IsEqualTo("Class");
+		await Assert.That(cut.FindAll(".wiki-facts-named-by a").Select(a => (a.TextContent, a.GetAttribute("href")))).IsEquivalentTo([
+			("Fireball", "/wiki/main/fireball"),
+			("Shield", "/wiki/main/shield"),
+			("WkFactNamedByAll", "/wiki/query?q=pf2e%3Aclass%3Dmain%3Awizard")]);
+	}
+
+	[Test]
 	public async Task TheBoxIsAbsentWithoutFacts()
 	{
 		var cut = Render<WikiFactBox>(p => p.Add(c => c.Facts, new List<WikiFactDto>()));

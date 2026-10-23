@@ -18,9 +18,16 @@ public class WikiFactApiTests(ServerWebAppFactory factory)
 		public string? PageTitle { get; init; }
 		public string? PageSlug { get; init; }
 		public string? PageNamespace { get; init; }
+		public string? Label { get; init; }
 	}
 
-	private record WikiPageDto(string Id, string Slug, string Title, int RevisionNumber, List<WikiFactDto> Facts);
+	private record WikiPageLinkDto(string Title, string Slug, string Namespace);
+	private record WikiFactNamedByDto(string Property, string Label, List<WikiPageLinkDto> Pages, bool More);
+
+	private record WikiPageDto(string Id, string Slug, string Title, int RevisionNumber, List<WikiFactDto> Facts)
+	{
+		public List<WikiFactNamedByDto> NamedBy { get; init; } = [];
+	}
 	private record WikiFactPropertyDto(string Id, string Type, bool Multiple, List<string> Keywords, string Label = "", string Description = "");
 	private record SetFactPropertyRequest(string Type, bool Multiple, string[]? Keywords, string? Label, string? Description);
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
@@ -62,6 +69,27 @@ public class WikiFactApiTests(ServerWebAppFactory factory)
 		var byClass = fetched.Facts.Single(f => f.Property == "pf2e:class");
 		await Assert.That((byClass.PageTitle, byClass.PageSlug, byClass.PageNamespace)).IsEqualTo((wizard.Title, wizard.Slug, "main"));
 		await Assert.That(fetched.Facts.Single(f => f.Property == "pf2e:level").PageTitle).IsNull();
+	}
+
+	[Test]
+	public async Task APageListsThePagesWhoseFactsNameIt()
+	{
+		await factory.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var http = CreateClient();
+		var spell = await CreatePageAsync(http, "Named api spell");
+		var wizard = await CreatePageAsync(http, "Named api wizard");
+		var put = await http.PutAsJsonAsync($"api/wiki/{Uri.EscapeDataString(spell.Slug)}/facts",
+			new SetFactsRequest([new("pf2e:class", wizard.Title), new("pf2e:level", "1")]));
+		await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.OK);
+
+		var fetched = (await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/{Uri.EscapeDataString(wizard.Slug)}"))!;
+		var named = fetched.NamedBy.Single();
+		await Assert.That((named.Property, named.Label, named.More)).IsEqualTo(("pf2e:class", "pf2e:class", false));
+		await Assert.That(named.Pages).IsEquivalentTo([new WikiPageLinkDto(spell.Title, spell.Slug, "main")]);
+		// A property without a label is shown as itself.
+		var stated = (await http.GetFromJsonAsync<WikiPageDto>($"api/wiki/ns/main/{Uri.EscapeDataString(spell.Slug)}"))!;
+		await Assert.That(stated.Facts.Select(f => f.Label ?? "")).IsEquivalentTo(["pf2e:class", "pf2e:level"]);
+		await Assert.That(stated.NamedBy).IsEmpty();
 	}
 
 	[Test]

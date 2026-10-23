@@ -44,6 +44,9 @@ public class WikiArticle
 	/// <summary>The facts the page states that the reader may see. Set in the editor and saved as page metadata, not text.</summary>
 	public List<SharpMUSH.Library.API.WikiFactDto> Facts { get; set; } = [];
 
+	/// <summary>For each page property, the pages the reader may see whose facts name this page.</summary>
+	public List<SharpMUSH.Library.API.WikiFactNamedByDto> NamedBy { get; set; } = [];
+
 	/// <summary>When false, the page is a draft hidden from anonymous visitors.</summary>
 	public bool Published { get; set; } = true;
 

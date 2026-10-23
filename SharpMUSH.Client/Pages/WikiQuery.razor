@@ -1,0 +1,19 @@
+@page "/wiki/query"
+@layout WikiLayout
+@using SharpMUSH.Client.Components.Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+<PageTitle>@Loc["WkFactQueryTitle"] — <GameName /></PageTitle>
+
+@* Where a fact's value links: every page whose facts meet the conditions in ?q=, written as wikiquery() takes them. *@
+<div class="wiki-query">
+    <PlainPageHeader Kicker="@Loc["Wiki"]" Title="@Loc["WkFactQueryTitle"]" Description="@Loc["WkFactQueryDesc"]" />
+    <WikiFactSearch @key="Q" Query="@Q" Locale="@Lang" />
+</div>
+
+@code {
+    /// <summary>The conditions, comma separated.</summary>
+    [SupplyParameterFromQuery(Name = "q")] public string? Q { get; set; }
+
+    [SupplyParameterFromQuery(Name = "lang")] public string? Lang { get; set; }
+}
