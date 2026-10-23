@@ -3,9 +3,10 @@
   "corpus": "help",
   "id": "wiki-facts",
   "lookup": "wiki facts",
-  "aliases": ["WIKI-FACTS", "@WIKI/FACT"],
+  "aliases": ["WIKI-FACTS", "@WIKI/FACT", "@WIKI/QUERY"],
   "sections": [
     {"id": "values", "heading": "Values", "lookup": "wiki fact values"},
+    {"id": "queries", "heading": "Queries", "lookup": "wiki fact queries"},
     {"id": "index", "heading": "The fact index", "lookup": "wiki fact index"}
   ]
 }
@@ -15,6 +16,7 @@
 - `@wiki/fact <page>`
 - `@wiki/fact <page>/<property>=<value>[|<value>...]`
 - `@wiki/fact <page>/<property>=`
+- `@wiki/query <condition>[, <condition>...]`
 - `@wiki/fact/index [rebuild]`
 
 A fact is a property of a page and its value, such as a spell's level. Like
@@ -31,6 +33,7 @@ From softcode, `wikifact(<page>)` lists the properties a page has facts for,
 and `wikifact(<page>, <property>)` returns one property's values.
 
 - [wiki fact values]: types, and naming a page
+- [wiki fact queries]: finding the pages that state a value
 - [wiki fact index]: how far the index has come, and rebuilding it
 
 ## Values
@@ -57,6 +60,26 @@ WIKI: pf2e:level is a whole number, not 'three'.
 A page shows only the facts you can read. A fact that names a page you may
 not read is left out.
 
+## Queries
+
+`@wiki/query` lists the pages whose facts meet every condition, and
+`wikiquery()` returns them from softcode (see [WIKIQUERY()]). Write each
+condition as `<property>=<value>`, or as `<property>=<low>..<high>` for a
+range of whole numbers. `category=<name>` and `namespace=<name>` limit where
+the pages come from. `@wiki/query` lists up to 100 pages and says when more
+match.
+
+```sharp
+> @wiki/query pf2e:tradition=arcane, pf2e:level=1..3
+```
+
+Output: a table of the matching pages, titled "2 page(s) where pf2e:tradition=arcane, pf2e:level=1..3".
+
+```sharp
+> @wiki/query pf2e:level=high
+WIKI: pf2e:level is a whole number, not 'high'.
+```
+
 ## The fact index
 
 The game keeps an index of every page's facts, so it can find the pages that
@@ -75,5 +98,6 @@ WIKI: The fact index is ready: 4711 pages.
 
 ::: seealso
 - [WIKIFACT()]
+- [WIKIQUERY()]
 - [wiki categories]
 :::

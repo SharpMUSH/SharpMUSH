@@ -91,6 +91,12 @@ public record WikiFactPropertyDto(string Id, string Type, bool Multiple, IReadOn
 public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 
 /// <summary>
+/// One page of <c>GET /api/wiki/query</c>'s answer. <paramref name="Next"/> continues it as <c>after</c>; null when
+/// nothing is left. A page may hold fewer rows than were asked for, even none, and still go on.
+/// </summary>
+public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next);
+
+/// <summary>
 /// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page
 /// without its body. A listing renders link rows and metadata columns, so the Markdown, HTML and plain
 /// text stay on the server; the banner image, the one thing a row takes from the body, is found there.
@@ -259,3 +265,22 @@ public record WikiAccessExplanationDto(string Action, bool Allowed, string Reaso
 /// <param name="Pages">The newest pages, newest first, the excluded page left out.</param>
 /// <param name="Total">Every page of the category in the namespace the caller may see, the excluded page included.</param>
 public sealed record WikiCategoryNewestDto(IReadOnlyList<WikiPageSummaryDto> Pages, int Total);
+
+/// <summary>Fact-query conditions as a person types them on one line: <c>@wiki/query</c> and the portal's search box.</summary>
+public static class WikiFactConditions
+{
+	/// <summary>
+	/// The conditions, separated by commas. A piece with no <c>=</c> is the rest of the value before it, so a title or
+	/// category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays one condition.
+	/// </summary>
+	public static IReadOnlyList<string> Split(string typed)
+	{
+		var conditions = new List<string>();
+		foreach (var piece in typed.Split(','))
+		{
+			if (conditions.Count > 0 && !piece.Contains('=')) conditions[^1] += "," + piece;
+			else conditions.Add(piece);
+		}
+		return conditions;
+	}
+}
