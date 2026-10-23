@@ -10,6 +10,17 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-kemono-player-world", "kemono", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-cyberpunk-kemono-player-character", "kemono", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-kemono-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-pulp-chibi-player-place", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-pulp-chibi-player-world", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-pulp-chibi-shared-welcome", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-cyberpunk-kemono-player-sign-in", "kemono", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-cyberpunk-kemono-shared-welcome", "kemono", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-kemono-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-pulp-chibi-shared-completion", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-pulp-chibi-player-speak-act", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-pulp-chibi-player-useful-action", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-dark-fantasy-kemono-administrator-invite", "kemono", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-kemono-administrator-invite.png", 1254, 1254, "administrator-invite"),
 		new SharpieArt("sharpie-pulp-chibi-player-character", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-pulp-chibi-player-sign-in", "chibi", "Pulp", "images/sharpie/sharpie-pulp-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
 		new SharpieArt("sharpie-suspense-chibi-administrator-identity", "chibi", "Suspense", "images/sharpie/sharpie-suspense-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
