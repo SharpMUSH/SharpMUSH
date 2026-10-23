@@ -1,3 +1,4 @@
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Wiki.Semantics;
@@ -49,16 +50,25 @@ public static partial class PackageDeclarationPlanner
 				continue;
 			}
 
-			keep.Add(spec);
 			if (current is null)
 			{
+				keep.Add(spec);
 				writes.Add(WikiPropertyDefinition(spec));
 				changes.Add(new(PackageDeclarationKind.WikiProperty, spec.Id, PackageDeclarationAction.Create,
 					baseline is null ? Describe(spec) : $"It had been removed, so it is defined again. {Describe(spec)}"));
 				continue;
 			}
 
+			// Fields merge one by one, so a type staff changed and values the package added can make a property the wiki refuses.
 			var merged = MergeWikiProperty(spec, baseline!, current);
+			if (WikiFactProperties.Checked(WikiPropertyDefinition(merged)) is Error<string> refused)
+			{
+				changes.Add(new(PackageDeclarationKind.WikiProperty, spec.Id, PackageDeclarationAction.Blocked,
+					$"The world's property is {Describe(current)} The package's changes to it would make one the wiki refuses: {refused.Value} Change it with @wiki/property to install."));
+				continue;
+			}
+
+			keep.Add(spec);
 			if (merged.SameAs(current))
 			{
 				changes.Add(new(PackageDeclarationKind.WikiProperty, spec.Id, PackageDeclarationAction.NoChange));

@@ -86,6 +86,18 @@ public class PackageWikiPropertyTests
 	}
 
 	[Test]
+	public async Task AnUpgradeWhoseMergeTheWikiWouldRefuseBlocks()
+	{
+		// Staff made it a number; the package's new version lists keywords for it.
+		var anyTradition = Tradition with { Values = [] };
+		var plan = PackageDeclarationPlanner.Plan(Declared(Tradition), Declared(anyTradition), Live(anyTradition with { Type = "number" }), 5);
+
+		await Assert.That(plan.IsBlocked).IsTrue();
+		await Assert.That(Change(plan, "pf2e:tradition").Detail!).Contains("only a keyword property lists its values");
+		await Assert.That(plan.WikiPropertyWrites).IsEmpty();
+	}
+
+	[Test]
 	public async Task AnUnchangedPropertyIsNotWritten()
 	{
 		var plan = PackageDeclarationPlanner.Plan(Declared(Level), Declared(Level), Live(Level), 5);
