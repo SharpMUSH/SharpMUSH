@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: onboarding-chargen
-version: 1.0.0
+title: "Onboarding: character applications"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Joins the checklist to character applications: the Get approved step says where the player's +app application stands and what to do next."
 license: MIT

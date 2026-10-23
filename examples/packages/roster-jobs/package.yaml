@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: roster-jobs
-version: 1.1.0
+title: "Roster applications through jobs"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT

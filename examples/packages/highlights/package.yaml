@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: highlights
-version: 1.1.1
+title: "Favourite poses and highlights"
+version: 1.1.2
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT

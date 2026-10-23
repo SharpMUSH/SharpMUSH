@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: availability
-version: 1.0.0
+title: "Availability"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT

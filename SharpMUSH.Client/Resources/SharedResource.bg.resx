@@ -1889,6 +1889,30 @@
     <value>Създай герой</value>
     <comment>MT — plain imperative, button</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Задай на този персонаж и собствена парола за вход от MU* клиент</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Въведете име на персонажа си.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Въведете парола за персонажа си или махнете отметката, за да влизате само през профила си.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Въведете името на персонажа, който искате да поемете.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Въведете паролата на персонажа.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Преди да изберете име, прочетете</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Героят е персонаж, с който играете в играта. Той е свързан с вашия акаунт; по-късно можете да създадете още.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Описание</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Заглавие</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Достъпът до клипборда е неуспешен. Изберете и копирайте показаната команда.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Създайте без избрана парола на персонажа; използвайте еднократни входове чрез самостоятелен клиент или задайте парола по-късно.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Затворете</value>

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: scene-here
-version: 1.0.2
+title: "Scene System: command palette"
+version: 1.0.3
 authors: [SharpMUSH]
 description: "Tells the command palette about the scene where a player stands: entering a room with a scene running pushes scene_here onto their context stack, and entering one without drops it."
 license: MIT

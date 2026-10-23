@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: http-handler
-version: 1.0.4
+title: "HTTP routes"
+version: 1.0.5
 authors: [SharpMUSH]
 description: "Inbound HTTP verb routers (GET/POST/…) for the configured http_handler object."
 license: MIT

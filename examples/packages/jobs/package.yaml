@@ -1,6 +1,7 @@
-format: "1.15"
+format: "1.16"
 package: jobs
-version: 1.13.1
+title: "Jobs"
+version: 1.13.2
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT

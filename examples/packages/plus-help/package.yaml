@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: plus-help
-version: 1.8.1
+title: "+help"
+version: 1.8.2
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT

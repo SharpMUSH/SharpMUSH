@@ -1889,6 +1889,30 @@
     <value>Opprett karakter</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Gi også denne karakteren sitt eget passord, for å logge inn fra en MU*-klient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Skriv inn et navn på karakteren din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Skriv inn et passord for karakteren din, eller fjern haken for å logge inn bare gjennom kontoen din.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Skriv inn navnet på karakteren du vil gjøre krav på.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Skriv inn passordet til karakteren.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Før du velger et navn, les</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>En karakter er en person du spiller i spillet. Den er knyttet til kontoen din, og du kan opprette flere senere.</value>
     <comment>MT</comment>
@@ -2288,6 +2312,10 @@
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Beskrivelse</value>
     <comment>MT — corpus term.</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Tittel</value>
+    <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Detaljer</value>
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Tilgang til utklippstavlen mislyktes. Merk og kopier kommandoen som vises.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Opprett uten å velge karakterpassord; bruk engangsinnlogginger i klienten eller angi et passord senere.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Lukk</value>

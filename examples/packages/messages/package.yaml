@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: messages
-version: 1.2.2
+title: "Messages object"
+version: 1.2.3
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT

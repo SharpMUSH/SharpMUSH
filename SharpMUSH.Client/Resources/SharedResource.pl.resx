@@ -1889,6 +1889,30 @@
     <value>Utwórz postać</value>
     <comment>MT — Polish does not distinguish this from NavCreateACharacter</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Nadaj tej postaci także własne hasło, aby logować się z klienta MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Wpisz imię swojej postaci.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Wpisz hasło dla swojej postaci albo odznacz pole, aby logować się tylko przez konto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Wpisz imię postaci, którą chcesz przejąć.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Wpisz hasło postaci.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Zanim wybierzesz imię, przeczytaj</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Postać to persona odgrywana w grze. Jest powiązana z kontem; kolejne można utworzyć później.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Opis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Tytuł</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Dostęp do schowka nie powiódł się. Zaznacz i skopiuj wyświetlone polecenie.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Utwórz bez wybranego hasła postaci; korzystaj z jednorazowego dostępu przez klienta lub ustaw hasło później.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Zamknij</value>

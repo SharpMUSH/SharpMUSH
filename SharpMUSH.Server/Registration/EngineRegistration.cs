@@ -183,6 +183,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddScoped<OnboardingPresentationService>();
 		services.AddScoped<OnboardingCapabilityService>();
+		services.AddScoped<AdministratorChecklistDetector>();
 		services.AddScoped<IOnboardingCommandProbe, OnboardingCommandProbe>();
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();

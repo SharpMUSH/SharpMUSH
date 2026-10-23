@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: discord
-version: 1.2.0
+title: "Discord link"
+version: 1.2.1
 authors: [SharpMUSH]
 description: "The game's side of the Discord link: the discord.admin permission, the Discord Admin role that allows it, and the Discord Bridge that owns the discord feed kind. Each linked Discord channel is the feed discord/<channel id>, and every line sent on it is posted in that channel. The Discord plugin does the posting; @discord/link links a channel."
 license: MIT

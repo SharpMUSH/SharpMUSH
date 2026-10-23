@@ -1889,6 +1889,30 @@
     <value>Crear personaje</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Dar también a este personaje su propia contraseña, para entrar desde un cliente MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Escribe un nombre para tu personaje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Escribe una contraseña para tu personaje, o desmarca la casilla para entrar solo con tu cuenta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Escribe el nombre del personaje que quieres reclamar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Escribe la contraseña del personaje.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Antes de elegir un nombre, lee</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Un personaje es una identidad que usted interpreta en el juego. Está vinculado a su cuenta; puede crear más personajes más adelante.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Descripción</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Título</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>No se pudo acceder al portapapeles. Selecciona y copia el comando que se muestra.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Crear sin elegir una contraseña de personaje; utiliza accesos de un solo uso desde el cliente o establece una contraseña más adelante.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Cerrar</value>

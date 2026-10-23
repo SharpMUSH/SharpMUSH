@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: gmcp-comm
-version: 1.1.0
+title: "GMCP channels and pages"
+version: 1.1.1
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Comm package: each channel line and page as Comm.Channel.Text, for a client's chat window, and the channels a player is on as Comm.Channel.List."
 license: MIT

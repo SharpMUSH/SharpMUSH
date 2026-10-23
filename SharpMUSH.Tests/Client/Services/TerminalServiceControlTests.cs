@@ -47,7 +47,7 @@ public class TerminalServiceControlTests
 		await svc.ConnectAsGuestAsync("ws://localhost:4202/ws");
 
 		ws.Received(1).ClearSendBuffer();
-		await ws.Received(1).ConnectAsync("ws://localhost:4202/ws");
+		await ws.Received(1).ConnectAsync("ws://localhost:4202/ws", null, signIn: true);
 		await ws.Received(1).SendAsync("connect guest");
 	}
 }

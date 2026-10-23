@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: relationships-card
-version: 1.0.1
+title: "Relationships on the name card"
+version: 1.0.2
 kind: application
 authors: [SharpMUSH]
 description: "The relationships package on the portal's name card: the relationship between you and the character, your note about them, and any line another package adds."

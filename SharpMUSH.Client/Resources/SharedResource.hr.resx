@@ -1889,6 +1889,30 @@
     <value>Stvori lik</value>
     <comment>MT — imperative button form</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Daj ovom liku i vlastitu lozinku, za prijavu iz MU* klijenta</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Unesite ime svog lika.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Unesite lozinku za svog lika ili uklonite kvačicu da se prijavljujete samo putem računa.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Unesite ime lika kojeg želite preuzeti.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Unesite lozinku lika.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Prije nego što odaberete ime, pročitajte</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Lik je persona koju igrate u igri. Povezan je s vašim računom; kasnije možete stvoriti još likova.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Opis</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Naslov</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Pristup međuspremniku nije uspio. Odaberite i kopirajte prikazanu naredbu.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Izradi bez odabrane lozinke lika; koristite jednokratne prijave putem klijenta ili postavite lozinku kasnije.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Zatvori</value>

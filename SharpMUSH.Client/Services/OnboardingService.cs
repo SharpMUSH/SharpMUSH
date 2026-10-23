@@ -97,6 +97,34 @@ public sealed class OnboardingService : IDisposable
 		{
 			if (Current(generation, token)) { Loading = false; Changed?.Invoke(); }
 		}
+		if (journey == GuideJourney.Administrator && token is not null && Ready && Current(generation, token))
+			await TickDetectedAsync(generation, token);
+	}
+
+	/// <summary>
+	/// Ticks the administrator steps the server can see are done (a channel exists, a backup is listed, ...).
+	/// A convenience: when the server cannot say, the checklist is left as it was.
+	/// </summary>
+	private async Task TickDetectedAsync(long generation, string token)
+	{
+		string[] detected;
+		try
+		{
+			using var request = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/administrator/detected");
+			request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+			using var client = _http.CreateClient("api");
+			using var response = await client.SendAsync(request);
+			if (!response.IsSuccessStatusCode) return;
+			detected = await response.Content.ReadFromJsonAsync<string[]>() ?? [];
+		}
+		catch (Exception error) when (error is HttpRequestException or JsonException or TaskCanceledException) { return; }
+		var steps = detected.Where(GuideStepIds.Administrator.Contains).Except(Progress.CompletedStepIds).ToArray();
+		if (steps.Length == 0 || !Current(generation, token)) return;
+		await ChangeAsync(progress => progress with
+		{
+			CompletedStepIds = progress.CompletedStepIds.Union(steps).ToArray(),
+			SkippedStepIds = progress.SkippedStepIds.Except(steps).ToArray()
+		});
 	}
 
 	public Task ChoosePathAsync(GuidePath path) => ChangeAsync(progress => progress with

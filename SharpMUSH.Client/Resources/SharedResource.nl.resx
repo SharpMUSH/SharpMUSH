@@ -1889,6 +1889,30 @@
     <value>Personage aanmaken</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Geef dit personage ook een eigen wachtwoord, om in te loggen vanuit een MU*-client</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Vul een naam voor je personage in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Vul een wachtwoord voor je personage in, of vink het vakje uit om alleen via je account in te loggen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Vul de naam in van het personage dat je wilt opeisen.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Vul het wachtwoord van het personage in.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Lees voordat je een naam kiest</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Een personage is een rol die je in het spel speelt. Het is gekoppeld aan je account; je kunt er later meer aanmaken.</value>
     <comment>MT</comment>
@@ -2287,6 +2311,10 @@
   </data>
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Beschrijving</value>
+    <comment>MT</comment>
+  </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titel</value>
     <comment>MT</comment>
   </data>
   <data name="PkgDetails" xml:space="preserve">
@@ -6419,9 +6447,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Toegang tot het klembord is mislukt. Selecteer en kopieer de weergegeven opdracht.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Aanmaken zonder gekozen personagewachtwoord; gebruik eenmalige clientaanmeldingen of stel later een wachtwoord in.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Sluiten</value>

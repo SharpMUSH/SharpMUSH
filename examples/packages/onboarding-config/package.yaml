@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: onboarding-config
-version: 1.0.0
+title: "Onboarding: +config settings"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the checklist's settings into +config: registers the Onboarding object with the +config registry, so staff choose the steps and when the list shows with +config onboarding."
 license: MIT

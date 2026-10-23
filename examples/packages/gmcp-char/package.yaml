@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: gmcp-char
-version: 1.2.0
+title: "GMCP character data"
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Char package: Char.Name, Char.Vitals for a client's gauges and Char.Status, from the attributes its settings name, each sent again the moment one of them changes."
 license: MIT

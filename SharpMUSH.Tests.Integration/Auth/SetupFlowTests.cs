@@ -191,7 +191,7 @@ public class SetupFlowTests(ServerWebAppFactory factory)
 	}
 
 	private record HandlerState(string Kind, int? Dbref, string? Name, bool IsWizard, List<string> Packages);
-	private record BundledPackageState(string Id, string Description, bool Installed, string? Requires, bool Available,
+	private record BundledPackageState(string Id, string Title, string Description, bool Installed, string? Requires, bool Available,
 		List<string> DependsOn);
 	private record SetupWizardResponse(bool Pending, List<HandlerState> Handlers, List<BundledPackageState> Packages);
 	private record ServerInfoResponse(bool GuestsEnabled, string MudName, List<string>? Features, string? BuildId);
