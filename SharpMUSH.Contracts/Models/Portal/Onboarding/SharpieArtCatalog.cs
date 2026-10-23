@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-post-apocalyptic-kemono-player-sign-in", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-player-channels", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-player-speak-act", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-player-useful-action", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-player-place", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-military-science-fiction-kemono-administrator-walkthrough", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-shared-welcome", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-military-science-fiction-kemono-administrator-rules", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-military-science-fiction-kemono-administrator-invite", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
