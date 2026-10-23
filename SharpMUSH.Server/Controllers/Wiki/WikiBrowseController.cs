@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
@@ -8,6 +9,7 @@ using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Middleware;
@@ -31,6 +33,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/categories      — every category, with its name, how many pages it holds and whether it is pinned
 ///   GET  /api/wiki/pinned-categories — the keys of the categories pinned to the wiki home
 ///   GET  /api/wiki/fact-properties — the properties facts may state, with their types
+///   GET  /api/wiki/query           — the pages whose facts meet every condition
 ///   POST /api/wiki/exists          — batch page-existence check (redlinks)
 /// </summary>
 [ApiController]
@@ -212,6 +215,34 @@ public class WikiBrowseController(
 			.OrderBy(p => p.Id, StringComparer.Ordinal)
 			.ToList());
 	}
+
+	/// <summary>
+	/// GET /api/wiki/query?condition=pf2e:level=1..3&amp;condition=category=Spells&amp;take=50&amp;after=&amp;lang=fr
+	/// The pages whose facts meet every <c>condition</c>, written as <c>wikiquery()</c> takes them, one page at a time:
+	/// <c>next</c> is the next request's <c>after</c>. 400 for a query the wiki cannot answer; 503 while the fact index
+	/// is building.
+	/// </summary>
+	[HttpGet("query")]
+	public async Task<IActionResult> QueryFacts([FromQuery] string[] condition, [FromQuery] int take = 50,
+		[FromQuery] string? after = null, [FromQuery] string? lang = null)
+	{
+		var visibility = await VisibilityAsync();
+		return await WikiFactQueryText.ParseAsync(Wiki, await Wiki.GetFactSchemaAsync(), condition,
+				Math.Clamp(take, 1, WikiFactQuery.MaxTake), visibility) switch
+		{
+			WikiFactQuery query => await AnsweredAsync(query with { After = after }, visibility, lang),
+			Error<string> error => BadRequest(error.Value)
+		};
+	}
+
+	private async Task<IActionResult> AnsweredAsync(WikiFactQuery query, WikiVisibility visibility, string? lang)
+		=> await Wiki.QueryFactsAsync(query, visibility) switch
+		{
+			WikiFactQueryPage found => Ok(new WikiFactQueryResultDto([.. await LocalizedListAsync(found.Pages, lang)], found.Next)),
+			WikiFactIndexBuilding building => StatusCode(StatusCodes.Status503ServiceUnavailable,
+				$"The fact index is building: {building.Status.Indexed} of {building.Status.Pages} pages."),
+			Error<string> error => BadRequest(error.Value)
+		};
 
 	private static string FactType(SemanticType type) => type switch
 	{

@@ -232,6 +232,27 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// wikiquery(&lt;condition&gt;[, &lt;condition&gt;...])
+	/// The pages whose facts meet every condition, as wikilist() lists them: up to four facts, a category and a
+	/// namespace (<see cref="WikiFactQueryText"/>). A page the executor may not read is left out.
+	/// </summary>
+	[SharpFunction(Name = "wikiquery", MinArgs = 1, MaxArgs = 6,
+		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["condition..."])]
+	public async ValueTask<CallState> wikiquery(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var wikiService = parser.ServiceProvider.GetRequiredService<IWikiService>();
+		var visibility = await WikiCommandHelper.SoftcodeVisibilityAsync(parser, await parser.CurrentState.KnownExecutorObject(Mediator));
+		var conditions = parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText() ?? string.Empty);
+		return new CallState(await QueryWiki.RunAsync(wikiService, conditions, visibility) switch
+		{
+			WikiFactQueryPage found => string.Join(" ", found.Pages.Select(WikiCommandHelper.DisplayReference)),
+			WikiFactIndexBuilding => ErrorMessages.Returns.WikiIndexBuilding,
+			Error<string> => ErrorMessages.Returns.InvalidWikiQuery
+		});
+	}
+
+	/// <summary>
 	/// wikiaccess(&lt;page&gt;, &lt;action&gt;[, &lt;player&gt;])
 	/// 1 when the executor (or the player named) may read, edit or delete the page, by its wiki permissions
 	/// and what the page's namespace, categories and the page itself require; 0 when not. Asking about

@@ -186,6 +186,9 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 
 	public Task<SemanticSchema> GetFactSchemaAsync() => store.GetFactSchemaAsync();
 
+	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> store.QueryFactsAsync(query with { Category = query.Category is { } category ? WikiHelpers.CategoryKey(category) : null }, visibility);
+
 	public async Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned)
 		=> WikiHelpers.CategoryKey(category) is { Length: > 0 } key
 			? await store.SetCategoryPinnedAsync(key, pinned)
