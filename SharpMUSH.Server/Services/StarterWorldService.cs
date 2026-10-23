@@ -84,7 +84,7 @@ public sealed partial class StarterWorldService(
 			return;
 		}
 
-		if (await attributes.GetAttributeAsync(arrival, arrival, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: false)
+		if (await attributes.GetAttributeAsync(arrival, arrival, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true)
 			is not SharpAttribute[] { Length: > 0 }
 			&& await attributes.SetAttributeAsync(god, arrival, "DESCRIBE", MarkupText.Plain(ArrivalDescription)) is Error<string>)
 			failures.Add("The arrival room could not be described.");
