@@ -10,6 +10,19 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-multiverse-chibi-player-world", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-multiverse-chibi-administrator-invite", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-multiverse-chibi-administrator-capabilities", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-multiverse-chibi-administrator-rules", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-multiverse-chibi-administrator-joining", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-crime-kemono-administrator-identity", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-crime-kemono-shared-completion", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-crime-kemono-player-continue", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-crime-kemono-player-useful-action", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-crime-kemono-player-speak-act", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-crime-kemono-player-channels", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-multiverse-chibi-shared-completion", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-multiverse-chibi-player-continue", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-continue.png", 1254, 1254, "player-continue"),
 		new SharpieArt("sharpie-multiverse-chibi-player-useful-action", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
 		new SharpieArt("sharpie-multiverse-chibi-player-character", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-paranormal-chibi-administrator-walkthrough", "chibi", "Paranormal", "images/sharpie/sharpie-paranormal-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
