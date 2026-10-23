@@ -52,4 +52,13 @@ public class GuideCatalogTests
 		await Assert.That(roleplay.Single(lesson => lesson.Id == "speak-act").Body.Contains("tabletop", StringComparison.Ordinal)).IsTrue();
 	}
 
+	[Test]
+	public async Task AdministratorChecklistMatchesItsStableStepsAndKeepsGodForEmergencies()
+	{
+		await Assert.That(GuideCatalog.Administrator.Select(lesson => lesson.Id)).IsEquivalentTo(GuideStepIds.Administrator, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var staff = GuideCatalog.Administrator.Single(lesson => lesson.Id == "staff-character");
+		await Assert.That(staff.Body).Contains("#1");
+		await Assert.That(staff.Body).Contains("=WIZARD");
+		await Assert.That(GuideCatalog.Administrator.Single(lesson => lesson.Id == "channels").Body).Contains("@channel/add Staff=admin");
+	}
 }

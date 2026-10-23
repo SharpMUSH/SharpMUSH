@@ -197,16 +197,25 @@ After existing setup completes, offer a separate “Prepare for your first playe
 checklist available from admin overview:
 
 1. **Identity and welcome:** name, description, genre, logo/theme and guide style.
-2. **Joining:** review enabled registration/sign-in methods, create/claim paths,
+2. **Staff character:** keep #1 (God) for emergencies; create a separate character,
+   set it WIZARD as #1, and give other staff the narrowest role that fits. The step
+   notes when #1 is the active character.
+3. **Joining:** review enabled registration/sign-in methods, create/claim paths,
    guest availability if supported, and game-specific character requirements.
-3. **Rules and setting:** select existing welcome/rules/character-guide wiki pages;
+4. **Starting room:** describe the `player_start` room and its exits; keep the
+   master room private.
+5. **Rules and setting:** select existing welcome/rules/character-guide wiki pages;
    offer the existing starter-wiki mechanism only through its explicit action.
-4. **Useful capabilities:** explain installed packages and their player-visible
+6. **Channels:** a public channel for questions and a staff-only one; a new world
+   has none, and the player guide's channel lesson relies on one existing.
+7. **Connect screen:** the connect screen and messages of the day.
+8. **Useful capabilities:** explain installed packages and their player-visible
    features, linking to the existing package review/apply workflow. No hidden install.
-5. **Walk the player path:** preview each familiarity route with the current config,
-   then test with an ordinary player account. Admin preview cannot impersonate a
+9. **Backups:** one `@backup`, a schedule, and a copy off the machine.
+10. **Walk the player path:** preview each familiarity route with the current config,
+   then test with a separate, ordinary account. Admin preview cannot impersonate a
    player or claim that public permissions have been validated by preview alone.
-6. **Ready to invite:** summarize working links and any unfinished items. Completion
+11. **Ready to invite:** summarize working links and any unfinished items. Completion
    does not publish the game, change registration policies or send invitations.
 
 Admin tasks stay editable independently; optional tasks may be deferred. Existing
