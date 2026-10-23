@@ -3790,6 +3790,24 @@
   <data name="NavCreateACharacter" xml:space="preserve">
     <value>Create a character</value>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Also give this character its own password, to sign in from a MU* client</value>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Enter a name for your character.</value>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Enter a password for your character, or untick the box to sign in through your account only.</value>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Enter the name of the character you want to claim.</value>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Enter the character's password.</value>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Before you choose a name, read</value>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>A character is a persona you play in the game. It's linked to your account; you can create more later.</value>
   </data>
@@ -9034,9 +9052,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Clipboard access failed. Select and copy the displayed command.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Create without a chosen character password; use one-use native logins or set a password later.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Close</value>

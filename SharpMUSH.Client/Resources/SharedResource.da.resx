@@ -1889,6 +1889,30 @@
     <value>Opret karakter</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Giv også denne karakter sin egen adgangskode, så du kan logge ind fra en MU*-klient</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Indtast et navn til din karakter.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Indtast en adgangskode til din karakter, eller fjern fluebenet for kun at logge ind via din konto.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Indtast navnet på den karakter, du vil gøre krav på.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Indtast karakterens adgangskode.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Før du vælger et navn, så læs</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>En karakter er en person, du spiller i spillet. Den er knyttet til din konto; du kan oprette flere senere.</value>
     <comment>MT</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Adgang til udklipsholderen mislykkedes. Markér og kopiér den viste kommando.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Opret uden at vælge en adgangskode til figuren; brug engangslogins i klienten, eller angiv en adgangskode senere.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Luk</value>

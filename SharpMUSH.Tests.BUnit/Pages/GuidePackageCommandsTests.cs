@@ -52,7 +52,7 @@ public class GuidePackageCommandsTests : BunitContext
 		});
 		await Assert.That(calls).IsEqualTo(2);
 		if (unavailable) await Assert.That(page.Find("[role=status]").TextContent).Contains("unavailable");
-		page.Dispose();
+		await DisposeComponentsAsync();
 		clock.Tick();
 		await Assert.That(calls).IsEqualTo(2);
 	}

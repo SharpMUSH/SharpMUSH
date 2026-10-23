@@ -1889,6 +1889,30 @@
     <value>Создать персонажа</value>
     <comment>MT — Russian has no article, so this collapses to the same wording as NavCreateACharacter; intentional.</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Также задать этому персонажу собственный пароль для входа из MU*-клиента</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Введите имя персонажа.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Введите пароль персонажа или снимите флажок, чтобы входить только через учётную запись.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Введите имя персонажа, которого хотите забрать.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Введите пароль персонажа.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Прежде чем выбрать имя, прочитайте</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Персонаж — это образ, за который вы играете. Он привязан к вашему аккаунту; позже можно создать ещё.</value>
     <comment>MT — formal вы.</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Не удалось получить доступ к буферу обмена. Выделите и скопируйте показанную команду.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Создать без выбора пароля персонажа; используйте одноразовые доступы через клиент или задайте пароль позже.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Закрыть</value>

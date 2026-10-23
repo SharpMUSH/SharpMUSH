@@ -1889,6 +1889,30 @@
     <value>Charakter erstellen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Diesem Charakter auch ein eigenes Passwort geben, um sich mit einem MU*-Client anzumelden</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Geben Sie einen Namen für Ihren Charakter ein.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Geben Sie ein Passwort für Ihren Charakter ein, oder entfernen Sie das Häkchen, um sich nur über Ihr Konto anzumelden.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Geben Sie den Namen des Charakters ein, den Sie übernehmen möchten.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Geben Sie das Passwort des Charakters ein.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Bevor Sie einen Namen wählen, lesen Sie</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Ein Charakter ist eine Spielfigur, die Sie im Spiel verkörpern. Er ist mit Ihrem Konto verknüpft; weitere können Sie später erstellen.</value>
     <comment>MT</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Zugriff auf die Zwischenablage fehlgeschlagen. Markiere und kopiere den angezeigten Befehl.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Ohne selbst gewähltes Charakterpasswort erstellen; verwende einmalige Client-Anmeldungen oder lege später ein Passwort fest.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Schließen</value>

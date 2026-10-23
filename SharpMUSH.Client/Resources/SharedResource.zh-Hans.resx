@@ -1889,6 +1889,30 @@
     <value>创建角色</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>同时为此角色设置单独的密码，用于从 MU* 客户端登录</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>请输入角色名称。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>请输入角色密码，或取消勾选，仅通过账户登录。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>请输入你要认领的角色名称。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>请输入角色密码。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>选择名称前，请阅读</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>角色是您在游戏中扮演的人物，与您的账号相关联；之后还可以创建更多角色。</value>
     <comment>MT</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>无法访问剪贴板。请选择并复制显示的命令。</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>创建时不选择角色密码；可使用客户端的一次性登录凭证，或稍后设置密码。</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>关闭</value>
