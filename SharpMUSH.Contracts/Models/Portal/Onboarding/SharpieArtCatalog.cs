@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-genre-none-kemono-administrator-joining", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-kemono-administrator-rules", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-kemono-administrator-identity", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-dark-fantasy-pixel-player-continue", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-player-place", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-player-sign-in", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-kemono-shared-completion", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
