@@ -137,7 +137,8 @@ public class WikiFactCommandTests
 			{ new("pf2e:level", "2"), new("pf2e:ancestry", ancestry.Id), new("pf2e:class", draftClass.Id) });
 	}
 
-	[Test]
+	// The rebuild empties the shared world's index, so no test that queries it runs meanwhile.
+	[Test, NotInParallel("wiki-fact-index")]
 	public async Task TheFactIndexReportsItselfAndOnlyWikiAdminRebuildsIt()
 	{
 		var builder = WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>();
