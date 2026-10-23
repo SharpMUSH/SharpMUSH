@@ -99,7 +99,7 @@ public partial class Commands
 		await NotifyService.Notify(handle, $"Account '{account.Username}' created successfully.");
 		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is MString newUserText
 			? newUserText
-			: AccountMenu("You have no characters yet.", [], MenuMakeFirst, MenuClaim));
+			: AccountMenu("Your account is ready", "You have no characters yet.", [], MenuMakeFirst, MenuClaim));
 		return new CallState(account.Id!);
 	}
 
@@ -204,8 +204,8 @@ public partial class Commands
 
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
 		await NotifyService.Notify(handle, characters.Count == 0
-			? AccountMenu($"Logged in as {account.Username}. You have no characters yet.", [], MenuMakeFirst, MenuClaim)
-			: AccountMenu($"Logged in as {account.Username}. Your characters:",
+			? AccountMenu($"Logged in as {account.Username}", "You have no characters yet.", [], MenuMakeFirst, MenuClaim)
+			: AccountMenu($"Logged in as {account.Username}", "Your characters:",
 				[.. characters.Select(c => ServerLayout.CommandLink($"{c.Object.Name} (#{c.Object.Key})", $"play {c.Object.Name}"))],
 				MenuPlay, MenuMakeAnother, MenuClaim));
 
@@ -218,10 +218,11 @@ public partial class Commands
 	private static readonly (string Command, string Does) MenuPlay = ("play <character>", "enter the game as one of them");
 
 	/// <summary>
-	/// The account menu: <paramref name="heading"/>, the account's characters as a list (each a link that plays
-	/// it), then the commands that come next with what each does, the descriptions lined up.
+	/// The account menu under a light rule titled <paramref name="title"/>, the way the connect screen and the
+	/// new-user message head theirs: <paramref name="lead"/>, the account's characters as a list (each a link that
+	/// plays it), then the commands that come next with what each does, the descriptions lined up.
 	/// </summary>
-	private static MarkupText AccountMenu(string heading, ImmutableArray<MarkupText> characters,
+	private static MarkupText AccountMenu(string title, string lead, ImmutableArray<MarkupText> characters,
 		params ReadOnlySpan<(string Command, string Does)> commands)
 	{
 		var list = new Fields([.. commands.ToArray().Select(command =>
@@ -229,9 +230,10 @@ public partial class Commands
 		{
 			Separator = MarkupText.Plain("  ")
 		};
+		var rule = new Rule(MarkupText.Plain(title)) { Border = BorderStyle.Single, TitleAlignment = Alignment.Left };
 		Block[] parts = characters.IsEmpty
-			? [new TextBlock(MarkupText.Plain(heading)), list]
-			: [new TextBlock(MarkupText.Plain(heading)), new Bullets([.. characters.Select(name => (Block)new TextBlock(name))]), list];
+			? [rule, new TextBlock(MarkupText.Plain(lead)), list]
+			: [rule, new TextBlock(MarkupText.Plain(lead)), new Bullets([.. characters.Select(name => (Block)new TextBlock(name))]), list];
 		return ServerLayout.Build(new Stack([.. parts]), 78);
 	}
 
