@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-genre-none-pixel-administrator-joining", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-administrator-identity", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-shared-completion", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-player-useful-action", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-player-world", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-player-character", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-shared-welcome", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
