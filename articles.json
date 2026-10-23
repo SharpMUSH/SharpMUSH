@@ -15180,7 +15180,8 @@
       "WIKI-FACTS",
       "@WIKI/FACT",
       "@WIKI/QUERY",
-      "@WIKI/PROPERTY"
+      "@WIKI/PROPERTY",
+      "@WIKI/FACETS"
     ],
     "sections": [
       {
@@ -15199,6 +15200,18 @@
         "id": "queries",
         "lookup": "wiki fact queries",
         "heading": "Queries",
+        "aliases": []
+      },
+      {
+        "id": "conditions",
+        "lookup": "wiki fact conditions",
+        "heading": "Conditions",
+        "aliases": []
+      },
+      {
+        "id": "facets",
+        "lookup": "wiki facets",
+        "heading": "Facets",
         "aliases": []
       },
       {
