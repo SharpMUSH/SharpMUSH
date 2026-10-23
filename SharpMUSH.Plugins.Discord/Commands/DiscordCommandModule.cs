@@ -95,7 +95,7 @@ public static class DiscordCommandModule
 		if (action is null)
 		{
 			var state = gateway.State;
-			await notify.Notify(executor, Overview(state, mirrorBans, relay.Links(), gate));
+			await notify.Notify(executor, Overview(parser.HouseLook(), state, mirrorBans, relay.Links(), gate));
 			// Outside the panel, so it copies whole.
 			if (state.ApplicationId is { } applicationId)
 			{
@@ -283,7 +283,7 @@ public static class DiscordCommandModule
 					: "Game bans are no longer mirrored. Bans the bot already made are lifted when their game bans end.", NoticeKind.Ok));
 				return new CallState(on ? "1" : "0");
 			case "":
-				await notify.Notify(executor, MirroredBans(services.GetRequiredService<IDiscordSettingsStore>().Get().MirrorBans,
+				await notify.Notify(executor, MirroredBans(services.GetRequiredService<IHouseLookService>().Look, services.GetRequiredService<IDiscordSettingsStore>().Get().MirrorBans,
 					services.GetRequiredService<IDiscordBanStore>().List()));
 				return CallState.Empty;
 			default:
@@ -292,7 +292,7 @@ public static class DiscordCommandModule
 		}
 	}
 
-	private static MString MirroredBans(bool mirrorBans, IReadOnlyList<DiscordMirroredBan> bans)
+	private static MString MirroredBans(LayoutTheme look, bool mirrorBans, IReadOnlyList<DiscordMirroredBan> bans)
 	{
 		var setting = ServerLayout.Body(MarkupText.Plain(mirrorBans
 			? "A game ban bans the account's Discord member in every server the bot is in. @discord/bans off stops that."
@@ -307,10 +307,10 @@ public static class DiscordCommandModule
 				],
 				bans.Select(ban => ImmutableArray.Create(ban.UserId.ToString(CultureInfo.InvariantCulture),
 					ban.Guilds.Count.ToString(CultureInfo.InvariantCulture), ban.At.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).AsEnumerable()));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord bans"), setting, banned), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord bans"), setting, banned), 78, look);
 	}
 
-	private static MString Overview(DiscordGatewayState gateway, bool mirrorBans, IReadOnlyList<DiscordLinkStatus> links,
+	private static MString Overview(LayoutTheme look, DiscordGatewayState gateway, bool mirrorBans, IReadOnlyList<DiscordLinkStatus> links,
 		IDiscordChannelGate gate)
 	{
 		var connection = ServerLayout.KeyValues(
@@ -334,7 +334,7 @@ public static class DiscordCommandModule
 					"#" + status.Link.ChannelName, status.Link.GuildName, status.Link.FeedKey,
 					State(status, gate.OpenTo(status.Link.ChannelId))).AsEnumerable()));
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord"), connection, linked), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord"), connection, linked), 78, look);
 	}
 
 	private static string BansMirrored(DiscordGatewayState gateway) => gateway.CannotBanIn is [_, ..] servers

@@ -5,6 +5,7 @@ using MarkupString.Layout;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.ParserInterfaces;
@@ -33,7 +34,7 @@ public static class DiscordRoleCommands
 		var (answer, result) = switches switch
 		{
 			_ when switches.Contains("DRIFT") && switches.Contains("APPLY") => Settle(services, maps, left),
-			_ when switches.Contains("DRIFT") => (Drift(services, maps), CallState.Empty),
+			_ when switches.Contains("DRIFT") => (Drift(parser.HouseLook(), services, maps), CallState.Empty),
 			_ when switches.Contains("UNMAP") => Done(await maps.UnmapAsync(left, cancellationToken), mapping =>
 				$"{mapping.RoleName} is no longer mapped to {mapping.Slug}. Members keep it as it is."),
 			_ when switches.Contains("ENFORCE") || switches.Contains("REPORT") => Done(
@@ -41,7 +42,7 @@ public static class DiscordRoleCommands
 				mapping => mapping.Mode == DiscordRoleMode.Enforce
 					? $"A change to {mapping.RoleName} made by hand on Discord is put back at once, and still listed by @discord/drift."
 					: $"A change to {mapping.RoleName} made by hand on Discord is listed by @discord/drift and left for you to decide."),
-			_ when right is null && left.Length == 0 => (List(maps.List()), CallState.Empty),
+			_ when right is null && left.Length == 0 => (List(parser.HouseLook(), maps.List()), CallState.Empty),
 			_ when right is null => (Notice("@discord/map <game role>=<Discord role> maps one; @discord/map alone lists them.", NoticeKind.Warn),
 				new CallState("#-1")),
 			_ => Mapped(await maps.MapAsync(
@@ -88,7 +89,7 @@ public static class DiscordRoleCommands
 		return (Notice($"Putting {mapping.RoleName} back to the game's roles wherever it was changed by hand.", NoticeKind.Ok), Id(mapping));
 	}
 
-	private static MString List(IReadOnlyList<DiscordRoleMappingStatus> mappings)
+	private static MString List(LayoutTheme look, IReadOnlyList<DiscordRoleMappingStatus> mappings)
 	{
 		Block body = mappings.Count == 0
 			? ServerLayout.Body(MarkupText.Plain("No roles are mapped. @discord/map <game role>=<Discord role> maps one."))
@@ -107,10 +108,10 @@ public static class DiscordRoleCommands
 					status.Mapping.Mode == DiscordRoleMode.Enforce ? "put back" : "reported",
 					status.Problem is { } problem ? $"broken: {problem}" : status.Drift > 0 ? $"{status.Drift} changed by hand" : "applied")
 					.AsEnumerable()));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord roles"), body), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord roles"), body), 78, look);
 	}
 
-	private static MString Drift(IServiceProvider services, DiscordRoleMaps maps)
+	private static MString Drift(LayoutTheme look, IServiceProvider services, DiscordRoleMaps maps)
 	{
 		var store = services.GetRequiredService<IDiscordRoleStore>();
 		var rows = store.Drift()
@@ -134,7 +135,7 @@ public static class DiscordRoleCommands
 					row.Drift.At.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).AsEnumerable()));
 		var hint = MarkupText.Plain(
 			"@discord/drift/apply [<role>] puts the game's roles back; @discord/unmap <role> stops mapping the role instead.");
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord roles changed by hand"), body, ServerLayout.Body(hint)), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord roles changed by hand"), body, ServerLayout.Body(hint)), 78, look);
 	}
 
 	private static CallState Id(DiscordRoleMapping mapping) => new(mapping.RoleId.ToString(CultureInfo.InvariantCulture));

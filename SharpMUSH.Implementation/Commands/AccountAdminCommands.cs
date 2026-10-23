@@ -66,7 +66,7 @@ public partial class Commands
 			var panel = filtered.Any(a => a.MustChangePassword)
 				? ServerLayout.Panel(MarkupText.Plain("Accounts"), fields, ServerLayout.Body(MarkupText.Plain("* must change password at next login")))
 				: ServerLayout.Panel(MarkupText.Plain("Accounts"), fields);
-			await NotifyService.Notify(executor, ServerLayout.Build(panel, 78));
+			await NotifyService.Notify(executor, ServerLayout.Build(panel, 78, parser.HouseLook()));
 			return CallState.Empty;
 		}
 
@@ -213,7 +213,7 @@ public partial class Commands
 				],
 				characters.Select(character => (IEnumerable<string>)[character.Object.Name, $"#{character.Object.Key}"]));
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Account {account.Username}"),
-			details, new Rule(), characterList), 78);
+			details, new Rule(), characterList), 78, HouseLook.Look);
 	}
 
 	/// <summary>

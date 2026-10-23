@@ -79,7 +79,7 @@ public partial class Commands
 					.Select(permission => new[] { permission.Category, permission.Scope, permission.Description }));
 
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Permissions"),
-			builtIn, new Rule(MarkupText.Plain("Custom permissions")), defined), 78);
+			builtIn, new Rule(MarkupText.Plain("Custom permissions")), defined), 78, parser.HouseLook());
 	}
 
 	/// <summary><c>@permission &lt;permission&gt;</c>: what it is, and which roles allow or deny it.</summary>
@@ -102,7 +102,7 @@ public partial class Commands
 			("Allowed by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Allow).Select(r => r.Slug)))),
 			("Denied by", MarkupText.Plain(Joined(roles.Where(r => r.Permissions.GetValueOrDefault(scope) == PermissionState.Deny).Select(r => r.Slug)))),
 		];
-		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Permission: {scope}"), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Permission: {scope}"), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
 	}
 
 	private async ValueTask<string> PermissionChangeAsync(IMUSHCodeParser parser, AnySharpObject executor, string operation,

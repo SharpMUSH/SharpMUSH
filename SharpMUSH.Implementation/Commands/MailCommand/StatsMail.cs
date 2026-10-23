@@ -76,8 +76,8 @@ public static class StatsMail
 		return switches switch
 		{
 			["STATS"] => await Stats(notifyService, executor, targetName, allSentMail, allReceivedMail),
-			["DSTATS"] => await DStats(notifyService, executor, targetName, allSentMail, allReceivedMail),
-			["FSTATS"] => await FStats(notifyService, executor, targetName, allSentMail, allReceivedMail),
+			["DSTATS"] => await DStats(parser.HouseLook(), notifyService, executor, targetName, allSentMail, allReceivedMail),
+			["FSTATS"] => await FStats(parser.HouseLook(), notifyService, executor, targetName, allSentMail, allReceivedMail),
 			_ => MarkupText.Empty
 		};
 	}
@@ -98,18 +98,18 @@ public static class StatsMail
 		return MarkupText.Empty;
 	}
 
-	private static async Task<MString> FStats(
+	private static async Task<MString> FStats(LayoutTheme look,
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
-		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: true);
+		=> await StatsSection(look, notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: true);
 
-	private static async Task<MString> DStats(
+	private static async Task<MString> DStats(LayoutTheme look,
 		INotifyService notifyService, AnySharpObject executor, string targetName,
 		IAsyncEnumerable<SharpMail> allSentMailIe, IAsyncEnumerable<SharpMail> allReceivedMailIe)
-		=> await StatsSection(notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: false);
+		=> await StatsSection(look, notifyService, executor, targetName, await allSentMailIe.ToArrayAsync(), await allReceivedMailIe.ToArrayAsync(), withSize: false);
 
 	/// <summary><c>@mail/dstats</c> and <c>/fstats</c>: what was sent and received, and with <paramref name="withSize"/> how much text it holds.</summary>
-	private static async Task<MString> StatsSection(INotifyService notifyService, AnySharpObject executor, string targetName,
+	private static async Task<MString> StatsSection(LayoutTheme look, INotifyService notifyService, AnySharpObject executor, string targetName,
 		SharpMail[] sent, SharpMail[] received, bool withSize)
 	{
 		string Summary(SharpMail[] mail) =>
@@ -123,7 +123,7 @@ public static class StatsMail
 			.. received.Length == 0 ? [] : new[] { ("Last received", MarkupText.Plain(received.Max(x => x.DateSent).ToString("ddd MMM dd HH:mm yyyy", CultureInfo.InvariantCulture))) },
 		];
 		await notifyService.Notify(executor,
-			ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Mail statistics for {targetName}"), ServerLayout.KeyValues(fields)), 78), executor);
+			ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Mail statistics for {targetName}"), ServerLayout.KeyValues(fields)), 78, look), executor);
 		return MarkupText.Empty;
 	}
 

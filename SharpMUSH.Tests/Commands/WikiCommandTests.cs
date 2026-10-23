@@ -164,14 +164,14 @@ public class WikiCommandTests
 			MarkupText.Plain("@wiki/create Qualified Row Page=Body of the qualified row page."));
 		var listing = await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@wiki/list"));
 
-		// The panel's rows, between its side lines, under the "Page" heading and the rule beneath it. A long
-		// title wraps onto an indented line of its own, which is not a row.
+		// The panel's rows, between its side lines (drawn in the game's layout_border), under the "Page" heading
+		// and the rule beneath it. A long title wraps onto an indented line of its own, which is not a row.
 		var rows = listing.Message.ToPlainText()
 			.Split('\n')
-			.Select(line => line.Trim().Trim('│').TrimEnd())
+			.Select(line => line.Trim().Trim('|', '│', '║').TrimEnd())
 			.SkipWhile(line => !line.TrimStart().StartsWith("Page "))
 			.Skip(2)
-			.TakeWhile(line => line.Trim().Length > 0 && !line.StartsWith('╰') && !line.Trim().StartsWith('…') && !line.StartsWith('├'))
+			.TakeWhile(line => line.Trim().Length > 0 && !line.StartsWith('+') && !line.StartsWith('╰') && !line.StartsWith('╚') && !line.StartsWith('├') && !line.Trim().StartsWith('…'))
 			.Where(line => line.Length > 1 && line[1] != ' ')
 			.Select(line => line.Trim())
 			.ToArray();

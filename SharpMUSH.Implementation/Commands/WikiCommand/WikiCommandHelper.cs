@@ -180,7 +180,7 @@ public static class WikiCommandHelper
 	/// under a divider below it. When <paramref name="shown"/> names columns, they take the place of the revision and
 	/// the date, and each row holds its cells after its title.
 	/// </summary>
-	public static MString PageListing(string title, IReadOnlyCollection<string[]> rows, Block? before = null, string? after = null,
+	public static MString PageListing(LayoutTheme look, string title, IReadOnlyCollection<string[]> rows, Block? before = null, string? after = null,
 		IReadOnlyList<string>? shown = null)
 	{
 		Block pages = rows.Count == 0
@@ -205,7 +205,7 @@ public static class WikiCommandHelper
 			parts.Add(new TextBlock(MarkupText.Plain(after)));
 		}
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), [.. parts]), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), [.. parts]), 78, look);
 	}
 
 	/// <summary>

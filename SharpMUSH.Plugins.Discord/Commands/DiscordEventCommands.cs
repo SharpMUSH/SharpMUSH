@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -41,7 +42,7 @@ public static class DiscordEventCommands
 				return new CallState("#-1 NO KEY");
 			}
 
-			await notify.Notify(executor, List(services.GetRequiredService<IDiscordEventStore>().List()));
+			await notify.Notify(executor, List(parser.HouseLook(), services.GetRequiredService<IDiscordEventStore>().List()));
 			return CallState.Empty;
 		}
 
@@ -89,7 +90,7 @@ public static class DiscordEventCommands
 		return new CallState(left);
 	}
 
-	private static MString List(IReadOnlyList<DiscordEventRecord> published)
+	private static MString List(LayoutTheme look, IReadOnlyList<DiscordEventRecord> published)
 	{
 		Block body = published.Count == 0
 			? ServerLayout.Body(MarkupText.Plain("Nothing is published. @discord/event <key>=<json> publishes an event."))
@@ -101,7 +102,7 @@ public static class DiscordEventCommands
 				],
 				published.OrderBy(record => record.Start).Select(record => ImmutableArray.Create(record.Key, record.Name,
 					record.Start.UtcDateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture)).AsEnumerable()));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord events"), body), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Discord events"), body), 78, look);
 	}
 
 	private static MString Notice(string text, NoticeKind kind) => NoticeMarkup.Message(Badge, text, kind);

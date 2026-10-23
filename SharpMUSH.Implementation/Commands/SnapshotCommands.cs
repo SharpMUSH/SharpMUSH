@@ -76,7 +76,7 @@ public partial class Commands
 	}
 
 	/// <summary>An object's snapshots, newest last, and any restore still waiting to be resolved.</summary>
-	private static MString SnapshotListing(SharpObject target, SnapshotHistory history)
+	private MString SnapshotListing(SharpObject target, SnapshotHistory history)
 	{
 		Block snapshots = history.Snapshots.Length == 0
 			? new TextBlock(MarkupText.Plain("No snapshots."))
@@ -95,11 +95,11 @@ public partial class Commands
 		return ServerLayout.Build(history.PendingRecoveryId is { } recovery
 			? ServerLayout.Panel(title, snapshots, new Rule(),
 				ServerLayout.KeyValues([("Pending recovery", MarkupText.Plain(recovery))]))
-			: ServerLayout.Panel(title, snapshots), 78);
+			: ServerLayout.Panel(title, snapshots), 78, HouseLook.Look);
 	}
 
 	/// <summary>What a restore would change, field by field, then the token that confirms it.</summary>
-	private static MString SnapshotPreviewListing(SnapshotPreview preview)
+	private MString SnapshotPreviewListing(SnapshotPreview preview)
 	{
 		Block changes = preview.Changes.Length == 0
 			? new TextBlock(MarkupText.Plain("Nothing would change."))
@@ -112,7 +112,7 @@ public partial class Commands
 				preview.Changes.Select(change => (IEnumerable<string>)[change.Field, change.Before, change.After]));
 		// The token stays outside the frame, on one line, so it copies whole.
 		return MarkupText.Join(MarkupText.NewLine, [
-			ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Restore preview of {preview.SnapshotId}"), changes), 78),
+			ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Restore preview of {preview.SnapshotId}"), changes), 78, HouseLook.Look),
 			MarkupText.Plain("Preview token: " + preview.Token)]);
 	}
 }

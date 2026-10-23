@@ -44,7 +44,7 @@ public class TerminalFeatureRenderingTests
 		new("telnet", capabilities, null, Handle: 7, SessionId: session);
 
 	private static string FigureMarkup(string source) => MarkupTextSerializer.Serialize(ServerLayout.Build(
-		new Figure(new ImageMarkup(source, "a cat"), MarkupText.Plain("(=^.^=)")), 40));
+		new Figure(new ImageMarkup(source, "a cat"), MarkupText.Plain("(=^.^=)")), 40, ServerLayout.DefaultLook));
 
 	private static async Task<string> RenderAsync(MarkupOutputRenderer renderer, string markup, RenderContext context) =>
 		Encoding.UTF8.GetString((await renderer.RenderAsync(markup, context)).Data);
@@ -181,7 +181,7 @@ public class TerminalFeatureRenderingTests
 		"iVBORw0KGgoAAAANSUhEUgAAAFAAAAAoCAIAAADmAupWAAAAQ0lEQVR42u3PMQ0AAAgDsMmZfxXIwgUPTWqgmfaVCAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsL31p8N6zEucp5cQAAAABJRU5ErkJggg==");
 
 	private static string ArtlessFigureMarkup(string source) => MarkupTextSerializer.Serialize(ServerLayout.Build(
-		new Figure(new ImageMarkup(source, "a cat"), MarkupText.Empty), 40));
+		new Figure(new ImageMarkup(source, "a cat"), MarkupText.Empty), 40, ServerLayout.DefaultLook));
 
 	/// <summary>
 	/// An MXP client draws the picture itself, but in the cells the figure keeps for it: those are the picture's

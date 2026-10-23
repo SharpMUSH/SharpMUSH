@@ -1,6 +1,7 @@
 using System.Globalization;
 using MarkupString;
 using MarkupString.Layout;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 
@@ -13,7 +14,7 @@ internal static class MailLayout
 	/// <paramref name="mail"/> in a section titled <paramref name="title"/>: who sent it, when, its status and
 	/// subject over a divider, then the message itself.
 	/// </summary>
-	public static async ValueTask<MString> Message(SharpMail mail, string title)
+	public static async ValueTask<MString> Message(LayoutTheme look, SharpMail mail, string title)
 	{
 		var from = (await mail.From.WithCancellation(CancellationToken.None)).Object()!.Name;
 		var status = string.Join(", ", new[]
@@ -34,6 +35,6 @@ internal static class MailLayout
 				("Subject", mail.Subject),
 			]),
 			new Rule(),
-			ServerLayout.Body(mail.Content)), 78);
+			ServerLayout.Body(mail.Content)), 78, look);
 	}
 }

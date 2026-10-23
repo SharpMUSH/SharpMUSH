@@ -3,6 +3,7 @@ using Mediator;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.ParserInterfaces;
@@ -36,7 +37,7 @@ public static class PropertyWiki
 					new TableColumn(MarkupText.Plain("Label")) { Min = 10 },
 				],
 				properties.Select(p => new[] { p.Id, WikiFactProperties.TypeName(p.Type), p.Cardinality == Cardinality.Multiple ? "several" : "one", p.Label }));
-		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Wiki properties"), body), 78), executor);
+		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Wiki properties"), body), 78, parser.HouseLook()), executor);
 		return MarkupText.Plain(string.Join(' ', properties.IsDefault ? [] : properties.Select(p => p.Id)));
 	}
 
@@ -49,7 +50,7 @@ public static class PropertyWiki
 			return await RefusedAsync(notifyService, executor, $"No property {id} is defined.", ErrorMessages.Returns.NoSuchWikiProperty);
 
 		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Property: {property.Id}"),
-			ServerLayout.KeyValues(Fields(property).Select(field => (field.Label, MarkupText.Plain(field.Value))))), 78), executor);
+			ServerLayout.KeyValues(Fields(property).Select(field => (field.Label, MarkupText.Plain(field.Value))))), 78, parser.HouseLook()), executor);
 		return MarkupText.Plain(property.Id);
 	}
 

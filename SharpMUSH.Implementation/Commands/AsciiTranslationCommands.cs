@@ -114,7 +114,7 @@ public partial class Commands
 	}
 
 	/// <summary>The table as a titled listing: each character, its code point (which an ASCII client still reads), and its text.</summary>
-	private static MString AsciiTranslationListing(IReadOnlyDictionary<string, string> table)
+	private MString AsciiTranslationListing(IReadOnlyDictionary<string, string> table)
 	{
 		Block body = table.Count == 0
 			? new TextBlock(MarkupText.Plain("No translations: clients without Unicode get the built-in stand-ins."))
@@ -131,6 +131,6 @@ public partial class Commands
 					pair.Value.Length == 0 ? "(left out)" : $"\"{pair.Value}\"",
 				}));
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"ASCII translations ({table.Count})"), body), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"ASCII translations ({table.Count})"), body), 78, HouseLook.Look);
 	}
 }

@@ -1106,7 +1106,7 @@ public partial class Commands
 				MarkupText.Plain(ErrorMessages.Notifications.ConfigCategoriesHeader),
 				categories,
 				new Rule(),
-				new TextBlock(MarkupText.Plain($"{ErrorMessages.Notifications.ConfigUseCategoryHelp}\n{ErrorMessages.Notifications.ConfigUseOptionHelp}"))), 78), executor);
+				new TextBlock(MarkupText.Plain($"{ErrorMessages.Notifications.ConfigUseCategoryHelp}\n{ErrorMessages.Notifications.ConfigUseOptionHelp}"))), 78, parser.HouseLook()), executor);
 			return CallState.Empty;
 		}
 
@@ -1137,7 +1137,7 @@ public partial class Commands
 				MarkupText.Plain(string.Format(ErrorMessages.Notifications.ConfigOptionsInCategoryFormat, matchingCategory)),
 				options,
 				new Rule(),
-				new TextBlock(ServerLayout.CommandLink(ErrorMessages.Notifications.ConfigAllCategories, "@config"))), 78), executor);
+				new TextBlock(ServerLayout.CommandLink(ErrorMessages.Notifications.ConfigAllCategories, "@config"))), 78, parser.HouseLook()), executor);
 			return CallState.Empty;
 		}
 

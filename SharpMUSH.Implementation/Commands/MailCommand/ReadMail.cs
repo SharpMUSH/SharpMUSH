@@ -1,5 +1,6 @@
 using Mediator;
 using MarkupString;
+using MarkupString.Layout;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -31,12 +32,12 @@ public static class ReadMail
 
 		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, msgList, executor) switch
 		{
-			IAsyncEnumerable<SharpMail> list => await ReadAsync(objectDataService, mediator, notifyService, player, list),
+			IAsyncEnumerable<SharpMail> list => await ReadAsync(parser.HouseLook(), objectDataService, mediator, notifyService, player, list),
 			Error<string> error => await MessageListHelper.RefuseAsync(notifyService, executor, error.Value)
 		};
 	}
 
-	private static async ValueTask<MString> ReadAsync(IExpandedObjectDataService objectDataService, IMediator mediator,
+	private static async ValueTask<MString> ReadAsync(LayoutTheme look, IExpandedObjectDataService objectDataService, IMediator mediator,
 		INotifyService notifyService, SharpPlayer player, IAsyncEnumerable<SharpMail> list)
 	{
 		var executor = new AnySharpObject(player);
@@ -51,7 +52,7 @@ public static class ReadMail
 		var outputs = new List<MString>();
 		foreach (var (actualMail, folder, number) in messages)
 		{
-			var output = await MailLayout.Message(actualMail, $"Message {folder}:{number}");
+			var output = await MailLayout.Message(look, actualMail, $"Message {folder}:{number}");
 			await notifyService.Notify(executor, output, executor);
 			outputs.Add(output);
 

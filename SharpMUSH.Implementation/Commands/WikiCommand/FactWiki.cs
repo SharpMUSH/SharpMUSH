@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
@@ -39,7 +40,7 @@ public static class FactWiki
 			? new TextBlock(MarkupText.Plain("No facts."))
 			: ServerLayout.KeyValues(shown.GroupBy(f => f.Property)
 				.Select(g => (g.Key, MarkupText.Plain(string.Join(" | ", g.Select(f => f.Value))))));
-		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Facts: {page.Title}"), body), 78), executor);
+		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Facts: {page.Title}"), body), 78, parser.HouseLook()), executor);
 		return MarkupText.Plain(string.Join(' ', shown.Select(f => f.Property).Distinct()));
 	}
 

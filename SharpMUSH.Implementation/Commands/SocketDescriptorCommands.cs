@@ -314,7 +314,7 @@ public partial class Commands
 
 		if (argument.Length == 0)
 		{
-			await NotifyService.Notify(handle, SocketOptions.Show(connection,
+			await NotifyService.Notify(handle, SocketOptions.Show(HouseLook.Look, connection,
 				await ArgHelpers.ColorFlagsOfAsync(Mediator, connection.Ref)));
 			return new None();
 		}
@@ -446,7 +446,7 @@ public partial class Commands
 
 		if (pairs.Length == 0)
 		{
-			await NotifyService.Notify(executor, SocketOptions.Show(target,
+			await NotifyService.Notify(executor, SocketOptions.Show(HouseLook.Look, target,
 				await ArgHelpers.ColorFlagsOfAsync(Mediator, target.Ref)), executor);
 			return CallState.Empty;
 		}
@@ -677,7 +677,7 @@ public static class SocketOptions
 	/// raise the depth above what the terminal negotiated, so the "auto (...)" reading is wrong
 	/// without them.
 	/// </param>
-	public static MString Show(IConnectionService.ConnectionData connection, PlayerColorFlags? colorFlags = null)
+	public static MString Show(LayoutTheme look, IConnectionService.ConnectionData connection, PlayerColorFlags? colorFlags = null)
 	{
 		var rows = new List<(string Label, MString Value)>();
 
@@ -745,7 +745,7 @@ public static class SocketOptions
 
 		Row("Prompt Newlines", YesNo(connection.Metadata.GetValueOrDefault(PromptNewlinesKey) == "1"));
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Connection settings"), ServerLayout.KeyValues(rows)), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Connection settings"), ServerLayout.KeyValues(rows)), 78, look);
 
 		static string YesNo(bool value) => value ? "Yes" : "No";
 		static string OnOff(bool value) => value ? "on" : "off";

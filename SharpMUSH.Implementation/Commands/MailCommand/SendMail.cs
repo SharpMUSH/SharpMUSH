@@ -1,4 +1,5 @@
 ﻿using Mediator;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -77,7 +78,7 @@ public static class SendMail
 
 		var sender = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var aliases = new MailAliases.Services(delivery.Mediator, delivery.Notify, delivery.Permissions, delivery.Connections);
+		var aliases = new MailAliases.Services(delivery.Mediator, delivery.Notify, delivery.Permissions, delivery.Connections, parser.ServiceProvider.GetRequiredService<IHouseLookService>());
 		var knownPlayerList = new List<(SharpPlayer Player, bool Silent)>();
 		foreach (var name in ArgHelpers.NameListString(nameList.ToPlainText()))
 		{

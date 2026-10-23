@@ -620,7 +620,7 @@ public partial class MarkupOutputRendererTests
 		var listing = ServerLayout.Build(new Table(
 			[new(MarkupText.Plain("Player Name")) { Min = 16, Wrap = false }, new(MarkupText.Plain("Doing")) { Max = 40, Wrap = false }],
 			[[(Block)MarkupText.Plain("Wren"), (Block)MarkupText.Plain("")]])
-		{ Gap = 1, HeaderRule = MarkupText.Empty }, 200, fluid: false);
+		{ Gap = 1, HeaderRule = MarkupText.Empty }, 200, ServerLayout.DefaultLook, fluid: false);
 
 		var rendered = RenderFor(MarkupTextSerializer.Serialize(listing), new ProtocolCapabilities(Width: 80, SupportsUtf8: false));
 
@@ -671,7 +671,7 @@ public partial class MarkupOutputRendererTests
 
 	/// <summary>A server listing, laid out the way <c>@config</c> and the other listings are.</summary>
 	private static MarkupText ServerPanel() =>
-		ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("List"), new TextBlock(MarkupText.Plain("hi"))), 20);
+		ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("List"), new TextBlock(MarkupText.Plain("hi"))), 20, ServerLayout.DefaultLook);
 
 	[Test]
 	public async Task APlayersTheme_DrawsServerListingsInItsLook()
@@ -681,8 +681,8 @@ public partial class MarkupOutputRendererTests
 		var coloured = StripAnsi(Render(ServerPanel(), new ProtocolCapabilities(), AllColour with { Theme = "{\"seed\":\"#7aa2f7\"}" }));
 
 		await Assert.That(themed).StartsWith("\u2756\u2550");
-		await Assert.That(plain).StartsWith("\u256d");
-		await Assert.That(coloured).StartsWith("\u256d");
+		await Assert.That(plain).StartsWith("\u2554");
+		await Assert.That(coloured).StartsWith("\u2554");
 	}
 
 	[Test]
