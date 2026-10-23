@@ -17,6 +17,9 @@ public class WikiFactQueryApiTests(ServerWebAppFactory factory)
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record SetFactsRequest(WikiFactDto[] Facts);
 
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(factory.Services.GetRequiredService<IWikiService>());
+
 	private HttpClient CreateClient()
 	{
 		var http = factory.CreateHttpClient();

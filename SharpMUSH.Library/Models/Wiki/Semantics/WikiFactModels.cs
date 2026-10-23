@@ -9,12 +9,12 @@ public union SemanticValue(PageRef, long, bool, Keyword);
 public enum SemanticType { PageRef, Integer, Boolean, Keyword }
 public enum Cardinality { Single, Multiple }
 /// <summary>
-/// Source package owns a qualified schema; changing it requires a new version and explicit migration.
-/// Id grammar is ASCII [A-Za-z0-9][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*,
-/// case-sensitive, with exactly one colon. Validation checks syntax, not external package ownership.
+/// A property a page's facts may state, as the world defines it. Id grammar is ASCII
+/// [A-Za-z0-9][A-Za-z0-9._-]*:[A-Za-z0-9][A-Za-z0-9._-]*, case-sensitive, with exactly one colon.
+/// <paramref name="Label"/> and <paramref name="Description"/> are what a reader is shown; empty when unset.
 /// </summary>
 public sealed record PropertyDefinition(string Id, long SchemaVersion, SemanticType Type, Cardinality Cardinality,
-	ImmutableArray<Keyword> AllowedKeywords);
+	ImmutableArray<Keyword> AllowedKeywords, string Label = "", string Description = "");
 public sealed record FactProvenance(string Package, string SourceCommit, string SourcePath, string AuthoredField,
 	bool LocalOverride, string PackageVersion = "", string SourceBlobHash = "",
 	string ExtractionRuleVersion = "", string EvidenceLocation = "");

@@ -1,3 +1,4 @@
+using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
@@ -46,7 +47,7 @@ public static class WikiFactEntry
 		var shown = new List<WikiPageFact>();
 		foreach (var fact in facts)
 		{
-			if (Definition(schema, fact.Property) is not { Type: SemanticType.PageRef })
+			if (!NamesPage(schema, fact))
 				shown.Add(fact);
 			else if (await wiki.GetByIdAsync(fact.Value) is WikiPage target && visibility.Admits(target))
 				shown.Add(fact with { Value = page(target) });
@@ -63,13 +64,26 @@ public static class WikiFactEntry
 		IEnumerable<WikiPageFact> stored, IReadOnlyList<WikiPageFact> stated, WikiVisibility visibility)
 	{
 		var kept = new List<WikiPageFact>(stated);
-		var references = stored.Where(fact => Definition(schema, fact.Property) is { Type: SemanticType.PageRef } definition
-			&& (definition.Cardinality == Cardinality.Multiple || stated.All(s => s.Property != fact.Property)));
+		var references = stored.Where(fact => NamesPage(schema, fact)
+			&& (Definition(schema, fact.Property) is not { Cardinality: Cardinality.Single } || stated.All(s => s.Property != fact.Property)));
 		foreach (var fact in references)
 			if (await wiki.GetByIdAsync(fact.Value) is WikiPage target && !visibility.Admits(target))
 				kept.Add(fact);
 		return kept;
 	}
+
+	/// <summary>
+	/// Whether <paramref name="fact"/> names a page, and is shown only to a reader who may see it: a value of a page
+	/// property, or a page id a page keeps from when its property was one (a property removed or retyped since).
+	/// </summary>
+	public static bool NamesPage(SemanticSchema schema, WikiPageFact fact)
+		=> Definition(schema, fact.Property) is { Type: SemanticType.PageRef } || IsPageId(fact.Value);
+
+	private static bool IsPageId(string value)
+		=> value.StartsWith(PageIdPrefix, StringComparison.Ordinal)
+			&& long.TryParse(value.AsSpan(PageIdPrefix.Length), NumberStyles.None, CultureInfo.InvariantCulture, out _);
+
+	private const string PageIdPrefix = "wiki_page/";
 
 	/// <summary>The schema's definition of <paramref name="property"/>, or null when it defines none.</summary>
 	public static PropertyDefinition? Definition(SemanticSchema schema, string property)

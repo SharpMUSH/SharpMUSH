@@ -22,6 +22,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 	private readonly ConcurrentDictionary<string, List<WikiRevision>> _revisions = new();
 	private readonly ConcurrentDictionary<(string PageId, string Locale), WikiTranslation> _translations = new();
 	private readonly ConcurrentDictionary<WikiRuleTarget, WikiRequirementSet> _requirements = new();
+	private readonly ConcurrentDictionary<string, PropertyDefinition> _properties = new(StringComparer.Ordinal);
 
 	/// <summary>Pinned category keys; the seeded ones to start with, as a new Lightning world has.</summary>
 	private readonly ConcurrentDictionary<string, byte> _pinned =
@@ -194,10 +195,19 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult<Found<None>>(new None());
 	}
 
-	/// <summary>No property is defined, so no fact is stated here.</summary>
-	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(new SemanticSchema(0, []));
+	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(WikiFactProperties.Schema(_properties.Values));
 
-	/// <summary>Defines no properties, so there is nothing to index: every page is in it.</summary>
+	public Task<Result<PropertyDefinition>> SetFactPropertyAsync(PropertyDefinition property)
+		=> Task.FromResult(WikiFactProperties.Checked(property) switch
+		{
+			PropertyDefinition definition => (Result<PropertyDefinition>)(_properties[definition.Id] = definition),
+			Error<string> error => error,
+		});
+
+	public Task<Found<None>> DeleteFactPropertyAsync(string id)
+		=> Task.FromResult<Found<None>>(_properties.TryRemove(id, out _) ? new None() : new NotFound());
+
+	/// <summary>Keeps no index: every page is in it.</summary>
 	public Task<WikiFactIndexStatus> GetFactIndexStatusAsync()
 		=> Task.FromResult(new WikiFactIndexStatus(WikiFactIndexPhase.Ready, _pagesById.Count, _pagesById.Count));
 
@@ -205,7 +215,7 @@ public sealed class InMemoryWikiStore : IWikiStore
 
 	public Task<WikiFactIndexStatus> RebuildFactIndexAsync() => GetFactIndexStatusAsync();
 
-	/// <summary>No property is defined, so every query names one this store cannot answer.</summary>
+	/// <summary>Keeps no index, so a query it can answer finds no page.</summary>
 	public async Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
 		=> WikiFactQueries.Check(await GetFactSchemaAsync(), query) switch
 		{
