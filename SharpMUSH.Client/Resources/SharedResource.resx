@@ -9372,6 +9372,7 @@
   <data name="GuideDraftHint" xml:space="preserve"><value>You choose when to send. An existing draft stays untouched.</value></data>
   <data name="GuideOpenPlay" xml:space="preserve"><value>Open Play to try it in the game</value></data>
   <data name="GuideBack" xml:space="preserve"><value>Back</value></data>
+  <data name="GuideStepOf" xml:space="preserve"><value>Step {0} of {1}</value></data>
   <data name="GuideSkip" xml:space="preserve"><value>Skip for now</value></data>
   <data name="GuideKnown" xml:space="preserve"><value>I already know this</value></data>
   <data name="GuideUnderstood" xml:space="preserve"><value>I've got this</value></data>
@@ -9525,6 +9526,7 @@
   <data name="GuidePackagesLoading" xml:space="preserve"><value>Loading game help…</value></data>
   <data name="GuidePackagesError" xml:space="preserve"><value>Game help is unavailable right now. Type help in the game.</value></data>
   <data name="GuidePackagesEmpty" xml:space="preserve"><value>No verified package suggestions are available for this character here. Other packages may still be installed; use the game’s own help.</value></data>
+  <data name="GuideWelcomeChecklist" xml:space="preserve"><value>This game keeps its own getting-started checklist. To see it, type</value></data>
   <data name="GuidePackagesExplanation" xml:space="preserve"><value>For this game's extra features, try:</value></data>
   <data name="GuidePackagesVersion" xml:space="preserve"><value>{0}, version {1}</value></data>
   <data name="GuidePackagesReference" xml:space="preserve"><value>Package reference (opens a new tab)</value></data>

@@ -129,7 +129,7 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Find(".kit-card.kit-card--aside .kit-card-title").TextContent).IsEqualTo("WidNewHere");
 		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
-			.IsEquivalentTo(new[] { "/wiki", "/characters", "/scenes" });
+			.IsEquivalentTo(new[] { "/welcome", "/wiki", "/characters", "/scenes" });
 		await Assert.That(cut.FindAll("a.kit-capsule--primary").Select(a => a.GetAttribute("href")).ToList())
 			.IsEquivalentTo(new[] { "/login?tab=register" });
 	}
@@ -142,7 +142,7 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		var cut = RenderWidget(BuildAuth([]));
 
 		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
-			.IsEquivalentTo(new[] { "/wiki", "/characters" });
+			.IsEquivalentTo(new[] { "/welcome", "/wiki", "/characters" });
 		await Assert.That(cut.Find(".quickstart-text").TextContent).IsEqualTo("WidQuickstartIntroNoScenes");
 	}
 

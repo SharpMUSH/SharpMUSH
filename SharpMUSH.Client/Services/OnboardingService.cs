@@ -109,8 +109,20 @@ public sealed class OnboardingService : IDisposable
 	public Task DismissAsync() => ChangeAsync(progress => progress with { Active = false, Dismissed = true });
 	public Task SetImageryAsync(GuideImagery imagery) => ChangeAsync(progress => progress with { Imagery = imagery });
 	public Task SetCurrentStepAsync(string step) => ChangeAsync(progress => progress with { CurrentStepId = step });
-	public Task CompleteStepAsync(string step) => FinishStepAsync(step, false);
+	public async Task CompleteStepAsync(string step)
+	{
+		var token = Session;
+		var character = _auth.ActiveCharacter;
+		var finished = PlayerGuideFinished;
+		await FinishStepAsync(step, false);
+		// The guide's last lesson done: the game's own +welcome list stops asking about the basics, for the
+		// character that finished it even if the player switches while this runs.
+		if (!finished && PlayerGuideFinished && token is not null && token == Session && character is not null)
+			await WelcomeChecklist.TickBasicsAsync(_http, token, $"#{character.DbrefNumber}:{character.CreationTime}");
+	}
 	public Task SkipStepAsync(string step) => FinishStepAsync(step, true);
+	private bool PlayerGuideFinished => _journey == GuideJourney.Player && Ready && StepsFor(Progress.Path)
+		.All(id => Progress.CompletedStepIds.Contains(id) || Progress.SkippedStepIds.Contains(id));
 	private IReadOnlyList<string> StepsFor(GuidePath path) => _journey == GuideJourney.Player
 		? GuideCatalog.Player(path).Select(lesson => lesson.Id).ToArray() : GuideStepIds.Administrator;
 

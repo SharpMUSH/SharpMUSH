@@ -20,7 +20,8 @@ public sealed class OnboardingCapabilityService(IPackageRegistryService registry
 	[
 		new("plus-help", "1.8.0", "+help"),
 		new("plus-help", "1.8.1", "+help"),
-		new("scene", "1.15.0", "+scene/help")
+		new("scene", "1.15.0", "+scene/help"),
+		new("onboarding", "1.0.1", "+welcome")
 	];
 
 	public async Task<IReadOnlyList<GuideCapability>> ResolveAsync(DBRef character, CancellationToken cancellationToken)

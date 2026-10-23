@@ -78,6 +78,52 @@ public class OnboardingServiceTests
 		await Assert.That(guide.Progress.Active).IsFalse();
 	}
 
+	/// <summary>
+	/// Finishing the guide ticks +welcome's "Learn the basics" for the character being played, once, and only where
+	/// the reviewed +welcome is installed. The tick names that character, so a switch while it runs cannot move it.
+	/// </summary>
+	[Test]
+	[Arguments(true, true, 1)]
+	[Arguments(false, true, 0)]
+	[Arguments(true, false, 0)]
+	public async Task FinishingTheGuideTicksTheWelcomeBasicsStep(bool installed, bool playing, int ticks)
+	{
+		var commands = new List<string>();
+		using var handler = new Handler(async request =>
+		{
+			switch (request.RequestUri!.AbsolutePath)
+			{
+				case "/api/onboarding/capabilities":
+					return new HttpResponseMessage(HttpStatusCode.OK)
+					{
+						Content = JsonContent.Create(installed
+						? new[] { new GuideCapability("onboarding", "+welcome", "", null, "onboarding", "1.0.1") } : [])
+					};
+				case "/api/commands":
+					var sent = (await request.Content!.ReadFromJsonAsync<SharpMUSH.Library.Models.Portal.PortalCommandRequest>())!;
+					commands.Add($"{sent.Command} as {sent.Character}");
+					return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { output = Array.Empty<string>() }) };
+			}
+			if (request.Method == HttpMethod.Get) return Reply(new() { Path = GuidePath.Mush, Active = true });
+			var save = (await request.Content!.ReadFromJsonAsync<SaveOnboardingRequest>())!;
+			return Reply(save.Progress with { Revision = save.ExpectedRevision + 1 });
+		});
+		var factory = new Factory(handler);
+		var auth = Auth("A");
+		auth.ActiveCharacter.Returns(playing ? new AccountAuthService.CharacterSummary(42, 1L, "Wren", "") : null);
+		using var guide = new OnboardingService(factory, auth, new Storage(), new Info(factory), SharpMUSH.Tests.BUnit.Resources.PortalLocalizer.Create());
+		await guide.LoadAsync(GuideJourney.Player);
+		var lessons = GuideCatalog.Player(GuidePath.Mush).Select(lesson => lesson.Id).ToArray();
+		await guide.SkipStepAsync(lessons[0]);
+		foreach (var lesson in lessons.Skip(1))
+		{
+			await Assert.That(commands).IsEmpty();
+			await guide.CompleteStepAsync(lesson);
+		}
+		await guide.CompleteStepAsync(lessons[^1]);
+		await Assert.That(commands).IsEquivalentTo(Enumerable.Repeat("+welcome/done basics as #42:1", ticks));
+	}
+
 	[Test]
 	public async Task ConflictRequiresReload()
 	{

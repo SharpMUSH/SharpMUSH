@@ -9,9 +9,10 @@
             {
                 <img class="guide-mascot @(art.Theme != "neutral" ? "guide-mascot-themed" : "") @(Imagery == GuideImagery.Reduced ? "guide-mascot-reduced" : "")" src="@ApiUrl.Resolve(art.Url)" width="88" height="88" alt="" @onerror="() => _failedArt = art.Url" />
             }
+            @if (StepCount > 0) { <span class="guide-step-count">@Loc["GuideStepOf", StepNumber, StepCount]</span> }
         </span>
         <GuideTooltip Text="@Loc["GuideStop"]" AlignEnd="true">
-            <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Stop" /></button>
+            <button type="button" class="guide-stop" aria-label="@Loc["GuideStop"]" @onclick="OnClose"><MudIcon Icon="@Icons.Material.Outlined.Close" /></button>
         </GuideTooltip>
     </div>
     <article class="guide-lesson">
@@ -33,16 +34,14 @@
         }
         @if (Lesson.ActionUrl is not null)
         {
-            <GuideTooltip Text="@Lesson.ActionLabel">
-                @if (Lesson.ActionUrl == "/play" && OnExplore.HasDelegate)
-                {
-                    <button type="button" class="guide-action guide-icon" aria-label="@Lesson.ActionLabel" @onclick="OnExplore"><MudIcon Icon="@Icons.Material.Outlined.PlayArrow" /></button>
-                }
-                else
-                {
-                    <a class="guide-action guide-icon" href="@Lesson.ActionUrl" aria-label="@Lesson.ActionLabel"><MudIcon Icon="@(Lesson.ActionUrl == "/play" ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.ArrowForward)" /></a>
-                }
-            </GuideTooltip>
+            @if (Lesson.ActionUrl == "/play" && OnExplore.HasDelegate)
+            {
+                <button type="button" class="guide-action" @onclick="OnExplore"><MudIcon Icon="@Icons.Material.Outlined.PlayArrow" Size="Size.Small" />@Lesson.ActionLabel</button>
+            }
+            else
+            {
+                <a class="guide-action" href="@Lesson.ActionUrl">@Lesson.ActionLabel<MudIcon Icon="@(Lesson.ActionUrl == "/play" ? Icons.Material.Outlined.PlayArrow : Icons.Material.Outlined.ArrowForward)" Size="Size.Small" /></a>
+            }
         }
         @if (Lesson.Id == "useful-action")
         {
@@ -59,15 +58,10 @@
         }
     </article>
     <div class="guide-panel-actions">
-        <GuideTooltip Text="@Loc["GuideBack"]">
-            <button type="button" class="guide-icon" aria-label="@Loc["GuideBack"]" disabled="@(!CanGoBack)" @onclick="OnBack"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" /></button>
-        </GuideTooltip>
-        <GuideTooltip Text="@Loc["GuideSkip"]">
-            <button type="button" class="guide-icon guide-skip" aria-label="@Loc["GuideSkip"]" @onclick="OnSkip"><MudIcon Icon="@Icons.Material.Outlined.SkipNext" /></button>
-        </GuideTooltip>
-        <GuideTooltip Text="@CompleteLabel">
-            <button type="button" class="guide-action guide-icon" aria-label="@CompleteLabel" @onclick="OnComplete"><MudIcon Icon="@Icons.Material.Outlined.Check" /></button>
-        </GuideTooltip>
+        @* Words, not icons: an arrow, a skip glyph and a tick each read as something else to someone new. *@
+        <button type="button" class="guide-back" disabled="@(!CanGoBack)" @onclick="OnBack"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" Size="Size.Small" />@Loc["GuideBack"]</button>
+        <button type="button" class="guide-skip" @onclick="OnSkip">@Loc["GuideSkip"]</button>
+        <button type="button" class="guide-action" @onclick="OnComplete"><MudIcon Icon="@Icons.Material.Outlined.Check" Size="Size.Small" />@CompleteLabel</button>
     </div>
     <details class="guide-reference">
         <summary>@Loc["GuideReference"]</summary>
@@ -85,6 +79,9 @@
 @code {
     [Parameter, EditorRequired] public GuideLesson Lesson { get; set; } = null!;
     [Parameter] public bool CanGoBack { get; set; }
+    /// <summary>The lesson's place in the path, from 1; with <see cref="StepCount"/> it shows as "Step 2 of 8".</summary>
+    [Parameter] public int StepNumber { get; set; }
+    [Parameter] public int StepCount { get; set; }
     [Parameter] public EventCallback OnBack { get; set; }
     [Parameter] public EventCallback OnComplete { get; set; }
     [Parameter] public EventCallback OnSkip { get; set; }
