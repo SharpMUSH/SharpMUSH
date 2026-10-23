@@ -46,6 +46,9 @@ public sealed record GetWikiRequirementsQuery() : IQuery<IReadOnlyList<WikiRequi
 /// <summary>Forwards to <see cref="IWikiStore.GetFactSchemaAsync"/>. Uncached.</summary>
 public sealed record GetWikiFactSchemaQuery() : IQuery<SemanticSchema>;
 
+/// <summary>Forwards to <see cref="IWikiStore.GetFactIndexStatusAsync"/>. Uncached.</summary>
+public sealed record GetWikiFactIndexStatusQuery() : IQuery<WikiFactIndexStatus>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetPinnedCategoriesAsync"/>. Uncached.</summary>
 public sealed record GetPinnedWikiCategoriesQuery() : IQuery<IReadOnlyList<string>>;
 

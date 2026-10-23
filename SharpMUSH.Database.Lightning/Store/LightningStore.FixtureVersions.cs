@@ -32,6 +32,8 @@ public sealed partial class LightningStore
 	internal static FixtureVersionClass? ClassifyFixtureTable(string name) => name switch
 	{
 		"wiki.req" => FixtureVersionClass.Requirements,
+		// The fact index: no semantic read of a fixture reads it, so its writes move no reader's pin.
+		"wiki.fact" => null,
 		_ when name.StartsWith("wiki.", StringComparison.Ordinal)
 			|| name.StartsWith(AtomicWikiLayout.Prefix, StringComparison.Ordinal) => FixtureVersionClass.Content,
 		"account" or "acct.perm" or "acct.ban" or "obj.perm" or "role" or "role.cat" or "perm.def" or "perm.cat"

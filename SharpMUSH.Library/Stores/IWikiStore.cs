@@ -103,6 +103,18 @@ public interface IWikiStore
 	/// <summary>The properties a page's facts may state, with each one's type, cardinality and allowed keywords.</summary>
 	Task<SemanticSchema> GetFactSchemaAsync();
 
+	/// <summary>The fact index's phase and how far it has come.</summary>
+	Task<WikiFactIndexStatus> GetFactIndexStatusAsync();
+
+	/// <summary>
+	/// Moves a clearing or building fact index on by one write: at most <paramref name="batchSize"/> pages indexed, or
+	/// entries cleared. Page writes keep the index in step meanwhile, so a build stopped at shutdown resumes where it was.
+	/// </summary>
+	Task<WikiFactIndexStatus> BuildFactIndexBatchAsync(int batchSize);
+
+	/// <summary>Starts the fact index over: it clears, then builds again through <see cref="BuildFactIndexBatchAsync"/>.</summary>
+	Task<WikiFactIndexStatus> RebuildFactIndexAsync();
+
 	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 

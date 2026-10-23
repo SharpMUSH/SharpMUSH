@@ -136,4 +136,26 @@ public class WikiFactCommandTests
 		await Assert.That(kept).IsEquivalentTo(new WikiPageFact[]
 			{ new("pf2e:level", "2"), new("pf2e:ancestry", ancestry.Id), new("pf2e:class", draftClass.Id) });
 	}
+
+	[Test]
+	public async Task TheFactIndexReportsItselfAndOnlyWikiAdminRebuildsIt()
+	{
+		var builder = WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>();
+		await builder.Idle;
+		var mortal = await PlayerAsync("FactIndexMortal", approved: true);
+		await RunAsync(mortal, "@wiki/fact/index");
+		await Assert.That(Told(mortal, "WIKI: The fact index is ready: ")).IsEqualTo(1);
+
+		await RunAsync(mortal, "@wiki/fact/index rebuild");
+		await Assert.That(Told(mortal, "needs the wiki.admin permission")).IsEqualTo(1);
+		await RunAsync(mortal, "@wiki/fact/index again");
+		await Assert.That(Told(mortal, "Usage: @wiki/fact/index [rebuild]")).IsEqualTo(1);
+
+		var wizard = await PlayerAsync("FactIndexWizard", approved: true);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {wizard.DbRef}=WIZARD"));
+		await RunAsync(wizard, "@wiki/fact/index rebuild");
+		await Assert.That(Told(wizard, "WIKI: The fact index is clearing; it builds again after.")).IsEqualTo(1);
+		await builder.Idle;
+		await Assert.That((await Mediator.Send(new SharpMUSH.Library.Queries.Database.Wiki.GetWikiFactIndexStatusQuery())).Ready).IsTrue();
+	}
 }

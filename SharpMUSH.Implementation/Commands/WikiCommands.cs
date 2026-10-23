@@ -22,7 +22,7 @@ public partial class Commands
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "PIN", "UNPIN", "REQUIRE",
 			"ACCESS", "FACT",
-			"NOEVAL", "SOURCE", "DRAFT", "MD"
+			"NOEVAL", "SOURCE", "DRAFT", "MD", "INDEX"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["page", "content"])]
@@ -34,9 +34,9 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		// NOEVAL, SOURCE, DRAFT and MD are modifiers, not actions: leaving any of them in this set would
+		// NOEVAL, SOURCE, DRAFT, MD and INDEX are modifiers, not actions: leaving any of them in this set would
 		// make "@wiki/view/source foo" look like two actions and trip TooManySwitches.
-		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT" or "MD")).ToArray();
+		var actions = switches.Where(s => s is not ("NOEVAL" or "SOURCE" or "DRAFT" or "MD" or "INDEX")).ToArray();
 		var forceSource = switches.Contains("SOURCE");
 		// /MD shows the stored markdown instead of the rendered body. Orthogonal to the other two:
 		// /SOURCE picks the locale, /DRAFT gates unpublished content, /MD picks raw over rendered.
@@ -118,6 +118,9 @@ public partial class Commands
 				=> await AccessWiki.Require(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			"ACCESS" when hasArg0
 				=> await AccessWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			// /fact/index is the fact index itself, not a page's facts.
+			"FACT" when switches.Contains("INDEX") && !hasArg1
+				=> await FactWiki.Index(parser, Mediator, NotifyService, arg0),
 			// "page/property=values" sets one property's values ("page/property=" clears it); a bare page shows its facts.
 			"FACT" when hasArg0 && arg1CallState is not null
 				=> await FactWiki.Set(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
