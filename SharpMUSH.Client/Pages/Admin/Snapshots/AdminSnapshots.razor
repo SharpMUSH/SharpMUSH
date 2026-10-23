@@ -8,7 +8,7 @@
 
 <PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
 <div class="page-stack page-stack--padded snapshots">
-    <PlainPageHeader Kicker="@Loc["AdmSnapshotsKicker"]" Title="@Loc["SnapshotsTitle"]" Description="@Loc["SnapshotsIntro"]" />
+    <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["SnapshotsTitle"]" Description="@Loc["SnapshotsIntro"]" />
 
     @if (_error is not null) { <MudAlert Severity="Severity.Error">@_error</MudAlert> }
     @if (_notice is not null) { <MudAlert Severity="Severity.Success">@_notice</MudAlert> }

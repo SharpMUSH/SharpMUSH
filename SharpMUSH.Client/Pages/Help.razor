@@ -15,7 +15,7 @@
 <PageTitle>@Loc["Help"] — <GameName /></PageTitle>
 
 <div class="help-page">
-    <PlainPageHeader Kicker="@Loc["AdmHelpKicker"]" Title="@Loc["Help"]" Description="@Loc["AdmHelpSubtitle"]" />
+    <PlainPageHeader Title="@Loc["Help"]" Description="@Loc["AdmHelpSubtitle"]" />
 
     @if (_loading)
     {
@@ -31,7 +31,7 @@
         @if (!string.IsNullOrWhiteSpace(_index.Html))
         {
             <KitCard>
-                <article class="help-entry">@((MarkupString)_index.Html)</article>
+                <article class="help-entry">@((MarkupString)PageHeadings.UnderPageTitle(_index.Html, _index.Topic))</article>
             </KitCard>
         }
 

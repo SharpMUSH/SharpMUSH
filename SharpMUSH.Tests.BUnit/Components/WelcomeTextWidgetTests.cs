@@ -34,12 +34,12 @@ public class WelcomeTextWidgetRenderingTests : WelcomeTextWidgetTestBase
 	}
 
 	[TUnit.Core.Test]
-	public async Task Markdown_RendersAsHtml()
+	public async Task Markdown_RendersAsHtml_UnderThePageHeading()
 	{
 		var cut = Render<WelcomeTextWidget>(p => p
 			.Add(x => x.Config, BuildConfig(new { Markdown = "# Greetings" })));
 
-		await Assert.That(cut.Markup).Contains("<h1");
+		await Assert.That(cut.Markup).Contains("<h2");
 		await Assert.That(cut.Markup).Contains("Greetings");
 	}
 

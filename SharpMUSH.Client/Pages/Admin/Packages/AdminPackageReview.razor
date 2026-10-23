@@ -15,7 +15,7 @@
 <div class="pkg-review">
 @if (_plan is null)
 {
-    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]" Title="@Loc["PkgReview"]" />
+    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgReview"]" />
     @if (_loadError is not null)
     {
         <MudAlert Severity="Severity.Error">@_loadError</MudAlert>
@@ -29,7 +29,7 @@
 }
 else
 {
-    <PlainPageHeader Kicker="@Loc["PkgKickerRegistry"]"
+    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]"
                      Title="@($"{(_plan.Changeset.Kind == PackageRevisionKind.Install ? Loc["PkgInstallHeading"] : Loc["PkgUpgradeHeading"])}: {_plan.PackageId} {_plan.Version}")">
         <DescriptionContent>
             @if (IsUpload)

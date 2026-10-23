@@ -156,10 +156,6 @@
     <value>Engedélyezés</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Dokumentáció</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Témák böngészése, hivatkozások keresése és a kézikönyv olvasása.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Szerepkörök</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Szerver</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Válasszon ki egy alkalmazást, vagy regisztráljon újat.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Építés · Egyéni widgetek</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Új alkalmazás</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Rendezze el az egyes oldalak widgetjeit a zónák közötti húzással. A módosítások minden látogató számára közzétételre kerülnek.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Építés · Oldalelrendezések</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>A sajátom megtartása</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Építés · Csomagkészítés</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Építés · Csomagnyilvántartás</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Építés · Csomagforrások</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licenc (nem kötelező)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Éppen most zajló jelenetek.</value>
     <comment>MT — "sessions" read as roleplay scenes, matching the surrounding scene-archive UI.</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Stáb · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>bárki szerkesztheti</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>módosítva</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · szerverkonfiguráció</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2990,10 +2954,6 @@
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>Öröklés</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Kezelés · Hozzáférés-vezérlés</value>
     <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
@@ -4463,10 +4423,6 @@
     <value>{0} (forrás)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Stáb · Média</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Felhasznált tárhely</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Adminisztrátori tartalomjegyzék</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Adminisztráció · Helyesírás</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Adatbázis</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Kezelés · Diagnosztika</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Kezelés · Automatizálás</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Építés · Helyreállítás</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Szűrés típus szerint</value>

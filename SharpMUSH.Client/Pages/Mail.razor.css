@@ -243,4 +243,10 @@
 	.mail-list-body {
 		max-height: 45svh;
 	}
+
+	/* Stacked under the list, an empty reading card is a second box saying "pick one" below the list
+	   you pick from; it appears once a message is open. */
+	.mail-panes ::deep .mail-reading--empty {
+		display: none;
+	}
 }

@@ -62,7 +62,7 @@ public class CustomConfigPagesTests : TrackingBunitContext
 	public async Task Sitelock_UsesThePlainHeader_WithItsCodeList()
 	{
 		var cut = Render<Sitelock>();
-		await AssertPlainHeader(cut, "Sitelock Rules");
+		await AssertPlainHeader(cut, "Sitelock rules");
 		await Assert.That(cut.FindAll(".kit-page-desc code").Count).IsGreaterThan(0);
 	}
 
@@ -70,14 +70,14 @@ public class CustomConfigPagesTests : TrackingBunitContext
 	public async Task BannedNames_UsesThePlainHeader()
 	{
 		var cut = Render<BannedNames>();
-		await AssertPlainHeader(cut, "Banned Player Names");
+		await AssertPlainHeader(cut, "Banned player names");
 	}
 
 	[Test]
 	public async Task Restrictions_UsesThePlainHeader()
 	{
 		var cut = Render<Restrictions>();
-		await AssertPlainHeader(cut, "Command & Function Restrictions");
+		await AssertPlainHeader(cut, "Command & function restrictions");
 	}
 
 	[Test]
@@ -115,6 +115,6 @@ public class CustomConfigPagesTests : TrackingBunitContext
 	public async Task Import_UsesThePlainHeader()
 	{
 		var cut = Render<ImportConfig>();
-		await AssertPlainHeader(cut, "Import Configuration");
+		await AssertPlainHeader(cut, "Import configuration");
 	}
 }

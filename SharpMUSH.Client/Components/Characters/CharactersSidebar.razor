@@ -27,7 +27,11 @@
                 }
             </Sub>
         </SidebarHead>
-        <SidebarSearch Placeholder="@Loc["NavCharSearch"]" OnSearch="Search" />
+        @* The directory has its own live filter in its header; one search box per page. *@
+        @if (_path != "/characters")
+        {
+            <SidebarSearch Placeholder="@Loc["NavCharSearch"]" OnSearch="Search" />
+        }
         <SectionLabel>@Loc["NavCharOnlineNow"]</SectionLabel>
     }
     <SidebarGroup Class="char-side-online" Label="@Loc["NavCharOnlineNow"]">

@@ -598,6 +598,9 @@ else
         {
             html = WikiImages.StripFirstImage(html, LeadImage!.Url);
         }
+
+        // The header (or, embedded, the page around it) holds the h1; the body's own outline goes under it.
+        html = PageHeadings.UnderPageTitle(html, Embedded ? null : Article?.Title);
         html = ApiUrl.ResolveHtml(html);
 
         _hasBody = HasVisibleContent(html);

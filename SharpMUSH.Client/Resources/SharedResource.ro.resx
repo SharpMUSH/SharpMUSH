@@ -156,10 +156,6 @@
     <value>Activare</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Documentație</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Răsfoiți subiectele, căutați în referințe și citiți manualul.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roluri</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Administrare · Server</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Selectați o aplicație sau înregistrați una nouă.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Construire · Widgeturi personalizate</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Aplicație nouă</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Aranjați widgeturile din fiecare pagină trăgându-le dintr-o zonă în alta. Modificările se publică pentru toți vizitatorii.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Construire · Aspectul paginilor</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>Varianta mea</value>
     <comment>MT — merge-conflict button; rendered as the noun pair "Varianta mea"/"Varianta lor" to stay short</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Construcție · Creare pachete</value>
-    <comment>MT — "Build" treated as the staff nav section, not the Builder privilege level</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Construcție · Registru de pachete</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Construcție · Surse de pachete</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licență (opțional)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sesiuni în desfășurare chiar acum.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Echipă · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>oricine poate edita</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>modificat</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · configurare server</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2990,10 +2954,6 @@
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>Moștenit</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Gestionare · Control acces</value>
     <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
@@ -4463,10 +4423,6 @@
     <value>{0} (sursă)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Echipă · Media</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Spațiu utilizat</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Index pentru administratori</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administrare · Ortografie</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Bază de date</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Gestionare · Diagnosticare</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Gestionare · Automatizare</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Construire · Recuperare</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtrează după tip</value>

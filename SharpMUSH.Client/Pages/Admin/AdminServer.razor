@@ -10,7 +10,7 @@
 @* The server's own figures, read in-process and refreshed every ten seconds while the page is open.
    Restarting stays with @shutdown in the game; the page only reports. *@
 <div class="page-stack page-stack--padded adm-server">
-    <PlainPageHeader Kicker="@Loc["AdmServerKicker"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
+    <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmServerTitle"]" Description="@Loc["AdmServerDescription"]" />
 
     <LoadState TValue="AdminServerStatus" Value="_status" Loading="@(_status is null && _error is null)" Error="@_error" ErrorClass="adm-server-error"
                ProgressColor="Color.Primary" Context="status">

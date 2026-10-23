@@ -106,7 +106,7 @@ public class ViewerScopedReloadTests : TrackingBunitContext
 		{
 			if (cut.FindAll(".stats-tile-value")[1].TextContent != "2") throw new InvalidOperationException("still the previous character's count");
 		}, TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll(".stats-tile-label")[1].TextContent).IsEqualTo("Active Scenes");
+		await Assert.That(cut.FindAll(".stats-tile-label")[1].TextContent).IsEqualTo("Active scenes");
 	}
 
 	private IRenderedComponent<T> InProfile<T>() where T : Microsoft.AspNetCore.Components.IComponent

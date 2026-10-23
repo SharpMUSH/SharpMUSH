@@ -156,10 +156,6 @@
     <value>Aktivera</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Dokumentation</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Bläddra bland ämnen, sök i referenser och läs manualen.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Roller</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Server</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Välj en applikation eller registrera en ny.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Bygga · Anpassade widgetar</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Ny applikation</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Ordna widgetarna på varje sida genom att dra dem mellan zoner. Ändringar publiceras för alla besökare.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Bygga · Sidlayouter</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>Behåll mitt</value>
     <comment>MT — merge-conflict choice, mirroring git's 'keep mine'.</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Bygga · Paketskapande</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Bygga · Paketregister</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Bygga · Paketkällor</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licens (valfritt)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sessioner som pågår just nu.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Personal · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>alla kan redigera</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>ändrad</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Admin · serverkonfiguration</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Ärv</value>
     <comment>MT — permission tri-state alongside Allow/Deny.</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Hantera · Åtkomstkontroll</value>
-    <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>LIVE</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (källa)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Personal · Media</value>
-    <comment>MT — 'staff' rendered as 'personal' throughout; some Swedish MU* groups keep 'staff'.</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Använt utrymme</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Administratörsregister</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administration · Stavningskontroll</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Databas</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Hantera · Diagnostik</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Hantera · Automatisering</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Bygg · Återställning</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtrera efter typ</value>

@@ -156,10 +156,6 @@
     <value>Omogući</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Dokumentacija</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Pregledajte teme, pretražite reference i pročitajte priručnik.</value>
     <comment>MT</comment>
@@ -258,10 +254,6 @@
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Uloge</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Admin · Poslužitelj</value>
-    <comment>MT — middle dot separator preserved</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Status</value>
@@ -1461,10 +1453,6 @@
     <value>Odaberite aplikaciju ili registrirajte novu.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Izrada · Prilagođeni widgeti</value>
-    <comment>MT — middle dot separator preserved; widget per the locale sheet</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Nova aplikacija</value>
     <comment>MT</comment>
@@ -1568,10 +1556,6 @@
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Rasporedite widgete na svakoj stranici povlačenjem između zona. Promjene se objavljuju svim posjetiteljima.</value>
     <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Izrada · Rasporedi stranica</value>
-    <comment>MT — middle dot separator preserved</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
     <value>Pregled uživo</value>
@@ -2381,18 +2365,6 @@
     <value>Zadrži moju verziju</value>
     <comment>MT — merge-conflict resolution option</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Izrada · Stvaranje paketa</value>
-    <comment>MT — middle dot separator preserved; "Stvaranje" used for the second half to avoid repeating "Izrada"</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Izrada · Registar paketa</value>
-    <comment>MT — middle dot separator preserved</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Izrada · Izvori paketa</value>
-    <comment>MT — middle dot separator preserved</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licenca (neobavezno)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sesije koje su trenutačno u tijeku.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Osoblje · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>svatko može uređivati</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>promijenjeno</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Administracija · konfiguracija poslužitelja</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Naslijedi</value>
     <comment>MT — permission tri-state alongside Allow/Deny</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Upravljanje · Kontrola pristupa</value>
-    <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>UŽIVO</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (izvor)</value>
     <comment>MT — {0} is a language name in nominative; parenthetical keeps it uninflected</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Osoblje · Mediji</value>
-    <comment>MT</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Iskorišteni prostor</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Administratorsko kazalo</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Administracija · Pravopis</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Admin · Baza podataka</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Upravljanje · Dijagnostika</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Upravljanje · Automatizacija</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Izgradnja · Oporavak</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filtriraj po vrsti</value>
