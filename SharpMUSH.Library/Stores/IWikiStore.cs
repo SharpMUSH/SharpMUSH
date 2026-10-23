@@ -115,6 +115,14 @@ public interface IWikiStore
 	/// <summary>Starts the fact index over: it clears, then builds again through <see cref="BuildFactIndexBatchAsync"/>.</summary>
 	Task<WikiFactIndexStatus> RebuildFactIndexAsync();
 
+	/// <summary>
+	/// The pages <paramref name="visibility"/> admits that meet every condition of <paramref name="query"/>
+	/// (<see cref="Wiki.Semantics.WikiFactQueries"/>), in the index's order of one condition's values and then the pages.
+	/// <see cref="WikiFactIndexBuilding"/> until the index is ready; an error for a query the schema cannot answer or a
+	/// continuation this store did not write.
+	/// </summary>
+	Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility);
+
 	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 
