@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-adult-kemono-shared-completion", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-player-continue", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-player-channels", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-christian-fiction-pixel-administrator-walkthrough", "pixel", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-christian-fiction-pixel-administrator-rules", "pixel", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-christian-fiction-pixel-administrator-joining", "pixel", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
