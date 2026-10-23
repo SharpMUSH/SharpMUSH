@@ -12,6 +12,15 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-post-apocalyptic-kemono-player-character", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-walkthrough", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-invite", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-capabilities", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-rules", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-joining", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-administrator-identity", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-shared-completion", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-player-continue", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-player-sign-in", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-subgenre-none-chibi-player-channels", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-subgenre-none-chibi-player-speak-act", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
