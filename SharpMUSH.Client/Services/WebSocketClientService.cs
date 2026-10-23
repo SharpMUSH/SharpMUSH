@@ -258,9 +258,12 @@ public class WebSocketClientService : IWebSocketClientService
 				_lastSeq = 0;
 				if (_slot is { } stale) await stale.ClearAsync();
 			}
+			// A reconnect logs in only after it knows the session is fresh, and may find no token to log in
+			// with: the server keeps the connect screen for it, so a failed login leaves one to read.
+			var signIn = _signIn && !reconnect;
 			var firstFrame = _resumeToken is not null
-				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass, _signIn)
-				: ResumeFrameParser.Hello(PresenceClass, _signIn);
+				? ResumeFrameParser.Resume(_resumeToken, _lastSeq, PresenceClass, signIn)
+				: ResumeFrameParser.Hello(PresenceClass, signIn);
 			await _webSocket.SendAsync(
 				new ArraySegment<byte>(Encoding.UTF8.GetBytes(firstFrame)),
 				WebSocketMessageType.Text, true, _cancellationTokenSource.Token);
