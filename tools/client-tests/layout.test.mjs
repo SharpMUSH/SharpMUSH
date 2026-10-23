@@ -219,7 +219,10 @@ test('exit keys are ignored while typing, with a modifier, held down, unlisted, 
     const { layout, listeners } = bootWithDialog(false);
     const calls = [];
     layout.registerExitKeys({ invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } }, ['n']);
+    const commandLine = { tagName: 'INPUT', isContentEditable: false, closest: selector => (selector.includes('.term-input') ? {} : null) };
+    const composer = { tagName: 'TEXTAREA', isContentEditable: false, closest: selector => (selector.includes('.composer-scope') ? {} : null) };
     for (const event of [press('n', input), press('n', editor), press('n', { tagName: 'TEXTAREA' }), press('n', { tagName: 'SELECT' }),
+        press('n', commandLine), press('n', composer),
         press('n', body, { ctrlKey: true }), press('n', body, { altKey: true }), press('n', body, { metaKey: true }),
         press('n', body, { repeat: true }), press('x')]) {
         listeners.get('keydown')(event.event);
