@@ -12,6 +12,13 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-walkthrough", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-invite", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-rules", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dark-fantasy-pixel-shared-completion", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-player-sign-in", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-shared-welcome", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-genre-none-kemono-administrator-walkthrough", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-joining", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-identity", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-administrator-capabilities", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
