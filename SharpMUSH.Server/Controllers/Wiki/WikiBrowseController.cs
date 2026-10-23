@@ -218,7 +218,8 @@ public class WikiBrowseController(
 	/// <summary>
 	/// GET /api/wiki/query?condition=pf2e:level=1..3&amp;condition=category=Spells&amp;take=50&amp;after=&amp;lang=fr
 	/// The pages whose facts meet every <c>condition</c>, written as <c>wikiquery()</c> takes them, one page at a time:
-	/// <c>next</c> is the next request's <c>after</c>. 400 for a query the wiki cannot answer; 503 while the fact index
+	/// <c>next</c> is the next request's <c>after</c>. A <c>show=</c> condition adds its properties as <c>show</c> and
+	/// each page's values for them under <c>facts</c>. 400 for a query the wiki cannot answer; 503 while the fact index
 	/// is building.
 	/// </summary>
 	[HttpGet("query")]
@@ -237,11 +238,26 @@ public class WikiBrowseController(
 	private async Task<IActionResult> AnsweredAsync(WikiFactQuery query, WikiVisibility visibility, string? lang)
 		=> await Wiki.QueryFactsAsync(query, visibility) switch
 		{
-			WikiFactQueryPage found => Ok(new WikiFactQueryResultDto([.. await LocalizedListAsync(found.Pages, lang)], found.Next)),
+			WikiFactQueryPage found => Ok(await ShownAsync(query,
+				new WikiFactQueryResultDto([.. await LocalizedListAsync(found.Pages, lang)], found.Next), found.Pages)),
 			WikiFactIndexBuilding building => StatusCode(StatusCodes.Status503ServiceUnavailable,
 				$"The fact index is building: {building.Status.Indexed} of {building.Status.Pages} pages."),
 			Error<string> error => BadRequest(error.Value)
 		};
+
+	/// <summary>The result with the columns its <c>show=</c> names and each page's values for them.</summary>
+	private async Task<WikiFactQueryResultDto> ShownAsync(WikiFactQuery query, WikiFactQueryResultDto result, IReadOnlyList<WikiPage> pages)
+	{
+		if (query.Show.Count == 0) return result;
+		var schema = await Wiki.GetFactSchemaAsync();
+		var facts = new Dictionary<string, IReadOnlyList<WikiFactDto>>();
+		foreach (var page in pages) facts[page.Id] = await FactDtosAsync(page, query.Show);
+		return result with
+		{
+			Show = [.. query.Show.Select(p => WikiFactEntry.Definition(schema, p)).OfType<PropertyDefinition>().Select(ToDto)],
+			Facts = facts,
+		};
+	}
 
 	/// <summary>
 	/// GET /api/wiki/pinned-categories

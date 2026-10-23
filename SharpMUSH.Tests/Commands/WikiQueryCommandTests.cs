@@ -76,6 +76,47 @@ public class WikiQueryCommandTests
 	}
 
 	[Test]
+	public async Task OperatorsSortAndShownValuesAnswerAsTyped()
+	{
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var player = await PlayerAsync("WikiQueryOperators");
+		var category = TestIsolationHelpers.GenerateUniqueName("QueryOps");
+		var wizard = await PageAsync("OpsWizard", category, true);
+		var low = await PageAsync("OpsLow", category, true, new("pf2e:level", "1"), new("pf2e:tradition", "arcane"), new("pf2e:class", wizard.Id));
+		var middle = await PageAsync("OpsMiddle", category, true, new("pf2e:level", "3"), new("pf2e:tradition", "divine"));
+		var high = await PageAsync("OpsHigh", category, true, new("pf2e:level", "5"), new("pf2e:tradition", "occult"), new("pf2e:tradition", "arcane"));
+		string Reference(WikiPage page) => $"main:{page.Slug}";
+		async Task ExpectAsync(string conditions, params WikiPage[] pages)
+		{
+			var marker = TestIsolationHelpers.GenerateUniqueName("ops");
+			await RunAsync(player, $"think {marker} [wikiquery(category={category}, {conditions})]");
+			await Assert.That(Told(player, $"{marker} {string.Join(" ", pages.Select(Reference))}")).IsEqualTo(1);
+		}
+
+		await ExpectAsync("pf2e:level>1, sort=pf2e:level", middle, high);
+		await ExpectAsync("pf2e:level<=3, sort=pf2e:level, order=desc", middle, low);
+		await ExpectAsync("pf2e:tradition=divine|occult, sort=pf2e:level", middle, high);
+		await ExpectAsync("pf2e:class=*", low);
+		await ExpectAsync("pf2e:level=*, pf2e:class!=*, sort=pf2e:level", middle, high);
+		await ExpectAsync("pf2e:tradition!=arcane, pf2e:level>=0", middle);
+
+		// A comparison after a value is a condition of its own, not more of that value.
+		await RunAsync(player, $"@wiki/query category={category}, pf2e:tradition=arcane|divine, pf2e:level>0, sort=pf2e:level, show=pf2e:tradition|pf2e:class");
+		var listing = WebAppFactoryArg.Notifications.RawFor(player.DbRef)
+			.Select(message => message switch { MString markup => markup.ToPlainText(), string text => text })
+			.Single(m => m.Contains($"3 page(s) where category={category}", StringComparison.Ordinal));
+		// The shown properties take the place of the revision and date, a page value by its title.
+		await Assert.That(listing).Contains("pf2e:tradition").And.Contains("pf2e:class").And.DoesNotContain("Edited");
+		await Assert.That(listing).Contains("OpsWizard_").And.Contains("arcane ·").And.Contains("occult");
+		await Assert.That(listing.IndexOf(Reference(low), StringComparison.Ordinal))
+			.IsLessThan(listing.IndexOf(Reference(middle), StringComparison.Ordinal));
+
+		var refused = TestIsolationHelpers.GenerateUniqueName("shown");
+		await RunAsync(player, $"think {refused} [wikiquery(category={category}, pf2e:level=*, show=pf2e:tradition)]");
+		await Assert.That(Told(player, $"{refused} #-1 INVALID WIKI QUERY")).IsEqualTo(1);
+	}
+
+	[Test]
 	public async Task ATitleWithACommaIsOneConditionAndTheListingIsInTheReadersLocale()
 	{
 		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
@@ -101,6 +142,14 @@ public class WikiQueryCommandTests
 	[Arguments("pf2e:class=No Such Query Page", "WIKI: pf2e:class names a page that does not exist: 'No Such Query Page'.")]
 	[Arguments("level", "WIKI: 'level' is not a condition like 'pf2e:level=1..3'.")]
 	[Arguments("namespace=nowhere", "WIKI: No namespace nowhere exists.")]
+	[Arguments("pf2e:tradition>2", "WIKI: pf2e:tradition is not a whole number, so it has no range.")]
+	[Arguments("pf2e:level>=x", "WIKI: pf2e:level is a whole number, not 'x'.")]
+	[Arguments("pf2e:level!=1", "WIKI: A query needs a condition a page meets by stating a value; != alone finds no pages.")]
+	[Arguments("pf2e:level=1, order=desc", "WIKI: order needs a sort, as in 'sort=pf2e:level'.")]
+	[Arguments("pf2e:level=1, order=up", "WIKI: order is asc or desc.")]
+	[Arguments("pf2e:level=1, sort=pf2e:class", "WIKI: pf2e:class names pages, so it does not sort them; sort by a number or a keyword.")]
+	[Arguments("pf2e:level=1, show=pf2e:unknown", "WIKI: No property pf2e:unknown is defined.")]
+	[Arguments("pf2e:tradition=arcane|", "WIKI: pf2e:tradition has an empty value in 'arcane|'.")]
 	public async Task AQueryTheWikiCannotAnswerIsTold(string condition, string told)
 	{
 		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;

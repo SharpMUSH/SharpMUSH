@@ -233,10 +233,11 @@ public partial class Functions
 
 	/// <summary>
 	/// wikiquery(&lt;condition&gt;[, &lt;condition&gt;...])
-	/// The pages whose facts meet every condition, as wikilist() lists them: up to four facts, a category and a
-	/// namespace (<see cref="WikiFactQueryText"/>). A page the executor may not read is left out.
+	/// The pages whose facts meet every condition, as wikilist() lists them: up to four facts, a category, a namespace,
+	/// a sort and its order (<see cref="WikiFactQueryText"/>). A page the executor may not read is left out. It returns
+	/// pages only, so <c>show=</c> is refused; <c>wikifact()</c> reads a page's values.
 	/// </summary>
-	[SharpFunction(Name = "wikiquery", MinArgs = 1, MaxArgs = 6,
+	[SharpFunction(Name = "wikiquery", MinArgs = 1, MaxArgs = 8,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["condition..."])]
 	public async ValueTask<CallState> wikiquery(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -246,6 +247,7 @@ public partial class Functions
 		var conditions = parser.CurrentState.ArgumentsOrdered.Values.Select(arg => arg.Message?.ToPlainText() ?? string.Empty);
 		return new CallState(await QueryWiki.RunAsync(wikiService, conditions, visibility, QueryWiki.MaxReturned) switch
 		{
+			WikiFactQueryListing { Show.Count: > 0 } => ErrorMessages.Returns.InvalidWikiQuery,
 			WikiFactQueryListing found => string.Join(" ", found.Pages.Select(WikiCommandHelper.DisplayReference)),
 			WikiFactIndexBuilding => ErrorMessages.Returns.WikiIndexBuilding,
 			Error<string> => ErrorMessages.Returns.InvalidWikiQuery

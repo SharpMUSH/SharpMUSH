@@ -8,6 +8,7 @@
     {"id": "values", "heading": "Values", "lookup": "wiki fact values"},
     {"id": "properties", "heading": "Properties", "lookup": "wiki fact properties"},
     {"id": "queries", "heading": "Queries", "lookup": "wiki fact queries"},
+    {"id": "conditions", "heading": "Conditions", "lookup": "wiki fact conditions"},
     {"id": "index", "heading": "The fact index", "lookup": "wiki fact index"}
   ]
 }
@@ -37,6 +38,7 @@ and `wikifact(<page>, <property>)` returns one property's values.
 - [wiki fact values]: types, and naming a page
 - [wiki fact properties]: the properties a page may state, and defining them
 - [wiki fact queries]: finding the pages that state a value
+- [wiki fact conditions]: what a query's conditions may say
 - [wiki fact index]: how far the index has come, and rebuilding it
 
 ## Values
@@ -102,22 +104,49 @@ property on it, and a property defined again finds the pages that state it.
 ## Queries
 
 `@wiki/query` lists the pages whose facts meet every condition, and
-`wikiquery()` returns them from softcode (see [WIKIQUERY()]). Write each
-condition as `<property>=<value>`, or as `<property>=<low>..<high>` for a
-range of whole numbers. `category=<name>` and `namespace=<name>` limit where
-the pages come from. `@wiki/query` lists up to 100 pages and says when more
-match.
+`wikiquery()` returns them from softcode (see [WIKIQUERY()]). A query takes
+up to four conditions (see [wiki fact conditions]), and these settings:
+
+- `category=<name>`, `namespace=<name>`: where the pages come from
+- `sort=<property>`: order by a number or keyword; a page that states none
+  is left out
+- `order=desc`: highest first; `order=asc`, the default, lowest first
+- `show=<property>[|<property>...]`: up to four properties' values beside
+  each page, in place of the revision and date. Not in `wikiquery()`.
+
+`@wiki/query` lists up to 100 pages and says when more match.
 
 ```sharp
-> @wiki/query pf2e:tradition=arcane, pf2e:level=1..3
+> @wiki/query pf2e:tradition=arcane, pf2e:level>1, sort=pf2e:level, show=pf2e:level
 ```
 
-Output: a table of the matching pages, titled "2 page(s) where pf2e:tradition=arcane, pf2e:level=1..3".
+Output: a table of the matching pages with a Level column, lowest first.
 
 ```sharp
 > @wiki/query pf2e:level=high
 WIKI: pf2e:level is a whole number, not 'high'.
 ```
+
+## Conditions
+
+- `<property>=<value>`: the page states the value. A page is named by its
+  title.
+- `<property>=<value>|<value>`: it states either.
+- `<property>!=<value>`: it does not state it.
+- `<property>=*`: it states any value; `<property>!=*`, none.
+- `pf2e:level>3`, `<3`, `>=3`, `<=3`: a whole number above, below, at
+  least or at most 3.
+- `<property>=<low>..<high>`: a whole number from *<low>* to *<high>*.
+  Leave one end off for no limit, as in `pf2e:level=..2`.
+
+A query needs one condition a page meets by stating a value, or a sort:
+`!=` alone finds no pages.
+
+```sharp
+> @wiki/query pf2e:class=*, pf2e:tradition!=divine
+```
+
+Output: a table of the pages that name a class and do not state divine.
 
 ## The fact index
 

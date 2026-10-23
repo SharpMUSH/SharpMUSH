@@ -58,3 +58,21 @@
 .wiki-fact-search-results a:hover,
 .wiki-fact-search-results a:focus-visible { text-decoration: underline; }
 .wiki-fact-search-message { color: var(--danger); }
+.wiki-fact-search-scroll { overflow-x: auto; }
+.wiki-fact-search-table {
+    padding: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.wiki-fact-search-table th,
+.wiki-fact-search-table td {
+    padding: 4px 16px 4px 0;
+    text-align: left;
+    vertical-align: top;
+}
+.wiki-fact-search-table thead th {
+    color: var(--text-dim);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+}
+.wiki-fact-search-table tbody th { font-weight: 400; }

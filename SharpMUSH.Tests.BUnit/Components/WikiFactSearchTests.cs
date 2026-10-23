@@ -114,6 +114,28 @@ public class WikiFactSearchTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ShownValuesAreColumnsBesideEachPage()
+	{
+		var result = new WikiFactQueryResultDto([Row("fireball"), Row("shield")], null)
+		{
+			Show = [new("pf2e:level", "number", false, [], "Level"), new("pf2e:class", "page", true, [])],
+			Facts = new Dictionary<string, IReadOnlyList<WikiFactDto>>
+			{
+				["wiki_page/fireball"] = [new("pf2e:class", "wiki_page/7") { PageTitle = "Wizard" }, new("pf2e:level", "3")],
+				["wiki_page/shield"] = [new("pf2e:level", "1")],
+			},
+		};
+		_handler.Answers.Enqueue(new(HttpStatusCode.OK) { Content = JsonContent.Create(result) });
+		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Query, "pf2e:level=*, show=pf2e:level|pf2e:class"));
+
+		cut.WaitForAssertion(() => cut.Find(".wiki-fact-search-table"));
+		await Assert.That(cut.FindAll("thead th").Select(th => th.TextContent)).IsEquivalentTo(["WkFactSearchPage", "Level", "pf2e:class"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(cut.FindAll("tbody tr").Select(tr => string.Join("|", tr.Children.Select(c => c.TextContent.Trim()))))
+			.IsEquivalentTo(["FIREBALL|3|Wizard", "SHIELD|1|"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task NoBoxIsShownWhereNoPropertyIsDefined()
 	{
 		_handler.Properties.Clear();

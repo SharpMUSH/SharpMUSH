@@ -5810,6 +5810,9 @@
   <data name="WkFactSearchBuilding" xml:space="preserve">
     <value>The fact index is still being built. Try again in a moment.</value>
   </data>
+  <data name="WkFactSearchPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
   <data name="WkFactSharing" xml:space="preserve">
     <value>Pages that also state {0}</value>
   </data>

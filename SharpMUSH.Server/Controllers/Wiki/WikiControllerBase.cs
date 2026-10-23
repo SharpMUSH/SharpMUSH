@@ -185,14 +185,17 @@ public abstract class WikiControllerBase(
 			NamedBy = await NamedByDtosAsync(p.Page),
 		};
 
-	/// <summary>The page's facts this reader may see; a value naming a page carries the page, to show and link.</summary>
-	private async Task<IReadOnlyList<WikiFactDto>> FactDtosAsync(WikiPage page)
+	/// <summary>
+	/// The page's facts this reader may see, only <paramref name="properties"/>' when named; a value naming a page carries
+	/// the page, to show and link.
+	/// </summary>
+	protected async Task<IReadOnlyList<WikiFactDto>> FactDtosAsync(WikiPage page, IReadOnlyCollection<string>? properties = null)
 	{
 		if (page.Facts.Count == 0) return [];
 		var schema = await Wiki.GetFactSchemaAsync();
 		var visibility = await VisibilityAsync();
 		var facts = new List<WikiFactDto>(page.Facts.Count);
-		foreach (var fact in page.Facts)
+		foreach (var fact in page.Facts.Where(f => properties is null || properties.Contains(f.Property)))
 		{
 			var label = WikiFactEntry.Label(schema, fact.Property);
 			if (!WikiFactEntry.NamesPage(schema, fact))
