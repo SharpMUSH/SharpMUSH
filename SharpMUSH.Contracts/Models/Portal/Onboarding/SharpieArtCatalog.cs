@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-joining", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-crime-pixel-shared-welcome", "pixel", "Crime", "images/sharpie/sharpie-crime-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-shared-completion", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-kemono-shared-welcome", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-kemono-administrator-invite", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-walkthrough", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
