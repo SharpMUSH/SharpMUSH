@@ -137,7 +137,7 @@ public partial class LightningDatabase : IWikiStore
 	private static IEnumerable<string> WikiIndexCategories(WikiPageRecord r)
 		=> (r.Categories ?? []).DistinctBy(category => category.ToUpperInvariant());
 
-	/// <summary>Writes (<paramref name="add"/>) or removes every list-index entry <paramref name="r"/> holds.</summary>
+	/// <summary>Writes (<paramref name="add"/>) or removes every list-index and fact-index entry <paramref name="r"/> holds.</summary>
 	private static void WikiListIndexes(ITx tx, long pageKey, WikiPageRecord r, bool add)
 	{
 		var value = WikiVisibilityValue(r);
@@ -150,6 +150,7 @@ public partial class LightningDatabase : IWikiStore
 			if (add) tx.Put(Tables.WikiByCategory, key, WikiCategoryValueCodec.Value(prefix, r.Published, r.AuthorDbref));
 			else tx.Delete(Tables.WikiByCategory, key);
 		}
+		WikiFactEntries(tx, pageKey, r, add);
 
 		void Apply(TableDef table, byte[] key)
 		{

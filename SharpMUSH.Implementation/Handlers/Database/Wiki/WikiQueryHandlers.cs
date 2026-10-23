@@ -85,6 +85,12 @@ public sealed class GetWikiFactSchemaQueryHandler(IWikiStore store) : IQueryHand
 		=> new(store.GetFactSchemaAsync());
 }
 
+public sealed class GetWikiFactIndexStatusQueryHandler(IWikiStore store) : IQueryHandler<GetWikiFactIndexStatusQuery, WikiFactIndexStatus>
+{
+	public ValueTask<WikiFactIndexStatus> Handle(GetWikiFactIndexStatusQuery query, CancellationToken cancellationToken)
+		=> new(store.GetFactIndexStatusAsync());
+}
+
 public sealed class GetWikiRevisionsQueryHandler(IWikiStore store) : IQueryHandler<GetWikiRevisionsQuery, IReadOnlyList<WikiRevision>>
 {
 	public ValueTask<IReadOnlyList<WikiRevision>> Handle(GetWikiRevisionsQuery query, CancellationToken cancellationToken)

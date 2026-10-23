@@ -34,6 +34,12 @@ public sealed record SetWikiPageMetadataCommand(string Id, IReadOnlyList<string>
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetPageFactsAsync"/>.</summary>
 public sealed record SetWikiPageFactsCommand(string Id, IReadOnlyList<WikiPageFact> Facts) : ICommand<FoundResult<WikiPage>>;
 
+/// <summary>Forwards to <see cref="IWikiStore.BuildFactIndexBatchAsync"/>.</summary>
+public sealed record BuildWikiFactIndexBatchCommand(int BatchSize) : ICommand<WikiFactIndexStatus>;
+
+/// <summary>Forwards to <see cref="IWikiStore.RebuildFactIndexAsync"/>.</summary>
+public sealed record RebuildWikiFactIndexCommand() : ICommand<WikiFactIndexStatus>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.SetCategoryPinnedAsync"/>.</summary>
 public sealed record SetWikiCategoryPinnedCommand(string Category, bool Pinned) : ICommand<bool>;
 

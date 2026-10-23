@@ -5,7 +5,8 @@
   "lookup": "wiki facts",
   "aliases": ["WIKI-FACTS", "@WIKI/FACT"],
   "sections": [
-    {"id": "values", "heading": "Values", "lookup": "wiki fact values"}
+    {"id": "values", "heading": "Values", "lookup": "wiki fact values"},
+    {"id": "index", "heading": "The fact index", "lookup": "wiki fact index"}
   ]
 }
 -->
@@ -14,6 +15,7 @@
 - `@wiki/fact <page>`
 - `@wiki/fact <page>/<property>=<value>[|<value>...]`
 - `@wiki/fact <page>/<property>=`
+- `@wiki/fact/index [rebuild]`
 
 A fact is a property of a page and its value, such as a spell's level. Like
 categories, facts are held by the page, not written in its text, and a
@@ -29,6 +31,7 @@ From softcode, `wikifact(<page>)` lists the properties a page has facts for,
 and `wikifact(<page>, <property>)` returns one property's values.
 
 - [wiki fact values]: types, and naming a page
+- [wiki fact index]: how far the index has come, and rebuilding it
 
 ## Values
 
@@ -53,6 +56,22 @@ WIKI: pf2e:level is a whole number, not 'three'.
 
 A page shows only the facts you can read. A fact that names a page you may
 not read is left out.
+
+## The fact index
+
+The game keeps an index of every page's facts, so it can find the pages that
+state a value. It builds the index by itself in the background when the
+server starts, and every edit keeps it up to date from then on.
+
+`@wiki/fact/index` shows how far the index has come. `@wiki/fact/index
+rebuild` empties it and builds it again; that needs wiki.admin.
+
+```sharp
+> @wiki/fact/index
+WIKI: The fact index is building: 512 of 4711 pages.
+> @wiki/fact/index
+WIKI: The fact index is ready: 4711 pages.
+```
 
 ::: seealso
 - [WIKIFACT()]
