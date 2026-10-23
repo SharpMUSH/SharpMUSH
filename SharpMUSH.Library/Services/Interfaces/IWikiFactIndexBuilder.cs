@@ -17,6 +17,9 @@ public interface IWikiFactIndexBuilder
 	/// <summary>Starts the index over and builds it again.</summary>
 	Task<WikiFactIndexStatus> RebuildAsync(CancellationToken cancellationToken = default);
 
+	/// <summary>Stops the build after the batch it is writing; the next start resumes it.</summary>
+	Task StopAsync();
+
 	/// <summary>Ends when no build is running.</summary>
 	Task Idle { get; }
 }

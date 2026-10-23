@@ -47,12 +47,19 @@ public sealed class WikiFactIndexBuilder(IMediator mediator, ILogger<WikiFactInd
 		return status;
 	}
 
+	public async Task StopAsync()
+	{
+		await _stopping.CancelAsync();
+		await Idle;
+	}
+
 	private async Task RunAsync()
 	{
 		try
 		{
 			while (true)
 			{
+				_stopping.Token.ThrowIfCancellationRequested();
 				var status = await mediator.Send(new BuildWikiFactIndexBatchCommand(IWikiFactIndexBuilder.BatchSize), _stopping.Token);
 				if (status.Ready && Finished())
 				{
