@@ -10,6 +10,15 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-steampunk-kemono-administrator-walkthrough", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-speak-act", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-useful-action", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-world", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-character", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-frankenstein-chibi-player-sign-in", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-frankenstein-chibi-shared-welcome", "chibi", "Frankenstein", "images/sharpie/sharpie-frankenstein-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-steampunk-kemono-administrator-capabilities", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-steampunk-kemono-administrator-rules", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-administrator-rules.png", 1254, 1254, "administrator-rules"),
 		new SharpieArt("sharpie-steampunk-kemono-player-continue", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-continue.png", 1254, 1254, "player-continue"),
 		new SharpieArt("sharpie-post-apocalyptic-chibi-player-sign-in", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
 		new SharpieArt("sharpie-post-apocalyptic-chibi-shared-welcome", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
