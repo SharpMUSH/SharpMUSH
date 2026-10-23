@@ -27,7 +27,9 @@
 @container page (max-width: 48rem) { .guide-mascot-themed:not(.guide-mascot-reduced) { width: 96px; height: 96px; } }
 
 .guide-panel .guide-stop { width: 44px; height: 44px; padding: 8px; justify-content: center; }
-.guide-panel .guide-icon { width: 44px; height: 44px; padding: 8px; justify-content: center; }
+.guide-panel-actions button, .guide-lesson .guide-action { gap: .4rem; }
+.guide-panel-actions .guide-action { margin-left: auto; }
+.guide-step-count { font-size: .9rem; font-weight: 600; }
 
 .guide-channel-commands { margin: 1rem 0; padding: 0; display: grid; gap: 1rem; }
 .guide-channel-commands > div { min-width: 0; }

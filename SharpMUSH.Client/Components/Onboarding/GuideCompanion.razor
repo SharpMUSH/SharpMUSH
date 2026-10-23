@@ -19,7 +19,7 @@ else if (Guide is { Ready: true, Progress.Active: true })
         <div class="guide-companion-content">
             @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReloadProgress"]</button></p> }
             @if (_message is not null) { <p role="status">@_message</p> }
-            <GuidePanel @ref="_panel" Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"player-{Lesson.Id}"))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert" OnExplore="OnExplore">
+            <GuidePanel @ref="_panel" Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"player-{Lesson.Id}"))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" StepNumber="@(Index + 1)" StepCount="@Lessons.Count" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert" OnExplore="OnExplore">
                 <Context><GuideContext LessonId="@Lesson.Id" /></Context>
             </GuidePanel>
         </div>
