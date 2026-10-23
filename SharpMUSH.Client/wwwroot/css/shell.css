@@ -1151,7 +1151,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .md-item > :first-child { margin-top: 0; }
 .md-item > :last-child { margin-bottom: 0; }
 
-/* ── Wiki directive blocks (dynamic listings: category / tag / pagelist / recent) ── */
+/* ── Wiki directive blocks (dynamic listings: category / tag / pagelist / recent / facts) ── */
 
 .wiki-directive-block {
     border-left: 3px solid var(--accent-dim);

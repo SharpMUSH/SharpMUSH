@@ -150,10 +150,13 @@ public static class ViewWiki
 			// followable from a surface that can navigate the wiki, and this is that surface. A page's
 			// pictures are the wiki's own, shown wherever image_hosts allows them, as the portal shows them.
 			var cosmetic = parser.ServiceProvider.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue.Cosmetic;
-			rendered = RecursiveMarkdownHelper.RenderMarkdown(markdown, new WikiCommandRenderer(RenderWidth, parser)
+			var document = RecursiveMarkdownHelper.Parse(markdown);
+			rendered = new WikiCommandRenderer(RenderWidth, parser)
 			{
 				ImageAllowed = source => ImageHostPolicy.Allows(source, cosmetic.ImageHosts, cosmetic.ImageHostList),
-			});
+				FactBlocks = await FactBlocksWiki.AnswerAsync(wikiService, localization, document,
+					await WikiCommandHelper.VisibilityAsync(parser, executor), RenderWidth, locale, forceSource),
+			}.Render(document);
 		}
 
 		// A draft's facts are withheld with its body; the pages naming it are other pages, shown either way.

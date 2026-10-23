@@ -117,7 +117,9 @@ up to four conditions (see [wiki fact conditions]), and these settings:
 - `show=<property>[|<property>...]`: up to four properties' values beside
   each page, in place of the revision and date. Not in `wikiquery()`.
 
-`@wiki/query` lists up to 100 pages and says when more match.
+`@wiki/query` lists up to 100 pages and says when more match. A
+`::: facts <conditions>` block in a page's text lists, each time the page
+is read, up to 20 of the pages its query finds.
 
 ```sharp
 > @wiki/query pf2e:tradition=arcane, pf2e:level>1, sort=pf2e:level, show=pf2e:level

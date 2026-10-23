@@ -558,6 +558,25 @@ public class WikiMarkdigPipelineTests
 			.Contains("<div class=\"wiki-directive\" data-directive=\"recent\" data-arg=\"10\"></div>");
 	}
 
+	/// <summary>::: facts → placeholder div with the conditions, escaped, as the arg; they are a query, not softcode.</summary>
+	[Test]
+	public async Task RenderToHtml_FactsDirective_EmitsPlaceholderDiv()
+	{
+		var html = Pipeline().RenderToHtml("::: facts pf2e:tradition=arcane, pf2e:level<3, show=pf2e:level|pf2e:class\n:::");
+
+		await Assert.That(html).Contains("<div class=\"wiki-directive\" data-directive=\"facts\" "
+			+ "data-arg=\"pf2e:tradition=arcane, pf2e:level&lt;3, show=pf2e:level|pf2e:class\"></div>");
+	}
+
+	/// <summary>A facts block with no conditions renders no directive at all.</summary>
+	[Test]
+	public async Task RenderToHtml_FactsDirectiveWithoutConditions_RendersNothing()
+	{
+		var html = Pipeline().RenderToHtml("::: facts\n:::");
+
+		await Assert.That(html).DoesNotContain("wiki-directive");
+	}
+
 	/// <summary>The recent count is clamped to 50 when the author asks for more.</summary>
 	[Test]
 	public async Task RenderToHtml_RecentDirectiveOverMax_ClampsTo50()
