@@ -21,7 +21,7 @@ public partial class Commands
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "PIN", "UNPIN", "REQUIRE",
-			"ACCESS", "FACT", "QUERY",
+			"ACCESS", "FACT", "QUERY", "PROPERTY",
 			"NOEVAL", "SOURCE", "DRAFT", "MD", "INDEX"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
@@ -126,6 +126,13 @@ public partial class Commands
 				=> await FactWiki.Set(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			"FACT" when hasArg0
 				=> await FactWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!),
+			// "property=type" defines it, "property=" removes it, "property/field=value" sets one field; alone, it shows.
+			"PROPERTY" when hasArg0 && arg1CallState is not null
+				=> await PropertyWiki.Set(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			"PROPERTY" when hasArg0
+				=> await PropertyWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!),
+			"PROPERTY" when arg1CallState is null
+				=> await PropertyWiki.List(parser, Mediator, wikiService, NotifyService),
 			// The conditions are one list; "=" splits the first of them, so it is put back.
 			"QUERY" when hasArg0
 				=> await QueryWiki.Handle(parser, Mediator, wikiService, localization, NotifyService,

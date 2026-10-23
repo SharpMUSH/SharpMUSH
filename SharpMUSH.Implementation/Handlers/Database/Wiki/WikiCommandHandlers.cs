@@ -2,6 +2,7 @@ using Mediator;
 using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library;
 
 namespace SharpMUSH.Implementation.Handlers.Database.Wiki;
@@ -46,6 +47,18 @@ public sealed class SetWikiPageFactsCommandHandler(IWikiStore store) : ICommandH
 {
 	public ValueTask<FoundResult<WikiPage>> Handle(SetWikiPageFactsCommand command, CancellationToken cancellationToken)
 		=> new(store.SetPageFactsAsync(command.Id, command.Facts));
+}
+
+public sealed class SetWikiFactPropertyCommandHandler(IWikiStore store) : ICommandHandler<SetWikiFactPropertyCommand, Result<PropertyDefinition>>
+{
+	public ValueTask<Result<PropertyDefinition>> Handle(SetWikiFactPropertyCommand command, CancellationToken cancellationToken)
+		=> new(store.SetFactPropertyAsync(command.Property));
+}
+
+public sealed class DeleteWikiFactPropertyCommandHandler(IWikiStore store) : ICommandHandler<DeleteWikiFactPropertyCommand, Found<None>>
+{
+	public ValueTask<Found<None>> Handle(DeleteWikiFactPropertyCommand command, CancellationToken cancellationToken)
+		=> new(store.DeleteFactPropertyAsync(command.Id));
 }
 
 public sealed class BuildWikiFactIndexBatchCommandHandler(IWikiStore store) : ICommandHandler<BuildWikiFactIndexBatchCommand, WikiFactIndexStatus>

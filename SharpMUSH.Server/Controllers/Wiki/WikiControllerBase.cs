@@ -232,6 +232,10 @@ public abstract class WikiControllerBase(
 		return list;
 	}
 
+	protected static WikiFactPropertyDto ToDto(PropertyDefinition p) => new(p.Id, WikiFactProperties.TypeName(p.Type),
+		p.Cardinality == Cardinality.Multiple, [.. (p.AllowedKeywords.IsDefault ? [] : p.AllowedKeywords).Select(k => k.Value)],
+		p.Label, p.Description);
+
 	protected static WikiTranslationSummaryDto ToDto(WikiTranslationSummary t) =>
 		new(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber);
 

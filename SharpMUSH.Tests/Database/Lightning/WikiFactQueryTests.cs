@@ -13,6 +13,9 @@ public class WikiFactQueryTests : LightningDatabaseFixture
 {
 	private IWikiStore Wiki => Db;
 
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(Wiki);
+
 	private static readonly DateTimeOffset T0 = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 	private static readonly string[] Traditions = ["arcane", "divine", "occult", "primal"];
 

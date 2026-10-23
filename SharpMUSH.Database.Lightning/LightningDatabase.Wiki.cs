@@ -549,50 +549,66 @@ public partial class LightningDatabase : IWikiStore
 		});
 	}
 
-	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(WikiFactSchema.Schema);
-
 	public async Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
 	{
-		facts = CanonicalPageReferences(facts);
 		return await Store.WriteAsync<FoundResult<WikiPage>>(tx =>
 		{
 			RequireWikiCategoryReady(tx);
 			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
-			if (RefusedFact(tx, id, facts) is { } refused) return new Error<string>(refused);
-
-			var updated = found.Record with { Facts = WikiFactRecords(facts) };
-			PutWikiPage(tx, found.Key, found.Record, updated);
-			return MapWikiPage(found.Key, updated);
+			var schema = ReadFactSchema(tx);
+			return CanonicalPageReferences(schema, facts) switch
+			{
+				IReadOnlyList<WikiPageFact> stated => StateFacts(tx, schema, id, found.Key, found.Record, stated),
+				Error<string> error => error,
+			};
 		});
 	}
 
+	private static FoundResult<WikiPage> StateFacts(ITx tx, SemanticSchema schema, string id, long key, WikiPageRecord record,
+		IReadOnlyList<WikiPageFact> facts)
+	{
+		if (RefusedFact(tx, schema, id, record.Facts ?? [], facts) is { } refused) return new Error<string>(refused);
+		var updated = record with { Facts = WikiFactRecords(facts) };
+		PutWikiPage(tx, key, record, updated);
+		return MapWikiPage(key, updated);
+	}
+
 	/// <summary>
-	/// Why these facts are refused, or null: a value the schema does not take, or a page reference to no page.
+	/// Why these facts are refused, or null: a value the schema does not take, or a page reference to no page. A
+	/// property whose values are those <paramref name="stored"/> already holds is not checked again, so a page keeps a
+	/// fact its property no longer takes until someone changes that property's values.
 	/// </summary>
-	private static string? RefusedFact(ITx tx, string id, IReadOnlyList<WikiPageFact> facts)
-		=> WikiPageFacts.ToCanonical(WikiFactSchema.Schema, new(CanonicalWikiPageId(id)), facts, CancellationToken.None) switch
+	private static string? RefusedFact(ITx tx, SemanticSchema schema, string id, WikiPageFactRecord[] stored,
+		IReadOnlyList<WikiPageFact> facts)
+	{
+		var unchanged = facts.GroupBy(f => f.Property)
+			.Where(property => property.Select(f => f.Value).Order(StringComparer.Ordinal).SequenceEqual(
+				stored.Where(f => f.Property == property.Key).Select(f => f.Value).Order(StringComparer.Ordinal)))
+			.Select(property => property.Key)
+			.ToHashSet(StringComparer.Ordinal);
+		var changed = facts.Where(f => !unchanged.Contains(f.Property));
+		return WikiPageFacts.ToCanonical(schema, new(CanonicalWikiPageId(id)), changed, CancellationToken.None) switch
 		{
-			ValidationFailure failure => WikiFactSchema.Describe(failure),
+			ValidationFailure failure => DescribeRefusedFact(failure),
 			CanonicalFactSet set => set.Facts.Select(f => f.Value is PageRef target
 					&& !(TryParseWikiPageId(target.Id, out var key) && TryReadWikiPage(tx, key) is not null)
 					? $"{f.Property} names a page that does not exist: '{target.Id}'."
 					: null)
 				.FirstOrDefault(refused => refused is not null),
 		};
+	}
 
 	/// <summary>
-	/// A page reference written as a bare key (<c>12</c>) stated as the page id it names (<c>wiki_page/12</c>), so
-	/// two ways of naming one page are one fact. Only properties the schema types as page references are read so.
+	/// The facts normalized, with a page reference written as a bare key (<c>12</c>) stated as the page id it names
+	/// (<c>wiki_page/12</c>), so two ways of naming one page are one fact. Only properties the schema types as page
+	/// references are read so.
 	/// </summary>
-	private static IReadOnlyList<WikiPageFact> CanonicalPageReferences(IReadOnlyList<WikiPageFact> facts)
+	private static Result<IReadOnlyList<WikiPageFact>> CanonicalPageReferences(SemanticSchema schema, IReadOnlyList<WikiPageFact> facts)
 	{
-		var references = WikiFactSchema.Schema.Properties.Where(p => p.Type == SemanticType.PageRef).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
-		var canonical = facts.Select(f => references.Contains(f.Property) && TryParseWikiPageId(f.Value, out var key) ? f with { Value = WikiPageId(key) } : f);
-		return WikiPageFacts.Normalize(canonical) switch
-		{
-			IReadOnlyList<WikiPageFact> normalized => normalized,
-			Error<string> => facts,
-		};
+		var references = schema.Properties.Where(p => p.Type == SemanticType.PageRef).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+		return WikiPageFacts.Normalize(facts.Select(f => references.Contains(f.Property) && TryParseWikiPageId(f.Value, out var key)
+			? f with { Value = WikiPageId(key) }
+			: f));
 	}
 
 	/// <summary>The stream read backwards: its keys end with the big-endian revision number, so key order is

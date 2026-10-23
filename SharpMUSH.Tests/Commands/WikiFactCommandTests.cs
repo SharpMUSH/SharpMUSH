@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -20,6 +21,9 @@ public class WikiFactCommandTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IWikiService WikiService => WebAppFactoryArg.Services.GetRequiredService<IWikiService>();
+
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(WikiService);
 
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix, bool approved)
 	{
@@ -90,6 +94,56 @@ public class WikiFactCommandTests
 		await RunAsync(player, $"@wiki/fact {spell.Slug}/{fact}");
 		await Assert.That(Told(player, told)).IsEqualTo(1);
 		await Assert.That(await FactsAsync(spell)).IsEquivalentTo([new WikiPageFact("pf2e:level", "5")]);
+	}
+
+	[Test]
+	public async Task StaffDefineChangeShowAndRemoveAProperty()
+	{
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		var id = $"test:{TestIsolationHelpers.GenerateUniqueName("rank").ToLowerInvariant()}";
+		int GodTold(string contains)
+			=> WebAppFactoryArg.Notifications.DeliveriesFor(god).Count(d => d.Message.Contains(contains, StringComparison.Ordinal));
+		Task GodRunsAsync(string command) => Parser.CommandParse(1, ConnectionService, MarkupText.Plain(command)).AsTask();
+
+		await GodRunsAsync($"@wiki/property {id}=keyword");
+		await Assert.That(GodTold($"WIKI: Defined {id}: keyword.")).IsEqualTo(1);
+		await GodRunsAsync($"@wiki/property {id}/values=Captain|Sergeant");
+		await GodRunsAsync($"@wiki/property {id}/multiple=yes");
+		await GodRunsAsync($"@wiki/property {id}/label=Rank");
+		await GodRunsAsync($"@wiki/property {id}/description=Where a member stands.");
+		await Assert.That(GodTold($"WIKI: Changed {id}.")).IsEqualTo(4);
+		var defined = WikiFactEntry.Definition(await WikiService.GetFactSchemaAsync(), id)!;
+		await Assert.That(defined with { AllowedKeywords = [] }).IsEqualTo(new PropertyDefinition(id,
+			WikiFactProperties.SchemaVersion, SemanticType.Keyword, Cardinality.Multiple, [], "Rank", "Where a member stands."));
+		await Assert.That(defined.AllowedKeywords.Select(k => k.Value)).IsEquivalentTo(["captain", "sergeant"]);
+
+		await GodRunsAsync($"@wiki/property {id}");
+		await Assert.That(GodTold($"Property: {id}")).IsEqualTo(1);
+		await Assert.That(GodTold("captain | sergeant")).IsEqualTo(1);
+		await GodRunsAsync($"@wiki/property {id}/multiple=maybe");
+		await Assert.That(GodTold("WIKI: Multiple takes yes or no.")).IsEqualTo(1);
+
+		// A page keeps the facts of a property that is removed.
+		var page = await PageAsync("PropertyPage");
+		(await WikiService.SetFactsAsync(page.Id, [new(id, "captain")])).Expect<WikiPage>();
+		await GodRunsAsync($"@wiki/property {id}=");
+		await Assert.That(GodTold($"WIKI: Removed {id}. Pages that state it keep their facts.")).IsEqualTo(1);
+		await Assert.That(WikiFactEntry.Definition(await WikiService.GetFactSchemaAsync(), id)).IsNull();
+		await Assert.That(await FactsAsync(page)).IsEquivalentTo([new WikiPageFact(id, "captain")]);
+	}
+
+	[Test]
+	public async Task OnlyWikiAdminChangesAProperty()
+	{
+		var player = await PlayerAsync("WikiPropertyMortal", approved: true);
+		var id = $"test:{TestIsolationHelpers.GenerateUniqueName("mortal").ToLowerInvariant()}";
+
+		await RunAsync(player, $"@wiki/property {id}=number");
+		await Assert.That(Told(player, "WIKI: Permission denied. That needs the wiki.admin permission.")).IsEqualTo(1);
+		await Assert.That(WikiFactEntry.Definition(await WikiService.GetFactSchemaAsync(), id)).IsNull();
+		// Anyone may read them.
+		await RunAsync(player, "@wiki/property pf2e:level");
+		await Assert.That(Told(player, "Property: pf2e:level")).IsEqualTo(1);
 	}
 
 	[Test]

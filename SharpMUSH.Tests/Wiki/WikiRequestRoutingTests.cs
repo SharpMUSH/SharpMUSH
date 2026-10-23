@@ -351,6 +351,7 @@ public class WikiRequestRoutingTests
 		var titlesBefore = Factory.Provider.Calls.GetValueOrDefault(nameof(IWikiStore.SetPageTitleAsync));
 		await Wiki.SetTitleAsync(page.Id, " New title ");
 		await Assert.That(Factory.Provider.Calls[nameof(IWikiStore.SetPageTitleAsync)] - titlesBefore).IsEqualTo(1);
+		await WikiFactTestProperties.DefineAsync(Wiki);
 		await Wiki.SetFactsAsync(page.Id, [new(" pf2e:level ", " 3 "), new("pf2e:level", "3")]);
 		await Wiki.UpdateAsync(page.Id, "Changed *body*", "raw editor", "summary");
 		await Wiki.SetMetadataAsync(page.Id, [" Mixed Case "], false);

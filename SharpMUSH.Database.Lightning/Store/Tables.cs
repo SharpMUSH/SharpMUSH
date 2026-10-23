@@ -142,6 +142,8 @@ public static class Tables
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
 	/// <summary>The fact index: property + 0x00 + typed value + page key → empty. See <c>LightningDatabase.WikiFactIndex.cs</c>.</summary>
 	public static readonly TableDef WikiFact = TableDef.Index("wiki.fact");
+	/// <summary>The properties facts may state, keyed by property id. See <c>LightningDatabase.WikiProperties.cs</c>.</summary>
+	public static readonly TableDef WikiProperty = TableDef.Node("wiki.prop");
 	/// <summary>What a namespace, category or page requires, keyed by (scope, key). See <c>LightningDatabase.WikiRequirements.cs</c>.</summary>
 	public static readonly TableDef WikiRequirement = TableDef.Node("wiki.req");
 	/// <summary>The categories pinned to the wiki home, keyed by category key. See <c>LightningDatabase.WikiPins.cs</c>.</summary>
