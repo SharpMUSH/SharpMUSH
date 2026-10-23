@@ -8,7 +8,8 @@ namespace SharpMUSH.Library.Models.Packages;
 /// The roles, custom permissions and categories a package declares (manifest format 1.2): the
 /// <c>categories:</c>, <c>permissions:</c> and <c>roles:</c> blocks; and the standard attribute entries of the
 /// <c>attributes:</c> block (format 1.5), which are removed with the package whatever relies on them; and the
-/// permissions it allows on roles it does not declare (<c>grants:</c>, format 1.15). An item the
+/// permissions it allows on roles it does not declare (<c>grants:</c>, format 1.15); and the properties its wiki pages'
+/// facts state (<c>wiki_properties:</c>, format 1.17). An item the
 /// package creates is the package's: an upgrade keeps it in step with the manifest and an uninstall
 /// removes it, unless the game has come to rely on it (a role someone holds, a permission a role sets,
 /// a category with something in it), which is then kept and given up. An item that already exists when
@@ -26,13 +27,18 @@ namespace SharpMUSH.Library.Models.Packages;
 /// The package's own permissions it allows on roles the game already has, such as <c>wizard</c> (<c>grants:</c>,
 /// format 1.15); null for none (see <see cref="RoleGrants"/>).
 /// </param>
+/// <param name="WikiProperties">
+/// The wiki fact properties the package defines (<c>wiki_properties:</c>, format 1.17); null for none (see
+/// <see cref="WikiFactProperties"/>).
+/// </param>
 public sealed record PackageDeclarations(
 	IReadOnlyList<PackageCategorySpec> RoleCategories,
 	IReadOnlyList<PackageCategorySpec> PermissionCategories,
 	IReadOnlyList<PackagePermissionSpec> Permissions,
 	IReadOnlyList<PackageRoleSpec> Roles,
 	IReadOnlyList<PackageAttributeEntrySpec>? Attributes = null,
-	IReadOnlyList<PackageGrantSpec>? Grants = null)
+	IReadOnlyList<PackageGrantSpec>? Grants = null,
+	IReadOnlyList<PackageWikiPropertySpec>? WikiProperties = null)
 {
 	/// <summary>A package that declares nothing.</summary>
 	public static PackageDeclarations None { get; } = new([], [], [], []);
@@ -47,10 +53,15 @@ public sealed record PackageDeclarations(
 	[JsonIgnore]
 	public IReadOnlyList<PackageGrantSpec> RoleGrants => Grants ?? [];
 
-	/// <summary>True when the package declares no category, permission, role, attribute entry or grant.</summary>
+	/// <summary>The wiki fact properties the package defines; never null.</summary>
+	[JsonIgnore]
+	public IReadOnlyList<PackageWikiPropertySpec> WikiFactProperties => WikiProperties ?? [];
+
+	/// <summary>True when the package declares no category, permission, role, attribute entry, grant or wiki property.</summary>
 	[JsonIgnore]
 	public bool IsEmpty => RoleCategories.Count == 0 && PermissionCategories.Count == 0
-		&& Permissions.Count == 0 && Roles.Count == 0 && AttributeEntries.Count == 0 && RoleGrants.Count == 0;
+		&& Permissions.Count == 0 && Roles.Count == 0 && AttributeEntries.Count == 0 && RoleGrants.Count == 0
+		&& WikiFactProperties.Count == 0;
 
 	/// <summary>The categories in the list <paramref name="kind"/>.</summary>
 	public IReadOnlyList<PackageCategorySpec> Categories(CategoryKind kind)
@@ -100,6 +111,30 @@ public sealed record PackageRoleSpec(
 /// <param name="Role">The role's slug.</param>
 /// <param name="Permission">The custom permission, lowercase.</param>
 public sealed record PackageGrantSpec(string Role, string Permission);
+
+/// <summary>
+/// A property a package's wiki facts state (the <c>wiki_properties:</c> block, format 1.17), as <c>@wiki/property</c>
+/// defines it. Removing it leaves the facts pages state with it in place.
+/// </summary>
+/// <param name="Id">The property key, such as <c>pf2e:level</c>.</param>
+/// <param name="Type">number, boolean, page or keyword.</param>
+/// <param name="Multiple">Whether a page may state more than one value.</param>
+/// <param name="Values">For a keyword property, the values it allows, lowercase; empty for any.</param>
+/// <param name="Label">What the portal calls it, or empty.</param>
+/// <param name="Description">What it records, or empty.</param>
+public sealed record PackageWikiPropertySpec(
+	string Id,
+	string Type,
+	bool Multiple,
+	IReadOnlyList<string> Values,
+	string Label = "",
+	string Description = "")
+{
+	/// <summary>Whether <paramref name="other"/> holds the same values, the lists compared by content.</summary>
+	public bool SameAs(PackageWikiPropertySpec other)
+		=> Id == other.Id && Type == other.Type && Multiple == other.Multiple && Values.SequenceEqual(other.Values)
+			&& Label == other.Label && Description == other.Description;
+}
 
 /// <summary>
 /// A standard attribute entry a package declares (the <c>attributes:</c> block, format 1.5): what
@@ -178,13 +213,16 @@ public enum PackageDeclarationKind
 	Attribute,
 
 	/// <summary>A permission allowed on a role the package does not declare (format 1.15).</summary>
-	Grant
+	Grant,
+
+	/// <summary>A wiki fact property (format 1.17).</summary>
+	WikiProperty
 }
 
 /// <summary>How messages name a <see cref="PackageDeclarationKind"/>.</summary>
 public static class PackageDeclarationKindNames
 {
-	/// <summary>"role category", "permission category", "permission", "attribute entry", "grant" or "role".</summary>
+	/// <summary>"role category", "permission category", "permission", "attribute entry", "grant", "wiki property" or "role".</summary>
 	public static string Noun(this PackageDeclarationKind kind) => kind switch
 	{
 		PackageDeclarationKind.RoleCategory => "role category",
@@ -192,13 +230,17 @@ public static class PackageDeclarationKindNames
 		PackageDeclarationKind.Permission => "permission",
 		PackageDeclarationKind.Attribute => "attribute entry",
 		PackageDeclarationKind.Grant => "grant",
+		PackageDeclarationKind.WikiProperty => "wiki property",
 		_ => "role"
 	};
 }
 
 /// <summary>One declared item's action in a plan, shown on the review screen and by <c>@package</c>.</summary>
 /// <param name="Kind">What sort of item it is.</param>
-/// <param name="Name">The category name, permission scope, role slug or attribute name; for a grant, <c>&lt;role&gt;: &lt;permission&gt;</c>.</param>
+/// <param name="Name">
+/// The category name, permission scope, role slug, attribute name or wiki property key; for a grant,
+/// <c>&lt;role&gt;: &lt;permission&gt;</c>.
+/// </param>
 /// <param name="Action">What the apply does with it.</param>
 /// <param name="Detail">Why, or what changes, in a sentence; null when the action says it all.</param>
 /// <param name="Retroactive">

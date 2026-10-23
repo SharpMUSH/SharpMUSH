@@ -21,11 +21,11 @@ public partial class LightningDatabase
 	private sealed record FactConditionSpan(byte[] Start, Func<byte[], bool> Inside);
 
 	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
-		=> Task.FromResult(WikiFactQueries.Check(WikiFactSchema.Schema, query) switch
+		=> Task.FromResult(Store.Read(tx => WikiFactQueries.Check(ReadFactSchema(tx), query) switch
 		{
-			IReadOnlyList<PropertyDefinition> definitions => Store.Read(tx => QueryFacts(tx, Canonical(query, definitions), definitions, visibility)),
+			IReadOnlyList<PropertyDefinition> definitions => QueryFacts(tx, Canonical(query, definitions), definitions, visibility),
 			Error<string> error => (WikiFactQueryResult)error
-		});
+		}));
 
 	/// <summary>The query with each page reference it names as its canonical id, the form the index holds.</summary>
 	private static WikiFactQuery Canonical(WikiFactQuery query, IReadOnlyList<PropertyDefinition> definitions)
@@ -40,7 +40,7 @@ public partial class LightningDatabase
 		WikiVisibility visibility)
 	{
 		if (FactIndexStatus(tx, ReadFactIndexState(tx)) is { Ready: false } status) return new WikiFactIndexBuilding(status);
-		var spans = query.Conditions.Select(FactSpan).ToList();
+		var spans = query.Conditions.Select((condition, i) => FactSpan(condition, definitions[i])).ToList();
 		if (FactQueryResume(query.After, spans) is not { } resume) return new Error<string>("That query's continuation is not valid here.");
 		var (driver, start) = resume.Driver < 0 ? (FactDriver(tx, spans), (byte[]?)null) : resume;
 		var conditions = query.Conditions;
@@ -75,9 +75,9 @@ public partial class LightningDatabase
 	private static long FactKeyInteger(string property, byte[] key)
 		=> unchecked((long)(BinaryPrimitives.ReadUInt64BigEndian(key.AsSpan(FactPropertyPrefix(property).Length + 1)) ^ 0x8000_0000_0000_0000UL));
 
-	private static FactConditionSpan FactSpan(WikiFactCondition condition) => condition switch
+	private static FactConditionSpan FactSpan(WikiFactCondition condition, PropertyDefinition definition) => condition switch
 	{
-		WikiFactEquals equals => FactPrefixSpan(FactValuePrefix(equals.Property, equals.Value)!),
+		WikiFactEquals equals => FactPrefixSpan(FactValuePrefix(equals.Property, equals.Value, definition.Type == SemanticType.Integer)),
 		WikiFactRange range => FactRangeSpan(Keys.Concat(FactPropertyPrefix(range.Property), [FactIntegerTag]), range)
 	};
 

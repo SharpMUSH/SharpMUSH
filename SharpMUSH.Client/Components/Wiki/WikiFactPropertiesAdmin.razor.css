@@ -1,0 +1,72 @@
+.wikiprops-empty {
+	padding: 1rem;
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}
+
+.wikiprops-scroll {
+	overflow-x: auto;
+}
+
+.wikiprops-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.8125rem;
+}
+
+.wikiprops-table th {
+	text-align: left;
+	font-weight: 600;
+	color: var(--text-dim);
+	padding: 0.375rem 0.5rem;
+	border-bottom: 1px solid var(--border);
+}
+
+.wikiprops-table td {
+	padding: 0.375rem 0.5rem;
+	border-bottom: 1px solid var(--border);
+	vertical-align: top;
+}
+
+.wikiprops-key,
+.wikiprops-type,
+.wikiprops-values {
+	font-family: var(--font-mono);
+}
+
+.wikiprops-key {
+	white-space: nowrap;
+}
+
+.wikiprops-label {
+	display: block;
+}
+
+.wikiprops-desc {
+	display: block;
+	color: var(--text-dim);
+}
+
+.wikiprops-multiple {
+	margin-left: 0.375rem;
+	padding: 0 0.375rem;
+	border-radius: 9px;
+	background: var(--border);
+	color: var(--text-dim);
+}
+
+.wikiprops-actions {
+	white-space: nowrap;
+	text-align: right;
+}
+
+.wikiprops-form {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+}
+
+.wikiprops-hint {
+	font-size: 0.8125rem;
+	color: var(--text-dim);
+}

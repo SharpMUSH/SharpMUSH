@@ -47,6 +47,7 @@ public static class PackageManifestWriter
 		WriteDeclarations(yaml, manifest.Declared);
 		WriteSettings(yaml, manifest.Settings ?? []);
 		WriteAttributeEntries(yaml, manifest.Declared.AttributeEntries);
+		WriteWikiProperties(yaml, manifest.Declared.WikiFactProperties);
 		WriteWiki(yaml, manifest.WikiPages);
 
 		switch (manifest.Kind)
@@ -308,6 +309,41 @@ public static class PackageManifestWriter
 			{
 				// The default pattern reads back from true; any other is quoted, for its backticks and wildcards.
 				yaml.Append("    watch: ").AppendLine(watch == AttributeWatch.DefaultPattern(entry.Name) ? "true" : Quoted(watch));
+			}
+		}
+	}
+
+	private static void WriteWikiProperties(StringBuilder yaml, IReadOnlyList<PackageWikiPropertySpec> properties)
+	{
+		if (properties.Count == 0)
+		{
+			return;
+		}
+
+		yaml.AppendLine();
+		yaml.AppendLine("wiki_properties:");
+		foreach (var property in properties)
+		{
+			yaml.Append("  ").Append(Scalar(property.Id)).AppendLine(":");
+			yaml.Append("    type: ").AppendLine(property.Type);
+			if (property.Multiple)
+			{
+				yaml.AppendLine("    multiple: true");
+			}
+
+			if (property.Values.Count > 0)
+			{
+				yaml.Append("    values: ").AppendLine(Flow(property.Values));
+			}
+
+			if (property.Label.Length > 0)
+			{
+				yaml.Append("    label: ").AppendLine(Scalar(property.Label));
+			}
+
+			if (property.Description.Length > 0)
+			{
+				yaml.Append("    description: ").AppendLine(Scalar(property.Description));
 			}
 		}
 	}

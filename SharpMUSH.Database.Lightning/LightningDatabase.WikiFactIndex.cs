@@ -1,11 +1,9 @@
 using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
-using System.Text;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
-using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
 namespace SharpMUSH.Database.Lightning;
@@ -19,8 +17,10 @@ namespace SharpMUSH.Database.Lightning;
 /// <para>Every page write moves the page's entries in the same job (<see cref="WikiListIndexes"/>), from the moment
 /// the index starts building; the build itself only adds the pages it has not reached, so a write never waits for it
 /// and a build stopped at shutdown resumes from <see cref="FactIndexState.ResumeAt"/>.</para>
-/// <para>Entries are typed by the schema they were built under. A different schema, or a state this build cannot
-/// read, clears the index first; while it clears, writes leave it alone.</para>
+/// <para>Every fact a page states has entries, whether or not its property is defined, so a property defined later
+/// finds the pages that already state it. An entry is typed by its property as it stands: a number property's values
+/// as numbers, anything else as text (see <see cref="RetypeFactEntries"/>). An index written in another key format,
+/// or a state this build cannot read, clears first; while it clears, writes leave it alone.</para>
 /// </remarks>
 public partial class LightningDatabase
 {
@@ -29,19 +29,18 @@ public partial class LightningDatabase
 	private const int FactIndexStateLength = 1 + 8 + 8 + 32;
 	private static readonly byte[] FactIndexStateKey = Keys.Str("wiki.fact.index");
 
-	/// <summary>What the entries are typed by: each property's id and type.</summary>
-	private static readonly byte[] FactIndexSchemaDigest = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n',
-		WikiFactSchema.Schema.Properties.OrderBy(p => p.Id, StringComparer.Ordinal).Select(p => $"{p.Id}\0{p.Type}"))));
+	/// <summary>The key format the entries are written in; an index written in another is built again.</summary>
+	private static readonly byte[] FactIndexSchemaDigest = SHA256.HashData("wiki.fact.index/2"u8);
 
 	/// <param name="ResumeAt">The first page key a build has not indexed yet.</param>
 	/// <param name="Indexed">Pages the build has indexed, for the progress it reports.</param>
-	/// <param name="Digest">The schema the entries were typed by; empty when the stored state could not be read.</param>
+	/// <param name="Digest">The key format the entries were written in; empty when the stored state could not be read.</param>
 	private sealed record FactIndexState(WikiFactIndexPhase Phase, long ResumeAt, long Indexed, byte[] Digest)
 	{
-		/// <summary>A world that never had an index: nothing is in it, and the schema is the running one.</summary>
+		/// <summary>A world that never had an index: nothing is in it, and the format is the running one.</summary>
 		internal static FactIndexState Fresh => new(WikiFactIndexPhase.Building, 0, 0, FactIndexSchemaDigest);
 
-		/// <summary>Whether page writes keep the entries: they are typed by the running schema and not being cleared.</summary>
+		/// <summary>Whether page writes keep the entries: they are in the running format and not being cleared.</summary>
 		internal bool Maintained => Phase != WikiFactIndexPhase.Clearing && Digest.AsSpan().SequenceEqual(FactIndexSchemaDigest);
 	}
 
@@ -69,15 +68,15 @@ public partial class LightningDatabase
 	private static void WikiFactEntries(ITx tx, long pageKey, WikiPageRecord r, bool add)
 	{
 		if (r.Facts is not { Length: > 0 } facts || !ReadFactIndexState(tx).Maintained) return;
-		PutFactEntries(tx, pageKey, facts, add);
+		PutFactEntries(tx, pageKey, facts, add, IntegerFactProperties(tx));
 	}
 
-	private static void PutFactEntries(ITx tx, long pageKey, WikiPageFactRecord[] facts, bool add)
+	/// <param name="integers">The properties whose values are keyed as numbers (<see cref="IntegerFactProperties"/>).</param>
+	private static void PutFactEntries(ITx tx, long pageKey, WikiPageFactRecord[] facts, bool add, IReadOnlySet<string> integers)
 	{
 		foreach (var fact in facts)
 		{
-			if (FactValuePrefix(fact.Property, fact.Value) is not { } prefix) continue;
-			var key = Keys.Concat(prefix, Keys.Dbref(pageKey));
+			var key = Keys.Concat(FactValuePrefix(fact.Property, fact.Value, integers.Contains(fact.Property)), Keys.Dbref(pageKey));
 			if (add) tx.Put(Tables.WikiFact, key, []);
 			else tx.Delete(Tables.WikiFact, key);
 		}
@@ -87,21 +86,14 @@ public partial class LightningDatabase
 	private static byte[] FactPropertyPrefix(string property) => Keys.Concat(Keys.Str(property), Keys.Sep);
 
 	/// <summary>
-	/// The prefix of the pages stating <paramref name="value"/> for <paramref name="property"/>, typed by the schema: an
-	/// integer as eight bytes that sort as the number does, anything else as its text and a 0x00. Null for a property
-	/// the schema does not define, which no query can name.
+	/// The prefix of the pages stating <paramref name="value"/> for <paramref name="property"/>: a value of an
+	/// <paramref name="integer"/> property as eight bytes that sort as the number does, anything else as its text and
+	/// a 0x00.
 	/// </summary>
-	private static byte[]? FactValuePrefix(string property, string value)
-	{
-		if (WikiFactDefinition(property) is not { } definition) return null;
-		return definition.Type == SemanticType.Integer
-			&& long.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
+	private static byte[] FactValuePrefix(string property, string value, bool integer)
+		=> integer && long.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
 			? Keys.Concat(FactPropertyPrefix(property), [FactIntegerTag], FactOrderedInteger(number))
 			: Keys.Concat(FactPropertyPrefix(property), [FactTextTag], Keys.Str(value), Keys.Sep);
-	}
-
-	private static PropertyDefinition? WikiFactDefinition(string property)
-		=> WikiFactSchema.Schema.Properties.FirstOrDefault(p => p.Id == property);
 
 	/// <summary>Big-endian with the sign bit flipped, so byte order is numeric order across negatives.</summary>
 	private static byte[] FactOrderedInteger(long value)
@@ -128,7 +120,7 @@ public partial class LightningDatabase
 		return await Store.WriteAsync(tx =>
 		{
 			var state = ReadFactIndexState(tx);
-			// A schema change starts the index over; the entries typed by the old one are cleared first.
+			// An index in another format starts over; its entries are cleared first.
 			if (!state.Digest.AsSpan().SequenceEqual(FactIndexSchemaDigest))
 				state = new(WikiFactIndexPhase.Clearing, 0, 0, FactIndexSchemaDigest);
 			state = state.Phase switch
@@ -156,11 +148,12 @@ public partial class LightningDatabase
 	private static FactIndexState IndexFactPages(ITx tx, FactIndexState state, int batch)
 	{
 		var indexed = 0;
+		var integers = IntegerFactProperties(tx);
 		foreach (var (key, value) in tx.RangeFromKey(Tables.WikiPage, WikiPageKey(state.ResumeAt)))
 		{
 			var pageKey = Keys.ReadDbref(key);
 			if (indexed == batch) return state with { ResumeAt = pageKey, Indexed = state.Indexed + indexed };
-			if (Codec.Deserialize<WikiPageRecord>(value) is { Facts: { Length: > 0 } facts }) PutFactEntries(tx, pageKey, facts, add: true);
+			if (Codec.Deserialize<WikiPageRecord>(value) is { Facts: { Length: > 0 } facts }) PutFactEntries(tx, pageKey, facts, add: true, integers);
 			indexed++;
 		}
 		return new(WikiFactIndexPhase.Ready, 0, state.Indexed + indexed, state.Digest);

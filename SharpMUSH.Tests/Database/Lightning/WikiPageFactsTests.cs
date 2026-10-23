@@ -9,6 +9,9 @@ public class WikiPageFactsTests : LightningDatabaseFixture
 {
 	private IWikiStore Wiki => Db;
 
+	[Before(Test)]
+	public Task DefineFactProperties() => WikiFactTestProperties.DefineAsync(Wiki);
+
 	private static readonly DateTimeOffset T0 = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
 
 	private async Task<WikiPage> AddAsync(string slug)
@@ -24,7 +27,7 @@ public class WikiPageFactsTests : LightningDatabaseFixture
 	[Arguments("pf2e:level", "6", "takes one value")]
 	[Arguments("pf2e:tradition", "elemental", "pf2e:tradition does not allow")]
 	[Arguments("pf2e:class", "wiki_page/987654", "names a page that does not exist")]
-	[Arguments("not a key", "1", "No property not a key")]
+	[Arguments("not a key", "1", "'not a key' is not a property key")]
 	public async Task FactsTheSchemaRefusesAreAnErrorAndChangeNothing(string property, string value, string message)
 	{
 		while (!(await Wiki.BuildFactIndexBatchAsync(256)).Ready) { }

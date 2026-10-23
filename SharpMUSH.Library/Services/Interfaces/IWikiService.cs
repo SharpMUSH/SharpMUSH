@@ -175,6 +175,15 @@ public interface IWikiService
 	Task<SemanticSchema> GetFactSchemaAsync();
 
 	/// <summary>
+	/// Defines a property facts may state, or replaces its definition (<see cref="IWikiStore.SetFactPropertyAsync"/>).
+	/// Who may do this is the caller's rule (wiki.admin).
+	/// </summary>
+	Task<Result<PropertyDefinition>> SetFactPropertyAsync(PropertyDefinition property);
+
+	/// <summary>Removes a property (<see cref="IWikiStore.DeleteFactPropertyAsync"/>); pages keep the facts that state it.</summary>
+	Task<Found<None>> DeleteFactPropertyAsync(string id);
+
+	/// <summary>
 	/// The pages <paramref name="visibility"/> admits that meet <paramref name="query"/>, one page of them at a time
 	/// (<see cref="IWikiStore.QueryFactsAsync"/>). Its category may be a name; it is matched as a key.
 	/// </summary>

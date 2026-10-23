@@ -192,7 +192,7 @@ public abstract class WikiControllerBase(
 		var facts = new List<WikiFactDto>(page.Facts.Count);
 		foreach (var fact in page.Facts)
 		{
-			if (WikiFactEntry.Definition(schema, fact.Property) is not { Type: SemanticType.PageRef })
+			if (!WikiFactEntry.NamesPage(schema, fact))
 				facts.Add(new(fact.Property, fact.Value));
 			else if (await Wiki.GetByIdAsync(fact.Value) is WikiPage target && visibility.Admits(target))
 				facts.Add(new(fact.Property, fact.Value) { PageTitle = target.Title, PageSlug = target.Slug, PageNamespace = target.Namespace });
@@ -231,6 +231,10 @@ public abstract class WikiControllerBase(
 
 		return list;
 	}
+
+	protected static WikiFactPropertyDto ToDto(PropertyDefinition p) => new(p.Id, WikiFactProperties.TypeName(p.Type),
+		p.Cardinality == Cardinality.Multiple, [.. (p.AllowedKeywords.IsDefault ? [] : p.AllowedKeywords).Select(k => k.Value)],
+		p.Label, p.Description);
 
 	protected static WikiTranslationSummaryDto ToDto(WikiTranslationSummary t) =>
 		new(t.Locale, t.Title, t.Published, t.UpdatedAt, t.RevisionNumber);
