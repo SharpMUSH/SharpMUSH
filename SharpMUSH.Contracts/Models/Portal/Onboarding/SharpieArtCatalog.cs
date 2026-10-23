@@ -10,6 +10,20 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-paranormal-kemono-administrator-identity", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-administrator-identity.png", 1254, 1254, "administrator-identity"),
+		new SharpieArt("sharpie-paranormal-kemono-player-speak-act", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-dragonlance-chibi-player-channels", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-dragonlance-chibi-player-speak-act", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-dragonlance-chibi-player-useful-action", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-discworld-chibi-administrator-walkthrough", "chibi", "Discworld", "images/sharpie/sharpie-discworld-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-paranormal-kemono-player-channels", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-paranormal-kemono-player-useful-action", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-discworld-chibi-administrator-invite", "chibi", "Discworld", "images/sharpie/sharpie-discworld-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-paranormal-kemono-player-world", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-paranormal-kemono-player-place", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-dragonlance-chibi-player-character", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-dragonlance-chibi-player-sign-in", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-dragonlance-chibi-shared-welcome", "chibi", "Dragonlance", "images/sharpie/sharpie-dragonlance-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
 		new SharpieArt("sharpie-paranormal-kemono-player-sign-in", "kemono", "Paranormal", "images/sharpie/sharpie-paranormal-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
 		new SharpieArt("sharpie-discworld-chibi-administrator-capabilities", "chibi", "Discworld", "images/sharpie/sharpie-discworld-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-discworld-chibi-administrator-rules", "chibi", "Discworld", "images/sharpie/sharpie-discworld-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
