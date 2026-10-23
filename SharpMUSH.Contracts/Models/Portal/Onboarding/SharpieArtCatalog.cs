@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-dark-fantasy-pixel-player-place", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dark-fantasy-pixel-player-sign-in", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-genre-none-kemono-shared-completion", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-kemono-player-continue", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-player-channels", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-player-speak-act", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dark-fantasy-pixel-player-useful-action", "pixel", "Dark Fantasy", "images/sharpie/sharpie-dark-fantasy-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
