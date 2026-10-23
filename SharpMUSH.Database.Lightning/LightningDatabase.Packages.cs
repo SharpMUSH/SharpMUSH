@@ -1,7 +1,6 @@
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using Records = SharpMUSH.Database.Lightning.Records;
@@ -90,13 +89,8 @@ public partial class LightningDatabase
 
 	public async Task RemoveInstalledPackageAsync(string packageId)
 	{
-		using var admission = EnterPackageWikiMutation();
-		await WriteFixtureAsync(admission, tx =>
+		await Store.WriteAsync(tx =>
 		{
-			// The pages it still owned become the game's again in this same job.
-			if (admission is { Phase: SemanticFixturePhase.Active })
-				ReleasePackagePages(tx, admission, [.. tx.Range(Tables.PkgWiki, Keys.Composite(packageId, ""))
-					.Select(entry => Codec.Deserialize<Records.PackageWikiPageRecord>(entry.Value))], CancellationToken.None);
 			tx.DeletePrefix(Tables.PkgObj, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgAttr, Keys.Composite(packageId, ""));
 			tx.DeletePrefix(Tables.PkgStruct, Keys.Composite(packageId, ""));
@@ -239,7 +233,6 @@ public partial class LightningDatabase
 
 	public async Task UpsertPackageWikiPageAsync(PackageWikiPageRecord record)
 	{
-		using var admission = EnterPackageWikiMutation();
 		var stored = new Records.PackageWikiPageRecord
 		{
 			PackageId = record.PackageId,
@@ -256,19 +249,8 @@ public partial class LightningDatabase
 			Pinned = record.Pinned,
 			BaselineVersion = record.BaselineVersion
 		};
-		await WriteFixtureAsync(admission, tx =>
-		{
-			var key = Keys.Composite(record.PackageId, record.Namespace, record.Slug);
-			if (admission is { Phase: SemanticFixturePhase.Active })
-			{
-				// A row that moves to another page first releases the page it named.
-				if (tx.TryGet(Tables.PkgWiki, key, out var previous)
-					&& Codec.Deserialize<Records.PackageWikiPageRecord>(previous) is { } old && old.PageId != record.PageId)
-					ReleasePackagePages(tx, admission, [old], CancellationToken.None);
-				MovePackagePageSource(tx, admission, record.PageId, PackagePageSource(record.PackageId, record.Namespace, record.Slug), null, CancellationToken.None);
-			}
-			tx.Put(Tables.PkgWiki, key, Codec.Serialize(stored));
-		});
+		await Store.WriteAsync(tx =>
+			tx.Put(Tables.PkgWiki, Keys.Composite(record.PackageId, record.Namespace, record.Slug), Codec.Serialize(stored)));
 	}
 
 	private static PackageWikiPageRecord MapPackageWikiPage(Records.PackageWikiPageRecord r) => new(
@@ -293,14 +275,7 @@ public partial class LightningDatabase
 
 	public async Task RemovePackageWikiPageAsync(string packageId, string ns, string slug)
 	{
-		using var admission = EnterPackageWikiMutation();
-		await WriteFixtureAsync(admission, tx =>
-		{
-			var key = Keys.Composite(packageId, ns, slug);
-			if (admission is { Phase: SemanticFixturePhase.Active } && tx.TryGet(Tables.PkgWiki, key, out var row))
-				ReleasePackagePages(tx, admission, [Codec.Deserialize<Records.PackageWikiPageRecord>(row)], CancellationToken.None);
-			tx.Delete(Tables.PkgWiki, key);
-		});
+		await Store.WriteAsync(tx => tx.Delete(Tables.PkgWiki, Keys.Composite(packageId, ns, slug)));
 	}
 
 	#endregion

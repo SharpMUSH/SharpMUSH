@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using SharpMUSH.Database.Lightning.Records;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
@@ -32,7 +31,7 @@ public partial class LightningDatabase
 
 	/// <summary>What the entries are typed by: each property's id and type.</summary>
 	private static readonly byte[] FactIndexSchemaDigest = SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n',
-		AtomicWikiLayout.Schema.Properties.OrderBy(p => p.Id, StringComparer.Ordinal).Select(p => $"{p.Id}\0{p.Type}"))));
+		WikiFactSchema.Schema.Properties.OrderBy(p => p.Id, StringComparer.Ordinal).Select(p => $"{p.Id}\0{p.Type}"))));
 
 	/// <param name="ResumeAt">The first page key a build has not indexed yet.</param>
 	/// <param name="Indexed">Pages the build has indexed, for the progress it reports.</param>
@@ -102,7 +101,7 @@ public partial class LightningDatabase
 	}
 
 	private static PropertyDefinition? WikiFactDefinition(string property)
-		=> AtomicWikiLayout.Schema.Properties.FirstOrDefault(p => p.Id == property);
+		=> WikiFactSchema.Schema.Properties.FirstOrDefault(p => p.Id == property);
 
 	/// <summary>Big-endian with the sign bit flipped, so byte order is numeric order across negatives.</summary>
 	private static byte[] FactOrderedInteger(long value)

@@ -2,7 +2,6 @@ using System.Buffers.Binary;
 using System.Security.Cryptography;
 using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 
@@ -11,21 +10,6 @@ namespace SharpMUSH.Database.Lightning;
 public partial class LightningDatabase
 {
 	private long _wikiCategoryReadyEpoch = -1;
-
-	private bool HasCompleteWikiCategoryAuthority(WikiCategoryMigrationOptions options, CancellationToken ct)
-	{
-		var budget = options.CreateBudget(ct);
-		using var fixedWork = budget.ReserveWorking(32768);
-		return Store.Read(tx =>
-		{
-			ValidateWikiCategoryEnvironment();
-			var reader = (IWikiCategoryMigrationReadTx)tx;
-			using var state = reader.ReadWikiCategoryState(budget) is NativeReadValue found ? found : null;
-			using var marker = reader.ReadWikiCategoryCompletion(budget) is NativeReadValue completion ? completion : null;
-			return WikiCategoryAuthorityCodec.Validate(state is not null, StateBytes(state), marker is not null,
-				StateBytes(marker), Store.MaxKeySize, ct);
-		});
-	}
 
 	internal async ValueTask MigrateWikiCategoryValuesAsync(WikiCategoryMigrationOptions options, CancellationToken ct = default)
 	{
@@ -55,7 +39,6 @@ public partial class LightningDatabase
 				Volatile.Write(ref _wikiCategoryReadyEpoch, initial.Epoch);
 				return;
 			}
-			using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
 			while (true)
 			{
 				ct.ThrowIfCancellationRequested();
@@ -67,7 +50,7 @@ public partial class LightningDatabase
 					await Store.WriteAsync(tx =>
 					{
 						candidate = ApplyWikiCategoryMigrationBatch(tx, options, expected is not null,
-							StateBytes(expected), initial.Epoch, admission, budget);
+							StateBytes(expected), initial.Epoch, budget);
 					}, ct);
 					expected?.Dispose();
 					expected = candidate;
@@ -97,7 +80,7 @@ public partial class LightningDatabase
 
 	internal NativeReadValue ApplyWikiCategoryMigrationBatch(ITx tx, WikiCategoryMigrationOptions options,
 		bool hasExpectedState, ReadOnlySpan<byte> expectedState, long expectedEpoch,
-		SemanticFixtureMutationLease? admission, NativeReadBudget budget)
+		NativeReadBudget budget)
 	{
 		ArgumentNullException.ThrowIfNull(options);
 		ArgumentNullException.ThrowIfNull(budget);
@@ -115,9 +98,6 @@ public partial class LightningDatabase
 		if (hasExpectedState != (current is not null) || !expectedState.SequenceEqual(StateBytes(current)))
 			throw CategoryCheckpointConflict();
 		if (complete) return OwnCategoryCheckpoint(WikiCategoryCheckpointCodec.Decode(current!.Value, Store.MaxKeySize, budget.CancellationToken), budget);
-		if (_fixtureLease is not null && admission?.Phase != SemanticFixturePhase.Inactive)
-			throw new WikiFixtureMutationException(WikiFixtureMutationFailure.UnsupportedOperation);
-		RequireFixtureMutation(tx, admission, budget, fixedWork);
 		if (current is null)
 		{
 			var begin = new WikiCategoryMigrationCheckpoint(WikiCategoryMigrationPhase.Clearing, 1, 0, 0, 0, [], [], [], [], 0, 0);
