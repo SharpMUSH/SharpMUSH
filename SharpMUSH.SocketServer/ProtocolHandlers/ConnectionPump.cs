@@ -68,7 +68,7 @@ public sealed class ConnectionPump(
 		{
 			if (claim.Found) await resumeTokens.InvalidateAsync(token, ct);
 			handle = candidateHandle;
-			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), ct);
+			session = await RegisterFreshAsync(transport, handle, ReadPresenceClass(firstFrame), SeqEnvelope.ReadsSignIn(firstFrame), ct);
 			// A failed authorization must not reveal old output. Fresh registration has its own token.
 			if (!resume && !SeqEnvelope.IsHello(firstFrame))
 				await PublishInputAsync(handle, firstFrame, ct);
@@ -360,7 +360,7 @@ public sealed class ConnectionPump(
 	}
 
 	/// <summary>Registers a fresh session and returns its per-incarnation session id.</summary>
-	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, string presenceClass, CancellationToken ct)
+	private async Task<string> RegisterFreshAsync(IDuplexTransport transport, long handle, string presenceClass, bool signIn, CancellationToken ct)
 	{
 		// A fresh incarnation gets a unique session id. Replay is keyed by it (never by the reusable
 		// handle), so a recycled handle's new occupant can never read this session's buffer, and vice
@@ -375,7 +375,7 @@ public sealed class ConnectionPump(
 		var output = CreateOutput(handle, session, sink);
 		await connectionService.RegisterAsync(handle, transport.RemoteIp, transport.Hostname, transport.Kind,
 			output, output, () => Encoding.UTF8, CreateDisconnect(handle, session, sink),
-			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, cancellationToken: ct);
+			presenceClass: presenceClass, isSecure: transport.IsSecure, sessionId: session, signIn: signIn, cancellationToken: ct);
 
 		var token = await resumeTokens.MintAsync(handle, session, ct);
 		await SendTransportAsync(transport, SeqEnvelope.ResumeToken(token), ct);

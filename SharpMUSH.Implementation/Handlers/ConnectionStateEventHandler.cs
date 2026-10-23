@@ -8,6 +8,7 @@ using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Implementation.Handlers;
 
@@ -47,7 +48,11 @@ public class ConnectionStateEventHandler(
 			var connectionData = connectionService.Get(notification.Handle);
 			if (connectionData != null)
 			{
-				if (await gameMessages.RenderAsync(GameMessage.Connect, notification.Handle) is MString connectText)
+				// A portal terminal logs in the moment it opens; the screen explaining how to log in is not for it.
+				// After a LOGOUT it is at the login prompt like any other connection.
+				var signingIn = notification.OldState == IConnectionService.ConnectionState.None
+					&& connectionData.Metadata.GetValueOrDefault(ConnectionEstablishedMessage.SignInMetadata) == "1";
+				if (!signingIn && await gameMessages.RenderAsync(GameMessage.Connect, notification.Handle) is MString connectText)
 				{
 					await notifyService.Notify(notification.Handle, connectText);
 				}
