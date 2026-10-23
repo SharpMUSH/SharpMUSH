@@ -81,14 +81,16 @@ public partial class LightningDatabase
 		WikiFactRange range => FactRangeSpan(Keys.Concat(FactPropertyPrefix(range.Property), [FactIntegerTag]), range)
 	};
 
-	private static FactConditionSpan FactPrefixSpan(byte[] prefix) => new(prefix, key => key.AsSpan().StartsWith(prefix));
+	// Every entry is its value's prefix and an eight-byte page key; a continuation's key is held to that shape too.
+	private static FactConditionSpan FactPrefixSpan(byte[] prefix)
+		=> new(prefix, key => key.Length == prefix.Length + 8 && key.AsSpan().StartsWith(prefix));
 
 	/// <summary>Every integer entry of the property from the range's lowest value through its highest.</summary>
 	private static FactConditionSpan FactRangeSpan(byte[] integers, WikiFactRange range)
 	{
 		var last = Keys.Concat(integers, FactOrderedInteger(range.Max ?? long.MaxValue));
 		return new(Keys.Concat(integers, FactOrderedInteger(range.Min ?? long.MinValue)),
-			key => key.AsSpan().StartsWith(integers) && key.AsSpan(0, last.Length).SequenceCompareTo(last) <= 0);
+			key => key.Length == last.Length + 8 && key.AsSpan().StartsWith(integers) && key.AsSpan(0, last.Length).SequenceCompareTo(last) <= 0);
 	}
 
 	/// <summary>The condition with the fewest entries, counting each up to one past a call's budget; the first on a tie.</summary>

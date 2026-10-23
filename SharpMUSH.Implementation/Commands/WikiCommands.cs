@@ -128,8 +128,8 @@ public partial class Commands
 				=> await FactWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!),
 			// The conditions are one list; "=" splits the first of them, so it is put back.
 			"QUERY" when hasArg0
-				=> await QueryWiki.Handle(parser, Mediator, wikiService, NotifyService,
-					arg1CallState is null ? arg0!.ToPlainText() : $"{arg0!.ToPlainText()}={arg1?.ToPlainText()}"),
+				=> await QueryWiki.Handle(parser, Mediator, wikiService, localization, NotifyService,
+					arg1CallState is null ? arg0!.ToPlainText() : $"{arg0!.ToPlainText()}={arg1?.ToPlainText()}", locale, forceSource),
 			// "page=list" sets a page's categories ("page=" clears them); a bare name lists a category.
 			"CATEGORY" when hasArg0 && arg1CallState is not null
 				=> await EditWiki.SetCategories(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1),
