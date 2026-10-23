@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-detective-pixel-player-speak-act", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-detective-pixel-player-useful-action", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-detective-pixel-player-world", "pixel", "Detective", "images/sharpie/sharpie-detective-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-player-sign-in", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-shared-welcome", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
