@@ -16,13 +16,23 @@ namespace SharpMUSH.Server.Controllers;
 [RequestSizeLimit(16 * 1024)]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 public sealed class OnboardingController(IMediator mediator, BearerAccountResolver accounts,
-	IAdministrativeCapabilityService capabilities, OnboardingCapabilityService guideCapabilities) : ControllerBase
+	IAdministrativeCapabilityService capabilities, OnboardingCapabilityService guideCapabilities,
+	AdministratorChecklistDetector detector) : ControllerBase
 {
 	[HttpGet("/api/onboarding/capabilities")]
 	public async Task<IActionResult> Capabilities(CancellationToken cancellationToken)
 		=> await accounts.ResolveCharacterAsync(this) switch
 		{
 			SignedInCharacter account => Ok(await guideCapabilities.ResolveAsync(account.Character.Object.DBRef, cancellationToken)),
+			ActionResult refused => refused
+		};
+
+	/// <summary>The administrator steps, not yet verified by this account, that the game shows are done.</summary>
+	[HttpGet("/api/onboarding/administrator/detected")]
+	public async Task<IActionResult> Detected(CancellationToken cancellationToken)
+		=> await accounts.ResolveAsync(this) switch
+		{
+			SignedInAccount account => await DetectAsync(account, cancellationToken),
 			ActionResult refused => refused
 		};
 
@@ -47,6 +57,13 @@ public sealed class OnboardingController(IMediator mediator, BearerAccountResolv
 		if (!TryJourney(journey, out var selected)) return BadRequest("Unknown guide journey.");
 		if (!await CanAccessAsync(account, selected, ct)) return Forbid();
 		return Ok(await mediator.Send(new GetOnboardingProgressQuery(account.Id, selected), ct));
+	}
+
+	private async Task<IActionResult> DetectAsync(SignedInAccount account, CancellationToken ct)
+	{
+		if (!await CanAccessAsync(account, GuideJourney.Administrator, ct)) return Forbid();
+		var progress = await mediator.Send(new GetOnboardingProgressQuery(account.Id, GuideJourney.Administrator), ct);
+		return Ok(await detector.DetectAsync(account.Id, GuideStepIds.Administrator.Except(progress.CompletedStepIds).ToArray(), ct));
 	}
 
 	private async Task<IActionResult> WriteAsync(SignedInAccount account, string journey, SaveOnboardingRequest request, CancellationToken ct)
