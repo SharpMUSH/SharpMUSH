@@ -66,7 +66,8 @@ not read is left out.
 `wikiquery()` returns them from softcode (see [WIKIQUERY()]). Write each
 condition as `<property>=<value>`, or as `<property>=<low>..<high>` for a
 range of whole numbers. `category=<name>` and `namespace=<name>` limit where
-the pages come from.
+the pages come from. `@wiki/query` lists up to 100 pages and says when more
+match.
 
 ```sharp
 > @wiki/query pf2e:tradition=arcane, pf2e:level=1..3
