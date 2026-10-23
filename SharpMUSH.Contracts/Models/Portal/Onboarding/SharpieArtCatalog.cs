@@ -12,6 +12,11 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-adult-pixel-player-character", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-pixel-player-sign-in", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-pixel-shared-welcome", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-walkthrough", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-joining", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-chibi-shared-completion", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-joining", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-identity", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
