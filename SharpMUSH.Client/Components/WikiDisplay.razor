@@ -51,6 +51,7 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
+            <WikiFactSearch Category="@Slug" Locale="@Locale" />
             <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
         </div>
         <aside class="wiki-page-aside">
@@ -119,9 +120,11 @@ else
                         </div>
                     </KitCard>
                 }
+                <WikiFactBox Facts="@Article.Facts" HoldLinks="@AwaitingReturnContext" />
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
+                    <WikiFactSearch Category="@Slug" Locale="@Locale" />
                     <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
                 }
             }

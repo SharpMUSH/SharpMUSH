@@ -5594,6 +5594,36 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Opisz tę kategorię</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Fakty</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Wartość</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Usuń fakt</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Dodaj fakt</value>
+  </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Znajdź strony według faktów</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Warunki oddzielone przecinkami</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Znajdź</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Więcej</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Żadna strona nie pasuje.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>Indeks faktów jest jeszcze budowany. Spróbuj ponownie za chwilę.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Dodaj kategorię</value>
   </data>

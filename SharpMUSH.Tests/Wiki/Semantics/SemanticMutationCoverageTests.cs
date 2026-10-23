@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Wiki.Semantics;
 /// <summary>Current storage boundaries, not a semantic freshness or atomic-index guarantee.</summary>
 public class SemanticMutationCoverageTests : LightningDatabaseFixture
 {
-	private enum Impact { Read, PresentationOnly, SemanticMutation }
+	private enum Impact { Read, PresentationOnly, SemanticMutation, FactIndex }
 
 	// Explicit names intentionally make interface expansion demand a classification review.
 	private static readonly Dictionary<string, Impact> WikiMethods = new()
@@ -28,6 +28,7 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 		["GetPagesByCategoryAsync"] = Impact.Read,
 		["GetRequirementsAsync"] = Impact.Read,
 		["GetPinnedCategoriesAsync"] = Impact.Read,
+		["GetFactSchemaAsync"] = Impact.Read,
 		["GetRevisionsAsync"] = Impact.Read,
 		["GetRevisionsBeforeAsync"] = Impact.Read,
 		["GetRevisionAsync"] = Impact.Read,
@@ -40,6 +41,11 @@ public class SemanticMutationCoverageTests : LightningDatabaseFixture
 		["SetRequirementsAsync"] = Impact.SemanticMutation,
 		["SetPageTitleAsync"] = Impact.SemanticMutation,
 		["SetPageMetadataAsync"] = Impact.SemanticMutation,
+		["SetPageFactsAsync"] = Impact.SemanticMutation,
+		["GetFactIndexStatusAsync"] = Impact.Read,
+		["BuildFactIndexBatchAsync"] = Impact.FactIndex,
+		["RebuildFactIndexAsync"] = Impact.FactIndex,
+		["QueryFactsAsync"] = Impact.Read,
 		["SetCategoryPinnedAsync"] = Impact.PresentationOnly,
 		["WriteTranslationAsync"] = Impact.SemanticMutation,
 		["DeleteTranslationAsync"] = Impact.SemanticMutation

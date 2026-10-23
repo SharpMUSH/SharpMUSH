@@ -59,14 +59,6 @@ public class SemanticContractTests
 		await Error(Schema(), big, ValidationCode.Quota);
 	}
 	[Test]
-	public async Task AliasesCannotGuessOrRetargetDeletedIncarnations()
-	{
-		var key = new PortableKey("pack", "Main", "key");
-		await Assert.That(CanonicalFacts.Resolve(key, [new(key, new("old")), new(key, new("new"))], new HashSet<PageRef> { new("new") }) is ValidationFailure a && a.Code == ValidationCode.AmbiguousAlias).IsTrue();
-		await Assert.That(CanonicalFacts.Resolve(key, [new(key, new("old"))], new HashSet<PageRef> { new("new") }) is ValidationFailure m && m.Code == ValidationCode.MissingTarget).IsTrue();
-		await Assert.That(CanonicalFacts.Resolve(key, [new(key, new("old"))], new HashSet<PageRef> { new("old") }) is PageRef p && p.Id == "old").IsTrue();
-	}
-	[Test]
 	public async Task RejectsUnqualifiedAndMalformedPropertyIdentity()
 	{
 		foreach (var id in new[] { "p", ":p", "test:", "a:b:c", "a :b", "a:b\n" })

@@ -1,7 +1,6 @@
 using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Seed;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
@@ -31,20 +30,7 @@ public partial class LightningDatabase
 	/// 5. ensure the singleton server-state row exists.
 	/// </summary>
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
-	{
-		try
-		{
-			await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
-			// Binding the primitive is not enough: seeds, plugins, credentials AND definition reload
-			// must all have succeeded before the first issued lineage becomes reopenable.
-			_fixtureLease?.Initialized();
-		}
-		catch
-		{
-			_fixtureLease?.InitializationFailed();
-			throw;
-		}
-	}
+		=> await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
 
 	private async Task MigrateCoreAsync(CancellationToken cancellationToken)
 	{
@@ -56,29 +42,14 @@ public partial class LightningDatabase
 			var pluginSteps = _migrationSources.SelectMany(source => source.LightningSteps).ToArray();
 			if (pluginSteps.Any(step => string.Equals(step.Id, WikiCategoryCheckpointCodec.MigrationId, StringComparison.Ordinal)))
 				throw new InvalidOperationException("A plugin migration uses the reserved wiki category migration ID.");
-			// Claim has already restored fixture phase. Refuse an incomplete Active world before
-			// identity binding or seed commits, retaining real admission until startup finishes.
-			// Identity does not exist yet on first open, so its transactional guard comes later.
-			using var categoryStartupAdmission = HasCompleteWikiCategoryAuthority(categoryOptions, cancellationToken)
-				? null : EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
-			await InitializeSemanticFixtureIdentityAsync(cancellationToken);
-			// A rebuild a previous process left staged is discarded before anything else writes; resume is not implemented.
-			await DiscardIncompleteSemanticRebuildAsync(cancellationToken);
-			using var migrationAdmission = EnterFixtureMutation(SemanticFixtureMutation.Pin);
-			await Store.WriteAsync(tx =>
-			{
-				RequireFixtureMutation(tx, migrationAdmission);
-				AtomicMigrationGuardObserved?.Invoke(AtomicWikiPhase);
-				UpsertSeedDefinitions(tx);
-			}, cancellationToken);
+			await Store.WriteAsync(UpsertSeedDefinitions, cancellationToken);
 			InvalidateDefinitions();
 			await Store.WriteAsync(SeedRoles, cancellationToken);
 
 			var initialApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialMigrationId), out _));
 			if (!initialApplied)
 			{
-				using var admission = EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
-				await WriteFixtureAsync(admission, ApplyInitialSeed, cancellationToken);
+				await Store.WriteAsync(ApplyInitialSeed, cancellationToken);
 				// After the object seed because it writes attributes onto #4 owned by #1, and through
 				// SetAttributeAsync rather than raw puts so the stored values match what a write in game makes.
 				await AncestorSeed.SeedAncestorFormatsAsync(this, cancellationToken);

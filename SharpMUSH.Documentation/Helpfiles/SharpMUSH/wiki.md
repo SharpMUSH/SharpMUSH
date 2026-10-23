@@ -45,6 +45,7 @@ evaluation of the arguments.
 - [wiki editing]: creating, editing, translating, rolling back
 - [wiki administration]: deleting, publishing, permissions
 - [wiki categories]: filing pages in categories, and pinning
+- [wiki facts]: a page's facts, like a spell's level
 
 ::: seealso
 - [WIKI()]

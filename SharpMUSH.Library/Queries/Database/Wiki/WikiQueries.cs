@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using Mediator;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -41,6 +42,15 @@ public sealed record GetWikiRequirementsQuery() : IQuery<IReadOnlyList<WikiRequi
 	public string CacheKey => "wiki:requirements";
 	public string[] CacheTags => [Definitions.CacheTags.WikiRequirements];
 }
+
+/// <summary>Forwards to <see cref="IWikiStore.GetFactSchemaAsync"/>. Uncached.</summary>
+public sealed record GetWikiFactSchemaQuery() : IQuery<SemanticSchema>;
+
+/// <summary>Forwards to <see cref="IWikiStore.GetFactIndexStatusAsync"/>. Uncached.</summary>
+public sealed record GetWikiFactIndexStatusQuery() : IQuery<WikiFactIndexStatus>;
+
+/// <summary>Forwards to <see cref="IWikiStore.QueryFactsAsync"/>. Uncached.</summary>
+public sealed record QueryWikiFactsQuery(WikiFactQuery Query, WikiVisibility Visibility) : IQuery<WikiFactQueryResult>;
 
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetPinnedCategoriesAsync"/>. Uncached.</summary>
 public sealed record GetPinnedWikiCategoriesQuery() : IQuery<IReadOnlyList<string>>;

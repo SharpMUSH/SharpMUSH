@@ -1,6 +1,8 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -173,7 +175,19 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 			NotFound notFound => notFound,
 		};
 
+	public async Task<FoundResult<WikiPage>> SetFactsAsync(string id, IEnumerable<WikiPageFact> facts)
+		=> WikiPageFacts.Normalize(facts) switch
+		{
+			IReadOnlyList<WikiPageFact> normalized => await store.SetPageFactsAsync(id, normalized),
+			Error<string> error => error,
+		};
+
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync() => store.GetPinnedCategoriesAsync();
+
+	public Task<SemanticSchema> GetFactSchemaAsync() => store.GetFactSchemaAsync();
+
+	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> store.QueryFactsAsync(query with { Category = query.Category is { } category ? WikiHelpers.CategoryKey(category) : null }, visibility);
 
 	public async Task<Result<bool>> SetCategoryPinnedAsync(string category, bool pinned)
 		=> WikiHelpers.CategoryKey(category) is { Length: > 0 } key

@@ -1,7 +1,9 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using System.Collections.Concurrent;
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -192,6 +194,25 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult<Found<None>>(new None());
 	}
 
+	/// <summary>No property is defined, so no fact is stated here.</summary>
+	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(new SemanticSchema(0, []));
+
+	/// <summary>Defines no properties, so there is nothing to index: every page is in it.</summary>
+	public Task<WikiFactIndexStatus> GetFactIndexStatusAsync()
+		=> Task.FromResult(new WikiFactIndexStatus(WikiFactIndexPhase.Ready, _pagesById.Count, _pagesById.Count));
+
+	public Task<WikiFactIndexStatus> BuildFactIndexBatchAsync(int batchSize) => GetFactIndexStatusAsync();
+
+	public Task<WikiFactIndexStatus> RebuildFactIndexAsync() => GetFactIndexStatusAsync();
+
+	/// <summary>No property is defined, so every query names one this store cannot answer.</summary>
+	public async Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> WikiFactQueries.Check(await GetFactSchemaAsync(), query) switch
+		{
+			Error<string> error => error,
+			_ => new WikiFactQueryPage([], null)
+		};
+
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());
 
@@ -216,6 +237,16 @@ public sealed class InMemoryWikiStore : IWikiStore
 		var updated = existing with { Categories = categories, Published = published };
 		_pagesById[id] = updated;
 		return Task.FromResult<Found<WikiPage>>(updated);
+	}
+
+	public Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
+	{
+		if (!_pagesById.TryGetValue(id, out var existing))
+			return Task.FromResult<FoundResult<WikiPage>>(new NotFound());
+
+		var updated = existing with { Facts = [.. facts] };
+		_pagesById[id] = updated;
+		return Task.FromResult<FoundResult<WikiPage>>(updated);
 	}
 
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take)

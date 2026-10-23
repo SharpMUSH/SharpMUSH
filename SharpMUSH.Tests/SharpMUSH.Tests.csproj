@@ -21,7 +21,6 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../tools/WikiSemantics/WikiSemantics.csproj" />
     <!-- Run the recovery probe as a separate process with its own dependency output. -->
     <ProjectReference Include="../tools/WikiSemantics.NativeProbe/WikiSemantics.NativeProbe.csproj" ReferenceOutputAssembly="false" Private="false" PrivateAssets="all" />
     <Compile Include="../tools/ContractAudit/SourceProvenance.cs" Link="Documentation/SourceProvenance.cs" />

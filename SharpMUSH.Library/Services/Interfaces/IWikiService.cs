@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
@@ -170,6 +171,15 @@ public interface IWikiService
 	/// </summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 
+	/// <summary>The properties a page's facts may state: each one's id, type, cardinality and allowed keywords.</summary>
+	Task<SemanticSchema> GetFactSchemaAsync();
+
+	/// <summary>
+	/// The pages <paramref name="visibility"/> admits that meet <paramref name="query"/>, one page of them at a time
+	/// (<see cref="IWikiStore.QueryFactsAsync"/>). Its category may be a name; it is matched as a key.
+	/// </summary>
+	Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility);
+
 	/// <summary>
 	/// Pins <paramref name="category"/> to the wiki home or takes it off. The category need not have a page
 	/// or any member yet. Returns whether anything changed, or <c>Error</c> for a blank name. Who may do this
@@ -185,6 +195,14 @@ public interface IWikiService
 	/// Returns the updated page, or <c>NotFound</c> when no page with <paramref name="id"/> exists.
 	/// </summary>
 	Task<Found<WikiPage>> SetMetadataAsync(string id, IEnumerable<string> categories, bool published);
+
+	/// <summary>
+	/// Replaces the facts a page states about itself (<see cref="WikiPage.Facts"/>). Like
+	/// <see cref="SetMetadataAsync"/> it writes no revision, and an edit of the page's text, title or categories
+	/// keeps them. Returns the updated page, <c>NotFound</c> when no page with <paramref name="id"/> exists, or an
+	/// error naming the fact that is malformed or does not fit the world's schema.
+	/// </summary>
+	Task<FoundResult<WikiPage>> SetFactsAsync(string id, IEnumerable<WikiPageFact> facts);
 
 	/// <summary>
 	/// Returns the <em>source-locale</em> revision history for a page, ordered by revision number

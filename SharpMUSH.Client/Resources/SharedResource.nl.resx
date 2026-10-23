@@ -5594,6 +5594,36 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Deze categorie beschrijven</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Feiten</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Waarde</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Feit verwijderen</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Een feit toevoegen</value>
+  </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Pagina's zoeken op feit</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Voorwaarden, gescheiden door komma's</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Zoeken</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Meer</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Geen pagina's gevonden.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>De feitenindex wordt nog opgebouwd. Probeer het zo opnieuw.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Categorie toevoegen</value>
   </data>
