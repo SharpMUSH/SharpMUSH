@@ -58,7 +58,8 @@ public static class WikiFactEntry
 	/// <summary>
 	/// The pages whose facts name <paramref name="page"/>, for each page property that any does, in the schema's order:
 	/// at most <paramref name="limit"/> of them, and whether more do. Only pages <paramref name="visibility"/> admits
-	/// are counted, and a page naming itself is not. Nothing is listed while the fact index is building.
+	/// are counted, and a page naming itself is not; a read that found only hidden pages goes on from where it stopped.
+	/// Nothing is listed while the fact index is building.
 	/// </summary>
 	public static async Task<IReadOnlyList<WikiFactNamers>> NamedByAsync(IWikiService wiki, SemanticSchema schema, WikiPage page,
 		WikiVisibility visibility, int limit)
@@ -67,12 +68,22 @@ public static class WikiFactEntry
 		foreach (var property in (schema.Properties.IsDefault ? [] : schema.Properties).Where(p => p.Type == SemanticType.PageRef))
 		{
 			var query = new WikiFactQuery([new WikiFactEquals(property.Id, page.Id)], limit + 1);
-			if (await wiki.QueryFactsAsync(query, visibility) is not WikiFactQueryPage found) continue;
-			var pages = found.Pages.Where(p => p.Id != page.Id).ToList();
-			if (pages.Count > 0) named.Add(new(property.Id, pages[..Math.Min(limit, pages.Count)], pages.Count > limit || found.Next is not null));
+			var pages = new List<WikiPage>();
+			string? next = null;
+			for (var read = 0; read < MaxNamerReads && pages.Count <= limit; read++)
+			{
+				if (await wiki.QueryFactsAsync(query with { After = next }, visibility) is not WikiFactQueryPage found) break;
+				pages.AddRange(found.Pages.Where(p => p.Id != page.Id));
+				next = found.Next;
+				if (next is null) break;
+			}
+			if (pages.Count > 0) named.Add(new(property.Id, pages[..Math.Min(limit, pages.Count)], pages.Count > limit || next is not null));
 		}
 		return named;
 	}
+
+	/// <summary>Index reads <see cref="NamedByAsync"/> makes per property at most, past pages the reader may not see.</summary>
+	private const int MaxNamerReads = 8;
 
 	/// <summary><paramref name="property"/>'s label, or the property itself when it has none or is not defined.</summary>
 	public static string Label(SemanticSchema schema, string property)

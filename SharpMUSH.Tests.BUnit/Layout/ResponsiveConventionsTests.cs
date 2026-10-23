@@ -102,6 +102,8 @@ public class ResponsiveConventionsTests
 			"renders only <WikiView Mode=\"View\">, whose own stylesheet carries the tiers",
 		["Pages/WikiRecent.razor.css"] =
 			"a single column of change rows at the page's full width; the rows wrap on their own",
+		["Pages/WikiQuery.razor.css"] =
+			"renders only the page header and <WikiFactSearch>, whose own stylesheet lays out its results",
 		["Pages/WikiPageEdit.razor.css"] =
 			"renders only <WikiView Mode=\"Edit\"> behind a height:100% wrapper; WikiEdit carries the tiers",
 	};
