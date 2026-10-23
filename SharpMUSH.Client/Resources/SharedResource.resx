@@ -5009,6 +5009,12 @@
   <data name="AdmSetupSaving" xml:space="preserve">
     <value>Saving…</value>
   </data>
+  <data name="AdmSetupDoneStaff" xml:space="preserve">
+    <value>You are playing #1, God, which passes every permission check. Before you build or test anything, create a staff character of your own and keep #1 for emergencies.</value>
+  </data>
+  <data name="AdmSetupDoneChecklist" xml:space="preserve">
+    <value>Open the first-players checklist</value>
+  </data>
   <data name="AdmSetupDoneLead" xml:space="preserve">
     <value>Everything here can be changed later from Build &amp; manage: the handlers in Configuration, under Database; packages in Packages; and another game's database in Database import.</value>
   </data>
@@ -9423,7 +9429,7 @@
   <data name="GuideLesson_Discord_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
   <data name="GuideLesson_Discord_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
   <data name="GuideLesson_Discord_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
-  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. Practice here is local; check the game's etiquette before speaking live.</value></data>
+  <data name="GuideLesson_Discord_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. What your character says and does is in character (IC); talk about the game or the real world is out of character (OOC), so mark it the way this game asks, such as Story's OOC mode. Practice here is local; check the game's etiquette before speaking live.</value></data>
   <data name="GuideLesson_Discord_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
   <data name="GuideLesson_Discord_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
   <data name="GuideLesson_Discord_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
@@ -9452,7 +9458,7 @@
   <data name="GuideLesson_OtherRoleplay_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
   <data name="GuideLesson_OtherRoleplay_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
   <data name="GuideLesson_OtherRoleplay_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
-  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve"><value>As at a tabletop session, describe what your character attempts and leave other players room to respond. pose waves. adds your character's name; say Hello speaks to the current room. A private page reaches a named player. Agree on scene expectations and read this game's consent rules before joining.</value></data>
+  <data name="GuideLesson_OtherRoleplay_speak-act_Body" xml:space="preserve"><value>As at a tabletop session, describe what your character attempts and leave other players room to respond. pose waves. adds your character's name; say Hello speaks to the current room. A private page reaches a named player. Keep out-of-character (OOC) talk marked apart from your character's words. Agree on scene expectations and read this game's consent rules before joining.</value></data>
   <data name="GuideLesson_OtherRoleplay_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
   <data name="GuideLesson_OtherRoleplay_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
   <data name="GuideLesson_OtherRoleplay_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
@@ -9470,7 +9476,7 @@
   <data name="GuideLesson_Explore_useful-action_Title" xml:space="preserve"><value>Try one small command</value></data>
   <data name="GuideLesson_Explore_useful-action_Body" xml:space="preserve"><value>The look command asks the game to describe where you are. Try it in local practice first. Then insert look into the empty, connected Game command box (or Command mode in Story) and press Send yourself. Inserting it does not send or complete this step.</value></data>
   <data name="GuideLesson_Explore_speak-act_Title" xml:space="preserve"><value>Know who can hear you</value></data>
-  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. Practice here is local; check the game's etiquette before speaking live.</value></data>
+  <data name="GuideLesson_Explore_speak-act_Body" xml:space="preserve"><value>In the terminal, say Hello speaks to people in your room and pose waves. describes your character waving. Story view, when a scene is available, also offers Say, OOC and Emit modes that treat your text literally; Command runs game syntax and expressions. A page targets one named player. What your character says and does is in character (IC); talk about the game or the real world is out of character (OOC), so mark it the way this game asks, such as Story's OOC mode. Practice here is local; check the game's etiquette before speaking live.</value></data>
   <data name="GuideLesson_Explore_continue_Title" xml:space="preserve"><value>You're ready to explore</value></data>
   <data name="GuideLesson_Explore_continue_Body" xml:space="preserve"><value>Use help for the game's command reference, look to reorient, and this game's rules and character guide for its own expectations. Ask the community when you need a hand. You can skip, close, or return to any part of this guide.</value></data>
   <data name="GuideLesson_Explore_continue_Action" xml:space="preserve"><value>Explore the game</value></data>
@@ -9486,19 +9492,38 @@
   <data name="GuideLesson_Administrator_rules_Body" xml:space="preserve"><value>Publish readable welcome, rules and character guide pages, then link them here. Check them while signed out; private pages are deliberately omitted from the public guide.</value></data>
   <data name="GuideLesson_Administrator_rules_Action" xml:space="preserve"><value>Open wiki</value></data>
   <data name="GuideLesson_Administrator_capabilities_Title" xml:space="preserve"><value>Check what is installed</value></data>
-  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve"><value>Review your installed packages and their own help. A general scene or Discord feature does not prove a particular softcode command exists. Package installation still uses its normal review and confirmation.</value></data>
+  <data name="GuideLesson_Administrator_capabilities_Body" xml:space="preserve"><value>Review your installed packages and their own help. A general scene or Discord feature does not prove a particular softcode command exists. Package installation still uses its normal review and confirmation. If the Onboarding package is installed, add your game's own steps to its +welcome checklist.</value></data>
   <data name="GuideLesson_Administrator_capabilities_Action" xml:space="preserve"><value>Review packages</value></data>
   <data name="GuideLesson_Administrator_walkthrough_Title" xml:space="preserve"><value>Walk in as an ordinary player</value></data>
-  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve"><value>Try joining, choosing a character, look, help, and the four familiarity paths using an ordinary player account. An administrator preview cannot verify ordinary-player permissions.</value></data>
+  <data name="GuideLesson_Administrator_walkthrough_Body" xml:space="preserve"><value>Try joining, choosing a character, look, help, and the four familiarity paths using a separate, ordinary account. A character on your own account shares that account's roles, and an administrator preview cannot verify ordinary-player permissions.</value></data>
   <data name="GuideLesson_Administrator_walkthrough_Action" xml:space="preserve"><value>Preview player guide</value></data>
   <data name="GuideLesson_Administrator_invite_Title" xml:space="preserve"><value>Ready when you are</value></data>
   <data name="GuideLesson_Administrator_invite_Body" xml:space="preserve"><value>Review completed and deferred items before sharing your game link. Finishing this checklist does not publish the game, open registration, install packages, or send invitations.</value></data>
+  <data name="GuideLesson_Administrator_staff-character_Title" xml:space="preserve"><value>Keep #1 for emergencies</value></data>
+  <data name="GuideLesson_Administrator_staff-character_Body" xml:space="preserve"><value>The account you claimed plays #1, God. God passes every lock and permission check, so one mistyped @nuke or runaway softcode loop as God has nothing to stop it. Create a character of your own for everyday staff work, then, connected as #1, type @set *&lt;name&gt;=WIZARD. Connect as #1 only for what only God can do. Give other staff the narrowest role that fits their job, such as builder or moderator, rather than wizard.</value></data>
+  <data name="GuideLesson_Administrator_staff-character_Action" xml:space="preserve"><value>Create a staff character</value></data>
+  <data name="GuideLesson_Administrator_start-room_Title" xml:space="preserve"><value>Prepare the room players arrive in</value></data>
+  <data name="GuideLesson_Administrator_start-room_Body" xml:space="preserve"><value>New characters start in the player_start room, #0 on a new world, and look there is the first thing they read. Describe it, give it clear exits, and tell newcomers where help and the rules are. Keep the master room, #2 on a new world, for global commands only: no exits into it and no players inside.</value></data>
+  <data name="GuideLesson_Administrator_start-room_Action" xml:space="preserve"><value>Core rooms</value></data>
+  <data name="GuideLesson_Administrator_channels_Title" xml:space="preserve"><value>Open channels for questions and staff</value></data>
+  <data name="GuideLesson_Administrator_channels_Body" xml:space="preserve"><value>A new world has no channels, but the player guide tells newcomers to find one. Create a public one for questions, for example @channel/add Newbie=player, and one for administrators, for example @channel/add Staff=admin, which only wizards and royalty can join. Ask your staff to join the public one so questions get answered.</value></data>
+  <data name="GuideLesson_Administrator_messages_Title" xml:space="preserve"><value>Write the connect screen</value></data>
+  <data name="GuideLesson_Administrator_messages_Body" xml:space="preserve"><value>The connect screen is the first thing a MU* client shows, and the messages of the day greet everyone who connects. Name your game, say how to create a character, and remove offers your game does not make, such as guest logins when it has no guest characters.</value></data>
+  <data name="GuideLesson_Administrator_messages_Action" xml:space="preserve"><value>Game messages</value></data>
+  <data name="GuideLesson_Administrator_backups_Title" xml:space="preserve"><value>Back up before you open</value></data>
+  <data name="GuideLesson_Administrator_backups_Body" xml:space="preserve"><value>Run @backup once and check @backup/list shows the copy. Set SHARPMUSH_BACKUP_INTERVAL so copies are taken on a schedule, and keep a copy off this machine; a copy on the same disk does not survive losing it.</value></data>
+  <data name="GuideLesson_Administrator_backups_Action" xml:space="preserve"><value>Remote backups</value></data>
+  <data name="GuideAdminPlayingGod" xml:space="preserve"><value>You are playing #1 right now. Switch to your staff character for everyday work.</value></data>
   <data name="GuideCommand_look_Meaning" xml:space="preserve"><value>Describe your current room</value></data>
   <data name="GuideCommand_look_Audience" xml:space="preserve"><value>Only you</value></data>
   <data name="GuideCommand_help_Meaning" xml:space="preserve"><value>Read command help</value></data>
   <data name="GuideCommand_help_Audience" xml:space="preserve"><value>Only you</value></data>
   <data name="GuideCommand_inventory_Meaning" xml:space="preserve"><value>List what you carry</value></data>
   <data name="GuideCommand_inventory_Audience" xml:space="preserve"><value>Only you</value></data>
+  <data name="GuideCommand_describe_Meaning" xml:space="preserve"><value>Set what others see when they look at you</value></data>
+  <data name="GuideCommand_describe_Audience" xml:space="preserve"><value>Anyone who looks at you</value></data>
+  <data name="GuideCommand_home_Meaning" xml:space="preserve"><value>Go back to your home if you get lost</value></data>
+  <data name="GuideCommand_home_Audience" xml:space="preserve"><value>People in the rooms you leave and arrive in</value></data>
   <data name="GuideCommand_who_Meaning" xml:space="preserve"><value>See connected players the game lets you see</value></data>
   <data name="GuideCommand_who_Audience" xml:space="preserve"><value>Only you</value></data>
   <data name="GuideCommand_say_Meaning" xml:space="preserve"><value>Speak as your character</value></data>
@@ -9532,6 +9557,9 @@
   <data name="GuideAdminPlayerChecked" xml:space="preserve"><value>I checked with an ordinary player account</value></data>
   <data name="GuideAdminChecked" xml:space="preserve"><value>I verified this</value></data>
   <data name="GuideAdminSummary" xml:space="preserve"><value>{0} verified; {1} deferred. Your game settings and package permissions are unchanged by checklist choices.</value></data>
+  <data name="GuideAdminProgress" xml:space="preserve"><value>{0} of {1} done</value></data>
+  <data name="GuideAdminContinue" xml:space="preserve"><value>Continue the checklist</value></data>
+  <data name="GuideAdminDashboardLead" xml:space="preserve"><value>Work through these before you invite anyone. This box goes away once every step is verified or deferred.</value></data>
   <data name="GuideCompanionTitle" xml:space="preserve"><value>With Sharpie: {0}</value></data>
   <data name="GuideReloadProgress" xml:space="preserve"><value>Reload progress</value></data>
   <data name="GuideOpenFull" xml:space="preserve"><value>Open the full guide or change my starting point</value></data>
