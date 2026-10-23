@@ -14,15 +14,17 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 /// </summary>
 public static class QueryWiki
 {
+	/// <param name="locale">The reader's locale, or null for the configured default.</param>
+	/// <param name="forceSource"><c>/SOURCE</c>: list source-locale titles, skipping localization entirely.</param>
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IMediator mediator, IWikiService wikiService,
-		INotifyService notifyService, string conditions)
+		IWikiLocalizationService localization, INotifyService notifyService, string conditions, string? locale, bool forceSource)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var visibility = await WikiCommandHelper.VisibilityAsync(parser, executor);
-		return await RunAsync(wikiService, conditions.Split(','), visibility) switch
+		return await RunAsync(wikiService, WikiFactQueryText.Split(conditions), visibility) switch
 		{
 			WikiFactQueryPage found => await ToldAsync(WikiCommandHelper.PageListing($"{found.Pages.Count} page(s) where {conditions.Trim()}",
-				[.. found.Pages.Select(WikiCommandHelper.PageRow)])),
+				await ListWiki.PageRowsAsync(localization, found.Pages, locale, forceSource))),
 			WikiFactIndexBuilding building => await ToldAsync(MarkupText.Plain(
 				$"WIKI: The fact index is building ({building.Status.Indexed} of {building.Status.Pages} pages); ask again when it is ready."),
 				ErrorMessages.Returns.WikiIndexBuilding),

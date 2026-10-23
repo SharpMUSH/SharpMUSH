@@ -17,6 +17,21 @@ public static class WikiFactQueryText
 	public const string Example = "pf2e:level=1..3";
 
 	/// <summary>
+	/// Conditions typed on one line, separated by commas. A piece with no <c>=</c> is the rest of the value before it,
+	/// so a title or category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays one condition.
+	/// </summary>
+	public static IReadOnlyList<string> Split(string typed)
+	{
+		var conditions = new List<string>();
+		foreach (var piece in typed.Split(','))
+		{
+			if (conditions.Count > 0 && !piece.Contains('=')) conditions[^1] += "," + piece;
+			else conditions.Add(piece);
+		}
+		return conditions;
+	}
+
+	/// <summary>
 	/// The query <paramref name="conditions"/> state, returning <paramref name="take"/> pages at a time. A page a
 	/// condition names is found through <paramref name="visibility"/>, so a page the reader may not see is no page.
 	/// Whether the query's properties and values fit the schema is the store's to check.

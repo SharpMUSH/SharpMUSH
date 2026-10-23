@@ -177,7 +177,10 @@ public class WikiFactQueryTests : LightningDatabaseFixture
 	[Arguments("pf2e:level=three", "pf2e:level is a whole number, not 'three'.")]
 	[Arguments("five", "A query takes from 1 to 4 conditions.")]
 	[Arguments("take", "A query returns from 1 to 50 pages at a time.")]
+	[Arguments("pf2e:tradition=long", "pf2e:tradition has no value longer than 256 bytes.")]
 	[Arguments("after", "That query's continuation is not valid here.")]
+	[Arguments("after:short", "That query's continuation is not valid here.")]
+	[Arguments("after:long", "That query's continuation is not valid here.")]
 	public async Task AQueryTheIndexCannotAnswerIsAnError(string shape, string error)
 	{
 		await BuildAsync();
@@ -190,6 +193,12 @@ public class WikiFactQueryTests : LightningDatabaseFixture
 			"pf2e:level=three" => new WikiFactQuery([new WikiFactEquals("pf2e:level", "three")], 10),
 			"five" => new WikiFactQuery([level, level, level, level, level], 10),
 			"take" => new WikiFactQuery([level], 51),
+			"pf2e:tradition=long" => new WikiFactQuery([new WikiFactEquals("pf2e:tradition", new string('a', 257))], 10),
+			// A range's property and tag with no value or page key after them, and a key longer than any entry.
+			"after:short" => new WikiFactQuery([new WikiFactRange("pf2e:level", 1, 3)], 10,
+				"facts:v1:" + Convert.ToBase64String([0, .. "pf2e:level"u8, 0, 1])),
+			"after:long" => new WikiFactQuery([level], 10,
+				"facts:v1:" + Convert.ToBase64String([0, .. "pf2e:level"u8, 0, 1, 0x80, 0, 0, 0, 0, 0, 0, 1, .. new byte[9000]])),
 			_ => new WikiFactQuery([level], 10, "facts:v1:" + Convert.ToBase64String([0, 9, 9]))
 		};
 
