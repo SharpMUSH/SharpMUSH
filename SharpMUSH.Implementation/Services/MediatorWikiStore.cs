@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using Mediator;
 using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -64,6 +65,9 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 
 	public Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
 		=> mediator.Send(new SetWikiPageFactsCommand(id, facts)).AsTask();
+
+	public Task<SemanticSchema> GetFactSchemaAsync()
+		=> mediator.Send(new GetWikiFactSchemaQuery()).AsTask();
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> mediator.Send(new GetPinnedWikiCategoriesQuery()).AsTask();

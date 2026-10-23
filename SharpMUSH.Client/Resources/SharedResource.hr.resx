@@ -5594,6 +5594,18 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Opišite ovu kategoriju</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Činjenice</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Vrijednost</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Ukloni činjenicu</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Dodaj činjenicu</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Dodaj kategoriju</value>
   </data>

@@ -107,6 +107,8 @@ Server
   URL; `[[Category:Lore]]` in text is only a link. A page can be in several. Each category has its own page,
   `/wiki/category/{key}`, an ordinary page in the `category` namespace that
   lists the category's subcategories and members under whatever text it has.
+- Facts are held by the page beside its categories (set in the editor, by `PUT
+  api/wiki/{slug}/facts`, or by `@wiki/fact page/property=values`), never part of a URL.
 - The old three-segment route `/wiki/{namespace}/{category}/{slug}` (and its
   `/edit`, `/history`, `/diff`) 301s to `/wiki/{namespace}/{slug}`.
 - Underscores replace spaces in the slug; lookup is case-insensitive

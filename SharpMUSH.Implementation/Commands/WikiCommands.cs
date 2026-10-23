@@ -21,7 +21,7 @@ public partial class Commands
 		[
 			"VIEW", "LIST", "SEARCH", "RECENT", "HISTORY", "CREATE", "EDIT", "APPEND", "ROLLBACK",
 			"TRANSLATE", "DELETE", "PROTECT", "UNPROTECT", "CATEGORY", "PUBLISH", "UNPUBLISH", "PIN", "UNPIN", "REQUIRE",
-			"ACCESS",
+			"ACCESS", "FACT",
 			"NOEVAL", "SOURCE", "DRAFT", "MD"
 		],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2,
@@ -118,6 +118,11 @@ public partial class Commands
 				=> await AccessWiki.Require(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
 			"ACCESS" when hasArg0
 				=> await AccessWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			// "page/property=values" sets one property's values ("page/property=" clears it); a bare page shows its facts.
+			"FACT" when hasArg0 && arg1CallState is not null
+				=> await FactWiki.Set(parser, Mediator, wikiService, NotifyService, arg0!, arg1),
+			"FACT" when hasArg0
+				=> await FactWiki.Show(parser, Mediator, wikiService, NotifyService, arg0!),
 			// "page=list" sets a page's categories ("page=" clears them); a bare name lists a category.
 			"CATEGORY" when hasArg0 && arg1CallState is not null
 				=> await EditWiki.SetCategories(parser, Mediator, wikiService, localization, NotifyService, arg0!, arg1),

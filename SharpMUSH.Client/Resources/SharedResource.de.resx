@@ -5594,6 +5594,18 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Diese Kategorie beschreiben</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Fakten</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Wert</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Fakt entfernen</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Fakt hinzufügen</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Kategorie hinzufügen</value>
   </data>

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 
@@ -98,6 +99,9 @@ public interface IWikiStore
 	/// not exist, are an error and change nothing.
 	/// </summary>
 	Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts);
+
+	/// <summary>The properties a page's facts may state, with each one's type, cardinality and allowed keywords.</summary>
+	Task<SemanticSchema> GetFactSchemaAsync();
 
 	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -76,6 +77,12 @@ public sealed class GetPinnedWikiCategoriesQueryHandler(IWikiStore store) : IQue
 {
 	public ValueTask<IReadOnlyList<string>> Handle(GetPinnedWikiCategoriesQuery query, CancellationToken cancellationToken)
 		=> new(store.GetPinnedCategoriesAsync());
+}
+
+public sealed class GetWikiFactSchemaQueryHandler(IWikiStore store) : IQueryHandler<GetWikiFactSchemaQuery, SemanticSchema>
+{
+	public ValueTask<SemanticSchema> Handle(GetWikiFactSchemaQuery query, CancellationToken cancellationToken)
+		=> new(store.GetFactSchemaAsync());
 }
 
 public sealed class GetWikiRevisionsQueryHandler(IWikiStore store) : IQueryHandler<GetWikiRevisionsQuery, IReadOnlyList<WikiRevision>>
