@@ -197,10 +197,12 @@ public class PackageAuthoringServiceTests
 	}
 
 	[Test]
-	public async Task Export_WithoutATitle_IsRefused()
+	[Arguments("  ")]
+	[Arguments("A title of sixty-one characters, which is one more than fits!")]
+	public async Task Export_WithoutAUsableTitle_IsRefused(string title)
 	{
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"untitled-pkg", "  ", "1.0.0", "x", null, [], [],
+			"untitled-pkg", title, "1.0.0", "x", null, [], [],
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
 

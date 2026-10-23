@@ -64,7 +64,8 @@ public partial class PackageManifestService : IPackageManifestService
 	private const int MaxPackageIdLength = 64;
 	private const int MaxKeywords = 5;
 	private const int MaxCategoryLength = 40;
-	private const int MaxTitleLength = 60;
+	/// <summary>The longest <c>title:</c> a manifest may give, after its spaces are collapsed.</summary>
+	public const int MaxTitleLength = 60;
 
 	[GeneratedRegex("^[a-z][a-z0-9-]*$")]
 	private static partial Regex PackageSlugRegex();
@@ -298,7 +299,7 @@ public partial class PackageManifestService : IPackageManifestService
 			return null;
 		}
 
-		var title = string.Join(' ', (OptionalString(doc, "title", issues) ?? "").Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+		var title = NormalizeTitle(OptionalString(doc, "title", issues) ?? "");
 		if (title.Length == 0)
 		{
 			issues.Add(PackageManifestIssue.Error("title",
@@ -315,6 +316,9 @@ public partial class PackageManifestService : IPackageManifestService
 
 		return title;
 	}
+
+	/// <summary>A title as the manifest stores it: trimmed, with each run of spaces made one.</summary>
+	public static string NormalizeTitle(string title) => string.Join(' ', title.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
 
 	/// <summary>The first format in which <c>category:</c> means something; below it the key is ignored.</summary>
 	public static PackageFormatVersion CategoryFormat { get; } = new(1, 10);

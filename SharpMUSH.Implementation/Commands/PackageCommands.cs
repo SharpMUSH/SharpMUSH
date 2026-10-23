@@ -49,8 +49,8 @@ public partial class Commands
 	/// </summary>
 	[SharpCommand(Name = "@PACKAGE", Switches = ["SCAN"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged,
-		CommandLock = "PERM^packages.admin", MinArgs = 1, MaxArgs = 4,
-		ParameterNames = ["objects", "package", "version", "description"])]
+		CommandLock = "PERM^packages.admin", MinArgs = 1, MaxArgs = 5,
+		ParameterNames = ["objects", "package", "version", "description", "title"])]
 	public async ValueTask<Option<CallState>> Package(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
