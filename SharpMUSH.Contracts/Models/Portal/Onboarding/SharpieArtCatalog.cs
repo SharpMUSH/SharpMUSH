@@ -12,6 +12,15 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-erotic-chibi-shared-completion", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-joining", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-identity", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-invite", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-capabilities", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-rules", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-administrator-identity", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-player-continue", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-chibi-player-channels", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-shared-completion", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-player-continue", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-chibi-player-speak-act", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
