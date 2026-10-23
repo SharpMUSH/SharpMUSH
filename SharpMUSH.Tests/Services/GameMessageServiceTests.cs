@@ -132,12 +132,24 @@ public partial class GameMessageServiceTests
 	public async Task TheMessagesObjectOffersGuestsOnlyWithAGuestCharacter()
 	{
 		var (service, _) = await WithMessagesObjectAsync();
+		// Another class's guest may outlive its run; take the power away for this one and give it back after.
+		var guests = ((await WebAppFactoryArg.FunctionParser.FunctionParse(MarkupText.Plain("lsearch(all,type,player,powers,Guest)")))?.Message?.ToPlainText() ?? "")
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		foreach (var guest in guests)
+			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=!Guest"));
+		try
+		{
+			var connect = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().ToPlainText();
+			var register = (await service.RenderAsync(GameMessage.Register, 0)).Expect<MString>().ToPlainText();
 
-		var connect = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().ToPlainText();
-		var register = (await service.RenderAsync(GameMessage.Register, 0)).Expect<MString>().ToPlainText();
-
-		await Assert.That(connect).DoesNotContain("Just looking?");
-		await Assert.That(register).DoesNotContain("connect guest");
+			await Assert.That(connect).DoesNotContain("Just looking?");
+			await Assert.That(register).DoesNotContain("connect guest");
+		}
+		finally
+		{
+			foreach (var guest in guests)
+				await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=Guest"));
+		}
 	}
 
 	/// <summary>The object shows the logo as a picture, with the text art as the description's stand-in for a terminal.</summary>
