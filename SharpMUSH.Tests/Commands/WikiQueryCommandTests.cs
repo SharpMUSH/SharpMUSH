@@ -10,6 +10,8 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary><c>@wiki/query</c> and <c>wikiquery()</c>: the pages whose facts meet every condition, in-game.</summary>
+// Kept apart from the test that rebuilds the shared world's fact index, which would answer these with "building".
+[NotInParallel("wiki-fact-index")]
 public class WikiQueryCommandTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
@@ -83,7 +85,9 @@ public class WikiQueryCommandTests
 		await RunAsync(player, $"@wiki/query pf2e:class={elder.Title}");
 		await Assert.That(Told(player, $"Sort {tag}")).IsEqualTo(1);
 		await RunAsync(player, $"@wiki/query/source pf2e:class={elder.Title}");
-		await Assert.That(Told(player, spell.Title)).IsEqualTo(1);
+		// Both listings name the page; only the first gave its French title.
+		await Assert.That(Told(player, $"main:{spell.Slug} ")).IsEqualTo(2);
+		await Assert.That(Told(player, $"Sort {tag}")).IsEqualTo(1);
 	}
 
 	[Test]
