@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-pixel-shared-welcome", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-genre-none-pixel-administrator-walkthrough", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-administrator-invite", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-administrator-capabilities", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-administrator-rules", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-shared-welcome", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-administrator-joining", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-administrator-identity", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-shared-completion", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
