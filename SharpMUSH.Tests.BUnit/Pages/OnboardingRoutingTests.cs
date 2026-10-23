@@ -74,6 +74,7 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton<NativeCharacterCredentialsClient>()
+			.AddSingleton<ServerInfoService>(new GuideServerInfoService(factory))
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),

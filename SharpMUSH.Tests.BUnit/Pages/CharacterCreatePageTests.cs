@@ -10,6 +10,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Onboarding;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
@@ -20,11 +21,19 @@ file sealed class CharacterCreateApiHandler(bool succeed, bool existingCharacter
 	public bool FailRoster { get; set; }
 	public bool FailRosterAfterCreate { get; set; }
 	public int Creates { get; private set; }
+	public string? LastBody { get; private set; }
 	private string _createdName = "Bob";
 	private int _createdId = 5;
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (request.Method == HttpMethod.Post && request.Content is not null)
+			LastBody = await request.Content.ReadAsStringAsync(cancellationToken);
+		return await Respond(request, path);
+	}
+
+	private Task<HttpResponseMessage> Respond(HttpRequestMessage request, string path)
+	{
 		if (request.Method == HttpMethod.Get && path == "api/account/characters")
 			return Task.FromResult(FailRoster || (FailRosterAfterCreate && Creates > 0)
 				? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
@@ -53,6 +62,12 @@ file sealed class CharacterCreateApiHandler(bool succeed, bool existingCharacter
 	}
 }
 
+/// <summary>Server info that answers only the onboarding presentation, which is what the create page reads.</summary>
+internal sealed class GuideServerInfoService(IHttpClientFactory http, OnboardingPresentation? presentation = null) : ServerInfoService(http)
+{
+	public override Task<OnboardingPresentation?> OnboardingAsync() => Task.FromResult(presentation);
+}
+
 /// <summary>
 /// Coverage for the dedicated create-character page (<c>/characters/new</c>): it renders the form,
 /// and a successful create returns the player to <c>/account</c>. Character creation was split out of
@@ -62,7 +77,8 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private ICharacterUpgradeService _upgrade = null!;
 
-	private (Action<bool> FailRoster, Action<bool> FailAfterCreate, Func<int> Creates) SeedLoggedIn(bool createSucceeds, bool existingCharacter = false)
+	private (Action<bool> FailRoster, Action<bool> FailAfterCreate, Func<int> Creates, Func<string?> LastBody) SeedLoggedIn(bool createSucceeds,
+		bool existingCharacter = false, GuideLink? characterGuide = null)
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");
 
@@ -76,6 +92,8 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(factory)
 			.AddSingleton<NativeCharacterCredentialsClient>()
+			.AddSingleton<ServerInfoService>(new GuideServerInfoService(factory, characterGuide is null ? null
+				: new OnboardingPresentation("game", "", "", "", "", "", null, null, characterGuide)))
 			.AddSingleton(sp => new AccountAuthService(
 				sp.GetRequiredService<IHttpClientFactory>(),
 				sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
@@ -92,7 +110,7 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Wizard");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
-		return (value => handler.FailRoster = value, value => handler.FailRosterAfterCreate = value, () => handler.Creates);
+		return (value => handler.FailRoster = value, value => handler.FailRosterAfterCreate = value, () => handler.Creates, () => handler.LastBody);
 	}
 
 	private static Task ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
@@ -131,7 +149,6 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		api.FailAfterCreate(true);
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 		await cut.FindAll("input").First().ChangeAsync("Bob");
-		await cut.Find("input[type=checkbox]").ChangeAsync(true);
 		await ClickCreate(cut);
 		await Assert.That(cut.Markup).Contains("GuideCharacterRosterFailed");
 		await Assert.That(api.Creates()).IsEqualTo(1);
@@ -199,6 +216,7 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 		await Assert.That(cut.Markup).Contains("NavClaimACharacter");
 		await cut.FindAll("input").First().ChangeAsync("imported bob");
+		await cut.Find("input[type=password]").ChangeAsync("bob-secret");
 
 		await cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").ClickAsync();
 
@@ -243,6 +261,7 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
 		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await cut.Find("input[type=password]").ChangeAsync("bob-secret");
 
 		await cut.FindAll("button").First(b => b.TextContent.Trim() == "NavClaimCharacter").ClickAsync();
 
@@ -252,5 +271,69 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("no refusal shown yet");
 		});
 		await Assert.That(nav.Uri).EndsWith("/characters/claim");
+	}
+
+	/// <summary>A new character signs in through the account; it asks for no password of its own unless ticked.</summary>
+	[TUnit.Core.Test]
+	public async Task Creating_asks_for_no_character_password_by_default()
+	{
+		var api = SeedLoggedIn(createSucceeds: true);
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+
+		await Assert.That(cut.FindAll("input[type=password]")).IsEmpty();
+		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await ClickCreate(cut);
+
+		await Assert.That(api.Creates()).IsEqualTo(1);
+		await Assert.That(api.LastBody()).Contains("\"password\":null");
+	}
+
+	/// <summary>A missing name or password is caught before anything is sent, with what to do about it.</summary>
+	[TUnit.Core.Test]
+	public async Task A_missing_name_or_password_says_what_to_enter()
+	{
+		var api = SeedLoggedIn(createSucceeds: true);
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("button.mud-button-filled").HasAttribute("disabled"))
+				throw new InvalidOperationException("the roster has not loaded yet");
+		});
+
+		await ClickCreate(cut);
+		cut.WaitForAssertion(() => cut.Find(".mud-alert:not(#onboarding-notice)"));
+		await Assert.That(cut.Find(".mud-alert:not(#onboarding-notice)").TextContent).Contains("NavCharacterNameRequired");
+
+		await cut.FindAll("input").First().ChangeAsync("Bob");
+		await cut.Find("input[type=checkbox]").ChangeAsync(true);
+		await ClickCreate(cut);
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Find(".mud-alert:not(#onboarding-notice)").TextContent.Contains("NavCharacterPasswordRequired"))
+				throw new InvalidOperationException("the password refusal has not rendered yet");
+		});
+		await Assert.That(api.Creates()).IsEqualTo(0);
+	}
+
+	/// <summary>The character guide chosen in setup is linked above the name, and only when creating.</summary>
+	[TUnit.Core.Test]
+	[TUnit.Core.Arguments(false)]
+	[TUnit.Core.Arguments(true)]
+	public async Task The_character_guide_is_linked_when_creating(bool claim)
+	{
+		SeedLoggedIn(createSucceeds: true, characterGuide: new GuideLink("Making a character", "/wiki/main/making-a-character"));
+		Services.GetRequiredService<NavigationManager>().NavigateTo(claim ? "/characters/claim" : "/characters/new");
+		var cut = Render<SharpMUSH.Client.Pages.CharacterCreate>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Find("button.mud-button-filled").HasAttribute("disabled"))
+				throw new InvalidOperationException("the roster has not loaded yet");
+		});
+		if (!claim) cut.WaitForAssertion(() => cut.Find(".charcreate-guide a"));
+
+		var links = cut.FindAll(".charcreate-guide a");
+		await Assert.That(links.Count).IsEqualTo(claim ? 0 : 1);
+		if (!claim)
+			await Assert.That(links[0].GetAttribute("href")).IsEqualTo("/wiki/main/making-a-character");
 	}
 }

@@ -1889,6 +1889,30 @@
     <value>Karakter létrehozása</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Saját jelszó adása ennek a karakternek is, MU*-kliensből való belépéshez</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Adjon nevet a karakterének.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Adjon meg jelszót a karakterének, vagy vegye ki a pipát, hogy csak a fiókjával lépjen be.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Adja meg a karakter nevét, amelyet igényelni szeretne.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Adja meg a karakter jelszavát.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Mielőtt nevet választ, olvassa el:</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>A karakter az a személy, akit a játékban alakít. A fiókjához kapcsolódik; később továbbiakat is létrehozhat.</value>
     <comment>MT</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Nem sikerült hozzáférni a vágólaphoz. Jelöld ki és másold ki a megjelenített parancsot.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Létrehozás választott karakterjelszó nélkül; használj egyszer használható klienses belépést, vagy állíts be jelszót később.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Bezárás</value>

@@ -1889,6 +1889,30 @@
     <value>Criar personagem</value>
     <comment>MT</comment>
   </data>
+  <data name="NavCharacterOwnPassword" xml:space="preserve">
+    <value>Dar também a este personagem uma senha própria, para entrar por um cliente MU*</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterNameRequired" xml:space="preserve">
+    <value>Digite um nome para o seu personagem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterPasswordRequired" xml:space="preserve">
+    <value>Digite uma senha para o seu personagem, ou desmarque a caixa para entrar apenas pela sua conta.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimNameRequired" xml:space="preserve">
+    <value>Digite o nome do personagem que você quer reivindicar.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavClaimPasswordRequired" xml:space="preserve">
+    <value>Digite a senha do personagem.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavCharacterGuideLead" xml:space="preserve">
+    <value>Antes de escolher um nome, leia</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavCreateCharacterBlurb" xml:space="preserve">
     <value>Um personagem é uma persona que você interpreta no jogo. Ele fica vinculado à sua conta; você pode criar outros depois.</value>
     <comment>MT</comment>
@@ -6419,9 +6443,6 @@
   </data>
   <data name="AuthNativeCopyFailed" xml:space="preserve">
     <value>Falha ao acessar a área de transferência. Selecione e copie o comando exibido.</value>
-  </data>
-  <data name="AuthNativeCreatePasswordLater" xml:space="preserve">
-    <value>Criar sem escolher uma senha de personagem; use acessos de uso único no cliente ou defina uma senha depois.</value>
   </data>
   <data name="AuthNativeClose" xml:space="preserve">
     <value>Fechar</value>
