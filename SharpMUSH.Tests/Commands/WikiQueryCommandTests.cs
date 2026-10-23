@@ -142,6 +142,7 @@ public class WikiQueryCommandTests
 	[Arguments("pf2e:class=No Such Query Page", "WIKI: pf2e:class names a page that does not exist: 'No Such Query Page'.")]
 	[Arguments("level", "WIKI: 'level' is not a condition like 'pf2e:level=1..3'.")]
 	[Arguments("namespace=nowhere", "WIKI: No namespace nowhere exists.")]
+	[Arguments("category=Spells", "WIKI: A query needs a fact condition, like 'pf2e:level=1..3'; category and namespace only narrow it.")]
 	[Arguments("pf2e:tradition>2", "WIKI: pf2e:tradition is not a whole number, so it has no range.")]
 	[Arguments("pf2e:level>=x", "WIKI: pf2e:level is a whole number, not 'x'.")]
 	[Arguments("pf2e:level!=1", "WIKI: A query needs a condition a page meets by stating a value; != alone finds no pages.")]
