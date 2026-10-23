@@ -29,6 +29,7 @@ public class StarterWikiService(
 	IWikiService wiki,
 	IExpandedObjectDataService serverData,
 	IOptionsWrapper<SharpMUSHOptions> options,
+	IConfigOptionWriter writer,
 	ILogger<StarterWikiService> logger)
 {
 	/// <summary>The dbref the starter pages are written as, as for the pages seeded at boot.</summary>
@@ -48,7 +49,8 @@ public class StarterWikiService(
 	/// Writes each starter page the game does not have, and replaces Home while it is still the page seeded at
 	/// boot. A page the game already has is left as it is. Theme, Setting and Policies are protected (a page requirement of
 	/// wiki.admin to edit and delete), so only wiki administrators edit them. Every category the set creates is
-	/// pinned to the wiki home. Records that the set was applied even when some pages failed, naming those.
+	/// pinned to the wiki home. The player guide's welcome and rules links, where setup left them empty, are pointed at
+	/// Getting Started and Policies. Records that the set was applied even when some pages failed, naming those.
 	/// Once applied, it writes nothing again, so a starter page an administrator deleted stays deleted.
 	/// </summary>
 	public async Task<Result<Success>> ApplyAsync()
@@ -67,12 +69,14 @@ public class StarterWikiService(
 	private async Task<Result<Success>> WritePagesAsync()
 	{
 		var failures = new List<string>();
+		var present = new List<StarterWikiPages.Page>();
 		foreach (var page in StarterWikiPages.All)
 		{
 			switch (await wiki.CreateAsync(page.Title, page.Markdown, Author, page.Namespace, sourceLocale: "en",
 				categories: page.Categories))
 			{
 				case WikiPage created:
+					present.Add(page);
 					await PinAsync(page, failures);
 					if (page.Protect && await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(created.Id), WikiRequirementSet.Protection, Author) is NotFound)
 					{
@@ -81,6 +85,7 @@ public class StarterWikiService(
 
 					break;
 				case Error<string> error when await wiki.GetBySlugAsync(WikiHelpers.Slugify(page.Title), page.Namespace) is WikiPage:
+					present.Add(page);
 					await PinAsync(page, failures);
 					logger.LogDebug("Starter wiki page {Title} already exists ({Reason}); left as it is.", page.Title, error.Value);
 					break;
@@ -91,6 +96,7 @@ public class StarterWikiService(
 		}
 
 		await ReplaceDefaultHomeAsync(failures);
+		await LinkGuidePagesAsync(present);
 		await serverData.SetExpandedServerDataAsync(new StarterWikiState { Applied = true });
 
 		return failures.Count == 0 ? new Success() : new Error<string>(string.Join(" ", failures));
@@ -108,6 +114,32 @@ public class StarterWikiService(
 			failures.Add($"Category {page.Title} could not be pinned: {error.Value}");
 		}
 	}
+
+	/// <summary>
+	/// Points the player guide's welcome link at Getting Started and its rules link at Policies, each only where setup
+	/// left it empty and the page is there. The character guide has no starter page and is left alone.
+	/// </summary>
+	private async Task LinkGuidePagesAsync(List<StarterWikiPages.Page> present)
+	{
+		var welcome = GuideTarget(present, "Getting Started");
+		var rules = GuideTarget(present, "Policies");
+		if (welcome.Length == 0 && rules.Length == 0) return;
+
+		await writer.UpdateAsync(current => current with
+		{
+			Onboarding = current.Onboarding with
+			{
+				WelcomePage = current.Onboarding.WelcomePage.Length == 0 ? welcome : current.Onboarding.WelcomePage,
+				RulesPage = current.Onboarding.RulesPage.Length == 0 ? rules : current.Onboarding.RulesPage
+			}
+		});
+	}
+
+	/// <summary>The guide's <c>namespace/slug</c> for a Main starter page that is there, or empty.</summary>
+	private static string GuideTarget(List<StarterWikiPages.Page> present, string title)
+		=> present.Any(page => page.Title == title && page.Namespace == WikiNamespace.Main)
+			? $"{WikiHelpers.NamespaceName(WikiNamespace.Main)}/{WikiHelpers.Slugify(title)}"
+			: "";
 
 	/// <summary>
 	/// Home is seeded at every boot, so it always exists. The starter Home replaces it only while nobody has
