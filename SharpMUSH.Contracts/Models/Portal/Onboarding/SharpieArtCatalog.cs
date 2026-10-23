@@ -12,6 +12,14 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-walkthrough", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-invite", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-capabilities", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-rules", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-player-sign-in", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-joining", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-administrator-identity", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-cyberpunk-pixel-shared-completion", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-cyberpunk-pixel-player-channels", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-cyberpunk-pixel-player-speak-act", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-cyberpunk-pixel-player-useful-action", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
