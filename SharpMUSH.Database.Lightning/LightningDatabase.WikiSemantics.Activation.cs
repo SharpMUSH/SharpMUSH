@@ -9,6 +9,7 @@ using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -152,6 +153,7 @@ public partial class LightningDatabase
 		using var work = WikiSemanticWork.CreateEmptyBase(tx, AtomicWikiLayout.Tables, budget, lifetime, delta);
 		var sequence = ExistingBootstrapSequence.AllocateForActivation(work);
 		using var identities = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+		var live = snapshot.Pages.Select(page => WikiPageId(page.Key)).ToHashSet(StringComparer.Ordinal);
 		foreach (var page in snapshot.Pages)
 		{
 			ct.ThrowIfCancellationRequested();
@@ -166,7 +168,7 @@ public partial class LightningDatabase
 				new(record.Namespace, [.. categories], rules, record.Published ?? true, record.Published == false ? record.AuthorDbref : null));
 			try { lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 			catch (InvalidDataException) { throw new WikiSemanticCapacityException("bootstrap-projection"); }
-			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, ct);
+			var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, BootstrapFacts(id, record, live, ct), false, ct);
 			if (prepared is ValidationFailure) throw new WikiSemanticCapacityException("bootstrap-projection");
 			if (prepared is not PreparedWikiProjection edit) throw new InvalidDataException("Invalid bootstrap preparation.");
 			if (WikiSemanticProjectionPlanner.PlanProjection(work, edit, 0, sequence) is not WikiProjectionPlanned planned)
@@ -184,6 +186,17 @@ public partial class LightningDatabase
 		delta.Put(Tables.Meta, AtomicWikiLayout.MarkerKey, active);
 		return new(certificate, incomplete, snapshot.Digest);
 	}
+
+	/// <summary>
+	/// The facts a page stated before the world indexed semantics. Activation projects them as an edit would, and a
+	/// fact the schema refuses, or one naming a page that is not there, leaves the world inactive.
+	/// </summary>
+	private static CanonicalFactSet BootstrapFacts(string id, WikiPageRecord record, IReadOnlySet<string> live, CancellationToken ct)
+		=> WikiPageFacts.ToCanonical(AtomicWikiLayout.Schema, new(id), (record.Facts ?? []).Select(f => new WikiPageFact(f.Property, f.Value)), ct) switch
+		{
+			CanonicalFactSet set when set.Facts.All(f => f.Value is not PageRef target || live.Contains(target.Id)) => set,
+			_ => throw new InvalidDataException("A page states facts the schema refuses.")
+		};
 
 	private static bool AppliesToBootstrapPage(WikiRequirementSet set, string id, WikiPageRecord record)
 		=> set.Required.TryGetValue(WikiAction.Read, out var scopes) && scopes.Count > 0 && (set.Target.Scope switch

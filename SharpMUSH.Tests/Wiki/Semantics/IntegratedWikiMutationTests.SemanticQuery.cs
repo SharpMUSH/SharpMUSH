@@ -86,7 +86,7 @@ public partial class IntegratedWikiMutationTests
 
 	/// <summary>The oracle: imported facts, the live page and WikiAccessService, ordered as the query orders them.</summary>
 	private static async Task<IReadOnlyList<string>> OracleAsync(QueryWorld world, WikiReader reader, Func<QueryPage, bool> holds,
-		bool byLevel, ISet<string>? editedSinceImport = null)
+		bool byLevel)
 	{
 		var services = world.Host.Services;
 		var wiki = services.GetRequiredService<IWikiService>();
@@ -94,7 +94,7 @@ public partial class IntegratedWikiMutationTests
 		var answer = new List<QueryPage>();
 		foreach (var page in world.Pages.Values.OrderBy(p => p.Order))
 		{
-			if (editedSinceImport?.Contains(page.Id) == true || !holds(page)) continue;
+			if (!holds(page)) continue;
 			if (await wiki.GetByIdAsync(page.Id) is not WikiPage live || !await access.CanSeeAsync(reader, live)) continue;
 			answer.Add(page);
 		}
@@ -202,7 +202,7 @@ public partial class IntegratedWikiMutationTests
 	}
 
 	[Test]
-	public async Task AnEditDropsThePagesFactsInItsOwnJob()
+	public async Task AnEditKeepsThePagesFactsAndChangesTheStateInItsOwnJob()
 	{
 		await using var world = await QueryWorldAsync();
 		var wiki = world.Host.Services.GetRequiredService<IWikiService>();
@@ -213,9 +213,10 @@ public partial class IntegratedWikiMutationTests
 		await Assert.That(changed is SemanticQueryResult.NotCertified { Outcome: var outcome } && outcome.GetType().Name == "DataChanged").IsTrue();
 
 		var (ids, _) = await PageThroughAsync(world, PublicReader, query);
-		await Assert.That(ids).DoesNotContain(victim.Id);
-		await Assert.That(ids).IsEquivalentTo(await OracleAsync(world, PublicReader, p => p.Traditions.Contains("arcane"), false,
-			new HashSet<string> { victim.Id }), TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		// The facts are the page's metadata, so the edit kept them.
+		await Assert.That(ids).Contains(victim.Id);
+		await Assert.That(ids).IsEquivalentTo(await OracleAsync(world, PublicReader, p => p.Traditions.Contains("arcane"), false),
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await world.Host.CloseAsync();
 	}
 

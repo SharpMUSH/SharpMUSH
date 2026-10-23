@@ -41,6 +41,13 @@ public record WikiPage(
 	/// </summary>
 	public IReadOnlyList<string> Categories { get; init; } = [];
 
+	/// <summary>
+	/// The facts the page states, sorted by property and then value (<see cref="SharpMUSH.Library.Wiki.Semantics.WikiPageFacts.Normalize"/>).
+	/// Held by the page beside its categories (<see cref="Services.Interfaces.IWikiService.SetFactsAsync"/>), so an
+	/// edit of its text, title or categories keeps them.
+	/// </summary>
+	public IReadOnlyList<WikiPageFact> Facts { get; init; } = [];
+
 	/// <summary>When false, the page is a draft hidden from non-admin listings and views.</summary>
 	public bool Published { get; init; } = true;
 

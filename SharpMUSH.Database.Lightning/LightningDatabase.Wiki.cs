@@ -7,6 +7,8 @@ using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
+using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
 
@@ -284,8 +286,12 @@ public partial class LightningDatabase : IWikiStore
 		Published = r.Published ?? true,
 		// Read straight through: a record the backfill has not reached yields empty, which means
 		// "not yet stamped". Nothing substitutes the configured default here or anywhere on the read path.
-		SourceLocale = r.SourceLocale ?? string.Empty
+		SourceLocale = r.SourceLocale ?? string.Empty,
+		Facts = r.Facts is { Length: > 0 } facts ? [.. facts.Select(f => new WikiPageFact(f.Property, f.Value))] : []
 	};
+
+	private static WikiPageFactRecord[]? WikiFactRecords(IReadOnlyList<WikiPageFact> facts)
+		=> facts.Count == 0 ? null : [.. facts.Select(f => new WikiPageFactRecord { Property = f.Property, Value = f.Value })];
 
 	private static string WikiRevisionId(string pageId, string locale, int revisionNumber)
 	{
@@ -588,6 +594,66 @@ public partial class LightningDatabase : IWikiStore
 			PutWikiPage(tx, found.Key, found.Record, updated);
 			return MapWikiPage(found.Key, updated);
 		});
+	}
+
+	public async Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
+	{
+		facts = CanonicalPageReferences(facts);
+		using var admission = EnterFixtureMutation(SemanticFixtureMutation.LegacyWiki);
+		if (admission is { Phase: SemanticFixturePhase.Active })
+		{
+			using var scope = new LegacyWikiPreparationScope(admission, CancellationToken.None);
+			var mutation = PrepareLegacyIntent(() => PreparedLegacyWikiMutation.Facts.Prepare(scope, id, facts));
+			try
+			{
+				return LegacyFreshPage(await CommitLegacyFixtureAsync(mutation, admission, CancellationToken.None)) switch
+				{
+					WikiPage page => page,
+					NotFound notFound => notFound,
+				};
+			}
+			catch (WikiFactRejectedException rejected) { return new Error<string>(rejected.Message); }
+		}
+		return await WriteFixtureAsync<FoundResult<WikiPage>>(admission, tx =>
+		{
+			RequireWikiCategoryReady(tx);
+			if (TryReadWikiPage(tx, id) is not { } found) return new NotFound();
+			if (RefusedFact(tx, id, facts) is { } refused) return new Error<string>(refused);
+
+			var updated = found.Record with { Facts = WikiFactRecords(facts) };
+			PutWikiPage(tx, found.Key, found.Record, updated);
+			return MapWikiPage(found.Key, updated);
+		});
+	}
+
+	/// <summary>
+	/// Why a world that does not index semantics yet refuses these facts, or null: the same schema and live-target
+	/// checks an indexed world makes, so a fact accepted now never leaves activation to refuse it.
+	/// </summary>
+	private static string? RefusedFact(ITx tx, string id, IReadOnlyList<WikiPageFact> facts)
+		=> WikiPageFacts.ToCanonical(AtomicWikiLayout.Schema, new(CanonicalWikiPageId(id)), facts, CancellationToken.None) switch
+		{
+			ValidationFailure failure => WikiFactRejectedException.Describe(failure),
+			CanonicalFactSet set => set.Facts.Select(f => f.Value is PageRef target
+					&& !(TryParseWikiPageId(target.Id, out var key) && TryReadWikiPage(tx, key) is not null)
+					? $"{f.Property} names a page that does not exist: '{target.Id}'."
+					: null)
+				.FirstOrDefault(refused => refused is not null),
+		};
+
+	/// <summary>
+	/// A page reference written as a bare key (<c>12</c>) stated as the page id it names (<c>wiki_page/12</c>), so
+	/// two ways of naming one page are one fact. Only properties the schema types as page references are read so.
+	/// </summary>
+	private static IReadOnlyList<WikiPageFact> CanonicalPageReferences(IReadOnlyList<WikiPageFact> facts)
+	{
+		var references = AtomicWikiLayout.Schema.Properties.Where(p => p.Type == SemanticType.PageRef).Select(p => p.Id).ToHashSet(StringComparer.Ordinal);
+		var canonical = facts.Select(f => references.Contains(f.Property) && TryParseWikiPageId(f.Value, out var key) ? f with { Value = WikiPageId(key) } : f);
+		return WikiPageFacts.Normalize(canonical) switch
+		{
+			IReadOnlyList<WikiPageFact> normalized => normalized,
+			Error<string> => facts,
+		};
 	}
 
 	/// <summary>The stream read backwards: its keys end with the big-endian revision number, so key order is

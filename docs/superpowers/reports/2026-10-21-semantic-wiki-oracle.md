@@ -31,10 +31,9 @@ that points at it.
   A public reader gets all five with 6 candidate probes and no denied skips, because its seek never enters
   the secret class. The secret reader, under the same budget, is asked to refine.
 
-Building the random worlds found one thing about the current design that needs saying. A metadata-only
-edit (categories or published) drops a page's imported facts, the same as a body edit does, because every
-legacy edit prepares its projection with no facts. The tests treat it that way. Facts kept as page metadata
-will change this.
+Facts are page metadata, so an edit of a page's text, title or categories keeps them. The random worlds
+state half their subjects' facts through `SetFactsAsync` and import the rest, then edit and recategorize
+pages, and the oracle expects every page to keep its facts.
 
 ## Full pack (evidence run)
 

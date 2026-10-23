@@ -10,6 +10,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Database.Lightning;
 
@@ -133,6 +134,7 @@ public partial class LightningDatabase
 				PreparedLegacyWikiMutation.Body body => body.Id,
 				PreparedLegacyWikiMutation.Title title => title.Id,
 				PreparedLegacyWikiMutation.Metadata metadata => metadata.Id,
+				PreparedLegacyWikiMutation.Facts facts => facts.Id,
 				_ => throw new InvalidDataException("Unknown legacy mutation.")
 			};
 			if (!TryParseWikiPageId(id, out key)) return new NotFound();
@@ -151,6 +153,7 @@ public partial class LightningDatabase
 				},
 				PreparedLegacyWikiMutation.Title title => old with { Title = title.Value },
 				PreparedLegacyWikiMutation.Metadata metadata => old with { Categories = metadata.Categories.ToArray(), Published = metadata.Published },
+				PreparedLegacyWikiMutation.Facts facts => old with { Facts = WikiFactRecords(facts.Values) },
 				_ => throw new InvalidDataException("Unknown legacy mutation.")
 			};
 			if (mutation is PreparedLegacyWikiMutation.Body edit)
@@ -169,7 +172,8 @@ public partial class LightningDatabase
 			new(updated.Namespace, [.. updated.Categories ?? []], rules, updated.Published ?? true, updated.Published == false ? updated.AuthorDbref : null));
 		try { work.Lifetime.ReserveAdditional(checked(4096 + 32L * WikiSemanticCodec.MeasureProjection(projection))); }
 		catch (InvalidDataException) { throw new WikiSemanticCapacityException("projection"); }
-		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, new(AtomicWikiLayout.Schema.Version, []), false, work.Budget.CancellationToken);
+		var stated = LegacyPageFacts(work, pageId, updated, mutation is PreparedLegacyWikiMutation.Facts);
+		var prepared = PreparedWikiProjection.PrepareProjection(AtomicWikiLayout.Schema, projection, stated, false, work.Budget.CancellationToken);
 		if (prepared is not PreparedWikiProjection editProjection) throw new WikiSemanticCapacityException("projection");
 		if (WikiSemanticProjectionPlanner.PlanProjection(work, editProjection, state?.State.Summary.StateVersion ?? 0, new AllocateNextSequence()) is not WikiProjectionPlanned planned)
 			throw SemanticFixtureCapability.Unavailable();
@@ -186,6 +190,36 @@ public partial class LightningDatabase
 		return new IntegratedWikiCommitted(committed, MapWikiPage(key, updated));
 	}
 	private static byte[] LegacyBytes(WikiSemanticWork work, long estimate, Func<byte[]> encode) => work.Bytes(estimate, encode);
+	/// <summary>
+	/// The canonical facts <paramref name="page"/> states, which every edit of it projects. Facts being
+	/// <paramref name="authored"/> are refused when they do not fit the schema or name a page that does not exist;
+	/// facts already stored were checked when they were set, so their failing now is a damaged row.
+	/// </summary>
+	private static CanonicalFactSet LegacyPageFacts(WikiSemanticWork work, string pageId, WikiPageRecord page, bool authored)
+	{
+		var stated = (page.Facts ?? []).Select(f => new WikiPageFact(f.Property, f.Value)).ToList();
+		if (stated.Count > 0) work.Lifetime.ReserveAdditional(checked(4096 + stated.Sum(f => 512L + 8L * (f.Property.Length + f.Value.Length))));
+		return WikiPageFacts.ToCanonical(AtomicWikiLayout.Schema, new(pageId), stated, work.Budget.CancellationToken) switch
+		{
+			CanonicalFactSet set when !authored => set,
+			CanonicalFactSet set => MissingTarget(work, set) is { } missing ? throw new WikiFactRejectedException(missing) : set,
+			ValidationFailure failure when authored => throw new WikiFactRejectedException(WikiFactRejectedException.Describe(failure)),
+			ValidationFailure => throw new InvalidDataException("Stored facts no longer fit the schema."),
+		};
+	}
+	private static string? MissingTarget(WikiSemanticWork work, CanonicalFactSet set)
+	{
+		foreach (var fact in set.Facts)
+			if (fact.Value is PageRef target && !LiveTarget(work, target))
+				return $"{fact.Property} names a page that does not exist: '{target.Id}'.";
+		return null;
+	}
+	private static bool LiveTarget(WikiSemanticWork work, PageRef target)
+	{
+		var id = work.Registry(WikiSemanticRegistryKind.Page, target.Id, false);
+		return id != 0 && work.Read(work.Tables.Summaries, work.Bytes(8, () => WikiSemanticKeys.Subject(id)), WikiSemanticStateCodec.ProjectionState)
+			is { State.Summary.Deleted: false };
+	}
 	/// <summary>
 	/// Work over the active generation's tables. While a rebuild is staged it also journals every projection
 	/// write it plans, in this same job, so the staged generation can replay it.
@@ -219,7 +253,9 @@ public partial class LightningDatabase
 		if (string.IsNullOrWhiteSpace(page.Slug) || string.IsNullOrWhiteSpace(page.Namespace) || string.IsNullOrWhiteSpace(page.Title)
 			|| page.MarkdownSource is null || page.RenderedHtml is null || page.PlainText is null || page.AuthorDbref is null
 			|| page.LastEditorDbref is null || page.CreatedAt is null || page.UpdatedAt is null || page.RevisionNumber < 1
-			|| page.Categories is { Length: > 128 } || (page.Categories ?? []).Any(string.IsNullOrWhiteSpace))
+			|| page.Categories is { Length: > 128 } || (page.Categories ?? []).Any(string.IsNullOrWhiteSpace)
+			|| page.Facts is { Length: > WikiSemanticLimits.MaxFacts }
+			|| (page.Facts ?? []).Any(f => f is null || string.IsNullOrWhiteSpace(f.Property) || string.IsNullOrWhiteSpace(f.Value)))
 			throw new InvalidDataException("Malformed wiki row.");
 	}
 	private static ImmutableArray<string> ReadLegacyProjectionRules(WikiSemanticWork work, string id, WikiPageRecord page)
@@ -248,7 +284,8 @@ public partial class LightningDatabase
 		var (strings, scalars) = record switch
 		{
 			WikiPageRecord page => (new[] { page.Slug, page.Title, page.Namespace, page.MarkdownSource, page.RenderedHtml, page.PlainText,
-				page.AuthorDbref, page.LastEditorDbref, page.CreatedAt, page.UpdatedAt, page.SourceLocale }.Concat(page.Categories ?? []), 14 + (page.Categories?.Length ?? 0)),
+				page.AuthorDbref, page.LastEditorDbref, page.CreatedAt, page.UpdatedAt, page.SourceLocale }.Concat(page.Categories ?? [])
+				.Concat((page.Facts ?? []).SelectMany(f => new[] { f.Property, f.Value })), 14 + (page.Categories?.Length ?? 0) + 3 * (page.Facts?.Length ?? 0)),
 			WikiRevisionRecord revision => (new[] { revision.PageId, revision.Locale, revision.MarkdownSource, revision.EditorDbref, revision.Timestamp, revision.EditSummary }.AsEnumerable(), 7),
 			_ => throw new InvalidDataException("Unsupported legacy record.")
 		};

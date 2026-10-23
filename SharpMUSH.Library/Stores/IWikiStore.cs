@@ -92,6 +92,13 @@ public interface IWikiStore
 	/// <summary>Sets the page's categories and published flag without a revision.</summary>
 	Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published);
 
+	/// <summary>
+	/// Sets the page's facts (already <c>WikiPageFacts.Normalize</c>d) without a revision. A store with a fact schema
+	/// types them against it in the same write; facts that do not fit it, or a page reference to a page that does
+	/// not exist, are an error and change nothing.
+	/// </summary>
+	Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts);
+
 	/// <summary>The keys of the categories pinned to the wiki home, ordinally sorted.</summary>
 	Task<IReadOnlyList<string>> GetPinnedCategoriesAsync();
 

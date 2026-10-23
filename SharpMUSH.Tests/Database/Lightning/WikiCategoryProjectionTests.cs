@@ -91,12 +91,13 @@ public partial class WikiCategoryProjectionTests
 		}
 		Run("schema-member-serializer-guard", () =>
 		{
-			var expected = strings.Concat(new[] { "RevisionNumber", "Categories", "Published" }).Order().ToArray();
+			var expected = strings.Concat(new[] { "RevisionNumber", "Categories", "Published", "Facts" }).Order().ToArray();
 			var properties = typeof(WikiPageRecord).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 			Check(properties.Select(p => p.Name).Order().SequenceEqual(expected), "WikiPageRecord schema changed");
 			foreach (var p in properties)
 			{
-				var type = p.Name switch { "Categories" => typeof(string[]), "Published" => typeof(bool?), "RevisionNumber" => typeof(int), _ => typeof(string) };
+				// The decoder skips Facts like any member it does not read.
+				var type = p.Name switch { "Categories" => typeof(string[]), "Published" => typeof(bool?), "RevisionNumber" => typeof(int), "Facts" => typeof(WikiPageFactRecord[]), _ => typeof(string) };
 				Check(p.PropertyType == type, "Property type changed: " + p.Name);
 			}
 			var context = LightningJsonContext.Default;

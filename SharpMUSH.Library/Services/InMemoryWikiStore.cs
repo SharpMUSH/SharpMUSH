@@ -218,6 +218,16 @@ public sealed class InMemoryWikiStore : IWikiStore
 		return Task.FromResult<Found<WikiPage>>(updated);
 	}
 
+	public Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
+	{
+		if (!_pagesById.TryGetValue(id, out var existing))
+			return Task.FromResult<FoundResult<WikiPage>>(new NotFound());
+
+		var updated = existing with { Facts = [.. facts] };
+		_pagesById[id] = updated;
+		return Task.FromResult<FoundResult<WikiPage>>(updated);
+	}
+
 	public Task<IReadOnlyList<WikiRevision>> GetRevisionsAsync(string pageId, string locale, int skip, int take)
 		=> Task.FromResult<IReadOnlyList<WikiRevision>>(RevisionSnapshot(pageId)
 			.Where(r => string.Equals(r.Locale, locale, StringComparison.OrdinalIgnoreCase))
