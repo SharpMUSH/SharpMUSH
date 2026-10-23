@@ -13801,6 +13801,22 @@
     "file": "sharpwiki.md"
   },
   {
+    "id": "legacy:wikifact()",
+    "lookup": "wikifact()",
+    "title": "wikifact()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpwiki.md"
+  },
+  {
+    "id": "legacy:wikiquery()",
+    "lookup": "wikiquery()",
+    "title": "wikiquery()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpwiki.md"
+  },
+  {
     "id": "legacy:wikiaccess()",
     "lookup": "wikiaccess()",
     "title": "wikiaccess()",
@@ -15155,6 +15171,37 @@
       }
     ],
     "file": "wiki-editing.md"
+  },
+  {
+    "id": "wiki-facts",
+    "lookup": "wiki facts",
+    "title": "Wiki Facts",
+    "aliases": [
+      "WIKI-FACTS",
+      "@WIKI/FACT",
+      "@WIKI/QUERY"
+    ],
+    "sections": [
+      {
+        "id": "values",
+        "lookup": "wiki fact values",
+        "heading": "Values",
+        "aliases": []
+      },
+      {
+        "id": "queries",
+        "lookup": "wiki fact queries",
+        "heading": "Queries",
+        "aliases": []
+      },
+      {
+        "id": "index",
+        "lookup": "wiki fact index",
+        "heading": "The fact index",
+        "aliases": []
+      }
+    ],
+    "file": "wiki-facts.md"
   },
   {
     "id": "wiki-function",
