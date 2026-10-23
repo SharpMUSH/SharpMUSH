@@ -1,0 +1,98 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@implements IDisposable
+
+@if (Guide is { Ready: false, Error: not null })
+{
+    <section class="guide-companion guide-recovery">
+        <h2>@Loc["GuideRecoveryTitle"]</h2>
+        <div class="guide-companion-content">
+            <p role="status">@Guide.Error</p>
+            <button type="button" disabled="@Guide.Loading" @onclick="Reload">@Loc["GuideReloadProgress"]</button>
+        </div>
+    </section>
+}
+else if (Guide is { Ready: true, Progress.Active: true })
+{
+    <section class="guide-companion">
+        <div class="guide-companion-content">
+            @if (Guide.Error is not null) { <p role="status">@Guide.Error <button type="button" @onclick="Reload">@Loc["GuideReloadProgress"]</button></p> }
+            @if (_message is not null) { <p role="status">@_message</p> }
+            <GuidePanel @ref="_panel" Art="@(SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, topic: $"player-{Lesson.Id}"))" Imagery="Guide.Progress.Imagery" Lesson="Lesson" CanGoBack="@(Index > 0)" OnBack="Back" OnComplete="Complete" OnSkip="Skip" OnClose="Close" OnInsert="Insert" OnExplore="OnExplore">
+                <Context><GuideContext LessonId="@Lesson.Id" /></Context>
+            </GuidePanel>
+        </div>
+    </section>
+}
+
+else if (Guide is { Ready: true, Progress.Active: false })
+{
+    <section class="guide-start" aria-label="@Loc["GuideChoosePath"]">
+        @if (SharpieArtCatalog.Resolve(Guide.Presentation?.ArtStyle, Guide.Presentation?.Genre, Guide.Presentation?.Subgenre, Guide.Presentation?.ArtOverrideId, Guide.Progress.Imagery, SharpieArtMoment.Welcome) is { } art)
+        {
+            <img src="@ApiUrl.Resolve(art.Url)" width="@(Guide.Progress.Imagery == GuideImagery.Reduced ? 40 : 64)" height="@(Guide.Progress.Imagery == GuideImagery.Reduced ? 40 : 64)" alt="" />
+        }
+        <h2>@Loc["GuideComingFrom"]</h2>
+        @foreach (var (path, key) in new[] { (GuidePath.Discord, "Discord"), (GuidePath.Mush, "Mush"), (GuidePath.OtherRoleplay, "Roleplay"), (GuidePath.Explore, "Explore") })
+        {
+            <button type="button" data-guide-path="@path" @onclick="() => ChoosePath(path)">@Loc[$"GuidePath{key}Title"]</button>
+        }
+        @if (Guide.Error is not null) { <p role="status">@Guide.Error</p> }
+    </section>
+}
+else if (Guide is { Ready: false })
+{
+    <p role="status">@Loc["GuideLoading"]</p>
+}
+
+@code {
+    [Parameter] public OnboardingService? Guide { get; set; }
+    [Parameter] public Func<Task<bool>>? InsertLook { get; set; }
+    [Parameter] public EventCallback OnExit { get; set; }
+    [Parameter] public EventCallback OnInserted { get; set; }
+    [Parameter] public EventCallback OnExplore { get; set; }
+    private string? _message;
+    private GuidePanel? _panel;
+    private bool _focusLesson;
+    private async Task ChoosePath(GuidePath path)
+    {
+        await Finish(() => Guide!.ChoosePathAsync(path));
+        _focusLesson = Guide is { Ready: true, Progress.Active: true };
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_focusLesson && _panel is not null)
+        {
+            _focusLesson = false;
+            await _panel.FocusHeadingAsync();
+        }
+    }
+    private IReadOnlyList<GuideLesson> Lessons => GuideLocalization.Player(Guide!.Progress.Path, Loc);
+    private int Index => Math.Max(0, Array.FindIndex(Lessons.ToArray(), item => item.Id == Guide!.Progress.CurrentStepId));
+    private GuideLesson Lesson => Lessons[Index];
+    protected override async Task OnInitializedAsync()
+    {
+        if (Guide is null) return;
+        Guide.Changed += Changed;
+        if ((!Guide.Ready && !Guide.Loading) || Guide.Journey != GuideJourney.Player) await Reload();
+    }
+    private Task Reload() => Guide!.LoadAsync(GuideJourney.Player);
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    private Task Back() => Guide!.SetCurrentStepAsync(Lessons[Math.Max(0, Index - 1)].Id);
+    private Task Complete() => Finish(() => Guide!.CompleteStepAsync(Lesson.Id));
+    private Task Skip() => Finish(() => Guide!.SkipStepAsync(Lesson.Id));
+    private Task Close() => Finish(() => Guide!.DismissAsync());
+    private async Task Finish(Func<Task> action)
+    {
+        await action();
+        if (Guide is { Ready: true, Progress.Active: false }) await OnExit.InvokeAsync();
+    }
+    private async Task Insert()
+    {
+        var inserted = InsertLook is not null && await InsertLook();
+        _message = inserted ? Loc["GuideInserted"] : Loc["GuideInsertUnavailable"];
+        if (inserted) await OnInserted.InvokeAsync();
+    }
+    public void Dispose() { if (Guide is not null) Guide.Changed -= Changed; }
+}

@@ -211,6 +211,7 @@ public partial class Play
 	private string SheetLabel(PlaySheet sheet) => sheet switch
 	{
 		PlaySheet.Room => Loc["NavPlayTabRoom"],
+		PlaySheet.Guide => Loc["GuideWithSharpie"],
 		PlaySheet.Details => Room.Info?.Name ?? Loc["NavPlayTabRoom"],
 		_ => Loc["NavPlayTabs"],
 	};
@@ -257,8 +258,16 @@ public partial class Play
 		await LoadAsideAsync();
 	}
 
+	private bool _focusCommandAfterGuide;
+
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
+		if (_focusCommandAfterGuide)
+		{
+			_focusCommandAfterGuide = false;
+			if (View == PlayView.Story && _composer is not null) await _composer.FocusCommandAsync();
+			else if (_playTerm is not null) await _playTerm.FocusCommandAsync();
+		}
 		if (!firstRender) return;
 		// A line the palette chose before this page was open to take it.
 		if (ServiceProvider.GetService<PaletteContext>()?.TakePendingInsert() is { } pending) await InsertLineAsync(pending);
@@ -656,6 +665,13 @@ public partial class Play
 	{
 		_mobileSheet = null;
 		await RunFocusAsync("sharpmushLayout.restoreFocus");
+	}
+
+	private async Task ReturnToCommandAsync()
+	{
+		await CloseMobileSheet();
+		// Wait until the modal focus trap has left the rendered tree.
+		_focusCommandAfterGuide = true;
 	}
 
 	private async Task OpenSiteMenu()

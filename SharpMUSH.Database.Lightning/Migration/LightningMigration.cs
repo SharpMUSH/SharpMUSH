@@ -14,6 +14,7 @@ public partial class LightningDatabase
 {
 	internal const string InitialMigrationId = "0001_initial";
 	internal const string AccountCredentialMigrationId = "0002_account_credentials";
+	internal const string OnboardingMigrationId = "0004_onboarding_progress_v1";
 	internal const string SessionDigestMigrationId = "0003_session_digest_authority";
 
 	/// <summary>
@@ -23,7 +24,7 @@ public partial class LightningDatabase
 	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, their
 	///    showcase image metadata, the ancestor player formats, the <c>system</c> wiki namespace's requirement
 	///    and the <c>character</c> category's pin to the wiki home;
-	/// 3. finish the core account, session and category-value migrations, then run every plugin's
+	/// 3. finish the core account, session, onboarding and category-value migrations, then run every plugin's
 	///    not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 5. ensure the singleton server-state row exists.
@@ -57,6 +58,7 @@ public partial class LightningDatabase
 
 			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
 			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
+			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
 			await MigrateWikiCategoryValuesAsync(categoryOptions, cancellationToken);
 
 			foreach (var step in pluginSteps)
@@ -83,6 +85,16 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	private static void MigrateOnboarding(ITx tx)
+	{
+		var marker = Keys.Str("mig:" + OnboardingMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		var identity = Keys.Str("onboarding:game-id");
+		if (!tx.TryGet(Tables.Meta, identity, out _))
+			tx.Put(Tables.Meta, identity, Keys.Str(Guid.NewGuid().ToString("N")));
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord { Id = OnboardingMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }));
 	}
 
 	private static void MigrateSessionDigests(ITx tx)

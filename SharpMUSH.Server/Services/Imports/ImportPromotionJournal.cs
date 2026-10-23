@@ -1,4 +1,5 @@
 using System.Text.Json;
+using SharpMUSH.Database.Lightning;
 using SharpMUSH.Library.Services.DatabaseConversion;
 
 namespace SharpMUSH.Server.Services.Imports;
@@ -18,6 +19,9 @@ public sealed record ImportSession(string Id, string Directory, ImportSessionSta
 	public string? Failure { get; init; }
 	public string? StartupFingerprint { get; init; }
 	public bool HadKeyRing { get; init; }
+	public ImportIdentityMapping? IdentityMapping { get; init; }
+	public bool IdentityMappingPrepared { get; init; }
+	public bool RollbackIdentityTransferred { get; init; }
 }
 
 /// <summary>
@@ -203,6 +207,23 @@ public sealed class ImportPromotionJournal
 			{
 				var replacedWorld = Path.Combine(session.Directory, "replaced-world");
 				var replacedKeys = Path.Combine(session.Directory, "replaced-keys");
+				if (!session.IdentityMappingPrepared
+					&& (System.IO.Directory.Exists(_live + ".previous") || System.IO.Directory.Exists(replacedWorld)))
+					throw new InvalidOperationException("This legacy import has no validated identity mapping. Preserve both worlds and perform explicit operator identity recovery before rollback.");
+				// Transfer before any move. The flag is durable before moving either directory, so a
+				// retry after a world move cannot accidentally read the restored world as the source.
+				if (!session.RollbackIdentityTransferred)
+				{
+					if (System.IO.Directory.Exists(_live + ".previous"))
+					{
+						var outgoing = System.IO.Directory.Exists(_live) ? _live : session.WorldPath;
+						LightningDatabase.TransferImportIdentity(outgoing, _live + ".previous", session.IdentityMapping, rollback: true);
+					}
+					else if (System.IO.Directory.Exists(replacedWorld))
+						LightningDatabase.TransferImportIdentity(replacedWorld, _live, session.IdentityMapping, rollback: true);
+					session = session with { RollbackIdentityTransferred = true };
+					Save(session);
+				}
 				// Filesystem phases are replayable if the process dies between a move and the next journal write.
 				if (System.IO.Directory.Exists(_live + ".previous"))
 				{
@@ -230,6 +251,16 @@ public sealed class ImportPromotionJournal
 				if (session.State != ImportSessionState.PromotionRequested)
 					throw new IOException("An interrupted import commit requires explicit rollback before startup.");
 				EnsureNoPrevious();
+				if (!session.IdentityMappingPrepared)
+				{
+					session = session with
+					{
+						IdentityMapping = LightningDatabase.ReadImportIdentityMapping(_live, session.WorldPath),
+						IdentityMappingPrepared = true
+					};
+					Save(session);
+				}
+				LightningDatabase.TransferImportIdentity(_live, session.WorldPath, session.IdentityMapping, rollback: false);
 				Save(session with { State = ImportSessionState.Committing });
 				if (System.IO.Directory.Exists(_live)) System.IO.Directory.Move(_live, _live + ".previous");
 				System.IO.Directory.Move(session.WorldPath, _live);

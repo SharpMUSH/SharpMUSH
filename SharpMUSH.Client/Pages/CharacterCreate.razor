@@ -22,11 +22,13 @@
             </MudAlert>
         }
 
-        <MudText Typo="Typo.h5" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
+        <MudText Typo="Typo.h5" HtmlTag="h1" GutterBottom="true">@(Claiming ? Loc["NavClaimACharacter"] : Loc["NavCreateACharacter"])</MudText>
         <MudText Typo="Typo.body2" Style="color:var(--text-faint);">
             @(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])
         </MudText>
 
+        @if (_createdCharacter is null)
+        {
         <MudTextField @bind-Value="_name" Label="@Loc["NavCharacterName"]"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-4" />
         @if (!Claiming)
@@ -39,39 +41,53 @@
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3" />
         }
 
+        }
+
         @if (_error is not null)
         {
             <MudAlert Severity="Severity.Error" Class="mt-3">@_error</MudAlert>
         }
 
+        @if (!_rosterReady && _createdCharacter is null)
+        {
+            <MudButton Disabled="_busy" OnClick="LoadRosterAsync">@Loc["GuideRetryRoster"]</MudButton>
+        }
         <div class="charcreate-actions">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_busy"
-                       OnClick="CreateAsync">@(Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"])</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_busy || (!_rosterReady && _createdCharacter is null))"
+                       OnClick="CreateAsync">@(_createdCharacter is not null ? Loc["GuideRetryConnection"] : Claiming ? Loc["NavClaimCharacter"] : Loc["NavCreateCharacter"])</MudButton>
             <MudButton Variant="Variant.Text" Href="/account">@Loc["Cancel"]</MudButton>
         </div>
 
         @* A character made at the connect screen, by staff or by an import has no account until its
            holder claims it, and the onboarding page is where a returning player lands. *@
+        @if (_createdCharacter is null)
+        {
         <MudText Typo="Typo.body2" Class="charcreate-switch">
             @if (Claiming)
             {
-                <a href="/characters/new">@Loc["NavCreateInstead"]</a>
+                <a href="@SwitchUrl(false)">@Loc["NavCreateInstead"]</a>
             }
             else
             {
-                <a href="/characters/claim">@Loc["NavClaimInstead"]</a>
+                <a href="@SwitchUrl(true)">@Loc["NavClaimInstead"]</a>
             }
         </MudText>
+        }
     </MudPaper>
 </div>
 
 @code {
+    [Parameter, SupplyParameterFromQuery(Name = "returnUrl")] public string? ReturnUrl { get; set; }
+    private string? GuideReturn => ReturnUrl is { } path && (path == "/welcome" || path.StartsWith("/welcome?", StringComparison.Ordinal)) && Welcome.LocalReturn(path) == path ? path : null;
+    private string SwitchUrl(bool claim) => (claim ? "/characters/claim" : "/characters/new") + (GuideReturn is { } path ? "?returnUrl=" + Uri.EscapeDataString(path) : "");
     private string _name = string.Empty;
     private string _password = string.Empty;
     private string? _error;
     private bool _busy;
     private bool _withoutPassword;
     private bool _onboarding;
+    private bool _rosterReady;
+    private AccountAuthService.CharacterSummary? _createdCharacter;
 
     /// <summary>
     /// Loads the roster so the page knows whether this is the account's first character. A reloaded
@@ -80,13 +96,35 @@
     /// and make CreateAsync below mistake their second character for their first.
     /// A failed fetch is left alone: "we could not ask" must not render as "you have none".
     /// </summary>
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => LoadRosterAsync();
+
+    private async Task LoadRosterAsync()
     {
-        _onboarding = await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> { Count: 0 };
+        _busy = true;
+        _error = null;
+        try
+        {
+            if (await AccountAuth.GetCharactersAsync() is IReadOnlyList<AccountAuthService.CharacterSummary> roster)
+            {
+                _rosterReady = true;
+                _onboarding = roster.Count == 0;
+            }
+            else
+            {
+                _rosterReady = false;
+                _error = Loc["GuideCharacterRosterUnavailable"];
+            }
+        }
+        finally { _busy = false; }
     }
 
     /// <summary>Switching between creating and claiming keeps the page; the other form's refusal goes.</summary>
-    protected override void OnParametersSet() => _error = null;
+    private bool? _lastClaiming;
+    protected override void OnParametersSet()
+    {
+        if (_lastClaiming.HasValue && _lastClaiming != Claiming) _error = null;
+        _lastClaiming = Claiming;
+    }
 
     /// <summary>True on <c>/characters/claim</c>: the form links a character that already exists.</summary>
     private bool Claiming => Nav.ToBaseRelativePath(Nav.Uri).StartsWith("characters/claim", StringComparison.OrdinalIgnoreCase);
@@ -96,7 +134,6 @@
         switch (await Native.CreateWithoutPasswordAsync(_name))
         {
             case AccountApiClient.CreateCharacterResponse created:
-                await AccountAuth.GetCharactersAsync();
                 return new AccountAuthService.CharacterSummary(created.DbrefNumber, created.CreationTime ?? 0, _name, created.Flags ?? "");
             case ApiFailure failure: return failure;
         }
@@ -105,32 +142,65 @@
 
     private async Task CreateAsync()
     {
+        if (_busy || (!_rosterReady && _createdCharacter is null)) return;
         _error = null;
         _busy = true;
-
-        var result = !Claiming && _withoutPassword
-            ? await CreateWithoutPasswordAsync()
-            : Claiming
-            ? await AccountAuth.ClaimCharacterAsync(_name, _password)
-            : await AccountAuth.CreateCharacterAsync(_name, _password);
-
-        _busy = false;
-        if (result is not AccountAuthService.CharacterSummary character)
+        try
         {
-            _error = result is ApiFailure failure ? failure.Message : null;
-            return;
-        }
+            if (_createdCharacter is not null)
+            {
+                await ConnectCreatedCharacterAsync();
+                return;
+            }
 
-        // A first character becomes the active one (a guest, or a fresh account) — start playing it
-        // everywhere. Creating an additional character just adds it to the roster.
-        if (AccountAuth.Characters.Count == 1)
-        {
-            await Upgrade.PlayAsAsync(character);
-            Nav.NavigateTo("/play");
+            var result = !Claiming && _withoutPassword
+                ? await CreateWithoutPasswordAsync()
+                : Claiming
+                ? await AccountAuth.ClaimCharacterAsync(_name, _password)
+                : await AccountAuth.CreateCharacterAsync(_name, _password);
+
+            if (result is not AccountAuthService.CharacterSummary character)
+            {
+                _error = result is ApiFailure failure ? failure.Message : null;
+                return;
+            }
+
+            // Keep the successful result even if the next roster or connection request fails.
+            _createdCharacter = character;
+            _password = string.Empty;
+            await ConnectCreatedCharacterAsync();
         }
-        else
+        finally
         {
-            Nav.NavigateTo("/account");
+            _busy = false;
         }
+    }
+
+    private async Task ConnectCreatedCharacterAsync()
+    {
+        try
+        {
+            if (await AccountAuth.GetCharactersAsync() is not IReadOnlyList<AccountAuthService.CharacterSummary> roster
+                || !roster.Any(item => item.DbrefNumber == _createdCharacter!.DbrefNumber && item.CreationTime == _createdCharacter.CreationTime))
+            {
+                _error = Loc["GuideCharacterRosterFailed"];
+                return;
+            }
+            if (roster.Count > 1)
+            {
+                Nav.NavigateTo(GuideReturn ?? "/account");
+                return;
+            }
+            if (await Upgrade.PlayAsAsync(_createdCharacter!))
+            {
+                Nav.NavigateTo(GuideReturn ?? "/play");
+                return;
+            }
+        }
+        catch (Exception ex) when (ex is System.Net.WebSockets.WebSocketException or HttpRequestException or OperationCanceledException)
+        {
+            // The character already exists. A transport failure must not offer creation again.
+        }
+        _error = Loc["GuideCharacterConnectionFailed"];
     }
 }

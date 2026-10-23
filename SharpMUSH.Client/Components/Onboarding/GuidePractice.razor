@@ -1,0 +1,31 @@
+@using SharpMUSH.Client.Resources
+@inject IStringLocalizer<SharedResource> Loc
+<section class="guide-practice" aria-label="@Loc["GuidePracticeLabel"]">
+    <h3>@Loc["GuidePracticeHeading"]</h3>
+    <p><strong>@Loc["GuidePracticeLocal"]</strong></p>
+    <label for="guide-practice-input">@Loc["GuidePracticeType"] <code>look</code></label>
+    <div>
+        <input id="guide-practice-input" @bind="_input" autocomplete="off" spellcheck="false" />
+        <button type="button" @onclick="Practice">@Loc["GuidePracticeTry"]</button>
+    </div>
+    @if (_result is not null)
+    {
+        <p role="status">@_result</p>
+    }
+</section>
+
+@code {
+    [Parameter] public EventCallback OnPracticed { get; set; }
+    private string _input = "";
+    private string? _result;
+    private async Task Practice()
+    {
+        if (!string.Equals(_input.Trim(), "look", StringComparison.OrdinalIgnoreCase))
+        {
+            _result = Loc["GuidePracticeInvalid"];
+            return;
+        }
+        _result = Loc["GuidePracticeResult"];
+        await OnPracticed.InvokeAsync();
+    }
+}

@@ -1,0 +1,51 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.Models.Portal.Setup
+@inject IAccountAuthState Auth
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@if (LessonId is "sign-in" or "character")
+{
+    <aside class="guide-context" aria-label="@Loc["GuideContextAccount"]">
+        @if (!Auth.IsLoggedIn)
+        {
+            <p>@Loc["GuideContextSignedOut"]</p>
+        }
+        else if (Auth.ActiveCharacter is { } character)
+        {
+            <p>@Loc["GuideContextCharacter", character.Name]</p>
+        }
+        else
+        {
+            <p>@Loc["GuideContextChooseCharacter"]</p>
+        }
+    </aside>
+}
+else if (LessonId is "world" or "continue")
+{
+    <aside class="guide-context" aria-label="@Loc["GuideContextFeatures"]">
+        <FeatureGate Feature="@GameFeatures.Scenes">
+            <p><a href="/scenes">@Loc["GuideContextScenes"]</a> — @Loc["GuideContextScenesDescription"]</p>
+        </FeatureGate>
+        <FeatureGate Feature="@GameFeatures.WikiReader">
+            <p><a href="/wiki">@Loc["GuideContextWiki"]</a> — @Loc["GuideContextWikiDescription"]</p>
+        </FeatureGate>
+        <GuidePackageCommands />
+    </aside>
+}
+
+@code {
+    [Parameter, EditorRequired] public string LessonId { get; set; } = string.Empty;
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.AuthStateChanged += Changed;
+        Auth.ActiveCharacterChanged += Changed;
+        await Auth.InitAsync();
+    }
+    private void Changed() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose()
+    {
+        Auth.AuthStateChanged -= Changed;
+        Auth.ActiveCharacterChanged -= Changed;
+    }
+}

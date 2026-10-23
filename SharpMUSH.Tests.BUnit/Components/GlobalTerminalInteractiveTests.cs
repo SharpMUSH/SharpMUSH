@@ -52,6 +52,22 @@ public class GlobalTerminalInteractiveTests : BunitContext
 	}
 
 	[Test]
+	public async Task Guide_inserts_only_look_into_an_empty_connected_terminal_without_sending()
+	{
+		var terminal = AnonymousTerminal();
+		terminal.IsConnected.Returns(true);
+		var cut = Render<GlobalTerminal>(p => p.Add(g => g.Terminal, terminal));
+		cut.WaitForAssertion(() => { if (cut.Find(".term-input").HasAttribute("disabled")) throw new InvalidOperationException("not ready"); });
+		await Assert.That(await cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("say hi"))).IsFalse();
+		await Assert.That(await cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("look"))).IsTrue();
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("look");
+		await terminal.DidNotReceive().SendAsync(Arg.Any<string>());
+		await cut.Find(".term-input").InputAsync("my unfinished draft");
+		await Assert.That(await cut.InvokeAsync(() => cut.Instance.TryInsertGuideCommandAsync("look"))).IsFalse();
+		await Assert.That(cut.Find(".term-input").GetAttribute("value")).IsEqualTo("my unfinished draft");
+	}
+
+	[Test]
 	public async Task Earlier_lines_from_the_kept_log_go_above_the_rest()
 	{
 		var terminal = AnonymousTerminal();

@@ -181,6 +181,9 @@ internal static class EngineRegistration
 		services.AddSingleton<GameFeatureService>();
 		services.AddSingleton<StarterWikiService>();
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
+		services.AddScoped<OnboardingPresentationService>();
+		services.AddScoped<OnboardingCapabilityService>();
+		services.AddScoped<IOnboardingCommandProbe, OnboardingCommandProbe>();
 		services.AddSingleton<HandlerSetupService>();
 		services.AddSingleton<MushCnfImportService>();
 		// Secrets the server holds for itself, encrypted with the Data Protection key ring; a plugin

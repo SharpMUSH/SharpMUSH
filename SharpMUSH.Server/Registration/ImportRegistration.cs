@@ -14,7 +14,6 @@ internal static class ImportRegistration
 		services.AddSingleton<ImportPreviewCoordinator>();
 		services.AddSingleton<ImportSessionRegistry>();
 		services.AddSingleton<StartupImportCoordinator>();
-		services.AddSingleton<PortalAdministratorTransfer>();
 		services.AddSingleton<PennMUSHDatabaseConversionService>();
 		services.AddHostedService<ImportConnectionResetService>();
 		return services;

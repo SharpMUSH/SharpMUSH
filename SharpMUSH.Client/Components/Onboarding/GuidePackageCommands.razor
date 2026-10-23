@@ -1,0 +1,135 @@
+@using System.Net.Http.Headers
+@using System.Text.Json
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IAccountAuthState Auth
+@inject IHttpClientFactory Http
+@inject IServiceProvider Services
+@inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
+
+@if (Auth.IsLoggedIn && Auth.ActiveCharacter is not null && (_loading || _error || _capabilities.Length > 0))
+{
+    <section class="guide-packages" aria-label="@Loc["GuidePackagesLabel"]">
+        @if (_loading) { <p role="status">@Loc["GuidePackagesLoading"]</p> }
+        else if (_error) { <p role="status">@Loc["GuidePackagesError"]</p> }
+        else
+        {
+            <p>@Loc["GuidePackagesExplanation"]</p>
+            <ul>
+                @foreach (var capability in _capabilities)
+                {
+                    <li><code>@capability.Command</code></li>
+                }
+            </ul>
+        }
+    </section>
+}
+
+@code {
+    private GuideCapability[] _capabilities = [];
+    private bool _loading, _error, _disposed, _initialized;
+    private long _generation;
+    private CancellationTokenSource? _pending;
+    private readonly CancellationTokenSource _stop = new();
+    private (string? Token, int? Character, long? Created) Authority =>
+        (Auth.IsLoggedIn ? Auth.AccountSessionToken : null, Auth.ActiveCharacter?.DbrefNumber, Auth.ActiveCharacter?.CreationTime);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Auth.AuthStateChanged += Changed;
+        Auth.ActiveCharacterChanged += Changed;
+        await Auth.InitAsync();
+        _initialized = true;
+        await Check();
+        if (!_disposed) _ = RefreshWhileOpen();
+    }
+
+    private async Task RefreshWhileOpen()
+    {
+        var stopToken = _stop.Token;
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(30),
+            Services.GetService<TimeProvider>() ?? TimeProvider.System);
+        try
+        {
+            while (await timer.WaitForNextTickAsync(stopToken))
+                await InvokeAsync(async () =>
+                {
+                    if (_disposed || _pending is not null) return;
+                    await Check(background: true);
+                    // Disposal can run while the HTTP request is awaited.
+                    if (!_disposed) StateHasChanged();
+                });
+        }
+        catch (OperationCanceledException) when (_stop.IsCancellationRequested) { }
+    }
+
+    private async Task Check(bool background = false)
+    {
+        Reset(clearCommands: !background);
+        var authority = Authority;
+        if (authority.Token is null || authority.Character is null || _disposed)
+        {
+            _capabilities = [];
+            return;
+        }
+        var generation = _generation;
+        using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        _pending = cancellation;
+        _loading = !background;
+        bool Current() => !_disposed && generation == _generation && authority == Authority;
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, "api/onboarding/capabilities");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", authority.Token);
+            using var client = Http.CreateClient("api");
+            using var response = await client.SendAsync(request, cancellation.Token);
+            response.EnsureSuccessStatusCode();
+            var capabilities = await response.Content.ReadFromJsonAsync<GuideCapability[]>(cancellation.Token)
+                ?? throw new JsonException("Missing capabilities response.");
+            if (!Current()) return;
+            _capabilities = capabilities;
+
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException or OperationCanceledException)
+        {
+            if (Current())
+            {
+                _capabilities = [];
+                _error = true;
+            }
+        }
+        finally
+        {
+            if (generation == _generation) { _loading = false; _pending = null; }
+        }
+    }
+
+    private void Reset(bool clearCommands = true)
+    {
+        _generation++;
+        _pending?.Cancel();
+        _pending = null;
+        if (clearCommands) _capabilities = [];
+        _loading = _error = false;
+    }
+    private void Changed()
+    {
+        if (_initialized) _ = InvokeAsync(async () =>
+        {
+            var check = Check();
+            StateHasChanged();
+            await check;
+            if (!_disposed) StateHasChanged();
+        });
+    }
+    public void Dispose()
+    {
+        _disposed = true;
+        _stop.Cancel();
+        Reset();
+        Auth.AuthStateChanged -= Changed;
+        Auth.ActiveCharacterChanged -= Changed;
+        _stop.Dispose();
+    }
+}

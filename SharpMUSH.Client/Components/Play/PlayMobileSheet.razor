@@ -22,14 +22,14 @@
     private string OverlayStyle => Sheet switch
     {
         PlaySheet.Details => "background: rgba(var(--scrim-ink), 0.55); align-items: flex-start; justify-content: stretch;",
-        PlaySheet.Room => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-end;",
+        PlaySheet.Room or PlaySheet.Guide => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-end;",
         _ => "background: rgba(var(--scrim-ink), 0.55); align-items: stretch; justify-content: flex-start;",
     };
 
     private string SheetClass => Sheet switch
     {
         PlaySheet.Details => "play-sheet--details",
-        PlaySheet.Room => "play-sheet--room",
+        PlaySheet.Room or PlaySheet.Guide => "play-sheet--room",
         _ => "play-sheet--side",
     };
 

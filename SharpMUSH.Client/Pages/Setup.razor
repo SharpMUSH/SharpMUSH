@@ -16,7 +16,7 @@
    PennMUSH database with its mush.cnf or start fresh, set the HTTP and event handlers the bundled packages
    build on, and choose the packages. Everything after the claim is pending on the server until the last
    step, so an administrator who closes the tab comes back here to the step they left (the database import
-   page links back with ?step=handlers). *@
+   page links back with ?step=identity). *@
 <div class="setup-page">
     <div class="setup-brand">
         <img src="assets/Logo.svg" alt="@Loc["AppTitle"]" class="setup-logo" />
@@ -55,7 +55,7 @@
 
         case Step.Import:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 4]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 5]</div>
                 @if (_completedUsername.Length > 0)
                 {
                     <p class="setup-claimed" role="status">
@@ -71,9 +71,19 @@
             </div>
             break;
 
+        case Step.Identity:
+            <div class="setup-card setup-card--wide">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 5]</div>
+                <h2 class="setup-title">@Loc["GuideSetupIdentity"]</h2>
+                <p class="setup-lead">@Loc["GuideSetupIdentityLead"]</p>
+                <SharpMUSH.Client.Components.Onboarding.GameIdentityForm SaveLabel="@Loc["GuideSetupIdentitySave"].Value" OnSaved="ContinueFromIdentity" />
+                <button class="setup-secondary setup-defer-identity" type="button" @onclick="ContinueFromIdentity">@Loc["GuideSetupIdentityLater"]</button>
+            </div>
+            break;
+
         case Step.Handlers:
             <div class="setup-card setup-card--wide">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 4]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 5]</div>
                 <h2 class="setup-title">@Loc["AdmSetupHandlersTitle"]</h2>
                 <p class="setup-lead">@Loc["AdmSetupHandlersLead"]</p>
 
@@ -180,7 +190,7 @@
 
         case Step.Packages:
             <div class="setup-card setup-card--wide">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 4]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 5, 5]</div>
                 <h2 class="setup-title">@Loc["AdmSetupPackagesTitle"]</h2>
                 <p class="setup-lead">@Loc["AdmSetupPackagesLead"]</p>
 
@@ -261,7 +271,7 @@
 
         case Step.Claim:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 4]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 5]</div>
                 <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
                 <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
 
@@ -299,7 +309,7 @@
 </div>
 
 @code {
-    private enum Step { Resolving, Claim, SignIn, Import, Handlers, Packages, Done }
+    private enum Step { Resolving, Claim, SignIn, Import, Identity, Handlers, Packages, Done }
 
     /// <summary>The handler choice that changes nothing.</summary>
     private const string Keep = "keep";
@@ -381,6 +391,7 @@
         Load(wizard);
         _step = StepParameter?.ToLowerInvariant() switch
         {
+            "identity" => Step.Identity,
             "handlers" => Step.Handlers,
             "packages" => Step.Packages,
             _ => Step.Import
@@ -460,7 +471,14 @@
     private void StartFresh()
     {
         _error = null;
+        _step = Step.Identity;
+        Nav.NavigateTo("/setup?step=identity", replace: true);
+    }
+
+    private void ContinueFromIdentity()
+    {
         _step = Step.Handlers;
+        Nav.NavigateTo("/setup?step=handlers", replace: true);
     }
 
     // A different choice is a different object, so whatever was checked and accepted no longer applies.
@@ -559,6 +577,7 @@
         if (_error is null)
         {
             _step = Step.Packages;
+            Nav.NavigateTo("/setup?step=packages", replace: true);
         }
     }
 

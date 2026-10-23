@@ -272,6 +272,41 @@ public class ImportPromotionJournalTests
 		finally { File.SetUnixFileMode(session.Directory, original); }
 	}
 
+	[Test]
+	public async Task PromotionAndRollbackKeepCurrentPortalCredentialsAndOnlyMappedGodOwnership()
+	{
+		var live = Path.Combine(_root, "live");
+		var journal = new ImportPromotionJournal(live);
+		var session = journal.Create();
+		await Populate(live, "Original sentinel");
+		await Populate(session.WorldPath, "Imported sentinel");
+		string accountId;
+		await using (var original = Open(live))
+		{
+			var account = await original.CreateAccountAsync("claimed-admin", "admin@example.test", "current-password");
+			accountId = account.Id ?? throw new InvalidOperationException("Account id missing.");
+			await original.LinkCharacterToAccountAsync(accountId, new DBRef(1));
+			await original.SetServerSetupCompletedAsync(true);
+		}
+		Directory.CreateDirectory(session.KeyRingPath);
+		journal.MarkReady(session.Id);
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using (var promoted = Open(live))
+		{
+			var account = await promoted.GetAccountByUsernameAsync("claimed-admin");
+			await Assert.That(account).IsNotNull();
+			await Assert.That(account!.PasswordHash).IsEqualTo("current-password");
+			await Assert.That(account.Id).IsEqualTo(accountId);
+			await Assert.That((await promoted.GetServerStateAsync()).SetupCompleted).IsTrue();
+			await promoted.UpdateAccountPasswordAsync(accountId, "changed-after-promotion");
+		}
+		journal.RequestRollback(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var restored = Open(live);
+		await Assert.That((await restored.GetAccountByIdAsync(accountId))!.PasswordHash).IsEqualTo("changed-after-promotion");
+	}
+
 	private static bool CanStillRead(string directory)
 	{
 		try { _ = Directory.GetFileSystemEntries(directory); return true; }

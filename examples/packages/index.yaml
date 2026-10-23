@@ -34,7 +34,7 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.2.0
+    version: 2.3.0
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
   - path: chargen-app/
     package: chargen-app
@@ -282,7 +282,7 @@ packages:
   - path: onboarding/
     name: Onboarding
     package: onboarding
-    version: 1.0.0
+    version: 1.0.1
     description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
   - path: onboarding-help/
     package: onboarding-help

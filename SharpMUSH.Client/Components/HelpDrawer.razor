@@ -54,6 +54,7 @@
         </div>
 
         <div style="flex:1;overflow-y:auto;padding:0.75rem 1rem;" id="help-drawer-content" @ref="_contentRef">
+            <p><a href="/welcome" @onclick="Close">@Loc["GuideHelpEntry"]</a></p>
             @if (_current is null)
             {
                 <div style="color:var(--text-faint);font-style:italic;font-size:0.8125rem;margin-top:1rem;">

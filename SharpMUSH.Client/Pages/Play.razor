@@ -50,7 +50,7 @@ else
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
         <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
-            <div class="play-main">
+            <div class="play-main" tabindex="-1" data-guide-anchor="play">
                 @* The open banner's room name is the page's h1; otherwise this one, for the reader alone, so the page
                    has a heading to land on (FocusOnNavigate) and to jump back to. *@
                 @if (!BannerShown)
@@ -86,6 +86,8 @@ else
                                             Name="@ViewerName" ImageUrl="@ViewerImage?.Url" Character="@ViewerCharacter" Connected="@PlayTerminal.IsConnected" />
                         </Lead>
                         <Controls>
+                            <PlayControl Class="play-guide-btn" Label="@Loc["GuideWithSharpie"]" Icon="@Icons.Material.Outlined.HelpOutline" PopsUp="true"
+                                         OnClick="() => OpenMobileSheetAsync(PlaySheet.Guide)" />
                             @* On a phone these step back into the banner's controls row (Play.razor.css). *@
                             <span class="play-head-more">
                                 @if (View == PlayView.Terminal)
@@ -179,6 +181,19 @@ else
                        the banner, with the header's less frequent buttons on it. Its minimise closes it. *@
                     <RoomBanner Info="@Room.Info" Here="@Room.Occupants.Count" Exits="@Room.Exits.Count"
                                 Minimised="false" MinimisedChanged="@(_ => CloseMobileSheet())" BottomActions="@BannerControls(PlaySettingsMenu.Sheet)" />
+                    break;
+                case PlaySheet.Guide:
+                    <nav class="play-guide-navigation" aria-label="@Loc["GuidePanelLabel"]">
+                        <SharpMUSH.Client.Components.Onboarding.GuideTooltip Text="@Loc["GuideBackToGame"]">
+                            <button type="button" class="play-guide-return" aria-label="@Loc["GuideBackToGame"]" @onclick="CloseMobileSheet"><MudIcon Icon="@Icons.Material.Outlined.ArrowBack" /></button>
+                        </SharpMUSH.Client.Components.Onboarding.GuideTooltip>
+                        <SharpMUSH.Client.Components.Onboarding.GuideTooltip Text="@Loc["GuideOpenFull"]">
+                            <a class="play-guide-return" href="/welcome" aria-label="@Loc["GuideOpenFull"]"><MudIcon Icon="@Icons.Material.Outlined.MenuBook" /></a>
+                        </SharpMUSH.Client.Components.Onboarding.GuideTooltip>
+                    </nav>
+                    <SharpMUSH.Client.Components.Onboarding.GuideCompanion Guide="@(ServiceProvider.GetService<OnboardingService>())"
+                        OnExit="CloseMobileSheet" OnInserted="ReturnToCommandAsync" OnExplore="ReturnToCommandAsync"
+                        InsertLook="@(() => View == PlayView.Story ? _composer?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false) : _playTerm?.TryInsertGuideCommandAsync("look") ?? Task.FromResult(false))" />
                     break;
                 case PlaySheet.Room:
                     <PlayRoomTabs Entries="_asideEntries" @bind-Selected="_sheetEntry" Label="@SheetLabel(sheet)" Room="Room"

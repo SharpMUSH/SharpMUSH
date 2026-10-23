@@ -30,6 +30,7 @@ namespace SharpMUSH.Database.Lightning.Store;
 [JsonSerializable(typeof(OAuthGrantRecord))]
 [JsonSerializable(typeof(OAuthTokenRecord))]
 [JsonSerializable(typeof(ReadMarkerRecord))]
+[JsonSerializable(typeof(SharpMUSH.Library.Models.Portal.Onboarding.OnboardingProgress))]
 [JsonSerializable(typeof(PageLogRecord))]
 [JsonSerializable(typeof(PageConversationRecord))]
 [JsonSerializable(typeof(FeedKindRecord))]

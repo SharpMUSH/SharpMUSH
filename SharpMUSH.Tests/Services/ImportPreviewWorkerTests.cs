@@ -214,4 +214,40 @@ public class ImportPreviewWorkerTests
 		finally { Environment.SetEnvironmentVariable("SHARPMUSH_LIGHTNING_MAPSIZE", previous); }
 	}
 
+	[Test]
+	public async Task RealWorkerPromotionPreservesClaimedAdministratorAndLatestCredential()
+	{
+		var (journal, source, _) = await SetupAsync();
+		string accountId;
+		await using (var live = Open(journal.LiveWorldPath))
+		{
+			var account = await live.CreateAccountAsync("claimed", "claimed@example.test", "before-preview");
+			accountId = account.Id ?? throw new InvalidOperationException("Account id missing.");
+			await live.LinkCharacterToAccountAsync(accountId, new DBRef(1));
+			await live.SetServerSetupCompletedAsync(true);
+			await live.SetExpandedServerData("SetupWizardState", new { Pending = true });
+		}
+		var coordinator = new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance);
+		var preview = await coordinator.PreviewAsync(new DatabaseImportFiles(source, Format: DatabaseImportFormat.RhostMUSH),
+			"mud_name Imported Identity Name");
+		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
+		await using (var live = Open(journal.LiveWorldPath))
+		{
+			await live.UpdateAccountPasswordAsync(accountId, "after-preview");
+		}
+		string? importedPassword;
+		await using (var staged = Open(preview.WorldPath))
+		{
+			importedPassword = (await staged.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>().PasswordHash;
+		}
+		journal.RequestPromotion(preview.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		await using var promoted = Open(journal.LiveWorldPath);
+		await Assert.That((await promoted.GetAccountByUsernameAsync("claimed"))?.PasswordHash).IsEqualTo("after-preview");
+		await Assert.That((await promoted.GetServerStateAsync()).SetupCompleted).IsTrue();
+		await Assert.That((await promoted.GetExpandedServerData<SharpMUSH.Server.Services.SetupWizardState>("SetupWizardState"))?.Pending ?? false).IsTrue();
+		await Assert.That((await promoted.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions)))?.Net.MudName).IsEqualTo("Imported Identity Name");
+		await Assert.That((await promoted.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>().PasswordHash).IsEqualTo(importedPassword);
+	}
+
 }
