@@ -75,7 +75,9 @@ public sealed class SemanticWikiPrototypeHost : IAsyncDisposable
 			ReserveAuxiliaryPaths();
 			_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(_sqlConnectionString, _configFile,
 				_notifier, _sqlPlatform, WorldPath, ConfigureFixtureServices);
-			// Program awaits migration. Publish only after the entire real host has started.
+			// Program awaits migration. Publish only after the entire real host has started and its fact index
+			// build, which writes the world in the background, has finished.
+			await _server.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
 			Volatile.Write(ref _services, _server.Services);
 		}
 		finally { _lifecycle.Release(); }

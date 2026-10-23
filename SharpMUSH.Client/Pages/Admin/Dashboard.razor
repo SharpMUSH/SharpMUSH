@@ -4,6 +4,9 @@
 @inject IAuthorizationService Authorization
 @inject SetupWizardService SetupWizard
 @inject ServerInfoService ServerInfo
+@inject OnboardingService Guide
+@using SharpMUSH.Client.Components.Onboarding
+@using SharpMUSH.Library.Models.Portal.Onboarding
 @implements IDisposable
 @using System.Security.Claims
 
@@ -14,8 +17,6 @@
    exactly the pages the sidebar does, in the same groups. *@
 <div class="page-stack page-stack--padded adm-dash">
     <PlainPageHeader Kicker="@Loc["NavBuildManage"]" Title="@Loc["AdmOverview"]" Description="@Loc["AdmOverviewDescription"]" />
-    <AuthorizeView Policy="config.admin"><p><a href="/admin/onboarding">@Loc["GuideAdminEntry"]</a> @Loc["GuideAdminDescription"]</p></AuthorizeView>
-
     @* The first-run wizard is unfinished: an administrator who closed the tab after claiming the game
        finds the way back here, since nothing else sends them to /setup once the game is claimed. *@
     @if (_setupPending)
@@ -25,6 +26,24 @@
             <a href="/setup" class="adm-dash-setup-link">@Loc["AdmSetupContinue"]</a>
         </MudAlert>
     }
+
+    @* The first-players checklist leads the page until every step is verified or deferred; after that it is
+       one line, for the administrator who wants to look again. *@
+    <AuthorizeView Policy="config.admin">
+        @if (ChecklistOpen)
+        {
+            <section class="adm-dash-checklist" aria-labelledby="adm-dash-checklist-title">
+                <h2 id="adm-dash-checklist-title">@Loc["GuideAdminHeading"]</h2>
+                <p>@Loc["GuideAdminDashboardLead"]</p>
+                <ChecklistProgress Progress="Guide.Progress" />
+                <a class="adm-dash-checklist-continue" href="/admin/onboarding">@Loc["GuideAdminContinue"]</a>
+            </section>
+        }
+        else
+        {
+            <p class="adm-dash-guide"><a href="/admin/onboarding">@Loc["GuideAdminEntry"]</a> @Loc["GuideAdminDescription"]</p>
+        }
+    </AuthorizeView>
 
     @foreach (var group in _groups)
     {
@@ -50,16 +69,23 @@
 
     private ClaimsPrincipal? _user;
 
+    private bool ChecklistOpen => Guide is { Ready: true, Journey: GuideJourney.Administrator } && !ChecklistProgress.Finished(Guide.Progress);
+
     protected override async Task OnInitializedAsync()
     {
         if (AuthState is null) return;
         _user = (await AuthState).User;
         ServerInfo.Changed += OnServerInfoChanged;
+        Guide.Changed += OnGuideChanged;
+        var checklist = (await Authorization.AuthorizeAsync(_user, "config.admin")).Succeeded
+            ? Guide.LoadAsync(GuideJourney.Administrator)
+            : Task.CompletedTask;
         var setup = (await Authorization.AuthorizeAsync(_user, "server.admin")).Succeeded
             ? SetupWizard.GetAsync()
             : null;
         await LoadGroupsAsync(_user);
         _setupPending = setup is not null && await setup is SetupWizardResponse { Pending: true };
+        await checklist;
     }
 
     private async Task LoadGroupsAsync(ClaimsPrincipal user) =>
@@ -76,5 +102,11 @@
         StateHasChanged();
     });
 
-    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
+    private void OnGuideChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        ServerInfo.Changed -= OnServerInfoChanged;
+        Guide.Changed -= OnGuideChanged;
+    }
 }
