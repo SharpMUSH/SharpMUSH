@@ -32,7 +32,7 @@ public static class GuideStepIds
 	public static IReadOnlyList<string> Player { get; } = Array.AsReadOnly(new[]
 		{ "place", "sign-in", "character", "world", "useful-action", "speak-act", "channels", "continue" });
 	public static IReadOnlyList<string> Administrator { get; } = Array.AsReadOnly(new[]
-		{ "identity", "joining", "rules", "capabilities", "walkthrough", "invite" });
+		{ "identity", "staff-character", "joining", "start-room", "rules", "channels", "messages", "capabilities", "backups", "walkthrough", "invite" });
 
 	public static bool IsValid(GuideJourney journey, OnboardingProgress? progress, long expectedRevision)
 	{
