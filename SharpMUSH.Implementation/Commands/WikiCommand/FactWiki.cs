@@ -1,10 +1,13 @@
 using Mediator;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Wiki.Semantics;
@@ -76,6 +79,33 @@ public static class FactWiki
 			Error<string> error => await RefusedAsync(notifyService, executor, error.Value, ErrorMessages.Returns.InvalidWikiFact),
 			NotFound => await RefusedAsync(notifyService, executor, $"No such page: {pageTarget}", ErrorMessages.Returns.NoSuchWikiPage),
 		};
+	}
+
+	/// <summary>
+	/// <c>@wiki/fact/index</c> shows how far the fact index has come; <c>@wiki/fact/index rebuild</c> (wiki.admin) starts
+	/// it over. Returns the phase, the pages indexed and the pages in the wiki.
+	/// </summary>
+	public static async ValueTask<MString> Index(IMUSHCodeParser parser, IMediator mediator, INotifyService notifyService, MString? arg)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		var request = arg?.ToPlainText().Trim() ?? string.Empty;
+		WikiFactIndexStatus status;
+		if (request.Length == 0)
+			status = await mediator.Send(new GetWikiFactIndexStatusQuery());
+		else if (!request.Equals("rebuild", StringComparison.OrdinalIgnoreCase))
+			return await RefusedAsync(notifyService, executor, "Usage: @wiki/fact/index [rebuild]", ErrorMessages.Returns.BadArgumentsToWikiCommand);
+		else if (!(await WikiCommandHelper.ReaderAsync(parser, executor)).Has(PortalPermission.WikiAdmin))
+			return await RefusedAsync(notifyService, executor, "Permission denied. That needs the wiki.admin permission.", ErrorMessages.Returns.PermissionDenied);
+		else
+			status = await parser.ServiceProvider.GetRequiredService<IWikiFactIndexBuilder>().RebuildAsync();
+
+		await notifyService.Notify(executor, status.Phase switch
+		{
+			WikiFactIndexPhase.Ready => $"WIKI: The fact index is ready: {status.Pages} pages.",
+			WikiFactIndexPhase.Building => $"WIKI: The fact index is building: {status.Indexed} of {status.Pages} pages.",
+			_ => "WIKI: The fact index is clearing; it builds again after."
+		}, executor);
+		return MarkupText.Plain($"{status.Phase.ToString().ToLowerInvariant()} {status.Indexed} {status.Pages}");
 	}
 
 	private static async ValueTask<MString> StatedAsync(IWikiService wikiService, INotifyService notifyService, AnySharpObject executor,

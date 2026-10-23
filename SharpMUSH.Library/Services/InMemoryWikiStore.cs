@@ -196,6 +196,14 @@ public sealed class InMemoryWikiStore : IWikiStore
 	/// <summary>No property is defined, so no fact is stated here.</summary>
 	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(new SemanticSchema(0, []));
 
+	/// <summary>Defines no properties, so there is nothing to index: every page is in it.</summary>
+	public Task<WikiFactIndexStatus> GetFactIndexStatusAsync()
+		=> Task.FromResult(new WikiFactIndexStatus(WikiFactIndexPhase.Ready, _pagesById.Count, _pagesById.Count));
+
+	public Task<WikiFactIndexStatus> BuildFactIndexBatchAsync(int batchSize) => GetFactIndexStatusAsync();
+
+	public Task<WikiFactIndexStatus> RebuildFactIndexAsync() => GetFactIndexStatusAsync();
+
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());
 

@@ -121,6 +121,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IAttributeIndexBuilder, AttributeIndexBuilder>();
+		services.AddSingleton<IWikiFactIndexBuilder, WikiFactIndexBuilder>();
 		services.AddSingleton<IEngineCommandInvoker, EngineCommandInvoker>();
 		services.AddSingleton<IRelationshipCycleChecker, RelationshipCycleChecker>();
 		services.AddSingleton<IObjectNameService, ObjectNameService>();
