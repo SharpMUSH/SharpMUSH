@@ -1,4 +1,5 @@
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using SharpMUSH.Client.Pages;
@@ -52,6 +53,17 @@ public class WelcomeTests : BunitContext
 		}
 		await Assert.That(page.FindAll(".admin-checklist img").Count).IsEqualTo(0);
 		await Assert.That(page.Find(".checklist-progress progress").GetAttribute("value")).IsEqualTo(GuideStepIds.Administrator.Count.ToString());
+	}
+
+	[Test]
+	public async Task AdminIdentitySettingsStayEditableWhenTheChecklistFailsToLoad()
+	{
+		ComponentFactories.AddStub<GameIdentityForm>();
+		((Info)Services.GetRequiredService<ServerInfoService>()).FailGuide = true;
+		var page = Render<SharpMUSH.Client.Pages.Admin.Onboarding>();
+		page.WaitForAssertion(() => page.Find("[role=status] button"));
+		await Assert.That(page.FindAll(".admin-checklist").Count).IsEqualTo(0);
+		await Assert.That(page.FindComponents<Stub<GameIdentityForm>>().Count).IsEqualTo(1);
 	}
 
 	[Test]

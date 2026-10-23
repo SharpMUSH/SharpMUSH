@@ -49,6 +49,8 @@
         <a href="/welcome?preview=true">@Loc["GuideAdminPreview"]</a>
     }
     else if (Guide.Loading) { <p role="status">@Loc["GuideAdminLoading"]</p> }
+    @* The identity settings stand apart from checklist progress, so a failed load keeps them editable. *@
+    else if (Guide.Error is not null) { <GameIdentityForm OnSaved="IdentitySaved" /> }
 </div>
 
 @code {
