@@ -355,6 +355,17 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			.GetApiAsync<List<WikiFactPropertyDto>>("api/wiki/fact-properties", "The server returned no wiki fact properties.");
 
 	/// <summary>
+	/// One page of the pages whose facts meet every condition, written as <c>wikiquery()</c> takes them, from where
+	/// <paramref name="after"/> (a previous page's <c>Next</c>) left off. The failure carries the server's reason.
+	/// </summary>
+	public async ValueTask<ApiResult<WikiFactQueryResultDto>> QueryFactsAsync(IEnumerable<string> conditions, string? after = null,
+		string? lang = null) =>
+		await httpClientFactory.CreateClient("api").GetApiAsync<WikiFactQueryResultDto>(
+			"api/wiki/query?" + string.Join('&', conditions.Select(c => "condition=" + Uri.EscapeDataString(c)))
+				+ (after is null ? string.Empty : "&after=" + Uri.EscapeDataString(after)) + LangQuery(lang, first: false),
+			"The server returned no query result.");
+
+	/// <summary>
 	/// Restores the page body from an earlier revision. The restore is a normal
 	/// edit (new revision), so rollbacks are themselves recorded in history.
 	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.

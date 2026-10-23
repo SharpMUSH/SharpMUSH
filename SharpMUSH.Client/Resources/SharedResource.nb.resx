@@ -5606,6 +5606,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>Legg til et faktum</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Finn sider etter fakta</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Betingelser skilt med komma</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Finn</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Flere</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Ingen sider passer.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>Faktaindeksen bygges fortsatt. Prøv igjen om litt.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Legg til en kategori</value>
   </data>

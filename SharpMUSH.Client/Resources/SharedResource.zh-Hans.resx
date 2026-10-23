@@ -5606,6 +5606,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>添加事实</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>按事实查找页面</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>条件，用逗号分隔</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>查找</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>更多</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>没有匹配的页面。</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>事实索引仍在建立中，请稍后再试。</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>添加分类</value>
   </data>
