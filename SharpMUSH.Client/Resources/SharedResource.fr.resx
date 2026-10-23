@@ -4874,6 +4874,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>Ajouter un fait</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Trouver des pages par fait</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Conditions séparées par des virgules</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Chercher</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Plus</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Aucune page ne correspond.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>L'index des faits est encore en construction. Réessayez dans un instant.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Ajouter une catégorie</value>
   </data>

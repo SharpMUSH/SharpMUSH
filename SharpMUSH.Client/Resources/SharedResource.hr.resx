@@ -5578,6 +5578,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>Dodaj činjenicu</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Pronađi stranice po činjenicama</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Uvjeti odvojeni zarezima</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Pronađi</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Više</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Nijedna stranica ne odgovara.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>Indeks činjenica još se gradi. Pokušajte ponovno za trenutak.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Dodaj kategoriju</value>
   </data>

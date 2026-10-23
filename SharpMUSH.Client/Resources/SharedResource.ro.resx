@@ -5578,6 +5578,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>Adaugă un fapt</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Găsește pagini după fapte</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Condiții separate prin virgule</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Caută</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Mai mult</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Nicio pagină nu se potrivește.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>Indexul faptelor încă se construiește. Încearcă din nou peste puțin timp.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Adaugă o categorie</value>
   </data>
