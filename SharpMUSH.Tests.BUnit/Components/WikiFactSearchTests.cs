@@ -51,9 +51,9 @@ public class WikiFactSearchTests : TrackingBunitContext
 	private static HttpResponseMessage Found(string? next, params string[] slugs) =>
 		new(HttpStatusCode.OK) { Content = JsonContent.Create(new WikiFactQueryResultDto([.. slugs.Select(Row)], next)) };
 
-	private async Task<IRenderedComponent<WikiFactSearch>> SearchAsync(string typed)
+	private async Task<IRenderedComponent<WikiFactSearch>> SearchAsync(string typed, string? locale = null)
 	{
-		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Category, "spells"));
+		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Category, "spells").Add(c => c.Locale, locale));
 		await cut.Find("input").ChangeAsync(new ChangeEventArgs { Value = typed });
 		await cut.Find("form").SubmitAsync();
 		return cut;
@@ -79,6 +79,15 @@ public class WikiFactSearchTests : TrackingBunitContext
 		await Assert.That(_handler.Queries[^1]).EndsWith("&after=second");
 		await Assert.That(cut.FindAll(".wiki-fact-search-results a").Select(a => a.TextContent)).IsEquivalentTo(["SHIELD", "FIREBALL"]);
 		await Assert.That(cut.FindAll(".wiki-fact-search-more")).IsEmpty();
+	}
+
+	[Test]
+	public async Task AnExplicitLocaleIsAskedForAndKeptOnTheResultLinks()
+	{
+		_handler.Answers.Enqueue(Found(null, "shield"));
+		var cut = await SearchAsync("pf2e:level=1", "fr");
+		await Assert.That(_handler.Queries).IsEquivalentTo(["/api/wiki/query?condition=category=spells&condition=pf2e:level=1&lang=fr"]);
+		await Assert.That(cut.Find(".wiki-fact-search-results a").GetAttribute("href")).IsEqualTo("/wiki/main/shield?lang=fr");
 	}
 
 	[Test]
