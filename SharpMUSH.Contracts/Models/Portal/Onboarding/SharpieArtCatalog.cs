@@ -10,6 +10,21 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-magical-realism-chibi-shared-completion", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-shared-completion.png", 1254, 1254, "shared-completion"),
+		new SharpieArt("sharpie-magical-realism-chibi-player-channels", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-magical-realism-chibi-player-useful-action", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-magical-realism-chibi-player-character", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-magical-realism-chibi-player-sign-in", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-magical-realism-chibi-player-place", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-magical-realism-chibi-administrator-walkthrough", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-magical-realism-chibi-administrator-invite", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-administrator-invite.png", 1254, 1254, "administrator-invite"),
+		new SharpieArt("sharpie-magical-realism-chibi-administrator-rules", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-magical-realism-chibi-administrator-joining", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-steampunk-kemono-player-channels", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-channels.png", 1254, 1254, "player-channels"),
+		new SharpieArt("sharpie-steampunk-kemono-player-useful-action", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-steampunk-kemono-player-place", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-steampunk-kemono-player-speak-act", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-steampunk-kemono-player-character", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-magical-realism-chibi-player-speak-act", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
 		new SharpieArt("sharpie-magical-realism-chibi-player-world", "chibi", "Magical Realism", "images/sharpie/sharpie-magical-realism-chibi-player-world.png", 1254, 1254, "player-world"),
 		new SharpieArt("sharpie-steampunk-kemono-player-sign-in", "kemono", "Steampunk", "images/sharpie/sharpie-steampunk-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
