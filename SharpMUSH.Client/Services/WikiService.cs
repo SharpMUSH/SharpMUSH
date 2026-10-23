@@ -376,6 +376,16 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			"The server returned no query result.");
 
 	/// <summary>
+	/// For each property <paramref name="category"/>'s pages state, the values they state and how many pages state each,
+	/// among the pages meeting every one of <paramref name="conditions"/>.
+	/// </summary>
+	public async ValueTask<ApiResult<WikiFacetsDto>> GetCategoryFacetsAsync(string category, IEnumerable<string> conditions) =>
+		await httpClientFactory.CreateClient("api").GetApiAsync<WikiFacetsDto>(
+			$"api/wiki/category/{Uri.EscapeDataString(category)}/facets"
+				+ string.Concat(conditions.Select((c, i) => (i == 0 ? "?" : "&") + "condition=" + Uri.EscapeDataString(c))),
+			"The server returned no facets.");
+
+	/// <summary>
 	/// Restores the page body from an earlier revision. The restore is a normal
 	/// edit (new revision), so rollbacks are themselves recorded in history.
 	/// Returns the updated <see cref="WikiArticle"/>, or the <see cref="ApiFailure"/> that stopped it.
@@ -545,6 +555,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Slug = dto.Slug,
 			Categories = dto.Categories.ToList(),
 			Facts = dto.Facts.ToList(),
+			NamedBy = dto.NamedBy.ToList(),
 			Published = dto.Published,
 			IsRestricted = dto.IsRestricted,
 			Access = dto.Access,

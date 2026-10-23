@@ -20,7 +20,7 @@
 .welcome-notice { padding: 1rem; border: 1px solid var(--border); margin-block: 1rem; }
 .welcome-notice button { padding: .6rem; margin-right: .5rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); cursor: pointer; }
 .welcome-imagery { display: flex; align-items: center; flex-wrap: wrap; gap: .7rem; margin-top: 2rem; }
-.welcome-imagery select { padding: .65rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 4px; }
+.welcome-imagery select { padding: .65rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
 .welcome-exit { margin-top: 2rem; color: var(--text-faint); }
 .welcome a:not([class]) { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
 .welcome-explore { display: inline-flex; align-items: center; min-height: 44px; margin-top: .5rem; padding: 0 1.25rem; border-radius: 6px; background: var(--accent); color: var(--accent-on); font-weight: 600; text-decoration: none; }

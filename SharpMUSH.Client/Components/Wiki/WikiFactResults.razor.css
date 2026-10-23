@@ -1,0 +1,42 @@
+.wiki-fact-results-more {
+    align-self: flex-start;
+    min-height: 44px;
+    padding: .55rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+.wiki-fact-results-more:disabled { opacity: .5; cursor: default; }
+.wiki-fact-results-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wiki-fact-results {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+.wiki-fact-results a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.wiki-fact-results a:hover,
+.wiki-fact-results a:focus-visible { text-decoration: underline; }
+.wiki-fact-results-message { color: var(--danger); }
+.wiki-fact-results-scroll { overflow-x: auto; }
+.wiki-fact-results-table {
+    padding: 0;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.wiki-fact-results-table th,
+.wiki-fact-results-table td {
+    padding: 4px 16px 4px 0;
+    text-align: left;
+    vertical-align: top;
+}
+.wiki-fact-results-table thead th {
+    color: var(--text-dim);
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+}
+.wiki-fact-results-table tbody th { font-weight: 400; }

@@ -103,6 +103,14 @@ Each block opens with `:::` plus a directive and closes with a bare `:::`:
 - `category <name>` — every page in a category
 - `pagelist <namespace>` — every page in a namespace (main, help, character, system, category)
 - `recent <count>` — the most recently edited pages (1–50)
+- `facts <conditions>` — the pages whose facts meet the conditions, written
+  as `@wiki/query` takes them. With `show=`, a table with a column for each
+  property named; it is a query, so it runs no softcode
+
+```
+::: facts pf2e:tradition=arcane, sort=pf2e:level, show=pf2e:level
+:::
+```
 
 For example, the five most recently edited pages right now:
 

@@ -2,23 +2,25 @@
 # &help
 This is the index to the MUSH online help files.
 
-  For an explanation of the help system, type:    help [newbie]<br>
-  For a walkthrough of SharpMUSH systems, type:   help [Getting Started]<br>
-  For help finding the helpfile you want:         help [help search]
-
-  For the list of MUSH commands, type:            help [COMMANDS]<br>
-  For the list of MUSH topics, type:              help [topics]<br>
-  For an alphabetical list of all help entries:   help [help search]<br>
-  For what SharpMUSH adds to PennMUSH:            help [sharpmush features]<br>
-  For information about SharpMUSH:                help [code]
-
-  For a list of flags:                            help [FLAG LIST]<br>
-  For a list of functions:                        help [FUNCTION LIST]<br>
-  For a list of attributes:                       help [attributes]<br>
-  To see the configuration of this MUSH:          `@config`
-
-  For this game's own commands and topics:        help [+help]<br>
-  For the help its plugins bring:                  help [plugin help]
+|                                               |                           |
+|-----------------------------------------------|---------------------------|
+| For an explanation of the help system, type:  | help [newbie]             |
+| For a walkthrough of SharpMUSH systems, type: | help [Getting Started]    |
+| For help finding the helpfile you want:       | help [help search]        |
+|                                               |                           |
+| For the list of MUSH commands, type:          | help [COMMANDS]           |
+| For the list of MUSH topics, type:            | help [topics]             |
+| For an alphabetical list of all help entries: | help [help search]        |
+| For what SharpMUSH adds to PennMUSH:          | help [sharpmush features] |
+| For information about SharpMUSH:              | help [code]               |
+|                                               |                           |
+| For a list of flags:                          | help [FLAG LIST]          |
+| For a list of functions:                      | help [FUNCTION LIST]      |
+| For a list of attributes:                     | help [attributes]         |
+| To see the configuration of this MUSH:        | `@config`                 |
+|                                               |                           |
+| For this game's own commands and topics:      | help [+help]              |
+| For the help its plugins bring:               | help [plugin help]        |
 
   If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
 

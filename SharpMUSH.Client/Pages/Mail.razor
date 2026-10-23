@@ -18,7 +18,7 @@
 @if (!_characterActive)
 {
     <div class="mail-page">
-        <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["Mail"]" />
+        <PlainPageHeader Title="@Loc["Mail"]" />
         <KitCard Class="mail-needs-character">
             <div class="mail-note">
                 <p>@Loc["MailNeedsCharacter"]</p>
@@ -30,7 +30,7 @@
 else
 {
     <div class="mail-page full-height">
-        <PlainPageHeader Kicker="@Loc["AppTitle"]" Title="@Loc["Mail"]">
+        <PlainPageHeader Title="@Loc["Mail"]">
             <Actions>
                 <CapsuleButton Primary="true" Href="/mail/compose" Icon="@Icons.Material.Outlined.Edit">@Loc["Compose"]</CapsuleButton>
             </Actions>
@@ -79,7 +79,7 @@ else
                 </div>
             </KitCard>
 
-            <KitCard Class="mail-reading">
+            <KitCard Class="@(_selected is null ? "mail-reading mail-reading--empty" : "mail-reading")">
                 @if (_selected is null)
                 {
                     <div class="mail-reading-none">@Loc["NavMailSelectMessage"]</div>

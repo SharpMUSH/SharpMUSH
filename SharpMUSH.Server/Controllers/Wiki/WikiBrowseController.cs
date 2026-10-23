@@ -29,6 +29,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
 ///   GET  /api/wiki/counts          — page counts by state (published, draft), and restricted pages
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
+///   GET  /api/wiki/category/{cat}/facets — each property's values among a category's pages, with counts
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   GET  /api/wiki/categories      — every category, with its name, how many pages it holds and whether it is pinned
 ///   GET  /api/wiki/pinned-categories — the keys of the categories pinned to the wiki home
@@ -126,6 +127,21 @@ public class WikiBrowseController(
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
 
+	/// <summary>
+	/// GET /api/wiki/category/{category}/facets?condition=pf2e:tradition=arcane
+	/// For each property the category's pages state, the values they state and how many pages state each, among the
+	/// pages meeting every <c>condition</c> (<see cref="WikiFactFacets"/>). A page value is shown by its title. 400 for
+	/// a condition the wiki cannot answer.
+	/// </summary>
+	[HttpGet("category/{category}/facets")]
+	public async Task<IActionResult> CategoryFacets(string category, [FromQuery] string[] condition)
+		=> await WikiFactFacets.CountAsync(Wiki, category, condition, await VisibilityAsync()) switch
+		{
+			WikiFacets facets => Ok(new WikiFacetsDto(facets.Pages, facets.Partial, [.. facets.Facets.Select(f => new WikiFacetDto(f.Property,
+				f.Label, WikiFactProperties.TypeName(f.Type), [.. f.Values.Select(v => new WikiFacetValueDto(v.Value, v.Label, v.Count))], f.More))])),
+			Error<string> error => BadRequest(error.Value),
+		};
+
 	/// <summary>Category rows read at a time by <see cref="NewestInCategory"/>.</summary>
 	private const int NewestBatch = 200;
 
@@ -218,7 +234,8 @@ public class WikiBrowseController(
 	/// <summary>
 	/// GET /api/wiki/query?condition=pf2e:level=1..3&amp;condition=category=Spells&amp;take=50&amp;after=&amp;lang=fr
 	/// The pages whose facts meet every <c>condition</c>, written as <c>wikiquery()</c> takes them, one page at a time:
-	/// <c>next</c> is the next request's <c>after</c>. 400 for a query the wiki cannot answer; 503 while the fact index
+	/// <c>next</c> is the next request's <c>after</c>. A <c>show=</c> condition adds its properties as <c>show</c> and
+	/// each page's values for them under <c>facts</c>. 400 for a query the wiki cannot answer; 503 while the fact index
 	/// is building.
 	/// </summary>
 	[HttpGet("query")]
@@ -237,11 +254,26 @@ public class WikiBrowseController(
 	private async Task<IActionResult> AnsweredAsync(WikiFactQuery query, WikiVisibility visibility, string? lang)
 		=> await Wiki.QueryFactsAsync(query, visibility) switch
 		{
-			WikiFactQueryPage found => Ok(new WikiFactQueryResultDto([.. await LocalizedListAsync(found.Pages, lang)], found.Next)),
+			WikiFactQueryPage found => Ok(await ShownAsync(query,
+				new WikiFactQueryResultDto([.. await LocalizedListAsync(found.Pages, lang)], found.Next), found.Pages)),
 			WikiFactIndexBuilding building => StatusCode(StatusCodes.Status503ServiceUnavailable,
 				$"The fact index is building: {building.Status.Indexed} of {building.Status.Pages} pages."),
 			Error<string> error => BadRequest(error.Value)
 		};
+
+	/// <summary>The result with the columns its <c>show=</c> names and each page's values for them.</summary>
+	private async Task<WikiFactQueryResultDto> ShownAsync(WikiFactQuery query, WikiFactQueryResultDto result, IReadOnlyList<WikiPage> pages)
+	{
+		if (query.Show.Count == 0) return result;
+		var schema = await Wiki.GetFactSchemaAsync();
+		var facts = new Dictionary<string, IReadOnlyList<WikiFactDto>>();
+		foreach (var page in pages) facts[page.Id] = await FactDtosAsync(page, query.Show);
+		return result with
+		{
+			Show = [.. query.Show.Select(p => WikiFactEntry.Definition(schema, p)).OfType<PropertyDefinition>().Select(ToDto)],
+			Facts = facts,
+		};
+	}
 
 	/// <summary>
 	/// GET /api/wiki/pinned-categories

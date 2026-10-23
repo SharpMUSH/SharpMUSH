@@ -14,6 +14,8 @@ namespace SharpMUSH.Library.Services;
 ///   <item><c>::: category lore</c> — pages in a category</item>
 ///   <item><c>::: pagelist help</c> — pages in a namespace</item>
 ///   <item><c>::: recent 10</c> — recently updated pages (count clamped 1–50)</item>
+///   <item><c>::: facts pf2e:tradition=arcane, show=pf2e:level</c> — the pages a fact query finds, as
+///   <c>wikiquery()</c> takes its conditions; a query, never softcode</item>
 /// </list>
 /// Each directive renders as
 /// <c>&lt;div class="wiki-directive" data-directive="…" data-arg="…"&gt;&lt;/div&gt;</c>.
@@ -62,11 +64,14 @@ internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContain
 	[GeneratedRegex(@"^\d{1,9}$")]
 	private static partial Regex RecentArgPattern();
 
+	/// <summary>The longest <c>facts</c> argument: four conditions and the settings a query takes fit well within it.</summary>
+	private const int MaxFactsLength = 1024;
+
 	protected override void Write(HtmlRenderer renderer, CustomContainer container)
 	{
 		var directive = container.Info?.Trim().ToLowerInvariant();
 
-		if (directive is not ("category" or "pagelist" or "recent"))
+		if (directive is not ("category" or "pagelist" or "recent" or "facts"))
 		{
 			// Unknown info string — keep the default custom-container rendering.
 			base.Write(renderer, container);
@@ -101,6 +106,10 @@ internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContain
 				return null;
 			return Math.Clamp(count, 1, MaxRecentCount).ToString();
 		}
+
+		// A fact query is checked when it is answered, where its reason can be shown; here it only has to be one line.
+		if (directive == "facts")
+			return arg.Length is > 0 and <= MaxFactsLength && !arg.Any(char.IsControl) ? arg : null;
 
 		return ArgPattern().IsMatch(arg) ? arg : null;
 	}

@@ -10,10 +10,24 @@ namespace SharpMUSH.Tests.Integration.Wiki;
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class WikiFactQueryApiTests(ServerWebAppFactory factory)
 {
-	private record WikiFactDto(string Property, string Value);
+	private record WikiFactDto(string Property, string Value)
+	{
+		public string? PageTitle { get; init; }
+	}
+
 	private record WikiPageDto(string Id, string Slug, string Title);
 	private record WikiPageSummaryDto(string Id, string Slug, string Title);
-	private record WikiFactQueryResultDto(List<WikiPageSummaryDto> Pages, string? Next);
+	private record WikiFactPropertyDto(string Id, string Label);
+
+	private record WikiFactQueryResultDto(List<WikiPageSummaryDto> Pages, string? Next)
+	{
+		public List<WikiFactPropertyDto> Show { get; init; } = [];
+		public Dictionary<string, List<WikiFactDto>> Facts { get; init; } = [];
+	}
+	private record WikiFacetValueDto(string Value, string Label, int Count);
+	private record WikiFacetDto(string Property, string Label, string Type, List<WikiFacetValueDto> Values, int More);
+	private record WikiFacetsDto(int Pages, bool Partial, List<WikiFacetDto> Facets);
+	private record SetMetadataRequest(string[] Categories, bool Published);
 	private record CreatePageRequest(string Title, string Markdown, string? Namespace);
 	private record SetFactsRequest(WikiFactDto[] Facts);
 
@@ -63,6 +77,27 @@ public class WikiFactQueryApiTests(ServerWebAppFactory factory)
 	}
 
 	[Test]
+	public async Task ASortedQueryShowsTheValuesItNames()
+	{
+		await factory.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var http = CreateClient();
+		var wizard = await PageAsync(http, "Shown api wizard");
+		var high = await PageAsync(http, "Shown api high", new WikiFactDto("pf2e:class", wizard.Title), new WikiFactDto("pf2e:level", "6"),
+			new WikiFactDto("pf2e:tradition", "arcane"));
+		var low = await PageAsync(http, "Shown api low", new WikiFactDto("pf2e:class", wizard.Title), new WikiFactDto("pf2e:level", "2"));
+
+		var page = (await http.GetFromJsonAsync<WikiFactQueryResultDto>("api/wiki/query?condition=" + Uri.EscapeDataString($"pf2e:class={wizard.Title}")
+			+ "&condition=sort%3Dpf2e:level&condition=order%3Ddesc&condition=" + Uri.EscapeDataString("show=pf2e:level|pf2e:tradition|pf2e:class")))!;
+		await Assert.That(page.Pages.Select(p => p.Id)).IsEquivalentTo([high.Id, low.Id], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(page.Show.Select(p => p.Id)).IsEquivalentTo(["pf2e:level", "pf2e:tradition", "pf2e:class"],
+			TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(page.Facts[high.Id].Select(f => (f.Property, f.Value)))
+			.IsEquivalentTo([("pf2e:class", wizard.Id), ("pf2e:level", "6"), ("pf2e:tradition", "arcane")]);
+		await Assert.That(page.Facts[high.Id].Single(f => f.Property == "pf2e:class").PageTitle).IsEqualTo(wizard.Title);
+		await Assert.That(page.Facts[low.Id].Select(f => f.Property)).IsEquivalentTo(["pf2e:class", "pf2e:level"]);
+	}
+
+	[Test]
 	public async Task AQueryTheWikiCannotAnswerIsABadRequest()
 	{
 		var http = CreateClient();
@@ -71,5 +106,33 @@ public class WikiFactQueryApiTests(ServerWebAppFactory factory)
 		await Assert.That(await refused.Content.ReadAsStringAsync()).Contains("'1..x' is not a range like '1..3'.");
 		await Assert.That((await http.GetAsync(Url("not-a-continuation", "pf2e:level=1"))).StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 		await Assert.That((await http.GetAsync("api/wiki/query")).StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
+	}
+
+	[Test]
+	public async Task ACategorysFacetsCountItsValues()
+	{
+		var http = CreateClient();
+		var category = $"facetapi{Guid.NewGuid():N}";
+		var wizard = await PageAsync(http, "Facet api wizard");
+		foreach (var (level, tradition) in new[] { ("1", "arcane"), ("1", "divine"), ("3", "arcane") })
+		{
+			var page = await PageAsync(http, "Facet api spell", new WikiFactDto("pf2e:level", level), new WikiFactDto("pf2e:tradition", tradition),
+				new WikiFactDto("pf2e:class", wizard.Title));
+			var put = await http.PutAsJsonAsync($"api/wiki/{Uri.EscapeDataString(page.Slug)}/metadata", new SetMetadataRequest([category], true));
+			await Assert.That(put.StatusCode).IsEqualTo(HttpStatusCode.OK);
+		}
+
+		var facets = (await http.GetFromJsonAsync<WikiFacetsDto>($"api/wiki/category/{category}/facets?condition="
+			+ Uri.EscapeDataString("pf2e:tradition=arcane")))!;
+		await Assert.That(facets.Pages).IsEqualTo(2);
+		await Assert.That(facets.Facets.Select(f => $"{f.Property}:{f.Type}:{string.Join(",", f.Values.Select(v => $"{v.Value}/{v.Label}/{v.Count}"))}"))
+			.IsEquivalentTo([
+				$"pf2e:class:page:main:{wizard.Slug}/{wizard.Title}/2",
+				"pf2e:level:number:1/1/1,3/3/1",
+				"pf2e:tradition:keyword:arcane/arcane/2,divine/divine/1",
+			], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+
+		var refused = await http.GetAsync($"api/wiki/category/{category}/facets?condition=" + Uri.EscapeDataString("pf2e:level=x"));
+		await Assert.That(refused.StatusCode).IsEqualTo(HttpStatusCode.BadRequest);
 	}
 }

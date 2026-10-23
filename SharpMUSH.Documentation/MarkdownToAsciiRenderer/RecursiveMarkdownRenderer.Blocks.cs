@@ -207,7 +207,10 @@ public partial class RecursiveMarkdownRenderer
 
 	/// <summary>Wiki directive names that render live listings on the web portal.</summary>
 	private static readonly HashSet<string> WikiDirectiveNames =
-		new(StringComparer.OrdinalIgnoreCase) { "category", "tag", "pagelist", "recent" };
+		new(StringComparer.OrdinalIgnoreCase) { "category", "tag", "pagelist", "recent", FactsContainerName };
+
+	/// <summary>The container that lists the pages a fact query finds: <c>::: facts &lt;conditions&gt;</c>.</summary>
+	public const string FactsContainerName = "facts";
 
 	/// <summary>The container that centres its contents: <c>::: center</c>.</summary>
 	public const string CenterContainerName = "center";
@@ -222,15 +225,10 @@ public partial class RecursiveMarkdownRenderer
 	/// </summary>
 	protected virtual MString RenderCustomContainer(CustomContainer container)
 	{
-		// Depending on trivia tracking, Markdig may put the whole fence line in Info
-		// or split it across Info/Arguments — normalise to "name" + "rest".
-		var fenceLine = $"{container.Info} {container.Arguments}".Trim();
-		var tokens = fenceLine.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-		var name = tokens.Length > 0 ? tokens[0] : string.Empty;
+		var (name, arg) = Fence(container);
 
 		if (WikiDirectiveNames.Contains(name))
 		{
-			var arg = tokens.Length > 1 ? tokens[1] : string.Empty;
 			var label = string.IsNullOrEmpty(arg) ? name : $"{name} {arg}";
 			return MarkupText.Wrap(_dimStyle, $"[live listing: {label} — see the web portal]");
 		}
@@ -241,6 +239,16 @@ public partial class RecursiveMarkdownRenderer
 			.ToList();
 		var content = MarkupText.Join(MarkupText.Plain("\n"), parts);
 		return name.Equals(CenterContainerName, StringComparison.OrdinalIgnoreCase) ? Centered(content) : content;
+	}
+
+	/// <summary>A container's name and the rest of its fence line, as in <c>::: category lore</c>.</summary>
+	public static (string Name, string Arg) Fence(CustomContainer container)
+	{
+		// Depending on trivia tracking, Markdig may put the whole fence line in Info
+		// or split it across Info/Arguments — normalise to "name" + "rest".
+		var fenceLine = $"{container.Info} {container.Arguments}".Trim();
+		var tokens = fenceLine.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		return (tokens.Length > 0 ? tokens[0] : string.Empty, tokens.Length > 1 ? tokens[1] : string.Empty);
 	}
 
 	/// <summary>

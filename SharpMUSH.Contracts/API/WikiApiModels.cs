@@ -65,6 +65,9 @@ public record WikiPageDto(
 
 	/// <summary>The facts the page states that this reader may see, ordered by property and then value.</summary>
 	public IReadOnlyList<WikiFactDto> Facts { get; init; } = [];
+
+	/// <summary>For each page property, the pages this reader may see whose facts name this page.</summary>
+	public IReadOnlyList<WikiFactNamedByDto> NamedBy { get; init; } = [];
 }
 
 /// <summary>
@@ -73,10 +76,22 @@ public record WikiPageDto(
 /// </summary>
 public record WikiFactDto(string Property, string Value)
 {
+	/// <summary>What a reader is shown for the property: its label, or the property when it has none. Unread on a write.</summary>
+	public string? Label { get; init; }
+
 	public string? PageTitle { get; init; }
 	public string? PageSlug { get; init; }
 	public string? PageNamespace { get; init; }
 }
+
+/// <summary>
+/// The pages whose <paramref name="Property"/> names a page, shown under <paramref name="Label"/>: up to a limit of them,
+/// and whether <paramref name="More"/> do.
+/// </summary>
+public record WikiFactNamedByDto(string Property, string Label, IReadOnlyList<WikiPageLinkDto> Pages, bool More);
+
+/// <summary>A page to show and link: its title, slug and namespace.</summary>
+public record WikiPageLinkDto(string Title, string Slug, string Namespace);
 
 /// <summary>
 /// A property facts may state. <paramref name="Type"/> is <c>number</c>, <c>keyword</c>, <c>boolean</c> or
@@ -99,10 +114,35 @@ public record SetFactPropertyRequest(string Type, bool Multiple, IReadOnlyList<s
 public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 
 /// <summary>
+/// <c>GET /api/wiki/category/{category}/facets</c>: how many of the category's pages meet the chosen conditions,
+/// whether only the first of a large category were counted (<paramref name="Partial"/>), and their facets.
+/// </summary>
+public record WikiFacetsDto(int Pages, bool Partial, IReadOnlyList<WikiFacetDto> Facets);
+
+/// <summary>
+/// A property's values among the pages, under <paramref name="Label"/>. <paramref name="Type"/> is as
+/// <see cref="WikiFactPropertyDto"/> names it; <paramref name="More"/> counts the values left out.
+/// </summary>
+public record WikiFacetDto(string Property, string Label, string Type, IReadOnlyList<WikiFacetValueDto> Values, int More);
+
+/// <summary>
+/// A value, or a range of whole numbers, and how many pages state it. <paramref name="Value"/> is written as a
+/// condition takes it after <c>property=</c>; <paramref name="Label"/> is what a reader is shown.
+/// </summary>
+public record WikiFacetValueDto(string Value, string Label, int Count);
+
+/// <summary>
 /// One page of <c>GET /api/wiki/query</c>'s answer. <paramref name="Next"/> continues it as <c>after</c>; null when
 /// nothing is left. A page may hold fewer rows than were asked for, even none, and still go on.
 /// </summary>
-public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next);
+public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next)
+{
+	/// <summary>The properties the query's <c>show=</c> names, in order: the columns beside each page.</summary>
+	public IReadOnlyList<WikiFactPropertyDto> Show { get; init; } = [];
+
+	/// <summary>By page id, the facts each page states for <see cref="Show"/>'s properties that the reader may see.</summary>
+	public IReadOnlyDictionary<string, IReadOnlyList<WikiFactDto>> Facts { get; init; } = new Dictionary<string, IReadOnlyList<WikiFactDto>>();
+}
 
 /// <summary>
 /// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page
@@ -278,15 +318,16 @@ public sealed record WikiCategoryNewestDto(IReadOnlyList<WikiPageSummaryDto> Pag
 public static class WikiFactConditions
 {
 	/// <summary>
-	/// The conditions, separated by commas. A piece with no <c>=</c> is the rest of the value before it, so a title or
-	/// category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays one condition.
+	/// The conditions, separated by commas. A piece with no operator (<c>=</c>, <c>&lt;</c> or <c>&gt;</c>) is the rest
+	/// of the value before it, so a title or category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays
+	/// one condition.
 	/// </summary>
 	public static IReadOnlyList<string> Split(string typed)
 	{
 		var conditions = new List<string>();
 		foreach (var piece in typed.Split(','))
 		{
-			if (conditions.Count > 0 && !piece.Contains('=')) conditions[^1] += "," + piece;
+			if (conditions.Count > 0 && piece.IndexOfAny(['=', '<', '>']) < 0) conditions[^1] += "," + piece;
 			else conditions.Add(piece);
 		}
 		return conditions;

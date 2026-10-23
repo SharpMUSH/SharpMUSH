@@ -235,7 +235,7 @@ public static class ResolvedThemeExtensions
 			H4 = new H4Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
 			H5 = new H5Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
 			H6 = new H6Typography { FontFamily = DisplayFontFamily, FontWeight = "600" },
-			Button = new ButtonTypography { FontFamily = UiFontFamily, FontWeight = "500" },
+			Button = new ButtonTypography { FontFamily = UiFontFamily, FontWeight = "500", TextTransform = "none" },
 			Caption = new CaptionTypography { FontFamily = MonoFontFamily, FontSize = "11px" },
 			Overline = new OverlineTypography { FontFamily = MonoFontFamily },
 		};

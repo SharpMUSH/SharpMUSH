@@ -122,18 +122,17 @@ arcane|primal
 
 Returns a space-separated list of the references of the published pages
 whose facts meet every condition. You can give up to four fact conditions,
-plus a category and a namespace:
+written as `@wiki/query` takes them (see [wiki fact conditions]), plus:
 
-- `<property>=<value>`: the page states that value. A page is named by its
-  title.
-- `<property>=<low>..<high>`: a whole number from *<low>* to *<high>*. Leave
-  one end off for no limit, as in `pf2e:level=..2`.
 - `category=<name>`: the page is in that category.
 - `namespace=<name>`: the page is in that namespace.
+- `sort=<property>`: order the pages by a number or keyword.
+- `order=desc`: highest first.
 
-A page you may not read is left out, and at most 1000 pages are returned. A
-condition the wiki cannot answer returns `#-1 INVALID WIKI QUERY`. Until the fact index is built, the result
-is `#-1 WIKI INDEX BUILDING`.
+`show=` is refused: read a page's values with `wikifact()`. A page you may
+not read is left out, and at most 1000 pages are returned. A condition the
+wiki cannot answer returns `#-1 INVALID WIKI QUERY`. Until the fact index
+is built, the result is `#-1 WIKI INDEX BUILDING`.
 
 ## Example
 
@@ -142,6 +141,8 @@ is `#-1 WIKI INDEX BUILDING`.
 main:shield main:fireball
 > think wikiquery(category=Spells, pf2e:class=Wizard)
 main:shield
+> think wikiquery(pf2e:tradition=arcane, sort=pf2e:level, order=desc)
+main:fireball main:magic_missile main:shield
 ```
 
 ::: seealso

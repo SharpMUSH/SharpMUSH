@@ -10,7 +10,7 @@
 
 <PageTitle>@Loc["JobsTitle"]</PageTitle>
 <div class="page-stack page-stack--padded jobs">
-    <PlainPageHeader Kicker="@Loc["AdmJobsKicker"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
+    <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
         <Actions>
             <CapsuleButton Icon="@Icons.Material.Filled.Refresh" OnClick="Load" Disabled="_busy">@Loc["JobsRefresh"]</CapsuleButton>
         </Actions>
@@ -23,11 +23,11 @@
             <AuthorizeView Policy="jobs.manage.own"><Authorized>
                 <KitCard Title="@Loc["JobsCreate"]">
                     <div class="jobs-form">
-                        <MudTextField @bind-Value="_target" Label="@Loc["JobsTarget"]" />
-                        <MudTextField @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
-                        <MudTextField @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
-                        <MudTextField @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
-                        <MudTextField @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="_target" Label="@Loc["JobsTarget"]" />
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="_attribute" Label="@Loc["JobsAttribute"]" />
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="_description" Label="@Loc["JobsDescription"]" MaxLength="500" />
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="_schedule" Label="@Loc["JobsSchedule"]" />
+                        <MudTextField Variant="Variant.Outlined" @bind-Value="_zone" Label="@Loc["JobsTimeZone"]" />
                         <div class="jobs-actions">
                             <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Create" Disabled="_busy">@Loc["JobsCreate"]</MudButton>
                         </div>
@@ -58,8 +58,8 @@
                             </div>
                             @if (_selected == job.Id)
                             {
-                                <MudTextField @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
-                                <MudTextField @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
+                                <MudTextField Variant="Variant.Outlined" @bind-Value="_editSchedule" Label="@Loc["JobsSchedule"]" />
+                                <MudTextField Variant="Variant.Outlined" @bind-Value="_editZone" Label="@Loc["JobsTimeZone"]" />
                                 <div class="jobs-actions">
                                     <MudButton Color="Color.Primary" OnClick="@(() => Save(job))" Disabled="_busy">@Loc["JobsSave"]</MudButton>
                                 </div>

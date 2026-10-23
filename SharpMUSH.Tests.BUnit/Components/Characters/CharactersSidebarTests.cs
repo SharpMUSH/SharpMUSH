@@ -85,9 +85,18 @@ public class CharactersSidebarTests : TrackingBunitContext
 	}
 
 	[Test]
-	public async Task Search_GoesToTheDirectoryWithTheQuery()
+	public async Task Search_IsLeftToTheDirectoryOnItsOwnPage()
 	{
 		var cut = RenderAt("/characters", CharactersApiFake.Anonymous(this));
+		cut.WaitForAssertion(() => cut.Find(".char-side-browse .kit-row-count"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".kit-side-search").Count).IsEqualTo(0)
+			.Because("the directory filters in its own header");
+	}
+
+	[Test]
+	public async Task Search_GoesToTheDirectoryWithTheQuery()
+	{
+		var cut = RenderAt("/character/Wren", CharactersApiFake.Anonymous(this));
 		// Every load has landed (the browse counts are the last to render) before typing, so no later
 		// render can land between the keystroke and the submit.
 		cut.WaitForAssertion(() => cut.Find(".char-side-browse .kit-row-count"), TimeSpan.FromSeconds(5));

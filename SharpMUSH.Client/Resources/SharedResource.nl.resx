@@ -156,10 +156,6 @@
     <value>Inschakelen</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Documentatie</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Blader door onderwerpen, doorzoek naslagwerken en lees de handleiding.</value>
     <comment>MT</comment>
@@ -257,10 +253,6 @@
   </data>
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Rollen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Beheer · server</value>
     <comment>MT</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
@@ -1461,10 +1453,6 @@
     <value>Selecteer een applicatie of registreer een nieuwe.</value>
     <comment>MT</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Bouwen · aangepaste widgets</value>
-    <comment>MT</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Nieuwe applicatie</value>
     <comment>MT</comment>
@@ -1567,10 +1555,6 @@
   </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Rangschik de widgets op elke pagina door ze tussen zones te slepen. Wijzigingen worden voor elke bezoeker gepubliceerd.</value>
-    <comment>MT</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Bouwen · paginalay-outs</value>
     <comment>MT</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
@@ -2381,18 +2365,6 @@
     <value>De mijne behouden</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Bouwen · pakketten samenstellen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Bouwen · pakketregister</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Bouwen · pakketbronnen</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Licentie (optioneel)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Sessies die nu bezig zijn.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Staf · wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>iedereen kan bewerken</value>
     <comment>MT</comment>
@@ -2791,10 +2759,6 @@
   </data>
   <data name="ResChangedBadge" xml:space="preserve">
     <value>gewijzigd</value>
-    <comment>MT</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Beheer · serverconfiguratie</value>
     <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
@@ -2990,10 +2954,6 @@
   </data>
   <data name="RolInherit" xml:space="preserve">
     <value>Overnemen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Beheer · toegangsbeheer</value>
     <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
@@ -4463,10 +4423,6 @@
     <value>{0} (bron)</value>
     <comment>MT</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Staf · media</value>
-    <comment>MT — "staff" rendered as "staf"; many Dutch MU* games keep the English word, worth a native check.</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Gebruikte opslag</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Beheerdersoverzicht</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Beheer · Spellingcontrole</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Beheer · Database</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Beheren · Diagnose</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Beheren · Automatisering</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Bouwen · Herstel</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filteren op soort</value>

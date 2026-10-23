@@ -82,17 +82,16 @@ public static class RecursiveMarkdownHelper
 		return renderer.Render(document);
 	}
 
+	/// <summary>Parses markdown as <see cref="RenderMarkdown(string, RecursiveMarkdownRenderer)"/> does, for a caller that reads the document before rendering it.</summary>
+	public static MarkdownDocument Parse(string markdown) => Markdown.Parse(markdown, BuildPipeline());
+
 	/// <summary>
 	/// Renders markdown text to MString using a custom renderer
 	/// </summary>
 	/// <param name="markdown">The markdown text to render</param>
 	/// <param name="renderer">Custom renderer instance to use</param>
 	public static MString RenderMarkdown(string markdown, RecursiveMarkdownRenderer renderer)
-	{
-		var pipeline = BuildPipeline();
-		var document = Markdown.Parse(markdown, pipeline);
-		return renderer.Render(document);
-	}
+		=> renderer.Render(Parse(markdown));
 
 	/// <summary>
 	/// Renders a parsed MarkdownDocument to MString using the recursive renderer

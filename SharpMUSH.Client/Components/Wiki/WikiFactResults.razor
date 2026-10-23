@@ -1,0 +1,115 @@
+@using System.Net
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The pages a fact query finds, as a list, or as a table with a column for each property its show= names. Give it a
+   @key of its conditions: it reads them once. *@
+@if (_message is { } message)
+{
+    <div class="wiki-fact-results-message" role="alert">@message</div>
+}
+else if (_pages is { } pages)
+{
+    @if (pages.Count == 0 && _next is null)
+    {
+        <EmptyState>@Loc["WkFactSearchNone"]</EmptyState>
+    }
+    @if (_show.Count == 0)
+    {
+        <ul class="wiki-fact-results" aria-live="polite">
+            @foreach (var row in pages)
+            {
+                <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
+            }
+        </ul>
+    }
+    else
+    {
+        <div class="wiki-fact-results-scroll">
+            <table class="wiki-fact-results wiki-fact-results-table" aria-live="polite">
+                <thead>
+                    <tr>
+                        <th scope="col">@Loc["WkFactSearchPage"]</th>
+                        @foreach (var property in _show)
+                        {
+                            <th scope="col" title="@property.Id">@(property.Label.Length > 0 ? property.Label : property.Id)</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in pages)
+                    {
+                        <tr>
+                            <th scope="row"><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.PathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></th>
+                            @foreach (var property in _show)
+                            {
+                                <td>@string.Join(" · ", Values(row.Id, property.Id))</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    @if (_next is not null)
+    {
+        <button type="button" class="wiki-fact-results-more" disabled="@_busy" @onclick="MoreAsync">@Loc["WkFactSearchMore"]</button>
+    }
+}
+
+@code {
+    /// <summary>The conditions, as wikiquery() takes them.</summary>
+    [Parameter, EditorRequired] public IReadOnlyList<string> Conditions { get; set; } = [];
+    [Parameter] public string? Locale { get; set; }
+
+    private List<WikiPageSummaryDto>? _pages;
+    private IReadOnlyList<WikiFactPropertyDto> _show = [];
+    private readonly Dictionary<string, IReadOnlyList<WikiFactDto>> _facts = [];
+    private string? _next;
+    private string? _message;
+    private bool _busy;
+
+    protected override Task OnInitializedAsync() => ReadAsync(after: null);
+
+    private Task MoreAsync() => ReadAsync(_next);
+
+    /// <summary>What a page states for a shown property, a page value as its title.</summary>
+    private IEnumerable<string> Values(string page, string property)
+        => (_facts.GetValueOrDefault(page) ?? []).Where(f => f.Property == property).Select(f => f.PageTitle ?? f.Value);
+
+    /// <summary>
+    /// Reads on from <paramref name="after"/> until a page holds a row or the answer ends: the server returns an empty
+    /// page with a continuation when it read its whole budget without a match.
+    /// </summary>
+    private async Task ReadAsync(string? after)
+    {
+        _busy = true;
+        _message = null;
+        do
+        {
+            switch (await Wiki.QueryFactsAsync(Conditions, after, Locale))
+            {
+                case WikiFactQueryResultDto found:
+                    _pages = [.. _pages ?? [], .. found.Pages];
+                    _show = found.Show;
+                    foreach (var (id, facts) in found.Facts) _facts[id] = facts;
+                    _next = after = found.Next;
+                    if (found.Pages.Count > 0) after = null;
+                    break;
+                case ApiFailure { Status: HttpStatusCode.ServiceUnavailable }:
+                    _message = Loc["WkFactSearchBuilding"];
+                    after = null;
+                    break;
+                case ApiFailure failure:
+                    _message = failure.Message;
+                    after = null;
+                    break;
+            }
+        } while (after is not null);
+        _busy = false;
+    }
+}

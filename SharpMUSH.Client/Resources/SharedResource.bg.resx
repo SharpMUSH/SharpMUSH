@@ -156,10 +156,6 @@
     <value>Активирай</value>
     <comment>MT — plain imperative, button</comment>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Документация</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Разгледайте темите, търсете в справочниците и прочетете ръководството.</value>
     <comment>MT — polite Вие-form</comment>
@@ -258,10 +254,6 @@
   <data name="AdmRolesTitle" xml:space="preserve">
     <value>Роли</value>
     <comment>MT</comment>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Администриране · Сървър</value>
-    <comment>MT — middle dot separator preserved</comment>
   </data>
   <data name="AdmStatus" xml:space="preserve">
     <value>Състояние</value>
@@ -1461,10 +1453,6 @@
     <value>Изберете приложение или регистрирайте ново.</value>
     <comment>MT — polite Вие-form</comment>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Изграждане · Персонализирани уиджети</value>
-    <comment>MT — middle dot separator preserved</comment>
-  </data>
   <data name="LayAppsNew" xml:space="preserve">
     <value>Ново приложение</value>
     <comment>MT</comment>
@@ -1568,10 +1556,6 @@
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Подредете уиджетите на всяка страница, като ги влачите между зоните. Промените се публикуват за всички посетители.</value>
     <comment>MT — polite Вие-form</comment>
-  </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Изграждане · Оформления на страници</value>
-    <comment>MT — middle dot separator preserved</comment>
   </data>
   <data name="LayLivePreview" xml:space="preserve">
     <value>Преглед на живо</value>
@@ -2381,18 +2365,6 @@
     <value>Запази моята версия</value>
     <comment>MT — merge-conflict resolution option, paired with PkgDeleteTakeTheirs</comment>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Изграждане · Създаване на пакети</value>
-    <comment>MT — middle dot separator preserved</comment>
-  </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Изграждане · Регистър на пакетите</value>
-    <comment>MT</comment>
-  </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Изграждане · Източници на пакети</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgLicenseLabel" xml:space="preserve">
     <value>Лиценз (незадължително)</value>
     <comment>MT</comment>
@@ -2777,10 +2749,6 @@
     <value>Сесии, които текат в момента.</value>
     <comment>MT</comment>
   </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Екип · Wiki</value>
-    <comment>MT</comment>
-  </data>
   <data name="ResAnyoneCanEdit" xml:space="preserve">
     <value>всеки може да редактира</value>
     <comment>MT</comment>
@@ -2792,10 +2760,6 @@
   <data name="ResChangedBadge" xml:space="preserve">
     <value>променено</value>
     <comment>MT — neuter, reads as a status badge</comment>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
-    <value>Администрация · конфигурация на сървъра</value>
-    <comment>MT</comment>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
     <value>Администрация · настройки на сървъра</value>
@@ -2991,10 +2955,6 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Наследяване</value>
     <comment>MT — permission tri-state value</comment>
-  </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>Управление · Контрол на достъпа</value>
-    <comment>MT</comment>
   </data>
   <data name="RolLiveBadge" xml:space="preserve">
     <value>НА ЖИВО</value>
@@ -4463,10 +4423,6 @@
     <value>{0} (източник)</value>
     <comment>MT — {0} is a language name; parenthesis keeps it at a syntactic boundary</comment>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Екип · Медия</value>
-    <comment>MT — «Staff» rendered «Екип» consistently across all batches</comment>
-  </data>
   <data name="WkStorageUsed" xml:space="preserve">
     <value>Използвано пространство</value>
     <comment>MT</comment>
@@ -5142,21 +5098,6 @@
   </data>
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Администраторски указател</value>
-  </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Администрация · Правопис</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Админ · База данни</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Управление · Диагностика</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Управление · Автоматизация</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Изграждане · Възстановяване</value>
   </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Филтър по вид</value>

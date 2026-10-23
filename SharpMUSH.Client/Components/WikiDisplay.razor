@@ -51,8 +51,9 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
-            <WikiFactSearch Category="@Slug" Locale="@Locale" />
-            <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+            <WikiCategoryFacets Category="@Slug" Locale="@Locale">
+                <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+            </WikiCategoryFacets>
         </div>
         <aside class="wiki-page-aside">
             <AuthorizeView Policy="wiki.admin">
@@ -120,12 +121,13 @@ else
                         </div>
                     </KitCard>
                 }
-                <WikiFactBox Facts="@Article.Facts" HoldLinks="@AwaitingReturnContext" />
+                <WikiFactBox Facts="@Article.Facts" NamedBy="@Article.NamedBy" Page="@($"{Namespace ?? "main"}:{Slug}")" HoldLinks="@AwaitingReturnContext" />
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
-                    <WikiFactSearch Category="@Slug" Locale="@Locale" />
-                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+                    <WikiCategoryFacets Category="@Slug" Locale="@Locale">
+                        <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+                    </WikiCategoryFacets>
                 }
             }
             else
@@ -598,6 +600,9 @@ else
         {
             html = WikiImages.StripFirstImage(html, LeadImage!.Url);
         }
+
+        // The header (or, embedded, the page around it) holds the h1; the body's own outline goes under it.
+        html = PageHeadings.UnderPageTitle(html, Embedded ? null : Article?.Title);
         html = ApiUrl.ResolveHtml(html);
 
         _hasBody = HasVisibleContent(html);
@@ -721,9 +726,9 @@ else
 
     private RenderFragment RenderSegments => RenderNodes(_segments);
 
-    /// <summary>The body's pieces: HTML as it is, a component for each live listing, and an element for
-    /// each block that holds one (<see cref="WikiBody"/>).</summary>
-    private static RenderFragment RenderNodes(IReadOnlyList<WikiBodyNode> nodes) => __builder =>
+    /// <summary>The body's pieces: HTML as it is, a component for each live listing (a facts block's query
+    /// answered when the page is read), and an element for each block that holds one (<see cref="WikiBody"/>).</summary>
+    private RenderFragment RenderNodes(IReadOnlyList<WikiBodyNode> nodes) => __builder =>
     {
         foreach (var node in nodes)
         {
@@ -731,6 +736,11 @@ else
             {
                 case WikiBodyHtml html:
                     @((MarkupString)html.Html)
+                    break;
+                case WikiBodyDirective { Directive: "facts" } facts:
+                    <div class="wiki-directive-block wiki-facts-block">
+                        <WikiFactResults Conditions="@(WikiFactConditions.Split(facts.Arg))" Locale="@Locale" />
+                    </div>
                     break;
                 case WikiBodyDirective directive:
                     <WikiDirectiveBlock Directive="@directive.Directive" Arg="@directive.Arg" />

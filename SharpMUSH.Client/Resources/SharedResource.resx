@@ -67,7 +67,7 @@
     <value>SharpMUSH</value>
   </data>
   <data name="AdminPanel" xml:space="preserve">
-    <value>Admin Panel</value>
+    <value>Admin panel</value>
   </data>
   <data name="Home" xml:space="preserve">
     <value>Home</value>
@@ -132,7 +132,7 @@
     <value>Important</value>
   </data>
   <data name="BannedNames" xml:space="preserve">
-    <value>Banned Names</value>
+    <value>Banned names</value>
   </data>
   <data name="Restrictions" xml:space="preserve">
     <value>Restrictions</value>
@@ -150,7 +150,7 @@
     <value>Chat</value>
   </data>
   <data name="LogsAndFiles" xml:space="preserve">
-    <value>Logs &amp; Files</value>
+    <value>Logs &amp; files</value>
   </data>
   <data name="Logging" xml:space="preserve">
     <value>Logging</value>
@@ -159,10 +159,10 @@
     <value>Files</value>
   </data>
   <data name="TextFiles" xml:space="preserve">
-    <value>Text Files</value>
+    <value>Text files</value>
   </data>
   <data name="DatabaseDumps" xml:space="preserve">
-    <value>Database Dumps</value>
+    <value>Database dumps</value>
   </data>
   <data name="Advanced" xml:space="preserve">
     <value>Advanced</value>
@@ -217,13 +217,13 @@
     <value>Edit</value>
   </data>
   <data name="WikiRecentChanges" xml:space="preserve">
-    <value>Recent Changes</value>
+    <value>Recent changes</value>
   </data>
   <data name="WikiNoRecentChanges" xml:space="preserve">
     <value>No pages have been edited yet.</value>
   </data>
   <data name="WikiBrowseByNamespace" xml:space="preserve">
-    <value>Browse by Namespace</value>
+    <value>Browse by namespace</value>
   </data>
   <data name="WikiNamespaceEmpty" xml:space="preserve">
     <value>No pages in this namespace yet.</value>
@@ -265,7 +265,7 @@
   <!-- NotFound.razor           -->
   <!-- ======================== -->
   <data name="NotFound" xml:space="preserve">
-    <value>Not Found</value>
+    <value>Not found</value>
   </data>
   <data name="NotFoundDescription" xml:space="preserve">
     <value>Sorry, the content you are looking for does not exist.</value>
@@ -294,19 +294,19 @@
   <!-- AdminConfig.razor (OLD)  -->
   <!-- ======================== -->
   <data name="ConfigurationManagement" xml:space="preserve">
-    <value>Configuration Management</value>
+    <value>Configuration management</value>
   </data>
   <data name="ImportConfig" xml:space="preserve">
-    <value>Import Config</value>
+    <value>Import config</value>
   </data>
   <data name="ResetToDefault" xml:space="preserve">
-    <value>Reset to Default</value>
+    <value>Reset to default</value>
   </data>
   <data name="ManageConfigDescription" xml:space="preserve">
     <value>Manage your MUSH configuration settings. You can import configuration files or modify settings directly.</value>
   </data>
   <data name="ConfigurationSections" xml:space="preserve">
-    <value>Configuration Sections</value>
+    <value>Configuration sections</value>
   </data>
   <data name="SettingsCount" xml:space="preserve">
     <value>{count, plural, one {# setting} other {# settings}}</value>
@@ -334,7 +334,7 @@
     <value>Add</value>
   </data>
   <data name="NewKey" xml:space="preserve">
-    <value>New Key</value>
+    <value>New key</value>
   </data>
   <data name="Type" xml:space="preserve">
     <value>Type: {0}</value>
@@ -362,22 +362,22 @@
   <!-- BannedNames.razor        -->
   <!-- ======================== -->
   <data name="BannedPlayerNames" xml:space="preserve">
-    <value>Banned Player Names</value>
+    <value>Banned player names</value>
   </data>
   <data name="BannedNamesDescription" xml:space="preserve">
     <value>Manage the list of names that players are not allowed to use when creating characters.</value>
   </data>
   <data name="AddBannedName" xml:space="preserve">
-    <value>Add Banned Name</value>
+    <value>Add banned name</value>
   </data>
   <data name="NameToBan" xml:space="preserve">
-    <value>Name to Ban</value>
+    <value>Name to ban</value>
   </data>
   <data name="AddName" xml:space="preserve">
-    <value>Add Name</value>
+    <value>Add name</value>
   </data>
   <data name="BannedNamesList" xml:space="preserve">
-    <value>Banned Names List</value>
+    <value>Banned names list</value>
   </data>
   <data name="NoBannedNamesConfigured" xml:space="preserve">
     <value>No banned names configured.</value>
@@ -408,7 +408,7 @@
   <!-- Sitelock.razor           -->
   <!-- ======================== -->
   <data name="SitelockRules" xml:space="preserve">
-    <value>Sitelock Rules</value>
+    <value>Sitelock rules</value>
   </data>
   <data name="SitelockDescription" xml:space="preserve">
     <value>Control which sites can connect, create players, or use guest accounts.</value>
@@ -417,22 +417,22 @@
     <value>Access rules:</value>
   </data>
   <data name="AddSitelockRule" xml:space="preserve">
-    <value>Add Sitelock Rule</value>
+    <value>Add sitelock rule</value>
   </data>
   <data name="HostPattern" xml:space="preserve">
-    <value>Host Pattern</value>
+    <value>Host pattern</value>
   </data>
   <data name="HostPatternHelper" xml:space="preserve">
     <value>e.g., *.example.com or 192.168.1.*</value>
   </data>
   <data name="AccessRulesLabel" xml:space="preserve">
-    <value>Access Rules</value>
+    <value>Access rules</value>
   </data>
   <data name="AccessRulesHelper" xml:space="preserve">
     <value>e.g., !connect, suspect</value>
   </data>
   <data name="ConfiguredRules" xml:space="preserve">
-    <value>Configured Rules</value>
+    <value>Configured rules</value>
   </data>
   <data name="NoSitelockRulesConfigured" xml:space="preserve">
     <value>No sitelock rules configured.</value>
@@ -466,31 +466,31 @@
   <!-- Restrictions.razor       -->
   <!-- ======================== -->
   <data name="CommandAndFunctionRestrictions" xml:space="preserve">
-    <value>Command &amp; Function Restrictions</value>
+    <value>Command &amp; function restrictions</value>
   </data>
   <data name="RestrictionsDescription" xml:space="preserve">
     <value>Restrict which players can use specific commands or functions based on flags, powers, or attributes.</value>
   </data>
   <data name="CommandRestrictions" xml:space="preserve">
-    <value>Command Restrictions</value>
+    <value>Command restrictions</value>
   </data>
   <data name="FunctionRestrictions" xml:space="preserve">
-    <value>Function Restrictions</value>
+    <value>Function restrictions</value>
   </data>
   <data name="AddCommandRestriction" xml:space="preserve">
-    <value>Add Command Restriction</value>
+    <value>Add command restriction</value>
   </data>
   <data name="AddFunctionRestriction" xml:space="preserve">
-    <value>Add Function Restriction</value>
+    <value>Add function restriction</value>
   </data>
   <data name="CommandName" xml:space="preserve">
-    <value>Command Name</value>
+    <value>Command name</value>
   </data>
   <data name="CommandNameHelper" xml:space="preserve">
     <value>e.g., pemit, force</value>
   </data>
   <data name="FunctionName" xml:space="preserve">
-    <value>Function Name</value>
+    <value>Function name</value>
   </data>
   <data name="FunctionNameHelper" xml:space="preserve">
     <value>e.g., pemit(), sql()</value>
@@ -505,10 +505,10 @@
     <value>e.g., wizard, builder</value>
   </data>
   <data name="ConfiguredCommandRestrictions" xml:space="preserve">
-    <value>Configured Command Restrictions</value>
+    <value>Configured command restrictions</value>
   </data>
   <data name="ConfiguredFunctionRestrictions" xml:space="preserve">
-    <value>Configured Function Restrictions</value>
+    <value>Configured function restrictions</value>
   </data>
   <data name="NoCommandRestrictions" xml:space="preserve">
     <value>No command restrictions configured.</value>
@@ -563,10 +563,10 @@
   <!-- SuggestionManagement.razor -->
   <!-- ======================== -->
   <data name="SuggestionManagement" xml:space="preserve">
-    <value>Suggestion Management</value>
+    <value>Suggestion management</value>
   </data>
   <data name="AddCategory" xml:space="preserve">
-    <value>Add Category</value>
+    <value>Add category</value>
   </data>
   <data name="Refresh" xml:space="preserve">
     <value>Refresh</value>
@@ -600,13 +600,13 @@
     <value>Categories</value>
   </data>
   <data name="TotalWords" xml:space="preserve">
-    <value>Total Words</value>
+    <value>Total words</value>
   </data>
   <data name="AvgWordsPerCategory" xml:space="preserve">
     <value>Avg. Words/Category</value>
   </data>
   <data name="CategoryName" xml:space="preserve">
-    <value>Category Name</value>
+    <value>Category name</value>
   </data>
   <data name="CategoryNameHelper" xml:space="preserve">
     <value>Enter a name for the new suggestion category (e.g., 'commands', 'functions', 'help')</value>
@@ -670,7 +670,7 @@
   <!-- ImportConfig.razor       -->
   <!-- ======================== -->
   <data name="ImportConfiguration" xml:space="preserve">
-    <value>Import Configuration</value>
+    <value>Import configuration</value>
   </data>
   <data name="ImportConfigDescription" xml:space="preserve">
     <value>Upload a mush.cnf file to import configuration settings. Supported formats: .cnf, .conf, .txt</value>
@@ -682,7 +682,7 @@
     <value>Supported formats: .cnf, .conf, .txt (max 1MB)</value>
   </data>
   <data name="SelectedFile" xml:space="preserve">
-    <value>Selected File</value>
+    <value>Selected file</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
     <value>Mail database (optional): the PennMUSH maildb, RhostMUSH's .dump.mail from wmail/unload, or TinyMUX's mail.db, for mail and mail aliases</value>
@@ -715,10 +715,10 @@
     <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
-    <value>Preview File Content</value>
+    <value>Preview file content</value>
   </data>
   <data name="ClearSelection" xml:space="preserve">
-    <value>Clear Selection</value>
+    <value>Clear selection</value>
   </data>
   <data name="Importing" xml:space="preserve">
     <value>Importing...</value>
@@ -743,10 +743,10 @@
     <value>Uploading...</value>
   </data>
   <data name="StartConversion" xml:space="preserve">
-    <value>Start Conversion</value>
+    <value>Start conversion</value>
   </data>
   <data name="ConvertingDatabase" xml:space="preserve">
-    <value>Converting Database</value>
+    <value>Converting database</value>
   </data>
   <data name="PercentComplete" xml:space="preserve">
     <value>{0:F1}% Complete - {1}</value>
@@ -761,10 +761,10 @@
     <value>Elapsed:</value>
   </data>
   <data name="EstimatedRemaining" xml:space="preserve">
-    <value>Estimated Remaining:</value>
+    <value>Estimated remaining:</value>
   </data>
   <data name="ObjectsCreated" xml:space="preserve">
-    <value>Objects Created</value>
+    <value>Objects created</value>
   </data>
   <data name="Players" xml:space="preserve">
     <value>Players:</value>
@@ -782,7 +782,7 @@
     <value>Total:</value>
   </data>
   <data name="AdditionalData" xml:space="preserve">
-    <value>Additional Data</value>
+    <value>Additional data</value>
   </data>
   <data name="AttributesLabel" xml:space="preserve">
     <value>Attributes:</value>
@@ -814,19 +814,19 @@
     <comment>ICU MessageFormat. Named args: count.</comment>
   </data>
   <data name="CancelConversion" xml:space="preserve">
-    <value>Cancel Conversion</value>
+    <value>Cancel conversion</value>
   </data>
   <data name="ConversionSuccess" xml:space="preserve">
-    <value>Conversion Completed Successfully!</value>
+    <value>Conversion completed successfully!</value>
   </data>
   <data name="ConversionErrors" xml:space="preserve">
-    <value>Conversion Completed with Errors</value>
+    <value>Conversion completed with errors</value>
   </data>
   <data name="ObjectsConverted" xml:space="preserve">
-    <value>Objects Converted</value>
+    <value>Objects converted</value>
   </data>
   <data name="TotalObjects" xml:space="preserve">
-    <value>Total Objects:</value>
+    <value>Total objects:</value>
   </data>
   <data name="Duration" xml:space="preserve">
     <value>Duration:</value>
@@ -838,14 +838,14 @@
     <value>Warnings ({0})</value>
   </data>
   <data name="ImportAnotherDatabase" xml:space="preserve">
-    <value>Import Another Database</value>
+    <value>Import another database</value>
   </data>
 
   <!-- ======================== -->
   <!-- ConfigIndex.razor        -->
   <!-- ======================== -->
   <data name="ServerConfiguration" xml:space="preserve">
-    <value>Server Configuration</value>
+    <value>Server configuration</value>
   </data>
   <data name="ManageAllSettings" xml:space="preserve">
     <value>Manage all SharpMUSH server settings from one place</value>
@@ -872,16 +872,16 @@
     <value>Coming soon</value>
   </data>
   <data name="QuickActions" xml:space="preserve">
-    <value>Quick Actions</value>
+    <value>Quick actions</value>
   </data>
   <data name="SearchAllSettings" xml:space="preserve">
-    <value>Search All Settings</value>
+    <value>Search all settings</value>
   </data>
   <data name="ImportConfigFile" xml:space="preserve">
-    <value>Import Config File</value>
+    <value>Import config file</value>
   </data>
   <data name="ExportConfiguration" xml:space="preserve">
-    <value>Export Configuration</value>
+    <value>Export configuration</value>
   </data>
   <data name="Maintenance" xml:space="preserve">
     <value>Maintenance</value>
@@ -903,7 +903,7 @@
   <!-- DynamicConfig.razor      -->
   <!-- ======================== -->
   <data name="RoutingError" xml:space="preserve">
-    <value>Routing Error:</value>
+    <value>Routing error:</value>
   </data>
   <data name="RoutingErrorDescription" xml:space="preserve">
     <value>The category "{0}" has a custom page that should be rendering instead of DynamicConfig.</value>
@@ -933,22 +933,22 @@
     <value>in this section</value>
   </data>
   <data name="ResetChanges" xml:space="preserve">
-    <value>Reset Changes</value>
+    <value>Reset changes</value>
   </data>
   <data name="AddItem" xml:space="preserve">
-    <value>Add Item</value>
+    <value>Add item</value>
   </data>
   <data name="NoItems" xml:space="preserve">
     <value>No items</value>
   </data>
   <data name="AddEntry" xml:space="preserve">
-    <value>Add Entry</value>
+    <value>Add entry</value>
   </data>
   <data name="NoEntries" xml:space="preserve">
     <value>No entries</value>
   </data>
   <data name="AddValue" xml:space="preserve">
-    <value>Add Value</value>
+    <value>Add value</value>
   </data>
   <data name="NewEntry" xml:space="preserve">
     <value>New entry</value>
@@ -957,7 +957,7 @@
     <value>Remove entry</value>
   </data>
   <data name="SaveConfiguration" xml:space="preserve">
-    <value>Save Configuration</value>
+    <value>Save configuration</value>
   </data>
   <data name="SaveNotImplemented" xml:space="preserve">
     <value>Save functionality not yet implemented</value>
@@ -975,7 +975,7 @@
     <value>Error loading configuration: {0}</value>
   </data>
   <data name="ResetToDefaults" xml:space="preserve">
-    <value>Reset to Defaults</value>
+    <value>Reset to defaults</value>
   </data>
   <data name="Saving" xml:space="preserve">
     <value>Saving...</value>
@@ -1002,7 +1002,7 @@
   </data>
 
   <data name="SoftcodeEditor" xml:space="preserve">
-    <value>Softcode Editor</value>
+    <value>Softcode editor</value>
   </data>
 
   <data name="Terminal" xml:space="preserve">
@@ -1016,7 +1016,7 @@
     <value>Save</value>
   </data>
   <data name="WikiAdmin" xml:space="preserve">
-    <value>Wiki Admin</value>
+    <value>Wiki admin</value>
   </data>
   <data name="WikiAdminDescription" xml:space="preserve">
     <value>Manage wiki pages: metadata, protection, publication state and bulk operations.</value>
@@ -1046,10 +1046,10 @@
     <value>Delete</value>
   </data>
   <data name="WikiEditMetadata" xml:space="preserve">
-    <value>Edit Metadata</value>
+    <value>Edit metadata</value>
   </data>
   <data name="WikiDeleteConfirmTitle" xml:space="preserve">
-    <value>Delete Pages</value>
+    <value>Delete pages</value>
   </data>
   <data name="WikiDeleteConfirmText" xml:space="preserve">
     <value>Delete {count, plural, one {# page} other {# pages}} and all their revisions? This cannot be undone.</value>
@@ -1105,7 +1105,7 @@
     <value>Wiki</value>
   </data>
   <data name="RecentChanges" xml:space="preserve">
-    <value>Recent Changes</value>
+    <value>Recent changes</value>
   </data>
   <data name="SceneArchive" xml:space="preserve">
     <value>Scenes</value>
@@ -1120,13 +1120,13 @@
     <value>Help</value>
   </data>
   <data name="MyAccount" xml:space="preserve">
-    <value>My Account</value>
+    <value>My account</value>
   </data>
   <data name="Delete" xml:space="preserve">
     <value>Delete</value>
   </data>
   <data name="EditProfile" xml:space="preserve">
-    <value>Edit Profile</value>
+    <value>Edit profile</value>
   </data>
   <data name="StaffOnlyField" xml:space="preserve">
     <value>Staff-only — changes apply only if you are staff.</value>
@@ -1151,7 +1151,7 @@
     <value>Could not set the icon: {0}</value>
   </data>
   <data name="ProfileHandler" xml:space="preserve">
-    <value>Profile Handler</value>
+    <value>Profile handler</value>
   </data>
   <data name="Compose" xml:space="preserve">
     <value>Compose</value>
@@ -1184,16 +1184,16 @@
     <value>Send</value>
   </data>
   <data name="WidgetZoneTopBar" xml:space="preserve">
-    <value>Top Bar</value>
+    <value>Top bar</value>
   </data>
   <data name="WidgetZoneLeftSidebar" xml:space="preserve">
-    <value>Left Sidebar</value>
+    <value>Left sidebar</value>
   </data>
   <data name="WidgetZoneRightSidebar" xml:space="preserve">
-    <value>Right Sidebar</value>
+    <value>Right sidebar</value>
   </data>
   <data name="WidgetZoneMainContent" xml:space="preserve">
-    <value>Main Content</value>
+    <value>Main content</value>
   </data>
   <data name="WidgetZoneFooter" xml:space="preserve">
     <value>Footer</value>
@@ -1205,7 +1205,7 @@
     <value>Could not delete message: {0}</value>
   </data>
   <data name="ComposeMail" xml:space="preserve">
-    <value>Compose Mail</value>
+    <value>Compose mail</value>
   </data>
   <data name="To" xml:space="preserve">
     <value>To</value>
@@ -1217,7 +1217,7 @@
     <value>Could not send mail: {0}</value>
   </data>
   <data name="AuthSignIn" xml:space="preserve">
-    <value>Sign In</value>
+    <value>Sign in</value>
   </data>
   <data name="AuthRegister" xml:space="preserve">
     <value>Register</value>
@@ -1238,7 +1238,7 @@
     <value>Remember me</value>
   </data>
   <data name="AuthCreateAccount" xml:space="preserve">
-    <value>Create Account</value>
+    <value>Create account</value>
   </data>
   <data name="AuthConnectDirectly" xml:space="preserve">
     <value>Or connect directly via the</value>
@@ -1259,7 +1259,7 @@
     <value>Registration failed.</value>
   </data>
   <data name="AuthFirstRunSetup" xml:space="preserve">
-    <value>First-Run Setup</value>
+    <value>First-run setup</value>
   </data>
   <data name="AuthSetupWelcome" xml:space="preserve">
     <value>Welcome to {0}</value>
@@ -1286,13 +1286,13 @@
     <value>This game hasn't been claimed yet. Choose a username and password for the pre-generated administrator account (linked to player #1, God). The first person to complete this form becomes the administrator.</value>
   </data>
   <data name="AuthConfirmPassword" xml:space="preserve">
-    <value>Confirm Password</value>
+    <value>Confirm password</value>
   </data>
   <data name="AuthSettingUp" xml:space="preserve">
     <value>Setting up…</value>
   </data>
   <data name="AuthCreateAdminAccount" xml:space="preserve">
-    <value>Create Admin Account</value>
+    <value>Create admin account</value>
   </data>
   <data name="AuthUsernameRequired" xml:space="preserve">
     <value>Username is required.</value>
@@ -1319,13 +1319,13 @@
     <value>Account</value>
   </data>
   <data name="AuthDebugMode" xml:space="preserve">
-    <value>Debug Mode</value>
+    <value>Debug mode</value>
   </data>
   <data name="AuthDebugModeBody" xml:space="preserve">
     <value>You are authenticated as {0} (development environment). No account session is associated; account management features require a real account login.</value>
   </data>
   <data name="AuthGoToHome" xml:space="preserve">
-    <value>Go to Home</value>
+    <value>Go to home</value>
   </data>
   <data name="AuthPasswordChangeRequired" xml:space="preserve">
     <value>Password change required.</value>
@@ -1382,13 +1382,13 @@
     <value>Password updated.</value>
   </data>
   <data name="AuthSwitchCharacter" xml:space="preserve">
-    <value>Switch Character</value>
+    <value>Switch character</value>
   </data>
   <data name="AuthNoCharacter" xml:space="preserve">
     <value>No character</value>
   </data>
   <data name="AuthAccountManagement" xml:space="preserve">
-    <value>My Account</value>
+    <value>My account</value>
   </data>
   <data name="AuthLogout" xml:space="preserve">
     <value>Logout</value>
@@ -1433,7 +1433,7 @@
     <value>Installed</value>
   </data>
   <data name="PkgUpdatesAvailable" xml:space="preserve">
-    <value>Updates Available</value>
+    <value>Updates available</value>
   </data>
   <data name="PkgObjects" xml:space="preserve">
     <value>Objects</value>
@@ -1517,11 +1517,8 @@
   <data name="PkgUninstalled" xml:space="preserve">
     <value>Uninstalled {0}.</value>
   </data>
-  <data name="PkgKickerAuthoring" xml:space="preserve">
-    <value>Portal · Package authoring</value>
-  </data>
   <data name="PkgAuthorHeading" xml:space="preserve">
-    <value>Author a Package</value>
+    <value>Author a package</value>
   </data>
   <data name="PkgAuthorDescription" xml:space="preserve">
     <value>Turn live objects into a package.yaml. Every dbref in the selection must end up symbolic: in-selection references resolve automatically; the rest you classify below.</value>
@@ -1602,11 +1599,8 @@
   <data name="PkgClassifyNeedsKeyLabel" xml:space="preserve">
     <value>Classify {0}: configure refs need a key and a label.</value>
   </data>
-  <data name="PkgKickerRegistry" xml:space="preserve">
-    <value>Portal · Packages</value>
-  </data>
   <data name="PkgBrowseHeading" xml:space="preserve">
-    <value>Browse Packages</value>
+    <value>Browse packages</value>
   </data>
   <data name="PkgBrowseDescription" xml:space="preserve">
     <value>Refreshes the remote's repo cache and lists its packages. Versions come from release tags; the branch tip is the dev channel.</value>
@@ -1638,11 +1632,8 @@
   <data name="PkgNoReleaseTags" xml:space="preserve">
     <value>No release tags — only the dev channel is available.</value>
   </data>
-  <data name="PkgKickerSources" xml:space="preserve">
-    <value>Portal · Package sources</value>
-  </data>
   <data name="PkgRemotesHeading" xml:space="preserve">
-    <value>Package Remotes</value>
+    <value>Package remotes</value>
   </data>
   <data name="PkgRemotesDescription" xml:space="preserve">
     <value>Git repos this game installs packages from. Trust levels are your call — community listings below are curated in the official repo, never self-declared.</value>
@@ -1933,7 +1924,7 @@
     <value>Error: {0}</value>
   </data>
   <data name="TermMushHelp" xml:space="preserve">
-    <value>MUSH Help</value>
+    <value>MUSH help</value>
   </data>
   <data name="TermHelpBack" xml:space="preserve">
     <value>Back</value>
@@ -1958,7 +1949,7 @@
     <value>Switches: {0}</value>
   </data>
   <data name="TermSoftcodeEditorTitle" xml:space="preserve">
-    <value>Softcode Editor</value>
+    <value>Softcode editor</value>
   </data>
   <data name="TermObjects" xml:space="preserve">
     <value>Objects</value>
@@ -1967,13 +1958,13 @@
     <value>Editor</value>
   </data>
   <data name="TermCreateThing" xml:space="preserve">
-    <value>Create Thing</value>
+    <value>Create thing</value>
   </data>
   <data name="TermCreateRoom" xml:space="preserve">
-    <value>Create Room</value>
+    <value>Create room</value>
   </data>
   <data name="TermCreateExit" xml:space="preserve">
-    <value>Create Exit</value>
+    <value>Create exit</value>
   </data>
   <data name="TermJumpLatest" xml:space="preserve">
     <value>Jump to latest</value>
@@ -2094,9 +2085,6 @@
   <data name="LayLayouts" xml:space="preserve">
     <value>Layout</value>
   </data>
-  <data name="LayLayoutsKicker" xml:space="preserve">
-    <value>Portal · Layout</value>
-  </data>
   <data name="LayLayoutsBlurb" xml:space="preserve">
     <value>Arrange the widgets on each page by dragging them between zones. Changes publish to every visitor.</value>
   </data>
@@ -2107,25 +2095,25 @@
     <value>default</value>
   </data>
   <data name="LayScopeGlobal" xml:space="preserve">
-    <value>Site Chrome</value>
+    <value>Site chrome</value>
   </data>
   <data name="LayScopeGlobalDesc" xml:space="preserve">
     <value>Top bar, sidebars, and footer shared by every page.</value>
   </data>
   <data name="LayScopeHome" xml:space="preserve">
-    <value>Home Page</value>
+    <value>Home page</value>
   </data>
   <data name="LayScopeHomeDesc" xml:space="preserve">
     <value>The landing page: its main column and its aside.</value>
   </data>
   <data name="LayScopeWikiIndex" xml:space="preserve">
-    <value>Wiki Index</value>
+    <value>Wiki index</value>
   </data>
   <data name="LayScopeWikiIndexDesc" xml:space="preserve">
     <value>The /wiki landing page.</value>
   </data>
   <data name="LayScopeProfile" xml:space="preserve">
-    <value>Character Profile</value>
+    <value>Character profile</value>
   </data>
   <data name="LayScopeProfileDesc" xml:space="preserve">
     <value>The /character/{name} page body and right rail.</value>
@@ -2221,43 +2209,43 @@
     <value>Failed to reset layout.</value>
   </data>
   <data name="LayWidgetCharacterDirectory" xml:space="preserve">
-    <value>Character Directory</value>
+    <value>Character directory</value>
   </data>
   <data name="LayWidgetWikiIndex" xml:space="preserve">
-    <value>Wiki Index</value>
+    <value>Wiki index</value>
   </data>
   <data name="LayWidgetSchemaApplication" xml:space="preserve">
-    <value>Schema Application</value>
+    <value>Schema application</value>
   </data>
   <data name="LayWidgetGameStats" xml:space="preserve">
-    <value>Game Stats</value>
+    <value>Game stats</value>
   </data>
   <data name="LayWidgetActiveScene" xml:space="preserve">
-    <value>Active Scene</value>
+    <value>Active scene</value>
   </data>
   <data name="LayWidgetRecentWikiActivity" xml:space="preserve">
-    <value>Recent Wiki Activity</value>
+    <value>Recent wiki activity</value>
   </data>
   <data name="LayWidgetOnlineCharacters" xml:space="preserve">
-    <value>Online Characters</value>
+    <value>Online characters</value>
   </data>
   <data name="LayWidgetQuickstart" xml:space="preserve">
     <value>Quickstart</value>
   </data>
   <data name="LayWidgetQuickLinks" xml:space="preserve">
-    <value>Quick Links</value>
+    <value>Quick links</value>
   </data>
   <data name="LayWidgetCharacterGallery" xml:space="preserve">
-    <value>Character Gallery</value>
+    <value>Character gallery</value>
   </data>
   <data name="LayWidgetWelcomeText" xml:space="preserve">
-    <value>Welcome Text</value>
+    <value>Welcome text</value>
   </data>
   <data name="LayWidgetSpacer" xml:space="preserve">
     <value>Spacer</value>
   </data>
   <data name="LayWidgetWikiBody" xml:space="preserve">
-    <value>Wiki Page</value>
+    <value>Wiki page</value>
   </data>
   <data name="LaySpacerHelp" xml:space="preserve">
     <value>Height of the empty space, in pixels. Its width follows the placement's column span.</value>
@@ -2349,9 +2337,6 @@
   <data name="LayApplications" xml:space="preserve">
     <value>Applications</value>
   </data>
-  <data name="LayAppsKicker" xml:space="preserve">
-    <value>Portal · Applications</value>
-  </data>
   <data name="LayAppsSchemaRegistry" xml:space="preserve">
     <value>Schema registry</value>
   </data>
@@ -2401,19 +2386,19 @@
     <value>Data URL</value>
   </data>
   <data name="LayAppSubmitRoute" xml:space="preserve">
-    <value>Submit Route</value>
+    <value>Submit route</value>
   </data>
   <data name="LayAppNavPlacement" xml:space="preserve">
-    <value>Nav Placement</value>
+    <value>Nav placement</value>
   </data>
   <data name="LayAppDisplayOrder" xml:space="preserve">
-    <value>Display Order</value>
+    <value>Display order</value>
   </data>
   <data name="LayAppMinRole" xml:space="preserve">
-    <value>Min Role</value>
+    <value>Min role</value>
   </data>
   <data name="LayAppAllowedZones" xml:space="preserve">
-    <value>Allowed Zones</value>
+    <value>Allowed zones</value>
   </data>
   <data name="LayActions" xml:space="preserve">
     <value>Actions</value>
@@ -2422,7 +2407,7 @@
     <value>Open app</value>
   </data>
   <data name="LayAppEditInSoftcode" xml:space="preserve">
-    <value>Edit in Softcode</value>
+    <value>Edit in softcode</value>
   </data>
   <data name="LayAppViewSchema" xml:space="preserve">
     <value>View schema</value>
@@ -2503,7 +2488,7 @@
     <value>Admin</value>
   </data>
   <data name="AdmGuestsSection" xml:space="preserve">
-    <value>Guest Characters</value>
+    <value>Guest characters</value>
   </data>
   <data name="AdmGuestsBlurb" xml:space="preserve">
     <value>Characters that "connect guest" hands out to anonymous visitors. A game with none refuses every guest login, whatever the Guests setting says.</value>
@@ -2566,7 +2551,7 @@
     <value>Moderation</value>
   </data>
   <data name="AdmMediaTitle" xml:space="preserve">
-    <value>Image Library</value>
+    <value>Image library</value>
   </data>
   <data name="AdmApplicationsTitle" xml:space="preserve">
     <value>Applications</value>
@@ -2579,9 +2564,6 @@
   </data>
   <data name="AdmPlayerDetailKicker" xml:space="preserve">
     <value>People · Character</value>
-  </data>
-  <data name="AdmServerKicker" xml:space="preserve">
-    <value>Server · Status</value>
   </data>
   <data name="AdmServerTitle" xml:space="preserve">
     <value>Server</value>
@@ -2772,9 +2754,6 @@
   <data name="AdmProfilesResetFailedError" xml:space="preserve">
     <value>Reset failed: {0}</value>
   </data>
-  <data name="AdmHelpKicker" xml:space="preserve">
-    <value>Documentation</value>
-  </data>
   <data name="AdmHelpSubtitle" xml:space="preserve">
     <value>Browse topics, search references, and read the manual.</value>
   </data>
@@ -2916,16 +2895,16 @@
     <value>Rev {0} — New</value>
   </data>
   <data name="WkImageLibrary" xml:space="preserve">
-    <value>Image Library</value>
+    <value>Image library</value>
   </data>
   <data name="WkImageLibraryDescription" xml:space="preserve">
     <value>Manage uploaded media assets used across the wiki and portal.</value>
   </data>
   <data name="WkTotalAssets" xml:space="preserve">
-    <value>Total Assets</value>
+    <value>Total assets</value>
   </data>
   <data name="WkStorageUsed" xml:space="preserve">
-    <value>Storage Used</value>
+    <value>Storage used</value>
   </data>
   <data name="WkKindImagePlural" xml:space="preserve">
     <value>Images</value>
@@ -2958,7 +2937,7 @@
     <value>Preview</value>
   </data>
   <data name="WkColFileName" xml:space="preserve">
-    <value>File Name</value>
+    <value>File name</value>
   </data>
   <data name="WkColKind" xml:space="preserve">
     <value>Kind</value>
@@ -2996,9 +2975,6 @@
   <data name="WkCopyFailed" xml:space="preserve">
     <value>Could not copy to the clipboard.</value>
   </data>
-  <data name="WkStaffMedia" xml:space="preserve">
-    <value>Content · Image Library</value>
-  </data>
   <data name="WkCopyMarkdown" xml:space="preserve">
     <value>Copy Markdown</value>
   </data>
@@ -3017,11 +2993,8 @@
   <data name="RolPageTitle" xml:space="preserve">
     <value>Roles</value>
   </data>
-  <data name="RolKicker" xml:space="preserve">
-    <value>People · Roles &amp; permissions</value>
-  </data>
   <data name="RolHeading" xml:space="preserve">
-    <value>Roles &amp; Permissions</value>
+    <value>Roles &amp; permissions</value>
   </data>
   <data name="RolTabRoles" xml:space="preserve">
     <value>Roles</value>
@@ -3228,7 +3201,7 @@
     <value>Scene</value>
   </data>
   <data name="RolLiveScene" xml:space="preserve">
-    <value>Live Scene</value>
+    <value>Live scene</value>
   </data>
   <data name="RolSceneLiveUnavailable" xml:space="preserve">
     <value>Live updates are unavailable — joining a scene requires a character who can see it. The poses below will not update.</value>
@@ -3256,16 +3229,16 @@
     <value>No poses in this scene.</value>
   </data>
   <data name="RolWatchLive" xml:space="preserve">
-    <value>Watch Live</value>
+    <value>Watch live</value>
   </data>
   <data name="RolBackToScenes" xml:space="preserve">
-    <value>Back to Scenes</value>
+    <value>Back to scenes</value>
   </data>
   <data name="RolBackToActiveScenes" xml:space="preserve">
-    <value>Back to Active Scenes</value>
+    <value>Back to active scenes</value>
   </data>
   <data name="RolViewArchive" xml:space="preserve">
-    <value>View Archive</value>
+    <value>View archive</value>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
     <value>Not connected to the game — connect to post and receive live poses.</value>
@@ -3312,7 +3285,7 @@
     <value>Scene in {0}</value>
   </data>
   <data name="WidJoinScene" xml:space="preserve">
-    <value>Join Scene</value>
+    <value>Join scene</value>
   </data>
   <data name="WidNoActiveScenes" xml:space="preserve">
     <value>No active scenes right now.</value>
@@ -3321,19 +3294,19 @@
     <value>Browse archive</value>
   </data>
   <data name="WidOnlineNow" xml:space="preserve">
-    <value>Online Now</value>
+    <value>Online now</value>
   </data>
   <data name="WidNobodyConnected" xml:space="preserve">
-    <value>No one is connected right now.</value>
+    <value>Nobody is online.</value>
   </data>
   <data name="WidUnavailable" xml:space="preserve">
     <value>Unavailable right now.</value>
   </data>
   <data name="WidConfigureQuickLinks" xml:space="preserve">
-    <value>Configure Quick Links</value>
+    <value>Configure quick links</value>
   </data>
   <data name="WidNewHere" xml:space="preserve">
-    <value>New Here?</value>
+    <value>New here?</value>
   </data>
   <data name="WidNoCharacterYet" xml:space="preserve">
     <value>You don't have a character yet</value>
@@ -3351,13 +3324,13 @@
     <value>Get started by reading the wiki or browsing characters.</value>
   </data>
   <data name="WidReadTheWiki" xml:space="preserve">
-    <value>Read the Wiki</value>
+    <value>Read the wiki</value>
   </data>
   <data name="WidBrowseCharacters" xml:space="preserve">
-    <value>Browse Characters</value>
+    <value>Browse characters</value>
   </data>
   <data name="WidBrowseScenes" xml:space="preserve">
-    <value>Browse Scenes</value>
+    <value>Browse scenes</value>
   </data>
   <data name="WidNewCharacter" xml:space="preserve">
     <value>New character</value>
@@ -3372,10 +3345,10 @@
     <value>Widget schema unavailable.</value>
   </data>
   <data name="WidPlayersOnline" xml:space="preserve">
-    <value>Players Online</value>
+    <value>Players online</value>
   </data>
   <data name="WidActiveScenes" xml:space="preserve">
-    <value>Active Scenes</value>
+    <value>Active scenes</value>
   </data>
   <data name="WidFormNoPages" xml:space="preserve">
     <value>This form has no pages.</value>
@@ -3481,10 +3454,7 @@
     <value>Started {0}</value>
   </data>
   <data name="ResViewLog" xml:space="preserve">
-    <value>View Log</value>
-  </data>
-  <data name="ResAdminWikiKicker" xml:space="preserve">
-    <value>Content · Wiki</value>
+    <value>View log</value>
   </data>
   <data name="ResWikiStatTotalPages" xml:space="preserve">
     <value>Total pages</value>
@@ -3499,9 +3469,6 @@
     <value>Draft</value>
   </data>
   <data name="ResConfigSectionKicker" xml:space="preserve">
-    <value>Server · Configuration</value>
-  </data>
-  <data name="ResConfigHomeKicker" xml:space="preserve">
     <value>Server · Configuration</value>
   </data>
   <data name="ResRoutingErrorHint" xml:space="preserve">
@@ -3568,19 +3535,19 @@
     <value>Set and skip namespace, category and page requirements, protect and publish pages, batch operations, and the wiki admin dashboard.</value>
   </data>
   <data name="EnumPermMediaUpload" xml:space="preserve">
-    <value>Image Library · Upload</value>
+    <value>Image library · Upload</value>
   </data>
   <data name="EnumPermMediaUploadDesc" xml:space="preserve">
     <value>Upload image assets for use in wiki pages.</value>
   </data>
   <data name="EnumPermMediaAdmin" xml:space="preserve">
-    <value>Image Library · Manage</value>
+    <value>Image library · Manage</value>
   </data>
   <data name="EnumPermMediaAdminDesc" xml:space="preserve">
     <value>Browse and delete the shared media library.</value>
   </data>
   <data name="EnumPermSoftcodeUse" xml:space="preserve">
-    <value>Softcode Editor</value>
+    <value>Softcode editor</value>
   </data>
   <data name="EnumPermSoftcodeUseDesc" xml:space="preserve">
     <value>Open the softcode editor to view and edit object attributes.</value>
@@ -3598,13 +3565,13 @@
     <value>Install, update, and manage softcode packages.</value>
   </data>
   <data name="EnumPermConfigAdmin" xml:space="preserve">
-    <value>Server Config</value>
+    <value>Server config</value>
   </data>
   <data name="EnumPermConfigAdminDesc" xml:space="preserve">
     <value>Edit server configuration, sitelock, banned names, restrictions.</value>
   </data>
   <data name="EnumPermRolesAdmin" xml:space="preserve">
-    <value>Roles &amp; Permissions</value>
+    <value>Roles &amp; permissions</value>
   </data>
   <data name="EnumPermRolesAdminDesc" xml:space="preserve">
     <value>Create roles, edit permissions, and assign roles to accounts.</value>
@@ -3622,7 +3589,7 @@
     <value>Disable, ban, warn, and edit player accounts, characters, and profiles.</value>
   </data>
   <data name="EnumPermLayoutAdmin" xml:space="preserve">
-    <value>Layout Editor</value>
+    <value>Layout editor</value>
   </data>
   <data name="EnumPermLayoutAdminDesc" xml:space="preserve">
     <value>Edit the portal widget layout.</value>
@@ -3682,7 +3649,7 @@
     <value>Search…</value>
   </data>
   <data name="NavCloseTerminal" xml:space="preserve">
-    <value>Close Terminal</value>
+    <value>Close terminal</value>
   </data>
   <data name="NavCommandTerminal" xml:space="preserve">
     <value>Command terminal</value>
@@ -3718,7 +3685,7 @@
     <value>guest</value>
   </data>
   <data name="NavPlayTerminal" xml:space="preserve">
-    <value>Play Terminal</value>
+    <value>Play terminal</value>
   </data>
   <data name="NavInPlay" xml:space="preserve">
     <value>in play</value>
@@ -4685,21 +4652,6 @@
   <data name="NavHelpAdminIndex" xml:space="preserve">
     <value>Admin index</value>
   </data>
-  <data name="AdmSuggestionsKicker" xml:space="preserve">
-    <value>Content · Spellcheck</value>
-  </data>
-  <data name="AdmDatabaseKicker" xml:space="preserve">
-    <value>Server · Database import</value>
-  </data>
-  <data name="AdmDiagnosticsKicker" xml:space="preserve">
-    <value>Build · Queue diagnostics</value>
-  </data>
-  <data name="AdmJobsKicker" xml:space="preserve">
-    <value>Build · Recurring jobs</value>
-  </data>
-  <data name="AdmSnapshotsKicker" xml:space="preserve">
-    <value>Build · Object snapshots</value>
-  </data>
   <data name="AdmMediaKindFilter" xml:space="preserve">
     <value>Filter by kind</value>
   </data>
@@ -4968,7 +4920,7 @@
     <value>On now ({0})</value>
   </data>
   <data name="NavPlayNobodyOn" xml:space="preserve">
-    <value>Nobody is on right now.</value>
+    <value>Nobody is online.</value>
   </data>
   <data name="NavPlayPageLogOff" xml:space="preserve">
     <value>This game doesn't keep page history, so only pages from this visit are shown.</value>
@@ -5801,6 +5753,21 @@
   <data name="WkFactSearchRun" xml:space="preserve">
     <value>Find</value>
   </data>
+  <data name="WkFacets" xml:space="preserve">
+    <value>Filter by facts</value>
+  </data>
+  <data name="WkFacetsClear" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
+  <data name="WkFacetsMore" xml:space="preserve">
+    <value>{count, plural, one {# more value} other {# more values}}</value>
+  </data>
+  <data name="WkFacetsPages" xml:space="preserve">
+    <value>{count, plural, one {# page matches} other {# pages match}}</value>
+  </data>
+  <data name="WkFacetsPartial" xml:space="preserve">
+    <value>This category is large, so only its first pages were counted.</value>
+  </data>
   <data name="WkFactSearchMore" xml:space="preserve">
     <value>More</value>
   </data>
@@ -5809,6 +5776,24 @@
   </data>
   <data name="WkFactSearchBuilding" xml:space="preserve">
     <value>The fact index is still being built. Try again in a moment.</value>
+  </data>
+  <data name="WkFactSearchPage" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="WkFactSharing" xml:space="preserve">
+    <value>Pages that also state {0}</value>
+  </data>
+  <data name="WkFactNamedBy" xml:space="preserve">
+    <value>Named by</value>
+  </data>
+  <data name="WkFactNamedByAll" xml:space="preserve">
+    <value>all</value>
+  </data>
+  <data name="WkFactQueryTitle" xml:space="preserve">
+    <value>Pages by fact</value>
+  </data>
+  <data name="WkFactQueryDesc" xml:space="preserve">
+    <value>Every page whose facts meet the conditions.</value>
   </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Add a category</value>
@@ -6642,7 +6627,7 @@
     <value>Shown from {0} on {1} (#{2}). The text below is used only if that attribute is removed.</value>
   </data>
   <data name="AdmMessagesOpenSoftcode" xml:space="preserve">
-    <value>Open the Softcode Editor</value>
+    <value>Open the softcode editor</value>
   </data>
   <data name="AdmMessagesObjectLacks" xml:space="preserve">
     <value>The object has no {0} attribute, so this stored text is shown.</value>
@@ -6723,7 +6708,7 @@
     <value>Keeps the connect screen, the messages of the day and the other server messages as softcode on one object instead of the stored text. Admin &gt; Messages switches back at any time.</value>
   </data>
   <data name="LayAppNavUrl" xml:space="preserve">
-    <value>Sidebar Route</value>
+    <value>Sidebar route</value>
   </data>
   <data name="LayAppNavUrlOptional" xml:space="preserve">
     <value>Sidebar route (optional)</value>
@@ -8036,7 +8021,7 @@
     <value>No line to read yet.</value>
   </data>
   <data name="AsciiTranslations" xml:space="preserve">
-    <value>ASCII Translations</value>
+    <value>ASCII translations</value>
   </data>
   <data name="AsciiTranslationsDescription" xml:space="preserve">
     <value>What a client without Unicode is sent for a character it cannot show. Each character is in the table once; adding it again replaces its text. Characters not listed get the built-in stand-ins: a middle dot becomes *, a dash -, an accented letter the plain one, anything else ?.</value>

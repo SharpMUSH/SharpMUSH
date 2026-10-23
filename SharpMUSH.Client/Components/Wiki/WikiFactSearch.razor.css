@@ -47,14 +47,3 @@
     font-size: 12px;
     overflow-wrap: anywhere;
 }
-.wiki-fact-search-results {
-    margin: 0;
-    padding-left: 1.2rem;
-}
-.wiki-fact-search-results a {
-    color: var(--accent);
-    text-decoration: none;
-}
-.wiki-fact-search-results a:hover,
-.wiki-fact-search-results a:focus-visible { text-decoration: underline; }
-.wiki-fact-search-message { color: var(--danger); }

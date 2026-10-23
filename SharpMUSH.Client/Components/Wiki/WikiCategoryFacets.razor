@@ -1,0 +1,136 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.API
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A category page's members, narrowed by facts: for each property its pages state, the values with how many pages
+   state each. Choosing values lists the pages that state them, with a column for each chosen property, in place of
+   the members. Without facets, only the members are shown. *@
+@if (_facets is { } facets && (facets.Facets.Count > 0 || _chosen.Count > 0))
+{
+    <section class="wiki-facets" aria-label="@Loc["WkFacets"]">
+        <div class="wiki-facets-filters">
+            @foreach (var facet in facets.Facets)
+            {
+                <fieldset class="wiki-facet">
+                    <legend title="@facet.Property">@facet.Label</legend>
+                    <div class="wiki-facet-values">
+                        @foreach (var value in facet.Values)
+                        {
+                            var chosen = Chosen(facet.Property, value.Value);
+                            <button type="button" class="wiki-facet-value" aria-pressed="@(chosen ? "true" : "false")"
+                                    disabled="@(_busy || !(chosen || MayChoose(facet.Property)))"
+                                    @onclick="() => ToggleAsync(facet, value)">
+                                @value.Label <span class="wiki-facet-count">@value.Count</span>
+                            </button>
+                        }
+                        @if (facet.More > 0)
+                        {
+                            <span class="wiki-facet-more">@Loc.Plural("WkFacetsMore", "count", facet.More)</span>
+                        }
+                    </div>
+                </fieldset>
+            }
+        </div>
+        @if (facets.Partial)
+        {
+            <p class="wiki-facets-note">@Loc["WkFacetsPartial"]</p>
+        }
+        @if (_message is { } message)
+        {
+            <div class="wiki-facets-message" role="alert">@message</div>
+        }
+        @if (_chosen.Count > 0)
+        {
+            <div class="wiki-facets-summary">
+                <span aria-live="polite">@Loc.Plural("WkFacetsPages", "count", facets.Pages)</span>
+                <button type="button" class="wiki-facets-clear" disabled="@_busy" @onclick="ClearAsync">@Loc["WkFacetsClear"]</button>
+            </div>
+            <WikiFactResults @key="_run" Conditions="ResultConditions" Locale="@Locale" />
+        }
+    </section>
+}
+@if (_chosen.Count == 0)
+{
+    @ChildContent
+}
+
+@code {
+    /// <summary>The category, as the page's slug names it.</summary>
+    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+    [Parameter] public string? Locale { get; set; }
+
+    /// <summary>The category's members, shown while no value is chosen.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>A query's most conditions; the category takes none of them.</summary>
+    private const int MaxProperties = 4;
+
+    /// <summary>The most values one condition names.</summary>
+    private const int MaxValues = 8;
+
+    private WikiFacetsDto? _facets;
+    // The chosen values by property, in the order the properties were first chosen.
+    private readonly List<(string Property, bool Number, List<string> Values)> _chosen = [];
+    private string? _message;
+    private bool _busy;
+    private int _run;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private bool Chosen(string property, string value)
+        => _chosen.Any(c => c.Property == property && c.Values.Contains(value));
+
+    /// <summary>Whether another value of <paramref name="property"/> may be chosen within a query's limits.</summary>
+    private bool MayChoose(string property)
+        => _chosen.FirstOrDefault(c => c.Property == property) is { Property: not null } held
+            ? held.Number || held.Values.Count < MaxValues
+            : _chosen.Count < MaxProperties;
+
+    /// <summary>One condition per chosen property: a property's values are either of them, a whole number's one range.</summary>
+    private IEnumerable<string> Conditions => _chosen.Select(c => $"{c.Property}={string.Join('|', c.Values)}");
+
+    private IReadOnlyList<string> ResultConditions =>
+        [$"category={Category}", .. Conditions, $"show={string.Join('|', _chosen.Select(c => c.Property))}"];
+
+    private async Task ToggleAsync(WikiFacetDto facet, WikiFacetValueDto value)
+    {
+        var index = _chosen.FindIndex(c => c.Property == facet.Property);
+        var number = facet.Type == "number";
+        if (index < 0)
+            _chosen.Add((facet.Property, number, [value.Value]));
+        else if (_chosen[index].Values.Remove(value.Value))
+        {
+            if (_chosen[index].Values.Count == 0) _chosen.RemoveAt(index);
+        }
+        // A range of whole numbers is one condition, so choosing another replaces it.
+        else if (number)
+            _chosen[index] = (facet.Property, number, [value.Value]);
+        else
+            _chosen[index].Values.Add(value.Value);
+        await LoadAsync();
+    }
+
+    private async Task ClearAsync()
+    {
+        _chosen.Clear();
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        switch (await Wiki.GetCategoryFacetsAsync(Category, Conditions))
+        {
+            case WikiFacetsDto facets:
+                _facets = facets;
+                _message = null;
+                break;
+            case ApiFailure failure:
+                _message = failure.Message;
+                break;
+        }
+        _run++;
+        _busy = false;
+    }
+}

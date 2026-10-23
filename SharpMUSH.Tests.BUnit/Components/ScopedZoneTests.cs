@@ -62,6 +62,6 @@ public class ScopedZoneTests : BunitContext
 		}, TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Markup).Contains("HelloFromZone");
-		await Assert.That(cut.Markup).Contains("<h1");
+		await Assert.That(cut.Markup).Contains("<h2");
 	}
 }

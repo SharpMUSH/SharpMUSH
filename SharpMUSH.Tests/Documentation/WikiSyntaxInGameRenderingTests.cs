@@ -207,6 +207,14 @@ public class WikiSyntaxInGameRenderingTests
 	}
 
 	[Test]
+	public async Task FactsDirective_RendersPlaceholder()
+	{
+		var text = Render("::: facts pf2e:tradition=arcane\n:::");
+
+		await Assert.That(text).Contains("[live listing: facts pf2e:tradition=arcane");
+	}
+
+	[Test]
 	public async Task TagAndPagelistDirectives_RenderPlaceholders()
 	{
 		var text = Render("::: tag magic\n:::\n\n::: pagelist help\n:::");
