@@ -22,6 +22,7 @@ public class BundledPackagesTests
 			var yaml = BundledPackages.ManifestYaml(descriptor.PackageId);
 			var parsed = _manifests.ParseManifest(yaml).Expect<ParsedPackageManifest>($"bundled manifest '{descriptor.PackageId}' must parse");
 			await Assert.That(parsed.Manifest.Name).IsEqualTo(descriptor.PackageId);
+			await Assert.That(parsed.Manifest.Title).IsNotNull().And.IsNotEmpty();
 		}
 	}
 

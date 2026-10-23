@@ -2313,6 +2313,10 @@
     <value>Beskrivning</value>
     <comment>MT — corpus term.</comment>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titel</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Detaljer</value>
     <comment>MT</comment>

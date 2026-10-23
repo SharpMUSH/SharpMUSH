@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: scene-config
-version: 1.0.0
+title: "Scene System: +config settings"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the scene settings into +config: registers the Scene Logger with the +config registry, so staff see and change them with +config scene."
 license: MIT

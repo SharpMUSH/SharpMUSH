@@ -697,6 +697,10 @@
   <data name="PkgDescriptionLabel" xml:space="preserve">
     <value>Description</value>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Titre</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgExportYaml" xml:space="preserve">
     <value>Exporter package.yaml</value>
   </data>

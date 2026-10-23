@@ -45,7 +45,7 @@ public class PackageAuthoringServiceTests
 		await Assert.That(external.Dbref).IsEqualTo("#0");
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"authored-pkg", "1.0.0", "Exported from live objects", "MIT", ["Tester"],
+			"authored-pkg", "Test package", "1.0.0", "Exported from live objects", "MIT", ["Tester"],
 			[
 				new AuthoringObjectSelection(coreObjid, "auth_core", []),
 				new AuthoringObjectSelection(globalObjid, "auth_global", [])
@@ -86,7 +86,7 @@ public class PackageAuthoringServiceTests
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"nested-pkg", "1.0.0", "Nested attributes", "MIT", ["Tester"],
+			"nested-pkg", "Test package", "1.0.0", "Nested attributes", "MIT", ["Tester"],
 			[new AuthoringObjectSelection(objid, "nested", [])],
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
@@ -114,7 +114,7 @@ public class PackageAuthoringServiceTests
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"reserved-pkg", "1.0.0", "Reserved tree", "MIT", ["Tester"],
+			"reserved-pkg", "Test package", "1.0.0", "Reserved tree", "MIT", ["Tester"],
 			[new AuthoringObjectSelection(objid, "reserved", [])],
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
@@ -141,7 +141,7 @@ public class PackageAuthoringServiceTests
 		var sourceObjid = (await Database.GetObjectNodeAsync(sourceDbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var exported = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"roundtrip-pkg", "1.0.0", "Round-trip test package", "MIT", ["Tester"],
+			"roundtrip-pkg", "Test package", "1.0.0", "Round-trip test package", "MIT", ["Tester"],
 			[new AuthoringObjectSelection(sourceObjid, "rt_core", [])],
 			new Dictionary<string, string> { ["#0"] = "room_zero" },
 			new Dictionary<string, AuthoringConfigureClassification>()));
@@ -149,6 +149,7 @@ public class PackageAuthoringServiceTests
 
 		var parsed = new PackageManifestService().ParseManifest(exportedText).Expect<ParsedPackageManifest>();
 		var manifest = parsed.Manifest;
+		await Assert.That(manifest.Title).IsEqualTo("Test package");
 		var installer = WebAppFactoryArg.Services.GetRequiredService<IPackageInstallService>();
 		var applied = await installer.ApplyAsync(manifest, new PackageApplyRequest(
 			new PackageApplySource("https://example.com/roundtrip", "roundtrip-pkg/", "rt-commit", "main"),
@@ -186,13 +187,27 @@ public class PackageAuthoringServiceTests
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"loner-pkg", "1.0.0", "x", null, [],
+			"loner-pkg", "Test package", "1.0.0", "x", null, [],
 			[new AuthoringObjectSelection(objid, "loner", [])],
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));
 
 		var error = result.Expect<Error<string>>();
 		await Assert.That(error.Value).Contains("#4242");
+	}
+
+	[Test]
+	[Arguments("  ")]
+	[Arguments("A title of sixty-one characters, which is one more than fits!")]
+	public async Task Export_WithoutAUsableTitle_IsRefused(string title)
+	{
+		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
+			"untitled-pkg", title, "1.0.0", "x", null, [], [],
+			new Dictionary<string, string>(),
+			new Dictionary<string, AuthoringConfigureClassification>()));
+
+		var error = result.Expect<Error<string>>();
+		await Assert.That(error.Value).Contains("title");
 	}
 
 	[Test]
@@ -212,7 +227,7 @@ public class PackageAuthoringServiceTests
 		var objid = (await Database.GetObjectNodeAsync(dbref)).Expect<AnySharpObject>().Object().DBRef.ToString();
 
 		var result = await Authoring.ExportAsync(new PackageAuthoringRequest(
-			"ws-edge", "1.0.0", "whitespace edge cases", null, ["Tester"],
+			"ws-edge", "Test package", "1.0.0", "whitespace edge cases", null, ["Tester"],
 			[new AuthoringObjectSelection(objid, "ws_obj", [])],
 			new Dictionary<string, string>(),
 			new Dictionary<string, AuthoringConfigureClassification>()));

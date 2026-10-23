@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: onboarding-help
-version: 1.0.0
+title: "Onboarding: +help topics"
+version: 1.0.1
 authors: [SharpMUSH]
 description: "Puts the checklist into +help: registers the onboarding package's topics with the +help librarian, and adds a step pointing new players at +help."
 license: MIT

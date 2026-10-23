@@ -2313,6 +2313,10 @@
     <value>Descrição</value>
     <comment>MT</comment>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Título</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Detalhes</value>
     <comment>MT</comment>

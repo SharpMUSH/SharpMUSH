@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: finger
-version: 1.2.0
+title: "Finger profiles"
+version: 1.2.1
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT

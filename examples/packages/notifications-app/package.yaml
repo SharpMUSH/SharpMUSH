@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: notifications-app
-version: 1.0.1
+title: "Notification settings in the portal"
+version: 1.0.2
 kind: application
 authors: [SharpMUSH]
 description: "Registers the notifications package's settings as a portal page at /apps/notifications, linked from Settings, Notifications."

@@ -92,6 +92,17 @@
                     <div class="setup-error" role="alert">@_error</div>
                 }
 
+                <ul class="setup-handler-summary">
+                    @foreach (var handler in _handlers)
+                    {
+                        <li @key="handler.Kind"><strong>@HandlerTitle(handler.Kind)</strong> @HandlerNow(handler)</li>
+                    }
+                </ul>
+
+                @* The shipped handlers suit a new game; changing them is for a game that brings its own objects. *@
+                <details class="setup-advanced" open="@HandlersNeedAttention">
+                <summary class="setup-advanced-summary">@Loc["AdmSetupHandlersAdvanced"]</summary>
+                <p class="setup-lead">@Loc["AdmSetupHandlersAdvancedLead"]</p>
                 @foreach (var handler in _handlers)
                 {
                     var kind = handler.Kind;
@@ -100,22 +111,11 @@
                         <h3 class="setup-handler-title">@HandlerTitle(kind)</h3>
                         <p class="setup-handler-desc">@HandlerDescription(kind)</p>
                         <p class="setup-handler-now">
-                            @if (handler is { Dbref: { } number, Name: { } name })
+                            @HandlerNow(handler)
+                            @if (handler is { Name: not null, Packages.Count: > 0 })
                             {
-                                @Loc["AdmSetupHandlerNow", $"#{number}", name]
-                                @if (handler.Packages.Count > 0)
-                                {
-                                    @* One text node: Blazor drops the whitespace-only one a leading space would be. *@
-                                    <span>@($" {Loc["AdmSetupHandlerCarries", string.Join(", ", handler.Packages)]}")</span>
-                                }
-                            }
-                            else if (handler.Dbref is { } missing)
-                            {
-                                @Loc["AdmSetupHandlerMissing", $"#{missing}"]
-                            }
-                            else
-                            {
-                                @Loc["AdmSetupHandlerUnset"]
+                                @* One text node: Blazor drops the whitespace-only one a leading space would be. *@
+                                <span>@($" {Loc["AdmSetupHandlerCarries", string.Join(", ", handler.Packages.Select(PackageTitle))]}")</span>
                             }
                         </p>
 
@@ -180,6 +180,7 @@
                         }
                     </section>
                 }
+                </details>
 
                 <button class="setup-submit setup-save-handlers" type="button" disabled="@_busy" @onclick="SaveHandlersAsync">
                     @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupContinueStep"])
@@ -197,6 +198,25 @@
                 @if (_error is not null)
                 {
                     <div class="setup-error" role="alert">@_error</div>
+                }
+
+                <div class="setup-pkg-tools">
+                    <input id="setup-pkg-search" class="setup-pkg-search" type="search" value="@_search"
+                           placeholder="@Loc["AdmSetupPkgSearch"]" aria-label="@Loc["AdmSetupPkgSearch"]"
+                           @oninput="@(e => _search = e.Value as string ?? string.Empty)" />
+                    @if (string.IsNullOrWhiteSpace(_search))
+                    {
+                        <button class="setup-secondary setup-pkg-all" type="button" aria-pressed="@(_showAll ? "true" : "false")"
+                                @onclick="() => _showAll = !_showAll">
+                            @(_showAll ? Loc["AdmSetupPkgShowRecommended"] : Loc["AdmSetupPkgShowAll", _packages.Count])
+                        </button>
+                    }
+                </div>
+                <p class="setup-pkg-summary" role="status">@Loc["AdmSetupPkgSummary", Effective.Count, _packages.Count]</p>
+
+                @if (!PackageGroups.Any())
+                {
+                    <p class="setup-pkg-none">@Loc["AdmSetupPkgNoMatch", _search.Trim()]</p>
                 }
 
                 @foreach (var group in PackageGroups)
@@ -357,6 +377,15 @@
 
     /// <summary>Whether the game already has the starter wiki pages, which are offered once.</summary>
     private bool _starterWikiApplied;
+
+    /// <summary>What the administrator typed to find a package; it searches every package, shown or not.</summary>
+    private string _search = string.Empty;
+
+    /// <summary>
+    /// Whether every bundled package is listed. Until then the step lists the recommended ones and whatever is
+    /// installed or ticked, which is what a new game starts with; the rest are a search or one click away.
+    /// </summary>
+    private bool _showAll;
 
     /// <summary>
     /// Each step starts at its top. The shell, not the window, scrolls, and it kept the offset of the step
@@ -670,7 +699,32 @@
         _busy = false;
     }
 
-    private IEnumerable<SetupPackageGroup> PackageGroups => SetupPackageGroups.For(_packages, Loc["AdmSetupPkgGroupUncategorized"]);
+    private IReadOnlyList<SetupPackageGroup> PackageGroups => SetupPackageGroups.For(ListedPackages, Loc["AdmSetupPkgGroupUncategorized"]);
+
+    /// <summary>The packages the step lists: those matching the search, else all or the recommended and ticked ones.</summary>
+    private IReadOnlyList<BundledPackageState> ListedPackages => _search.Trim() is { Length: > 0 } search
+        ? _packages.Where(p => Matches(p, search)).ToList()
+        : _showAll
+        ? _packages
+        : _packages.Where(p => p.Recommended || p.Installed || Effective.Contains(p.Id)).ToList();
+
+    private bool Matches(BundledPackageState package, string search)
+        => new[] { package.Id, PackageTitle(package), PackageDescription(package), package.Category ?? string.Empty }
+            .Any(text => text.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
+    /// The handlers section opens by itself when something there needs a decision: a handler that is not set, not
+    /// there or not a wizard, a choice other than keeping it, or a refused save.
+    /// </summary>
+    private bool HandlersNeedAttention => _error is not null || _handlers.Any(handler =>
+        handler.Name is null || !handler.IsWizard || _handlerChoices[handler.Kind].Mode != Keep);
+
+    private string HandlerNow(HandlerState handler) => handler switch
+    {
+        { Dbref: { } number, Name: { } name } => Loc["AdmSetupHandlerNow", $"#{number}", name],
+        { Dbref: { } missing } => Loc["AdmSetupHandlerMissing", $"#{missing}"],
+        _ => Loc["AdmSetupHandlerUnset"],
+    };
 
     private string HandlerTitle(string kind) => kind == HandlerKinds.Http
         ? Loc["AdmSetupHandlerHttpTitle"]
@@ -691,25 +745,7 @@
         ? PackageTitle(package)
         : id;
 
-    private string PackageTitle(BundledPackageState package) => package.Id switch
-    {
-        "http-handler" => Loc["AdmSetupPkgHttpHandlerTitle"],
-        "profile-handler" => Loc["AdmSetupPkgProfileHandlerTitle"],
-        "room-contents" => Loc["AdmSetupPkgRoomContentsTitle"],
-        "comm-feed" => Loc["AdmSetupPkgCommFeedTitle"],
-        "plus-help" => Loc["AdmSetupPkgPlusHelpTitle"],
-        "plus-config" => Loc["AdmSetupPkgPlusConfigTitle"],
-        "scene" => Loc["AdmSetupAppScenesTitle"],
-        "wiki-reader" => Loc["AdmSetupAppWikiReaderTitle"],
-        "jobs" => Loc["AdmSetupPkgJobsTitle"],
-        "jobs-app" => Loc["AdmSetupPkgJobsAppTitle"],
-        "chargen" => Loc["AdmSetupPkgChargenTitle"],
-        "chargen-app" => Loc["AdmSetupPkgChargenAppTitle"],
-        "bboards" => Loc["AdmSetupPkgBBoardsTitle"],
-        "bboards-app" => Loc["AdmSetupPkgBBoardsAppTitle"],
-        "messages" => Loc["AdmSetupPkgMessagesTitle"],
-        _ => package.Id,
-    };
+    private static string PackageTitle(BundledPackageState package) => package.Title;
 
     private string PackageDescription(BundledPackageState package) => package.Id switch
     {

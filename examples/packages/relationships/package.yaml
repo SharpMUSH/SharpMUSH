@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: relationships
-version: 1.1.1
+title: "Relationships"
+version: 1.1.2
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT

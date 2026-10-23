@@ -44,6 +44,7 @@ public sealed record AuthoringConfigureClassification(string Key, string Label);
 
 /// <summary>Everything needed to export a selection as a package manifest.</summary>
 /// <param name="PackageId">Package id slug.</param>
+/// <param name="Title">The name the package is listed under (required).</param>
 /// <param name="Version">Semantic version.</param>
 /// <param name="Description">Package description.</param>
 /// <param name="License">License identifier, or null.</param>
@@ -53,6 +54,7 @@ public sealed record AuthoringConfigureClassification(string Key, string Label);
 /// <param name="ConfigureByDbref">External dbref (bare <c>#N</c>) → configure classification.</param>
 public sealed record PackageAuthoringRequest(
 	string PackageId,
+	string Title,
 	string Version,
 	string Description,
 	string? License,

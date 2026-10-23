@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: health-jobs
-version: 1.0.3
+title: "Game health: job load"
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Staff load in +health: how many open jobs each staffer handles, how many wait on staff, and the oldest one waiting. Joins the health and jobs packages."
 license: MIT

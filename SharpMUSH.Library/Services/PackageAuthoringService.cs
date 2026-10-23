@@ -77,6 +77,17 @@ public partial class PackageAuthoringService(
 	public async Task<Result<string>> ExportAsync(
 		PackageAuthoringRequest request, CancellationToken cancellationToken = default)
 	{
+		var title = PackageManifestService.NormalizeTitle(request.Title);
+		if (title.Length == 0)
+		{
+			return new Error<string>("Give the package a title: the name it is listed under, such as \"Bulletin boards\".");
+		}
+
+		if (title.Length > PackageManifestService.MaxTitleLength)
+		{
+			return new Error<string>($"The title is {title.Length} characters long; give one of at most {PackageManifestService.MaxTitleLength}.");
+		}
+
 		var selections = new List<(AuthoringObjectSelection Selection, AuthoringObject Object)>();
 		var tokenByNumber = new Dictionary<int, string>();
 		foreach (var selection in request.Objects)
@@ -205,7 +216,10 @@ public partial class PackageAuthoringService(
 			usedConfigure.Values
 				.OrderBy(c => c.Key, StringComparer.Ordinal)
 				.ToDictionary(c => c.Key, c => new PackageConfigureSpec(c.Key, c.Label), StringComparer.Ordinal),
-			objects);
+			objects)
+		{
+			Title = title
+		};
 
 		// The writer covers every field the reader reads, but the manifest is also built from live
 		// game state, so parse it back: an object whose name or attribute value cannot survive the

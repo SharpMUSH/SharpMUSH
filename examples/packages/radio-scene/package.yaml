@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: radio-scene
-version: 1.4.0
+title: "Radio in scenes"
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Radio in scenes: +radio/log puts what a player hears on a frequency into the scene they are in. Joins the radio and scene packages through a tap on the radio feed kind."
 license: MIT

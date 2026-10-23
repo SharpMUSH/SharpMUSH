@@ -332,7 +332,8 @@ public class PackageManifestWriterTests
 			new PackageApplicationSpec(
 				"sink-portal", "Kitchen Sink", "widgets", PackageApplicationDisplay.Widget,
 				"http/sink/schema", "http/sink/data", "http/sink/submit",
-				"Builder", "Main", ["MainContent", "RightSidebar"], 7));
+				"Builder", "Main", ["MainContent", "RightSidebar"], 7))
+		{ Title = "Test package" };
 
 		var again = RoundTrip(original);
 		var application = again.Application!;
@@ -366,7 +367,8 @@ public class PackageManifestWriterTests
 		new PackageApplicationSpec(
 			"weather", "Weather", null, PackageApplicationDisplay.Widget,
 			"http/weather/schema", null, null,
-			"player", null, ["RightSidebar"], 30, scope, oobPackage));
+			"player", null, ["RightSidebar"], 30, scope, oobPackage))
+	{ Title = "Test package" };
 
 	[Test]
 	public async Task ApplicationPermissionRoundTrips()
@@ -430,7 +432,8 @@ public class PackageManifestWriterTests
 			[
 				new PackageBinaryFile("Sink.Plugin.dll", sha),
 				new PackageBinaryFile("Sink.Support.dll", new string('b', 64))
-			]));
+			]))
+		{ Title = "Test package" };
 
 		var again = RoundTrip(original);
 		var binary = again.Binary!;
@@ -576,7 +579,8 @@ public class PackageManifestWriterTests
 				[], [], [],
 				new Dictionary<string, string>(),
 				new Dictionary<string, PackageAttributeSpec> { [attribute] = new(value, []) })
-		]);
+		])
+	{ Title = "Test package" };
 
 	/// <summary>Writing twice is byte-identical: the writer has no ordering nondeterminism.</summary>
 	[Test]

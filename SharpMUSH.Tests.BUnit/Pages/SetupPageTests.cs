@@ -47,6 +47,9 @@ file sealed class SetupApiHandler(
 {
 	private bool? _wizardPending = wizard;
 	private int? _eventHandler;
+
+	/// <summary>The event handler the game starts with; none unless a test sets one.</summary>
+	public int? EventHandler { set => _eventHandler = value; }
 	private int? _httpHandler = 8;
 	private readonly HashSet<string> _installed = ["http-handler", "profile-handler", "plus-help", "scene"];
 
@@ -221,6 +224,7 @@ file sealed class SetupApiHandler(
 	{
 		recommended,
 		id,
+		title = $"Title of {id}",
 		description = $"{id} manifest description",
 		installed = _installed.Contains(id),
 		requires,
@@ -404,7 +408,7 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
-		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("http-handler, profile-handler");
+		await Assert.That(cut.Find("#setup-handler-http .setup-handler-now").TextContent).Contains("Title of http-handler, Title of profile-handler");
 		await Assert.That(cut.FindAll("#setup-handler-event input[value='keep']")).IsEmpty();
 		await Assert.That(cut.Find("#setup-handler-event input[value='create']").HasAttribute("checked")).IsTrue();
 		await cut.Find("button.setup-save-handlers").ClickAsync();
@@ -427,6 +431,8 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 			.Because("a new game has it, and the handler it builds on is there now");
 
 		await cut.Find("#setup-pkg-scene").ChangeAsync(false);
+		// Neither installed nor recommended: listed once every package is.
+		await cut.Find("button.setup-pkg-all").ClickAsync();
 		await cut.Find("#setup-pkg-wiki-reader").ChangeAsync(true);
 		await cut.Find("button.setup-save").ClickAsync();
 
@@ -577,6 +583,55 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("finished state not rendered yet");
 		});
 		await Assert.That(handler.StarterWikiCalls).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// The step lists what a new game starts with (the recommended packages and whatever is installed); the rest are one
+	/// click away, and a search looks through every package.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_ListsTheRecommendedSetUntilAskedForAllOrSearched()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out _, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-pkg-room-contents"));
+
+		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader")).IsEmpty();
+		await Assert.That(cut.FindAll(".setup-app-title").Select(title => title.TextContent)).Contains("Title of room-contents");
+		await Assert.That(cut.Find(".setup-pkg-summary").TextContent).Contains("AdmSetupPkgSummary");
+
+		await cut.Find("button.setup-pkg-all").ClickAsync();
+		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader").Count).IsEqualTo(1);
+
+		await cut.Find("button.setup-pkg-all").ClickAsync();
+		await cut.Find("#setup-pkg-search").InputAsync("WIKI");
+		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("#setup-pkg-scene")).IsEmpty();
+
+		await cut.Find("#setup-pkg-search").InputAsync("title of wiki");
+		await Assert.That(cut.FindAll("#setup-pkg-wiki-reader").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("#setup-pkg-scene")).IsEmpty();
+
+		await cut.Find("#setup-pkg-search").InputAsync("nothing-like-this");
+		await Assert.That(cut.Find(".setup-pkg-none").TextContent).Contains("nothing-like-this");
+	}
+
+	/// <summary>Handlers a new game can keep are folded under Advanced; one that is not set opens it.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Handlers_AreFoldedUnderAdvancedUnlessTheyNeedAChoice()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.EventHandler = 9;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=handlers");
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("details.setup-advanced"));
+
+		await Assert.That(cut.Find("details.setup-advanced").HasAttribute("open")).IsFalse();
+		await Assert.That(cut.FindAll(".setup-handler-summary li").Count).IsEqualTo(2);
+
+		await cut.Find("#setup-handler-http input[value=none]").ChangeAsync(true);
+		await Assert.That(cut.Find("details.setup-advanced").HasAttribute("open")).IsTrue();
 	}
 
 	[TUnit.Core.Test]

@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: wiki-reader
-version: 1.7.2
+title: "In-game wiki reader"
+version: 1.7.3
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT

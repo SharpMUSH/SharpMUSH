@@ -151,6 +151,7 @@ public class ApplicationConfigurationTests
 		var yaml = $"""
 			format: {format}
 			package: example-app
+			title: Example
 			version: 1.0.0
 			kind: application
 			application:

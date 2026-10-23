@@ -1,6 +1,7 @@
-format: "1.10"
+format: "1.16"
 package: timeline
-version: 1.0.2
+title: "IC timeline"
+version: 1.0.3
 authors: [SharpMUSH]
 description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
 license: MIT

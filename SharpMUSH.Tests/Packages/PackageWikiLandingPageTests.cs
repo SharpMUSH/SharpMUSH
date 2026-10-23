@@ -231,7 +231,7 @@ public class PackageWikiLandingPageTests
 	[Test]
 	public async Task NewerMinorWarningIsIndependentOfTheLandingFieldFloor()
 	{
-		var parsed = Parse(null, "1.99").Expect<ParsedPackageManifest>();
+		var parsed = _service.ParseManifest(Document(null, "1.99") + "title: An independent guide\n").Expect<ParsedPackageManifest>();
 		await Assert.That(parsed.Warnings.Count).IsEqualTo(1);
 		await Assert.That(parsed.Warnings.Single().Path).IsEqualTo("format");
 		await Assert.That(parsed.Warnings.Single().Message.Contains("newer", StringComparison.OrdinalIgnoreCase)).IsTrue();

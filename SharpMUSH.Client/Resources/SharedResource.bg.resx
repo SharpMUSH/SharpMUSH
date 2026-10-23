@@ -2313,6 +2313,10 @@
     <value>Описание</value>
     <comment>MT</comment>
   </data>
+  <data name="PkgTitleLabel" xml:space="preserve">
+    <value>Заглавие</value>
+    <comment>MT</comment>
+  </data>
   <data name="PkgDetails" xml:space="preserve">
     <value>Подробности</value>
     <comment>MT</comment>
