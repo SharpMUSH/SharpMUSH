@@ -1,0 +1,68 @@
+.wiki-facets {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 12px 0;
+}
+.wiki-facets-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+}
+.wiki-facet {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+.wiki-facet legend {
+    padding: 0;
+    margin-bottom: 4px;
+    color: var(--text-dim);
+    font-size: 13px;
+}
+.wiki-facet-values {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+.wiki-facet-value,
+.wiki-facets-clear {
+    min-height: 44px;
+    padding: .4rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+.wiki-facet-value[aria-pressed="true"] {
+    border-color: var(--accent);
+    color: var(--accent);
+    font-weight: 600;
+}
+.wiki-facet-value:disabled,
+.wiki-facets-clear:disabled { opacity: .5; cursor: default; }
+.wiki-facet-value:focus-visible,
+.wiki-facets-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wiki-facet-count {
+    margin-left: 4px;
+    color: var(--text-faint);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+.wiki-facet-more,
+.wiki-facets-note {
+    margin: 0;
+    color: var(--text-faint);
+    font-size: 12px;
+}
+.wiki-facets-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+.wiki-facets-message { color: var(--danger); }

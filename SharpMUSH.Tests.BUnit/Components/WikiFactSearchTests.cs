@@ -13,8 +13,8 @@ using System.Net.Http.Json;
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>
-/// <c>WikiFactSearch</c> on a category page: the typed conditions sent with the category's, an empty page read past,
-/// more read on request, and the server's refusal shown as it gave it.
+/// <c>WikiFactSearch</c>: the typed conditions sent as typed, an empty page read past, more read on request, and the
+/// server's refusal shown as it gave it.
 /// </summary>
 public class WikiFactSearchTests : TrackingBunitContext
 {
@@ -53,14 +53,14 @@ public class WikiFactSearchTests : TrackingBunitContext
 
 	private async Task<IRenderedComponent<WikiFactSearch>> SearchAsync(string typed, string? locale = null)
 	{
-		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Category, "spells").Add(c => c.Locale, locale));
+		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Locale, locale));
 		await cut.Find("input").ChangeAsync(new ChangeEventArgs { Value = typed });
 		await cut.Find("form").SubmitAsync();
 		return cut;
 	}
 
 	[Test]
-	public async Task TheCategoryAndTypedConditionsAreAskedAndMoreIsReadOnRequest()
+	public async Task TheTypedConditionsAreAskedAndMoreIsReadOnRequest()
 	{
 		_handler.Answers.Enqueue(Found("first"));
 		_handler.Answers.Enqueue(Found("second", "shield"));
@@ -69,16 +69,16 @@ public class WikiFactSearchTests : TrackingBunitContext
 		var cut = await SearchAsync(" pf2e:level=1..3 , pf2e:class=Smith, John ");
 		// The first answer read its budget and found nothing, so the box read on by itself.
 		await Assert.That(_handler.Queries).IsEquivalentTo([
-			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:class=Smith, John",
-			"/api/wiki/query?condition=category=spells&condition=pf2e:level=1..3&condition=pf2e:class=Smith, John&after=first"],
+			"/api/wiki/query?condition=pf2e:level=1..3&condition=pf2e:class=Smith, John",
+			"/api/wiki/query?condition=pf2e:level=1..3&condition=pf2e:class=Smith, John&after=first"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
-		await Assert.That(cut.FindAll(".wiki-fact-search-results a").Select(a => (a.TextContent, a.GetAttribute("href"))))
+		await Assert.That(cut.FindAll(".wiki-fact-results a").Select(a => (a.TextContent, a.GetAttribute("href"))))
 			.IsEquivalentTo([("SHIELD", "/wiki/main/shield")]);
 
-		await cut.Find(".wiki-fact-search-more").ClickAsync();
+		await cut.Find(".wiki-fact-results-more").ClickAsync();
 		await Assert.That(_handler.Queries[^1]).EndsWith("&after=second");
-		await Assert.That(cut.FindAll(".wiki-fact-search-results a").Select(a => a.TextContent)).IsEquivalentTo(["SHIELD", "FIREBALL"]);
-		await Assert.That(cut.FindAll(".wiki-fact-search-more")).IsEmpty();
+		await Assert.That(cut.FindAll(".wiki-fact-results a").Select(a => a.TextContent)).IsEquivalentTo(["SHIELD", "FIREBALL"]);
+		await Assert.That(cut.FindAll(".wiki-fact-results-more")).IsEmpty();
 	}
 
 	[Test]
@@ -86,8 +86,8 @@ public class WikiFactSearchTests : TrackingBunitContext
 	{
 		_handler.Answers.Enqueue(Found(null, "shield"));
 		var cut = await SearchAsync("pf2e:level=1", "fr");
-		await Assert.That(_handler.Queries).IsEquivalentTo(["/api/wiki/query?condition=category=spells&condition=pf2e:level=1&lang=fr"]);
-		await Assert.That(cut.Find(".wiki-fact-search-results a").GetAttribute("href")).IsEqualTo("/wiki/main/shield?lang=fr");
+		await Assert.That(_handler.Queries).IsEquivalentTo(["/api/wiki/query?condition=pf2e:level=1&lang=fr"]);
+		await Assert.That(cut.Find(".wiki-fact-results a").GetAttribute("href")).IsEqualTo("/wiki/main/shield?lang=fr");
 	}
 
 	[Test]
@@ -108,7 +108,7 @@ public class WikiFactSearchTests : TrackingBunitContext
 		_handler.Answers.Enqueue(Found(null, "fireball"));
 		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Query, "pf2e:tradition=arcane"));
 
-		cut.WaitForAssertion(() => cut.Find(".wiki-fact-search-results a"));
+		cut.WaitForAssertion(() => cut.Find(".wiki-fact-results a"));
 		await Assert.That(_handler.Queries).IsEquivalentTo(["/api/wiki/query?condition=pf2e:tradition=arcane"]);
 		await Assert.That(cut.Find("input").GetAttribute("value")).IsEqualTo("pf2e:tradition=arcane");
 	}
@@ -128,18 +128,10 @@ public class WikiFactSearchTests : TrackingBunitContext
 		_handler.Answers.Enqueue(new(HttpStatusCode.OK) { Content = JsonContent.Create(result) });
 		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Query, "pf2e:level=*, show=pf2e:level|pf2e:class"));
 
-		cut.WaitForAssertion(() => cut.Find(".wiki-fact-search-table"));
+		cut.WaitForAssertion(() => cut.Find(".wiki-fact-results-table"));
 		await Assert.That(cut.FindAll("thead th").Select(th => th.TextContent)).IsEquivalentTo(["WkFactSearchPage", "Level", "pf2e:class"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll("tbody tr").Select(tr => string.Join("|", tr.Children.Select(c => c.TextContent.Trim()))))
 			.IsEquivalentTo(["FIREBALL|3|Wizard", "SHIELD|1|"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
-	}
-
-	[Test]
-	public async Task NoBoxIsShownWhereNoPropertyIsDefined()
-	{
-		_handler.Properties.Clear();
-		var cut = Render<WikiFactSearch>(p => p.Add(c => c.Category, "spells"));
-		await Assert.That(cut.FindAll(".wiki-fact-search")).IsEmpty();
 	}
 }
