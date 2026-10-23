@@ -12,6 +12,10 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-military-science-fiction-kemono-administrator-identity", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-military-science-fiction-kemono-shared-completion", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-military-science-fiction-kemono-player-channels", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-military-science-fiction-kemono-player-speak-act", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-chibi-administrator-capabilities", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-chibi-shared-completion", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-chibi-player-continue", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
