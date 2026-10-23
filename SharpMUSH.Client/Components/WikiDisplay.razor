@@ -51,8 +51,9 @@ else if (Article is null && IsCategoryPage)
                     </AuthorizeView>
                 </Actions>
             </WikiPageHeader>
-            <WikiFactSearch Category="@Slug" Locale="@Locale" />
-            <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+            <WikiCategoryFacets Category="@Slug" Locale="@Locale">
+                <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+            </WikiCategoryFacets>
         </div>
         <aside class="wiki-page-aside">
             <AuthorizeView Policy="wiki.admin">
@@ -124,8 +125,9 @@ else
                 @CategoryBar
                 @if (IsCategoryPage)
                 {
-                    <WikiFactSearch Category="@Slug" Locale="@Locale" />
-                    <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+                    <WikiCategoryFacets Category="@Slug" Locale="@Locale">
+                        <WikiCategoryMembers Category="@Slug" Locale="@Locale" MembersCollection="@MembersCollection" MembersSkip="@MembersSkip" BrowseState="@_returnState" HoldLinks="@AwaitingReturnContext" />
+                    </WikiCategoryFacets>
                 }
             }
             else

@@ -32,8 +32,17 @@ public static class WikiFactQueries
 		if (query.Sort is { } sort && Definition(schema, sort) is { Type: SemanticType.PageRef })
 			return new Error<string>($"{sort} names pages, so it does not sort them; sort by a number or a keyword.");
 
+		return CheckConditions(schema, query.Conditions);
+	}
+
+	/// <summary>
+	/// The definition of each of <paramref name="conditions"/>' properties, in order, or an error naming the first one
+	/// <paramref name="schema"/> does not define or whose value its property cannot hold.
+	/// </summary>
+	public static Result<IReadOnlyList<PropertyDefinition>> CheckConditions(SemanticSchema schema, IEnumerable<WikiFactCondition> conditions)
+	{
 		var definitions = new List<PropertyDefinition>();
-		foreach (var condition in query.Conditions)
+		foreach (var condition in conditions)
 		{
 			var property = Property(condition);
 			if (Definition(schema, property) is not { } definition)

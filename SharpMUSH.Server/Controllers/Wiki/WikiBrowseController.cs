@@ -29,6 +29,7 @@ namespace SharpMUSH.Server.Controllers;
 ///   GET  /api/wiki/pages           — paginated listing of all pages (X-Total-Count header)
 ///   GET  /api/wiki/counts          — page counts by state (published, draft), and restricted pages
 ///   GET  /api/wiki/category/{cat}  — pages in a category (subcategories are its category-namespace rows)
+///   GET  /api/wiki/category/{cat}/facets — each property's values among a category's pages, with counts
 ///   GET  /api/wiki/category-names  — each category's name in the reader's locale
 ///   GET  /api/wiki/categories      — every category, with its name, how many pages it holds and whether it is pinned
 ///   GET  /api/wiki/pinned-categories — the keys of the categories pinned to the wiki home
@@ -125,6 +126,21 @@ public class WikiBrowseController(
 		var pages = await Wiki.GetByCategoryAsync(category, skip, take, await VisibilityAsync());
 		return Ok(await LocalizedListAsync(pages, lang));
 	}
+
+	/// <summary>
+	/// GET /api/wiki/category/{category}/facets?condition=pf2e:tradition=arcane
+	/// For each property the category's pages state, the values they state and how many pages state each, among the
+	/// pages meeting every <c>condition</c> (<see cref="WikiFactFacets"/>). A page value is shown by its title. 400 for
+	/// a condition the wiki cannot answer.
+	/// </summary>
+	[HttpGet("category/{category}/facets")]
+	public async Task<IActionResult> CategoryFacets(string category, [FromQuery] string[] condition)
+		=> await WikiFactFacets.CountAsync(Wiki, category, condition, await VisibilityAsync()) switch
+		{
+			WikiFacets facets => Ok(new WikiFacetsDto(facets.Pages, facets.Partial, [.. facets.Facets.Select(f => new WikiFacetDto(f.Property,
+				f.Label, WikiFactProperties.TypeName(f.Type), [.. f.Values.Select(v => new WikiFacetValueDto(v.Value, v.Label, v.Count))], f.More))])),
+			Error<string> error => BadRequest(error.Value),
+		};
 
 	/// <summary>Category rows read at a time by <see cref="NewestInCategory"/>.</summary>
 	private const int NewestBatch = 200;

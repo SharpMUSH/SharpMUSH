@@ -114,6 +114,24 @@ public record SetFactPropertyRequest(string Type, bool Multiple, IReadOnlyList<s
 public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 
 /// <summary>
+/// <c>GET /api/wiki/category/{category}/facets</c>: how many of the category's pages meet the chosen conditions,
+/// whether only the first of a large category were counted (<paramref name="Partial"/>), and their facets.
+/// </summary>
+public record WikiFacetsDto(int Pages, bool Partial, IReadOnlyList<WikiFacetDto> Facets);
+
+/// <summary>
+/// A property's values among the pages, under <paramref name="Label"/>. <paramref name="Type"/> is as
+/// <see cref="WikiFactPropertyDto"/> names it; <paramref name="More"/> counts the values left out.
+/// </summary>
+public record WikiFacetDto(string Property, string Label, string Type, IReadOnlyList<WikiFacetValueDto> Values, int More);
+
+/// <summary>
+/// A value, or a range of whole numbers, and how many pages state it. <paramref name="Value"/> is written as a
+/// condition takes it after <c>property=</c>; <paramref name="Label"/> is what a reader is shown.
+/// </summary>
+public record WikiFacetValueDto(string Value, string Label, int Count);
+
+/// <summary>
 /// One page of <c>GET /api/wiki/query</c>'s answer. <paramref name="Next"/> continues it as <c>after</c>; null when
 /// nothing is left. A page may hold fewer rows than were asked for, even none, and still go on.
 /// </summary>

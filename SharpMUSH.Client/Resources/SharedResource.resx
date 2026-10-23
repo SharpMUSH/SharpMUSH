@@ -5801,6 +5801,21 @@
   <data name="WkFactSearchRun" xml:space="preserve">
     <value>Find</value>
   </data>
+  <data name="WkFacets" xml:space="preserve">
+    <value>Filter by facts</value>
+  </data>
+  <data name="WkFacetsClear" xml:space="preserve">
+    <value>Clear filters</value>
+  </data>
+  <data name="WkFacetsMore" xml:space="preserve">
+    <value>{count, plural, one {# more value} other {# more values}}</value>
+  </data>
+  <data name="WkFacetsPages" xml:space="preserve">
+    <value>{count, plural, one {# page matches} other {# pages match}}</value>
+  </data>
+  <data name="WkFacetsPartial" xml:space="preserve">
+    <value>This category is large, so only its first pages were counted.</value>
+  </data>
   <data name="WkFactSearchMore" xml:space="preserve">
     <value>More</value>
   </data>
