@@ -177,9 +177,11 @@ public static class WikiCommandHelper
 	/// <summary>
 	/// A wiki listing: <paramref name="rows"/> (<see cref="PageRow(WikiPage)"/>) as a table in a panel titled
 	/// <paramref name="title"/>, with <paramref name="before"/> above the table and <paramref name="after"/>
-	/// under a divider below it.
+	/// under a divider below it. When <paramref name="shown"/> names columns, they take the place of the revision and
+	/// the date, and each row holds its cells after its title.
 	/// </summary>
-	public static MString PageListing(string title, IReadOnlyCollection<string[]> rows, Block? before = null, string? after = null)
+	public static MString PageListing(string title, IReadOnlyCollection<string[]> rows, Block? before = null, string? after = null,
+		IReadOnlyList<string>? shown = null)
 	{
 		Block pages = rows.Count == 0
 			? new TextBlock(MarkupText.Plain("No pages."))
@@ -187,8 +189,13 @@ public static class WikiCommandHelper
 				[
 					new TableColumn(MarkupText.Plain("Page")) { Wrap = false },
 					new TableColumn(MarkupText.Plain("Title")) { Min = 10 },
-					new TableColumn(MarkupText.Plain("Rev")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
-					new TableColumn(MarkupText.Plain("Edited")) { Wrap = false, Priority = 2 },
+					.. shown is { Count: > 0 }
+						? shown.Select(heading => new TableColumn(MarkupText.Plain(heading)) { Min = Math.Min(heading.Length, 16) })
+						:
+						[
+							new TableColumn(MarkupText.Plain("Rev")) { Alignment = Alignment.Right, Wrap = false, Priority = 3 },
+							new TableColumn(MarkupText.Plain("Edited")) { Wrap = false, Priority = 2 },
+						],
 				],
 				rows);
 		List<Block> parts = before is null ? [pages] : [before, new Rule(), pages];

@@ -117,7 +117,14 @@ public record SetFactsRequest(IReadOnlyList<WikiFactDto>? Facts);
 /// One page of <c>GET /api/wiki/query</c>'s answer. <paramref name="Next"/> continues it as <c>after</c>; null when
 /// nothing is left. A page may hold fewer rows than were asked for, even none, and still go on.
 /// </summary>
-public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next);
+public record WikiFactQueryResultDto(IReadOnlyList<WikiPageSummaryDto> Pages, string? Next)
+{
+	/// <summary>The properties the query's <c>show=</c> names, in order: the columns beside each page.</summary>
+	public IReadOnlyList<WikiFactPropertyDto> Show { get; init; } = [];
+
+	/// <summary>By page id, the facts each page states for <see cref="Show"/>'s properties that the reader may see.</summary>
+	public IReadOnlyDictionary<string, IReadOnlyList<WikiFactDto>> Facts { get; init; } = new Dictionary<string, IReadOnlyList<WikiFactDto>>();
+}
 
 /// <summary>
 /// One row of a wiki listing (recent changes, a namespace, a category, the paged index): the page
@@ -293,15 +300,16 @@ public sealed record WikiCategoryNewestDto(IReadOnlyList<WikiPageSummaryDto> Pag
 public static class WikiFactConditions
 {
 	/// <summary>
-	/// The conditions, separated by commas. A piece with no <c>=</c> is the rest of the value before it, so a title or
-	/// category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays one condition.
+	/// The conditions, separated by commas. A piece with no operator (<c>=</c>, <c>&lt;</c> or <c>&gt;</c>) is the rest
+	/// of the value before it, so a title or category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays
+	/// one condition.
 	/// </summary>
 	public static IReadOnlyList<string> Split(string typed)
 	{
 		var conditions = new List<string>();
 		foreach (var piece in typed.Split(','))
 		{
-			if (conditions.Count > 0 && !piece.Contains('=')) conditions[^1] += "," + piece;
+			if (conditions.Count > 0 && piece.IndexOfAny(['=', '<', '>']) < 0) conditions[^1] += "," + piece;
 			else conditions.Add(piece);
 		}
 		return conditions;

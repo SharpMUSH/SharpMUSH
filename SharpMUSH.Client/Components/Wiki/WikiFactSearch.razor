@@ -30,12 +30,43 @@
             {
                 <EmptyState>@Loc["WkFactSearchNone"]</EmptyState>
             }
-            <ul class="wiki-fact-search-results" aria-live="polite">
-                @foreach (var row in pages)
-                {
-                    <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
-                }
-            </ul>
+            @if (_show.Count == 0)
+            {
+                <ul class="wiki-fact-search-results" aria-live="polite">
+                    @foreach (var row in pages)
+                    {
+                        <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <div class="wiki-fact-search-scroll">
+                    <table class="wiki-fact-search-results wiki-fact-search-table" aria-live="polite">
+                        <thead>
+                            <tr>
+                                <th scope="col">@Loc["WkFactSearchPage"]</th>
+                                @foreach (var property in _show)
+                                {
+                                    <th scope="col" title="@property.Id">@(property.Label.Length > 0 ? property.Label : property.Id)</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var row in pages)
+                            {
+                                <tr>
+                                    <th scope="row"><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></th>
+                                    @foreach (var property in _show)
+                                    {
+                                        <td>@string.Join(" · ", Values(row.Id, property.Id))</td>
+                                    }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
             @if (_next is not null)
             {
                 <button type="button" class="wiki-fact-search-more" disabled="@_busy" @onclick="MoreAsync">@Loc["WkFactSearchMore"]</button>
@@ -57,6 +88,8 @@
     private string _typed = string.Empty;
     private string[] _conditions = [];
     private List<WikiPageSummaryDto>? _pages;
+    private IReadOnlyList<WikiFactPropertyDto> _show = [];
+    private readonly Dictionary<string, IReadOnlyList<WikiFactDto>> _facts = [];
     private string? _next;
     private string? _message;
     private bool _busy;
@@ -74,11 +107,17 @@
         _conditions = [.. Category is null ? [] : new[] { $"category={Category}" },
             .. WikiFactConditions.Split(_typed).Select(c => c.Trim()).Where(c => c.Length > 0)];
         _pages = [];
+        _show = [];
+        _facts.Clear();
         _next = null;
         await ReadAsync(after: null);
     }
 
     private Task MoreAsync() => ReadAsync(_next);
+
+    /// <summary>What a page states for a shown property, a page value as its title.</summary>
+    private IEnumerable<string> Values(string page, string property)
+        => (_facts.GetValueOrDefault(page) ?? []).Where(f => f.Property == property).Select(f => f.PageTitle ?? f.Value);
 
     /// <summary>
     /// Reads on from <paramref name="after"/> until a page holds a row or the answer ends: the server returns an empty
@@ -94,6 +133,8 @@
             {
                 case WikiFactQueryResultDto found:
                     _pages = [.. _pages ?? [], .. found.Pages];
+                    _show = found.Show;
+                    foreach (var (id, facts) in found.Facts) _facts[id] = facts;
                     _next = after = found.Next;
                     if (found.Pages.Count > 0) after = null;
                     break;

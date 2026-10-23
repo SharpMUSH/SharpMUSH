@@ -11,7 +11,16 @@ public sealed record WikiFactEquals(string Property, string Value);
 /// </summary>
 public sealed record WikiFactRange(string Property, long? Min, long? Max);
 
-public union WikiFactCondition(WikiFactEquals, WikiFactRange);
+/// <summary>A page states one of <paramref name="Values"/> for <paramref name="Property"/>, written as facts are.</summary>
+public sealed record WikiFactOneOf(string Property, IReadOnlyList<string> Values);
+
+/// <summary>A page states any value for <paramref name="Property"/>.</summary>
+public sealed record WikiFactStated(string Property);
+
+/// <summary>A page does not meet <paramref name="Condition"/>. It narrows a query and never drives one.</summary>
+public sealed record WikiFactNot(WikiFactCondition Condition);
+
+public union WikiFactCondition(WikiFactEquals, WikiFactRange, WikiFactOneOf, WikiFactStated, WikiFactNot);
 
 /// <summary>
 /// The pages meeting every one of <paramref name="Conditions"/>, at most <paramref name="Take"/> of them, from
@@ -20,6 +29,9 @@ public union WikiFactCondition(WikiFactEquals, WikiFactRange);
 public sealed record WikiFactQuery(IReadOnlyList<WikiFactCondition> Conditions, int Take, string? After = null)
 {
 	public const int MaxConditions = 4;
+
+	/// <summary>The most values one condition names, as <c>a|b</c>.</summary>
+	public const int MaxValues = 8;
 	public const int MaxTake = 50;
 
 	/// <summary>Index entries one call reads at most; past them it returns what it found and where to go on.</summary>
@@ -30,6 +42,19 @@ public sealed record WikiFactQuery(IReadOnlyList<WikiFactCondition> Conditions, 
 
 	/// <summary>Only pages in this category, as a key (<see cref="Services.WikiHelpers.CategoryKey"/>); null for any.</summary>
 	public string? Category { get; init; }
+
+	/// <summary>
+	/// The property whose values order the pages, lowest first unless <see cref="Descending"/>; a page that states
+	/// none is not listed. Null for the order the index finds them in.
+	/// </summary>
+	public string? Sort { get; init; }
+
+	public bool Descending { get; init; }
+
+	/// <summary>The properties whose values a reader is shown beside each page. A store checks them and returns pages.</summary>
+	public IReadOnlyList<string> Show { get; init; } = [];
+
+	public const int MaxShown = 4;
 }
 
 /// <summary>
