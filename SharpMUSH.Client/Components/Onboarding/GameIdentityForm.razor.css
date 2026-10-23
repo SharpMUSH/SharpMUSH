@@ -5,6 +5,7 @@
 .identity-form p { line-height: 1.65; margin: .75rem 0; }
 .identity-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
 .identity-save { margin-top: 1rem; padding: .7rem 1rem; color: var(--text); background: var(--surface); border: 1px solid var(--accent); border-radius: 5px; cursor: pointer; }
+.identity-form a { color: var(--accent); text-decoration: underline; text-underline-offset: .2em; }
 .identity-form :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 @container page (max-width: 48rem) { .identity-columns { grid-template-columns: 1fr; gap: 0; } }
 
