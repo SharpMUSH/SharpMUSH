@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-dragonlance-pixel-player-place", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-discworld-kemono-administrator-rules", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-pixel-player-world", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-pixel-player-character", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-pixel-player-sign-in", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-pixel-shared-welcome", "pixel", "Dragonlance", "images/sharpie/sharpie-dragonlance-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-administrator-joining", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-kemono-administrator-identity", "kemono", "Discworld", "images/sharpie/sharpie-discworld-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-discworld-pixel-player-useful-action", "pixel", "Discworld", "images/sharpie/sharpie-discworld-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
