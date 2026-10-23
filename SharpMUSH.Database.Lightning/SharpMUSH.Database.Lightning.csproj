@@ -10,7 +10,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="SharpMUSH.Tests" />
-    <InternalsVisibleTo Include="WikiSemantics" />
     <InternalsVisibleTo Include="SharpMUSH.Tests.Infrastructure" />
     <InternalsVisibleTo Include="WikiSemantics.NativeProbe" />
     <InternalsVisibleTo Include="SharpMUSH.Benchmarks" />

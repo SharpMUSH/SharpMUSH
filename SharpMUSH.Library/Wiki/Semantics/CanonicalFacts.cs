@@ -89,23 +89,6 @@ public static class CanonicalFacts
 		return new CanonicalFactSet(schema.Version, [.. canonical.Values]);
 	}
 
-	public static IdentityResult Resolve(PortableKey key, IEnumerable<PortableAlias> aliases,
-		IReadOnlySet<PageRef> existing, CancellationToken cancellationToken = default)
-	{
-		var matches = new HashSet<PageRef>();
-		foreach (var alias in aliases)
-		{
-			cancellationToken.ThrowIfCancellationRequested();
-			if (alias.Key == key)
-				matches.Add(alias.Target);
-		}
-		if (matches.Count > 1)
-			return new ValidationFailure(ValidationCode.AmbiguousAlias, "Portable alias has multiple incarnations.");
-		if (matches.Count == 1 && existing.Contains(matches.Single()))
-			return matches.Single();
-		return new ValidationFailure(ValidationCode.MissingTarget, "Portable target is unavailable.");
-	}
-
 	/// <summary>Stable typed scalar encoding used only for canonical ordering, never authorization.</summary>
 	public static string ValueKey(SemanticValue value) => value switch
 	{

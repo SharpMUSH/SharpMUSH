@@ -1,6 +1,5 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
 using SharpMUSH.Library.Services;
@@ -65,8 +64,7 @@ public partial class LightningDatabase
 		public async ValueTask<(int Records, long Bytes)> PurgeAsync(HistoryPurgeBatch batch, HistoryRetentionRule rule,
 			DateTimeOffset now, CancellationToken ct = default)
 		{
-			using var admission = provider.EnterFixtureMutation(SemanticFixtureMutation.Unsupported);
-			return await provider.WriteFixtureAsync(admission, tx =>
+			return await provider.Store.WriteAsync(tx =>
 			{
 				var deleted = 0;
 				var freed = 0L;

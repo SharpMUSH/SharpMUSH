@@ -1,6 +1,5 @@
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
@@ -26,27 +25,15 @@ public partial class LightningDatabase
 
 	public async Task<Found<None>> SetRequirementsAsync(WikiRequirementSet set)
 	{
-		using var admission = EnterFixtureMutation(SemanticFixtureMutation.Requirements);
 		var key = set.Target.Scope == WikiRuleScope.Page ? CanonicalWikiPageId(set.Target.Key) : set.Target.Key;
-		return await WriteFixtureAsync<Found<None>>(admission, tx =>
+		return await Store.WriteAsync<Found<None>>(tx =>
 		{
 			if (set.Target.Scope == WikiRuleScope.Page && TryReadWikiPage(tx, key) is null) return new NotFound();
 
 			var rowKey = WikiRequirementKey(set.Target.Scope, key);
-			// On an active projection a read requirement decides which visibility class a page projects under, so
-			// changing one rewrites every page it applies to, in this job. They are counted before anything is
-			// written, and more than the cap is refused. Edit and delete requirements are plain rows.
-			IReadOnlyList<long> rewrite = [];
-			if (admission is { Phase: SemanticFixturePhase.Active })
-			{
-				var current = tx.TryGet(Tables.WikiRequirement, rowKey, out var bytes)
-					? MapWikiRequirement(Codec.Deserialize<WikiRequirementRecord>(bytes)) : null;
-				if (!SameRead(current, set)) rewrite = ReadRewriteTargets(tx, set.Target.Scope, key);
-			}
 			if (set.IsEmpty)
 			{
 				tx.Delete(Tables.WikiRequirement, rowKey);
-				RewriteReadVisibility(tx, admission, rewrite);
 				return new None();
 			}
 
@@ -60,15 +47,8 @@ public partial class LightningDatabase
 				UpdatedBy = set.UpdatedBy,
 				UpdatedAt = set.UpdatedAt.ToUnixTimeMilliseconds(),
 			}));
-			RewriteReadVisibility(tx, admission, rewrite);
 			return new None();
 		});
-	}
-
-	private static bool SameRead(WikiRequirementSet? current, WikiRequirementSet next)
-	{
-		IReadOnlyList<string> Read(WikiRequirementSet? set) => set is not null && set.Required.TryGetValue(WikiAction.Read, out var scopes) ? scopes : [];
-		return Read(current).SequenceEqual(Read(next), StringComparer.Ordinal);
 	}
 
 	/// <summary>True when the page itself carries requirements, which keeps its full revision history.</summary>

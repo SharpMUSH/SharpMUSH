@@ -1,5 +1,4 @@
 using System.Buffers.Binary;
-using SharpMUSH.Database.Lightning.Semantics;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -22,7 +21,7 @@ public partial class LightningDatabase
 	private sealed record FactConditionSpan(byte[] Start, Func<byte[], bool> Inside);
 
 	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
-		=> Task.FromResult(WikiFactQueries.Check(AtomicWikiLayout.Schema, query) switch
+		=> Task.FromResult(WikiFactQueries.Check(WikiFactSchema.Schema, query) switch
 		{
 			IReadOnlyList<PropertyDefinition> definitions => Store.Read(tx => QueryFacts(tx, Canonical(query, definitions), definitions, visibility)),
 			Error<string> error => (WikiFactQueryResult)error
