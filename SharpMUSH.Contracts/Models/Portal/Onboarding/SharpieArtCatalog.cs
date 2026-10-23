@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-post-apocalyptic-kemono-shared-completion", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-post-apocalyptic-kemono-player-continue", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-chibi-player-speak-act", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-chibi-player-useful-action", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-chibi-player-place", "chibi", "Erotic", "images/sharpie/sharpie-erotic-chibi-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
