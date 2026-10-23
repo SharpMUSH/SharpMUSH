@@ -5055,7 +5055,7 @@
     <value>Choose your handlers</value>
   </data>
   <data name="AdmSetupHandlersLead" xml:space="preserve">
-    <value>The packages SharpMUSH ships build on two objects: the HTTP handler and the event handler. You can build them onto the ones your game already has, or create new ones. Building onto an existing object adds the packages' attributes to it; where it already has one of the same name, your value is kept and that part of the package does not run as shipped. Before anything changes, the wizard lists every such attribute.</value>
+    <value>The packages SharpMUSH ships run on two objects, the HTTP handler and the event handler. A new game can keep the ones it has.</value>
   </data>
   <data name="AdmSetupHandlerHttpTitle" xml:space="preserve">
     <value>HTTP handler (http_handler)</value>
@@ -5106,10 +5106,31 @@
     <value>Choose your packages</value>
   </data>
   <data name="AdmSetupPackagesLead" xml:space="preserve">
-    <value>Every package this server ships. Add or remove any of them; what a package needs comes with it. You can change them later under Packages.</value>
+    <value>The recommended packages are ticked. Search, or show all of them, to add others; what a package needs comes with it. You can change them later under Packages.</value>
   </data>
   <data name="AdmSetupPkgGroupUncategorized" xml:space="preserve">
     <value>Uncategorized</value>
+  </data>
+  <data name="AdmSetupHandlersAdvanced" xml:space="preserve">
+    <value>Advanced: use other objects</value>
+  </data>
+  <data name="AdmSetupHandlersAdvancedLead" xml:space="preserve">
+    <value>You can build the packages onto objects your game already has, or create new ones. Building onto an existing object adds the packages' attributes to it; where it already has one of the same name, your value is kept and that part of the package does not run as shipped. Before anything changes, the wizard lists every such attribute.</value>
+  </data>
+  <data name="AdmSetupPkgSearch" xml:space="preserve">
+    <value>Search packages</value>
+  </data>
+  <data name="AdmSetupPkgShowAll" xml:space="preserve">
+    <value>Show all {0}</value>
+  </data>
+  <data name="AdmSetupPkgShowRecommended" xml:space="preserve">
+    <value>Show recommended only</value>
+  </data>
+  <data name="AdmSetupPkgSummary" xml:space="preserve">
+    <value>{0} of {1} packages will be installed.</value>
+  </data>
+  <data name="AdmSetupPkgNoMatch" xml:space="preserve">
+    <value>No package matches "{0}".</value>
   </data>
   <data name="AdmSetupPkgGroupCount" xml:space="preserve">
     <value>{0} of {1}</value>
