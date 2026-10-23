@@ -24,3 +24,9 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.home-guide-entry a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-underline-offset: .2em;
+}

@@ -1,0 +1,24 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IStringLocalizer<SharedResource> Loc
+
+@* How far the administrator checklist has come: a step counts once it is verified or deferred. *@
+<div class="checklist-progress">
+    <p id="@_label">@Loc["GuideAdminProgress", Handled(Progress), GuideStepIds.Administrator.Count]</p>
+    <progress value="@Handled(Progress)" max="@GuideStepIds.Administrator.Count" aria-labelledby="@_label"></progress>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public OnboardingProgress Progress { get; set; } = new();
+
+    private readonly string _label = $"checklist-progress-{Guid.NewGuid():N}";
+
+    public static bool IsHandled(OnboardingProgress progress, string step) =>
+        progress.CompletedStepIds.Contains(step) || progress.SkippedStepIds.Contains(step);
+
+    public static int Handled(OnboardingProgress progress) =>
+        GuideStepIds.Administrator.Count(step => IsHandled(progress, step));
+
+    public static bool Finished(OnboardingProgress progress) =>
+        Handled(progress) == GuideStepIds.Administrator.Count;
+}
