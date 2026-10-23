@@ -11,7 +11,7 @@ public static class WikiFactQueries
 {
 	/// <summary>
 	/// The definition of each condition's property, in order, or an error naming the first thing
-	/// <paramref name="schema"/> cannot answer: an undefined property, a range over anything but whole numbers, a
+	/// <paramref name="schema"/> cannot answer: an undefined property, a range over anything but numbers and dates, a
 	/// value its property's type cannot hold or no fact can state, or a sort or shown property it does not define.
 	/// Too many conditions, none a page meets by stating a value (and no sort), or a page size out of range, is an
 	/// error too.
@@ -59,7 +59,7 @@ public static class WikiFactQueries
 
 	private static string? Refused(WikiFactCondition condition, PropertyDefinition definition) => condition switch
 	{
-		WikiFactRange when definition.Type != SemanticType.Integer => $"{definition.Id} is not a whole number, so it has no range.",
+		WikiFactRange when !Ordered(definition.Type) => $"{definition.Id} is not a number or a date, so it has no range.",
 		WikiFactRange { Min: null, Max: null } => $"A range over {definition.Id} needs a bound.",
 		WikiFactRange => null,
 		WikiFactEquals equals => Refused(equals.Value, definition),
@@ -72,7 +72,8 @@ public static class WikiFactQueries
 	};
 
 	private static string? Refused(string value, PropertyDefinition definition)
-		=> definition.Type == SemanticType.Integer && Integer(value) is null ? $"{definition.Id} is a whole number, not '{value}'."
+		=> Ordered(definition.Type) && OrderKey(definition.Type, value) is null
+			? $"{definition.Id} is {WikiPageFacts.Describe(definition.Type)}, not '{value}'."
 			: Encoding.UTF8.GetByteCount(value) > WikiSemanticPolicy.MaxKeywordBytes
 				? $"{definition.Id} has no value longer than {WikiSemanticPolicy.MaxKeywordBytes} bytes."
 				: null;
@@ -103,15 +104,18 @@ public static class WikiFactQueries
 	{
 		WikiFactEquals equals => SameValue(definition, value, equals.Value),
 		WikiFactOneOf oneOf => oneOf.Values.Any(wanted => SameValue(definition, value, wanted)),
-		WikiFactRange range => Integer(value) is { } number && number >= (range.Min ?? long.MinValue) && number <= (range.Max ?? long.MaxValue),
+		WikiFactRange range => OrderKey(definition.Type, value) is { } key && key >= (range.Min ?? long.MinValue) && key <= (range.Max ?? long.MaxValue),
 		WikiFactStated => true,
 		WikiFactNot => false,
 	};
 
 	private static bool SameValue(PropertyDefinition definition, string value, string wanted)
-		=> definition.Type == SemanticType.Integer
-			? Integer(value) is { } number && number == Integer(wanted)
-			: string.Equals(value, wanted, StringComparison.Ordinal);
+		=> definition.Type switch
+		{
+			_ when Ordered(definition.Type) => OrderKey(definition.Type, value) is { } key && key == OrderKey(definition.Type, wanted),
+			SemanticType.Text => string.Equals(Folded(value), Folded(wanted), StringComparison.Ordinal),
+			_ => string.Equals(value, wanted, StringComparison.Ordinal)
+		};
 
 	/// <summary>Whether <paramref name="page"/> is in the query's namespace and category, when it names them.</summary>
 	public static bool InScope(WikiFactQuery query, WikiPage page)
@@ -120,4 +124,47 @@ public static class WikiFactQueries
 
 	public static long? Integer(string value)
 		=> long.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number) ? number : null;
+
+	/// <summary>A finite number with an optional sign and decimal point, and no exponent or digit grouping.</summary>
+	public static double? Decimal(string value)
+		=> double.TryParse(value, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var number)
+			&& double.IsFinite(number)
+			? number + 0.0
+			: null;
+
+	/// <summary>A calendar day written <c>yyyy-MM-dd</c>.</summary>
+	public static DateOnly? Date(string value)
+		=> DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date) ? date : null;
+
+	/// <summary>Whether <paramref name="type"/>'s values have an order that ranges, comparisons and facet ranges follow.</summary>
+	public static bool Ordered(SemanticType type) => type is SemanticType.Integer or SemanticType.Decimal or SemanticType.Date;
+
+	/// <summary>
+	/// <paramref name="value"/> as a whole number in its type's order, or null when the type has no order or the value
+	/// is not one of its values: a whole number is itself, a date its day number, and a decimal its bits arranged so
+	/// that the keys order as the numbers do. A <see cref="WikiFactRange"/>'s bounds are keys.
+	/// </summary>
+	public static long? OrderKey(SemanticType type, string value) => type switch
+	{
+		SemanticType.Integer => Integer(value),
+		SemanticType.Decimal => Decimal(value) is { } number ? DecimalKey(number) : null,
+		SemanticType.Date => Date(value)?.DayNumber,
+		_ => null
+	};
+
+	/// <summary>
+	/// A finite number's key: its bits as they are for a positive number, and with every bit but the sign flipped for a
+	/// negative one, so a larger magnitude is a smaller key. Negative zero is zero.
+	/// </summary>
+	public static long DecimalKey(double number)
+	{
+		var bits = BitConverter.DoubleToInt64Bits(number + 0.0);
+		return bits >= 0 ? bits : bits ^ long.MaxValue;
+	}
+
+	/// <summary>The decimal number <paramref name="key"/> stands for (<see cref="DecimalKey"/>).</summary>
+	public static double DecimalOf(long key) => BitConverter.Int64BitsToDouble(key >= 0 ? key : key ^ long.MaxValue);
+
+	/// <summary>Text as it is compared: two texts are one value when they differ only in case.</summary>
+	public static string Folded(string text) => text.ToLowerInvariant();
 }

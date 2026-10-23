@@ -137,7 +137,7 @@ public class WikiViewFactsTests
 		await Assert.That(text).Contains("School");
 		await Assert.That(view.Render(MarkupFormat.Mxp)).Contains($"@wiki main:{later.Slug}");
 		// A query the wiki cannot answer says why, where the block is.
-		await Assert.That(text).Contains($"[Query {School.Id}>2: {School.Id} is not a whole number, so it has no range.]");
+		await Assert.That(text).Contains($"[Query {School.Id}>2: {School.Id} is not a number or a date, so it has no range.]");
 	}
 
 	[Test]

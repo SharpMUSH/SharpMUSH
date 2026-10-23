@@ -11,7 +11,7 @@
             <label for="@_inputId">@Loc["WkFactSearch"]</label>
             <div class="wiki-fact-search-row">
                 <input id="@_inputId" type="text" @bind="_typed" aria-describedby="@(_inputId)-hint"
-                       placeholder="@string.Join(", ", properties.Take(2).Select(p => p.Type == "number" ? $"{p.Id}=1..3" : $"{p.Id}=…"))" />
+                       placeholder="@string.Join(", ", properties.Take(2).Select(Example))" />
                 <button type="submit">@Loc["WkFactSearchRun"]</button>
             </div>
             <span id="@(_inputId)-hint" class="wiki-fact-search-hint">@Loc["WkFactSearchHint"]: @string.Join(", ", properties.Select(p => p.Id))</span>
@@ -42,6 +42,14 @@
         _typed = Query;
         Search();
     }
+
+    private static string Example(WikiFactPropertyDto property) => property.Type switch
+    {
+        "number" => $"{property.Id}=1..3",
+        "decimal" => $"{property.Id}>1.5",
+        "date" => $"{property.Id}>=2026-01-01",
+        _ => $"{property.Id}=…",
+    };
 
     private void Search()
     {
