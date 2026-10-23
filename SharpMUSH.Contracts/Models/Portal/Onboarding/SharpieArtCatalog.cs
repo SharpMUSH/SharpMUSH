@@ -12,6 +12,7 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-cyberpunk-pixel-player-continue", "pixel", "Cyberpunk", "images/sharpie/sharpie-cyberpunk-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-pixel-player-channels", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-player-speak-act", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-player-place", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Genre),
