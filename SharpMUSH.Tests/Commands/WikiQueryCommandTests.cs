@@ -1,7 +1,9 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Implementation.Commands.WikiCommand;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -106,5 +108,31 @@ public class WikiQueryCommandTests
 		var marker = TestIsolationHelpers.GenerateUniqueName("refused");
 		await RunAsync(player, $"think {marker} [wikiquery({condition})]");
 		await Assert.That(Told(player, $"{marker} #-1 INVALID WIKI QUERY")).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task AQueryListsUpToItsLimitAndSaysWhetherMoreMatch()
+	{
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var category = TestIsolationHelpers.GenerateUniqueName("QueryLimit");
+		var made = new List<string>();
+		for (var i = 0; i < 3; i++) made.Add((await PageAsync("QueryLimited", category, true, new WikiPageFact("pf2e:level", "2"))).Id);
+		string[] conditions = [$"category={category}", "pf2e:level=2"];
+
+		var cut = (await QueryWiki.RunAsync(WikiService, conditions, WikiVisibility.All, 2)).Expect<WikiFactQueryListing>();
+		await Assert.That(cut.More).IsTrue();
+		await Assert.That(cut.Pages.Count).IsEqualTo(2);
+		await Assert.That(made).Contains(cut.Pages[0].Id).And.Contains(cut.Pages[1].Id);
+		var all = (await QueryWiki.RunAsync(WikiService, conditions, WikiVisibility.All, 3)).Expect<WikiFactQueryListing>();
+		await Assert.That(all.More).IsFalse();
+		await Assert.That(all.Pages.Select(p => p.Id)).IsEquivalentTo(made);
+	}
+
+	[Test]
+	public async Task AFifthConditionIsRefusedBeforeThePageItNamesIsLookedFor()
+	{
+		var refused = await QueryWiki.RunAsync(WikiService,
+			["pf2e:level=1", "pf2e:level=2", "pf2e:level=3", "pf2e:level=4", $"pf2e:class={Guid.NewGuid():N}"], WikiVisibility.All, 10);
+		await Assert.That(refused.Expect<Error<string>>().Value).IsEqualTo("A query takes from 1 to 4 conditions.");
 	}
 }

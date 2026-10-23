@@ -131,8 +131,8 @@ plus a category and a namespace:
 - `category=<name>`: the page is in that category.
 - `namespace=<name>`: the page is in that namespace.
 
-A page you may not read is left out. A condition the wiki cannot answer
-returns `#-1 INVALID WIKI QUERY`. Until the fact index is built, the result
+A page you may not read is left out, and at most 1000 pages are returned. A
+condition the wiki cannot answer returns `#-1 INVALID WIKI QUERY`. Until the fact index is built, the result
 is `#-1 WIKI INDEX BUILDING`.
 
 ## Example
