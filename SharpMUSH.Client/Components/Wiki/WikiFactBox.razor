@@ -24,7 +24,7 @@
                             }
                             @if (fact is { PageSlug: { } slug, PageTitle: { } title })
                             {
-                                <a href="@Link(WikiRoutes.WikiPathFor(fact.PageNamespace, slug))">@title</a>
+                                <a href="@Link(WikiRoutes.PathFor(fact.PageNamespace, slug))">@title</a>
                             }
                             else
                             {
@@ -50,7 +50,7 @@
                             {
                                 <span class="wiki-facts-sep" aria-hidden="true"> · </span>
                             }
-                            <a href="@Link(WikiRoutes.WikiPathFor(namer.Namespace, namer.Slug))">@namer.Title</a>
+                            <a href="@Link(WikiRoutes.PathFor(namer.Namespace, namer.Slug))">@namer.Title</a>
                         }
                         @if (named.More)
                         {

@@ -33,15 +33,17 @@ public class WikiFactTests : BunitContext
 		var cut = Render<WikiFactBox>(p => p.Add(c => c.Facts, new List<WikiFactDto>
 		{
 			new("pf2e:class", "wiki_page/7") { PageTitle = "Wizard", PageSlug = "wizard", PageNamespace = "main" },
+			new("pf2e:mentor", "wiki_page/9") { PageTitle = "Aria", PageSlug = "aria", PageNamespace = "character" },
 			new("pf2e:level", "3"),
 			new("pf2e:tradition", "arcane"),
 			new("pf2e:tradition", "primal"),
 		}));
 
-		await Assert.That(cut.FindAll("dt").Select(d => d.TextContent)).IsEquivalentTo(["pf2e:class", "pf2e:level", "pf2e:tradition"]);
-		var link = cut.Find("dd a");
-		await Assert.That((link.TextContent, link.GetAttribute("href"))).IsEqualTo(("Wizard", "/wiki/main/wizard"));
-		await Assert.That(cut.FindAll("dd")[2].TextContent).IsEqualTo("arcane · primal");
+		await Assert.That(cut.FindAll("dt").Select(d => d.TextContent)).IsEquivalentTo(["pf2e:class", "pf2e:mentor", "pf2e:level", "pf2e:tradition"]);
+		var links = cut.FindAll("dd a").Take(2).Select(a => (a.TextContent, a.GetAttribute("href")));
+		// A character's page is linked where it is read, under /character.
+		await Assert.That(links).IsEquivalentTo([("Wizard", "/wiki/main/wizard"), ("Aria", "/character/aria")]);
+		await Assert.That(cut.FindAll("dd")[3].TextContent).IsEqualTo("arcane · primal");
 	}
 
 	[Test]
@@ -68,13 +70,13 @@ public class WikiFactTests : BunitContext
 			.Add(c => c.Page, "main:wizard")
 			.Add(c => c.NamedBy, new List<WikiFactNamedByDto>
 			{
-				new("pf2e:class", "Class", [new("Fireball", "fireball", "main"), new("Shield", "shield", "main")], More: true),
+				new("pf2e:class", "Class", [new("Fireball", "fireball", "main"), new("Aria", "aria", "character")], More: true),
 			}));
 
 		await Assert.That(cut.Find(".wiki-facts-named-by dt").TextContent).IsEqualTo("Class");
 		await Assert.That(cut.FindAll(".wiki-facts-named-by a").Select(a => (a.TextContent, a.GetAttribute("href")))).IsEquivalentTo([
 			("Fireball", "/wiki/main/fireball"),
-			("Shield", "/wiki/main/shield"),
+			("Aria", "/character/aria"),
 			("WkFactNamedByAll", "/wiki/query?q=pf2e%3Aclass%3Dmain%3Awizard")]);
 	}
 
