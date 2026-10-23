@@ -360,7 +360,7 @@ two independent defects.
 `npm test` in this directory runs the standalone Chromium table regression, without
 a running game. It checks the rendered radio table against the portal CSS, including
 whole headers beside a growing About column and prose wrapping at narrow widths.
-The fixture preserves the HTML emitted by MarkupString 2.22.0 at 78 columns; its
+The fixture preserves the HTML emitted by MarkupString 2.22.1 at 78 columns; its
 small stylesheet includes the relevant `LayoutCss.Fixed` rules from that version.
 Update both when the renderer changes its table markup or CSS.
 
