@@ -1,0 +1,203 @@
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Client.Services
+@using SharpMUSH.Library.API
+@inject WikiService Wiki
+@inject ISnackbar Snackbar
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The properties a page's facts may state, as @wiki/property defines them: one row each, edited in a dialog. *@
+<KitCard Title="@Loc["WikiPropTitle"]" Sub="@Loc["WikiPropSub"]" Class="wikiprops">
+    <Controls>
+        <MudTooltip Text="@Loc["WikiPropNew"]">
+            <MudIconButton Icon="@Icons.Material.Filled.Add" Size="Size.Small" Color="Color.Primary" aria-label="@Loc["WikiPropNew"]"
+                           Disabled="@(_properties is null)" OnClick="@OpenNew" />
+        </MudTooltip>
+    </Controls>
+    <ChildContent>
+        @if (_properties is null)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" Size="Size.Small" />
+        }
+        else if (_properties.Count == 0)
+        {
+            <div class="wikiprops-empty">@Loc["WikiPropNone"]</div>
+        }
+        else
+        {
+            <div class="wikiprops-scroll">
+                <table class="wikiprops-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">@Loc["WikiPropKey"]</th>
+                            <th scope="col">@Loc["WikiPropLabel"]</th>
+                            <th scope="col">@Loc["WikiPropType"]</th>
+                            <th scope="col">@Loc["WikiPropValues"]</th>
+                            <th scope="col"><span class="visually-hidden">@Loc["WikiPropActions"]</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var property in _properties)
+                        {
+                            <tr>
+                                <td class="wikiprops-key">@property.Id</td>
+                                <td>
+                                    <span class="wikiprops-label">@property.Label</span>
+                                    @if (property.Description.Length > 0)
+                                    {
+                                        <span class="wikiprops-desc">@property.Description</span>
+                                    }
+                                </td>
+                                <td class="wikiprops-type">
+                                    @property.Type
+                                    @if (property.Multiple)
+                                    {
+                                        <span class="wikiprops-multiple">@Loc["WikiPropMultipleShort"]</span>
+                                    }
+                                </td>
+                                <td class="wikiprops-values">
+                                    @(property.Keywords.Count > 0 ? string.Join(", ", property.Keywords) : property.Type == "keyword" ? Loc["WikiPropAnyValue"].Value : "")
+                                </td>
+                                <td class="wikiprops-actions">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small"
+                                                   aria-label="@string.Format(Loc["WikiPropEdit"], property.Id)" OnClick="@(() => OpenEdit(property))" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error"
+                                                   aria-label="@string.Format(Loc["WikiPropRemove"], property.Id)" OnClick="@(() => _removing = property)" />
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </ChildContent>
+</KitCard>
+
+<MudDialog @bind-Visible="_editing" Options="@DialogOptions">
+    <TitleContent>@(_isNew ? Loc["WikiPropNew"] : _id)</TitleContent>
+    <DialogContent>
+        <div class="wikiprops-form">
+            @if (_isNew)
+            {
+                <MudTextField T="string" @bind-Value="_id" Immediate="true" Label="@Loc["WikiPropKey"]" HelperText="@Loc["WikiPropKeyHelp"]"
+                              Placeholder="faction:rank" Variant="Variant.Outlined" Margin="Margin.Dense" />
+            }
+            <MudSelect T="string" @bind-Value="_type" Label="@Loc["WikiPropType"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                @foreach (var type in Types)
+                {
+                    <MudSelectItem T="string" Value="@type">@type</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSwitch T="bool" @bind-Value="_multiple" Color="Color.Primary" Label="@Loc["WikiPropMultiple"]" />
+            @if (_type == "keyword")
+            {
+                <ListEditor Items="_values" ItemsChanged="@(values => _values = values)" Label="@Loc["WikiPropValues"]"
+                            Help="@Loc["WikiPropValuesHelp"]" Normalize="@(value => value.Trim().ToLowerInvariant())" />
+            }
+            <MudTextField T="string" @bind-Value="_label" Label="@Loc["WikiPropLabel"]" MaxLength="100"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+            <MudTextField T="string" @bind-Value="_description" Label="@Loc["WikiPropDescription"]" Lines="2" MaxLength="1000"
+                          Variant="Variant.Outlined" Margin="Margin.Dense" />
+            @if (!_isNew)
+            {
+                <div class="wikiprops-hint">@Loc["WikiPropKeepsFacts"]</div>
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => _editing = false)">@Loc["Cancel"]</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" Disabled="@(_busy || _id.Trim().Length == 0)" OnClick="@SaveAsync">
+            @Loc["Save"]
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<ConfirmDialog Visible="@(_removing is not null)" VisibleChanged="@(visible => { if (!visible) _removing = null; })"
+               Title="@string.Format(Loc["WikiPropRemove"], _removing?.Id)" ConfirmText="@Loc["WikiPropRemoveConfirm"]"
+               Busy="_busy" OnConfirm="RemoveAsync">
+    <MudText>@Loc["WikiPropKeepsFacts"]</MudText>
+</ConfirmDialog>
+
+@code {
+    private static readonly DialogOptions DialogOptions = new() { MaxWidth = MaxWidth.Small, FullWidth = true, CloseOnEscapeKey = true };
+
+    /// <summary>The types a property takes, as @wiki/property names them.</summary>
+    private static readonly string[] Types = ["keyword", "number", "page", "boolean"];
+
+    private List<WikiFactPropertyDto>? _properties;
+    private WikiFactPropertyDto? _removing;
+    private bool _editing;
+    private bool _isNew;
+    private bool _busy;
+    private string _id = string.Empty;
+    private string _type = "keyword";
+    private bool _multiple;
+    private IReadOnlyList<string> _values = [];
+    private string _label = string.Empty;
+    private string _description = string.Empty;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        switch (await Wiki.GetFactPropertiesAsync())
+        {
+            case List<WikiFactPropertyDto> properties:
+                _properties = properties;
+                break;
+            case ApiFailure failure:
+                _properties = [];
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+    }
+
+    private void OpenNew() => Open(true, new WikiFactPropertyDto(string.Empty, "keyword", false, []));
+
+    private void OpenEdit(WikiFactPropertyDto property) => Open(false, property);
+
+    private void Open(bool isNew, WikiFactPropertyDto property)
+    {
+        (_isNew, _id, _type, _multiple, _values, _label, _description) =
+            (isNew, property.Id, property.Type, property.Multiple, property.Keywords, property.Label, property.Description);
+        _editing = true;
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        var id = _id.Trim();
+        var request = new SetFactPropertyRequest(_type, _multiple, _type == "keyword" ? _values : [], _label, _description);
+        switch (await Wiki.SetFactPropertyAsync(id, request))
+        {
+            case WikiFactPropertyDto stored:
+                _properties = [.. (_properties ?? []).Where(p => p.Id != stored.Id).Append(stored).OrderBy(p => p.Id, StringComparer.Ordinal)];
+                _editing = false;
+                Snackbar.Add(string.Format(Loc["WikiPropSaved"], stored.Id), Severity.Success);
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+
+        _busy = false;
+    }
+
+    private async Task RemoveAsync()
+    {
+        if (_removing is not { } property) return;
+        _busy = true;
+        switch (await Wiki.DeleteFactPropertyAsync(property.Id))
+        {
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+            default:
+                _properties = [.. (_properties ?? []).Where(p => p.Id != property.Id)];
+                Snackbar.Add(string.Format(Loc["WikiPropRemoved"], property.Id), Severity.Success);
+                break;
+        }
+
+        _removing = null;
+        _busy = false;
+    }
+}

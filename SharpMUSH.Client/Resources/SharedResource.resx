@@ -9685,4 +9685,67 @@
   <data name="GuideIdentityStarterAdventureText" xml:space="preserve"><value>Welcome to {0}. Who will your character become? Let your curiosity lead the way into a new story.</value></data>
   <data name="GuideIdentityStarterRelaxedText" xml:space="preserve"><value>Welcome to {0}. Take a moment to settle in, imagine a character, and find a story you would like to tell.</value></data>
   <data name="GuideIdentityStarterNewPlayersText" xml:space="preserve"><value>Welcome to {0}. New to text roleplay? Start with a character idea and a little curiosity. Every story begins somewhere.</value></data>
+  <data name="WikiPropTitle" xml:space="preserve">
+    <value>Fact properties</value>
+  </data>
+  <data name="WikiPropSub" xml:space="preserve">
+    <value>The properties a page's facts may state, as @wiki/property defines them. A package can define its own.</value>
+  </data>
+  <data name="WikiPropNew" xml:space="preserve">
+    <value>New property</value>
+  </data>
+  <data name="WikiPropNone" xml:space="preserve">
+    <value>No properties yet. A page states only properties defined here.</value>
+  </data>
+  <data name="WikiPropKey" xml:space="preserve">
+    <value>Property</value>
+  </data>
+  <data name="WikiPropKeyHelp" xml:space="preserve">
+    <value>A group and a name, like faction:rank.</value>
+  </data>
+  <data name="WikiPropLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="WikiPropDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="WikiPropType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="WikiPropMultiple" xml:space="preserve">
+    <value>A page may state several values</value>
+  </data>
+  <data name="WikiPropMultipleShort" xml:space="preserve">
+    <value>several</value>
+  </data>
+  <data name="WikiPropValues" xml:space="preserve">
+    <value>Values</value>
+  </data>
+  <data name="WikiPropValuesHelp" xml:space="preserve">
+    <value>The keywords it allows. Leave it empty to allow any.</value>
+  </data>
+  <data name="WikiPropAnyValue" xml:space="preserve">
+    <value>any</value>
+  </data>
+  <data name="WikiPropActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="WikiPropEdit" xml:space="preserve">
+    <value>Edit {0}</value>
+  </data>
+  <data name="WikiPropRemove" xml:space="preserve">
+    <value>Remove {0}</value>
+  </data>
+  <data name="WikiPropRemoveConfirm" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="WikiPropKeepsFacts" xml:space="preserve">
+    <value>Pages that state it keep their facts. A page keeps a value the property no longer takes until someone changes it.</value>
+  </data>
+  <data name="WikiPropSaved" xml:space="preserve">
+    <value>Saved {0}.</value>
+  </data>
+  <data name="WikiPropRemoved" xml:space="preserve">
+    <value>Removed {0}.</value>
+  </data>
 </root>
