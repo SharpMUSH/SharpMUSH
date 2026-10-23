@@ -265,3 +265,22 @@ public record WikiAccessExplanationDto(string Action, bool Allowed, string Reaso
 /// <param name="Pages">The newest pages, newest first, the excluded page left out.</param>
 /// <param name="Total">Every page of the category in the namespace the caller may see, the excluded page included.</param>
 public sealed record WikiCategoryNewestDto(IReadOnlyList<WikiPageSummaryDto> Pages, int Total);
+
+/// <summary>Fact-query conditions as a person types them on one line: <c>@wiki/query</c> and the portal's search box.</summary>
+public static class WikiFactConditions
+{
+	/// <summary>
+	/// The conditions, separated by commas. A piece with no <c>=</c> is the rest of the value before it, so a title or
+	/// category with a comma in it, as in <c>pf2e:class=Smith, John</c>, stays one condition.
+	/// </summary>
+	public static IReadOnlyList<string> Split(string typed)
+	{
+		var conditions = new List<string>();
+		foreach (var piece in typed.Split(','))
+		{
+			if (conditions.Count > 0 && !piece.Contains('=')) conditions[^1] += "," + piece;
+			else conditions.Add(piece);
+		}
+		return conditions;
+	}
+}

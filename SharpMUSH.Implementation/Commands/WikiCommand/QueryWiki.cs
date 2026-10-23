@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models.Wiki;
@@ -21,7 +22,7 @@ public static class QueryWiki
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var visibility = await WikiCommandHelper.VisibilityAsync(parser, executor);
-		return await RunAsync(wikiService, WikiFactQueryText.Split(conditions), visibility) switch
+		return await RunAsync(wikiService, WikiFactConditions.Split(conditions), visibility) switch
 		{
 			WikiFactQueryPage found => await ToldAsync(WikiCommandHelper.PageListing($"{found.Pages.Count} page(s) where {conditions.Trim()}",
 				await ListWiki.PageRowsAsync(localization, found.Pages, locale, forceSource))),
