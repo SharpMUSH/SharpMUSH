@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
@@ -27,6 +28,7 @@ public sealed class StarterWikiState
 public class StarterWikiService(
 	IWikiService wiki,
 	IExpandedObjectDataService serverData,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<StarterWikiService> logger)
 {
 	/// <summary>The dbref the starter pages are written as, as for the pages seeded at boot.</summary>
@@ -109,7 +111,7 @@ public class StarterWikiService(
 
 	/// <summary>
 	/// Home is seeded at every boot, so it always exists. The starter Home replaces it only while nobody has
-	/// changed the seeded text: an administrator's own Home stays.
+	/// changed the seeded text: an administrator's own Home stays. It opens with the introduction saved in setup.
 	/// </summary>
 	private async Task ReplaceDefaultHomeAsync(List<string> failures)
 	{
@@ -119,7 +121,8 @@ public class StarterWikiService(
 			return;
 		}
 
-		if (await wiki.UpdateAsync(home.Id, StarterWikiPages.Home, Author, "Starter wiki pages") is NotFound)
+		if (await wiki.UpdateAsync(home.Id, StarterWikiPages.HomeWith(options.CurrentValue.Onboarding.Introduction), Author,
+			"Starter wiki pages") is NotFound)
 		{
 			failures.Add("Home could not be updated.");
 		}

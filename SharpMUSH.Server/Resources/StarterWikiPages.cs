@@ -41,6 +41,19 @@ public static class StarterWikiPages
 		new("House Rules", WikiNamespace.Category, Read("category-house-rules.md"), ["Policies"], Protect: false),
 	];
 
+	/// <summary>The prompt on <see cref="Home"/> that the game's own introduction answers.</summary>
+	public const string HomeIntroductionPrompt =
+		"> **Fill in:** One or two sentences a stranger could read on a MUSH listing site:\n> the genre, the place, and what players do here.";
+
+	/// <summary>
+	/// <see cref="Home"/> with the introduction the administrator wrote in setup in place of its first prompt, so the
+	/// welcome they typed is what the wiki opens with. Without one, Home keeps the prompt.
+	/// </summary>
+	public static string HomeWith(string? introduction)
+		=> string.IsNullOrWhiteSpace(introduction)
+			? Home
+			: Home.Replace(HomeIntroductionPrompt, introduction.Trim().ReplaceLineEndings("\n"), StringComparison.Ordinal);
+
 	private static string Read(string name)
 	{
 		var resource = $"SharpMUSH.Server.Resources.Wiki.Starter.{name}";

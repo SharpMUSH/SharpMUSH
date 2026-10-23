@@ -180,6 +180,7 @@ internal static class EngineRegistration
 		services.AddSingleton<SetupService>();
 		services.AddSingleton<GameFeatureService>();
 		services.AddSingleton<StarterWikiService>();
+		services.AddSingleton<StarterWorldService>();
 		services.AddSingleton<IGameFeatureReader>(sp => sp.GetRequiredService<GameFeatureService>());
 		services.AddScoped<OnboardingPresentationService>();
 		services.AddScoped<OnboardingCapabilityService>();
