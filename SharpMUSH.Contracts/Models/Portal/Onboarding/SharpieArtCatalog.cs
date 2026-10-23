@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-military-science-fiction-kemono-player-world", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-genre-none-chibi-player-useful-action", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-chibi-shared-completion", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-chibi-player-place", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-chibi-player-world", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Genre),
