@@ -1,6 +1,8 @@
 namespace SharpMUSH.Library.Models.Portal.Onboarding;
 
-public sealed record SharpieArt(string Id, string Style, string Theme, string Url, int Width, int Height, string? Topic = null);
+public sealed record SharpieArt(string Id, string Style, string Theme, string Url, int Width, int Height, string? Topic = null, SharpieArtThemeKind? ThemeKind = null);
+
+public enum SharpieArtThemeKind { Genre, Subgenre }
 
 public enum SharpieArtMoment { Lesson, Welcome, Completion }
 
@@ -10,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-invite", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-forgotten-realms-chibi-administrator-capabilities", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-urban-fantasy-kemono-administrator-capabilities", "kemono", "Urban Fantasy", "images/sharpie/sharpie-urban-fantasy-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
 		new SharpieArt("sharpie-forgotten-realms-chibi-administrator-identity", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
 		new SharpieArt("sharpie-forgotten-realms-chibi-player-channels", "chibi", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-chibi-player-channels.png", 1254, 1254, "player-channels"),
@@ -1471,12 +1475,13 @@ public static class SharpieArtCatalog
 			SharpieArtMoment.Completion => "sharpie-smile-neutral",
 			_ => "sharpie-minimal-neutral"
 		};
-		SharpieArt? Find(string? theme, string? targetTopic) => approved.FirstOrDefault(art => art.Style == family
+		SharpieArt? Find(string? theme, SharpieArtThemeKind kind, string? targetTopic) => approved.FirstOrDefault(art => art.Style == family
+			&& (art.ThemeKind is null || art.ThemeKind == kind)
 			&& art.Topic == targetTopic && string.Equals(art.Theme, theme, StringComparison.OrdinalIgnoreCase));
 		return approved.FirstOrDefault(art => art.Id == overrideId && art.Style == family && (art.Topic is null || art.Topic == requestedTopic))
-			?? (requestedTopic is null ? null : Find(subgenre, requestedTopic) ?? Find(genre, requestedTopic))
-			?? Find(subgenre, null)
-			?? Find(genre, null)
+			?? (requestedTopic is null ? null : Find(subgenre, SharpieArtThemeKind.Subgenre, requestedTopic) ?? Find(genre, SharpieArtThemeKind.Genre, requestedTopic))
+			?? Find(subgenre, SharpieArtThemeKind.Subgenre, null)
+			?? Find(genre, SharpieArtThemeKind.Genre, null)
 			?? approved.FirstOrDefault(art => art.Id == neutralId && art.Topic is null);
 	}
 }
