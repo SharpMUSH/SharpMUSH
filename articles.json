@@ -15179,13 +15179,20 @@
     "aliases": [
       "WIKI-FACTS",
       "@WIKI/FACT",
-      "@WIKI/QUERY"
+      "@WIKI/QUERY",
+      "@WIKI/PROPERTY"
     ],
     "sections": [
       {
         "id": "values",
         "lookup": "wiki fact values",
         "heading": "Values",
+        "aliases": []
+      },
+      {
+        "id": "properties",
+        "lookup": "wiki fact properties",
+        "heading": "Properties",
         "aliases": []
       },
       {
