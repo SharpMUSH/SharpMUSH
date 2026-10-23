@@ -133,7 +133,7 @@ public class SetupController(
 		};
 
 	/// <summary>
-	/// Makes the starter world: a description for the room new characters arrive in, an exit from it to a second room
+	/// Makes the starter world: a description for the room new characters arrive in, an exit from it to a tutorial room
 	/// and back, and a Newbie channel. What the game already has is left as it is. 409 naming the parts that could
 	/// not be made; the others still were.
 	/// </summary>

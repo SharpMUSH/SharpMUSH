@@ -20,8 +20,8 @@ public sealed class StarterWorldState
 
 /// <summary>
 /// What a new world has to show its first player, made once from the setup wizard: the room new characters arrive
-/// in (<c>player_start</c>) gets a description and an exit, <c>Out</c>, to a second room with an exit back, and a
-/// Newbie channel opens for questions. Every part goes through the game's own commands as God, and each is left out
+/// in (<c>player_start</c>) gets a description and an exit, <c>Tutorial</c>, to a room that shows the basics, whose
+/// <c>Out</c> leads back to it, and a Newbie channel opens for questions. Every part goes through the game's own commands as God, and each is left out
 /// when the game already has it: an arrival room with a description or an exit, or a channel named Newbie. An
 /// imported world is therefore left as it was.
 /// </summary>
@@ -34,12 +34,14 @@ public sealed partial class StarterWorldService(
 {
 	public const string ArrivalDescription =
 		"New characters arrive here. Type look to see this room again, help for the list of commands, and "
-		+ "@channel/on Newbie to ask other players a question. Out leads further into the game.";
+		+ "@channel/on Newbie to ask other players a question. Tutorial leads to a room that shows the basics.";
 
-	public const string OutsideName = "Outside";
+	public const string TutorialName = "Tutorial";
 
-	public const string OutsideDescription =
-		"The first place beyond the arrival room, waiting for this game's staff to name and describe it. In leads back.";
+	public const string TutorialDescription =
+		"The basics, one command at a time. Type look to read this again. say Hello (or \"Hello) speaks to the room, "
+		+ "and pose waves (or :waves) acts. page <name>=<message> reaches someone anywhere in the game. help <topic> "
+		+ "explains any command. Out leads back to the arrival room.";
 
 	public const string Channel = "Newbie";
 
@@ -99,18 +101,19 @@ public sealed partial class StarterWorldService(
 
 		if (await mediator.CreateStream(new GetExitsQuery(arrival.Object().DBRef)).AnyAsync(ct)) return;
 		var arrivalRef = $"#{arrival.Object().DBRef.Number}";
-		if (Made(await RunAsync("@DIG", OutsideName)) is not { } outside)
+		if (Made(await RunAsync("@DIG", TutorialName)) is not { } tutorial)
 		{
-			failures.Add("The room beyond the arrival room could not be dug.");
+			failures.Add("The tutorial room could not be dug.");
 			return;
 		}
-		var outFailed = Failed(await RunAsync("@OPEN", "Out;o", outside, null, arrivalRef));
-		var inFailed = Failed(await RunAsync("@OPEN", "In;i", arrivalRef, null, outside));
-		if (outFailed || inFailed)
-			failures.Add("The exits between the arrival room and Outside could not all be opened.");
-		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse(outside[1..], System.Globalization.CultureInfo.InvariantCulture))), ct) is AnySharpObject made
-			&& await attributes.SetAttributeAsync(god, made, "DESCRIBE", MarkupText.Plain(OutsideDescription)) is Error<string>)
-			failures.Add("Outside could not be described.");
+		// Out always leads back to the arrival room, the hub; i is left alone, since it is inventory.
+		var toFailed = Failed(await RunAsync("@OPEN", "Tutorial;tut", tutorial, null, arrivalRef));
+		var outFailed = Failed(await RunAsync("@OPEN", "Out;o", arrivalRef, null, tutorial));
+		if (toFailed || outFailed)
+			failures.Add("The exits between the arrival room and the tutorial room could not all be opened.");
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse(tutorial[1..], System.Globalization.CultureInfo.InvariantCulture))), ct) is AnySharpObject made
+			&& await attributes.SetAttributeAsync(god, made, "DESCRIBE", MarkupText.Plain(TutorialDescription)) is Error<string>)
+			failures.Add("The tutorial room could not be described.");
 	}
 
 	private async Task ChannelAsync(List<string> failures, CancellationToken ct)

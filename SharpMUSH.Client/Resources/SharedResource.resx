@@ -5049,7 +5049,7 @@
     <value>Starter world</value>
   </data>
   <data name="AdmSetupStarterWorldDesc" xml:space="preserve">
-    <value>Describes the room new players arrive in, digs an Outside room with exits both ways, and adds a Newbie channel for questions. Anything the game already has is left alone.</value>
+    <value>Describes the room new players arrive in, digs a Tutorial room from it that shows the basics, with Out leading back, and adds a Newbie channel for questions. Anything the game already has is left alone.</value>
   </data>
   <data name="AdmSetupStarterWorldApplied" xml:space="preserve">
     <value>Already added.</value>
