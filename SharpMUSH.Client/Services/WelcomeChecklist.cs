@@ -17,7 +17,8 @@ public static class WelcomeChecklist
 
 	public const string BasicsStep = "basics";
 
-	public static async Task TickBasicsAsync(IHttpClientFactory http, string token)
+	/// <param name="character">The objid of the character that finished the guide; the tick is refused once the session plays another.</param>
+	public static async Task TickBasicsAsync(IHttpClientFactory http, string token, string character)
 	{
 		try
 		{
@@ -30,7 +31,7 @@ public static class WelcomeChecklist
 				|| !installed.Any(capability => capability.Command == Command)) return;
 			using var tick = new HttpRequestMessage(HttpMethod.Post, "api/commands")
 			{
-				Content = JsonContent.Create(new PortalCommandRequest($"{Command}/done {BasicsStep}"))
+				Content = JsonContent.Create(new PortalCommandRequest($"{Command}/done {BasicsStep}", Character: character))
 			};
 			tick.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
 			using var _ = await client.SendAsync(tick);

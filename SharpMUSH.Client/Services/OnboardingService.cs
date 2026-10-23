@@ -112,11 +112,13 @@ public sealed class OnboardingService : IDisposable
 	public async Task CompleteStepAsync(string step)
 	{
 		var token = Session;
+		var character = _auth.ActiveCharacter;
 		var finished = PlayerGuideFinished;
 		await FinishStepAsync(step, false);
-		// The guide's last lesson done: the game's own +welcome list stops asking about the basics.
-		if (!finished && PlayerGuideFinished && token is not null && token == Session && _auth.ActiveCharacter is not null)
-			await WelcomeChecklist.TickBasicsAsync(_http, token);
+		// The guide's last lesson done: the game's own +welcome list stops asking about the basics, for the
+		// character that finished it even if the player switches while this runs.
+		if (!finished && PlayerGuideFinished && token is not null && token == Session && character is not null)
+			await WelcomeChecklist.TickBasicsAsync(_http, token, $"#{character.DbrefNumber}:{character.CreationTime}");
 	}
 	public Task SkipStepAsync(string step) => FinishStepAsync(step, true);
 	private bool PlayerGuideFinished => _journey == GuideJourney.Player && Ready && StepsFor(Progress.Path)

@@ -80,7 +80,7 @@ public class OnboardingServiceTests
 
 	/// <summary>
 	/// Finishing the guide ticks +welcome's "Learn the basics" for the character being played, once, and only where
-	/// the reviewed +welcome is installed.
+	/// the reviewed +welcome is installed. The tick names that character, so a switch while it runs cannot move it.
 	/// </summary>
 	[Test]
 	[Arguments(true, true, 1)]
@@ -100,7 +100,8 @@ public class OnboardingServiceTests
 						? new[] { new GuideCapability("onboarding", "+welcome", "", null, "onboarding", "1.0.1") } : [])
 					};
 				case "/api/commands":
-					commands.Add((await request.Content!.ReadFromJsonAsync<SharpMUSH.Library.Models.Portal.PortalCommandRequest>())!.Command);
+					var sent = (await request.Content!.ReadFromJsonAsync<SharpMUSH.Library.Models.Portal.PortalCommandRequest>())!;
+					commands.Add($"{sent.Command} as {sent.Character}");
 					return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new { output = Array.Empty<string>() }) };
 			}
 			if (request.Method == HttpMethod.Get) return Reply(new() { Path = GuidePath.Mush, Active = true });
@@ -120,7 +121,7 @@ public class OnboardingServiceTests
 			await guide.CompleteStepAsync(lesson);
 		}
 		await guide.CompleteStepAsync(lessons[^1]);
-		await Assert.That(commands).IsEquivalentTo(Enumerable.Repeat("+welcome/done basics", ticks));
+		await Assert.That(commands).IsEquivalentTo(Enumerable.Repeat("+welcome/done basics as #42:1", ticks));
 	}
 
 	[Test]
