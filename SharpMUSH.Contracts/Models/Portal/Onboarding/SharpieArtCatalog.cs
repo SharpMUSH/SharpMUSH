@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-genre-none-kemono-shared-welcome", "kemono", "None", "images/sharpie/sharpie-genre-none-kemono-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-kemono-administrator-invite", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-walkthrough", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-invite", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-capabilities", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-rules", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-classical-fantasy-pixel-administrator-identity", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-classical-fantasy-pixel-player-continue", "pixel", "Classical Fantasy", "images/sharpie/sharpie-classical-fantasy-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-adult-kemono-administrator-walkthrough", "kemono", "Adult", "images/sharpie/sharpie-adult-kemono-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Genre),
