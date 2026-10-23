@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-subgenre-none-chibi-player-sign-in", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-subgenre-none-chibi-shared-welcome", "chibi", "None", "images/sharpie/sharpie-subgenre-none-chibi-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-military-science-fiction-kemono-player-useful-action", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-chibi-administrator-walkthrough", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-chibi-administrator-invite", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Genre),
