@@ -155,12 +155,26 @@ public class PackageWikiPropertyTests
 
 	[Test]
 	[Arguments("level:\n    type: number", "'level' is not a property key like 'game:level'.")]
-	[Arguments("pf2e:level:\n    type: integer", "A wiki property's type is number, boolean, page or keyword.")]
+	[Arguments("pf2e:level:\n    type: integer", "A wiki property's type is keyword, text, number, decimal, date, page or boolean.")]
 	[Arguments("pf2e:level:\n    type: number\n    values: [high]", "pf2e:level is number; only a keyword property lists its values.")]
 	[Arguments("pf2e:level:\n    type: number\n    multiple: maybe", "multiple is true or false.")]
 	public async Task ADefinitionTheWikiCannotTakeIsRefused(string entry, string error)
 	{
 		await Assert.That(Errors(Parse($"wiki_properties:\n  {entry}")).Single()).IsEqualTo(error);
+	}
+
+	[Test]
+	[Arguments("text")]
+	[Arguments("decimal")]
+	[Arguments("date")]
+	public async Task TextDecimalAndDateNeedFormat118(string type)
+	{
+		var entry = $"wiki_properties:\n  pf2e:cast:\n    type: {type}";
+
+		await Assert.That(Errors(Parse(entry)).Single())
+			.IsEqualTo($"The {type} type needs format 1.18 or later; set format: \"1.18\".");
+		var declared = Parse(entry, "\"1.18\"").Expect<ParsedPackageManifest>().Manifest.Declared;
+		await Assert.That(declared.WikiFactProperties!.Single().Type).IsEqualTo(type);
 	}
 
 	[Test]

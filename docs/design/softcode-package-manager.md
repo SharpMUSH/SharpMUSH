@@ -136,6 +136,8 @@ permissions) and `roles:`. The reference is
   number of values, and its keywords include the package's), and blocks otherwise. An owned
   property merges field by field. A dropped property, or every one on uninstall, is removed;
   pages keep the facts they state.
+- **Text, decimal and date wiki properties (format 1.18).** A `wiki_properties:` type of `text`,
+  `decimal` or `date` needs format 1.18, and an earlier format refuses it.
 
 ### Configuration options (format 1.3)
 

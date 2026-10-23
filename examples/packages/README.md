@@ -71,7 +71,7 @@ lines, and crucially **no dbrefs**. Object identity is expressed through
 `{{ref}}` tokens that the install engine resolves to real dbrefs at apply time.
 
 ```yaml
-format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties)
+format: 1                       # manifest format version (omit = 1; 1.2 adds roles, 1.3 settings, 1.4 wiki pages, 1.5 attribute entries, 1.6 the engine range, 1.7 plugins, 1.8 attribute indexes, 1.9 attribute watches, 1.10 category, 1.15 grants, 1.16 title, 1.17 wiki properties, 1.18 text, decimal and date wiki properties)
 package: myrddins-bbs           # required — id slug: lowercase, digits, hyphens, ≤64 chars
 title: "Bulletin Boards"        # required from format "1.16" — the name people choose the package by; ≤60 chars
 version: 2.4.1                  # required — semantic version
@@ -562,7 +562,8 @@ wiki_properties:
     description: The magic traditions a spell belongs to.
 ```
 
-- `type`: `number`, `keyword`, `page` or `boolean`. Required.
+- `type`: `number`, `keyword`, `page` or `boolean`; from format 1.18 also
+  `text`, `decimal` or `date`. Required.
 - `multiple`: `true` if a page may state several values. Default `false`.
 - `values`: the keywords a keyword property allows. Omit it to allow any.
 - `label` and `description`: what readers see.

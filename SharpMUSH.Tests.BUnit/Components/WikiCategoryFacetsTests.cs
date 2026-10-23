@@ -25,6 +25,8 @@ public class WikiCategoryFacetsTests : TrackingBunitContext
 		public WikiFacetsDto Facets { get; set; } = new(3, false, [
 			new("pf2e:tradition", "Tradition", "keyword", [new("arcane", "arcane", 3), new("occult", "occult", 2)], 0),
 			new("pf2e:level", "Level", "number", [new("1", "1", 2), new("3", "3", 1)], 0),
+			new("pf2e:published", "Published", "date", [new("2019-08-01..2020-12-31", "2019-08-01 to 2020-12-31", 2),
+				new("2021-01-01..2023-08-02", "2021-01-01 to 2023-08-02", 1)], 0),
 		]);
 		public List<string> Requests { get; } = [];
 
@@ -66,10 +68,11 @@ public class WikiCategoryFacetsTests : TrackingBunitContext
 	{
 		var cut = Facets();
 
-		await Assert.That(cut.FindAll("legend").Select(l => l.TextContent)).IsEquivalentTo(["Tradition", "Level"],
+		await Assert.That(cut.FindAll("legend").Select(l => l.TextContent)).IsEquivalentTo(["Tradition", "Level", "Published"],
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll(".wiki-facet-value").Select(b => string.Join(' ', b.TextContent.Split(' ', StringSplitOptions.RemoveEmptyEntries))))
-			.IsEquivalentTo(["arcane 3", "occult 2", "1 2", "3 1"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			.IsEquivalentTo(["arcane 3", "occult 2", "1 2", "3 1", "2019-08-01 to 2020-12-31 2", "2021-01-01 to 2023-08-02 1"],
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
 		await Assert.That(cut.FindAll(".members")).Count().IsEqualTo(1);
 		await Assert.That(_handler.Requests).IsEquivalentTo(["/api/wiki/category/spells/facets"]);
 	}
@@ -98,6 +101,18 @@ public class WikiCategoryFacetsTests : TrackingBunitContext
 		await cut.Find(".wiki-facets-clear").ClickAsync();
 		await Assert.That(cut.FindAll(".members")).Count().IsEqualTo(1);
 		await Assert.That(_handler.Requests[^1]).IsEqualTo("/api/wiki/category/spells/facets");
+	}
+
+	[Test]
+	public async Task ADateRangeIsOneConditionLikeANumbersRange()
+	{
+		var cut = Facets();
+
+		await ChooseAsync(cut, "2019-08-01 to 2020-12-31");
+		await ChooseAsync(cut, "2021-01-01 to 2023-08-02");
+
+		await Assert.That(_handler.Requests.Where(r => r.Contains("/facets")).Last())
+			.IsEqualTo("/api/wiki/category/spells/facets?condition=pf2e:published=2021-01-01..2023-08-02");
 	}
 
 	[Test]

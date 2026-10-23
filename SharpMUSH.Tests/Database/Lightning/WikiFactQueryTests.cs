@@ -251,7 +251,7 @@ public class WikiFactQueryTests : LightningDatabaseFixture
 
 	[Test]
 	[Arguments("pf2e:unknown", "No property pf2e:unknown is defined.")]
-	[Arguments("pf2e:tradition..", "pf2e:tradition is not a whole number, so it has no range.")]
+	[Arguments("pf2e:tradition..", "pf2e:tradition is not a number or a date, so it has no range.")]
 	[Arguments("pf2e:level..", "A range over pf2e:level needs a bound.")]
 	[Arguments("pf2e:level=three", "pf2e:level is a whole number, not 'three'.")]
 	[Arguments("five", "A query takes from 1 to 4 conditions.")]
