@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Globalization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Library.Services;
 
@@ -203,6 +204,14 @@ public sealed class InMemoryWikiStore : IWikiStore
 	public Task<WikiFactIndexStatus> BuildFactIndexBatchAsync(int batchSize) => GetFactIndexStatusAsync();
 
 	public Task<WikiFactIndexStatus> RebuildFactIndexAsync() => GetFactIndexStatusAsync();
+
+	/// <summary>No property is defined, so every query names one this store cannot answer.</summary>
+	public async Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> WikiFactQueries.Check(await GetFactSchemaAsync(), query) switch
+		{
+			Error<string> error => error,
+			_ => new WikiFactQueryPage([], null)
+		};
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> Task.FromResult<IReadOnlyList<string>>(_pinned.Keys.Order(StringComparer.Ordinal).ToList());
