@@ -148,6 +148,8 @@
         switch (await Native.CreateWithoutPasswordAsync(_name))
         {
             case AccountApiClient.CreateCharacterResponse created:
+                // As AccountAuthService does after a create: the account's role comes from its characters.
+                await AccountAuth.ReloadAuthorityAsync();
                 return new AccountAuthService.CharacterSummary(created.DbrefNumber, created.CreationTime ?? 0, _name, created.Flags ?? "");
             case ApiFailure failure: return failure;
         }

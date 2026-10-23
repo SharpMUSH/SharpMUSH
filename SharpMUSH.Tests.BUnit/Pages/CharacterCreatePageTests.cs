@@ -22,6 +22,8 @@ file sealed class CharacterCreateApiHandler(bool succeed, bool existingCharacter
 	public bool FailRosterAfterCreate { get; set; }
 	public int Creates { get; private set; }
 	public string? LastBody { get; private set; }
+	/// <summary>Reads of the session's authority after a character was made.</summary>
+	public int SessionReads { get; private set; }
 	private string _createdName = "Bob";
 	private int _createdId = 5;
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -34,6 +36,7 @@ file sealed class CharacterCreateApiHandler(bool succeed, bool existingCharacter
 
 	private Task<HttpResponseMessage> Respond(HttpRequestMessage request, string path)
 	{
+		if (request.Method == HttpMethod.Get && path == "api/account/session" && Creates > 0) SessionReads++;
 		if (request.Method == HttpMethod.Get && path == "api/account/characters")
 			return Task.FromResult(FailRoster || (FailRosterAfterCreate && Creates > 0)
 				? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
@@ -77,7 +80,7 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 {
 	private ICharacterUpgradeService _upgrade = null!;
 
-	private (Action<bool> FailRoster, Action<bool> FailAfterCreate, Func<int> Creates, Func<string?> LastBody) SeedLoggedIn(bool createSucceeds,
+	private (Action<bool> FailRoster, Action<bool> FailAfterCreate, Func<int> Creates, Func<string?> LastBody, Func<int> SessionReads) SeedLoggedIn(bool createSucceeds,
 		bool existingCharacter = false, GuideLink? characterGuide = null)
 	{
 		this.AddAuthorization().SetAuthorized("headwiz");
@@ -110,7 +113,8 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.mustChangePassword").SetResult(bool.FalseString);
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.role").SetResult("Wizard");
 		JSInterop.Setup<string?>("sessionStorage.getItem", "sharpmush.account.permissions").SetResult("[\"*\"]");
-		return (value => handler.FailRoster = value, value => handler.FailRosterAfterCreate = value, () => handler.Creates, () => handler.LastBody);
+		return (value => handler.FailRoster = value, value => handler.FailRosterAfterCreate = value, () => handler.Creates, () => handler.LastBody,
+			() => handler.SessionReads);
 	}
 
 	private static Task ClickCreate(IRenderedComponent<SharpMUSH.Client.Pages.CharacterCreate> cut)
@@ -286,6 +290,8 @@ public class CharacterCreatePageTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(api.Creates()).IsEqualTo(1);
 		await Assert.That(api.LastBody()).Contains("\"password\":null");
+		// The account's role comes from its characters, so the first one changes what the tab may do.
+		await Assert.That(api.SessionReads()).IsGreaterThan(0);
 	}
 
 	/// <summary>A missing name or password is caught before anything is sent, with what to do about it.</summary>
