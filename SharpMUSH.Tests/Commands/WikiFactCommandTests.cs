@@ -85,6 +85,8 @@ public class WikiFactCommandTests
 	[Arguments("pf2e:unknown=1", "WIKI: No property pf2e:unknown is defined.")]
 	[Arguments("pf2e:class=No Such Page Anywhere", "WIKI: pf2e:class names a page that does not exist: 'No Such Page Anywhere'.")]
 	[Arguments("pf2e:level=1|2", "WIKI: pf2e:level takes one value.")]
+	[Arguments("pf2e:price=1e3", "WIKI: pf2e:price is a number like 1.5, not '1e3'.")]
+	[Arguments("pf2e:published=August 2019", "WIKI: pf2e:published is a date like 2026-10-23, not 'August 2019'.")]
 	public async Task AFactTheSchemaRefusesIsToldAndChangesNothing(string fact, string told)
 	{
 		var player = await PlayerAsync("WikiFactRefused", approved: true);

@@ -6,8 +6,9 @@ namespace SharpMUSH.Library.Models.Wiki;
 public sealed record WikiFactEquals(string Property, string Value);
 
 /// <summary>
-/// A page states a whole number from <paramref name="Min"/> to <paramref name="Max"/>, both included, for
-/// <paramref name="Property"/>; a missing bound is open.
+/// A page states a value from <paramref name="Min"/> to <paramref name="Max"/>, both included, for
+/// <paramref name="Property"/>, a number or a date property; a missing bound is open. The bounds are keys in the
+/// property's order (<see cref="Wiki.Semantics.WikiFactQueries.OrderKey"/>): a whole number is its own key.
 /// </summary>
 public sealed record WikiFactRange(string Property, long? Min, long? Max);
 

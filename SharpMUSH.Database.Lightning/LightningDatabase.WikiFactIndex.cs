@@ -1,30 +1,32 @@
 using System.Buffers.Binary;
-using System.Globalization;
 using System.Security.Cryptography;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Plugins.Storage.Lightning;
+using SharpMUSH.Library.Wiki.Semantics;
 
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
 /// The fact index, <see cref="Tables.WikiFact"/>: one empty entry per value a page states, keyed
-/// <c>property 0x00 tag value page</c>. The pages stating one value are one prefix, and an integer property's values
-/// sort as numbers, so a range of them is one range read.
+/// <c>property 0x00 tag value page</c>. The pages stating one value are one prefix, and a number or date property's
+/// values sort in their order, so a range of them is one range read.
 /// </summary>
 /// <remarks>
 /// <para>Every page write moves the page's entries in the same job (<see cref="WikiListIndexes"/>), from the moment
 /// the index starts building; the build itself only adds the pages it has not reached, so a write never waits for it
 /// and a build stopped at shutdown resumes from <see cref="FactIndexState.ResumeAt"/>.</para>
 /// <para>Every fact a page states has entries, whether or not its property is defined, so a property defined later
-/// finds the pages that already state it. An entry is typed by its property as it stands: a number property's values
-/// as numbers, anything else as text (see <see cref="RetypeFactEntries"/>). An index written in another key format,
+/// finds the pages that already state it. An entry is typed by its property as it stands: a number or date
+/// property's values by their order key, a text property's in lower case, anything else as written (see
+/// <see cref="RetypeFactEntries"/>). An index written in another key format,
 /// or a state this build cannot read, clears first; while it clears, writes leave it alone.</para>
 /// </remarks>
 public partial class LightningDatabase
 {
-	private const byte FactIntegerTag = 1;
+	private const byte FactOrderedTag = 1;
 	private const byte FactTextTag = 2;
 	private const int FactIndexStateLength = 1 + 8 + 8 + 32;
 	private static readonly byte[] FactIndexStateKey = Keys.Str("wiki.fact.index");
@@ -68,15 +70,15 @@ public partial class LightningDatabase
 	private static void WikiFactEntries(ITx tx, long pageKey, WikiPageRecord r, bool add)
 	{
 		if (r.Facts is not { Length: > 0 } facts || !ReadFactIndexState(tx).Maintained) return;
-		PutFactEntries(tx, pageKey, facts, add, IntegerFactProperties(tx));
+		PutFactEntries(tx, pageKey, facts, add, FactKeyTypes(tx));
 	}
 
-	/// <param name="integers">The properties whose values are keyed as numbers (<see cref="IntegerFactProperties"/>).</param>
-	private static void PutFactEntries(ITx tx, long pageKey, WikiPageFactRecord[] facts, bool add, IReadOnlySet<string> integers)
+	/// <param name="types">The properties whose values are not keyed as written (<see cref="FactKeyTypes"/>).</param>
+	private static void PutFactEntries(ITx tx, long pageKey, WikiPageFactRecord[] facts, bool add, IReadOnlyDictionary<string, SemanticType> types)
 	{
 		foreach (var fact in facts)
 		{
-			var key = Keys.Concat(FactValuePrefix(fact.Property, fact.Value, integers.Contains(fact.Property)), Keys.Dbref(pageKey));
+			var key = Keys.Concat(FactValuePrefix(fact.Property, fact.Value, types.GetValueOrDefault(fact.Property, SemanticType.Keyword)), Keys.Dbref(pageKey));
 			if (add) tx.Put(Tables.WikiFact, key, []);
 			else tx.Delete(Tables.WikiFact, key);
 		}
@@ -86,17 +88,18 @@ public partial class LightningDatabase
 	private static byte[] FactPropertyPrefix(string property) => Keys.Concat(Keys.Str(property), Keys.Sep);
 
 	/// <summary>
-	/// The prefix of the pages stating <paramref name="value"/> for <paramref name="property"/>: a value of an
-	/// <paramref name="integer"/> property as eight bytes that sort as the number does, anything else as its text and
-	/// a 0x00.
+	/// The prefix of the pages stating <paramref name="value"/> for <paramref name="property"/>, of
+	/// <paramref name="type"/>: a number or a date as eight bytes that sort as its order key does, a text in lower
+	/// case, and anything else, or a value its type cannot hold, as written; each text with a 0x00 after it.
 	/// </summary>
-	private static byte[] FactValuePrefix(string property, string value, bool integer)
-		=> integer && long.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var number)
-			? Keys.Concat(FactPropertyPrefix(property), [FactIntegerTag], FactOrderedInteger(number))
-			: Keys.Concat(FactPropertyPrefix(property), [FactTextTag], Keys.Str(value), Keys.Sep);
+	private static byte[] FactValuePrefix(string property, string value, SemanticType type)
+		=> WikiFactQueries.OrderKey(type, value) is { } key
+			? Keys.Concat(FactPropertyPrefix(property), [FactOrderedTag], FactOrderedKey(key))
+			: Keys.Concat(FactPropertyPrefix(property), [FactTextTag],
+				Keys.Str(type == SemanticType.Text ? WikiFactQueries.Folded(value) : value), Keys.Sep);
 
 	/// <summary>Big-endian with the sign bit flipped, so byte order is numeric order across negatives.</summary>
-	private static byte[] FactOrderedInteger(long value)
+	private static byte[] FactOrderedKey(long value)
 	{
 		var bytes = new byte[8];
 		BinaryPrimitives.WriteUInt64BigEndian(bytes, unchecked((ulong)value ^ 0x8000_0000_0000_0000UL));
@@ -148,12 +151,12 @@ public partial class LightningDatabase
 	private static FactIndexState IndexFactPages(ITx tx, FactIndexState state, int batch)
 	{
 		var indexed = 0;
-		var integers = IntegerFactProperties(tx);
+		var types = FactKeyTypes(tx);
 		foreach (var (key, value) in tx.RangeFromKey(Tables.WikiPage, WikiPageKey(state.ResumeAt)))
 		{
 			var pageKey = Keys.ReadDbref(key);
 			if (indexed == batch) return state with { ResumeAt = pageKey, Indexed = state.Indexed + indexed };
-			if (Codec.Deserialize<WikiPageRecord>(value) is { Facts: { Length: > 0 } facts }) PutFactEntries(tx, pageKey, facts, add: true, integers);
+			if (Codec.Deserialize<WikiPageRecord>(value) is { Facts: { Length: > 0 } facts }) PutFactEntries(tx, pageKey, facts, add: true, types);
 			indexed++;
 		}
 		return new(WikiFactIndexPhase.Ready, 0, state.Indexed + indexed, state.Digest);

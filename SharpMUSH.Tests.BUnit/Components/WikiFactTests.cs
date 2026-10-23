@@ -127,6 +127,19 @@ public class WikiFactTests : BunitContext
 	}
 
 	[Test]
+	public async Task EachValueIsTypedInAnInputForItsType()
+	{
+		var cut = Render<WikiFactEditor>(p => p
+			.Add(c => c.Facts, [new("pf2e:level", "3"), new("pf2e:price", "1.5"), new("pf2e:published", "2026-10-23"), new("pf2e:motto", "Hold fast")])
+			.Add(c => c.Properties, [.. Properties, new("pf2e:price", "decimal", false, []), new("pf2e:published", "date", false, []),
+				new("pf2e:motto", "text", false, [])]));
+
+		await Assert.That(cut.FindAll(".wiki-edit-fact input").Select(i => (i.GetAttribute("type"), i.GetAttribute("step"), i.GetAttribute("value"))))
+			.IsEquivalentTo([("number", null, "3"), ("number", "any", "1.5"), ("date", null, "2026-10-23"), ("text", null, "Hold fast")],
+				TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
 	public async Task WithoutPropertiesTheEditorShowsNothing()
 	{
 		var cut = Render<WikiFactEditor>(p => p.Add(c => c.Facts, new List<WikiFactDto>()));

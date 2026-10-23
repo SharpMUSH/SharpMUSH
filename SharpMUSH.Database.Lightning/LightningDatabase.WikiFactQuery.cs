@@ -129,9 +129,8 @@ public partial class LightningDatabase
 	private static bool FirstEntryOf(WikiPage page, long pageKey, WikiFactCondition condition, PropertyDefinition definition,
 		byte[] key, bool descending)
 	{
-		var integer = definition.Type == SemanticType.Integer;
 		var keys = page.Facts.Where(f => f.Property == definition.Id && WikiFactQueries.Meets(condition, definition, f.Value))
-			.Select(f => Keys.Concat(FactValuePrefix(f.Property, f.Value, integer), Keys.Dbref(pageKey)));
+			.Select(f => Keys.Concat(FactValuePrefix(f.Property, f.Value, definition.Type), Keys.Dbref(pageKey)));
 		var first = descending ? keys.Max(ByteOrder) : keys.Min(ByteOrder);
 		return first is not null && first.AsSpan().SequenceEqual(key);
 	}
@@ -143,26 +142,26 @@ public partial class LightningDatabase
 		WikiFactEquals equals => new([FactValueSegment(definition, equals.Value)]),
 		WikiFactOneOf oneOf => new([.. oneOf.Values.Select(v => FactValueSegment(definition, v))
 			.DistinctBy(s => Convert.ToHexString(s.Start)).OrderBy(s => s.Start, ByteOrder)]),
-		WikiFactRange range => new([FactRangeSegment(Keys.Concat(FactPropertyPrefix(range.Property), [FactIntegerTag]), range)]),
+		WikiFactRange range => new([FactRangeSegment(Keys.Concat(FactPropertyPrefix(range.Property), [FactOrderedTag]), range)]),
 		WikiFactStated stated => new([FactPrefixSegment(FactPropertyPrefix(stated.Property), exactLength: false)]),
 		// Never asked for: a negation does not drive.
 		WikiFactNot => new([]),
 	};
 
 	private static FactSegment FactValueSegment(PropertyDefinition definition, string value)
-		=> FactPrefixSegment(FactValuePrefix(definition.Id, value, definition.Type == SemanticType.Integer), exactLength: true);
+		=> FactPrefixSegment(FactValuePrefix(definition.Id, value, definition.Type), exactLength: true);
 
 	// Every entry is its value's prefix and an eight-byte page key; a continuation's key is held to that shape too.
 	private static FactSegment FactPrefixSegment(byte[] prefix, bool exactLength)
 		=> new(prefix, prefix, null, key => key.AsSpan().StartsWith(prefix)
 			&& (exactLength ? key.Length == prefix.Length + 8 : key.Length > prefix.Length + 8));
 
-	/// <summary>Every integer entry of the property from the range's lowest value through its highest.</summary>
-	private static FactSegment FactRangeSegment(byte[] integers, WikiFactRange range)
+	/// <summary>Every ordered entry of the property from the range's lowest key through its highest.</summary>
+	private static FactSegment FactRangeSegment(byte[] ordered, WikiFactRange range)
 	{
-		var last = Keys.Concat(integers, FactOrderedInteger(range.Max ?? long.MaxValue));
-		return new(integers, Keys.Concat(integers, FactOrderedInteger(range.Min ?? long.MinValue)), [.. last, .. Enumerable.Repeat((byte)0xFF, 9)],
-			key => key.Length == last.Length + 8 && key.AsSpan().StartsWith(integers) && key.AsSpan(0, last.Length).SequenceCompareTo(last) <= 0);
+		var last = Keys.Concat(ordered, FactOrderedKey(range.Max ?? long.MaxValue));
+		return new(ordered, Keys.Concat(ordered, FactOrderedKey(range.Min ?? long.MinValue)), [.. last, .. Enumerable.Repeat((byte)0xFF, 9)],
+			key => key.Length == last.Length + 8 && key.AsSpan().StartsWith(ordered) && key.AsSpan(0, last.Length).SequenceCompareTo(last) <= 0);
 	}
 
 	/// <summary>The driving condition with the fewest entries, counting each up to one past a call's budget; the first on a tie.</summary>

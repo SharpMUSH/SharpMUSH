@@ -11,14 +11,17 @@ public partial class PackageManifestService
 	/// <summary>The first format with the <c>wiki_properties:</c> block; below it the block is ignored.</summary>
 	public static PackageFormatVersion WikiPropertiesFormat { get; } = new(1, 17);
 
+	/// <summary>The first format whose wiki properties may be <c>text</c>, <c>decimal</c> or <c>date</c>.</summary>
+	public static PackageFormatVersion WikiPropertyTypesFormat { get; } = new(1, 18);
+
 	private static readonly IReadOnlySet<string> KnownWikiPropertyKeys = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"type", "multiple", "values", "label", "description"
 	};
 
 	/// <summary>
-	/// The properties a package's wiki facts state: a mapping of property key to its <c>type</c> (number, boolean, page
-	/// or keyword), whether a page states <c>multiple</c> values, a keyword property's <c>values</c>, and its
+	/// The properties a package's wiki facts state: a mapping of property key to its <c>type</c> (keyword, number,
+	/// page or boolean; from format 1.18 also text, decimal or date), whether a page states <c>multiple</c> values, a keyword property's <c>values</c>, and its
 	/// <c>label</c> and <c>description</c>, as <c>@wiki/property</c> takes them. Each is checked as the store checks it.
 	/// </summary>
 	private static IReadOnlyList<PackageWikiPropertySpec> ReadWikiProperties(Dictionary<string, object?> doc, PackageKind kind,
@@ -65,7 +68,7 @@ public partial class PackageManifestService
 				issues.Add(PackageManifestIssue.Warning($"{path}.{key}", $"Unknown key '{key}' is ignored."));
 			}
 
-			if (ReadWikiProperty(rawId.Trim(), entry, path, issues) is not { } spec)
+			if (ReadWikiProperty(rawId.Trim(), entry, path, format, issues) is not { } spec)
 			{
 				continue;
 			}
@@ -83,11 +86,20 @@ public partial class PackageManifestService
 	}
 
 	private static PackageWikiPropertySpec? ReadWikiProperty(
-		string id, Dictionary<string, object?> entry, string path, List<PackageManifestIssue> issues)
+		string id, Dictionary<string, object?> entry, string path, PackageFormatVersion format, List<PackageManifestIssue> issues)
 	{
 		if (WikiFactProperties.ParseType(entry.GetValueOrDefault("type") as string) is not { } type)
 		{
-			issues.Add(PackageManifestIssue.Error($"{path}.type", "A wiki property's type is number, boolean, page or keyword."));
+			issues.Add(PackageManifestIssue.Error($"{path}.type",
+				"A wiki property's type is keyword, text, number, decimal, date, page or boolean."));
+			return null;
+		}
+
+		if (type is SemanticType.Text or SemanticType.Decimal or SemanticType.Date
+			&& format.Major == WikiPropertyTypesFormat.Major && format.Minor < WikiPropertyTypesFormat.Minor)
+		{
+			issues.Add(PackageManifestIssue.Error($"{path}.type",
+				$"The {WikiFactProperties.TypeName(type)} type needs format {WikiPropertyTypesFormat} or later; set format: \"{WikiPropertyTypesFormat}\"."));
 			return null;
 		}
 

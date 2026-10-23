@@ -13,8 +13,8 @@ namespace SharpMUSH.Database.Lightning;
 /// </summary>
 /// <remarks>
 /// A property defined, changed or removed leaves the pages that state it alone: a page keeps a fact its property no
-/// longer takes until someone changes that property's values. Its index entries move in the same transaction when
-/// the change moves them between number and text order.
+/// longer takes until someone changes that property's values. Its index entries are keyed again in the same
+/// transaction when the change gives it another type.
 /// </remarks>
 public partial class LightningDatabase
 {
@@ -22,13 +22,15 @@ public partial class LightningDatabase
 		=> WikiFactProperties.Schema(tx.Range(Tables.WikiProperty, [])
 			.Select(entry => MapWikiProperty(Codec.Deserialize<WikiPropertyRecord>(entry.Value))));
 
-	/// <summary>The properties whose values the index keys as numbers.</summary>
-	private static HashSet<string> IntegerFactProperties(ITx tx)
+	/// <summary>The type of each defined property, by which the index keys its values.</summary>
+	private static Dictionary<string, SemanticType> FactKeyTypes(ITx tx)
 		=> tx.Range(Tables.WikiProperty, [])
-			.Select(entry => Codec.Deserialize<WikiPropertyRecord>(entry.Value))
-			.Where(record => record.Type == nameof(SemanticType.Integer))
-			.Select(record => record.Id)
-			.ToHashSet(StringComparer.Ordinal);
+			.Select(entry => MapWikiProperty(Codec.Deserialize<WikiPropertyRecord>(entry.Value)))
+			.ToDictionary(definition => definition.Id, definition => definition.Type, StringComparer.Ordinal);
+
+	/// <summary>The type the index keys a stored property's values by; a keyword's for one not defined.</summary>
+	private static SemanticType StoredFactType(ITx tx, byte[] key)
+		=> tx.TryGet(Tables.WikiProperty, key, out var bytes) ? MapWikiProperty(Codec.Deserialize<WikiPropertyRecord>(bytes)).Type : SemanticType.Keyword;
 
 	public Task<SemanticSchema> GetFactSchemaAsync() => Task.FromResult(Store.Read(ReadFactSchema));
 
@@ -38,10 +40,9 @@ public partial class LightningDatabase
 			PropertyDefinition definition => await Store.WriteAsync<Result<PropertyDefinition>>(tx =>
 			{
 				var key = Keys.Str(definition.Id);
-				var wasInteger = tx.TryGet(Tables.WikiProperty, key, out var bytes)
-					&& Codec.Deserialize<WikiPropertyRecord>(bytes).Type == nameof(SemanticType.Integer);
+				var was = StoredFactType(tx, key);
 				tx.Put(Tables.WikiProperty, key, Codec.Serialize(WikiPropertyRecordOf(definition)));
-				if (wasInteger != (definition.Type == SemanticType.Integer)) RetypeFactEntries(tx, definition.Id);
+				if (was != definition.Type) RetypeFactEntries(tx, definition.Id);
 				return definition;
 			}),
 			Error<string> error => error,
@@ -53,9 +54,10 @@ public partial class LightningDatabase
 			: await Store.WriteAsync<Found<None>>(tx =>
 			{
 				var key = Keys.Str(id);
-				if (!tx.TryGet(Tables.WikiProperty, key, out var bytes)) return new NotFound();
+				if (!tx.TryGet(Tables.WikiProperty, key, out _)) return new NotFound();
+				var was = StoredFactType(tx, key);
 				tx.Delete(Tables.WikiProperty, key);
-				if (Codec.Deserialize<WikiPropertyRecord>(bytes).Type == nameof(SemanticType.Integer)) RetypeFactEntries(tx, id);
+				if (was != SemanticType.Keyword) RetypeFactEntries(tx, id);
 				return new None();
 			});
 
@@ -69,12 +71,12 @@ public partial class LightningDatabase
 		var entries = tx.Range(Tables.WikiFact, FactPropertyPrefix(property)).Select(entry => entry.Key).ToList();
 		foreach (var key in entries) tx.Delete(Tables.WikiFact, key);
 
-		var integers = IntegerFactProperties(tx);
+		var types = FactKeyTypes(tx);
 		var pages = entries.Select(key => Keys.ReadDbref(key.AsSpan(key.Length - 8))).Distinct()
 			.Select(pageKey => (Key: pageKey, Record: TryReadWikiPage(tx, pageKey)))
 			.Where(page => page.Record is { Facts: not null });
 		foreach (var (pageKey, record) in pages)
-			PutFactEntries(tx, pageKey, [.. record!.Facts!.Where(f => f.Property == property)], add: true, integers);
+			PutFactEntries(tx, pageKey, [.. record!.Facts!.Where(f => f.Property == property)], add: true, types);
 	}
 
 	private static PropertyDefinition MapWikiProperty(WikiPropertyRecord record)

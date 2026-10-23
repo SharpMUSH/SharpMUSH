@@ -117,7 +117,7 @@ public sealed record PackageGrantSpec(string Role, string Permission);
 /// defines it. Removing it leaves the facts pages state with it in place.
 /// </summary>
 /// <param name="Id">The property key, such as <c>pf2e:level</c>.</param>
-/// <param name="Type">number, boolean, page or keyword.</param>
+/// <param name="Type">keyword, text, number, decimal, date, page or boolean.</param>
 /// <param name="Multiple">Whether a page may state more than one value.</param>
 /// <param name="Values">For a keyword property, the values it allows, lowercase; empty for any.</param>
 /// <param name="Label">What the portal calls it, or empty.</param>
