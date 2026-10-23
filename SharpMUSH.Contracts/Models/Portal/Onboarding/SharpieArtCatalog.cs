@@ -12,6 +12,11 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-genre-none-chibi-shared-completion", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-chibi-player-continue", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-chibi-player-channels", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-chibi-player-speak-act", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-military-science-fiction-kemono-player-place", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-military-science-fiction-kemono-player-world", "kemono", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-kemono-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-genre-none-chibi-player-useful-action", "chibi", "None", "images/sharpie/sharpie-genre-none-chibi-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-chibi-shared-completion", "chibi", "Adult", "images/sharpie/sharpie-adult-chibi-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
