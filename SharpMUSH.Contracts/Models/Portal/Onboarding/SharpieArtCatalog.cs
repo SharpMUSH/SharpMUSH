@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-genre-none-pixel-player-world", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-genre-none-pixel-player-character", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-genre-none-pixel-shared-welcome", "pixel", "None", "images/sharpie/sharpie-genre-none-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-player-speak-act", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-invite", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
