@@ -10,6 +10,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-multiverse-chibi-player-useful-action", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-multiverse-chibi-player-character", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-paranormal-chibi-administrator-walkthrough", "chibi", "Paranormal", "images/sharpie/sharpie-paranormal-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
+		new SharpieArt("sharpie-paranormal-chibi-administrator-capabilities", "chibi", "Paranormal", "images/sharpie/sharpie-paranormal-chibi-administrator-capabilities.png", 1254, 1254, "administrator-capabilities"),
+		new SharpieArt("sharpie-paranormal-chibi-administrator-rules", "chibi", "Paranormal", "images/sharpie/sharpie-paranormal-chibi-administrator-rules.png", 1254, 1254, "administrator-rules"),
+		new SharpieArt("sharpie-paranormal-chibi-administrator-identity", "chibi", "Paranormal", "images/sharpie/sharpie-paranormal-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
 		new SharpieArt("sharpie-crime-kemono-player-place", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-place.png", 1254, 1254, "player-place"),
 		new SharpieArt("sharpie-crime-kemono-player-character", "kemono", "Crime", "images/sharpie/sharpie-crime-kemono-player-character.png", 1254, 1254, "player-character"),
 		new SharpieArt("sharpie-multiverse-chibi-player-sign-in", "chibi", "Multiverse", "images/sharpie/sharpie-multiverse-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
