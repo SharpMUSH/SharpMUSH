@@ -7,7 +7,9 @@ window.SharpMUSH = window.SharpMUSH || {};
 // When a target column count is set for an element (the /play terminal — the player's
 // preferred line width, min 78), the font is SCALED so exactly that many columns fill the
 // available width: it grows on a roomy screen (bigger, more readable) and shrinks on a tight
-// one, clamped to a legible range. With no target, the natural grid at the base font is used.
+// one, down to MIN_FONT_PX. A screen too narrow for the target at that size (a phone held
+// upright) keeps MIN_FONT_PX and reports the columns that fit, so the server lays out to them
+// and the output wraps there. With no target, the natural grid at the base font is used.
 //
 // Growing is for a roomy screen, so it also answers to height: the font grows past the stylesheet's
 // size only while the output still shows GROW_MIN_ROWS rows. A phone held sideways is wide and short,
@@ -15,7 +17,7 @@ window.SharpMUSH = window.SharpMUSH || {};
 // there instead (the target's columns still fit, with room to spare). Height never shrinks the font
 // below the base: that is width's job alone.
 window.SharpMUSH.Metrics = {
-    MIN_FONT_PX: 6,    // below this, fall back to horizontal scroll rather than illegible text
+    MIN_FONT_PX: 12,   // the smallest legible size; below it the target gives way to fewer columns
     MAX_FONT_PX: 24,   // above this, stop growing (line-length cap) — content left-aligns
     GROW_MIN_ROWS: 16, // grow past the base font only while at least this many rows still show
     _targets: {},      // elementId -> target column count
@@ -82,6 +84,7 @@ window.SharpMUSH.Metrics = {
             if (fitFont > growCap) fitFont = growCap;
             // Closed-loop: glyph advance isn't perfectly linear with size (hinting), so correct
             // downward if the real width overflows. Growth is already bounded by growthCap.
+            if (fitFont < this.MIN_FONT_PX) return this.narrow(el, cs, contentW, contentH, advanceRatio, lineRatio, clamp);
             for (var i = 0; i < 4; i++) {
                 if (fitFont <= this.MIN_FONT_PX) { fitFont = this.MIN_FONT_PX; break; }
                 var actual = this._runWidth(el, cs, fitFont, '0'.repeat(target));
@@ -98,6 +101,15 @@ window.SharpMUSH.Metrics = {
             cols: clamp(Math.floor(contentW / advance)),
             rows: clamp(Math.floor(contentH / lineHeight))
         };
+    },
+
+    // Too narrow for the target at a legible size: the smallest legible font, and as many columns as fit it.
+    narrow: function (el, cs, contentW, contentH, advanceRatio, lineRatio, clamp) {
+        var fontPx = this.MIN_FONT_PX;
+        var cols = Math.floor((contentW - 1) / (advanceRatio * fontPx));
+        while (cols > 1 && this._runWidth(el, cs, fontPx, '0'.repeat(cols)) > contentW - 1) cols--;
+        el.style.fontSize = fontPx + 'px';
+        return { cols: clamp(cols), rows: clamp(Math.floor(contentH / (lineRatio * fontPx))) };
     },
 
     // The largest font the fit may grow to: MAX_FONT_PX, or less when the output is too short to show

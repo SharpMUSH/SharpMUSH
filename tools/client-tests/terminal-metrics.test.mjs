@@ -87,7 +87,19 @@ test('a short output never shrinks the font below the base; a narrow one still d
     short.metrics.measure('output');
     assert.equal(fontOf(short.output), BASE_PX);
 
-    const narrow = boot({ width: 500, height: 120 });
-    narrow.metrics.measure('output');
+    const narrow = boot({ width: 600, height: 120 });
+    const grid = narrow.metrics.measure('output');
     assert.ok(fontOf(narrow.output) < BASE_PX, 'width still shrinks the font to fit the columns');
+    assert.equal(grid.cols, 78);
+});
+
+test('a phone held upright keeps a legible font and reports the columns that fit it', () => {
+    // 390 px wide: 78 columns would need 390 / 78 / 0.6 = 8.3 px.
+    const { metrics, output } = boot({ width: 390, height: 600 });
+    const grid = metrics.measure('output');
+
+    assert.equal(fontOf(output), metrics.MIN_FONT_PX);
+    assert.equal(grid.cols, Math.floor(389 / (metrics.MIN_FONT_PX * ADVANCE)));
+    assert.ok(grid.cols * metrics.MIN_FONT_PX * ADVANCE <= 389, 'the reported columns must fit the width');
+    assert.equal(grid.rows, Math.floor(600 / (metrics.MIN_FONT_PX * LINE)));
 });

@@ -24,11 +24,10 @@
          class="sharp-terminal-output" data-input-region="@Interactive"
          role="log" aria-live="@(Interactive && !ScreenReader.On ? "polite" : "off")" aria-label="@Loc["TermOutputLabel"]" tabindex="0"
          style="flex:1;min-height:0;overflow:auto;white-space:pre-wrap;word-break:break-word;line-height:1.6;">
-        @* When MinColumns is set (the /play terminal asks for 78), this inner track holds a
-           floor width of that many characters. On a narrow screen the output scrolls
-           horizontally rather than wrapping 78-col content down to the phone's ~50 columns —
-           and the measured NAWS is floored to match (see OnTerminalResize). *@
-        <div class="sharp-terminal-track" style="@(TargetColumns > 0 ? $"min-width:{TargetColumns}ch;" : "")">
+        @* With TargetColumns set (the /play terminal asks for 78), SharpMUSH.Metrics sizes the font so
+           that many columns fill the width; a screen too narrow for them at a legible size wraps at the
+           columns it reports over NAWS instead (terminalMetrics.js). *@
+        <div class="sharp-terminal-track">
             @if (EarlierOffered)
             {
                 <div class="sharp-terminal-earlier-bar">
@@ -438,8 +437,8 @@
     [JSInvokable]
     public async Task OnTerminalResize(int cols, int rows)
     {
-        // cols already reflects the player's preferred width when TargetColumns is set (the fit
-        // returns exactly that), so this is what we report to the server over NAWS.
+        // With TargetColumns set, cols is the player's preferred width, or fewer on a screen too narrow
+        // for it at a legible size; either way it is what the output wraps at, so it is what NAWS reports.
 
         // Remember the grid even before the socket connects (the first measurement fires on
         // fonts-ready, which can precede connect). The remembered size is then sent once the
