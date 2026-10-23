@@ -49,7 +49,9 @@ public sealed class AdministratorChecklistDetector(IMediator mediator, IOptionsW
 	{
 		if (await mediator.Send(new GetObjectNodeQuery(new DBRef((int)options.CurrentValue.Database.PlayerStart)), ct)
 			is not AnySharpObject room) return false;
-		return await attributes.GetAttributeAsync(room, room, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: false)
-			is SharpAttribute[] { Length: > 0 } chain && !string.IsNullOrWhiteSpace(chain[^1].Value.ToPlainText());
+		// Inherited as look finds it, and judged on Text: a picture alone is a description, and its carrier is
+		// left out of the plain text.
+		return await attributes.GetAttributeAsync(room, room, "DESCRIBE", IAttributeService.AttributeMode.Read, parent: true)
+			is SharpAttribute[] { Length: > 0 } chain && !string.IsNullOrWhiteSpace(chain[^1].Value.Text);
 	}
 }

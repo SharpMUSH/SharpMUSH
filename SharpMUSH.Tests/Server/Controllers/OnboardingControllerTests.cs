@@ -7,6 +7,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Commands.Database;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal.Onboarding;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
@@ -14,6 +15,7 @@ using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Server.Controllers;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Services;
 
 namespace SharpMUSH.Tests.Server.Controllers;
 
@@ -113,5 +115,31 @@ public class OnboardingControllerTests
 
 		await Assert.That(detected).IsEquivalentTo(backupVerified ? ["identity"] : new[] { "identity", "backups" });
 		backups.Received(backupVerified ? 0 : 1).List();
+	}
+
+	/// <summary>A start room described only by a picture is described; the picture's carrier is not plain text.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task StartRoomDescribedOnlyByAPictureCounts(bool picture)
+	{
+		var room = new TestObjectFactory().CreateRoom(0, "Arrival");
+		var mediator = Substitute.For<IMediator>();
+		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(new AnySharpObject(room)));
+		var attributes = Substitute.For<IAttributeService>();
+		var value = picture ? MarkupText.Image("harbour.png", "The harbour") : MarkupText.Plain("  ");
+		attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), "DESCRIBE",
+				IAttributeService.AttributeMode.Read, true)
+			.Returns((OptionalSharpAttributeOrError)new[]
+				{ new SharpAttribute("", "", "DESCRIBE", [], null, "DESCRIBE", null!, null!, null!) { Value = value } });
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default());
+		var detector = new AdministratorChecklistDetector(mediator, options, Substitute.For<IWorldBackupService>(), attributes,
+			Substitute.For<IAccountService>());
+
+		var detected = await detector.DetectAsync("account-a", ["start-room"], default);
+
+		await Assert.That(detected.Contains("start-room")).IsEqualTo(picture);
 	}
 }
