@@ -10,6 +10,21 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-world", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-character", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-sign-in", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-military-science-fiction-chibi-player-place", "chibi", "Military Science Fiction", "images/sharpie/sharpie-military-science-fiction-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-magical-realism-kemono-player-world", "kemono", "Magical Realism", "images/sharpie/sharpie-magical-realism-kemono-player-world.png", 1254, 1254, "player-world"),
+		new SharpieArt("sharpie-magical-realism-kemono-player-character", "kemono", "Magical Realism", "images/sharpie/sharpie-magical-realism-kemono-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-magical-realism-kemono-player-sign-in", "kemono", "Magical Realism", "images/sharpie/sharpie-magical-realism-kemono-player-sign-in.png", 1254, 1254, "player-sign-in"),
+		new SharpieArt("sharpie-weird-fiction-chibi-administrator-joining", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-continue", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-continue.png", 1254, 1254, "player-continue"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-speak-act", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-speak-act.png", 1254, 1254, "player-speak-act"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-useful-action", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-useful-action.png", 1254, 1254, "player-useful-action"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-character", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-character.png", 1254, 1254, "player-character"),
+		new SharpieArt("sharpie-weird-fiction-chibi-player-place", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-player-place.png", 1254, 1254, "player-place"),
+		new SharpieArt("sharpie-weird-fiction-chibi-shared-welcome", "chibi", "Weird Fiction", "images/sharpie/sharpie-weird-fiction-chibi-shared-welcome.png", 1254, 1254, "shared-welcome"),
+		new SharpieArt("sharpie-medieval-fantasy-kemono-shared-completion", "kemono", "Medieval Fantasy", "images/sharpie/sharpie-medieval-fantasy-kemono-shared-completion.png", 1254, 1254, "shared-completion"),
 		new SharpieArt("sharpie-post-apocalyptic-chibi-administrator-walkthrough", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough"),
 		new SharpieArt("sharpie-post-apocalyptic-chibi-administrator-joining", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-administrator-joining.png", 1254, 1254, "administrator-joining"),
 		new SharpieArt("sharpie-post-apocalyptic-chibi-administrator-identity", "chibi", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-chibi-administrator-identity.png", 1254, 1254, "administrator-identity"),
