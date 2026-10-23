@@ -354,6 +354,16 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		await httpClientFactory.CreateClient("api")
 			.GetApiAsync<List<WikiFactPropertyDto>>("api/wiki/fact-properties", "The server returned no wiki fact properties.");
 
+	/// <summary>Defines a property, or replaces its definition, and returns it as stored. The failure carries the server's reason.</summary>
+	public async ValueTask<ApiResult<WikiFactPropertyDto>> SetFactPropertyAsync(string id, SetFactPropertyRequest request) =>
+		Logged(await Http.PutApiAsync<SetFactPropertyRequest, WikiFactPropertyDto>(
+				$"api/wiki/fact-properties/{Uri.EscapeDataString(id)}", request, "The server returned no wiki fact property."),
+			"SetFactPropertyAsync", id);
+
+	/// <summary>Removes a property. Pages that state it keep their facts.</summary>
+	public async ValueTask<ApiResult<Success>> DeleteFactPropertyAsync(string id) =>
+		Logged(await Http.DeleteApiAsync($"api/wiki/fact-properties/{Uri.EscapeDataString(id)}"), "DeleteFactPropertyAsync", id);
+
 	/// <summary>
 	/// One page of the pages whose facts meet every condition, written as <c>wikiquery()</c> takes them, from where
 	/// <paramref name="after"/> (a previous page's <c>Next</c>) left off. The failure carries the server's reason.
