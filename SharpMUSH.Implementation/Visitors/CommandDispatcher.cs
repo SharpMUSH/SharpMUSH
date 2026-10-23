@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
+using SharpMUSH.Library.API;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -91,8 +92,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
 			{
-				await services.NotifyService.NotifyLocalized(parser.CurrentState.Handle.Value,
-					nameof(ErrorMessages.Notifications.NoSuchCommandAtLogin));
+				await RepeatConnectScreen(parser.CurrentState.Handle.Value);
 				return new None();
 			}
 
@@ -211,6 +211,21 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// </summary>
 	private static MString CommandSlice(MString src, IEvaluationStringContext firstCommandMatch)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
+
+	/// <summary>
+	/// An unknown command at the login prompt shows the connect screen again, which lists the ones that work.
+	/// PennMUSH check_connect ends the same way (<c>src/bsd.c</c>, "invalid command, just repeat login screen").
+	/// </summary>
+	private async ValueTask RepeatConnectScreen(long handle)
+	{
+		if (services.GameMessages is { } messages && await messages.RenderAsync(GameMessage.Connect, handle) is MString screen)
+		{
+			await services.NotifyService.Notify(handle, screen);
+			return;
+		}
+
+		await services.NotifyService.NotifyLocalized(handle, nameof(ErrorMessages.Notifications.NoSuchCommandAtLogin));
+	}
 
 	/// <summary>
 	/// PennMUSH's <c>LT_CMD</c> line (<c>src/game.c:1232</c>, <c>src/log.c:547</c>): every command when

@@ -1,6 +1,5 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
-using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -30,7 +29,6 @@ public class SocketCommandAbbreviationTests
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
-	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
@@ -136,25 +134,22 @@ public class SocketCommandAbbreviationTests
 	/// <summary>
 	/// A nonsense token matches zero registered SOCKET commands (not an ambiguous prefix —
 	/// among WHO/CONNECT/QUIT/REGISTER/LOGIN/MAKE/PLAY no two commands share a first letter, so
-	/// there is no real ambiguous-prefix case to exercise here). This must still fall through to
-	/// the existing "no such command at login" behavior, unchanged.
+	/// there is no real ambiguous-prefix case to exercise here). It connects nothing and shows the
+	/// connect screen again, as PennMUSH check_connect does, so the player sees the commands that work.
 	/// </summary>
 	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]
-	public async ValueTask UnknownAbbreviation_DoesNotConnect_NoSuchCommandAtLogin()
+	public async ValueTask UnknownAbbreviation_DoesNotConnect_RepeatsTheConnectScreen()
 	{
 		var name = TestIsolationHelpers.GenerateUniqueName("abbrxyz");
 		await CreateTestPlayerAsync(name, "irrelevant-password");
 		var handle = await RegisterConnectionAsync(TestIsolationHelpers.GenerateUniqueHandle());
+		var screensBefore = ConnectScreenTests.NotificationsTo(WebAppFactoryArg, handle).Count(m => m.Contains("Welcome to SharpMUSH!"));
 
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"xyz {name} irrelevant-password"));
 
-		var gotNoSuchCommandNotice = NotifyService.ReceivedCalls().Any(c =>
-			c.GetMethodInfo().Name == "NotifyLocalized" &&
-			c.GetArguments().Length >= 2 &&
-			c.GetArguments()[0] is long h && h == handle &&
-			c.GetArguments()[1] is string k && k == nameof(ErrorMessages.Notifications.NoSuchCommandAtLogin));
-
-		await Assert.That(gotNoSuchCommandNotice).IsTrue();
+		var messages = ConnectScreenTests.NotificationsTo(WebAppFactoryArg, handle);
+		await Assert.That(messages.Count(m => m.Contains("Welcome to SharpMUSH!"))).IsEqualTo(screensBefore + 1);
+		await Assert.That(messages).DoesNotContain(ErrorMessages.Notifications.NoSuchCommandAtLogin);
 		await Assert.That(ConnectionService.Get(handle)?.Ref).IsNull();
 	}
 

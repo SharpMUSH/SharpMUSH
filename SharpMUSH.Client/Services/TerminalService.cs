@@ -102,8 +102,8 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		wsService.Relogin = relogin;
 
 		_logger.LogInformation("Connecting to {ServerUri}", LogSanitizer.Sanitize(serverUri));
+		AddSystemLine("Connecting…");
 		await wsService.ConnectAsync(serverUri, identity, signIn);
-		AddSystemLine($"Connected to {serverUri}");
 	}
 
 	private void UnsubscribeWebSocketHandlers()
@@ -140,9 +140,7 @@ public partial class TerminalService(IWebSocketClientService wsService, ILogger<
 		// Never echo any part of the OTT: ConnectWithOttAsync is used for real account
 		// logins, so the token must not leak into the terminal line buffer (or anything
 		// inspecting TerminalService.Lines).
-		AddSystemLine("[OTT] Sending login token…");
 		await wsService.SendAsync($"connect token {ott}");
-		AddSystemLine("[OTT] Authenticating…");
 	}
 
 	/// <summary>

@@ -16,6 +16,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Commands;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -101,18 +102,42 @@ public partial class GameMessageServiceTests
 
 	/// <summary>
 	/// The bundled object's connect screen, as an ASCII client 78 columns wide is sent it, is the shipped one line for
-	/// line, with the logo's art still green.
+	/// line, with the logo's art still green. The shipped screen offers <c>connect guest</c>, which the object does only
+	/// while a guest character exists.
 	/// </summary>
 	[Test]
+	[NotInParallel(GuestLoginTests.GuestCharacters)]
 	public async Task TheMessagesObjectShowsTheSameConnectScreen()
 	{
 		var (service, _) = await WithMessagesObjectAsync();
+		var guest = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "GmsGuest");
+		await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=Guest"));
+		try
+		{
+			var shown = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>();
+			var ascii = BlockLayout.Relayout(shown, 78, new LayoutContext { AsciiOnly = true }).ToPlainText().Replace(MudName, "SharpMUSH");
 
-		var shown = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>();
-		var ascii = BlockLayout.Relayout(shown, 78, new LayoutContext { AsciiOnly = true }).ToPlainText().Replace(MudName, "SharpMUSH");
+			await Assert.That(Lines(ascii)).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
+			await Assert.That(shown.Render(MarkupFormat.Ansi)).Contains("\u001b[38;2;0;245;183m          ==         ==");
+		}
+		finally
+		{
+			await WebAppFactoryArg.CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {guest}=!Guest"));
+		}
+	}
 
-		await Assert.That(Lines(ascii)).IsEquivalentTo(Lines(Plain(service.ShippedText(GameMessage.Connect))));
-		await Assert.That(shown.Render(MarkupFormat.Ansi)).Contains("\u001b[38;2;0;245;183m          ==         ==");
+	/// <summary>A game whose guests are on but has no guest character does not offer <c>connect guest</c>.</summary>
+	[Test]
+	[NotInParallel(GuestLoginTests.GuestCharacters)]
+	public async Task TheMessagesObjectOffersGuestsOnlyWithAGuestCharacter()
+	{
+		var (service, _) = await WithMessagesObjectAsync();
+
+		var connect = (await service.RenderAsync(GameMessage.Connect, 0)).Expect<MString>().ToPlainText();
+		var register = (await service.RenderAsync(GameMessage.Register, 0)).Expect<MString>().ToPlainText();
+
+		await Assert.That(connect).DoesNotContain("Just looking?");
+		await Assert.That(register).DoesNotContain("connect guest");
 	}
 
 	/// <summary>The object shows the logo as a picture, with the text art as the description's stand-in for a terminal.</summary>

@@ -1,7 +1,7 @@
 format: "1.16"
 package: messages
 title: "Messages object"
-version: 1.2.3
+version: 1.3.0
 authors: [SharpMUSH]
 description: "The Messages object: the connect screen, the MOTDs and the other server messages as softcode."
 license: MIT
@@ -24,8 +24,9 @@ objects:
     type: thing
     name: Messages
     flags: [no_command]
-    # Send_OOB lets its messages show the logo as a picture and carry command links.
-    powers: [Send_OOB]
+    # Send_OOB lets its messages show the logo as a picture and carry command links. Search lets the connect
+    # screen find the guest characters, so it offers connect guest only when one exists.
+    powers: [Send_OOB, Search]
     attributes:
       # The connect screen: the logo as a picture, with the ways in beside it, or under it on a screen too narrow
       # for both. A terminal that cannot show the picture gets LOGO in the logo's green instead, read with v() so
@@ -67,7 +68,10 @@ objects:
 
       # The text beside the logo. A way in that the game has turned off is left out.
       FUN`CONNECT`MENU: |-
-        Welcome to [tone(strong,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`LAYOUT`SECTION,New here?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,register),<name> \[email\] <password>,u(FUN`LAYOUT`COMMAND,make),<character> <password>)])][if(strmatch(config(guests),Yes),%r[u(FUN`LAYOUT`SECTION,Just looking?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),guest)])]%r[u(FUN`LAYOUT`SECTION,Have an account?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,login),<name-or-email> <password>,u(FUN`LAYOUT`COMMAND,play),<character>,u(FUN`LAYOUT`COMMAND,claim),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Playing a character?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Any time)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,WHO),who is online,u(FUN`LAYOUT`COMMAND,QUIT),leave the game)]
+        Welcome to [tone(strong,mudname())]!%r[if(strmatch(config(player_creation),Yes),%r[u(FUN`LAYOUT`SECTION,New here?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,register),<name> \[email\] <password>,u(FUN`LAYOUT`COMMAND,make),<character> <password>)])][if(u(FUN`CONNECT`GUESTS),%r[u(FUN`LAYOUT`SECTION,Just looking?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),guest)])]%r[u(FUN`LAYOUT`SECTION,Have an account?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,login),<name-or-email> <password>,u(FUN`LAYOUT`COMMAND,play),<character>,u(FUN`LAYOUT`COMMAND,claim),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Playing a character?)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,connect),<character> <password>)]%r[u(FUN`LAYOUT`SECTION,Any time)]%r[fields(u(FUN`LAYOUT`LIST),u(FUN`LAYOUT`COMMAND,WHO),who is online,u(FUN`LAYOUT`COMMAND,QUIT),leave the game,u(FUN`LAYOUT`COMMAND,SCREENREADER),using a screen reader)]
+      # Whether connect guest can hand out a character: guest logins on, and a player with the Guest power.
+      FUN`CONNECT`GUESTS: |-
+        and(strmatch(config(guests),Yes),words(lsearch(all,type,player,powers,Guest)))
       # %0 heading: a light rule with the heading at its left.
       FUN`LAYOUT`SECTION: |-
         rule(tone(strong,%0),,lit({"border":"single","title":"left"}))
@@ -90,7 +94,7 @@ objects:
       NEWUSER: |-
         %r[u(FUN`LAYOUT`SECTION,Your account is ready)]%r[fields(u(FUN`LAYOUT`LIST),make <character> <password>,create your first character,claim <character> <password>,add a character you already have,play <character>,enter the game as one of them)]
       REGISTER: |-
-        %r[notice(,[mudname()] is not taking new accounts.,warn)][if(strmatch(config(guests),Yes),%rYou can still look around: connect guest.)]
+        %r[notice(,[mudname()] is not taking new accounts.,warn)][if(u(FUN`CONNECT`GUESTS),%rYou can still look around: connect guest.)]
       DOWN: |-
         %r[notice(,[mudname()] is closed to logins for now. Please try again later.,warn)]
       QUIT: |-

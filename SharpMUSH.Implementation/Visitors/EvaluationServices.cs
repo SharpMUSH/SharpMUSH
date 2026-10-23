@@ -30,6 +30,7 @@ internal sealed class EvaluationServices
 	private IUserDefinedFunctionService? _userFunctions;
 	private IPluginHookDispatcher? _pluginHooks;
 	private IRealityPolicy? _reality;
+	private IGameMessageService? _gameMessages;
 	private IPipeOutputCapture? _pipeCapture;
 	private IActivityLedger? _activity;
 	private ExecutorDebugFlags? _debugFlags;
@@ -115,6 +116,10 @@ internal sealed class EvaluationServices
 	/// <summary>Plugin command interceptors; absent in hosts that do not register them.</summary>
 	public IPluginHookDispatcher? PluginHooks
 		=> _pluginHooks ??= LocatesOptional ? Provider.GetService<IPluginHookDispatcher>() : null;
+
+	/// <summary>The connect screen and the other server messages; absent in hosts that do not register it.</summary>
+	public IGameMessageService? GameMessages
+		=> _gameMessages ??= LocatesOptional ? Provider.GetService<IGameMessageService>() : null;
 
 	/// <summary>
 	/// The reality policy <c>$</c>-command discovery perceives through. Required: a host without one
