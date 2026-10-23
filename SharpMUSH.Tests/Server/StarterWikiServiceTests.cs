@@ -44,6 +44,17 @@ public class StarterWikiServiceTests
 		return options;
 	}
 
+	/// <summary>A config writer that keeps what it is asked to store, starting from <paramref name="onboarding"/>.</summary>
+	private static IConfigOptionWriter Writer(OnboardingOptions? onboarding = null)
+	{
+		var stored = SharpMUSHOptions.Default() with { Onboarding = onboarding ?? new() };
+		var writer = Substitute.For<IConfigOptionWriter>();
+		writer.CurrentAsync().Returns(_ => ValueTask.FromResult(stored));
+		writer.UpdateAsync(Arg.Any<Func<SharpMUSHOptions, SharpMUSHOptions>>(), Arg.Any<CancellationToken>())
+			.Returns(call => ValueTask.FromResult(stored = call.Arg<Func<SharpMUSHOptions, SharpMUSHOptions>>()(stored)));
+		return writer;
+	}
+
 	private static WikiPage Page(string title, WikiNamespace ns, string markdown)
 		=> new($"{ns}:{title}", title.ToLowerInvariant().Replace(' ', '_'), title, ns.ToString().ToLowerInvariant(),
 			markdown, string.Empty, string.Empty, "#1", "#1", DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, 1);
@@ -82,7 +93,7 @@ public class StarterWikiServiceTests
 	{
 		var wiki = Wiki(SeededWikiPages.Home);
 		var data = new InMemoryServerData();
-		var service = new StarterWikiService(wiki, data, Options(""), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, data, Options(""), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.AppliedAsync()).IsFalse();
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
@@ -106,7 +117,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_PinsEveryStarterCategory()
 	{
 		var wiki = Wiki(SeededWikiPages.Home, ("Places", WikiNamespace.Category));
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 
@@ -125,7 +136,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_LeavesPagesTheGameHas()
 	{
 		var wiki = Wiki(SeededWikiPages.Home, ("Theme", WikiNamespace.Main));
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 		await wiki.DidNotReceive().SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Theme"), Arg.Any<IReadOnlyDictionary<WikiAction, IReadOnlyList<string>>>(), Arg.Any<string>());
@@ -137,7 +148,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_KeepsAnEditedHome()
 	{
 		var wiki = Wiki("Welcome to our game.");
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 		await wiki.DidNotReceive().UpdateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>());
@@ -148,7 +159,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_Twice_WritesOnce()
 	{
 		var wiki = Wiki(SeededWikiPages.Home);
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Task.WhenAll(service.ApplyAsync(), service.ApplyAsync());
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
@@ -167,7 +178,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_OpensHomeWithTheSetupIntroduction(string introduction)
 	{
 		var wiki = Wiki(SeededWikiPages.Home);
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(introduction), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(introduction), Writer(), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 
@@ -181,5 +192,23 @@ public class StarterWikiServiceTests
 		await Assert.That(written).DoesNotContain("One or two sentences a stranger could read");
 		await Assert.That(written).Contains("Rain-slicked streets and a city of secrets.\nPlay a detective.");
 		await Assert.That(written).Contains("[[Getting Started]]");
+	}
+
+	/// <summary>
+	/// The player guide's welcome and rules links point at Getting Started and Policies once the starter pages are
+	/// written, unless setup already named pages for them.
+	/// </summary>
+	[Test]
+	public async Task Apply_LinksTheGuideToGettingStartedAndPolicies()
+	{
+		var writer = Writer(new() { RulesPage = "main/house_rules" });
+		var service = new StarterWikiService(Wiki(SeededWikiPages.Home), new InMemoryServerData(), Options(""), writer, NullLogger<StarterWikiService>.Instance);
+
+		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
+
+		var guide = (await writer.CurrentAsync()).Onboarding;
+		await Assert.That(guide.WelcomePage).IsEqualTo("main/getting_started");
+		await Assert.That(guide.RulesPage).IsEqualTo("main/house_rules");
+		await Assert.That(guide.CharacterGuidePage).IsEqualTo("");
 	}
 }
