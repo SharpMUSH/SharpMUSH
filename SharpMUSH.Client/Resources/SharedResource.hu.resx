@@ -5578,6 +5578,24 @@
   <data name="WkAddFact" xml:space="preserve">
     <value>Tény hozzáadása</value>
   </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Oldalak keresése tények szerint</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Feltételek vesszővel elválasztva</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Keresés</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>Több</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>Nincs egyező oldal.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>A tényindex még készül. Próbáld újra egy pillanat múlva.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Kategória hozzáadása</value>
   </data>
