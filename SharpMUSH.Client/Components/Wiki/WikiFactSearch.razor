@@ -1,4 +1,5 @@
 @using System.Net
+@using SharpMUSH.Client.Models.Wiki
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Library.API
 @using SharpMUSH.Library.Services
@@ -31,7 +32,7 @@
             <ul class="wiki-fact-search-results" aria-live="polite">
                 @foreach (var row in pages)
                 {
-                    <li><a href="@WikiRoutes.WikiPathFor(row.Namespace, row.Slug)">@row.Title</a></li>
+                    <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
                 }
             </ul>
             @if (_next is not null)
