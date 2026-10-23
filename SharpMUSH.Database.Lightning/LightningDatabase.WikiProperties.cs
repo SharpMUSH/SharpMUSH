@@ -70,9 +70,11 @@ public partial class LightningDatabase
 		foreach (var key in entries) tx.Delete(Tables.WikiFact, key);
 
 		var integers = IntegerFactProperties(tx);
-		foreach (var pageKey in entries.Select(key => Keys.ReadDbref(key.AsSpan(key.Length - 8))).Distinct())
-			if (TryReadWikiPage(tx, pageKey) is { Facts: { } facts })
-				PutFactEntries(tx, pageKey, [.. facts.Where(f => f.Property == property)], add: true, integers);
+		var pages = entries.Select(key => Keys.ReadDbref(key.AsSpan(key.Length - 8))).Distinct()
+			.Select(pageKey => (Key: pageKey, Record: TryReadWikiPage(tx, pageKey)))
+			.Where(page => page.Record is { Facts: not null });
+		foreach (var (pageKey, record) in pages)
+			PutFactEntries(tx, pageKey, [.. record!.Facts!.Where(f => f.Property == property)], add: true, integers);
 	}
 
 	private static PropertyDefinition MapWikiProperty(WikiPropertyRecord record)
