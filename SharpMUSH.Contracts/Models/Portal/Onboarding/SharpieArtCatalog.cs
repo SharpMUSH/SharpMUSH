@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-adult-pixel-administrator-joining", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-pixel-administrator-identity", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-pixel-shared-completion", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-adult-pixel-player-continue", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Genre),
+		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-rules", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-post-apocalyptic-kemono-administrator-capabilities", "kemono", "Post-Apocalyptic", "images/sharpie/sharpie-post-apocalyptic-kemono-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-adult-pixel-player-channels", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-pixel-player-speak-act", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Genre),
 		new SharpieArt("sharpie-adult-pixel-player-useful-action", "pixel", "Adult", "images/sharpie/sharpie-adult-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Genre),
