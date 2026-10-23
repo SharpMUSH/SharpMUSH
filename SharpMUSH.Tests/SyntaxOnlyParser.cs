@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation;
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -43,6 +44,7 @@ public static class SyntaxOnlyParser
 			.AddSingleton(Substitute.For<IAttributeService>())
 			.AddSingleton(Substitute.For<IHookService>())
 			.AddSingleton(Substitute.For<ILockService>())
+			.AddSingleton<IHouseLookService>(new HouseLookService(options, Substitute.For<ILayoutThemeService>()))
 			.BuildServiceProvider();
 
 		return new MUSHCodeParser(NullLogger<MUSHCodeParser>.Instance, BuiltInFunctions(options),

@@ -155,7 +155,7 @@ public partial class Commands
 		parts.Add(new Rule());
 		parts.Add(new Bullets([.. StorageNotes(report, backup).Select(note => (Block)new TextBlock(MarkupText.Plain(note)))]));
 
-		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Storage"), [.. parts]), 78));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Storage"), [.. parts]), 78, HouseLook.Look));
 	}
 
 	/// <summary>Both backup commands show the same read-only inventory, ten copies at a time.</summary>
@@ -197,7 +197,7 @@ public partial class Commands
 
 		if (inventory.Total == 0) parts.Add(new TextBlock(MarkupText.Plain("No backups on disk.")));
 		parts.Add(new TextBlock(MarkupText.Plain($"Page {page}/{inventory.Pages}; {inventory.Total} copies. @storage/backups <page> or @backup/list <page>.")));
-		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Backup inventory"), [.. parts]), 78));
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Backup inventory"), [.. parts]), 78, HouseLook.Look));
 	}
 
 	/// <summary>The few things the figures alone do not say.</summary>
@@ -277,7 +277,7 @@ public partial class Commands
 			? "No archive: a purged record survives only in older backups."
 			: $"Purged records are archived to {HistoryRetention.Options.ArchivePath} first.";
 		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("History"), table,
-			new Rule(), new TextBlock(MarkupText.Plain(archive))), 78));
+			new Rule(), new TextBlock(MarkupText.Plain(archive))), 78, HouseLook.Look));
 	}
 
 	private async ValueTask StoragePurgeAsync(AnySharpObject executor)

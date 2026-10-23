@@ -57,7 +57,7 @@ public static class ListWiki
 
 		// Both terms are drawn from the same population — the pages this reader may see — so the remainder
 		// is "visible pages past the window", and neither the title nor this line reveals a draft.
-		var output = WikiCommandHelper.PageListing(
+		var output = WikiCommandHelper.PageListing(parser.HouseLook(),
 			$"{total} page(s){(ns is null ? "" : $" in namespace '{nsText!.ToLowerInvariant()}'")}",
 			await PageRowsAsync(localization, pages, locale, forceSource),
 			after: total > pages.Count ? $"… and {total - pages.Count} more. See the web portal for the full index." : null);
@@ -99,7 +99,7 @@ public static class ListWiki
 		var names = forceSource
 			? null
 			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
-		var output = WikiCommandHelper.PageListing(
+		var output = WikiCommandHelper.PageListing(parser.HouseLook(),
 			$"Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies)",
 			await PageRowsAsync(localization, pages, locale, forceSource),
 			before: subcategories.Count == 0
@@ -143,7 +143,7 @@ public static class ListWiki
 			var row when m.Locale.Equals(localization.SourceLocaleOf(m.Page), StringComparison.OrdinalIgnoreCase) => row,
 			var row => [row[0], $"{row[1]} [{m.Locale}]", .. row[2..]],
 		}).ToList();
-		var output = WikiCommandHelper.PageListing($"{matches.Count} page(s) matching '{needle}'", rows);
+		var output = WikiCommandHelper.PageListing(parser.HouseLook(), $"{matches.Count} page(s) matching '{needle}'", rows);
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}
@@ -178,7 +178,7 @@ public static class ListWiki
 		var pages = await wikiService.GetRecentChangesAsync(
 			count, await WikiCommandHelper.VisibilityAsync(parser, executor));
 
-		var output = WikiCommandHelper.PageListing("Recently edited pages",
+		var output = WikiCommandHelper.PageListing(parser.HouseLook(), "Recently edited pages",
 			await PageRowsAsync(localization, pages, locale, forceSource));
 		await notifyService.Notify(executor, output, executor);
 		return output;

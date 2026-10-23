@@ -80,14 +80,14 @@ public partial class Commands
 	/// The jobs, each under a divider carrying its id: an id is the whole of what <c>/disable</c> and the
 	/// rest take, too long to share a table row with the schedule and the next run.
 	/// </summary>
-	private static MString RecurringJobListing(RecurringJob[] jobs)
+	private MString RecurringJobListing(RecurringJob[] jobs)
 	{
 		var parts = jobs.SelectMany(job => new Block[]
 		{
 			new Rule(MarkupText.Plain(job.Id)) { TitleAlignment = Alignment.Left },
 			ServerLayout.KeyValues(JobFields(job)),
 		});
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Recurring jobs"), [.. parts]), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Recurring jobs"), [.. parts]), 78, HouseLook.Look);
 	}
 
 	private static IEnumerable<(string Label, MString Value)> JobFields(RecurringJob job)

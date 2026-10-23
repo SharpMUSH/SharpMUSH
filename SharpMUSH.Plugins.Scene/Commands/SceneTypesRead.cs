@@ -1,6 +1,7 @@
 using System.Globalization;
 using MarkupString.Layout;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -39,7 +40,7 @@ public static class SceneTypesRead
 				t.Order.ToString(CultureInfo.InvariantCulture),
 			}));
 
-		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Pose types"), types), 78);
+		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Pose types"), types), 78, parser.HouseLook());
 		await notifyService.Notify(executor, output);
 
 		if (catalogue.Problems.Count > 0)
@@ -51,7 +52,7 @@ public static class SceneTypesRead
 				],
 				catalogue.Problems.Select(p => new[] { $"TYPE`{p.Key.ToUpperInvariant()}", p.Reason }));
 			await notifyService.Notify(executor,
-				ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Not read"), problems), 78));
+				ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Not read"), problems), 78, parser.HouseLook()));
 		}
 
 		return MarkupText.Plain(string.Join(' ', catalogue.Types.Select(t => t.Key)));

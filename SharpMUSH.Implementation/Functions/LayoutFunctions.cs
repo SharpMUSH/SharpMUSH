@@ -383,38 +383,11 @@ public partial class Functions
 		return BlockLayout.Build(block.ThemedUnder(house), width, fluid);
 	}
 
-	/// <summary>The <c>layout_border</c> and resolved <c>layout_theme</c> the house look was last made from, and the look.</summary>
-	private (string? Border, string? Theme, ThemePalette? Palette, LayoutTheme Look)? _house;
-
 	/// <summary>The game's look: <c>layout_border</c>'s border and <c>layout_theme</c>'s colours.</summary>
-	private LayoutTheme HouseTheme() => House().Look;
+	private LayoutTheme HouseTheme() => HouseLook.Look;
 
 	/// <summary><c>layout_theme</c>'s palette, or null when it is unset or names no theme.</summary>
-	private ThemePalette? HousePalette() => House().Palette;
-
-	private (string? Border, string? Theme, ThemePalette? Palette, LayoutTheme Look) House()
-	{
-		var cosmetic = Configuration.CurrentValue.Cosmetic;
-		// Keyed on what layout_theme resolves to, so a change to an added theme it names is seen.
-		var unset = string.IsNullOrWhiteSpace(cosmetic.LayoutTheme) || cosmetic.LayoutTheme.Trim().Equals(LayoutThemes.None, StringComparison.OrdinalIgnoreCase);
-		var theme = unset ? null : LayoutThemeService.Resolve(cosmetic.LayoutTheme) switch
-		{
-			string resolved => resolved,
-			_ => string.Empty,
-		};
-		if (_house is { } house && house.Border == cosmetic.LayoutBorder && house.Theme == theme) return house;
-		var palette = string.IsNullOrEmpty(theme) ? null : LayoutThemes.Read(theme) switch
-		{
-			ThemePalette read => read,
-			_ => null,
-		};
-		// A theme with a look of its own brings its border; layout_border is the border of one without.
-		var colours = palette?.ToLayoutTheme() ?? LayoutTheme.Default;
-		var look = colours with { Border = colours.Border ?? DefaultBorder() };
-		var made = (cosmetic.LayoutBorder, theme, palette, look);
-		_house = made;
-		return made;
-	}
+	private ThemePalette? HousePalette() => HouseLook.Palette;
 
 	/// <summary>A child block without the game's look a function laid it out under.</summary>
 	private Block Adopt(Block block) => block is Themed { Fallback: true } themed && themed.Theme == HouseTheme() ? themed.Content : block;
@@ -436,8 +409,7 @@ public partial class Functions
 		return ImageHostPolicy.Allows(address, cosmetic.ImageHosts, cosmetic.ImageHostList);
 	}
 
-	private BorderStyle DefaultBorder() =>
-		BorderStyle.Preset(Configuration.CurrentValue.Cosmetic.LayoutBorder ?? string.Empty) ?? BorderStyle.Double;
+	private BorderStyle DefaultBorder() => HouseLook.Border;
 
 	/// <summary>An argument as a flex item: the sized item an <c>item()</c> made, or the content at an automatic width.</summary>
 	private Block FlexItemOf(MString content) =>

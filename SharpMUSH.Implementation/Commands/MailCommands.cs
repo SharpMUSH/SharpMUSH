@@ -138,5 +138,5 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private MailAliases.Services MailAliasServices => new(Mediator, NotifyService, PermissionService, ConnectionService);
+	private MailAliases.Services MailAliasServices => new(Mediator, NotifyService, PermissionService, ConnectionService, HouseLook);
 }

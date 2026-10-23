@@ -2200,14 +2200,14 @@ public partial class Commands : ICommandRestrictionApplier
 	/// <summary>
 	/// A flag's or power's details as a panel titled with its name; <c>/debug</c> adds the stored id.
 	/// </summary>
-	private static MString DescribeDefinition(DefinitionRegistry registry, RegistryEntry entry, bool debug)
+	private MString DescribeDefinition(DefinitionRegistry registry, RegistryEntry entry, bool debug)
 	{
 		// The first field is the name, which the title carries.
 		var fields = registry.Describe(entry)[1..];
 		IEnumerable<(string Label, string Value)> shown = debug ? [("ID", entry.Id ?? "N/A"), .. fields] : fields;
 		var title = MarkupText.Plain($"{registry.Kind} {entry.Name}{(debug ? " (debug)" : string.Empty)}");
 		return ServerLayout.Build(ServerLayout.Panel(title,
-			ServerLayout.KeyValues(shown.Select(field => (field.Label, MarkupText.Plain(field.Value))))), 78);
+			ServerLayout.KeyValues(shown.Select(field => (field.Label, MarkupText.Plain(field.Value))))), 78, HouseLook.Look);
 	}
 
 	private enum DefinitionOperation { Default, List, Add, Delete, Letter, Type, Alias, Restrict, Decompile, Disable, Enable, Debug }
@@ -2536,7 +2536,7 @@ public partial class Commands : ICommandRestrictionApplier
 				.ToArrayAsync();
 			// A narrow client loses the least needed column first.
 			var table = ServerLayout.Listing(registry.ListColumns, rows);
-			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(registry.ListTitle), table), 78), executor);
+			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(registry.ListTitle), table), 78, parser.HouseLook()), executor);
 			return CallState.Empty;
 		}
 

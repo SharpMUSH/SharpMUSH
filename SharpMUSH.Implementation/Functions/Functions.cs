@@ -39,6 +39,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 	private IConnectionService ConnectionService { get; }
 	private IExpandedObjectDataService ObjectDataService { get; }
 	private ILayoutThemeService LayoutThemeService { get; }
+	private IHouseLookService HouseLook { get; }
 	private IObjectNameService ObjectNameService { get; }
 	private IFlagAndPowerService FlagAndPowerService { get; }
 	private IObjectRelationshipService ObjectRelationshipService { get; }
@@ -84,6 +85,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		IObjectRelationshipService objectRelationshipService,
 		IExpandedObjectDataService objectDataService,
 		ILayoutThemeService layoutThemeService,
+		IHouseLookService houseLook,
 		ISortService sortService,
 		IValidateService validateService,
 		ICommunicationService communicationService,
@@ -117,6 +119,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 		ObjectRelationshipService = objectRelationshipService;
 		ObjectDataService = objectDataService;
 		LayoutThemeService = layoutThemeService;
+		HouseLook = houseLook;
 		SortService = sortService;
 		ValidateService = validateService;
 		CommunicationService = communicationService;

@@ -25,7 +25,7 @@ public static class ListMail
 
 		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, arg0, executor) switch
 		{
-			IAsyncEnumerable<SharpMail> list => await ListAsync(notifyService!, executor, folders, list),
+			IAsyncEnumerable<SharpMail> list => await ListAsync(parser.HouseLook(), notifyService!, executor, folders, list),
 			Error<string> error => await MessageListHelper.RefuseAsync(notifyService!, executor, error.Value)
 		};
 	}
@@ -40,7 +40,7 @@ public static class ListMail
 		new(MarkupText.Plain("Sent")) { Wrap = false, Priority = 3 },
 	];
 
-	private static async ValueTask<MString> ListAsync(INotifyService notifyService, AnySharpObject executor,
+	private static async ValueTask<MString> ListAsync(LayoutTheme look, INotifyService notifyService, AnySharpObject executor,
 		ExpandedMailData folders, IAsyncEnumerable<SharpMail> list)
 	{
 		var foundAny = false;
@@ -54,7 +54,7 @@ public static class ListMail
 			await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(title),
 				ServerLayout.Listing(Columns, rows),
 				new Rule(),
-				new TextBlock(MarkupText.Plain($"{Counted(rows.Length, "message")}, {unread} unread.\nFlags: N new, U urgent, F forwarded, C cleared, + tagged."))), 78));
+				new TextBlock(MarkupText.Plain($"{Counted(rows.Length, "message")}, {unread} unread.\nFlags: N new, U urgent, F forwarded, C cleared, + tagged."))), 78, look));
 
 			foundAny = true;
 		}

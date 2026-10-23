@@ -46,7 +46,7 @@ public partial class RecursiveMarkdownRenderer
 	/// <paramref name="block"/> laid out at the render width (<see cref="ServerLayout.Build"/>); a flex item
 	/// that takes the result in draws it again at the item's width.
 	/// </summary>
-	protected MString Laid(Block block) => ServerLayout.Build(block, _maxWidth);
+	protected MString Laid(Block block) => ServerLayout.Build(block, _maxWidth, _mushParser?.HouseLook() ?? ServerLayout.DefaultLook);
 
 	private const int START_BORDER_WIDTH = 2; // "| "
 	private const int END_BORDER_WIDTH = 2; // " |"

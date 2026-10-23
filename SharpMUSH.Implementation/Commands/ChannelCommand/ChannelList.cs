@@ -117,7 +117,7 @@ public static class ChannelList
 		Block body = rows.Count == 0
 			? new TextBlock(MarkupText.Plain("No channels."))
 			: ServerLayout.Listing(Columns, rows);
-		var result = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Channels"), body), 78);
+		var result = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Channels"), body), 78, parser.HouseLook());
 		await NotifyService.Notify(executor, result, executor);
 		return new CallState(result);
 	}

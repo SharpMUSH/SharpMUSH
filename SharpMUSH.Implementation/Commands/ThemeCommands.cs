@@ -115,7 +115,7 @@ public partial class Commands
 				theme.BuiltIn ? "built-in" : "added",
 				theme.Disabled ? "disabled" : "offered",
 			}));
-		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Layout themes"), table), 78);
+		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Layout themes"), table), 78, HouseLook.Look);
 		await NotifyService.Notify(executor, output, executor);
 		return new CallState(string.Join(' ', LayoutThemeService.Names));
 	}

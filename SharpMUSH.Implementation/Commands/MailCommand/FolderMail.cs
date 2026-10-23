@@ -47,7 +47,7 @@ public static class FolderMail
 		switch (switches)
 		{
 			case ["FOLDERS"] or ["FOLDER"] when folderSpec.Length == 0:
-				return await GetMailFolderInfo(mediator!, notifyService!, executor, executorPlayer, folderInfo);
+				return await GetMailFolderInfo(parser.HouseLook(), mediator!, notifyService!, executor, executorPlayer, folderInfo);
 
 			case ["FOLDERS"] or ["FOLDER"] when named is not int:
 				return await WhatFolder(notifyService!, executor);
@@ -212,7 +212,7 @@ public static class FolderMail
 	/// <c>do_mail_change_folder</c> with no folder (<c>extmail.c:313-321</c>): each folder that holds mail, with
 	/// its counts, then the current folder.
 	/// </summary>
-	private static async ValueTask<MString> GetMailFolderInfo(IMediator mediator, INotifyService notifyService,
+	private static async ValueTask<MString> GetMailFolderInfo(LayoutTheme look, IMediator mediator, INotifyService notifyService,
 		AnySharpObject executor, SharpPlayer player, ExpandedMailData folderInfo)
 	{
 		// One read of the whole mailbox, tallied by folder, rather than one read per folder number.
@@ -250,7 +250,7 @@ public static class FolderMail
 		await notifyService.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail folders"),
 			folders,
 			new Rule(),
-			new TextBlock(MarkupText.Plain($"Current folder: {current} ({currentFolder.DisplayName})"))), 78), executor);
+			new TextBlock(MarkupText.Plain($"Current folder: {current} ({currentFolder.DisplayName})"))), 78, look), executor);
 		return MarkupText.Plain(current.ToString());
 	}
 }

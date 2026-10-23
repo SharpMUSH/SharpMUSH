@@ -215,7 +215,7 @@ public partial class Commands
 			await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Sitelock rules ({sitelockRules.Rules.Count})"),
 				rules,
 				new Rule(MarkupText.Plain($"Banned player names ({bannedNames.BannedNames.Length})")) { TitleAlignment = Alignment.Left },
-				names), 78), executor);
+				names), 78, parser.HouseLook()), executor);
 			return CallState.Empty;
 		}
 

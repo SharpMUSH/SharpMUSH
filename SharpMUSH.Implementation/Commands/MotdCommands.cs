@@ -275,7 +275,7 @@ public partial class Commands
 		}
 
 		var footer = $"{playerList.Count} players logged in.";
-		var listing = ServerLayout.Build(new Table(DoingColumns, [.. playerList]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		var listing = ServerLayout.Build(new Table(DoingColumns, [.. playerList]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
 
 		await NotifyService.Notify(executor, message, executor);

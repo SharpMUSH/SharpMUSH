@@ -222,7 +222,7 @@ public partial class Commands
 	/// new-user message head theirs: <paramref name="lead"/>, the account's characters as a list (each a link that
 	/// plays it), then the commands that come next with what each does, the descriptions lined up.
 	/// </summary>
-	private static MarkupText AccountMenu(string title, string lead, ImmutableArray<MarkupText> characters,
+	private MarkupText AccountMenu(string title, string lead, ImmutableArray<MarkupText> characters,
 		params ReadOnlySpan<(string Command, string Does)> commands)
 	{
 		var list = new Fields([.. commands.ToArray().Select(command =>
@@ -234,7 +234,7 @@ public partial class Commands
 		Block[] parts = characters.IsEmpty
 			? [rule, new TextBlock(MarkupText.Plain(lead)), list]
 			: [rule, new TextBlock(MarkupText.Plain(lead)), new Bullets([.. characters.Select(name => (Block)new TextBlock(name))]), list];
-		return ServerLayout.Build(new Stack([.. parts]), 78);
+		return ServerLayout.Build(new Stack([.. parts]), 78, HouseLook.Look);
 	}
 
 	/// <summary>

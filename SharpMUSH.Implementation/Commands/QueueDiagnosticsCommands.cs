@@ -69,7 +69,7 @@ public partial class Commands
 				row.Count.ToString(CultureInfo.InvariantCulture), row.Failures.ToString(CultureInfo.InvariantCulture),
 				Milliseconds(row.InclusiveMilliseconds), Milliseconds(row.MaximumMilliseconds)
 			]));
-		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue profile"), table), 78), executor);
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue profile"), table), 78, parser.HouseLook()), executor);
 		await NotifyService.NotifyLocalized(executor, "QueueProfileReport", profile.ExpiresAt.ToString("u"));
 		return CallState.Empty;
 	}
@@ -119,7 +119,7 @@ public partial class Commands
 				row.ExecutionDuration is { } run ? Milliseconds(run.TotalMilliseconds) : "-",
 				row.InvocationCount?.ToString(CultureInfo.InvariantCulture) ?? "-"
 			]));
-		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue history"), table), 78), executor);
+		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Queue history"), table), 78, HouseLook.Look), executor);
 		await NotifyService.NotifyLocalized(executor, "QueueHistoryReport");
 		return CallState.Empty;
 	}

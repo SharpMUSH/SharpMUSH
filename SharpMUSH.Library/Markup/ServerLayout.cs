@@ -17,18 +17,12 @@ public static class ServerLayout
 	/// </summary>
 	public static BorderStyle Dashes { get; } = BorderStyle.Ascii with { TitleOpen = MarkupText.Empty, TitleClose = MarkupText.Empty };
 
-	/// <summary>
-	/// The frame round a server listing: rounded lines to a client that reads UTF-8, <c>+-+</c> to one that
-	/// does not, and a titled panel in the portal.
-	/// </summary>
-	public static BorderStyle PanelBorder => BorderStyle.Rounded;
-
 	/// <summary>The line under a listing's headings; an ASCII-only client gets <c>-</c>.</summary>
 	public static MarkupText HeadingRule { get; } = MarkupText.Plain("─");
 
 	/// <summary>
-	/// <paramref name="parts"/> in a frame titled <paramref name="title"/>, drawn in the reader's border or
-	/// <see cref="PanelBorder"/> (<see cref="House"/>). A <see cref="Rule"/> among the parts is drawn as a
+	/// <paramref name="parts"/> in a frame titled <paramref name="title"/>, drawn in the reader's border or the
+	/// game's (<c>layout_border</c>, <see cref="Build"/>). A <see cref="Rule"/> among the parts is drawn as a
 	/// divider meeting the frame's sides.
 	/// </summary>
 	public static Block Panel(MarkupText title, params ReadOnlySpan<Block> parts) =>
@@ -52,11 +46,10 @@ public static class ServerLayout
 			new Rule { Border = SectionBorder }]);
 
 	/// <summary>
-	/// The look <see cref="Build"/> lays server output out under: <see cref="PanelBorder"/> frames and the
-	/// <see cref="HeadingRule"/>. It is a fallback, so a player's <c>@theme</c> with a look of its own
-	/// (a genre's border and heading rule) draws server listings in that look instead.
+	/// The game's look when no <see cref="Services.Interfaces.IHouseLookService"/> is at hand: <c>layout_border</c>'s
+	/// default, double lines.
 	/// </summary>
-	public static LayoutTheme House { get; } = new() { Border = PanelBorder, HeaderRule = HeadingRule };
+	public static LayoutTheme DefaultLook { get; } = new() { Border = BorderStyle.Double };
 
 	/// <summary>A table with the house heading rule and two cells between columns.</summary>
 	public static Table Listing(ImmutableArray<TableColumn> columns, IEnumerable<ImmutableArray<Block>> rows) =>
@@ -95,13 +88,19 @@ public static class ServerLayout
 
 	/// <summary>A <see cref="Dashes"/> rule across <paramref name="width"/>, with <paramref name="title"/> centred in it.</summary>
 	public static MarkupText DashedRule(int width, MarkupText? title = null) =>
-		Build(new Rule(title) { Border = Dashes }, width);
+		Build(new Rule(title) { Border = Dashes }, width, DefaultLook);
 
 	/// <summary>
 	/// <paramref name="block"/> laid out at <paramref name="width"/> under a <see cref="LayoutMarkup"/>, so the
 	/// rendering worker lays it out again for each client (its width when <paramref name="fluid"/>, ASCII
 	/// borders without UTF-8, reading order for a screen reader) and the portal draws it as page structure.
 	/// </summary>
+	/// <param name="look">
+	/// The game's look (<see cref="Services.Interfaces.IHouseLookService.Look"/>), with <see cref="HeadingRule"/>
+	/// under headings when it names no rule of its own. It is a fallback, so a player's <c>@theme</c> with a look
+	/// of its own (a genre's border and heading rule) draws server listings in that look instead, as it does
+	/// softcode layouts.
+	/// </param>
 	/// <remarks>
 	/// <para>
 	/// The engine fills every line to the full width. A listing has no right edge to reach, so each line
@@ -114,10 +113,10 @@ public static class ServerLayout
 	/// takes the whole region and never sees that layer.
 	/// </para>
 	/// </remarks>
-	public static MarkupText Build(Block block, int width, bool fluid = true)
+	public static MarkupText Build(Block block, int width, LayoutTheme look, bool fluid = true)
 	{
 		ArgumentNullException.ThrowIfNull(block);
-		block = block.ThemedUnder(House);
+		block = block.ThemedUnder(look with { HeaderRule = look.HeaderRule ?? HeadingRule });
 		var lines = BlockLayout.Lines(block, width).Select(line => line.Trim(TrimType.TrimEnd, " ")).ToList();
 		var text = MarkupText.Join(MarkupText.NewLine, lines);
 		if (text.Length == 0) return text;

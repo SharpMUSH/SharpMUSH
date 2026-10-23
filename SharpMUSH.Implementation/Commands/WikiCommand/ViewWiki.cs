@@ -117,7 +117,7 @@ public static class ViewWiki
 		// English is how a translation gap goes unnoticed in game exactly as it does on the web.
 		var localeMarker = localized is { IsFallback: true } ? $" [{localized.Locale}]" : string.Empty;
 
-		var line = ServerLayout.Build(new Rule(), RenderWidth);
+		var line = ServerLayout.Build(new Rule(), RenderWidth, parser.HouseLook());
 		var restricted = (await access.RequirementsAsync()).HasPageRules(page.Id);
 		var markers = $"{(published ? "" : " (draft)")}{(restricted ? " (restricted)" : "")}";
 		// A category's name is its category page's title, in the reader's language where it is translated.
@@ -154,13 +154,13 @@ public static class ViewWiki
 			rendered = new WikiCommandRenderer(RenderWidth, parser)
 			{
 				ImageAllowed = source => ImageHostPolicy.Allows(source, cosmetic.ImageHosts, cosmetic.ImageHostList),
-				FactBlocks = await FactBlocksWiki.AnswerAsync(wikiService, localization, document,
+				FactBlocks = await FactBlocksWiki.AnswerAsync(parser.HouseLook(), wikiService, localization, document,
 					await WikiCommandHelper.VisibilityAsync(parser, executor), RenderWidth, locale, forceSource),
 			}.Render(document);
 		}
 
 		// A draft's facts are withheld with its body; the pages naming it are other pages, shown either way.
-		var facts = await FactsAsync(wikiService, await WikiCommandHelper.VisibilityAsync(parser, executor), page, bodyShown);
+		var facts = await FactsAsync(parser.HouseLook(), wikiService, await WikiCommandHelper.VisibilityAsync(parser, executor), page, bodyShown);
 		var output = MarkupText.Join(MarkupText.NewLine, [
 			line,
 			MarkupText.Plain($"Wiki: {title} [{page.Namespace}]{markers}"),
@@ -183,7 +183,7 @@ public static class ViewWiki
 	/// value to <c>@wiki/query</c> for the pages sharing it; then, by property, the pages whose facts name this one.
 	/// Null when there is neither.
 	/// </summary>
-	private static async Task<MString?> FactsAsync(IWikiService wikiService, WikiVisibility visibility, WikiPage page, bool stated)
+	private static async Task<MString?> FactsAsync(LayoutTheme look, IWikiService wikiService, WikiVisibility visibility, WikiPage page, bool stated)
 	{
 		var schema = await wikiService.GetFactSchemaAsync();
 		var shown = new List<(string Property, MString Value)>();
@@ -208,7 +208,7 @@ public static class ViewWiki
 					.. n.Pages.Select(PageLink),
 					.. n.More ? [ServerLayout.CommandLink("more", QueryCommand(n.Property, WikiCommandHelper.DisplayReference(page)))] : Array.Empty<MString>(),
 				])))));
-		return ServerLayout.Build(new Stack([.. parts]), RenderWidth);
+		return ServerLayout.Build(new Stack([.. parts]), RenderWidth, look);
 	}
 
 	/// <summary>The command listing the pages that state <paramref name="value"/> for <paramref name="property"/>, unevaluated.</summary>
@@ -287,7 +287,7 @@ public static class ViewWiki
 		}
 
 		var output = ServerLayout.Build(ServerLayout.Panel(
-			MarkupText.Plain($"Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}"), history), 78);
+			MarkupText.Plain($"Revision history for {localized?.Title ?? page.Title} [{page.Namespace}]{streamMarker}"), history), 78, parser.HouseLook());
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}

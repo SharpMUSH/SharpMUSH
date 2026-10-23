@@ -28,7 +28,7 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 public static class MailAliases
 {
 	public sealed record Services(IMediator Mediator, INotifyService Notify, IPermissionService Permissions,
-		IConnectionService Connections);
+		IConnectionService Connections, IHouseLookService House);
 
 	/// <summary>The players a <c>+alias</c> recipient mails, and whether the send must go silent.</summary>
 	public sealed record Recipients(SharpPlayer[] Members, bool Silent);
@@ -270,7 +270,7 @@ public static class MailAliases
 		Block body = rows.Count == 0
 			? new TextBlock(MarkupText.Plain("No mail aliases."))
 			: ServerLayout.Listing(columns, rows);
-		return services.Notify.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail aliases"), body), 78), executor);
+		return services.Notify.Notify(executor, ServerLayout.Build(ServerLayout.Section(MarkupText.Plain("Mail aliases"), body), 78, services.House.Look), executor);
 	}
 
 	/// <summary>do_malias_members.</summary>
