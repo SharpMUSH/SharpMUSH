@@ -2780,7 +2780,7 @@ One possible use: `@adesc me=think %n just looked at you.`
 
 Connects you to a character from the login screen. Quote a name that contains spaces. A character with no password takes no password argument, and `connect guest` takes the next free guest character if the game offers them.
 
-See [cd] and [cd] to connect with your `DARK` flag forced on or off.
+See [cd], [ch] and [cv] to connect dark, hidden or visible.
 
 
 ::: seealso
