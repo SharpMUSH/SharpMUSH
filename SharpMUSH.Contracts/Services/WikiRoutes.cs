@@ -50,4 +50,10 @@ public static class WikiRoutes
 	/// </summary>
 	public static string CategoryPath(string category) =>
 		$"/wiki/category/{Uri.EscapeDataString(WikiHelpers.CategoryKey(category))}";
+
+	/// <summary>
+	/// The pages whose facts meet <paramref name="conditions"/>, written as <c>wikiquery()</c> takes them, comma separated:
+	/// <c>/wiki/query?q=pf2e:tradition%3Darcane</c>.
+	/// </summary>
+	public static string QueryPath(string conditions) => $"/wiki/query?q={Uri.EscapeDataString(conditions)}";
 }

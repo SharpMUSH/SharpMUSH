@@ -63,6 +63,10 @@ WIKI: pf2e:level is a whole number, not 'three'.
 A page shows only the facts you can read. A fact that names a page you may
 not read is left out.
 
+`@wiki <page>` shows the page's facts below its text, by label, then the
+pages whose facts name it. Where a client can click, a value runs
+`@wiki/query` for the other pages that state it.
+
 ## Properties
 
 - `@wiki/property`

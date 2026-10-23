@@ -5810,6 +5810,21 @@
   <data name="WkFactSearchBuilding" xml:space="preserve">
     <value>The fact index is still being built. Try again in a moment.</value>
   </data>
+  <data name="WkFactSharing" xml:space="preserve">
+    <value>Pages that also state {0}</value>
+  </data>
+  <data name="WkFactNamedBy" xml:space="preserve">
+    <value>Named by</value>
+  </data>
+  <data name="WkFactNamedByAll" xml:space="preserve">
+    <value>all</value>
+  </data>
+  <data name="WkFactQueryTitle" xml:space="preserve">
+    <value>Pages by fact</value>
+  </data>
+  <data name="WkFactQueryDesc" xml:space="preserve">
+    <value>Every page whose facts meet the conditions.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Add a category</value>
   </data>

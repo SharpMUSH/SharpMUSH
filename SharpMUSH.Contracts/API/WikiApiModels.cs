@@ -65,6 +65,9 @@ public record WikiPageDto(
 
 	/// <summary>The facts the page states that this reader may see, ordered by property and then value.</summary>
 	public IReadOnlyList<WikiFactDto> Facts { get; init; } = [];
+
+	/// <summary>For each page property, the pages this reader may see whose facts name this page.</summary>
+	public IReadOnlyList<WikiFactNamedByDto> NamedBy { get; init; } = [];
 }
 
 /// <summary>
@@ -73,10 +76,22 @@ public record WikiPageDto(
 /// </summary>
 public record WikiFactDto(string Property, string Value)
 {
+	/// <summary>What a reader is shown for the property: its label, or the property when it has none. Unread on a write.</summary>
+	public string? Label { get; init; }
+
 	public string? PageTitle { get; init; }
 	public string? PageSlug { get; init; }
 	public string? PageNamespace { get; init; }
 }
+
+/// <summary>
+/// The pages whose <paramref name="Property"/> names a page, shown under <paramref name="Label"/>: up to a limit of them,
+/// and whether <paramref name="More"/> do.
+/// </summary>
+public record WikiFactNamedByDto(string Property, string Label, IReadOnlyList<WikiPageLinkDto> Pages, bool More);
+
+/// <summary>A page to show and link: its title, slug and namespace.</summary>
+public record WikiPageLinkDto(string Title, string Slug, string Namespace);
 
 /// <summary>
 /// A property facts may state. <paramref name="Type"/> is <c>number</c>, <c>keyword</c>, <c>boolean</c> or

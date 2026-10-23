@@ -17,8 +17,8 @@
 }
 .wiki-facts-list dt {
     color: var(--text-dim);
-    font-family: var(--font-mono);
 }
+.wiki-facts-list + .wiki-facts-label { margin-top: 6px; }
 .wiki-facts-list dd {
     margin: 0;
     color: var(--text);

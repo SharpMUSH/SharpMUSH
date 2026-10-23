@@ -16,6 +16,7 @@ non-API routes (standard WASM hosting pattern).
 /wiki/Page_Name             Wiki page (underscores, case-insensitive lookup)
 /wiki/Page_Name/edit        Wiki page editor
 /wiki/Page_Name/history     Page revision history
+/wiki/query?q=prop%3Dvalue  Pages whose facts meet the conditions
 /character/CharacterName    Character profile (cleaner than /wiki/Character:X)
 /character/CharacterName/scenes  Every scene the character was in (paged, by state and search)
 /character/CharacterName/gallery  Every image in the character's gallery, filtered by tag
@@ -109,6 +110,8 @@ Server
   lists the category's subcategories and members under whatever text it has.
 - Facts are held by the page beside its categories (set in the editor, by `PUT
   api/wiki/{slug}/facts`, or by `@wiki/fact page/property=values`), never part of a URL.
+  `/wiki/query?q=<conditions>` lists the pages whose facts meet the conditions, written
+  as `wikiquery()` takes them; a fact's value links there.
 - The old three-segment route `/wiki/{namespace}/{category}/{slug}` (and its
   `/edit`, `/history`, `/diff`) 301s to `/wiki/{namespace}/{slug}`.
 - Underscores replace spaces in the slug; lookup is case-insensitive

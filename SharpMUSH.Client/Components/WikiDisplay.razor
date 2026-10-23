@@ -120,7 +120,7 @@ else
                         </div>
                     </KitCard>
                 }
-                <WikiFactBox Facts="@Article.Facts" HoldLinks="@AwaitingReturnContext" />
+                <WikiFactBox Facts="@Article.Facts" NamedBy="@Article.NamedBy" Page="@($"{Namespace ?? "main"}:{Slug}")" HoldLinks="@AwaitingReturnContext" />
                 @CategoryBar
                 @if (IsCategoryPage)
                 {

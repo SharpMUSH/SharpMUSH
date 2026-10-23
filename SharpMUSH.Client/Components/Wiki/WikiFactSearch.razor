@@ -6,8 +6,9 @@
 @inject WikiService Wiki
 @inject IStringLocalizer<SharedResource> Loc
 
-@* The pages of a category whose facts meet conditions typed as wikiquery() takes them. Absent when no property is defined. *@
-@if (_properties is { Count: > 0 } properties)
+@* The pages, of a category or of the whole wiki, whose facts meet conditions typed as wikiquery() takes them. On a
+   category page it is absent when no property is defined. *@
+@if (_properties is { } properties && (properties.Count > 0 || Category is null))
 {
     <section class="wiki-fact-search" aria-label="@Loc["WkFactSearch"]">
         <form class="wiki-fact-search-form" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
@@ -44,8 +45,11 @@
 }
 
 @code {
-    /// <summary>The category whose pages are searched, as the page's slug names it.</summary>
-    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+    /// <summary>The category whose pages are searched, as the page's slug names it; null for every page.</summary>
+    [Parameter] public string? Category { get; set; }
+
+    /// <summary>Conditions to search for at once, as they would be typed.</summary>
+    [Parameter] public string? Query { get; set; }
     [Parameter] public string? Locale { get; set; }
 
     private readonly string _inputId = "wiki-fact-search-" + Guid.NewGuid().ToString("N");
@@ -58,11 +62,17 @@
     private bool _busy;
 
     protected override async Task OnInitializedAsync()
-        => _properties = await Wiki.GetFactPropertiesAsync() is List<WikiFactPropertyDto> properties ? properties : null;
+    {
+        _properties = await Wiki.GetFactPropertiesAsync() is List<WikiFactPropertyDto> properties ? properties : null;
+        if (string.IsNullOrWhiteSpace(Query)) return;
+        _typed = Query;
+        await SearchAsync();
+    }
 
     private async Task SearchAsync()
     {
-        _conditions = [$"category={Category}", .. WikiFactConditions.Split(_typed).Select(c => c.Trim()).Where(c => c.Length > 0)];
+        _conditions = [.. Category is null ? [] : new[] { $"category={Category}" },
+            .. WikiFactConditions.Split(_typed).Select(c => c.Trim()).Where(c => c.Length > 0)];
         _pages = [];
         _next = null;
         await ReadAsync(after: null);

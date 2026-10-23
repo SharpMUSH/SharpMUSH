@@ -172,6 +172,7 @@ public abstract class WikiControllerBase(
 		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 		Access = await AccessDtoAsync(p),
 		Facts = await FactDtosAsync(p),
+		NamedBy = await NamedByDtosAsync(p),
 	};
 
 	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales)
@@ -181,6 +182,7 @@ public abstract class WikiControllerBase(
 			Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 			Access = await AccessDtoAsync(p.Page),
 			Facts = await FactDtosAsync(p.Page),
+			NamedBy = await NamedByDtosAsync(p.Page),
 		};
 
 	/// <summary>The page's facts this reader may see; a value naming a page carries the page, to show and link.</summary>
@@ -192,12 +194,28 @@ public abstract class WikiControllerBase(
 		var facts = new List<WikiFactDto>(page.Facts.Count);
 		foreach (var fact in page.Facts)
 		{
+			var label = WikiFactEntry.Label(schema, fact.Property);
 			if (!WikiFactEntry.NamesPage(schema, fact))
-				facts.Add(new(fact.Property, fact.Value));
+				facts.Add(new(fact.Property, fact.Value) { Label = label });
 			else if (await Wiki.GetByIdAsync(fact.Value) is WikiPage target && visibility.Admits(target))
-				facts.Add(new(fact.Property, fact.Value) { PageTitle = target.Title, PageSlug = target.Slug, PageNamespace = target.Namespace });
+				facts.Add(new(fact.Property, fact.Value)
+				{
+					Label = label, PageTitle = target.Title, PageSlug = target.Slug, PageNamespace = target.Namespace
+				});
 		}
 		return facts;
+	}
+
+	/// <summary>The most pages listed for each property naming a page; past it, the client links the query listing all.</summary>
+	private const int MaxNamers = 20;
+
+	/// <summary>For each page property, the pages this reader may see whose facts name <paramref name="page"/>.</summary>
+	private async Task<IReadOnlyList<WikiFactNamedByDto>> NamedByDtosAsync(WikiPage page)
+	{
+		var schema = await Wiki.GetFactSchemaAsync();
+		var named = await WikiFactEntry.NamedByAsync(Wiki, schema, page, await VisibilityAsync(), MaxNamers);
+		return [.. named.Select(n => new WikiFactNamedByDto(n.Property, WikiFactEntry.Label(schema, n.Property),
+			[.. n.Pages.Select(p => new WikiPageLinkDto(p.Title, p.Slug, p.Namespace))], n.More))];
 	}
 
 	/// <summary>

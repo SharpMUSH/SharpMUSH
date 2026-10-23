@@ -545,6 +545,7 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 			Slug = dto.Slug,
 			Categories = dto.Categories.ToList(),
 			Facts = dto.Facts.ToList(),
+			NamedBy = dto.NamedBy.ToList(),
 			Published = dto.Published,
 			IsRestricted = dto.IsRestricted,
 			Access = dto.Access,
