@@ -9,6 +9,7 @@
 .admin-check-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
 .admin-check-actions button { padding: .7rem; color: var(--text); background: var(--surface); border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
 .admin-check-state { font-weight: 650; }
+.admin-check-warning { padding: .6rem .8rem; border-left: 3px solid var(--warn); background: var(--warn-tint); border-radius: 4px; }
 .admin-onboarding :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
 @container page (max-width: 48rem) {
