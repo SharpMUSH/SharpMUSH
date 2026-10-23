@@ -167,7 +167,7 @@ public partial class WikiCategoryMigrationTests
 				await db.Store.WriteAsync(tx =>
 				{
 					candidate = db.ApplyWikiCategoryMigrationBatch(tx, options, presentOverride ?? _hasExpected,
-						expectedOverride ?? _expected?.Value ?? [], epoch ?? _epoch, null, budget);
+						expectedOverride ?? _expected?.Value ?? [], epoch ?? _epoch, budget);
 					Check(tx.TryGet(Tables.Meta, StateKey, out var stored) && stored.SequenceEqual(candidate.Value),
 						"Returned state differs from actual transaction state.");
 					Check(budget.WorkingBytes == 128 + 32 + ((candidate.Value.Length + 7L) / 8 * 8),

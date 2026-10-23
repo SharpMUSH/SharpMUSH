@@ -26,10 +26,11 @@ public class WikiApiContractTests
 		RequestedLocale = "fr-CA",
 		IsFallback = true,
 		AvailableLocales = ["en", "fr"],
+		Facts = [new("pf2e:class", "wiki_page/7") { PageTitle = "Wizard", PageSlug = "wizard", PageNamespace = "main" }, new("pf2e:level", "3")],
 	};
 
 	/// <summary>
-	/// Field by field rather than record equality: the two list members compare by reference, so a
+	/// Field by field rather than record equality: the list members compare by reference, so a
 	/// perfectly round-tripped DTO is never <c>Equals</c> to the one it came from.
 	/// </summary>
 	[Test]
@@ -39,10 +40,11 @@ public class WikiApiContractTests
 
 		var round = JsonSerializer.Deserialize<WikiPageDto>(JsonSerializer.Serialize(original, Web), Web)!;
 
-		await Assert.That(round with { Categories = [], AvailableLocales = [] })
-			.IsEqualTo(original with { Categories = [], AvailableLocales = [] });
+		await Assert.That(round with { Categories = [], AvailableLocales = [], Facts = [] })
+			.IsEqualTo(original with { Categories = [], AvailableLocales = [], Facts = [] });
 		await Assert.That(round.Categories).IsEquivalentTo(original.Categories);
 		await Assert.That(round.AvailableLocales).IsEquivalentTo(original.AvailableLocales);
+		await Assert.That(round.Facts).IsEquivalentTo(original.Facts);
 	}
 
 	/// <summary>

@@ -4,6 +4,7 @@
 @using SharpMUSH.Client.Resources
 @using SharpMUSH.Client.Services
 @using SharpMUSH.Library.Services
+@using SharpMUSH.Library.API
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject WikiService Wiki
 @inject NavigationManager Nav
@@ -41,6 +42,7 @@ else
                   SelectedLocale="@_selectedLocale"
                   AvailableLocales="@_availableLocales"
                   CategoryNames="@_categoryNames"
+                  FactProperties="@_factProperties"
                   Namespace="@Namespace"
                   OnLocaleChanged="@HandleLocaleChanged"
                   OnSaved="@HandleSave"
@@ -130,6 +132,18 @@ else
 
     /// <summary>Each category's name in the edited language, for the editor's category chips.</summary>
     private IReadOnlyDictionary<string, string>? _categoryNames;
+
+    /// <summary>The properties a page's facts may state, for the editor; read alongside the category names.</summary>
+    private IReadOnlyList<WikiFactPropertyDto> _factProperties = [];
+
+    /// <summary>The category names in <paramref name="locale"/> and the fact properties, read together.</summary>
+    private async Task<IReadOnlyDictionary<string, string>> EditorDataAsync(string? locale)
+    {
+        var properties = Wiki.GetFactPropertiesAsync().AsTask();
+        var names = await Wiki.GetCategoryNamesAsync(locale);
+        _factProperties = await properties is List<WikiFactPropertyDto> found ? found : [];
+        return names;
+    }
     private IReadOnlyList<string> _availableLocales = [];
 
     /// <summary>
@@ -144,7 +158,7 @@ else
     {
         var reader = Volatile.Read(ref _readerVersion);
         if (!IsCurrentReader(reader) || _loading) return;
-        var names = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+        var names = await EditorDataAsync(_selectedLocale);
         if (!IsCurrentReader(reader)) return;
         _categoryNames = names;
         _editDraft = BuildEditDraft();
@@ -166,6 +180,7 @@ else
                 Id = _article.Id,
                 Slug = _article.Slug,
                 Categories = [.. _article.Categories],
+                Facts = [.. _article.Facts],
                 Published = _article.Published,
             }
             : new WikiArticle(string.IsNullOrWhiteSpace(NewTitle) ? Slug : NewTitle.Trim(), string.Empty, null)
@@ -252,6 +267,14 @@ else
         {
             // Content save succeeded; categories and the published switch are page metadata, their own call.
             result = await Wiki.SetMetadataAsync(saved.Slug, draft.Categories, draft.Published, Namespace);
+            if (!IsCurrentReader(reader)) return;
+        }
+
+        // Facts are page metadata too. A row left blank states nothing.
+        var facts = draft.Facts.Where(f => f.Value.Length > 0).Select(f => (f.Property, f.Value)).ToList();
+        if (result is WikiArticle withMetadata && !withMetadata.Facts.Select(f => (f.Property, f.Value)).Order().SequenceEqual(facts.Order()))
+        {
+            result = await Wiki.SetFactsAsync(withMetadata.Slug, [.. facts.Select(f => new WikiFactDto(f.Property, f.Value))], Namespace);
             if (!IsCurrentReader(reader)) return;
         }
 
@@ -447,7 +470,7 @@ else
         {
             // A cold load into Edit mode never calls ActivateEditMode, so it must build the draft
             // itself or WikiEdit's `Article is not null` guard renders nothing.
-            var names = await Wiki.GetCategoryNamesAsync(_selectedLocale);
+            var names = await EditorDataAsync(_selectedLocale);
             if (!IsCurrentLoad(reader, load)) return;
             _categoryNames = names;
             _editDraft = BuildEditDraft();

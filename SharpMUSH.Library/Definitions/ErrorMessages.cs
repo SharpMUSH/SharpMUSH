@@ -240,6 +240,12 @@ public static partial class ErrorMessages
 		public const string InvalidMessageOrPlayer = "#-1 INVALID MESSAGE OR PLAYER";
 		public const string NoSuchOption = "#-1 NO SUCH OPTION";
 		public const string NoSuchWikiPage = "#-1 NO SUCH WIKI PAGE";
+		/// <summary>A fact the wiki's schema refuses: an unknown property, a value of the wrong type, or a page that is not there.</summary>
+		public const string InvalidWikiFact = "#-1 INVALID WIKI FACT";
+		/// <summary>A fact query the wiki cannot answer: a condition it cannot read, or a property, value or page that is not there.</summary>
+		public const string InvalidWikiQuery = "#-1 INVALID WIKI QUERY";
+		/// <summary>The fact index is still building, so no fact query can be answered yet.</summary>
+		public const string WikiIndexBuilding = "#-1 WIKI INDEX BUILDING";
 		public const string NoSuchPid = "#-1 NO SUCH PID";
 		public const string NoSuchPlayer = "#-1 NO SUCH PLAYER";
 		/// <summary><c>pagerecall()</c> and <c>pageconversations()</c> while <c>page_log</c> is off.</summary>

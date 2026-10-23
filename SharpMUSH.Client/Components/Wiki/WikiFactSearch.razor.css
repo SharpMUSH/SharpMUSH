@@ -1,0 +1,60 @@
+.wiki-fact-search {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 12px 0;
+}
+.wiki-fact-search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.wiki-fact-search-form label {
+    color: var(--text-dim);
+    font-size: 13px;
+}
+.wiki-fact-search-row {
+    display: flex;
+    gap: 8px;
+}
+.wiki-fact-search-row input {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: .5rem .7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    font-family: var(--font-mono);
+}
+.wiki-fact-search button {
+    min-height: 44px;
+    padding: .55rem .8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-row);
+    background: var(--surface);
+    color: var(--text);
+    font: inherit;
+    cursor: pointer;
+}
+.wiki-fact-search button:disabled { opacity: .5; cursor: default; }
+.wiki-fact-search input:focus-visible,
+.wiki-fact-search button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.wiki-fact-search-hint {
+    color: var(--text-faint);
+    font-size: 12px;
+    overflow-wrap: anywhere;
+}
+.wiki-fact-search-results {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+.wiki-fact-search-results a {
+    color: var(--accent);
+    text-decoration: none;
+}
+.wiki-fact-search-results a:hover,
+.wiki-fact-search-results a:focus-visible { text-decoration: underline; }
+.wiki-fact-search-message { color: var(--danger); }

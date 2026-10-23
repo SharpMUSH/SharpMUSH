@@ -2,7 +2,6 @@ using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Models.Wiki.Semantics;
 
-public readonly record struct PortableKey(string Package, string Namespace, string SourceKey);
 /// <summary>Opaque incarnation ID. A recreated page receives a new ID even if its title or source key matches.</summary>
 public readonly record struct PageRef(string Id);
 public readonly record struct Keyword(string Value);
@@ -22,30 +21,14 @@ public sealed record FactProvenance(string Package, string SourceCommit, string 
 public sealed record SemanticFact(PageRef Subject, string Property, SemanticValue Value, FactProvenance Provenance);
 public sealed record SemanticSchema(long Version, ImmutableArray<PropertyDefinition> Properties);
 public sealed record CanonicalFactSet(long SchemaVersion, ImmutableArray<SemanticFact> Facts);
-public enum ValidationCode { InvalidSchema, InvalidKeyword, UnknownProperty, WrongType, InvalidEnum, Cardinality, Quota, AmbiguousAlias, MissingTarget }
+public enum ValidationCode { InvalidSchema, InvalidKeyword, UnknownProperty, WrongType, InvalidEnum, Cardinality, Quota, MissingTarget }
 public sealed record ValidationFailure(ValidationCode Code, string Detail);
 public union ValidationResult(CanonicalFactSet, ValidationFailure);
-public union IdentityResult(PageRef, ValidationFailure);
-public sealed record PortableAlias(PortableKey Key, PageRef Target);
-/// <summary>Snapshot descriptors contain no scope grants. Resolve WikiVisibility externally.</summary>
-public sealed record VisibilityDescriptor(string Namespace, ImmutableArray<string> Categories,
-	ImmutableArray<string> RuleIds, bool Published, string? DraftAuthor);
-
-/// <summary>Local identity is the world-scoped immutable PageRef, with no portable fields.</summary>
-public readonly record struct LocalWikiSource;
-public readonly record struct PortableWikiSource(PortableKey Key);
-public union WikiSemanticSource(LocalWikiSource, PortableWikiSource);
-/// <summary>Projection metadata only. Live content and revision bodies remain owned by the wiki.</summary>
-public sealed record WikiPageProjection(PageRef Reference, WikiSemanticSource Source, string Title,
-	string Collection, VisibilityDescriptor Visibility);
-
-/// <summary>Shared admission policy used by both the validator and native preparation.</summary>
+/// <summary>How many facts a page may state, and how large they may be.</summary>
 public static class WikiSemanticPolicy
 {
 	public const int MaxFacts = 128;
 	public const int MaxValuesPerProperty = 32;
 	public const int MaxFactBytes = 64 * 1024;
 	public const int MaxKeywordBytes = 256;
-	public const int MaxSummaryBytes = 16 * 1024;
-	public const int MaxDescriptorBytes = 8 * 1024;
 }

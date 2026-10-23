@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using Mediator;
 using SharpMUSH.Library.Commands.Database.Wiki;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -61,6 +62,24 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 
 	public Task<Found<WikiPage>> SetPageMetadataAsync(string id, IReadOnlyList<string> categories, bool published)
 		=> mediator.Send(new SetWikiPageMetadataCommand(id, categories, published)).AsTask();
+
+	public Task<FoundResult<WikiPage>> SetPageFactsAsync(string id, IReadOnlyList<WikiPageFact> facts)
+		=> mediator.Send(new SetWikiPageFactsCommand(id, facts)).AsTask();
+
+	public Task<SemanticSchema> GetFactSchemaAsync()
+		=> mediator.Send(new GetWikiFactSchemaQuery()).AsTask();
+
+	public Task<WikiFactIndexStatus> GetFactIndexStatusAsync()
+		=> mediator.Send(new GetWikiFactIndexStatusQuery()).AsTask();
+
+	public Task<WikiFactIndexStatus> BuildFactIndexBatchAsync(int batchSize)
+		=> mediator.Send(new BuildWikiFactIndexBatchCommand(batchSize)).AsTask();
+
+	public Task<WikiFactIndexStatus> RebuildFactIndexAsync()
+		=> mediator.Send(new RebuildWikiFactIndexCommand()).AsTask();
+
+	public Task<WikiFactQueryResult> QueryFactsAsync(WikiFactQuery query, WikiVisibility visibility)
+		=> mediator.Send(new QueryWikiFactsQuery(query, visibility)).AsTask();
 
 	public Task<IReadOnlyList<string>> GetPinnedCategoriesAsync()
 		=> mediator.Send(new GetPinnedWikiCategoriesQuery()).AsTask();

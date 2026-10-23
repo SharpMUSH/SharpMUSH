@@ -5765,6 +5765,36 @@
   <data name="WikiCategoryDescribe" xml:space="preserve">
     <value>Describe this category</value>
   </data>
+  <data name="WkFacts" xml:space="preserve">
+    <value>Facts</value>
+  </data>
+  <data name="WkFactValue" xml:space="preserve">
+    <value>Value</value>
+  </data>
+  <data name="WkRemoveFact" xml:space="preserve">
+    <value>Remove fact</value>
+  </data>
+  <data name="WkAddFact" xml:space="preserve">
+    <value>Add a fact</value>
+  </data>
+  <data name="WkFactSearch" xml:space="preserve">
+    <value>Find pages by fact</value>
+  </data>
+  <data name="WkFactSearchHint" xml:space="preserve">
+    <value>Conditions, separated by commas</value>
+  </data>
+  <data name="WkFactSearchRun" xml:space="preserve">
+    <value>Find</value>
+  </data>
+  <data name="WkFactSearchMore" xml:space="preserve">
+    <value>More</value>
+  </data>
+  <data name="WkFactSearchNone" xml:space="preserve">
+    <value>No pages match.</value>
+  </data>
+  <data name="WkFactSearchBuilding" xml:space="preserve">
+    <value>The fact index is still being built. Try again in a moment.</value>
+  </data>
   <data name="WkAddCategory" xml:space="preserve">
     <value>Add a category</value>
   </data>

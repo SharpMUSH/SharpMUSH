@@ -1,0 +1,102 @@
+@using System.Net
+@using SharpMUSH.Client.Models.Wiki
+@using SharpMUSH.Client.Resources
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Services
+@inject WikiService Wiki
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The pages of a category whose facts meet conditions typed as wikiquery() takes them. Absent when no property is defined. *@
+@if (_properties is { Count: > 0 } properties)
+{
+    <section class="wiki-fact-search" aria-label="@Loc["WkFactSearch"]">
+        <form class="wiki-fact-search-form" @onsubmit="SearchAsync" @onsubmit:preventDefault="true">
+            <label for="@_inputId">@Loc["WkFactSearch"]</label>
+            <div class="wiki-fact-search-row">
+                <input id="@_inputId" type="text" @bind="_typed" aria-describedby="@(_inputId)-hint"
+                       placeholder="@string.Join(", ", properties.Take(2).Select(p => p.Type == "number" ? $"{p.Id}=1..3" : $"{p.Id}=…"))" />
+                <button type="submit" disabled="@_busy">@Loc["WkFactSearchRun"]</button>
+            </div>
+            <span id="@(_inputId)-hint" class="wiki-fact-search-hint">@Loc["WkFactSearchHint"]: @string.Join(", ", properties.Select(p => p.Id))</span>
+        </form>
+        @if (_message is { } message)
+        {
+            <div class="wiki-fact-search-message" role="alert">@message</div>
+        }
+        else if (_pages is { } pages)
+        {
+            @if (pages.Count == 0 && _next is null)
+            {
+                <EmptyState>@Loc["WkFactSearchNone"]</EmptyState>
+            }
+            <ul class="wiki-fact-search-results" aria-live="polite">
+                @foreach (var row in pages)
+                {
+                    <li><a href="@WikiLocaleLinks.WithLocale(WikiRoutes.WikiPathFor(row.Namespace, row.Slug), Locale)">@row.Title</a></li>
+                }
+            </ul>
+            @if (_next is not null)
+            {
+                <button type="button" class="wiki-fact-search-more" disabled="@_busy" @onclick="MoreAsync">@Loc["WkFactSearchMore"]</button>
+            }
+        }
+    </section>
+}
+
+@code {
+    /// <summary>The category whose pages are searched, as the page's slug names it.</summary>
+    [Parameter, EditorRequired] public string Category { get; set; } = string.Empty;
+    [Parameter] public string? Locale { get; set; }
+
+    private readonly string _inputId = "wiki-fact-search-" + Guid.NewGuid().ToString("N");
+    private List<WikiFactPropertyDto>? _properties;
+    private string _typed = string.Empty;
+    private string[] _conditions = [];
+    private List<WikiPageSummaryDto>? _pages;
+    private string? _next;
+    private string? _message;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+        => _properties = await Wiki.GetFactPropertiesAsync() is List<WikiFactPropertyDto> properties ? properties : null;
+
+    private async Task SearchAsync()
+    {
+        _conditions = [$"category={Category}", .. WikiFactConditions.Split(_typed).Select(c => c.Trim()).Where(c => c.Length > 0)];
+        _pages = [];
+        _next = null;
+        await ReadAsync(after: null);
+    }
+
+    private Task MoreAsync() => ReadAsync(_next);
+
+    /// <summary>
+    /// Reads on from <paramref name="after"/> until a page holds a row or the answer ends: the server returns an empty
+    /// page with a continuation when it read its whole budget without a match.
+    /// </summary>
+    private async Task ReadAsync(string? after)
+    {
+        _busy = true;
+        _message = null;
+        do
+        {
+            switch (await Wiki.QueryFactsAsync(_conditions, after, Locale))
+            {
+                case WikiFactQueryResultDto found:
+                    _pages = [.. _pages ?? [], .. found.Pages];
+                    _next = after = found.Next;
+                    if (found.Pages.Count > 0) after = null;
+                    break;
+                case ApiFailure { Status: HttpStatusCode.ServiceUnavailable }:
+                    _message = Loc["WkFactSearchBuilding"];
+                    after = null;
+                    break;
+                case ApiFailure failure:
+                    _message = failure.Message;
+                    after = null;
+                    break;
+            }
+        } while (after is not null);
+        _busy = false;
+    }
+}

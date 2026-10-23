@@ -87,6 +87,8 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.StartupAttributeBootstrapService>();
 		// Attribute indexes a restart interrupted carry on building where they stopped.
 		services.AddHostedService<Services.AttributeIndexResumeService>();
+		// The wiki's fact index builds, or carries on building, in the background.
+		services.AddHostedService<Services.WikiFactIndexStartupService>();
 		// What the health endpoints and the portal's startup page read; the bridge reports into it.
 		services.AddSingleton<ServerReadiness>();
 		services.AddHostedService<NatsBridgeService>();

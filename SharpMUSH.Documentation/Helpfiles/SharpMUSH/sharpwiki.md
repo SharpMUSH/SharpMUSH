@@ -89,6 +89,66 @@ an error.
 - [WIKILIST()]
 :::
 
+# wikifact()
+
+- `wikifact(<page>)`
+- `wikifact(<page>, <property>[, <delimiter>])`
+
+With only a page, returns the properties the page has facts for. With a
+property, returns that property's values. A value that names a page is
+returned as that page's reference. A fact that names a page you may not
+read is left out. The list is separated by spaces, or by `<delimiter>` if
+you give one.
+
+Set facts with `@wiki/fact <page>/<property>=<value>`.
+
+## Example
+
+```sharp
+> think wikifact(fireball)
+pf2e:level pf2e:tradition
+> think wikifact(fireball, pf2e:tradition, |)
+arcane|primal
+```
+
+::: seealso
+- [WIKI()]
+- [wiki facts]
+:::
+
+# wikiquery()
+
+- `wikiquery(<condition>[, <condition>...])`
+
+Returns a space-separated list of the references of the published pages
+whose facts meet every condition. You can give up to four fact conditions,
+plus a category and a namespace:
+
+- `<property>=<value>`: the page states that value. A page is named by its
+  title.
+- `<property>=<low>..<high>`: a whole number from *<low>* to *<high>*. Leave
+  one end off for no limit, as in `pf2e:level=..2`.
+- `category=<name>`: the page is in that category.
+- `namespace=<name>`: the page is in that namespace.
+
+A page you may not read is left out, and at most 1000 pages are returned. A
+condition the wiki cannot answer returns `#-1 INVALID WIKI QUERY`. Until the fact index is built, the result
+is `#-1 WIKI INDEX BUILDING`.
+
+## Example
+
+```sharp
+> think wikiquery(pf2e:tradition=arcane, pf2e:level=1..3)
+main:shield main:fireball
+> think wikiquery(category=Spells, pf2e:class=Wizard)
+main:shield
+```
+
+::: seealso
+- [WIKIFACT()]
+- [wiki fact queries]
+:::
+
 # wikiaccess()
 
 - `wikiaccess(<page>, <action>)`

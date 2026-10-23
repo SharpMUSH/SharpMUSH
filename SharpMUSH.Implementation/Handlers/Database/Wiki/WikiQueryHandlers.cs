@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using Mediator;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
@@ -76,6 +77,24 @@ public sealed class GetPinnedWikiCategoriesQueryHandler(IWikiStore store) : IQue
 {
 	public ValueTask<IReadOnlyList<string>> Handle(GetPinnedWikiCategoriesQuery query, CancellationToken cancellationToken)
 		=> new(store.GetPinnedCategoriesAsync());
+}
+
+public sealed class GetWikiFactSchemaQueryHandler(IWikiStore store) : IQueryHandler<GetWikiFactSchemaQuery, SemanticSchema>
+{
+	public ValueTask<SemanticSchema> Handle(GetWikiFactSchemaQuery query, CancellationToken cancellationToken)
+		=> new(store.GetFactSchemaAsync());
+}
+
+public sealed class GetWikiFactIndexStatusQueryHandler(IWikiStore store) : IQueryHandler<GetWikiFactIndexStatusQuery, WikiFactIndexStatus>
+{
+	public ValueTask<WikiFactIndexStatus> Handle(GetWikiFactIndexStatusQuery query, CancellationToken cancellationToken)
+		=> new(store.GetFactIndexStatusAsync());
+}
+
+public sealed class QueryWikiFactsQueryHandler(IWikiStore store) : IQueryHandler<QueryWikiFactsQuery, WikiFactQueryResult>
+{
+	public ValueTask<WikiFactQueryResult> Handle(QueryWikiFactsQuery query, CancellationToken cancellationToken)
+		=> new(store.QueryFactsAsync(query.Query, query.Visibility));
 }
 
 public sealed class GetWikiRevisionsQueryHandler(IWikiStore store) : IQueryHandler<GetWikiRevisionsQuery, IReadOnlyList<WikiRevision>>

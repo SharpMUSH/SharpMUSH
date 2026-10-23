@@ -5,8 +5,10 @@ using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Models.Wiki.Semantics;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Middleware;
@@ -169,6 +171,7 @@ public abstract class WikiControllerBase(
 		LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
 		Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 		Access = await AccessDtoAsync(p),
+		Facts = await FactDtosAsync(p),
 	};
 
 	protected async Task<WikiPageDto> ToDtoAsync(LocalizedWikiPage p, IReadOnlyList<string> availableLocales)
@@ -177,7 +180,25 @@ public abstract class WikiControllerBase(
 			LastEditedBy = await Names.NameOfAsync(p.LastEditorDbref, HttpContext.RequestAborted),
 			Image = WikiImages.FirstImageUrl(p.RenderedHtml),
 			Access = await AccessDtoAsync(p.Page),
+			Facts = await FactDtosAsync(p.Page),
 		};
+
+	/// <summary>The page's facts this reader may see; a value naming a page carries the page, to show and link.</summary>
+	private async Task<IReadOnlyList<WikiFactDto>> FactDtosAsync(WikiPage page)
+	{
+		if (page.Facts.Count == 0) return [];
+		var schema = await Wiki.GetFactSchemaAsync();
+		var visibility = await VisibilityAsync();
+		var facts = new List<WikiFactDto>(page.Facts.Count);
+		foreach (var fact in page.Facts)
+		{
+			if (WikiFactEntry.Definition(schema, fact.Property) is not { Type: SemanticType.PageRef })
+				facts.Add(new(fact.Property, fact.Value));
+			else if (await Wiki.GetByIdAsync(fact.Value) is WikiPage target && visibility.Admits(target))
+				facts.Add(new(fact.Property, fact.Value) { PageTitle = target.Title, PageSlug = target.Slug, PageNamespace = target.Namespace });
+		}
+		return facts;
+	}
 
 	/// <summary>
 	/// True when any requirement applies to the page, its own or one it inherits, so the page never claims
