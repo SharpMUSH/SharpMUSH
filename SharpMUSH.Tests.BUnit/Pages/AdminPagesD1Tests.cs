@@ -18,6 +18,7 @@ using SharpMUSH.Client.Pages.Admin.Roles;
 using SharpMUSH.Client.Pages.Admin.Snapshots;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Onboarding;
 using SharpMUSH.Tests.BUnit.Components;
 using SharpMUSH.Tests.BUnit.Resources;
 
@@ -76,6 +77,10 @@ public class AdminPagesD1Tests : TrackingBunitContext
 			.AddSingleton<RestrictionsService>()
 			.AddSingleton<AdminConfigService>()
 			.AddSingleton<SetupWizardService>()
+			.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true,
+				onboarding: new OnboardingPresentation("game-1", "", "Fantasy", "", "minimalist", "", null, null, null)))
+			.AddSingleton<IAccountAuthState>(sp => sp.GetRequiredService<AccountAuthService>())
+			.AddSingleton<OnboardingService>()
 			.AddSingleton<ILayoutService, LayoutService>()
 			.AddSingleton(sp => new AccountAuthService(factory, sp.GetRequiredService<Microsoft.JSInterop.IJSRuntime>(),
 				NullLogger<AccountAuthService>.Instance, []));
@@ -412,6 +417,36 @@ public class AdminPagesD1Tests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.FindAll("a.adm-dash-setup-link[href='/setup']").Count).IsEqualTo(shown ? 1 : 0);
+	}
+
+	/// <summary>
+	/// The first-players checklist leads the overview for a configuration administrator until every step is
+	/// verified or deferred, then shrinks to one line; nobody else sees it.
+	/// </summary>
+	[Test]
+	[Arguments("config.admin", false, true)]
+	[Arguments("config.admin", true, false)]
+	[Arguments("players.view", false, false)]
+	public async Task Dashboard_LeadsWithTheChecklistUntilItIsFinished(string policy, bool finished, bool shown)
+	{
+		Auth.SetPolicies("players.view", policy);
+		if (finished)
+			JSInterop.Setup<string?>("localStorage.getItem", _ => true).SetResult(System.Text.Json.JsonSerializer.Serialize(
+				new OnboardingProgress { CompletedStepIds = ["identity"], SkippedStepIds = GuideStepIds.Administrator.Skip(1).ToArray() }));
+		var cut = RenderPage(typeof(Dashboard));
+
+		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
+		if (shown)
+			cut.WaitForAssertion(() => cut.Find(".adm-dash-checklist"), TimeSpan.FromSeconds(5));
+		// The one-line link also stands while the guide is still loading; the finished case must have loaded it.
+		if (finished)
+		{
+			var guide = Services.GetRequiredService<OnboardingService>();
+			cut.WaitForAssertion(() => { if (!guide.Ready) throw new InvalidOperationException("the guide has not loaded"); }, TimeSpan.FromSeconds(5));
+			await Assert.That(SharpMUSH.Client.Components.Onboarding.ChecklistProgress.Finished(guide.Progress)).IsTrue();
+		}
+		await Assert.That(cut.FindAll(".adm-dash-checklist a.adm-dash-checklist-continue[href='/admin/onboarding']").Count).IsEqualTo(shown ? 1 : 0);
+		await Assert.That(cut.FindAll(".adm-dash-guide a[href='/admin/onboarding']").Count).IsEqualTo(policy == "config.admin" && !shown ? 1 : 0);
 	}
 
 	/// <summary>
