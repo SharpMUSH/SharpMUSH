@@ -438,6 +438,13 @@ public class AdminPagesD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find("a.adm-dash-card"), TimeSpan.FromSeconds(5));
 		if (shown)
 			cut.WaitForAssertion(() => cut.Find(".adm-dash-checklist"), TimeSpan.FromSeconds(5));
+		// The one-line link also stands while the guide is still loading; the finished case must have loaded it.
+		if (finished)
+		{
+			var guide = Services.GetRequiredService<OnboardingService>();
+			cut.WaitForAssertion(() => { if (!guide.Ready) throw new InvalidOperationException("the guide has not loaded"); }, TimeSpan.FromSeconds(5));
+			await Assert.That(SharpMUSH.Client.Components.Onboarding.ChecklistProgress.Finished(guide.Progress)).IsTrue();
+		}
 		await Assert.That(cut.FindAll(".adm-dash-checklist a.adm-dash-checklist-continue[href='/admin/onboarding']").Count).IsEqualTo(shown ? 1 : 0);
 		await Assert.That(cut.FindAll(".adm-dash-guide a[href='/admin/onboarding']").Count).IsEqualTo(policy == "config.admin" && !shown ? 1 : 0);
 	}
