@@ -73,8 +73,17 @@ file sealed class SetupApiHandler(
 	/// <summary>Whether the game already has the starter wiki pages.</summary>
 	public bool StarterWikiApplied { get; set; }
 
+	/// <summary>How many times api/setup/wizard/starter-world was posted.</summary>
+	public int StarterWorldCalls { get; private set; }
+
+	/// <summary>Whether the starter world was already applied.</summary>
+	public bool StarterWorldApplied { get; set; }
+
 	/// <summary>Whether api/setup/wizard/starter-wiki refuses (409), as when some pages could not be written.</summary>
 	public bool StarterWikiFails { get; set; }
+
+	/// <summary>Whether api/setup/wizard/starter-world refuses (409), as when a part could not be made.</summary>
+	public bool StarterWorldFails { get; set; }
 
 	/// <summary>Whether api/setup/wizard/packages refuses (409).</summary>
 	public bool PackagesFail { get; set; }
@@ -128,6 +137,15 @@ file sealed class SetupApiHandler(
 			_installed.Clear();
 			_installed.UnionWith(document.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!));
 			return Json(Wizard(_wizardPending ?? true));
+		}
+
+		if (path == "api/setup/wizard/starter-world" && request.Method == HttpMethod.Post)
+		{
+			StarterWorldCalls++;
+			StarterWorldApplied = true;
+			return StarterWorldFails
+				? new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("The tutorial room could not be dug.") }
+				: Json(Wizard(_wizardPending ?? true));
 		}
 
 		if (path == "api/setup/wizard/starter-wiki" && request.Method == HttpMethod.Post)
@@ -201,6 +219,7 @@ file sealed class SetupApiHandler(
 	{
 		pending,
 		starterWikiApplied = StarterWikiApplied,
+		starterWorldApplied = StarterWorldApplied,
 		handlers = new object[]
 		{
 			Handler("http", _httpHandler, _httpHandler is null ? null : "HTTP Handler", ["http-handler", "profile-handler"]),
@@ -529,6 +548,65 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				throw new InvalidOperationException("finished state not rendered yet");
 		});
 		await Assert.That(handler.StarterWikiCalls).IsEqualTo(0);
+	}
+
+	/// <summary>The starter world is ticked by default and applied with the packages, once.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWorld_IsAppliedOnce()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-starter-world"));
+		await Assert.That(cut.Find("#setup-starter-world").HasAttribute("checked")).IsTrue();
+		await cut.Find("button.setup-save").ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWorldCalls).IsEqualTo(1);
+	}
+
+	/// <summary>When the starter world and the starter pages both fail, the step names both reasons.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWorldAndWikiFailures_AreBothShown()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.StarterWorldFails = true;
+		handler.StarterWikiFails = true;
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("button.setup-save"));
+		await cut.Find("button.setup-save").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".setup-error"));
+		var error = cut.Find(".setup-error").TextContent;
+		await Assert.That(error).Contains("AdmSetupStarterWorldFailed");
+		await Assert.That(error).Contains("AdmSetupStarterWikiFailed");
+	}
+
+	/// <summary>An unticked starter world is not applied.</summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_StarterWorldUnticked_IsNotApplied()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("#setup-starter-world"));
+		await cut.Find("#setup-starter-world").ChangeAsync(false);
+		await cut.Find("button.setup-save").ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		await Assert.That(handler.StarterWorldCalls).IsEqualTo(0);
 	}
 
 	/// <summary>

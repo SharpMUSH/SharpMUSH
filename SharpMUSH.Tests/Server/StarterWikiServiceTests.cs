@@ -1,8 +1,10 @@
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Resources;
 using SharpMUSH.Server.Services;
@@ -33,6 +35,13 @@ public class StarterWikiServiceTests
 			_data[typeof(T).Name] = data;
 			return ValueTask.CompletedTask;
 		}
+	}
+
+	private static IOptionsWrapper<SharpMUSHOptions> Options(string introduction)
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSHOptions.Default() with { Onboarding = new() { Introduction = introduction } });
+		return options;
 	}
 
 	private static WikiPage Page(string title, WikiNamespace ns, string markdown)
@@ -73,7 +82,7 @@ public class StarterWikiServiceTests
 	{
 		var wiki = Wiki(SeededWikiPages.Home);
 		var data = new InMemoryServerData();
-		var service = new StarterWikiService(wiki, data, NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, data, Options(""), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.AppliedAsync()).IsFalse();
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
@@ -97,7 +106,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_PinsEveryStarterCategory()
 	{
 		var wiki = Wiki(SeededWikiPages.Home, ("Places", WikiNamespace.Category));
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 
@@ -116,7 +125,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_LeavesPagesTheGameHas()
 	{
 		var wiki = Wiki(SeededWikiPages.Home, ("Theme", WikiNamespace.Main));
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 		await wiki.DidNotReceive().SetRequirementsAsync(WikiRuleTarget.ForPage("Main:Theme"), Arg.Any<IReadOnlyDictionary<WikiAction, IReadOnlyList<string>>>(), Arg.Any<string>());
@@ -128,7 +137,7 @@ public class StarterWikiServiceTests
 	public async Task Apply_KeepsAnEditedHome()
 	{
 		var wiki = Wiki("Welcome to our game.");
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
 
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 		await wiki.DidNotReceive().UpdateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>());
@@ -139,12 +148,38 @@ public class StarterWikiServiceTests
 	public async Task Apply_Twice_WritesOnce()
 	{
 		var wiki = Wiki(SeededWikiPages.Home);
-		var service = new StarterWikiService(wiki, new InMemoryServerData(), NullLogger<StarterWikiService>.Instance);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(""), NullLogger<StarterWikiService>.Instance);
 
 		await Task.WhenAll(service.ApplyAsync(), service.ApplyAsync());
 		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
 
 		await wiki.Received(StarterWikiPages.All.Count).CreateAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
 			Arg.Any<WikiNamespace>(), Arg.Any<string?>(), Arg.Any<IEnumerable<string>?>());
+	}
+
+	/// <summary>
+	/// The welcome typed in setup opens the starter Home in place of the prompt that asks for one; without one,
+	/// the prompt stays.
+	/// </summary>
+	[Test]
+	[Arguments("Rain-slicked streets and a city of secrets.\nPlay a detective.")]
+	[Arguments("")]
+	public async Task Apply_OpensHomeWithTheSetupIntroduction(string introduction)
+	{
+		var wiki = Wiki(SeededWikiPages.Home);
+		var service = new StarterWikiService(wiki, new InMemoryServerData(), Options(introduction), NullLogger<StarterWikiService>.Instance);
+
+		await Assert.That(await service.ApplyAsync() is Success).IsTrue();
+
+		var written = (string)wiki.ReceivedCalls().Single(call => call.GetMethodInfo().Name == nameof(IWikiService.UpdateAsync)).GetArguments()[1]!;
+		if (introduction.Length == 0)
+		{
+			await Assert.That(written).IsEqualTo(StarterWikiPages.Home);
+			return;
+		}
+		await Assert.That(StarterWikiPages.Home).Contains(StarterWikiPages.HomeIntroductionPrompt);
+		await Assert.That(written).DoesNotContain("One or two sentences a stranger could read");
+		await Assert.That(written).Contains("Rain-slicked streets and a city of secrets.\nPlay a detective.");
+		await Assert.That(written).Contains("[[Getting Started]]");
 	}
 }

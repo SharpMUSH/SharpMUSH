@@ -36,6 +36,7 @@ public class SetupController(
 	GameFeatureService features,
 	HandlerSetupService handlers,
 	StarterWikiService starterWiki,
+	StarterWorldService starterWorld,
 	IConfigOptionWriter config,
 	ILogger<SetupController> logger) : ControllerBase
 {
@@ -131,6 +132,20 @@ public class SetupController(
 			Error<string> error => Conflict(error.Value),
 		};
 
+	/// <summary>
+	/// Makes the starter world: a description for the room new characters arrive in, an exit from it to a tutorial room
+	/// and back, and a Newbie channel. What the game already has is left as it is. 409 naming the parts that could
+	/// not be made; the others still were.
+	/// </summary>
+	[HttpPost("wizard/starter-world")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> ApplyStarterWorld(CancellationToken cancellationToken)
+		=> await starterWorld.ApplyAsync(cancellationToken) switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+
 	/// <summary>Closes the wizard. What it set up stays as it is.</summary>
 	[HttpPost("wizard/finish")]
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
@@ -144,7 +159,7 @@ public class SetupController(
 
 	private async Task<SetupWizardResponse> WizardAsync(CancellationToken cancellationToken)
 		=> new(await features.WizardPendingAsync(), await handlers.HandlersAsync(cancellationToken),
-			await features.PackagesAsync(), await starterWiki.AppliedAsync());
+			await features.PackagesAsync(), await starterWiki.AppliedAsync(), await starterWorld.AppliedAsync());
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

@@ -50,6 +50,7 @@ public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfo
 	/// Writes the starter wiki pages the game does not have yet: Getting Started, Theme, Setting, Policies and the
 	/// categories that file them.
 	/// </summary>
+	public virtual Task<ApiResult<Success>> ApplyStarterWorldAsync() => Http.PostApiAsync("api/setup/wizard/starter-world");
 	public virtual Task<ApiResult<Success>> ApplyStarterWikiAsync() => Http.PostApiAsync("api/setup/wizard/starter-wiki");
 
 	public virtual Task<ApiResult<Success>> FinishAsync() => Http.PostApiAsync("api/setup/wizard/finish");
