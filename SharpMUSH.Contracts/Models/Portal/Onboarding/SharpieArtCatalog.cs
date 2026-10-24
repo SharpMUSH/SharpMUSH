@@ -12,6 +12,17 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-gothic-pixel-administrator-walkthrough", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-administrator-invite", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-administrator-capabilities", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-administrator-rules", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-administrator-joining", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-administrator-identity", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-continue", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-channels", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-speak-act", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-place", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-world", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-player-character", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-player-sign-in", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-shared-welcome", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
