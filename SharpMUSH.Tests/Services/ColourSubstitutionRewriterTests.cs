@@ -127,6 +127,23 @@ public class ColourSubstitutionRewriterTests
 		await Assert.That(result.Text).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// A call that picks a colour is only a colour when its unit holds nothing else. Beside text of its own
+	/// it is text, and stays whole; one with no text after it is dropped and reported.
+	/// </summary>
+	[Test]
+	[Arguments("[list(a,[iter(b,if(1,%c0x00,%c0xEF)%c0X[printf($02s,1)]Z,,)]%cn,,c)]",
+		"[list(a,[iter(b,ansi(if(1,+xterm0,+xterm239),%c0X[printf($02s,1)]Z),,)],,c)]", "computed-colour-code")]
+	[Arguments("x(a,[iter(b,if(1,%cr,%cg)Z)]%cn,c)", "x(a,[iter(b,ansi(if(1,r,g),Z))],c)", "")]
+	[Arguments("x(a,[if(1,%cr,%cg)]%cn,c)", "x(a,,c)", "trailing-codes-dropped")]
+	public async Task KeepsACallThatPicksAColourBesideText(string body, string expected, string flags)
+	{
+		var result = ColourSubstitutionRewriter.Rewrite(body, RhostExpression);
+
+		await Assert.That(result.Text).IsEqualTo(expected);
+		await Assert.That(string.Join(' ', result.Flags.Order(StringComparer.Ordinal))).IsEqualTo(flags);
+	}
+
 	[Test]
 	public async Task LeavesAnUnbalancedBodyAlone()
 	{

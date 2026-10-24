@@ -350,7 +350,25 @@ public static class RhostNameTables
 		{
 			yield return new(number, name);
 		}
+
+		(int, string)[] inline =
+		[
+			(InlineStart, "ConnInfo"), (InlineStart + 1, "ConnRecord"), (InlineStart + 2, "MFail"), (InlineStart + 3, "WireFuncEval"),
+			(InlineStart + 4, "WireQueueMax"), (InlineStart + 5, "AMail"), (InlineStart + 6, "LastWhisper")
+		];
+		foreach (var (number, name) in inline)
+		{
+			yield return new(number, name);
+		}
 	}
+
+	/// <summary>
+	/// <c>A_INLINE_START</c>/<c>A_INLINE_END</c>: RhostMUSH numbers its newer built-in attributes from here, far
+	/// above the user attributes, and writes no <c>+A</c> header for them.
+	/// </summary>
+	public const int InlineStart = 2100000000;
+
+	public const int InlineEnd = 2140000000;
 
 	/// <summary>Attribute numbers with a field of their own in the import, not an attribute.</summary>
 	public const int PasswordAttribute = 5;
@@ -380,6 +398,8 @@ public static class RhostNameTables
 		[238] = ServerState, [239] = ServerState, [241] = ServerState, [242] = ServerState, [243] = ServerState,
 		[244] = "reality levels, which SharpMUSH does not have", [247] = ServerState, [249] = ServerState,
 		[251] = ServerState + " (object tags)",
+		[InlineStart] = ServerState + " (connection counts)", [InlineStart + 1] = ServerState + " (connection record)",
+		[InlineStart + 3] = ServerState, [InlineStart + 4] = ServerState, [InlineStart + 6] = ServerState,
 	}.ToFrozenDictionary();
 
 	/// <summary>User attributes RhostMUSH writes for itself, by name.</summary>

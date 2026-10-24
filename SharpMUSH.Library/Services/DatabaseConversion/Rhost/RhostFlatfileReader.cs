@@ -199,7 +199,7 @@ public static class RhostFlatfileReader
 		var exits = Ref(lines, dbref, "exits");
 		var link = (version & LinkFlag) != 0 ? Ref(lines, dbref, "link") : -1;
 		var next = Ref(lines, dbref, "next");
-		var lockText = (version & LockInAttributeFlag) != 0 ? string.Empty : Field(lines, dbref, "lock");
+		var lockText = (version & LockInAttributeFlag) != 0 ? string.Empty : Lock(lines, dbref);
 		var owner = Ref(lines, dbref, "owner");
 		var parent = (version & ParentFlag) != 0 ? Ref(lines, dbref, "parent") : -1;
 		var pennies = (version & MoneyInAttributeFlag) != 0 ? 0 : Ref(lines, dbref, "pennies");
@@ -309,7 +309,8 @@ public static class RhostFlatfileReader
 			foreach (var attr in obj.Attributes)
 			{
 				if (attr.Number <= 0 || !attributes.Add(attr.Number)
-					|| (attr.Number >= 256 && !flat.UserAttributes.ContainsKey(attr.Number)))
+					|| (attr.Number is >= 256 and < RhostNameTables.InlineStart && !flat.UserAttributes.ContainsKey(attr.Number))
+					|| attr.Number >= RhostNameTables.InlineEnd)
 					throw new FormatException($"RhostMUSH export has an invalid or duplicate attribute on #{obj.DBRef}.");
 				if (attr.Owner is { } owner) Owner(owner, true);
 			}
@@ -358,6 +359,47 @@ public static class RhostFlatfileReader
 
 	private static string Field(LineCursor lines, int dbref, string what)
 		=> lines.Next() ?? throw lines.Error($"the file ends inside #{dbref}'s {what}");
+
+	/// <summary>
+	/// The lock field, as RhostMUSH's <c>putboolexp</c> writes it: an attribute (<c>n:value</c>) or eval
+	/// (<c>n/value</c>) key ends its line, so a lock holding one runs over several lines, and one ending in
+	/// one is followed by a blank line. RhostMUSH's reader skips that blank line, and so does this.
+	/// </summary>
+	private static string Lock(LineCursor lines, int dbref)
+	{
+		var text = new StringBuilder();
+		var depth = 0;
+		do
+		{
+			var line = Field(lines, dbref, "lock");
+			text.Append(line);
+			var inValue = false;
+			foreach (var ch in line)
+			{
+				if (inValue && ch is not (')' or '&' or '|')) continue;
+				inValue = false;
+				switch (ch)
+				{
+					case '(':
+						depth++;
+						break;
+					case ')':
+						depth--;
+						break;
+					case ':' or '/':
+						inValue = true;
+						break;
+				}
+			}
+		} while (depth > 0);
+
+		if (lines.Peek() == string.Empty)
+		{
+			lines.Next();
+		}
+
+		return text.ToString();
+	}
 
 	private static int Ref(LineCursor lines, int dbref, string what)
 		=> Number(Field(lines, dbref, what), lines, $"#{dbref}'s {what}");

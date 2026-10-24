@@ -394,7 +394,7 @@ public static partial class RhostDatabaseTranslator
 
 		string name;
 		uint definitionFlags = 0;
-		if (attribute.Number is > 0 and < 256)
+		if (attribute.Number is (> 0 and < 256) or (>= RhostNameTables.InlineStart and < RhostNameTables.InlineEnd))
 		{
 			if (RhostNameTables.SkippedAttributes.TryGetValue(attribute.Number, out var reason))
 			{
@@ -518,11 +518,14 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// A lock as SharpMUSH reads it. RhostMUSH's lock attributes already write objects as <c>#n</c>, and
-	/// its key syntax (<c>&amp;</c>, <c>|</c>, <c>!</c>, <c>=</c>, <c>+</c>, <c>$</c>, <c>@</c>, <c>attr:value</c>)
-	/// is the one SharpMUSH reads.
+	/// A lock as SharpMUSH reads it. RhostMUSH's lock attributes write each object as <c>(#n)</c>, and its key
+	/// syntax (<c>&amp;</c>, <c>|</c>, <c>!</c>, <c>=</c>, <c>+</c>, <c>$</c>, <c>@</c>, <c>attr:value</c>) is the one
+	/// SharpMUSH reads, except that SharpMUSH wants a prefix right before the object: <c>$(#73)</c> is <c>$#73</c>.
 	/// </summary>
-	private static string LockKey(string text) => text.Trim();
+	private static string LockKey(string text) => PrefixedObject().Replace(text.Trim(), "$1$2");
+
+	[GeneratedRegex(@"([=+$@])\((#-?\d+)\)")]
+	private static partial Regex PrefixedObject();
 
 	[GeneratedRegex(@"(?<![#\w])(\d+)(?!\w)")]
 	private static partial Regex BareNumbers();
