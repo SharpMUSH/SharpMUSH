@@ -167,10 +167,18 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
-	/// <summary>A conversion that failed applied nothing, so it does not say the mush.cnf was applied.</summary>
+	/// <summary>
+	/// A conversion that failed, or stopped with no errors (a database with no objects), applied nothing, so it
+	/// does not say it succeeded or that the mush.cnf was applied.
+	/// </summary>
 	[Test]
-	public async Task DatabaseImport_AFailedConversion_DoesNotReportTheMushCnfApplied()
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DatabaseImport_AFailedConversion_DoesNotReportTheMushCnfApplied(bool stoppedWithoutErrors)
 	{
+		var result = stoppedWithoutErrors
+			? new ConversionResult { Aborted = true }
+			: new ConversionResult { Errors = ["Not a PennMUSH database."] };
 		AddServices((_, path) => path switch
 		{
 			"api/databaseconversion/upload" => Started(),
@@ -178,7 +186,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			{
 				TotalObjects = 10, ProcessedObjects = 10, CurrentPhase = "Done", PercentageComplete = 100
 			})),
-			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult { Errors = ["Not a PennMUSH database."] }))
+			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(result))
 		});
 
 		var cut = await StartConversionWithConfig();
