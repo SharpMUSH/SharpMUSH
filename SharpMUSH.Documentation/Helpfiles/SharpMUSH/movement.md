@@ -12,8 +12,7 @@
 -->
 # Movement
 
-Every move (through an exit, by @teleport, by entering or leaving an object, or by going home)
-triggers the same attributes in the same order.
+Every move (through an exit, by @teleport, by entering or leaving an object, or by going home) triggers the same attributes in the same order.
 
 - [movement order]: the eight steps of a move, and what each attribute receives
 - [movement exceptions]: objects that cannot hear, DARK wizards, silent moves, and the look
@@ -31,16 +30,11 @@ triggers the same attributes in the same order.
 
 ## Quiet moves and the look after a move
 
-An object that cannot hear (one that is not a connected player, not a PUPPET, has no `@listen`,
-and is not AUDIBLE with a `@forwardlist`) triggers only the action attributes (`@aleave`,
-`@azleave`, `@azenter`, `@aenter`), never the messages. A DARK wizard triggers no `@o`-messages
-at all.
+An object that cannot hear (one that is not a connected player, not a PUPPET, has no `@listen`, and is not AUDIBLE with a `@forwardlist`) triggers only the action attributes (`@aleave`, `@azleave`, `@azenter`, `@aenter`), never the messages. A DARK wizard triggers no `@o`-messages at all.
 
-A silent move (`@teleport/silent`) suppresses only the `@move`/`@omove`/`@amove` attributes, and
-for `@teleport` also the `@tport` family. It does not suppress the enter and leave attributes.
+A silent move (`@teleport/silent`) suppresses only the `@move`/`@omove`/`@amove` attributes, and for `@teleport` also the `@tport` family. It does not suppress the enter and leave attributes.
 
-After every move, the object looks at where it arrived. This look always happens, including on a
-silent move; a TERSE player sees the room's name and contents but not its description.
+After every move, the object looks at where it arrived. This look always happens, including on a silent move; a TERSE player sees the room's name and contents but not its description.
 
 ::: seealso
 - [go]

@@ -52,7 +52,7 @@ These are the events a SharpMUSH game raises. To see the help for a type, type `
 
 ## Arguments
 
-The handler gets each argument by position, the first as %0, and by the name shown, as %`\<name\>` (see [named arguments]). `&OBJECT\`MOVE #9=...` can read the destination as %1 or as %`\<destination\>`. A name of the form *received/sent/commands* names the parts of a value made of numbers joined by `/`: %`\<received\>`, %`\<sent\>` and %`\<commands\>` are each one number, and the position holds the whole value, as in PennMUSH.
+The handler gets each argument by position, the first as %0, and by the name shown, as `%<name>` (see [named arguments]). `&OBJECT\`MOVE #9=...` can read the destination as %1 or as `%<destination>`. A name of the form *received/sent/commands* names the parts of a value made of numbers joined by `/`: `%<received>`, `%<sent>` and `%<commands>` are each one number, and the position holds the whole value, as in PennMUSH.
 
 ## SharpMUSH-only events
 

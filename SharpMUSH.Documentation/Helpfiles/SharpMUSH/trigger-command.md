@@ -35,7 +35,7 @@
 
 @trigger queues an action list stored in an attribute. It can also pass values to that attribute on the stack, as %0 to %9 and `r(0,args)` to `r(29,args)`.
 
-Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
+With `/inline` or `/inplace`, `@trigger` outputs what the last command it ran output; queued, it outputs nothing. See [command output].
 
 You must control `<object>`, or it must be Link_OK and you must have the same owner, to trigger an attribute on it.
 
@@ -45,7 +45,7 @@ The triggered attribute is queued - the new action list is not run instantly. Th
 
 ## Switches
 
-- /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as %`\<name\>` (see [uargs()]), and also by numbered value position starting at %0. With `/match`, the pairs follow the match string.
+- /args: Pass named arguments instead: each `<name>, <value>` pair is read in the attribute as `%<name>` (see [uargs()]), and also by numbered value position starting at %0. With `/match`, the pairs follow the match string.
 - /spoof: If you control `<object>`, enactor is preserved.
 - /inline: Run @triggered attribute immediately, rather than queueing it.
 - /clearregs: Clear Q-registers before @triggering.

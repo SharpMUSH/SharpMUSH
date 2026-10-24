@@ -381,7 +381,7 @@ Existing games which have softcoded 'who' commands.
 
 		var functionList = helpfiles.FindEntry("FUNCTION LIST");
 		await Assert.That(functionList).IsNotNull();
-		await Assert.That(functionList!).Contains("Several major variants");
+		await Assert.That(functionList!).Contains("grouped by what they work on");
 
 		var gettingStarted = helpfiles.FindEntry("Getting Started");
 		await Assert.That(gettingStarted).IsNotNull();

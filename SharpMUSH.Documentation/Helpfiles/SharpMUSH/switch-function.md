@@ -46,7 +46,6 @@ switch() and switchall() use wildcard and lt/gt `<expr>`s, as described in [SWIT
 ::: seealso
 - [RESWITCH()]
 - [STEXT()]
-- [STEXT()]
 - [IF()]
 - [COND()]
 - [FIRSTOF()]

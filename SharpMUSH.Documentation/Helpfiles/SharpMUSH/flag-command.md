@@ -54,8 +54,8 @@ All other switches to this command are restricted to God:
 - /enable re-enables a disabled flag
 - /alias adds a new alias for an existing flag; use !`<alias>` to delete one.
 - /letter changes or removes a single-letter alias for an existing flag.
-- /restrict changes flag permissions (see help @flag adding flags)
-- /type changes flag type(s) (see help @flag adding flags)
+- /restrict changes flag permissions (see [@flag adding flags])
+- /type changes flag type(s) (see [@flag adding flags])
 - /delete deletes a flag completely, removing it from all objects in the database and then removing it permanently from the flag table. It requires the exact flag name or alias to be used. Be very very careful with this.
 - /decompile prints out a list of @flag/add commands needed to recreate the flag table on another MUSH. If `<pattern>` is given, only flags whose names match that wildcard pattern are shown.
 

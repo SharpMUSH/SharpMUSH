@@ -70,10 +70,7 @@ We got an array: ["bar",10]
 
 ## Nested pretty printer
 
-A JSON pretty-printer can recurse on arrays and objects while preserving the
-already-encoded primitive values in %1. The callback's %0 tells it which type
-it received. Extra arguments carry indentation depth (%3) and whether to
-print an object key (%4).
+A JSON pretty-printer can recurse on arrays and objects while preserving the already-encoded primitive values in %1. The callback's %0 tells it which type it received. Extra arguments carry indentation depth (%3) and whether to print an object key (%4).
 
 ```sharp
 > &pretty_json me=u(me/pretty_json_sub,json_query(%0,type),%0,,0,0)

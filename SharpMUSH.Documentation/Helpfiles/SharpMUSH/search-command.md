@@ -45,7 +45,7 @@
 
 This command searches the database and lists objects which meet user specified search criteria. You can limit the scope of the search by specifying `<begin>` and `<end>` as the first and last dbrefs to search.
 
-Output: the dbrefs found, as `lsearch()` returns them.
+`@search` outputs the dbrefs found, as `lsearch()` returns them.
 
 If a `<player>` argument is supplied, only objects owned by that player will be listed, or all objects if "all" is used. Mortals attempting to match other players (aside from ZMPs whose @lock/zone they pass) or "all" will only get objects which they can examine.
 

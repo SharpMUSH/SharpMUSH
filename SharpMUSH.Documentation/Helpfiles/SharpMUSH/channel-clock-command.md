@@ -47,7 +47,6 @@ You may set a channel's locks if you own it, if you pass its mod lock, or if you
 
 ::: seealso
 - [LOCKING]
-- [LOCKING]
 - [lock keys]
 - [@CHANNEL PRIVS]
 :::

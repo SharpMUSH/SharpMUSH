@@ -13,7 +13,7 @@
 `list(<option>[, <type>])`<br>
 `list(<list>, <eval>[, <delimiter>][, <header>][, <target>])`
 
-  This is the function-equivilent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
+  This is the function-equivalent of the @list command, and lists some useful information about the MUSH. `<option>` can be one of:
 
   motd        : Returns the current @motd<br>
   wizmotd     : Returns the current @motd/wizard. Wiz/Roy only.<br>
@@ -51,6 +51,5 @@
 - [LFLAGS()]
 - [CONFIG()]
 - [FUNCTIONS()]
-- [@motd]
 - [@motd]
 :::

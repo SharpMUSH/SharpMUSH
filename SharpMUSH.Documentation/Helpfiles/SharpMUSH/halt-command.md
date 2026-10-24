@@ -19,9 +19,9 @@
 
 The @halt command removes all queued actions for `<object>`. If given, `<action list>` is placed in the queue for the object instead. If no action list is specified, the object is set HALT.
 
-If `<object>` is a player, it clears the queue for the player and all of his objects. You can use "@halt me" to clear your own queue without setting yourself HALT.
+If `<object>` is a player, it clears the queue for the player and all of their objects. You can use "@halt me" to clear your own queue without setting yourself HALT.
 
-Only wizards and objects with the halt @power can @halt other player's objects. Note that halting an object does NOT affect any objects waiting on it as a semaphore.
+Only wizards and objects with the halt @power can @halt other players' objects. Note that halting an object does NOT affect any objects waiting on it as a semaphore.
 
 - [@halt pid]: cancelling a single queue entry by its pid
 - [@halt all]: halting every object in the game, for wizards
@@ -30,9 +30,9 @@ Only wizards and objects with the halt @power can @halt other player's objects. 
 
 `@halt/pid <pid>`
 
-`@halt/pid` will cancel a single queue entry with the given pid (the number in parenthesis before it in @ps). You must control the object that queued the command or have the halt power to do this.
+`@halt/pid` will cancel a single queue entry with the given pid (the number in parentheses before it in @ps). You must control the object that queued the command or have the halt power to do this.
 
-A cancelled delayed entry remains reserved until its scheduled trigger is confirmed removed. If scheduling or cancellation reports a cleanup failure, the command stays cancelled and consumes its queue allowance; retry `@halt/pid <pid>` after the scheduler is available to finish cleanup.
+A cancelled entry that was waiting on a delay keeps its place in the queue count until the delay is removed. If @halt/pid reports that it could not remove it, the entry stays cancelled and still counts towards the queue limit: try `@halt/pid <pid>` again later.
 
 ## Halting everything
 

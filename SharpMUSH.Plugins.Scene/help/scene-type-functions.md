@@ -48,7 +48,7 @@ One field of a pose type; `label` when no field is given. The others are `presen
 
 Empty when `<json>` would read as the pose type `<key>`, otherwise `#-1` and the reason. A key is 1 to 32 letters, digits, `-` and `_`, starting with a letter or digit. The fields are listed in [@scene types].
 
-```
+```sharp
 > think scenetypecheck(radio, json(object,hidden,json(string,yes)))
 ```
 
@@ -89,7 +89,7 @@ Empty when `<json>` would read as the scene detail `<key>`, otherwise `#-1` and 
 
 `<value>` as the detail `<key>` keeps it: trimmed, or for a detail that takes several values, each one trimmed, blanks left out, joined by `|`. When the detail has choices, each value is written as its choice is, and a value it does not allow is `#-1` and a message naming the choices. A key the game does not define keeps the value trimmed. A key that cannot be a detail is `#-1` and the reason.
 
-```
+```sharp
 > think scenedetailvalue(verse, canon | AU)
 ```
 

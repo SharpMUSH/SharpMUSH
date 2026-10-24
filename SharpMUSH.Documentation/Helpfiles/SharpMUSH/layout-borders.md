@@ -39,7 +39,7 @@ box() and rule() draw with a border style. The game's default is the `layout_bor
 
 ## Styles
 
-```
+```text
 +=====< Title >====+  +-----< Title >----+
 | mush             |  | ascii            |
 +==================+  +------------------+

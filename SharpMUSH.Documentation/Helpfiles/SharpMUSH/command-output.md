@@ -39,13 +39,13 @@ The examples run their lists with `@force/noeval me={...}`, the way to try a lis
 
 To use what a command shows instead, pipe it into the next command with `;|` and read `%|`: see [piping].
 
-- [command output keeping]: the `Output:` line, q-registers, and failed commands
+- [command output keeping]: keeping a value in a q-register, and failed commands
 - [command output kinds]: which commands leave a value, nothing, or `%>` unchanged
 - [command output queue]: `%>` in queued lists, typed lines and functions
 
 ## Keeping a value and failures
 
-A command that outputs something says what in its help, on a line starting `Output:`. Most commands that change something output nothing, and the next command replaces `%>`. To use a value after such a command, keep it in a q-register: `@dig Kitchen;@desc [setq(0,%>)]%q0=A small kitchen.;@link %q0=here`.
+A command's help says what it outputs, if anything. Most commands that change something output nothing, and the next command replaces `%>`. To use a value after such a command, keep it in a q-register: `@dig Kitchen;@desc [setq(0,%>)]%q0=A small kitchen.;@link %q0=here`.
 
 A command that fails leaves the `#-1` error it failed with, the way its function would return it.
 

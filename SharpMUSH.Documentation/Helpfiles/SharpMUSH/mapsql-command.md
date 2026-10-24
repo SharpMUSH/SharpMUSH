@@ -38,7 +38,7 @@ The `/colnames` switch causes @mapsql to first queue the obj/attr with row numbe
 `@mapsql/notify <obj>/<attr>=<query>`<br>
 `@mapsql/spoof <obj>/<attr>=<query>`
 
-The `/notify` switch queues `@notify me` after the admitted row callbacks. This runs as the object executing `@mapsql`. One queue slot is reserved for completion before the query starts; if that reservation fails, the query does not run. Completion still runs for an empty result or partial row admission, but a query error releases its reservation without notifying.
+The `/notify` switch queues `@notify me` after the rows, run as the object using @mapsql, so code waiting on its semaphore knows the query is done. It runs when the query returns no rows, and when a full queue took only some of them, but not when the query fails. If the queue has no room left for the notify, the query does not run.
 
 By default, the object using @mapsql will be the enactor (%#) for the triggered attribute. However, if you control `<object>`, the `/spoof` switch can be used to preserve the current enactor.
 
@@ -60,7 +60,8 @@ The `/prepare` switch enables prepared statement mode. When used, additional com
 > @mapsql me/showresult=SELECT `name`, `age` FROM `people`
 ```
 
-Prepared statement example:
+A prepared statement:
+
 ```sharp
 > &showresult me=@pemit %#=%0. %1 (%2)
 > &QUERY me=SELECT `name`, `age` FROM `people` WHERE status = ?

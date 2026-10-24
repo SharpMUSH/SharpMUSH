@@ -11,41 +11,46 @@
 }
 -->
 # convtime()
+
 `convtime(<time string>[, <timezone>[, <precision>]])`<br>
 `convutctime(<time string>[, <precision>])`
 
-  This functions converts a time string to the number of seconds since Jan 1, 1970 GMT. A time string is of the format:<br>
-      Ddd MMM DD HH:MM:SS YYYY<br>
-  where Ddd is the day of the week, MMM is the month, DD is the day of the month, HH is the hour in 24-hour time, MM is the minutes, SS is the seconds, and YYYY is the year. If you supply an incorrectly formatted string, it will return #-1.
+convtime() converts a time string to the number of seconds since 1 January 1970 UTC. The time string is written the way time() writes it:
 
-  convutctime() and convtime() with a second argument of 'utc' assume the timestring is based on UTC time. Other time zones can be specified too, such as America/New_York, with their summer time. If no `<timezone>` is given, the server's timezone is used.
+`Ddd MMM DD HH:MM:SS YYYY`
+
+Ddd is the day of the week, MMM the month, DD the day of the month, HH the hour on a 24-hour clock, MM the minutes, SS the seconds and YYYY the year. A string convtime() cannot read returns `#-1 INVALID TIME`.
+
+- `<timezone>`: the zone the time is in, such as `America/New_York`, with its summer time. `utc` reads it as UTC. With none, the server's zone is used. convutctime() is convtime() with `utc`.
+- `<precision>`: `s` or `seconds` (the default) returns whole seconds, `f` or `fractional` seconds with a fraction, and `ms` or `milliseconds` milliseconds.
 
 - [convtime formats]: ISO dates, offsets, summer time gaps and dates before 1970
 - [convtime examples]: converting time() output and a dated time
 
 ## Other date formats
 
-  convtime() also reads other ways of writing a date and time, such as 2026-10-30 20:00, in the same zone. A time that names its own offset, such as 2026-10-30T20:00:00Z or 2026-10-30T20:00:00+02:00, keeps it. A time the zone skips when summer time starts, such as 2027-03-14 02:30 in America/New_York, returns #-1 INVALID TIME; written in the format above, it is moved on past the gap, as PennMUSH does.
+convtime() also reads other ways of writing a date and time, such as `2026-10-30 20:00`, in the same zone. A time that names its own offset, such as `2026-10-30T20:00:00Z` or `2026-10-30T20:00:00+02:00`, keeps it.
 
-  Dates prior to 1970 are read too, and return a negative number.
+A time the zone skips when summer time starts, such as `2027-03-14 02:30` in America/New_York, returns `#-1 INVALID TIME`. Written in time()'s format, it is moved on past the gap, as PennMUSH does: `Sun Mar 14 02:30:00 2027` reads as 03:30.
+
+Dates before 1970 return a negative number.
 
 ## Examples
 
-  Example:
 ```sharp
-say time()
-You say, "Wed Jun 24 10:22:54 1992"
+> think convtime(Wed Jun 24 10:22:54 1992,utc)
+709381374
+> think convtime(2026-10-30 20:00,America/New_York)
+1793404800
+> think convtime(2026-10-30T20:00:00.25Z,,f)
+1793390400.25
+> think convtime(Fri Jan 01 00:00:00 1960,utc)
+-315619200
 ```
-
-    > say convtime(Wed Jun 24 10:22:54 1992)<br>
-    You say, "709395774"
-
-    > say convtime(2026-10-30 20:00,America/New_York)<br>
-    You say, "1793404800"
-
 
 ::: seealso
 - [CONVSECS()]
 - [time()]
+- [dateparse()]
 - [timezones]
 :::

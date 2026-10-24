@@ -31,7 +31,7 @@ The server shows a connection a few fixed texts: the connect screen, the message
 | Wizard message of the day | `WIZMOTD` | after the MOTD, to wizards and royalty |
 | Guest message | `GUEST` | to a guest, after the MOTD |
 | New account | `NEWUSER` | after `register` creates an account |
-| Registration closed | `REGISTER` | instead of `create` or `register` while player creation is off |
+| Registration closed | `REGISTER` | instead of `register` or `make` while player creation is off |
 | Logins disabled | `DOWN` | before the refusal while logins are off |
 | Goodbye | `QUIT` | after `QUIT` and `LOGOUT` |
 

@@ -29,7 +29,7 @@
 
 @decompile outputs a list of the commands that you would have to enter in order to recreate `<object>`. Useful for either copying objects from one MUSH to another, or for making logs of important objects to protect against an accidental @nuke or a crash.
 
-Output: the dbref of the object decompiled.
+`@decompile` outputs the dbref of the object decompiled.
 
 All output lines are prefixed with `<prefix>`, if one is given. This is useful for creating client-side scripts for editing code.
 

@@ -11,23 +11,19 @@
 -->
 # Clients
 
-  Clients are special software programs that you can use to connect to MUSHes. They are usually much nicer to use than raw telnet and give you many additional features, such as larger text buffers (so you can type more), backscroll, history of previous commands, macros, and so on.
+A client is a program for playing on a MUSH. It is easier to use than plain telnet: it keeps a long scrollback, remembers what you typed, and offers macros, triggers and logging. The web portal's Play page is a client too, and needs nothing installed.
 
-  Here is a list of common clients and the web sites where they can be found.  Please note that the below sites are subject to change. The below are listed solely for your information and possible benefit. The developers of SharpMUSH have nothing to do with the clients. Except for Potato, which is made by Mike. Not that this is a shameless plug. Noooo. Carry on.
-
-- [clients list]: common clients for each operating system, and their web sites
+- [clients list]: common clients and where to find them
 
 ## Client list
 
-  | OPERATING SYSTEM | CLIENT      | WEB SITE                              |
-  |------------------|-------------|---------------------------------------|
-  | UNIX             | Tinyfugue   | http://tinyfugue.sourceforge.net      |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  | WINDOWS          | MUSHClient  | http://www.mushclient.com             |
-  |                  | MuckClient  | http://www.xcalibur.co.uk/MuckClient/ |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | BeipMU      | http://www.beipmu.com (Recommended)   |
-  | MAC OS X         | Savitar     | http://www.heynow.com/Savitar/        |
-  |                  | Atlantis    | http://www.riverdark.net/atlantis/    |
-  |                  | Potato      | http://www.potatomushclient.com       |
-  |                  | Unix clients will also run on OS X. |               |
+These are some clients in wide use. SharpMUSH's developers do not make them, and their sites can change.
+
+| Client | Runs on | Site |
+| --- | --- | --- |
+| Mudlet | Windows, macOS, Linux | https://www.mudlet.org |
+| MUSHclient | Windows | https://www.gammon.com.au/mushclient |
+| TinTin++ | Linux, macOS, Windows | https://tintin.mudhalla.net |
+| TinyFugue | Linux, macOS | https://tinyfugue.sourceforge.net |
+
+Mudlet also draws what the game sends it over GMCP, such as a map and gauges: see [gmcp].

@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.14.0
+version: 1.14.1
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -2333,10 +2333,10 @@ objects:
       HELP`REQUEST: |-
         ## Filing
 
-        - `+request/draft new`: start an optional draft on this connection; ordinary chat still works.
-        - `+request/draft set <field>=<literal text>`: edit a declared field. Text stays literal; boolean, number and list fields accept JSON literals.
-        - `+request/draft review`, `back`, `file`, `cancel`: review, return to edits, file once, or discard.
-          Drafts expire after 30 idle minutes and retire on logout/disconnect; they do not survive restart.
+        - `+request/draft new`: start a request to fill in a step at a time. You can keep playing and chatting while it is open.
+        - `+request/draft set <field>=<value>`: fill in `bucket`, `title`, `text`, or `softcode` \(`true` to show your text exactly as typed\). Text is kept as you type it.
+        - `+request/draft review` checks the request. Then `back` returns to editing, `file` files it, and `cancel` throws it away.
+          A draft belongs to the connection that started it. It lasts 30 minutes after you last use it, and ends when you log out, disconnect or the game restarts.
         - `+request <title>=<text>`: files in the Requests bucket.
         - `+request <bucket>/<title>=<text>`: files in a bucket by its full name, such as `+request Applications/Ready for review=...`. The part before the `/` is a bucket only when it is a bucket's whole name, so `+request Help w/ exits=...` is just a title.
         - `+bug`, `+typo`, `+pitch` and `+apply <title>=<text>` file in Bugs, Building, Plots and Applications.

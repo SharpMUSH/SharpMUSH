@@ -56,7 +56,7 @@ One field of a scene; `status` when no field is given.
 
 Any other key the scene holds, such as `title` or `summary` (the pitch), reads as its text. A detail the game defines reads empty while it is unset. Anything else, an unset `title` included, is `#-1 UNKNOWN SCENE FIELD`.
 
-```
+```sharp
 > think scene(12, title)
 ```
 
@@ -84,7 +84,7 @@ A bound that is not a number is `#-1 BAD ARGUMENT FORMAT TO SCENELIST`, and a pl
 
 The ids of the scenes both players are members of and you may see, latest activity first: `<count>` of them, 1 when left out, found among the first player's latest 200 scenes. Cancelled scenes are left out. A count that is not a whole number above 0 is `#-1 BAD ARGUMENT FORMAT TO SCENESHARED`, and a player that is not found is `#-1 NO SUCH PLAYER`.
 
-```
+```sharp
 > think sceneshared(Alice, Bob, 3)
 ```
 

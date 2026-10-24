@@ -26,7 +26,7 @@ By default, anyone can use the `@moniker` command to set a moniker for themselve
 
 The "monikers" `@config` option is a list of places where a name is shown with its moniker:
 
-```
+```text
          chat - In @chat messages
           say - Speech: say, pose and semipose
      movement - Movement messages (exit @osucc and @odrop, get, drop, teleport)
@@ -42,7 +42,7 @@ It also names the types of object monikered: players, things, rooms, exits, or a
 
 Words may be shortened, and !<word> removes one. The default is "alltypes say"; an empty list leaves only `moniker()` and %k. Where a name is not monikered, look and examine hilight it.
 
-```
+```sharp
 @config/set monikers=everywhere players !who
 ```
 

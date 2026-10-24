@@ -80,7 +80,7 @@ Add `/all` to `/disable`, `/enable`, `/schedule` or `/delete` to select another 
 
 Both are resolved like any other permission (see [administrative capabilities]). A job always runs as the active player who created it; editing another account's schedule never changes who it runs as.
 
-Output: the message `@job` shows, such as `Created recurring job <id>`.
+`@job` outputs the message it shows, such as `Created recurring job <id>`.
 
 ## Schedule grammar
 
@@ -107,7 +107,7 @@ When both day fields are restricted (neither is a literal `*`), either one may m
 
 ## Schedule examples
 
-```
+```text
 0 9 * * 1-5      Weekdays at 09:00
 */15 * * * *     Every fifteen minutes
 0 0 1,15 * *     Midnight on the first and fifteenth

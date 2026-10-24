@@ -46,6 +46,5 @@ By default, information is shown in upper-case. Add the `/lowercase` switch to s
 - [@power]
 - [@attribute]
 - [@motd]
-- [@motd]
 - [locktypes]
 :::

@@ -12,42 +12,38 @@
 -->
 # Other Mail Commands
 
-- `@mail/clear [<msg-list> | all]`
-- `@mail/unclear [<msg-list> | all]`
-* These commands mark mail in the current folder as cleared or uncleared. Cleared mail is kept, and can be uncleared, until you purge it.
-* If no msg-list is specified, all mail in your current folder is cleared.
-* If "all" is given instead of a msg-list, all mail in **all** folders is cleared/uncleared.
+`@mail/clear [<msg-list> | all]`<br>
+`@mail/unclear [<msg-list> | all]`<br>
+`@mail/purge`
 
-- `@mail/purge`
-* Deletes all of your cleared mail, in every folder.
+`@mail/clear` marks mail in the current folder as cleared, and `@mail/unclear` takes the mark off. Cleared mail is kept, and can be uncleared, until you purge it. With no msg-list, every message in the current folder is cleared; with `all`, every message in every folder.
+
+`@mail/purge` deletes all of your cleared mail, in every folder.
 
 - [other mail commands tagging]: tagging mail to act on it en masse
 - [other mail commands status]: marking mail unread, and setting its status
 
 ## Tagging mail
 
-- `@mail/tag [<msg-list> | all]`
-- `@mail/untag [<msg-list> | all]`
-* These commands tag or untag mail in the current folder.
-* Tagged mail can be later acted on en masse by using "tagged" as the msg-list for other commands (which does **not** untag them afterward).
-* If no msg-list is specified, all messages in the current folder are tagged/untagged.
-* If "all" is given as the msg-list, all mail in **all** folders is tagged/untagged.
+`@mail/tag [<msg-list> | all]`<br>
+`@mail/untag [<msg-list> | all]`
 
-### Example
-```sharp
+These tag or untag mail in the current folder. Other commands then act on every tagged message when given `tagged` as the msg-list, and leave the tags on. With no msg-list, every message in the current folder is tagged or untagged; with `all`, every message in every folder.
+
 To clear all mail from Paul and Chani:
-@mail/tag *paul
-@mail/tag *chani
-@mail/clear tagged
-@mail/untag all
+
+```sharp
+> @mail/tag *paul
+> @mail/tag *chani
+> @mail/clear tagged
+> @mail/untag all
 ```
 
 ## Unread and status
 
-- `@mail/unread [<msg-list> | all]`
-* Mark messages which have already been read as new/unread.
+`@mail/unread [<msg-list> | all]`<br>
+`@mail/status [<msg-list> | all]=<status>`
 
-- `@mail/status [<msg-list> | all]=<status>`
-* Set the status of the given messages.
-* *<status>* can be one of: tagged, untagged, cleared, uncleared, read, unread, urgent or unurgent.
-* Read marks a new message as read without reading it, urgent/unurgent toggle the urgent flag, and the others are equivalent to @mail/tag, @mail/untag, @mail/clear, @mail/unclear and @mail/unread respectively.
+`@mail/unread` marks messages you have read as new again.
+
+`@mail/status` sets the status of the given messages. `<status>` is one of `tagged`, `untagged`, `cleared`, `uncleared`, `read`, `unread`, `urgent` or `unurgent`. `read` marks a new message read without showing it, `urgent` and `unurgent` set and clear the urgent flag, and the others do what @mail/tag, @mail/untag, @mail/clear, @mail/unclear and @mail/unread do.

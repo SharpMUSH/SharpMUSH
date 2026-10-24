@@ -28,8 +28,8 @@
 
 This allows you to mark up a string using ANSI terminal effects, 16-color codes, and 256 XTERM colors (specified as color names or hex values).
 
-The old-style `<ansi-codes>` are listed in "help ansi legacy color codes".<br>
-Each block of space-separated `<codes>` can be one or more old-style ANSI codes, as listed in "help ansi legacy color codes", or a foreground and/or background color. Background colors are prefixed with a "/". Each color can be one of:
+The old-style `<ansi-codes>` are listed in [ansi legacy color codes].<br>
+Each block of space-separated `<codes>` can be one or more old-style ANSI codes, as listed in [ansi legacy color codes], or a foreground and/or background color. Background colors are prefixed with a "/". Each color can be one of:
 
     * +`<colorname>` (for a list of valid names, see [colors()])
     * a hexcode, optionally in angle brackets (#000000, `<#ff0055>`, etc)

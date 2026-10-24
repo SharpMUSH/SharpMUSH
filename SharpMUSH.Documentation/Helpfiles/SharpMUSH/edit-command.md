@@ -29,7 +29,7 @@ This command allows you to edit the contents of attributes, without having to re
 
 All the attributes on `<object>` whose names match the wildcard pattern `<attributes>` will be searched for the string `<search>`, and each occurrence of it will be replaced with the string `<replace>`.
 
-If `<search>` is "$", then `<replace>` will be added to the end of the attributes. When `<search>` is "^", `<replace>` will be added to the beginning of the attributes. (If you need to replace a single $ or ^, consider using @edit/regexp (see help @edit regular expression replacement) or the edit() function.)
+If `<search>` is "$", then `<replace>` will be added to the end of the attributes. When `<search>` is "^", `<replace>` will be added to the beginning of the attributes. (If you need to replace a single $ or ^, consider using @edit/regexp (see [@edit regular expression replacement]) or the edit() function.)
 
 - [@edit switches]: `/first`, `/check` and `/quiet`, and quoting the arguments
 - [@edit regular expression replacement]: `@edit/regexp`, and evaluating the replacement

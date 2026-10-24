@@ -38,8 +38,6 @@ With one argument, nameq() returns the label of `<register>`, or nothing when it
 
 With three arguments the second is ignored; leave it empty. With a number other than 0 as the third argument, nameq() returns the name of the register `<label>` belongs to. Given a register name instead, it returns the label.
 
-Output: a label, a register name, or nothing.
-
 - [nameq setting labels]: giving a register a label, and the errors
 - [nameq examples]: reading, setting and refusing labels
 - [nameq listing registers]: finding registers by label, name or value

@@ -54,6 +54,5 @@ Please see [setq()] for more information about the setq registers.
 - [REGISTERS()]
 - [LISTQ()]
 - [LETQ()]
-- [LISTQ()]
 - [STRMATCH()]
 :::

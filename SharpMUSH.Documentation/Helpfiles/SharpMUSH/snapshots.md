@@ -69,7 +69,7 @@ A snapshot is visible to the account that took it, for as long as the character 
 
 The portal's Object snapshots page does the same.
 
-Output: the message `@snapshot` shows, such as `Captured snapshot <id>`, the list, or the preview and its token.
+`@snapshot` outputs the message it shows, such as `Captured snapshot <id>`, the list, or the preview and its token.
 
 ## Preview and restore selection
 

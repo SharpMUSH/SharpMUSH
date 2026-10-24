@@ -45,11 +45,9 @@ The switch may also name the lock with "lock" on the end, as RhostMUSH spells it
 - [ELOCK()]
 - [LOCK()]
 - [@lset]
-- [@CHANNEL CLOCK]
 - [TESTLOCK()]
 - [LLOCKS()]
 - [LOCKFLAGS()]
 - [LOCKOWNER()]
 - [clock()]
-- [LLOCKS()]
 :::

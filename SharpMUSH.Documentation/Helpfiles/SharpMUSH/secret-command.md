@@ -27,7 +27,7 @@ A typed value passes through your client, which may keep it in a log. Use the we
 
 Using @secret needs the `config.admin` permission. A plugin may name another permission that manages its own secret.
 
-Output: nothing; it tells you what it did.
+`@secret` outputs nothing; it tells you what it did.
 
 - [@secret list]: what the listing shows for each secret
 - [@secret storing]: setting a value and removing it
@@ -65,7 +65,7 @@ Importing a PennMUSH `mush.cnf` in the web portal stores its `sql_password` as t
 
 ## Examples
 
-```
+```sharp
 > @secret http.github.token=ghp_example
 http.github.token is set. Its value is never shown again.
 > @secret/host http.github.token=api.github.com uploads.github.com
@@ -74,7 +74,7 @@ http.github.token is set. Its value is never shown again.
 
 ## Listing and clearing example
 
-```
+```sharp
 > @secret
 +-------------------------------< Secrets (2) >------------------------------+
 | Secret             Value       Stored                 For                  |

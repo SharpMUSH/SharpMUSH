@@ -33,7 +33,7 @@ Every player has a context stack: the names of what they have been doing lately,
 
 `/push` puts `<name>` on top of the stack, or moves it back to the top when it is already there, with the new values. `/drop` takes it off. With no switch, `@context` lists the stack. A push or drop prints nothing.
 
-- `<name>` is letters, digits and `_ - . : #`, at most 64 characters, and is stored in lower case. Names are shared by every package; the Guide lists the ones in use.
+- `<name>` is letters, digits and `_ - . : #`, at most 64 characters, and is stored in lower case. Every package shares one set of names, so a package starts its contexts with its own name, as the scene package's `scene_focus` and `scene_here` do.
 - `<values>` is a JSON object of text, numbers or true/false, at most 16 of them. A palette entry's `<slot>` of the same name is filled from it. Build it with json(), since the parser removes `{ }`.
 - `<lifetime>` is how long the context lasts, such as `60s` or `10m`, at most a day. Leave it out for a context that should sink on its own.
 - `<info>` is one line telling the player why the context is there. It takes the rest of the command, commas included, and is shown under the commands it raises.

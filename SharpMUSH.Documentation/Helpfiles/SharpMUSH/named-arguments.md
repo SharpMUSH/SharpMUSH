@@ -14,7 +14,7 @@
     },
     {
       "id": "presence-and-migration",
-      "heading": "Presence and migration",
+      "heading": "Included and repeated arguments",
       "lookup": "named arguments presence"
     },
     {
@@ -52,7 +52,7 @@
 -->
 # Named Arguments
 
-A named argument is an argument passed under a name alongside its position. Code reads it with %`\<name\>`, or with r(`<name>`, args), where it would read %0 with %0 or r(0, args).
+A named argument is an argument passed under a name alongside its position. Code reads it with `%<name>`, or with r(`<name>`, args), where it would read %0 with %0 or r(0, args).
 
 ```sharp
 &FUN`ROW me=%<name> has %<count> posts.
@@ -60,22 +60,22 @@ think uargs(me/FUN`ROW, name, Bob, count, 3)
 ```
 Output: `Bob has 3 posts.`
 
-- Names are case-insensitive: %`\<count\>` and %`\<COUNT\>` are the same argument.
-- The name inside %`\<...\>` is evaluated, so %`\<item[add(1,1)]\>` reads `item2`.
-- %`\<0\>` is %0, so a number reads the argument in that position.
+- Names are case-insensitive: `%<count>` and `%<COUNT>` are the same argument.
+- The name inside `%<...>` is evaluated, so `%<item[add(1,1)]>` reads `item2`.
+- `%<0>` is %0, so a number reads the argument in that position.
 - A name nobody passed is empty.
 - Named arguments belong to one call, as %0-%9 do. The attribute's own u() calls don't see them, and nothing is left behind when it returns. Q-registers (setq()) stay set for the rest of the queue entry, so a value handed to a helper is better passed by name.
 
-An unclosed %`\<` is a parse error, as an unclosed %q`\<` is.
+An unclosed `%<` is a parse error, as an unclosed `%q<` is.
 
 ## Passing named arguments
 
 | Where | Passes |
 | --- | --- |
-| uargs(`<obj>/<attr>`, `<name>`, `<value>`, ...) | names and ordered numbered value aliases |
-| @trigger/args `<obj>/<attr>`=`<name>`,`<value>`,... | names and ordered numbered value aliases |
-| @include/args `<obj>/<attr>`=`<name>`,`<value>`,... | names and numbered aliases overlaid on the caller's arguments |
-| stepargs(`<obj>/<attr>`, `<list>`, `<names>`) | each run's elements under `<names>` and numbered slots |
+| uargs(`<obj>/<attr>`, `<name>`, `<value>`, ...) | each value by its name and by its position |
+| @trigger/args `<obj>/<attr>`=`<name>`,`<value>`,... | each value by its name and by its position |
+| @include/args `<obj>/<attr>`=`<name>`,`<value>`,... | each value by its name and position, on top of the caller's arguments |
+| stepargs(`<obj>/<attr>`, `<list>`, `<names>`) | each run's elements under `<names>` and by position |
 
 ```sharp
 &FUN`PAIR me=%<name>=%<count>
@@ -90,13 +90,15 @@ think get(me/LAST`GREETING)
 ```
 Output: `Welcome, Bob.`
 
-## Presence and migration
+## Included and repeated arguments
 
-Includes replace numbered slots supplied by the overlay and retain untouched inherited slots, including `/chain/args`. For example, including `who,Bob` replaces inherited %0 with Bob while retaining inherited %1. This changes the earlier names-only behavior. Repeated names retain ordered numbered values; their named value is last-wins. Numeric names must match their supplied position after leading-zero normalization.
+@include/args passes the arguments it names on top of the caller's. `@include/args me/X=who,Bob` makes `%<who>` Bob and `%0` Bob, and leaves the caller's `%1` and the rest as they were. `@include/chain/args` works the same way.
 
-`hasarg(name)` checks visible keys, including empty values. `hasarg(name,supplied)` checks inputs supplied to this invocation. Inherited include keys and generated count keys are visible but not supplied. A nested attribute call starts its own supplied set; built-in wrappers preserve the surrounding set.
+A name given twice keeps both values in their positions, and the name reads the last one. A name that is a number must be its value's own position, counted from 0.
 
-With `@trigger/match/args`, the shared command/listen matcher supplies captures first, then named values overlay their numbered aliases. Untouched captures stay available. The match string itself does not occupy a numbered slot. Both captured inputs and explicit overrides are supplied to that invocation.
+[hasarg()] tells whether an argument exists, even an empty one, and whether this call was passed it or only sees it from its caller.
+
+With `@trigger/match/args`, the pattern's captures come first, as %0, %1 and so on, and the named values then replace the positions they take. Captures they do not replace stay. The string being matched is not one of the arguments.
 
 ## Naming a function's arguments
 
@@ -185,21 +187,21 @@ A hook can't refuse its command, so when a command named with `...` is given an 
 ## Arguments the game names
 
 - @hook attributes: `ARGS`, `LS`, `RS`, `EQUALS`, `SWITCHES`, `LSAC` and `LSA<n>` (see [@hook registers]).
-- @http callbacks: %`\<status\>` and %`\<content-type\>`, with the body in %0 (see [@http]).
-- @input callbacks: %`\<reason\>` (see [@input]).
-- Event handlers: each argument by the name the event shows, such as %`\<destination\>` for object\`move (see [event list]).
-- @feed tie-ins and taps: %`\<id\>`, %`\<key\>`, %`\<speaker\>`, %`\<style\>`, %`\<text\>`, %`\<name\>` and the rest of their table (see [@feed tie-ins]).
-- The http_handler: %`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<headers\>` and %`\<hdr.<name>\>` for each header (see [http requests]).
-- @chatformat and MOGRIFY\`FORMAT: %`\<type\>`, %`\<channel\>`, %`\<message\>`, %`\<name\>`, %`\<title\>`, %`\<default\>`, %`\<says\>`, %`\<options\>` (see [@chatformat], [mogrifier]).
-- The other MOGRIFY\` attributes: the same names, and %`\<value\>` for the part being rewritten (see [mogrifier]).
+- @http callbacks: `%<status>` and `%<content-type>`, with the body in %0 (see [@http]).
+- @input callbacks: `%<reason>` (see [@input]).
+- Event handlers: each argument by the name the event shows, such as `%<destination>` for object\`move (see [event list]).
+- @feed tie-ins and taps: `%<id>`, `%<key>`, `%<speaker>`, `%<style>`, `%<text>`, `%<name>` and the rest of their table (see [@feed tie-ins]).
+- The http_handler: `%<path>`, `%<body>`, `%<viewer>`, `%<headers>` and `%<hdr.<name>>` for each header (see [http requests]).
+- @chatformat and MOGRIFY\`FORMAT: `%<type>`, `%<channel>`, `%<message>`, `%<name>`, `%<title>`, `%<default>`, `%<says>`, `%<options>` (see [@chatformat], [mogrifier]).
+- The other MOGRIFY\` attributes: the same names, and `%<value>` for the part being rewritten (see [mogrifier]).
 
 ## Arguments formats and queries name
 
-- @pageformat and @outpageformat: %`\<message\>`, %`\<type\>`, %`\<alias\>`, %`\<recipients\>`, %`\<default\>` (see [@pageformat]).
-- @speechmod: %`\<message\>`, %`\<type\>` (see [@speechmod]).
-- @mailfilter: %`\<sender\>`, %`\<subject\>`, %`\<body\>`, %`\<flags\>` (see [@mailfilter]).
-- Look formats: @nameformat's %`\<object\>` and %`\<name\>`, @descformat's and @idescformat's %`\<description\>`, @conformat's %`\<contents\>` and %`\<names\>`, @exitformat's %`\<exits\>` (see [@nameformat]).
-- rendermarkdowncustom() templates: %`\<text\>`, %`\<url\>` and the other names in their list (see [rendermarkdowncustom()]).
+- @pageformat and @outpageformat: `%<message>`, `%<type>`, `%<alias>`, `%<recipients>`, `%<default>` (see [@pageformat]).
+- @speechmod: `%<message>`, `%<type>` (see [@speechmod]).
+- @mailfilter: `%<sender>`, `%<subject>`, `%<body>`, `%<flags>` (see [@mailfilter]).
+- Look formats: @nameformat's `%<object>` and `%<name>`, @descformat's and @idescformat's `%<description>`, @conformat's `%<contents>` and `%<names>`, @exitformat's `%<exits>` (see [@nameformat]).
+- rendermarkdowncustom() templates: `%<text>`, `%<url>` and the other names in their list (see [rendermarkdowncustom()]).
 - Regexp $-commands: each named capture.
 - mapsql(): each column, by its name.
 

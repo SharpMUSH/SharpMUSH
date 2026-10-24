@@ -46,7 +46,7 @@ Ex: `@fail Heavy Box=You can't pick that up.`
 The third form sets an arbitrary attribute with `<value>` on `<object>`. You can also do this with `&<attribute> <object>=<value>`<br>
 Ex: `@set Test Object=random:This is a random attribute.`<br>
 `&random Test Object=This is a random attribute.`<br>
-An important difference between these two forms is that @set will always evaluate the `<value>` before setting it on `<object>`, while the `&<attribute>` form will not evaluate when entered directly by a player in his client (and is usually what you want).
+An important difference between these two forms is that @set will always evaluate the `<value>` before setting it on `<object>`, while the `&<attribute>` form will not evaluate when entered directly by a player in their client (and is usually what you want).
 
 The third form keeps everything after the first colon as the value, commas included.
 
