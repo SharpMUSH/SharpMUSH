@@ -41,7 +41,7 @@ public record ConversionResult
 	/// </summary>
 	public bool Aborted { get; init; }
 
-	public bool IsSuccessful => Errors.Count == 0;
+	public bool IsSuccessful => !Aborted && Errors.Count == 0;
 }
 
 /// <summary>Safe journal discovery; excludes private paths, source configuration, and key material.</summary>
