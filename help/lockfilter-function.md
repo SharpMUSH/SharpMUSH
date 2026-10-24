@@ -45,6 +45,13 @@ All players with an AGE attribute over 20:
 #123 #456 #789
 ```
 
+A backslash before a character in an attribute name makes it part of the name, so an attribute named +FOO is not read as a carry key. Write two backslashes, since `<key>` is evaluated first. All connected players whose +FOO attribute is BAR:
+
+```sharp
+> think map(#apply/name,lockfilter(\\+FOO:BAR,lwho()))
+Mike Walker Qon
+```
+
 ::: seealso
 - [LOCKING]
 - [LOCK()]
