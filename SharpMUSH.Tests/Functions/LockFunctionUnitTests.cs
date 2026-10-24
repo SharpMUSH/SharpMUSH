@@ -158,6 +158,23 @@ public class LockFunctionUnitTests
 		await Assert.That(creator.ToPlainText()).IsEqualTo("#1");
 	}
 
+	/// <summary>
+	/// A backslash in a key's attribute name escapes the next character, as test_atr (src/boolexp.c) reads
+	/// it, so <c>\\+FOO:BAR</c> tests an attribute named +FOO rather than a carry key.
+	/// </summary>
+	[Test]
+	public async Task AnEscapedAttributeNameTestsThatAttribute()
+	{
+		var created = await Parser.EvaluateAsync(MarkupText.Plain("create(EscapedKey_" + Guid.NewGuid().ToString("N") + ")"));
+		var target = created.ToPlainText();
+		await Parser.FunctionParse(MarkupText.Plain($"set({target},+FOO:BAR)"));
+
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"[lockfilter(\\\\+FOO:BAR,{target})]|[testlock(\\\\+FOO:BAR,{target})]|[testlock(\\\\+FOO:BAZ,{target})]"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo($"{target}|1|0");
+	}
+
 	[Test]
 	public async Task ListsBuiltinAndCustomLocks()
 	{

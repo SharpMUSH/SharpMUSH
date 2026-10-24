@@ -416,7 +416,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitAttributeExpr(SharpMUSHBoolExpParser.AttributeExprContext context)
 	{
-		var attrName = context.@string().GetText();
+		var attrName = LockLiteralText.ReadAttributeName(context.@string());
 		var expectedValue = LockLiteralText.Read(context.literal());
 
 		return async (_, unlockerObj) =>
@@ -450,7 +450,7 @@ public class SharpMUSHBooleanExpressionVisitor(
 
 	public override LockPredicate VisitEvaluationExpr(SharpMUSHBoolExpParser.EvaluationExprContext context)
 	{
-		var attrName = context.@string().GetText();
+		var attrName = LockLiteralText.ReadAttributeName(context.@string());
 		var expected = LockLiteralText.Read(context.literal());
 
 		// PennMUSH eval lock (ATTR/pattern): evaluate the attribute on the gated object
