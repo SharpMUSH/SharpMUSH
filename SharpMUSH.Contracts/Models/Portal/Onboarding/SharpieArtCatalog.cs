@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-frankenstein-pixel-player-channels", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-player-speak-act", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-player-world", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-player-character", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-player-sign-in", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
