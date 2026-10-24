@@ -273,7 +273,7 @@
                     {
                         <MudAlert Severity="Severity.Warning" Dense="true" Class="dbimport-restart-required">@Loc["AdmImportRestartRequested"]</MudAlert>
                     }
-                    @if (_configImportedFrom is not null)
+                    @if (_configImportedFrom is not null && _result.IsSuccessful)
                     {
                         <MudAlert Severity="Severity.Info" Dense="true" Class="dbimport-config-applied">
                             @Loc[_result.RequiresPromotion ? "AdmImportConfigPrepared" : "AdmImportConfigApplied", _configImportedFrom]

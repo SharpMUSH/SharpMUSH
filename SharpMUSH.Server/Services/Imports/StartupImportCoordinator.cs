@@ -30,8 +30,8 @@ public sealed class StartupImportCoordinator(ImportPreviewCoordinator previews, 
 		}
 		catch (Exception error)
 		{
-			logger.LogError("Startup import was not committed: {ErrorType}", error.GetType().Name);
-			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.GetType().Name);
+			logger.LogError(error, "Startup import was not committed: {Reason}", error.Message);
+			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.Message);
 		}
 	}
 
