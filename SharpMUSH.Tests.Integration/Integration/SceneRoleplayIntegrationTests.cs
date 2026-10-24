@@ -1181,6 +1181,12 @@ public class SceneRoleplayIntegrationTests
 			.Because("a player-set FORMAT`SAY must override the default render");
 		await Assert.That(hugoObserver.Message).Contains($"Hugo_{Tag}: with format")
 			.Because("the custom format renders name + message");
+		var irisHeard = hugoSay.Where(n => n.Recipient == Num(iris)).Select(n => n.Message).ToList();
+		var lineAt = irisHeard.FindIndex(m => m.Contains("with format"));
+		await Assert.That(irisHeard.FindIndex(m => m.Contains($"Hugo_{Tag} · pose "))).IsGreaterThanOrEqualTo(0).And.IsLessThan(lineAt)
+			.Because("the room gets the pose's rule before a line its speaker formats");
+		await Assert.That(irisHeard.FindLastIndex(m => m.Contains($"< Scene {hugoScene} >"))).IsGreaterThan(lineAt)
+			.Because("and the footer after it");
 
 		// Iris has no FORMAT`SAY → default literal third-person "Name says, \"…\"".
 		var irisSay = await RunAndCollectNotificationsAs(irisHandle, "say no format");
