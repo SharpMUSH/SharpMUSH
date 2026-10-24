@@ -590,6 +590,14 @@ public static partial class ColourSubstitutionRewriter
 			var buffer = new StringBuilder();
 			var style = new Style();
 			var afterCode = false;
+			// A code-producing call no text has followed yet: if none does, the call is dropped.
+			var unusedCall = false;
+
+			void DropUnusedCall()
+			{
+				if (unusedCall) Flags.Add(TrailingCodesDropped);
+				unusedCall = false;
+			}
 
 			void Flush(bool atCode = false)
 			{
@@ -617,6 +625,7 @@ public static partial class ColourSubstitutionRewriter
 
 				buffer.Clear();
 				afterCode = false;
+				unusedCall = false;
 			}
 
 			for (var index = 0; index < unit.Items.Count; index++)
@@ -632,12 +641,14 @@ public static partial class ColourSubstitutionRewriter
 
 					case ItemKind.Reset:
 						Flush(true);
+						DropUnusedCall();
 						style = new Style();
 						afterCode = true;
 						break;
 
 					case ItemKind.Separator:
 						Flush();
+						DropUnusedCall();
 						style = new Style();
 						afterCode = false;
 						output.Append(item.Text);
@@ -664,6 +675,7 @@ public static partial class ColourSubstitutionRewriter
 							Flush(true);
 							afterCode = true;
 							style.Dynamic.Add(Child(child, true));
+							unusedCall = true;
 							break;
 						}
 
@@ -692,6 +704,7 @@ public static partial class ColourSubstitutionRewriter
 			}
 
 			Flush();
+			DropUnusedCall();
 			return output.ToString();
 		}
 	}
@@ -791,6 +804,10 @@ public static partial class ColourSubstitutionRewriter
 					if (!CodeOnly(unit)) return false;
 					found = true;
 				}
+				else if (CodesBesideText(unit))
+				{
+					return false;
+				}
 
 				if (unit.Items.Where(item => item.Kind == ItemKind.Child).Any(item => !Walk(item.Child!)))
 				{
@@ -801,6 +818,18 @@ public static partial class ColourSubstitutionRewriter
 			return true;
 		}
 	}
+
+	/// <summary>
+	/// A unit whose codes come from a call inside it, beside text of its own, as in
+	/// <c>if(x,%c0x00,%c0xEF)%c0X[printf(...)]</c>: it writes text, not only codes.
+	/// </summary>
+	private static bool CodesBesideText(Unit unit)
+		=> unit.Items.Exists(item => item.Kind == ItemKind.Child && ContainsCode(item.Child!))
+			&& unit.Items.Exists(item => (item.Kind == ItemKind.Text && !string.IsNullOrWhiteSpace(item.Text))
+				|| (item.Kind == ItemKind.Child && !ContainsCode(item.Child!)));
+
+	private static bool ContainsCode(Node node)
+		=> UnitsOf(node).Any(unit => HasCode(unit) || unit.Items.Exists(item => item.Kind == ItemKind.Child && ContainsCode(item.Child!)));
 
 	private static bool TrailingOpen(Unit unit)
 	{

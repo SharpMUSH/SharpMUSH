@@ -206,7 +206,41 @@ public class RhostStrictReaderTests
 		await Assert.That(mail.Mail.Messages.Single().Body).IsEqualTo(imported);
 	}
 
-	private static string Object(int id, string name, int flags, int owner, string attributes = "", int location = -1, int home = -1)
-		=> $"!{id}\n{name}\n{location}\n-1\n{home}\n-1\n\n{owner}\n0\n{flags}\n{attributes}<\n";
+	/// <summary>
+	/// RhostMUSH ends an attribute or eval key's line inside a lock, so a lock holding one spans lines, and
+	/// <c>putboolexp</c> adds a blank line after one that ends in one.
+	/// </summary>
+	[Test]
+	[Arguments("256/1\n", "256/1")]
+	[Arguments("(256:yes\n&1)", "(256:yes&1)")]
+	[Arguments("(1&256/a(b\n)", "(1&256/a(b)")]
+	[Arguments("(256/x\n|(1&256:y\n))", "(256/x|(1&256:y))")]
+	public async Task ReadsALockOverTheLinesRhostWritesItOn(string field, string expected)
+	{
+		var world = "+V7\n+S2\n+N257\n+A256\n0:TEST\n"
+			+ Object(0, "Limbo", 0, 1) + Object(1, "Wizard", 3, 1, lockField: field)
+			+ RhostFlatfileReader.EndOfDump + "\n";
+
+		var wizard = RhostFlatfileReader.ReadStrict(world).Objects[1];
+
+		await Assert.That(wizard.Lock).IsEqualTo(expected);
+		await Assert.That(wizard.Owner).IsEqualTo(1);
+	}
+
+	/// <summary>RhostMUSH's newer built-in attributes are numbered from 2100000000 and have no +A header.</summary>
+	[Test]
+	public async Task AcceptsBuiltInAttributesAboveTheUserAttributes()
+	{
+		var world = "+V7\n+S2\n+N256\n"
+			+ Object(0, "Limbo", 0, 1) + Object(1, "Wizard", 3, 1, ">2100000000\n1 0 0\n>2100000006\nWizard\n")
+			+ RhostFlatfileReader.EndOfDump + "\n";
+
+		await Assert.That(RhostFlatfileReader.ReadStrict(world).Objects[1].Attributes.Count).IsEqualTo(2);
+		Assert.Throws<FormatException>(() => RhostFlatfileReader.ReadStrict(world.Replace(">2100000006", ">2140000000")));
+	}
+
+	private static string Object(int id, string name, int flags, int owner, string attributes = "", int location = -1, int home = -1,
+		string lockField = "")
+		=> $"!{id}\n{name}\n{location}\n-1\n{home}\n-1\n{lockField}\n{owner}\n0\n{flags}\n{attributes}<\n";
 
 }
