@@ -70,6 +70,13 @@ public sealed class ConfigOptionWriter(
 		}
 
 		var number = text.StartsWith('#') ? text[1..] : text;
+		// A dbref option takes an objid too (#8:1792817866185), the dbref before the colon.
+		if (ConfigMetadata.PropertyMetadata.TryGetValue(property, out var metadata) && metadata.Dbref
+			&& number.IndexOf(':') is > 0 and var colon
+			&& ulong.TryParse(number[(colon + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out _))
+		{
+			number = number[..colon];
+		}
 
 		if (Nullable.GetUnderlyingType(type) is { } underlying)
 		{
