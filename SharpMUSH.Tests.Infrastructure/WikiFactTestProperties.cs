@@ -22,6 +22,9 @@ public static class WikiFactTestProperties
 		new("pf2e:ancestry", WikiFactProperties.SchemaVersion, SemanticType.PageRef, Cardinality.Single, []),
 		new("pf2e:source-book", WikiFactProperties.SchemaVersion, SemanticType.Keyword, Cardinality.Single,
 			[new("player core"), new("player core 2"), new("gm core")]),
+		new("pf2e:price", WikiFactProperties.SchemaVersion, SemanticType.Decimal, Cardinality.Single, []),
+		new("pf2e:published", WikiFactProperties.SchemaVersion, SemanticType.Date, Cardinality.Single, []),
+		new("pf2e:motto", WikiFactProperties.SchemaVersion, SemanticType.Text, Cardinality.Single, []),
 	];
 
 	public static async Task DefineAsync(IWikiStore store)

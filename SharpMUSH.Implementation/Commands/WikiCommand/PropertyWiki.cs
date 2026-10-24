@@ -91,7 +91,7 @@ public static class PropertyWiki
 		{
 			null => WikiFactProperties.ParseType(value) is { } type
 				? property with { Type = type, AllowedKeywords = type == SemanticType.Keyword ? property.AllowedKeywords : [] }
-				: new Error<string>($"'{value}' is not a property type: number, keyword, page or boolean."),
+				: new Error<string>($"'{value}' is not a property type: keyword, text, number, decimal, date, page or boolean."),
 			"label" => property with { Label = value },
 			"description" => property with { Description = value },
 			"values" => property with

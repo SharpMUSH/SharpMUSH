@@ -96,6 +96,9 @@ public static class CanonicalFacts
 		long integer => "i:" + integer.ToString(CultureInfo.InvariantCulture),
 		bool boolean => boolean ? "b:1" : "b:0",
 		Keyword keyword => "k:" + keyword.Value,
+		FactText text => "t:" + text.Value,
+		double number => "d:" + number.ToString("R", CultureInfo.InvariantCulture),
+		DateOnly date => "a:" + date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 		_ => "invalid"
 	};
 
@@ -123,6 +126,9 @@ public static class CanonicalFacts
 		SemanticType.Integer => value is long,
 		SemanticType.Boolean => value is bool,
 		SemanticType.Keyword => value is Keyword,
+		SemanticType.Text => value is FactText,
+		SemanticType.Decimal => value is double number && double.IsFinite(number),
+		SemanticType.Date => value is DateOnly,
 		_ => false
 	};
 

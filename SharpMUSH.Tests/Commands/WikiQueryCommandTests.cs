@@ -117,6 +117,35 @@ public class WikiQueryCommandTests
 	}
 
 	[Test]
+	public async Task DecimalsDatesAndTextAnswerAsTyped()
+	{
+		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
+		var player = await PlayerAsync("WikiQueryTypes");
+		var category = TestIsolationHelpers.GenerateUniqueName("QueryTypes");
+		var cheap = await PageAsync("TypesCheap", category, true, new("pf2e:price", "0.5"), new("pf2e:published", "2019-08-01"), new("pf2e:motto", "Run Away"));
+		var dear = await PageAsync("TypesDear", category, true, new("pf2e:price", "12.75"), new("pf2e:published", "2023-08-02"));
+		async Task ExpectAsync(string conditions, params WikiPage[] pages)
+		{
+			var marker = TestIsolationHelpers.GenerateUniqueName("types");
+			await RunAsync(player, $"think {marker} [wikiquery(category={category}, {conditions})]");
+			await Assert.That(Told(player, $"{marker} {string.Join(" ", pages.Select(p => $"main:{p.Slug}"))}")).IsEqualTo(1);
+		}
+
+		await ExpectAsync("pf2e:price<1.25", cheap);
+		await ExpectAsync("pf2e:price=0.50", cheap);
+		await ExpectAsync("pf2e:published=2020-01-01..", dear);
+		await ExpectAsync("pf2e:price=*, sort=pf2e:published, order=desc", dear, cheap);
+		await ExpectAsync("pf2e:motto=run away", cheap);
+
+		await RunAsync(player, $"@wiki/query category={category}, pf2e:price=*, sort=pf2e:price, show=pf2e:price|pf2e:published");
+		var listing = WebAppFactoryArg.Notifications.RawFor(player.DbRef)
+			.Select(message => message switch { MString markup => markup.ToPlainText(), string text => text })
+			.Single(m => m.Contains($"2 page(s) where category={category}", StringComparison.Ordinal));
+		// Values are shown as the page wrote them.
+		await Assert.That(listing).Contains("0.5").And.Contains("12.75").And.Contains("2019-08-01").And.Contains("2023-08-02");
+	}
+
+	[Test]
 	public async Task ATitleWithACommaIsOneConditionAndTheListingIsInTheReadersLocale()
 	{
 		await WebAppFactoryArg.Services.GetRequiredService<IWikiFactIndexBuilder>().Idle;
@@ -143,7 +172,7 @@ public class WikiQueryCommandTests
 	[Arguments("level", "WIKI: 'level' is not a condition like 'pf2e:level=1..3'.")]
 	[Arguments("namespace=nowhere", "WIKI: No namespace nowhere exists.")]
 	[Arguments("category=Spells", "WIKI: A query needs a fact condition, like 'pf2e:level=1..3'; category and namespace only narrow it.")]
-	[Arguments("pf2e:tradition>2", "WIKI: pf2e:tradition is not a whole number, so it has no range.")]
+	[Arguments("pf2e:tradition>2", "WIKI: pf2e:tradition is not a number or a date, so it has no range.")]
 	[Arguments("pf2e:level>=x", "WIKI: pf2e:level is a whole number, not 'x'.")]
 	[Arguments("pf2e:level!=1", "WIKI: A query needs a condition a page meets by stating a value; != alone finds no pages.")]
 	[Arguments("pf2e:level=1, order=desc", "WIKI: order needs a sort, as in 'sort=pf2e:level'.")]

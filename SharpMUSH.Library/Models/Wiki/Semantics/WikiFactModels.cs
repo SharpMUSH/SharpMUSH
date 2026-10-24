@@ -5,8 +5,14 @@ namespace SharpMUSH.Library.Models.Wiki.Semantics;
 /// <summary>Opaque incarnation ID. A recreated page receives a new ID even if its title or source key matches.</summary>
 public readonly record struct PageRef(string Id);
 public readonly record struct Keyword(string Value);
-public union SemanticValue(PageRef, long, bool, Keyword);
-public enum SemanticType { PageRef, Integer, Boolean, Keyword }
+/// <summary>Free text, kept as written; it matches another text ignoring case.</summary>
+public readonly record struct FactText(string Value);
+public union SemanticValue(PageRef, long, bool, Keyword, FactText, double, DateOnly);
+/// <summary>
+/// What a property's values are. <see cref="Decimal"/> is a finite number written with a decimal point and no
+/// exponent; <see cref="Date"/> a calendar day written <c>yyyy-MM-dd</c>.
+/// </summary>
+public enum SemanticType { PageRef, Integer, Boolean, Keyword, Text, Decimal, Date }
 public enum Cardinality { Single, Multiple }
 /// <summary>
 /// A property a page's facts may state, as the world defines it. Id grammar is ASCII

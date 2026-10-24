@@ -48,10 +48,13 @@ and `wikifact(<page>, <property>)` returns one property's values.
 
 Each property has a type, and a value of the wrong type is refused:
 
-- a whole number, like `3`
-- a keyword from the property's list, like `arcane`
-- `true` or `false`
-- a page, written as its title, like `Help:Fireball`
+- `number`: a whole number, like `3`
+- `decimal`: a number with a decimal point, like `1.5` (no `1e3` or `1,000`)
+- `date`: a day written year-month-day, like `2026-10-23`
+- `keyword`: a word from the property's list, like `arcane`
+- `text`: any text, kept as written and matched whatever its case
+- `boolean`: `true` or `false`
+- `page`: a page, written as its title, like `Help:Fireball`
 
 A property takes either one value or several. Separate several values with
 `|`.
@@ -84,9 +87,9 @@ A page states only properties the game defines. `@wiki/property` lists them
 and `@wiki/property <property>` shows one. Anyone may read them; changing them
 needs wiki.admin.
 
-A property is named `<group>:<name>`, like `faction:leader`. Its type is
-`number`, `keyword`, `page` or `boolean`. `<property>=<type>` defines it or
-changes its type, and `<property>=` removes it. Each field sets one thing:
+A property is named `<group>:<name>`, like `faction:leader`. Its type is one
+of those in [wiki fact values]. `<property>=<type>` defines it or changes its
+type, and `<property>=` removes it. Each field sets one thing:
 
 - `label`: the name readers see
 - `description`: what the property means
@@ -111,8 +114,8 @@ property on it, and a property defined again finds the pages that state it.
 up to four conditions (see [wiki fact conditions]), and these settings:
 
 - `category=<name>`, `namespace=<name>`: where the pages come from
-- `sort=<property>`: order by a number or keyword; a page that states none
-  is left out
+- `sort=<property>`: order by any property but a page; a page that states
+  none is left out
 - `order=desc`: highest first; `order=asc`, the default, lowest first
 - `show=<property>[|<property>...]`: up to four properties' values beside
   each page, in place of the revision and date. Not in `wikiquery()`.
@@ -139,10 +142,11 @@ WIKI: pf2e:level is a whole number, not 'high'.
 - `<property>=<value>|<value>`: it states either.
 - `<property>!=<value>`: it does not state it.
 - `<property>=*`: it states any value; `<property>!=*`, none.
-- `pf2e:level>3`, `<3`, `>=3`, `<=3`: a whole number above, below, at
-  least or at most 3.
-- `<property>=<low>..<high>`: a whole number from *<low>* to *<high>*.
-  Leave one end off for no limit, as in `pf2e:level=..2`.
+- `pf2e:level>3`, `<3`, `>=3`, `<=3`: a number, decimal or date above,
+  below, at least or at most the value; a later date is above.
+- `<property>=<low>..<high>`: from *<low>* to *<high>*, as in
+  `lore:founded=2026-01-01..2026-06-30`. Leave one end off for no limit, as
+  in `pf2e:level=..2`.
 
 A query needs one condition a page meets by stating a value, or a sort:
 `!=` alone finds no pages.
@@ -156,9 +160,10 @@ Output: a table of the pages that name a class and do not state divine.
 ## Facets
 
 `@wiki/facets <category>` lists, for each property the category's pages
-state, the values they state and how many pages state each. Many whole
-numbers are counted in up to six ranges, and a property lists its twelve
-most stated values. After `=`, conditions narrow the pages counted; a
+state, the values they state and how many pages state each. Many numbers or
+dates are counted in up to six ranges (of equal width for whole numbers, else
+of about as many values each), and a property lists its twelve most stated
+values. After `=`, conditions narrow the pages counted; a
 property's own conditions do not narrow its counts, so its other values stay
 listed. Where a client can click, a value narrows the facets, and "List
 them" runs the query for the pages counted. A category's portal page offers

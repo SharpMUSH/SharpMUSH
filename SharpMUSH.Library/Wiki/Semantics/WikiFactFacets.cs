@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Wiki.Semantics;
 /// <summary>
 /// A category's facets, as Semantic Drilldown shows them: for each defined property its pages state, the values they
 /// state and how many pages state each, among the pages that meet the conditions already chosen. A property's own
-/// conditions are left out of its counts, so the values a reader could pick instead stay listed. A whole-number
+/// conditions are left out of its counts, so the values a reader could pick instead stay listed. A number or date
 /// property with more than <see cref="MaxRanges"/> values is counted in that many ranges instead.
 /// </summary>
 public static class WikiFactFacets
@@ -21,7 +21,7 @@ public static class WikiFactFacets
 	/// <summary>The most values listed for one property, the most stated first.</summary>
 	public const int MaxValues = 12;
 
-	/// <summary>The most ranges a whole-number property's values are counted in.</summary>
+	/// <summary>The most ranges a number or date property's values are counted in.</summary>
 	public const int MaxRanges = 6;
 
 	private const int Batch = 200;
@@ -87,8 +87,9 @@ public static class WikiFactFacets
 			if (!stated.TryGetValue(definition.Id, out var values)) continue;
 			var counted = definition.Type switch
 			{
-				SemanticType.Integer => Numbers(values),
+				_ when WikiFactQueries.Ordered(definition.Type) => Ranges(values, definition.Type),
 				SemanticType.PageRef => await PagesAsync(wiki, values, visibility),
+				SemanticType.Text => Texts(values),
 				_ => Counted(values, value => (value, value)),
 			};
 			if (counted.Count == 0) continue;
@@ -124,32 +125,63 @@ public static class WikiFactFacets
 		return Counted(pages, id => named[id]);
 	}
 
-	/// <summary>
-	/// Whole numbers in their own order: each value while there are at most <see cref="MaxRanges"/>, else that many
-	/// ranges of equal width from the least to the greatest, written <c>low..high</c>. A page is counted once in a range
-	/// however many of its values fall there.
-	/// </summary>
-	private static List<WikiFacetValue> Numbers(List<IReadOnlyList<string>> pages)
+	/// <summary>Texts that differ only in case counted as one, shown as the first page spelled it.</summary>
+	private static List<WikiFacetValue> Texts(List<IReadOnlyList<string>> pages)
 	{
-		var numbers = pages.Select(values => values.Select(WikiFactQueries.Integer).OfType<long>().ToHashSet()).ToList();
-		var distinct = numbers.SelectMany(n => n).Distinct().Order().ToList();
-		if (distinct.Count <= MaxRanges)
-			return [.. distinct.Select(n => new WikiFacetValue(Text(n), Text(n), numbers.Count(page => page.Contains(n))))];
+		var spelled = new Dictionary<string, string>(StringComparer.Ordinal);
+		foreach (var value in pages.SelectMany(values => values)) spelled.TryAdd(WikiFactQueries.Folded(value), value);
+		return Counted([.. pages.Select(values => (IReadOnlyList<string>)[.. values.Select(v => spelled[WikiFactQueries.Folded(v)]).Distinct(StringComparer.Ordinal)])],
+			value => (value, value));
+	}
 
-		var (low, high) = (distinct[0], distinct[^1]);
-		// Computed in decimal: the width of a range near long's limits does not fit in a long.
-		var width = (long)Math.Ceiling(((decimal)high - low + 1) / MaxRanges);
+	/// <summary>
+	/// Numbers and dates in their own order: each value while there are at most <see cref="MaxRanges"/>, else that many
+	/// ranges from the least to the greatest, written <c>low..high</c>. Whole numbers are cut into ranges of equal
+	/// width; decimals and dates, which spread unevenly, into ranges of about as many values each, from one value a
+	/// page states to another. A page is counted once in a range however many of its values fall there.
+	/// </summary>
+	private static List<WikiFacetValue> Ranges(List<IReadOnlyList<string>> pages, SemanticType type)
+	{
+		var keys = pages.Select(values => values.Select(v => WikiFactQueries.OrderKey(type, v)).OfType<long>().ToHashSet()).ToList();
+		var distinct = keys.SelectMany(k => k).Distinct().Order().ToList();
+		if (distinct.Count <= MaxRanges)
+			return [.. distinct.Select(k => new WikiFacetValue(Write(type, k), Write(type, k), keys.Count(page => page.Contains(k))))];
+
 		var ranges = new List<WikiFacetValue>();
-		for (var start = (decimal)low; start <= high; start += width)
+		foreach (var (from, to) in type == SemanticType.Integer ? EqualWidths(distinct[0], distinct[^1]) : Quantiles(distinct))
 		{
-			var (from, to) = ((long)start, (long)Math.Min(high, start + width - 1));
-			var count = numbers.Count(page => page.Any(n => n >= from && n <= to));
-			if (count > 0) ranges.Add(new WikiFacetValue($"{Text(from)}..{Text(to)}", from == to ? Text(from) : $"{Text(from)} to {Text(to)}", count));
+			var count = keys.Count(page => page.Any(k => k >= from && k <= to));
+			if (count > 0)
+				ranges.Add(new WikiFacetValue($"{Write(type, from)}..{Write(type, to)}",
+					from == to ? Write(type, from) : $"{Write(type, from)} to {Write(type, to)}", count));
 		}
 		return ranges;
 	}
 
-	private static string Text(long number) => number.ToString(CultureInfo.InvariantCulture);
+	private static IEnumerable<(long From, long To)> EqualWidths(long low, long high)
+	{
+		// Computed in decimal: the width of a range near long's limits does not fit in a long.
+		var width = (long)Math.Ceiling(((decimal)high - low + 1) / MaxRanges);
+		for (var start = (decimal)low; start <= high; start += width)
+			yield return ((long)start, (long)Math.Min(high, start + width - 1));
+	}
+
+	private static IEnumerable<(long From, long To)> Quantiles(List<long> distinct)
+	{
+		for (var i = 0; i < MaxRanges; i++)
+		{
+			var (first, last) = (distinct.Count * i / MaxRanges, distinct.Count * (i + 1) / MaxRanges - 1);
+			yield return (distinct[first], distinct[last]);
+		}
+	}
+
+	/// <summary>An order key written as a value of <paramref name="type"/> is (<see cref="WikiFactQueries.OrderKey"/>).</summary>
+	private static string Write(SemanticType type, long key) => type switch
+	{
+		SemanticType.Decimal => WikiFactQueries.WriteDecimal(WikiFactQueries.DecimalOf(key)),
+		SemanticType.Date => DateOnly.FromDayNumber((int)key).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+		_ => key.ToString(CultureInfo.InvariantCulture)
+	};
 }
 
 /// <summary>
@@ -165,7 +197,7 @@ public sealed record WikiFacets(int Pages, bool Partial, IReadOnlyList<WikiFacet
 public sealed record WikiFacet(string Property, string Label, SemanticType Type, IReadOnlyList<WikiFacetValue> Values, int More);
 
 /// <summary>
-/// One value, or one range of whole numbers, and how many pages state it. <paramref name="Value"/> is written as a
+/// One value, or one range of numbers or dates, and how many pages state it. <paramref name="Value"/> is written as a
 /// condition takes it after <c>property=</c>; <paramref name="Label"/> is what a reader is shown.
 /// </summary>
 public sealed record WikiFacetValue(string Value, string Label, int Count);

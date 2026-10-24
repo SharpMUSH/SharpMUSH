@@ -68,8 +68,11 @@ public static class WikiFactProperties
 	public static string TypeName(SemanticType type) => type switch
 	{
 		SemanticType.Integer => "number",
+		SemanticType.Decimal => "decimal",
+		SemanticType.Date => "date",
 		SemanticType.Boolean => "boolean",
 		SemanticType.PageRef => "page",
+		SemanticType.Text => "text",
 		_ => "keyword",
 	};
 
@@ -77,9 +80,12 @@ public static class WikiFactProperties
 	public static SemanticType? ParseType(string? name) => name?.Trim().ToLowerInvariant() switch
 	{
 		"number" => SemanticType.Integer,
+		"decimal" => SemanticType.Decimal,
+		"date" => SemanticType.Date,
 		"boolean" => SemanticType.Boolean,
 		"page" => SemanticType.PageRef,
 		"keyword" => SemanticType.Keyword,
+		"text" => SemanticType.Text,
 		_ => null,
 	};
 }
