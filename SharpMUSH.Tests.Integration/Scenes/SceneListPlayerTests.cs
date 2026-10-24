@@ -10,10 +10,10 @@ using SharpMUSH.Tests.Infrastructure;
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// scenelist()'s options object, above all <c>with</c>: the scenes two players both belong to, which the relationships
+/// scenelist()'s player arguments, above all <c>shared</c>: the scenes two players both belong to, which the relationships
 /// card uses for "Last scene together". Each test makes its own two players and its own scenes.
 /// </summary>
-public class SceneListOptionsTests
+public class SceneListPlayerTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
@@ -63,41 +63,32 @@ public class SceneListOptionsTests
 		return id;
 	}
 
-	/// <summary>The scenes of the first player's that the second also belongs to, as scenelist() with <c>with</c> lists them.</summary>
-	private Task<string> Shared(string count = "") =>
-		Eval($"scenelist(mine,json(object,player,json(string,{First}),with,json(string,{Second}){(count.Length == 0 ? "" : $",count,{count}")}))");
+	/// <summary>The scenes the first player and the second both belong to, as scenelist(shared) lists them.</summary>
+	private Task<string> Shared() => Eval($"scenelist(shared,{First},{Second})");
 
 	[Test]
-	public async Task With_lists_only_the_scenes_both_belong_to()
+	public async Task Shared_lists_only_the_scenes_both_belong_to()
 	{
 		var both = await SceneWith(First, Second);
 		await SceneWith(First);
 		var again = await SceneWith(First, Second);
 
-		var shared = (await Shared("10")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var shared = (await Shared()).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		await Assert.That(shared).IsEquivalentTo(new[] { both, again });
 	}
 
 	[Test]
-	public async Task A_count_of_one_gives_the_latest()
-	{
-		await SceneWith(First, Second);
-		var latest = await SceneWith(First, Second);
-
-		await Assert.That(await Shared("1")).IsEqualTo(latest);
-	}
-
-	[Test]
-	public async Task A_count_past_the_scan_takes_what_the_scan_finds()
+	public async Task Shared_with_one_name_starts_from_the_reader()
 	{
 		var both = await SceneWith(First, Second);
 
-		await Assert.That(await Shared(int.MaxValue.ToString())).IsEqualTo(both);
+		await Assert.That(await Eval($"scenelist(shared,{Second})")).IsEqualTo(both)
+			.Because("the reader is the first player");
 	}
 
 	[Test]
-	public async Task With_is_empty_for_two_players_who_share_none()
+	public async Task Shared_is_empty_for_two_players_who_share_none()
 	{
 		await SceneWith(First);
 
@@ -105,24 +96,23 @@ public class SceneListOptionsTests
 	}
 
 	[Test]
-	public async Task Player_lists_every_scene_of_that_player()
+	public async Task Mine_with_a_player_lists_every_scene_of_theirs()
 	{
 		var mine = await SceneWith(First);
 		var shared = await SceneWith(First, Second);
 
-		var listed = (await Eval($"scenelist(mine,json(object,player,json(string,{Second})))")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var listed = (await Eval($"scenelist(mine,{Second})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		await Assert.That(listed).Contains(shared);
 		await Assert.That(listed).DoesNotContain(mine);
 	}
 
 	[Test]
-	public async Task Bad_options_are_errors()
+	public async Task Bad_arguments_are_errors()
 	{
-		await Assert.That(await Shared("0")).IsEqualTo("#-1 COUNT MUST BE A POSITIVE WHOLE NUMBER");
-		await Assert.That(await Eval($"scenelist(mine,json(object,with,json(string,*NoSuchPlayer{Guid.NewGuid():N})))")).IsEqualTo("#-1 NO SUCH PLAYER");
-		await Assert.That(await Eval("scenelist(mine,json(object,colour,1))")).IsEqualTo("#-1 UNKNOWN OPTION COLOUR");
-		await Assert.That(await Eval("scenelist(mine,json(array,1))")).IsEqualTo("#-1 OPTIONS MUST BE A JSON OBJECT");
-		await Assert.That(await Eval("scenelist(scheduled,json(object,from,json(string,soon)))")).IsEqualTo("#-1 FROM MUST BE UTC MILLISECONDS");
+		await Assert.That(await Eval("scenelist(shared)")).IsEqualTo("#-1 NO SUCH PLAYER");
+		await Assert.That(await Eval($"scenelist(shared,{First},*NoSuchPlayer{Guid.NewGuid():N})")).IsEqualTo("#-1 NO SUCH PLAYER");
+		await Assert.That(await Eval($"scenelist(mine,*NoSuchPlayer{Guid.NewGuid():N})")).IsEqualTo("#-1 NO SUCH PLAYER");
+		await Assert.That(await Eval("scenelist(scheduled,soon)")).IsEqualTo("#-1 BAD ARGUMENT FORMAT TO SCENELIST");
 	}
 }

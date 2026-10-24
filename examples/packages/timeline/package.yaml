@@ -194,7 +194,7 @@ objects:
       # with no IC date last.
       FUN`TIMELINE`SCENES:
         value: |-
-          sortkey(%!/FUN`TIMELINE`KEY,filterbool(%!/FUN`TIMELINE`FINISHED,scenelist(mine,json(object,player,json(string,%0)))),n)
+          sortkey(%!/FUN`TIMELINE`KEY,filterbool(%!/FUN`TIMELINE`FINISHED,scenelist(mine,%0)),n)
         flags: [funsyntax]
       FUN`TIMELINE`FINISHED:
         value: |-

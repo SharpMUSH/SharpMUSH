@@ -206,9 +206,9 @@ use a **verb form** (cf. `mail`/`mailsend`, `wiki`/`wikilist`). Writes are
 `WizardOnly|HasSideFX` (guard `Configuration.CurrentValue.Function.FunctionSideEffects`),
 take **dbrefs**, and return the new id/value inline. Reads are `Regular`.
 
-**Reads:** `scene(<id>[,<field>])` · `scenelist([<filter>][,<options>])`
-(`active`/`recent`/`scheduled`/`mine`; JSON options `from`/`to` (UTC ms, sorted by
-`ScheduledFor`), `player`, `with`, `count`) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
+**Reads:** `scene(<id>[,<field>])` · `scenelist([<filter>][,<from>,<to>])`
+(`active`/`recent`/`scheduled`; windowed UTC-ms, sorted by `ScheduledFor`) ·
+`scenelist(mine[,<player>])` · `scenelist(shared,<player>[,<player>])` (scenes both belong to) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
 `sceneposes(<id>[,<authorDbref>][,<count>])` (ordered pose ids) ·
 `scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props; `edits` the
 edit-version history) · `scenemembers(<id>[,<role>])`

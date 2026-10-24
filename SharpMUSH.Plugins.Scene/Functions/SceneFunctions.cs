@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -159,20 +158,20 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenelist([&lt;filter&gt;][, &lt;options&gt;])
-	/// Returns a space-separated list of scene ids the reader may see. Filter: active | recent | scheduled |
-	/// upcoming | mine (default recent). upcoming is scheduled without the scenes that never started and are more
-	/// than an hour past their time. &lt;options&gt; is a JSON object:
+	/// scenelist([&lt;filter&gt;][, &lt;arg&gt;][, &lt;arg&gt;])
+	/// Returns a space-separated list of scene ids the reader may see, at most 50, the most recent. Filter: active |
+	/// finished | recent | scheduled | upcoming | mine | shared (default recent). upcoming is scheduled without the
+	/// scenes that never started and are more than an hour past their time. What follows the filter depends on it:
 	/// <list type="bullet">
-	/// <item><c>from</c>, <c>to</c>: UTC-millis bounds that window the scheduled and upcoming filters.</item>
-	/// <item><c>player</c>: with mine, that player's scenes rather than the reader's, every one of them.</item>
-	/// <item><c>with</c>: only the scenes this player also belongs to, from the newest 200 of the list.</item>
-	/// <item><c>count</c>: at most this many, the most recent (default 50).</item>
+	/// <item>active, finished, scheduled, upcoming: &lt;from&gt;, &lt;to&gt;, UTC-millis bounds that window the list.</item>
+	/// <item>mine: &lt;player&gt;, whose scenes rather than the reader's, every one of them.</item>
+	/// <item>shared: &lt;player&gt;[, &lt;other&gt;], the scenes both belong to (the reader and &lt;player&gt; when
+	/// there is one name), found among the first one's newest 200.</item>
 	/// </list>
 	/// </summary>
-	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 2,
+	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["filter", "options"])]
+		ParameterNames = ["filter", "arg", "arg"])]
 	public static async ValueTask<CallState> SceneList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -184,106 +183,93 @@ public static class SceneFunctions
 			filter = "recent";
 		}
 
-		var optionsText = args.TryGetValue("1", out var optionsArg) ? optionsArg.Message.ToPlainText().Trim() : string.Empty;
-		return ReadSceneListOptions(optionsText) switch
+		var first = args.TryGetValue("1", out var firstArg) ? firstArg.Message.ToPlainText().Trim() : string.Empty;
+		var second = args.TryGetValue("2", out var secondArg) ? secondArg.Message.ToPlainText().Trim() : string.Empty;
+		return filter switch
 		{
-			SceneListOptions options => await ListedScenesAsync(parser, filter, options),
-			Error<string> error => new CallState($"#-1 {error.Value}"),
+			"mine" => await MineAsync(parser, first),
+			"shared" => await SharedAsync(parser, first, second),
+			_ => await WindowedAsync(parser, filter, first, second),
 		};
 	}
 
-	/// <summary>What scenelist()'s options object asks for. A null field is the default.</summary>
-	internal sealed record SceneListOptions(long? From = null, long? To = null, string? Player = null, string? With = null, int? Count = null);
-
-	/// <summary>The options object, or why it cannot be read. Empty text is every default.</summary>
-	internal static Result<SceneListOptions> ReadSceneListOptions(string text)
+	/// <summary>scenelist(&lt;filter&gt;, &lt;from&gt;, &lt;to&gt;): the filter's 50 most recent, inside the window when one is given.</summary>
+	private static async ValueTask<CallState> WindowedAsync(IMUSHCodeParser parser, string filter, string fromText, string toText)
 	{
-		var options = new SceneListOptions();
-		if (text.Length == 0) return options;
-
-		JsonDocument document;
-		try
+		long? from = null, to = null;
+		if (fromText.Length > 0)
 		{
-			document = JsonDocument.Parse(text);
-		}
-		catch (JsonException)
-		{
-			return new Error<string>("OPTIONS MUST BE A JSON OBJECT");
+			if (!long.TryParse(fromText, out var parsed)) return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
+			from = parsed;
 		}
 
-		using (document)
+		if (toText.Length > 0)
 		{
-			if (document.RootElement.ValueKind != JsonValueKind.Object) return new Error<string>("OPTIONS MUST BE A JSON OBJECT");
-			foreach (var property in document.RootElement.EnumerateObject())
-			{
-				var key = property.Name.ToLowerInvariant();
-				var value = property.Value;
-				Result<SceneListOptions> next = key switch
-				{
-					"from" or "to" => value.ValueKind == JsonValueKind.Number && value.TryGetInt64(out var millis)
-						? key == "from" ? options with { From = millis } : options with { To = millis }
-						: new Error<string>($"{key.ToUpperInvariant()} MUST BE UTC MILLISECONDS"),
-					"player" or "with" => value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } name
-						? key == "player" ? options with { Player = name } : options with { With = name }
-						: new Error<string>($"{key.ToUpperInvariant()} MUST NAME A PLAYER"),
-					"count" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var count) && count > 0
-						? options with { Count = count }
-						: new Error<string>("COUNT MUST BE A POSITIVE WHOLE NUMBER"),
-					_ => new Error<string>($"UNKNOWN OPTION {key.ToUpperInvariant()}")
-				};
-
-				switch (next)
-				{
-					case SceneListOptions read:
-						options = read;
-						break;
-					case Error<string> error:
-						return error;
-				}
-			}
+			if (!long.TryParse(toText, out var parsed)) return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
+			to = parsed;
 		}
 
-		return options;
+		return await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync(filter, await ViewerDbrefAsync(parser), from, to));
 	}
 
-	private static async ValueTask<CallState> ListedScenesAsync(IMUSHCodeParser parser, string filter, SceneListOptions options)
+	/// <summary>scenelist(mine[, &lt;player&gt;]): the reader's 50 most recent, or every scene of the player's.</summary>
+	private static async ValueTask<CallState> MineAsync(IMUSHCodeParser parser, string player)
 	{
-		var viewer = await ViewerDbrefAsync(parser);
-		var scan = options.Count ?? 50;
-		if (filter == "mine" && options.Player is { } player)
+		if (player.Length == 0)
 		{
-			// A player's whole history, which a timeline is drawn from, not the 50 most recent.
-			if (await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerAsync(parser, player)) is not { } member)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-			}
-			(viewer, scan) = (member, options.Count ?? int.MaxValue);
+			return await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync("mine", await ViewerDbrefAsync(parser)));
 		}
 
-		string? other = null;
-		if (options.With is { } with)
+		// A player's whole history, which a timeline is drawn from, not the 50 most recent.
+		return await MemberAsync(parser, player) is { } member
+			? await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync("mine", member, count: int.MaxValue))
+			: new CallState(ErrorMessages.Returns.NoSuchPlayer);
+	}
+
+	/// <summary>scenelist(shared, &lt;player&gt;[, &lt;other&gt;]): the scenes both belong to, from the first one's newest 200.</summary>
+	private static async ValueTask<CallState> SharedAsync(IMUSHCodeParser parser, string player, string other)
+	{
+		var (firstName, secondName) = other.Length == 0 ? (string.Empty, player) : (player, other);
+		var first = firstName.Length == 0 ? await ViewerDbrefAsync(parser) : await MemberAsync(parser, firstName);
+		if (first is null || await MemberAsync(parser, secondName) is not { } second)
 		{
-			if (await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerAsync(parser, with)) is not { } found)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-			}
-			(other, scan) = (found, SharedScanLimit);
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var scenes = await service.ListScenesAsync(filter, viewer, options.From, options.To, scan);
-		var limit = options.Count ?? (other is null ? int.MaxValue : 50);
+		var service = ServiceOf(parser);
+		var both = new List<Contracts.Scene>();
+		foreach (var scene in await service.ListScenesAsync("mine", first, count: SharedScanLimit))
+		{
+			if (await service.GetMemberAsync(scene.Id, second) is SceneMember)
+			{
+				both.Add(scene);
+			}
+		}
 
+		return await VisibleAsync(parser, both);
+	}
+
+	/// <summary>How many of the first player's scenes scenelist(shared) reads, newest first.</summary>
+	private const int SharedScanLimit = 200;
+
+	private static ISceneService ServiceOf(IMUSHCodeParser parser) => parser.ServiceProvider.GetRequiredService<ISceneService>();
+
+	/// <summary>The objid of the player <paramref name="name"/> names, or null when it names none.</summary>
+	private static async ValueTask<string?> MemberAsync(IMUSHCodeParser parser, string name)
+		=> name.Length == 0 ? null : await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerAsync(parser, name));
+
+	/// <summary>The ids of the scenes in <paramref name="scenes"/> the reader may see.</summary>
+	private static async ValueTask<CallState> VisibleAsync(IMUSHCodeParser parser, IReadOnlyList<Contracts.Scene> scenes)
+	{
+		var service = ServiceOf(parser);
 		// Every other read function gates on SceneVisibleToAsync, so a private scene answers
 		// #-1 PERMISSION — but the storage's `active`/`finished`/`recent`/`scheduled` filters carry no
 		// visibility clause at all, so an ungated listing handed any player the id of every private
 		// scene in the game and let them count them. Ids are cheap to try; filter the listing through
 		// the same predicate the field reads use, so what a player can list is exactly what they can read.
-		var visible = new List<string>(Math.Min(scenes.Count, limit));
+		var visible = new List<string>(scenes.Count);
 		foreach (var scene in scenes)
 		{
-			if (visible.Count == limit) break;
-			if (other is not null && await service.GetMemberAsync(scene.Id, other) is not SceneMember) continue;
 			if (await SceneVisibleToAsync(service, scene, parser))
 			{
 				visible.Add(scene.Id);
@@ -292,9 +278,6 @@ public static class SceneFunctions
 
 		return new CallState(string.Join(" ", visible));
 	}
-
-	/// <summary>How many of the listed scenes scenelist() reads for a <c>with</c> player, newest first.</summary>
-	private const int SharedScanLimit = 200;
 
 	/// <summary>
 	/// scenewhere(&lt;roomDbref&gt;)

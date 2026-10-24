@@ -313,7 +313,7 @@ public class SceneServiceIntegrationTests
 
 	/// <summary>
 	/// <c>sceneset(&lt;id&gt;,scheduledfor,…)</c> adds or removes the scene's <c>scene.idx</c> "sched"
-	/// row on the null boundary, which is what <c>scenelist(scheduled,&lt;options&gt;)</c> windows.
+	/// row on the null boundary, which is what <c>scenelist(scheduled,&lt;from&gt;,&lt;to&gt;)</c> windows.
 	/// A stale row would leave a cleared scene in every future window, or hide a freshly-scheduled one.
 	/// </summary>
 	[Test]
@@ -328,12 +328,12 @@ public class SceneServiceIntegrationTests
 
 		await Eval($"sceneset({id},scheduledfor,{now})");
 
-		await Assert.That(await Eval($"scenelist(scheduled,json(object,from,{insideFrom},to,{insideTo}))")).Contains(id);
-		await Assert.That(await Eval($"scenelist(scheduled,json(object,from,{outsideFrom},to,{outsideTo}))")).DoesNotContain(id);
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).Contains(id);
+		await Assert.That(await Eval($"scenelist(scheduled,{outsideFrom},{outsideTo})")).DoesNotContain(id);
 
 		await Eval($"sceneset({id},scheduledfor,)");
 
-		await Assert.That(await Eval($"scenelist(scheduled,json(object,from,{insideFrom},to,{insideTo}))")).DoesNotContain(id);
+		await Assert.That(await Eval($"scenelist(scheduled,{insideFrom},{insideTo})")).DoesNotContain(id);
 	}
 
 	/// <summary>
@@ -371,7 +371,7 @@ public class SceneServiceIntegrationTests
 		await Assert.That(Array.IndexOf(all, pausedTimed)).IsLessThan(Array.IndexOf(all, paused))
 			.Because("scenes with a time come before the ones without");
 
-		var windowed = (await Eval($"scenelist(scheduled,json(object,from,{from},to,{to}))")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var windowed = (await Eval($"scenelist(scheduled,{from},{to})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		await Assert.That(windowed).Contains(pausedTimed);
 		await Assert.That(windowed).DoesNotContain(paused).Because("a scene with no time is in no window");
 		await Assert.That((await Eval("scenelist(active)")).Split(' ')).DoesNotContain(paused);

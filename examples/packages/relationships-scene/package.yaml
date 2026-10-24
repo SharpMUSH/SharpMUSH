@@ -48,7 +48,7 @@ objects:
       # reader's own card or a visitor.
       FUN`SCENE`SHARED:
         value: |-
-          if(cand(strlen(%0),comp(%0,%1),isint(setr(shared_first,scenelist(mine,json(object,player,json(string,%0),with,json(string,%1),count,1))))),%q<shared_first>)
+          if(cand(strlen(%0),comp(%0,%1),isint(setr(shared_first,first(scenelist(shared,%0,%1))))),%q<shared_first>)
         flags: [funsyntax]
       # %0 a scene: how long since anyone posed in it, 3d ago.
       FUN`SCENE`WHEN:
@@ -62,4 +62,4 @@ objects:
       HELP`REL`SCENE: |-
         With `relationships-scene` installed, a card shows Last scene together: the latest scene you and that character both belong to, and how long since anyone posed in it. In the portal it links to the scene's log.
 
-        `scenelist\(mine, <options>\)` with a `with` option is the function behind it: the scenes both players belong to, the latest activity first, that you may see. `think scenelist\(mine,json\(object,with,json\(string,Wren\),count,3\)\)` lists up to three.
+        `scenelist\(shared, <player>\[, <player>\]\)` is the function behind it: the scenes both players belong to, the latest activity first, that you may see. `think scenelist\(shared,Wren\)` lists the ones you share with Wren.

@@ -8,7 +8,6 @@
   "sections": [
     {"id": "scene", "heading": "scene()", "lookup": "scene()", "aliases": []},
     {"id": "scenelist", "heading": "scenelist()", "lookup": "scenelist()", "aliases": []},
-    {"id": "scenelist-options", "heading": "scenelist() options", "lookup": "scenelist options", "aliases": []},
     {"id": "scenewhere", "heading": "scenewhere()", "lookup": "scenewhere()", "aliases": []},
     {"id": "sceneposes", "heading": "sceneposes()", "lookup": "sceneposes()", "aliases": []},
     {"id": "scenepose", "heading": "scenepose()", "lookup": "scenepose()", "aliases": []},
@@ -59,7 +58,9 @@ Output: Harbour Night
 
 ## scenelist()
 
-`scenelist([<filter>][, <options>])`
+`scenelist([<filter>][, <from>, <to>])`
+`scenelist(mine[, <player>])`
+`scenelist(shared, <player>[, <player>])`
 
 The ids of the scenes you may see among the first 50 the filter finds, separated by spaces. `<filter>` is one of:
 
@@ -67,32 +68,18 @@ The ids of the scenes you may see among the first 50 the filter finds, separated
 - `active`, `finished`: the scenes with that status, latest activity first
 - `scheduled`: the scenes waiting to run, soonest first: those with a time that are not active or finished, and every paused one, the paused ones with no time last
 - `upcoming`: `scheduled` without the scenes more than an hour past their time that never started
-- `mine`: the scenes you are a member of, cancelled ones left out
+- `mine`: the scenes you are a member of, cancelled ones left out; with `<player>`, every scene of that player's instead
+- `shared`: the scenes two players are both members of, latest activity first, found among the first player's latest 200; with one name, you and that player
 
-`<options>` is a JSON object that narrows the list; see [scenelist options]. The scenes you and Bob were both in, the latest three:
+`<from>` and `<to>` are UTC milliseconds. They limit `active`, `finished`, `scheduled` and `upcoming` to the scenes whose time falls between them, leaving out scenes with no time.
+
+A bound that is not a number is `#-1 BAD ARGUMENT FORMAT TO SCENELIST`, and a player that is not found is `#-1 NO SUCH PLAYER`.
 
 ```sharp
-> think scenelist(mine, json(object,with,json(string,Bob),count,3))
+> think scenelist(shared, Bob)
 ```
 
 Output: 40 31 12
-
-## scenelist() options
-
-Each option is a key of the JSON object, and any of them may be left out.
-
-- `from`, `to`: UTC milliseconds. They limit `active`, `finished`, `scheduled` and `upcoming` to the scenes whose time falls between them, leaving out scenes with no time.
-- `player`: with `mine`, every scene of that player's instead of your latest 50, still only those you may see.
-- `with`: only the scenes this player is also a member of, found among the latest 200 the filter lists.
-- `count`: at most this many scenes.
-
-Options that are not a JSON object are `#-1 OPTIONS MUST BE A JSON OBJECT`, and an option the list does not have is `#-1 UNKNOWN OPTION <NAME>`. A player that is not found is `#-1 NO SUCH PLAYER`.
-
-```sharp
-> think scenelist(scheduled, json(object,from,1792000000000,to,1792600000000))
-```
-
-Output: 44 45
 
 ## scenewhere()
 
