@@ -108,6 +108,9 @@ public class FormattingFunctionUnitTests
 	[Arguments("wrap(a%rb%r%rc,5,,|)", "a|b||c")]
 	// Widths are display cells, so a two-cell character takes two of them.
 	[Arguments("wrap(日本語です,4)", "日本\n語で\nす")]
+	// An empty width is 78.
+	[Arguments("words(wrap([repeat(a,73)] bcd,,,|),|)", "1")]
+	[Arguments("words(wrap([repeat(a,75)] bcd,,,|),|)", "2")]
 	public async Task Wrap(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
