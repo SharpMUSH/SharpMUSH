@@ -51,6 +51,7 @@ public class TextFunctionUnitTests
 	[Test]
 	[Arguments("textentries(nosuchfile,*)")]
 	[Arguments("textfile(nosuchfile,SOMETHING)")]
+	[Arguments("textsearch(nosuchfile,x)")]
 	public async Task AnUnknownTextFileIsRefused(string expression)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(ErrorMessages.Returns.NoSuchFile);
 
@@ -70,6 +71,8 @@ public class TextFunctionUnitTests
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 		await Assert.That(await EvalAs(mortal.DbRef, "textfile(ahelp,AHELP)"))
 			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, "textsearch(ahelp,a)"))
+			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		await Assert.That(await Eval("textentries(ahelp,*)")).IsNotEmpty()
 			.Because("God must still be able to read it, or the refusal above proves nothing");
@@ -84,12 +87,14 @@ public class TextFunctionUnitTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>
+	/// <c>fun_textsearch</c> (<c>src/help.c:1197</c>) names the entries whose text holds the pattern,
+	/// caselessly and with wildcards. "natural log" is in the text of exactly these three shipped topics.
+	/// </summary>
 	[Test]
-	[Arguments("textsearch(file,pattern)", "")]
-	public async Task Textsearch(string str, string expected)
-	{
-		TestDiagnostics.WriteLine("Testing: {0}", str);
-		var result = (await Parser.FunctionParse(MarkupText.Plain(str)))?.Message.ToString();
-		await Assert.That(result).IsNotNull();
-	}
+	[Arguments("textsearch(help,natural log)", "ln() log() textfile examples")]
+	[Arguments("textsearch(help,NATURAL L?G,|)", "ln()|log()|textfile examples")]
+	[Arguments("textsearch(help,zzznosuchtext)", "")]
+	public async Task TextsearchFindsEntriesByTheirText(string expression, string expected)
+		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
 }

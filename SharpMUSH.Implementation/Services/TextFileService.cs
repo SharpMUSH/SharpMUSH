@@ -7,6 +7,7 @@ using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.Plugins;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Implementation.Services;
 
@@ -269,6 +270,12 @@ public class TextFileService : ITextFileService
 			}
 		}
 
+		// A term with a * or ? is a wildcard pattern found anywhere in the text, as PennMUSH's textsearch()
+		// reads one.
+		var glob = searchTerm.AsSpan().IndexOfAny('*', '?') >= 0
+			? SoftcodeRegex.Wildcard($"*{searchTerm}*", RegexOptions.CultureInvariant)
+			: null;
+
 		var results = new List<string>();
 		foreach (var indexEntry in entries.Select(pair => pair.Value).Where(entry => !entry.Hidden)
 			.DistinctBy(entry => entry.EntryName, StringComparer.OrdinalIgnoreCase))
@@ -276,7 +283,9 @@ public class TextFileService : ITextFileService
 			var content = indexEntry.Help?.Article is { } article
 				? indexEntry.Help.SectionId is null ? article.Overview : article.Sections.First(section => section.Id == indexEntry.Help.SectionId).Markdown
 				: indexEntry.Help?.Markdown ?? string.Empty;
-			if (content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+			if (glob is not null
+				? SoftcodeRegex.IsMatch(glob, content)
+				: content.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
 			{
 				results.Add(indexEntry.EntryName);
 			}

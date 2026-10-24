@@ -53,6 +53,30 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// The entries of a text file whose text matches <c>&lt;pattern&gt;</c>, joined by <c>&lt;osep&gt;</c>.
+	/// </summary>
+	/// <remarks>
+	/// <c>fun_textsearch</c> (<c>src/help.c:1197</c>) finds the pattern anywhere in an entry's text,
+	/// caselessly, with <c>*</c> and <c>?</c> as wildcards, and names each entry once.
+	/// </remarks>
+	[SharpFunction(Name = "textsearch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["type", "pattern", "osep"])]
+	public async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.Arguments;
+		var fileReference = args["0"].Message.ToPlainText();
+		var pattern = args["1"].Message.ToPlainText();
+		var separator = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ").ToPlainText();
+
+		return await ReadableCorpusAsync(parser, fileReference) switch
+		{
+			string corpus => new CallState(string.Join(separator,
+				(await TextFileService.SearchContentAsync(corpus, pattern)).Order(StringComparer.OrdinalIgnoreCase))),
+			Error<string> refused => new CallState(refused.Value)
+		};
+	}
+
+	/// <summary>
 	/// One entry of a text file.
 	/// </summary>
 	/// <remarks>
