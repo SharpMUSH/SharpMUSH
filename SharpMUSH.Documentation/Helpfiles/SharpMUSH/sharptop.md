@@ -2,27 +2,36 @@
 # &help
 This is the index to the MUSH online help files.
 
-|                                               |                           |
-|-----------------------------------------------|---------------------------|
-| For an explanation of the help system, type:  | help [newbie]             |
-| For a walkthrough of SharpMUSH systems, type: | help [Getting Started]    |
-| For help finding the helpfile you want:       | help [help search]        |
-|                                               |                           |
-| For the list of MUSH commands, type:          | help [COMMANDS]           |
-| For the list of MUSH topics, type:            | help [topics]             |
-| For an alphabetical list of all help entries: | help [help search]        |
-| For what SharpMUSH adds to PennMUSH:          | help [sharpmush features] |
-| For information about SharpMUSH:              | help [code]               |
-|                                               |                           |
-| For a list of flags:                          | help [FLAG LIST]          |
-| For a list of functions:                      | help [FUNCTION LIST]      |
-| For a list of attributes:                     | help [attributes]         |
-| To see the configuration of this MUSH:        | `@config`                 |
-|                                               |                           |
-| For this game's own commands and topics:      | help [+help]              |
-| For the help its plugins bring:               | help [plugin help]        |
+## New players
 
-  If there are any errors in the help text, please notify a wizard in the game, or file an issue at https://github.com/SharpMUSH/SharpMUSH/issues, which is the bug-tracking site for SharpMUSH (and its distributed help files) but probably has no relation to this MUSH in particular.
+|                                            |                         |
+|--------------------------------------------|-------------------------|
+| How to read the help files:                | help [newbie]           |
+| A walkthrough of moving, talking and mail: | help [Getting Started]  |
+| Finding the helpfile you want:             | help [help search]      |
+| Commands such as look, say and page:       | help [COMMANDS]         |
+| This game's own commands and topics:       | help [+help]            |
+
+## Builders and coders
+
+|                                            |                           |
+|--------------------------------------------|---------------------------|
+| The list of MUSH topics:                   | help [topics]             |
+| The list of flags:                         | help [FLAG LIST]          |
+| The list of functions:                     | help [FUNCTION LIST]      |
+| The list of attributes:                    | help [attributes]         |
+| What SharpMUSH adds to PennMUSH:           | help [sharpmush features] |
+| The help its plugins bring:                | help [plugin help]        |
+
+## Administrators
+
+|                                            |                           |
+|--------------------------------------------|---------------------------|
+| Settings, players, roles, backups:         | help [administration]     |
+| Commands only staff can use:               | help [@-wizard]           |
+| The configuration of this MUSH:            | `@config`                 |
+
+For information about SharpMUSH, see [code]. If the help text has an error, tell a wizard on this game or report it to SharpMUSH at https://github.com/SharpMUSH/SharpMUSH/issues.
 
 # +help
   `help` is the server's own help, the same on every SharpMUSH game. `+help` is this game's: the topics its installed systems carry, such as `+scene` and `+request`, and whatever its staff have written down. Type `+help` for its index and `+help <topic>` for a topic. If no topic matches, `+help <source>` lists that source's topics, like `+help/list <source>`.
