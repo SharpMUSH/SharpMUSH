@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-frankenstein-pixel-administrator-walkthrough", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-administrator-invite", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-administrator-capabilities", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-administrator-rules", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-christian-fiction-kemono-player-world", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-christian-fiction-kemono-player-place", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-administrator-identity", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-administrator-walkthrough", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-administrator-invite", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
