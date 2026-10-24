@@ -142,7 +142,7 @@ public class RhostDatabaseTranslatorTests
 	{
 		var flatfile = RhostFlatfileReader.ReadStrict("+V7\n+S2\n+N256\n"
 			+ "!0\nLimbo\n-1\n-1\n-1\n-1\n\n1\n0\n0\n<\n"
-			+ "!1\nWizard\n0\n-1\n0\n-1\n\n1\n0\n3\n>42\n=(#0)|@(#1)\n>63\n$(#1)\n>61\n!(#0)&+(#1)\n<\n"
+			+ "!1\nWizard\n0\n-1\n0\n-1\n\n1\n0\n3\n>42\n=(#0)|@(#1)\n>63\n$(#1)\n>61\n!(#0)&+(#1)\n>59\nTAG:=(#1)|=(#1)\n<\n"
 			+ RhostFlatfileReader.EndOfDump + "\n");
 
 		var wizard = RhostDatabaseTranslator.Translate(flatfile).Objects.First(o => o.DBRef == 1);
@@ -150,6 +150,7 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(wizard.Locks["Basic"].Expression).IsEqualTo("=#0|@#1");
 		await Assert.That(wizard.Locks["Give"].Expression).IsEqualTo("$#1");
 		await Assert.That(wizard.Locks["Page"].Expression).IsEqualTo("!(#0)&+#1");
+		await Assert.That(wizard.Locks["Enter"].Expression).IsEqualTo("TAG:=(#1)|=#1");
 	}
 
 	/// <summary>The built-in attributes numbered from 2100000000: server state is left behind, the rest imported.</summary>

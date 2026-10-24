@@ -183,8 +183,12 @@ public class AdminImportRefusalTests : TrackingBunitContext
 
 		var cut = await StartConversionWithConfig();
 
-		cut.WaitForAssertion(() => cut.Find(".dbimport-grid"), TimeSpan.FromSeconds(5));
-		await Assert.That(cut.Markup).Contains("ConversionErrors").And.DoesNotContain("AdmImportConfigApplied");
+		// The progress view has a grid too, so wait for the failed result itself.
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("ConversionErrors")) throw new InvalidOperationException("no result yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
 	/// <summary>
