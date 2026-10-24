@@ -323,3 +323,17 @@ installed managed-attribute baseline and the current character's reachable
 command handlers. They display “Included with this server” instead of a fabricated
 Git reference. Git-sourced packages continue to require an approved repository,
 a safe source path and a pinned commit URL. Unknown sources remain unadvertised.
+
+### Artwork category identity
+
+Artwork can declare `SharpieArtThemeKind.Genre` or `Subgenre`. The resolver checks
+that kind as well as theme, style and topic, because MSSP includes `None` in both
+category lists. Existing unambiguous entries without a kind remain compatible;
+new entries should specify their kind. Explicit administrator artwork overrides
+continue to select their named asset within the requested style/topic.
+
+The two `None` inventories use distinct `sharpie-genre-none-...` and
+`sharpie-subgenre-none-...` asset IDs and filenames. Their independent QA reports
+also include the category kind. An approval in one inventory never approves the
+other. Missing artwork continues through topic-aware subgenre/genre fallbacks to
+the approved neutral mascot; no-image preferences still return no artwork.
