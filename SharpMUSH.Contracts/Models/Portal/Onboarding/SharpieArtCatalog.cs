@@ -12,6 +12,11 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-erotic-pixel-player-world", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-player-character", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-player-sign-in", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-shared-welcome", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-kemono-player-place", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-shared-completion", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-administrator-joining", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-player-continue", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
