@@ -439,7 +439,8 @@
     public async Task OnTerminalResize(int cols, int rows)
     {
         // cols already reflects the player's preferred width when TargetColumns is set (the fit
-        // returns exactly that), so this is what we report to the server over NAWS.
+        // returns at least that, more when the font stops growing first), so this is what we report
+        // to the server over NAWS.
 
         // Remember the grid even before the socket connects (the first measurement fires on
         // fonts-ready, which can precede connect). The remembered size is then sent once the

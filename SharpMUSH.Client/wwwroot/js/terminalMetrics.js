@@ -13,10 +13,11 @@ window.SharpMUSH = window.SharpMUSH || {};
 // size only while the output still shows GROW_MIN_ROWS rows. A phone held sideways is wide and short,
 // and width alone would fit 78 columns at ~17px and leave about seven lines; it keeps the base size
 // there instead (the target's columns still fit, with room to spare). Height never shrinks the font
-// below the base: that is width's job alone.
+// below the base: that is width's job alone. When either cap stops the font short of the fit, the
+// spare width is reported as more columns, so text and layouts use the whole line.
 window.SharpMUSH.Metrics = {
     MIN_FONT_PX: 6,    // below this, fall back to horizontal scroll rather than illegible text
-    MAX_FONT_PX: 24,   // above this, stop growing (line-length cap) — content left-aligns
+    MAX_FONT_PX: 24,   // above this, stop growing; the spare width becomes more columns
     GROW_MIN_ROWS: 16, // grow past the base font only while at least this many rows still show
     _targets: {},      // elementId -> target column count
     _fire: {},         // elementId -> re-measure fn (so setTarget can refit immediately)
@@ -90,7 +91,10 @@ window.SharpMUSH.Metrics = {
             }
             el.style.fontSize = fitFont + 'px';
             var fitLine = lineRatio * fitFont;
-            return { cols: target, rows: clamp(Math.floor(contentH / fitLine)) };
+            // A capped font leaves room past the target: report the columns that fit, so a fluid
+            // layout (laid out at the reported width) reaches the edge instead of stopping at the target.
+            var fits = Math.floor(targetW / (this._runWidth(el, cs, fitFont, '0'.repeat(200)) / 200));
+            return { cols: clamp(Math.max(target, fits)), rows: clamp(Math.floor(contentH / fitLine)) };
         }
 
         // No target: natural grid at the base font.
