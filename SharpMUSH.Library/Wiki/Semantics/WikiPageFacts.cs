@@ -92,7 +92,7 @@ public static class WikiPageFacts
 		bool boolean => boolean ? "true" : "false",
 		Keyword keyword => keyword.Value,
 		FactText text => text.Value,
-		double number => number.ToString("R", CultureInfo.InvariantCulture),
+		double number => WikiFactQueries.WriteDecimal(number),
 		DateOnly date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 		_ => throw new ArgumentException("Unknown semantic value.", nameof(value))
 	};
