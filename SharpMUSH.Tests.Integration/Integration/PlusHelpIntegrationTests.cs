@@ -944,7 +944,7 @@ public class PlusHelpIntegrationTests
 			await Assert.That(Joined(await RunAs(staff, $"+help {topic}"))).Contains(word)
 				.And.Contains("Subtopics: keys").And.Contains("Shown only to: role^wizard");
 
-			await Assert.That(Joined(await RunAs(staff, $"+help/unrestrict {topic}"))).Contains($"game/{topic} is shown to everyone again.");
+			await Assert.That(Joined(await RunAs(staff, $"+help/unrestrict {topic}"))).Contains($"game/{topic} has no lock of its own now.");
 			await Assert.That(Joined(await RunAs(reader, $"+help {topic} keys"))).Contains(word).And.DoesNotContain("Shown only to");
 		}
 		finally

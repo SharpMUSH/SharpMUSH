@@ -665,7 +665,7 @@ objects:
       # %q<cmd_rest> — <topic>.
       INC`SWITCH`UNRESTRICT:
         value: |-
-          @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; think setq(topic_lock_attribute,LOCK`[after(%q<topic_attribute>,`)]); @assert strlen(get(%q<topic_object>/%q<topic_lock_attribute>))=@include %!/INC`DISPLAY`WARN=That game topic has no lock.; think attrib_set(%q<topic_object>/%q<topic_lock_attribute>); @pemit %#=notice(HELP,game/[lcstr(edit(squish(%q<topic>),%b,%b))] is shown to everyone again.,ok)
+          @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; think setq(topic_lock_attribute,LOCK`[after(%q<topic_attribute>,`)]); @assert strlen(get(%q<topic_object>/%q<topic_lock_attribute>))=@include %!/INC`DISPLAY`WARN=That game topic has no lock.; think attrib_set(%q<topic_object>/%q<topic_lock_attribute>); @pemit %#=notice(HELP,game/[lcstr(edit(squish(%q<topic>),%b,%b))] has no lock of its own now.,ok)
         flags: [cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
@@ -766,7 +766,7 @@ objects:
           - `+help/write <topic>=<text>` — create or replace a topic
           - `+help/delete <topic>` — remove one
           - `+help/restrict <topic>=<lock>` — show it, and its subtopics, only to those passing the lock
-          - `+help/unrestrict <topic>` — show it to everyone again
+          - `+help/unrestrict <topic>` — take its own lock off; a lock above it still applies
 
           A topic name is words of letters, digits, and `_ . -`. Several words make a multi-word
           topic: `+help/write house rules=...` is then read by `+help house rules`.

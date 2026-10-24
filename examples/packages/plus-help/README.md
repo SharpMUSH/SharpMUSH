@@ -21,7 +21,7 @@ game installed and what *this* game's staff wrote. The two never merge.
 | `+help/write <topic>=<text>` | staff | Write a topic belonging to no package |
 | `+help/delete <topic>` | staff | Remove one |
 | `+help/restrict <topic>=<lock>` | staff | Show a game topic, and its subtopics, only to those passing the lock |
-| `+help/unrestrict <topic>` | staff | Show it to everyone again |
+| `+help/unrestrict <topic>` | staff | Take off its own lock; a lock on a topic above it still applies |
 | `+help/source <name>=<object>` | staff | Register a source by hand |
 | `+help/unsource <name>` | staff | Drop a hand-registered source |
 
