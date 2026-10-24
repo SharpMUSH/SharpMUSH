@@ -77,7 +77,7 @@ public class ScenePoseTypeIntegrationTests
 	public async Task The_shipped_types_are_read_by_the_plugin()
 	{
 		await LoggerAsync();
-		var types = (await Eval("scenetypes()")).Split(' ');
+		var types = (await Eval("scenetype()")).Split(' ');
 		await Assert.That(types.Take(3)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
 		await Assert.That(await Eval("scenetype(ooc,presentation)")).IsEqualTo("band");
 		await Assert.That(await Eval("scenetype(ooc,tone)")).IsEqualTo("secondary");
@@ -160,8 +160,8 @@ public class ScenePoseTypeIntegrationTests
 		try
 		{
 			await God($"&TYPE`{key.ToUpperInvariant()} {logger}={{\"presentation\":\"nope\"}}");
-			await Assert.That(await Eval("scenetypes()")).DoesNotContain(key);
-			await Assert.That(await Eval($"scenetypecheck({key},json(object,presentation,json(string,nope)))"))
+			await Assert.That(await Eval("scenetype()")).DoesNotContain(key);
+			await Assert.That(await Eval($"scenetype({key},check,json(object,presentation,json(string,nope)))"))
 				.StartsWith("#-1 presentation must be one of");
 			var listed = await God("@scene/types");
 			await Assert.That(listed).Contains($"TYPE`{key.ToUpperInvariant()}");

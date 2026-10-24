@@ -225,7 +225,7 @@ public class TimelineIntegrationTests
 			await UninstallAsync();
 		}
 
-		await Assert.That(await Eval("scenedetails()")).DoesNotContain("icdate").Because("uninstalling takes the details away");
+		await Assert.That(await Eval("scenedetail()")).DoesNotContain("icdate").Because("uninstalling takes the details away");
 	}
 
 	[Test]

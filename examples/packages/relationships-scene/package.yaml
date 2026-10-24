@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships-scene
 title: "Relationships: last scene together"
-version: 1.0.3
+version: 1.0.4
 authors: [SharpMUSH]
 description: "Adds Last scene together to the +rel card and the portal's name card: the latest scene you and that character both belong to, linked to its log."
 license: MIT
@@ -10,12 +10,12 @@ keywords: [relationships, scene, card]
 category: Characters
 requires_server: ">=0.1"
 
-# sceneshared() is the Scene plugin's: the package installs only while that plugin is running.
+# scenelist() is the Scene plugin's: the package installs only while that plugin is running.
 plugins: [scene]
 
 # A package that joins two others, as radio-scene does: relationships keeps the card, and the Scene System knows
 # who was in which scene. Installing it is what puts a scene line on the card, so a game without the Scene System
-# never runs code that calls sceneshared().
+# never runs code that calls scenelist().
 depends:
   - package: relationships
     version: ">=1.0"
@@ -33,7 +33,7 @@ depends:
 objects:
   # One more card line on the Relationships object, the way its help says lines are added: LINE`<order>`<KEY> is
   # the label, SHOW`<KEY> the value, LINK`<KEY> the portal page it links to. %<viewer> is the reader and
-  # %<target> the character the card is about. sceneshared() lists only scenes the one asking may see; the reader
+  # %<target> the character the card is about. scenelist() lists only scenes the one asking may see; the reader
   # belongs to every scene it finds, so none is hidden from them.
   - ref: card_line
     target: "{{relationships/relationships}}"
@@ -48,7 +48,7 @@ objects:
       # reader's own card or a visitor.
       FUN`SCENE`SHARED:
         value: |-
-          if(cand(strlen(%0),comp(%0,%1),isint(setr(shared_first,first(sceneshared(%0,%1))))),%q<shared_first>)
+          if(cand(strlen(%0),comp(%0,%1),isint(setr(shared_first,scenelist(mine,json(object,player,json(string,%0),with,json(string,%1),count,1))))),%q<shared_first>)
         flags: [funsyntax]
       # %0 a scene: how long since anyone posed in it, 3d ago.
       FUN`SCENE`WHEN:
@@ -62,4 +62,4 @@ objects:
       HELP`REL`SCENE: |-
         With `relationships-scene` installed, a card shows Last scene together: the latest scene you and that character both belong to, and how long since anyone posed in it. In the portal it links to the scene's log.
 
-        `sceneshared\(<player>, <player>\[, <count>\]\)` is the function behind it: the scenes both players belong to, the latest activity first, that you may see. `think sceneshared\(me,Wren,3\)` lists up to three.
+        `scenelist\(mine, <options>\)` with a `with` option is the function behind it: the scenes both players belong to, the latest activity first, that you may see. `think scenelist\(mine,json\(object,with,json\(string,Wren\),count,3\)\)` lists up to three.

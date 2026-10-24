@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.16.0
+version: 1.16.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -226,7 +226,7 @@ objects:
       # <KEY> for a listed type other than ic, with the scene for a type drawn without a rule. A type no longer
       # listed draws as in character, as the portal draws it.
       FUN`TYPE`DRAW: |-
-        if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,firstof(%4,%#),%2,%3),if(cand(member(scenetypes(),lcstr(%0)),not(strmatch(%0,ic))),<[ucstr(%0)][if(cand(strlen(%3),not(u(%!/FUN`TYPE`FRAMED,%0))),%b[chr(183)] %3)]>%b)%2)
+        if(hasattr(%!,TYPE`%0`FORMAT),u(%!/TYPE`%0`FORMAT,%1,firstof(%4,%#),%2,%3),if(cand(member(scenetype(),lcstr(%0)),not(strmatch(%0,ic))),<[ucstr(%0)][if(cand(strlen(%3),not(u(%!/FUN`TYPE`FRAMED,%0))),%b[chr(183)] %3)]>%b)%2)
       # 1 when type %0 is drawn under a rule: any type but a band, message or notice, a removed one included.
       FUN`TYPE`FRAMED: |-
         not(match(band message notice,scenetype(lcstr(%0),presentation)))
@@ -244,16 +244,16 @@ objects:
       # The types %0 has hidden from recall and log: the ones they hid with +scene/hide that are still listed,
       # and the ones the game starts hidden that they have not shown with +scene/show.
       FUN`HIDDEN: |-
-        setunion(setinter(get(%0/SCENE`HIDE),scenetypes()),squish(iter(scenetypes(),if(cand(scenetype(%i0,hidden),not(member(get(%0/SCENE`SHOW),%i0))),%i0))))
+        setunion(setinter(get(%0/SCENE`HIDE),scenetype()),squish(iter(scenetype(),if(cand(scenetype(%i0,hidden),not(member(get(%0/SCENE`SHOW),%i0))),%i0))))
       FUN`HIDDEN`NOW: |-
         if(words(setr(hidden_types,u(%!/FUN`HIDDEN,%0))),Hidden from your recall and log: [itemize(%q<hidden_types>)]. +scene/show <type> shows one again.,Every pose type shows in your recall and log. +scene/hide <type> hides one.)
-      # %0's value for field %1, as JSON. scenetypecheck() refuses anything that does not fit the field.
+      # %0's value for field %1, as JSON. scenetype(<key>,check,<json>) refuses anything that does not fit the field.
       FUN`TYPE`VALUE: |-
         switch(%0,hidden,u(%!/FUN`DETAIL`BOOL,%1),order,if(isint(%1),%1,json(string,%1)),json(string,%1))
       FUN`TYPE`SAMPLE: |-
         u(%!/FUN`TYPE`DRAW,%0,,name(%#) waves.,,%#)
       FUN`TYPES`TABLE: |-
-        setq(type_keys,scenetypes())[setq(type_hidden,u(%!/FUN`HIDDEN,%#))][box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|1|3,||1|),tone(strong,Type)%r[iter(%q<type_keys>,%i0,,%r)],tone(strong,Name)%r[iter(%q<type_keys>,scenetype(%i0,label),,%r)],tone(strong,Looks like)%r[iter(%q<type_keys>,u(%!/FUN`TYPE`SAMPLE,%i0),,%r)],tone(strong,You)%r[iter(%q<type_keys>,if(member(%q<type_hidden>,%i0),hidden,shown),,%r)]),Pose types,,u(%!/FUN`FRAME))]
+        setq(type_keys,scenetype())[setq(type_hidden,u(%!/FUN`HIDDEN,%#))][box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|1|3,||1|),tone(strong,Type)%r[iter(%q<type_keys>,%i0,,%r)],tone(strong,Name)%r[iter(%q<type_keys>,scenetype(%i0,label),,%r)],tone(strong,Looks like)%r[iter(%q<type_keys>,u(%!/FUN`TYPE`SAMPLE,%i0),,%r)],tone(strong,You)%r[iter(%q<type_keys>,if(member(%q<type_hidden>,%i0),hidden,shown),,%r)]),Pose types,,u(%!/FUN`FRAME))]
       FUN`TYPE`CARD: |-
         box(fields(,Type,%0,Name,scenetype(%0,label),Portal look,scenetype(%0,presentation),Colour,firstof(scenetype(%0,tone),text),Icon,firstof(scenetype(%0,icon),none),Hidden at first,if(scenetype(%0,hidden),yes,no),Order,scenetype(%0,order),Looks like,u(%!/FUN`TYPE`SAMPLE,%0),Format,firstof(get(%!/TYPE`%0`FORMAT),none)),Pose type %0,,u(%!/FUN`FRAME))
       DATA`DENY`TYPES: |-
@@ -295,19 +295,19 @@ objects:
 
       CMD`TYPES:
         value: |-
-          $(?is)^\+scene/types$: @assert words(scenetypes())=@pemit %#=notice(SCENE,No pose types are defined.,warn); @pemit %#=u(%!/FUN`TYPES`TABLE)
+          $(?is)^\+scene/types$: @assert words(scenetype())=@pemit %#=notice(SCENE,No pose types are defined.,warn); @pemit %#=u(%!/FUN`TYPES`TABLE)
         flags: [REGEXP]
       CMD`TYPE:
         value: |-
-          $(?is)^\+scene/type +(.+)$: think setq(type_key,lcstr(trim(%1))); @assert member(scenetypes(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); @pemit %#=u(%!/FUN`TYPE`CARD,%q<type_key>)
+          $(?is)^\+scene/type +(.+)$: think setq(type_key,lcstr(trim(%1))); @assert member(scenetype(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); @pemit %#=u(%!/FUN`TYPE`CARD,%q<type_key>)
         flags: [REGEXP]
       CMD`TYPE`ADD:
         value: |-
-          $(?is)^\+scene/type/add +([^=]+)=(.+)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`TYPES),error); think setq(type_key,lcstr(trim(%1)))[setq(type_json,json(object,label,json(string,trim(%2))))]; @assert not(hasattr(%!,TYPE`%q<type_key>))=@pemit %#=notice(SCENE,There is already a pose type called %q<type_key>.,warn); @assert not(strlen(setr(type_error,scenetypecheck(%q<type_key>,%q<type_json>))))=@pemit %#=notice(SCENE,after(%q<type_error>,#-1%b),warn); &TYPE`%q<type_key> %!=%q<type_json>; @pemit %#=notice(SCENE,Added pose type %q<type_key>. +scene/type/set %q<type_key>/<field>=<value> changes how it looks.,ok)
+          $(?is)^\+scene/type/add +([^=]+)=(.+)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`TYPES),error); think setq(type_key,lcstr(trim(%1)))[setq(type_json,json(object,label,json(string,trim(%2))))]; @assert not(hasattr(%!,TYPE`%q<type_key>))=@pemit %#=notice(SCENE,There is already a pose type called %q<type_key>.,warn); @assert not(strlen(setr(type_error,scenetype(%q<type_key>,check,%q<type_json>))))=@pemit %#=notice(SCENE,after(%q<type_error>,#-1%b),warn); &TYPE`%q<type_key> %!=%q<type_json>; @pemit %#=notice(SCENE,Added pose type %q<type_key>. +scene/type/set %q<type_key>/<field>=<value> changes how it looks.,ok)
         flags: [REGEXP]
       CMD`TYPE`SET:
         value: |-
-          $(?is)^\+scene/type/set +([^/=]+)/([^=]+)=(.*)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`TYPES),error); think setq(type_key,lcstr(trim(%1)))[setq(type_field,lcstr(trim(%2)))]; @assert hasattr(%!,TYPE`%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); @assert member(get(%!/DATA`TYPE`FIELDS),%q<type_field>)=@pemit %#=notice(SCENE,A pose type's fields are [itemize(get(%!/DATA`TYPE`FIELDS))].,warn); think setq(type_json,json_mod(get(%!/TYPE`%q<type_key>),set,$.%q<type_field>,u(%!/FUN`TYPE`VALUE,%q<type_field>,trim(%3)))); @assert not(strlen(setr(type_error,scenetypecheck(%q<type_key>,%q<type_json>))))=@pemit %#=notice(SCENE,after(%q<type_error>,#-1%b),warn); &TYPE`%q<type_key> %!=%q<type_json>; @pemit %#=notice(SCENE,Pose type %q<type_key>: %q<type_field> set.,ok)
+          $(?is)^\+scene/type/set +([^/=]+)/([^=]+)=(.*)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`TYPES),error); think setq(type_key,lcstr(trim(%1)))[setq(type_field,lcstr(trim(%2)))]; @assert hasattr(%!,TYPE`%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); @assert member(get(%!/DATA`TYPE`FIELDS),%q<type_field>)=@pemit %#=notice(SCENE,A pose type's fields are [itemize(get(%!/DATA`TYPE`FIELDS))].,warn); think setq(type_json,json_mod(get(%!/TYPE`%q<type_key>),set,$.%q<type_field>,u(%!/FUN`TYPE`VALUE,%q<type_field>,trim(%3)))); @assert not(strlen(setr(type_error,scenetype(%q<type_key>,check,%q<type_json>))))=@pemit %#=notice(SCENE,after(%q<type_error>,#-1%b),warn); &TYPE`%q<type_key> %!=%q<type_json>; @pemit %#=notice(SCENE,Pose type %q<type_key>: %q<type_field> set.,ok)
         flags: [REGEXP]
       CMD`TYPE`REMOVE:
         value: |-
@@ -317,11 +317,11 @@ objects:
       # the reader, as SCENE`HIDE and SCENE`SHOW, so the portal's Show menu reads the same choice.
       CMD`TYPE`HIDE:
         value: |-
-          $(?is)^\+scene/hi(?\:d(?\:e)?)?(?\: +(.*))?$: think setq(type_key,lcstr(trim(%1))); @assert strlen(%q<type_key>)=@pemit %#=notice(SCENE,u(%!/FUN`HIDDEN`NOW,%#)); @assert member(scenetypes(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); &SCENE`HIDE %#=setunion(get(%#/SCENE`HIDE),%q<type_key>); &SCENE`SHOW %#=setdiff(get(%#/SCENE`SHOW),%q<type_key>); @assert member(get(%#/SCENE`HIDE),%q<type_key>)=@pemit %#=notice(SCENE,Your choice could not be saved on your character.,warn); @pemit %#=notice(SCENE,scenetype(%q<type_key>,label) lines are hidden from your recall and log. +scene/show %q<type_key> shows them again.,ok)
+          $(?is)^\+scene/hi(?\:d(?\:e)?)?(?\: +(.*))?$: think setq(type_key,lcstr(trim(%1))); @assert strlen(%q<type_key>)=@pemit %#=notice(SCENE,u(%!/FUN`HIDDEN`NOW,%#)); @assert member(scenetype(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); &SCENE`HIDE %#=setunion(get(%#/SCENE`HIDE),%q<type_key>); &SCENE`SHOW %#=setdiff(get(%#/SCENE`SHOW),%q<type_key>); @assert member(get(%#/SCENE`HIDE),%q<type_key>)=@pemit %#=notice(SCENE,Your choice could not be saved on your character.,warn); @pemit %#=notice(SCENE,scenetype(%q<type_key>,label) lines are hidden from your recall and log. +scene/show %q<type_key> shows them again.,ok)
         flags: [REGEXP]
       CMD`TYPE`SHOW:
         value: |-
-          $(?is)^\+scene/sh(?\:o(?\:w)?)? +(.+)$: think setq(type_key,lcstr(trim(%1))); @assert member(scenetypes(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); &SCENE`SHOW %#=setunion(get(%#/SCENE`SHOW),%q<type_key>); &SCENE`HIDE %#=setdiff(get(%#/SCENE`HIDE),%q<type_key>); @assert member(get(%#/SCENE`SHOW),%q<type_key>)=@pemit %#=notice(SCENE,Your choice could not be saved on your character.,warn); @pemit %#=notice(SCENE,scenetype(%q<type_key>,label) lines show in your recall and log.,ok)
+          $(?is)^\+scene/sh(?\:o(?\:w)?)? +(.+)$: think setq(type_key,lcstr(trim(%1))); @assert member(scenetype(),%q<type_key>)=@pemit %#=notice(SCENE,No pose type called %q<type_key>. +scene/types lists them.,warn); &SCENE`SHOW %#=setunion(get(%#/SCENE`SHOW),%q<type_key>); &SCENE`HIDE %#=setdiff(get(%#/SCENE`HIDE),%q<type_key>); @assert member(get(%#/SCENE`SHOW),%q<type_key>)=@pemit %#=notice(SCENE,Your choice could not be saved on your character.,warn); @pemit %#=notice(SCENE,scenetype(%q<type_key>,label) lines show in your recall and log.,ok)
         flags: [REGEXP]
 
       # ---- filters ----------------------------------------------------------------
@@ -352,7 +352,7 @@ objects:
       #                 it), choices (the values it allows; none means any text), many (true when a scene may give
       #                 several, split by |), listed (shown beside the title in +scene lists and on the portal's
       #                 scene cards), tone (the theme colour its values show in, such as warning) and order.
-      #                 scenedetails() lists the keys, scenedetail() reads a field.
+      #                 scenedetail() lists the keys, scenedetail(<key>,<field>) reads a field.
       # A key must be a word that is not one of the scene's own fields (status, title, room, ...). Staff with
       # layout.admin change the catalogue with +scene/detail/add, /set and /remove. With DATA`CONFIG`OPEN-DETAILS set, as
       # shipped, an owner may set any detail, shown under its key when the catalogue does not list it.
@@ -362,14 +362,14 @@ objects:
         label hint choices many listed tone order
       # The name detail %0 goes by: its label, or for one the catalogue does not list, its key.
       FUN`DETAIL`LABEL: |-
-        if(member(scenedetails(),%0),scenedetail(%0),capstr(%0))
+        if(member(scenedetail(),%0),scenedetail(%0),capstr(%0))
       # Scene %0's value for detail %1, several values split by a middle dot, in the detail's tone, through the
       # DETAIL`SHOW filters.
       FUN`DETAIL`SHOW: |-
         u(%!/FUN`FILTER,DETAIL`SHOW,u(%!/FUN`DETAIL`PAINT,%1,edit(scene(%0,%1),|,%b[chr(183)]%b)),%0,%1)
       # %1 in the tone detail %0 names, or as it is when it names none or the catalogue does not list it.
       FUN`DETAIL`PAINT: |-
-        if(strlen(setr(detail_tone,if(member(scenedetails(),%0),scenedetail(%0,tone)))),tone(%q<detail_tone>,%1),%1)
+        if(strlen(setr(detail_tone,if(member(scenedetail(),%0),scenedetail(%0,tone)))),tone(%q<detail_tone>,%1),%1)
       # How many of scene %0's values for detail %1 match the pattern %2, ignoring case.
       FUN`DETAIL`HAS: |-
         if(not(strmatch(setr(detail_values,scene(%0,%1)),#-1*)),words(iter(%q<detail_values>,if(strmatch(trim(%i0),%2),1),|,%b)),0)
@@ -381,7 +381,7 @@ objects:
         iter(scene(%0,details),tone(strong,u(%!/FUN`DETAIL`LABEL,%i0)): [u(%!/FUN`DETAIL`SHOW,%0,%i0)],,%b[chr(183)]%b)
       # The listed details scene %0 has, after its title in a list, in a muted tone.
       FUN`DETAIL`TAGS: |-
-        setq(detail_listed,squish(iter(scenedetails(),if(cand(scenedetail(%i0,listed),strlen(scene(%0,%i0))),%i0))))[if(words(%q<detail_listed>),tone(muted,%b[chr(183)] [iter(%q<detail_listed>,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%b[chr(183)]%b)]))]
+        setq(detail_listed,squish(iter(scenedetail(),if(cand(scenedetail(%i0,listed),strlen(scene(%0,%i0))),%i0))))[if(words(%q<detail_listed>),tone(muted,%b[chr(183)] [iter(%q<detail_listed>,u(%!/FUN`DETAIL`SHOW,%0,%i0),,%b[chr(183)]%b)]))]
       # What detail %0 takes: its choices, or any text, and whether several.
       FUN`DETAIL`TAKES: |-
         if(strlen(setr(detail_choices,scenedetail(%0,choices))),itemize(%q<detail_choices>,|,or),any text)[if(scenedetail(%0,many),\, several split by |)]
@@ -391,36 +391,36 @@ objects:
       FUN`DETAIL`BOOL: |-
         switch(lcstr(%0),yes,true,true,true,on,true,1,true,no,false,false,false,off,false,0,false,json(string,%0))
       FUN`DETAILS`TABLE: |-
-        setq(detail_keys,scenedetails())[box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|3|2,||1|),tone(strong,Detail)%r[iter(%q<detail_keys>,%i0,,%r)],tone(strong,Name)%r[iter(%q<detail_keys>,scenedetail(%i0),,%r)],tone(strong,What goes in it)%r[iter(%q<detail_keys>,firstof(scenedetail(%i0,hint),-),,%r)],tone(strong,Takes)%r[iter(%q<detail_keys>,u(%!/FUN`DETAIL`TAKES,%i0),,%r)]),Scene details,,u(%!/FUN`FRAME))]
+        setq(detail_keys,scenedetail())[box(datacolumns(u(%!/FUN`TABLE`OPTS,1|4,|10|20|,1|2|3|2,||1|),tone(strong,Detail)%r[iter(%q<detail_keys>,%i0,,%r)],tone(strong,Name)%r[iter(%q<detail_keys>,scenedetail(%i0),,%r)],tone(strong,What goes in it)%r[iter(%q<detail_keys>,firstof(scenedetail(%i0,hint),-),,%r)],tone(strong,Takes)%r[iter(%q<detail_keys>,u(%!/FUN`DETAIL`TAKES,%i0),,%r)]),Scene details,,u(%!/FUN`FRAME))]
       FUN`DETAIL`CARD: |-
         box(fields(,Detail,%0,Name,scenedetail(%0),What goes in it,firstof(scenedetail(%0,hint),-),Takes,u(%!/FUN`DETAIL`TAKES,%0),In lists,if(scenedetail(%0,listed),yes,no),Tone,firstof(scenedetail(%0,tone),-),Order,scenedetail(%0,order)),Scene detail %0,,u(%!/FUN`FRAME))
       # +scene/details lists the game's details; +scene/detail <key> shows one.
       CMD`DETAILS:
         value: |-
-          $(?is)^\+scene/details$: @assert words(scenedetails())=@pemit %#=notice(SCENE,if(get(%!/DATA`CONFIG`OPEN-DETAILS),This game lists no scene details. You can still set your own: +scene/set <name>=<value>.,This game has no scene details.),warn); @pemit %#=u(%!/FUN`DETAILS`TABLE)[if(get(%!/DATA`CONFIG`OPEN-DETAILS),%rYou can set other details too: +scene/set <name>=<value>.)]
+          $(?is)^\+scene/details$: @assert words(scenedetail())=@pemit %#=notice(SCENE,if(get(%!/DATA`CONFIG`OPEN-DETAILS),This game lists no scene details. You can still set your own: +scene/set <name>=<value>.,This game has no scene details.),warn); @pemit %#=u(%!/FUN`DETAILS`TABLE)[if(get(%!/DATA`CONFIG`OPEN-DETAILS),%rYou can set other details too: +scene/set <name>=<value>.)]
         flags: [REGEXP]
       CMD`DETAIL:
         value: |-
-          $(?is)^\+scene/detail +(.+)$: think setq(detail_key,lcstr(trim(%1))); @assert member(scenedetails(),%q<detail_key>)=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @pemit %#=u(%!/FUN`DETAIL`CARD,%q<detail_key>)
+          $(?is)^\+scene/detail +(.+)$: think setq(detail_key,lcstr(trim(%1))); @assert member(scenedetail(),%q<detail_key>)=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @pemit %#=u(%!/FUN`DETAIL`CARD,%q<detail_key>)
         flags: [REGEXP]
       CMD`DETAIL`ADD:
         value: |-
-          $(?is)^\+scene/detail/add +([^=]+)=(.+)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`DETAILS),error); think setq(detail_key,lcstr(trim(%1)))[setq(detail_json,json(object,label,json(string,trim(%2))))]; @assert not(hasattr(%!,DETAIL`%q<detail_key>))=@pemit %#=notice(SCENE,There is already a scene detail called %q<detail_key>.,warn); @assert not(strlen(setr(detail_error,scenedetailcheck(%q<detail_key>,%q<detail_json>))))=@pemit %#=notice(SCENE,after(%q<detail_error>,#-1%b),warn); &DETAIL`%q<detail_key> %!=%q<detail_json>; @pemit %#=notice(SCENE,Added scene detail %q<detail_key>. +scene/detail/set %q<detail_key>/<field>=<value> changes it.,ok)
+          $(?is)^\+scene/detail/add +([^=]+)=(.+)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`DETAILS),error); think setq(detail_key,lcstr(trim(%1)))[setq(detail_json,json(object,label,json(string,trim(%2))))]; @assert not(hasattr(%!,DETAIL`%q<detail_key>))=@pemit %#=notice(SCENE,There is already a scene detail called %q<detail_key>.,warn); @assert not(strlen(setr(detail_error,scenedetail(%q<detail_key>,check,%q<detail_json>))))=@pemit %#=notice(SCENE,after(%q<detail_error>,#-1%b),warn); &DETAIL`%q<detail_key> %!=%q<detail_json>; @pemit %#=notice(SCENE,Added scene detail %q<detail_key>. +scene/detail/set %q<detail_key>/<field>=<value> changes it.,ok)
         flags: [REGEXP]
       CMD`DETAIL`SET:
         value: |-
-          $(?is)^\+scene/detail/set +([^/=]+)/([^=]+)=(.*)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`DETAILS),error); think setq(detail_key,lcstr(trim(%1)))[setq(detail_field,lcstr(trim(%2)))]; @assert hasattr(%!,DETAIL`%q<detail_key>)=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert member(get(%!/DATA`DETAIL`FIELDS),%q<detail_field>)=@pemit %#=notice(SCENE,A scene detail's fields are [itemize(get(%!/DATA`DETAIL`FIELDS))].,warn); think setq(detail_json,json_mod(get(%!/DETAIL`%q<detail_key>),set,$.%q<detail_field>,u(%!/FUN`DETAIL`VALUE,%q<detail_field>,trim(%3)))); @assert not(strlen(setr(detail_error,scenedetailcheck(%q<detail_key>,%q<detail_json>))))=@pemit %#=notice(SCENE,after(%q<detail_error>,#-1%b),warn); &DETAIL`%q<detail_key> %!=%q<detail_json>; @pemit %#=notice(SCENE,Scene detail %q<detail_key>: %q<detail_field> set.,ok)
+          $(?is)^\+scene/detail/set +([^/=]+)/([^=]+)=(.*)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`DETAILS),error); think setq(detail_key,lcstr(trim(%1)))[setq(detail_field,lcstr(trim(%2)))]; @assert hasattr(%!,DETAIL`%q<detail_key>)=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert member(get(%!/DATA`DETAIL`FIELDS),%q<detail_field>)=@pemit %#=notice(SCENE,A scene detail's fields are [itemize(get(%!/DATA`DETAIL`FIELDS))].,warn); think setq(detail_json,json_mod(get(%!/DETAIL`%q<detail_key>),set,$.%q<detail_field>,u(%!/FUN`DETAIL`VALUE,%q<detail_field>,trim(%3)))); @assert not(strlen(setr(detail_error,scenedetail(%q<detail_key>,check,%q<detail_json>))))=@pemit %#=notice(SCENE,after(%q<detail_error>,#-1%b),warn); &DETAIL`%q<detail_key> %!=%q<detail_json>; @pemit %#=notice(SCENE,Scene detail %q<detail_key>: %q<detail_field> set.,ok)
         flags: [REGEXP]
       CMD`DETAIL`REMOVE:
         value: |-
           $(?is)^\+scene/detail/remove +(.+)$: @assert permission(%#,layout.admin)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`DETAILS),error); think setq(detail_key,lcstr(trim(%1))); @assert hasattr(%!,DETAIL`%q<detail_key>)=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>.,warn); &DETAIL`%q<detail_key> %!; @pemit %#=notice(SCENE,Removed scene detail %q<detail_key>. Scenes keep their values for it[if(get(%!/DATA`CONFIG`OPEN-DETAILS),\, shown under its key)].,ok)
         flags: [REGEXP]
       # +scene/set [<id>/]<detail>=<value>: the focused scene, or the one named; an empty value clears it. Its owner
-      # or a scene manager, as for the title and pitch. scenedetailvalue() refuses a key that can't be a detail and a value
+      # or a scene manager, as for the title and pitch. scenedetail(<key>,value,<value>) refuses a key that can't be a detail and a value
       # the detail does not allow, and writes several values the one way.
       CMD`SET:
         value: |-
-          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); think setq(detail_key,lcstr(trim(%2))); @assert cor(member(scenedetails(),%q<detail_key>),get(%!/DATA`CONFIG`OPEN-DETAILS))=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert not(strmatch(setr(detail_value,scenedetailvalue(%q<detail_key>,%3)),#-1*))=@pemit %#=notice(SCENE,after(%q<detail_value>,#-1%b),warn); @scene/set %q<scene_id>/%q<detail_key>=%q<detail_value>; @pemit %#=notice(SCENE,if(strlen(%q<detail_value>),Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] is now [u(%!/FUN`DETAIL`SHOW,%q<scene_id>,%q<detail_key>)].,Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] cleared.),ok)
+          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); think setq(detail_key,lcstr(trim(%2))); @assert cor(member(scenedetail(),%q<detail_key>),get(%!/DATA`CONFIG`OPEN-DETAILS))=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert not(strmatch(setr(detail_value,scenedetail(%q<detail_key>,value,%3)),#-1*))=@pemit %#=notice(SCENE,after(%q<detail_value>,#-1%b),warn); @scene/set %q<scene_id>/%q<detail_key>=%q<detail_value>; @pemit %#=notice(SCENE,if(strlen(%q<detail_value>),Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] is now [u(%!/FUN`DETAIL`SHOW,%q<scene_id>,%q<detail_key>)].,Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] cleared.),ok)
         flags: [REGEXP]
 
       # ---- pose marks -------------------------------------------------------------
@@ -1136,7 +1136,7 @@ objects:
       # card carries the roster there is nothing left for a second verb to say.
       #
       # Cast and Members are both here because they answer different questions: Cast is the personas
-      # that have spoken (scenecast, deduplicated, what a reader of the log sees) and Members is the
+      # that have spoken (scene(<id>,cast), deduplicated, what a reader of the log sees) and Members is the
       # characters with their roles. A persona is not a character, so one cannot stand in for the
       # other — an actor posing under two names appears once per name in Cast and once in Members.
       # +scene <id>, +scene/info <id> and +event <id>; a title, or the start of one, finds the scene too

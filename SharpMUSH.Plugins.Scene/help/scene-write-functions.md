@@ -101,7 +101,7 @@ Replaces the pose's content with a new version, recording `<editor>` as its last
 `sceneundo(<pose id>)`<br>
 `sceneredo(<pose id>)`
 
-`sceneundo()` shows the pose's version before the current one again, and `sceneredo()` the one after it. Each returns the pose id, or the reason when there is no such version, such as `Already at the oldest version.` Live scene views show the change. [sceneedits()] lists the versions.
+`sceneundo()` shows the pose's version before the current one again, and `sceneredo()` the one after it. Each returns the pose id, or the reason when there is no such version, such as `Already at the oldest version.` Live scene views show the change. [scenepose()] lists the versions as its `edits` field.
 
 ## scenemovepose()
 

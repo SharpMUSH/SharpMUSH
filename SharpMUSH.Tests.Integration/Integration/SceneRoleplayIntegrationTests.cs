@@ -486,8 +486,8 @@ public class SceneRoleplayIntegrationTests
 		await Assert.That(who).Contains("Bob the Bard");
 		await Assert.That(who).Contains("Carol the Cloaked");
 
-		// scenecast() (the data behind the card's Cast line) carries exactly the three personas.
-		var cast = await Eval($"scenecast({sceneId})");
+		// scene(<id>,cast) (the data behind the card's Cast line) carries exactly the three personas.
+		var cast = await Eval($"scene({sceneId},cast)");
 		Log($"[CAST] {cast}");
 		foreach (var persona in new[] { "Alice the Innkeeper", "Bob the Bard", "Carol the Cloaked" })
 			await Assert.That(cast).Contains(persona);

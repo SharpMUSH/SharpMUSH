@@ -10,10 +10,10 @@ using SharpMUSH.Tests.Infrastructure;
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// sceneshared(): the scenes two players both belong to, which the relationships card uses for "Last scene
-/// together". Each test makes its own two players and its own scenes.
+/// scenelist()'s options object, above all <c>with</c>: the scenes two players both belong to, which the relationships
+/// card uses for "Last scene together". Each test makes its own two players and its own scenes.
 /// </summary>
-public class SceneSharedTests
+public class SceneListOptionsTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactory { get; init; }
@@ -63,27 +63,29 @@ public class SceneSharedTests
 		return id;
 	}
 
+	/// <summary>The scenes of the first player's that the second also belongs to, as scenelist() with <c>with</c> lists them.</summary>
+	private Task<string> Shared(string count = "") =>
+		Eval($"scenelist(mine,json(object,player,json(string,{First}),with,json(string,{Second}){(count.Length == 0 ? "" : $",count,{count}")}))");
+
 	[Test]
-	public async Task It_lists_only_the_scenes_both_belong_to()
+	public async Task With_lists_only_the_scenes_both_belong_to()
 	{
 		var both = await SceneWith(First, Second);
 		await SceneWith(First);
 		var again = await SceneWith(First, Second);
 
-		var shared = (await Eval($"sceneshared({First},{Second},10)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var shared = (await Shared("10")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
 		await Assert.That(shared).IsEquivalentTo(new[] { both, again });
 	}
 
 	[Test]
-	public async Task It_gives_one_scene_unless_asked_for_more()
+	public async Task A_count_of_one_gives_the_latest()
 	{
 		await SceneWith(First, Second);
-		await SceneWith(First, Second);
+		var latest = await SceneWith(First, Second);
 
-		var one = await Eval($"sceneshared({First},{Second})");
-
-		await Assert.That(one.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length).IsEqualTo(1);
+		await Assert.That(await Shared("1")).IsEqualTo(latest);
 	}
 
 	[Test]
@@ -91,21 +93,36 @@ public class SceneSharedTests
 	{
 		var both = await SceneWith(First, Second);
 
-		await Assert.That(await Eval($"sceneshared({First},{Second},{int.MaxValue})")).IsEqualTo(both);
+		await Assert.That(await Shared(int.MaxValue.ToString())).IsEqualTo(both);
 	}
 
 	[Test]
-	public async Task It_is_empty_for_two_players_who_share_none()
+	public async Task With_is_empty_for_two_players_who_share_none()
 	{
 		await SceneWith(First);
 
-		await Assert.That(await Eval($"sceneshared({First},{Second})")).IsEqualTo(string.Empty);
+		await Assert.That(await Shared()).IsEqualTo(string.Empty);
 	}
 
 	[Test]
-	public async Task A_bad_count_or_an_unknown_player_is_an_error()
+	public async Task Player_lists_every_scene_of_that_player()
 	{
-		await Assert.That(await Eval($"sceneshared({First},{Second},0)")).IsEqualTo("#-1 BAD ARGUMENT FORMAT TO SCENESHARED");
-		await Assert.That(await Eval($"sceneshared({First},*NoSuchPlayer{Guid.NewGuid():N})")).IsEqualTo("#-1 NO SUCH PLAYER");
+		var mine = await SceneWith(First);
+		var shared = await SceneWith(First, Second);
+
+		var listed = (await Eval($"scenelist(mine,json(object,player,json(string,{Second})))")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		await Assert.That(listed).Contains(shared);
+		await Assert.That(listed).DoesNotContain(mine);
+	}
+
+	[Test]
+	public async Task Bad_options_are_errors()
+	{
+		await Assert.That(await Shared("0")).IsEqualTo("#-1 COUNT MUST BE A POSITIVE WHOLE NUMBER");
+		await Assert.That(await Eval($"scenelist(mine,json(object,with,json(string,*NoSuchPlayer{Guid.NewGuid():N})))")).IsEqualTo("#-1 NO SUCH PLAYER");
+		await Assert.That(await Eval("scenelist(mine,json(object,colour,1))")).IsEqualTo("#-1 UNKNOWN OPTION COLOUR");
+		await Assert.That(await Eval("scenelist(mine,json(array,1))")).IsEqualTo("#-1 OPTIONS MUST BE A JSON OBJECT");
+		await Assert.That(await Eval("scenelist(scheduled,json(object,from,json(string,soon)))")).IsEqualTo("#-1 FROM MUST BE UTC MILLISECONDS");
 	}
 }
