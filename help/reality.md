@@ -85,7 +85,7 @@ Every switch needs the `reality.admin` permission on the account linked to the p
 | Layers per world | 32 |
 | Layer name | 1-32 ASCII letters, digits, `_` or `-`; case does not matter |
 
-Output: the message `@reality` shows.
+`@reality` outputs the message it shows.
 
 ## Layer descriptions
 

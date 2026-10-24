@@ -255,6 +255,12 @@
     ],
     "sections": [
       {
+        "id": "fields",
+        "lookup": "@appdraft fields",
+        "heading": "Fields and answers",
+        "aliases": []
+      },
+      {
         "id": "callbacks",
         "lookup": "@appdraft callbacks",
         "heading": "Callbacks and ownership",
@@ -2229,9 +2235,15 @@
     ],
     "sections": [
       {
+        "id": "forms",
+        "lookup": "dateparse forms",
+        "heading": "What it understands",
+        "aliases": []
+      },
+      {
         "id": "policies",
         "lookup": "dateparse policies",
-        "heading": "Calendar and ambiguity policies",
+        "heading": "How dates are read",
         "aliases": []
       },
       {
@@ -3362,7 +3374,14 @@
     "aliases": [
       "hasarg"
     ],
-    "sections": [],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "hasarg examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
     "file": "hasarg.md"
   },
   {
@@ -5255,7 +5274,7 @@
       {
         "id": "presence-and-migration",
         "lookup": "named arguments presence",
-        "heading": "Presence and migration",
+        "heading": "Included and repeated arguments",
         "aliases": []
       },
       {
@@ -14385,6 +14404,12 @@
         "aliases": []
       },
       {
+        "id": "display",
+        "lookup": "terminfo display",
+        "heading": "Display capabilities",
+        "aliases": []
+      },
+      {
         "id": "visibility",
         "lookup": "terminfo visibility",
         "heading": "Who sees what",
@@ -14852,7 +14877,7 @@
       {
         "id": "uargs-examples",
         "lookup": "uargs examples",
-        "heading": "uargs examples",
+        "heading": "Examples",
         "aliases": []
       }
     ],

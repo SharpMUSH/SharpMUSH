@@ -19,7 +19,7 @@ SharpMUSH writes to your connection in UTF-8 when your client agrees to it durin
 'SOCKSET charset' names the character set yourself, for a client SharpMUSH guesses wrong. 'auto' goes back to what your client negotiated or reported. 'SOCKSET stripaccents=yes' sends ASCII whatever this is set to.
 
 Example:
-```
+```sharp
 > SOCKSET charset=ascii
 Charset set to 'ascii'
 ```

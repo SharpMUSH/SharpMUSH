@@ -334,7 +334,6 @@ Controls who can take from this container.
 - [give]
 - [buy]
 - [@LOCK/BASIC]
-- [@LOCK/BASIC]
 :::
 
 # @lock/filter

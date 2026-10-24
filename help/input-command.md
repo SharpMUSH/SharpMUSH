@@ -59,20 +59,26 @@ Patterns match the whole line, with spaces around it trimmed and case ignored. W
 
 ## Typed text
 
-An attribute gets the line and nothing else: brackets, semicolons, percent substitutions, and newlines are literal data, not commands or expressions. Empty input and whitespace are lines too. A transport that sends a paste as separate lines sends each line, and capture continues until the exit, so later pasted lines do not become commands.
+An attribute gets the line and nothing else: brackets, semicolons, percent signs and line breaks in it are plain text, never commands or code. An empty line, or one of only spaces, is a line too. A client that sends a paste as separate lines sends each line to the session, until the exit, so no pasted line runs as a command.
 
-Each attribute runs as the initiating executor, with the connected character as enactor. `%@` is kept from the code that ran `@input/start`: from a $-command, that is the player who typed it. It gets fresh registers and evaluation limits on each line. A line uses the normal admitted input entry and its execution budget. Queue rejection consumes no execution capacity; it never turns captured input into ordinary commands. A timeout run also requires normal queue admission.
+Each attribute runs as the object that started the session, with the connected character as the enactor (%#). `%@` is whatever it was for the code that ran `@input/start`: from a `$`-command, the player who typed it. Each line starts with fresh q-registers and its own evaluation limits, and is queued as typed input is. When the queue is full, the line is dropped, never run as a command. The timeout's run is queued the same way.
 
 ## Prompting, replacing and cancelling
 
 `@input/prompt <prompt>`<br>
 `@input/cancel`
 
-From an attribute, use `@input/prompt` to send another prompt to this connection, or `@input/start` to replace the session; a replacement may name different patterns. A new session invalidates queued responses to the former session. Replies waiting behind session startup, including blank replies, belong to the first session opened after they were queued. Replacing that session discards its remaining queued replies, including queued cancel messages. If that session ends before they execute, they are discarded rather than run as commands. `@input/cancel` ends capture without running anything and restores ordinary commands. Cancellation prevents attributes already running on this connection from reopening or managing capture; a later independent start is still allowed. A player can always leave by sending exactly `@input/cancel` (case-insensitive) as a complete input message. This escape is checked before queue admission, even when the queue is full. Extra spaces or appended commands make it ordinary literal session data.
+From an attribute, `@input/prompt` sends another prompt to this connection, and `@input/start` replaces the session with a new one, which may have other patterns. Lines the player typed for the old session that have not run yet are thrown away, never run as commands; lines typed while a session was starting go to it.
+
+`@input/cancel` ends the session without running anything, and the player's lines are commands again. After it, an attribute still running from that session cannot reopen it, though other code can start a new one.
+
+A player can always leave by typing exactly `@input/cancel`, in any case, as a whole line. It works even when the queue is full. With anything else on the line, such as extra spaces or another command, it is an ordinary line of the session.
 
 ## Timeout
 
-The timeout is a safety net for a player who walked away. It defaults to 60 seconds and may be 1-3600 seconds. It is measured from session start and is not extended by input or prompts. At expiry, capture ends and the exit attribute runs with empty `%0` and `timeout` as `r(reason,args)`. Sending the cancel escape after expiry does not suppress an already pending timeout run. Starting another session is refused while the expired generation still owes its timeout run; the exit attribute itself may start the next session. An attribute is skipped if its binding or authority has changed or admission fails. Disconnect, logout, character switch, replacement, and engine restart end capture without running anything. A halted executor, an unhandled failure, or an exhausted execution budget also ends capture.
+The timeout is a safety net for a player who walked away. It is 60 seconds unless given, and can be 1 to 3600. It counts from when the session started: typing and prompts do not extend it. When it runs out, the session ends and the exit attribute runs with an empty `%0` and `timeout` as `r(reason,args)`; typing `@input/cancel` after that does not stop that run. A new session cannot start until the run has happened, except from the exit attribute itself.
+
+The exit attribute is skipped if the player's connection or character, or the object's control of the attribute, has changed since the session started. Disconnecting, logging out, switching character, a replacement session and a server restart end the session without running anything, as do a halted object, an error in an attribute, and running out of evaluation limits.
 
 ## Rescuing a stuck player
 
@@ -82,7 +88,9 @@ The timeout is a safety net for a player who walked away. It defaults to 60 seco
 
 ## Checks and limits
 
-Every delivery rechecks the connection incarnation, full character and object identities, ownership, control, and attribute access. These checks share the line's execution budget. Prompts are bound to the original connection and are discarded if that connection is replaced before delivery. Changed ownership, deleted/recycled objects, or revoked permission end the session safely. Two connections playing the same character have independent sessions and cannot consume one another's input. There may be at most 1024 sessions globally, 64 per initiating owner, and one per connection. An input message may contain at most 65,536 UTF-16 code units; longer input is rejected while capture remains active.
+Before each line runs, the server checks again that it is the same connection and character, and that the object still exists, has the same owner, and controls and may run the attribute. If any of that changed, the session ends without running anything. A prompt for a connection that has since been replaced is not sent.
+
+Two connections playing the same character have sessions of their own, and one never gets the other's lines. There can be at most one session per connection, 64 started by objects of one owner, and 1024 in the game. A line longer than 65,536 characters is refused, and the session stays open.
 
 ## Example
 

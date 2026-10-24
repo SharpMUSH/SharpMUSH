@@ -37,7 +37,7 @@ Wizard-only. Reports where the world's disk goes, and what the version histories
 
 The other figures show the free disk beside the world, the backup copies kept, and the size of the next copy and of the backup directory at the height of a run. Earlier worlds still on disk, such as the `.previous` world a promoted import replaced, are listed until you delete them. Notes at the bottom say when the next backup will not fit, when backups share the world's disk, and how many readers a dead process left behind have been cleaned up since startup.
 
-Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy; `deploy/README.md` describes how to do that safely.
+Deleting things frees space inside the file for reuse. It never shrinks the file. The file only gets smaller when it is replaced with a compacted copy: setting `SHARPMUSH_LIGHTNING_COMPACT_ON_START=true` on the server does that at its next start, keeping the original beside it as `<path>.precompact`.
 
 ## History kept in the world
 
@@ -66,7 +66,7 @@ The policy is set on the server, not with `@config`. **The default keeps everyth
 - any pose version that `redo` can still reach.
 - anything on a protected wiki page.
 
-Undo stops at the oldest version that survives. A wiki rollback can only go back to a revision that survives. See `deploy/README.md` for the settings.
+Undo stops at the oldest version that survives. A wiki rollback can only go back to a revision that survives. The policy for each kind is set on the server with `SHARPMUSH_HISTORY_<KIND>_MAX_AGE` (how old a record may get, such as `365d`) and, for `WIKI` and `SCENE_EDITS`, `SHARPMUSH_HISTORY_<KIND>_KEEP` (how many of the newest versions always stay). The kind is written in capitals with `_` for `.`, such as `SCENE_DELETED`, and `SHARPMUSH_HISTORY_INTERVAL` runs a pass on a schedule.
 
 ::: seealso
 - [@backup]

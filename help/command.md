@@ -74,7 +74,7 @@ The `/quiet` switch can be used to suppress output from @command.
 
 `@command/args <command>=[<name> ...]`
 
-`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as %`\<name\>` as well as `LSA<n>` (see [@hook]). The last name can take the rest of the arguments, in the same shapes as `@function/args` (`parts...`, `key...|value...`, `case...|result... default`, or a bare `...` for pairs); see [named arguments commands]. With no names, the names are cleared. It needs the config.admin permission and, like the other switches, lasts until the server restarts.
+`@command/args` names the command's arguments for its @hooks: in order, the left side and then each right-side argument. A hook reads each as `%<name>` as well as `LSA<n>` (see [@hook]). The last name can take the rest of the arguments, in the same shapes as `@function/args` (`parts...`, `key...|value...`, `case...|result... default`, or a bare `...` for pairs); see [named arguments commands]. With no names, the names are cleared. It needs the config.admin permission and, like the other switches, lasts until the server restarts.
 
 ## Making changes permanent
 

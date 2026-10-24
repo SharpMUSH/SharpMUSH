@@ -19,8 +19,7 @@ formdecode() converts form-encoded data, such as HTTP GET paths (after the ?) or
 
 If *<paramname>* is not given, formdecode() returns a list of parameter names.
 
-If there are multiple values, they will be separated by *<osep>* (default %b)
-
+If there are multiple values, they will be separated by *<osep>* (default %b).
 
 ## Examples
 
@@ -30,12 +29,12 @@ If there are multiple values, they will be separated by *<osep>* (default %b)
 You say, "Joe"
 
 > say formdecode(v(formdata),hobby)
-You say, "o/\` singing o/\`"
+You say, "o/` singing o/`"
 
 > say formdecode(v(formdata),like,^)
 You say, "potato^cheese"
 
-> say formdecode(v(formdata),,,)
+> say formdecode(v(formdata),,\,)
 You say, "name,hobby,like,like"
 ```
 

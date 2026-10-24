@@ -25,7 +25,7 @@ sharpmush
 
 Writes *<theme>* out in full as JSON: its name, whether it is for a dark or light background, and each colour with the standard colour a sixteen-colour client is sent. *<theme>* is anything the `"theme"` option takes; see [LAYOUT THEMES]. A theme made from a seed colour can be made once and kept:
 
-```
+```sharp
 think set(me,MYTHEME:[theme({{"seed":"#d08770","harmony":"split"}})])
 think box(Hello,,30,json(object,theme,v(MYTHEME)))
 ```

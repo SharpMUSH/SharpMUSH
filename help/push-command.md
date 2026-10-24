@@ -21,7 +21,7 @@ The game sends nothing by itself: a notification goes out only when code runs @p
 
 Using @push needs the `notify.push` permission, which the `wizard` role allows.
 
-Output: one word. `sent`; `none` when the player has no device with notifications on, or no account; `attended` when the player is at the game and `/always` was not given; `limited` past `push_limit`. See [command output].
+`@push` outputs one word: `sent`; `none` when the player has no device with notifications on, or no account; `attended` when the player is at the game and `/always` was not given; `limited` past `push_limit`. See [command output].
 
 - [@push delivery]: topics, players at the game, and urgent notifications
 - [@push limits]: how many notifications and browsers, and the signing key
@@ -46,7 +46,7 @@ The server signs every notification with a key it makes the first time it needs 
 
 ## Examples
 
-```
+```sharp
 > &SEND me=@push Mira=Page from Tobin,,/play,page-tobin; think %>
 > @include me/SEND
 sent

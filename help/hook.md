@@ -159,7 +159,7 @@ Walker sticks his right foot out
 
 ## Argument registers
 
-The following named arguments may be available (via %`\<name\>` or `r(<name>,args)`) in your @hook, depending on the command hooked and the arguments given when run; use `registers(,args)` to get the available registers. `/before`, `/after` and `/ignore` hooks can also use the %u substitution to access the entire command string entered.
+The following named arguments may be available (via `%<name>` or `r(<name>,args)`) in your @hook, depending on the command hooked and the arguments given when run; use `registers(,args)` to get the available registers. `/before`, `/after` and `/ignore` hooks can also use the %u substitution to access the entire command string entered.
 
 | Register | Description |
 | --- | --- |
@@ -181,4 +181,4 @@ The following named arguments may be available (via %`\<name\>` or `r(<name>,arg
 | **Available for SWITCHES commands (such as @lock):** | |
 | SWITCHES | The switch string given. (Note: Currently, switches given to normal commands are not available here, but can be accessed via the %u substitution.) |
 
-A wizard can also give the arguments names of their own with @command/args: after `@command/args @atrchown=attribute owner`, a hook on @atrchown reads %`\<attribute\>` and %`\<owner\>` beside LSA1 and LSA2. See [@command].
+A wizard can also give the arguments names of their own with @command/args: after `@command/args @atrchown=attribute owner`, a hook on @atrchown reads `%<attribute>` and `%<owner>` beside LSA1 and LSA2. See [@command].

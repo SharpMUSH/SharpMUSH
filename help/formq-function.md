@@ -17,9 +17,9 @@ formq() decodes form-encoded data (an HTTP query string or a form-urlencoded bod
 
 Each parameter becomes the register *<prefix><NAME>* (default prefix `FORM.`), so `?name=Joe` is readable as *%q<form.name>*. Names are normalized the same way HTTP header registers are (uppercased; anything outside `A-Z 0-9 _ . -` becomes `_`).
 
-Array parameters collapse into one %r-separated register, whichever way the client spells them: repeated names (`like=a&like=b`) and bracket arrays (`like[]=a&like[]=b`) both produce *%q<form.like>* containing `a%rb`, the same convention as duplicate HTTP headers in %`\<hdr.*\>`. Bare tokens (`?debug` with no `=`) become registers with an empty value.
+Array parameters collapse into one %r-separated register, whichever way the client spells them: repeated names (`like=a&like=b`) and bracket arrays (`like[]=a&like[]=b`) both produce *%q<form.like>* containing `a%rb`, the same convention as duplicate HTTP headers in `%<hdr.*>`. Bare tokens (`?debug` with no `=`) become registers with an empty value.
 
-formq() returns the space-separated list of normalized parameter names (without the prefix), mirroring %`\<headers\>`.
+formq() returns the space-separated list of normalized parameter names (without the prefix), mirroring `%<headers>`.
 
 ## Examples
 

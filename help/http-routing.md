@@ -38,7 +38,7 @@ Before dispatching, the router sets:
 
 ## Adding a route
 
-The sub-attribute receives *%0* = the raw request body, and the request's named arguments (%`\<path\>`, %`\<body\>`, %`\<viewer\>`, %`\<hdr.<name>\>`), which `@include` passes on. The body is left raw on purpose: check %`\<hdr.content-type\>` and use [FORMQ()] or [json_query()] on *%0* as appropriate. Sub-attributes read the decoded *%q<form.*>* registers, and the raw query string is still `after(%<path>,?)`.
+The sub-attribute receives *%0* = the raw request body, and the request's named arguments (`%<path>`, `%<body>`, `%<viewer>`, `%<hdr.<name>>`), which `@include` passes on. The body is left raw on purpose: check `%<hdr.content-type>` and use [FORMQ()] or [json_query()] on *%0* as appropriate. Sub-attributes read the decoded *%q<form.*>* registers, and the raw query string is still `after(%<path>,?)`.
 
 To serve `GET /api/users`:
 
@@ -81,7 +81,7 @@ The roster is `/http/characters`.
 The connection list is `/http/online`.
 
 
-``&GET`ONLINE`` answers the **connection list**, with the same row shape as `/http/characters` (`{name, objid, created, category, image}`). It is built on [lwho()], the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FUN`PROFILE`ONLINEVISIBLE``, which by default applies the ``&FUN`PROFILE`CHARACTERVISIBLE`` rules plus hiding DARK players. Note `lwho()` evaluates `CanSee()` against the *caller*, and the handler is wizard-flagged, so DARK players would otherwise be listed to anonymous web visitors. Redefine it to suit your game's policy.
+``&GET`ONLINE`` answers the **connection list**, with the same row shape as `/http/characters` (`{name, objid, created, category, image}`). It is built on [lwho()], the same registry `WHO` reads, so an object that never binds a connection cannot appear here however it is flagged. Visibility comes from ``&FUN`PROFILE`ONLINEVISIBLE``, which by default applies the ``&FUN`PROFILE`CHARACTERVISIBLE`` rules plus hiding DARK players. lwho() lists the players its caller can see, and the handler is a wizard, so without that rule DARK players would be listed to anonymous web visitors. Redefine it to suit your game's policy.
 
 ### Row separators
 

@@ -21,7 +21,7 @@ Examples all assume the following dedicated handler:
 
 ```sharp
 > @pcreate HTTPHandler=digest(md5,rand())
-> @config/set http_handler=pmatch(HTTPHandler)
+> @config/set http_handler=num(*HTTPHandler)
 ```
 
 ::: seealso
@@ -59,13 +59,13 @@ GET requests are the simplest: there is no form data, and `%0` splits into the p
 Return a JSON array of users to any GET request:
 
 ```sharp
-> &LIST_TO_JSON\`FOLD *HTTPHandler=json_mod(%0,insert,$\\[[json_query(%0,size)]\\],json(string,%1))
-> &LIST_TO_JSON *HTTPHandler=fold(list_to_json\`fold,%0,\\[\\],%1)
+> &LIST_TO_JSON`FOLD *HTTPHandler=json_mod(%0,insert,$\[[json_query(%0,size)]\],json(string,%1))
+> &LIST_TO_JSON *HTTPHandler=fold(list_to_json`fold,%0,\[\],%1)
 > &NAMES *HTTPHandler=u(list_to_json,map(#apply/name,mwho(),%b,^),^)
 > &GET *HTTPHandler=@respond/type application/json ; think u(names)
 ```
 
-Check: `http://yourmush:port/http/dbrefs`
+Check: `http://yourmush:port/http/`
 
 ## GET by path and query
 
@@ -74,9 +74,9 @@ Check: `http://yourmush:port/http/dbrefs`
 As above, but only for the path `/who`; for `/dbrefs`, the dbrefs without names:
 
 ```sharp
-> &GET\`WHO *HTTPHandler=@respond/type application/json ; think u(names)
-> &GET\`DBREFS *HTTPHandler=@respond/type application/json ; think u(list_to_json,mwho(),%b)
-> &GET *HTTPHandler=@break strmatch(%0,/who)=@include me/get\`who ; @break strmatch(%0,/dbrefs)=@include me/get\`dbrefs
+> &GET`WHO *HTTPHandler=@respond/type application/json ; think u(names)
+> &GET`DBREFS *HTTPHandler=@respond/type application/json ; think u(list_to_json,mwho(),%b)
+> &GET *HTTPHandler=@break strmatch(%0,/who)=@include me/get`who ; @break strmatch(%0,/dbrefs)=@include me/get`dbrefs
 ```
 
 Check:
@@ -121,9 +121,9 @@ Check: the same, but send the fields as JSON.
 To accept either, depending on whether the client sends JSON:
 
 ```sharp
-> &POST\`JSON *HTTPHandler=@chat [json_query(%1,extract,$.channel)]=[json_query(%1,extract,$.msg)]
-> &POST\`FORM *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
-> &POST *HTTPHandler=@break strmatch(%<hdr.content-type>,*json*)=@include me/post\`json ; @include me/post\`form
+> &POST`JSON *HTTPHandler=@chat [json_query(%1,extract,$.channel)]=[json_query(%1,extract,$.msg)]
+> &POST`FORM *HTTPHandler=@chat [formdecode(%1,channel)]=[formdecode(%1,msg)]
+> &POST *HTTPHandler=@break strmatch(%<hdr.content-type>,*json*)=@include me/post`json ; @include me/post`form
 ```
 
 Check: POST either form data or JSON.

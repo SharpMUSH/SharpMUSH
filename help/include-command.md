@@ -35,7 +35,7 @@
 
 @include inserts the contents of the attribute provided into the action list in-place, without adding a new queue entry. It is useful to avoid having to copy the same code into multiple commands. The attribute to be included must be visible to the enactor.
 
-Output: the output of the last command run. See [command output].
+`@include` outputs what the last command it ran output. See [command output].
 
 - [@include example]: shared checks, and attributes that are also $-commands
 - [@include arguments and nesting]: %0-%9 in the included actions, and the nesting limit
@@ -65,7 +65,7 @@ In-place action lists (those run by @include, @trigger, @force, @switch/inplace,
 ## Include switches
 
 @include takes the following switches to alter its behaviour:
-- /args: The arguments are `<name>,<value>` pairs, read in the included actions as %`\<name\>` (see [uargs()]). Each supplied value also replaces its numbered slot, starting at %0. Untouched inherited slots stay available, including with /chain. This replaces the previous names-only overlay. hasarg(name,supplied) reports only this include's supplied keys; hasarg(name) also sees inherited keys.
+- /args: The arguments are `<name>,<value>` pairs, read in the included actions as `%<name>` (see [uargs()]). Each supplied value also replaces its numbered slot, starting at %0. Untouched inherited slots stay available, including with /chain. This replaces the previous names-only overlay. hasarg(name,supplied) reports only this include's supplied keys; hasarg(name) also sees inherited keys.
 - /chain: Include several attributes in sequence, as a pipeline. See [@include attribute pipelines].
 - /nobreak: Prevents an @break/@assert in the included attribute from breaking the including action list.
 - /localize: Saves all q-registers before including the attribute, and restores them after including the attribute.

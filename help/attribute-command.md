@@ -202,7 +202,7 @@ Both attributes run the same handler, so it reads both values again rather than 
 A package can add standard attributes to the table itself, in the `attributes:` block of its manifest (format 1.5), instead of running `@attribute` from its install code. Each entry names the attribute and gives what `@attribute` would set: default `flags`, and a `limit` or an `enum` (with a `delimiter` when a choice holds a space).
 
 Example, in a package's manifest:
-```
+```yaml
 format: 1.5
 attributes:
   JOB`STATUS:
@@ -224,7 +224,7 @@ From format 1.8 an entry can also carry an `index:`, as `@attribute/index` would
 From format 1.9 an entry can also carry a `watch:`, as `@attribute/watch` would set it: `watch: true` for the default pattern, or the pattern itself, such as ``watch: WATCH`HP`*``. An older manifest's `watch:` is ignored. A game entry without the same watch blocks the install until you watch it that way. An upgrade that drops `watch:` stops watching the attribute, and uninstalling the package deletes the entry with its watch.
 
 Example, in a package's manifest:
-```
+```yaml
 format: 1.9
 attributes:
   HP:

@@ -13,7 +13,7 @@
 -->
 # @config tiny
 
-Options that help control compability with TinyMUSH servers.
+Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code written for those servers.
 
 - [@config tiny tinymush]: null strings, booleans, trim(), @pemit and parenthesis groups
 - [@config tiny tinymux]: TinyMUX logic, justification, text order and loop tokens

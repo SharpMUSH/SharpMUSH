@@ -13,39 +13,30 @@
 `isdbref(<string>)`<br>
 `isobjid(<string>)`
 
-  isobjid() returns 1 if `<string>` is the object id of an existing object. If `<string>` is not a full objid, or is the objid of a garbage object, it returns 0.
+isobjid() returns 1 if `<string>` is the objid of an existing object, and 0 if it is not a full objid or no such object exists.
 
-  isdbref() functions the same, but will also return 1 if `<string>` is the dbref of an existing (or garbage) object.
+isdbref() returns 1 if `<string>` is the dbref or objid of an existing object. A destroyed object's dbref no longer exists, so isdbref() returns 0 for it.
 
 - [isdbref examples]: dbrefs and objids that do and do not exist
 
 ## Examples
 
-  Examples:
 ```sharp
-@stats
-100 objects = 20 rooms, 20 exits, 20 things, 20 players, 20 garbage.
-The next object to be created will be #33.
+> think objid(#1)
+#1:1792817866185
+> think isdbref(#1)
+1
+> think isdbref(#1:1792817866185)
+1
+> think isobjid(#1)
+0
+> think isobjid(#1:1792817866185)
+1
+> think isobjid(#1:9876543210)
+0
+> think isobjid(#)
+0
 ```
-
-    > think isdbref(#33)<br>
-    1<br>
-    > think isobjid(#33:1234567890)<br>
-    0
-
-    > think csecs(#1)<br>
-    1324654503<br>
-    > think isdbref(#1)<br>
-    1<br>
-    > think isobjid(#)<br>
-    0<br>
-    > think isdbref(#1:1324654503)<br>
-    1<br>
-    > think isobjid(#1:1324654503)<br>
-    1<br>
-    > think isobjid(#1:9876543210)<br>
-    0
-
 
 ::: seealso
 - [database]

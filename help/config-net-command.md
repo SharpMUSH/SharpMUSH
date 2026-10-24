@@ -30,7 +30,7 @@ Networking and connection-related options.
 
 - `use_dns=<boolean>`: Are IP addresses resolved into hostnames?
 - `logins=<boolean>`: Are mortal logins enabled?
-- `player_creation=<boolean>`: Can CREATE be used from the login screen?
+- `player_creation=<boolean>`: Can `register` and `make` be used from the login screen?
 - `guests=<boolean>`: Are guest logins allowed?
 - `pueblo=<boolean>`: Is Pueblo support turned on?
 - `media_base_url=<string>`: The web address a GMCP client such as Mudlet fetches the game's sounds and music from, when [sound()] or [music()] names a file rather than a full address. It is sent as GMCP Client.Media.Default when a client agrees to GMCP, and to every such client when it changes; a `/` is added if it does not end in one. Empty sends nothing, and such a client then needs full addresses.
@@ -38,5 +38,7 @@ Networking and connection-related options.
 ## SQL and SSL
 
 - `sql_platform=<string>`: What kind of SQL server are we using? ("mysql", "mariadb", "postgresql", "postgres" or "sqlite"). SQL is off while sql_host and sql_database are both empty.
-- `sql_host=<string>`: What is the hostname or ip address of the SQL server
+- `sql_host=<string>`: What is the hostname or IP address of the SQL server?
+- `sql_database=<string>`: The name of the database on the SQL server. Only God sees it.
+- `sql_username=<string>`: The user name to log in to the SQL server with. Only God sees it. The password is the `sql.password` secret: see [@secret].
 - `ssl_require_client_cert=<boolean>`: Are client certificates verified in SSL connections?

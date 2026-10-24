@@ -120,15 +120,13 @@ II. License
 
 ## Grants of license
 
-   2. Grant of Copyright License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,<br>
+   2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual,<br>
       worldwide, non-exclusive, no-charge, royalty-free, irrevocable<br>
       copyright license to reproduce, prepare Derivative Works of,<br>
       publicly display, publicly perform, sublicense, and distribute the<br>
       Work and such Derivative Works in Source or Object form.
 
-   3. Grant of Patent License. Subject to the terms and conditions of
-      this License, each Contributor hereby grants to You a perpetual,<br>
+   3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual,<br>
       worldwide, non-exclusive, no-charge, royalty-free, irrevocable<br>
       (except as stated in this section) patent license to make, have made,<br>
       use, offer to sell, sell, import, and otherwise transfer the Work,<br>
@@ -145,8 +143,7 @@ II. License
 
 ## Redistribution
 
-   4. Redistribution. You may reproduce and distribute copies of the
-      Work or Derivative Works thereof in any medium, with or without<br>
+   4. Redistribution. You may reproduce and distribute copies of the Work or Derivative Works thereof in any medium, with or without<br>
       modifications, and in Source or Object form, provided that You<br>
       meet the following conditions:
 
@@ -190,21 +187,18 @@ II. License
 
 ## Submissions, trademarks and warranty
 
-   5. Submission of Contributions. Unless You explicitly state otherwise,
-      any Contribution intentionally submitted for inclusion in the Work<br>
+   5. Submission of Contributions. Unless You explicitly state otherwise, any Contribution intentionally submitted for inclusion in the Work<br>
       by You to the Licensor shall be under the terms and conditions of<br>
       this License, without any additional terms or conditions.<br>
       Notwithstanding the above, nothing herein shall supersede or modify<br>
       the terms of any separate license agreement you may have executed<br>
       with Licensor regarding such Contributions.
 
-   6. Trademarks. This License does not grant permission to use the trade
-      names, trademarks, service marks, or product names of the Licensor,<br>
+   6. Trademarks. This License does not grant permission to use the trade names, trademarks, service marks, or product names of the Licensor,<br>
       except as required for reasonable and customary use in describing the<br>
       origin of the Work and reproducing the content of the NOTICE file.
 
-   7. Disclaimer of Warranty. Unless required by applicable law or
-      agreed to in writing, Licensor provides the Work (and each<br>
+   7. Disclaimer of Warranty. Unless required by applicable law or agreed to in writing, Licensor provides the Work (and each<br>
       Contributor provides its Contributions) on an "AS IS" BASIS,<br>
       WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or<br>
       implied, including, without limitation, any warranties or conditions<br>
@@ -215,8 +209,7 @@ II. License
 
 ## Liability
 
-   8. Limitation of Liability. In no event and under no legal theory,
-      whether in tort (including negligence), contract, or otherwise,<br>
+   8. Limitation of Liability. In no event and under no legal theory, whether in tort (including negligence), contract, or otherwise,<br>
       unless required by applicable law (such as deliberate and grossly<br>
       negligent acts) or agreed to in writing, shall any Contributor be<br>
       liable to You for damages, including any direct, indirect, special,<br>
@@ -227,8 +220,7 @@ II. License
       other commercial damages or losses), even if such Contributor<br>
       has been advised of the possibility of such damages.
 
-   9. Accepting Warranty or Additional Liability. While redistributing
-      the Work or Derivative Works thereof, You may choose to offer,<br>
+   9. Accepting Warranty or Additional Liability. While redistributing the Work or Derivative Works thereof, You may choose to offer,<br>
       and charge a fee for, acceptance of support, warranty, indemnity,<br>
       or other liability obligations and/or rights consistent with this<br>
       License. However, in accepting such obligations, You may act only<br>

@@ -70,7 +70,7 @@ only allows those with their @sex set to Male who are carrying a "Bathroom Key" 
 
 ## Grouping lock keys
 
-You can group together different sets of keys by enclosing each group in parenthesis "()". For instance,
+You can group together different sets of keys by enclosing each group in parentheses "()". For instance,
 
 ```sharp
 > @lock Entrance=!type^player | (type^player & !flag^unregistered)

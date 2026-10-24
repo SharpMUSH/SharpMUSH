@@ -50,7 +50,7 @@ These functions change the Scene System's records, as [@scene] does. Only wizard
 
 Makes a scene owned by `<owner>` in `<room>`, public, and returns its id. An empty room makes a scene with no room yet. The scene's status is `new`, or `scheduled` when `<scheduledfor>` gives it a time in UTC milliseconds. A scheduled scene needs a title, a pitch and a time still to come, or the result is `#-1 A scheduled scene needs a title, pitch and future UTC millisecond time.` Making a scene raises the ``scene`status`` event (see [scene events]).
 
-```
+```sharp
 > think scenecreate(here, me, Harbour Night)
 ```
 

@@ -83,7 +83,7 @@
 
 Sets the theme every layout is drawn in for a player: boxes, tables, gauges and the rest, from any function in [LAYOUT FUNCTIONS]. *<theme>* is anything the `"theme"` option takes (see [LAYOUT THEMES]): a name from [THEMES()], or a theme written out as JSON inside a second pair of braces, as for a layout function's options: `@theme me={{"seed":"#7aa2f7","harmony":"triadic"}}`. With nothing after the `=`, the theme is cleared.
 
-Output: none.
+`@theme` outputs nothing.
 
 - [@theme light and dark]: a theme made for a light or dark background
 - [@theme parents]: themes taken from a parent or the player ancestor
@@ -117,7 +117,7 @@ The theme is kept in the `THEME` attribute, and a player without one of their ow
 
 `@theme` keeps what follows the `=` exactly as it is typed, braces and all. Whenever the theme is needed it is evaluated as the player, with `%#` and `%!` the player, and what it works out to is the theme. Evaluating takes off the outer pair of braces round JSON, which is why JSON is typed inside two, and runs anything in `[ ]`, so a list in JSON is typed `\[ \]`. That lets one theme on an ancestor or parent choose by a value:
 
-```
+```sharp
 @theme #4=[if(strmatch(get(%#/FACTION),Rebel),horror,nord)]
 ```
 
@@ -209,7 +209,7 @@ A player whose theme stops reading after a change, or is removed or disabled, se
 
 Changing the themes needs the `layout.admin` permission. The themes are kept with the game's data, not in `mush.cnf`.
 
-Output: none.
+These commands output nothing.
 
 ## Adding a theme
 
@@ -221,7 +221,7 @@ Output: none.
 
 Fantasy replaced with a version of the game's own, with red titles:
 
-```
+```sharp
 > @theme/disable fantasy
 Theme fantasy disabled.
 > @theme/add myfantasy={{"preset":"fantasy","colors":{"secondary":"#c0392b"}}}

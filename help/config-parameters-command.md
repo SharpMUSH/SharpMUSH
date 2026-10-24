@@ -28,7 +28,7 @@ Categories:
 - [@config net]
 - [@config tiny]
 
-The categories and groups are the same as those used by `@config/list`.
+The categories and groups are the same as those `@config` lists.
 
 - [@config parameters values]: the value types options take, and list-valued options
 

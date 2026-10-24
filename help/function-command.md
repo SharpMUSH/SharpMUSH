@@ -112,7 +112,7 @@ And then store each function as an attribute of the same name on object #100.
 
 ## Named arguments
 
-`@function/args <function name>=[<name> ...]` passes the function's arguments under these space-separated names as well as %0, %1 and so on. The attribute reads them with %`\<name\>`. With no names, the names are cleared. Redefining the function clears them too, so set them after the @function in the same @startup.
+`@function/args <function name>=[<name> ...]` passes the function's arguments under these space-separated names as well as %0, %1 and so on. The attribute reads them with `%<name>`. With no names, the names are cleared. Redefining the function clears them too, so set them after the @function in the same @startup.
 
 ```sharp
 &FN`GREET me=Hello, %<who>. You have %<count> new posts.

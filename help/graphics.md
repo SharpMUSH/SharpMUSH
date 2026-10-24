@@ -37,7 +37,7 @@ Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A 
 A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it. A moving picture shows its first frame unless animation is on; see [ANIMATION].
 
 Example:
-```
+```sharp
 > SOCKSET graphics=auto
 Graphics set to 'auto'
 ```
