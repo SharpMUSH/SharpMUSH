@@ -10,7 +10,7 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Library.Services;
 
-public class SortService(ILocateService locateService, IConnectionService connectionService, IMediator mediator)
+public class SortService(ILocateService locateService, IConnectionService connectionService, IAttributeService attributeService, IMediator mediator)
 	: ISortService
 {
 	// Cached comparers — avoid allocations on every sort/set operation
@@ -85,17 +85,33 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			"-lattr" => new ISortService.SortInformation(ISortService.SortType.AttributeName, OrderByDirection.Descending,
 				null),
 
-			_ when sortType.StartsWith("attr:") => new ISortService.SortInformation(
-				ISortService.SortType.CasedAttributeContent, OrderByDirection.Ascending, sortType[5..]),
-			_ when sortType.StartsWith("attri:") => new ISortService.SortInformation(
-				ISortService.SortType.UncasedAttributeContent, OrderByDirection.Ascending, sortType[6..]),
+			// get_list_type_info (src/sort.c) reads the type before the colon without regard to case,
+			// and a leading - reverses it as it does every other type.
+			_ when AttributeSortKey(sortType) is ({ } type, var direction, var attribute) => new ISortService.SortInformation(
+				type, direction, attribute),
 
 			_ => new ISortService.SortInformation(ISortService.SortType.UncasedLexicographically, OrderByDirection.Ascending,
 				null)
 		};
 
+	private static (ISortService.SortType?, OrderByDirection, string?) AttributeSortKey(string sortType)
+	{
+		var direction = sortType.StartsWith('-') ? OrderByDirection.Descending : OrderByDirection.Ascending;
+		var key = sortType.StartsWith('-') ? sortType[1..] : sortType;
+		var colon = key.IndexOf(':');
+		if (colon < 0) return (null, direction, null);
+
+		var attribute = key[(colon + 1)..];
+		return key[..colon].ToLowerInvariant() switch
+		{
+			"attr" => (ISortService.SortType.CasedAttributeContent, direction, attribute),
+			"attri" => (ISortService.SortType.UncasedAttributeContent, direction, attribute),
+			_ => (null, direction, null)
+		};
+	}
+
 	public bool IsSortType(string sortType) =>
-		sortType.StartsWith("attr:") || sortType.StartsWith("attri:")
+		AttributeSortKey(sortType) is ({ }, _, _)
 		|| (sortType.StartsWith('-') ? sortType[1..] : sortType) is "a" or "i" or "d" or "n" or "f" or "m" or "name"
 			or "namei" or "conn" or "idle" or "owner" or "loc" or "ctime" or "mtime" or "lattr";
 
@@ -110,7 +126,7 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 
-		var (sortType, direction, _) = sortData;
+		var (sortType, direction, sortAttribute) = sortData;
 
 		await foreach (var item in sortType switch
 		{
@@ -217,6 +233,14 @@ public class SortService(ILocateService locateService, IConnectionService connec
 			ISortService.SortType.AttributeName => source
 				.OrderByAwait(keySelector, StringComparer.OrdinalIgnoreCase.WithNaturalSort(), direction),
 
+			ISortService.SortType.CasedAttributeContent => source
+				.OrderByAwait(async (key, ct) => await AttributeContent(await keySelector(key, ct)),
+					AttributeContentComparer(StringComparer.Ordinal), direction),
+
+			ISortService.SortType.UncasedAttributeContent => source
+				.OrderByAwait(async (key, ct) => await AttributeContent(await keySelector(key, ct)),
+					AttributeContentComparer(StringComparer.OrdinalIgnoreCase), direction),
+
 			ISortService.SortType.Invalid
 				=> source.OrderByAwait((i, ct) => ValueTask.FromResult(i.ToPlainText()), StringComparer.Ordinal,
 					direction),
@@ -225,6 +249,27 @@ public class SortService(ILocateService locateService, IConnectionService connec
 		})
 		{
 			yield return item;
+		}
+
+		// gen_db_attr (src/sort.c): the attribute's value as do_get_attrib reads it, the permission
+		// error when the sorter may not read it, and nothing when it is unset. What is not an object
+		// sorts after every object, and objects with the same value by dbref.
+		async ValueTask<(int Missing, string Value, int DbRef)> AttributeContent(string name)
+		{
+			if (string.IsNullOrEmpty(sortAttribute)
+					|| await locateService.Locate(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject found)
+			{
+				return (1, string.Empty, int.MaxValue);
+			}
+
+			var value = await attributeService.GetAttributeAsync(executor, found, sortAttribute,
+					IAttributeService.AttributeMode.Read, true) switch
+			{
+				SharpAttribute[] path => path.Last().Value.ToPlainText(),
+				Error<string> error => error.Value,
+				_ => string.Empty
+			};
+			return (0, value, found.Object().DBRef.Number);
 		}
 
 		// Locates the named object and reads one of its connection's timings; anything that is not a
@@ -247,6 +292,12 @@ public class SortService(ILocateService locateService, IConnectionService connec
 	/// for set membership testing. This ensures setunion/setinter/setdiff/setsymdiff
 	/// use the same comparison logic as sorting when determining duplicates.
 	/// </summary>
+	private static Comparer<(int Missing, string Value, int DbRef)> AttributeContentComparer(StringComparer values) =>
+		Comparer<(int Missing, string Value, int DbRef)>.Create((x, y) =>
+			x.Missing != y.Missing ? x.Missing.CompareTo(y.Missing)
+			: values.Compare(x.Value, y.Value) is var byValue and not 0 ? byValue
+			: x.DbRef.CompareTo(y.DbRef));
+
 	/// <summary>The number of dbref or objid <paramref name="text"/> (<c>#105</c>, <c>#105:1</c>); -1 when it is neither.</summary>
 	private static int DbRefNumber(string text)
 	{

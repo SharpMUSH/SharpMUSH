@@ -78,18 +78,6 @@ public class AttributeTreeNameTests
 	}
 
 	[Test]
-	public async Task TextsearchMatchesNestedAttributes()
-	{
-		var thing = await CreateTreeAsync();
-		var marker = $"deep{Guid.NewGuid():N}";
-		await Output($"&FUN`FOOTER`DISPLAY`CENTER {thing}={marker}");
-
-		var found = (await Read($"textsearch(all,{marker},FOOTER`DISPLAY`CENTER)"))
-			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-		await Assert.That(found.Any(objid => objid == thing || objid.StartsWith($"{thing}:", StringComparison.Ordinal))).IsTrue();
-	}
-
-	[Test]
 	public async Task GrepAndWildgrepNameTreeAttributesByPath()
 	{
 		var thing = await CreateTreeAsync();

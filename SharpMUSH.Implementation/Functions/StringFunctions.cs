@@ -606,16 +606,50 @@ public partial class Functions
 		var str = parser.CurrentState.Arguments["0"].Message;
 		var width = parser.CurrentState.Arguments["1"].Message;
 		var fill = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, MarkupText.Space);
-		var rightFill = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, fill);
+		var rightFill = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.Empty);
 
 		if (!ArgHelpers.TryUnsignedInteger(parser, width.ToPlainText(), out var widthInt))
 		{
 			return new ValueTask<CallState>(new CallState(ErrorMessages.Returns.PositiveInteger));
 		}
 
-		var result = str.Center(fill, rightFill, widthInt, JustifyTruncation(parser, string.Empty));
+		var padding = widthInt - str.DisplayWidth;
+		if (padding <= 0)
+		{
+			return new ValueTask<CallState>(new CallState(str.Center(fill, fill, widthInt, JustifyTruncation(parser, string.Empty))));
+		}
 
-		return new ValueTask<CallState>(new CallState(result));
+		// fun_center (src/funstr.c) starts each side's fill at its first character, and an empty
+		// fill is spaces. Without a right fill, the right side is the left fill laid out the same
+		// way and then flipped.
+		var left = padding / 2;
+		var right = padding - left;
+		var rightSide = args.Count > 3
+			? TileFill(rightFill, right)
+			: MarkupText.Concat(SplitIntoGraphemes(TileFill(fill, right)).Reverse());
+
+		return new ValueTask<CallState>(new CallState(MarkupText.Concat([TileFill(fill, left), str, rightSide])));
+	}
+
+	/// <summary>
+	/// <paramref name="fill"/> repeated from its first character until it is <paramref name="cells"/>
+	/// display cells wide. A cell a wide character cannot fill is a space.
+	/// </summary>
+	private static MString TileFill(MString fill, int cells)
+	{
+		var pieces = SplitIntoGraphemes(fill);
+		var tiled = new List<MString>();
+		var used = 0;
+		for (var index = 0; pieces.Length > 0 && used < cells; index = (index + 1) % pieces.Length)
+		{
+			var piece = pieces[index];
+			if (piece.DisplayWidth <= 0 || used + piece.DisplayWidth > cells) break;
+			tiled.Add(piece);
+			used += piece.DisplayWidth;
+		}
+
+		if (used < cells) tiled.Add(MarkupText.Plain(new string(' ', cells - used)));
+		return MarkupText.Concat(tiled);
 	}
 
 	[SharpFunction(Name = "chr", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]

@@ -125,6 +125,17 @@ public class ConfigSetCommandTests
 			await Assert.That(Configuration.CurrentValue.Command.NoisyWhisper).IsEqualTo(expected);
 		});
 
+	/// <summary>A dbref option takes an objid, as <c>cf_dbref</c> does: <c>@config/set http_handler=[objid(#8)]</c>.</summary>
+	[Test]
+	public async ValueTask Set_TakesAnObjidForADbrefOption()
+		=> await Restoring(async () =>
+		{
+			var messages = await AsGod("@config/set http_handler=[objid(#8)]");
+
+			await Assert.That(messages).Contains("Option set.");
+			await Assert.That(Configuration.CurrentValue.Database.HttpHandler).IsEqualTo(8u);
+		});
+
 	/// <summary>A value that does not parse for the option's type is refused, and nothing changes.</summary>
 	[Test]
 	[Arguments("noisy_whisper", "maybe")]

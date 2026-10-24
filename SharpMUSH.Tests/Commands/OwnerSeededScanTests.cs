@@ -11,7 +11,7 @@ namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
 /// The commands and functions that act on everything one player owns — <c>@chownall</c>,
-/// <c>@chzoneall</c>, <c>@restart</c> on a player, and <c>textsearch()</c> with a class — find those
+/// <c>@chzoneall</c> and <c>@restart</c> on a player — find those
 /// objects through the owner index rather than by scanning the world. These pin what each one touches:
 /// that player's objects of the asked-for types, nobody else's, in dbref order.
 /// </summary>
@@ -109,29 +109,5 @@ public class OwnerSeededScanTests
 		await Assert.That(await Eval($"get(#{second.Number}/SEEDRAN)")).IsEqualTo("yes");
 		await Assert.That(await Eval($"get(#{theirs.Number}/SEEDRAN)")).IsEqualTo(string.Empty)
 			.Because("only the restarted player's objects run their @STARTUP");
-	}
-
-	[Test]
-	public async ValueTask TextsearchWithAClassSearchesOnlyThatOwnersObjectsInDbrefOrder()
-	{
-		var owner = await Player("SeedTextOwner");
-		var bystander = await Player("SeedTextBystander");
-		var token = TestIsolationHelpers.GenerateUniqueName("SeedNeedle");
-		var first = await Make(owner.DbRef, $"create({TestIsolationHelpers.GenerateUniqueName("SeedTextA")})");
-		var second = await Make(owner.DbRef, $"create({TestIsolationHelpers.GenerateUniqueName("SeedTextB")})");
-		var theirs = await Make(bystander.DbRef, $"create({TestIsolationHelpers.GenerateUniqueName("SeedTextTheirs")})");
-		var god = await Node(new DBRef(1));
-		foreach (var obj in new[] { second, first, theirs })
-		{
-			await AttributeService.SetAttributeAsync(god, await Node(obj), "SEEDNOTE", MarkupText.Plain($"has {token} in it"));
-		}
-
-		// textsearch() writes objids.
-		var (a, b, c) = ((await Node(first)).Object().DBRef, (await Node(second)).Object().DBRef,
-			(await Node(theirs)).Object().DBRef);
-		await Assert.That(await Eval($"textsearch(#{owner.DbRef.Number},{token})"))
-			.IsEqualTo($"{a} {b}");
-		await Assert.That(await Eval($"textsearch(all,{token})"))
-			.IsEqualTo($"{a} {b} {c}");
 	}
 }

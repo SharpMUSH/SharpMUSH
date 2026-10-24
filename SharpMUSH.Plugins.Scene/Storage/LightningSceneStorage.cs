@@ -280,8 +280,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 		=> Task.FromResult(_accessor.Read<Found<SceneModel>>(tx
 			=> ReadScene(tx, BareId(sceneId)) is { } scene ? ProjectScene(tx, scene) : new NotFound()));
 
-	public Task<Found<SceneModel>> SetSceneMetaAsync(string sceneId, string key, string value)
-		=> _accessor.WriteAsync<Found<SceneModel>>(tx =>
+	public Task<FoundResult<SceneModel>> SetSceneMetaAsync(string sceneId, string key, string value)
+		=> _accessor.WriteAsync<FoundResult<SceneModel>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is not { } scene)
@@ -290,11 +290,10 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			}
 
 			var normalized = key.Trim().ToLowerInvariant();
-			if (normalized == "joinpolicy" && value is not ("open" or "invite-only" or "limited")) return new NotFound();
-			if (normalized == "joinpolicy" && value == "limited" && PlayerCap(scene) == 0) return new NotFound();
-			if (normalized == "playercap" && (!int.TryParse(value, out var cap) || cap < 0 || cap > 10000
-				|| (cap == 0 && scene.Meta.GetValueOrDefault("joinpolicy") == "limited")
-				|| (cap > 0 && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) > cap))) return new NotFound();
+			if (RefusedValue(tx, id, scene, normalized, value) is { } refused)
+			{
+				return new Error<string>(refused);
+			}
 
 			switch (normalized)
 			{
@@ -353,6 +352,22 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			tx.Put(_scenes, Keys.Str(id), Encode(scene));
 			return ProjectScene(tx, scene);
 		}).AsTask();
+
+	/// <summary>Why <paramref name="key"/> cannot take <paramref name="value"/>, or null when it can.</summary>
+	private string? RefusedValue(ITx tx, string id, SceneRecord scene, string key, string value) => key switch
+	{
+		"joinpolicy" when value is not ("open" or "invite-only" or "limited")
+			=> "A join policy is open, invite-only or limited.",
+		"joinpolicy" when value == "limited" && PlayerCap(scene) == 0
+			=> "A limited scene needs a player cap.",
+		"playercap" when !int.TryParse(value, out var cap) || cap < 0 || cap > 10000
+			=> "A player cap is a whole number from 0 to 10000.",
+		"playercap" when int.Parse(value) == 0 && scene.Meta.GetValueOrDefault("joinpolicy") == "limited"
+			=> "A limited scene needs a player cap.",
+		"playercap" when int.Parse(value) is > 0 and var cap && SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) > cap
+			=> "More players than that are already seated.",
+		_ => null
+	};
 
 	public Task<IReadOnlyList<SceneModel>> ListScenesAsync(string filter, string? viewerDbref = null,
 		long? fromUtcMillis = null, long? toUtcMillis = null, int count = 50)
@@ -823,8 +838,8 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 			return ProjectMember(tx, member);
 		}).AsTask();
 
-	public Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role)
-		=> _accessor.WriteAsync<Found<SceneMember>>(tx =>
+	public Task<FoundResult<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role)
+		=> _accessor.WriteAsync<FoundResult<SceneMember>>(tx =>
 		{
 			var id = BareId(sceneId);
 			if (ReadScene(tx, id) is not { } scene || DbrefNumber(playerDbref) is not { } player)
@@ -834,7 +849,7 @@ public sealed partial class LightningSceneStorage : ISceneStorage
 
 			var cap = PlayerCap(scene);
 			if (OccupiesSeat(role) && cap > 0 && !SceneMembers(tx, id).Any(m => m.MemberDbref == player && OccupiesSeat(m.Role))
-				&& SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap) return new NotFound();
+				&& SceneMembers(tx, id).Count(m => OccupiesSeat(m.Role)) >= cap) return new Error<string>("This scene has reached its player cap.");
 
 			var key = Keys.Composite(id, player);
 			var name = ObjectName(tx, player) ?? "";

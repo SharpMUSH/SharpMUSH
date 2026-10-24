@@ -820,43 +820,6 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All, found => found.TypeString());
 	}
 
-	[SharpFunction(Name = "textsearch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "pattern"])]
-	public async ValueTask<CallState> TextSearch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
-
-		var classArg = args["0"].Message.ToPlainText();
-		var pattern = args["1"].Message.ToPlainText();
-		var attributePattern = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, "*").ToPlainText();
-
-		AnySharpObject? classObj = null;
-		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
-		{
-			var maybeClass = await LocateService.Locate(parser, executor, executor, classArg, LocateFlags.All);
-			if (maybeClass is not AnySharpObject classFound)
-			{
-				return new CallState(ErrorMessages.Returns.InvalidClass);
-			}
-			classObj = classFound;
-		}
-
-		// A class is an owner: its objects come from the owner index (ascending dbref order, as the
-		// world scan returned them), and the owner is still compared exactly per object.
-		var candidates = classObj is null
-			? Mediator.CreateStream(new GetAllObjectsQuery())
-			: Mediator.CreateStream(new GetFilteredObjectsQuery(new ObjectSearchFilter { Owner = classObj.Object().DBRef }));
-		var results = candidates
-			.Where(async (obj, _) => classObj is null
-				|| (await obj.Owner.WithCancellation(CancellationToken.None)).Object.DBRef == classObj.Object().DBRef)
-			.Where(async (obj, _) => await obj.AllAttributes.Value.AnyAsync(attr =>
-				(attributePattern == "*" || attr.LongName.Contains(attributePattern, StringComparison.OrdinalIgnoreCase))
-				&& attr.Value.ToPlainText().Contains(pattern, StringComparison.OrdinalIgnoreCase)))
-			.Select(obj => new DBRef(obj.Key, obj.CreationTime).ToString());
-
-		return new CallState(string.Join(" ", await results.ToArrayAsync()));
-	}
-
 	[SharpFunction(Name = "colors", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["ansi-string", "strip"])]
 	public ValueTask<CallState> Colors(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

@@ -162,7 +162,7 @@ public class JobsIntegrationTests
 			var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("jobs");
 			var jobs = objects.Single(o => o.Ref == "jobs").Objid;
 			await Assert.That(await As(player, "help @appdraft")).Contains("keeps a draft of a form");
-			await Assert.That(await As(player, "help appfields()")).Contains("structural checks");
+			await Assert.That(await As(player, "help appfields()")).Contains("appfields(<declaration>, <JSON fields>)");
 			await Assert.That(await God($"think [get([u({jobs}/FUN`JOB`FIND,1)]/JOB`ENTRY`1`TEXT)]")).IsEqualTo("[set(me,W)]%;say private");
 			var declaration = System.Text.Json.Nodes.JsonNode.Parse(await God($"think [get({jobs}/FORM)]"))!.AsArray();
 			declaration[1]!["validation"]!["max_length"] = 6;

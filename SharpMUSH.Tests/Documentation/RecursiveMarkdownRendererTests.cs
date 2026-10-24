@@ -332,6 +332,22 @@ public class RecursiveMarkdownRendererTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("* one\n  * inner\n* two");
 	}
 
+	/// <summary>
+	/// A code block in a list item sits under the item's text with its own indentation, one line per
+	/// line: its lines are padded to the width beside the marker, not the whole width, so none wraps.
+	/// </summary>
+	[Test]
+	[Arguments("* one\n  ```\n  {\n    \"a\": 1\n  }\n  ```", "* one\n    {\n      \"a\": 1\n    }")]
+	[Arguments("* one\n  ```json\n  {\n    \"a\": 1\n  }\n  ```", "* one\n    {\n      \"a\": 1\n    }")]
+	[Arguments("* one\n  * two\n    ```json\n    {\n      \"a\": 1\n    }\n    ```", "* one\n  * two\n      {\n        \"a\": 1\n      }")]
+	[Arguments("  ```\n  {\n    \"a\": 1\n  }\n  ```", "  {\n    \"a\": 1\n  }")]
+	public async Task RenderList_CodeBlockInAnItem_KeepsOneLinePerLine(string markdown, string expected)
+	{
+		var result = SharpMUSH.Documentation.MarkdownToAsciiRenderer.RecursiveMarkdownHelper.RenderMarkdown(markdown);
+
+		await Assert.That(string.Join("\n", result.ToPlainText().Split('\n').Select(line => line.TrimEnd()))).IsEqualTo(expected);
+	}
+
 	/// <summary>The two table examples in <c>help rendermarkdown()</c>, as printed there.</summary>
 	[Test]
 	public async Task RenderTable_HelpExamples()

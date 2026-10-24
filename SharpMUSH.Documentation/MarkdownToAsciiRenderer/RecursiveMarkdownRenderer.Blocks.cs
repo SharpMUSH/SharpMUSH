@@ -123,14 +123,31 @@ public partial class RecursiveMarkdownRenderer
 	/// </summary>
 	protected virtual MString RenderList(ListBlock list)
 	{
-		var items = list
-			.OfType<ListItemBlock>()
-			.Select(listItem => ItemBody(MarkupText.Join(MarkupText.NewLine, listItem
-				.Select(Render)
-				.Where(IsNonWhitespace)
-				// Text keeps no spaces round it; a nested layout is left whole, so it is still a layout.
-				.Select(rendered => BlockLayout.AsBlock(rendered) is TextBlock ? rendered.Trim(TrimType.TrimBoth, " ") : rendered))))
-			.ToImmutableArray();
+		// An item's blocks are laid out to the width left beside its marker, so a code block's padded
+		// lines fit there rather than wrapping.
+		var listItems = list.OfType<ListItemBlock>().ToList();
+		var marker = list.IsOrdered ? $"{FirstItemIndex(list) + listItems.Count}. ".Length : "* ".Length;
+		var outer = _maxWidth;
+		_maxWidth = Math.Max(1, outer - marker);
+		ImmutableArray<Block> items;
+		try
+		{
+			items = listItems
+				.Select(listItem => ItemBody(MarkupText.Join(MarkupText.NewLine, listItem
+					.Select(child => (Code: child is CodeBlock, Rendered: Render(child)))
+					.Where(part => IsNonWhitespace(part.Rendered))
+					// Text keeps no spaces round it; code keeps its indentation, and a nested layout is left
+					// whole, so it is still a layout.
+					.Select(part => !part.Code && BlockLayout.AsBlock(part.Rendered) is TextBlock
+						? part.Rendered.Trim(TrimType.TrimBoth, " ")
+						: part.Rendered))))
+				.ToImmutableArray();
+		}
+		finally
+		{
+			_maxWidth = outer;
+		}
+
 		if (items.IsEmpty) return MarkupText.Empty;
 
 		// Star, not a styled custom marker: the portal draws a custom marker as an inline box ahead of the

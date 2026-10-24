@@ -928,7 +928,13 @@ public static class SceneFunctions
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(service, id);
 		var statusBefore = SceneStatusEvent.IsStatus(key) ? await SceneStatusEvent.StatusOfAsync(service, id) : string.Empty;
 		var valueBefore = await SceneChangeEvent.ValueBeforeAsync(service, id, key);
-		if (await service.SetSceneMetaAsync(id, key, value) is not Contracts.Scene scene)
+		var result = await service.SetSceneMetaAsync(id, key, value);
+		if (result is Error<string> refused)
+		{
+			return new CallState($"#-1 {refused.Value}");
+		}
+
+		if (result is not Contracts.Scene scene)
 		{
 			return new CallState(SceneNotFound);
 		}
@@ -1163,7 +1169,13 @@ public static class SceneFunctions
 		var role = args["2"].Message.ToPlainText().Trim();
 
 		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		if (await service.AddMemberAsync(id, player, role) is not SceneMember member)
+		var result = await service.AddMemberAsync(id, player, role);
+		if (result is Error<string> refused)
+		{
+			return new CallState($"#-1 {refused.Value}");
+		}
+
+		if (result is not SceneMember member)
 		{
 			return new CallState(SceneNotFound);
 		}

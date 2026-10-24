@@ -76,7 +76,7 @@ Makes the player a member, as `owner` when they own the scene and `participant` 
 
 `sceneset(<scene>, <key>, <value>)`
 
-Sets one key of a scene, as `@scene/set` does, and returns the scene id. The keys and the values they take are in [@scene creating]. A value those keys refuse is `#-1 NOT FOUND`.
+Sets one key of a scene, as `@scene/set` does, and returns the scene id. The keys and the values they take are in [@scene creating]. A value those keys refuse is `#-1` and the reason, such as `#-1 A limited scene needs a player cap.`
 
 ## sceneaddpose()
 
@@ -119,7 +119,7 @@ Marks the pose deleted and returns its id. It keeps its place, content and histo
 
 `sceneaddmember(<scene>, <player>, <role>)`
 
-Adds the player to the scene with `<role>`, or changes their role, keeping their focus and persona, and returns the player's dbref. `owner`, `gm` and `participant` take a seat; when the scene's player cap has none left the result is `#-1 NOT FOUND`.
+Adds the player to the scene with `<role>`, or changes their role, keeping their focus and persona, and returns the player's dbref. `owner`, `gm` and `participant` take a seat; when the scene's player cap has none left the result is `#-1 This scene has reached its player cap.`
 
 ## sceneunmember()
 

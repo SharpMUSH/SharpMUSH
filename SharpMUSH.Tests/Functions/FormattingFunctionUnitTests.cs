@@ -174,6 +174,13 @@ public class FormattingFunctionUnitTests
 	[Arguments("center(foo,2)", "foo")]
 	[Arguments("center(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	[Arguments("center(foo,5,=,~)", "=foo~")]
+	// Read from PennMUSH 1.8.8: each side's fill starts at its first character, and the right side
+	// is the left fill flipped unless a right fill is given.
+	[Arguments("center(hello,16,12345)", "12345hello154321")]
+	[Arguments("center(X,5,-=)", "-=X=-")]
+	[Arguments("center(X,6,ab)", "abXaba")]
+	[Arguments("center(X,6,a,bc)", "aaXbcb")]
+	[Arguments("center(X,5,-,)", "--X  ")]
 	public async Task Center(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

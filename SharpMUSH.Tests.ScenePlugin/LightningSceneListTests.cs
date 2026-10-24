@@ -136,9 +136,20 @@ public class LightningSceneListTests
 		await _scenes.AddMemberAsync(scene.Id, "#21", "observer");
 		await _scenes.SetSceneMetaAsync(scene.Id, "playercap", "2");
 		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "limited");
-		foreach (var invalid in new[] { "-1", "10001", "1.5", "no", "0", "1" })
-			await Assert.That(await _scenes.SetSceneMetaAsync(scene.Id, "playercap", invalid) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
-		await Assert.That(await _scenes.AddMemberAsync(scene.Id, "#21", "participant") is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
+		foreach (var (invalid, reason) in new[]
+		{
+			("-1", "A player cap is a whole number from 0 to 10000."),
+			("10001", "A player cap is a whole number from 0 to 10000."),
+			("1.5", "A player cap is a whole number from 0 to 10000."),
+			("no", "A player cap is a whole number from 0 to 10000."),
+			("0", "A limited scene needs a player cap."),
+			("1", "More players than that are already seated.")
+		})
+			await Assert.That((await _scenes.SetSceneMetaAsync(scene.Id, "playercap", invalid)).Expect<SharpMUSH.Library.DiscriminatedUnions.Error<string>>().Value).IsEqualTo(reason);
+		await Assert.That((await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "closed")).Expect<SharpMUSH.Library.DiscriminatedUnions.Error<string>>().Value)
+			.IsEqualTo("A join policy is open, invite-only or limited.");
+		await Assert.That((await _scenes.AddMemberAsync(scene.Id, "#21", "participant")).Expect<SharpMUSH.Library.DiscriminatedUnions.Error<string>>().Value)
+			.IsEqualTo("This scene has reached its player cap.");
 		await Assert.That((await _scenes.JoinSceneAsync(scene.Id, "#20")).Expect<SharpMUSH.Plugins.Scene.Models.SceneMember>().Role).IsEqualTo("gm");
 		await Assert.That((await _scenes.GetSceneAsync(scene.Id)).Expect<SharpMUSH.Plugins.Scene.Models.Scene>().Meta["playercap"]).IsEqualTo("2");
 	}
