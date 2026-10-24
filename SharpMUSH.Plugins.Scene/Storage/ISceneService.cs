@@ -43,9 +43,9 @@ public interface ISceneService
 	/// <c>scheduledfor</c>, <c>istemp</c>, <c>room</c>, <c>owner</c>, <c>plot</c>,
 	/// <c>title</c>, <c>summary</c>, <c>icdate</c>, <c>location</c>, <c>type</c>,
 	/// <c>warning</c>) route to the first-class field/edge; any other key lands in
-	/// the opaque <see cref="Scene.Meta"/> bag. Returns <c>NotFound</c> if missing.
+	/// the opaque <see cref="Scene.Meta"/> bag. Returns <c>NotFound</c> if missing, and why when a key refuses the value.
 	/// </summary>
-	Task<Found<Contracts.Scene>> SetSceneMetaAsync(string sceneId, string key, string value);
+	Task<FoundResult<Contracts.Scene>> SetSceneMetaAsync(string sceneId, string key, string value);
 
 	/// <summary>
 	/// Lists scenes by <paramref name="filter"/> (<c>active</c> | <c>recent</c> |
@@ -139,8 +139,8 @@ public interface ISceneService
 	/// <summary>Atomically accepts a player under the scene joining policy and player cap, consuming any invitation.</summary>
 	Task<FoundResult<SceneMember>> JoinSceneAsync(string sceneId, string playerDbref);
 
-	/// <summary>Adds or updates a membership with a free-string role. NotFound if the scene is missing or its cap refuses a seat.</summary>
-	Task<Found<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role);
+	/// <summary>Adds or updates a membership with a free-string role. NotFound if the scene is missing; an error when its cap refuses a seat.</summary>
+	Task<FoundResult<SceneMember>> AddMemberAsync(string sceneId, string playerDbref, string role);
 
 	/// <summary>Removes <b>all</b> of the player's membership to the scene. <c>NotFound</c> if the scene is missing.</summary>
 	Task<Found<None>> RemoveMemberAsync(string sceneId, string playerDbref);

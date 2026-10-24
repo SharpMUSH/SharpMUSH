@@ -27,7 +27,14 @@ public static class SceneMemberHandlers
 		}
 
 		var playerDbref = await SceneLocate.PlayerOrSelf(parser, playerArg.ToPlainText().Trim());
-		if (await sceneService.AddMemberAsync(sceneId, playerDbref, role!) is not SceneMember member)
+		var result = await sceneService.AddMemberAsync(sceneId, playerDbref, role!);
+		if (result is Error<string> refused)
+		{
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(refused.Value, NoticeKind.Warn));
+			return MarkupText.Plain($"#-1 {refused.Value}");
+		}
+
+		if (result is not SceneMember member)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);

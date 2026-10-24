@@ -103,7 +103,7 @@ Output: `[SCENE] 12/status = active`
 - `joinpolicy`: `open`, `invite-only`, or `limited`, which needs a player cap
 - `playercap`: 0 (no cap) to 10000, never below the members already seated
 
-Any other key, such as `title` or `summary` (the pitch), is kept as text. A value these keys refuse warns that there is no such scene. Making a scene or changing its status raises the ``scene`status`` event, and changing any other key but `plot` raises ``scene`change`` (see [scene events]).
+Any other key, such as `title` or `summary` (the pitch), is kept as text. A value these keys refuse is not stored, and the warning says why. Making a scene or changing its status raises the ``scene`status`` event, and changing any other key but `plot` raises ``scene`change`` (see [scene events]).
 
 ## Writing poses
 
@@ -140,7 +140,7 @@ Every edit of a pose is kept as a version, which [sceneedits()] lists. `/undo` s
 - `@scene/showas <scene id>/<player>=[<name>]`
 - `@scene/notice <scene id>/<player>=<text>`
 
-`/member` adds the player to the scene with a role, or changes their role, keeping their focus and persona. A role is any word. `owner`, `gm` and `participant` take a seat, which the scene's player cap counts: a full scene refuses another, and warns that there is no such scene. `/unmember` removes the player from the scene.
+`/member` adds the player to the scene with a role, or changes their role, keeping their focus and persona. A role is any word. `owner`, `gm` and `participant` take a seat, which the scene's player cap counts: a full scene refuses another, and warns that it has reached its player cap. `/unmember` removes the player from the scene.
 
 `/focus` makes the scene the player's current one, which the scene package and [ooc] write their poses into. A player has one focus at a time; nothing after the `=` clears it.
 

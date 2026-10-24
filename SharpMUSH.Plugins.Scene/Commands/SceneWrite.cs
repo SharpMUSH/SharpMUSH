@@ -59,7 +59,14 @@ public static class SceneWrite
 		var roomBefore = await SceneRoomRefresh.RoomOfAsync(sceneService, sceneId);
 		var statusBefore = SceneStatusEvent.IsStatus(key!) ? await SceneStatusEvent.StatusOfAsync(sceneService, sceneId) : string.Empty;
 		var valueBefore = await SceneChangeEvent.ValueBeforeAsync(sceneService, sceneId, key!);
-		if (await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText()) is not Contracts.Scene scene)
+		var result = await sceneService.SetSceneMetaAsync(sceneId, key!, value.ToPlainText());
+		if (result is Error<string> refused)
+		{
+			await notifyService.Notify(executor, SceneCommandHelper.Notice(refused.Value, NoticeKind.Warn));
+			return MarkupText.Plain($"#-1 {refused.Value}");
+		}
+
+		if (result is not Contracts.Scene scene)
 		{
 			await notifyService.Notify(executor, SceneCommandHelper.Notice($"No scene '{sceneId}'.", NoticeKind.Warn));
 			return MarkupText.Plain(SceneCommandHelper.NotFound);
