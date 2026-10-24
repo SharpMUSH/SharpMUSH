@@ -40,7 +40,9 @@ public static partial class RhostDatabaseTranslator
 		["rhost_printf"] = true,
 		["rhost_map_args"] = true,
 		["sidefx_flag"] = true,
-		["rhost_list"] = true
+		["rhost_list"] = true,
+		// RhostMUSH's mail command is mail (see the note Translate gives).
+		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
 	};
 
 	/// <summary>Reads a flatfile and, when given, the mail dumps, into the import's model.</summary>
@@ -109,6 +111,8 @@ public static partial class RhostDatabaseTranslator
 			report.Lines.AddRange(mail.Notes);
 		}
 
+		report.Line($"mail is now another name for @mail: listing and reading mail work as in {ServerName}, but " +
+			$"mail <players>=<text> sends <text> at once, as @mail does, where {ServerName} would start a message with it as the subject.");
 		report.Line($"{ServerName} comsys channels are not imported: a stock {ServerName} runs its channels in softcode " +
 			"(SOFTCOM), which comes across with the objects that hold it; a game built with the hardcoded comsys keeps each " +
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");

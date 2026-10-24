@@ -1874,6 +1874,14 @@ public partial class Functions
 	public ValueTask<CallState> Version(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(Implementation.Generated.VersionInfo.Version);
 
+	/// <summary>
+	/// RhostMUSH's <c>error([object])</c>: the message a command that matches nothing gets. RhostMUSH may draw
+	/// it from a file of its own, and the object picks whose; SharpMUSH has the one message.
+	/// </summary>
+	[SharpFunction(Name = "error", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
+	public ValueTask<CallState> UnmatchedCommandMessage(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult<CallState>(ErrorMessages.Notifications.HuhTypeHelp);
+
 	[SharpFunction(Name = "poll", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> Poll(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{

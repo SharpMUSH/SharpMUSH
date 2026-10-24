@@ -159,6 +159,16 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>RhostMUSH's error(): what an unmatched command is told, with or without an object.</summary>
+	[Test]
+	[Arguments("error()")]
+	[Arguments("error(%#)")]
+	public async Task Error(string str)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo("Huh?  (Type \"help\" for help.)");
+	}
+
 	[Test]
 	[Arguments("nearby(%#,%#)", "1")]
 	[Arguments("nearby(%#,%l)", "1")]
