@@ -12,6 +12,13 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-gothic-pixel-player-character", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-player-sign-in", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-gothic-pixel-shared-welcome", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-administrator-joining", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-player-useful-action", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-frankenstein-pixel-player-place", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-christian-fiction-kemono-player-useful-action", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-administrator-walkthrough", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-administrator-invite", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-frankenstein-pixel-administrator-capabilities", "pixel", "Frankenstein", "images/sharpie/sharpie-frankenstein-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
