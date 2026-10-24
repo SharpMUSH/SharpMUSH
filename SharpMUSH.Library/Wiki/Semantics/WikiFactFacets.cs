@@ -125,13 +125,16 @@ public static class WikiFactFacets
 		return Counted(pages, id => named[id]);
 	}
 
-	/// <summary>Texts that differ only in case counted as one, shown as the first page spelled it.</summary>
+	/// <summary>
+	/// Texts that differ only in case counted as one, chosen by their folded form, so the value stays the same whichever
+	/// pages a filter leaves, and labelled as the first page spelled it.
+	/// </summary>
 	private static List<WikiFacetValue> Texts(List<IReadOnlyList<string>> pages)
 	{
 		var spelled = new Dictionary<string, string>(StringComparer.Ordinal);
 		foreach (var value in pages.SelectMany(values => values)) spelled.TryAdd(WikiFactQueries.Folded(value), value);
-		return Counted([.. pages.Select(values => (IReadOnlyList<string>)[.. values.Select(v => spelled[WikiFactQueries.Folded(v)]).Distinct(StringComparer.Ordinal)])],
-			value => (value, value));
+		return Counted([.. pages.Select(values => (IReadOnlyList<string>)[.. values.Select(WikiFactQueries.Folded).Distinct(StringComparer.Ordinal)])],
+			folded => (folded, spelled[folded]));
 	}
 
 	/// <summary>

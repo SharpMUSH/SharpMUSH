@@ -148,12 +148,41 @@ public class WikiFactValueTypesTests : LightningDatabaseFixture
 			+ "2026-03-02..2026-03-12(2), 2026-03-22..2026-04-01(2), 2026-04-11..2026-04-21(2)");
 		// Squares crowd the low end, so the decimals are cut two values to a range rather than by width.
 		await Assert.That(Shown(Weight.Id)).IsEqualTo("0..0.25(2), 1..2.25(2), 4..6.25(2), 9..12.25(2), 16..20.25(2), 25..30.25(2)");
-		// A text spelled two ways is one value, shown as the first page spelled it.
-		await Assert.That(Shown(Motto.Id)).IsEqualTo("Even(6), ODD(6)");
+		// A text spelled two ways is one value, chosen by its folded form and labelled as the first page spelled it.
+		await Assert.That(string.Join(", ", facets.Facets.Single(f => f.Property == Motto.Id).Values.Select(v => $"{v.Value}:{v.Label}({v.Count})")))
+			.IsEqualTo("even:Even(6), odd:ODD(6)");
 
 		var chosen = (await WikiFactFacets.CountAsync(wiki, "Things", ["lore:founded=2026-01-21..2026-01-31", "gear:weight=2.25"],
 			WikiVisibility.All)).Expect<WikiFacets>();
 		await Assert.That(chosen.Pages).IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task ATextFacetKeepsItsValueWhicheverSpellingAFilterLeaves()
+	{
+		var wiki = await WikiAsync(Weight, Motto);
+		await PageAsync(wiki, "Upper", new WikiPageFact(Weight.Id, "1"), new WikiPageFact(Motto.Id, "Hold Fast"));
+		await PageAsync(wiki, "Lower", new WikiPageFact(Weight.Id, "2"), new WikiPageFact(Motto.Id, "hold fast"));
+
+		async Task<string> MottoAsync(params string[] conditions)
+			=> (await WikiFactFacets.CountAsync(wiki, "Things", conditions, WikiVisibility.All)).Expect<WikiFacets>()
+				.Facets.Single(f => f.Property == Motto.Id).Values.Single().Value;
+
+		await Assert.That(await MottoAsync()).IsEqualTo("hold fast");
+		await Assert.That(await MottoAsync("gear:weight=1")).IsEqualTo("hold fast");
+		await Assert.That(await MottoAsync("gear:weight=2")).IsEqualTo("hold fast");
+	}
+
+	[Test]
+	public async Task ACanonicalDecimalIsStatedAsAValueThePageCanHold()
+	{
+		var schema = new SemanticSchema(WikiFactProperties.SchemaVersion, [Weight]);
+		var subject = new PageRef("page");
+		var canonical = WikiPageFacts.ToCanonical(schema, subject, [new WikiPageFact(Weight.Id, "0.00001")]).Expect<CanonicalFactSet>();
+		var stated = WikiPageFacts.FromCanonical(canonical.Facts);
+
+		await Assert.That(stated.Single().Value).IsEqualTo("0.00001");
+		await Assert.That(WikiPageFacts.ToCanonical(schema, subject, stated).Expect<CanonicalFactSet>().Facts).Count().IsEqualTo(1);
 	}
 
 	[Test]
