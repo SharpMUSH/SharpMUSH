@@ -12,6 +12,12 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-forgotten-realms-pixel-player-world", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-forgotten-realms-pixel-player-character", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-administrator-walkthrough", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-administrator-invite", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-administrator-capabilities", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-administrator-rules", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-rules.png", 1254, 1254, "administrator-rules", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-pixel-administrator-identity", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-erotic-pixel-shared-completion", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-player-speak-act", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
