@@ -60,10 +60,10 @@ Incoming requests, which softcode answers, are described in [http].
 
 The action list receives:
 - %0: the body of the reply.
-- %`<status>`: the HTTP status, such as 200.
-- %`<content-type>`: the reply's Content-Type header.
-- %`<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
-- %`<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
+- `%<status>`: the HTTP status, such as 200.
+- `%<content-type>`: the reply's Content-Type header.
+- `%<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
+- `%<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
 
 These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
 

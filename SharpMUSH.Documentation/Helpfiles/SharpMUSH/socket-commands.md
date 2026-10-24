@@ -30,19 +30,11 @@ These commands can only be entered through a client, on the connection they are 
 
 ## How socket commands behave
 
-PennMUSH handles these before it decides whether a descriptor has a player behind
-it, and SharpMUSH does the same, which is why they answer at the connect screen
-too. Because they act on the connection that typed them, a player with two
-clients open sets the screen width of one without touching the other.
+PennMUSH handles these before it decides whether a descriptor has a player behind it, and SharpMUSH does the same, which is why they answer at the connect screen too. Because they act on the connection that typed them, a player with two clients open sets the screen width of one without touching the other.
 
-VERSION is a SharpMUSH addition: PennMUSH has only `@version`. It reports the
-same lines that `@version` does and is accepted at the connect screen, because
-players arriving from MUX-family servers and crawler bots type it unprefixed.
+VERSION is a SharpMUSH addition: PennMUSH has only `@version`. It reports the same lines that `@version` does and is accepted at the connect screen, because players arriving from MUX-family servers and crawler bots type it unprefixed.
 
-LOGOUT leaves your character but keeps the connection: you return to the screen
-above and can connect again, as the same character or a different one, without
-reconnecting. QUIT closes the connection instead. Logging out clears the
-settings you made on that connection, so the next login on it starts clean.
+LOGOUT leaves your character but keeps the connection: you return to the screen above and can connect again, as the same character or a different one, without reconnecting. QUIT closes the connection instead. Logging out clears the settings you made on that connection, so the next login on it starts clean.
 
 ## Login screen commands
 

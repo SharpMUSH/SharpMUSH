@@ -14,18 +14,17 @@
 -->
 # @profile
 
-`@profile/start [<seconds>]`
-
-`@profile/stop`
-
+`@profile/start [<seconds>]`<br>
+`@profile/stop`<br>
 `@profile`
 
-Starts, stops, or displays a temporary profile of function and command invocations.
-The default duration is 60 seconds; choose a whole number from 1 to 300. Starting a
-new profile replaces your account's previous profile. Recording ends automatically
-at expiry, on permission loss, or on restart. Stopped results expire after 15 minutes and may be evicted sooner when another
-profile needs capacity. There can be at most eight profiles on the server, with
-one per account.
+@profile records how often each function and command runs for you, and how long it takes, so you can find what makes your code slow.
+
+- `@profile/start` starts recording, for 60 seconds or the number of seconds given, 1 to 300. Starting again replaces your last profile.
+- `@profile/stop` stops recording early.
+- `@profile` shows what was recorded.
+
+Recording also stops when its time is up, when you lose the permission to profile, or when the server restarts. A stopped profile is kept for 15 minutes, or less when another needs the room. The server keeps at most eight profiles, one per account.
 
 - [@profile permissions]: the permissions needed, and the portal page
 - [@profile results]: what each row holds, and why times overlap
@@ -34,41 +33,32 @@ one per account.
 
 ## Who may profile
 
-Profiling requires `diagnostics.profile` and queue inspection permission for an
-explicitly linked active character executing as itself. Owning an object does not
-give its callbacks your account permissions. Both the game commands and the portal
-at `/admin/diagnostics` use the same authorization service. The portal requires you
-to select the linked character whose authority will be used. The portal page is shown
-only to staff holding `queue.inspect`; anyone else profiles with the game commands.
+Profiling needs the `diagnostics.profile` and `queue.inspect` permissions, and records only a character linked to your account, running as itself. Code running on an object you own is not recorded as you, since it does not carry your account's permissions.
+
+The portal has the same profiler at `/admin/diagnostics`, for staff with `queue.inspect`; it asks which of your characters to profile as. Anyone else uses the commands.
 
 ## Reading the results
 
-Rows contain source/attribute when known, invocation kind and name, count, failure
-count, total inclusive elapsed milliseconds, and longest invocation. Inclusive time
-includes nested calls and awaits: nested rows overlap and must not be summed as
-CPU usage or added to queue execution time. A source attribute is shown only when
-it belongs to the recorded executor. Unknown context stays unknown.
+Each row is one command or function: the attribute it ran from, when known, its kind and name, how many times it ran and failed, its total time in milliseconds and its longest single run. The attribute is shown only when it is on the object you profiled; otherwise it is `?`.
+
+A row's time includes everything it called and waited for, so the rows overlap: `THINK` includes the `ADD` inside it. Do not add the rows up, and do not read them as CPU time.
 
 ## Sampling limits and privacy
 
-Sampling uses the existing invocation telemetry hooks. It is bounded to 256 distinct
-keys per profile and a shared mailbox of 4,096 pending samples; excess samples may
-be omitted. Reports always describe this limit and do not expose loss counts that
-could reveal activity outside your permissions. A background collector checks
-current account and source authority before accepting each batch. Reading results
-rechecks access, so revocation also hides previously collected data. No code,
-arguments, register values, return values, or arbitrary error messages are captured.
+A profile keeps up to 256 different rows, and the server holds at most 4,096 samples waiting to be counted; past that, some may be left out. The report says so, but never how many, since that could show activity you may not see.
+
+Each sample is checked against your permissions before it is counted, and again when you read the profile, so losing a permission hides what was already recorded. No code, arguments, register values, results or error messages are ever recorded.
 
 ## Example
 
 ```sharp
-@profile/start 30
-think add(2,3)
-@profile
-@profile/stop
-@ps/history 10
+> @profile/start 30
+Profile recording for 30 seconds.
+> think add(2,3)
+5
+> @profile
 ```
 
-The profile can include the `ADD` and `THINK` invocations in their visible context.
-Commands submitted directly through the game produce queue history; inspecting or
-profiling does not change their execution order or admission limits.
+Output: a box titled `Queue profile` with a row each for `@PROFILE`, `THINK` and `ADD`, such as `? Function ADD 1 0 0.55 0.55`, then when the profile expires and how to read it.
+
+Profiling never changes the order in which commands run, or the queue's limits.

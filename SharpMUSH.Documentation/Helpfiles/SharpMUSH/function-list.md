@@ -11,40 +11,39 @@
 }
 -->
 # Function List
-  Several major variants of functions are available. The help topics are listed below, together with a quick summary of the function type and some examples of that type of function.
+Functions are grouped by what they work on. Each topic below covers one group, with some of its functions in brackets.
 
-  The command "@list/functions" lists all functions on the game.<br>
-  The command "@function" lists only the game's custom global functions defined via the @function command.
+`@list/functions` lists every function on the game, and `@function` only the global functions the game added with @function.
 
 - [function list objects]: attributes, objects, connections, channels, mail and feeds
 - [function list data]: numbers, lists, strings, time, JSON, SQL, HTML and layout
 
 ## Functions for objects and communication
 
-  [Attribute functions]: attribute-related manipulations (GET, UFUN) <br>
-  [channel functions]: get information about channels (CTITLE, CWHO) <br>
-  [Communication functions]: send messages to objects (PEMIT, OEMIT) <br>
-  [Connection functions]: get information about a player's connection (CONN) <br>
-  [Dbref functions]: return dbref info related to objects (LOC, LEXITS) <br>
-  [Feed functions]: read the feeds a game's systems run (FEEDMSG, FEEDWHO) <br>
-  [Information functions]: find out something about objects (FLAGS, MONEY) <br>
-  [Mail Functions]: manipulate @mail (MAIL, FOLDERSTATS) <br>
-  [Page functions]: read your own page log (PAGERECALL, PAGECONVERSATIONS) <br>
-  [Wiki functions]: read the shared wiki (WIKI, WIKILIST)
+- [Attribute functions]: attribute-related manipulations (GET, UFUN)
+- [channel functions]: get information about channels (CTITLE, CWHO)
+- [Communication functions]: send messages to objects (PEMIT, OEMIT)
+- [Connection functions]: get information about a player's connection (CONN)
+- [Dbref functions]: return dbref info related to objects (LOC, LEXITS)
+- [Feed functions]: read the feeds a game's systems run (FEEDMSG, FEEDWHO)
+- [Information functions]: find out something about objects (FLAGS, MONEY)
+- [Mail Functions]: manipulate @mail (MAIL, FOLDERSTATS)
+- [Page functions]: read your own page log (PAGERECALL, PAGECONVERSATIONS)
+- [Wiki functions]: read the shared wiki (WIKI, WIKILIST)
 
 ## Functions for data, text and output
 
-  [Bitwise functions]: manipulation of individual bits of numbers (SHL, BOR) <br>
-  [Boolean functions]: produce 0 or 1 (false or true) answers (OR, AND) <br>
-  [HTML FUNCTIONS]: output HTML tags for Pueblo and WebSocket clients <br>
-  [JSON FUNCTIONS]: create and manipulate JSON objects (JSON, JSON_MAP) <br>
-  [Layout functions]: boxes, tables, columns and trees the portal draws as layout (BOX, DATATABLE) <br>
-  [List functions]: manipulate lists (REVWORDS, FIRST) <br>
-  [Math functions]: number manipulation, generic or integers only (ADD, DIV) <br>
-  [MEDIA FUNCTIONS]: sounds, pictures and panes, written once for every client (SOUND, IMAGE) <br>
-  [Regular expression functions]: Regular expressions (REGMATCH, REGEDIT) <br>
-  [SQL functions]: access SQL databases (SQL, SQLESCAPE) <br>
-  [String functions]: string manipulation (ESCAPE, FLIP) <br>
-  [Time functions]: formatting and display of time (TIME, CONVSECS) <br>
-  [Utility functions]: general utilities (ISINT, COMP) <br>
-  [Vector functions]: arithmetic on lists of numbers as vectors (VADD, VMAG)
+- [Bitwise functions]: manipulation of individual bits of numbers (SHL, BOR)
+- [Boolean functions]: produce 0 or 1 (false or true) answers (OR, AND)
+- [HTML FUNCTIONS]: output HTML tags for Pueblo and WebSocket clients
+- [JSON FUNCTIONS]: create and manipulate JSON objects (JSON, JSON_MAP)
+- [Layout functions]: boxes, tables, columns and trees the portal draws as layout (BOX, DATATABLE)
+- [List functions]: manipulate lists (REVWORDS, FIRST)
+- [Math functions]: number manipulation, generic or integers only (ADD, DIV)
+- [MEDIA FUNCTIONS]: sounds, pictures and panes, written once for every client (SOUND, IMAGE)
+- [Regular expression functions]: Regular expressions (REGMATCH, REGEDIT)
+- [SQL functions]: access SQL databases (SQL, SQLESCAPE)
+- [String functions]: string manipulation (ESCAPE, FLIP)
+- [Time functions]: formatting and display of time (TIME, CONVSECS)
+- [Utility functions]: general utilities (ISINT, COMP)
+- [Vector functions]: arithmetic on lists of numbers as vectors (VADD, VMAG)

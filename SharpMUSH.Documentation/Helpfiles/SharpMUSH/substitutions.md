@@ -92,9 +92,9 @@ right pronoun for him/her:<br>
 
 Some attributes can be retrieved via substitutions:<br>
      %va-%vz = the contents of the object's VA-VZ attributes, respectively<br>
-     %=`\<name\>` = the contents of the object's attribute `<name>`, as v(`<name>`); `%=<12>` is argument 12. From TinyMUX.<br>
+     `%=<name>` = the contents of the object's attribute `<name>`, as v(`<name>`); `%=<12>` is argument 12. From TinyMUX.<br>
      %wa-%wz, %xa-%xz = as above, for WA-WZ and XA-XZ<br>
-These are the equivilent of get(me/`<attribute>`).
+These are the equivalent of get(me/`<attribute>`).
 
 ## Substitution reference
 
@@ -109,7 +109,7 @@ Other substitutions:<br>
     %u = text of the last command, after evaluation, available to locks/hooks<br>
     %> = the output of the last command, like a function's result: see [command output]<br>
     %| = what the command before a `;|` showed you: see [piping]<br>
-    %*`\<text\>` = `<text>` marked as a list separator, which list functions split on only where it is marked: see [list separators]<br>
+    `%*<text>` = `<text>` marked as a list separator, which list functions split on only where it is marked: see [list separators]<br>
     %? = The current function invocation and depth counts<br>
     %= = The dbref/attribute currently being evaluated, or `#LAMBDA/<code>` inside a #lambda<br>
     %+ = The number of arguments passed to the current ufun.
@@ -118,7 +118,7 @@ Other substitutions:<br>
 
 Register, argument and list substitutions:<br>
     %qN = the equivalent of r(N) for registers 0-9 and A-Z set by the `setq()` function<br>
-    %q`\<N\>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    %`\<name\>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>
+    `%q<N>` = the equivalent of r(N) for a named register set by the `setq()` function<br>    `%<name>` = the equivalent of r(name, args): the argument called `<name>`, from `uargs()`, a regexp `$-command` or `mapsql()`. `%<0>` is `%0`. Like `%0`, it ends with the call.<br>
     %iN = equivalent of itext(N), the list element for `iter()`/`@dolist`. %iL (or %il) is the outermost one.<br>
     %i_N = equivalent of inum(N), the position of that element in its list; %i_L is the outermost one's. From RhostMUSH.<br>
     %-N = argument N, for N from 0 to 999 (up to three digits), the same as %`<N>`: `%-12` is the thirteenth argument. From RhostMUSH.<br>

@@ -55,12 +55,11 @@
 
 The setq() and setr() functions are used to copy strings into local registers assigned arbitrary names (Much like variables in other programming languages.) setq() returns a null string; it is a purely "side effect" function. setr() returns the value stored. Multiple registers can be assigned with a single setq() or setr(), with additional pairs of registers and values in the function's arguments. In this case, setr() returns the value stored in the first register listed. All arguments are evaluated before any registers are set; to use a register set earlier in the same call, use setqm() or setrm(), which set them in order.
 
-With exactly three arguments, the third is a label: another name for the register (see 'help setq register labels').
+With exactly three arguments, the third is a label: another name for the register (see [setq register labels]).
 
 ::: seealso
 - [setqm()]
 - [R()]
-- [LISTQ()]
 - [LISTQ()]
 - [LETQ()]
 - [LOCALIZE()]

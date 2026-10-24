@@ -11,39 +11,40 @@
 -->
 # Wildcards
 
-  SharpMUSH has two standard wildcards, which can be used in `$-commands`, as well as a number of softcode functions: an asterisk (*) matches zero or more of any characters, and a question mark (?) matches exactly one character. The most common use of wildcards is to allow people to pass arguments to `$-commands`. For example, let's say you want to have a 'wave' command which allows you to wave to a specific person:
+SharpMUSH has two wildcards, which `$-commands` and many functions understand: an asterisk (`*`) matches any number of characters, none included, and a question mark (`?`) matches exactly one.
+
+Their most common use is to let people pass arguments to a `$-command`. A `wave` command that waves at someone:
 
 ```sharp
-    > &cmd.wave me=$wave *: pose waves.
+> &cmd.wave me=$wave *: pose waves.
 ```
 
-  The "*" wildcard will match anything, allowing you to type "wave foo", "wave bar", etc. You can use the %0-%9 substitutions to get the values which matched the first ten wildcards in the command:
+The `*` matches anything, so `wave foo` and `wave bar` both work. `%0` to `%9` hold what the first ten wildcards matched:
 
 ```sharp
-    > &cmd.wave me=$wave *: pose waves to %0.
-    > wave to Muse
-    Mike waves to Muse.
+> &cmd.wave me=$wave *: pose waves to %0.
+> wave Muse
+Mike waves to Muse.
 ```
 
 - [wildcards escaping]: matching a literal * or ?, the ** wildcard, and regexps
 
 ## Escaping, ** and regular expressions
 
-  A backslash (\) can be used to escape * and ? if you want to match a literal asterisk or question mark. (Note that you will often have to use \\ so that the softcode parser doesn't evaluate it away!)
+A backslash (`\`) before `*` or `?` matches a literal asterisk or question mark. You usually have to write `\\`, so that the parser leaves one backslash for the match:
 
 ```sharp
-  > think strmatch(foobar, ?*?)
-  1
-  > think strmatch(foobar, \\?*\\?)
-  0
-  > think strmatch(?foobar?, \\?*\\?)
-  1
+> think strmatch(foobar, ?*?)
+1
+> think strmatch(foobar, \\?*\\?)
+0
+> think strmatch(?foobar?, \\?*\\?)
+1
 ```
 
-  The "**" wildcard is also available for matching attribute names - see HELP attribute trees browsing for more information.
+The `**` wildcard matches attribute names across levels of an attribute tree: see [attribute trees browsing].
 
-  It's also possible to use regular expressions, rather than wildcards, for matching strings. Regexps allow a lot more control over what is matched, but are therefore somewhat more complex. See [regexp] for details.
-
+Regular expressions match strings with more control than wildcards, and more to learn: see [regexp].
 
 ::: seealso
 - [$-commands]

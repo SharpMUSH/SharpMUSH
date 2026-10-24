@@ -36,7 +36,7 @@ The table is kept with the game's configuration and is the same one the web port
 
 ## Example
 
-```
+```sharp
 > @ascii <a middle dot>=%b-%b
 ```
 Output: the game says a middle dot is now sent to clients without Unicode as a space, a dash and a space. A title written as Wren, a middle dot, then Scene 3 reaches an ASCII client as `Wren - Scene 3` rather than `Wren * Scene 3`.

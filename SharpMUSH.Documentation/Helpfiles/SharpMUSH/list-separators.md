@@ -127,12 +127,12 @@ A player can write `%*<|>` in a command's arguments, the same way they can write
 
 Printed, a separator looks like any other character. Two ways show which characters are marked:
 
-- `decompose()` and `@decompile` write each marked stretch back as `%*<...>`. Evaluating the result gives the same list.
+- `decompose()` and `@decompile` write each marked stretch back as `%*<...>`, with some characters, such as `^`, escaped by a `\`. Evaluating the result gives the same list.
 - A player set `SHOW_SEPARATORS` sees separators in reverse video, in a terminal and in the portal.
 
 ```sharp
 > think decompose(Mannaz%*<^>12%*<|>Raya%*<^>9)
-Mannaz%*<^>12%*<|>Raya%*<^>9
+Mannaz%*<\^>12%*<|>Raya%*<\^>9
 ```
 
 PennMUSH, RhostMUSH and TinyMUX have no `%*` substitution and print `*<|>` for `%*<|>`. Importing a PennMUSH database names every attribute that uses `%*<`.

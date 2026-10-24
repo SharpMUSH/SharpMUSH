@@ -22,7 +22,7 @@
 
 Reports the server start time, last reboot, total reboot count, current time, time until the next purge and warning runs, and SharpMUSH uptime. Wizards also receive the process statistics below, unless they use `/mortal`.
 
-Output: the time the game started, in seconds, as `uptime()` returns it.
+`@uptime` outputs the time the game started, in seconds, as `uptime()` returns it.
 
 ## Process statistics
 

@@ -474,7 +474,7 @@ You say, "r baz"
 
   Takes any number of `<word>` arguments, and returns the one which is lexicographically biggest. That is, the `<word>` would be last in alphabetical order.
 
-  This is equivilent to ```last(sort(`<word>` ... `<wordN>`,a))```.
+  This is equivalent to ```last(sort(`<word>` ... `<wordN>`,a))```.
 
 ::: seealso
 - [ALPHAMIN()]
@@ -485,7 +485,7 @@ You say, "r baz"
 
   Takes any number of `<word>` arguments, and returns the one which is lexicographically smallest. That is, the word that would be first in alphabetical order.
 
-  This is equivilent to first(sort(`<word>` ... `<wordN>`,a)).
+  This is equivalent to first(sort(`<word>` ... `<wordN>`,a)).
 
 
 ::: seealso
@@ -544,7 +544,6 @@ You say, "r baz"
 ::: seealso
 - [POWERS()]
 - [ORLPOWERS()]
-- [@power]
 - [@power]
 :::
 # aposs()
@@ -607,7 +606,7 @@ You say, "r baz"
 
   When given a second argument of "on" (or "off"), attempts to lock (or unlock) the specified attribute, as per @atrlock.
 
-  A locked attribute is one which has the "locked" attribute flag, so this function is roughly equivilent to:
+  A locked attribute is one which has the "locked" attribute flag, so this function is roughly equivalent to:
 
 `hasattr(<object>/<attrib>, locked)`<br>
 `set(<object>/<attribute>, [!]locked)`
@@ -759,8 +758,6 @@ think brackets(v(desc))
 
 
 ::: seealso
-- [ROUND()]
-- [ROUND()]
 - [ROUND()]
 - [TRUNC()]
 :::
@@ -1245,7 +1242,6 @@ You say "apple orange banana"
 - [u()]
 - [EDEFAULT()]
 - [UDEFAULT()]
-- [UDEFAULT()]
 - [STRFIRSTOF()]
 :::
 # strdelete()
@@ -1427,7 +1423,6 @@ SHA256(foo) => 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
 
 
 ::: seealso
-- [FILTER()]
 - [FILTER()]
 - [FILTERQ()]
 - [setq()]
@@ -1659,7 +1654,6 @@ test
 ::: seealso
 - [GET()]
 - [u()]
-- [GET()]
 - [EDEFAULT()]
 :::
 # exit()
@@ -1727,7 +1721,6 @@ You say, "1 3 5"
 - [LOCKFILTER()]
 - [FILTERQ()]
 - [E()]
-- [E()]
 - [boolean values]
 :::
 # filterq()
@@ -1747,8 +1740,6 @@ Kept: 12 7 / Dropped: apples pears
 
 ::: seealso
 - [FILTER()]
-- [FILTER()]
-- [E()]
 - [E()]
 - [setq()]
 :::
@@ -1887,7 +1878,6 @@ think fmod(6.1,2.5)
 
 ::: seealso
 - [DIV()]
-- [DIV()]
 - [MOD()]
 - [LMATH()]
 :::
@@ -1958,7 +1948,6 @@ You say, "South;sout;sou;so;s"
 - [NAME()]
 - [ACCNAME()]
 - [INAME()]
-- [ALIAS()]
 - [ALIAS()]
 :::
 # functions()
@@ -2071,7 +2060,6 @@ You say "This is"
 
 ::: seealso
 - [element()]
-- [element()]
 - [GRAB()]
 - [regmatch()]
 :::
@@ -2177,8 +2165,6 @@ think hasflag(me, wizard)
 ::: seealso
 - [ORFLAGS()]
 - [ANDFLAGS()]
-- [ORFLAGS()]
-- [ANDFLAGS()]
 - [FLAGS()]
 - [LFLAGS()]
 - [attribute flags]
@@ -2195,7 +2181,6 @@ think hasflag(me, wizard)
 
 
 ::: seealso
-- [@power]
 - [@power]
 - [HASFLAG()]
 :::
@@ -2267,7 +2252,6 @@ think hastype(test object, PLAYER THING)
 ::: seealso
 - [Connection functions]
 - [IPADDR()]
-- [LPORTS()]
 - [LPORTS()]
 :::
 # idle()
@@ -2520,8 +2504,6 @@ You say, "Test 1! Test 2! Test 3!"
 ::: seealso
 - [iter()]
 - [ilev()]
-- [ilev()]
-- [ilev()]
 :::
 # ipaddr()
 `ipaddr(<player|descriptor>)`
@@ -2534,7 +2516,6 @@ You say, "Test 1! Test 2! Test 3!"
 ::: seealso
 - [Connection functions]
 - [HOST()]
-- [LPORTS()]
 - [LPORTS()]
 :::
 # jiter()
@@ -2713,8 +2694,6 @@ think setr(A, 1)[setr(B,1)]:[letq(A, 2, %qA[setr(B,2)])]:%qA%qB
 
 ::: seealso
 - [setq()]
-- [setq()]
-- [LISTQ()]
 - [LISTQ()]
 - [LOCALIZE()]
 - [ulocal()]
@@ -2820,7 +2799,7 @@ think lmath(add, 1|2|3, |)
 # ln()
 `ln(<number>)`
 
-  Returns the natural log of `<number>`. This is equivilent to log(`<number>`, e).
+  Returns the natural log of `<number>`. This is equivalent to log(`<number>`, e).
 
 
 ::: seealso
@@ -2882,7 +2861,6 @@ You say, "Outside-Inside-Inside"
 
 ::: seealso
 - [LETQ()]
-- [setq()]
 - [setq()]
 - [R()]
 - [ulocal()]
@@ -3414,7 +3392,6 @@ You say, "http://www.testmush.com"
 ::: seealso
 - [LMATH()]
 - [DIV()]
-- [DIV()]
 :::
 # mwho()
 # mwhoid()
@@ -3543,7 +3520,6 @@ You say, "#1 #7 #56 #-1"
 ::: seealso
 - [LMATH()]
 - [AND()]
-- [AND()]
 - [OR()]
 - [NOR()]
 :::
@@ -3657,7 +3633,7 @@ You say, "#1 #7 #56 #-1"
 `nexits(<room>)`<br>
 `nvexits(<room>)`
 
-  These functions return a count of the exits in a room. They are equivilent to words(lexits(`<room>`)) and words(lvexits(`<room>`)) respectively, though are more efficient, and don't suffer from buffer constraints.
+  These functions return a count of the exits in a room. They are equivalent to words(lexits(`<room>`)) and words(lvexits(`<room>`)) respectively, though are more efficient, and don't suffer from buffer constraints.
 
 
 ::: seealso
@@ -3672,7 +3648,7 @@ You say, "#1 #7 #56 #-1"
 `nplayers(<object>)`<br>
 `nvplayers(<object>)`
 
-  These functions return a count of the players in `<object>`. They are equivilent to words(lplayers(`<object>`)) and words(lvplayers(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
+  These functions return a count of the players in `<object>`. They are equivalent to words(lplayers(`<object>`)) and words(lvplayers(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
 
 
 ::: seealso
@@ -3689,7 +3665,7 @@ You say, "#1 #7 #56 #-1"
 `nthings(<object>)`<br>
 `nvthings(<object>)`
 
-  These functions return a count of the things in a container. They are equivilent to words(lthings(`<object>`)) and words(lvthings(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
+  These functions return a count of the things in a container. They are equivalent to words(lthings(`<object>`)) and words(lvthings(`<object>`)) respectively, though are more efficient and do not suffer from buffer constraints.
 
 
 ::: seealso
@@ -3708,13 +3684,12 @@ You say, "#1 #7 #56 #-1"
 
   nmwho() returns a count of all currently connected, non-hidden players. It's exactly the same as nwho() used by a mortal, and is suitable for use on privileged global objects that always need an unprivileged count of who is online.
 
-  These functions are equivilent to `words(lwho([<viewer>]))` and `words(mwho())`, but are more efficient, and don't suffer from buffer constraints.
+  These functions are equivalent to `words(lwho([<viewer>]))` and `words(mwho())`, but are more efficient, and don't suffer from buffer constraints.
 
 
 ::: seealso
 - [LWHO()]
 - [MWHO()]
-- [XWHO()]
 - [XWHO()]
 :::
 # obj()
@@ -3768,7 +3743,6 @@ think objevals(me,v(DATA`TEXT))
 
 ::: seealso
 - [NUM()]
-- [CTIME()]
 - [CTIME()]
 - [%#]
 :::
@@ -3865,7 +3839,6 @@ think objevals(me,v(DATA`TEXT))
 ::: seealso
 - [POWERS()]
 - [ANDLPOWERS()]
-- [@power]
 - [@power]
 - [ORFLAGS()]
 :::
@@ -3981,7 +3954,6 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
 
 
 ::: seealso
-- [LPORTS()]
 - [LPORTS()]
 :::
 # pmatch()
@@ -4114,7 +4086,6 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
 - [ANDLPOWERS()]
 - [ORLPOWERS()]
 - [@power]
-- [@power]
 :::
 # quota()
 `quota(<player>)`
@@ -4127,9 +4098,7 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
 ::: seealso
 - [@quota]
 - [@quota administrative quota changes]
-- [@quota administrative quota changes]
 - [QUOTAS]
-- [@power]
 - [@power]
 :::
 # r()
@@ -4142,23 +4111,20 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
   `<type>` defaults to "qregisters", and must be one of:
 
     qregisters - registers set with setq(), setr() and similar functions<br>
-    args       - the stack, usually accessed via %0-%9. There are up to 30 stack registers, plus named arguments from regexp $-commands, mapsql() and uargs(), also available as %`\<name\>`. Names are case-insensitive.<br>
+    args       - the stack, usually accessed via %0-%9. There are up to 30 stack registers, plus named arguments from regexp $-commands, mapsql() and uargs(), also available as `%<name>`. Names are case-insensitive.<br>
     iter       - itext() context from iter() or @dolist. Must be an int, or "L" for the outermost itext().<br>
     switch     - stext() context from switch() or @switch. Must be an int, or "L" for the outermost stext()<br>
     regexp     - regexp capture names from re*() regexp functions
 
-  qregisters can also be accessed via the %qX (for one-char register names) or %q`\<X\>` (for registers with longer names) substitutions.
+  qregisters can also be accessed via the %qX (for one-char register names) or `%q<X>` (for registers with longer names) substitutions.
 
 
 ::: seealso
 - [setq()]
 - [LETQ()]
 - [LISTQ()]
-- [LISTQ()]
 - [REGISTERS()]
 - [V()]
-- [ilev()]
-- [STEXT()]
 - [ilev()]
 - [STEXT()]
 :::
@@ -4499,7 +4465,7 @@ moderator player everyone
 - [WHERE()]
 :::
 # root()
-`root(<number>, \<n\>)`
+`root(<number>, <n>)`
 
   Returns the n-th root of `<number>`. The 2nd root is the square root, the 3rd the cube root, and so on.
 
@@ -4747,7 +4713,6 @@ LOC
 
 ::: seealso
 - [LISTQ()]
-- [setq()]
 - [setq()]
 - [LETQ()]
 - [R()]
@@ -5126,7 +5091,6 @@ Tue Sep 22 13:54:04 2015
 
 ::: seealso
 - [STARTTIME()]
-- [STARTTIME()]
 :::
 # ssl()
 `ssl(<player|descriptor>)`
@@ -5168,7 +5132,7 @@ d - e -
 # stepargs()
 `stepargs([<obj>/]<attr>, <list>, <names>[, <delim>[, <osep>]])`
 
-  stepargs() is step() with named arguments. `<names>` is a space-separated list of up to 30 names; the list is taken that many elements at a time, and each element is passed under the name in its place, read with %`\<name\>` or r(`<name>`, args). The attribute gets no %0-%9. If the elements can't be split up evenly, the last names of the last call are unset. A name may appear only once; an empty or repeated name list returns `#-1 ARGUMENT NAME INVALID`.
+  stepargs() is step() with named arguments. `<names>` is a space-separated list of up to 30 names; the list is taken that many elements at a time, and each element is passed under the name in its place, read with `%<name>` or r(`<name>`, args). The attribute gets no %0-%9. If the elements can't be split up evenly, the last names of the last call are unset. A name may appear only once; an empty or repeated name list returns `#-1 ARGUMENT NAME INVALID`.
 
   Example:
 ```sharp
@@ -5455,7 +5419,7 @@ You say, "abcdefgh"
 
   If X and Y are non-numeric strings, the result of comp(X,Y) is used to determine which string is alphabetically before (less than) the other.
 
-  If you need to have a leading `< or >` that's treated like a normal character in a wildcard match, use \\`< or \\>` (the \\ will turn into \ when the argument is evaluated, and then that single \ will stop the greater/less than check).
+  If you need to have a leading `< or >` that's treated like a normal character in a wildcard match, use `\\<` or `\\>` (the \\ will turn into \ when the argument is evaluated, and then that single \ will stop the greater/less than check).
 
 
 ::: seealso
@@ -5466,12 +5430,12 @@ You say, "abcdefgh"
 # %$
 # %$0
 `slev()`<br>
-`stext([\<n\>])`<br>
-  %$`\<n\>`
+`stext([<n>])`<br>
+  `%$<n>`
 
-  slev() returns the current nesting depth of switch*(), case*(), reswitch*(), if(), ifelse() and @switch/@selects. An if() or ifelse() counts while its branch runs, with its evaluated condition as the `<string>`. stext() returns the `<string>` being matched for the current switch, or the `\<n\>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. Unlike the "#$" token, which names the outermost switch it is written in, it can name any level.
+  slev() returns the current nesting depth of switch*(), case*(), reswitch*(), if(), ifelse() and @switch/@selects. An if() or ifelse() counts while its branch runs, with its evaluated condition as the `<string>`. stext() returns the `<string>` being matched for the current switch, or the `<n>`th switch where n=0 is the current switch, n=1 is the switch the current switch is nested in, and so on. Unlike the "#$" token, which names the outermost switch it is written in, it can name any level.
 
-  stext(L) returns the `<string>` for the outermost switch, and is equivilent to stext(slev()). %$`\<n\>` is equivilent to stext(`\<n\>`), for `\<n\>`s of 0-9 or L.
+  stext(L) returns the `<string>` for the outermost switch, and is equivalent to stext(slev()). `%$<n>` is equivalent to stext(`<n>`), for `<n>`s of 0-9 or L.
 
   Examples:
 ```sharp
@@ -5764,9 +5728,7 @@ You say, "101"
 
 ::: seealso
 - [ROUND()]
-- [ROUND()]
 - [BOUND()]
-- [ROUND()]
 - [LEFT()]
 :::
 # type()
@@ -5894,11 +5856,11 @@ think words(unmark(a%*<|>b), %*<|>)
 
     0-9, #, @, !, n, l, and c.
 
-  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivilent to %n (whereas %N is equivilent to `[capstr(%n)]`).
+  Unlike %-subs, the v() function is not case-sensitive: v(n) and v(N) are both equivalent to %n (whereas %N is equivalent to `[capstr(%n)]`).
 
-  v() can also return the value of stack registers %0 through %9: v(0) is equivilent to %0. A number of two or more digits, such as v(10), is treated as an attribute name; use %`<10>` or r(10,args) for argument 10 and higher.
+  v() can also return the value of stack registers %0 through %9: v(0) is equivalent to %0. A number of two or more digits, such as v(10), is treated as an attribute name; use %`<10>` or r(10,args) for argument 10 and higher.
 
-  The final form of this function is equivilent to get(me/`<attribute>`), but is usually slightly more efficient.
+  The final form of this function is equivalent to get(me/`<attribute>`), but is usually slightly more efficient.
 
 
 ::: seealso
@@ -6388,7 +6350,6 @@ think words(1 2%b%b3, %b)
 - [SECS()]
 - [CONVSECS()]
 - [time()]
-- [STARTTIME()]
 - [STARTTIME()]
 - [RESTARTS()]
 - [@dbck]

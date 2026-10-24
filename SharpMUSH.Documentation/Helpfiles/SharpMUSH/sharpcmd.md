@@ -91,7 +91,7 @@ In order for debug to be shown for triggered $-commands, you must either control
 
 The "@@" command does nothing; it does not evaluate its input or show any messages to the executor. It can be used for commenting code.
 
-Output: leaves the previous command's output unchanged.
+`@@` leaves the previous command's output unchanged.
 
 ### Example
 ```sharp
@@ -100,7 +100,6 @@ Output: leaves the previous command's output unchanged.
 
 
 ::: seealso
-- [@@()]
 - [@@()]
 :::
 # @aclone
@@ -391,7 +390,6 @@ For other types of object, @alias has no special meaning.
 ::: seealso
 - [@name]
 - [ALIAS()]
-- [ALIAS()]
 :::
 # @move
 # @omove
@@ -602,7 +600,6 @@ Note that, if `<object>` has a CHARGES attribute set and it does not contain a n
 ::: seealso
 - [use]
 - [@charges]
-- [@charges]
 - [action lists]
 - [verbs]
 :::
@@ -702,7 +699,7 @@ This is a wizard-only command which sets a COMMENT attribute on `<object>`. The 
 
 When set, the CONFORMAT attribute is evaluated when `<object>` is looked at, and the result is displayed instead of the usual "Contents:" (for rooms) or "Carrying:" (for players and things) list of contents.
 
-The dbrefs of the objects which would appear in the normal contents list are passed to the attribute as %0 or %`\<contents\>` (you can use lcon(me) for a full contents list). A list of the names of these objects is passed as %1 or %`\<names\>`, |-delimited. Each is passed by position and by name (see [named arguments]).
+The dbrefs of the objects which would appear in the normal contents list are passed to the attribute as %0 or `%<contents>` (you can use lcon(me) for a full contents list). A list of the names of these objects is passed as %1 or `%<names>`, |-delimited. Each is passed by position and by name (see [named arguments]).
 
 Q-registers (set via setq() and similar functions) are inherited from the @descformat, and passed on to the @exitformat.
 
@@ -730,7 +727,7 @@ Show just the object names (with no ansi) in a table:
 # @invformat
 `@invformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of the usual "You are carrying:" list of objects when `<object>` uses the "inventory" command. The dbrefs of the objects that would appear in the inventory are passed as %0 or %`\<contents\>`, and a list of their names as they would appear in the usual list, |-delimited, as %1 or %`\<names\>` (see [named arguments]). If the result is empty, nothing is shown.
+When set, this attribute is evaluated and displayed instead of the usual "You are carrying:" list of objects when `<object>` uses the "inventory" command. The dbrefs of the objects that would appear in the inventory are passed as %0 or `%<contents>`, and a list of their names as they would appear in the usual list, |-delimited, as %1 or `%<names>` (see [named arguments]). If the result is empty, nothing is shown.
 
 ### Example
 ```sharp
@@ -751,7 +748,7 @@ You're holding: Red Ball, Pickle, and Piano
 # @descformat
 `@descformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of `<object>`'s @describe, when someone looks at `<object>`. The evaluated @describe, which would be shown if no @descformat were set, is passed to the @descformat as %0, and by name as %`\<description\>` (see [named arguments]); use v(describe) to get the unevaluated description.
+When set, this attribute is evaluated and displayed instead of `<object>`'s @describe, when someone looks at `<object>`. The evaluated @describe, which would be shown if no @descformat were set, is passed to the @descformat as %0, and by name as `%<description>` (see [named arguments]); use v(describe) to get the unevaluated description.
 
 This is primarily useful for room parents, to enforce a consistent look for all rooms without having to apply formatting to ever @describe. Note that this object is only used with @describe - to format the @idescribe, use @idescformat.
 
@@ -774,7 +771,7 @@ Q-registers (set via setq() and similar functions) are inherited from the @namef
 # @idescformat
 `@idescformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed instead of `<object>`'s inside description when someone looks at `<object>` while inside it. The evaluated @idescribe is passed to @idescformat as %0, and by name as %`\<description\>` (see [named arguments]); use v(idescribe) to get the unevaluated description.
+When set, this attribute is evaluated and displayed instead of `<object>`'s inside description when someone looks at `<object>` while inside it. The evaluated @idescribe is passed to @idescformat as %0, and by name as `%<description>` (see [named arguments]); use v(idescribe) to get the unevaluated description.
 
 If no @idescribe is set, @idescformat formats the evaluated @describe instead. When neither @idescribe nor @idescformat is set, the normal @describe and @descformat attributes are used.
 
@@ -816,7 +813,7 @@ If a container has both a @nameaccent and a @nameformat, the @nameformat is used
 # @nameformat
 `@nameformat <object>[=<format>]`
 
-When set, this attribute is evaluated and displayed in place of `<object>`'s name, when objects inside `<object>` "look". The room's dbref is passed as %0 or %`\<object\>`, and the default-formatted name (as it would be displayed with no @nameformat set) is passed as %1 or %`\<name\>`. Each is passed by position and by name (see [named arguments]).
+When set, this attribute is evaluated and displayed in place of `<object>`'s name, when objects inside `<object>` "look". The room's dbref is passed as %0 or `%<object>`, and the default-formatted name (as it would be displayed with no @nameformat set) is passed as %1 or `%<name>`. Each is passed by position and by name (see [named arguments]).
 
 @nameformat is not used when people who are outside the object look at it.
 
@@ -862,7 +859,7 @@ The COST attribute can be set, but SharpMUSH has no money: "give" with a number 
 
 This command creates a new thing called `<name>`. SharpMUSH has no money, so creating an object costs nothing and `<cost>` is accepted and ignored.
 
-Output: the new thing's dbref, as `create()` returns it.
+`@create` outputs the new thing's dbref, as `create()` returns it.
 
 When quotas are enabled, each object you create uses part of your building quota; see [@quota].
 
@@ -1032,7 +1029,7 @@ and<br>
 `emit[/<switch>] <message>`<br>
 `\<message>`
 
-This sends `<message>` to everyone in your location. Nothing is added to the message, not even your name. If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` as %0 or %`\<message\>`, and | as %1 or %`\<type\>`, and the result will be shown instead of `<message>` as long as it evaluates to a non-empty string.
+This sends `<message>` to everyone in your location. Nothing is added to the message, not even your name. If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` as %0 or `%<message>`, and | as %1 or `%<type>`, and the result will be shown instead of `<message>` as long as it evaluates to a non-empty string.
 
 The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
@@ -1115,7 +1112,7 @@ Zone leaving is assumed to occur after room leaving, so these are triggered afte
 
 This command will show you all objects linked to `<object>`. If you don't specify an `<object>`, your current location is used. You can limit the range of the dbrefs searched by specifying `<begin>` and `<end>`.
 
-Output: the dbrefs of the entrances found, as `entrances()` returns them.
+`@entrances` outputs the dbrefs of the entrances found, as `entrances()` returns them.
 
 You can use any combination of switches to limit the types of objects:
 - /exits show only exits linked to `<object>`
@@ -1134,7 +1131,7 @@ If you control `<object>`, or have the Search or See_All powers, all objects lin
 # @exitformat
 `@exitformat <object>[=<format>]`
 
-When set, the exitformat attribute is evaluated and shown in place of the "Obvious exits" list for a room. (It has no meaning when set on other types of object.) The dbrefs of the exits which would appear in the default "Obvious exits" list is passed to the attribute as %0, and by name as %`\<exits\>` (see [named arguments]), as a space-separated list; you can use lexits(me) to get all the exits in the room.
+When set, the exitformat attribute is evaluated and shown in place of the "Obvious exits" list for a room. (It has no meaning when set on other types of object.) The dbrefs of the exits which would appear in the default "Obvious exits" list is passed to the attribute as %0, and by name as `%<exits>` (see [named arguments]), as a space-separated list; you can use lexits(me) to get all the exits in the room.
 
 Q-registers (set via setq() and similar functions) are inherited from the @conformat.
 
@@ -1186,7 +1183,7 @@ One, Two, and Three
 
 Displays the name and dbref of every room, thing, or player you control whose name matches `<name>`. If `<begin>` and `<end>` are given, @find will start at the `<begin>`th object in the database, and will not search past the `<end>`th object.
 
-Output: the dbrefs found, separated by spaces.
+`@find` outputs the dbrefs found, separated by spaces.
 
 You may wish to use the @search command instead, which can filter the results more complexly.
 
@@ -1250,7 +1247,7 @@ event Trigger the ``OBJECT`FLAG`` event when this flag is set or cleared. Only m
 
 @grep returns a list of all attributes on `<object>` which match `<pattern>`. If `<attrs>` is specified, only attributes which match the wildcard pattern `<attrs>` are checked; it defaults to "*". Use "**" for all attributes.
 
-Output: the names of the attributes matched, as `grep()` returns them.
+`@grep` outputs the names of the attributes matched, as `grep()` returns them.
 
 By default, attributes which contain the string `<pattern>` are returned. However, if the `/wild` switch is given, `<pattern>` is treated as a wildcard pattern, and attributes which match the pattern are returned. If the `/regexp` switch is given, `<pattern>` is treated as a regular expression, and attributes matching the regexp are returned. Please note that `<pattern>` will NOT be evaluated, so you can easily grep for code strings.
 
@@ -1264,8 +1261,6 @@ For backwards compatability, the `/list` switch provides the default behaviour o
 
 
 ::: seealso
-- [GREP()]
-- [GREP()]
 - [GREP()]
 - [WILDCARDS]
 :::
@@ -1560,7 +1555,6 @@ Show the first letter in orange, and the rest with no color
 - [ansi()]
 - [@nameformat]
 - [@nameaccent]
-- [MONIKER()]
 :::
 # @name
 `@name <object>=<new name>`<br>
@@ -1659,7 +1653,6 @@ These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @ze
 - [EMIT()]
 - [NSLEMIT()]
 - [PEMIT()]
-- [PEMIT()]
 - [REMIT()]
 - [OEMIT()]
 - [ZEMIT()]
@@ -1670,7 +1663,7 @@ These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @ze
 
 This command opens an exit, named `<exit name>`, in your current location, or in `<source room>` if one is given. Exits can only be opened from rooms. If a `<destination>` is given, the exit will be linked (as per @link) to that object. If you don't have permission to link to `<destination>`, the exit will be created but unlinked.
 
-Output: the new exit's dbref, as `open()` returns it.
+`@open` outputs the new exit's dbref, as `open()` returns it.
 
 If `<return exit name>` is given, the MUSH will attempt to open an exit back from `<destination>` and link it to `<exit name>`'s source.
 
@@ -1776,7 +1769,7 @@ In all cases, %0 is the dbref of the object being given, and %1 is the dbref of 
 
 This wizard-only command creates a player with the given name and password. If specified, `<dbref>` is the dbref of a garbage object to be used for the new player.
 
-Output: the new player's dbref, as `pcreate()` returns it.
+`@pcreate` outputs the new player's dbref, as `pcreate()` returns it.
 
 
 ::: seealso
@@ -1795,7 +1788,6 @@ If `<message>` is omitted, an empty prompt is sent.
 ::: seealso
 - [@pemit]
 - [@nspemit]
-- [PEMIT()]
 - [PEMIT()]
 - [PROMPT_NEWLINES]
 :::
@@ -1823,7 +1815,6 @@ This command manipulate the message at the top of WHO/DOING. By itself, it displ
 
 ::: seealso
 - [@doing]
-- [who]
 - [who]
 :::
 # @poor
@@ -1905,7 +1896,7 @@ This command halts `<object>` (as described in @halt), and then triggers the STA
 
 @scan gives you a list of all objects containing $-commands (user-defined commands) which could match `<command>`. If given no switches, it checks you, your possessions, your location, objects in your location, the zone/zone master room of your location, your zone, and objects in the master room. It does NOT stop when it gets a match, but rather, finds all possible matches. It also tells how many commands on each object were matched, and what attributes they are in. It does NOT scan objects that you do not control and are not set VISUAL.
 
-Output: the `<object>/<attribute>` pairs matched, as `scan()` returns them.
+`@scan` outputs the `<object>/<attribute>` pairs matched, as `scan()` returns them.
 
 This command any combination of these four switches:
 - /room -- just matches on your location and objects in it.
@@ -2069,7 +2060,7 @@ Neither is sent unless SharpMUSH knows your client reads it, because a client th
 Use 'on' or 'off' to override that, and 'auto' to go back to it. SOCKSET shows the setting in effect, as "auto (on)" or "auto (off)" when nothing is set. terminfo() includes 'hyperlinks' and 'commandlinks' while they are on.
 
 Example:
-```
+```sharp
 > SOCKSET hyperlinks=on
 Hyperlinks set to 'on'
 ```
@@ -2089,7 +2080,7 @@ With animation on, a moving picture (an animated GIF) plays, as long as pictures
 A terminal known not to play moving pictures (Ghostty, Konsole, mintty and Visual Studio Code among them) is sent the first frame even with animation on. terminfo() includes 'animation' while moving pictures play.
 
 Example:
-```
+```sharp
 > SOCKSET animation=on
 Animation set to 'on'
 ```
@@ -2113,7 +2104,7 @@ The terminals SharpMUSH knows:
 - kitty, ghostty, wezterm, iterm2, konsole, foot, xterm, windows-terminal, mintty, vscode (Visual Studio Code's terminal), contour, rio, mlterm, alacritty, vte (GNOME Terminal, Tilix, Terminator and other VTE terminals), tmux
 
 Example:
-```
+```sharp
 > SOCKSET terminal=windows-terminal
 Terminal set to 'windows-terminal'
 ```
@@ -2128,7 +2119,7 @@ Terminal set to 'windows-terminal'
 # @speechmod
 `@speechmod <object>[=<modifier>]`
 
-When set, this attribute modifies everything `<object>` says, poses, semiposes and @emits. The original text spoken/posed/emitted is passed as %0 or %`\<message\>`, with %1 or %`\<type\>` passed as " (for say), : (for pose), ; (for semipose) or | (for @emit). Each is passed by position and by name (see [named arguments]).
+When set, this attribute modifies everything `<object>` says, poses, semiposes and @emits. The original text spoken/posed/emitted is passed as %0 or `%<message>`, with %1 or `%<type>` passed as " (for say), : (for pose), ; (for semipose) or | (for @emit). Each is passed by position and by name (see [named arguments]).
 
 If the attribute evaluates to an empty string, the original text will be used. Otherwise, the result of the attribute is used.
 
@@ -2269,7 +2260,7 @@ This is a SharpMUSH command; PennMUSH has no @locale.
 
 Runs an attribute once for each element of `<list>`, as [@dolist] does, but passing the element as `%0` rather than substituting it into the command text. The attribute is named as `<object>/<attribute>`.
 
-Output: with `/inline` or `/inplace`, the output of the last command run; queued, nothing. See [command output].
+With `/inline` or `/inplace`, `@map` outputs what the last command it ran output; queued, it outputs nothing. See [command output].
 
 Switches are the queue-control set shared with [@dolist] and [@include]: `/inline`, `/inplace`, `/localize`, `/clearregs`, `/nobreak`, `/notify` and `/delimit`.
 
@@ -2287,11 +2278,10 @@ This is a SharpMUSH command; PennMUSH spells the same idea with [@dolist] and [M
 
 Tells the player the name of the MUSH, which version of the code is currently running on the system, when it was compiled, and when the last restart was. It may also include some other information, including the MUSH's website address and the GIT revision, if available.
 
-Output: the version, as `version()` returns it.
+`@version` outputs the version, as `version()` returns it.
 
 
 ::: seealso
-- [VERSION()]
 - [VERSION()]
 :::
 # @wall
@@ -2309,7 +2299,6 @@ The message is prefixed with the value of the wall_prefix, rwall_prefix or wizwa
 
 
 ::: seealso
-- [@wall]
 - [@wall]
 :::
 # @wcheck
@@ -2333,7 +2322,7 @@ The third runs it on all objects the player owns that aren't set NO_WARN.
 
 If `<player>` is not set UNFINDABLE, this command will tell you where the player is. It will also inform the player that you attempted to locate their position, and whether you succeeded or not.
 
-Output: the player's location, as `loc()` returns it.
+`@whereis` outputs the player's location, as `loc()` returns it.
 
 To avoid being found this way, just do: `@set me=UNFINDABLE`
 
@@ -2431,7 +2420,7 @@ Some routers will only consider a connection alive if text is received, as well 
 
 The teach command shows its argument (unparsed) to others in your location, and then executes it as a command. If the `/list` switch is given, it will run an `<action list>` of commands in much the same way as @triggering an attribute. Otherwise, it executes a single `<command>`, exactly as if you'd entered `<command>` from your client. Useful for helping newbies and demonstrating commands.
 
-Output: the output of the last command it ran. See [command output].
+`teach` outputs what the last command it ran output. See [command output].
 
 ```sharp
 > say To do a pose, use :<action>
@@ -2478,7 +2467,7 @@ In order to drop an object, you must pass it's Drop lock and your location's Dro
 
 Used to enter a thing or player. You can only enter an object if you own it or if it is set ENTER_OK. You must also pass the enter-lock, if it is set. Entering an object triggers is @enter/@oenter/@oxenter messages and its @aenter actions. If you fail the enter-lock, the object's @efail/@oefail/@aefail messages and actions are triggered.
 
-Output: the dbref of the object you enter.
+`enter` outputs the dbref of the object you enter.
 
 Insides of objects are best used for vehicles, or storage spaces when you don't have a home. You can describe the interior of an object differently from its exterior by using @idescribe.
 
@@ -2492,7 +2481,7 @@ The ? wildcard matches a single character except a backtick (`).<br>
 The ** wildcard matches any number of characters, including backticks.<br>
 For example, to see all the attributes that began with a 'v' you could do ex `<object>`/v**
 
-Output: the dbref of the object examined.
+`examine` outputs the dbref of the object examined.
 
 The `/brief` switch is equivalent to the 'brief' command.<br>
 The `/debug` switch is wizard-only and shows raw values for certain fields in an object.<br>
@@ -2520,8 +2509,6 @@ You begin following `<object>`, a player or thing, if you pass its follow lock (
 - [desert]
 - [FOLLOWERS()]
 - [FOLLOWING()]
-- [@follow]
-- [@follow]
 - [@follow]
 :::
 # dismiss
@@ -2658,7 +2645,7 @@ This command gives an `<object>` from your inventory to `<recipient>`. The recip
 
 Goes in the specified direction. `<Direction>` can be the name or alias of an exit in your area, the enter alias of an object in your area, or the leave alias of the object you are in. You do not need to use the word 'go' or 'move', in fact -- simply typing the direction will have the same effect.
 
-Output: the dbref of the room you arrive in.
+Moving outputs the dbref of the room you arrive in.
 
 'go home' is a special command that returns you to your home room/object.
 
@@ -2666,7 +2653,6 @@ Output: the dbref of the room you arrive in.
 ::: seealso
 - [HOMES]
 - [@link]
-- [@ealias]
 - [@ealias]
 - [EXITS]
 - [movement]
@@ -2686,7 +2672,7 @@ This command returns some information about the MUSH you are on, such as its ver
 
 Lists what you are carrying. Can be abbreviated by just 'i', or 'inv'. If you are not set OPAQUE, others will also be able to see what is in your inventory by looking at you.
 
-Output: the dbrefs of what you carry, separated by spaces.
+`inventory` outputs the dbrefs of what you carry, separated by spaces.
 
 Note that on some MUSHes it is possible to take things that are in someone else's inventory. To be safe, @lock any objects that you do not want to lose.
 
@@ -2704,7 +2690,7 @@ Note that on some MUSHes it is possible to take things that are in someone else'
 
 The command leave allows you to exit an object you have enter'ed into. When you leave an object, its @leave/@oleave/@oxleave messages are triggered, and its @aleave actions are triggered.
 
-Output: the dbref of the room you arrive in.
+`leave` outputs the dbref of the room you arrive in.
 
 The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cannot be left. @lock/leave may also be enabled on some MUSHes, which allows you to set who can leave the object. If you fail to leave, the object's @lfail/@olfail/@alfail messages/actions will be triggered.
 
@@ -2732,7 +2718,7 @@ The news system works just like the help system. Many MUSHes use it to provide s
 
 Says `<message>` out loud. The message will be enclosed in double-quotes. A single double-quote is the abbreviation for this common command. If the `/noeval` switch is given, `<message>` will not be evaluated.
 
-If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` passed as %0 or %`\<message\>` and " (a double-quote) passed as %1 or %`\<type\>`. The result is shown instead of `<message>`, as long as it evaluates to a non-empty string.
+If you have a SPEECHMOD attribute set, it will be evaluated with `<message>` passed as %0 or `%<message>` and " (a double-quote) passed as %1 or `%<type>`. The result is shown instead of `<message>`, as long as it evaluates to a non-empty string.
 
 If `<message>` begins with a double-quote and the chat_strip_quote @config option is on, the leading " will be stripped.
 
@@ -2762,7 +2748,7 @@ The score command is not supported: SharpMUSH does not track money, so it only s
 
 You can use this command to send a private message to yourself. Pronoun substitution is performed. This is essentially equivalent to doing a "`@pemit/silent me=<message>`".
 
-Output: the text it shows.
+`think` outputs the text it shows.
 
 One possible use: `@adesc me=think %n just looked at you.`
 
@@ -2889,8 +2875,6 @@ This command stops you from following an object that you were formerly following
 - [desert]
 - [FOLLOWERS()]
 - [@follow]
-- [@follow]
-- [@follow]
 :::
 # use
 `use <object>`
@@ -2968,7 +2952,7 @@ Anyone who is not a wizard or royalty and lacks the See_All power gets the listi
 
 Attempts to run a user-defined command on a specific object. If the `/room` switch is given, `<obj>` must be a room or your current location, and its contents are checked for commands as if it was a master room.
 
-Output: the output of the command run. See [command output].
+`with` outputs what the command it ran output. See [command output].
 
 `<obj>` must be an object near you, an object you control, your ZMO or (if the `/room` switch is given) the Master Room.
 

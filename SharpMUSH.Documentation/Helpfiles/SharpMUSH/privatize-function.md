@@ -33,7 +33,7 @@ Examples:
 (before: ) internal external
 ```
 
-With more arguments, privatize() evaluates `<code>` privately, see 'help privatize private evaluation'.
+With more arguments, privatize() evaluates `<code>` privately: see [privatize private evaluation].
 
 privatize() comes from RhostMUSH and takes the same arguments.
 

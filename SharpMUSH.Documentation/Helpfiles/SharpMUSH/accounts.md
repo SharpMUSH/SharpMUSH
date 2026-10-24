@@ -33,7 +33,7 @@ A character on no account still plays the PennMUSH way, with [connect] and its o
 
 ## Claiming a character you already have
 
-A character made at the connect screen with `create`, made by staff with [@pcreate], or brought over in a PennMUSH import has no account. Its holder adds it to theirs by proving they know its password:
+A character made by staff with [@pcreate], or brought over in a PennMUSH import, has no account. Its holder adds it to theirs by proving they know its password:
 
 - At the connect screen, `login` to the account, then type `claim <character> <password>`. See [claim].
 - In the game, while playing a character on the account, type `@account/claim <character>=<password>`.

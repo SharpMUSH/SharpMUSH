@@ -57,8 +57,8 @@ A request to `http://<mush>/http/<path>` runs the handler's attribute for the re
 
 The HTTP surface is served under a dedicated **`/http/`** path, so it can't shadow the web portal's own routes. When a request to `http://<mush>/http/<path>` arrives, SharpMUSH invisibly runs the HTTP Handler object (`@config http_handler`), executing an `@include me/<method>`, e.g. `@include me/GET`.
 
-- *%0*, also %`\<path\>`, will be the pathname **with the `/http` prefix stripped**: a request to `/http/path/to?foo=bar` arrives as *%0* = `/path/to?foo=bar`. So *%0* is `/`, `/path/to`, `/foo?bar=baz`, etc.
-- *%1*, also %`\<body\>`, will be the body of the request. If it's JSON, use [json_query()] to deal with it. If it's form-encoded, look at [FORMDECODE()].
+- *%0*, also `%<path>`, will be the pathname **with the `/http` prefix stripped**: a request to `/http/path/to?foo=bar` arrives as *%0* = `/path/to?foo=bar`. So *%0* is `/`, `/path/to`, `/foo?bar=baz`, etc.
+- *%1*, also `%<body>`, will be the body of the request. If it's JSON, use [json_query()] to deal with it. If it's form-encoded, look at [FORMDECODE()].
 
 These, the headers and the viewer below are named arguments (see [named arguments]): `@include` passes them on, but a u() function does not see them, so pass what it needs as an argument.
 
@@ -124,15 +124,15 @@ Inbound request body and header limits come from ASP.NET Core, Kestrel, and any 
 
 ### Request headers
 
-Incoming headers are named arguments: %`\<headers\>` is a list of all headers by name, and each header is %`\<hdr.<name>\>`, e.g. %`\<hdr.host\>` for the `Host:` header.
+Incoming headers are named arguments: `%<headers>` is a list of all headers by name, and each header is `%<hdr.<name>>`, e.g. `%<hdr.host>` for the `Host:` header.
 
-Multiple header lines go in the same argument, %r-delimited. So two `Accept:` lines become %`\<hdr.accept\>` with two %r-delimited lines.
+Multiple header lines go in the same argument, %r-delimited. So two `Accept:` lines become `%<hdr.accept>` with two %r-delimited lines.
 
 PennMUSH sets the q-registers *%q<headers>* and *%q<hdr.<name>>* instead. A game imported from PennMUSH has the `http_qregisters` option on, which sets them as well.
 
 ## Credentials and the viewer
 
-Unlike PennMUSH, **credentials never reach softcode**: the `Authorization`, `Proxy-Authorization` and `Cookie` headers are left out of both %`\<hdr.*\>` and %`\<headers\>` (and of the q-registers), and an `access_token` query parameter is removed from *%0*. They carry the web portal's sign-in, a client's password, or a proxy's session, and every route's code sees the same arguments. Instead, %`\<viewer\>` holds the objid of the character the request signed in as (the portal account's current character), already checked by the server, or is empty for an anonymous request. A route that answers differently per player reads %`\<viewer\>`; it never checks a password itself.
+Unlike PennMUSH, **credentials never reach softcode**: the `Authorization`, `Proxy-Authorization` and `Cookie` headers are left out of both `%<hdr.*>` and `%<headers>` (and of the q-registers), and an `access_token` query parameter is removed from *%0*. They carry the web portal's sign-in, a client's password, or a proxy's session, and every route's code sees the same arguments. Instead, `%<viewer>` holds the objid of the character the request signed in as (the portal account's current character), already checked by the server, or is empty for an anonymous request. A route that answers differently per player reads `%<viewer>`; it never checks a password itself.
 
 ## Response size
 

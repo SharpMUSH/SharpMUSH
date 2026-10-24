@@ -11,38 +11,44 @@
 }
 -->
 # Sorting
-  In functions where you can specify a sorting method, you can provide one of these sort types:
+
+Functions that sort, such as sort() and setunion(), take one of these sort types.
 
 - [sorting types]: every sort type, reversing a sort, and case
 - [sorting by attribute]: the attr: and attri: sort keys
 
 ## Sort types
 
-  Type    Sorts:<br>
-   a       Sorts lexicographically (Maybe case-sensitive).<br>
-   i       Sorts lexicographically (Always case-insensitive).<br>
-   d       Sorts dbrefs.<br>
-   n       Sorts integer numbers.<br>
-   f       Sorts decimal numbers.<br>
-   m       Sorts strings with embedded numbers and dbrefs (as names).<br>
-   name    Sorts dbrefs by their names. (Maybe case-sensitive)<br>
-   namei   Sorts dbrefs by their names. (Always case-insensitive)<br>
-   conn    Sorts dbrefs by their connection time.<br>
-   idle    Sorts dbrefs by their idle time.<br>
-   owner   Sorts dbrefs by their owner dbrefs.<br>
-   loc     Sorts dbrefs by their location dbref.<br>
-   ctime   Sorts dbrefs by their creation time.<br>
-   mtime   Sorts dbrefs by their modification time.<br>
-   lattr   Sorts attribute names.
+| Type | Sorts |
+| --- | --- |
+| `a` | text, case-sensitive: capitals come before lower case |
+| `i` | text, ignoring case |
+| `d` | dbrefs, by number |
+| `n` | whole numbers |
+| `f` | decimal numbers |
+| `m` | text with numbers and dbrefs in it, numbers in number order |
+| `name` | dbrefs by their names, case-sensitive |
+| `namei` | dbrefs by their names, ignoring case |
+| `conn` | dbrefs by their connection time |
+| `idle` | dbrefs by their idle time |
+| `owner` | dbrefs by their owners' dbrefs |
+| `loc` | dbrefs by their locations' dbrefs |
+| `ctime` | dbrefs by their creation time |
+| `mtime` | dbrefs by their modification time |
+| `lattr` | attribute names |
 
-  Prefixing the sort type with a minus sign, -, reverses the order of the sort.
+A minus sign before the type, such as `-a`, reverses the order.
 
-  Whether or not the 'a' sort type is case-sensitive or not depends on the particular mush and its environment.
+```sharp
+> think sort(b A a B c C,a)
+A B C a b c
+> think sort(b A a B,-a)
+b a B A
+```
 
 ## Sorting by attribute
 
-  The special sort key attr:`<aname>` or attri:`<aname>` will sort dbrefs according to their `<aname>` attributes. For example: Separating by &factions or &species attrs. attr is probably case-sensitive, and attri is case-insensitive.
-
+`attr:<attribute>` sorts dbrefs by the value of that attribute on each, case-sensitive; `attri:<attribute>` does the same, ignoring case. For instance, `attri:SPECIES` groups characters by their SPECIES attribute.
 
 ::: seealso
 - [SORT()]

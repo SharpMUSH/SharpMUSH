@@ -5,7 +5,8 @@
   "lookup": "dateparse()",
   "aliases": ["dateparse"],
   "sections": [
-    {"id": "policies", "heading": "Calendar and ambiguity policies", "lookup": "dateparse policies"},
+    {"id": "forms", "heading": "What it understands", "lookup": "dateparse forms"},
+    {"id": "policies", "heading": "How dates are read", "lookup": "dateparse policies"},
     {"id": "examples", "heading": "Examples", "lookup": "dateparse examples"}
   ]
 }
@@ -14,36 +15,51 @@
 
 `dateparse(<expression>[, <timezone>[, <reference>[, <output>]]])`
 
-Reads one complete English date expression and returns epoch seconds. `output` is `s` (whole seconds, default), `f` (fractional seconds), or `ms` (milliseconds). Use `normalized` to return the resolved local date, exact clock, numeric UTC offset and zone instead of an epoch value. This preserves a zone explicitly written in the expression for confirmations. Numeric expression and reference values always mean epoch **seconds**, irrespective of output precision. `reference` defaults to the instant of the call; provide it for repeatable calculations. The zone defaults to the executor's readable, valid `TZ`, then UTC. A zone in the expression overrides it. Use canonical IANA names such as `America/Chicago`, `UTC`, `Z`, or a numeric offset such as `-05:00`.
+dateparse() reads a date and time written in English, such as `tomorrow 7pm`, and returns it in seconds since 1970.
 
-Supported families include `tomorrow 7pm`, `the day after tomorrow at noon`, `Tuesday 18:30`, `next week Tuesday 18:30`, `in 90 minutes`, `+1h30m`, `in 7 days at 18:30`, `two weeks from now at 7pm`, `October 23 at 7pm`, `23 Oct 2026 19:00`, ISO timestamps, epoch seconds, `a week from Tuesday at 7pm`, `first Saturday of next month at noon`, and `last Friday of November at 18:00`. English month and weekday names accept usual three-letter forms. English word case and repeated spaces are ignored; IANA names retain their canonical spelling, and an optional `at` precedes clocks.
+- `<expression>`: the date and time, at most 512 characters, all of which must be understood. It may name its own zone, which wins over `<timezone>`.
+- `<timezone>`: the zone the expression is read in, as a tz database name such as `America/Chicago`, `UTC`, `Z`, or an offset such as `-05:00`. With none, it is the zone in your `TZ` attribute, or UTC.
+- `<reference>`: the moment, in seconds, that words such as `tomorrow` count from. It is now unless given; give it to get the same answer every time.
+- `<output>`: `s` (whole seconds, the default), `f` (seconds with a fraction), `ms` (milliseconds), or `normalized`: the date, time, offset and zone it read, such as `2026-10-17 19:00:00 -05:00 (America/Chicago)`, to show a player what was understood.
 
-Input is limited to 512 characters and must be consumed completely. Refusal returns `#-1 INCOMPLETE DATE: ...`, `#-1 AMBIGUOUS DATE: ...`, `#-1 UNSUPPORTED DATE: ...`, or `#-1 INVALID DATE: ...` with guidance. `convtime()` retains its existing compatibility behavior.
+A number given as the expression or the reference is always seconds, whatever `<output>` says.
 
-## Calendar and ambiguity policies
+- [dateparse forms]: the expressions it reads, and its errors
+- [dateparse policies]: weekdays, offsets, summer time and what is never guessed
+- [dateparse examples]: tomorrow, offsets, the normalized form and a refusal
 
-A bare weekday means its next occurrence, including today if its clock has not passed. `this Tuesday` means Tuesday of the current Monday-based week; `next Tuesday` is strictly later than today; `next week Tuesday` means Tuesday of the following Monday-based week. Missing years use the reference year. `a week from Tuesday` anchors that bare weekday and then adds seven calendar days. A relative month with an explicit year (`next month 2027`) is contradictory; use a month name and year. Date-only inputs require a clock. A clock alone uses today, even when past. General parsing permits past instants; scene scheduling refuses them.
+## What it understands
 
-Days, weeks and fortnights advance the local calendar and retain the reference clock unless another clock is supplied. Hours, minutes and seconds are elapsed time. For mixed quantities, calendar adjustments happen before elapsed adjustments. A clock combined with only an elapsed offset is refused as contradictory. Months and years are not offset units; give a named date or an ordinal weekday instead.
+dateparse() understands, among others, `tomorrow 7pm`, `the day after tomorrow at noon`, `Tuesday 18:30`, `next week Tuesday 18:30`, `in 90 minutes`, `+1h30m`, `in 7 days at 18:30`, `two weeks from now at 7pm`, `October 23 at 7pm`, `23 Oct 2026 19:00`, ISO timestamps, a number of seconds, `a week from Tuesday at 7pm`, `first Saturday of next month at noon` and `last Friday of November at 18:00`. Month and weekday names can be cut to three letters, case and extra spaces do not matter, and `at` before a time is optional.
 
-DST gaps and repeated clocks are refused; give another clock or an ISO timestamp with an explicit offset. If a numeric offset and named zone are both written, they must agree. `2026-11-01T01:30:00-04:00` and `2026-11-01T01:30:00-05:00` select different instants. Numeric dates such as `03/04`, zone abbreviations such as `CST`, vague dayparts such as `tonight` or `tomorrow evening`, ranges, and recurrences are not guessed.
+What it cannot read returns `#-1 INCOMPLETE DATE: ...`, `#-1 AMBIGUOUS DATE: ...`, `#-1 UNSUPPORTED DATE: ...` or `#-1 INVALID DATE: ...`, followed by what to change. convtime() reads dates its own way, as PennMUSH's does.
+
+## How dates are read
+
+A weekday on its own is the next one, today included if its time has not passed yet. `this Tuesday` is the Tuesday of this week, counted from Monday; `next Tuesday` is the next one after today; `next week Tuesday` is the Tuesday of next week. A date with no year is in the reference's year. `a week from Tuesday` is the coming Tuesday, then seven days on. `next month 2027` contradicts itself: name the month and year instead.
+
+A date needs a time. A time alone is today, even when it has passed. dateparse() itself accepts a past moment; `+scene/schedule` refuses one.
+
+Days, weeks and fortnights move along the calendar and keep the reference's time of day unless another is given; hours, minutes and seconds are counted as elapsed time. When both are given, the calendar moves first. A time together with only an hours-or-minutes offset is refused. Months and years cannot be offsets: name the date, or a weekday such as `first Saturday of next month`.
+
+A time that summer time skips or repeats is refused: give another time, or an ISO timestamp with its offset, since `2026-11-01T01:30:00-04:00` and `2026-11-01T01:30:00-05:00` are different moments. When an expression gives both an offset and a zone, they must agree. dateparse() never guesses at numeric dates such as `03/04`, zone abbreviations such as `CST`, vague times such as `tonight` or `tomorrow evening`, ranges, or repeats.
 
 ## Examples
 
-At reference `1792152000` (2026-10-16 12:00 UTC):
+With the reference `1792152000`, which is 16 October 2026 at 12:00 UTC:
 
 ```sharp
-dateparse(tomorrow 7pm,America/Chicago,1792152000)
+> think dateparse(tomorrow 7pm,America/Chicago,1792152000)
 1792281600
-
-dateparse(+1h30m,UTC,1792152000,ms)
+> think dateparse(+1h30m,UTC,1792152000,ms)
 1792157400000
-
-dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)
+> think dateparse(tomorrow 7pm America/Chicago,UTC,1792152000,normalized)
 2026-10-17 19:00:00 -05:00 (America/Chicago)
-
-dateparse(next Tuesday,UTC,1792152000)
+> think dateparse(next Tuesday,UTC,1792152000)
 #-1 INCOMPLETE DATE: CLOCK TIME REQUIRED; ADD A TIME SUCH AS 19:00 OR NOON
 ```
 
-See also [convtime()] and [timezones].
+::: seealso
+- [convtime()]
+- [timezones]
+:::

@@ -51,6 +51,5 @@ These are privileges, not locks. A privilege says which *kind* of thing the chan
 ::: seealso
 - [@channel joining]
 - [@CHANNEL CLOCK]
-- [@CHANNEL CLOCK]
 - [cflags()]
 :::

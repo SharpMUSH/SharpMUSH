@@ -79,8 +79,8 @@ These commands manipulate power definitions. Only God may use them, with the exc
 - /enable re-enables a disabled power
 - /alias replaces the aliases of an existing power with the space- or comma-separated list given; an empty list clears them. Like PennMUSH, the standard powers answer to PennMUSH's aliases for them: `tel_anywhere` for Tport_Anywhere, `@wall` and `wall` for Announce
 - /letter changes or removes the single-letter abbreviation of an existing power (see [@power letters])
-- /restrict changes power permissions (see help @power registry behavior)
-- /type changes power type(s) (see help @power registry behavior)
+- /restrict changes power permissions (see [@power registry behavior])
+- /type changes power type(s) (see [@power registry behavior])
 - /delete deletes a power completely, removing it from all objects in the database and the removing it permanently from the power table. It requires the exact power name or alias to be used. Be very very careful with this.
 - /decompile shows a power's full definition
 

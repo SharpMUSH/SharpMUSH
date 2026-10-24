@@ -36,8 +36,6 @@ A function call with one or two `!` before its name gives 1 or 0 about its resul
 - `!$` and `!!$` test for text: `!$` is 1 when the result is empty, `!!$` when it is not.
 - `!^` and `!!^` test truth the way `t()` does: `!^` is like `not()`, `!!^` like `t()`.
 
-Output: 1 or 0.
-
 The idea comes from RhostMUSH. PennMUSH has no bangs: there `!strlen(abc)` is text, and `[!strlen(abc)]` is an unknown function.
 
 - [bang notation placement]: where a bang is read, and bangs in substitutions

@@ -19,11 +19,13 @@
 
 With no arguments, @config lists the categories of configuration options for the MUSH. With an argument, @config lists the options in the given `<category>`, or shows the current value of the given `<option>`.
 
-Output: when exactly one option matches, its value, as `config()` returns it; otherwise nothing.
+When exactly one option matches, `@config` outputs its value, as `config()` returns it; otherwise it outputs nothing.
 
 Only God can see the SQL credentials (sql_username, sql_database). The SQL password is not a configuration option: it is the `sql.password` secret, which nobody can see. See [@secret].
 
-For information about parameters, see [@config parameters]
+For information about parameters, see [@config parameters].
+
+`/list` and `/lowercase` are accepted, as in PennMUSH, and list the same way as `@config` alone.
 
 - [@config set]: which values an option takes, and what cannot be set
 - [@config stored]: where a change is kept, and options the game does not read

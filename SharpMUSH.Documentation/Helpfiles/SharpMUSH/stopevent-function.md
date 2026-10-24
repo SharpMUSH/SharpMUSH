@@ -11,7 +11,7 @@
 -->
 # stopevent()
 
-`STOPEVENT()`
+`stopevent()`
 
 Called from an event handler attribute of a stoppable event, keeps the attributes after it from running. The attribute that calls it runs to the end. It returns nothing.
 

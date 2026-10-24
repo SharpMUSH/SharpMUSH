@@ -448,7 +448,6 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 - [@quota]
 - [QUOTA()]
 - [@power]
-- [@power]
 :::
 
 # Regexp Examples
@@ -545,8 +544,6 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 - [LOCKING]
 - [verbs]
 - [attributes]
-- [@asuccess]
-- [@asuccess]
 - [@asuccess]
 :::
 

@@ -105,18 +105,15 @@
 -->
 # Compatibility Parser
 
-Deliberate differences in how a line is parsed, dispatched and evaluated. SharpMUSH does not intend
-to change any of these to match PennMUSH.
+Deliberate differences in how a line is parsed, dispatched and evaluated. SharpMUSH does not intend to change any of these to match PennMUSH.
 
 ## The command word is not evaluated for built-in dispatch
 
 **A choice.**
 
-**PennMUSH** evaluates the first word of a command line before matching it, so
-`[strcat(th,ink)] hello` runs `think`.<br>
+**PennMUSH** evaluates the first word of a command line before matching it, so `[strcat(th,ink)] hello` runs `think`.<br>
 **SharpMUSH** matches the built-in command word literally.<br>
-**Why.** A command name that only exists after evaluation cannot be checked against a lock, a hook or
-a restriction before it runs.<br>
+**Why.** A command name that only exists after evaluation cannot be checked against a lock, a hook or a restriction before it runs.<br>
 **Workaround.** Build command names as literal text, or dispatch through `@switch`.
 
 ```sharp
@@ -124,19 +121,16 @@ a restriction before it runs.<br>
 think hello
 ```
 
-This is specifically about matching a built-in command name. Once built-in dispatch has not matched,
-`$`-commands *are* matched against the fully evaluated line (a separate, later stage).
+This is specifically about matching a built-in command name. Once built-in dispatch has not matched, `$`-commands *are* matched against the fully evaluated line (a separate, later stage).
 
 ## Malformed expressions are an error, not silent text
 
 **A choice.**
 
-**PennMUSH** evaluates almost anything: an unclosed `[`, `(`, or `{`, or a trailing `\` still
-produces output.<br>
+**PennMUSH** evaluates almost anything: an unclosed `[`, `(`, or `{`, or a trailing `\` still produces output.<br>
 **SharpMUSH** answers `#-1 PARSER FAILURE` for an unbalanced expression.<br>
 **Why.** Silent recovery turns a typo into output that looks deliberate.<br>
-**Workaround.** Balance your brackets. Orphaned closers with no opener, such as a stray `]`, are
-still literal text, as in PennMUSH.
+**Workaround.** Balance your brackets. Orphaned closers with no opener, such as a stray `]`, are still literal text, as in PennMUSH.
 
 ```sharp
 > think [add(1,2)
@@ -149,8 +143,7 @@ still literal text, as in PennMUSH.
 
 **A choice.**
 
-**PennMUSH** runs the arguments for their side effects first: `not(setq(0,x),1)` sets `%q0` and then
-reports the arity error.<br>
+**PennMUSH** runs the arguments for their side effects first: `not(setq(0,x),1)` sets `%q0` and then reports the arity error.<br>
 **SharpMUSH** validates the argument count first, so those side effects do not happen.<br>
 **Why.** A miscalled function should not change the world.<br>
 **Workaround.** Do not rely on side effects in the arguments of a miscalled function.
@@ -169,8 +162,7 @@ reports the arity error.<br>
 **Why.** The limits exist to bound the work a single line can cause; continuing past one does not.<br>
 **Workaround.** Expect no output after the point where a limit is reached.
 
-An attribute that calls itself reaches the recursion limit. PennMUSH goes on to append an `x` for
-every call that had already started and counts the result, answering 86 here; SharpMUSH stops:
+An attribute that calls itself reaches the recursion limit. PennMUSH goes on to append an `x` for every call that had already started and counts the result, answering 86 here; SharpMUSH stops:
 
 ```sharp
 > &RECURSE me=[u(me/RECURSE)]x
@@ -182,13 +174,9 @@ every call that had already started and counts the result, answering 86 here; Sh
 
 **A choice.**
 
-**PennMUSH** counts every recursive call of its expression parser against `call_limit` (each
-bracket, function argument and attribute body, `src/parse.c:2128`) and ships it at 100.<br>
-**SharpMUSH** counts function calls and attribute evaluations, about a third as many for the same
-code, and starts a new game at 1000.<br>
-**Why.** At 100 the call limit would trip before `function_recursion_limit` (50) on ordinary
-self-recursion, so `&X me=[u(me/X)]` would report `CALL LIMIT EXCEEDED` where PennMUSH reports
-`FUNCTION RECURSION LIMIT EXCEEDED`. 1000 keeps the recursion limit the one that answers.<br>
+**PennMUSH** counts every recursive call of its expression parser against `call_limit` (each bracket, function argument and attribute body, `src/parse.c:2128`) and ships it at 100.<br>
+**SharpMUSH** counts function calls and attribute evaluations, about a third as many for the same code, and starts a new game at 1000.<br>
+**Why.** At 100 the call limit would trip before `function_recursion_limit` (50) on ordinary self-recursion, so `&X me=[u(me/X)]` would report `CALL LIMIT EXCEEDED` where PennMUSH reports `FUNCTION RECURSION LIMIT EXCEEDED`. 1000 keeps the recursion limit the one that answers.<br>
 **Workaround.** None needed. A game that wants a tighter bound can lower it with `@config/set`.
 
 PennMUSH answers `100`:
@@ -202,16 +190,9 @@ PennMUSH answers `100`:
 
 **A choice.**
 
-**PennMUSH** splices each list element into the pattern as text and then evaluates it, so element
-text containing softcode executes.<br>
-**SharpMUSH** reads `##` as the element and `#@` as its position, from the outermost `iter()` or
-`@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\`
-they stay `##` and `#@`, where PennMUSH has already spliced the value. `#$` in `switch()`,
-`reswitch()`, `@switch` and `@select` works the same way: it reads the subject of the outermost one
-whose action it is written in, and the subject is never re-evaluated. The `innermost_tokens` option
-makes all three name the innermost loop or switch instead, as TinyMUX does.<br>
-**Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can
-influence becomes executable.<br>
+**PennMUSH** splices each list element into the pattern as text and then evaluates it, so element text containing softcode executes.<br>
+**SharpMUSH** reads `##` as the element and `#@` as its position, from the outermost `iter()` or `@dolist` they are written in, and does not re-evaluate element text. Inside `lit()` or after `\` they stay `##` and `#@`, where PennMUSH has already spliced the value. `#$` in `switch()`, `reswitch()`, `@switch` and `@select` works the same way: it reads the subject of the outermost one whose action it is written in, and the subject is never re-evaluated. The `innermost_tokens` option makes all three name the innermost loop or switch instead, as TinyMUX does.<br>
+**Why.** Splice-then-evaluate is a code-injection path: any list whose contents a player can influence becomes executable.<br>
 **Workaround.** Use `u()` or an explicit evaluation where you meant to run the element.
 
 ```sharp
@@ -228,16 +209,10 @@ a b
 
 **A choice.**
 
-**PennMUSH** replaces `#$` only in `switch()`, `switchall()`, `reswitch()`, `@switch` and `@select`. In
-`case()`, `caseall()`, `if()` and `ifelse()` it is plain text.<br>
-**SharpMUSH** also replaces it in the action of `case()` and `caseall()`, with their subject, and in the
-branch of `if()` and `ifelse()`, with the evaluated condition, as TinyMUX does. A `switch()` around them or
-inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there.
-The branch of an `if()` or `ifelse()` also counts as a switch for `stext()`, `%$<n>` and `slev()`, so
-`%$0` there is the condition and `%$1` the switch around it.<br>
+**PennMUSH** replaces `#$` only in `switch()`, `switchall()`, `reswitch()`, `@switch` and `@select`. In `case()`, `caseall()`, `if()` and `ifelse()` it is plain text.<br>
+**SharpMUSH** also replaces it in the action of `case()` and `caseall()`, with their subject, and in the branch of `if()` and `ifelse()`, with the evaluated condition, as TinyMUX does. A `switch()` around them or inside them still takes `#$` first, so code written for PennMUSH reads the same switch it read there. The branch of an `if()` or `ifelse()` also counts as a switch for `stext()`, `%$<n>` and `slev()`, so `%$0` there is the condition and `%$1` the switch around it.<br>
 **Why.** The token then means the same thing in every function that matches or tests a value.<br>
-**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`. Inside an `if()`, use `%$1` or
-`stext(1)` for the switch around it, or `%$L` for the outermost.
+**Workaround.** Write `\#$` or `lit(#$)` where you want the text `#$`. Inside an `if()`, use `%$1` or `stext(1)` for the switch around it, or `%$L` for the outermost.
 
 ```sharp
 > think case(moof,moof,#$)
@@ -256,12 +231,9 @@ a
 
 **A choice.**
 
-**PennMUSH** builds the called function's name from evaluated output, so `[setq(0,add)]%q0(1,2)`
-calls `add`.<br>
-**SharpMUSH** recognises function names lexically; a name that only appears after substitution is
-ordinary text.<br>
-**Why.** The same reason as the command word: a call that does not exist until evaluation cannot be
-restricted.<br>
+**PennMUSH** builds the called function's name from evaluated output, so `[setq(0,add)]%q0(1,2)` calls `add`.<br>
+**SharpMUSH** recognises function names lexically; a name that only appears after substitution is ordinary text.<br>
+**Why.** The same reason as the command word: a call that does not exist until evaluation cannot be restricted.<br>
 **Workaround.** `switch()` on the name, or store the call in an attribute and `u()` it.
 
 PennMUSH answers `3` to the first line:
@@ -277,15 +249,10 @@ add(1,2)
 
 **A choice.**
 
-**PennMUSH** keeps a tab character typed straight after a function's `(` or an argument's `,`, and
-trims only spaces there, so `strlen(<tab>a)` is 2.<br>
-**SharpMUSH** treats a tab in that position like a newline, as layout that separates tokens, and
-drops it: `strlen(<tab>a)` is 1, and `strlen(<tab>)` is 0 where PennMUSH answers 1. A tab anywhere
-else in an argument is kept, so `strlen(a<tab>b)` is 3 on both.<br>
-**Why.** It lets softcode be indented over several lines, with tabs, without changing what it
-evaluates to.<br>
-**Workaround.** Write the tab as `%t`, or put anything evaluated, even an empty `[space(0)]`, in front
-of it. `%t` is kept in every position on both servers:
+**PennMUSH** keeps a tab character typed straight after a function's `(` or an argument's `,`, and trims only spaces there, so `strlen(<tab>a)` is 2.<br>
+**SharpMUSH** treats a tab in that position like a newline, as layout that separates tokens, and drops it: `strlen(<tab>a)` is 1, and `strlen(<tab>)` is 0 where PennMUSH answers 1. A tab anywhere else in an argument is kept, so `strlen(a<tab>b)` is 3 on both.<br>
+**Why.** It lets softcode be indented over several lines, with tabs, without changing what it evaluates to.<br>
+**Workaround.** Write the tab as `%t`, or put anything evaluated, even an empty `[space(0)]`, in front of it. `%t` is kept in every position on both servers:
 
 ```sharp
 > think strlen(%ta)
@@ -298,11 +265,8 @@ of it. `%t` is kept in every position on both servers:
 
 **A choice.**
 
-**PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow
-extra unescaped commas (`capstr(a,b,c)` capitalises the string `a,b,c`), though it now warns that
-this is deprecated.<br>
-**SharpMUSH** treats every comma as an argument separator, so `capstr(a,b,c)` is a
-too-many-arguments error.<br>
+**PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow extra unescaped commas (`capstr(a,b,c)` capitalises the string `a,b,c`), though it now warns that this is deprecated.<br>
+**SharpMUSH** treats every comma as an argument separator, so `capstr(a,b,c)` is a too-many-arguments error.<br>
 **Why.** It avoids silently changing what counts as an argument.<br>
 **Workaround.** Escape the commas (`\,`) or brace the text.
 
@@ -311,40 +275,26 @@ too-many-arguments error.<br>
 A,b,c
 ```
 
-Where SharpMUSH gives a function an optional argument PennMUSH does not have (see
-[compatibility arguments]), a PennMUSH-era call with an unescaped comma does not fail: it passes that
-argument instead. `strlen()` is one.
+Where SharpMUSH gives a function an optional argument PennMUSH does not have (see [compatibility arguments]), a PennMUSH-era call with an unescaped comma does not fail: it passes that argument instead. `strlen()` is one.
 
 ## A command that crashes says so
 
 **A choice.**
 
 **PennMUSH** has no equivalent.<br>
-**SharpMUSH** answers `#-1 EXCEPTION: <json>` when an internal error escapes a command, and notifies
-the player with the same text.<br>
-**Why.** Producing no output at all is indistinguishable from a command that did nothing on
-purpose.<br>
+**SharpMUSH** answers `#-1 EXCEPTION: <json>` when an internal error escapes a command, and notifies the player with the same text.<br>
+**Why.** Producing no output at all is indistinguishable from a command that did nothing on purpose.<br>
 **Workaround.** See [exception] for the payload and what a mortal versus a wizard is shown.<br>
-**No example.** A command that crashes is a defect, and none is kept around to show this with. Once
-one is found it is fixed, so there is no command whose output could stand as the example.
+**No example.** A command that crashes is a defect, and none is kept around to show this with. Once one is found it is fixed, so there is no command whose output could stand as the example.
 
 ## A failing function says why
 
 **A choice.**
 
-**PennMUSH** answers many failures with a bare `#-1` (or `#-2`, `#-3`), sometimes notifying the
-reason separately and often not giving one at all.<br>
-**SharpMUSH** puts the reason after the number: `#-1 PERMISSION DENIED`, `#-1 NO MATCH`,
-`#-1 NO ZONE SET`, `#-1 NO DROP-TO`, `#-2 I DON'T KNOW WHICH ONE YOU MEAN`, `#-2 VARIABLE
-DESTINATION`, `#-3 HOME`, and so on. Where PennMUSH notified a reason and returned a bare `#-1`, as
-`hidden()` did, the reason is now the return value and nothing is notified. A function that looks an
-object up still says "I can't see that here." when the match fails, as PennMUSH's does.<br>
-**Why.** A bare `#-1` reads the same whether the object was missing, refused, or simply had nothing
-to report, and a notification sent from inside `iter()` arrives once per element.<br>
-**Workaround.** Test the prefix, as PennMUSH's own test suite does: `strmatch(%0,#-*)`, or `t()`,
-which is false for anything starting `#-`. Code that compares with `=` or `eq()` against exactly
-`#-1` needs the prefix test instead. `namelist()` keeps one-word `#-1` and `#-2` entries, because each
-entry is a position in a list.
+**PennMUSH** answers many failures with a bare `#-1` (or `#-2`, `#-3`), sometimes notifying the reason separately and often not giving one at all.<br>
+**SharpMUSH** puts the reason after the number: `#-1 PERMISSION DENIED`, `#-1 NO MATCH`, `#-1 NO ZONE SET`, `#-1 NO DROP-TO`, `#-2 I DON'T KNOW WHICH ONE YOU MEAN`, `#-2 VARIABLE DESTINATION`, `#-3 HOME`, and so on. Where PennMUSH notified a reason and returned a bare `#-1`, as `hidden()` did, the reason is now the return value and nothing is notified. A function that looks an object up still says "I can't see that here." when the match fails, as PennMUSH's does.<br>
+**Why.** A bare `#-1` reads the same whether the object was missing, refused, or simply had nothing to report, and a notification sent from inside `iter()` arrives once per element.<br>
+**Workaround.** Test the prefix, as PennMUSH's own test suite does: `strmatch(%0,#-*)`, or `t()`, which is false for anything starting `#-`. Code that compares with `=` or `eq()` against exactly `#-1` needs the prefix test instead. `namelist()` keeps one-word `#-1` and `#-2` entries, because each entry is a position in a list.
 
 ```sharp
 > think zone(me)
@@ -358,10 +308,8 @@ entry is a position in a list.
 **A choice.**
 
 **Affects** `setunion() setdiff() setinter() setsymdiff()`.<br>
-**PennMUSH** answers `#-1 SEPARATOR MUST BE ONE CHARACTER` to a `<delimiter>` longer than one
-character, once either list is non-empty.<br>
-**SharpMUSH** splits both lists on the whole `<delimiter>` and joins the answer with it, unless an
-`<osep>` is given.<br>
+**PennMUSH** answers `#-1 SEPARATOR MUST BE ONE CHARACTER` to a `<delimiter>` longer than one character, once either list is non-empty.<br>
+**SharpMUSH** splits both lists on the whole `<delimiter>` and joins the answer with it, unless an `<osep>` is given.<br>
 **Why.** Data held in softcode lists often already contains every single character.<br>
 **Workaround.** Use a one-character `<delimiter>`; it means the same on both servers.
 
@@ -377,12 +325,9 @@ b
 **A choice.**
 
 **Affects** `mailstats() maildstats() mailfstats()` with no `<player>`.<br>
-**PennMUSH** turns a Wizard's empty `<player>` into "all mail" (`extmail.c:2238-2242`), then
-rejects that as no player before its all-mail branch is reached. The Wizard is told ": No such
-player." and gets nothing back.<br>
+**PennMUSH** turns a Wizard's empty `<player>` into "all mail" (`extmail.c:2238-2242`), then rejects that as no player before its all-mail branch is reached. The Wizard is told ": No such player." and gets nothing back.<br>
 **SharpMUSH** gives a Wizard their own statistics, as it gives everyone else.<br>
-**Why.** [mailstats()] documents `mailstats([<player>])` as your own statistics, and PennMUSH's
-answer is an error nobody could have relied on.<br>
+**Why.** [mailstats()] documents `mailstats([<player>])` as your own statistics, and PennMUSH's answer is an error nobody could have relied on.<br>
 **Workaround.** None needed: `mailstats(me)` means the same on both servers.
 
 ```sharp
@@ -395,12 +340,9 @@ answer is an error nobody could have relied on.<br>
 **A choice.**
 
 **PennMUSH** has no `%>` substitution, so it evaluates `%>` to a plain `>`.<br>
-**SharpMUSH** substitutes the output of the last command run in the same queue entry: after
-`@dig Kitchen`, `%>` is the new room's dbref. A typed line starts with it empty. See
-[command output].<br>
+**SharpMUSH** substitutes the output of the last command run in the same queue entry: after `@dig Kitchen`, `%>` is the new room's dbref. A typed line starts with it empty. See [command output].<br>
 **Why.** It lets one command's result feed the next without a search or a register.<br>
-**Workaround.** Write a plain `>`, which means the same on both servers. Importing a
-PennMUSH database names every attribute that uses `%>`.
+**Workaround.** Write a plain `>`, which means the same on both servers. Importing a PennMUSH database names every attribute that uses `%>`.
 
 PennMUSH answers `a>b` to the first line:
 
@@ -415,16 +357,10 @@ a>b
 
 **A choice.**
 
-**PennMUSH** has no command piping. It evaluates `%|` to a plain `|`, and runs `;|` as a `;`
-followed by a command that starts with `|` (`; |` too).<br>
-**SharpMUSH** pipes as TinyMUX does: in an action list, a command followed by `;|` has what it
-shows you passed to the next command, which reads it as `%|`. Everywhere else `%|` is empty. See
-[piping].<br>
-**Why.** It lets softcode use what a command shows, which has no function of its own (`look`),
-and TinyMUX code that pipes runs unchanged.<br>
-**Workaround.** Write a plain `|`, which means the same on both servers. No command starts with `|`
-on either server, so `;|` had no use in PennMUSH. Importing a PennMUSH database names every
-attribute that uses `%|` or `;|`.
+**PennMUSH** has no command piping. It evaluates `%|` to a plain `|`, and runs `;|` as a `;` followed by a command that starts with `|` (`; |` too).<br>
+**SharpMUSH** pipes as TinyMUX does: in an action list, a command followed by `;|` has what it shows you passed to the next command, which reads it as `%|`. Everywhere else `%|` is empty. See [piping].<br>
+**Why.** It lets softcode use what a command shows, which has no function of its own (`look`), and TinyMUX code that pipes runs unchanged.<br>
+**Workaround.** Write a plain `|`, which means the same on both servers. No command starts with `|` on either server, so `;|` had no use in PennMUSH. Importing a PennMUSH database names every attribute that uses `%|` or `;|`.
 
 PennMUSH answers `a|b` to the first line:
 
@@ -442,8 +378,7 @@ a|b
 **PennMUSH** has no `%m` substitution, so it evaluates `%m` to a plain `m`.<br>
 **SharpMUSH** substitutes the running command as it was written, as TinyMUX does: `%m` is `%c`.<br>
 **Why.** TinyMUX code that reads the command runs unchanged.<br>
-**Workaround.** Write a plain `m`, which means the same on both servers, and `%c` for the command.
-Importing a PennMUSH database names every attribute that uses `%m`.
+**Workaround.** Write a plain `m`, which means the same on both servers, and `%c` for the command. Importing a PennMUSH database names every attribute that uses `%m`.
 
 PennMUSH answers `m|think %m|%c` to the line:
 
@@ -456,16 +391,10 @@ think %m|%c|think %m|%c
 
 **A choice.**
 
-**PennMUSH** evaluates `%=` to the attribute being evaluated, such as `#1/FN`, and `<name>` after it
-is text, so `%=<desc>` in an attribute is `#1/FN<desc>`.<br>
-**SharpMUSH** reads `%=<name>` as TinyMUX does: the executor's attribute `<name>`, as `v(<name>)`
-would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is still
-PennMUSH's: the attribute being evaluated, such as `#1/FN`, or `#LAMBDA/<code>` inside a
-`#lambda`, and empty outside one.<br>
+**PennMUSH** evaluates `%=` to the attribute being evaluated, such as `#1/FN`, and `<name>` after it is text, so `%=<desc>` in an attribute is `#1/FN<desc>`.<br>
+**SharpMUSH** reads `%=<name>` as TinyMUX does: the executor's attribute `<name>`, as `v(<name>)` would, or, when `<name>` is a number, that argument, as `%<name>` would. `%=` on its own is still PennMUSH's: the attribute being evaluated, such as `#1/FN`, or `#LAMBDA/<code>` inside a `#lambda`, and empty outside one.<br>
 **Why.** TinyMUX code that reads attributes, and arguments past `%9`, this way runs unchanged.<br>
-**Workaround.** Use `v(<name>)` for an attribute, which means the same on both servers, and
-`%<name>` for a numbered argument. Importing a PennMUSH database names every attribute that uses
-`%=<`.
+**Workaround.** Use `v(<name>)` for an attribute, which means the same on both servers, and `%<name>` for a numbered argument. Importing a PennMUSH database names every attribute that uses `%=<`.
 
 ```sharp
 > &MUXDOC me=hello
@@ -477,14 +406,10 @@ hello
 
 **A choice.**
 
-**PennMUSH** has no `%*` substitution and prints the character after the `%`, so `%*<|>` is
-`*<|>`. RhostMUSH and TinyMUX do the same.<br>
-**SharpMUSH** reads `%*<text>` as `<text>` marked as a list separator. A list function given a
-marked delimiter splits only where it is marked: see [list separators].<br>
-**Why.** A list item can then hold its delimiter's characters, such as a `|` in a box border, without
-splitting.<br>
-**Workaround.** Write `*<` without the `%` where the text was meant. Importing a PennMUSH database
-names every attribute that uses `%*<`.
+**PennMUSH** has no `%*` substitution and prints the character after the `%`, so `%*<|>` is `*<|>`. RhostMUSH and TinyMUX do the same.<br>
+**SharpMUSH** reads `%*<text>` as `<text>` marked as a list separator. A list function given a marked delimiter splits only where it is marked: see [list separators].<br>
+**Why.** A list item can then hold its delimiter's characters, such as a `|` in a box border, without splitting.<br>
+**Workaround.** Write `*<` without the `%` where the text was meant. Importing a PennMUSH database names every attribute that uses `%*<`.
 
 ```sharp
 > think words(a|b%*<|>c,%*<|>)
