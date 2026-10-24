@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-high-fantasy-pixel-player-world", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-christian-fiction-kemono-player-channels", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-high-fantasy-pixel-player-sign-in", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-high-fantasy-pixel-shared-welcome", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-christian-fiction-kemono-player-speak-act", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
