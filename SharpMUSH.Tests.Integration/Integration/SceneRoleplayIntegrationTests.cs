@@ -1133,9 +1133,9 @@ public class SceneRoleplayIntegrationTests
 		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
 		{
 			var notes = await RunAndCollectNotificationsAs(janeHandle, command);
-			// Each hearer gets the pose's rule and the line in one message; the line is its last.
-			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
-			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
+			// Each hearer gets the pose's rule, the line and its footer in one message; the line is the middle one.
+			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[1]).ToList();
+			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[1]).ToList();
 
 			await Assert.That(speakerLines).IsEquivalentTo(new[] { $"You say, \"{text}\"" })
 				.Because($"PennMUSH do_say sends the speaker the first-person line only ({command})");
@@ -1181,6 +1181,12 @@ public class SceneRoleplayIntegrationTests
 			.Because("a player-set FORMAT`SAY must override the default render");
 		await Assert.That(hugoObserver.Message).Contains($"Hugo_{Tag}: with format")
 			.Because("the custom format renders name + message");
+		var irisHeard = hugoSay.Where(n => n.Recipient == Num(iris)).Select(n => n.Message).ToList();
+		var lineAt = irisHeard.FindIndex(m => m.Contains("with format"));
+		await Assert.That(irisHeard.FindIndex(m => m.Contains($"Hugo_{Tag} · pose "))).IsGreaterThanOrEqualTo(0).And.IsLessThan(lineAt)
+			.Because("the room gets the pose's rule before a line its speaker formats");
+		await Assert.That(irisHeard.FindLastIndex(m => m.Contains($"< Scene {hugoScene} >"))).IsGreaterThan(lineAt)
+			.Because("and the footer after it");
 
 		// Iris has no FORMAT`SAY → default literal third-person "Name says, \"…\"".
 		var irisSay = await RunAndCollectNotificationsAs(irisHandle, "say no format");

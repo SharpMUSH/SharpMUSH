@@ -188,9 +188,11 @@ public class ScenePoseTypeIntegrationTests
 		await As(poser, $"+scene/narrate {scene}={line}");
 
 		var pose = await Eval($"last(sceneposes({scene}))");
-		await Assert.That(Notifications.For(witness.DbRef).Skip(before).Single(message => message.Contains(line, StringComparison.Ordinal)))
-			.Contains($"pose {pose}").And.Contains($"< Scene {scene} >").And.EndsWith(line)
-			.Because("narration is drawn under the pose's rule, with the scene on the right");
+		var heard = Notifications.For(witness.DbRef).Skip(before).Single(message => message.Contains(line, StringComparison.Ordinal)).Split('\n');
+		await Assert.That(heard).Count().IsEqualTo(3).Because("narration is drawn between the pose's rule and its footer");
+		await Assert.That(heard[0]).Contains($"pose {pose}").Because("the rule names the pose");
+		await Assert.That(heard[1]).IsEqualTo(line);
+		await Assert.That(heard[2]).Contains($"< Scene {scene} >").Because("the footer names the scene");
 		await Assert.That(await Eval($"scenepose({scene},{pose},type)")).IsEqualTo("narration");
 		await Assert.That(await Eval($"scenepose({scene},{pose},source)")).IsEqualTo("emit");
 	}

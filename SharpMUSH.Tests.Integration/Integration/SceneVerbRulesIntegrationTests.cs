@@ -394,7 +394,8 @@ public class SceneVerbRulesIntegrationTests
 
 		await Assert.That(said).Contains($"Thunder rolls {Tag}.");
 		await Assert.That(said).Contains($"Frame{Tag} · pose {pose}").Because("the rule names who posed and the pose, as for a captured pose");
-		await Assert.That(said).Contains($"< Scene {id} >").Because("the rule carries the scene on its right");
+		await Assert.That(said.IndexOf($"< Scene {id} >", StringComparison.Ordinal)).IsGreaterThan(said.IndexOf($"Thunder rolls {Tag}.", StringComparison.Ordinal))
+			.Because("the footer under the pose carries the scene");
 	}
 
 	[Test]
