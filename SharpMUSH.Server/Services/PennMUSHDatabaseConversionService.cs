@@ -28,8 +28,8 @@ public sealed class PennMUSHDatabaseConversionService(StartupImportCoordinator i
 		}
 		catch (Exception error)
 		{
-			logger.LogError("Startup import failed before serving: {ErrorType}", error.GetType().Name);
-			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.GetType().Name);
+			logger.LogError(error, "Startup import failed before serving: {Reason}", error.Message);
+			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.Message);
 		}
 	}
 }

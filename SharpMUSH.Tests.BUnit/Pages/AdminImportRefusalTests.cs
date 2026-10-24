@@ -167,6 +167,26 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
+	/// <summary>A conversion that failed applied nothing, so it does not say the mush.cnf was applied.</summary>
+	[Test]
+	public async Task DatabaseImport_AFailedConversion_DoesNotReportTheMushCnfApplied()
+	{
+		AddServices((_, path) => path switch
+		{
+			"api/databaseconversion/upload" => Started(),
+			"api/databaseconversion/progress/s1" => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionProgress
+			{
+				TotalObjects = 10, ProcessedObjects = 10, CurrentPhase = "Done", PercentageComplete = 100
+			})),
+			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult { Errors = ["Not a PennMUSH database."] }))
+		});
+
+		var cut = await StartConversionWithConfig();
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-grid"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Markup).Contains("ConversionErrors").And.DoesNotContain("AdmImportConfigApplied");
+	}
+
 	/// <summary>
 	/// Softcode the import rewrote is listed on its own, every attribute, apart from the warnings, so an
 	/// administrator can go through the list and test each one.
