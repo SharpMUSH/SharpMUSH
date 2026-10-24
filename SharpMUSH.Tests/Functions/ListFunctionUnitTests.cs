@@ -307,6 +307,26 @@ public class ListFunctionUnitTests
 	}
 
 	/// <summary>
+	/// <c>attr:</c> and <c>attri:</c> sort dbrefs by an attribute's value (<c>gen_db_attr</c>, <c>src/sort.c</c>):
+	/// case-sensitive and not, a minus reversing it, the type name in any case, ties by dbref and anything that
+	/// is not an object last. The expected orders are PennMUSH 1.8.8's for the same values.
+	/// </summary>
+	[Test]
+	public async Task SortByAttributeContent()
+	{
+		var beta = await CreateObjectWithAttribute(TestIsolationHelpers.GenerateUniqueName("SortAttr"), "SORTKEY", "beta");
+		var upper = await CreateObjectWithAttribute(TestIsolationHelpers.GenerateUniqueName("SortAttr"), "SORTKEY", "Alpha");
+		var lower = await CreateObjectWithAttribute(TestIsolationHelpers.GenerateUniqueName("SortAttr"), "SORTKEY", "alpha");
+		var list = $"#{beta} #{upper} #{lower}";
+
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"[sort({list},attr:SORTKEY)]|[sort({list},attri:SORTKEY)]|[sort({list},-attr:SORTKEY)]|[sort({list},ATTR:SORTKEY)]|[sort({list} #-1 foo,attr:SORTKEY)]"));
+
+		await Assert.That(result.ToPlainText()).IsEqualTo(
+			$"#{upper} #{lower} #{beta}|#{upper} #{lower} #{beta}|#{beta} #{lower} #{upper}|#{upper} #{lower} #{beta}|#{upper} #{lower} #{beta} #-1 foo");
+	}
+
+	/// <summary>
 	/// <c>fun_v</c> reads <c>%0</c>-<c>%9</c> only for a single digit (<c>src/fundb.c:452-468</c>);
 	/// <c>v(10)</c> is the attribute named 10, not the eleventh argument.
 	/// </summary>
