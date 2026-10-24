@@ -139,7 +139,7 @@ public partial class PennMUSHDatabaseConverter
 				options with { Database = database }), cancellationToken);
 			context.WrittenDatabaseOptions = database;
 			_configurationReload?.SignalChange();
-			context.Warnings.Add($"Created a new Package Manager '{name}' at #{packageManager.Number}, past the imported " +
+			context.Notes.Add($"Created a new Package Manager '{name}' at #{packageManager.Number}, past the imported " +
 				"objects, and set package_manager to it.");
 
 			var reinstalled = _bundledPackages is null
@@ -148,7 +148,7 @@ public partial class PennMUSHDatabaseConverter
 			var missing = context.UninstalledPackages.Except(reinstalled, StringComparer.Ordinal).ToList();
 			if (reinstalled.Count > 0)
 			{
-				context.Warnings.Add($"Installed the package(s) {string.Join(", ", reinstalled)} again.");
+				context.Notes.Add($"Installed the package(s) {string.Join(", ", reinstalled)} again.");
 			}
 
 			// An attach-mode package is skipped while its handler is unset, which the import does to an option

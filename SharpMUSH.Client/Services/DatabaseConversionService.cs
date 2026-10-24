@@ -106,6 +106,14 @@ public class DatabaseConversionService(ILogger<DatabaseConversionService> logger
 	public Task<ApiResult<Success>> RollbackAsync(string sessionId) =>
 		Client.PostApiAsync($"/api/databaseconversion/rollback/{Uri.EscapeDataString(sessionId)}", new { confirmRestart = true });
 
+	/// <summary>Whether the world the last promotion replaced is still kept; while it is, no other preview can be promoted.</summary>
+	public Task<ApiResult<PreviousWorldStatus>> GetPreviousWorldAsync() =>
+		Client.GetApiAsync<PreviousWorldStatus>("/api/databaseconversion/previous", "The server did not say whether it keeps a previous world.");
+
+	/// <summary>Deletes the world the last promotion replaced. That import can no longer be rolled back.</summary>
+	public Task<ApiResult<Success>> DiscardPreviousWorldAsync() =>
+		Client.PostApiAsync("/api/databaseconversion/previous/discard", new { confirmDiscard = true });
+
 	private class UploadResponse
 	{
 		public string SessionId { get; set; } = string.Empty;

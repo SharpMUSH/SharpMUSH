@@ -13,9 +13,10 @@ public sealed class ImportSessionRegistry(ImportPreviewCoordinator previews, Imp
 {
 	private readonly ConcurrentDictionary<string, (CancellationTokenSource Cancellation, Task Work)> _running = new();
 
-	public string Start(DatabaseImportFiles files, string? configuration, ConfigurationSnapshot baseline, string uploadDirectory)
+	public string Start(DatabaseImportFiles files, string? configuration, ConfigurationSnapshot baseline, string uploadDirectory,
+		DateTimeOffset? started = null, string? sourceFile = null)
 	{
-		var session = journal.Create();
+		var session = journal.Create(started, sourceFile);
 		var cancellation = CancellationTokenSource.CreateLinkedTokenSource(lifetime.ApplicationStopping);
 		var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		if (!_running.TryAdd(session.Id, (cancellation, completion.Task))) throw new InvalidOperationException("Duplicate import identifier.");

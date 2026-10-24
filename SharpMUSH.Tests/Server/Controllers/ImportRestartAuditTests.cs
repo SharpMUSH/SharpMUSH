@@ -43,7 +43,7 @@ public class ImportRestartAuditTests
 			var http = new DefaultHttpContext();
 			http.Features.Set<IHttpResponseFeature>(feature);
 			var controller = new DatabaseConversionController(null!, journal, null!, Substitute.For<IStorageCapacityService>(),
-				audit, lifetime, NullLogger<DatabaseConversionController>.Instance)
+				audit, lifetime, TimeProvider.System, NullLogger<DatabaseConversionController>.Instance)
 			{ ControllerContext = new ControllerContext { HttpContext = http } };
 			var confirmation = new DatabaseConversionController.RestartConfirmation(true);
 			var result = rollback ? await controller.Rollback(session.Id, confirmation, CancellationToken.None)

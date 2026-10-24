@@ -116,6 +116,7 @@ public static partial class RhostDatabaseTranslator
 			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
 			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
 		database.ImportNotes = report.Finish();
+		database.RoutineNotes = report.FinishRoutine();
 		database.SoftcodeRewrites = report.Rewrites;
 		return database;
 	}
@@ -398,7 +399,7 @@ public static partial class RhostDatabaseTranslator
 		{
 			if (RhostNameTables.SkippedAttributes.TryGetValue(attribute.Number, out var reason))
 			{
-				report.Note($"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef);
+				report.Note($"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef, routine: true);
 				return null;
 			}
 
@@ -603,6 +604,9 @@ public static partial class RhostDatabaseTranslator
 	{
 		private readonly SortedDictionary<string, List<int>> _decisions = new(StringComparer.Ordinal);
 
+		/// <summary>RhostMUSH's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
+		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
+
 		public List<string> Lines { get; } = [];
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
@@ -610,11 +614,12 @@ public static partial class RhostDatabaseTranslator
 
 		public void Line(string line) => Lines.Add(line);
 
-		public void Note(string decision, int dbref)
+		public void Note(string decision, int dbref, bool routine = false)
 		{
-			if (!_decisions.TryGetValue(decision, out var dbrefs))
+			var decisions = routine ? _routine : _decisions;
+			if (!decisions.TryGetValue(decision, out var dbrefs))
 			{
-				_decisions[decision] = dbrefs = [];
+				decisions[decision] = dbrefs = [];
 			}
 
 			if (dbrefs.Count == 0 || dbrefs[^1] != dbref)
@@ -627,14 +632,19 @@ public static partial class RhostDatabaseTranslator
 		{
 			var lines = new List<string>(Lines.Count + _decisions.Count);
 			lines.Add(Lines[0]);
-			foreach (var (decision, dbrefs) in _decisions)
-			{
-				var sample = string.Join(" ", dbrefs.Take(10).Select(d => $"#{d}"));
-				lines.Add($"{decision} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})");
-			}
-
+			lines.AddRange(Decided(_decisions));
 			lines.AddRange(Lines.Skip(1));
 			return lines;
 		}
+
+		public List<string> FinishRoutine() => [.. Decided(_routine)];
+
+		private static IEnumerable<string> Decided(SortedDictionary<string, List<int>> decisions)
+			=> decisions.Select(decision =>
+			{
+				var (text, dbrefs) = decision;
+				var sample = string.Join(" ", dbrefs.Take(10).Select(d => $"#{d}"));
+				return $"{text} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})";
+			});
 	}
 }

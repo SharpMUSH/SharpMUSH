@@ -169,7 +169,73 @@
 	color: var(--text);
 }
 
+/* Routine notes, folded away under the warnings. */
+.dbimport-notes-summary {
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-dim);
+}
+
+.dbimport-notes[open] .dbimport-notes-summary {
+	margin-bottom: 8px;
+}
+
+.dbimport-note-list {
+	margin: 8px 0 0;
+	padding-left: 18px;
+	font-size: 13px;
+	color: var(--text-dim);
+	overflow-wrap: anywhere;
+}
+
+/* One row per import: the file, the server it came from, when, and where it stands. */
+.dbimport-sessions {
+	display: flex;
+	flex-direction: column;
+	padding: 6px 8px 10px;
+}
+
+.dbimport-session {
+	display: grid;
+	grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+	gap: 12px;
+	align-items: baseline;
+	padding: 8px;
+	border: 0;
+	border-radius: var(--radius-tile);
+	background: none;
+	color: var(--text-dim);
+	font: inherit;
+	font-size: 13px;
+	text-align: left;
+	cursor: pointer;
+}
+
+.dbimport-session:hover,
+.dbimport-session:focus-visible {
+	background: var(--surface-2);
+}
+
+.dbimport-session-file {
+	color: var(--text);
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.dbimport-session-started {
+	font-family: var(--font-mono);
+	font-size: 12px;
+}
+
 @container page (max-width: 48rem) {
+	.dbimport-session {
+		grid-template-columns: minmax(0, 1fr) auto;
+		gap: 2px 12px;
+	}
+
 	.dbimport-file-row {
 		flex-wrap: wrap;
 	}

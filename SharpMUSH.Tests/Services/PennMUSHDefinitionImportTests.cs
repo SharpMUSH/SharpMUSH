@@ -107,7 +107,7 @@ public class PennMUSHDefinitionImportTests
 			.Because("the source's table aliases only DESC, SUCC and the like, which SharpMUSH reads through");
 		await Assert.That(result.Warnings.Where(w => w.Contains("does not answer to"))).IsEmpty()
 			.Because("SharpMUSH's flags and powers answer to every alias a stock PennMUSH table gives them (#1508)");
-		await Assert.That(result.Warnings.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
+		await Assert.That(result.Notes.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
 	}
 
 	/// <summary>
@@ -154,8 +154,8 @@ public class PennMUSHDefinitionImportTests
 		var describe = await AttributeEntryAsync(world, "DESCRIBE");
 		await Assert.That(describe!.DefaultFlags).DoesNotContain("wizard")
 			.Because("the source's attribute table makes DESCRIBE wizard-only");
-		await Assert.That(result.Warnings.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("source standard attribute definition(s) already exist"))).IsTrue();
+		await Assert.That(result.Notes.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
+		await Assert.That(result.Notes.Any(w => w.Contains("source standard attribute definition(s) already exist"))).IsTrue();
 	}
 
 	/// <summary>
