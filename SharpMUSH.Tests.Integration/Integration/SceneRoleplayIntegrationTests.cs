@@ -1133,9 +1133,9 @@ public class SceneRoleplayIntegrationTests
 		foreach (var (command, text) in new[] { ("say hello there", "hello there"), ("\"quoted shortcut", "quoted shortcut") })
 		{
 			var notes = await RunAndCollectNotificationsAs(janeHandle, command);
-			// Each hearer gets the pose's rule and the line in one message; the line is its last.
-			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
-			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[^1]).ToList();
+			// Each hearer gets the pose's rule, the line and its footer in one message; the line is the middle one.
+			var speakerLines = notes.Where(n => n.Recipient == Num(jane) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[1]).ToList();
+			var observerLines = notes.Where(n => n.Recipient == Num(kurt) && n.Message.Contains(text)).Select(n => n.Message.Split('\n')[1]).ToList();
 
 			await Assert.That(speakerLines).IsEquivalentTo(new[] { $"You say, \"{text}\"" })
 				.Because($"PennMUSH do_say sends the speaker the first-person line only ({command})");

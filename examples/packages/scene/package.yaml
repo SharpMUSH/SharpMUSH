@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.15.2
+version: 1.16.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -203,8 +203,8 @@ objects:
       #                      sample), %1 the reader, %2 the line with its markup, %3 the scene id (empty for
       #                      a sample). Empty shows that reader nothing. Live lines (INC`CAPTURE`LINE), recall
       #                      and log all go through it.
-      # A pose of a prose or aside type is drawn under a rule naming who posed it and the pose on the left and
-      # the scene on the right. A band, message or notice type has no rule: it is one line, tagged with the
+      # A pose of a prose or aside type is drawn under a rule naming who posed it and the pose, and over a rule
+      # naming the scene. A band, message or notice type has no rule: it is one line, tagged with the
       # scene its FORMAT is given, <OOC · 12>.
       # tone() colours by theme colour rather than by colour, so each reader sees it in their own @theme.
       # A package adding a type attaches both attributes here, as radio-scene does for radio; uninstalling
@@ -230,15 +230,17 @@ objects:
       # 1 when type %0 is drawn under a rule: any type but a band, message or notice, a removed one included.
       FUN`TYPE`FRAMED: |-
         not(match(band message notice,scenetype(lcstr(%0),presentation)))
-      # The rule over pose %1 of scene %0: who posed it and the pose on the left, the scene and the pose's marks
-      # (+scene/mark) on the right, through the POSE`RULE filters. When the line is too narrow for both, the scene
-      # goes first.
+      # The rule over pose %1 of scene %0: who posed it and the pose, on the left.
       FUN`POSE`RULE: |-
-        rule(firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname)) [chr(183)] pose %1,,json(object,title,"left",titles,json(array,json(object,text,json(string,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)),side,"right"))))
-      # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: under its rule when its type has one,
-      # nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
+        rule(firstof(scenepose(%0,%1,showas),scenepose(%0,%1,authorname)) [chr(183)] pose %1,,json(object,title,"left"))
+      # The rule under pose %1 of scene %0: the scene and the pose's marks (+scene/mark) on the right, through the
+      # POSE`RULE filters.
+      FUN`POSE`FOOTER: |-
+        rule(,,json(object,titles,json(array,json(object,text,json(string,u(%!/FUN`FILTER,POSE`RULE,Scene %0[if(words(setr(pose_marks,scenepose(%0,%1,tags))),%b[chr(183)] [edit(%q<pose_marks>,%b,%b[chr(183)]%b)])],%0,%1)),side,"right"))))
+      # Pose %1 of scene %3, type %0 and line %2, as reader %4 sees it: between its rule and footer when its type
+      # has them, nothing when its FORMAT draws nothing for them. Live lines, recall and log all go through it.
       FUN`POSE`DRAW: |-
-        if(strlen(setr(pose_line,u(%!/FUN`TYPE`DRAW,%0,%1,%2,%3,%4))),if(u(%!/FUN`TYPE`FRAMED,%0),u(%!/FUN`POSE`RULE,%3,%1)%r)%q<pose_line>)
+        if(strlen(setr(pose_line,u(%!/FUN`TYPE`DRAW,%0,%1,%2,%3,%4))),if(u(%!/FUN`TYPE`FRAMED,%0),u(%!/FUN`POSE`RULE,%3,%1)%r%q<pose_line>%r[u(%!/FUN`POSE`FOOTER,%3,%1)],%q<pose_line>))
       # The types %0 has hidden from recall and log: the ones they hid with +scene/hide that are still listed,
       # and the ones the game starts hidden that they have not shown with +scene/show.
       FUN`HIDDEN: |-
@@ -330,7 +332,7 @@ objects:
       #   CARD         %0 the body of a scene's card (+scene <id>), between its title and its last rule; %1 the scene
       #   LIST`TITLE   %0 a scene's title in +scene, /old and /mine, with its listed details; %1 the scene
       #   LOG`HEAD     %0 the lines over +scene/log; %1 the scene
-      #   POSE`RULE    %0 the right side of the rule over a pose, plain text; %1 the scene, %2 the pose
+      #   POSE`RULE    %0 the right side of the rule under a pose, plain text; %1 the scene, %2 the pose
       #   DETAIL`SHOW  %0 a scene's value for a detail, as shown everywhere it is shown; %1 the scene, %2 the detail
       #   JOIN         %0 what a player is told when they join; %1 the scene, %2 the player
       #   HELP         %0 the body of +scene/help, the command list; scene-help adds where to read more
@@ -483,8 +485,8 @@ objects:
       #      under the pose's rule.
       #   3. Otherwise ⇒ @message/spoof the pose to the room exactly as before (so a pose outside any
       #      scene behaves like the un-hooked built-in -- the emit is never lost).
-      # So a CAPTURED pose is framed (a rule naming the poser, the pose and the scene, or a scene tag); an
-      # uncaptured one is a plain pose. The rule must come AFTER addpose because it reads the new pose id.
+      # So a CAPTURED pose is framed (a rule naming the poser and the pose, one under it naming the scene, or a
+      # scene tag); an uncaptured one is a plain pose. The rule must come AFTER addpose because it reads the new pose id.
       #
       # EVERY capture pattern carries BOTH inline flags, `(?is)`, and the `s` is not decoration.
       # $-commands are matched against the command line AFTER evaluation, so a multi-line pose --
@@ -499,7 +501,7 @@ objects:
         think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`IS`APPROVED,%#)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))]
 
       # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
-      # posed and the pose (left) and the scene (right), or for a band, message or notice type as one line tagged
+      # posed and the pose, over a rule naming the scene, or for a band, message or notice type as one line tagged
       # with the scene. A hearer whose type FORMAT draws nothing gets nothing, rule included. It runs AS the
       # Logger (@include locates its target as the executor), so it works for a remote poser too, and reads the
       # pose id off last(sceneposes()), so it MUST run after @scene/addpose. The hook passes it, by name
@@ -512,10 +514,10 @@ objects:
       #   hearers who hears it; self, when set, is what the speaker hears instead (SAY's "You say")
       #   scene   the scene, and room its room
       # A speaker's own FORMAT`<VERB> (on them, not inherited from the Ancestor Player) wins, as it does for
-      # a line no scene records; the room then gets the rule as it is, before the line. Named arguments
+      # a line no scene records; the room then gets the rule as it is before the line, and the footer after it. Named arguments
       # belong to this one call, so nothing left over from the speaker's own code can leak in.
       INC`CAPTURE`LINE: |-
-        think setq(pose_id,last(sceneposes(%<scene>))); @if hasattrval(%#,FORMAT`%<verb>)={@if u(%!/FUN`TYPE`FRAMED,%<type>)={@remit %<room>=u(%!/FUN`POSE`RULE,%<scene>,%q<pose_id>)}; @if strlen(%<self>)={@message/spoof %#=%<self>,%#/FORMAT`%<verb>,%<words>,##}; @message/spoof %<hearers>=%<heard>,%#/FORMAT`%<verb>,%<words>,##},{@if strlen(%<self>)={@message/spoof %#=%<self>,%!/FUN`POSE`DRAW,%<type>,%q<pose_id>,%<self>,%<scene>,##}; @message/spoof %<hearers>=%<heard>,%!/FUN`POSE`DRAW,%<type>,%q<pose_id>,%<line>,%<scene>,##}
+        think setq(pose_id,last(sceneposes(%<scene>))); @if hasattrval(%#,FORMAT`%<verb>)={@if u(%!/FUN`TYPE`FRAMED,%<type>)={@remit %<room>=u(%!/FUN`POSE`RULE,%<scene>,%q<pose_id>)}; @if strlen(%<self>)={@message/spoof %#=%<self>,%#/FORMAT`%<verb>,%<words>,##}; @message/spoof %<hearers>=%<heard>,%#/FORMAT`%<verb>,%<words>,##; @if u(%!/FUN`TYPE`FRAMED,%<type>)={@remit %<room>=u(%!/FUN`POSE`FOOTER,%<scene>,%q<pose_id>)}},{@if strlen(%<self>)={@message/spoof %#=%<self>,%!/FUN`POSE`DRAW,%<type>,%q<pose_id>,%<self>,%<scene>,##}; @message/spoof %<hearers>=%<heard>,%!/FUN`POSE`DRAW,%<type>,%q<pose_id>,%<line>,%<scene>,##}
 
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
@@ -858,9 +860,9 @@ objects:
       # that does not exist, and an unfocused player's scenefocus() IS that string, so without it
       # the verb printed the sentinel back at them.
 
-      # One entry per pose, drawn as it is live (FUN`POSE`DRAW): a rule naming who posed, the pose's id and the
-      # scene, then the pose as its type's FORMAT draws it, with the stored markup, so colour survives. A band,
-      # message or notice type is one line with no rule.
+      # One entry per pose, drawn as it is live (FUN`POSE`DRAW): a rule naming who posed and the pose's id, the
+      # pose as its type's FORMAT draws it, with the stored markup, so colour survives, then a rule naming the
+      # scene. A band, message or notice type is one line with no rule.
       # Recall used to print bare content lines, which ran together into an undifferentiated block --
       # an @emit carries no name of its own, a multi-line pose reads as several separate ones, and
       # there was no id on screen to hand to +scene/edit or +scene/undo.
@@ -1441,7 +1443,7 @@ objects:
         - `+scene/log \[<id>\]` — the whole log
 
         Each pose is introduced by a rule naming who posed it and its number, which is the `<pose>` the
-        commands above take. Each line is drawn as its type draws it, so an out-of-character line starts with
+        commands above take, and closed by a rule naming its scene and marks. Each line is drawn as its type draws it, so an out-of-character line starts with
         `<OOC>`. `+scene/hide <type>` leaves a type out of your recall and log; see `+help scene types`.
       HELP`SCENE`PITCH: |-
         `+scene/pitch <text>` sets the summary shown on a scene's card and its page on the website. It is
@@ -1596,7 +1598,7 @@ objects:
         - `CARD` — the body of `+scene <id>`'s card. `%%1` is the scene
         - `` LIST`TITLE `` — a scene's title in `+scene`, `+scene/old` and `+scene/mine`. `%%1` is the scene
         - `` LOG`HEAD `` — the lines over `+scene/log`. `%%1` is the scene
-        - `` POSE`RULE `` — the right side of the line over a pose, plain text. `%%1` is the scene, `%%2` the pose
+        - `` POSE`RULE `` — the right side of the line under a pose, plain text. `%%1` is the scene, `%%2` the pose
         - `` DETAIL`SHOW `` — a scene's value for a detail, wherever it is shown. `%%1` is the scene, `%%2` the detail
         - `JOIN` — what a player is told when they join. `%%1` is the scene, `%%2` the player
         - `HELP` — the command list `+scene/help` shows
