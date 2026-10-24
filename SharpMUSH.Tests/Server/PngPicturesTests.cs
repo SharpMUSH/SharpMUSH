@@ -45,7 +45,8 @@ public class PngPicturesTests
 		{
 			Directory.CreateDirectory(Path.Join(root.FullName, "assets"));
 			await File.WriteAllBytesAsync(Path.Join(root.FullName, "assets", "cat.webp"), Encoded(SKEncodedImageFormat.Webp, 6, 4));
-			using var service = Service(root.FullName);
+			using var files = new PhysicalFileProvider(root.FullName);
+			using var service = Service(files);
 
 			var png = await service.ConvertAsync(PngPictures.Original(PngPictures.Readable("/assets/cat.webp"))!, CancellationToken.None);
 
@@ -81,7 +82,8 @@ public class PngPicturesTests
 		{
 			Directory.CreateDirectory(Path.Join(root.FullName, "assets"));
 			await File.WriteAllTextAsync(Path.Join(root.FullName, "assets", "not-a-picture.webp"), "hello");
-			using var service = Service(root.FullName);
+			using var files = new PhysicalFileProvider(root.FullName);
+			using var service = Service(files);
 
 			await Assert.That(await service.ConvertAsync(path, CancellationToken.None)).IsNull();
 		}
@@ -91,10 +93,10 @@ public class PngPicturesTests
 		}
 	}
 
-	private static PngPictureService Service(string webRoot)
+	private static PngPictureService Service(IFileProvider webRoot)
 	{
 		var environment = Substitute.For<IWebHostEnvironment>();
-		environment.WebRootFileProvider.Returns(new PhysicalFileProvider(webRoot));
+		environment.WebRootFileProvider.Returns(webRoot);
 		return new PngPictureService(environment, Substitute.For<IWikiAssetService>());
 	}
 
