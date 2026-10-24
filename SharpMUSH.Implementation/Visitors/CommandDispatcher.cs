@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library;
@@ -115,6 +116,12 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 					case AmbiguousChatAlias:
 						return new None();
 				}
+			}
+
+			// MUX-style aliases always work, whatever use_muxcomm says (help sharpconf).
+			if (await MatchComsysAliasAsync(parser, tokenText.ToPlainText()) is ComsysAlias comsysAlias)
+			{
+				return await ComsysAliasAsync(parser, comsysAlias, context, src);
 			}
 
 			if (TryFindSingleTokenCommand(parser, command, out var singleTokenCommand))
@@ -452,6 +459,53 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			default:
 				return new NotFound();
 		}
+	}
+
+	/// <summary>A comsys alias the executor holds (<c>pub</c> in <c>pub Hello</c>), and what follows it.</summary>
+	private readonly record struct ComsysAlias(SharpChannel Channel, string Message);
+
+	private union ComsysAliasMatch(ComsysAlias, NotFound);
+
+	/// <summary>
+	/// PennMUSH's <c>parse_chat_alias</c> (extchat.c): the first word names a <c>CHANALIAS`&lt;word&gt;</c>
+	/// attribute on the executor itself, something follows it, and the attribute names a channel the executor
+	/// is on, by its full name. Anything else is not an alias, and the line carries on down the ladder.
+	/// </summary>
+	private async ValueTask<ComsysAliasMatch> MatchComsysAliasAsync(IMUSHCodeParser parser, string line)
+	{
+		var space = line.IndexOf(' ');
+		var message = space < 0 ? string.Empty : line[(space + 1)..].TrimStart(' ');
+		if (space <= 0 || message.Length == 0)
+			return new NotFound();
+
+		var executor = await parser.CurrentState.KnownExecutorObject(services.Mediator);
+		if (await services.AttributeService.GetAttributeAsync(executor, executor, $"CHANALIAS`{line[..space].ToUpperInvariant()}",
+					IAttributeService.AttributeMode.Read, parent: false) is not SharpAttribute[] { Length: > 0 } attribute)
+			return new NotFound();
+
+		var channelName = attribute[^1].Value.ToPlainText();
+		return await services.Mediator.Send(new GetChannelQuery(channelName)) is { } channel
+					 && channel.Name.ToPlainText().Equals(channelName, StringComparison.OrdinalIgnoreCase)
+					 && await ChannelHelper.IsMemberOfChannel(services.Mediator, executor, channel)
+			? new ComsysAlias(channel, message)
+			: new NotFound();
+	}
+
+	/// <summary>
+	/// Runs a comsys alias: <c>on</c>, <c>off</c> and <c>who</c> are <c>@channel/ungag</c>, <c>/gag</c> and
+	/// <c>/who</c> on its channel, as in PennMUSH, and anything else is said on it.
+	/// </summary>
+	private ValueTask<Option<CallState>> ComsysAliasAsync(IMUSHCodeParser parser, ComsysAlias alias,
+		ICommandContext context, MString src)
+	{
+		var channelName = alias.Channel.Name.ToPlainText();
+		return alias.Message.ToLowerInvariant() switch
+		{
+			"on" => RedispatchAsync(parser, MarkupText.Plain($"@channel/ungag {channelName}")),
+			"off" => RedispatchAsync(parser, MarkupText.Plain($"@channel/gag {channelName}")),
+			"who" => RedispatchAsync(parser, MarkupText.Plain($"@channel/who {channelName}")),
+			_ => new ValueTask<Option<CallState>>(services.Commands.ChannelAsync(parser, alias.Channel, context, src))
+		};
 	}
 
 	private async ValueTask NotifyHandle(IMUSHCodeParser parser, string key, params object[] args)
