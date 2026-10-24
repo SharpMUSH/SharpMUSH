@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-erotic-pixel-administrator-joining", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-player-channels", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-erotic-pixel-player-place", "pixel", "Erotic", "images/sharpie/sharpie-erotic-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-player-useful-action", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-player-world", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-world.png", 1254, 1254, "player-world", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-player-character", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
