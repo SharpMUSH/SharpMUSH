@@ -392,31 +392,37 @@ public partial class TelnetServer
 		{
 			server._logger.LogDebug("Pueblo negotiated on handle {Handle}", handle);
 
-			if (await server.TryUpdateFormatAsync(handle, OutputFormat.Pueblo, ct))
+			await held.PublishAsync(async () =>
 			{
-				server._logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", handle);
-			}
+				if (await server.TryUpdateFormatAsync(handle, OutputFormat.Pueblo, ct))
+				{
+					server._logger.LogDebug("Updated Pueblo capabilities for handle {Handle}", handle);
+				}
 
-			await held.PublishAsync(() => server._publishEndpoint.Publish(
-				new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion), ct));
+				await server._publishEndpoint.Publish(
+					new PuebloNegotiatedMessage(handle, PuebloProtocol.ClientCommand + clientVersion), ct);
+			});
 		}
 
 		private async ValueTask OnMxpEnabledAsync()
 		{
 			await AnnounceTelnetIfNegotiatedAsync();
 
-			if (await server.TryUpdateFormatAsync(handle, OutputFormat.Mxp, ct))
+			// Held like every other capability: MXP usually starts before the connection is registered.
+			await held.PublishAsync(async () =>
 			{
-				server._logger.LogDebug("Updated MXP capabilities for handle {Handle}", handle);
-				server.StartAskingWhatMxpClientRenders(handle, _telnet, ct);
-			}
-			else if (!ct.IsCancellationRequested)
-			{
-				server._logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", handle);
-			}
+				if (await server.TryUpdateFormatAsync(handle, OutputFormat.Mxp, ct))
+				{
+					server._logger.LogDebug("Updated MXP capabilities for handle {Handle}", handle);
+					server.StartAskingWhatMxpClientRenders(handle, _telnet, ct);
+				}
+				else if (!ct.IsCancellationRequested)
+				{
+					server._logger.LogWarning("MXP negotiated but connection {Handle} not yet registered", handle);
+				}
 
-			await held.PublishAsync(
-				() => server._publishEndpoint.Publish(new MxpNegotiatedMessage(handle), ct));
+				await server._publishEndpoint.Publish(new MxpNegotiatedMessage(handle), ct);
+			});
 		}
 
 		/// <summary>
