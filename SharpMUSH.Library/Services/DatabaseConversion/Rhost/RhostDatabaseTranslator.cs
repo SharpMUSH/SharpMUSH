@@ -521,10 +521,12 @@ public static partial class RhostDatabaseTranslator
 	/// A lock as SharpMUSH reads it. RhostMUSH's lock attributes write each object as <c>(#n)</c>, and its key
 	/// syntax (<c>&amp;</c>, <c>|</c>, <c>!</c>, <c>=</c>, <c>+</c>, <c>$</c>, <c>@</c>, <c>attr:value</c>) is the one
 	/// SharpMUSH reads, except that SharpMUSH wants a prefix right before the object: <c>$(#73)</c> is <c>$#73</c>.
+	/// An <c>attr:value</c> or <c>attr/value</c> key's value, which runs to the next <c>&amp;</c>, <c>|</c> or
+	/// <c>)</c>, is left as it is.
 	/// </summary>
 	private static string LockKey(string text) => PrefixedObject().Replace(text.Trim(), "$1$2");
 
-	[GeneratedRegex(@"([=+$@])\((#-?\d+)\)")]
+	[GeneratedRegex(@"(?<![:/][^&|)]*)([=+$@])\((#-?\d+)\)")]
 	private static partial Regex PrefixedObject();
 
 	[GeneratedRegex(@"(?<![#\w])(\d+)(?!\w)")]
