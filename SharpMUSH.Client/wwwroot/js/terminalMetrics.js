@@ -42,7 +42,7 @@ window.SharpMUSH.Metrics = {
 
     measure: function (elementId) {
         var el = document.getElementById(elementId);
-        if (!el) return { cols: 80, rows: 24 };
+        if (!el) return { cols: 78, rows: 24 };
 
         var clamp = function (v) { return v < 1 ? 1 : (v > 1000 ? 1000 : v); };
         var target = this._targets[elementId] || 0;
@@ -64,8 +64,8 @@ window.SharpMUSH.Metrics = {
             el.appendChild(p); lineHeight = p.getBoundingClientRect().height / 5; el.removeChild(p);
         })();
 
-        if (!advance || advance <= 0) return { cols: 80, rows: 24 };
-        if (!lineHeight || lineHeight <= 0) return { cols: 80, rows: 24 };
+        if (!advance || advance <= 0) return { cols: 78, rows: 24 };
+        if (!lineHeight || lineHeight <= 0) return { cols: 78, rows: 24 };
 
         var padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
         var padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);

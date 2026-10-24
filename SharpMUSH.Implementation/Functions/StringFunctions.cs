@@ -1935,14 +1935,14 @@ public partial class Functions
 		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
 		// fun_wrap (src/funstr.c:1644-1669): an empty text is answered as it is, before the widths are
-		// read; each width goes through int_check (72 by default, the first line defaulting to the
-		// width, and 0 for it meaning the width); and a width below 2 is too small.
+		// read; each width goes through int_check (78 by default where PennMUSH has 72, the first line
+		// defaulting to the width, and 0 for it meaning the width); and a width below 2 is too small.
 		if (str.ToPlainText().Length == 0)
 		{
 			return str;
 		}
 
-		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message.ToPlainText(), 72, out var widthInt)
+		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message.ToPlainText(), 78, out var widthInt)
 			|| !ArgHelpers.TryIntCheck(parser, args.TryGetValue("2", out var firstArg) ? firstArg.Message.ToPlainText() : null,
 				widthInt, out var firstLineInt))
 		{
