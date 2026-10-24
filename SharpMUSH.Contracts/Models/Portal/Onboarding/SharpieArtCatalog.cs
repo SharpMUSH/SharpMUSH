@@ -12,6 +12,14 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-epic-fantasy-pixel-shared-completion", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-administrator-joining", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-player-continue", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-player-speak-act", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-player-useful-action", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-player-place", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-place.png", 1254, 1254, "player-place", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-epic-fantasy-pixel-player-character", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-kemono-player-character", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-player-character.png", 1254, 1254, "player-character", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-player-sign-in", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-administrator-walkthrough", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-epic-fantasy-pixel-administrator-invite", "pixel", "Epic Fantasy", "images/sharpie/sharpie-epic-fantasy-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
