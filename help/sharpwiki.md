@@ -126,7 +126,7 @@ written as `@wiki/query` takes them (see [wiki fact conditions]), plus:
 
 - `category=<name>`: the page is in that category.
 - `namespace=<name>`: the page is in that namespace.
-- `sort=<property>`: order the pages by a number or keyword.
+- `sort=<property>`: order the pages by any property but a page.
 - `order=desc`: highest first.
 
 `show=` is refused: read a page's values with `wikifact()`. A page you may
