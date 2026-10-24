@@ -42,7 +42,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.16.0
+    version: 1.16.1
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -182,7 +182,7 @@ packages:
   - path: relationships-scene/
     name: Relationships Scene
     package: relationships-scene
-    version: 1.0.3
+    version: 1.0.4
     description: Adds Last scene together to the +rel card and the portal's name card (requires relationships and scene)
   - path: relationships-app/
     name: Relationships web
@@ -197,7 +197,7 @@ packages:
   - path: timeline/
     name: Timeline
     package: timeline
-    version: 1.0.3
+    version: 1.0.4
     description: IC dates on scenes and a timeline per character — a scene is dated in the IC calendar when it starts, +scene/date dates a flashback, +timeline lists a character's scenes in IC order
   - path: discord/
     name: Discord

@@ -55,8 +55,8 @@ plugin seam.
       keys → field/edge, else `Meta`), addpose, setpose, editpose (versioned),
       undo/redo (move `current_edit`), move (`pose_next` re-link), delete
       (soft), addmember/unmember, setfocus, showas, plot ops; reads `scene`,
-      `scenelist`, `scenewhere`, `sceneposes`, `scenepose`, `sceneedits`,
-      `scenemembers`, `scenemember`, `scenefocus`, `scenetags`, `scenecast`
+      `scenelist`, `scenewhere`, `sceneposes`, `scenepose`,
+      `scenemembers`, `scenemember`, `scenefocus`
       (`SharpMUSH.Library/Services/Interfaces/ISceneService.cs`)
 - [x] ~~`InMemorySceneService`~~ **dropped by design** — there is no in-memory
       implementation. `LightningSceneStorage` implements `ISceneService` directly
@@ -123,7 +123,7 @@ plugin seam.
       `SceneLive`, `Scenes`, `ScenesActive` (`Client/Pages/`) + `ActiveSceneWidget`
       (`Client/Components/Widgets/`)
 - [x] `SceneDetail`: render `Markup` client-side; edited badge; struck
-      `IsDeleted` (owner); dynamic tag chips from `scenetags`/distinct `Tags`
+      `IsDeleted` (owner); dynamic tag chips from distinct `Tags`
 - [x] `SceneLive`: `JoinScene` + `OnSceneEventReceived` patch by pose id; pose
       editor submits a normal **POSE/SAY/SEMIPOSE** (never `@emit`) via
       `GameHub.SendCommand` (no `ISceneService` write, no optimistic insert);

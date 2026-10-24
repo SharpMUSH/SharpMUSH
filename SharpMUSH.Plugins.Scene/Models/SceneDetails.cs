@@ -56,7 +56,8 @@ public static partial class SceneDetails
 	public static readonly IReadOnlySet<string> Reserved = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"status", "id", "public", "istemp", "scheduledfor", "startedat", "lastactivityat", "posecount", "owner",
-		"ownername", "starter", "startername", "room", "roomname", "plot", "title", "summary", "image", "details", "joinpolicy", "playercap",
+		"ownername", "starter", "startername", "room", "roomname", "plot", "title", "summary", "image", "details", "tags", "cast", "joinpolicy",
+		"playercap",
 	};
 
 	private const int DefaultOrder = 50;

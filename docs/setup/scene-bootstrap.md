@@ -114,7 +114,7 @@ line no verb matches answers with the switch's usage line instead of `Huh?`.
 | `+pot` | pose tracker (turn order for the focused scene, idle time and the length of each last pose) |
 
 **Reads are functions, writes are commands.** Reads use the `scene…()` functions
-(`scenewhere`, `scenefocus`, `scene`, `sceneposes`, `scenepose`, `scenemember`, `scenecast`, …);
+(`scenewhere`, `scenefocus`, `scene`, `sceneposes`, `scenepose`, `scenemember`, …);
 all writes go through wizard-only `@scene/*` commands that the WIZARD Logger satisfies, so the
 package works **without** enabling `function_side_effects`. Object arguments (rooms, players)
 resolve through the engine's **`LocateService`**, so `here`, `me`, player names, `*name`, and

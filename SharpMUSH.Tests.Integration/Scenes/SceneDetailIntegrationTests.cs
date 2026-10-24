@@ -112,10 +112,14 @@ public class SceneDetailIntegrationTests
 		var scene = await SceneAsync(owner);
 		var verse = TestIsolationHelpers.GenerateUniqueName("Verse");
 
-		await Assert.That(await Eval("scenedetails()")).IsEmpty().Because("the scene package names no details of its own");
+		await Assert.That(await Eval("scenedetail()")).IsEmpty().Because("the scene package names no details of its own");
 		await Assert.That(await As(owner, "+scene/details")).Contains("This game lists no scene details. You can still set your own");
 		await Assert.That(await Eval("scenedetail(nosuchdetail)")).IsEqualTo("#-1 NO SUCH SCENE DETAIL");
-		await Assert.That(await Eval("scenedetailvalue(title,x)")).StartsWith("#-1 'title' is a scene field already");
+		await Assert.That(await Eval("scenedetail(title,value,x)")).StartsWith("#-1 'title' is a scene field already");
+		await Assert.That(await Eval("scenedetail(cast,check,json(object,label,json(string,Cast)))")).StartsWith("#-1 'cast' is a scene field already")
+			.Because("scene(<id>,cast) answers the cast, so no detail can take that key");
+		await Assert.That(await Eval("scenedetail(mood,check,json(object,label,json(string,Mood)))")).IsEmpty()
+			.Because("a detail the catalogue does not list yet can still be checked");
 
 		await Assert.That(await As(owner, $"+scene/set verse={verse}")).Contains($"Scene {scene}: Verse is now {verse}.");
 		await Assert.That(await As(owner, "+scene/set canon=Marvel|X-Men")).Contains("Canon is now Marvel · X-Men.");
@@ -188,7 +192,7 @@ public class SceneDetailIntegrationTests
 		{
 			await InstallAsync("scene-verse");
 			var logger = await LoggerAsync();
-			await Assert.That((await Eval("scenedetails()")).Split(' ').Take(3))
+			await Assert.That((await Eval("scenedetail()")).Split(' ').Take(3))
 				.IsEquivalentTo(new[] { "warning", "verse", "canon" }, TUnit.Assertions.Enums.CollectionOrdering.Matching)
 				.Because("the content warning comes first, so it is read first");
 			await Assert.That(await Eval("scenedetail(warning)")).IsEqualTo("Content warning");
@@ -198,7 +202,7 @@ public class SceneDetailIntegrationTests
 				.Because("a detail's values show in its tone");
 			await Assert.That(await Html($"u({logger}/FUN`DETAIL`PAINT,verse,Marvel)")).IsEqualTo(await Html("Marvel"));
 			await Assert.That(await Eval("scenedetail(canon,many)")).IsEqualTo("1");
-			await Assert.That(await Eval("scenedetailvalue(canon, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
+			await Assert.That(await Eval("scenedetail(canon,value, Marvel | X-Men |)")).IsEqualTo("Marvel|X-Men");
 
 			scene = await SceneAsync(owner);
 			await Assert.That(await Eval($"scene({scene},verse)")).IsEmpty().Because("a listed detail reads empty until it is set");
@@ -217,7 +221,7 @@ public class SceneDetailIntegrationTests
 			await Installer.UninstallAsync("scene-verse", force: true, CancellationToken.None);
 		}
 
-		await Assert.That(await Eval("scenedetails()")).IsEmpty().Because("uninstalling scene-verse takes its details away");
+		await Assert.That(await Eval("scenedetail()")).IsEmpty().Because("uninstalling scene-verse takes its details away");
 		await Assert.That(await Eval($"scene({scene},verse)")).IsEqualTo(verse).Because("scenes keep the values they were given");
 		await Assert.That(await As(joiner, $"+scene/join {scene}")).DoesNotContain("Content warning");
 	}

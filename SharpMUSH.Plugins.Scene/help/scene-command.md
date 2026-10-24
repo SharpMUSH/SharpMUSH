@@ -126,7 +126,7 @@ Live scene views show each new pose and edit as it happens.
 - `@scene/move <pose id>=[<after pose id>]`
 - `@scene/delete <pose id>`
 
-Every edit of a pose is kept as a version, which [sceneedits()] lists. `/undo` shows the version before the current one again, and `/redo` the one after it; each warns when there is none. An edit made after an undo drops the versions that were undone.
+Every edit of a pose is kept as a version, which [scenepose()] lists as its `edits`. `/undo` shows the version before the current one again, and `/redo` the one after it; each warns when there is none. An edit made after an undo drops the versions that were undone.
 
 `/move` puts the pose right after another pose of the same scene, or first in the scene when nothing follows the `=`.
 

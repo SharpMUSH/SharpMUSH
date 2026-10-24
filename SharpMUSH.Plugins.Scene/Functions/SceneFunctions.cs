@@ -85,8 +85,8 @@ public static class SceneFunctions
 	/// scene(&lt;id&gt;[, &lt;field&gt;])
 	/// Returns a field of a scene. Fields: status (default), id, public, istemp,
 	/// scheduledfor, startedat, lastactivityat, posecount, owner, ownername,
-	/// starter, startername, room, roomname, title, summary, details (the details it has a value for), or any
-	/// meta key. A detail the catalogue lists reads empty while it is unset.
+	/// starter, startername, room, roomname, title, summary, details (the details it has a value for), tags (the
+	/// distinct tags its poses carry), cast (the distinct names its poses were shown as), or any meta key. A detail the catalogue lists reads empty while it is unset.
 	/// </summary>
 	[SharpFunction(Name = "scene", MinArgs = 1, MaxArgs = 2,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -133,6 +133,8 @@ public static class SceneFunctions
 			"room" => new CallState(await SceneLocate.ObjIdOrSelfAsync(parser, scene.RoomDbref)),
 			"roomname" => new CallState(scene.RoomName),
 			"details" => new CallState(string.Join(" ", DetailKeys(scene, await SceneLogger.DetailsAsync(parser.ServiceProvider)))),
+			"tags" => new CallState(await service.GetTagsAsync(id) is IReadOnlyList<string> tags ? string.Join(" ", tags) : string.Empty),
+			"cast" => new CallState(await service.GetCastAsync(id) is IReadOnlyList<string> cast ? string.Join(" ", cast) : string.Empty),
 			_ when scene.Meta.TryGetValue(field, out var metaVal) => new CallState(metaVal),
 			// A detail the game lists reads empty until it is set, as an attribute does.
 			_ => (await SceneLogger.DetailsAsync(parser.ServiceProvider)).Details.Any(d => d.Key == field)
@@ -156,17 +158,20 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenelist([&lt;filter&gt;][, &lt;from&gt;][, &lt;to&gt;][, &lt;player&gt;])
-	/// Returns a space-separated list of scene ids. Filter: active | recent |
-	/// scheduled | upcoming | mine (default recent). upcoming is scheduled without the scenes
-	/// that never started and are more than an hour past their time. The optional UTC-millis
-	/// from/to bounds window the scheduled and upcoming filters. At most 50 scenes, the most recent. With mine,
-	/// &lt;player&gt; lists every scene that player belongs to rather than the reader's: still only the ones the reader
-	/// may see.
+	/// scenelist([&lt;filter&gt;][, &lt;arg&gt;][, &lt;arg&gt;])
+	/// Returns a space-separated list of scene ids the reader may see, at most 50, the most recent. Filter: active |
+	/// finished | recent | scheduled | upcoming | mine | shared (default recent). upcoming is scheduled without the
+	/// scenes that never started and are more than an hour past their time. What follows the filter depends on it:
+	/// <list type="bullet">
+	/// <item>active, finished, scheduled, upcoming: &lt;from&gt;, &lt;to&gt;, UTC-millis bounds that window the list.</item>
+	/// <item>mine: &lt;player&gt;, whose scenes rather than the reader's, every one of them.</item>
+	/// <item>shared: &lt;player&gt;[, &lt;other&gt;], the scenes both belong to (the reader and &lt;player&gt; when
+	/// there is one name), found among the first one's newest 200.</item>
+	/// </list>
 	/// </summary>
-	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 4,
+	[SharpFunction(Name = "scenelist", MinArgs = 0, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["filter", "from", "to", "player"])]
+		ParameterNames = ["filter", "arg", "arg"])]
 	public static async ValueTask<CallState> SceneList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -178,49 +183,85 @@ public static class SceneFunctions
 			filter = "recent";
 		}
 
-		long? from = null;
-		if (args.TryGetValue("1", out var fromArg))
+		var first = args.TryGetValue("1", out var firstArg) ? firstArg.Message.ToPlainText().Trim() : string.Empty;
+		var second = args.TryGetValue("2", out var secondArg) ? secondArg.Message.ToPlainText().Trim() : string.Empty;
+		return filter switch
 		{
-			var fromText = fromArg.Message.ToPlainText().Trim();
-			if (fromText.Length > 0)
+			"mine" => await MineAsync(parser, first),
+			"shared" => await SharedAsync(parser, first, second),
+			_ => await WindowedAsync(parser, filter, first, second),
+		};
+	}
+
+	/// <summary>scenelist(&lt;filter&gt;, &lt;from&gt;, &lt;to&gt;): the filter's 50 most recent, inside the window when one is given.</summary>
+	private static async ValueTask<CallState> WindowedAsync(IMUSHCodeParser parser, string filter, string fromText, string toText)
+	{
+		long? from = null, to = null;
+		if (fromText.Length > 0)
+		{
+			if (!long.TryParse(fromText, out var parsed)) return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
+			from = parsed;
+		}
+
+		if (toText.Length > 0)
+		{
+			if (!long.TryParse(toText, out var parsed)) return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
+			to = parsed;
+		}
+
+		return await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync(filter, await ViewerDbrefAsync(parser), from, to));
+	}
+
+	/// <summary>scenelist(mine[, &lt;player&gt;]): the reader's 50 most recent, or every scene of the player's.</summary>
+	private static async ValueTask<CallState> MineAsync(IMUSHCodeParser parser, string player)
+	{
+		if (player.Length == 0)
+		{
+			return await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync("mine", await ViewerDbrefAsync(parser)));
+		}
+
+		// A player's whole history, which a timeline is drawn from, not the 50 most recent.
+		return await MemberAsync(parser, player) is { } member
+			? await VisibleAsync(parser, await ServiceOf(parser).ListScenesAsync("mine", member, count: int.MaxValue))
+			: new CallState(ErrorMessages.Returns.NoSuchPlayer);
+	}
+
+	/// <summary>scenelist(shared, &lt;player&gt;[, &lt;other&gt;]): the scenes both belong to, from the first one's newest 200.</summary>
+	private static async ValueTask<CallState> SharedAsync(IMUSHCodeParser parser, string player, string other)
+	{
+		var (firstName, secondName) = other.Length == 0 ? (string.Empty, player) : (player, other);
+		var first = firstName.Length == 0 ? await ViewerDbrefAsync(parser) : await MemberAsync(parser, firstName);
+		if (first is null || await MemberAsync(parser, secondName) is not { } second)
+		{
+			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
+		}
+
+		var service = ServiceOf(parser);
+		var both = new List<Contracts.Scene>();
+		foreach (var scene in await service.ListScenesAsync("mine", first, count: SharedScanLimit))
+		{
+			if (await service.GetMemberAsync(scene.Id, second) is SceneMember)
 			{
-				if (!long.TryParse(fromText, out var parsed))
-				{
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
-				}
-				from = parsed;
+				both.Add(scene);
 			}
 		}
 
-		long? to = null;
-		if (args.TryGetValue("2", out var toArg))
-		{
-			var toText = toArg.Message.ToPlainText().Trim();
-			if (toText.Length > 0)
-			{
-				if (!long.TryParse(toText, out var parsed))
-				{
-					return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENELIST"));
-				}
-				to = parsed;
-			}
-		}
+		return await VisibleAsync(parser, both);
+	}
 
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var viewer = await ViewerDbrefAsync(parser);
-		var count = 50;
-		if (filter == "mine" && args.TryGetValue("3", out var playerArg) && playerArg.Message.ToPlainText().Trim() is { Length: > 0 } player)
-		{
-			if (await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerOrSelf(parser, player)) is not { } member)
-			{
-				return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-			}
-			// A player's whole history, which a timeline is drawn from, not the 50 most recent.
-			(viewer, count) = (member, int.MaxValue);
-		}
+	/// <summary>How many of the first player's scenes scenelist(shared) reads, newest first.</summary>
+	private const int SharedScanLimit = 200;
 
-		var scenes = await service.ListScenesAsync(filter, viewer, from, to, count);
+	private static ISceneService ServiceOf(IMUSHCodeParser parser) => parser.ServiceProvider.GetRequiredService<ISceneService>();
 
+	/// <summary>The objid of the player <paramref name="name"/> names, or null when it names none.</summary>
+	private static async ValueTask<string?> MemberAsync(IMUSHCodeParser parser, string name)
+		=> name.Length == 0 ? null : await SceneLocate.ObjIdAsync(parser, await SceneLocate.PlayerAsync(parser, name));
+
+	/// <summary>The ids of the scenes in <paramref name="scenes"/> the reader may see.</summary>
+	private static async ValueTask<CallState> VisibleAsync(IMUSHCodeParser parser, IReadOnlyList<Contracts.Scene> scenes)
+	{
+		var service = ServiceOf(parser);
 		// Every other read function gates on SceneVisibleToAsync, so a private scene answers
 		// #-1 PERMISSION — but the storage's `active`/`finished`/`recent`/`scheduled` filters carry no
 		// visibility clause at all, so an ungated listing handed any player the id of every private
@@ -237,54 +278,6 @@ public static class SceneFunctions
 
 		return new CallState(string.Join(" ", visible));
 	}
-
-	/// <summary>
-	/// sceneshared(&lt;player&gt;, &lt;player&gt;[, &lt;count&gt;])
-	/// The scenes both players belong to, the latest activity first, that the enactor may see: at most
-	/// &lt;count&gt; of them (1 by default), from the first player's last 200. Cancelled scenes are left out, as
-	/// scenelist() leaves them out.
-	/// </summary>
-	[SharpFunction(Name = "sceneshared", MinArgs = 2, MaxArgs = 3,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["player", "other", "count"])]
-	public static async ValueTask<CallState> SceneShared(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var count = 1;
-		if (args.TryGetValue("2", out var countArg) && countArg.Message.ToPlainText().Trim() is { Length: > 0 } countText
-			&& (!int.TryParse(countText, out count) || count < 1))
-		{
-			return new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "SCENESHARED"));
-		}
-
-		if (await SceneLocate.PlayerAsync(parser, args["0"].Message.ToPlainText().Trim()) is not { } player
-			|| await SceneLocate.PlayerAsync(parser, args["1"].Message.ToPlainText().Trim()) is not { } other)
-		{
-			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
-		}
-
-		return new CallState(string.Join(" ", await SharedScenesAsync(parser, player, other, count)));
-	}
-
-	/// <summary>The ids of up to <paramref name="count"/> of <paramref name="player"/>'s last 200 scenes that <paramref name="other"/> also belongs to and the enactor may see.</summary>
-	private static async ValueTask<List<string>> SharedScenesAsync(IMUSHCodeParser parser, string player, string other, int count)
-	{
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		var shared = new List<string>(Math.Min(count, SharedScanLimit));
-		foreach (var scene in await service.ListScenesAsync("mine", player, count: SharedScanLimit))
-		{
-			if (shared.Count == count) break;
-			if (await service.GetMemberAsync(scene.Id, other) is SceneMember && await SceneVisibleToAsync(service, scene, parser))
-			{
-				shared.Add(scene.Id);
-			}
-		}
-
-		return shared;
-	}
-
-	/// <summary>How many of the first player's scenes sceneshared() reads, newest first.</summary>
-	private const int SharedScanLimit = 200;
 
 	/// <summary>
 	/// scenewhere(&lt;roomDbref&gt;)
@@ -371,7 +364,7 @@ public static class SceneFunctions
 	/// scenepose(&lt;scene&gt;, &lt;poseId&gt;[, &lt;field&gt;])
 	/// Returns a field of a pose; an empty &lt;scene&gt; finds the pose by its id alone. Fields: content (default), markup, id, scene,
 	/// author, authorname, showas, origin, originname, source, tags, createdat,
-	/// deleted, editcount, lasteditedat, lasteditor, lasteditorname, or any meta key.
+	/// deleted, editcount, edits (its version ids, oldest first), lasteditedat, lasteditor, lasteditorname, or any meta key.
 	/// <para><c>content</c> is the pose as it was written, colours, boxes and pictures included, so a
 	/// recall prints it the way the room saw it and lays it out again at the reader's width;
 	/// <c>markup</c> is the same pose serialised.</para>
@@ -409,6 +402,13 @@ public static class SceneFunctions
 		if (await service.GetPoseAsync(poseId) is not ScenePose pose || pose.SceneId != sceneId)
 		{
 			return new CallState(SceneNotFound);
+		}
+
+		if (field == "edits")
+		{
+			return await service.GetPoseEditsAsync(poseId) is IReadOnlyList<ScenePoseEdit> edits
+				? new CallState(string.Join(" ", edits.Select(e => e.Id)))
+				: new CallState(SceneNotFound);
 		}
 
 		return field switch
@@ -449,50 +449,6 @@ public static class SceneFunctions
 		{
 			return MarkupText.Plain(pose.Content);
 		}
-	}
-
-	/// <summary>
-	/// sceneedits(&lt;scene&gt;, &lt;poseId&gt;)
-	/// Returns a space-separated list of edit-version ids for a pose, oldest first.
-	/// </summary>
-	[SharpFunction(Name = "sceneedits", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["scene", "poseId"])]
-	public static async ValueTask<CallState> SceneEdits(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var sceneId = args["0"].Message.ToPlainText().Trim();
-		var poseId = args["1"].Message.ToPlainText().Trim();
-
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		// An empty scene looks the pose up by its id alone, in whatever scene it is. The scene is still checked
-		// for visibility before any field is read.
-		if (sceneId.Length == 0 && await service.GetPoseAsync(poseId) is ScenePose located)
-		{
-			sceneId = located.SceneId;
-		}
-
-		if (await service.GetSceneAsync(sceneId) is not Contracts.Scene scene)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		if (!await SceneVisibleToAsync(service, scene, parser))
-		{
-			return new CallState(ScenePermission);
-		}
-
-		if (await service.GetPoseAsync(poseId) is not ScenePose pose || pose.SceneId != sceneId)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		if (await service.GetPoseEditsAsync(poseId) is not IReadOnlyList<ScenePoseEdit> edits)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		return new CallState(string.Join(" ", edits.Select(e => e.Id)));
 	}
 
 	/// <summary>
@@ -606,110 +562,41 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenetags(&lt;scene&gt;)
-	/// Returns a space-separated list of the distinct opaque tags used across a scene's poses.
+	/// scenetype([&lt;key&gt;[, &lt;field&gt;[, &lt;json&gt;]]])
+	/// With no key, the pose types the Scene Logger defines, in their order, as a space-separated list of keys.
+	/// Otherwise one field of a pose type: label (the default), presentation, tone, icon, hidden or order. The field
+	/// <c>check</c> is empty when &lt;json&gt; would read as pose type &lt;key&gt;, and otherwise <c>#-1</c> and the
+	/// reason, as <c>@scene/types</c> would give it: how the scene package refuses a bad edit before writing it.
 	/// </summary>
-	[SharpFunction(Name = "scenetags", MinArgs = 1, MaxArgs = 1,
+	[SharpFunction(Name = "scenetype", MinArgs = 0, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["scene"])]
-	public static async ValueTask<CallState> SceneTags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var id = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		if (!await SceneVisibleToAsync(service, scene, parser))
-		{
-			return new CallState(ScenePermission);
-		}
-
-		if (await service.GetTagsAsync(id) is not IReadOnlyList<string> tags)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		return new CallState(string.Join(" ", tags));
-	}
-
-	/// <summary>
-	/// scenecast(&lt;scene&gt;)
-	/// Returns a space-separated list of the distinct display personas (ShowAsNames) used in a scene.
-	/// </summary>
-	[SharpFunction(Name = "scenecast", MinArgs = 1, MaxArgs = 1,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["scene"])]
-	public static async ValueTask<CallState> SceneCast(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var id = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
-		var service = parser.ServiceProvider.GetRequiredService<ISceneService>();
-		if (await service.GetSceneAsync(id) is not Contracts.Scene scene)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		if (!await SceneVisibleToAsync(service, scene, parser))
-		{
-			return new CallState(ScenePermission);
-		}
-
-		if (await service.GetCastAsync(id) is not IReadOnlyList<string> cast)
-		{
-			return new CallState(SceneNotFound);
-		}
-
-		return new CallState(string.Join(" ", cast));
-	}
-
-	/// <summary>
-	/// scenetypes()
-	/// The pose types the Scene Logger defines, in their order, as a space-separated list of keys.
-	/// </summary>
-	[SharpFunction(Name = "scenetypes", MinArgs = 0, MaxArgs = 0,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> SceneTypes(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var catalogue = await SceneLogger.CatalogueAsync(parser.ServiceProvider);
-		return new CallState(string.Join(" ", catalogue.Types.Select(t => t.Key)));
-	}
-
-	/// <summary>
-	/// scenetypecheck(&lt;key&gt;, &lt;json&gt;)
-	/// Empty when &lt;json&gt; would read as pose type &lt;key&gt;; otherwise <c>#-1</c> and the reason, as
-	/// <c>@scene/types</c> would give it. How the scene package refuses a bad edit before writing it.
-	/// </summary>
-	[SharpFunction(Name = "scenetypecheck", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["key", "json"])]
-	public static ValueTask<CallState> SceneTypeCheck(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		return ValueTask.FromResult(PoseTypes.Read(args["0"].Message.ToPlainText().Trim(), args["1"].Message.ToPlainText()) switch
-		{
-			PoseType => CallState.Empty,
-			Error<string> error => new CallState($"#-1 {error.Value}"),
-		});
-	}
-
-	/// <summary>
-	/// scenetype(&lt;key&gt;[, &lt;field&gt;])
-	/// One field of a pose type: label (the default), presentation, tone, icon, hidden or order.
-	/// </summary>
-	[SharpFunction(Name = "scenetype", MinArgs = 1, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["key", "field"])]
+		ParameterNames = ["key", "field", "json"])]
 	public static async ValueTask<CallState> SceneType(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var key = args["0"].Message.ToPlainText().Trim().ToLowerInvariant();
+		var key = args.TryGetValue("0", out var keyArg) ? keyArg.Message.ToPlainText().Trim() : string.Empty;
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
 			: "label";
 
+		if (field == "check")
+		{
+			var json = args.TryGetValue("2", out var jsonArg) ? jsonArg.Message.ToPlainText() : string.Empty;
+			return PoseTypes.Read(key, json) switch
+			{
+				PoseType => CallState.Empty,
+				Error<string> error => new CallState($"#-1 {error.Value}"),
+			};
+		}
+
 		var catalogue = await SceneLogger.CatalogueAsync(parser.ServiceProvider);
-		if (catalogue.Types.FirstOrDefault(t => t.Key == key) is not { } type)
+		if (key.Length == 0)
+		{
+			return new CallState(string.Join(" ", catalogue.Types.Select(t => t.Key)));
+		}
+
+		var lowered = key.ToLowerInvariant();
+		if (catalogue.Types.FirstOrDefault(t => t.Key == lowered) is not { } type)
 		{
 			return new CallState(NoSuchType);
 		}
@@ -727,35 +614,54 @@ public static class SceneFunctions
 	}
 
 	/// <summary>
-	/// scenedetails()
-	/// The scene details the Scene Logger defines, in their order, as a space-separated list of keys.
+	/// scenedetail([&lt;key&gt;[, &lt;field&gt;[, &lt;value&gt;]]])
+	/// With no key, the scene details the Scene Logger defines, in their order, as a space-separated list of keys.
+	/// Otherwise one field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone,
+	/// order, hidden or sort. Two fields take a third argument and need no listed key:
+	/// <list type="bullet">
+	/// <item><c>check</c> is empty when &lt;value&gt; would read as the JSON of detail &lt;key&gt;; otherwise <c>#-1</c>
+	/// and the reason. How the scene package refuses a bad catalogue edit before writing it.</item>
+	/// <item><c>value</c> is &lt;value&gt; as detail &lt;key&gt; keeps it: trimmed, several values joined by |, each
+	/// written as its choice is. A key the catalogue does not list keeps the value trimmed. <c>#-1</c> and the reason
+	/// for a key that can't be a detail or a value the detail does not allow.</item>
+	/// </list>
 	/// </summary>
-	[SharpFunction(Name = "scenedetails", MinArgs = 0, MaxArgs = 0,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
-	public static async ValueTask<CallState> SceneDetailList(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var catalogue = await SceneLogger.DetailsAsync(parser.ServiceProvider);
-		return new CallState(string.Join(" ", catalogue.Details.Select(d => d.Key)));
-	}
-
-	/// <summary>
-	/// scenedetail(&lt;key&gt;[, &lt;field&gt;])
-	/// One field of a scene detail: label (the default), hint, choices (split by |), many, listed, tone, order, hidden or
-	/// sort.
-	/// </summary>
-	[SharpFunction(Name = "scenedetail", MinArgs = 1, MaxArgs = 2,
+	[SharpFunction(Name = "scenedetail", MinArgs = 0, MaxArgs = 3,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["key", "field"])]
+		ParameterNames = ["key", "field", "value"])]
 	public static async ValueTask<CallState> SceneDetailFn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var key = args["0"].Message.ToPlainText().Trim().ToLowerInvariant();
+		var key = args.TryGetValue("0", out var keyArg) ? keyArg.Message.ToPlainText() : string.Empty;
 		var field = args.TryGetValue("1", out var fieldArg)
 			? fieldArg.Message.ToPlainText().Trim().ToLowerInvariant()
 			: "label";
+		var value = args.TryGetValue("2", out var valueArg) ? valueArg.Message.ToPlainText() : string.Empty;
+
+		switch (field)
+		{
+			case "check":
+				return SceneDetails.Read(key.Trim(), value) switch
+				{
+					SceneDetail => CallState.Empty,
+					Error<string> error => new CallState($"#-1 {error.Value}"),
+				};
+			case "value":
+				return SceneDetails.Normalize(key) switch
+				{
+					string normal => await KeptValueAsync(parser, normal, value),
+					Error<string> error => new CallState($"#-1 {error.Value}"),
+				};
+		}
 
 		var catalogue = await SceneLogger.DetailsAsync(parser.ServiceProvider);
-		if (catalogue.Details.FirstOrDefault(d => d.Key == key) is not { } detail)
+		var lowered = key.Trim().ToLowerInvariant();
+		if (lowered.Length == 0)
+		{
+			return new CallState(string.Join(" ", catalogue.Details.Select(d => d.Key)));
+		}
+
+		if (catalogue.Details.FirstOrDefault(d => d.Key == lowered) is not { } detail)
 		{
 			return new CallState(NoSuchDetail);
 		}
@@ -773,44 +679,6 @@ public static class SceneFunctions
 			"sort" => detail.Sort,
 			_ => NoSuchDetailField,
 		});
-	}
-
-	/// <summary>
-	/// scenedetailcheck(&lt;key&gt;, &lt;json&gt;)
-	/// Empty when &lt;json&gt; would read as scene detail &lt;key&gt;; otherwise <c>#-1</c> and the reason. How the scene
-	/// package refuses a bad catalogue edit before writing it.
-	/// </summary>
-	[SharpFunction(Name = "scenedetailcheck", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["key", "json"])]
-	public static ValueTask<CallState> SceneDetailCheck(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		return ValueTask.FromResult(SceneDetails.Read(args["0"].Message.ToPlainText().Trim(), args["1"].Message.ToPlainText()) switch
-		{
-			SceneDetail => CallState.Empty,
-			Error<string> error => new CallState($"#-1 {error.Value}"),
-		});
-	}
-
-	/// <summary>
-	/// scenedetailvalue(&lt;key&gt;, &lt;value&gt;)
-	/// &lt;value&gt; as detail &lt;key&gt; keeps it: trimmed, several values joined by |, each written as its choice is.
-	/// A key the catalogue does not list keeps the value trimmed. <c>#-1</c> and the reason for a key that can't be a
-	/// detail or a value the detail does not allow.
-	/// </summary>
-	[SharpFunction(Name = "scenedetailvalue", MinArgs = 2, MaxArgs = 2,
-		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["key", "value"])]
-	public static async ValueTask<CallState> SceneDetailValue(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		var args = parser.CurrentState.Arguments;
-		var value = args["1"].Message.ToPlainText();
-		return SceneDetails.Normalize(args["0"].Message.ToPlainText()) switch
-		{
-			string key => await KeptValueAsync(parser, key, value),
-			Error<string> error => new CallState($"#-1 {error.Value}"),
-		};
 	}
 
 	private static async ValueTask<CallState> KeptValueAsync(IMUSHCodeParser parser, string key, string value)

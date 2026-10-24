@@ -206,15 +206,16 @@ use a **verb form** (cf. `mail`/`mailsend`, `wiki`/`wikilist`). Writes are
 `WizardOnly|HasSideFX` (guard `Configuration.CurrentValue.Function.FunctionSideEffects`),
 take **dbrefs**, and return the new id/value inline. Reads are `Regular`.
 
-**Reads:** `scene(<id>[,<field>])` · `scenelist([<filter>][,<from>][,<to>])`
-(`active`/`recent`/`scheduled`/`mine`; windowed UTC-ms for `scheduled`, sorted by
-`ScheduledFor`) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
+**Reads:** `scene(<id>[,<field>])` · `scenelist([<filter>][,<from>,<to>])`
+(`active`/`finished`/`recent` latest activity first, `scheduled`/`upcoming` by `ScheduledFor`;
+`<from>`/`<to>` a UTC-ms window for all but `recent`) ·
+`scenelist(mine[,<player>])` · `scenelist(shared,<player>[,<player>])` (scenes both belong to) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
 `sceneposes(<id>[,<authorDbref>][,<count>])` (ordered pose ids) ·
-`scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props) ·
-`sceneedits(<id>,<poseId>)` (edit-version history) · `scenemembers(<id>[,<role>])`
+`scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props; `edits` the
+edit-version history) · `scenemembers(<id>[,<role>])`
 · `scenemember(<id>,<playerDbref>[,<field>])` (role/showas/current/grantedat) ·
-`scenefocus(<playerDbref>)` (the player's current scene id) · `scenetags(<id>)`
-(distinct pose tags) · `scenecast(<id>)` (distinct `ShowAsName`s).
+`scenefocus(<playerDbref>)` (the player's current scene id). `scene(<id>,tags)` lists the
+distinct pose tags and `scene(<id>,cast)` the distinct `ShowAsName`s.
 
 **Writes:** `scenecreate(<room>,<owner>[,<title>[,<pitch>[,<scheduledfor>]]])` → id · `sceneset(<id>,<key>,
 <value>)` · `sceneaddpose(<id>,<author>,<showas>,<origin>,<source>,<tags>,
@@ -370,7 +371,7 @@ owner-only for lifecycle/management; authors edit their own poses.**
 - **Visibility / archive:** `/share`, `/unshare`, `/private`, `/public`.
 - **Metadata:** `/title`, `/desc`, `/icdate`, `/type`, `/warn`.
 - **Viewing:** `+scene`, `/list`, `/log [<id>] [<n>]`, `/recap [<n>]` (recent
-  poses — also the "whose turn" cue), `/who [<id>]` (`scenemembers` + `scenecast`).
+  poses — also the "whose turn" cue), `/who [<id>]` (`scenemembers` + `scene(<id>,cast)`).
 - **Agenda:** `+schedule` / `+scenes`. **Plots:** `/plot/*`.
 
 **`+scene/leave`** clears the player's focus (`scenesetfocus(%#)`), and **if they

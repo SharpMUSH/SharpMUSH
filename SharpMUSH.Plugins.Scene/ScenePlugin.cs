@@ -40,7 +40,7 @@ public sealed class ScenePlugin
 	: PluginBase, IServiceRegistrar, IFlagSource, IBridgeSubscriptionSource, IEndpointContributor
 {
 	public override string Id => "scene";
-	public override string Version => "1.0.0";
+	public override string Version => "2.0.0";
 
 	/// <summary>
 	/// Registers the Scene System's storage (this plugin owns it as of Phase 8) into the host container:

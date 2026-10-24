@@ -105,6 +105,24 @@ public class SceneServiceIntegrationTests
 	/// <para>Losing focus is not cosmetic: nearly every owner verb acts on <c>scenefocus(%#)</c> and
 	/// does nothing without one, and the capture hooks need it to record a pose at all.</para>
 	/// </summary>
+	/// <summary>
+	/// The lists that used to be functions of their own: <c>scene(&lt;id&gt;,tags)</c>, <c>scene(&lt;id&gt;,cast)</c> and
+	/// <c>scenepose(&lt;scene&gt;,&lt;pose&gt;,edits)</c>.
+	/// </summary>
+	[Test]
+	public async Task SceneAndPoseFields_ListTagsCastAndEdits()
+	{
+		var id = await NewSceneAsync("Fields");
+		var pose = await Eval($"sceneaddpose({id},{God},The Stranger,{God},ic,pose,combat night,draws a sword.)");
+		await Eval($"sceneeditpose({pose},{God},draws two swords.)");
+
+		await Assert.That((await Eval($"scene({id},tags)")).Split(' ')).IsEquivalentTo(new[] { "combat", "night" });
+		await Assert.That(await Eval($"scene({id},cast)")).IsEqualTo("The Stranger");
+		await Assert.That((await Eval($"scenepose({id},{pose},edits)")).Split(' ', StringSplitOptions.RemoveEmptyEntries).Length).IsEqualTo(2)
+			.Because("the pose as written and its one edit are two versions");
+		await Assert.That(await Eval($"scenepose(,{pose},edits)")).IsEqualTo(await Eval($"scenepose({id},{pose},edits)"));
+	}
+
 	[Test]
 	public async Task SetMember_KeepsFocusAndPersona()
 	{
