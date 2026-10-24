@@ -276,8 +276,8 @@ public class PlusHelpIntegrationTests
 	public async Task AQualifiedName_ReadsTheSameTopicAsTheBareOne()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var bare = Joined(await RunAs(await ReaderAsync(), "+help write"));
-		var qualified = Joined(await RunAs(await ReaderAsync(), "+help plus-help/write"));
+		var bare = Joined(await RunAs(await StaffAsync(), "+help write"));
+		var qualified = Joined(await RunAs(await StaffAsync(), "+help plus-help/write"));
 
 		await Assert.That(bare).Contains("+help/write");
 		await Assert.That(qualified).Contains("+help/write");
@@ -305,7 +305,7 @@ public class PlusHelpIntegrationTests
 	public async Task Search_MatchesTopicBodiesAsWellAsNames()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(await ReaderAsync(), "+help/search markdown"));
+		var said = Joined(await RunAs(await StaffAsync(), "+help/search markdown"));
 
 		await Assert.That(said).Contains("plus-help/write")
 			.Because("the write topic's body says its text is markdown, and search reads bodies");
@@ -434,7 +434,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheFrontPage_LinksInEachClientsDialect_AndPrintsNoTagAsText()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var shown = await ShownAsync(await ReaderAsync(), "+help");
+		var shown = await ShownAsync(await StaffAsync(), "+help");
 
 		await Assert.That(shown.ToPlainText()).DoesNotContain("<a ")
 			.Because("a tag in the text reaches every client as literal text");
@@ -803,7 +803,7 @@ public class PlusHelpIntegrationTests
 	[Arguments("+help/0 scene*", "Usage: +help[/<page>] <topic>")]
 	[Arguments("+help/list/999", "you asked for page 999.")]
 	[Arguments("+help/2 scene*", "There is one page — you asked for page 2.")]
-	[Arguments("+help/2 plus-help/write", "There is one page — you asked for page 2.")]
+	[Arguments("+help/2 plus-help/search", "There is one page — you asked for page 2.")]
 	public async Task AMistypedArgument_IsAnsweredWithTheUsageLine(string command, string usage)
 	{
 		await PutLibrarianInMasterRoomAsync();
@@ -892,7 +892,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheWriteTopic_ShowsItsExamplesAsWritten()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(await ReaderAsync(), "+help write"));
+		var said = Joined(await RunAs(await StaffAsync(), "+help write"));
 
 		await Assert.That(said).Contains("[tone(info,...)] and [name(%#)] both work");
 		await Assert.That(said).Contains("%% shows a %.");
@@ -955,6 +955,24 @@ public class PlusHelpIntegrationTests
 		}
 	}
 
+	/// <summary>Writing help is a staff verb, so its topics and the front page's word on it are for staff.</summary>
+	[Test]
+	public async Task TheWritingTopics_AreShownOnlyToStaff()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+		var staff = await StaffAsync();
+
+		await Assert.That(Joined(await RunAs(reader, "+help write"))).Contains("No local topic").And.DoesNotContain("+help/write <topic>");
+		await Assert.That(Joined(await RunAs(reader, "+help locks"))).Contains("No local topic");
+		await Assert.That(Joined(await RunAs(reader, "+help"))).DoesNotContain("+help/write index=<text>")
+			.Because("the front page tells only staff how to replace it");
+
+		await Assert.That(Joined(await RunAs(staff, "+help write"))).Contains("+help/write <topic>=<text>")
+			.And.Contains("Shown only to: flag^wizard|flag^royalty");
+		await Assert.That(Joined(await RunAs(staff, "+help"))).Contains("Replace it with +help/write index=<text>");
+	}
+
 	/// <summary>A see-also line does not name a topic the reader may not read.</summary>
 	[Test]
 	public async Task SeeAlso_LeavesOutATopicLockedToTheReader()
@@ -966,13 +984,13 @@ public class PlusHelpIntegrationTests
 		var staff = await StaffAsync();
 		await RunAs(staff, $"+help/write {open}=Anyone reads this.");
 		await RunAs(staff, $"+help/write {locked}=Staff read this.");
-		await God1($"&SEE`{open.ToUpperInvariant()} {gameHelp}={locked}|write");
+		await God1($"&SEE`{open.ToUpperInvariant()} {gameHelp}={locked}|search");
 		try
 		{
 			await RunAs(staff, $"+help/restrict {locked}=role^wizard");
 
-			await Assert.That(Joined(await RunAs(await ReaderAsync(), $"+help {open}"))).Contains("See also: write").And.DoesNotContain(locked);
-			await Assert.That(Joined(await RunAs(staff, $"+help {open}"))).Contains($"See also: {locked} · write");
+			await Assert.That(Joined(await RunAs(await ReaderAsync(), $"+help {open}"))).Contains("See also: search").And.DoesNotContain(locked);
+			await Assert.That(Joined(await RunAs(staff, $"+help {open}"))).Contains($"See also: {locked} · search");
 		}
 		finally
 		{

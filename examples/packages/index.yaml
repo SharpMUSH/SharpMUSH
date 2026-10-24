@@ -67,7 +67,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.13.2
+    version: 1.14.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
@@ -217,7 +217,7 @@ packages:
   - path: notifications/
     name: Notifications
     package: notifications
-    version: 1.1.2
+    version: 1.2.0
     description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
@@ -282,7 +282,7 @@ packages:
   - path: onboarding/
     name: Onboarding
     package: onboarding
-    version: 1.0.2
+    version: 1.1.0
     description: +welcome — a getting-started checklist shown at login while a step is open; the game chooses the steps, and other packages add their own
   - path: onboarding-help/
     package: onboarding-help

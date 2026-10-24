@@ -326,6 +326,8 @@ objects:
         It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
         well as from theirs. A Status column appears when another package gives some player a status,
         such as `+status lfrp`.
+      LOCK`WHO`FILTERS: |-
+        perm^packages.admin
       HELP`WHO`FILTERS: |-
         A package can put a status in `+who` without editing who-where. It adds a **filter** to the
         Who-Where Function Object: an attribute named `` FILTER`WHO`STATUS`<name> ``. For each player,

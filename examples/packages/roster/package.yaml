@@ -711,6 +711,8 @@ objects:
         For example:
 
         `+config roster/max-per-account=2`
+      LOCK`ROSTER`CODE: |-
+        perm^packages.admin
       HELP`ROSTER`CODE: |-
         Code on a WIZARD object can change the roster the way the commands do, and read it.
 
@@ -726,6 +728,8 @@ objects:
         ## Switches
 
         `` DATA`ROUTE`<SWITCH> `` on the Roster names the routine a switch runs, `` INC`CMD`<ROUTE> ``. A value with a / in it is an attribute on another object, run with `@trigger/inline/spoof` as the command runs, so another package adds a switch without changing the roster. A package that adds a way to apply says so under `+roster` by setting `` DATA`HOWTOGET`<its name> `` on the Roster.
+      LOCK`ROSTER`HOW: |-
+        perm^config.admin
       HELP`ROSTER`HOW: |-
         The roster has no way to apply built in, because games choose differently. Three common ones:
 

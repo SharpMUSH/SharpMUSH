@@ -810,6 +810,8 @@ objects:
         `` &ALIAS`IRISH <Clock>=Europe/Dublin ``
 
         The IC date has its own settings: see `+help time ic`.
+      LOCK`TIME`IC: |-
+        perm^config.admin
       HELP`TIME`IC: |-
         The IC date `+time` shows comes from these settings, changed with `+config time/<setting>=<value>`:
 

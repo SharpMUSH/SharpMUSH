@@ -586,6 +586,8 @@ objects:
         - `+finger <player>` shows them every field, set or not, and which are hidden.
 
         A player's value is their `` PROFILE`<KEY> `` attribute, so the portal's profile page and other code read the same text.
+      LOCK`FINGER`FIELDS: |-
+        perm^config.admin
       HELP`FINGER`FIELDS: |-
         The fields are a `+config` table, `finger/fields`. Each has a key, a label and two fields:
 

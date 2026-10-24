@@ -1,7 +1,7 @@
 format: "1.16"
 package: notifications
 title: "Push notifications"
-version: 1.1.2
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT
@@ -149,6 +149,8 @@ objects:
         - `+notify preview=on` shows the message itself. It is off at first, so a locked phone shows only who wrote to you, never what they said.
 
         The portal's Notifications page sets the same things with switches.
+      LOCK`NOTIFY`STAFF: |-
+        perm^packages.admin
       HELP`NOTIFY`STAFF: |-
         The Notifications object in the master room keeps what can notify a player, as `` DATA`KIND`<NAME> `` with its description and `` DATA`KIND`<NAME>`DEFAULT ``, 1 when it is on until a player turns it off. `` DATA`PREVIEW`DEFAULT `` is whether a new player sees message text: 0. Each player's choices are on the player, as `` NOTIFY`<NAME> `` and `` NOTIFY`PREVIEW ``: 1 or 0, unset meaning the default.
 

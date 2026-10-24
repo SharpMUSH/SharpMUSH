@@ -978,6 +978,8 @@ objects:
         Output: `\[CONFIG\] Done: avail/find-days is now 14, was 7.`
 
         Entries are kept on the Availability Calendar inside it, `` PLAYER`<key>`<n>`<leaf> ``, one leaf per fact: `KIND`, `REPEAT`, `EVERY`, `DAYS`, `DATE`, `TIME`, `MINUTES`, `UNTIL`, `ZONE`, `SKIP` and `NOTE`. They stay there rather than on the characters for privacy: a character's attributes can be read by whoever may examine it, and a note is its owner's alone.
+      LOCK`AVAIL`CODE: |-
+        perm^packages.admin
       HELP`AVAIL`CODE: |-
         Other code reads availability through functions on the Availability object. It is WIZARD, so only privileged code may `u\(\)` them, such as the Scene Logger when scene-availability is installed.
 

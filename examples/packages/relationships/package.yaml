@@ -837,6 +837,8 @@ objects:
         Staff with the `softcode.relationships.see` permission see every relationship, the hidden ones too. A game hands it out: `@role/allow wizard=softcode.relationships.see`.
 
         A player keeps their side of each relationship on themselves: `` RELATION`<key> `` holds the type's key, what that character is to them, with `` RELATION`<key>`TEXT `` and `` RELATION`<key>`SINCE `` under it. `<key>` is the other character's objid with the `#` dropped and the `:` written as `_`, so `#20:1792045608032` is `20_1792045608032`. A side without the `visual` flag is hidden. `` RELNOTE`<key> `` holds a private note.
+      LOCK`REL`TYPES: |-
+        perm^config.admin
       HELP`REL`TYPES: |-
         The types are a `+config` table, `relationships/types`. Each has a label and two fields:
 

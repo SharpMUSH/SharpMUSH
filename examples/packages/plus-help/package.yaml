@@ -120,7 +120,8 @@ objects:
       # it. The LOCK root locks every topic the object carries; LOCK`<path> locks the topic at
       # HELP`<path> and every subtopic below it. A value is a lock key, as @lock takes one —
       # perm^config.admin, role^wizard|role^royalty, flag^builder — tested against the reader with
-      # testlock(). A key that does not parse fails, so a mistyped lock hides rather than leaks.
+      # testlock(). It is evaluated first, on its own object, so a package's {{ref}} names an object.
+      # A key that does not parse fails, so a mistyped lock hides rather than leaks.
       # %0 a lock key, or nothing — whether the reader passes it; no key passes everyone
       FUN`IS`PASSED:
         value: |-
@@ -129,7 +130,7 @@ objects:
       # %0 an object — whether the reader passes its LOCK root
       FUN`IS`OBJECTREADABLE:
         value: |-
-          u(%!/FUN`IS`PASSED,get(%0/LOCK))
+          u(%!/FUN`IS`PASSED,u(%0/LOCK))
         flags: [funsyntax]
       # A source hides from a reader when every object it names that exists is locked to them. One
       # whose objects are all gone stays, so +help/sources can still say they are missing.
@@ -141,7 +142,7 @@ objects:
       # %0 an object — the topic paths below its LOCK tree whose lock the reader fails
       FUN`GET`FAILEDPATHS:
         value: |-
-          trim(squish(iter(lattr(%0/LOCK`**),if(u(%!/FUN`IS`PASSED,get(%0/%i0)),,rest(%i0,`)),%b,%b)))
+          trim(squish(iter(lattr(%0/LOCK`**),if(u(%!/FUN`IS`PASSED,u(%0/%i0)),,rest(%i0,`)),%b,%b)))
         flags: [funsyntax]
       # %0 a topic path, below HELP · %1 paths — whether it is one of them or below one
       FUN`IS`UNDERPATHS:
@@ -425,9 +426,15 @@ objects:
       # A reader who sees a locked topic passed its lock; the line tells them, and staff checking a
       # topic, who else does.
       # %0 a record — the locks it is shown behind after a blank line, or nothing when it has none
+      # Lock key %0 as a reader is shown it: an indirect lock, @<object>/<lock>, by that object's name and
+      # the lock's, such as Jobs staff; any other key as written.
+      FUN`DISPLAY`LOCKKEY:
+        value: |-
+          if(strmatch(%0,@?*/?*),[name(before(after(%0,@),/))] [after(%0,/)],%0)
+        flags: [funsyntax]
       FUN`DISPLAY`LOCKS:
         value: |-
-          if(words(setr(topic_locks,u(%!/FUN`GET`LOCKNAMES,%0))),%r%r[tone(muted,Shown only to: [iter(%q<topic_locks>,get(extract(%0,2,1,:)/%i0),%b,%band%b)])])
+          if(words(setr(topic_locks,u(%!/FUN`GET`LOCKNAMES,%0))),%r%r[tone(muted,Shown only to: [iter(%q<topic_locks>,u(%!/FUN`DISPLAY`LOCKKEY,u(extract(%0,2,1,:)/%i0)),%b,%band%b)])])
         flags: [funsyntax]
       # %0 a source — the object carrying its topics, or nothing when that object is gone
       FUN`DISPLAY`SOURCEOBJECT:
@@ -703,8 +710,8 @@ objects:
           Everything below is what this game actually has installed. Read a topic by name:
           `+help scene`, or `+help scene join` for a topic several words long.
 
-          Staff: this page is itself a topic. Replace it with `+help/write index=<text>`, and add
-          your own with `+help/write <topic>=<text>` — see \[write\].
+          [if(orflags(%#,Wr),Staff: this page is itself a topic. Replace it with `+help/write index=<text>`\, and add
+          your own with `+help/write <topic>=<text>` — see \[write\].)]
       HELP`HELP:
         value: |-
           `+help` is this game's own help: the topics its installed packages carry, and the ones its
@@ -759,6 +766,9 @@ objects:
       SEE`LOCKS:
         value: |-
           write|sources
+      LOCK`WRITE:
+        value: |-
+          flag^wizard|flag^royalty
       HELP`WRITE:
         value: |-
           Staff write this game's own topics in-game, rather than by editing a file:
@@ -804,6 +814,9 @@ objects:
           - `+help/source <name>=<object>` — read `<object>`'s HELP tree as source `<name>`
           - `+help/unsource <name>` — stop reading it
 
+      LOCK`LOCKS:
+        value: |-
+          flag^wizard|flag^royalty
       HELP`LOCKS:
         value: |-
           A topic can be for some readers only. A reader who fails its lock never meets it: not on the
@@ -815,7 +828,8 @@ objects:
           - `` LOCK`<path> `` locks the topic at `` HELP`<path> `` and every subtopic below it.
 
           The value is a lock key, as `@lock` takes: `perm^config.admin`, `role^wizard|role^royalty`
-          or `flag^builder`. A key that cannot be read hides the topic from everyone.
+          or `flag^builder`. It is evaluated on its object first, so a package can name one of its
+          own objects by its reference. A key that cannot be read hides the topic from everyone.
 
           ```
           &LOCK`CONFIG Config Help=perm^config.admin
@@ -826,7 +840,8 @@ objects:
 
           Staff lock the game's own topics with `+help/restrict <topic>=<lock>` and free one with
           `+help/unrestrict <topic>`. A reader who passes a lock sees `Shown only to:` and the lock
-          at the foot of the topic.
+          at the foot of the topic. An indirect lock, `` @<object>/<lock> ``, shows as the object's
+          name and the lock's: `@Jobs/staff` reads `Shown only to: Jobs staff`.
 
   # ---- the game's own topics --------------------------------------------------
   # Ships empty but for its description: +help/write fills it in-game. The manifest manages only the

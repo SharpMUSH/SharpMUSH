@@ -128,6 +128,17 @@ from, so the front page, `/list`, `/search`, `/sources`, a subtopics line and a 
 miss it, and a see-also entry naming it is dropped. A key that does not parse fails, so a typo
 hides a topic rather than showing it. A reader who passes sees `Shown only to: <lock>` at its foot.
 
+The value is evaluated on its own object before it is tested, so it can name one of the package's
+objects by reference. When no permission says who a topic is for, an indirect lock points at a
+lock the package keeps on that object; jobs locks its staff topics to whoever works a bucket that way:
+
+```yaml
+      LOCK`JOBS`HOOKS: |-
+        @{{jobs}}/staff
+```
+
+An indirect lock shows at the foot as the object's name and the lock's: `Shown only to: Jobs staff`.
+
 Lock a topic to whatever its commands check, so that the help and the command agree on who may use
 them. A bridge package can attach a `LOCK` leaf to another package's help object, as it attaches a
 `HELP` leaf. A plus-help older than 1.9.0 ignores the tree and shows every topic.
