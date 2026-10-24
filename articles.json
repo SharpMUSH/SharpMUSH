@@ -7879,6 +7879,7 @@
     "lookup": "@emit",
     "title": "@emit",
     "aliases": [
+      "emit",
       "\\"
     ],
     "sections": [],
@@ -14110,6 +14111,21 @@
       }
     ],
     "file": "sql-function.md"
+  },
+  {
+    "id": "standin-function",
+    "lookup": "standin()",
+    "title": "standin()",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "examples",
+        "lookup": "standin() examples",
+        "heading": "Examples",
+        "aliases": []
+      }
+    ],
+    "file": "standin-function.md"
   },
   {
     "id": "stopevent-function",
