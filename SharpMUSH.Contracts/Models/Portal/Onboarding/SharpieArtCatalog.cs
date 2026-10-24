@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-dragonlance-kemono-administrator-joining", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-dragonlance-kemono-administrator-identity", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-forgotten-realms-pixel-administrator-identity", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-shared-completion", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-player-continue", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-player-continue.png", 1254, 1254, "player-continue", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-player-channels", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
