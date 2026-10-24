@@ -35,7 +35,7 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 	{
 		if (await Registry.GetInstalledPackageAsync("scene") is not InstalledPackageRecord package)
 			throw new InvalidOperationException("scene is not installed.");
-		await Assert.That(package.Version).IsEqualTo("1.15.1");
+		await Assert.That(package.Version).IsEqualTo("1.15.2");
 
 		var objects = await Registry.GetPackageObjectsAsync("scene");
 		// Two created objects: the WIZARD Logger that runs the verbs and the @hook overrides, and
