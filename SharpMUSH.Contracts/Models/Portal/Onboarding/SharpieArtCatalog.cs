@@ -12,6 +12,7 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-christian-fiction-kemono-player-speak-act", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-shared-completion", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-shared-completion.png", 1254, 1254, "shared-completion", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-player-useful-action", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-player-useful-action.png", 1254, 1254, "player-useful-action", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-gothic-pixel-administrator-walkthrough", "pixel", "Gothic", "images/sharpie/sharpie-gothic-pixel-administrator-walkthrough.png", 1254, 1254, "administrator-walkthrough", SharpieArtThemeKind.Subgenre),
