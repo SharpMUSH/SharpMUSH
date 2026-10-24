@@ -66,6 +66,7 @@ public record AliasOptions(
 			{ "@ATRLOCK", ["@attrlock"] },
 			{ "@ATRCHOWN", ["@attrchown"] },
 			{ "@EDIT", ["@gedit"] },
+			{ "@EMIT", ["emit"] },
 			{ "@IFELSE", ["@if"] },
 			{ "@SWITCH", ["@sw"] },
 			{ "GET", ["take"] },

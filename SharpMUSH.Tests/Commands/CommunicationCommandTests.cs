@@ -182,6 +182,7 @@ public class CommunicationCommandTests
 	[Test]
 	[Arguments("@emit Test broadcast", "Test broadcast")]
 	[Arguments("@emit Another broadcast message", "Another broadcast message")]
+	[Arguments("emit Alias broadcast", "Alias broadcast")]
 	public async ValueTask EmitBasic(string command, string expected)
 	{
 		TestDiagnostics.WriteLine("Testing: {0}", command);
