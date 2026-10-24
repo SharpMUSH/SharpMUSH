@@ -68,7 +68,7 @@ test('a wide but short output keeps the base font and shows more rows', () => {
     const { metrics, output } = boot({ width: 818, height: 250 });
     const grid = metrics.measure('output');
 
-    assert.equal(grid.cols, 78);
+    assert.equal(grid.cols, Math.floor(817 / (BASE_PX * ADVANCE)), 'the spare width is reported as more columns');
     assert.equal(fontOf(output), BASE_PX, 'the font must not grow past the base on a short output');
     assert.equal(grid.rows, Math.floor(250 / (BASE_PX * LINE)));
 });
@@ -90,4 +90,14 @@ test('a short output never shrinks the font below the base; a narrow one still d
     const narrow = boot({ width: 500, height: 120 });
     narrow.metrics.measure('output');
     assert.ok(fontOf(narrow.output) < BASE_PX, 'width still shrinks the font to fit the columns');
+});
+
+test('a very wide output stops the font at its cap and reports the columns that fit', () => {
+    // A 2732px desktop window: 78 columns would want ~58px glyphs.
+    const { metrics, output } = boot({ width: 2732, height: 1400 });
+    const grid = metrics.measure('output');
+
+    assert.equal(fontOf(output), metrics.MAX_FONT_PX);
+    assert.equal(grid.cols, Math.floor(2731 / (metrics.MAX_FONT_PX * ADVANCE)),
+        'a fluid layout is laid out at the reported width, so it must be the width that fits');
 });
