@@ -1,6 +1,7 @@
 using ColorCode;
 using ColorCode.Common;
 using ColorCode.Parsing;
+using Markdig.Helpers;
 using Markdig.Syntax;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
@@ -50,7 +51,7 @@ public partial class RecursiveMarkdownRenderer
 		{
 			var bgLines = fencedPlain.Lines.Lines?
 				.Where(line => line.Slice.Text != null)
-				.Select(line => MarkupText.Plain(line.Slice.ToString()))
+				.Select(line => MarkupText.Plain(FencedLine(fencedPlain, line)))
 				.ToList() ?? new List<MString>();
 			if (bgLines.Count == 0) return MarkupText.Empty;
 			return MarkupText.Wrap(CodeBackgroundStyle, AlignAllCodeLines(bgLines));
@@ -62,6 +63,18 @@ public partial class RecursiveMarkdownRenderer
 			.ToList() ?? new List<MString>();
 
 		return MarkupText.Join(MarkupText.Plain("\n"), lines);
+	}
+
+	/// <summary>
+	/// A fenced line from the fence's own column on. Inside a list item, Markdig leaves the item's
+	/// indentation at the start of each line.
+	/// </summary>
+	private static string FencedLine(FencedCodeBlock fenced, StringLine line)
+	{
+		var text = line.Slice.ToString();
+		var indent = 0;
+		while (indent < fenced.Column - line.Column && indent < text.Length && text[indent] == ' ') indent++;
+		return text[indent..];
 	}
 
 	/// <summary>
@@ -98,7 +111,7 @@ public partial class RecursiveMarkdownRenderer
 
 		var sourceLines = code.Lines.Lines?
 			.Where(l => l.Slice.Text != null)
-			.Select(l => l.Slice.ToString())
+			.Select(l => FencedLine(code, l))
 			.ToList() ?? [];
 
 		if (sourceLines.Count == 0) return MarkupText.Empty;
@@ -204,7 +217,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var sourceLines = code.Lines.Lines?
 			.Where(l => l.Slice.Text != null)
-			.Select(l => l.Slice.ToString())
+			.Select(l => FencedLine(code, l))
 			.ToList() ?? [];
 
 		if (sourceLines.Count == 0)
