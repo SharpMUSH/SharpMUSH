@@ -242,12 +242,12 @@
 | [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
 | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
 | [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               | [SHA0()]                 |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STRALLOF()]             |
-| [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           |
-| [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
-| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
-| [URLENCODE()]            | [WRAP()]                 |                          |                          |
+| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STANDIN()]              |
+| [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
+| [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            |
+| [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               |
+| [TR()]                   | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 

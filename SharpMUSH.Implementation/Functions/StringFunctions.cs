@@ -1633,6 +1633,20 @@ public partial class Functions
 		return ValueTask.FromResult<CallState>(arg0.Apply(func));
 	}
 
+	/// <summary>
+	/// <c>standin(&lt;text&gt;, &lt;stand-in&gt;)</c>: the text, sent as the stand-in to a client that is not sent
+	/// UTF-8 and cannot show it, where the stand-ins of <c>@ascii</c> and the built-in ones would be used.
+	/// </summary>
+	[SharpFunction(Name = "standin", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["text", "stand-in"])]
+	public ValueTask<CallState> StandIn(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		var standIn = args["1"].Message.ToPlainText();
+		return ValueTask.FromResult(standIn.All(c => c is >= ' ' and <= '~')
+			? new CallState(MarkupText.StandIn(args["0"].Message, standIn))
+			: new CallState(ErrorMessages.Returns.InvalidArgument));
+	}
+
 	[SharpFunction(Name = "stripansi", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
 	public ValueTask<CallState> StripAnsi(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ValueTask.FromResult<CallState>(parser.CurrentState.Arguments["0"].Message.WithoutVisualMarkup());
@@ -1935,14 +1949,14 @@ public partial class Functions
 		var lineSeparator = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, MarkupText.NewLine);
 
 		// fun_wrap (src/funstr.c:1644-1669): an empty text is answered as it is, before the widths are
-		// read; each width goes through int_check (72 by default, the first line defaulting to the
-		// width, and 0 for it meaning the width); and a width below 2 is too small.
+		// read; each width goes through int_check (78 by default where PennMUSH has 72, the first line
+		// defaulting to the width, and 0 for it meaning the width); and a width below 2 is too small.
 		if (str.ToPlainText().Length == 0)
 		{
 			return str;
 		}
 
-		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message.ToPlainText(), 72, out var widthInt)
+		if (!ArgHelpers.TryIntCheck(parser, args["1"].Message.ToPlainText(), 78, out var widthInt)
 			|| !ArgHelpers.TryIntCheck(parser, args.TryGetValue("2", out var firstArg) ? firstArg.Message.ToPlainText() : null,
 				widthInt, out var firstLineInt))
 		{

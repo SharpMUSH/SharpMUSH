@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.4.2
+version: 1.4.3
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -1055,7 +1055,7 @@ objects:
       # Board %0 (number path %2) as viewer %1, page %3 (empty for the last, the newest posts): its
       # description, its boards, then its posts. Sets %q<board_post_count> to the number of posts.
       FUN`SCREEN`BOARD: |-
-        u(%!/FUN`SCREEN`BOARD`PAGE,%0,%1,%3)[u(%!/FUN`SCREEN`BOARD`COUNTS,%0,%1)][u(%!/FUN`SCREEN`BOARD`ROWS,%0,%1,%2)][rule(%2 [u(%!/FUN`DISPLAY`BOARDNAME,%0)])][if(strlen(get(%0/DESCRIBE)),%r[get(%0/DESCRIBE)]%r)][if(words(%q<board_visible_boards>),%r[ulocal(%!/FUN`DISPLAY`BOARDTABLE,%0,%1,%2,%q<board_visible_boards>)])][if(cand(words(%q<board_visible_boards>),%q<board_post_count>),%r[rule(Posts,,u(%!/FUN`DISPLAY`THINRULE))])][if(%q<board_post_count>,%r[datacolumns(u(%!/FUN`DISPLAY`OPTIONS`POSTS),%q<table_column_1>,%q<table_column_2>,%q<table_column_3>,%q<table_column_4>,%q<table_column_5>,%q<table_column_6>)])][if(not(cor(words(%q<board_visible_boards>),%q<board_post_count>)),%rNothing here yet.)]%r[rule(u(%!/FUN`SCREEN`BOARD`SUMMARY))][u(%!/FUN`SCREEN`BOARD`LEGEND)][u(%!/FUN`SCREEN`BOARD`PAGER,%2)]%r[u(%!/FUN`SCREEN`BOARD`HINTS,%0,%1,%2)]
+        u(%!/FUN`SCREEN`BOARD`PAGE,%0,%1,%3)[u(%!/FUN`SCREEN`BOARD`COUNTS,%0,%1)][u(%!/FUN`SCREEN`BOARD`ROWS,%0,%1,%2)][rule(%2 [u(%!/FUN`DISPLAY`BOARDNAME,%0)])][if(strlen(get(%0/DESCRIBE)),%r[get(%0/DESCRIBE)]%r[rule(,,u(%!/FUN`DISPLAY`THINRULE))])][if(words(%q<board_visible_boards>),%r[ulocal(%!/FUN`DISPLAY`BOARDTABLE,%0,%1,%2,%q<board_visible_boards>)])][if(cand(words(%q<board_visible_boards>),%q<board_post_count>),%r[rule(Posts,,u(%!/FUN`DISPLAY`THINRULE))])][if(%q<board_post_count>,%r[datacolumns(u(%!/FUN`DISPLAY`OPTIONS`POSTS),%q<table_column_1>,%q<table_column_2>,%q<table_column_3>,%q<table_column_4>,%q<table_column_5>,%q<table_column_6>)])][if(not(cor(words(%q<board_visible_boards>),%q<board_post_count>)),%rNothing here yet.)]%r[rule(u(%!/FUN`SCREEN`BOARD`SUMMARY))][u(%!/FUN`SCREEN`BOARD`LEGEND)][u(%!/FUN`SCREEN`BOARD`PAGER,%2)][u(%!/FUN`SCREEN`BOARD`HINTS,%0,%1,%2)]
       # Which boards and posts board %0 shows viewer %1 on page %2 (empty for the last). Pins head every
       # page. Pages count back from the newest post, so the last page is always full and the first takes
       # what is left. Sets %q<board_visible_boards> (the boards shown), %q<board_count> (every board on it), %q<board_post_list> (every post),
@@ -1105,14 +1105,14 @@ objects:
         post_mark,u(%!/FUN`SCREEN`BOARD`MARK,%0,%q<post_thread_mark>),
         board_post_marks,%q<board_post_marks> %q<post_mark>,
         post_new_comments,if(member(%q<unread_comment_posts>,%0),u(%!/FUN`READING`NEWCOMMENTS,%0,%q<post_thread_mark>,%1),0),
-        table_column_1,%q<table_column_1>%r[switch(%q<post_mark>,U,tone(info,U),%q<post_mark>)],
+        table_column_1,%q<table_column_1>%r[switch(%q<post_mark>,U,tone(info,U),P,standin(📌,P),%q<post_mark>)],
         table_column_2,%q<table_column_2>%r%q<post_number>,
         table_column_3,%q<table_column_3>%r[u(%!/FUN`DISPLAY`LINK,firstof(get(%0/TITLE),%(removed%)),+bbread %2/%q<post_number>)],
         table_column_4,%q<table_column_4>%r[u(%!/FUN`DISPLAY`AUTHOR,%0,,%q<viewer_objid>)],
         table_column_5,%q<table_column_5>%r[words(u(%!/FUN`STORE`COMMENTKEYS,%0))][if(%q<post_new_comments>,%b[tone(info,+%q<post_new_comments>)])],
         table_column_6,%q<table_column_6>%r[u(%!/FUN`DISPLAY`TIME,get(%0/ACTIVE))])
-      # Post %0's mark in the post table, for a reader who has read it up to %1: U unread, P pinned, T
-      # times out within three days, or nothing.
+      # Post %0's mark in the post table, for a reader who has read it up to %1: U unread, P pinned (shown
+      # as a pin, P where the client has no emoji), T times out within three days, or nothing.
       FUN`SCREEN`BOARD`MARK: |-
         setq(post_timeout_at,u(%!/FUN`STORE`TIMEOUTAT,%0))[cond(gt(get(%0/SEQ),%1),U,member(%q<screen_pins>,%0),P,cand(strlen(%q<post_timeout_at>),lt(sub(%q<post_timeout_at>,secs()),259200)),T,)]
       # The closing rule's title: how many boards and posts, what is new, and which page.
@@ -1120,15 +1120,15 @@ objects:
         squish(if(words(%q<board_visible_boards>),u(%!/FUN`DISPLAY`PLURAL,words(%q<board_visible_boards>),board)%,) [u(%!/FUN`DISPLAY`PLURAL,%q<board_post_count>,post)][if(%q<unread_count>,%, %q<unread_count> unread)][if(%q<board_new_comments>,%, [u(%!/FUN`DISPLAY`PLURAL,%q<board_new_comments>,new comment)])][if(gt(%q<page_count>,1),%, page %q<screen_page_number> of %q<page_count>)])
       # What the table's marks mean, for the marks it shows, on a line of its own.
       FUN`SCREEN`BOARD`LEGEND: |-
-        setq(board_legend,trim(if(member(%q<board_post_marks>,U),U unread|)[if(%q<board_new_comments>,+n new comments|)][if(member(%q<board_post_marks>,P),P pinned|)][if(member(%q<board_post_marks>,T),T times out soon|)],|,r))[if(strlen(%q<board_legend>),%r[edit(%q<board_legend>,|,%b·%b)])]
+        setq(board_legend,trim(if(member(%q<board_post_marks>,U),U unread|)[if(%q<board_new_comments>,+n new comments|)][if(member(%q<board_post_marks>,T),T times out soon|)],|,r))[if(strlen(%q<board_legend>),%r[edit(%q<board_legend>,|,%b·%b)])]
       # Links to the older and newer pages of the board at number path %0, on a line of its own, when it
       # has more than one.
       FUN`SCREEN`BOARD`PAGER: |-
         if(gt(%q<page_count>,1),%r[trim(if(gt(%q<screen_page_number>,1),u(%!/FUN`DISPLAY`LINK,+bbread/[dec(%q<screen_page_number>)] %0,+bbread/[dec(%q<screen_page_number>)] %0) for older.%b·%b)[if(lt(%q<screen_page_number>,%q<page_count>),u(%!/FUN`DISPLAY`LINK,+bbread/[inc(%q<screen_page_number>)] %0,+bbread/[inc(%q<screen_page_number>)] %0) for newer.)])])
-      # The commands under board %0 (number path %2) for viewer %1: read one, post, go up. A long path
-      # puts each on a line of its own.
+      # The commands under board %0 (number path %2) for viewer %1: read one, post. A long path puts each
+      # on a line of its own.
       FUN`SCREEN`BOARD`HINTS: |-
-        setq(board_hint_separator,if(gt(strlen(%2),12),%r,%b·%b))[if(%q<board_post_count>,+bbread %2/<#> reads one.%q<board_hint_separator>)][if(u(%!/FUN`PERMISSION`CAN,%0,post,%1),+bbpost %2/<title>=<text> posts here.%q<board_hint_separator>)][u(%!/FUN`DISPLAY`LINK,+bbread ..,+bbread [u(%!/FUN`PATH`OFPARENT,%0)])] goes up.
+        setq(board_hints,trim(if(%q<board_post_count>,+bbread %2/<#> reads one.|)[if(u(%!/FUN`PERMISSION`CAN,%0,post,%1),+bbpost %2/<title>=<text> posts here.|)],|,r))[if(strlen(%q<board_hints>),%r[edit(%q<board_hints>,|,if(gt(strlen(%2),12),%r,%b·%b))])]
       # The number path of the level above board %0, empty for the top.
       FUN`PATH`OFPARENT: |-
         setq(path_parent_board,u(%!/FUN`STORE`PARENT,%0))[if(u(%!/FUN`IS`TOP,%q<path_parent_board>),,u(%!/FUN`PATH`OFBOARD,%q<path_parent_board>))]
