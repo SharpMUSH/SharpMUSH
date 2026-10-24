@@ -12,6 +12,9 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-high-fantasy-pixel-administrator-invite", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-administrator-invite.png", 1254, 1254, "administrator-invite", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-high-fantasy-pixel-administrator-capabilities", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-administrator-capabilities.png", 1254, 1254, "administrator-capabilities", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-high-fantasy-pixel-administrator-joining", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-christian-fiction-kemono-administrator-identity", "kemono", "Christian Fiction", "images/sharpie/sharpie-christian-fiction-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-high-fantasy-pixel-player-channels", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-player-channels.png", 1254, 1254, "player-channels", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-high-fantasy-pixel-player-speak-act", "pixel", "High Fantasy", "images/sharpie/sharpie-high-fantasy-pixel-player-speak-act.png", 1254, 1254, "player-speak-act", SharpieArtThemeKind.Subgenre),
