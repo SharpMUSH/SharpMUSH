@@ -6,13 +6,11 @@
   "aliases": ["scene detail functions"],
   "listedIn": ["function list objects"],
   "sections": [
-    {"id": "scenetypes", "heading": "scenetypes()", "lookup": "scenetypes()", "aliases": []},
     {"id": "scenetype", "heading": "scenetype()", "lookup": "scenetype()", "aliases": []},
-    {"id": "scenetypecheck", "heading": "scenetypecheck()", "lookup": "scenetypecheck()", "aliases": []},
-    {"id": "scenedetails", "heading": "scenedetails()", "lookup": "scenedetails()", "aliases": []},
+    {"id": "scenetype-check", "heading": "scenetype() check", "lookup": "scenetype check", "aliases": []},
     {"id": "scenedetail", "heading": "scenedetail()", "lookup": "scenedetail()", "aliases": []},
-    {"id": "scenedetailcheck", "heading": "scenedetailcheck()", "lookup": "scenedetailcheck()", "aliases": []},
-    {"id": "scenedetailvalue", "heading": "scenedetailvalue()", "lookup": "scenedetailvalue()", "aliases": []}
+    {"id": "scenedetail-check", "heading": "scenedetail() check", "lookup": "scenedetail check", "aliases": []},
+    {"id": "scenedetail-value", "heading": "scenedetail() value", "lookup": "scenedetail value", "aliases": []}
   ]
 }
 -->
@@ -20,51 +18,47 @@
 
 The scene package defines the game's pose types and scene details on its Scene Logger object, one attribute of JSON each: ``TYPE`<KEY>`` for a pose type (see [@scene types]) and ``DETAIL`<KEY>`` for a scene detail. A scene detail is a piece of text the game names and explains that a scene can hold, such as the setting it takes place in; the scene keeps its value under the detail's key. These functions read the definitions, and check one before it is written. Without the scene package there are none.
 
-- [scenetypes()]: the pose type keys
-- [scenetype()]: one field of a pose type
-- [scenetypecheck()]: whether JSON reads as a pose type
-- [scenedetails()]: the scene detail keys
-- [scenedetail()]: one field of a scene detail
-- [scenedetailcheck()]: whether JSON reads as a scene detail
-- [scenedetailvalue()]: a value as a detail keeps it
+- [scenetype()]: the pose type keys, or one field of a pose type
+- [scenetype check]: whether JSON reads as a pose type
+- [scenedetail()]: the scene detail keys, or one field of a scene detail
+- [scenedetail check]: whether JSON reads as a scene detail
+- [scenedetail value]: a value as a detail keeps it
 
 A JSON object cannot be typed with braces, which are taken as grouping; build it with [json()].
 
-## scenetypes()
-
-`scenetypes()`
-
-The keys of the pose types, separated by spaces, lowest `order` first and then by key. An attribute that does not read as a type is left out; `@scene/types` says why.
-
 ## scenetype()
 
-`scenetype(<key>[, <field>])`
+`scenetype([<key>[, <field>]])`
 
-One field of a pose type; `label` when no field is given. The others are `presentation`, `tone`, `icon`, `hidden` (1 or 0) and `order`. A key the game does not define is `#-1 NO SUCH POSE TYPE`, and any other field is `#-1 UNKNOWN TYPE FIELD`.
+With no key, the keys of the pose types, separated by spaces, lowest `order` first and then by key. An attribute that does not read as a type is left out; `@scene/types` says why.
 
-## scenetypecheck()
-
-`scenetypecheck(<key>, <json>)`
-
-Empty when `<json>` would read as the pose type `<key>`, otherwise `#-1` and the reason. A key is 1 to 32 letters, digits, `-` and `_`, starting with a letter or digit. The fields are listed in [@scene types].
+With a key, one field of that pose type; `label` when no field is given. The others are `presentation`, `tone`, `icon`, `hidden` (1 or 0) and `order`. A key the game does not define is `#-1 NO SUCH POSE TYPE`, and any other field is `#-1 UNKNOWN TYPE FIELD`.
 
 ```sharp
-> think scenetypecheck(radio, json(object,hidden,json(string,yes)))
+> think scenetype()
+```
+
+Output: ic ooc narration
+
+## scenetype() check
+
+`scenetype(<key>, check, <json>)`
+
+Empty when `<json>` would read as the pose type `<key>`, otherwise `#-1` and the reason. The key does not have to be defined yet. A key is 1 to 32 letters, digits, `-` and `_`, starting with a letter or digit. The fields are listed in [@scene types].
+
+```sharp
+> think scenetype(radio, check, json(object,hidden,json(string,yes)))
 ```
 
 Output: #-1 hidden must be true or false
 
-## scenedetails()
-
-`scenedetails()`
-
-The keys of the scene details, separated by spaces, lowest `order` first.
-
 ## scenedetail()
 
-`scenedetail(<key>[, <field>])`
+`scenedetail([<key>[, <field>]])`
 
-One field of a scene detail; `label` when no field is given. The others are:
+With no key, the keys of the scene details, separated by spaces, lowest `order` first.
+
+With a key, one field of that scene detail; `label` when no field is given. The others are:
 
 - `hint`: one line saying what goes in it
 - `choices`: the values it allows, separated by `|`, or empty when any text will do
@@ -75,22 +69,28 @@ One field of a scene detail; `label` when no field is given. The others are:
 - `hidden`: 1 when it is kept for code only and never shown
 - `sort`: the key of the detail whose number puts scenes in this one's order, or empty
 
-A key the game does not define is `#-1 NO SUCH SCENE DETAIL`, and any other field is `#-1 UNKNOWN DETAIL FIELD`.
+A key the game does not define is `#-1 NO SUCH SCENE DETAIL`, and any other field is `#-1 UNKNOWN DETAIL FIELD`. The fields `check` and `value` take a third argument; see [scenedetail check] and [scenedetail value].
 
-## scenedetailcheck()
+## scenedetail() check
 
-`scenedetailcheck(<key>, <json>)`
+`scenedetail(<key>, check, <json>)`
 
-Empty when `<json>` would read as the scene detail `<key>`, otherwise `#-1` and the reason. A key is 1 to 32 letters, digits, `-` and `_`, starting with a letter, and cannot be one of the scene's own fields, such as `title` or `status`. The JSON fields are those [scenedetail()] reads: `label`, `hint` and `tone` are text, `choices` a list of text, `many`, `listed` and `hidden` true or false, `order` a whole number (50 when left out), and `sort` another detail's key.
+Empty when `<json>` would read as the scene detail `<key>`, otherwise `#-1` and the reason. The key does not have to be defined yet. A key is 1 to 32 letters, digits, `-` and `_`, starting with a letter, and cannot be one of the scene's own fields, such as `title`, `status` or `cast`. The JSON fields are those [scenedetail()] reads: `label`, `hint` and `tone` are text, `choices` a list of text, `many`, `listed` and `hidden` true or false, `order` a whole number (50 when left out), and `sort` another detail's key.
 
-## scenedetailvalue()
+```sharp
+> think scenedetail(title, check, json(object,label,Title))
+```
 
-`scenedetailvalue(<key>, <value>)`
+Output: #-1 'title' is a scene field already, so it can't be a detail
+
+## scenedetail() value
+
+`scenedetail(<key>, value, <value>)`
 
 `<value>` as the detail `<key>` keeps it: trimmed, or for a detail that takes several values, each one trimmed, blanks left out, joined by `|`. When the detail has choices, each value is written as its choice is, and a value it does not allow is `#-1` and a message naming the choices. A key the game does not define keeps the value trimmed. A key that cannot be a detail is `#-1` and the reason.
 
 ```sharp
-> think scenedetailvalue(verse, canon | AU)
+> think scenedetail(verse, value, canon | AU)
 ```
 
 Output: Canon|AU, when `verse` takes several values and its choices are Canon and AU.

@@ -15661,12 +15661,6 @@
         "aliases": []
       },
       {
-        "id": "sceneshared",
-        "lookup": "sceneshared()",
-        "heading": "sceneshared()",
-        "aliases": []
-      },
-      {
         "id": "scenewhere",
         "lookup": "scenewhere()",
         "heading": "scenewhere()",
@@ -15685,12 +15679,6 @@
         "aliases": []
       },
       {
-        "id": "sceneedits",
-        "lookup": "sceneedits()",
-        "heading": "sceneedits()",
-        "aliases": []
-      },
-      {
         "id": "scenemembers",
         "lookup": "scenemembers()",
         "heading": "scenemembers()",
@@ -15706,18 +15694,6 @@
         "id": "scenefocus",
         "lookup": "scenefocus()",
         "heading": "scenefocus()",
-        "aliases": []
-      },
-      {
-        "id": "scenetags",
-        "lookup": "scenetags()",
-        "heading": "scenetags()",
-        "aliases": []
-      },
-      {
-        "id": "scenecast",
-        "lookup": "scenecast()",
-        "heading": "scenecast()",
         "aliases": []
       }
     ],
@@ -15744,27 +15720,15 @@
     ],
     "sections": [
       {
-        "id": "scenetypes",
-        "lookup": "scenetypes()",
-        "heading": "scenetypes()",
-        "aliases": []
-      },
-      {
         "id": "scenetype",
         "lookup": "scenetype()",
         "heading": "scenetype()",
         "aliases": []
       },
       {
-        "id": "scenetypecheck",
-        "lookup": "scenetypecheck()",
-        "heading": "scenetypecheck()",
-        "aliases": []
-      },
-      {
-        "id": "scenedetails",
-        "lookup": "scenedetails()",
-        "heading": "scenedetails()",
+        "id": "scenetype-check",
+        "lookup": "scenetype check",
+        "heading": "scenetype() check",
         "aliases": []
       },
       {
@@ -15774,15 +15738,15 @@
         "aliases": []
       },
       {
-        "id": "scenedetailcheck",
-        "lookup": "scenedetailcheck()",
-        "heading": "scenedetailcheck()",
+        "id": "scenedetail-check",
+        "lookup": "scenedetail check",
+        "heading": "scenedetail() check",
         "aliases": []
       },
       {
-        "id": "scenedetailvalue",
-        "lookup": "scenedetailvalue()",
-        "heading": "scenedetailvalue()",
+        "id": "scenedetail-value",
+        "lookup": "scenedetail value",
+        "heading": "scenedetail() value",
         "aliases": []
       }
     ],
