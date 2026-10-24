@@ -109,6 +109,9 @@ public class SummaryIntegrationTests
 			// +help carries the topics.
 			await Assert.That(await As(cy, "+help summary")).Contains("sums up your last pose")
 				.And.Contains("[SUMMARY] Mira: Bars the door and will not let anyone leave.");
+			// The staff topic is locked to config.admin, which the setting it documents needs.
+			await Assert.That(await As(cy, "+help summary staff")).DoesNotContain("+config summary/max-length=300");
+			await God($"@permission/allow #{cy.DbRef.Number}=config.admin");
 			await Assert.That(await As(cy, "+help summary staff")).Contains("+config summary/max-length=300");
 		}
 		finally

@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.0.5
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -374,6 +374,9 @@ objects:
     name: Health Help
     location: "{{health}}"
     attributes:
+      # +health is for staff with players.view, as the command checks, so its whole help is too.
+      LOCK: |-
+        perm^players.view
       HELP: |-
         Staff numbers on how the game is doing: +health.
       HELP`HEALTH: |-

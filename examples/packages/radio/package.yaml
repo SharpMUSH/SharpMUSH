@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.3.1
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -511,6 +511,8 @@ objects:
         ## What it keeps
 
         `+radio/options <frequency>/keep=<lines>` sets how many lines a frequency keeps for recall, 500 unless set. `/age=30d` drops lines older than that, and `/length=<characters>` refuses longer messages. Leave the part after `=` empty to put back the default.
+      LOCK`RADIO`SETTINGS: |-
+        perm^config.admin
       HELP`RADIO`SETTINGS: |-
         Staff change how the radio works with `+config radio`, which lists its settings. `+config radio/<setting>=<value>` changes one, and `+config/reset radio/<setting>` puts back its default.
 

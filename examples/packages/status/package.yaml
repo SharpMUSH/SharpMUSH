@@ -1,7 +1,7 @@
 format: "1.16"
 package: status
 title: "Roleplay status"
-version: 1.1.3
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -569,6 +569,8 @@ objects:
         - `+status/show <name>` shows one person's status with their note. `+status/show` on its own shows yours.
 
         The list shows only who you could see in `WHO`.
+      LOCK`STATUS`STAFF: |-
+        perm^softcode.status.moderate|perm^config.admin
       HELP`STATUS`STAFF: |-
         Staff with the `softcode.status.moderate` permission, which the `status-moderator` role allows, look after statuses:
 

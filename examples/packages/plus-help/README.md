@@ -20,6 +20,8 @@ game installed and what *this* game's staff wrote. The two never merge.
 | `+help/sources` | all | What each source covers, its registry object and topic count |
 | `+help/write <topic>=<text>` | staff | Write a topic belonging to no package |
 | `+help/delete <topic>` | staff | Remove one |
+| `+help/restrict <topic>=<lock>` | staff | Show a game topic, and its subtopics, only to those passing the lock |
+| `+help/unrestrict <topic>` | staff | Show it to everyone again |
 | `+help/source <name>=<object>` | staff | Register a source by hand |
 | `+help/unsource <name>` | staff | Drop a hand-registered source |
 
@@ -108,6 +110,27 @@ reader's own name. Anything that should be *shown* rather than *run* is escaped 
 
 **Uninstalling plus-help needs `--force`** while any contributor is attached to the librarian, or
 the contributors uninstalled first. That is the attachment guard doing its job.
+
+## Topics for some readers
+
+A source locks topics in a `LOCK` tree beside its `HELP` tree. The `LOCK` root locks every topic the
+object carries, which hides the whole source; `` LOCK`<path> `` locks the topic at `` HELP`<path> ``
+and every subtopic below it. A value is a lock key as `@lock` takes one, tested against the reader
+with `testlock()`:
+
+```yaml
+      LOCK`MYTHING`STAFF: |-
+        perm^softcode.mything.admin
+```
+
+A reader who fails a lock never meets the topic: it is left out of the records every read starts
+from, so the front page, `/list`, `/search`, `/sources`, a subtopics line and a lookup by name all
+miss it, and a see-also entry naming it is dropped. A key that does not parse fails, so a typo
+hides a topic rather than showing it. A reader who passes sees `Shown only to: <lock>` at its foot.
+
+Lock a topic to whatever its commands check, so that the help and the command agree on who may use
+them. A bridge package can attach a `LOCK` leaf to another package's help object, as it attaches a
+`HELP` leaf. A plus-help older than 1.9.0 ignores the tree and shows every topic.
 
 ## Collisions
 

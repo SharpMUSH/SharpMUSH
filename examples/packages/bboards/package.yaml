@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.4.3
+version: 1.5.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -2590,6 +2590,8 @@ objects:
         - `+bbedit` and `+bbremove` on anyone's post or comment.
 
         A board's moderators are whoever passes its moderate lock: see \[bboards admin\].
+      LOCK`BBOARDS`ADMIN: |-
+        perm^softcode.bboards.admin
       HELP`BBOARDS`ADMIN: |-
         ## Running the boards
 

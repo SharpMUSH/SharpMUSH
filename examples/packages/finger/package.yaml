@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -577,6 +577,8 @@ objects:
         - `+finger/unhide <field>` shows it to everyone again.
 
         A field you hide stays hidden when you change it. It is the attribute's `visual` flag, so `` @set me/PROFILE`AGE=!visual `` hides it too.
+      LOCK`FINGER`STAFF: |-
+        perm^softcode.finger.edit
       HELP`FINGER`STAFF: |-
         Staff with the `softcode.finger.edit` permission set anyone's fields. A game hands it out: `@role/allow wizard=softcode.finger.edit` gives it to every wizard, and `@permission/allow <player>=softcode.finger.edit` to one player.
 

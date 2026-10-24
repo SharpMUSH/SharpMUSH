@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.0.5
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -544,6 +544,8 @@ objects:
         - `+safety/scene \[<id>\]` shows the owner of a scene, for each content warning, how many of the other players have a line or veil touching it. The same count appears on the scene's `+scene` card, for its owner only.
 
         A line or veil touches a warning when either contains the other as whole words: a line of `Spiders` touches the warning `Spiders and snakes`. The warnings are the scene's `warning` detail \(`+help scene verse`\).
+      LOCK`SAFETY`STAFF: |-
+        perm^config.admin
       HELP`SAFETY`STAFF: |-
         Staff who change the game's configuration set these with `+config safety`:
 

@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.0.3
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -785,6 +785,8 @@ objects:
         A list longer than your screen comes in pages, the page asked for as the last switch: `+info/2` is the second page of your files, `+info/2 Wren` the second of Wren's. The last line of a page names the command for the next.
 
         Output: a table of files with when each was last saved and whether staff locked it, or a file as a box with its name, its text, and who saved it when.
+      LOCK`INFO`STAFF: |-
+        perm^softcode.info.staff
       HELP`INFO`STAFF: |-
         Staff with the `softcode.info.staff` permission look after other characters' files. A game hands it out: `@role/allow wizard=softcode.info.staff` gives it to every wizard, and `@permission/allow <player>=softcode.info.staff` to one player.
 
@@ -798,6 +800,8 @@ objects:
         The same permission reads every journal entry: `+journal <player>` lists all of a player's entries, shared or not.
 
         A character's files are attributes on the character: `` INFOFILE`<n>`NAME `` and `` INFOFILE`<n>`TEXT `` for `+info`, `` PINFOFILE`<n>` `` for `+pinfo`, and `` JOURNAL`<n>` `` for the journal. The package flags each tree `wizard` and `no_command` the first time it writes it, so a player cannot change them with `&`.
+      LOCK`INFO`SETTINGS: |-
+        perm^config.admin
       HELP`INFO`SETTINGS: |-
         `+config info` lists the settings, and `+config info/<setting>=<value>` changes one. Changing them needs `config.admin`.
 

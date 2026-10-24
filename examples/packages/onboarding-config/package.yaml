@@ -1,7 +1,7 @@
 format: "1.16"
 package: onboarding-config
 title: "Onboarding: +config settings"
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Puts the checklist's settings into +config: registers the Onboarding object with the +config registry, so staff choose the steps and when the list shows with +config onboarding."
 license: MIT
@@ -40,6 +40,8 @@ objects:
   - ref: config_help
     target: "{{onboarding/onboarding_help}}"
     attributes:
+      LOCK`WELCOME`STAFF: |-
+        perm^config.admin
       HELP`WELCOME`STAFF: |-
         Staff who can change the game's configuration \(the `config.admin` permission\) choose the steps and settings with `+config`:
 

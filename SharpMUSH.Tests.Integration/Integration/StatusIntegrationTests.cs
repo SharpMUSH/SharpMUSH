@@ -264,8 +264,11 @@ public class StatusIntegrationTests
 			await Assert.That(await As(ann, "+status/list/0")).Contains("Pages start at 1");
 
 			await Assert.That(await As(ann, "+help status")).Contains("+status lfrp=").And.Contains("+status/list");
-			await Assert.That(await As(ann, "+help status staff")).Contains("+config status/statuses/<name>/lasts=<time>");
 			await Assert.That(await As(ann, "+status/options lfrp/hours=1")).Contains("+status has no /options switch.");
+			// The staff topic is for moderators and those who change the configuration, as its lock says.
+			await Assert.That(await As(ann, "+help status staff")).DoesNotContain("+config status/statuses/<name>/lasts=<time>");
+			await God($"@role/assign #{ann.DbRef.Number}=status-moderator");
+			await Assert.That(await As(ann, "+help status staff")).Contains("+config status/statuses/<name>/lasts=<time>");
 		}
 		finally
 		{

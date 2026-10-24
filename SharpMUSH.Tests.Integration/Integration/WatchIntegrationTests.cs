@@ -140,6 +140,9 @@ public class WatchIntegrationTests
 			await Assert.That(await As(ann, "+watch something")).Contains("+watch/add <name> watches someone.");
 
 			await Assert.That(await As(ann, "+help watch")).Contains("+watch/watchers");
+			// The staff topic is locked to config.admin, which the settings it documents need.
+			await Assert.That(await As(ann, "+help watch staff")).DoesNotContain("+config watch");
+			await God($"@permission/allow #{ann.DbRef.Number}=config.admin");
 			await Assert.That(await As(ann, "+help watch staff")).Contains("+config watch");
 		}
 		finally
