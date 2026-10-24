@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster-jobs
 title: "Roster applications through jobs"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT
@@ -183,6 +183,8 @@ objects:
         - Your account may have one application open for a character, and three open at once unless the game changed it.
 
         When staff approve the job, the character is linked to your account, and your connected characters are told. When the character goes to someone else, or leaves the roster, your application is closed and says why.
+      LOCK`ROSTER`APPLY`STAFF: |-
+        perm^softcode.jobs.roster|perm^softcode.jobs.admin
       HELP`ROSTER`APPLY`STAFF: |-
         Applications are jobs in the **Roster** bucket. Whoever works it decides them: the `softcode.jobs.roster` permission, which the `job-admin-roster` role allows, or `softcode.jobs.admin`.
 

@@ -1,7 +1,7 @@
 format: "1.16"
 package: wiki-reader
 title: "In-game wiki reader"
-version: 1.7.3
+version: 1.8.0
 authors: [SharpMUSH]
 description: "+wiki — a reading front end for @wiki: paged listings, a rendered article view, and an editorial audit for staff."
 license: MIT
@@ -407,6 +407,8 @@ objects:
         A switch can be cut short to any beginning no other switch has: `+wiki/c` is `+wiki/category`.
 
         Drafts are invisible here — a page appears once it is published.
+      LOCK`WIKI`AUDIT: |-
+        flag^wizard|flag^royalty
       HELP`WIKI`AUDIT: |-
         `+wiki/audit` is a staff verb. It counts the published pages and lists the ones in no
         category, which is what makes a wiki hard to navigate as it grows. Category pages and

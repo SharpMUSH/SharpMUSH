@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.1.2
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -831,10 +831,14 @@ objects:
         `+rel/note <name>=<text>` keeps a note about anyone, related or not, that only you see. It shows on their card, in the game and in the portal. Nothing after the `=` clears it.
 
         What you type is kept as typed: brackets and percent signs are plain text.
+      LOCK`REL`STAFF: |-
+        perm^softcode.relationships.see
       HELP`REL`STAFF: |-
         Staff with the `softcode.relationships.see` permission see every relationship, the hidden ones too. A game hands it out: `@role/allow wizard=softcode.relationships.see`.
 
         A player keeps their side of each relationship on themselves: `` RELATION`<key> `` holds the type's key, what that character is to them, with `` RELATION`<key>`TEXT `` and `` RELATION`<key>`SINCE `` under it. `<key>` is the other character's objid with the `#` dropped and the `:` written as `_`, so `#20:1792045608032` is `20_1792045608032`. A side without the `visual` flag is hidden. `` RELNOTE`<key> `` holds a private note.
+      LOCK`REL`TYPES: |-
+        perm^config.admin
       HELP`REL`TYPES: |-
         The types are a `+config` table, `relationships/types`. Each has a label and two fields:
 
@@ -858,6 +862,8 @@ objects:
         `` &SHOW`SEEN <Relationships>=if\(hasflag\(%%<target>,connected\),now,get\(%%<target>/LASTLOGOUT\)\) ``
 
         The `relationships-scene` package adds Last scene together this way.
+      LOCK`REL`SETTINGS: |-
+        perm^config.admin
       HELP`REL`SETTINGS: |-
         `+config relationships` lists them, and `+config relationships/<setting>=<value>` changes one.
 

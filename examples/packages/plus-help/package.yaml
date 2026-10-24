@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-help
 title: "+help"
-version: 1.8.2
+version: 1.9.0
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -88,10 +88,10 @@ objects:
       # "game" leads because a game's own help should read before the packages'; the rest sort so the
       # index does not reorder itself as packages are installed. A leaf with no value is skipped:
       # +help/unsource clears the value, and attrib_set() leaves the attribute itself in place.
-      # no arguments — every registered source, the game's own first
+      # %0 "all" for every source, optional — every registered source the reader may read, the game's own first
       FUN`GET`SOURCES:
         value: |-
-          trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(cand(strlen(get(%!/%i0)),not(strmatch(setr(registered_name,lcstr(rest(%i0,`))),game))),%q<registered_name>),%b,%b))]))
+          trim(squish(game%b[sort(iter(lattr(%!/SRC`*),if(cand(strlen(get(%!/%i0)),not(strmatch(setr(registered_name,lcstr(rest(%i0,`))),game)),cor(strmatch(%0,all),u(%!/FUN`IS`SOURCEREADABLE,%q<registered_name>))),%q<registered_name>),%b,%b))]))
         flags: [funsyntax]
       # ** is the wildcard that crosses a backtick; * stops at one. The root itself is not matched,
       # which is what we want: it holds the source's description, not a topic.
@@ -100,15 +100,68 @@ objects:
       # above it -- +help/write "house rules" sets HELP`HOUSE`RULES, and the engine materializes an
       # empty HELP`HOUSE -- which would otherwise list as a topic named "house" with nothing in it.
       # Missing objects must not turn lattr() error words into phantom topic records.
-      # %0 a source — its topics as records
+      #
+      # A topic the reader fails a lock on is never made a record, so every read below — the index,
+      # listings, search, a topic, its subtopics — leaves it out without asking again. Each object's
+      # failed locks are worked out once, before its topics are walked.
+      # %0 a source · %1 "all" for every topic, optional — its topics the reader may read, as records
       FUN`SOURCE`RECORDS:
         value: |-
-          iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(isdbref(%i0),iter(lattr(%i0/HELP`**),if(strlen(get(%i1/%i0)),%0:[num(%i1)]:%i0),%b,%b)),%b,%b)
+          iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(cand(isdbref(%i0),cor(strmatch(%1,all),u(%!/FUN`IS`OBJECTREADABLE,%i0))),[setq(failed_paths,if(strmatch(%1,all),,u(%!/FUN`GET`FAILEDPATHS,%i0)))][iter(lattr(%i0/HELP`**),if(cand(strlen(get(%i1/%i0)),not(u(%!/FUN`IS`UNDERPATHS,rest(%i0,`),%q<failed_paths>))),%0:[num(%i1)]:%i0),%b,%b)]),%b,%b)
         flags: [funsyntax]
-      # no arguments — every topic in the game, as records
+      # %0 "all" for every topic, optional — every topic in the game the reader may read, as records
       FUN`GET`RECORDS:
         value: |-
-          trim(squish(iter(u(%!/FUN`GET`SOURCES),u(%!/FUN`SOURCE`RECORDS,%i0),%b,%b)))
+          trim(squish(iter(u(%!/FUN`GET`SOURCES,%0),u(%!/FUN`SOURCE`RECORDS,%i0,%0),%b,%b)))
+        flags: [funsyntax]
+
+      # ── Locks ───────────────────────────────────────────────────────────────
+      # A source declares who may read its help in a LOCK tree beside HELP, the way SEE sits beside
+      # it. The LOCK root locks every topic the object carries; LOCK`<path> locks the topic at
+      # HELP`<path> and every subtopic below it. A value is a lock key, as @lock takes one —
+      # perm^config.admin, role^wizard|role^royalty, flag^builder — tested against the reader with
+      # testlock(). It is evaluated first, on its own object, so a package's {{ref}} names an object.
+      # A key that does not parse fails, so a mistyped lock hides rather than leaks.
+      # %0 a lock key, or nothing — whether the reader passes it; no key passes everyone
+      FUN`IS`PASSED:
+        value: |-
+          cor(not(strlen(%0)),t(testlock(%0,%#)))
+        flags: [funsyntax]
+      # %0 an object — whether the reader passes its LOCK root
+      FUN`IS`OBJECTREADABLE:
+        value: |-
+          u(%!/FUN`IS`PASSED,u(%0/LOCK))
+        flags: [funsyntax]
+      # A source hides from a reader when every object it names that exists is locked to them. One
+      # whose objects are all gone stays, so +help/sources can still say they are missing.
+      # %0 a source — whether the reader may read it
+      FUN`IS`SOURCEREADABLE:
+        value: |-
+          cor(not(words(setr(source_present,iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(isdbref(%i0),%i0),%b,%b)))),t(words(iter(%q<source_present>,if(u(%!/FUN`IS`OBJECTREADABLE,%i0),x),%b,%b))))
+        flags: [funsyntax]
+      # %0 an object — the topic paths below its LOCK tree whose lock the reader fails
+      FUN`GET`FAILEDPATHS:
+        value: |-
+          trim(squish(iter(lattr(%0/LOCK`**),if(u(%!/FUN`IS`PASSED,u(%0/%i0)),,rest(%i0,`)),%b,%b)))
+        flags: [funsyntax]
+      # %0 a topic path, below HELP · %1 paths — whether it is one of them or below one
+      FUN`IS`UNDERPATHS:
+        value: |-
+          t(words(iter(%1,if(cor(strmatch(%0,%i0),strmatch(%0,%i0`*)),x),%b,%b)))
+        flags: [funsyntax]
+      # %0 a record — the lock attributes on its object that apply to it: the root, then each one at
+      # or above its path
+      FUN`GET`LOCKNAMES:
+        value: |-
+          setqm(lock_object,extract(%0,2,1,:),
+          lock_path,rest(extract(%0,3,1,:),`))[trim(squish([if(strlen(get(%q<lock_object>/LOCK)),LOCK)] [iter(lattr(%q<lock_object>/LOCK`**),if(cand(strlen(get(%q<lock_object>/%i0)),u(%!/FUN`IS`UNDERPATHS,%q<lock_path>,rest(%i0,`))),%i0),%b,%b)]))]
+        flags: [funsyntax]
+      # A see-also entry naming a topic the reader may not read is left out, so a locked topic's name
+      # never reaches them that way either. One that names nothing at all is still shown.
+      # %0 records · %1 a topic name as written — whether it names only topics locked to the reader
+      FUN`IS`WITHHELD:
+        value: |-
+          cand(not(words(u(%!/FUN`GET`FOUND,%0,lcstr(%1)))),words(u(%!/FUN`GET`FOUND,u(%!/FUN`GET`RECORDS,all),lcstr(%1))))
         flags: [funsyntax]
 
       # %0 a record — its source
@@ -174,6 +227,11 @@ objects:
       FUN`GET`SEE:
         value: |-
           get(extract(%0,2,1,:)/SEE`[rest(extract(%0,3,1,:),`)])
+        flags: [funsyntax]
+      # %0 records · %1 a record — the topics it points at that the reader may know of, "|"-separated
+      FUN`GET`SEEALSO:
+        value: |-
+          trim(squish(iter(u(%!/FUN`GET`SEE,%1),if(u(%!/FUN`IS`WITHHELD,%0,%i0),,%i0),|,|),|),|)
         flags: [funsyntax]
 
       # ── Selection ───────────────────────────────────────────────────────────
@@ -356,14 +414,27 @@ objects:
       # %0 records · %1 a record — the subtopic and see-also lines after a blank line, each omitted when empty
       FUN`DISPLAY`NAV:
         value: |-
-          if(words(setr(nav_children,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[tone(strong,Subtopics:)] [iter(%q<nav_children>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,tone(muted,%b·%b))])[if(strlen(setr(nav_see_also,u(%!/FUN`GET`SEE,%1))),%r[if(words(%q<nav_children>),,%r)][tone(strong,See also:)] [iter(%q<nav_see_also>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,tone(muted,%b·%b))])]
+          if(words(setr(nav_children,u(%!/FUN`GET`CHILDREN,%0,%1))),%r%r[tone(strong,Subtopics:)] [iter(%q<nav_children>,u(%!/FUN`DISPLAY`CHILD,%i0),%b,tone(muted,%b·%b))])[if(strlen(setr(nav_see_also,u(%!/FUN`GET`SEEALSO,%0,%1))),%r[if(words(%q<nav_children>),,%r)][tone(strong,See also:)] [iter(%q<nav_see_also>,u(%!/FUN`DISPLAY`SEEONE,%i0),|,tone(muted,%b·%b))])]
         flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
       # %0 records · %1 a record — the whole topic, titled with its name
       FUN`DISPLAY`TOPIC:
         value: |-
-          box(rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))[u(%!/FUN`DISPLAY`NAV,%0,%1)],u(%!/FUN`RECORD`NAME,%1),,u(%!/FUN`GET`FRAME))%r+help/list [u(%!/FUN`RECORD`SOURCE,%1)]
+          box(rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))[u(%!/FUN`DISPLAY`NAV,%0,%1)][u(%!/FUN`DISPLAY`LOCKS,%1)],u(%!/FUN`RECORD`NAME,%1),,u(%!/FUN`GET`FRAME))%r+help/list [u(%!/FUN`RECORD`SOURCE,%1)]
+        flags: [funsyntax]
+      # A reader who sees a locked topic passed its lock; the line tells them, and staff checking a
+      # topic, who else does.
+      # %0 a record — the locks it is shown behind after a blank line, or nothing when it has none
+      # Lock key %0 as a reader is shown it: an indirect lock, @<object>/<lock>, by that object's name and
+      # the lock's, such as Jobs staff; any other key as written.
+      FUN`DISPLAY`LOCKKEY:
+        value: |-
+          if(strmatch(%0,@?*/?*),[name(before(after(%0,@),/))] [after(%0,/)],%0)
+        flags: [funsyntax]
+      FUN`DISPLAY`LOCKS:
+        value: |-
+          if(words(setr(topic_locks,u(%!/FUN`GET`LOCKNAMES,%0))),%r%r[tone(muted,Shown only to: [iter(%q<topic_locks>,u(%!/FUN`DISPLAY`LOCKKEY,u(extract(%0,2,1,:)/%i0)),%b,%band%b)])])
         flags: [funsyntax]
       # %0 a source — the object carrying its topics, or nothing when that object is gone
       FUN`DISPLAY`SOURCEOBJECT:
@@ -532,7 +603,7 @@ objects:
       # %0 the reader, optional — the switches, the staff ones too when %0 is staff or not given
       FUN`GET`SWITCHES:
         value: |-
-          list search sources[if(cor(not(strlen(%0)),orflags(%0,Wr)),%bwrite delete source unsource)]
+          list search sources[if(cor(not(strlen(%0)),orflags(%0,Wr)),%bwrite delete restrict unrestrict source unsource)]
         flags: [funsyntax]
       # %0 a switch as typed — the one it names, whole or by a beginning no other switch has, or nothing
       # · %1 the switches to choose from, optional: this object's own when not given. wiki-reader passes
@@ -544,7 +615,7 @@ objects:
       # %0 a switch — how it is typed, after +help/
       FUN`GET`USAGE:
         value: |-
-          switch(%0,list,list\[/<page>\] \[<source>\],search,search\[/<page>\] <text>,sources,sources,write,write <topic>=<text>,delete,delete <topic>,source,source <name>=<object>,unsource,unsource <name>)
+          switch(%0,list,list\[/<page>\] \[<source>\],search,search\[/<page>\] <text>,sources,sources,write,write <topic>=<text>,delete,delete <topic>,restrict,restrict <topic>=<lock>,unrestrict,unrestrict <topic>,source,source <name>=<object>,unsource,unsource <name>)
         flags: [funsyntax]
       # %0 a switch — whether what it lists comes in pages
       FUN`IS`PAGED:
@@ -590,6 +661,19 @@ objects:
         value: |-
           @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert strlen(get(%q<topic_object>/%q<topic_attribute>))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; think attrib_set(%q<topic_object>/%q<topic_attribute>); @pemit %#=notice(HELP,Deleted game/[lcstr(edit(squish(%q<topic>),%b,%b))].,ok)
         flags: [cmdsyntax]
+      # A game topic's lock is a LOCK leaf on Game Help at the topic's path, as a package declares
+      # one. The key is tried on the writer first, so one that does not parse is refused rather than
+      # stored to hide the topic from everyone.
+      # %q<cmd_rest> — <topic>=<lock>.
+      INC`SWITCH`RESTRICT:
+        value: |-
+          @include %!/INC`IS`STAFF; @assert cand(strmatch(%q<cmd_rest>,*=*),strlen(trim(before(%q<cmd_rest>,=))),strlen(setr(topic_lock,trim(after(%q<cmd_rest>,=)))))=@include %!/INC`DISPLAY`USAGE; think setq(topic,ucstr(trim(before(%q<cmd_rest>,=)))); @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; @assert words(lattr(%q<topic_object>/%q<topic_attribute>*))=@include %!/INC`DISPLAY`WARN=No game topic by that name.; @assert not(strmatch(testlock(%q<topic_lock>,%#),#-1*))=@include %!/INC`DISPLAY`WARN=That is not a lock: %q<topic_lock>; think attrib_set(%q<topic_object>/LOCK`[after(%q<topic_attribute>,`)],%q<topic_lock>); @pemit %#=notice(HELP,game/[lcstr(edit(squish(%q<topic>),%b,%b))] is now shown only to: %q<topic_lock>,ok)
+        flags: [cmdsyntax]
+      # %q<cmd_rest> — <topic>.
+      INC`SWITCH`UNRESTRICT:
+        value: |-
+          @include %!/INC`IS`STAFF; @assert strlen(setr(topic,ucstr(trim(%q<cmd_rest>))))=@include %!/INC`DISPLAY`USAGE; @include/args %!/INC`IS`TOPICNAME=topic,%q<topic>; think setq(topic_lock_attribute,LOCK`[after(%q<topic_attribute>,`)]); @assert strlen(get(%q<topic_object>/%q<topic_lock_attribute>))=@include %!/INC`DISPLAY`WARN=That game topic has no lock.; think attrib_set(%q<topic_object>/%q<topic_lock_attribute>); @pemit %#=notice(HELP,game/[lcstr(edit(squish(%q<topic>),%b,%b))] has no lock of its own now.,ok)
+        flags: [cmdsyntax]
       # The escape hatch for a system no package installed. A package that ships a manifest should
       # attach its SRC leaf instead, so that uninstalling it takes the registration with it.
       # %q<cmd_rest> — <name>=<object>.
@@ -626,8 +710,8 @@ objects:
           Everything below is what this game actually has installed. Read a topic by name:
           `+help scene`, or `+help scene join` for a topic several words long.
 
-          Staff: this page is itself a topic. Replace it with `+help/write index=<text>`, and add
-          your own with `+help/write <topic>=<text>` — see \[write\].
+          [if(orflags(%#,Wr),Staff: this page is itself a topic. Replace it with `+help/write index=<text>`\, and add
+          your own with `+help/write <topic>=<text>` — see \[write\].)]
       HELP`HELP:
         value: |-
           `+help` is this game's own help: the topics its installed packages carry, and the ones its
@@ -669,7 +753,7 @@ objects:
         flags: [no_command]
       SEE`HELP:
         value: |-
-          write|search|sources
+          write|search|sources|locks
       SEE`SEARCH:
         value: |-
           help|write
@@ -678,13 +762,21 @@ objects:
           write|help
       SEE`WRITE:
         value: |-
-          sources|help
+          sources|help|locks
+      SEE`LOCKS:
+        value: |-
+          write|sources
+      LOCK`WRITE:
+        value: |-
+          flag^wizard|flag^royalty
       HELP`WRITE:
         value: |-
           Staff write this game's own topics in-game, rather than by editing a file:
 
           - `+help/write <topic>=<text>` — create or replace a topic
           - `+help/delete <topic>` — remove one
+          - `+help/restrict <topic>=<lock>` — show it, and its subtopics, only to those passing the lock
+          - `+help/unrestrict <topic>` — take its own lock off; a lock above it still applies
 
           A topic name is words of letters, digits, and `_ . -`. Several words make a multi-word
           topic: `+help/write house rules=...` is then read by `+help house rules`.
@@ -721,6 +813,35 @@ objects:
 
           - `+help/source <name>=<object>` — read `<object>`'s HELP tree as source `<name>`
           - `+help/unsource <name>` — stop reading it
+
+      LOCK`LOCKS:
+        value: |-
+          flag^wizard|flag^royalty
+      HELP`LOCKS:
+        value: |-
+          A topic can be for some readers only. A reader who fails its lock never meets it: not on the
+          front page, in a listing, a search or a see-also line, nor by typing its name.
+
+          A source declares its locks in a `LOCK` tree on the same object as its `HELP` tree:
+
+          - `LOCK` locks every topic the object carries, which hides the whole source.
+          - `` LOCK`<path> `` locks the topic at `` HELP`<path> `` and every subtopic below it.
+
+          The value is a lock key, as `@lock` takes: `perm^config.admin`, `role^wizard|role^royalty`
+          or `flag^builder`. It is evaluated on its object first, so a package can name one of its
+          own objects by its reference. A key that cannot be read hides the topic from everyone.
+
+          ```
+          &LOCK`CONFIG Config Help=perm^config.admin
+          ```
+
+          Output: nothing; `+help config` and its subtopics are now hidden from anyone without
+          `config.admin`.
+
+          Staff lock the game's own topics with `+help/restrict <topic>=<lock>` and free one with
+          `+help/unrestrict <topic>`. A reader who passes a lock sees `Shown only to:` and the lock
+          at the foot of the topic. An indirect lock, `` @<object>/<lock> ``, shows as the object's
+          name and the lock's: `@Jobs/staff` reads `Shown only to: Jobs staff`.
 
   # ---- the game's own topics --------------------------------------------------
   # Ships empty but for its description: +help/write fills it in-game. The manifest manages only the

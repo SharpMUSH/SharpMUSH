@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -958,6 +958,8 @@ objects:
         Output: a box titled `Free times`, a row for each time the three of you are free for three hours or more, such as `Sat 17 Oct  09:00  21:00  12h`, then who was counted.
 
         Free time is counted in steps of 30 minutes: a step is free when a free entry covers all of it and no busy entry touches it.
+      LOCK`AVAIL`SETTINGS: |-
+        perm^config.admin
       HELP`AVAIL`SETTINGS: |-
         `+config avail` lists the settings and `+config avail/<setting>=<value>` changes one \(`config.admin`\). Lengths take `2h`, `90m` or seconds.
 
@@ -976,6 +978,8 @@ objects:
         Output: `\[CONFIG\] Done: avail/find-days is now 14, was 7.`
 
         Entries are kept on the Availability Calendar inside it, `` PLAYER`<key>`<n>`<leaf> ``, one leaf per fact: `KIND`, `REPEAT`, `EVERY`, `DAYS`, `DATE`, `TIME`, `MINUTES`, `UNTIL`, `ZONE`, `SKIP` and `NOTE`. They stay there rather than on the characters for privacy: a character's attributes can be read by whoever may examine it, and a note is its owner's alone.
+      LOCK`AVAIL`CODE: |-
+        perm^packages.admin
       HELP`AVAIL`CODE: |-
         Other code reads availability through functions on the Availability object. It is WIZARD, so only privileged code may `u\(\)` them, such as the Scene Logger when scene-availability is installed.
 

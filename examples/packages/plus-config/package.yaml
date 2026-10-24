@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-config
 title: "+config"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+config — one command for the settings softcode systems keep for themselves, each checked against the type and limits the system declares."
 license: MIT
@@ -736,6 +736,9 @@ objects:
     type: thing
     name: Config Help
     attributes:
+      # Changing a setting is for config.admin, and so is reading how: the whole source is locked to it.
+      LOCK: |-
+        perm^config.admin
       HELP: |-
         Game settings that softcode systems keep for themselves.
       HELP`CONFIG: |-

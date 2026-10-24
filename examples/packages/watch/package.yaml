@@ -1,7 +1,7 @@
 format: "1.16"
 package: watch
 title: "Watch list"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -423,6 +423,8 @@ objects:
         - `+watch/hide` keeps you out of everyone's watch lines and their `+watch`. `+watch/unhide` undoes it.
         - Someone your page lock keeps out is never told when you connect. See `help @lock/page`.
         - Nobody hears of you while you are DARK or connected hidden, and someone who cannot locate you sees no room for you in `+watch`.
+      LOCK`WATCH`STAFF: |-
+        perm^config.admin
       HELP`WATCH`STAFF: |-
         Staff who can change the game's configuration \(the `config.admin` permission\) change these with `+config watch`; `+config watch/<setting>=<value>` changes one:
 

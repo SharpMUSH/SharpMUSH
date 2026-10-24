@@ -713,9 +713,12 @@ public class JobsIntegrationTests
 			await Assert.That(string.Join("\n", Notifications.For(staff.DbRef)))
 				.Contains("HOOKTURN 1 new>staff new>staff");
 
-			await Assert.That(await As(player, "+help jobs hooks"))
+			await Assert.That(await As(staff, "+help jobs hooks"))
 				.Contains("%<job> (%0): job number.").And.Contains("%<handler> (%2): the handler")
-				.Because("the hooks' help names each argument beside its position");
+				.And.Contains("Shown only to: Jobs staff")
+				.Because("the hooks' help names each argument beside its position, for those who work a bucket");
+			await Assert.That(await As(player, "+help jobs hooks")).Contains("No local topic")
+				.Because("a player who works no bucket is not shown the staff topics");
 			await Assert.That(await As(player, "+help jobs api"))
 				.Contains("Jobs/INC`API`FILE=player,%#,bucket,Applications,title,Application for")
 				.Because("the API takes the job's parts by name");

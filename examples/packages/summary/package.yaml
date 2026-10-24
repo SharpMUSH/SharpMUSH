@@ -1,7 +1,7 @@
 format: "1.16"
 package: summary
 title: "Pose summaries"
-version: 1.0.3
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+summary: a line that sums up your last pose, told to the room you are in and kept nowhere."
 license: MIT
@@ -135,6 +135,8 @@ objects:
         ```
 
         Output: the one line, told to everyone in the room, you included.
+      LOCK`SUMMARY`STAFF: |-
+        perm^config.admin
       HELP`SUMMARY`STAFF: |-
         Staff change how long a summary may be with `+config summary`:
 

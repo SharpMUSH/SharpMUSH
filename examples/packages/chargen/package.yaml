@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.3.1
+version: 2.4.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -1734,6 +1734,8 @@ objects:
         Output: `\[APP\] Done: Archetype saved.`
 
         The web portal has the same application at /apps/chargen.
+      LOCK`APP`REVIEW: |-
+        perm^softcode.chargen.review
       HELP`APP`REVIEW: |-
         Reviewers hold the `softcode.chargen.review` permission, usually through the
         `application-reviewer` role.
@@ -1772,6 +1774,8 @@ objects:
         ```
 
         Output: `\[APP\] Done: Returned to Cora for changes.`
+      LOCK`APP`FORM: |-
+        perm^config.admin
       HELP`APP`FORM: |-
         The form is the game's: sections, and fields in them. Changing it takes the `config.admin` permission.
         Each answer is an attribute on the character, which only `+app` changes, and each submission is kept
@@ -1800,6 +1804,8 @@ objects:
         its most characters and its help, then `On each character` with the answer's attribute, `BG*`, in chapters,
         and each round's, `` CHARGEN`ROUND`<n>`BACKGROUND`<chapter> ``, then a table of its attributes on the
         Chargen Store.
+      LOCK`APP`FIELDS: |-
+        perm^config.admin
       HELP`APP`FIELDS: |-
         Each field has options, set with `+apps/field/<option> <key>=<value>`. An empty value puts one back to
         its default, and `+apps/field <key>` marks the options left at it.
@@ -1855,6 +1861,8 @@ objects:
 
         A character who already has BG1 and BG2 from an imported database finds them as chapters 1 and 2.
         The most characters, `max`, is for each chapter.
+      LOCK`APP`SETTINGS: |-
+        perm^config.admin
       HELP`APP`SETTINGS: |-
         `+config chargen` lists the settings; `+config chargen/<setting>=<value>` changes one.
 

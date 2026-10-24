@@ -1,7 +1,7 @@
 format: "1.16"
 package: alts
 title: "Alts"
-version: 1.0.3
+version: 1.1.0
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -296,6 +296,8 @@ objects:
         Anyone asking about a hidden character is told its alts are private, so it is never linked to the others. A hidden character is forgotten when it leaves your account.
 
         Online shows only when the reader could already see that character connected in `WHO`.
+      LOCK`ALTS`STAFF: |-
+        perm^players.view
       HELP`ALTS`STAFF: |-
         Staff with the `players.view` permission, the one `account\(\)` checks, see every character on an account with `+alts <name>`, hidden ones marked, whatever the account chose. The footer names the account.
 

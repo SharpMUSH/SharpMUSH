@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.13.2
+version: 1.14.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -153,6 +153,9 @@ objects:
     type: thing
     name: Jobs
     flags: [WIZARD]
+    locks:
+      # Whoever works a bucket: the jobs package's staff help topics are locked to this.
+      staff: "FUN`LOCK`STAFF/1"
     attributes:
       # ---- configuration --------------------------------------------------------
       # The settings +config shows and changes (plus-config): the value, then what +config needs to explain
@@ -1442,6 +1445,9 @@ objects:
       # Whether %0 works any bucket.
       FUN`IS`STAFF: |-
         t(words(squish(iter(lcon({{buckets}}),if(u({{jobs}}/FUN`CAN`WORK,%i0,%0),%i0)))))
+      # The staff lock's test, with the reader as %#.
+      FUN`LOCK`STAFF: |-
+        u({{jobs}}/FUN`IS`STAFF,%#)
       # A schema document: kind %0, title %1, sections %2 (%r-separated), actions object %3.
       WEB`ELEMENT`DOCUMENT: |-
         json_fill(get({{jobs}}/DATA`WEB`DOCUMENT),/kind,%0,/title,%1,/pages/0/title,%1,/pages/0/sections,u({{jobs}}/WEB`JSON`ARRAY,%2),/actions,firstof(%3,u({{jobs}}/WEB`JSON`EMPTY)))
@@ -2351,6 +2357,8 @@ objects:
         - `+job/options mail=off`: stop the @mail copies of staff replies.
 
         Messages are markdown. Add `/softcode` to show yours exactly as typed: see \[jobs format\].
+      LOCK`JOBS`STAFF: |-
+        @{{jobs}}/staff
       HELP`JOBS`STAFF: |-
         ## The queue
 
@@ -2380,6 +2388,8 @@ objects:
         - `+jobs/audit`, `+job/audit <#>`, `+job/revert <#>=<why>`: approvals made at once. See \[jobs audit\].
 
         Every switch is in \[jobs commands\].
+      LOCK`JOBS`COMMANDS: |-
+        @{{jobs}}/staff
       HELP`JOBS`COMMANDS: |-
         Every `+job` switch, with the AnomalyJobs and Volund spellings it also takes. `<#>` is a job number.
 
@@ -2501,6 +2511,8 @@ objects:
         The bucket `+request` files in can be neither disabled nor deleted. Renaming it keeps `+request` filing there. `+config jobs/default-bucket` points `+request` at another bucket, and `+config jobs` lists the buckets `+bug`, `+typo`, `+pitch`, `+apply` and gallery reports file in.
 
         The portal's **Bucket settings** page does the same: **New bucket** under the list, and **Manage** on each bucket's page.
+      LOCK`JOBS`ROLES: |-
+        @{{jobs}}/staff
       HELP`JOBS`ROLES: |-
         Who works which jobs comes from permissions, held through roles:
 
@@ -2523,6 +2535,8 @@ objects:
         A bucket's **work lock** is what is actually checked: by default
         `perm^softcode.jobs.admin|perm^softcode.jobs.<bucket>`. Change it with `+bucket/lock` to add
         anything a lock can test.
+      LOCK`JOBS`HOOKS: |-
+        @{{jobs}}/staff
       HELP`JOBS`HOOKS: |-
         A bucket runs code when its jobs change. Every bucket has one attribute per event, `` ON`<EVENT> ``,
         which starts out as a comment naming its arguments, with an example. Replace the comment with code
@@ -2607,6 +2621,8 @@ objects:
         The jobs-app package puts the same queue in the web portal at `/apps/jobs`, reading these jobs through the HTTP handler.
 
         A report of a profile gallery image, sent from the portal's image viewer, files a job in the Staff bucket as whoever reported it, with the image's address, its caption and the reason. `+config jobs/gallery-bucket=<bucket>` sends them elsewhere.
+      LOCK`JOBS`AUDIT: |-
+        @{{jobs}}/staff
       HELP`JOBS`AUDIT: |-
         A bucket with `audit` on approves a job as soon as it is filed, and staff check it afterwards. Use
         it for requests that are almost always granted, where waiting costs more than the odd mistake.
@@ -2652,6 +2668,8 @@ objects:
 
         A bucket with `audit` on and no `` ON`REVERT `` written can still be reverted; nothing is undone
         but the job's outcome.
+      LOCK`JOBS`CHECKLIST: |-
+        @{{jobs}}/staff
       HELP`JOBS`CHECKLIST: |-
         A bucket can give every new job the same steps to go through, such as what staff check on an
         application:

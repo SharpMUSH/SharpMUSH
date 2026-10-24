@@ -206,6 +206,8 @@ public class OnboardingIntegrationTests
 
 		await Assert.That(await As(ed, "+welcome")).DoesNotContain("Read the house rules");
 		await Assert.That(await As(ed, "+help welcome")).Contains("+welcome/done <step>");
-		await Assert.That(await As(ed, "+help welcome staff")).Contains("+config/add onboarding/steps/rules=Read the house rules");
+		// The staff topic is locked to config.admin, which the settings it documents need.
+		await Assert.That(await As(ed, "+help welcome staff")).DoesNotContain("+config/add onboarding/steps/rules=Read the house rules");
+		await Assert.That(await As(staff, "+help welcome staff")).Contains("+config/add onboarding/steps/rules=Read the house rules");
 	}
 }

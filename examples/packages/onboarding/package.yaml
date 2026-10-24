@@ -1,7 +1,7 @@
 format: "1.16"
 package: onboarding
 title: "Getting-started checklist"
-version: 1.0.2
+version: 1.1.0
 authors: [SharpMUSH]
 description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
@@ -424,6 +424,8 @@ objects:
         ```
 
         Output: one line naming the step and how many are left.
+      LOCK`WELCOME`STEPS: |-
+        perm^packages.admin
       HELP`WELCOME`STEPS: |-
         Each step on the checklist is an entry on the Onboarding Steps object, inside the Onboarding object in the master room: `` STEP`<STEP> `` holds its label, with `HINT` \(how to do it, in a line\), `DETAIL` \(more about it, for `+welcome <number>`\) and `ORDER` \(where it comes, lowest first\) beneath. A step's name starts with a letter. The steps that come with the game are `basics` \(10\), `describe` \(30\), `channel` \(40\) and `approval` \(60\).
 

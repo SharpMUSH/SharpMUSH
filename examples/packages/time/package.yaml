@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.3.2
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -787,6 +787,8 @@ objects:
         Output: a box titled `20:30 on Wed 15 Jul` with the time in America/Los_Angeles, the game time, your time, how far off it is, and the line for Discord.
 
         Until you set your zone with `+timezone`, a time you type is read in the game's. See `+help timezone`.
+      LOCK`TIME`SETTINGS: |-
+        perm^config.admin
       HELP`TIME`SETTINGS: |-
         `+config time` lists the settings and `+config time/<setting>=<value>` changes one \(`config.admin`\):
 
@@ -808,6 +810,8 @@ objects:
         `` &ALIAS`IRISH <Clock>=Europe/Dublin ``
 
         The IC date has its own settings: see `+help time ic`.
+      LOCK`TIME`IC: |-
+        perm^config.admin
       HELP`TIME`IC: |-
         The IC date `+time` shows comes from these settings, changed with `+config time/<setting>=<value>`:
 

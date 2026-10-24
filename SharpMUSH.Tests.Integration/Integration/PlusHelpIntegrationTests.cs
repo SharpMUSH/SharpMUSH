@@ -276,8 +276,8 @@ public class PlusHelpIntegrationTests
 	public async Task AQualifiedName_ReadsTheSameTopicAsTheBareOne()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var bare = Joined(await RunAs(await ReaderAsync(), "+help write"));
-		var qualified = Joined(await RunAs(await ReaderAsync(), "+help plus-help/write"));
+		var bare = Joined(await RunAs(await StaffAsync(), "+help write"));
+		var qualified = Joined(await RunAs(await StaffAsync(), "+help plus-help/write"));
 
 		await Assert.That(bare).Contains("+help/write");
 		await Assert.That(qualified).Contains("+help/write");
@@ -305,7 +305,7 @@ public class PlusHelpIntegrationTests
 	public async Task Search_MatchesTopicBodiesAsWellAsNames()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(await ReaderAsync(), "+help/search markdown"));
+		var said = Joined(await RunAs(await StaffAsync(), "+help/search markdown"));
 
 		await Assert.That(said).Contains("plus-help/write")
 			.Because("the write topic's body says its text is markdown, and search reads bodies");
@@ -434,7 +434,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheFrontPage_LinksInEachClientsDialect_AndPrintsNoTagAsText()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var shown = await ShownAsync(await ReaderAsync(), "+help");
+		var shown = await ShownAsync(await StaffAsync(), "+help");
 
 		await Assert.That(shown.ToPlainText()).DoesNotContain("<a ")
 			.Because("a tag in the text reaches every client as literal text");
@@ -803,7 +803,7 @@ public class PlusHelpIntegrationTests
 	[Arguments("+help/0 scene*", "Usage: +help[/<page>] <topic>")]
 	[Arguments("+help/list/999", "you asked for page 999.")]
 	[Arguments("+help/2 scene*", "There is one page — you asked for page 2.")]
-	[Arguments("+help/2 plus-help/write", "There is one page — you asked for page 2.")]
+	[Arguments("+help/2 plus-help/search", "There is one page — you asked for page 2.")]
 	public async Task AMistypedArgument_IsAnsweredWithTheUsageLine(string command, string usage)
 	{
 		await PutLibrarianInMasterRoomAsync();
@@ -892,7 +892,7 @@ public class PlusHelpIntegrationTests
 	public async Task TheWriteTopic_ShowsItsExamplesAsWritten()
 	{
 		await PutLibrarianInMasterRoomAsync();
-		var said = Joined(await RunAs(await ReaderAsync(), "+help write"));
+		var said = Joined(await RunAs(await StaffAsync(), "+help write"));
 
 		await Assert.That(said).Contains("[tone(info,...)] and [name(%#)] both work");
 		await Assert.That(said).Contains("%% shows a %.");
@@ -912,6 +912,136 @@ public class PlusHelpIntegrationTests
 
 		await Assert.That(System.Text.RegularExpressions.Regex.IsMatch(said, @"\S  +\S")).IsFalse()
 			.Because($"{command} has no double space inside a line");
+	}
+
+	// ── Locks ───────────────────────────────────────────────────────────────
+
+	/// <summary>
+	/// A reader who fails a topic's lock meets it nowhere: not by name, in a search or a listing, and
+	/// not its subtopics either. One who passes reads it, with the lock at its foot.
+	/// </summary>
+	[Test]
+	public async Task ARestrictedTopic_IsHiddenWherever_FromAReaderWhoFailsItsLock()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var topic = $"vault{Tag}".ToLowerInvariant();
+		var word = $"Hoard{Tag}";
+		var staff = await StaffAsync();
+		var reader = await ReaderAsync();
+		await RunAs(staff, $"+help/write {topic}=The {word} is staff business.");
+		await RunAs(staff, $"+help/write {topic} keys=Where the {word} keys are kept.");
+		try
+		{
+			await Assert.That(Joined(await RunAs(staff, $"+help/restrict {topic}=role^wizard")))
+				.Contains($"game/{topic} is now shown only to: role^wizard");
+
+			await Assert.That(Joined(await RunAs(reader, $"+help {topic}"))).Contains("No local topic").And.DoesNotContain(word);
+			await Assert.That(Joined(await RunAs(reader, $"+help {topic} keys"))).Contains("No local topic").And.DoesNotContain(word)
+				.Because("a lock covers every subtopic below its topic");
+			await Assert.That(Joined(await RunAs(reader, $"+help/search {word}"))).DoesNotContain(topic);
+			await Assert.That(Joined(await RunAs(reader, "+help/list game"))).DoesNotContain(topic);
+
+			await Assert.That(Joined(await RunAs(staff, $"+help {topic}"))).Contains(word)
+				.And.Contains("Subtopics: keys").And.Contains("Shown only to: role^wizard");
+
+			await Assert.That(Joined(await RunAs(staff, $"+help/unrestrict {topic}"))).Contains($"game/{topic} has no lock of its own now.");
+			await Assert.That(Joined(await RunAs(reader, $"+help {topic} keys"))).Contains(word).And.DoesNotContain("Shown only to");
+		}
+		finally
+		{
+			await RunAs(staff, $"+help/unrestrict {topic}");
+			await RunAs(staff, $"+help/delete {topic} keys");
+			await RunAs(staff, $"+help/delete {topic}");
+		}
+	}
+
+	/// <summary>Writing help is a staff verb, so its topics and the front page's word on it are for staff.</summary>
+	[Test]
+	public async Task TheWritingTopics_AreShownOnlyToStaff()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+		var staff = await StaffAsync();
+
+		await Assert.That(Joined(await RunAs(reader, "+help write"))).Contains("No local topic").And.DoesNotContain("+help/write <topic>");
+		await Assert.That(Joined(await RunAs(reader, "+help locks"))).Contains("No local topic");
+		await Assert.That(Joined(await RunAs(reader, "+help"))).DoesNotContain("+help/write index=<text>")
+			.Because("the front page tells only staff how to replace it");
+
+		await Assert.That(Joined(await RunAs(staff, "+help write"))).Contains("+help/write <topic>=<text>")
+			.And.Contains("Shown only to: flag^wizard|flag^royalty");
+		await Assert.That(Joined(await RunAs(staff, "+help"))).Contains("Replace it with +help/write index=<text>");
+	}
+
+	/// <summary>A see-also line does not name a topic the reader may not read.</summary>
+	[Test]
+	public async Task SeeAlso_LeavesOutATopicLockedToTheReader()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var open = $"lobby{Tag}".ToLowerInvariant();
+		var locked = $"backroom{Tag}".ToLowerInvariant();
+		var gameHelp = await ObjectAsync("game_help");
+		var staff = await StaffAsync();
+		await RunAs(staff, $"+help/write {open}=Anyone reads this.");
+		await RunAs(staff, $"+help/write {locked}=Staff read this.");
+		await God1($"&SEE`{open.ToUpperInvariant()} {gameHelp}={locked}|search");
+		try
+		{
+			await RunAs(staff, $"+help/restrict {locked}=role^wizard");
+
+			await Assert.That(Joined(await RunAs(await ReaderAsync(), $"+help {open}"))).Contains("See also: search").And.DoesNotContain(locked);
+			await Assert.That(Joined(await RunAs(staff, $"+help {open}"))).Contains($"See also: {locked} · search");
+		}
+		finally
+		{
+			await God1($"&SEE`{open.ToUpperInvariant()} {gameHelp}=");
+			await RunAs(staff, $"+help/unrestrict {locked}");
+			await RunAs(staff, $"+help/delete {locked}");
+			await RunAs(staff, $"+help/delete {open}");
+		}
+	}
+
+	[Test]
+	public async Task Restrict_IsRefusedForAMortal_AndForAKeyThatIsNotALock()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var topic = $"gate{Tag}".ToLowerInvariant();
+		var staff = await StaffAsync();
+		await RunAs(staff, $"+help/write {topic}=A gate.");
+		try
+		{
+			await Assert.That(Joined(await RunAs(await ReaderAsync(), $"+help/restrict {topic}=role^wizard"))).Contains("Staff only");
+			await Assert.That(Joined(await RunAs(staff, $"+help/restrict {topic}=|"))).Contains("That is not a lock");
+			await Assert.That(Joined(await RunAs(staff, $"+help/restrict nosuch{Tag}=role^wizard"))).Contains("No game topic by that name");
+
+			var stored = (await God1($"think [get({await ObjectAsync("game_help")}/LOCK`{topic.ToUpperInvariant()})]")).Message.ToPlainText()?.Trim() ?? "";
+			await Assert.That(stored).IsEmpty().Because("every refusal must leave the topic unlocked");
+		}
+		finally
+		{
+			await RunAs(staff, $"+help/delete {topic}");
+		}
+	}
+
+	/// <summary>
+	/// +config's help locks its whole source to config.admin, the permission changing a setting needs:
+	/// a mortal finds it on neither the front page nor +help/sources, and a wizard reads it.
+	/// </summary>
+	[Test]
+	public async Task ALockedSource_IsHiddenWhole()
+	{
+		await PutLibrarianInMasterRoomAsync();
+		var reader = await ReaderAsync();
+		var staff = await StaffAsync();
+
+		await Assert.That(Joined(await RunAs(reader, "+help plus-config/config"))).Contains("No local topic");
+		await Assert.That(Joined(await RunAs(reader, "+help config"))).DoesNotContain("+config/reset")
+			.Because("a bare word finds the topics that show the command, and the one documenting +config is locked");
+		await Assert.That(Joined(await RunAs(reader, "+help/sources"))).DoesNotContain("Game settings that softcode systems keep");
+		await Assert.That(Joined(await RunAs(reader, "+help/list plus-config"))).Contains("No such help source: plus-config");
+
+		await Assert.That(Joined(await RunAs(staff, "+help config"))).Contains("+config/reset").And.Contains("Shown only to: perm^config.admin");
+		await Assert.That(Joined(await RunAs(staff, "+help/sources"))).Contains("Game settings that softcode systems keep");
 	}
 
 	/// <summary>The server's help answers for +help, which a player meets in every game's help index.</summary>

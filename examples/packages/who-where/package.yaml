@@ -1,7 +1,7 @@
 format: "1.16"
 package: who-where
 title: "+who and +where"
-version: 1.8.1
+version: 1.9.0
 authors: [SharpMUSH]
 description: "+who and +where commands drawn with layout functions. +who lists name, alias, idle, connected, gender and location, by name or by idle, or matching a name; +where groups players under a line per location, or lists them by location or by name."
 license: MIT
@@ -326,6 +326,8 @@ objects:
         It shows what a mortal may see, so anyone hiding from the who list is absent from yours as
         well as from theirs. A Status column appears when another package gives some player a status,
         such as `+status lfrp`.
+      LOCK`WHO`FILTERS: |-
+        perm^packages.admin
       HELP`WHO`FILTERS: |-
         A package can put a status in `+who` without editing who-where. It adds a **filter** to the
         Who-Where Function Object: an attribute named `` FILTER`WHO`STATUS`<name> ``. For each player,
@@ -371,6 +373,8 @@ objects:
 
         Output: a heading, a line per location with the players there under it, and the count.
 
+      LOCK`WHO`SETTINGS: |-
+        perm^config.admin
       HELP`WHO`SETTINGS: |-
         Staff change what `+who` and `+where` show with `+config who-where`:
 

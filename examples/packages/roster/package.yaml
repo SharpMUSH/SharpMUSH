@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -680,6 +680,8 @@ objects:
         A character you are given is linked to your account. Play it from your account like any other: `play <name>` at the account menu, or the character list in the web portal. Its password is the game's, not yours.
 
         How you ask for a character is up to the game. `+roster` says how, under the list.
+      LOCK`ROSTER`STAFF: |-
+        perm^softcode.roster.manage
       HELP`ROSTER`STAFF: |-
         Staff with the `softcode.roster.manage` permission, which the `roster-admin` role allows, manage the roster.
 
@@ -695,6 +697,8 @@ objects:
         `/idle` and `/history` come in pages too: `+roster/idle/2`, `+roster/history/2 <name>`.
 
         A character linked or unlinked some other way, by `@account/link`, a claim or the web portal, is held or available on the roster at once, and its history says so.
+      LOCK`ROSTER`SETTINGS: |-
+        perm^config.admin
       HELP`ROSTER`SETTINGS: |-
         `+config roster` shows the settings and changes them:
 
@@ -707,6 +711,8 @@ objects:
         For example:
 
         `+config roster/max-per-account=2`
+      LOCK`ROSTER`CODE: |-
+        perm^packages.admin
       HELP`ROSTER`CODE: |-
         Code on a WIZARD object can change the roster the way the commands do, and read it.
 
@@ -722,6 +728,8 @@ objects:
         ## Switches
 
         `` DATA`ROUTE`<SWITCH> `` on the Roster names the routine a switch runs, `` INC`CMD`<ROUTE> ``. A value with a / in it is an attribute on another object, run with `@trigger/inline/spoof` as the command runs, so another package adds a switch without changing the roster. A package that adds a way to apply says so under `+roster` by setting `` DATA`HOWTOGET`<its name> `` on the Roster.
+      LOCK`ROSTER`HOW: |-
+        perm^config.admin
       HELP`ROSTER`HOW: |-
         The roster has no way to apply built in, because games choose differently. Three common ones:
 
