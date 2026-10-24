@@ -12,6 +12,8 @@ public static class SharpieArtCatalog
 	public static IReadOnlyList<string> Styles { get; } = Array.AsReadOnly(new[] { "minimalist", "chibi", "anime", "kemono", "pixel", "comicbook" });
 	// QA-passed artwork ships under the owner's standing approval; uncovered combinations retain fallbacks.
 	public static IReadOnlyList<SharpieArt> Approved { get; } = Array.AsReadOnly(new[] {
+		new SharpieArt("sharpie-forgotten-realms-pixel-player-sign-in", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-player-sign-in.png", 1254, 1254, "player-sign-in", SharpieArtThemeKind.Subgenre),
+		new SharpieArt("sharpie-forgotten-realms-pixel-shared-welcome", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-shared-welcome.png", 1254, 1254, "shared-welcome", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-administrator-joining", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-administrator-joining.png", 1254, 1254, "administrator-joining", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-dragonlance-kemono-administrator-identity", "kemono", "Dragonlance", "images/sharpie/sharpie-dragonlance-kemono-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
 		new SharpieArt("sharpie-forgotten-realms-pixel-administrator-identity", "pixel", "Forgotten Realms", "images/sharpie/sharpie-forgotten-realms-pixel-administrator-identity.png", 1254, 1254, "administrator-identity", SharpieArtThemeKind.Subgenre),
