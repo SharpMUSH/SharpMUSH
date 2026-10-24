@@ -193,8 +193,8 @@ This is the index to the MUSH online help files.
     Cyclonus (#6) is the enactor and #6 is the executor!
     > @create Box
     Created: Object #10
-    > &EMIT box=$emit: @emit %n (%#) is the enactor and %! is the executor!
-    > emit
+    > &WHOAMI box=$whoami: @emit %n (%#) is the enactor and %! is the executor!
+    > whoami
     Cyclonus (#6) is the enactor and #10 is the executor!
 ```
 
