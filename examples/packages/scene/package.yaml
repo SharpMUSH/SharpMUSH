@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.15.1
+version: 1.15.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -1359,7 +1359,7 @@ objects:
 
         ## Running one
 
-        - `+scene/create <title>[=<pitch>]` — start one here and focus it
+        - `+scene/create <title>\[=<pitch>\]` — start one here and focus it
         - `+scene/title \[<id>=\]<text>` — rename it
         - `+scene/pitch \[<id>=\]<text>` — say what it is about, so people can decide to come
         - `+scene/set \[<id>/\]<detail>=<value>` — a detail, such as its verse or a content warning;
@@ -1373,17 +1373,26 @@ objects:
 
         Wizards, and anyone holding the `scene.manage` permission, can do all of these on any scene.
       HELP`SCENE`POLICY: |-
-        Use `+scene/policy [<id>=]open|invite-only|limited` to set joining policy. Open permits anyone approved;
-        invite-only requires `+scene/invite <id>=<player>` from the owner or a scene manager. Limited requires a positive cap.
-        `+scene/limit [<id>=]<0-10000>` sets a numeric player cap under any policy; zero removes it unless policy is limited.
-        Owner, GM and participant memberships consume seats. Observers and pending invitations do not.
-        An invitation alone grants no membership or access to a private scene; joining accepts it and consumes it only if a seat is available.
-        Rejoining preserves your role and seat. Lowering a cap below current participation is refused.
-        Cards and lists label the policy and cap independently of pose tags and public/private visibility.
+        Who may join a scene is its **joining policy**, which its owner sets:
+
+        - `+scene/policy \[<id>=\]open` — anyone with an approved character may join. This is the default
+        - `+scene/policy \[<id>=\]invite-only` — only players invited with `+scene/invite <id>=<player>`, by
+          the owner or a scene manager
+        - `+scene/policy \[<id>=\]limited` — anyone may join until the scene is full. Set a limit first
+
+        `+scene/limit \[<id>=\]<number>` sets how many players the scene holds, up to 10000, under any policy.
+        `0` removes the limit, but not while the policy is limited. A limit below the number of players already
+        in the scene is refused.
+
+        The owner, GMs and players in the scene take a seat each; observers and invited players who have not
+        joined do not. An invitation is not a seat, and does not let you read a private scene: joining uses it,
+        and only when a seat is free. A player who leaves and comes back keeps their role and seat.
+
+        Scene cards and lists show the policy and the limit.
       HELP`SCENE`LIMIT: |-
-        See `help scene policy` for joining policy, invitations and player caps.
+        See `+help scene policy` for joining policy, invitations and player limits.
       HELP`SCENE`INVITE: |-
-        See `help scene policy` for joining policy, invitations and player caps.
+        See `+help scene policy` for joining policy, invitations and player limits.
       HELP`SCENE`JOIN: |-
         `+scene/join <id>` puts you in a scene and makes it your **focus** — the scene your poses are
         recorded into. `+scene` lists the ids.
@@ -1465,17 +1474,18 @@ objects:
         Rescheduling a running scene pauses it. A scheduled or paused scene records nothing and is not
         listed as live until its owner starts it. A finished or cancelled scene can't be rescheduled.
 
-        Scheduling uses the zone `+timezone` sets, or UTC when absent. Append an IANA name to override it:
-        `tomorrow 7pm America/Chicago`. Confirmations show the resolved date, clock, zone and UTC offset.
-        Slashes inside the zone, title and pitch are preserved. The schedule and cards use each reader's zone.
+        Times are read in your `+timezone`, or in UTC if you have not set one. A zone name after the time
+        overrides it: `tomorrow 7pm America/Chicago`; its slash does not end the time. The confirmation shows the
+        date and time understood, with the zone and its offset from UTC. Everyone sees scheduled times in their
+        own zone.
 
-        A date needs an exact clock: `next Tuesday` and `tomorrow evening` ask you to clarify. A clock alone
-        means today, so one already passed is refused. `this Tuesday` is in the current Monday-based week;
-        `next Tuesday` is strictly later; `next week Tuesday` is in the following Monday-based week.
-        New day/week phrases advance the local calendar; legacy single `+3d` or `+1w` offsets retain elapsed
-        durations. DST gaps and repeated clocks require another time or an ISO timestamp with an explicit offset.
-        Numeric dates like `03/04`, ambiguous abbreviations like `CST`, ranges and recurrences are not guessed.
-        See `help dateparse policies` for the complete grammar and policy.
+        A date needs a time: `next Tuesday` and `tomorrow evening` are refused, with a request to say when. A
+        time alone is today, so one that has passed is refused. Weeks start on Monday: `this Tuesday` is in this
+        week, `next Tuesday` is the next one after today, and `next week Tuesday` is in next week. `in 7 days`
+        keeps the time of day across a summer-time change; `+7d` is exactly 168 hours. A time that summer time
+        skips or repeats is refused: give another, or an ISO time with its offset. Dates such as `03/04`, zone
+        abbreviations such as `CST`, ranges and repeats are refused rather than guessed. See
+        `help dateparse policies`.
       HELP`SCENE`TYPES: |-
         Every line in a scene has a **type**: in character \(`ic`\), out of character \(`ooc`\), narration,
         and whatever else the game adds, such as `radio`. The type decides how the line looks, here and in
@@ -1601,4 +1611,4 @@ objects:
         `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
         last posed, so a table can tell whose turn it is.
 
-        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>[=<pitch>]` first.
+        It needs a focused scene: `+scene/join <id>` or `+scene/create <title>\[=<pitch>\]` first.

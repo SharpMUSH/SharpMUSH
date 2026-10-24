@@ -80,7 +80,7 @@ The same changes can be made from softcode with the [scene write functions].
 
 `/get` shows a scene's summary line, or with a key, that key's value. The keys are `status`, `public` and `istemp` (1 or 0), `scheduledfor`, `startedat` and `lastactivityat` (times), `room`, `owner` and `starter` (names), `posecount`, and any other key the scene holds, such as `title`, which is empty when unset.
 
-```
+```sharp
 > @scene/get 12/status
 ```
 
@@ -157,7 +157,7 @@ Every edit of a pose is kept as a version, which [sceneedits()] lists. `/undo` s
 
 A plot gathers the scenes of one story. `/plot` shows a plot's id, title, owner and description. `/plot/create` makes one and says its id; it needs an owner and a title. `/plot/link` files a scene under a plot, and `/plot/unlink` takes it out again; both warn when the plot or the scene is missing.
 
-```
+```sharp
 > @scene/plot/link 3=12
 ```
 

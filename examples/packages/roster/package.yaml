@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -708,9 +708,11 @@ objects:
         - `return-message`: what the account's characters are told when one of theirs goes back to the roster.
         - `field-order`: the fields an entry shows first, in order. `GROUP SUMMARY`.
 
-        For example:
+        For example, to let an account hold two:
 
         `+config roster/max-per-account=2`
+
+        Output: `\[CONFIG\] Done: roster/max-per-account is now 2, was 1.`
       LOCK`ROSTER`CODE: |-
         perm^packages.admin
       HELP`ROSTER`CODE: |-
