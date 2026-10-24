@@ -91,7 +91,7 @@ public static class ChannelWhat
 			return new CallState(ErrorMessages.Returns.NoSuchChannel);
 		}
 
-		var output = ServerLayout.Build(panels.Count == 1 ? panels[0] : new Stack([.. panels]), 78);
+		var output = ServerLayout.Build(panels.Count == 1 ? panels[0] : new Stack([.. panels]), 78, parser.HouseLook());
 		await notifyService.Notify(executor, output, executor);
 		return new CallState(output);
 	}

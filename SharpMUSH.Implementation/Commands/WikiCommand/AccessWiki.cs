@@ -66,7 +66,7 @@ public static class AccessWiki
 		{
 			case WikiRequirements requirements:
 				var output = ServerLayout.Build(
-					ServerLayout.Section(MarkupText.Plain($"{target.Label} now requires"), Describe(requirements.For(target.Rule))), 78);
+					ServerLayout.Section(MarkupText.Plain($"{target.Label} now requires"), Describe(requirements.For(target.Rule))), 78, parser.HouseLook());
 				await notifyService.Notify(executor, output, executor);
 				return MarkupText.Plain(target.Rule.ToString());
 			case Error<string> error:
@@ -161,7 +161,7 @@ public static class AccessWiki
 			shown = ServerLayout.Section(MarkupText.Plain($"What {player.Object.Name} may do with {target.Label}"), [.. parts]);
 		}
 
-		var output = ServerLayout.Build(shown, 78);
+		var output = ServerLayout.Build(shown, 78, parser.HouseLook());
 		await notifyService.Notify(executor, output, executor);
 		return output;
 	}

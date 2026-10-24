@@ -1,7 +1,9 @@
+using MarkupString.Layout;
 using Mediator;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
@@ -30,7 +32,7 @@ public static class FacetsWiki
 
 		return await WikiFactFacets.CountAsync(wikiService, key, conditions, visibility) switch
 		{
-			WikiFacets facets => await ToldAsync(Shown(WikiHelpers.CategoryLabel(key, await localization.GetCategoryNamesAsync(locale, visibility)),
+			WikiFacets facets => await ToldAsync(Shown(parser.HouseLook(), WikiHelpers.CategoryLabel(key, await localization.GetCategoryNamesAsync(locale, visibility)),
 				key, conditions, facets)),
 			Error<string> error => await ToldAsync(MarkupText.Plain($"WIKI: {error.Value}"), ErrorMessages.Returns.InvalidWikiQuery),
 		};
@@ -42,7 +44,7 @@ public static class FacetsWiki
 		}
 	}
 
-	private static MString Shown(string label, string key, IReadOnlyList<string> conditions, WikiFacets facets)
+	private static MString Shown(LayoutTheme look, string label, string key, IReadOnlyList<string> conditions, WikiFacets facets)
 	{
 		var separator = MarkupText.Plain(" · ");
 		var where = conditions.Count == 0 ? string.Empty : $" where {string.Join(", ", conditions)}";
@@ -60,6 +62,6 @@ public static class FacetsWiki
 				.. facet.More > 0 ? [MarkupText.Plain($"{facet.More} more")] : Array.Empty<MString>(),
 			]))));
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Facets: {label}"),
-			new TextBlock(MarkupText.Join(MarkupText.Plain(" "), summary)), values), 78);
+			new TextBlock(MarkupText.Join(MarkupText.Plain(" "), summary)), values), 78, look);
 	}
 }

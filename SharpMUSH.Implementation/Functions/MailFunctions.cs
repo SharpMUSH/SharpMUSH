@@ -412,7 +412,7 @@ public partial class Functions
 			.Select(arg => arg.Value.Message.ToPlainText())
 			.ToArray();
 
-		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService, ConnectionService),
+		return new CallState(await MailAliases.FunctionAsync(new MailAliases.Services(Mediator, NotifyService, PermissionService, ConnectionService, HouseLook),
 			executor, args));
 	}
 }

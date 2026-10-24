@@ -87,7 +87,7 @@
             ? held.Number || held.Values.Count < MaxValues
             : _chosen.Count < MaxProperties;
 
-    /// <summary>One condition per chosen property: a property's values are either of them, a whole number's one range.</summary>
+    /// <summary>One condition per chosen property: a property's values are either of them, a number's or a date's one range.</summary>
     private IEnumerable<string> Conditions => _chosen.Select(c => $"{c.Property}={string.Join('|', c.Values)}");
 
     private IReadOnlyList<string> ResultConditions =>
@@ -96,14 +96,14 @@
     private async Task ToggleAsync(WikiFacetDto facet, WikiFacetValueDto value)
     {
         var index = _chosen.FindIndex(c => c.Property == facet.Property);
-        var number = facet.Type == "number";
+        var number = facet.Type is "number" or "decimal" or "date";
         if (index < 0)
             _chosen.Add((facet.Property, number, [value.Value]));
         else if (_chosen[index].Values.Remove(value.Value))
         {
             if (_chosen[index].Values.Count == 0) _chosen.RemoveAt(index);
         }
-        // A range of whole numbers is one condition, so choosing another replaces it.
+        // A range of numbers or dates is one condition, so choosing another replaces it.
         else if (number)
             _chosen[index] = (facet.Property, number, [value.Value]);
         else

@@ -43,7 +43,7 @@ public partial class Commands
 	/// <paramref name="functions"/> in a panel titled <paramref name="title"/>, sorted by name: a table with
 	/// <paramref name="detailed"/>, a grid of names without, and <paramref name="summary"/> under a rule.
 	/// </summary>
-	private static MarkupText FunctionListing(string title, IReadOnlyCollection<UserDefinedFunction> functions,
+	private MarkupText FunctionListing(string title, IReadOnlyCollection<UserDefinedFunction> functions,
 		Func<string, UserDefinedFunction?> lookup, bool detailed, string empty, string summary)
 	{
 		var sorted = functions.OrderBy(fn => fn.Name, StringComparer.OrdinalIgnoreCase).ToArray();
@@ -54,7 +54,7 @@ public partial class Commands
 			_ => new Grid([.. sorted.Select(fn => MarkupText.Plain(fn.Name))]) { Gap = 2 },
 		};
 		var footer = new TextBlock(ToneMarkup.Build(ThemeRole.Muted, MarkupText.Plain(summary), ToneMarkup.Standard(ThemeRole.Muted)));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), body, new Rule(), footer), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), body, new Rule(), footer), 78, HouseLook.Look);
 	}
 
 	private static ImmutableArray<Block> FunctionRow(UserDefinedFunction fn, Func<string, UserDefinedFunction?> lookup) =>
@@ -102,7 +102,7 @@ public partial class Commands
 		: $"{min} to {max}";
 
 	/// <summary><c>@function &lt;name&gt;</c> for a user-defined function.</summary>
-	private static MarkupText UserFunctionReport(UserDefinedFunction fn, Func<string, UserDefinedFunction?> lookup, bool showLocation)
+	private MarkupText UserFunctionReport(UserDefinedFunction fn, Func<string, UserDefinedFunction?> lookup, bool showLocation)
 	{
 		var names = fn.AliasOf is { } target ? lookup(target)?.ArgumentNames ?? [] : fn.ArgumentNames;
 		(string, MarkupText)[] fields =
@@ -113,11 +113,11 @@ public partial class Commands
 			("Arguments", MarkupText.Plain(FunctionArity(fn.MinArgs, fn.MaxArgs))),
 			.. names.Length == 0 ? [] : new[] { ("Named", MarkupText.Plain(string.Join(", ", names))) },
 		];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"{fn.Name}()"), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"{fn.Name}()"), ServerLayout.KeyValues(fields)), 78, HouseLook.Look);
 	}
 
 	/// <summary><c>@function &lt;name&gt;</c> for a built-in.</summary>
-	private static MarkupText BuiltinFunctionReport(SharpFunctionAttribute attr, bool isSystem, string? restriction)
+	private MarkupText BuiltinFunctionReport(SharpFunctionAttribute attr, bool isSystem, string? restriction)
 	{
 		var flags = Enum.GetValues<FunctionFlags>()
 			.Where(flag => flag != FunctionFlags.Regular && flag != FunctionFlags.Arg_Mask && attr.Flags.HasFlag(flag))
@@ -130,6 +130,6 @@ public partial class Commands
 			("Flags", MarkupText.Plain(string.Join(" · ", flags))),
 			.. restrictions.Length == 0 ? [] : new[] { ("Restricted", MarkupText.Plain(string.Join(" · ", restrictions))) },
 		];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"{attr.Name.ToLowerInvariant()}()"), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"{attr.Name.ToLowerInvariant()}()"), ServerLayout.KeyValues(fields)), 78, HouseLook.Look);
 	}
 }

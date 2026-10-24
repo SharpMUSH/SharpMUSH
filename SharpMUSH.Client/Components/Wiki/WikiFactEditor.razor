@@ -34,8 +34,8 @@
                         </select>
                         break;
                     default:
-                        <input type="@(property?.Type == "number" ? "number" : "text")" value="@(fact.PageTitle ?? fact.Value)"
-                               disabled="@Disabled" aria-label="@label"
+                        <input type="@InputType(property?.Type)" step="@(property?.Type == "decimal" ? "any" : null)"
+                               value="@(fact.PageTitle ?? fact.Value)" disabled="@Disabled" aria-label="@label"
                                @onchange="@(e => SetValue(index, e.Value?.ToString()))" />
                         break;
                 }
@@ -74,6 +74,14 @@
     /// <summary>Every property but a single-valued one the page already states.</summary>
     private List<WikiFactPropertyDto> Addable =>
         [.. Properties.Where(p => p.Multiple || Facts.All(f => f.Property != p.Id))];
+
+    /// <summary>The input a value is typed in: a date picker for a date, a number field for a number, else text.</summary>
+    private static string InputType(string? type) => type switch
+    {
+        "number" or "decimal" => "number",
+        "date" => "date",
+        _ => "text",
+    };
 
     private static IEnumerable<string> KeywordsFor(WikiFactPropertyDto property, string current) =>
         property.Keywords.Contains(current) || current.Length == 0 ? property.Keywords : [current, .. property.Keywords];

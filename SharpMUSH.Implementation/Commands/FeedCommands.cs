@@ -208,7 +208,7 @@ public partial class Commands
 			rows);
 		var everyTap = taps.Count(tap => tap.Kind == FeedNames.Every);
 		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Feed kinds"), table,
-			new TextBlock(MarkupText.Plain(everyTap == 0 ? "No taps on every kind." : $"{Counted(everyTap, "tap")} on every kind (*)."))), 78);
+			new TextBlock(MarkupText.Plain(everyTap == 0 ? "No taps on every kind." : $"{Counted(everyTap, "tap")} on every kind (*)."))), 78, parser.HouseLook());
 	}
 
 	private async ValueTask<MString> FeedInfoAsync(IMUSHCodeParser parser, AnySharpObject executor, string text)
@@ -237,7 +237,7 @@ public partial class Commands
 				("Lines", MarkupText.Plain(LinesHeld(held.Messages, held.Bytes, held.StoredBytes))),
 				("Taps", MarkupText.Plain(taps.Count == 0 ? "none" : string.Join(", ", taps.Select(tap => $"{tap.Object}/{tap.Attribute}")))),
 			];
-			return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed kind {kind.Name}"), ServerLayout.KeyValues(kindFields)), 78);
+			return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed kind {kind.Name}"), ServerLayout.KeyValues(kindFields)), 78, parser.HouseLook());
 		}
 
 		if (await Mediator.Send(new GetFeedQuery(kind.Name, key), ct) is not SharpFeed feed)
@@ -251,7 +251,7 @@ public partial class Commands
 			.. SettingRows(feed.Settings, effective, "kind"),
 			("Locks", MarkupText.Plain(LockList(feed.Locks))),
 		];
-		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed {feed.Name}"), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed {feed.Name}"), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
 	}
 
 	/// <summary>A line count with the size of the text, which <c>max_bytes</c> limits, and what the lines take stored.</summary>
@@ -310,7 +310,7 @@ public partial class Commands
 				new TableColumn(MarkupText.Plain("Seen to")) { Alignment = Alignment.Right, Wrap = false, Priority = 2 },
 			],
 			rows);
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Members of {target.Feed.Name}"), table), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Members of {target.Feed.Name}"), table), 78, HouseLook.Look);
 	}
 
 	/// <summary>

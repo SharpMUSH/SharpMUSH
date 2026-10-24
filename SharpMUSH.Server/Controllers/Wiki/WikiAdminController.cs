@@ -89,7 +89,7 @@ public class WikiAdminController(
 	public async Task<IActionResult> SetFactProperty(string id, [FromBody] SetFactPropertyRequest request)
 	{
 		if (WikiFactProperties.ParseType(request.Type) is not { } type)
-			return BadRequest($"'{request.Type}' is not a property type: number, keyword, boolean or page.");
+			return BadRequest($"'{request.Type}' is not a property type: keyword, text, number, decimal, date, page or boolean.");
 		var property = new PropertyDefinition(id, WikiFactProperties.SchemaVersion, type,
 			request.Multiple ? Cardinality.Multiple : Cardinality.Single,
 			[.. (request.Keywords ?? []).Select(keyword => new Keyword(keyword))], request.Label ?? string.Empty, request.Description ?? string.Empty);

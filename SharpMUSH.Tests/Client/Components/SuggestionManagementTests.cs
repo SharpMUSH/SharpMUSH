@@ -91,7 +91,7 @@ public class SuggestionManagementTests
 		await Task.Delay(200);
 
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Total Words");
+		await Assert.That(markup).Contains("Total words");
 		await Assert.That(markup).Contains("Categories");
 	}
 
@@ -123,7 +123,7 @@ public class SuggestionManagementTests
 		await Task.Delay(100);
 
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Suggestion Management");
+		await Assert.That(markup).Contains("Suggestion management");
 	}
 
 	[Test]
@@ -142,7 +142,7 @@ public class SuggestionManagementTests
 		await Task.Delay(100);
 
 		var markup = cut.Markup;
-		await Assert.That(markup).Contains("Suggestion Management");
+		await Assert.That(markup).Contains("Suggestion management");
 	}
 
 	[Test]
@@ -177,7 +177,7 @@ public class SuggestionManagementTests
 
 		var cut = ctx.Render<SuggestionManagement>();
 
-		var addButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Add Category"));
+		var addButton = cut.FindAll("button").FirstOrDefault(b => b.TextContent.Contains("Add category"));
 		await Assert.That(addButton).IsNotNull();
 	}
 

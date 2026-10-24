@@ -82,7 +82,7 @@ public partial class Commands
 				new TableColumn(MarkupText.Plain("Name")) { Min = 10 },
 			],
 			roles.Select(role => new[] { role.Priority.ToString(CultureInfo.InvariantCulture), role.Slug, role.Category, role.IsSystem ? $"{role.Name} (system)" : role.Name }));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Roles, highest first"), table), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Roles, highest first"), table), 78, parser.HouseLook());
 	}
 
 	private static async ValueTask<MString> RoleInfoAsync(IMUSHCodeParser parser, string slug)
@@ -108,7 +108,7 @@ public partial class Commands
 			("Allows", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Allow))),
 			("Denies", MarkupText.Plain(ScopeList(role.Permissions, PermissionState.Deny))),
 		];
-		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(role.Name), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(role.Name), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
 	}
 
 	/// <summary><c>@role/categories</c> and <c>@permission/categories</c>: one category list, what each category holds and its description.</summary>
@@ -123,7 +123,7 @@ public partial class Commands
 		var categories = await registry.GetCategoriesAsync(kind, ct);
 		if (categories.Count == 0)
 			return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(heading),
-				new TextBlock(MarkupText.Plain($"None. Create one with {CategoryCommand(kind)}/category/create <name>=<description>."))), 78);
+				new TextBlock(MarkupText.Plain($"None. Create one with {CategoryCommand(kind)}/category/create <name>=<description>."))), 78, parser.HouseLook());
 
 		var table = ServerLayout.Listing(
 			[
@@ -137,7 +137,7 @@ public partial class Commands
 				Counted(members.Count(m => string.Equals(m, category.Name, StringComparison.OrdinalIgnoreCase)), kind == CategoryKind.Role ? "role" : "permission"),
 				category.Description
 			}));
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(heading), table), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(heading), table), 78, parser.HouseLook());
 	}
 
 	/// <summary>The command that manages the category list <paramref name="kind"/>.</summary>
@@ -177,7 +177,7 @@ public partial class Commands
 			("Holds", MarkupText.Plain(Joined(scopes.Where(grants.Has)))),
 			("Lacks", MarkupText.Plain(Joined(scopes.Where(scope => !grants.Has(scope))))),
 		];
-		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(target.Object().Name), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
 	}
 
 	private static string SourceNote(ObjectGrants grants, string slug)

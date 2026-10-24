@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Extensions;
 using Mediator;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -30,7 +31,7 @@ public static class QueryWiki
 		var visibility = await WikiCommandHelper.VisibilityAsync(parser, executor);
 		return await RunAsync(wikiService, WikiFactConditions.Split(conditions), visibility, MaxListed) switch
 		{
-			WikiFactQueryListing found => await ToldAsync(WikiCommandHelper.PageListing($"{found.Pages.Count} page(s) where {conditions.Trim()}",
+			WikiFactQueryListing found => await ToldAsync(WikiCommandHelper.PageListing(parser.HouseLook(), $"{found.Pages.Count} page(s) where {conditions.Trim()}",
 				await RowsAsync(wikiService, localization, found, visibility, locale, forceSource),
 				after: found.More ? "… and more. Narrow the query, or see the web portal." : null,
 				shown: await LabelsAsync(wikiService, found.Show))),

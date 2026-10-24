@@ -79,6 +79,9 @@ public static class WikiPageFacts
 		SemanticType.Boolean when value == "false" => false,
 		SemanticType.Keyword => new Keyword(value),
 		SemanticType.PageRef => new PageRef(value),
+		SemanticType.Text => new FactText(value),
+		SemanticType.Decimal when WikiFactQueries.Decimal(value) is { } number => number,
+		SemanticType.Date when WikiFactQueries.Date(value) is { } date => date,
 		_ => null
 	};
 
@@ -88,14 +91,21 @@ public static class WikiPageFacts
 		long integer => integer.ToString(CultureInfo.InvariantCulture),
 		bool boolean => boolean ? "true" : "false",
 		Keyword keyword => keyword.Value,
+		FactText text => text.Value,
+		double number => WikiFactQueries.WriteDecimal(number),
+		DateOnly date => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
 		_ => throw new ArgumentException("Unknown semantic value.", nameof(value))
 	};
 
-	private static string Describe(SemanticType type) => type switch
+	/// <summary>What a value of <paramref name="type"/> is, as a refusal tells it.</summary>
+	public static string Describe(SemanticType type) => type switch
 	{
 		SemanticType.Integer => "a whole number",
+		SemanticType.Decimal => "a number like 1.5",
+		SemanticType.Date => "a date like 2026-10-23",
 		SemanticType.Boolean => "true or false",
 		SemanticType.PageRef => "a page",
+		SemanticType.Text => "text",
 		_ => "a keyword"
 	};
 }

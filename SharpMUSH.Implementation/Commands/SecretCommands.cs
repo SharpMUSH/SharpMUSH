@@ -173,7 +173,7 @@ public partial class Commands
 	/// Each secret, where its value comes from, when (UTC) and by whom it was stored, the hosts <c>@http</c> may send
 	/// it to, and what it is for.
 	/// </summary>
-	private static MString SecretListing(IReadOnlyList<SecretStatus> secrets)
+	private MString SecretListing(IReadOnlyList<SecretStatus> secrets)
 	{
 		Block body = secrets.Count == 0
 			? new TextBlock(MarkupText.Plain("No secrets."))
@@ -194,7 +194,7 @@ public partial class Commands
 					SecretUseText(secret),
 				}));
 
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Secrets ({secrets.Count})"), body), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Secrets ({secrets.Count})"), body), 78, HouseLook.Look);
 	}
 
 	/// <summary>What the secret is for, then the hosts @http may send it to.</summary>

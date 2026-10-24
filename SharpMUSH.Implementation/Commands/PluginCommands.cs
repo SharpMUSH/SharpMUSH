@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using MarkupString.Layout;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
@@ -43,7 +44,7 @@ public partial class Commands
 		if (listing.Plugins.Count == 0)
 		{
 			return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Plugins"),
-				new TextBlock(MarkupText.Plain("No plugins found."))), 78);
+				new TextBlock(MarkupText.Plain("No plugins found."))), 78, HouseLook.Look);
 		}
 
 		var table = ServerLayout.Listing(
@@ -63,7 +64,7 @@ public partial class Commands
 		var parts = listing.RestartPending
 			? new Block[] { table, new TextBlock(MarkupText.Plain("Some changes wait for a restart: @shutdown/reboot.")) }
 			: [table];
-		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Plugins"), parts), 78);
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Plugins"), parts), 78, HouseLook.Look);
 	}
 
 	private async ValueTask<MString> PluginInfoAsync(string id)
@@ -85,7 +86,7 @@ public partial class Commands
 			.. plugin.Dependents.Count > 0 ? new[] { ("Needed by", MarkupText.Plain(string.Join(", ", plugin.Dependents))) } : [],
 			.. plugin.Description is { } description ? new[] { ("About", MarkupText.Plain(description)) } : [],
 		];
-		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(plugin.Name), ServerLayout.KeyValues(fields)), 78);
+		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain(plugin.Name), ServerLayout.KeyValues(fields)), 78, HouseLook.Look);
 	}
 
 	private async ValueTask<string> PluginSetEnabledAsync(string id, bool enabled) =>

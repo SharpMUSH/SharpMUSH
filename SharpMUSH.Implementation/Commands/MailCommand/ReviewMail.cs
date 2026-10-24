@@ -1,5 +1,6 @@
 ﻿using Mediator;
 using MarkupString;
+using MarkupString.Layout;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
@@ -27,7 +28,7 @@ public static class ReviewMail
 				return MarkupText.Empty;
 			}
 
-			return await ReviewSentAsync(notifyService, mediator, executor, msgListArg, recipient: null);
+			return await ReviewSentAsync(parser.HouseLook(), notifyService, mediator, executor, msgListArg, recipient: null);
 		}
 
 		// extmail.c's lookup_player resolves "#1" as readily as a name, so a dbref must match too.
@@ -45,18 +46,18 @@ public static class ReviewMail
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		return await ReviewSentAsync(notifyService, mediator, executor, msgListArg, recipient);
+		return await ReviewSentAsync(parser.HouseLook(), notifyService, mediator, executor, msgListArg, recipient);
 	}
 
-	private static async ValueTask<MString> ReviewSentAsync(INotifyService notifyService, IMediator mediator,
+	private static async ValueTask<MString> ReviewSentAsync(LayoutTheme look, INotifyService notifyService, IMediator mediator,
 		AnySharpObject executor, MString? msgListArg, SharpPlayer? recipient)
 		=> MessageListHelper.HandleSent(mediator, msgListArg, executor, recipient) switch
 		{
-			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(notifyService, executor, mailList),
+			IAsyncEnumerable<SharpMail> mailList => await ReviewAsync(look, notifyService, executor, mailList),
 			Error<string> error => MarkupText.Plain(error.Value)
 		};
 
-	private static async ValueTask<MString> ReviewAsync(INotifyService notifyService, AnySharpObject executor,
+	private static async ValueTask<MString> ReviewAsync(LayoutTheme look, INotifyService notifyService, AnySharpObject executor,
 		IAsyncEnumerable<SharpMail> mailList)
 	{
 		var i = 0;
@@ -64,7 +65,7 @@ public static class ReviewMail
 		await foreach (var actualMail in mailList)
 		{
 			i++;
-			var output = await MailLayout.Message(actualMail, $"Sent message {i} ({actualMail.Folder})");
+			var output = await MailLayout.Message(look, actualMail, $"Sent message {i} ({actualMail.Folder})");
 			await notifyService.Notify(executor, output, executor);
 		}
 

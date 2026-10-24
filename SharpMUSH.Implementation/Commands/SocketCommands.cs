@@ -148,7 +148,7 @@ public partial class Commands
 			_ => $"There are {count} players connected."
 		};
 
-		var listing = ServerLayout.Build(new Table(isWizard ? WizardWhoColumns : MortalWhoColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		var listing = ServerLayout.Build(new Table(isWizard ? WizardWhoColumns : MortalWhoColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		var message = MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]);
 
 		await NotifyService.Notify(handle: parser.CurrentState.Handle!.Value, what: message);
@@ -232,7 +232,7 @@ public partial class Commands
 			_ => $"There are {count} players connected."
 		};
 
-		var listing = ServerLayout.Build(new Table(SessionColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, fluid: false);
+		var listing = ServerLayout.Build(new Table(SessionColumns, [.. rows]) { Gap = 1, HeaderRule = MarkupText.Empty }, ListingCells, parser.HouseLook(), fluid: false);
 		await NotifyService.Notify(executor, MarkupText.Concat([listing, MarkupText.NewLine, MarkupText.Plain(footer)]), executor);
 		return new None();
 	}

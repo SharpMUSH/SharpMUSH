@@ -1,3 +1,4 @@
+using MarkupString.Layout;
 using System.Collections.Immutable;
 using Markdig.Extensions.CustomContainers;
 using Markdig.Syntax;
@@ -5,6 +6,7 @@ using SharpMUSH.Library.API;
 using Block = MarkupString.Layout.Block;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services.Interfaces;
@@ -29,7 +31,7 @@ public static class FactBlocksWiki
 	/// What each of <paramref name="document"/>'s first <see cref="MaxBlocks"/> facts blocks shows, by its conditions: the
 	/// pages under their titles in <paramref name="locale"/>, or as written when <paramref name="forceSource"/>.
 	/// </summary>
-	public static async Task<IReadOnlyDictionary<string, MString>> AnswerAsync(IWikiService wikiService,
+	public static async Task<IReadOnlyDictionary<string, MString>> AnswerAsync(LayoutTheme look, IWikiService wikiService,
 		IWikiLocalizationService localization, MarkdownDocument document, WikiVisibility visibility, int width, string? locale,
 		bool forceSource)
 	{
@@ -44,7 +46,7 @@ public static class FactBlocksWiki
 		foreach (var conditions in written)
 			blocks[conditions] = await QueryWiki.RunAsync(wikiService, WikiFactConditions.Split(conditions), visibility, MaxPages) switch
 			{
-				WikiFactQueryListing found => await ListedAsync(wikiService, found, conditions, visibility, width,
+				WikiFactQueryListing found => await ListedAsync(look, wikiService, found, conditions, visibility, width,
 					await TitlesAsync(localization, found.Pages, locale, forceSource)),
 				WikiFactIndexBuilding => MarkupText.Plain("[The fact index is building; read the page again when it is ready.]"),
 				Error<string> error => MarkupText.Plain($"[Query {conditions}: {error.Value}]"),
@@ -58,7 +60,7 @@ public static class FactBlocksWiki
 			? [.. pages.Select(p => p.Title)]
 			: [.. (await localization.LocalizeAllAsync(pages, locale, includeDrafts: false)).Select(p => p.Title)];
 
-	private static async Task<MString> ListedAsync(IWikiService wikiService, WikiFactQueryListing found, string conditions,
+	private static async Task<MString> ListedAsync(LayoutTheme look, IWikiService wikiService, WikiFactQueryListing found, string conditions,
 		WikiVisibility visibility, int width, IReadOnlyList<string> titles)
 	{
 		if (found.Pages.Count == 0) return MarkupText.Plain("No pages match.");
@@ -80,6 +82,6 @@ public static class FactBlocksWiki
 		], rows);
 		return ServerLayout.Build(found.More
 			? new Stack([table, new TextBlock(ServerLayout.CommandLink("… and more", $"@wiki/query/noeval {conditions}"))])
-			: table, width);
+			: table, width, look);
 	}
 }

@@ -10,7 +10,7 @@ namespace SharpMUSH.Library.Wiki.Semantics;
 /// A fact query as a person types it, in <c>wikiquery()</c>, <c>@wiki/query</c> and the portal: one condition per
 /// entry. <c>&lt;property&gt;=&lt;value&gt;</c> names a value as <c>@wiki/fact</c> sets it, a page by its title, and
 /// <c>a|b</c> either of two; <c>!=</c> a value the page does not state; <c>=*</c> any value and <c>!=*</c> none;
-/// <c>&gt;</c>, <c>&lt;</c>, <c>&gt;=</c>, <c>&lt;=</c> and <c>=&lt;low&gt;..&lt;high&gt;</c> whole numbers.
+/// <c>&gt;</c>, <c>&lt;</c>, <c>&gt;=</c>, <c>&lt;=</c> and <c>=&lt;low&gt;..&lt;high&gt;</c> numbers and dates.
 /// <c>category=</c> and <c>namespace=</c> say where the pages are, <c>sort=</c> and <c>order=asc|desc</c> how they
 /// are ordered, and <c>show=a|b</c> which values are shown beside them.
 /// </summary>
@@ -98,17 +98,18 @@ public static class WikiFactQueryText
 		string op, string value, WikiVisibility visibility)
 	{
 		var definition = WikiFactEntry.Definition(schema, property);
-		var integer = definition is { Type: SemanticType.Integer };
+		var ordered = definition is not null && WikiFactQueries.Ordered(definition.Type);
 		if (op is ">" or "<" or ">=" or "<=")
-			return (definition, WikiFactQueries.Integer(value)) switch
+			return definition switch
 			{
-				(null, _) => new Error<string>($"No property {property} is defined."),
-				_ when !integer => new Error<string>($"{property} is not a whole number, so it has no range."),
-				(_, null) => new Error<string>($"{property} is a whole number, not '{value}'."),
-				(_, { } bound) => Bounded(property, op, bound),
+				null => new Error<string>($"No property {property} is defined."),
+				_ when !ordered => new Error<string>($"{property} is not a number or a date, so it has no range."),
+				_ => WikiFactQueries.OrderKey(definition.Type, value) is { } bound
+					? Bounded(property, op, bound)
+					: new Error<string>($"{property} is {WikiPageFacts.Describe(definition.Type)}, not '{value}'."),
 			};
-		if (op == "=" && integer && value.Contains("..", StringComparison.Ordinal))
-			return Range(property, value);
+		if (op == "=" && ordered && value.Contains("..", StringComparison.Ordinal))
+			return Range(definition!, value);
 
 		WikiFactCondition stated;
 		if (value == "*")
@@ -129,24 +130,34 @@ public static class WikiFactQueryText
 		return op == "!=" ? new WikiFactNot(stated) : stated;
 	}
 
-	/// <summary><c>&gt;</c>, <c>&lt;</c>, <c>&gt;=</c> and <c>&lt;=</c> as the range of whole numbers they leave.</summary>
+	/// <summary>
+	/// <c>&gt;</c>, <c>&lt;</c>, <c>&gt;=</c> and <c>&lt;=</c> as the range of keys they leave: past a key is the next one,
+	/// since every value has a whole-number key.
+	/// </summary>
 	private static Result<WikiFactCondition> Bounded(string property, string op, long bound) => op switch
 	{
-		">" when bound == long.MaxValue => new Error<string>($"No whole number is greater than {bound}."),
-		"<" when bound == long.MinValue => new Error<string>($"No whole number is less than {bound}."),
+		">" when bound == long.MaxValue => new Error<string>($"No value of {property} is greater than that."),
+		"<" when bound == long.MinValue => new Error<string>($"No value of {property} is less than that."),
 		">" => (WikiFactCondition)new WikiFactRange(property, bound + 1, null),
 		"<" => (WikiFactCondition)new WikiFactRange(property, null, bound - 1),
 		">=" => (WikiFactCondition)new WikiFactRange(property, bound, null),
 		_ => (WikiFactCondition)new WikiFactRange(property, null, bound),
 	};
 
-	private static Result<WikiFactCondition> Range(string property, string value)
+	private static Result<WikiFactCondition> Range(PropertyDefinition definition, string value)
 	{
 		var split = value.IndexOf("..", StringComparison.Ordinal);
 		var (low, high) = (value[..split].Trim(), value[(split + 2)..].Trim());
-		long? Bound(string text) => text.Length == 0 ? null : WikiFactQueries.Integer(text);
+		long? Bound(string text) => text.Length == 0 ? null : WikiFactQueries.OrderKey(definition.Type, text);
 		if ((low.Length > 0 && Bound(low) is null) || (high.Length > 0 && Bound(high) is null))
-			return new Error<string>($"{property} is a whole number; '{value}' is not a range like '1..3'.");
-		return (WikiFactCondition)new WikiFactRange(property, Bound(low), Bound(high));
+			return new Error<string>($"{definition.Id} is {WikiPageFacts.Describe(definition.Type)}; '{value}' is not a range like '{RangeExample(definition.Type)}'.");
+		return (WikiFactCondition)new WikiFactRange(definition.Id, Bound(low), Bound(high));
 	}
+
+	private static string RangeExample(SemanticType type) => type switch
+	{
+		SemanticType.Decimal => "1.5..3",
+		SemanticType.Date => "2026-01-01..2026-06-30",
+		_ => "1..3"
+	};
 }

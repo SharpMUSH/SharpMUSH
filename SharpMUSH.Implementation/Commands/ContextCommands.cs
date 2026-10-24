@@ -6,6 +6,7 @@ using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Palette;
 using SharpMUSH.Library.ParserInterfaces;
@@ -95,7 +96,7 @@ public partial class Commands
 				string.Join(" · ", context.Context.Values.Select(pair => $"{pair.Key}={pair.Value}")),
 				context.Context.Info ?? string.Empty
 			}));
-		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Context of {player.Object.Name}, newest first"), table), 78);
+		var output = ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain($"Context of {player.Object.Name}, newest first"), table), 78, parser.HouseLook());
 		await NotifyService.Notify(executor, output);
 		return CallState.Empty;
 	}

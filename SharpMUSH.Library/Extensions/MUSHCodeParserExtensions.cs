@@ -1,3 +1,6 @@
+using MarkupString.Layout;
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 
@@ -5,6 +8,13 @@ namespace SharpMUSH.Library.Extensions;
 
 public static class MUSHCodeParserExtensions
 {
+	/// <summary>
+	/// The game's look (<c>layout_border</c>, <c>layout_theme</c>), which the server's own listings are laid out
+	/// under (<see cref="ServerLayout.Build"/>) as softcode layouts are.
+	/// </summary>
+	public static LayoutTheme HouseLook(this IMUSHCodeParser parser) =>
+		parser.ServiceProvider.GetRequiredService<Services.Interfaces.IHouseLookService>().Look;
+
 	public static TResult With<TResult>(this IMUSHCodeParser parser, Func<ParserState, ParserState> stateTransform, Func<IMUSHCodeParser, TResult> evaluate)
 		=> evaluate(parser.Push(stateTransform(parser.CurrentState)));
 

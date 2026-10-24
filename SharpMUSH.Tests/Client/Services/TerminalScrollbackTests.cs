@@ -77,7 +77,7 @@ public class TerminalScrollbackTests
 		var table = new MarkupString.Layout.Table(
 			[new MarkupString.Layout.TableColumn(MarkupText.Empty) { Wrap = false }, new MarkupString.Layout.TableColumn(MarkupText.Plain("Title"))],
 			[[MarkupText.Empty, MarkupText.Plain("The First One")]]);
-		var line = Server(ServerLayout.Build(table, 78));
+		var line = Server(ServerLayout.Build(table, 78, ServerLayout.DefaultLook));
 
 		var restored = TerminalScrollback.Parse($"[{TerminalScrollback.Serialize(line).Expect<string>()}]").Single();
 
