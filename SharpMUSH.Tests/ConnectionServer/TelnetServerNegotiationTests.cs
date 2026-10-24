@@ -649,6 +649,81 @@ public partial class TelnetServerNegotiationTests
 		}
 	}
 
+	/// <summary>
+	/// A client agrees to MXP in its first answer, well before the connection registers. The switch to
+	/// MXP output waits for registration like every other capability, instead of giving up on a handle
+	/// that is not there yet and leaving the connection on ANSI for good.
+	/// </summary>
+	[Test]
+	public async Task MxpBeforeRegistration_StillSwitchesTheFormat()
+	{
+		var registrationStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var releaseRegistration = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var registrationComplete = 0;
+		var capabilities = new ProtocolCapabilities();
+
+		var connectionService = Substitute.For<IConnectionServerService>();
+		connectionService
+			.RegisterAsync(
+				Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+				Arg.Any<Func<byte[], ValueTask>>(), Arg.Any<Func<byte[], ValueTask>>(),
+				Arg.Any<Func<Encoding>>(), Arg.Any<Action>(),
+				Arg.Any<Func<string, string, ValueTask>>(),
+				Arg.Any<ProtocolCapabilities?>(), Arg.Any<string>(), Arg.Any<bool>(), cancellationToken: Arg.Any<CancellationToken>())
+			.Returns(async _ =>
+			{
+				registrationStarted.TrySetResult();
+				await releaseRegistration.Task;
+				Volatile.Write(ref registrationComplete, 1);
+			});
+		connectionService.Get(42).Returns(_ => Volatile.Read(ref registrationComplete) == 0
+			? null
+			: new ConnectionServerService.ConnectionData(
+				42, null, ConnectionServerService.ConnectionState.Connected,
+				_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask,
+				() => Encoding.UTF8, () => { }, null, capabilities, null));
+		connectionService
+			.UpdateCapabilities(Arg.Any<long>(), Arg.Any<Func<ProtocolCapabilities, ProtocolCapabilities>>())
+			.Returns(call =>
+			{
+				lock (connectionService)
+				{
+					capabilities = call.Arg<Func<ProtocolCapabilities, ProtocolCapabilities>>()(capabilities);
+				}
+
+				return true;
+			});
+
+		var (toServer, fromServer, handler, published, cts) = StartServer(
+			new ConnectionServerOptions { MxpSupportTimeoutMilliseconds = 60_000 }, connectionService);
+		try
+		{
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, WILL, MXP));
+			await registrationStarted.Task.WaitAsync(Timeout);
+			await WriteAsync(toServer, IAC, DO, MXP);
+			await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, SB, MXP, IAC, SE));
+
+			// Longer than a retry against the unregistered handle would have waited.
+			await Task.Delay(ConnectionRetryPolicy.MaxAttempts * ConnectionRetryPolicy.Delay * 2);
+			releaseRegistration.TrySetResult();
+
+			await ReadUntilAsync(fromServer, seen => Encoding.ASCII.GetString(seen).Contains("<SUPPORT "));
+			await Assert.That(await WaitForPublishedAsync<MxpNegotiatedMessage>(published)).IsNotNull();
+
+			ProtocolCapabilities seen;
+			lock (connectionService) seen = capabilities;
+			await Assert.That(seen.Format).IsEqualTo(OutputFormat.Mxp);
+		}
+		finally
+		{
+			releaseRegistration.TrySetResult();
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
 	[Test]
 	public async Task ServerOmitsMxp_WhenDisabled()
 	{
