@@ -32,10 +32,12 @@ public class TerminalFeatureRenderingTests
 	private sealed class PictureHandler(HttpStatusCode status, byte[]? picture = null) : HttpMessageHandler
 	{
 		public int Requests;
+		public Uri? LastAddress;
 
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
 			Interlocked.Increment(ref Requests);
+			LastAddress = request.RequestUri;
 			return Task.FromResult(new HttpResponseMessage(status) { Content = new ByteArrayContent(picture ?? Png) });
 		}
 	}
@@ -161,6 +163,22 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(guarded.Requests).IsEqualTo(3).Because("another scheme or port is someone else's server");
 	}
 
+	/// <summary>A picture of the game's that StbImageSharp cannot decode is fetched converted to PNG.</summary>
+	[Test]
+	public async Task AGameWebpPicture_IsFetchedAsPng()
+	{
+		var local = new PictureHandler(HttpStatusCode.OK);
+		using var store = new TerminalPictureStore("http://game.example:8080/", 1 << 20,
+			NullLogger<TerminalPictureStore>.Instance, new PictureHandler(HttpStatusCode.OK), local);
+
+		store.TryGet("/assets/cat.webp", out _, out var pending);
+		if (pending is not null) await pending;
+
+		await Assert.That(local.LastAddress?.AbsoluteUri).IsEqualTo("http://game.example:8080/pictures/png/assets/cat.webp.png");
+		await Assert.That(store.TryGet("/assets/cat.webp", out var picture, out _)).IsTrue();
+		await Assert.That(picture).IsNotNull();
+	}
+
 	[Test]
 	public async Task FailedAddresses_AreForgottenPastTheLimit()
 	{
@@ -254,12 +272,28 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(text).Contains(format == OutputFormat.Mxp ? "<IMAGE" : "<img");
 	}
 
+	/// <summary>An MXP or Pueblo client is sent a WebP picture of the game's as PNG, which it can read.</summary>
+	[Test]
+	[Arguments(OutputFormat.Mxp, "<IMAGE cat.webp.png URL=https://game.example/pictures/png/assets/")]
+	[Arguments(OutputFormat.Pueblo, "https://game.example/pictures/png/assets/cat.webp.png")]
+	public async Task AGameWebpPicture_IsSentAsPng(OutputFormat format, string expected)
+	{
+		var context = new RenderContext("telnet", new ProtocolCapabilities(Format: format), null, Handle: 7, SessionId: "s",
+			Website: "https://game.example");
+
+		var text = await RenderAsync(new MarkupOutputRenderer(), FigureMarkup("/assets/cat.webp"), context);
+
+		await Assert.That(text).Contains(expected);
+	}
+
 	[Test]
 	[Arguments("https://pictures.example/cat.png", null, "https://pictures.example/cat.png")]
 	[Arguments("/assets/cat.png", null, null)]
 	[Arguments("/assets/cat.png", "https://game.example", "https://game.example/assets/cat.png")]
 	[Arguments("/assets/cat.png", "https://game.example/portal/", "https://game.example/assets/cat.png")]
 	[Arguments("cat.png", "https://game.example/", "https://game.example/cat.png")]
+	[Arguments("/assets/cat.webp", "https://game.example", "https://game.example/pictures/png/assets/cat.webp.png")]
+	[Arguments("https://pictures.example/cat.webp", null, "https://pictures.example/cat.webp")]
 	[Arguments("//elsewhere.example/cat.png", "https://game.example", null)]
 	[Arguments("/assets/cat.png", "telnet://game.example", null)]
 	[Arguments("file:///etc/passwd", "https://game.example", null)]

@@ -1,4 +1,5 @@
 using MarkupString;
+using SharpMUSH.Library.Markup;
 
 namespace SharpMUSH.RenderingWorker.Services;
 
@@ -42,12 +43,14 @@ public static class ClientFetchedPictures
 
 	/// <summary>
 	/// Where the client can fetch <paramref name="source"/>: the address itself when it is absolute http or
-	/// https, the game's own picture at <paramref name="website"/> when that is one, else null.
+	/// https, the game's own picture at <paramref name="website"/> when that is one, else null. A picture of
+	/// the game's in a format the client does not read is sent as PNG (<see cref="PngPictures"/>).
 	/// </summary>
 	public static string? Resolve(string source, string? website)
 	{
 		if (IsAbsolute(source)) return source.Trim();
-		var path = source.Trim();
+		// Sent as PNG when the client could not read the file as it is (WebP).
+		var path = PngPictures.Readable(source.Trim());
 		// "//host/x" names another host, not one of the game's pictures.
 		if (path.Length == 0 || path.StartsWith("//", StringComparison.Ordinal) || !IsAbsolute(website)) return null;
 		return Uri.TryCreate(new Uri(website!.Trim()), path, out var address) && address.Scheme is "http" or "https"
