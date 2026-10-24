@@ -9643,8 +9643,9 @@
   <data name="GuideCharacterRosterFailed" xml:space="preserve"><value>Your character is saved, but we could not refresh your character list. Retry to continue with that character; it will not be created again.</value></data>
   <data name="GuidePackagesBundled" xml:space="preserve"><value>Included with this server</value></data>
   <data name="GuideLoginEntry" xml:space="preserve"><value>New here? Get started with Sharpie</value></data>
-  <data name="GuideHomeEntry" xml:space="preserve"><value>Getting started with Sharpie</value></data>
-  <data name="GuideHomeDescription" xml:space="preserve"><value>— an optional guide to joining and playing.</value></data>
+  <data name="GuideQuickstartEntry" xml:space="preserve"><value>Getting started</value></data>
+  <data name="GuideHelpIndexEntry" xml:space="preserve"><value>Getting started with Sharpie</value></data>
+  <data name="GuideHelpIndexDescription" xml:space="preserve"><value>— an optional guide to joining and playing.</value></data>
   <data name="GuideHelpEntry" xml:space="preserve"><value>Getting started with Sharpie / Change my guide</value></data>
   <data name="GuideAdminEntry" xml:space="preserve"><value>Prepare for new players</value></data>
   <data name="GuideAdminDescription" xml:space="preserve"><value>— game introduction and onboarding checklist.</value></data>

@@ -4,6 +4,16 @@
 	gap: 16px;
 }
 
+.help-guide-entry {
+	margin: 0;
+}
+
+.help-guide-entry a {
+	color: var(--accent);
+	text-decoration: underline;
+	text-underline-offset: .2em;
+}
+
 .help-entry {
 	padding: 16px 20px;
 	overflow-wrap: anywhere;
