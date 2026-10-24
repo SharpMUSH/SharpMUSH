@@ -13,7 +13,6 @@
 <div class="home-page @(_hasAside ? "home-page--aside" : null)">
     <div class="page-stack home-main">
         <PlainPageHeader Title="@Loc["HomeWhatsHappening"]" />
-        <p class="home-guide-entry"><a href="/welcome">@Loc["GuideHomeEntry"]</a> @Loc["GuideHomeDescription"]</p>
         <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
     </div>
     @if (_hasAside)

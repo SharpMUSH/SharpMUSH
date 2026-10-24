@@ -96,6 +96,20 @@ public class HelpPageTests : TrackingBunitContext
 	}
 
 	[TUnit.Core.Test]
+	public async Task Index_OpensWithTheGettingStartedGuide()
+	{
+		AddHelpServices(isStaff: false);
+		this.AddAuthorization();
+
+		var cut = Render<SharpMUSH.Client.Pages.Help>();
+		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
+
+		var guide = cut.Markup.IndexOf("href=\"/welcome\"", StringComparison.Ordinal);
+		await Assert.That(guide).IsGreaterThanOrEqualTo(0);
+		await Assert.That(guide).IsLessThan(cut.Markup.IndexOf("This is the index to the MUSH online help files.", StringComparison.Ordinal));
+	}
+
+	[TUnit.Core.Test]
 	public async Task Index_OmitsTheAdminCorpusForAMortal()
 	{
 		AddHelpServices(isStaff: false);
