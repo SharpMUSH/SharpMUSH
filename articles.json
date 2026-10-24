@@ -138,6 +138,16 @@
     "file": "activity-function.md"
   },
   {
+    "id": "administration",
+    "lookup": "administration",
+    "title": "Administration",
+    "aliases": [
+      "admin"
+    ],
+    "sections": [],
+    "file": "administration.md"
+  },
+  {
     "id": "align",
     "lookup": "align()",
     "title": "align()",
