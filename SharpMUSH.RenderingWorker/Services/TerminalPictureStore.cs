@@ -1,4 +1,5 @@
 using MarkupString.Ansi;
+using SharpMUSH.Library.Markup;
 using StbImageSharp;
 using System.Collections.Concurrent;
 using System.Net;
@@ -134,7 +135,8 @@ public sealed class TerminalPictureStore : IDisposable
 			return absolute.Scheme is "http" or "https" ? absolute : null;
 		// Relative: one of the game's own pictures, which is fetched only from where the game says they are.
 		if (_baseAddress is null || source.StartsWith("//", StringComparison.Ordinal)) return null;
-		return Uri.TryCreate(_baseAddress, source, out var local) && IsGameOrigin(local) ? local : null;
+		// One this renderer cannot decode (WebP) is fetched as PNG.
+		return Uri.TryCreate(_baseAddress, PngPictures.Readable(source), out var local) && IsGameOrigin(local) ? local : null;
 	}
 
 	/// <summary>

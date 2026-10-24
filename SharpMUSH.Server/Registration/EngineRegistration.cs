@@ -303,6 +303,7 @@ internal static class EngineRegistration
 		services.AddHttpContextAccessor();
 		services.AddTransient<Microsoft.AspNetCore.Authentication.IClaimsTransformation, FreshPermissionClaimsTransformation>();
 		services.AddSingleton<IWikiAssetService, Server.Services.FileSystemWikiAssetService>();
+		services.AddSingleton<Server.Services.PngPictureService>();
 
 		// Scene subsystem — ISceneService is NO LONGER implemented by core providers. It is registered by
 		// the Scene plugin's IServiceRegistrar (ScenePlugin.RegisterServices -> services.AddSceneSystem),
