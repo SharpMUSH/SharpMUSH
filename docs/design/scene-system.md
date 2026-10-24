@@ -207,7 +207,8 @@ use a **verb form** (cf. `mail`/`mailsend`, `wiki`/`wikilist`). Writes are
 take **dbrefs**, and return the new id/value inline. Reads are `Regular`.
 
 **Reads:** `scene(<id>[,<field>])` · `scenelist([<filter>][,<from>,<to>])`
-(`active`/`recent`/`scheduled`; windowed UTC-ms, sorted by `ScheduledFor`) ·
+(`active`/`finished`/`recent` latest activity first, `scheduled`/`upcoming` by `ScheduledFor`;
+`<from>`/`<to>` a UTC-ms window for all but `recent`) ·
 `scenelist(mine[,<player>])` · `scenelist(shared,<player>[,<player>])` (scenes both belong to) · `scenewhere(<roomDbref>)` (active scene bound to a room) ·
 `sceneposes(<id>[,<authorDbref>][,<count>])` (ordered pose ids) ·
 `scenepose(<id>,<poseId>[,<field>])` (field from `current_edit` + pose props; `edits` the
