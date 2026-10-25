@@ -915,7 +915,7 @@ public partial class Functions
 
 		if (args.Count > 5 && Configuration.CurrentValue.Compatibility.RhostEdit)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "EDIT", 5, args.Count)));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgumentCount("EDIT", 3, 5, args.Count)));
 		}
 
 		for (var i = 1; i < args.Count - 1; i += 2)

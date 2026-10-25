@@ -281,7 +281,7 @@ public class FunctionFlagDispatchTests
 		var parsed = await parser.EvaluateAsync(MarkupText.Plain("flagprobe(hello)"));
 		var expected = parity
 			? string.Format(ErrorMessages.Returns.GotUnEvenArgs, "FLAGPROBE")
-			: string.Format(ErrorMessages.Returns.TooFewArguments, "FLAGPROBE", 2, 1);
+			: ErrorMessages.Returns.ArgumentCount("FLAGPROBE", 2, 3, 1);
 		await Assert.That(parsed.ToPlainText()).IsEqualTo(expected);
 		parser = (MUSHCodeParser)parser.Push(parser.CurrentState with { Arguments = new() { ["0"] = new CallState("hello") } });
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();

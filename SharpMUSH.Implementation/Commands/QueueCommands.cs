@@ -755,7 +755,7 @@ public partial class Commands
 		if (string.IsNullOrEmpty(arg1))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.WaitWhatToDoWithProcess), executor);
-			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "@WAIT", 2, 1));
+			return new CallState(string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@WAIT", 2, 1));
 		}
 
 		if (!TryGetQueueEntry(parser.ServiceProvider.GetRequiredService<ITaskQueueReader>(), pid, out var maybeFoundPid))

@@ -35,7 +35,7 @@ public class RhostCompatibilityOptionTests
 	[Arguments("edit(abcabc,b,X,,2)", "2a2X2c2a2X2c2", "aXcaXc")]
 	[Arguments("edit(abcabc,$,X,1)", "abcabcX", "abcabcX")]
 	[Arguments("edit(abcabc,b,X)", "aXcaXc", "aXcaXc")]
-	[Arguments("edit(abcabc,b,X,c,Y,a,Z)", "ZXYZXY", "#-1 FUNCTION (EDIT) EXPECTS AT MOST 5 ARGUMENTS BUT GOT 7")]
+	[Arguments("edit(abcabc,b,X,c,Y,a,Z)", "ZXYZXY", "#-1 FUNCTION (EDIT) EXPECTS BETWEEN 3 AND 5 ARGUMENTS BUT GOT 7")]
 	public async Task RhostEdit(string code, string off, string on)
 	{
 		await Assert.That(await EvaluateAsync(code, options => options with { RhostEdit = false })).IsEqualTo(off);
@@ -71,7 +71,7 @@ public class RhostCompatibilityOptionTests
 		await Assert.That(await EvaluateAsync($"lattr({thing}/V*,|)", options => options with { RhostLattr = false }))
 			.IsEqualTo("VA|VB|VC");
 		await Assert.That(await EvaluateAsync($"lattr({thing}/V*,,$)", options => options with { RhostLattr = false }))
-			.IsEqualTo("#-1 FUNCTION (LATTR) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3");
+			.IsEqualTo("#-1 FUNCTION (LATTR) EXPECTS 1 OR 2 ARGUMENTS BUT GOT 3");
 	}
 
 	[Test]

@@ -15,7 +15,7 @@ public class FormattingFunctionUnitTests
 	/// <c>IsNotNull()</c> on a non-nullable string, which no result could fail.
 	/// </summary>
 	[Test]
-	[Arguments("render(test %r newline)", "#-1 FUNCTION (RENDER) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
+	[Arguments("render(test %r newline)", "#-1 FUNCTION (RENDER) EXPECTS 2 ARGUMENTS BUT GOT 1")]
 	public async Task Render(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

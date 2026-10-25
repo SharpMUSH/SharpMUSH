@@ -140,7 +140,7 @@ public class BitwiseFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("bnand(12,10,5)", "#-1 FUNCTION (BNAND) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3")]
+	[Arguments("bnand(12,10,5)", "#-1 FUNCTION (BNAND) EXPECTS 2 ARGUMENTS BUT GOT 3")]
 	public async Task BnandTakesExactlyTwoArguments(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

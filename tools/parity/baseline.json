@@ -141,20 +141,12 @@
    "command": "Alice alicepass"
   },
   {
-   "key": "30-softcode/sc.control#2",
-   "command": "think [null(x)][s(%b)] [lit([add(1,2)])] [eval(add(1,2))]"
-  },
-  {
    "key": "30-softcode/sc.control#4",
    "command": "think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]"
   },
   {
    "key": "30-softcode/sc.errors#0",
    "command": "think [nosuchfunction(1)]"
-  },
-  {
-   "key": "30-softcode/sc.errors#1",
-   "command": "think [add()] [strlen()] [mid(abc)]"
   },
   {
    "key": "30-softcode/sc.errors#2",
@@ -243,6 +235,10 @@
   {
    "key": "40-compat-choices/choice.mail-folder#1",
    "command": "Bob bobpass"
+  },
+  {
+   "key": "48-argument-counts/argc.login#0",
+   "command": "Wiz wizpass"
   },
   {
    "key": "47-json-audit/json.login#0",

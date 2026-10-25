@@ -472,7 +472,7 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (args.IsEmpty)
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json_query", 1, int.MaxValue, args.Count));
+			return new CallState(ErrorMessages.Returns.ArgumentCount("JSON_QUERY", 1, int.MaxValue, args.Count));
 		}
 
 		var json = args["0"].Message.ToPlainText();

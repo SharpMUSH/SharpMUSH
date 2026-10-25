@@ -250,7 +250,7 @@ public class FunctionArityParityTests : ServerTestBase
 	[Test]
 	public async Task AnsiRefusesAThirdArgumentRatherThanDroppingIt()
 		=> await Assert.That(await Eval("ansi(h,a,b)"))
-			.IsEqualTo("#-1 FUNCTION (ANSI) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3");
+			.IsEqualTo("#-1 FUNCTION (ANSI) EXPECTS 2 ARGUMENTS BUT GOT 3");
 
 	/// <summary>
 	/// <c>@function &lt;name&gt;=&lt;obj&gt;,&lt;attr&gt;</c> with no bounds gets PennMUSH's
@@ -264,7 +264,7 @@ public class FunctionArityParityTests : ServerTestBase
 
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 10))})")).IsEqualTo("ok");
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 11))})"))
-			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS AT MOST 10 ARGUMENTS BUT GOT 11");
+			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS BETWEEN 0 AND 10 ARGUMENTS BUT GOT 11");
 	}
 
 	/// <summary>
@@ -278,7 +278,7 @@ public class FunctionArityParityTests : ServerTestBase
 
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 30))})")).IsEqualTo("ok");
 		await Assert.That(await Eval($"{fn}({string.Join(',', Enumerable.Repeat("x", 31))})"))
-			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS AT MOST 30 ARGUMENTS BUT GOT 31");
+			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS BETWEEN 0 AND 30 ARGUMENTS BUT GOT 31");
 	}
 
 	/// <summary>
@@ -293,7 +293,7 @@ public class FunctionArityParityTests : ServerTestBase
 
 		await Assert.That(await Eval($"{fn}(x,y)")).IsEqualTo("ok");
 		await Assert.That(await Eval($"{fn}(x,y,z)"))
-			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 3");
+			.IsEqualTo($"#-1 FUNCTION ({fn.ToUpperInvariant()}) EXPECTS BETWEEN 0 AND 2 ARGUMENTS BUT GOT 3");
 	}
 
 	/// <summary>Defines a user function answering <c>ok</c>, with <paramref name="bounds"/> appended verbatim.</summary>

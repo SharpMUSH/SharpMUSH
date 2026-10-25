@@ -186,7 +186,7 @@ public class SwitchFunctionUnitTests
 	/// <summary>RhostMUSH's ifelse() leaves the false branch out as if() does; RhostMUSH 5.13 gives these.</summary>
 	[Test]
 	[Arguments("[ifelse(1,yes)]|[ifelse(0,yes)]|[ifelse(1,a,b)]|[ifelse(0,a,b)]", "yes||a|b")]
-	[Arguments("ifelse(1)", "#-1 FUNCTION (IFELSE) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
+	[Arguments("ifelse(1)", "#-1 FUNCTION (IFELSE) EXPECTS 2 OR 3 ARGUMENTS BUT GOT 1")]
 	public async Task IfElseTakesTwoOrThreeArguments(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

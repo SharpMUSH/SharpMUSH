@@ -148,13 +148,27 @@ public static partial class ErrorMessages
 		public const string ComparisonRequiresTwoNumbers = "#-1 COMPARISON REQUIRES 2 OR MORE NUMBERS";
 		public const string SeparatorMustBeOneChar = "#-1 SEPARATOR MUST BE ONE CHARACTER";
 		public const string MissingArguments = "#-1 MISSING ARGUMENTS";
+		/// <summary>json() given the wrong number of values for its type (<c>fun_json</c>, src/funjson.c).</summary>
+		public const string WrongNumberOfArguments = "#-1 WRONG NUMBER OF ARGUMENTS";
 
 		public const string AmbiguousChannelName = "#-2 AMBIGUOUS CHANNEL NAME";
 
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string TooFewArguments = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string TooManyArguments = "#-1 FUNCTION ({0}) EXPECTS AT MOST {1} ARGUMENTS BUT GOT {2}";
+		/// <summary>
+		/// PennMUSH's error for a call of <paramref name="name"/> with <paramref name="got"/> arguments when it takes
+		/// <paramref name="minimum"/> to <paramref name="maximum"/> (src/parse.c:2981): the one count, two counts
+		/// joined by OR, AT LEAST when there is no upper bound, or BETWEEN.
+		/// </summary>
+		public static string ArgumentCount(string name, int minimum, int maximum, int got) =>
+			$"#-1 FUNCTION ({name}) EXPECTS {ExpectedArguments(minimum, maximum)} ARGUMENTS BUT GOT {got}";
+
+		private static string ExpectedArguments(int minimum, int maximum) => maximum switch
+		{
+			_ when maximum == minimum => $"{minimum}",
+			_ when maximum == minimum + 1 => $"{minimum} OR {maximum}",
+			int.MaxValue => $"AT LEAST {minimum}",
+			_ => $"BETWEEN {minimum} AND {maximum}"
+		};
+
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string TooFewCommandArguments = "#-1 COMMAND ({0}) EXPECTS AT LEAST {1} ARGUMENTS BUT GOT {2}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
@@ -164,8 +178,6 @@ public static partial class ErrorMessages
 		/// <summary>An lmath() distance over the wrong number of values (<c>math_dist2d</c>, src/funmath.c).</summary>
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ExpectsExactArguments = "#-1 FUNCTION ({0}) EXPECTS {1} ARGUMENTS";
-		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
-		public const string WrongArgumentsRange = "#-1 FUNCTION ({0}) EXPECTS AT LEAST {1} ARGUMENTS AND AT MOST {2} BUT GOT {3}";
 
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ParserFailure = "#-1 PARSER FAILURE: {0}";

@@ -24,7 +24,7 @@ public partial class Functions
 		if (Configuration.CurrentValue.Compatibility.RhostPrintf)
 		{
 			if (values.Length == 0)
-				return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "PRINTF", 2, 1)));
+				return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgumentCount("PRINTF", 2, int.MaxValue, 1)));
 			if (RhostPrintfFormatter.TryFormat(format, values, out result, out error, parser.CurrentState.OutputLimit))
 				return ValueTask.FromResult<CallState>(result);
 		}

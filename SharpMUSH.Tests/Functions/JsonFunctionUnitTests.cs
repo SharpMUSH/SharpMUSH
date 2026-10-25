@@ -41,12 +41,14 @@ public class JsonFunctionUnitTests
 	// PennMUSH's json() gives an empty array or object when no values or pairs follow the type.
 	[Arguments("json(array)", "[]")]
 	[Arguments("json(object)", "{}")]
-	[Arguments("json(object,k)", "#-1 FUNCTION (json) EXPECTS AN ODD NUMBER OF ARGUMENTS")]
+	[Arguments("json(object,k)", ErrorMessages.Returns.WrongNumberOfArguments)]
 	[Arguments("json(array,1,blah)", "#-1 INVALID VALUE")]
 	// Penn json.null.1-3
 	[Arguments("json(null)", "null")]
 	[Arguments("json(null,null)", "null")]
 	[Arguments("json(null,foo)", ErrorMessages.Returns.InvalidArgument)]
+	[Arguments("json(null,null,null)", ErrorMessages.Returns.WrongNumberOfArguments)]
+	[Arguments("json(string)", ErrorMessages.Returns.WrongNumberOfArguments)]
 	// Penn json.boolean.1-5
 	[Arguments("json(boolean, true)", "true")]
 	[Arguments("json(boolean, 1)", "true")]
