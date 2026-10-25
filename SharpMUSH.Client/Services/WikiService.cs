@@ -613,9 +613,11 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 	}
 
 	public async ValueTask<ApiResult<WikiPageBatch>> GetCollectionPagesAsync(string collection, int skip = 0, int take = 50,
-		string? category = null, string? search = null, string? lang = null)
+		string? category = null, string? search = null, string? lang = null, string? after = null, string? before = null)
 	{
 		var query = $"?skip={skip}&take={take}";
+		if (!string.IsNullOrEmpty(after)) query += "&after=" + Uri.EscapeDataString(after);
+		else if (!string.IsNullOrEmpty(before)) query += "&before=" + Uri.EscapeDataString(before);
 		if (!string.IsNullOrWhiteSpace(category)) query += "&category=" + Uri.EscapeDataString(category);
 		if (!string.IsNullOrWhiteSpace(search)) query += "&search=" + Uri.EscapeDataString(search);
 		query += LangQuery(lang, first: false);
@@ -630,7 +632,8 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 				if (rows is null || !response.Headers.TryGetValues("X-Total-Count", out var values)
 					|| !int.TryParse(values.SingleOrDefault(), out var total) || total < 0)
 					return new ApiFailure(ApiFailureKind.Unexpected, "The wiki listing was incomplete.");
-				return new WikiPageBatch(rows.Select(ToSummary).ToList(), total);
+				return new WikiPageBatch(rows.Select(ToSummary).ToList(), total,
+					Header(response, "X-Previous-Page"), Header(response, "X-Next-Page"));
 			}
 			catch (Exception error) when (error is System.Text.Json.JsonException or NotSupportedException)
 			{
@@ -639,6 +642,9 @@ public class WikiService(IHttpClientFactory httpClientFactory, ILogger<WikiServi
 		}
 		catch (Exception error) { return ApiFailure.Transport(error); }
 	}
+
+	private static string? Header(HttpResponseMessage response, string name)
+		=> response.Headers.TryGetValues(name, out var values) && values.SingleOrDefault() is { Length: > 0 } value ? value : null;
 
 	private static WikiPageSummary ToSummary(WikiPageSummaryDto dto) =>
 		new(dto.Slug, dto.Title, dto.Namespace, dto.UpdatedAt, dto.RevisionNumber)

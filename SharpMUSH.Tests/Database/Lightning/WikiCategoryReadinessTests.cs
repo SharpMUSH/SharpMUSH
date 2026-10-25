@@ -75,6 +75,7 @@ public class WikiCategoryReadinessTests
 			case 1: await db.CountPagesInCategoryAsync("a", admitted); break;
 			case 2: await db.CountPagesByCategoryAsync(admitted); break;
 			case 3: await db.GetPagesByCategoryAsync("a", 0, 0, admitted); break;
+			case 4: await db.GetPagesByCategoryWindowAsync("a", new WikiPageAt(0), 10, admitted); break;
 			default: throw new ArgumentOutOfRangeException(nameof(reader));
 		}
 	}
@@ -97,6 +98,7 @@ public class WikiCategoryReadinessTests
 	[Arguments(1)]
 	[Arguments(2)]
 	[Arguments(3)]
+	[Arguments(4)]
 	public async Task ConstructedProviderRefusesEveryCategoryReadBeforeMigrateIncludingTakeZero(int reader)
 		=> await WithWorld(async (db, _) =>
 		{
@@ -184,7 +186,7 @@ public class WikiCategoryReadinessTests
 			}
 			else db.Store.WipeDirectory();
 			await Assert.That(db.Store.Epoch > oldEpoch).IsTrue();
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidOperationException).IsTrue();
 			var before = Snapshot(db);
 			await Assert.That(await Failure(() => Mutate(db, 0, string.Empty)) is InvalidOperationException).IsTrue();
@@ -229,7 +231,8 @@ public class WikiCategoryReadinessTests
 			if (damage == "label-utf8") key[2] = 0xff;
 			await db.Store.WriteAsync(tx => tx.Put(Tables.WikiByCategory, key, value));
 			var visibility = WikiVisibility.PublishedOnly with { ExcludedPageIds = new HashSet<string> { "wiki_page/9000" } };
-			for (var reader = 0; reader < 3; reader++)
+			// The listings reach the entry; the counts are kept apart from the index and do not.
+			foreach (var reader in new[] { 0, 4 })
 				await Assert.That(await Failure(() => Read(db, reader, visibility)) is InvalidDataException).IsTrue();
 		});
 
@@ -253,7 +256,7 @@ public class WikiCategoryReadinessTests
 				tx.Delete(Tables.Meta, WikiCategoryCheckpointCodec.CompletionKey);
 			});
 			var before = Snapshot(db);
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidOperationException).IsTrue();
 			for (var mutation = 0; mutation < 5; mutation++)
 				await Assert.That(await Failure(() => Mutate(db, mutation, page.Id)) is InvalidOperationException).IsTrue();
@@ -277,9 +280,10 @@ public class WikiCategoryReadinessTests
 			{
 				Hidden = new WikiReadRestrictions(false, new HashSet<string> { "main" }, new HashSet<string>(), new HashSet<string>())
 			};
-			// Namespace/category restrictions require source metadata; JSON failure proves it was consulted.
-			await Assert.That(await Failure(() => Read(db, 1, hidden)) is System.Text.Json.JsonException).IsTrue();
-			await Assert.That(await Failure(() => Read(db, 2, hidden)) is System.Text.Json.JsonException).IsTrue();
+			// A namespace restriction reads the page's kept summary, not its body.
+			await Assert.That(await db.CountPagesInCategoryAsync("a", hidden)).IsEqualTo(0);
+			await Assert.That(await db.CountPagesByCategoryAsync(hidden)).IsEmpty();
+			await Assert.That(await db.GetPagesByCategoryAsync("a", 0, 10, hidden)).IsEmpty();
 		});
 
 	[Test]
@@ -326,7 +330,7 @@ public class WikiCategoryReadinessTests
 				}
 			});
 			var before = Snapshot(db);
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidDataException).IsTrue();
 			await Assert.That(await Failure(() => Mutate(db, 2, page.Id)) is InvalidDataException).IsTrue();
 			await Assert.That(await Failure(() => db.Migrate().AsTask()) is InvalidDataException).IsTrue();

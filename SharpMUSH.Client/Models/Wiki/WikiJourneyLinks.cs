@@ -43,6 +43,8 @@ public static class WikiJourneyLinks
 		Add(query, "q", state.Search);
 		Add(query, "category", state.Category);
 		if (state.Skip != 0) query["skip"] = state.Skip.ToString(System.Globalization.CultureInfo.InvariantCulture);
+		Add(query, "after", state.After);
+		Add(query, "before", state.Before);
 		Add(query, "lang", state.Locale);
 		return Append("/wiki/collections/" + Uri.EscapeDataString(state.Collection), query);
 	}

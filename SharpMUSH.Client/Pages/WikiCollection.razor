@@ -9,7 +9,8 @@
 
 <PageTitle>@Loc["WikiCollections"] — <GameName /></PageTitle>
 <div class="wiki-collection-route">
-    <WikiCollectionBrowser Collection="@_state.Collection" Search="@_state.Search" Category="@_state.Category" Skip="@_state.Skip" Locale="@_state.Locale" />
+    <WikiCollectionBrowser Collection="@_state.Collection" Search="@_state.Search" Category="@_state.Category" Skip="@_state.Skip" Locale="@_state.Locale"
+                           After="@_state.After" Before="@_state.Before" />
 </div>
 
 @code {

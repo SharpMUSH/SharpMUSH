@@ -60,6 +60,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
 			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
 			await MigrateWikiCategoryValuesAsync(categoryOptions, cancellationToken);
+			await Store.WriteAsync(MigrateWikiCounts, cancellationToken);
 
 			foreach (var step in pluginSteps)
 			{

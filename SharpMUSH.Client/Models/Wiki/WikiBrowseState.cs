@@ -2,9 +2,13 @@ using System.Globalization;
 
 namespace SharpMUSH.Client.Models.Wiki;
 
-/// <summary>Submitted collection browsing state. URLs carry destinations, never authorization.</summary>
+/// <summary>
+/// Submitted collection browsing state. URLs carry destinations, never authorization. <see cref="After"/> or
+/// <see cref="Before"/> is the server's token for where the page starts, so the next page is read from there rather than
+/// by counting <see cref="Skip"/> rows again; <see cref="Skip"/> still says which rows those are.
+/// </summary>
 public sealed record WikiBrowseState(string Collection, string? Search = null, string? Category = null,
-	int Skip = 0, string? Locale = null)
+	int Skip = 0, string? Locale = null, string? After = null, string? Before = null)
 {
 	public const int PageSize = 50;
 	public const int MaxSearchLength = 200;
@@ -16,20 +20,33 @@ public sealed record WikiBrowseState(string Collection, string? Search = null, s
 		Search = Text(Search, MaxSearchLength),
 		Category = Text(Category, 200),
 		Skip = Skip < 0 ? 0 : Skip / PageSize * PageSize,
-		Locale = string.IsNullOrWhiteSpace(Locale) ? null : Locale.Trim()
+		Locale = string.IsNullOrWhiteSpace(Locale) ? null : Locale.Trim(),
+		// The first page needs no token, and a token is only ever one of the two.
+		After = Skip < PageSize ? null : Token(After),
+		Before = Skip < PageSize || Token(After) is not null ? null : Token(Before)
 	};
 
-	public WikiBrowseState Previous()
+	/// <summary>The page before this one, read back from <paramref name="before"/> (the page's first row) when given.</summary>
+	public WikiBrowseState Previous(string? before = null)
 	{
 		var state = Normalize();
-		return state with { Skip = Math.Max(0, state.Skip - PageSize) };
+		return (state with { Skip = Math.Max(0, state.Skip - PageSize), After = null, Before = before }).Normalize();
 	}
 
-	public WikiBrowseState Next()
+	/// <summary>The page after this one, read on from <paramref name="after"/> (the page's last row) when given.</summary>
+	public WikiBrowseState Next(string? after = null)
 	{
 		var state = Normalize();
-		return state with { Skip = state.Skip >= LastOffset ? LastOffset : checked(state.Skip + PageSize) };
+		return (state with { Skip = state.Skip >= LastOffset ? LastOffset : checked(state.Skip + PageSize), After = after, Before = null })
+			.Normalize();
 	}
+
+	/// <summary>A token as the server writes them, or null: one that is too long, or has more than URL-safe characters.</summary>
+	public static string? Token(string? value)
+		=> value is { Length: > 0 and <= MaxTokenLength } && value.All(c => char.IsAsciiLetterOrDigit(c) || c is '-' or '_' or '.' or ':')
+			? value : null;
+
+	public const int MaxTokenLength = 4096;
 
 	public static int ParseSkip(string? value) => int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var offset)
 		? Math.Max(0, offset) / PageSize * PageSize : 0;
@@ -44,7 +61,8 @@ public sealed record WikiBrowseState(string Collection, string? Search = null, s
 				? Uri.UnescapeDataString(path["/wiki/collections/".Length..]) : "game";
 		}
 		return new WikiBrowseState(collection, query.GetValueOrDefault("q"), query.GetValueOrDefault("category"),
-			ParseSkip(query.GetValueOrDefault("skip")), query.GetValueOrDefault("lang")).Normalize();
+			ParseSkip(query.GetValueOrDefault("skip")), query.GetValueOrDefault("lang"),
+			query.GetValueOrDefault("after"), query.GetValueOrDefault("before")).Normalize();
 	}
 
 	/// <summary>Reads raw values before typed conversion; the last occurrence wins, including an empty value.</summary>

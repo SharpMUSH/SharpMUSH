@@ -46,6 +46,27 @@ internal sealed class WikiApiFake : HttpMessageHandler
 	public List<WikiCollectionSummaryDto> Collections { get; } = [];
 	public string[]? CollectionRows { get; set; }
 
+	/// <summary>
+	/// When set, a collection page answers with cursor tokens as the server does: <c>at-N</c> names the row at index N,
+	/// <c>after</c> reads from the row after it and <c>before</c> up to the row before it.
+	/// </summary>
+	public bool Cursors { get; set; }
+
+	/// <summary>The rows a collection page returns, and its tokens either side.</summary>
+	private (string[] Rows, string? Previous, string? Next) CollectionPage(HttpRequestMessage request)
+	{
+		var all = CollectionResults(request);
+		var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query);
+		var take = int.TryParse(query["take"], out var t) ? t : 50;
+		var start = int.TryParse(query["skip"], out var s) ? s : 0;
+		if (Cursors && query["after"] is { } after && after.StartsWith("at-", StringComparison.Ordinal)) start = int.Parse(after[3..]) + 1;
+		else if (Cursors && query["before"] is { } before && before.StartsWith("at-", StringComparison.Ordinal))
+			start = Math.Max(0, int.Parse(before[3..]) - take);
+		var rows = all.Skip(start).Take(take).ToArray();
+		if (!Cursors || rows.Length == 0) return (rows, null, null);
+		return (rows, start > 0 ? $"at-{start}" : null, start + rows.Length < all.Length ? $"at-{start + rows.Length - 1}" : null);
+	}
+
 	private string Navigation(HttpRequestMessage request)
 	{
 		var collection = System.Web.HttpUtility.ParseQueryString(request.RequestUri!.Query)["collection"] ?? PageCollection ?? "game";
@@ -111,7 +132,8 @@ internal sealed class WikiApiFake : HttpMessageHandler
 		string? body = path switch
 		{
 			"/api/wiki/navigation" when !FailPins => Navigation(request),
-			_ when path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal) && path.EndsWith("/pages", StringComparison.Ordinal) => Paged(request, CollectionResults(request)),
+			_ when path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal) && path.EndsWith("/pages", StringComparison.Ordinal)
+				=> "[" + string.Join(",", CollectionPage(request).Rows) + "]",
 			"/api/wiki/pinned-categories" when !FailPins => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			_ when request.Method == HttpMethod.Put && path.EndsWith("/pin", StringComparison.Ordinal) => System.Text.Json.JsonSerializer.Serialize(Pinned),
 			"/api/wiki/pages" => "[" + string.Join(",", AllPages) + "]",
@@ -127,7 +149,12 @@ internal sealed class WikiApiFake : HttpMessageHandler
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
 			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 		if (path.StartsWith("/api/wiki/collections/", StringComparison.Ordinal))
+		{
 			result.Headers.Add("X-Total-Count", CollectionResults(request).Length.ToString());
+			var (_, previous, next) = CollectionPage(request);
+			if (previous is not null) result.Headers.Add("X-Previous-Page", previous);
+			if (next is not null) result.Headers.Add("X-Next-Page", next);
+		}
 		return Task.FromResult(result);
 	}
 

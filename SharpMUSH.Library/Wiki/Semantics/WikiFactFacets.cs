@@ -58,10 +58,11 @@ public static class WikiFactFacets
 		var key = WikiHelpers.CategoryKey(category);
 		var stated = new Dictionary<string, List<IReadOnlyList<string>>>(StringComparer.Ordinal);
 		var (read, matched, partial) = (0, 0, false);
-		for (var skip = 0; !partial; skip += Batch)
+		WikiPageCursor cursor = new WikiPageAt(0);
+		while (!partial)
 		{
-			var pages = await wiki.GetByCategoryAsync(key, skip, Batch, visibility);
-			foreach (var page in pages)
+			if (await wiki.GetByCategoryWindowAsync(key, cursor, Batch, visibility) is not WikiPageWindow window) break;
+			foreach (var page in window.Pages)
 			{
 				if (read++ == MaxPages)
 				{
@@ -78,7 +79,8 @@ public static class WikiFactFacets
 					values.Add([.. property.Select(f => f.Value).Distinct(StringComparer.Ordinal)]);
 				}
 			}
-			if (pages.Count < Batch) break;
+			if (window.Next is not { } next) break;
+			cursor = new WikiPageAfter(next);
 		}
 
 		var facets = new List<WikiFacet>();

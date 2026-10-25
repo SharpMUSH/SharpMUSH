@@ -76,6 +76,15 @@ public interface IWikiService
 	/// <param name="visibility">The pages returned, applied before paging; null returns every page.</param>
 	Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null);
 
+	/// <summary>
+	/// A page of <see cref="GetByCategoryAsync"/>'s list read from <paramref name="cursor"/>, so the hundredth page costs
+	/// what the first does. An error for a token the store did not write.
+	/// </summary>
+	Task<Result<WikiPageWindow>> GetByCategoryWindowAsync(string category, WikiPageCursor cursor, int take, WikiVisibility visibility);
+
+	/// <summary>A page of every namespace's pages, in namespace and slug order, read from <paramref name="cursor"/>.</summary>
+	Task<Result<WikiPageWindow>> GetAllPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility);
+
 	/// <summary>How many pages <paramref name="visibility"/> admits in each category, keyed by category key.</summary>
 	Task<IReadOnlyDictionary<string, int>> CountPagesByCategoryAsync(WikiVisibility visibility);
 

@@ -109,6 +109,8 @@
     [Parameter] public string? Category { get; set; }
     [Parameter] public int Skip { get; set; }
     [Parameter] public string? Locale { get; set; }
+    [Parameter] public string? After { get; set; }
+    [Parameter] public string? Before { get; set; }
     [Parameter] public bool Embedded { get; set; }
     private WikiNavigationDto? _navigation;
     private WikiPageBatch? _rows;
@@ -150,7 +152,7 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        var state = new WikiBrowseState(Collection, Search, Category, Skip, Locale).Normalize();
+        var state = new WikiBrowseState(Collection, Search, Category, Skip, Locale, After, Before).Normalize();
         if (_parameters == state) return;
         SetState(state);
         await ReloadAsync();
@@ -174,11 +176,15 @@
         var navigation = await Wiki.GetNavigationAsync(state.Collection, lang: state.Locale);
         if (_disposed || version != _version) return;
         if (navigation is not WikiNavigationDto loaded) { _failed = true; _loading = false; return; }
-        var result = await Wiki.GetCollectionPagesAsync(state.Collection, state.Skip, WikiBrowseState.PageSize, state.Category, state.Search, lang: state.Locale);
+        var result = await Wiki.GetCollectionPagesAsync(state.Collection, state.Skip, WikiBrowseState.PageSize, state.Category, state.Search,
+            lang: state.Locale, after: state.After, before: state.Before);
         if (_disposed || version != _version) return;
-        if (result is WikiPageBatch changed && changed.Total > 0 && state.Skip >= changed.Total)
+        // Read back to the start, the page is the first whatever offset the link said.
+        if (result is WikiPageBatch { Previous: null } started && state.Before is not null && started.Pages.Count > 0)
+            state = state with { Skip = 0, Before = null };
+        if (result is WikiPageBatch changed && changed.Total > 0 && (state.Skip >= changed.Total || changed.Pages.Count == 0 && state.After is not null))
         {
-            state = state with { Skip = ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize };
+            state = state with { Skip = Math.Min(state.Skip, ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize), After = null, Before = null };
             result = await Wiki.GetCollectionPagesAsync(state.Collection, state.Skip, WikiBrowseState.PageSize, state.Category, state.Search, lang: state.Locale);
             if (_disposed || version != _version) return;
         }
@@ -229,8 +235,8 @@
 
     private Task ApplySearch() => NavigateAsync(_state with { Search = _draft, Skip = 0 });
     private Task SelectCategory(string category) => NavigateAsync(_state with { Category = category, Skip = 0 });
-    private Task PreviousAsync() => NavigateAsync(_state.Previous());
-    private Task NextAsync() => NavigateAsync(_state.Next());
+    private Task PreviousAsync() => NavigateAsync(_state.Previous(_rows?.Previous));
+    private Task NextAsync() => NavigateAsync(_state.Next(_rows?.Next));
     public void Dispose()
     {
         _disposed = true;

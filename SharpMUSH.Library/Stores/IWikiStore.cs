@@ -65,6 +65,16 @@ public interface IWikiStore
 	Task<IReadOnlyList<WikiPage>> GetPagesByCategoryAsync(string category, int skip, int take, WikiVisibility visibility);
 
 	/// <summary>
+	/// A page of <paramref name="category"/>'s members in <see cref="GetPagesByCategoryAsync"/>'s order, read from
+	/// <paramref name="cursor"/> rather than from an offset. An error for a token this store did not write.
+	/// </summary>
+	Task<Result<WikiPageWindow>> GetPagesByCategoryWindowAsync(string category, WikiPageCursor cursor, int take,
+		WikiVisibility visibility);
+
+	/// <summary>A page of every namespace's pages in <see cref="GetPagesAsync"/>'s order, read from <paramref name="cursor"/>.</summary>
+	Task<Result<WikiPageWindow>> GetPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility);
+
+	/// <summary>
 	/// Stores <paramref name="page"/> under a newly allocated id, ignoring the one it carries, with its
 	/// body as source revision 1, summarised as <paramref name="editSummary"/>. <c>Error</c> when its
 	/// <c>(namespace, slug)</c> is taken.
