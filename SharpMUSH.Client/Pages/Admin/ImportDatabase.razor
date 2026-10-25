@@ -487,7 +487,8 @@
         if (session.Result is { } result && session.State is not ("Preparing" or "Converting" or "Validating"))
         {
             _result = result with { ImportSessionId = session.SessionId, RequiresPromotion = session.State == "Ready" };
-            _canRollback = session.State is "Committed" or "RecoveryRequired";
+            // A committed import can be rolled back only while the world it replaced is still kept.
+            _canRollback = session.State is "RecoveryRequired" || (session.State is "Committed" && _previousRetained);
             _restartRequested = session.State is "PromotionRequested" or "RollbackRequested";
             _finished = DateTimeOffset.UtcNow;
             _error = session.Failure;

@@ -76,7 +76,7 @@ public sealed class ImportPromotionJournal
 					throw new InvalidOperationException("Another import session is active; finish or abort it first.");
 			}
 			var id = Guid.NewGuid().ToString("N");
-			var session = new ImportSession(id, Path.Combine(_root, id), ImportSessionState.Preparing) { Started = started, SourceFile = sourceFile };
+			var session = new ImportSession(id, Path.Join(_root, id), ImportSessionState.Preparing) { Started = started, SourceFile = sourceFile };
 			PrivateDirectory(session.Directory);
 			try { Save(session); }
 			catch

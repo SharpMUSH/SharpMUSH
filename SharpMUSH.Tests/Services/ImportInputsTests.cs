@@ -6,7 +6,7 @@ namespace SharpMUSH.Tests.Services;
 
 public class ImportInputsTests
 {
-	private readonly string _root = Path.Combine(Path.GetTempPath(), "import-inputs-" + Guid.NewGuid().ToString("N"));
+	private readonly string _root = Path.Join(Path.GetTempPath(), "import-inputs-" + Guid.NewGuid().ToString("N"));
 
 	[After(Test)]
 	public void Cleanup()
@@ -17,7 +17,7 @@ public class ImportInputsTests
 	private string Sized(string name, long length)
 	{
 		Directory.CreateDirectory(_root);
-		var path = Path.Combine(_root, name);
+		var path = Path.Join(_root, name);
 		using var file = File.Create(path);
 		file.SetLength(length);
 		return path;
@@ -27,10 +27,10 @@ public class ImportInputsTests
 	public async Task GzipIsToldByItsFirstBytesNotItsName()
 	{
 		Directory.CreateDirectory(_root);
-		var compressed = Path.Combine(_root, "outdb");
+		var compressed = Path.Join(_root, "outdb");
 		await using (var gzip = new GZipStream(File.Create(compressed), CompressionLevel.Fastest))
 			await gzip.WriteAsync("+V-1\n"u8.ToArray());
-		var plain = Path.Combine(_root, "outdb.gz");
+		var plain = Path.Join(_root, "outdb.gz");
 		await File.WriteAllTextAsync(plain, "+V-1\n");
 
 		await Assert.That(ImportInputs.IsGzip(compressed)).IsTrue();
@@ -60,7 +60,7 @@ public class ImportInputsTests
 	public async Task TheDeadlineGrowsWithTheInputs()
 	{
 		var small = new DatabaseImportFiles(Sized("small", 1 << 20));
-		var large = new DatabaseImportFiles(Sized("large", 64L << 20), Mail: Sized("mail", 16L << 20), Chat: Path.Combine(_root, "missing"));
+		var large = new DatabaseImportFiles(Sized("large", 64L << 20), Mail: Sized("mail", 16L << 20), Chat: Path.Join(_root, "missing"));
 
 		await Assert.That(ImportInputs.Deadline(small)).IsEqualTo(TimeSpan.FromMinutes(10));
 		await Assert.That(ImportInputs.Deadline(large)).IsEqualTo(TimeSpan.FromMinutes(20));

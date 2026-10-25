@@ -387,6 +387,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			sessions: [new("saved-preview", "Ready", new ConversionResult { PlayersConverted = 2 }, null)]);
 		var cut = Render<ImportDatabase>();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
 		await cut.Find(".dbimport-resume").ClickAsync();
 		await Assert.That(cut.FindAll(".dbimport-promote").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".dbimport-promote").HasAttribute("disabled")).IsTrue();
@@ -403,6 +404,7 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		}, sessions: [new("validating", "Validating", new ConversionResult { PlayersConverted = 2 }, null)]);
 		var cut = Render<ImportDatabase>();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
 		await cut.Find(".dbimport-resume").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-cancel"));
 		await Assert.That(cut.FindAll(".dbimport-promote")).IsEmpty();
@@ -471,4 +473,22 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			.IsEquivalentTo(["AdmImportPennGuideTitle", "AdmImportMuxGuideTitle", "AdmImportRhostGuideTitle"]);
 		await Assert.That(cut.Markup).DoesNotContain("github.com");
 	}
+
+	/// <summary>A committed import offers its rollback only while the world it replaced is still kept.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task ACommittedImportOffersRollbackOnlyWhileThePreviousWorldIsKept(bool previousRetained)
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path),
+			sessions: [new("s1", "Committed", new ConversionResult { SourceName = "PennMUSH" }, null, DateTimeOffset.UnixEpoch, "outdb")],
+			previousRetained: previousRetained);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
+		await cut.Find(".dbimport-resume").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-grid"));
+		await Assert.That(cut.FindAll(".dbimport-rollback").Count).IsEqualTo(previousRetained ? 1 : 0);
+	}
 }
+

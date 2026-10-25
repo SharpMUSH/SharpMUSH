@@ -71,7 +71,7 @@ public class ImportPromotionJournalTests
 	[Test]
 	public async Task DiscardingThePreviousWorldLetsAnotherImportBePromoted()
 	{
-		var live = Path.Combine(_root, "live");
+		var live = Path.Join(_root, "live");
 		var journal = new ImportPromotionJournal(live);
 		await Populate(live, "Live sentinel");
 		foreach (var sentinel in new[] { "First import", "Second import" })
@@ -96,7 +96,7 @@ public class ImportPromotionJournalTests
 	[Test]
 	public async Task ThePreviousWorldIsKeptWhileACommitMayNeedIt()
 	{
-		var live = Path.Combine(_root, "live");
+		var live = Path.Join(_root, "live");
 		var journal = new ImportPromotionJournal(live);
 		var session = journal.Create();
 		await Populate(live, "Live sentinel");

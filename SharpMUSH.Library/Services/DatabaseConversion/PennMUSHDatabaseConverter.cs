@@ -236,7 +236,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				// Until the objects exist, how many have been made is the count to show.
 				ReportProgress(phase, phaseStart + (phaseEnd - phaseStart) * Math.Min(done, totalObjects) / totalObjects,
-					phaseStart == 0.0 ? done : null);
+					phase == "Creating objects" ? done : null);
 			}
 		};
 

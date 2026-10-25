@@ -9276,7 +9276,7 @@
     <value>Expected ({0})</value>
   </data>
   <data name="AdmImportNotesLead" xml:space="preserve">
-    <value>What every import of this kind does. Nothing here needs fixing; the downloaded log lists it too.</value>
+    <value>What every import of this kind does. Check any configuration lines listed here for settings to carry over by hand; the downloaded log lists them too.</value>
   </data>
   <data name="AdmImportPreviousKept" xml:space="preserve">
     <value>Previous world kept</value>
