@@ -65,7 +65,8 @@ public record LimitOptions(
 		Group = "Players",
 		Order = 3,
 		Min = 0,
-		Max = 1000)]
+		Max = 1000,
+		Unused = "Named registers are not counted: the bundled packages set hundreds in one queue entry.")]
 	uint MaxNamedQRegisters,
 
 	[property: SharpConfig(

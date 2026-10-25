@@ -1126,24 +1126,6 @@ public partial record ParserState
 		return true;
 	}
 
-	/// <summary>
-	/// PennMUSH <c>pi_regs_setq</c> (<c>src/parse.c:1457</c>): a new named register (any name longer than one
-	/// character) is refused once the frame holds <paramref name="maxNamed"/> of them. Overwriting one already
-	/// set, and the single-character registers, are never refused.
-	/// </summary>
-	public bool RefusesNewNamedRegister(string register, uint maxNamed)
-	{
-		if (!Registers.TryPeek(out var top))
-		{
-			return false;
-		}
-
-		register = RegisterLabels.Resolve(top, register);
-		return register.Length > 1
-			&& !top.ContainsKey(register)
-			&& RegisterLabels.Registers(top).Count(name => name.Length > 1) >= maxNamed;
-	}
-
 	[GeneratedRegex(@"^[A-Z0-9_.\-]+$")]
 	private static partial Regex RegisterNameRegex();
 

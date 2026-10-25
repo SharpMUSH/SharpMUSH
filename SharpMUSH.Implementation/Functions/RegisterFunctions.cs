@@ -130,13 +130,13 @@ public partial class Functions
 	/// the arguments too. A third argument that cannot be a label keeps PennMUSH's refusal, so a
 	/// PennMUSH call such as <c>setr(A,1,B)</c> answers as it does there.
 	/// </remarks>
-	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue, string calledAs, uint maxNamed)
+	private static CallState SetRegisters(IMUSHCodeParser parser, bool echoFirstValue, string calledAs)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
 		if (arguments.Count == 3 && RegisterLabels.IsValidLabel(arguments["2"].Message.ToPlainText()))
 		{
 			var labelled = SetLabelledRegister(parser.CurrentState,
-				arguments["0"].Message.ToPlainText(), arguments["1"].Message, arguments["2"].Message.ToPlainText(), maxNamed);
+				arguments["0"].Message.ToPlainText(), arguments["1"].Message, arguments["2"].Message.ToPlainText());
 			if (labelled.Length > 0) return new CallState(labelled);
 			return echoFirstValue ? new CallState(arguments["1"].Message) : new CallState(string.Empty);
 		}
@@ -144,17 +144,16 @@ public partial class Functions
 		if (arguments.Count % 2 != 0)
 			return new CallState(string.Format(ErrorMessages.Returns.GotUnEvenArgs, calledAs));
 
-		// fun_setq (src/funmisc.c:334-345): every pair is tried, and the first failure is the answer.
-		var error = string.Empty;
+		var everythingIsOkay = true;
 
 		for (var i = 0; i < arguments.Count; i += 2)
 		{
-			var pairError = SetRegister(parser.CurrentState, arguments[i.ToString()].Message.ToPlainText().ToUpper(),
-				arguments[(i + 1).ToString()].Message, maxNamed);
-			if (error.Length == 0) error = pairError;
+			everythingIsOkay &= parser.CurrentState.AddRegister(
+				arguments[i.ToString()].Message.ToPlainText().ToUpper(),
+				arguments[(i + 1).ToString()].Message);
 		}
 
-		if (error.Length > 0) return new CallState(error);
+		if (!everythingIsOkay) return new CallState(ErrorMessages.Returns.BadRegName);
 
 		return echoFirstValue ? new CallState(arguments["1"].Message) : new CallState(string.Empty);
 	}
@@ -166,19 +165,11 @@ public partial class Functions
 	/// </remarks>
 	[SharpFunction(Name = "setq", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> setq(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: false, "SETQ",
-			Configuration.CurrentValue.Limit.MaxNamedQRegisters));
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: false, "SETQ"));
 
 	[SharpFunction(Name = "setr", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular)]
 	public ValueTask<CallState> setr(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true, "SETR",
-			Configuration.CurrentValue.Limit.MaxNamedQRegisters));
-
-	/// <summary>Sets one register, or answers why it could not be set (empty when it was).</summary>
-	private static string SetRegister(ParserState state, string register, MString value, uint maxNamed)
-		=> state.RefusesNewNamedRegister(register, maxNamed) ? ErrorMessages.Returns.TooManyRegisters
-			: state.AddRegister(register, value) ? string.Empty
-			: ErrorMessages.Returns.BadRegName;
+		=> ValueTask.FromResult(SetRegisters(parser, echoFirstValue: true, "SETR"));
 
 	/// <summary>
 	/// Sets <paramref name="register"/> to <paramref name="value"/> and gives it <paramref name="label"/>,
@@ -187,8 +178,7 @@ public partial class Functions
 	/// nor value) or <c>!</c> (the same, but a register holding a value may be taken).
 	/// </summary>
 	/// <returns>Empty when set; otherwise the error to return.</returns>
-	private static string SetLabelledRegister(ParserState state, string register, MString value, string label,
-		uint maxNamed)
+	private static string SetLabelledRegister(ParserState state, string register, MString value, string label)
 	{
 		if (!RegisterLabels.IsValidLabel(label)) return ErrorMessages.Returns.InvalidLabel;
 		if (!state.Registers.TryPeek(out var frame)) return ErrorMessages.Returns.BadRegName;
@@ -201,8 +191,7 @@ public partial class Functions
 		}
 		else name = RegisterLabels.Resolve(frame, name);
 
-		var error = SetRegister(state, name, value, maxNamed);
-		if (error.Length > 0) return error;
+		if (!state.AddRegister(name, value)) return ErrorMessages.Returns.BadRegName;
 		RegisterLabels.Set(frame, name, label);
 		return string.Empty;
 	}
@@ -223,8 +212,7 @@ public partial class Functions
 	/// any argument hit an error, which the caller carries on its result as an eager function's
 	/// dispatcher would.
 	/// </returns>
-	private static async ValueTask<OrderedRegisters> SetRegistersInOrder(IMUSHCodeParser parser, int pairArguments,
-		uint maxNamed)
+	private static async ValueTask<OrderedRegisters> SetRegistersInOrder(IMUSHCodeParser parser, int pairArguments)
 	{
 		var arguments = parser.CurrentState.ArgumentsOrdered;
 		var values = new List<MString>(pairArguments / 2);
@@ -240,9 +228,8 @@ public partial class Functions
 			var nameText = (name.Message ?? MarkupText.Empty).ToPlainText();
 			var separator = nameText.IndexOf('>');
 			var pairError = separator < 0
-				? SetRegister(parser.CurrentState, nameText.ToUpper(), valueText, maxNamed)
-				: SetLabelledRegister(parser.CurrentState, nameText[..separator], valueText, nameText[(separator + 1)..],
-					maxNamed);
+				? parser.CurrentState.AddRegister(nameText.ToUpper(), valueText) ? string.Empty : ErrorMessages.Returns.BadRegName
+				: SetLabelledRegister(parser.CurrentState, nameText[..separator], valueText, nameText[(separator + 1)..]);
 			if (error.Length == 0) error = pairError;
 			values.Add(valueText);
 		}
@@ -255,8 +242,7 @@ public partial class Functions
 	[SharpFunction(Name = "setqm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.NoParse | FunctionFlags.EvenArgsOnly)]
 	public async ValueTask<CallState> SetQM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var set = await SetRegistersInOrder(parser, parser.CurrentState.ArgumentsOrdered.Count,
-			Configuration.CurrentValue.Limit.MaxNamedQRegisters);
+		var set = await SetRegistersInOrder(parser, parser.CurrentState.ArgumentsOrdered.Count);
 		var result = set.Error.Length == 0 ? CallState.Empty : new CallState(set.Error);
 		return result with { HadErrors = set.HadErrors };
 	}
@@ -278,8 +264,7 @@ public partial class Functions
 			? await arguments[(arguments.Count - 1).ToString()].GetParsedResultAsync()
 			: new CallState(MarkupText.Space);
 
-		var set = await SetRegistersInOrder(parser, hasDelimiter ? arguments.Count - 1 : arguments.Count,
-			Configuration.CurrentValue.Limit.MaxNamedQRegisters);
+		var set = await SetRegistersInOrder(parser, hasDelimiter ? arguments.Count - 1 : arguments.Count);
 		var result = set.Error.Length == 0
 			? JoinWithinOutputLimit(parser, set.Values, delimiter.Message ?? MarkupText.Empty)
 			: new CallState(set.Error);

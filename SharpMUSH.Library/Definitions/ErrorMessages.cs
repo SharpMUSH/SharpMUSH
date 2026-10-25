@@ -294,7 +294,6 @@ public static partial class ErrorMessages
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
 		public const string TooManyWords = "#-1 TOO MANY WORDS";
-		public const string TooManyRegisters = "#-1 TOO MANY REGISTERS";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
 		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";

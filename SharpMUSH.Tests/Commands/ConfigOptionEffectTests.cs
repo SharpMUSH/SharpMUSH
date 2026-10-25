@@ -9,9 +9,9 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Options that PennMUSH acts on and SharpMUSH used to accept and ignore (#2097): max_named_qregs,
-/// use_muxcomm, max_player_chans and read_remote_desc. Each test runs against a command and function table of
-/// its own, built with the options it needs, so the shared world's options stay as they are.
+/// Options that PennMUSH acts on and SharpMUSH used to accept and ignore (#2097): max_player_chans, use_muxcomm
+/// and read_remote_desc. Each test runs against a command and function table of its own, built with the options it
+/// needs, so the shared world's options stay as they are.
 /// </summary>
 public class ConfigOptionEffectTests
 {
@@ -49,20 +49,6 @@ public class ConfigOptionEffectTests
 	}
 
 	private static string ShortName(string prefix) => prefix + Guid.NewGuid().ToString("N")[..10];
-
-	[Test]
-	public async Task MaxNamedQRegs_RefusesANewNamedRegisterPastTheLimit()
-	{
-		var options = Baseline with { Limit = Baseline.Limit with { MaxNamedQRegisters = 2 } };
-		var (player, parser) = await PlayerWith(options, "QregLimit");
-		var token = TestIsolationHelpers.GenerateUniqueName("qreg");
-
-		var heard = await Run(player, parser,
-			$"think {token}:[setq(aa,1,bb,2)][setq(cc,3)]:[setq(aa,5)][r(aa)]:[setq(c,7)][r(c)]");
-
-		// A third name is refused; one already set may change; a single-character register is not counted.
-		await Assert.That(heard).Contains($"{token}:{ErrorMessages.Returns.TooManyRegisters}:5:7");
-	}
 
 	[Test]
 	public async Task UseMuxCommOff_DisablesTheComsysCommands()
