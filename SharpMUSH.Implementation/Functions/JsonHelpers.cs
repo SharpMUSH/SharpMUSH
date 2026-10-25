@@ -20,22 +20,19 @@ public static class JsonHelpers
 
 	public static ValueTask<CallState> NullJSON(OrderedArguments args)
 	{
-		if (args.Count == 1)
+		return ValueTask.FromResult(new CallState(args.Count switch
 		{
-			return ValueTask.FromResult(new CallState("null"));
-		}
-		if (args.Count == 2 && args["1"].Message.ToPlainText().Equals("null", StringComparison.OrdinalIgnoreCase))
-		{
-			return ValueTask.FromResult(new CallState("null"));
-		}
-		return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidArgument));
+			> 2 => ErrorMessages.Returns.WrongNumberOfArguments,
+			2 when !args["1"].Message.ToPlainText().Equals("null", StringComparison.OrdinalIgnoreCase) => ErrorMessages.Returns.InvalidArgument,
+			_ => "null"
+		}));
 	}
 
 	public static ValueTask<CallState> BooleanJSON(OrderedArguments args)
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WrongNumberOfArguments));
 		}
 
 		var entry = args["1"].Message.ToPlainText();
@@ -51,7 +48,7 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WrongNumberOfArguments));
 		}
 
 		var entry = args["1"].Message;
@@ -68,7 +65,7 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WrongNumberOfArguments));
 		}
 
 		var entry = args["1"].Message;
@@ -80,7 +77,7 @@ public static class JsonHelpers
 	{
 		if (args.Count != 2)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.WrongArgumentsRange, "json", 2, 2, args.Count)));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WrongNumberOfArguments));
 		}
 
 		var entry = args["1"].Message.ToPlainText();
@@ -122,7 +119,7 @@ public static class JsonHelpers
 	{
 		if (args.Count % 2 == 0)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.GotEvenArgs, "json")));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.WrongNumberOfArguments));
 		}
 
 		var pairs = args.Values.Select(x => x.Message).Skip(1).Chunk(2).ToList();

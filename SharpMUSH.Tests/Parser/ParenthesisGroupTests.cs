@@ -56,7 +56,7 @@ public class ParenthesisGroupTests
 	[Test]
 	public async Task GroupEndsWhereItsParenthesisCloses()
 		=> await Assert.That(await Evaluate("[ucstr(x,(a)b)]"))
-			.IsEqualTo("#-1 FUNCTION (UCSTR) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2");
+			.IsEqualTo("#-1 FUNCTION (UCSTR) EXPECTS 1 ARGUMENTS BUT GOT 2");
 
 	[Test]
 	[Arguments("[cat(x,(a,b)c)]", "x (a,b)c")]

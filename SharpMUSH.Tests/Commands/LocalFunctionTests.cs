@@ -176,7 +176,7 @@ public class LocalFunctionTests
 		await Cmd($"@function/local {name}=me,{name},1,1");
 		await Assert.That(await Eval($"{name}()")).IsEqualTo("global");
 		await Assert.That(await Eval($"localfun({name},argument)")).IsEqualTo("local-argument");
-		await Assert.That(await Eval($"localfun({name})")).Contains("EXPECTS AT LEAST");
+		await Assert.That(await Eval($"localfun({name})")).Contains("EXPECTS 1 ARGUMENTS BUT GOT 0");
 		await Cmd($"@function/local/alias {name}alias={name}");
 		await Cmd($"@function/local/disable {name}");
 		await Assert.That(await Eval($"localfun({name}alias,argument)")).Contains("NOT FOUND");

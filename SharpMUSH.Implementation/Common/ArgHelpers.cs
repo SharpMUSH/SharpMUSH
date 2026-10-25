@@ -300,7 +300,7 @@ public static partial class ArgHelpers
 		var numbers = NumericEvaluation.For(parser);
 		if (args.Count < 2)
 		{
-			return ValueTask.FromResult(new CallState(Message: ErrorMessages.Returns.TooFewArguments));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgumentCount(parser.CurrentState.Function?.ToUpperInvariant() ?? string.Empty, 2, int.MaxValue, args.Count)));
 		}
 
 		// Every argument is checked before any comparison decides the answer: a non-number anywhere in

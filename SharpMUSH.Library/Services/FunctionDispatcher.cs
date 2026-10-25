@@ -43,8 +43,8 @@ public static class FunctionDispatcher
 
 	/// <summary>
 	/// The arity and parity rules for a call of <paramref name="name"/> with <paramref name="count"/>
-	/// arguments: the PennMUSH error string of the first that fails, or null. Too many is checked before
-	/// too few, and an even count against <see cref="FunctionFlags.UnEvenArgsOnly"/> before an odd one
+	/// arguments: the PennMUSH error string of the first that fails, or null. A count out of range is checked
+	/// first, and an even count against <see cref="FunctionFlags.UnEvenArgsOnly"/> before an odd one
 	/// against <see cref="FunctionFlags.EvenArgsOnly"/>.
 	/// </summary>
 	/// <param name="name">The name the call was written with, which is what the error names.</param>
@@ -52,11 +52,9 @@ public static class FunctionDispatcher
 	public static string? ValidateArgumentCount(SharpFunctionAttribute attribute, string name, int count, bool emptyCall = false)
 	{
 		if (emptyCall && count < attribute.EmptyCallMinArgs)
-			return string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.EmptyCallMinArgs, count);
-		if (count > attribute.MaxArgs)
-			return string.Format(ErrorMessages.Returns.TooManyArguments, name.ToUpperInvariant(), attribute.MaxArgs, count);
-		if (count < attribute.MinArgs)
-			return string.Format(ErrorMessages.Returns.TooFewArguments, name.ToUpperInvariant(), attribute.MinArgs, count);
+			return ErrorMessages.Returns.ArgumentCount(name.ToUpperInvariant(), attribute.EmptyCallMinArgs, attribute.MaxArgs, count);
+		if (count > attribute.MaxArgs || count < attribute.MinArgs)
+			return ErrorMessages.Returns.ArgumentCount(name.ToUpperInvariant(), attribute.MinArgs, attribute.MaxArgs, count);
 		// Test the individual bits: switching on the whole Flags value only ever matched a
 		// function whose flags were *exactly* the parity flag, so any declaration that
 		// combined it with another flag (letq's NoParse, for instance) skipped the check.

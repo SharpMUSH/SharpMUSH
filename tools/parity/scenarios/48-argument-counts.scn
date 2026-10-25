@@ -1,0 +1,18 @@
+# Argument-count errors from the softcode audit (#2268): PennMUSH's four wordings, chosen by the
+# function's declared range, and json()'s own refusal of a wrong count.
+::case argc.login
+::login wiz Wiz wizpass
+think ok
+
+::case argc.forms  one count, two counts, no upper bound, a range
+think abs(1,1)
+think and()
+think extract(a,1,1,|,x)
+think mid(a)
+think lattr(me,|,x)
+
+::case argc.json  json() refuses a wrong count for its type
+think json(string)
+think json(number,1,2)
+think json(object,a)
+think json(null,a,b)

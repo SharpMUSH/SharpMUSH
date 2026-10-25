@@ -132,8 +132,8 @@ public class UserDefinedFunctionTests
 		await Cmd($"&{attr} me=ok");
 		await Cmd($"@function {fn}=me,{attr},2,2");
 
-		await Assert.That((await Eval($"{fn}(a)")).ToUpperInvariant()).Contains("AT LEAST");
-		await Assert.That((await Eval($"{fn}(a,b,c)")).ToUpperInvariant()).Contains("AT MOST");
+		await Assert.That((await Eval($"{fn}(a)")).ToUpperInvariant()).Contains("EXPECTS 2 ARGUMENTS BUT GOT 1");
+		await Assert.That((await Eval($"{fn}(a,b,c)")).ToUpperInvariant()).Contains("EXPECTS 2 ARGUMENTS BUT GOT 3");
 		await Assert.That(await Eval($"{fn}(a,b)")).IsEqualTo("ok");
 	}
 

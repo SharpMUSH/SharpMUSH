@@ -129,15 +129,15 @@ public class RhostListFunctionTests
 	}
 
 	[Test]
-	[Arguments("list(a)", "#-1 FUNCTION (LIST) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
-	[Arguments("list(a,b,c,d,e,f)", "#-1 FUNCTION (LIST) EXPECTS AT MOST 5 ARGUMENTS BUT GOT 6")]
+	[Arguments("list(a)", "#-1 FUNCTION (LIST) EXPECTS BETWEEN 2 AND 5 ARGUMENTS BUT GOT 1")]
+	[Arguments("list(a,b,c,d,e,f)", "#-1 FUNCTION (LIST) EXPECTS BETWEEN 1 AND 5 ARGUMENTS BUT GOT 6")]
 	public async Task TheArgumentCountIsRhostMushs(string expression, string expected)
 		=> await Assert.That(await EvalAsync(1, expression, rhostList: true)).IsEqualTo(expected);
 
 	[Test]
 	[Arguments("member(list(functions),LIST)", "0", false)]
 	[Arguments("list(a b,x)", "#-1", true)]
-	[Arguments("list(a b,x,,H)", "#-1 FUNCTION (LIST) EXPECTS AT MOST 2 ARGUMENTS BUT GOT 4", true)]
+	[Arguments("list(a b,x,,H)", "#-1 FUNCTION (LIST) EXPECTS 1 OR 2 ARGUMENTS BUT GOT 4", true)]
 	public async Task OffListIsPennMushs(string expression, string expected, bool equal)
 	{
 		var result = await EvalAsync(1, expression, rhostList: false);

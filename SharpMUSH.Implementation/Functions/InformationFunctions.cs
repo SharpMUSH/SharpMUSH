@@ -1182,7 +1182,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		if (args.Count > 2)
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, "LIST", 2, args.Count));
+			return new CallState(ErrorMessages.Returns.ArgumentCount("LIST", 1, 2, args.Count));
 		}
 
 		var errors = new ListEvaluationErrors();
@@ -1251,7 +1251,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		if (args.Count < 2)
 		{
-			return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, "LIST", 2, args.Count));
+			return new CallState(ErrorMessages.Returns.ArgumentCount("LIST", 2, 5, args.Count));
 		}
 
 		var errors = new ListEvaluationErrors();

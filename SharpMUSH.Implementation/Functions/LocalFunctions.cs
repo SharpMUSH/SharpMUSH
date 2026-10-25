@@ -42,8 +42,8 @@ public partial class Functions
 			return new CallState(string.Format(ErrorMessages.Returns.NoSuchFunction, name.ToUpperInvariant()));
 		}
 		var argumentCount = parser.CurrentState.Arguments.Count - 1;
-		if (argumentCount < entry.MinArgs) return new CallState(string.Format(ErrorMessages.Returns.TooFewArguments, name, entry.MinArgs, argumentCount));
-		if (argumentCount > entry.MaxArgs) return new CallState(string.Format(ErrorMessages.Returns.TooManyArguments, name, entry.MaxArgs, argumentCount));
+		if (argumentCount < entry.MinArgs || argumentCount > entry.MaxArgs)
+			return new CallState(ErrorMessages.Returns.ArgumentCount(name, entry.MinArgs, entry.MaxArgs, argumentCount));
 		// The caller must be able to read it; the value itself is read once, by the evaluation below, which
 		// repeats this same read before its execute check.
 		switch (await AttributeService.LazilyGetAttributeAsync(caller, target, entry.Attribute, IAttributeService.AttributeMode.Read, false))

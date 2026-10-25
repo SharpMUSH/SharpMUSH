@@ -31,8 +31,8 @@ public partial class Functions
 		}
 
 		return count > 2
-			? ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.TooManyArguments,
-				calledAs.ToUpperInvariant(), 2, count)))
+			? ValueTask.FromResult(new CallState(ErrorMessages.Returns.ArgumentCount(
+				calledAs.ToUpperInvariant(), 1, 2, count)))
 			: AttributePatternAsync(parser, calledAs, checkParents, IAttributeService.AttributePatternMode.Wildcard,
 				matched => string.Join(AttributeListSeparator(parser, 1), matched));
 	}

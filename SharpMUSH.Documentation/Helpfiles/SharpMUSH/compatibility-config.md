@@ -270,7 +270,7 @@ An empty list tells nothing, header included, so this shows only what `think` re
 > think X[list(,##,,Words:)]Y
 XY
 > think list(functions)
-#-1 FUNCTION (LIST) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1
+#-1 FUNCTION (LIST) EXPECTS BETWEEN 2 AND 5 ARGUMENTS BUT GOT 1
 ```
 
 ## RhostMUSH map() arguments: `rhost_map_args`

@@ -1994,15 +1994,6 @@
       "file": "compatibility-unresolved.md",
       "corpus": "help",
       "names": [
-        "compatibility unresolved argument count error wording"
-      ],
-      "canonical": "compatibility unresolved argument count error wording",
-      "section": true
-    },
-    {
-      "file": "compatibility-unresolved.md",
-      "corpus": "help",
-      "names": [
         "compatibility unresolved halt and players 1006 items 1 and 2"
       ],
       "canonical": "compatibility unresolved halt and players 1006 items 1 and 2",

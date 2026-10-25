@@ -59,7 +59,7 @@ public class MuxCompatibilityTests
 	[Arguments(Mux.Justify, "[ljust(abcdef,3)]|[rjust(abcdef,3)]|[center(abcdefg,3)]|[ljust(ab,4,xy)]", "abc|abc|abc|abxy")]
 	[Arguments(Mux.Justify, "ljust(abcdef,3,,0)", "abcdef")]
 	[Arguments(Mux.Collation, "[sort(b A a B)]|[comp(a,B)]|[comp(B,a)]|[sort(b A a B,a)]|[comp(a,a)]", "a A b B|-1|1|A B a b|0")]
-	[Arguments(Mux.List, "list(a b)", "#-1 FUNCTION (LIST) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
+	[Arguments(Mux.List, "list(a b)", "#-1 FUNCTION (LIST) EXPECTS BETWEEN 2 AND 5 ARGUMENTS BUT GOT 1")]
 	public async Task FunctionsAnswerAsTinyMux(Mux options, string expression, string expected)
 		=> await Assert.That(await Evaluate(options, expression)).IsEqualTo(expected);
 

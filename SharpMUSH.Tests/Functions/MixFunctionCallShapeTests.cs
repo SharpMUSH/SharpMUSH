@@ -46,7 +46,7 @@ public class MixFunctionCallShapeTests
 		var refused = await Factory.FunctionParser.FunctionParse(MarkupText.Plain($"mix({obj}/CB,{Lists(34)},|)"))
 			?? throw new InvalidOperationException("MIX returned no parser result.");
 		await Assert.That(refused.Message.ToPlainText())
-			.IsEqualTo("#-1 FUNCTION (MIX) EXPECTS AT MOST 35 ARGUMENTS BUT GOT 36");
+			.IsEqualTo("#-1 FUNCTION (MIX) EXPECTS BETWEEN 3 AND 35 ARGUMENTS BUT GOT 36");
 		await Assert.That(await Factory.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({obj}/MARKER)")))
 			.IsEqualTo(MarkupText.Plain("unchanged"));
 
