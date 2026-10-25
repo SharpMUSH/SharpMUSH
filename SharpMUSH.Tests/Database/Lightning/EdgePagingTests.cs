@@ -41,7 +41,7 @@ public class EdgePagingTests : LightningDatabaseFixture
 	}
 
 	[Test]
-	public async Task ContentsLargerThanAPage_ComeBackWholeInIndexOrder()
+	public async Task ContentsLargerThanAPage_ComeBackWholeNewestFirst()
 	{
 		var room = await NewRoom("BigRoom");
 		var things = await NewThings(room, SetSize);
@@ -50,7 +50,8 @@ public class EdgePagingTests : LightningDatabaseFixture
 
 		await Assert.That(contents).Count().IsEqualTo(SetSize);
 		await Assert.That(contents).IsEquivalentTo(things.Select(t => (long)t.Number));
-		await Assert.That(contents).IsEquivalentTo(IndexOrder(Tables.Location.Reverse, room.Object().Key), CollectionOrdering.Matching);
+		await Assert.That(contents).IsEquivalentTo(things.Select(t => (long)t.Number).Reverse(), CollectionOrdering.Matching)
+			.Because("contents come back newest arrival first");
 	}
 
 	[Test]

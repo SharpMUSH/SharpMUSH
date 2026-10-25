@@ -22,6 +22,7 @@ public partial class LightningDatabase
 	internal const string AccountCredentialMigrationId = "0002_account_credentials";
 	internal const string OnboardingMigrationId = "0004_onboarding_progress_v1";
 	internal const string SessionDigestMigrationId = "0003_session_digest_authority";
+	internal const string ArrivalOrderMigrationId = "0006_arrival_order";
 
 	/// <summary>The <c>meta</c> key holding the world format, a 4-byte big-endian integer.</summary>
 	internal static ReadOnlySpan<byte> WorldFormatKey => "world_format"u8;
@@ -40,6 +41,7 @@ public partial class LightningDatabase
 		new(1, OnboardingMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateOnboarding, ct)),
 		new(1, WikiCategoryCheckpointCodec.MigrationId, (db, options, ct) => db.MigrateWikiCategoryValuesAsync(options, ct)),
 		new(1, WikiCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiCounts, ct)),
+		new(1, ArrivalOrderMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateArrivalOrder, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>
@@ -181,6 +183,29 @@ public partial class LightningDatabase
 		if (!tx.TryGet(Tables.Meta, identity, out _))
 			tx.Put(Tables.Meta, identity, Keys.Str(Guid.NewGuid().ToString("N")));
 		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord { Id = OnboardingMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() }));
+	}
+
+	/// <summary>
+	/// Rewrites every location entry with an arrival number (<see cref="SetLocation"/>). A world from
+	/// before this kept no order, and read each container's contents lowest dbref first; the highest
+	/// dbref arrives first here, so that is the order it keeps.
+	/// </summary>
+	private static void MigrateArrivalOrder(ITx tx)
+	{
+		var marker = Keys.Str("mig:" + ArrivalOrderMigrationId);
+		if (tx.TryGet(Tables.Meta, marker, out _)) return;
+		var placed = tx.Range(Tables.Location.Forward, [])
+			.Select(entry => (Content: Keys.ReadDbref(entry.Key), Container: Keys.ReadDbref(entry.Value)))
+			.ToList();
+		tx.DeletePrefix(Tables.Location.Forward, []);
+		tx.DeletePrefix(Tables.Location.Reverse, []);
+		tx.Delete(Tables.Meta, Keys.Str("next_arrival"));
+		foreach (var (content, container) in Enumerable.Reverse(placed))
+			SetLocation(tx, content, container);
+		tx.Put(Tables.Meta, marker, Codec.Serialize(new MigrationRecord
+		{
+			Id = ArrivalOrderMigrationId, AppliedUnixMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+		}));
 	}
 
 	private static void MigrateSessionDigests(ITx tx)
@@ -383,7 +408,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.ObjName, Keys.Lower(seedObject.Name), Keys.Dbref(dbref));
 			IndexObjectType(tx, seedObject.Type, dbref);
 
-			SetSingleEdge(tx, Tables.Location, dbref, seedObject.Location);
+			SetLocation(tx, dbref, seedObject.Location);
 			SetSingleEdge(tx, Tables.Home, dbref, seedObject.Home);
 			SetSingleEdge(tx, Tables.Owner, dbref, seedObject.Owner);
 

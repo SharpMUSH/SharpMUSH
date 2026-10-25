@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Database.Lightning.Store;
 using SharpMUSH.Library;
@@ -154,6 +155,64 @@ public partial class LightningDatabase(
 
 	internal static long? GetSingleEdge(ITx tx, TableDef forward, long from)
 		=> tx.Dups(forward, Keys.Dbref(from)).Select(v => (long?)Keys.ReadDbref(v)).FirstOrDefault();
+
+	/// <summary>
+	/// Puts <paramref name="content"/> in <paramref name="container"/>, or nowhere, as the newest arrival.
+	/// Location is the one edge that keeps an order: each placement takes the next arrival number, the
+	/// forward value is the container followed by that number, and the reverse value is the number
+	/// inverted followed by the content, so a container's duplicates sort newest arrival first, the order
+	/// PennMUSH keeps its contents list in.
+	/// </summary>
+	internal static void SetLocation(ITx tx, long content, long? container)
+	{
+		var key = Keys.Dbref(content);
+		foreach (var old in tx.Dups(Tables.Location.Forward, key).ToList())
+		{
+			tx.Delete(Tables.Location.Reverse, old.AsSpan(0, 8), ArrivalEntry(ReadArrival(old), content));
+			tx.Delete(Tables.Location.Forward, key, old);
+		}
+
+		if (container is not { } target) return;
+		var arrival = NextArrival(tx);
+		tx.Put(Tables.Location.Forward, key, Keys.Concat(Keys.Dbref(target), ArrivalBytes(arrival)));
+		tx.Put(Tables.Location.Reverse, Keys.Dbref(target), ArrivalEntry(arrival, content));
+	}
+
+	/// <summary>Removes every location entry naming <paramref name="dbref"/>, as content or as container.</summary>
+	internal static void DeleteLocationEdges(ITx tx, long dbref)
+	{
+		SetLocation(tx, dbref, null);
+		var key = Keys.Dbref(dbref);
+		foreach (var entry in tx.Dups(Tables.Location.Reverse, key).ToList())
+		{
+			var arrival = ulong.MaxValue - BinaryPrimitives.ReadUInt64BigEndian(entry);
+			tx.Delete(Tables.Location.Forward, entry.AsSpan(8), Keys.Concat(key, ArrivalBytes(arrival)));
+		}
+		tx.DeletePrefix(Tables.Location.Reverse, key);
+	}
+
+	/// <summary>The content a reverse location value names.</summary>
+	internal static long ReadArrivalContent(ReadOnlySpan<byte> entry) => Keys.ReadDbref(entry[8..]);
+
+	private static ulong ReadArrival(ReadOnlySpan<byte> forward) => BinaryPrimitives.ReadUInt64BigEndian(forward[8..]);
+
+	private static byte[] ArrivalBytes(ulong arrival)
+	{
+		var bytes = new byte[8];
+		BinaryPrimitives.WriteUInt64BigEndian(bytes, arrival);
+		return bytes;
+	}
+
+	private static byte[] ArrivalEntry(ulong arrival, long content)
+		=> Keys.Concat(ArrivalBytes(ulong.MaxValue - arrival), Keys.Dbref(content));
+
+	private static ulong NextArrival(ITx tx)
+	{
+		var key = Keys.Str("next_arrival");
+		var next = tx.TryGet(Tables.Meta, key, out var value) ? BinaryPrimitives.ReadUInt64BigEndian(value) : 0;
+		tx.Put(Tables.Meta, key, ArrivalBytes(next + 1));
+		return next;
+	}
 
 	internal Task MutateWorldAuthorityAsync(Func<Task> mutation, CancellationToken cancellationToken = default)
 	{
