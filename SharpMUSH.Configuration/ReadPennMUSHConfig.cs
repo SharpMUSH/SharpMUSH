@@ -366,8 +366,21 @@ public static partial class ReadPennMushConfig
 			secrets[PennMushConfigImport.SecretDirectives[key]] = DirectiveValue(line);
 		}
 
+		// Every directive read above, by whichever path: the rest name options SharpMUSH does not have.
+		var unrecognized = text.Select(DirectiveName).OfType<string>()
+			.Where(name => !configDictionary.ContainsKey(name)
+				&& !name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
+				&& !name.Equals("include", StringComparison.OrdinalIgnoreCase)
+				&& !name.Equals("mssp", StringComparison.OrdinalIgnoreCase)
+				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name))
+			.Distinct(StringComparer.OrdinalIgnoreCase)
+			.ToList();
+
 		return new PennMushConfigImport(work, skipped, named,
-			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal));
+			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal))
+		{
+			Unrecognized = unrecognized
+		};
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];
 

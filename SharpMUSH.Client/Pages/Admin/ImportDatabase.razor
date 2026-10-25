@@ -74,19 +74,19 @@
 
     @if (!_isConverting && _result == null)
     {
-        <RhostImportGuide />
+        <ImportGuides />
 
         <KitCard Class="dbimport-dropzone">
             <div class="dbimport-body">
+                @* No Accept list: a PennMUSH outdb has no extension, and any input may be gzipped. *@
                 <MudFileUpload T="IBrowserFile"
-                               Accept=".db,.flat,.txt"
                                FilesChanged="OnFileSelected"
                                MaximumFileCount="1"
                                MaxFileSize="104857600" />
                 <div class="dbimport-dropzone-inner">
                     <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Class="dbimport-dropzone-icon" />
                     <span class="dbimport-dropzone-title">@Loc["DropDatabaseFile"]</span>
-                    <span class="dbimport-dropzone-hint">@Loc["SupportedFormatsDb"]</span>
+                    <span class="dbimport-dropzone-hint">@Loc["AdmImportDatabaseFormats"]</span>
                 </div>
             </div>
         </KitCard>
@@ -114,7 +114,7 @@
                     @* The source game's mush.cnf goes in first: it names the master room, the player start,
                        the ancestors and the handlers the database's objects are, and those decide how the
                        import places SharpMUSH's own objects. Without it the game keeps SharpMUSH's defaults. *@
-                    <SectionLabel Class="dbimport-label">@Loc["AdmImportConfigRecommended"]</SectionLabel>
+                    <SectionLabel Class="dbimport-label dbimport-config-label">@Loc[ConfigLabel]</SectionLabel>
                     <MudFileUpload T="IBrowserFile"
                                    Accept=".cnf,.conf,.txt"
                                    FilesChanged="OnConfigFileSelected"
@@ -431,6 +431,15 @@
 
     /// <summary>A mail folder file is RhostMUSH's alone; told from the file, it may still be one.</summary>
     private bool TakesMailFolders => _format is "auto" or "rhostmush";
+
+    /// <summary>The configuration slot's label, naming the file the chosen server keeps its settings in.</summary>
+    private string ConfigLabel => _format switch
+    {
+        "pennmush" => "AdmImportConfigPennMUSH",
+        "tinymux" => "AdmImportConfigTinyMUX",
+        "rhostmush" => "AdmImportConfigRhostMUSH",
+        _ => "AdmImportConfigAuto"
+    };
 
     private IReadOnlyList<ImportSessionStatus> _sessions = [];
 

@@ -27,6 +27,13 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	public static readonly IReadOnlyDictionary<string, string> SecretDirectives =
 		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["sql_password"] = "sql.password" };
 
+	/// <summary>
+	/// The directives the file names that SharpMUSH has no option for, in the order they first appear. A PennMUSH
+	/// <c>mush.cnf</c> carries plenty (<c>chunk_swap_file</c>, <c>forking_dump</c>, <c>compress_program</c>), and a
+	/// TinyMUX or RhostMUSH configuration more.
+	/// </summary>
+	public IReadOnlyList<string> Unrecognized { get; init; } = [];
+
 	/// <summary>Whether the file gave <paramref name="name"/> (a configuration name) a value.</summary>
 	public bool Sets(string name) => Named.Contains(name);
 

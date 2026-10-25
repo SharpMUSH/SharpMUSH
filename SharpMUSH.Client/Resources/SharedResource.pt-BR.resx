@@ -3412,10 +3412,6 @@
     <value>Formatos suportados: .cnf, .conf, .txt (máx. 1MB)</value>
     <comment>MT</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Formatos suportados: .db, .txt (máx. 100MB)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Temp. (C)</value>
     <comment>MT</comment>

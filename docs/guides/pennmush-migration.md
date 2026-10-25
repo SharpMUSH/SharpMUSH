@@ -45,7 +45,9 @@ The files that go with each format:
 | RhostMUSH | the flatfile `@dump/flat` writes | `.dump.mail` from `wmail/unload`, with its `.dump.folder` in the mail-folders slot | none: see below |
 | TinyMUX | the flatfile (versions 1 to 5) | `mail.db` | `comsys.db` in the chat slot |
 
-The `mush.cnf` slot reads PennMUSH's configuration file. A RhostMUSH or TinyMUX configuration file is not read; set the matching options yourself.
+Any of these files may be gzipped, as PennMUSH writes its dumps by default (`outdb.gz`); the import tells a gzipped file from its first bytes and unpacks it, to at most 512 MiB. An upload takes up to 100 MB per file, so compress a larger one first. An import is stopped if it runs longer than ten minutes plus a minute for every 8 MiB of input.
+
+The configuration slot takes the source's configuration file: PennMUSH's `mush.cnf`, TinyMUX's `netmux.conf` or RhostMUSH's `netrhost.conf`. A directive with the same name as a PennMUSH one is read as PennMUSH reads it. The import report lists each `include` line as a warning, since an uploaded file cannot name files on the server, and the directives SharpMUSH has no option for as one note; paste an included file's lines into the uploaded file to keep them.
 
 **What comes across.** Objects keep their numbers, with their names, owners, parents, zones, locks, attributes and creation times. Flags and powers become SharpMUSH's where one matches: a wizard becomes the `wizard` role, a RhostMUSH councilor the `royalty` role and an architect the `builder` role, and a TinyMUX power such as `control_all` becomes the permission it stands for. A flag or power with no match is kept as a custom flag or power of its own, so `hasflag()` still sees it. Passwords keep working: the forms these servers store (DES and extended DES crypt, MD5-crypt, SHA-crypt, TinyMUX's SHA-1, and a PennMUSH hash TinyMUX carried over) are checked at login and rehashed the first time each player connects. Mail comes across, in RhostMUSH's folders when the folder dump is given; TinyMUX channels come across with their members, and each player's comsys aliases become `CHANALIAS` attributes.
 

@@ -441,4 +441,34 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		cut.WaitForState(() => cut.FindAll(".dbimport-previous").Count == 0);
 		await Assert.That(asked).IsEquivalentTo(["POST api/databaseconversion/previous/discard"]);
 	}
+
+	/// <summary>
+	/// The database picker takes any file, since a PennMUSH outdb has no extension and any input may be gzipped, and
+	/// the configuration slot names the file the chosen server keeps its settings in.
+	/// </summary>
+	[Test]
+	public async Task TheDatabasePickerTakesAnyFileAndTheConfigurationSlotNamesTheServersFile()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path));
+		var cut = Render<ImportDatabase>();
+		await Assert.That(cut.FindComponent<InputFile>().Find("input").GetAttribute("accept")).IsNull();
+		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+X992001\n~0\n***END OF DUMP***\n", "netmux.flat.gz"));
+		cut.WaitForAssertion(() => cut.Find(".dbimport-config-label"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".dbimport-config-label").TextContent).IsEqualTo("AdmImportConfigAuto");
+		await cut.InvokeAsync(() => cut.FindComponent<MudRadioGroup<string>>().Instance.ValueChanged.InvokeAsync("tinymux"));
+		cut.WaitForState(() => cut.Find(".dbimport-config-label").TextContent == "AdmImportConfigTinyMUX", TimeSpan.FromSeconds(5));
+		await cut.InvokeAsync(() => cut.FindComponent<MudRadioGroup<string>>().Instance.ValueChanged.InvokeAsync("rhostmush"));
+		cut.WaitForState(() => cut.Find(".dbimport-config-label").TextContent == "AdmImportConfigRhostMUSH", TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>Each server has its own folded export guide, and none sends the reader off to a code host.</summary>
+	[Test]
+	public async Task EachServerHasAnExportGuide()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path));
+		var cut = Render<ImportDatabase>();
+		await Assert.That(cut.FindAll(".import-guide summary").Select(summary => summary.TextContent))
+			.IsEquivalentTo(["AdmImportPennGuideTitle", "AdmImportMuxGuideTitle", "AdmImportRhostGuideTitle"]);
+		await Assert.That(cut.Markup).DoesNotContain("github.com");
+	}
 }
