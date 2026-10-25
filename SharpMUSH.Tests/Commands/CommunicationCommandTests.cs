@@ -621,7 +621,7 @@ public class CommunicationCommandTests
 		});
 	}
 
-	/// <summary><c>&lt;alias&gt; off</c> and <c>on</c> are <c>@channel/gag</c> and <c>/ungag</c>, as in PennMUSH.</summary>
+	/// <summary><c>&lt;alias&gt; off</c> and <c>on</c> are <c>@channel/gag</c> and <c>/ungag</c>, as in PennMUSH; a space after the word does not matter.</summary>
 	[Test]
 	public async ValueTask ComsysAlias_OffAndOn_GagAndUngagTheChannel()
 	{
@@ -633,7 +633,7 @@ public class CommunicationCommandTests
 			var gagged = TestIsolationHelpers.GenerateUniqueName("WhileGagged");
 			var ungagged = TestIsolationHelpers.GenerateUniqueName("AfterUngag");
 
-			await NotifiedWhile(player, $"{alias} off");
+			await NotifiedWhile(player, $"{alias} off ");
 			var whileGagged = await NotifiedWhile(player, $"@cemit {channel}={gagged}");
 			await NotifiedWhile(player, $"{alias} on");
 			var afterUngag = await NotifiedWhile(player, $"@cemit {channel}={ungagged}");

@@ -1444,14 +1444,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0
 				|| !context.DbrefMapping.TryGetValue(pennObj.Link, out locationDbRef))
 			{
-				var limbo = ContentOf(sharpObj) is AnySharpContent created
-					? $"#{(await created.Location()).Object().DBRef.Number}"
-					: "Limbo";
-				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {limbo}");
+				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {await LimboAsync()}");
 				return;
 			}
-
-			context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was put in its home #{pennObj.Link}");
 		}
 
 		var locationObj = await _mediator.Send(new GetObjectNodeQuery(locationDbRef), cancellationToken);
@@ -1459,8 +1454,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// Rooms aren't content
 		if (ContainerOf(locationObj) is not AnySharpContainer container || ContentOf(sharpObj) is not AnySharpContent content)
 		{
+			if (!context.DbrefMapping.ContainsKey(pennObj.Location))
+				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import, and its home #{pennObj.Link} cannot hold it; it was left in {await LimboAsync()}");
 			return;
 		}
+
+		if (!context.DbrefMapping.ContainsKey(pennObj.Location))
+			context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was put in its home #{pennObj.Link}");
 
 		// A conversion is building a world out of a dump, not moving anyone: there is no
 		// actor, no parser and nobody present to notify, so this places the object
@@ -1474,6 +1474,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			IsSilent: true,
 			Cause: "conversion",
 			OldContainer: currentContainer.Object().DBRef), cancellationToken);
+		return;
+
+		// Where the conversion created the object, which is where it stays.
+		async ValueTask<string> LimboAsync() => ContentOf(sharpObj) is AnySharpContent created
+			? $"#{(await created.Location()).Object().DBRef.Number}"
+			: "Limbo";
 	}
 
 	private async Task LinkExitAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,

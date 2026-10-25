@@ -15,7 +15,7 @@ public class PennMUSHDanglingReferenceTests
 {
 	/// <summary>
 	/// Lost is in #99, parented to #98 and zoned to #97, with its home in Dangling Home. Stray is in #95 and
-	/// has no home. The exit leads to #96. Orphan's owner is #94.
+	/// has no home. The exit leads to #96. Orphan's owner is #94. Misled is in #93 with the exit for its home.
 	/// </summary>
 	private static PennMUSHDatabase Fixture() => new()
 	{
@@ -33,7 +33,8 @@ public class PennMUSHDanglingReferenceTests
 			new PennMUSHObject { DBRef = 4, Name = "Dangling Home", Type = PennMUSHObjectType.Room, Owner = 1 },
 			new PennMUSHObject { DBRef = 5, Name = "Dangling Exit", Type = PennMUSHObjectType.Exit, Owner = 1, Location = 4, Link = 96 },
 			new PennMUSHObject { DBRef = 6, Name = "Dangling Stray", Type = PennMUSHObjectType.Thing, Owner = 1, Location = 95 },
-			new PennMUSHObject { DBRef = 7, Name = "Dangling Orphan", Type = PennMUSHObjectType.Thing, Owner = 94, Location = 4, Link = 4 }
+			new PennMUSHObject { DBRef = 7, Name = "Dangling Orphan", Type = PennMUSHObjectType.Thing, Owner = 94, Location = 4, Link = 4 },
+			new PennMUSHObject { DBRef = 8, Name = "Dangling Misled", Type = PennMUSHObjectType.Thing, Owner = 1, Location = 93, Link = 5 }
 		]
 	};
 
@@ -51,6 +52,8 @@ public class PennMUSHDanglingReferenceTests
 		await Assert.That(result.Warnings).Contains("Destination #96 of exit #5 is not in the import; the exit was left unlinked");
 		await Assert.That(result.Warnings).Contains("Location #95 of #6 is not in the import; it was left in #0");
 		await Assert.That(result.Warnings).Contains("Owner #94 of #7 is not an imported player; God keeps it");
+		await Assert.That(result.Warnings).Contains("Location #93 of #8 is not in the import, and its home #5 cannot hold it; it was left in #0");
+		await Assert.That(result.Warnings).DoesNotContain("Location #93 of #8 is not in the import; it was put in its home #5");
 
 		var home = await FindAsync(world, "Dangling Home");
 		var lost = await FindAsync(world, "Dangling Lost");

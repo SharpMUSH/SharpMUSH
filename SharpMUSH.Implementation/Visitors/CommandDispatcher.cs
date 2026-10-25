@@ -499,7 +499,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		ICommandContext context, MString src)
 	{
 		var channelName = alias.Channel.Name.ToPlainText();
-		return alias.Message.ToLowerInvariant() switch
+		return alias.Message.TrimEnd().ToLowerInvariant() switch
 		{
 			"on" => RedispatchAsync(parser, MarkupText.Plain($"@channel/ungag {channelName}")),
 			"off" => RedispatchAsync(parser, MarkupText.Plain($"@channel/gag {channelName}")),
