@@ -444,6 +444,13 @@ public static partial class HelperFunctions
 	public static async ValueTask<bool> HasLongFingers(this AnySharpObject obj)
 		=> await obj.IsPriv() || await obj.HasPower("Long_Fingers");
 
+	/// <summary>
+	/// PennMUSH <c>Myopic</c> (<c>hdrs/dbdefs.h:93</c>): the looker's owner is set MYOPIC, so names in looks
+	/// and inventories come without their dbref and flags.
+	/// </summary>
+	public static async ValueTask<bool> IsMyopic(this AnySharpObject looker)
+		=> await (await looker.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken)).Object.HasFlag("MYOPIC");
+
 	public static ValueTask<bool> HasFlag(this AnySharpObject obj, string flag)
 		=> obj.Object().HasFlag(flag);
 

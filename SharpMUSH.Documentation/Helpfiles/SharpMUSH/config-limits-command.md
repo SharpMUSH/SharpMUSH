@@ -71,7 +71,7 @@ Limits and other constants.
 - `push_idle_seconds=<number>`: Seconds without input after which `@push` treats a player as away, unless a portal tab of theirs is in view (see [@push]).
 - `push_limit=<number>`: The most push notifications `@push` sends one player in a minute.
 - `push_devices=<number>`: The most browsers one account may turn push notifications on in.
-- `keepalive_timeout=<time>`: How often should an 'Are you still there?' query be sent to clients, to stop players' routers booting idle connections?
+- `keepalive_timeout=<time>`: How long a KEEPALIVE player's telnet connection can go without output before it is sent a telnet NOP, to stop routers dropping idle connections. See [KEEPALIVE].
 - `max_parents=<number>`: The maximum number of levels of parenting allowed.
 - `call_limit=<number>`: The maximum number of times the parser can be called recursively for any one expression.
 - `chunk_migrate=<number>`: Maximum number of attributes that can be moved to disk cache per second.

@@ -102,7 +102,12 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 /// it changes and when a connection server asks.
 /// </summary>
 /// <param name="MediaBaseUrl">Where a GMCP client fetches the game's sounds; null when unset, or from an older server.</param>
-public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null);
+/// <param name="KeepAliveSeconds">
+/// <c>keepalive_timeout</c>: how long a KEEPALIVE player's telnet connection stays silent before it is sent
+/// <c>IAC NOP</c>; zero from an older server.
+/// </param>
+public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null,
+	uint KeepAliveSeconds = 0);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection
@@ -113,7 +118,9 @@ public record UpdatePlayerPreferencesMessage(
 	bool ColorEnabled,
 	bool Xterm256Enabled,
 	bool TruecolorEnabled = false,
-	bool ShowSeparators = false
+	bool ShowSeparators = false,
+	bool NoAccents = false,
+	bool KeepAlive = false
 ) : IHandleMessage;
 
 /// <summary>

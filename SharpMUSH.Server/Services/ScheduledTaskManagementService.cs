@@ -1,3 +1,4 @@
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -5,7 +6,10 @@ using Microsoft.Extensions.Options;
 using Quartz;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.ExpandedObjectData;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Text.RegularExpressions;
@@ -226,6 +230,7 @@ public partial class ScheduledTaskManagementService(
 		IObjectDestructionService destructionService,
 		IEventService eventService,
 		IServiceProvider serviceProvider,
+		IOptionsWrapper<SharpMUSHOptions> configuration,
 		ILogger<UpdatePurgeTimeJob> logger) : IJob
 	{
 		public async Task Execute(IJobExecutionContext context)
@@ -257,6 +262,17 @@ public partial class ScheduledTaskManagementService(
 
 				// PennMUSH spec: db`purge, after the scheduled purge only, never after a manual @purge.
 				await eventService.TriggerEventAsync(SharpEvents.DbPurge, null);
+
+				// Penn's timed dbck() and dump (src/timer.c:175, 235) warn about disconnected rooms and remind
+				// players set ON-VACATION. SharpMUSH has neither timer, so they ride on the purge cycle.
+				var options = configuration.CurrentValue;
+				await ConnectedRoomCheck.WarnOwnersAsync(serviceProvider.GetRequiredService<IMediator>(),
+					serviceProvider.GetRequiredService<INotifyService>(),
+					serviceProvider.GetRequiredService<IPermissionService>(),
+					serviceProvider.GetRequiredService<IConnectionService>(),
+					new DBRef((int)options.Database.BaseRoom), options.Database.ExitsConnectRooms);
+				await serviceProvider.GetRequiredService<IGameBroadcastService>()
+					.BroadcastToFlagAsync("ON-VACATION", ErrorMessages.Notifications.OnVacationReminder);
 			}
 			catch (Exception ex)
 			{

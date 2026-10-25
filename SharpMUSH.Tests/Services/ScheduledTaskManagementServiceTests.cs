@@ -11,6 +11,13 @@ namespace SharpMUSH.Tests.Services;
 
 public class ScheduledTaskManagementServiceTests
 {
+	private static IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> Options()
+	{
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(SharpMUSH.Configuration.Options.SharpMUSHOptions.Default());
+		return options;
+	}
+
 	[Test]
 	public async Task ParseTimeInterval_ValidHourInterval_ReturnsCorrectTimeSpan()
 	{
@@ -185,7 +192,7 @@ public class ScheduledTaskManagementServiceTests
 
 		var events = Substitute.For<IEventService>();
 		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
-			dataService, destructionService, events, serviceProvider, logger);
+			dataService, destructionService, events, serviceProvider, Options(), logger);
 
 		await job.Execute(jobContext);
 
@@ -226,7 +233,7 @@ public class ScheduledTaskManagementServiceTests
 
 		var events = Substitute.For<IEventService>();
 		var job = new ScheduledTaskManagementService.UpdatePurgeTimeJob(
-			dataService, destructionService, events, serviceProvider, logger);
+			dataService, destructionService, events, serviceProvider, Options(), logger);
 
 		await job.Execute(jobContext);
 

@@ -5,9 +5,9 @@ These options control some attribute behavior.
 - `amail=<boolean>`: Is the @amail attribute used?
 - `player_listen=<boolean>`: Is @listen checked on players?
 - `player_ahear=<boolean>`: Is @ahear triggered on players?
-- `startups=<boolean>`: Accepted but ignored; @startup attributes run at every server start.
+- `startups=<boolean>`: Run every @startup attribute when the server starts? Turn it off to keep a broken @startup from running; @restart still works.
 - `room_connects=<boolean>`: Are @aconnect and @adisconnect triggered on rooms?
-- `read_remote_desc=<boolean>`: Accepted but ignored.
+- `read_remote_desc=<boolean>`: Can players look at a far-away object that has no @describe? When it is off, they get "You can't see that from here." An object with a @describe can be looked at from afar unless the attribute is NEARBY.
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?
 - `gender_attr=<string>`: The attribute that holds an object's gender, which pronoun substitution reads and [@gender] sets. SEX when blank, and by default.
 - `reverse_shs=<boolean>`: Accepted but ignored; it has no effect on passwords or logins.
@@ -16,11 +16,11 @@ These options control some attribute behavior.
 These options control chat system settings.
 
 - `chan_cost=<number>`: Accepted but ignored; channels cost nothing to create.
-- `max_channels=<number>`: How many channels each non-admin player may own.
-- `max_player_chans=<number>`: Accepted but ignored; see max_channels.
+- `max_channels=<number>`: How many channels the game may have in all.
+- `max_player_chans=<number>`: How many channels each non-admin player may own. 0 means only admins can create channels.
 - `noisy_cemit=<boolean>`: Is @cemit/noisy the default?
 - `chan_title_len=<number>`: How long can @channel/title's be?
-- `use_muxcomm=<boolean>`: Accepted but ignored; MUX-style channel aliases always work. See [MUXCOMSYS]
+- `use_muxcomm=<boolean>`: Turn on MUX-style channel aliases (addcom, delcom, comlist, comtitle, @clist and `<alias> <message>`)? See [MUXCOMSYS]
 - `chat_token_alias=<character>`: A single character that can be used as well as + for talking on channels (+<chan> <msg>)
 - `page_log=<boolean>`: Keep each player's pages so they can read their page history, in game (page/recall) and in the web portal? A SharpMUSH extension, on by default; set it to no to keep no page log. See [page log]
 - `page_log_retention_days=<number>`: How many days a logged page is kept. -1 (the default) never deletes.
@@ -60,7 +60,7 @@ These are database options.
 - `ancestor_player=<dbref>`: As ancestor_room for players.
 - `base_room=<dbref>`: The starting room used to determine if other rooms are disconnected.
 - `default_home=<dbref>`: The room to send things to when they're homeless.
-- `exits_connect_rooms=<boolean>`: Accepted but ignored.
+- `exits_connect_rooms=<boolean>`: Is a room with any exit of its own counted as connected, so `@dbck` and the scheduled purge don't warn its owner about it? See [FLOATING].
 - `zone_control_zmp_only=<boolean>`: Do we only perform control checks on ZMPs, or do we check ZMOs and ZMRs too?
 
 # @config dump

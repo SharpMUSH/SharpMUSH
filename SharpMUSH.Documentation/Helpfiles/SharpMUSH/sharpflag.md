@@ -232,7 +232,19 @@ Only wizards can set or clear FIXED.
 
 **Flag: FLOATING (rooms)**
 
-FLOATING can be set on a room, but it has no effect in SharpMUSH, and nothing sets it automatically.
+A FLOATING room counts as connected, and so does every room its exits lead to. `@dbck` and each scheduled purge (see '@config purge_interval') tell the owner of every room that can't be reached through exits from the base room or a FLOATING room. A room isn't reported if it, or its owner, is set NO_WARN, or if it has exits of its own while exits_connect_rooms is on.
+
+Set FLOATING on the first room of an area that isn't linked to the grid yet, to stop the warnings for every room in it.
+
+Example:
+```
+> @set here=FLOATING
+```
+
+Output:
+```
+Room Zero - FLOATING set.
+```
 
 # GAGGED
 
@@ -364,11 +376,16 @@ JURY_OK can be set on a player, but it has no effect in SharpMUSH. A game's own 
 
 **Flag: KEEPALIVE (players)**
 
-KEEPALIVE can be set, but it has no effect in SharpMUSH. Whether an idle player is disconnected depends on the idle_timeout option and the Idle power, which wizards and royalty also have.
+A KEEPALIVE player's telnet connection is sent a telnet NOP when nothing has been sent to it for keepalive_timeout seconds. Some routers drop a connection that has been quiet for a while; the NOP keeps it open. The client shows nothing.
+
+Only connections whose client has negotiated a telnet option get the NOP, and not after `@sockset telnet=no`.
+
+KEEPALIVE does not stop the game disconnecting an idle player. That depends on the idle_timeout option and the Idle power, which wizards and royalty also have.
 
 
 ::: seealso
 - [@power]
+- [@config limits]
 :::
 
 # LIGHT
@@ -483,13 +500,25 @@ An object set MONIKER has its name colored by its `@moniker` in every place the 
 
 **Flag: MYOPIC (players)**
 
-MYOPIC can be set, but it has no effect in SharpMUSH.
+A MYOPIC player sees names without dbrefs and flags, even on objects they control, as a player who controls nothing would. It applies to `look`, room contents and `inventory`. The flag is read from the object's owner, so it also applies to the player's objects.
+
+Example, carrying a thing named Widget:
+```
+> @set me=MYOPIC
+> inventory
+```
+
+Output:
+```
+You are carrying:
+Widget
+```
 
 # NOACCENTS
 
 **Flag: NOACCENTS (players)**
 
-NOACCENTS can be set, but it has no effect. To have a connection sent plain ASCII, with accented characters replaced, use `@sockset stripaccents=yes` on it.
+A NOACCENTS player is sent plain ASCII on every connection, with each accented letter sent as the plain letter it is based on. It does what `@sockset stripaccents=yes` does to one connection. Clearing the flag goes back to what each connection negotiated.
 
 
 ::: seealso
@@ -581,7 +610,14 @@ A player or thing set OPAQUE does not show its contents to anyone looking at it 
 
 The flag is aliased to ON_VACATION, ONVACATION and VACATION.
 
-ON-VACATION can be set, but it has no effect in SharpMUSH. A game's own code may test it with `hasflag()`.
+Set ON-VACATION to tell other players you are away for a while. A game's own code may test it with `hasflag()`.
+
+While it is set, you are reminded at each scheduled purge (see '@config purge_interval'), and you are reminded to clear it when you connect.
+
+Output when you connect:
+```
+Welcome back from vacation! Don't forget to unset your ON-VACATION flag
+```
 
 # ORPHAN
 

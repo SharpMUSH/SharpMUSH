@@ -45,6 +45,10 @@ public class UpdatePlayerPreferencesConsumer(
 			);
 
 			var success = connectionService.UpdatePreferences(message.Handle, updatedPreferences);
+			// NOACCENTS changes the character set the connection is written in and KEEPALIVE what is written while it is
+			// quiet, which are capabilities; this answers false when they were already so.
+			connectionService.UpdateCapabilities(message.Handle,
+				current => current with { NoAccents = message.NoAccents, KeepAlive = message.KeepAlive });
 
 			if (success)
 			{
@@ -149,6 +153,7 @@ public class UpdatePlayerPreferencesConsumer(
 
 	public Task HandleAsync(ClearPlayerOutputPreferencesMessage message, CancellationToken cancellationToken = default)
 	{
+		connectionService.UpdateCapabilities(message.Handle, current => current with { NoAccents = false, KeepAlive = false });
 		if (connectionService.ClearPreferences(message.Handle))
 		{
 			logger.LogInformation("Cleared player output preferences for connection {Handle}", message.Handle);

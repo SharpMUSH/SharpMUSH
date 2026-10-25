@@ -4,6 +4,7 @@ using SharpMUSH.Library.Utilities;
 using SharpMUSH.SocketServer.Models;
 using SharpMUSH.SocketServer.Services;
 using SharpMUSH.Messaging.Messages;
+using System.Diagnostics;
 using System.Net;
 using System.Text;
 using TelnetNegotiationCore.Builders;
@@ -20,6 +21,17 @@ public partial class TelnetServer
 	/// One telnet connection: the interpreter's negotiation callbacks, the state they share, and the
 	/// connection's registration with the main process.
 	/// </summary>
+	/// <summary>How often a quiet telnet connection is checked for a KEEPALIVE NOP; <c>keepalive_timeout</c>'s minimum.</summary>
+	internal static readonly TimeSpan KeepAliveCheckInterval = TimeSpan.FromSeconds(30);
+
+	/// <summary>
+	/// Whether a connection that has been sent nothing for <paramref name="silent"/> is due a KEEPALIVE NOP: its player
+	/// is KEEPALIVE, it still speaks telnet (not after <c>SOCKSET telnet=no</c>), and it has been quiet for
+	/// <paramref name="timeout"/>.
+	/// </summary>
+	internal static bool KeepAliveDue(ProtocolCapabilities? capabilities, TimeSpan silent, TimeSpan timeout)
+		=> capabilities is { KeepAlive: true, Telnet: true } && silent >= timeout;
+
 	private sealed class TelnetSession(
 		TelnetServer server,
 		ConnectionContext connection,
@@ -38,6 +50,8 @@ public partial class TelnetServer
 		// What negotiation has said so far, for the capabilities the connection registers with: the updates
 		// themselves are held until registration, and the connect screen must not be drawn before they land.
 		private volatile string? _charset;
+		// When output or a keep-alive last went to the client, for KEEPALIVE.
+		private long _lastWritten = Stopwatch.GetTimestamp();
 		private volatile int _width;
 		private volatile bool _terminalTypesComplete;
 		private readonly TaskCompletionSource _negotiationSettled = new(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -51,7 +65,8 @@ public partial class TelnetServer
 			{
 				OnSupportsChangedAsync = OnGmcpSupportsChangedAsync
 			};
-			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)));
+			var builder = AddMxp(AddPueblo(AddNegotiationPlugins(server._telnetFactory.CreateBuilder(), terminalTypeProtocol, gmcp)))
+				.WithKeepAlive(KeepAliveCheckInterval, SendKeepAliveAsync);
 
 			builder.UsePipe(new CountingDuplexPipe(connection.Transport, traffic));
 			var telnet = await builder.BuildAsync();
@@ -461,6 +476,26 @@ public partial class TelnetServer
 				isSecure: isSecure, cancellationToken: ct);
 		}
 
+		/// <summary>
+		/// PennMUSH's KEEPALIVE: a player's telnet connection that has been sent nothing for <c>keepalive_timeout</c> is
+		/// sent <c>IAC NOP</c>. The interpreter asks after each <see cref="KeepAliveCheckInterval"/> it has written nothing.
+		/// </summary>
+		private async ValueTask SendKeepAliveAsync(TelnetInterpreter telnet, CancellationToken token)
+		{
+			// A client that never negotiated an option may not read telnet commands at all, and would show the NOP.
+			var timeout = server._settings?.KeepAlive ?? OutputSettingsHolder.DefaultKeepAlive;
+			if (!AnyOptionNegotiated() || !KeepAliveDue(server._connectionService.Get(handle)?.Capabilities,
+						Stopwatch.GetElapsedTime(Interlocked.Read(ref _lastWritten)), timeout))
+			{
+				return;
+			}
+
+			await telnet.SendKeepAliveAsync(token);
+			MarkWritten();
+		}
+
+		private void MarkWritten() => Interlocked.Exchange(ref _lastWritten, Stopwatch.GetTimestamp());
+
 		private async ValueTask WriteOutputAsync(byte[] data)
 		{
 			// Write output to the network transport using SendAsync which handles
@@ -469,6 +504,7 @@ public partial class TelnetServer
 			server._logger.LogTrace("OutputFunction called with {ByteCount} bytes for handle {Handle}", data.Length, handle);
 			try
 			{
+				MarkWritten();
 				await _telnet!.SendAsync(data);
 				server._logger.LogTrace("Successfully sent {ByteCount} bytes to transport for handle {Handle}",
 					data.Length, handle);
@@ -492,6 +528,7 @@ public partial class TelnetServer
 			// After SOCKSET telnet=no a prompt is a line, as PennMUSH writes one without CONN_TELNET.
 			try
 			{
+				MarkWritten();
 				if (server._connectionService.Get(handle)?.Capabilities.Telnet == false)
 				{
 					await _telnet!.SendAsync(data);
