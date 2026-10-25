@@ -36,13 +36,13 @@ public class JsonFunctionUnitTests
 	[Arguments("""json(object,k,"v")""", """{"k":"v"}""")]
 	[Arguments("""json(object,k,"v",k,"b")""", "#-1 DUPLICATE KEYS: k")]
 	[Arguments("""json(object,ansi(hr,k),"v")""", """{"k":"v"}""")]
-	[Arguments("json(object,k,v)", "#-1 BAD ARGUMENT FORMAT TO json")]
+	[Arguments("json(object,k,v)", "#-1 INVALID VALUE")]
 	[Arguments("json(array,1,2)", "[1,2]")]
 	// PennMUSH's json() gives an empty array or object when no values or pairs follow the type.
 	[Arguments("json(array)", "[]")]
 	[Arguments("json(object)", "{}")]
 	[Arguments("json(object,k)", "#-1 FUNCTION (json) EXPECTS AN ODD NUMBER OF ARGUMENTS")]
-	[Arguments("json(array,1,blah)", "#-1 BAD ARGUMENT FORMAT TO json")]
+	[Arguments("json(array,1,blah)", "#-1 INVALID VALUE")]
 	// Penn json.null.1-3
 	[Arguments("json(null)", "null")]
 	[Arguments("json(null,null)", "null")]
@@ -184,8 +184,8 @@ public class JsonFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("json_map(#lambda/%%0:%%1,json(string,foo))", "string:\"foo\"")]
-	[Arguments("json_map(#lambda/%%0:%%1,json(array,json(string,foo),5),|)", "string:\"foo\"|number:5")]
+	[Arguments("json_map(#lambda/%%0:%%1,json(string,foo))", "string:foo")]
+	[Arguments("json_map(#lambda/%%0:%%1,json(array,json(string,foo),5),|)", "string:foo|number:5")]
 	[Arguments("json_map(#lambda/%%2:%%1:%%3:%%4,json(object,a,1,b,2),|,extra,tail)", "a:1:extra:tail|b:2:extra:tail")]
 	[Arguments("json_mod(json(object,a,1),patch,json(object,b,2))", "{\"a\":1,\"b\":2}")]
 	[Arguments("json_mod(json(object,a,1),set,$.a,json(string,new))", "{\"a\":\"new\"}")]
@@ -445,7 +445,7 @@ public class JsonFunctionUnitTests
 		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&{attrName} {objDbRef}=%0:%1"));
 
 		var result = await Parser.EvaluateAsync(MarkupText.Plain($"json_map({objDbRef}/{attrName},lit(\"test_json_map_string\"))"));
-		await Assert.That(result.ToPlainText()).IsEqualTo("string:\"test_json_map_string\"");
+		await Assert.That(result.ToPlainText()).IsEqualTo("string:test_json_map_string");
 	}
 
 	[Test]

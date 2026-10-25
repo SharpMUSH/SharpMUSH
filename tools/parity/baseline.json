@@ -245,6 +245,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "47-json-audit/json.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "46-colors-audit/colors.login#0",
    "command": "Wiz wizpass"
   },

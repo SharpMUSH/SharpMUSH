@@ -222,7 +222,7 @@ There is no column count: `align` and `widths` already have exactly one entry pe
 
  They are markdown *source*, not rendered text - a cell reading `**loud**` arrives with its asterisks. Call `rendermarkdown()` on a cell when you want it formatted; the choice of whether and how stays with you. A literal pipe is written `\|` in table source and is handed over as written, because `rendermarkdown()` is what resolves it.
 
-Reach for `json_map()` rather than picking the JSON apart with string functions: it walks `rows`, and then each row's own cells, so a per-row and a per-cell helper compose. Two things about it are worth knowing before you write one. It passes the callee `%0` type, `%1` the element's **raw JSON**, and `%2` its index; a string element arrives quoted, so `json_query(%1,unescape)` is what gets you the value. And the element lands in `%1`, not `%0`, which is why the example below needs a one-token `ROWJ` adapter to hand a row on to `u()`.
+Reach for `json_map()` rather than picking the JSON apart with string functions: it walks `rows`, and then each row's own cells, so a per-row and a per-cell helper compose. Two things about it are worth knowing before you write one. It passes the callee `%0` type, `%1` the element's value, and `%2` its index; a string element arrives as its text, an array or object as its JSON. And the element lands in `%1`, not `%0`, which is why the example below needs a one-token `ROWJ` adapter to hand a row on to `u()`.
 
 Templates are evaluated with the *caller* as executor, so `me` inside one is the player, not the object the templates live on. Address helper attributes by dbref.
 
@@ -323,8 +323,8 @@ See Markdown Guide (@wiki help:markdown_guide) first.
 A table template receives the table as JSON and lays it out itself. This one rebuilds the default look with `lalign()`:
 ```sharp
 &FUN`VAL #123=%1
-&FUN`TABLE`SPEC #123=[json_query(%1,unescape)][json_query(%q<wd>,get,%2)]
-&FUN`TABLE`CELL #123=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]
+&FUN`TABLE`SPEC #123=%1[json_query(%q<wd>,get,%2)]
+&FUN`TABLE`CELL #123=[rendermarkdown(%1,[max(10,json_query(%q<wd>,get,%2))])]
 &FUN`TABLE`ROW #123=[lalign(%q<spec>,[json_map(#123/FUN`TABLE`CELL,%0,|)],|)]
 &FUN`TABLE`ROWJ #123=[u(#123/FUN`TABLE`ROW,%1)]
 &FUN`TABLE`HEAD #123=[ansi(h,[u(#123/FUN`TABLE`ROW,[json_query(%0,get,head)])])]
@@ -348,7 +348,7 @@ Command          Effect     Cost
 
 Three registers are computed once from the payload: `%q<wd>` keeps `widths` as JSON for indexed lookup, `%q<spec>` zips `align` with `widths` into an `align()` width spec, and `%q<tw>` is the table's own width. `jiter()` then fans the payload across the three bands, each receiving it as `%0`.
 
-`json_map()` supplies the element value as `%1` and its index as `%2` - the index is how `SPEC` and `CELL` find their own column's width, and ``FUN`TABLE`ROWJ`` exists only to move that value into `%0` for `u()`. A string element arrives as raw JSON, quoted, which is why `SPEC` and `CELL` read it through `json_query(%1,unescape)`. ``FUN`TABLE`ROW`` and ``FUN`TABLE`CELL`` read `%q<spec>` and `%q<wd>` from the enclosing call, so a `ulocal()` in this chain would break them. The `max(10,...)` is `rendermarkdown()`'s own minimum width, which a narrow column can fall under.
+`json_map()` supplies the element value as `%1` and its index as `%2` - the index is how `SPEC` and `CELL` find their own column's width, and ``FUN`TABLE`ROWJ`` exists only to move that value into `%0` for `u()`. ``FUN`TABLE`ROW`` and ``FUN`TABLE`CELL`` read `%q<spec>` and `%q<wd>` from the enclosing call, so a `ulocal()` in this chain would break them. The `max(10,...)` is `rendermarkdown()`'s own minimum width, which a narrow column can fall under.
 
 ## Notes and errors
 

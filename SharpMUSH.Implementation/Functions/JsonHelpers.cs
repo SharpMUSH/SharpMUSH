@@ -100,11 +100,11 @@ public static class JsonHelpers
 				.Skip(1)
 				.Select(x => ParseElement(x.Value.Message.ToPlainText()));
 
-			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(elements)));
+			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(elements, RelaxedJsonOptions)));
 		}
 		catch (JsonException)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json")));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidValue));
 		}
 	}
 
@@ -136,13 +136,24 @@ public static class JsonHelpers
 		try
 		{
 			var dictionary = pairs.ToDictionary(x => x[0].ToPlainText(), x => ParseElement(x[1].ToString()));
-			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary)));
+			return ValueTask.FromResult(new CallState(JsonSerializer.Serialize(dictionary, RelaxedJsonOptions)));
 		}
 		catch (JsonException)
 		{
-			return ValueTask.FromResult(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, "json")));
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.InvalidValue));
 		}
 	}
+
+	/// <summary>
+	/// The value json_map() passes as %1, as SQLite's <c>json_each</c> gives it to PennMUSH: a string's text
+	/// without its quotes or escapes, an array or object as compact JSON, anything else as written.
+	/// </summary>
+	public static string MapValue(JsonElement element) => element.ValueKind switch
+	{
+		JsonValueKind.String => element.GetString()!,
+		JsonValueKind.Array or JsonValueKind.Object => JsonSerializer.Serialize(element, RelaxedJsonOptions),
+		_ => element.GetRawText()
+	};
 
 	public static string GetJsonType(JsonElement element) => element.ValueKind switch
 	{

@@ -1,0 +1,23 @@
+# JSON functions from the softcode audit (#2268): json_map's %1 for each type, quotes kept as \"
+# when a value is written back out, and the errors for a value that is not JSON.
+::case json.login
+::login wiz Wiz wizpass
+think ok
+
+::case json.map  json_map hands a string over as its text, an array as its JSON
+&JSON me=We got [art(%0)] %0: %1
+think json_map(me/JSON, "foo")
+think json_map(me/JSON, \["foo"\, 5\], %r)
+think json_map(me/JSON, \["foo"\, \["bar"\, 10\]\], %r)
+think json_map(me/JSON, json(object,a,json(string,x"y),b,null))
+&JSON me=
+
+::case json.quotes  a quote inside a value is written \"
+think json(array, "abc", "def", json(string,gh"i))
+think json(string, Look\, it's "JSON"!)
+think json_query(json(object,k,json(string,a"b)), get, k)
+think json_mod(json(object,a,1), set, $.a, json(string,q"q))
+
+::case json.errors  a value that is not JSON
+think json(object,k,v)
+think json(array,1,blah)
