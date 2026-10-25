@@ -1441,7 +1441,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			// PennMUSH's dbck sends a player or thing whose location is gone to its home. Anything else
 			// stays in Limbo, where the conversion created it.
-			if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0
+			if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0 || pennObj.Link == pennObj.DBRef
 				|| !context.DbrefMapping.TryGetValue(pennObj.Link, out locationDbRef))
 			{
 				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {await LimboAsync()}");

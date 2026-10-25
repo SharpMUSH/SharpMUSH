@@ -191,7 +191,7 @@ public partial class Commands
 			await Mediator.Send(new AddUserToChannelCommand(channel, executor));
 		}
 
-		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
+		var attributeName = $"CHANALIAS`{alias.ToUpperInvariant()}";
 		var result = await AttributeService.SetAttributeAsync(executor, executor, attributeName, channel.Name);
 
 		if (result is Error<string> error)
@@ -224,7 +224,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
+		var attributeName = $"CHANALIAS`{alias.ToUpperInvariant()}";
 		return await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read) switch
 		{
 			SharpAttribute[] aliasAttribute => await DeleteChannelAliasAsync(executor, alias, attributeName,
@@ -314,7 +314,7 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.AliasCannotBeEmpty);
 		}
 
-		var attributeName = $"CHANALIAS`{alias.ToUpper()}";
+		var attributeName = $"CHANALIAS`{alias.ToUpperInvariant()}";
 		return await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read) switch
 		{
 			SharpAttribute[] aliasAttribute => await SetAliasTitleAsync(parser, executor, alias, aliasAttribute.Last().Value,
