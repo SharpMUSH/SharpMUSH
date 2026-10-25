@@ -168,10 +168,34 @@ public partial class Functions
 		return new SpeechParts(head, text, say, name, sayString, open, close);
 	}
 
+	/// <summary>The text without its leading spaces; a sound or other point among them stays.</summary>
 	private static MString WithoutLeadingSpaces(MString text)
 	{
-		var spaces = text.ToPlainText().TakeWhile(c => c == ' ').Count();
-		return text.Substring(spaces, text.Length - spaces);
+		var plain = text.ToPlainText();
+		var spaces = plain.TakeWhile(c => c == ' ').Count();
+		if (spaces == 0) return text;
+
+		var cut = PlainOffsets(text, plain)[spaces];
+		var points = Enumerable.Range(0, cut).Where(index => text.Text[index] != ' ').Select(index => text.Substring(index, 1));
+		return MarkupText.Concat([.. points, text.Substring(cut, text.Length - cut)]);
+	}
+
+	/// <summary>
+	/// Where each character of <paramref name="plain"/>, the plain text of <paramref name="text"/>, sits in its
+	/// <see cref="MarkupText.Text"/>, with the text's length after the last. Point markup rides on carrier
+	/// characters the plain text leaves out, so the two count differently.
+	/// </summary>
+	private static int[] PlainOffsets(MString text, string plain)
+	{
+		var raw = text.Text;
+		var offsets = new int[plain.Length + 1];
+		for (int r = 0, p = 0; r < raw.Length && p < plain.Length; r++)
+		{
+			if (raw[r] == plain[p]) offsets[p++] = r;
+		}
+
+		offsets[plain.Length] = raw.Length;
+		return offsets;
 	}
 
 	/// <summary>Speech nothing transforms: said as <c>Name says, "text"</c>, or posed or emitted as it is.</summary>
@@ -180,13 +204,6 @@ public partial class Functions
 			? MarkupText.Concat([speech.Name, MarkupText.Space, speech.SayString, MarkupText.Plain(" \""), speech.Text,
 				MarkupText.Plain("\"")])
 			: MarkupText.Concat(speech.Head, speech.Text);
-
-	/// <summary>
-	/// PennMUSH's <c>chopstr</c> (src/strutil.c:137): the first <paramref name="limit"/> - 1 characters,
-	/// or the whole string when it is no longer than <paramref name="limit"/>.
-	/// </summary>
-	private static MString Chop(MString text, int limit)
-		=> text.Length <= limit ? text : text.Substring(0, limit - 1);
 
 	/// <summary>
 	/// A <c>&amp;name</c> speaker is that name, spoken by the executor. Any other speaker is located;
@@ -293,6 +310,12 @@ public partial class Functions
 	{
 		var text = speech.Text;
 		var plain = text.ToPlainText();
+		var offsets = PlainOffsets(text, plain);
+		// From plain offset a to b; from the start, any point before the first character comes too.
+		MString Slice(int from, int to) => text.Substring(from == 0 ? 0 : offsets[from], offsets[to] - (from == 0 ? 0 : offsets[from]));
+		// PennMUSH's chopstr (src/strutil.c:137) over plain characters: the first limit - 1 from a, or all the
+		// rest when no longer than limit.
+		MString ChopFrom(int from, int limit) => plain.Length - from <= limit ? Slice(from, plain.Length) : Slice(from, from + limit - 1);
 		var open = speech.Open.ToPlainText();
 		var close = speech.Close.ToPlainText();
 		var firstOpen = plain.IndexOf(open, StringComparison.Ordinal);
@@ -323,7 +346,7 @@ public partial class Functions
 		}
 		else if (!say && firstOpen >= 0)
 		{
-			output.Add(Chop(text, firstOpen + 1));
+			output.Add(ChopFrom(0, firstOpen + 1));
 			fragment = 0;
 			start = firstOpen + open.Length;
 		}
@@ -339,7 +362,7 @@ public partial class Functions
 		{
 			fragment++;
 			var closeAt = plain.IndexOf(close, start, StringComparison.Ordinal);
-			var piece = text.Substring(start, (closeAt >= 0 ? closeAt : plain.Length) - start);
+			var piece = Slice(start, closeAt >= 0 ? closeAt : plain.Length);
 			end = closeAt >= 0 ? closeAt + close.Length : -1;
 
 			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor,
@@ -373,7 +396,7 @@ public partial class Functions
 			// Text between fragments is copied only when it is longer than the open delimiter.
 			if (nextOpen - end > open.Length)
 			{
-				output.Add(Chop(text.Substring(end, plain.Length - end), nextOpen - end + 1));
+				output.Add(ChopFrom(end, nextOpen - end + 1));
 			}
 
 			start = nextOpen + open.Length;
@@ -382,7 +405,7 @@ public partial class Functions
 
 		if (end >= 0 && end < plain.Length)
 		{
-			output.Add(text.Substring(end, plain.Length - end));
+			output.Add(Slice(end, plain.Length));
 		}
 
 		return new CallState(MarkupText.Concat(output)) { HadErrors = hadErrors };

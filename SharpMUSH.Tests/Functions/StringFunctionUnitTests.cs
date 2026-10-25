@@ -730,6 +730,15 @@ public class StringFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>A sound is not a space: the spaces after : go, and the sound among them stays.</summary>
+	[Test]
+	public async Task SpeakKeepsASoundAmongTheSpacesItTrims()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("speak(&Bob,:[sound(ding.wav)]  waves)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("Bob waves");
+		await Assert.That(result.Text.Contains(MarkupText.PointCarrier)).IsTrue();
+	}
+
 	// The transformation gets the fragment as %0, the speaker as %1 and the fragment's number as %2.
 	[Test]
 	[Arguments("ucstr(%0)", ":waves. \"hello\" and \"bye\"", "Bob waves. HELLO and BYE")]
