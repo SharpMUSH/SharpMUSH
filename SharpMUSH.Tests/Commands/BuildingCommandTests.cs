@@ -970,7 +970,8 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// With neither @describe nor @descformat, a room shows no description: look_room passes no default.
+	/// With neither @describe nor @descformat, a room shows no description: look_room passes no default. The
+	/// room is ORPHAN so the Ancestor Room's @descformat, which another test may switch on, stays out of it.
 	/// </summary>
 	[Test]
 	public async ValueTask Look_Room_NoDescriptionOrFormat_ShowsNoDescription()
@@ -980,6 +981,7 @@ public class BuildingCommandTests
 		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
 		var digResult = await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@dig RoomDefault_{token}"));
 		var roomDbRef = DBRef.Parse(digResult.Message.ToPlainText()!.Trim());
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@set {roomDbRef}=ORPHAN"));
 		// Keep the teleport's queued auto-look out of the explicit look's notification window.
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@tel/silent me={roomDbRef}"));
 
