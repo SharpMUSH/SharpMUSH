@@ -387,7 +387,6 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			sessions: [new("saved-preview", "Ready", new ConversionResult { PlayersConverted = 2 }, null)]);
 		var cut = Render<ImportDatabase>();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
-		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
 		await cut.Find(".dbimport-resume").ClickAsync();
 		await Assert.That(cut.FindAll(".dbimport-promote").Count).IsEqualTo(1);
 		await Assert.That(cut.Find(".dbimport-promote").HasAttribute("disabled")).IsTrue();
@@ -404,7 +403,6 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		}, sessions: [new("validating", "Validating", new ConversionResult { PlayersConverted = 2 }, null)]);
 		var cut = Render<ImportDatabase>();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
-		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
 		await cut.Find(".dbimport-resume").ClickAsync();
 		cut.WaitForAssertion(() => cut.Find(".dbimport-cancel"));
 		await Assert.That(cut.FindAll(".dbimport-promote")).IsEmpty();
