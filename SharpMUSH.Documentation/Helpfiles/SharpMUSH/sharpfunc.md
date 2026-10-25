@@ -2600,7 +2600,7 @@ You say, "One|PLAYER"
 # lcon()
 `lcon(<object>[, <type>])`
 
-  Returns a list of the dbrefs of objects which are located in `<object>`.
+  Returns a list of the dbrefs of objects which are located in `<object>`, the most recent arrival first.
 
   You can get the complete contents of any object you may examine, regardless of whether or not objects are dark. You can get the partial contents (obeying DARK/LIGHT/etc.) of your current location or the enactor (%#). You CANNOT get the contents of anything else, regardless of whether or not you have objects in it.
 

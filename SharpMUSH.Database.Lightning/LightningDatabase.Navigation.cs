@@ -164,7 +164,7 @@ public partial class LightningDatabase
 	/// <summary>The full id of the content an edge value names, or null when its object is gone or is a room.</summary>
 	private DBRef? ContentRef(ITx tx, byte[] value)
 	{
-		var dbref = Keys.ReadDbref(value);
+		var dbref = ReadArrivalContent(value);
 		return ReadObjectHeader(tx, dbref) is { } header && header.Type != DatabaseConstants.TypeRoom
 			? new DBRef((int)dbref, header.CreationTime)
 			: null;
@@ -224,7 +224,7 @@ public partial class LightningDatabase
 				}
 				PutEdge(tx, Tables.Exit, destination.Number, source.Number);
 			}
-			SetSingleEdge(tx, Tables.Location, source.Number, destination.Number);
+			SetLocation(tx, source.Number, destination.Number);
 			cancellationToken.ThrowIfCancellationRequested();
 		}, cancellationToken);
 	}

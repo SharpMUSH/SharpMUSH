@@ -217,7 +217,7 @@ public partial class NavigationTests
 		var thingRef = await _db.CreateThingAsync("NotAPlayer", room, god, room);
 		// A room whose location edge names the master room (an imported world can carry one) is not content.
 		var dropRoomRef = await _db.CreateRoomAsync("LocatedInMaster", god);
-		await _db.Store.WriteAsync(tx => LightningDatabase.SetSingleEdge(tx, Tables.Location, dropRoomRef.Number, room.Object().DBRef.Number));
+		await _db.Store.WriteAsync(tx => LightningDatabase.SetLocation(tx, dropRoomRef.Number, room.Object().DBRef.Number));
 
 		var contents = await _db.GetContentRefsAsync(room.Object().DBRef).ToListAsync();
 		await Assert.That(contents).Contains((await Node(thingRef)).Object().DBRef);

@@ -63,7 +63,7 @@ public partial class LightningDatabase
 
 			// A player owns itself, as in the migration seed.
 			SetSingleEdge(tx, Tables.Owner, dbref, dbref);
-			SetSingleEdge(tx, Tables.Location, dbref, (long)location.Number);
+			SetLocation(tx, dbref, (long)location.Number);
 			SetSingleEdge(tx, Tables.Home, dbref, (long)home.Number);
 
 			return new DBRef((int)dbref, created);
@@ -189,7 +189,7 @@ public partial class LightningDatabase
 		tx.Put(Tables.ObjName, Keys.Lower(name), Keys.Dbref(dbref));
 		IndexObjectType(tx, DatabaseConstants.TypeThing, dbref);
 
-		SetSingleEdge(tx, Tables.Location, dbref, locKey);
+		SetLocation(tx, dbref, locKey);
 		SetSingleEdge(tx, Tables.Home, dbref, homeKey);
 		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
 
@@ -260,7 +260,7 @@ public partial class LightningDatabase
 		// The room->exit direction is a second, dedicated edge (Tables.Exit) so "exits at this
 		// room" is a cheap point lookup instead of a type-filtered scan of every reverse-location
 		// entry, which a flat key-value store cannot afford.
-		SetSingleEdge(tx, Tables.Location, dbref, locKey);
+		SetLocation(tx, dbref, locKey);
 		PutEdge(tx, Tables.Exit, locKey, dbref);
 		SetSingleEdge(tx, Tables.Owner, dbref, ownerKey);
 
@@ -1047,7 +1047,9 @@ public partial class LightningDatabase
 			// holds toward it (and that edge's paired outbound counterpart) — the graph-shaped
 			// equivalent of PennMUSH's free_object() db_top sweep that nulls out dangling
 			// Zone/Parent/Home/Location references.
-			foreach (var (forward, reverse) in Tables.EdgePairs)
+			// Location's values carry the arrival order as well as the dbref, so it has its own sweep.
+			DeleteLocationEdges(tx, n);
+			foreach (var (forward, reverse) in Tables.EdgePairs.Where(pair => pair != Tables.Location))
 			{
 				foreach (var to in tx.Dups(forward, key).ToList())
 				{

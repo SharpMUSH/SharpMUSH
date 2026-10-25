@@ -1,0 +1,18 @@
+# Contents are listed newest arrival first, as PennMUSH keeps them: moveto() takes the object out of
+# its old container's list and pushes it onto the head of the new one's (src/move.c). An imported world
+# keeps the order of PennMUSH's lists; the import case leaves out SharpMUSH's own Package Manager player,
+# which PennMUSH does not have.
+
+::case contents.import  an imported room lists its contents in PennMUSH's order
+::login wiz Wiz wizpass
+::as wiz
+think remove(iter(lcon(#0,player),name(##),,|),Package Manager,|)
+
+::case contents.arrival  the newest arrival comes first, and arriving again makes it the newest
+@create First
+@create Second
+@create Third
+think iter(lcon(me),name(##))
+drop First
+get First
+think iter(lcon(me),name(##))
