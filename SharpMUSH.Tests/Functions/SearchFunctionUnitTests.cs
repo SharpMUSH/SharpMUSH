@@ -117,6 +117,36 @@ public class SearchFunctionUnitTests
 		await Assert.That(ReturnedDbRefs(result)).DoesNotContain(control.Number);
 	}
 
+	/// <summary>An empty PARENT restriction finds the objects with no parent, as PennMUSH's does.</summary>
+	[Test]
+	public async Task Lsearch_EmptyParent_FindsObjectsWithNoParent()
+	{
+		var token = TestIsolationHelpers.GenerateUniqueName("LSearchNoParent");
+		var parent = await CreateThingAsync($"{token}_Parent");
+		var orphan = await CreateThingAsync($"{token}_Orphan");
+		var child = await CreateThingAsync($"{token}_Child");
+		await CommandAsync($"@parent {child}={parent}");
+
+		foreach (var search in new[] { "lsearch(all,parent,)", "lsearch(,parent,)", "children()" })
+		{
+			var result = ReturnedDbRefs(await SearchAsync(search));
+			await Assert.That(result).Contains(orphan.Number);
+			await Assert.That(result).DoesNotContain(child.Number);
+		}
+	}
+
+	[Test]
+	public async Task Lsearch_UnknownParent_IsRefused()
+		=> await Assert.That(await SearchAsync("lsearch(all,parent,#2147483000)")).IsEqualTo("#-1");
+
+	/// <summary>An empty player is every object the searcher may search.</summary>
+	[Test]
+	public async Task Nsearch_EmptyPlayer_CountsEverything()
+	{
+		var count = int.Parse(await SearchAsync("nsearch()"));
+		await Assert.That(count).IsGreaterThan(1);
+	}
+
 	[Test]
 	public async Task Lsearch_OwnerClass_ExcludesObjectsOwnedByOthers()
 	{

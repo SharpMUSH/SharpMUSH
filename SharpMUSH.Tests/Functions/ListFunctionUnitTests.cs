@@ -252,6 +252,10 @@ public class ListFunctionUnitTests
 	[Arguments("extract(a b c,2)", "b")]
 	[Arguments("extract(a b c,1,2)", "a b")]
 	[Arguments("extract(a|b|c,2,3,|)", "b|c")]
+	[Arguments("extract(a b c d e,2,-2)", "b c d")]
+	[Arguments("extract(a b c d e,-2,2)", "d e")]
+	[Arguments("extract(a b c d e,-2,-1)", "d")]
+	[Arguments("extract(a b c d e,2,0)", "")]
 	public async Task Extract(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
@@ -517,6 +521,8 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("ldelete(a b c d,2)", "a c d")]
 	[Arguments("ldelete(a|b|c|d,2,|)", "a|c|d")]
+	[Arguments("ldelete(foo bar baz boing,3,,%b~%b)", "foo ~ bar ~ boing")]
+	[Arguments("ldelete(a|b|c,2,|,)", "ac")]
 	public async Task Ldelete(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
@@ -799,6 +805,7 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("munge(test/SORT_MUNGE,b a c,2 1 3)", "1 2 3")]
 	[Arguments("munge(test/SORT_MUNGE,b|a|c,2|1|3,|,;)", "1;2;3")]
+	[Arguments("munge(test/SORT_MUNGE,b a b,1 2 3)", "2 1 3")]
 	public async Task Munge(string function, string expected)
 	{
 		var objNum = await CreateObjectWithAttribute("munge_obj", "SORT_MUNGE", "sort(%0,,%1)");
@@ -821,6 +828,25 @@ public class ListFunctionUnitTests
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
 		await Assert.That(result.ToString()).IsNotEmpty();
+	}
+
+	[Test]
+	[Arguments("randextract(this is a test,6,,D)", 6)]
+	[Arguments("randextract(this is a test,6,,duplicates)", 6)]
+	[Arguments("randextract(this is a test,6,,R)", 4)]
+	[Arguments("randextract(a b c,6,,L)", 1)]
+	public async Task RandomExtractTypes(string function, int atLeast)
+	{
+		var words = (await Parser.EvaluateAsync(MarkupText.Plain(function))).ToPlainText().Split(' ');
+		await Assert.That(words.Length).IsGreaterThanOrEqualTo(atLeast);
+		await Assert.That(words.All(word => word is "this" or "is" or "a" or "test" or "b" or "c")).IsTrue();
+	}
+
+	[Test]
+	public async Task RandomExtractRejectsUnknownType()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("randextract(a b c,2,,X)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 INVALID TYPE");
 	}
 
 	[Test]
@@ -895,6 +921,12 @@ public class ListFunctionUnitTests
 	[Test]
 	[Arguments("index(a b c d,%b,2,2)", "b c")]
 	[Arguments("index(alpha::beta::gamma,::,2,2)", "beta::gamma")]
+	[Arguments("index(Cup of Tea | Mug of Beer | Glass of Wine, |, 2, 1)", "Mug of Beer")]
+	[Arguments("index(a|b|c,|,2,5)", "b|c")]
+	[Arguments("index(a|b|c,|,-1,1)", "")]
+	[Arguments("index(a|b|c,|,4,1)", "")]
+	[Arguments("index(a||b,|,2,2)", "|b")]
+	[Arguments("index(a b c,,2,1)", "b")]
 	public async Task Index(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
@@ -903,6 +935,7 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("itemize(a b c)", "a, b, and c")]
+	[Arguments("itemize(eggs bacon spam, ,&,;)", "eggs; bacon; & spam")]
 	public async Task Itemize(string function, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
@@ -1055,6 +1088,8 @@ public class ListFunctionUnitTests
 
 	[Test]
 	[Arguments("elist(a b c)", "a, b, and c")]
+	[Arguments("elist(a|b|c,and,|)", "a, b, and c")]
+	[Arguments("elist(a b,or,,-)", "a-or-b")]
 	public async Task Elist(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

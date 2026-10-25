@@ -90,8 +90,9 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var arg0 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
 
-		if (!DBRef.TryParse(arg0, out var parentRef)
-				|| (await Mediator.Send(new GetObjectNodeQuery(parentRef!.Value))).IsNone)
+		// An empty object is PARENT's empty restriction: every object with no parent.
+		if (arg0.Length > 0 && (!DBRef.TryParse(arg0, out var parentRef)
+				|| (await Mediator.Send(new GetObjectNodeQuery(parentRef!.Value))).IsNone))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.SearchUnknownParent), executor);
 			return new CallState(ErrorMessages.Returns.Nothing);
@@ -561,7 +562,7 @@ public partial class Functions
 		}
 
 		var classArg = args["0"].Message.ToPlainText();
-		AnySharpObject? classObj = null;
+		DBRef? owner = null;
 
 		// A first argument holding '=' names no player, since a name cannot contain one, so PennMUSH
 		// answers it "Unknown owner." and #-1: it is free for RhostMUSH's one-argument form.
@@ -570,14 +571,25 @@ public partial class Functions
 			return await TinySearchAsync(parser, executor);
 		}
 
-		if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
+		// fill_search_spec (src/wiz.c): no player is everything the searcher may search, and "me" their own.
+		if (classArg.Length == 0)
+		{
+			owner = await executor.IsSee_All() || await executor.HasPower("Search")
+				? null
+				: (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		}
+		else if (classArg.Equals("me", StringComparison.OrdinalIgnoreCase))
+		{
+			owner = (await executor.Object().Owner.WithCancellation(CancellationToken.None)).Object.DBRef;
+		}
+		else if (!classArg.Equals("all", StringComparison.OrdinalIgnoreCase))
 		{
 			var maybeClass = await LocateService.Locate(parser, executor, executor, classArg, LocateFlags.All);
 			if (maybeClass is not AnySharpObject classFound)
 			{
 				return new CallState(ErrorMessages.Returns.InvalidClass);
 			}
-			classObj = classFound;
+			owner = classFound.Object().DBRef;
 		}
 
 		var pairs = new List<SearchSpecEngine.SearchPair>();
@@ -593,7 +605,7 @@ public partial class Functions
 				args[(i + 1).ToString()].Message.ToPlainText()));
 		}
 
-		return await RunListSearchAsync(parser, executor, classObj?.Object().DBRef, pairs, useRegex);
+		return await RunListSearchAsync(parser, executor, owner, pairs, useRegex);
 	}
 
 	/// <summary>Runs an lsearch() spec and answers its matches as dbrefs, or #-1 once the searcher is told why not.</summary>

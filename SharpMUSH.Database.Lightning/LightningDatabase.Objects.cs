@@ -796,7 +796,7 @@ public partial class LightningDatabase
 	}
 
 	private static bool NeedsEdgePredicates(ObjectSearchFilter filter)
-		=> filter.Owner.HasValue || filter.Zone.HasValue || filter.Parent.HasValue
+		=> filter.Owner.HasValue || filter.Zone.HasValue || filter.Parent.HasValue || filter.NoParent
 			|| !string.IsNullOrEmpty(filter.HasFlag) || !string.IsNullOrEmpty(filter.HasPower)
 			|| filter.AttributeValue is not null;
 
@@ -814,6 +814,11 @@ public partial class LightningDatabase
 		}
 
 		if (filter.Parent.HasValue && GetSingleEdge(tx, Tables.Parent.Forward, dbref) != filter.Parent.Value.Number)
+		{
+			return false;
+		}
+
+		if (filter.NoParent && GetSingleEdge(tx, Tables.Parent.Forward, dbref) is not null)
 		{
 			return false;
 		}

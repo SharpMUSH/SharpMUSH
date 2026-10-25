@@ -144,6 +144,7 @@ public class FormattingFunctionUnitTests
 	// Penn ljust.1-ljust.5
 	[Arguments("ljust(foo,3)", "foo")]
 	[Arguments("ljust(foo,5,=)", "foo==")]
+	[Arguments("ljust(foo,12,=+)", "foo=+=+=+=+=")]
 	[Arguments("ljust(foo,2)", "foo")]
 	[Arguments("ljust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Ljust(string str, string expected)
@@ -158,6 +159,7 @@ public class FormattingFunctionUnitTests
 	[Arguments("rjust(foo,3)", "foo")]
 	[Arguments("rjust(foo,5)", "  foo")]
 	[Arguments("rjust(foo,5,=)", "==foo")]
+	[Arguments("rjust(foo,12,=+)", "=+=+=+=+=foo")]
 	[Arguments("rjust(foo,2)", "foo")]
 	[Arguments("rjust(foo,-3)", "#-1 ARGUMENT MUST BE POSITIVE INTEGER")]
 	public async Task Rjust(string str, string expected)
@@ -221,6 +223,7 @@ public class FormattingFunctionUnitTests
 	// A leading '-' is the centring prefix, not a sign: the width here is 5, centred.
 	[Arguments("table(a b c,-5,10)", "  a     b  \n  c  ")]
 	[Arguments("table(a b c d,5,10,%b,|)", "a    |b    \nc    |d    ")]
+	[Arguments("table(the quick brown fox,10,25,,|)", "the       |quick     \nbrown     |fox       ")]
 	// An output separator given as empty is no separator at all, and takes no width with it.
 	[Arguments("table(a b c d,5,10,%b,)", "a    b    \nc    d    ")]
 	[Arguments("table(,5,10)", "")]

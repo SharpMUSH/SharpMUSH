@@ -17,6 +17,14 @@ public class UncoveredFunctionTests : ServerTestBase
 	[Arguments("spellnum(0)", "zero")]
 	[Arguments("spellnum(5)", "five")]
 	[Arguments("spellnum(21)", "twenty-one")]
+	[Arguments("spellnum(12345)", "twelve thousand three hundred forty-five")]
+	[Arguments("spellnum(-101)", "negative one hundred one")]
+	[Arguments("spellnum(1.5)", "one and five tenths")]
+	[Arguments("spellnum(2.01)", "two and one hundredth")]
+	[Arguments("spellnum(0.25)", "twenty-five hundredths")]
+	[Arguments("spellnum(1.0)", "one and zero tenths")]
+	[Arguments("spellnum(1.2.3)", "#-1 ARGUMENT MUST BE NUMBER")]
+	[Arguments("spellnum(1234567890123456)", "#-1 OUT OF RANGE")]
 	public async Task SpellNumSpellsANumberOut(string code, string expected)
 		=> await Assert.That(await Eval(code)).IsEqualTo(expected);
 

@@ -1,6 +1,5 @@
 using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
-using Humanizer;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using MarkupString;
@@ -1238,8 +1237,11 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		var truncType = JustifyTruncation(parser, truncate);
-		return ValueTask.FromResult<CallState>(str.Pad(fill, widthInt, PadType.Right, truncType));
+		// Like center(), the fill starts at its first character wherever it lands (fun_ljust).
+		var padding = widthInt - str.DisplayWidth;
+		return ValueTask.FromResult<CallState>(padding > 0
+			? MarkupText.Concat(str, TileFill(fill, padding))
+			: str.Pad(fill, widthInt, PadType.Right, JustifyTruncation(parser, truncate)));
 	}
 
 	/// <summary>
@@ -1261,42 +1263,37 @@ public partial class Functions
 				parser.CurrentState.Arguments["0"].Message.IndexesOf(parser.CurrentState.Arguments["1"].Message.Text)
 					.Select(x => x.ToString())));
 
-	[SharpFunction(Name = "merge", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_merge</c>: every character of the first string that is one of the characters of the third
+	/// (a space when it is empty) is replaced by the character at the same position in the second. The two strings
+	/// must be the same length.
+	/// </summary>
+	[SharpFunction(Name = "merge", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string1", "string2", "characters"])]
 	public ValueTask<CallState> Merge(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var string1 = parser.CurrentState.Arguments["0"].Message.ToPlainText();
-		var string2 = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var separator = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		var first = parser.CurrentState.Arguments["0"].Message;
+		var second = parser.CurrentState.Arguments["1"].Message;
+		var characters = parser.CurrentState.Arguments["2"].Message.ToPlainText();
+		var replaced = characters.Length == 0 ? " " : characters;
 
-		var parts1 = string.IsNullOrEmpty(separator)
-			? new[] { string1 }
-			: string1.Split(new[] { separator }, StringSplitOptions.None);
-		var parts2 = string.IsNullOrEmpty(separator)
-			? new[] { string2 }
-			: string2.Split(new[] { separator }, StringSplitOptions.None);
-
-		var result = new StringBuilder();
-		var maxCount = Math.Max(parts1.Length, parts2.Length);
-
-		for (int i = 0; i < maxCount; i++)
+		if (first.Length != second.Length)
 		{
-			if (i < parts1.Length && !string.IsNullOrEmpty(parts1[i]))
-			{
-				result.Append(parts1[i]);
-			}
-
-			if (i < parts2.Length && !string.IsNullOrEmpty(parts2[i]))
-			{
-				result.Append(parts2[i]);
-			}
-
-			if (i < maxCount - 1)
-			{
-				result.Append(' ');
-			}
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.StringLengthsMustBeEqual));
 		}
 
-		return ValueTask.FromResult(new CallState(result.ToString()));
+		var plain = first.Text;
+		var pieces = new List<MarkupText>();
+		var index = 0;
+		while (index < plain.Length)
+		{
+			var takeSecond = replaced.Contains(plain[index]);
+			var runEnd = index + 1;
+			while (runEnd < plain.Length && replaced.Contains(plain[runEnd]) == takeSecond) runEnd++;
+			pieces.Add((takeSecond ? second : first).Substring(index, runEnd - index));
+			index = runEnd;
+		}
+
+		return ValueTask.FromResult(new CallState(MarkupText.Concat(pieces)));
 	}
 
 	[SharpFunction(Name = "mid", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "first", "length"])]
@@ -1539,8 +1536,11 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
-		var truncType = JustifyTruncation(parser, truncate);
-		return ValueTask.FromResult<CallState>(str.Pad(fill, widthInt, PadType.Left, truncType));
+		// Like center(), the fill starts at its first character wherever it lands (fun_rjust).
+		var padding = widthInt - str.DisplayWidth;
+		return ValueTask.FromResult<CallState>(padding > 0
+			? MarkupText.Concat(TileFill(fill, padding), str)
+			: str.Pad(fill, widthInt, PadType.Left, JustifyTruncation(parser, truncate)));
 	}
 
 	[SharpFunction(Name = "scramble", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular, ParameterNames = ["string"])]
@@ -1578,21 +1578,61 @@ public partial class Functions
 	[SharpFunction(Name = "spellnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> SpellNumber(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var numberString = parser.CurrentState.Arguments["0"].Message;
-
-		if (!decimal.TryParse(numberString.ToPlainText(), out var repeatNumber))
+		var number = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim(' ');
+		var minus = number.StartsWith('-');
+		if (minus || number.StartsWith('+'))
 		{
-			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
+			number = number[1..];
 		}
 
-		var integral = (int)Math.Truncate(repeatNumber);
-		var fractional = (int)Math.Truncate((repeatNumber - integral) * (10 ^ repeatNumber.Scale));
-		var concat = fractional > 0
-			? $"{integral.ToWords()} dot {fractional.ToWords()}"
-			: integral.ToWords();
+		var parts = number.TrimStart('0').Split('.');
+		if (parts.Length > 2 || parts.Any(part => !part.All(char.IsAsciiDigit)))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
+		}
 
-		return ValueTask.FromResult(new CallState(concat));
+		var whole = parts[0];
+		var fraction = parts.Length > 1 ? parts[1] : string.Empty;
+		var padded = whole.PadLeft((whole.Length + 2) / 3 * 3, '0');
+		if (padded.Length > 15 || fraction.Length > 14)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.OutOfRange));
+		}
+
+		return ValueTask.FromResult(new CallState(SpellNumber(minus, padded, fraction)));
 	}
+
+	/// <summary>
+	/// PennMUSH's <c>fun_spellnum</c> (<c>src/funmath.c</c>): the whole part, then " and " and the
+	/// fraction as a count of tenths, hundredths and so on.
+	/// </summary>
+	private static string SpellNumber(bool minus, string whole, string fraction)
+	{
+		var spelled = whole.Length == 0
+			? fraction.Length == 0 ? "zero" : string.Empty
+			: (minus ? "negative " : string.Empty) + SpellDigits(whole);
+
+		if (fraction.Length == 0) return spelled;
+
+		var digits = fraction.TrimStart('0');
+		var tail = FractionTails[fraction.Length];
+		var prefix = whole.Length > 0 ? " and " : minus && digits.Length > 0 ? "negative " : string.Empty;
+		var count = digits switch
+		{
+			"" => $"zero {tail}s",
+			"1" => $"one {tail}",
+			_ => $"{SpellDigits(digits.PadLeft((digits.Length + 2) / 3 * 3, '0'))} {tail}s",
+		};
+
+		return spelled + prefix + count;
+	}
+
+	private static readonly string[] FractionTails =
+	[
+		"", "tenth", "hundredth", "thousandth", "ten-thousandth", "hundred-thousandth", "millionth",
+		"ten-millionth", "hundred-millionth", "billionth", "ten-billionth", "hundred-billionth", "trillionth",
+		"ten-trillionth", "hundred-trillionth",
+	];
 
 	[SharpFunction(Name = "squish", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "delimiter"])]
 	public ValueTask<CallState> Squish(IMUSHCodeParser parser, SharpFunctionAttribute _2)

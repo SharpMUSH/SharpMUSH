@@ -213,6 +213,10 @@
    "command": "Wiz wizpass"
   },
   {
+   "key": "39-list-string-audit/lsa.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "40-compat-choices/choice.dropto#0",
    "command": "Wiz wizpass"
   },

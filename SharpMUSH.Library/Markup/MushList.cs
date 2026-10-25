@@ -53,21 +53,19 @@ public static class MushList
 		=> Range(delimiter, text, 1, long.MaxValue);
 
 	/// <summary>
-	/// <c>extract()</c>'s selection: a positive <paramref name="first"/> is a 1-based position and a
-	/// non-positive one counts from the end; a positive <paramref name="length"/> takes that many items and a
-	/// non-positive one takes that many from the end of what remains.
+	/// <c>extract()</c>'s selection, as PennMUSH's <c>fun_extract</c> makes it: a positive <paramref name="first"/> is a
+	/// 1-based position and a negative one counts from the end (-1 is the last item); a positive
+	/// <paramref name="length"/> takes that many items and a negative one runs up to the item at that position
+	/// counted from the end. A position outside the list, or a length that ends before it starts, is nothing.
 	/// </summary>
 	public static MarkupText Extract(MarkupText delimiter, MarkupText text, int first, int length)
 	{
 		var total = first > 0 && length > 0 ? long.MaxValue : Count(delimiter, text);
-		var from = first > 0 ? first - 1L : Math.Max(0, total - Math.Abs((long)first));
-		if (from >= total) return Join(delimiter, []);
+		var from = first > 0 ? first - 1L : total + first;
+		if (from < 0 || from >= total || length == 0) return Join(delimiter, []);
 
-		var until = total;
-		if (length > 0) until = from + length < total ? from + length : total;
-		else from = Math.Max(from, total - Math.Abs((long)length));
-
-		return Range(delimiter, text, from, until);
+		var until = length > 0 ? Math.Min(from + length, total) : total + 1 + length;
+		return until <= from ? Join(delimiter, []) : Range(delimiter, text, from, until);
 	}
 
 	/// <summary>The items at positions <paramref name="from"/> up to (not including) <paramref name="until"/>.</summary>

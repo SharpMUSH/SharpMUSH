@@ -246,7 +246,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var list = args["0"].Message;
 		var pattern = args["1"].Message.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
+		var delimiter = ArgHelpers.Delimiter(parser.CurrentState.ArgumentsOrdered, 2);
 		var outputSep = all && args.ContainsKey("3")
 			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter.ToPlainText())
 			: delimiter;
@@ -292,7 +292,7 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var list = args["0"].Message;
 		var pattern = args["1"].Message.ToPlainText();
-		var delimiter = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, " ");
+		var delimiter = ArgHelpers.Delimiter(parser.CurrentState.ArgumentsOrdered, 2);
 		var outputSep = all && args.ContainsKey("3")
 			? ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 3, delimiter.ToPlainText())
 			: delimiter;

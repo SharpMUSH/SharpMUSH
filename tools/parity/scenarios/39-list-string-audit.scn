@@ -1,0 +1,38 @@
+# List and string functions from the softcode audit (#2268): an empty delimiter is a space
+# (delim_check), extract() and index() count items PennMUSH's way, merge() swaps characters,
+# a multi-character fill starts at its first character, and spellnum() says no "and".
+::case lsa.login
+::login wiz Wiz wizpass
+think ok
+
+::case lsa.extract  a negative length counts back from the end of the list
+think [extract(a b c d e,2,-2)]|[extract(a b c d e,-2,2)]|[extract(a b c d e,-2,-1)]|[extract(a b c d e,2,0)]
+
+::case lsa.merge  each listed character in the first string takes the second string's character there
+think [merge(AB--EF,abcdef,-)]|[merge(AB[space(2)]EF,abcdef,)]|[merge(a-b-c,1x2y3,-)]|[merge(abc,de,b)]
+
+::case lsa.empty-delimiter  an empty delimiter is a space, an empty output separator stays empty
+think [ldelete(foo bar baz boing,3,,%b~%b)]|[ldelete(a|b|c,2,|,)]
+think [itemize(eggs bacon spam, ,&,;)]|[elist(a|b|c,and,|)]|[elist(a b,or,,-)]
+think [reglmatchall(I am testing a test, test, , |)]|[first(a b,)]|[last(a b,)]|[words(randextract(this is a test,6,,D))]
+think [table(the quick brown fox, 10, 25, , |)]
+
+::case lsa.index  index() trims the spaces round the items it returns
+think [index(Cup of Tea | Mug of Beer | Glass of Wine, |, 2, 1)]|[index(a|b|c,|,2,5)]|[index(a|b|c,|,-1,1)]|[index(a||b,|,2,2)]
+
+::case lsa.fill  a fill of several characters starts at its first character on either side
+think [ljust(foo,12,=+)]|[rjust(foo,12,=+)]|[center(foo,12,=+)]
+
+::case lsa.munge  equal sort keys keep their own partners
+&LSASORT me=sort(%0)
+think [munge(me/LSASORT,b a b,1 2 3)]
+&LSASORT me
+
+::case lsa.spellnum  no "and" inside the whole part
+think [spellnum(12345)]|[spellnum(-101)]|[spellnum(1.5)]|[spellnum(2.01)]|[spellnum(0.25)]|[spellnum(1.2.3)]
+
+::case lsa.randextract-type  only the first letter of the type is read
+think [words(randextract(a b c,6,,duplicates))]|[randextract(a b c,2,,X)]
+
+::case lsa.search-empty  an empty player or parent searches everything
+think [gt(nsearch(),0)] [gt(words(children()),0)] [gt(words(lsearch(,parent,)),0)]
