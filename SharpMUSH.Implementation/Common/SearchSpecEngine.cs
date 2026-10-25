@@ -123,12 +123,14 @@ public static class SearchSpecEngine
 				// An empty restriction means objects with no parent; one that names nothing is refused
 				// (fill_search_spec, src/wiz.c).
 				case "PARENT" when restriction.Length == 0:
+					parent = null;
 					noParent = true;
 					break;
 				case "PARENT":
 					var maybeParent = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeParent is not AnySharpObject parentObject)
 						return new Error<string>(nameof(ErrorMessages.Notifications.SearchUnknownParent));
+					noParent = false;
 					parent = parentObject.Object().DBRef;
 					break;
 				case "FLAG":

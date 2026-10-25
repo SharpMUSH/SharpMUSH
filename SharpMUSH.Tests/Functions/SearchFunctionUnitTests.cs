@@ -127,7 +127,8 @@ public class SearchFunctionUnitTests
 		var child = await CreateThingAsync($"{token}_Child");
 		await CommandAsync($"@parent {child}={parent}");
 
-		foreach (var search in new[] { "lsearch(all,parent,)", "lsearch(,parent,)", "children()" })
+		// A later PARENT restriction replaces an earlier one, as fill_search_spec's does.
+		foreach (var search in new[] { "lsearch(all,parent,)", "lsearch(,parent,)", "children()", $"lsearch(all,parent,#{parent.Number},parent,)" })
 		{
 			var result = ReturnedDbRefs(await SearchAsync(search));
 			await Assert.That(result).Contains(orphan.Number);

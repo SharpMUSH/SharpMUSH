@@ -1237,6 +1237,11 @@ public partial class Functions
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
 		}
 
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, widthInt))
+		{
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
+		}
+
 		// Like center(), the fill starts at its first character wherever it lands (fun_ljust).
 		var padding = widthInt - str.DisplayWidth;
 		return ValueTask.FromResult<CallState>(padding > 0
@@ -1534,6 +1539,11 @@ public partial class Functions
 		if (!ArgHelpers.TryUnsignedInteger(parser, width, out var widthInt))
 		{
 			return new ValueTask<CallState>(ErrorMessages.Returns.PositiveInteger);
+		}
+
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, widthInt))
+		{
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
 		}
 
 		// Like center(), the fill starts at its first character wherever it lands (fun_rjust).

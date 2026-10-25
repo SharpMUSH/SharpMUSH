@@ -90,7 +90,7 @@ public record ObjectSearchFilter
 	/// </summary>
 	public bool HasFilters => Types != null || Owner != null || NamePattern != null ||
 														MinDbRef != null || MaxDbRef != null || Zone != null ||
-														Parent != null || HasFlag != null || HasPower != null || AttributeValue != null ||
+														Parent != null || NoParent || HasFlag != null || HasPower != null || AttributeValue != null ||
 														Skip != null || Limit != null;
 }
 

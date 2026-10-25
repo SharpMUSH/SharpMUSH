@@ -849,6 +849,16 @@ public class ListFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 INVALID TYPE");
 	}
 
+	/// <summary>fun_randword answers an empty list before it reads the count or the type.</summary>
+	[Test]
+	[Arguments("randextract(,1,,X)")]
+	[Arguments("randextract(,x)")]
+	public async Task RandomExtractOfNothingIsNothing(string function)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(function));
+		await Assert.That(result.ToPlainText()).IsEqualTo(string.Empty);
+	}
+
 	[Test]
 	[Arguments("randword(a b c d e)")]
 	public async Task RandomWord(string function)

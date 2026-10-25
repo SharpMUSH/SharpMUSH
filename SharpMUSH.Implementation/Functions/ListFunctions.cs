@@ -866,6 +866,13 @@ public partial class Functions
 	{
 		var args = parser.CurrentState.ArgumentsOrdered;
 		var listArg = args["0"].Message;
+		// fun_randword answers an empty list with nothing before it reads any other argument
+		// (src/funlist.c:1154-1156).
+		if (listArg is null || listArg.Text.Length == 0)
+		{
+			return ValueTask.FromResult(CallState.Empty);
+		}
+
 		var countArg = args.TryGetValue("1", out var countValue) ? countValue.Message.ToPlainText() : "1";
 		var delimiter = ArgHelpers.Delimiter(args, 2);
 		// fun_randword reads only the type's first letter (src/funlist.c:1175-1186).
