@@ -115,7 +115,17 @@ public class FingerIntegrationTests
 			await Assert.That(await As(ann, "+finger/set age=")).Contains("Your Age is not set.");
 			await Assert.That(await As(bo, $"+finger {ann.Name}")).DoesNotContain("Age");
 
-			await Assert.That(await As(ann, "+finger/set alias=x")).Contains("Alias is worked out by the game: nobody sets it.");
+			// Alias is the player's @alias: the game's rules decide, and a refusal says why.
+			var alias = $"FgAl{ann.DbRef.Number}";
+			await Assert.That(await As(ann, $"+finger/set alias={alias}")).Contains($"Your Alias: {alias}");
+			await Assert.That(await God($"think alias(#{ann.DbRef.Number})")).IsEqualTo(alias);
+			await Assert.That(await As(bo, $"+finger/set alias={alias}"))
+				.Contains($"'{alias}' is not a valid alias.").And.Contains("Your Alias did not change.");
+			await Assert.That(await God($"think hasattr(#{bo.DbRef.Number},ALIAS)")).IsEqualTo("0");
+			await Assert.That(await As(ann, "+finger/set alias=")).Contains("Your Alias is cleared.");
+			await Assert.That(await God($"think hasattr(#{ann.DbRef.Number},ALIAS)")).IsEqualTo("0");
+			await Assert.That(await As(ann, "+finger/set alias=")).Contains("Your Alias is not set.");
+			await Assert.That(await As(ann, "+finger/hide alias")).Contains("Alias is worked out by the game: nobody sets it.");
 			await Assert.That(await As(ann, "+finger/set bogus=x")).Contains("There is no field called 'bogus'.");
 			await Assert.That(await As(ann, "+finger/set age")).Contains("+finger/set <field>=<text> sets a field.");
 			await Assert.That(await As(ann, $"+finger/set age={new string('x', 1001)}")).Contains("Keep Age to 1000 characters.");
@@ -158,6 +168,13 @@ public class FingerIntegrationTests
 
 			await Assert.That(await As(ann, "+finger/unhide age")).Contains("Everyone sees your Age again.");
 			await Assert.That(WithoutPlayerName(await As(bo, $"+finger {ann.Name}"))).Contains("Age:").And.Contains("33");
+
+			// Staff set someone's alias, and are told why the game refused one.
+			var alias = $"HdAl{bo.DbRef.Number}";
+			await Assert.That(await As(staff, $"+finger/set {bo.Name}/alias={alias}")).Contains($"{bo.Name}'s Alias: {alias}");
+			await Assert.That(await God($"think alias(#{bo.DbRef.Number})")).IsEqualTo(alias);
+			await Assert.That(await As(staff, $"+finger/set {ann.Name}/alias={alias}"))
+				.Contains($"{ann.Name}'s Alias did not change: '{alias}' is not a valid alias.");
 		}
 		finally
 		{
