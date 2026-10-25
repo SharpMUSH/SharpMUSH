@@ -22,7 +22,7 @@ Whenever some text is entered by an object, the MUSH attempts to match it agains
 
     Socket commands (*): QUIT, SCREENWIDTH, etc<br>
     Single-token commands: ", :, ;, +, \, #<br>
-    MUX-style channel aliases, if enabled (see [MUXCOMSYS])<br>
+    MUX-style channel aliases (see [MUXCOMSYS])<br>
     Exits in the room<br>
     &attribute setting<br>
     Regular game commands: get, inventory, `@emit`, etc<br>

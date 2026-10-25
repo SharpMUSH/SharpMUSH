@@ -141,7 +141,7 @@ public partial class Functions : ILibraryProvider<FunctionDefinition>
 			_functionLibrary.Add(command.Key, (command.Value, true));
 			_functionLibrary.ReserveSystemName(command.Key);
 
-			foreach (var alias in Configurable.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			foreach (var alias in Configuration.CurrentValue.Alias.FunctionAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
 				_functionLibrary.Add(alias, (command.Value, true));
 				_functionLibrary.ReserveSystemName(alias);

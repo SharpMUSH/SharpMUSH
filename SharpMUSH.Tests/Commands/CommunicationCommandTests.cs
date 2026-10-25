@@ -603,6 +603,69 @@ public class CommunicationCommandTests
 		});
 	}
 
+	/// <summary>PennMUSH with use_muxcomm: <c>&lt;alias&gt; &lt;message&gt;</c> speaks on the alias's channel.</summary>
+	[Test]
+	public async ValueTask ComsysAlias_WithAMessage_SpeaksOnItsChannel()
+	{
+		var alias = UniqueAlias("Speak");
+		var spoken = TestIsolationHelpers.GenerateUniqueName("AliasSpoken");
+
+		await WithOwnChannelAsync("AliasSpeak", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {alias}={channel}");
+
+			var said = await NotifiedWhile(player, $"{alias} {spoken}");
+
+			await Assert.That(said.Any(message => message.Contains($"<{channel}>") && message.Contains(spoken)))
+				.IsTrue().Because($"the player was told: {string.Join(" | ", said)}");
+		});
+	}
+
+	/// <summary><c>&lt;alias&gt; off</c> and <c>on</c> are <c>@channel/gag</c> and <c>/ungag</c>, as in PennMUSH; a space after the word does not matter.</summary>
+	[Test]
+	public async ValueTask ComsysAlias_OffAndOn_GagAndUngagTheChannel()
+	{
+		var alias = UniqueAlias("Gag");
+
+		await WithOwnChannelAsync("AliasGag", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {alias}={channel}");
+			var gagged = TestIsolationHelpers.GenerateUniqueName("WhileGagged");
+			var ungagged = TestIsolationHelpers.GenerateUniqueName("AfterUngag");
+
+			await NotifiedWhile(player, $"{alias} off ");
+			var whileGagged = await NotifiedWhile(player, $"@cemit {channel}={gagged}");
+			await NotifiedWhile(player, $"{alias} on");
+			var afterUngag = await NotifiedWhile(player, $"@cemit {channel}={ungagged}");
+
+			await Assert.That(whileGagged.Any(message => message.Contains(gagged))).IsFalse()
+				.Because($"a gagged member hears nothing on the channel: {string.Join(" | ", whileGagged)}");
+			await Assert.That(afterUngag.Any(message => message.Contains(ungagged))).IsTrue()
+				.Because($"the player was told: {string.Join(" | ", afterUngag)}");
+		});
+	}
+
+	/// <summary>An alias with nothing after it, or one naming a channel the player has left, is not chat.</summary>
+	[Test]
+	public async ValueTask ComsysAlias_WithoutAMessageOrMembership_IsNotChat()
+	{
+		var alias = UniqueAlias("Bare");
+		var spoken = TestIsolationHelpers.GenerateUniqueName("NotSpoken");
+
+		await WithOwnChannelAsync("AliasBare", async (player, channel) =>
+		{
+			await NotifiedWhile(player, $"addcom {alias}={channel}");
+
+			var bare = await NotifiedWhile(player, alias);
+			await NotifiedWhile(player, $"@channel/off {channel}");
+			var afterLeaving = await NotifiedWhile(player, $"{alias} {spoken}");
+
+			await Assert.That(bare).Contains("Huh?  (Type \"help\" for help.)");
+			await Assert.That(afterLeaving.Any(message => message.Contains(spoken))).IsFalse()
+				.Because($"the player was told: {string.Join(" | ", afterLeaving)}");
+		});
+	}
+
 	[Test]
 	[Arguments("delcom nonexistent_alias_DELCOM")]
 	public async ValueTask DelComNotFound(string command)

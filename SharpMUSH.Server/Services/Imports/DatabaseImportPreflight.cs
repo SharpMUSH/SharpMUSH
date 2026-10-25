@@ -45,10 +45,8 @@ public sealed class DatabaseImportPreflight(PennMUSHDatabaseParser parser)
 		if (database.Objects.Count == 0) throw new FormatException("An empty source world cannot replace a live world.");
 		var numbers = database.Objects.Select(obj => obj.DBRef).ToHashSet();
 		if (numbers.Count != database.Objects.Count) throw new FormatException("Source object numbers are duplicated.");
-		foreach (var obj in database.Objects)
-			foreach (var reference in new[] { obj.Location, obj.Owner, obj.Parent, obj.Zone, obj.Link })
-				if (reference >= 0 && !numbers.Contains(reference))
-					throw new FormatException($"Source #{obj.DBRef} references missing object #{reference}.");
+		// A reference to an object the source no longer has is repaired by the conversion, which warns
+		// about each one, as PennMUSH's dbck does at startup.
 		return database;
 	}
 }

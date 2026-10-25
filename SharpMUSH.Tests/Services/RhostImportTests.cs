@@ -111,6 +111,10 @@ public class RhostImportTests
 			RhostList = true
 		});
 		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
+		// RhostMUSH's mail command, added beside the aliases @mail already had.
+		await Assert.That(stored.Alias.CommandAliases["@MAIL"]).Contains("mail");
+		await Assert.That(stored.Alias.CommandAliases["@EMIT"]).IsEquivalentTo(["emit"]);
+		await Assert.That(result.Warnings).Contains(w => w.StartsWith("mail is now another name for @mail"));
 		// The reader's decisions lead the warnings.
 		await Assert.That(result.Warnings[0]).StartsWith("Read a RhostMUSH flatfile");
 		// %m is TinyMUX's and RhostMUSH's last command, as it is here: no PennMUSH warning about it.

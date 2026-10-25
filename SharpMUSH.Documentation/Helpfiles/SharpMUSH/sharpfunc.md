@@ -107,19 +107,20 @@
 | [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
 | [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
 | [CONFIG()]       | [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        |
-| [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        | [FINDABLE()]     |
-| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
-| [GETPIDS()]      | [HASATTR()]      | [HASATTRP()]     | [HASFLAG()]      |
-| [HASPOWER()]     | [HASROLE()]      | [HASTYPE()]      | [INAME()]        |
-| [ISAPPROVED()]   | [LFLAGS()]       | [LLOCKFLAGS()]   | [LOCK()]         |
-| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
-| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MOTD()]         |
-| [MSECS()]        | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       |
-| [NAME()]         | [NATTR()]        | [NEARBY()]       | [OBJID()]        |
-| [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    |
-| [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [TYPE()]         | [VERSION()]      | [VISIBLE()]      | [WIZMOTD()]      |
+| [CTIME()]        | [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        |
+| [FINDABLE()]     | [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     |
+| [FULLNAME()]     | [GETPIDS()]      | [HASATTR()]      | [HASATTRP()]     |
+| [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      | [HASTYPE()]      |
+| [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       | [LLOCKFLAGS()]   |
+| [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        |
+| [LPIDS()]        | [LSTATS()]       | [MONEY()]        | [MONIKER()]      |
+| [MOTD()]         | [MSECS()]        | [MTIME()]        | [MUDNAME()]      |
+| [MUDURL()]       | [NAME()]         | [NATTR()]        | [NEARBY()]       |
+| [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     |
+| [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    |
+| [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
+| [ROLES()]        | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
+| [WIZMOTD()]      |                  |                  |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -1616,6 +1617,20 @@ think elock(Dancing Slippers/drop, Princess)
 ::: seealso
 - [NEQ()]
 - [LMATH()]
+:::
+# error()
+`error([<object>])`
+
+  Returns the message a command that matches nothing gets. RhostMUSH softcode calls it to answer a player who may not use a command as if the command did not exist. `<object>` is accepted and changes nothing.
+
+  Example:
+```sharp
+say error()
+You say, "Huh?  (Type "help" for help.)"
+```
+
+::: seealso
+- [HUH_COMMAND]
 :::
 # escape()
 `escape(<string>)`

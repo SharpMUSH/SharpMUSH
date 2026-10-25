@@ -67,7 +67,7 @@ public partial class PennMUSHDatabaseConverter
 	/// <summary>
 	/// Sets the options the source's softcode needs (<see cref="PennMUSHDatabase.SourceOptions"/>) in the
 	/// configuration of the world being written: a <see cref="bool"/> as given, a <see cref="uint"/> raised
-	/// to at least its value. Written through the Mediator, like the objects, so it lands in the same world,
+	/// to at least its value, an alias table's entries added to the aliases already there. Written through the Mediator, like the objects, so it lands in the same world,
 	/// and signalled so a running game rereads its configuration.
 	/// </summary>
 	/// <remarks>
@@ -97,6 +97,7 @@ public partial class PennMUSHDatabaseConverter
 				var value = (wanted, current) switch
 				{
 					(uint minimum, uint now) => Math.Max(minimum, now),
+					(Dictionary<string, string[]> added, Dictionary<string, string[]> now) => WithAliases(now, added),
 					_ => wanted
 				};
 				if (Equals(current, value)) continue;
@@ -118,6 +119,30 @@ public partial class PennMUSHDatabaseConverter
 			context.Warnings.Add($"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
 				"set them in the configuration and reload it.");
 		}
+	}
+
+	/// <summary>
+	/// <paramref name="now"/> with the aliases in <paramref name="added"/> it lacks, or <paramref name="now"/>
+	/// itself when it has them all, so an unchanged option is left alone.
+	/// </summary>
+	private static Dictionary<string, string[]> WithAliases(Dictionary<string, string[]> now,
+		Dictionary<string, string[]> added)
+	{
+		var missing = added
+			.Select(entry => (entry.Key, Aliases: entry.Value
+				.Where(alias => !(now.GetValueOrDefault(entry.Key) ?? []).Contains(alias, StringComparer.OrdinalIgnoreCase))
+				.ToArray()))
+			.Where(entry => entry.Aliases.Length > 0)
+			.ToList();
+		if (missing.Count == 0) return now;
+
+		var merged = new Dictionary<string, string[]>(now, now.Comparer);
+		foreach (var (name, aliases) in missing)
+		{
+			merged[name] = [.. merged.GetValueOrDefault(name) ?? [], .. aliases];
+		}
+
+		return merged;
 	}
 
 	/// <summary>

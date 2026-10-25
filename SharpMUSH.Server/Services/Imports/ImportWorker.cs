@@ -67,7 +67,7 @@ public static class ImportWorker
 					journal.Save(session with { State = ImportSessionState.Aborted, Result = result with { Aborted = true }, Failure = "Conversion did not pass validation." });
 					return 0;
 				}
-				await EnsurePackageManagerAsync(mediator, options, result, deadline.Token);
+				await EnsurePackageManagerAsync(mediator, options, result, configuration?.Sets("package_manager") == true, deadline.Token);
 				if (configuration is not null) ReportConfiguration(configuration, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
@@ -120,8 +120,9 @@ public static class ImportWorker
 			result.Notes.Add($"Configuration: {configuration.Unrecognized.Count} directive(s) SharpMUSH has no option for, not carried over: {string.Join(", ", configuration.Unrecognized)}.");
 	}
 
+	/// <param name="fromFile">Whether the uploaded configuration set <c>package_manager</c>, rather than the game keeping its own.</param>
 	private static async Task EnsurePackageManagerAsync(IMediator mediator, IConfigOptionWriter options,
-		ConversionResult result, CancellationToken ct)
+		ConversionResult result, bool fromFile, CancellationToken ct)
 	{
 		var current = await options.CurrentAsync();
 		var configured = current.Database.PackageManager;
@@ -143,7 +144,7 @@ public static class ImportWorker
 		await mediator.Send(new SetObjectFlagCommand(created, wizard), ct);
 		await options.UpdateAsync(value => value with { Database = value.Database with { PackageManager = (uint)manager.Number } }, ct);
 		result.Notes.Add(configured is { } named && named != (uint)manager.Number
-			? $"package_manager named #{named}, which is not a player in the imported database, so a Package Manager '{name}' was created at #{manager.Number}."
+			? $"{(fromFile ? "The configuration's" : "This game's")} package_manager is #{named}, which is not a player in the imported database, so a Package Manager '{name}' was created at #{manager.Number}."
 			: $"Created a Package Manager '{name}' at #{manager.Number}, past the imported objects, for the bundled packages.");
 	}
 

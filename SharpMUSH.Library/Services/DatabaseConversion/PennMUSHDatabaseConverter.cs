@@ -1432,10 +1432,21 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private async Task SetLocationAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
-		if (pennObj.Type == PennMUSHObjectType.Room || pennObj.Location < 0
-			|| !context.DbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
+		if (pennObj.Type == PennMUSHObjectType.Room || pennObj.Location < 0)
 		{
 			return;
+		}
+
+		if (!context.DbrefMapping.TryGetValue(pennObj.Location, out var locationDbRef))
+		{
+			// PennMUSH's dbck sends a player or thing whose location is gone to its home. Anything else
+			// stays in Limbo, where the conversion created it.
+			if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0 || pennObj.Link == pennObj.DBRef
+				|| !context.DbrefMapping.TryGetValue(pennObj.Link, out locationDbRef))
+			{
+				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {await LimboAsync()}");
+				return;
+			}
 		}
 
 		var locationObj = await _mediator.Send(new GetObjectNodeQuery(locationDbRef), cancellationToken);
@@ -1443,8 +1454,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		// Rooms aren't content
 		if (ContainerOf(locationObj) is not AnySharpContainer container || ContentOf(sharpObj) is not AnySharpContent content)
 		{
+			if (!context.DbrefMapping.ContainsKey(pennObj.Location))
+				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import, and its home #{pennObj.Link} cannot hold it; it was left in {await LimboAsync()}");
 			return;
 		}
+
+		if (!context.DbrefMapping.ContainsKey(pennObj.Location))
+			context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was put in its home #{pennObj.Link}");
 
 		// A conversion is building a world out of a dump, not moving anyone: there is no
 		// actor, no parser and nobody present to notify, so this places the object
@@ -1458,14 +1474,25 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			IsSilent: true,
 			Cause: "conversion",
 			OldContainer: currentContainer.Object().DBRef), cancellationToken);
+		return;
+
+		// Where the conversion created the object, which is where it stays.
+		async ValueTask<string> LimboAsync() => ContentOf(sharpObj) is AnySharpContent created
+			? $"#{(await created.Location()).Object().DBRef.Number}"
+			: "Limbo";
 	}
 
 	private async Task LinkExitAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
-		if (pennObj.Type != PennMUSHObjectType.Exit || pennObj.Link < 0
-			|| !context.DbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
+		if (pennObj.Type != PennMUSHObjectType.Exit || pennObj.Link < 0)
 		{
+			return;
+		}
+
+		if (!context.DbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
+		{
+			context.Warnings.Add($"Destination #{pennObj.Link} of exit #{pennObj.DBRef} is not in the import; the exit was left unlinked");
 			return;
 		}
 
@@ -1481,8 +1508,14 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private async Task SetParentAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
-		if (pennObj.Parent < 0 || !context.DbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
+		if (pennObj.Parent < 0)
 		{
+			return;
+		}
+
+		if (!context.DbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
+		{
+			context.Warnings.Add($"Parent #{pennObj.Parent} of #{pennObj.DBRef} is not in the import; it was dropped");
 			return;
 		}
 
@@ -1500,8 +1533,14 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private async Task SetZoneAsync(PennMUSHObject pennObj, AnySharpObject sharpObj,
 		PennMUSHConversionContext context, CancellationToken cancellationToken)
 	{
-		if (pennObj.Zone < 0 || !context.DbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
+		if (pennObj.Zone < 0)
 		{
+			return;
+		}
+
+		if (!context.DbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
+		{
+			context.Warnings.Add($"Zone #{pennObj.Zone} of #{pennObj.DBRef} is not in the import; it was dropped");
 			return;
 		}
 

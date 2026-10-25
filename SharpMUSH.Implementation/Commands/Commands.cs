@@ -266,7 +266,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		{
 			_commandLibrary.Add(command.Key, (command.Value, true));
 
-			foreach (var alias in Configurable.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
+			foreach (var alias in Configuration.CurrentValue.Alias.CommandAliases.TryGetValue(command.Key, out var aliasList) ? aliasList : [])
 			{
 				_commandLibrary.Add(alias, (command.Value, true));
 			}
