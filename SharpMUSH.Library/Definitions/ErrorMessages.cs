@@ -117,6 +117,7 @@ public static partial class ErrorMessages
 		public const string NoSuchFlag = "#-1 NO SUCH FLAG";
 		public const string NoSuchTimezone = "#-1 NO SUCH TIMEZONE";
 		public const string FunctionDisabled = "#-1 FUNCTION DISABLED";
+		public const string CommandDisabled = "#-1 COMMAND DISABLED";
 		public const string NoSideFx = "#-1 SIDE EFFECTS DISABLED FOR THIS FUNCTION";
 
 		public const string Invoke = "#-1 FUNCTION INVOCATION LIMIT EXCEEDED";
@@ -171,6 +172,7 @@ public static partial class ErrorMessages
 
 		public const string NothingToDo = "#-1 NOTHING TO DO";
 		public const string CantSeeThroughThat = "#-1 CANNOT SEE THROUGH THAT";
+		public const string CantSeeThatFromHere = "#-1 CANNOT SEE THAT FROM HERE";
 		public const string ParentLoop = "#-1 PARENT LOOP DETECTED";
 		public const string TooManyAncestors = "#-1 TOO MANY ANCESTORS";
 		public const string SafeObject = "#-1 OBJECT IS SAFE";
@@ -292,6 +294,7 @@ public static partial class ErrorMessages
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
 		public const string TooManyWords = "#-1 TOO MANY WORDS";
+		public const string TooManyRegisters = "#-1 TOO MANY REGISTERS";
 		public const string UseTagwrapInstead = "#-1 USE TAGWRAP INSTEAD";
 		public const string VectorsMustBe3D = "#-1 VECTORS MUST BE 3-DIMENSIONAL";
 		public const string VectorsMustMatchDimensions = "#-1 VECTORS MUST BE SAME DIMENSIONS";
@@ -1042,6 +1045,15 @@ public static partial class ErrorMessages
 
 		public const string CantGoThatWay = "You can't go that way.";
 		public const string CantSeeThroughThat = "You can't see through that.";
+		/// <summary>PennMUSH look_at (src/look.c:726): a remote object whose description is not to be read from afar.</summary>
+		public const string CantSeeThatFromHere = "You can't see that from here.";
+		/// <summary>PennMUSH check_connect (src/bsd.c:4381), to a player connecting while set ON-VACATION.</summary>
+		public const string WelcomeBackFromVacation = "Welcome back from vacation! Don't forget to unset your ON-VACATION flag";
+		/// <summary>PennMUSH dbsave_event (src/timer.c:235), to every player set ON-VACATION.</summary>
+		public const string OnVacationReminder = "Your ON-VACATION flag is set! If you're back, clear it.";
+		/// <summary>PennMUSH check_connected_marks (src/destroy.c:1255). {0} the room as its owner sees it.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string DisconnectedRoomFormat = "You own a disconnected room, {0}";
 		public const string ExitGoesNowhere = "That exit doesn't go anywhere.";
 		public const string ExitNoValidLocation = "That exit doesn't go to a valid location.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]

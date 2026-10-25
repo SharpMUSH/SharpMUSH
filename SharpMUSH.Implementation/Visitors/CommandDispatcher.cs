@@ -118,8 +118,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				}
 			}
 
-			// MUX-style aliases always work, whatever use_muxcomm says (help sharpconf).
-			if (await MatchComsysAliasAsync(parser, tokenText.ToPlainText()) is ComsysAlias comsysAlias)
+			// PennMUSH command.c:1247 reads comsys aliases only while use_muxcomm is on.
+			if (visitor.Configuration.CurrentValue.Chat.UseMuxComm
+					&& await MatchComsysAliasAsync(parser, tokenText.ToPlainText()) is ComsysAlias comsysAlias)
 			{
 				return await ComsysAliasAsync(parser, comsysAlias, context, src);
 			}

@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
@@ -26,6 +27,7 @@ public class StartupAttributeBootstrapService(
 	IMediator mediator,
 	IAttributeService attributeService,
 	IMUSHCodeParser parser,
+	IOptionsWrapper<SharpMUSHOptions> options,
 	ILogger<StartupAttributeBootstrapService> logger) : IHostedService
 {
 	/// <summary>God (#1): the identity STARTUP runs as.</summary>
@@ -33,6 +35,14 @@ public class StartupAttributeBootstrapService(
 
 	public async Task StartAsync(CancellationToken cancellationToken)
 	{
+		// PennMUSH init_game_postdb (src/game.c:706): the boot pass runs only while `startups` is on.
+		// @restart is not affected.
+		if (!options.CurrentValue.Attribute.Startups)
+		{
+			logger.LogInformation("Boot @STARTUP pass skipped: startups is off.");
+			return;
+		}
+
 		try
 		{
 			if (await mediator.Send(new GetObjectNodeQuery(God), cancellationToken) is not AnySharpObject god)

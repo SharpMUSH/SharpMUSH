@@ -104,7 +104,7 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "keepalive_timeout",
 		Category = "Limit",
-		Description = "Seconds between TCP keepalive probes",
+		Description = "Seconds a KEEPALIVE player's telnet connection may go without output before it is sent a NOP",
 		ValidationPattern = @"^\d+$",
 		Group = "Connections",
 		Order = 6,

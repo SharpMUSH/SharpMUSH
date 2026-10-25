@@ -189,6 +189,10 @@ public static partial class ErrorMessages
 		public const string ChatWhatToEmit = "What do you want to emit?";
 
 		public const string ChatAlreadyExists = "CHAT: Channel already exists.";
+		/// <summary>PennMUSH src/extchat.c:4277, a comsys command while use_muxcomm is off.</summary>
+		public const string CommandDisabled = "Command disabled.";
+		public const string ChatNoRoomForChannels = "No more room for channels.";
+		public const string ChatOwnTooManyChannels = "You already own too many channels.";
 		public const string ChatChannelCreationFailed = "CHAT: The channel could not be created.";
 		public const string ChatInvalidChannelNameShort = "CHAT: Invalid channel name.";
 		public const string ChatChannelCreated = "Channel has been created.";

@@ -2155,7 +2155,7 @@ Test
 
 Sets the list of actions on `<object>` that will happen whenever the MUSH is restarted. This lets you start up objects that need to be running continuously. It is also useful for setting up @functions and @hooks, which are not saved across restarts.
 
-@startup is also triggered when an object is @restarted or @undestroyed.
+@startup is also triggered when an object is @restarted or @undestroyed. When the `startups` option is off, the server does not run any @startup when it starts; @restart still does.
 
 Note that @startups are NEVER inherited from parent objects.
 
