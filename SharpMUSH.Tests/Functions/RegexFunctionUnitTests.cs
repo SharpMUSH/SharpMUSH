@@ -17,6 +17,10 @@ public class RegexFunctionUnitTests
 	// which is what Penn's own helpfile says and is not what Penn's code does.
 	[Test]
 	[Arguments("regmatch(test,test)", "1")]
+	[Arguments(@"regmatch(a,\[\[:alnum:\]\])", "1")]
+	[Arguments(@"regmatch(f,^\[^\[:digit:\]\]$)", "1")]
+	[Arguments(@"regmatch(7,^\[^\[:digit:\]\]$)", "0")]
+	[Arguments("regmatch(abab,^(?P<x>ab)(?P=x)$)", "1")]
 	[Arguments("regmatch(test,t.*t)", "1")]
 	[Arguments("regmatch(test123,t.*t)", "1")]
 	[Arguments("regmatch(test,tes)", "1")]

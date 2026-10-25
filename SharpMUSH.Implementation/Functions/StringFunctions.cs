@@ -1763,15 +1763,35 @@ public partial class Functions
 				countControls ? ControlCharacterWidth.One : ControlCharacterWidth.Zero));
 	}
 
-	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_strmatch</c> (<c>src/funstr.c</c>): on a match, each register named in the third
+	/// argument takes the capture of the <c>*</c> or <c>?</c> at its position; <c>-</c> skips one.
+	/// </summary>
+	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message;
-		var pattern = parser.CurrentState.Arguments["1"].Message;
+		var pattern = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var match = SoftcodeRegex.Wildcard(pattern).Match(str.ToPlainText());
 
-		var match = MushText.IsWildcardMatch(str, pattern);
+		if (!match.Success || !parser.CurrentState.Arguments.TryGetValue("2", out var registers))
+		{
+			return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
+		}
 
-		return ValueTask.FromResult(new CallState(match ? "1" : "0"));
+		var result = "1";
+		var names = registers.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		for (var i = 0; i < names.Length; i++)
+		{
+			var group = match.Groups[i + 1];
+			var capture = group.Success ? str.Substring(group.Index, group.Length) : MarkupText.Empty;
+			if (names[i] != "-" && !parser.CurrentState.AddRegister(names[i].ToUpperInvariant(), capture))
+			{
+				result += ErrorMessages.Returns.BadRegName;
+			}
+		}
+
+		return ValueTask.FromResult(new CallState(result));
 	}
 
 	// Two arguments are TinyMUX's arity (switch(x,default) is the default); PennMUSH refuses them, so

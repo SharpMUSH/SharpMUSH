@@ -1,0 +1,20 @@
+# Registers and regular expressions from the softcode audit (#2268): letq() keeps only the registers
+# it names, strmatch() fills the registers it is given, and patterns take PCRE's POSIX classes and
+# Python-style named groups.
+::case rra.login
+::login wiz Wiz wizpass
+think ok
+
+::case rra.letq  a register letq() did not name is the caller's
+think [setr(B,1)][letq(A,2,setr(B,2))]:%qB
+think [setq(C,1)][letq(A,2,unsetq(C))]:[r(C)]:[letq(A,add(1,1),%qA)]
+
+::case rra.strmatch  the registers named in the third argument take the captures
+think [strmatch(foo:bar,*:*,0 1)]/%q0/%q1
+think [strmatch(abc,?b?,- x)]/%qx|[strmatch(nope,*:*,0 1)]
+
+::case rra.posix  POSIX classes inside a bracket expression
+think [regmatch(a,\[\[:alnum:\]\])] [regmatch(%b,^\[\[:space:\]\]$)] [regmatch(G,^\[\[:xdigit:\]\]$)] [regmatch(f,^\[^\[:digit:\]\]$)]
+
+::case rra.named  Python-style named groups
+think [regedit(best,(?P<c>.)est,$<c>R)] [regmatch(abab,^(?P<x>ab)(?P=x)$)]

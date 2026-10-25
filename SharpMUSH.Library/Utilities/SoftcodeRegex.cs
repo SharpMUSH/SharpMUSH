@@ -70,7 +70,7 @@ public static class SoftcodeRegex
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		// A near-deadline pattern must not borrow the cache's longer timeout.
 		if (ExecutionBudget.Current is { } budget && budget.Remaining < MatchTimeout)
-			return new Regex(pattern, options, TimeSpan.FromMilliseconds(Math.Max(1, budget.Remaining.TotalMilliseconds)));
+			return new Regex(PcreSyntax.ToDotNet(pattern), options, TimeSpan.FromMilliseconds(Math.Max(1, budget.Remaining.TotalMilliseconds)));
 		var key = (pattern, options);
 		if (Cache.TryGetValue(key, out Regex? cached) && cached is not null)
 		{
@@ -80,7 +80,7 @@ public static class SoftcodeRegex
 		// Built before it is stored so an invalid pattern throws to the caller, and so the constructor
 		// never runs while the cache holds a lock. A concurrent miss on the same key builds a second
 		// instance and one of them wins; they are equivalent, and the loser is collected.
-		var regex = new Regex(pattern, options, MatchTimeout);
+		var regex = new Regex(PcreSyntax.ToDotNet(pattern), options, MatchTimeout);
 		Cache.Set(key, regex, EntryOptions);
 		return regex;
 	}

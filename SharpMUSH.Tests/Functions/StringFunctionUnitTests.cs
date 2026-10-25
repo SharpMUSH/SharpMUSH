@@ -384,6 +384,17 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
+	[Arguments("[strmatch(foo:bar,*:*,0 1)]/%q0/%q1", "1/foo/bar")]
+	[Arguments("[strmatch(abc,?b?,- x)]/%qx", "1/c")]
+	[Arguments("[strmatch(nope,*:*,y)]/%qy", "0/")]
+	[Arguments("strmatch(FOO,f*)", "1")]
+	public async Task StrMatch(string str, string expectedText)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expectedText);
+	}
+
+	[Test]
 	[Arguments("merge(a|b|c,1|2|3,|)", "a|b|c")]
 	[Arguments("merge(AB--EF,abcdef,-)", "ABcdEF")]
 	[Arguments("merge(AB[space(2)]EF,abcdef,)", "ABcdEF")]
