@@ -23,7 +23,9 @@ public class FlagAndPowerService(
 	IPermissionService permissionService,
 	INotifyService notifyService,
 	IPublisher publisher,
-	IRoleManagementService roles)
+	IRoleManagementService roles,
+	Lazy<ICommunicationService> communication,
+	ILocalizationService localization)
 	: IFlagAndPowerService
 {
 	public async ValueTask<CallState> SetOrUnsetFlag(AnySharpObject executor, AnySharpObject obj, string flagOrFlagAlias,
@@ -51,7 +53,7 @@ public class FlagAndPowerService(
 			if (notify)
 			{
 				await notifyService.Notify(executor,
-					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, obj.Object().Name));
+					string.Format(Definitions.ErrorMessages.Notifications.DontRecognizeFlag, plainFlag));
 			}
 
 			return ErrorMessages.Returns.NoSuchFlag;
@@ -111,13 +113,20 @@ public class FlagAndPowerService(
 				}
 			case true:
 				{
+					var before = await HearingAsync(obj);
+					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
+					if (!obj.IsPlayer && (before.Hearer || before.Listener)
+							&& await mediator.Send(new GetObjectNodeQuery(obj.Object().DBRef)) is AnySharpObject after
+							&& await HearingAsync(after) is (false, false))
+					{
+						await AnnounceListeningAsync(obj, nameof(Definitions.ErrorMessages.Notifications.NoLongerListeningFormat));
+					}
+
 					if (notify)
 					{
 						await notifyService.Notify(executor,
 							string.Format(Definitions.ErrorMessages.Notifications.FlagReset, obj.Object().Name, realFlag.Name));
 					}
-
-					await mediator.Send(new UnsetObjectFlagCommand(obj, realFlag));
 
 					await publisher.Publish(new ObjectFlagChangedNotification(
 						obj,
@@ -139,13 +148,20 @@ public class FlagAndPowerService(
 					break;
 				}
 			case false:
+				{
+					var before = await HearingAsync(obj);
+					await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
+					if (!obj.IsPlayer && realFlag.Name.ToUpperInvariant() is "PUPPET" or "MONITOR" && before is (false, false))
+					{
+						await AnnounceListeningAsync(obj, nameof(Definitions.ErrorMessages.Notifications.NowListeningFormat));
+					}
+				}
+
 				if (notify)
 				{
 					await notifyService.Notify(executor,
 						string.Format(Definitions.ErrorMessages.Notifications.FlagSet, obj.Object().Name, realFlag.Name));
 				}
-
-				await mediator.Send(new SetObjectFlagCommand(obj, realFlag));
 
 				await publisher.Publish(new ObjectFlagChangedNotification(
 					obj,
@@ -158,6 +174,26 @@ public class FlagAndPowerService(
 		}
 
 		return true;
+	}
+
+	private async ValueTask<(bool Hearer, bool Listener)> HearingAsync(AnySharpObject obj)
+		=> (await permissionService.IsHearer(obj), await obj.IsListener());
+
+	/// <summary>
+	/// <c>set_flag</c>'s notice that a non-player started or stopped listening (PennMUSH
+	/// <c>src/flags.c:1818-1829, 1871-1881</c>): told to where the object is and what is there, then to
+	/// the object and what it holds, so a puppet hears it twice.
+	/// </summary>
+	private async ValueTask AnnounceListeningAsync(AnySharpObject obj, string key)
+	{
+		var message = MarkupText.Plain(string.Format(localization.Get(key), obj.Object().Name));
+		if (!obj.IsRoom)
+		{
+			await communication.Value.NotifyExceptAsync(obj, (await obj.Where()).WithExitOption(), null, message,
+				IPermissionService.InteractType.Presence);
+		}
+
+		await communication.Value.NotifyExceptAsync(obj, obj, null, message, IPermissionService.InteractType.None);
 	}
 
 	/// <summary>

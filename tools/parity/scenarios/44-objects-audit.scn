@@ -1,0 +1,36 @@
+# Objects and listening from the softcode audit (#2268): @listen and PUPPET announce that an object
+# can hear, a room with no description shows none, examine writes an attribute's owner before its
+# flags, an unknown flag is named in the refusal, and @open refuses an exit name with junk after a
+# semicolon.
+::case obj.login
+::login wiz Wiz wizpass
+think ok
+
+::case obj.listen  @listen and PUPPET announce that the object can hear
+@create ListenProbe
+@listen ListenProbe=*
+@listen ListenProbe
+@set ListenProbe=puppet
+@set ListenProbe=!puppet
+@recycle ListenProbe
+
+::case obj.room-desc  a room with no description shows nothing under its name
+@dig/teleport NoDescRoom
+look
+@tel/silent me=#0
+
+::case obj.examine  examine writes the owner before the attribute flags
+@create ChargeThing
+@charges ChargeThing=5
+examine ChargeThing/CHARGES
+@recycle ChargeThing
+
+::case obj.flag  an unknown flag is named in the refusal
+@set me=OOC
+@set me=!NOSUCHFLAG
+
+::case obj.open  @open refuses a name with text after a semicolon and a space
+@dig/teleport OpenRoom
+@open SemiOne ; @open SemiTwo
+think [lexits(here)]
+@tel/silent me=#0

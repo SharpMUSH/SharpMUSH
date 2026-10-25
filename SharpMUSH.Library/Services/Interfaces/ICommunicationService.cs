@@ -100,6 +100,18 @@ public interface ICommunicationService
 		IPermissionService.InteractType interact = IPermissionService.InteractType.Hear);
 
 	/// <summary>
+	/// PennMUSH's <c>notify_except</c> (<c>src/notify.c:989</c>): <paramref name="location"/> itself, then
+	/// whatever it holds, each passing <paramref name="interact"/>, all but <paramref name="except"/>.
+	/// <see cref="SendToRoomAsync"/> tells only the contents.
+	/// </summary>
+	ValueTask NotifyExceptAsync(
+		AnySharpObject executor,
+		AnySharpObject location,
+		AnySharpObject? except,
+		SharpMessage message,
+		IPermissionService.InteractType interact);
+
+	/// <summary>
 	/// Sends a message to a single object after locating it and checking permissions.
 	/// </summary>
 	/// <param name="parser">The parser for locate and notify operations</param>

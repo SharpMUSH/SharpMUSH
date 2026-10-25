@@ -31,9 +31,12 @@ public static partial class ObjectNames
 	[GeneratedRegex(@"\A[^ \p{C}\[\]%\\=&\|](?:[^\p{C}\[\]%\\=&\|]*[^ \p{C}\[\]%\\=&\|])?\z")]
 	private static partial Regex NamePattern();
 
-	/// <summary>Whether <paramref name="name"/> is a legal name: the pattern above, ASCII only, and not a magic cookie.</summary>
-	public static bool IsLegal(string name)
+	/// <summary>
+	/// Whether <paramref name="name"/> is a legal name: the pattern above, ASCII only, and not a magic cookie.
+	/// An exit may be called <c>me</c> (PennMUSH <c>ok_name</c>'s <c>is_exit</c>).
+	/// </summary>
+	public static bool IsLegal(string name, bool isExit = false)
 		=> NamePattern().IsMatch(name)
-			&& !MagicCookies.Contains(name)
+			&& !(MagicCookies.Contains(name) && !(isExit && name == "me"))
 			&& name.EnumerateRunes().All(rune => rune.IsAscii);
 }

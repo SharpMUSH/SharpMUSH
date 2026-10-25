@@ -542,7 +542,7 @@ public partial class Commands
 			foreach (var (attr, readFrom) in listed)
 			{
 				var attrOwner = await attr.Owner.WithCancellation(CancellationToken.None);
-				var attrFlagsStr = attr.Flags.Any() ? $"{string.Join("", attr.Flags.Select(f => f.Symbol))} " : "";
+				var attrFlagsStr = string.Join("", attr.Flags.Select(f => f.Symbol));
 
 				if (!await PermissionService.CanViewAttribute(executor, viewing, viewMemo, attr))
 				{
@@ -551,8 +551,9 @@ public partial class Commands
 
 				shown++;
 
+				// examine_helper (look.c:327-357): the owner, then the flag letters, as [#3$].
 				var inheritedFrom = readFrom.Number == viewing.Object().DBRef.Number ? "" : $"#{readFrom.Number}/";
-				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [{attrFlagsStr}#{attrOwner!.Object.DBRef.Number}]: ").Hilight();
+				var header = MarkupText.Plain($"{inheritedFrom}{attr.LongName} [#{attrOwner!.Object.DBRef.Number}{attrFlagsStr}]: ").Hilight();
 				var parseType = attr.SyntaxParseType();
 
 				if (parseType is null)

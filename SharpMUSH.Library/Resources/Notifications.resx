@@ -879,6 +879,21 @@
   <data name="ExitsOnlyFromRooms" xml:space="preserve">
     <value>You can only make exits out of rooms.</value>
   </data>
+  <data name="GrowsEarsFormat" xml:space="preserve">
+    <value>{0} grows ears and can now hear.</value>
+  </data>
+  <data name="LosesEarsFormat" xml:space="preserve">
+    <value>{0} loses its ears and becomes deaf.</value>
+  </data>
+  <data name="NowListeningFormat" xml:space="preserve">
+    <value>{0} is now listening.</value>
+  </data>
+  <data name="NoLongerListeningFormat" xml:space="preserve">
+    <value>{0} is no longer listening.</value>
+  </data>
+  <data name="StrangeExitName" xml:space="preserve">
+    <value>That's a strange name for an exit!</value>
+  </data>
   <data name="LinkedToNameFormat" xml:space="preserve">
     <value>Linked to {0}.</value>
   </data>

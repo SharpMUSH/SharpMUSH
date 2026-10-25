@@ -86,6 +86,28 @@ internal sealed class AttributeWriter(
 		SharpPlayer creator,
 		bool isAttributeCopy, StoredMarkup? storedValue = null)
 	{
+		if (isAttributeCopy || !IsListen(attribute))
+		{
+			return await SetOrAliasAsync(executor, obj, attribute, value, creator, isAttributeCopy, storedValue);
+		}
+
+		var before = await HearingAsync(obj);
+		var result = await SetOrAliasAsync(executor, obj, attribute, value, creator, isAttributeCopy, storedValue);
+		if (result is WrittenAttribute && !before.Hearer && !before.Listener)
+		{
+			await AnnounceListenAsync(obj, nameof(ErrorMessages.Notifications.GrowsEarsFormat));
+		}
+
+		return result;
+	}
+
+	private async ValueTask<Result<WrittenAttribute>> SetOrAliasAsync(AnySharpObject executor,
+		AnySharpObject obj,
+		string attribute,
+		MString value,
+		SharpPlayer creator,
+		bool isAttributeCopy, StoredMarkup? storedValue)
+	{
 		if (isAttributeCopy || !PlayerAliases.Applies(obj, attribute))
 		{
 			return await WriteAttributeAsync(executor, obj, attribute, value, creator, isAttributeCopy, isPlayerAlias: false, storedValue);
@@ -96,6 +118,24 @@ internal sealed class AttributeWriter(
 			? nameof(ErrorMessages.Notifications.PlayerAliasSet)
 			: nameof(ErrorMessages.Notifications.PlayerAliasRemoved));
 		return result;
+	}
+
+	private static bool IsListen(string attribute) => attribute.Equals("LISTEN", StringComparison.OrdinalIgnoreCase);
+
+	private async ValueTask<(bool Hearer, bool Listener)> HearingAsync(AnySharpObject obj)
+		=> (await permissionService.IsHearer(obj), await obj.IsListener());
+
+	/// <summary>
+	/// <c>do_set_atr</c>'s LISTEN branch (PennMUSH <c>src/attrib.c:2424-2443</c>): an object that could not
+	/// hear before a LISTEN is set "grows ears", and one a cleared LISTEN leaves unable to hear "loses its
+	/// ears". Told to where the object is, or to a room itself, and what is there, the object excepted.
+	/// </summary>
+	private async ValueTask AnnounceListenAsync(AnySharpObject obj, string key)
+	{
+		var communication = serviceProvider.GetRequiredService<ICommunicationService>();
+		var localization = serviceProvider.GetRequiredService<ILocalizationService>();
+		var message = MarkupText.Plain(string.Format(localization.Get(key), obj.Object().Name));
+		await communication.NotifyExceptAsync(obj, (await obj.Where()).WithExitOption(), obj, message, IPermissionService.InteractType.Presence);
 	}
 
 	/// <summary>
@@ -466,6 +506,18 @@ internal sealed class AttributeWriter(
 	{
 		// do_set_atr(thing, "ALIAS", NULL, ...) reports a player's alias list itself. @wipe goes through
 		// wipe_atr instead, which says nothing of it; the provider still drops the lookup names.
+		if (patternMode == IAttributeService.AttributePatternMode.Exact && IsListen(attributePattern))
+		{
+			var before = await HearingAsync(obj);
+			var cleared = await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
+			if (cleared is Success && before.Hearer && !before.Listener && !await permissionService.IsHearer(obj))
+			{
+				await AnnounceListenAsync(obj, nameof(ErrorMessages.Notifications.LosesEarsFormat));
+			}
+
+			return cleared;
+		}
+
 		if (patternMode == IAttributeService.AttributePatternMode.Wildcard || !PlayerAliases.Applies(obj, attributePattern))
 		{
 			return await ClearMatchingAsync(executor, obj, attributePattern, patternMode);
