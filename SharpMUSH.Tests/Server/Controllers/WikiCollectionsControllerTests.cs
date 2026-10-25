@@ -186,5 +186,8 @@ public class WikiCollectionsControllerTests
 		await Assert.That(back.Titles).IsEquivalentTo(second.Titles);
 		var forged = await PageAsync(50, after: "c1.forged");
 		await Assert.That(forged.Titles).IsEquivalentTo(second.Titles);
+		controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+		await Assert.That(Value<List<WikiPageSummaryDto>>(await controller.Pages("package:pf2e-remaster", 0, 0, "Spells"))).IsEmpty();
+		await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("120");
 	}
 }

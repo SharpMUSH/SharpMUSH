@@ -169,7 +169,8 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		WikiPageCursor cursor = after is { Length: > 0 } ? new WikiPageAfter(after)
 			: before is { Length: > 0 } ? new WikiPageBefore(before)
 			: new WikiPageAt(skip);
-		var read = await WindowAsync(category, cursor, take, visibility);
+		// A window holds at least one row; take=0 asks only for the count.
+		Result<WikiPageWindow> read = take == 0 ? new WikiPageWindow([], null, null) : await WindowAsync(category, cursor, take, visibility);
 		if (read is not WikiPageWindow) read = await WindowAsync(category, new WikiPageAt(skip), take, visibility);
 		if (read is not WikiPageWindow window) return Problem("The wiki listing could not be read.");
 		var rows = window.Pages;

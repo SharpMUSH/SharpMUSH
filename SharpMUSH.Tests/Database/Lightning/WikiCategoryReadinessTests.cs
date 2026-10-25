@@ -98,6 +98,7 @@ public class WikiCategoryReadinessTests
 	[Arguments(1)]
 	[Arguments(2)]
 	[Arguments(3)]
+	[Arguments(4)]
 	public async Task ConstructedProviderRefusesEveryCategoryReadBeforeMigrateIncludingTakeZero(int reader)
 		=> await WithWorld(async (db, _) =>
 		{
@@ -185,7 +186,7 @@ public class WikiCategoryReadinessTests
 			}
 			else db.Store.WipeDirectory();
 			await Assert.That(db.Store.Epoch > oldEpoch).IsTrue();
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidOperationException).IsTrue();
 			var before = Snapshot(db);
 			await Assert.That(await Failure(() => Mutate(db, 0, string.Empty)) is InvalidOperationException).IsTrue();
@@ -255,7 +256,7 @@ public class WikiCategoryReadinessTests
 				tx.Delete(Tables.Meta, WikiCategoryCheckpointCodec.CompletionKey);
 			});
 			var before = Snapshot(db);
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidOperationException).IsTrue();
 			for (var mutation = 0; mutation < 5; mutation++)
 				await Assert.That(await Failure(() => Mutate(db, mutation, page.Id)) is InvalidOperationException).IsTrue();
@@ -329,7 +330,7 @@ public class WikiCategoryReadinessTests
 				}
 			});
 			var before = Snapshot(db);
-			for (var reader = 0; reader < 4; reader++)
+			for (var reader = 0; reader < 5; reader++)
 				await Assert.That(await Failure(() => Read(db, reader)) is InvalidDataException).IsTrue();
 			await Assert.That(await Failure(() => Mutate(db, 2, page.Id)) is InvalidDataException).IsTrue();
 			await Assert.That(await Failure(() => db.Migrate().AsTask()) is InvalidDataException).IsTrue();
