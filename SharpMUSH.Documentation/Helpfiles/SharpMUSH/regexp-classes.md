@@ -31,7 +31,7 @@ POSIX classes such as `[[:digit:]]` and `[[:alpha:]]` work inside a bracket expr
 
 ## Replacements for POSIX classes
 
-Each class matches the ASCII pattern in its row. The Unicode pattern is the wider class to use when letters or digits from other scripts should match:
+Each class matches its ASCII pattern. The Unicode pattern also matches other scripts:
 
 | POSIX name | ASCII pattern | Unicode pattern |
 | --- | --- | --- |
@@ -50,7 +50,7 @@ Each class matches the ASCII pattern in its row. The Unicode pattern is the wide
 | `punct` | `[\x21-\x2F\x3A-\x40\x5B-\x60\x7B-\x7E]` | `\p{P}` (Unicode punctuation excludes many symbols). |
 | `xdigit` | `[A-Fa-f0-9]` | Same range for ASCII hexadecimal input. |
 
-Negate a whole class with a leading `^`, for example `[^0-9]`. Use `\D`, `\S`, `\W`, or `\P{L}` for the complements of their corresponding Unicode classes. To combine letters and digits from any script, write `[\p{L}\p{Nd}]`; `[[:alnum:]]` is ASCII only.
+Negate a class with a leading `^`, as in `[^0-9]`. `\D`, `\S`, `\W` and `\P{L}` are the complements of the Unicode classes.
 
 ## Portable character classes
 
