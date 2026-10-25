@@ -35,16 +35,11 @@ cwho() lwho() mwho() nmwho() xwho() zwho()
 ```
 
 ```sharp
-> think textfile(help, ln\(\))
-# ln()
-`ln(<number>)`
+> think textfile(help, pi\(\))
+# pi()
+`pi()`
 
-  Returns the natural log of `<number>`. This is equivalent to log(`<number>`, e).
-
-
-::: seealso
-- [LOG()]
-:::
+  Returns the value of "pi" (3.14159265358979323846264338327, rounded to the game's float_precision setting).
 ```
 
 ::: seealso

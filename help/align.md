@@ -128,30 +128,30 @@ Examples:
 ## Decorated layouts
 
 ```sharp
-    > &haiku me = Alignment function,%rIt justifies your writing,%rBut the words still suck.%rLuke
+> &haiku me = Alignment function,%rIt justifies your writing,%rBut the words still suck.%rLuke
 
-    > th [align(5 -40 5,,[repeat(-,40)]%r[u(haiku)]%r[repeat(-,40)],,%b,+)]
+> th [align(5 -40 5,,[repeat(-,40)]%r[u(haiku)]%r[repeat(-,40)],,%b,+)]
 
-         +----------------------------------------+
-         +          Alignment function,           +
-         +       It justifies your writing,       +
-         +       But the words still suck.        +
-         +                  Luke                  +
-         +----------------------------------------+
+     +----------------------------------------+
+     +          Alignment function,           +
+     +       It justifies your writing,       +
+     +       But the words still suck.        +
+     +                  Luke                  +
+     +----------------------------------------+
 ```
 
 ## Column merging
 
 ```sharp
-  > &dropcap me=%b_______%r|__%b%b%b__|%r%b%b%b|%b|%r%b%b%b|_|
-  > &story me=%r'was the night before Christmas, when all through the house%rNot a creature was stirring, not even a mouse.%rThe stockings were hung by the chimney with care,%rIn hopes that St Nicholas soon would be there.
-  > th align(9'(ch) 68, u(dropcap), u(story))
+> &dropcap me=%b_______%r|__%b%b%b__|%r%b%b%b|%b|%r%b%b%b|_|
+> &story me=%r'was the night before Christmas, when all through the house%rNot a creature was stirring, not even a mouse.%rThe stockings were hung by the chimney with care,%rIn hopes that St Nicholas soon would be there.
+> th align(9'(ch) 68, u(dropcap), u(story))
 
-   _______
-  |__   __| 'was the night before Christmas, when all through the house
-     | |    Not a creature was stirring, not even a mouse.
-     |_|    The stockings were hung by the chimney with care,
-  In hopes that St Nicholas soon would be there.
+ _______
+|__   __| 'was the night before Christmas, when all through the house
+   | |    Not a creature was stirring, not even a mouse.
+   |_|    The stockings were hung by the chimney with care,
+In hopes that St Nicholas soon would be there.
 
 ```
 

@@ -29,9 +29,9 @@
 `colors(<wildcard>)`<br>
 `colors(<colors>, <format>)`
 
-With no arguments, colors() returns an unsorted, space-separated list of colors that SharpMUSH knows the name of. You can use these colors in ansi(+`<colorname>`,text). The colors "xterm0" to "xterm255" are not included in the list, but can also be used in ansi().
+With no arguments, colors() returns a space-separated list, sorted by name, of colors that SharpMUSH knows the name of. You can use these colors in ansi(+`<colorname>`,text). The colors "xterm0" to "xterm255" are not included in the list, but can also be used in ansi().
 
-With one argument, returns an unsorted, space-separated list of colors that match the wildcard pattern `<wildcard>`.
+With one argument, returns a space-separated list, sorted by name, of colors that match the wildcard pattern `<wildcard>`.
 
 With two arguments, colors() returns information about specific colors. It can be used for working out how certain colors will downgrade to people using clients which aren't fully color-capable.
 
@@ -64,35 +64,20 @@ With two arguments, colors() returns information about specific colors. It can b
 
 Examples:
 ```sharp
-think colors(*yellow*)
-greenyellow yellowgreen lightgoldenrodyellow lightyellow yellow lightyellow1 lightyellow2 lightyellow3 lightyellow4 yellow1 yellow2 yellow3 yellow4
-```
-
-```sharp
-    > think colors(+yellow, hex)
-    #ffff00
-```
-```sharp
-    > think colors(+yellow, xterm256)
-    226
-```
-```sharp
-    > think colors(+yellow, 16color)
-    yh
-```
-```sharp
-    > think colors(/+yellow, 16color)
-    Y
-```
-```sharp
-    > think colors(#ffff00, name)
-    yellow yellow1
-```
-```sharp
-    > think colors(iuB+red, hex styles)
-    ui#ff0000/#0000ee
-```
-```sharp
-    > think colors(+blue huyG/+black, auto)
-    hy/+black
+> think colors(*yellow*)
+greenyellow lightgoldenrodyellow lightyellow lightyellow1 lightyellow2 lightyellow3 lightyellow4 yellow yellow1 yellow2 yellow3 yellow4 yellowgreen
+> think colors(+yellow, hex)
+#ffff00
+> think colors(+yellow, xterm256)
+11
+> think colors(+yellow, 16color)
+yh
+> think colors(/+yellow, 16color)
+Y
+> think colors(#ffff00, name)
+yellow yellow1
+> think colors(iuB+red, hex styles)
+ui#ff0000/#0000ee
+> think colors(+blue huyG/+black, auto)
+yh/+black
 ```

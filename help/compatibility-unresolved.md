@@ -16,11 +16,6 @@
       "lookup": "compatibility unresolved connection hooks run inline 1006 item 14"
     },
     {
-      "id": "argument-count-error-wording",
-      "heading": "Argument-count error wording",
-      "lookup": "compatibility unresolved argument count error wording"
-    },
-    {
       "id": "halt-and-players-1006-items-1-and-2",
       "heading": "HALT and players (#1006 items 1 and 2)",
       "lookup": "compatibility unresolved halt and players 1006 items 1 and 2"
@@ -59,10 +54,6 @@ Until it is settled, do not rely on a `$`-command body running before or after a
 ## Connection hooks run inline (#1006 item 14)
 
 `ConnectionAnnounceService` evaluates connection hooks inline rather than admitting them to the scheduler. Same shape of question as #1132, same lack of a decision.
-
-## Argument-count error wording
-
-PennMUSH writes four different messages depending on the function's declared range: `EXPECTS <n>`, `EXPECTS <min> OR <max>`, `EXPECTS AT LEAST <min>`, `EXPECTS BETWEEN <min> AND <max>` (parse.c:2981). SharpMUSH writes `EXPECTS AT LEAST <min>` or `EXPECTS AT MOST <max>`. Softcode that matches on the text of an arity error will not port. No decision has been recorded on whether to adopt PennMUSH's four forms.
 
 ## HALT and players (#1006 items 1 and 2)
 

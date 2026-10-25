@@ -1164,7 +1164,9 @@ Normally, exits appear in a room's Obvious exits list in the order they were cre
 ### Example
 ```sharp
 > @dig/teleport Test Room
-> @open Two ; @open Three ; @open One
+> @open Two
+> @open Three
+> @open One
 > look
 Test Room(#3Rn)
 Obvious exits:
@@ -1679,7 +1681,7 @@ To open an exit in a room, you must control the room, have the Open_Anywhere @po
 
 ### Example
 ```sharp
-> @open Up \<U\>;up;u;climb=#255, Down \<D\>;down;d;fall
+> @open Up <U>;up;u;climb=#255, Down <D>;down;d;fall
 ```
 
 
@@ -2428,7 +2430,7 @@ The teach command shows its argument (unparsed) to others in your location, and 
 
 ```sharp
 > say To do a pose, use :<action>
-You say "To do a pose, use :<action>"
+You say, "To do a pose, use :<action>"
 > teach :waves hello.
 Javelin types --> :waves hello.
 Javelin waves hello.

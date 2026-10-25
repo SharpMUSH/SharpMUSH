@@ -1784,12 +1784,6 @@
         "aliases": []
       },
       {
-        "id": "argument-count-error-wording",
-        "lookup": "compatibility unresolved argument count error wording",
-        "heading": "Argument-count error wording",
-        "aliases": []
-      },
-      {
         "id": "halt-and-players-1006-items-1-and-2",
         "lookup": "compatibility unresolved halt and players 1006 items 1 and 2",
         "heading": "HALT and players (#1006 items 1 and 2)",

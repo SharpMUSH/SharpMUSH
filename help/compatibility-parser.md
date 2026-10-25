@@ -150,7 +150,7 @@ This is specifically about matching a built-in command name. Once built-in dispa
 
 ```sharp
 > think [not(setq(0,x),1)]%q0
-#-1 FUNCTION (NOT) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2
+#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2
 ```
 
 ## Evaluation stops at the first limit

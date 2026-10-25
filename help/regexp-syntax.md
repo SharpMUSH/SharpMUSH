@@ -65,7 +65,7 @@
 
 # Regular Expression Syntax
 
-SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, but POSIX bracket classes, Python-style named groups, and some advanced PCRE constructs need changes when porting code.
+SharpMUSH uses `System.Text.RegularExpressions`, the .NET regular expression engine. PennMUSH uses PCRE2. Common patterns work in both, including POSIX classes and Python-style named groups, but some advanced PCRE constructs need changes when porting code.
 
 Command and listen attributes with the REGEXP flag use regular expressions; their CASE flag controls case sensitivity. Functions such as `regmatch()`, `regrab()`, `regedit()`, and `reswitch()` are case-sensitive by default and have variants ending in `i` for case-insensitive matching. Matching searches for a substring unless the pattern supplies anchors. See [regexp] and [regmatch()].
 
@@ -111,7 +111,7 @@ For a literal plus sign use `\+`; for a literal dot use `\.`. Escaping for the M
 | `\p{L}`, `\P{L}` | Unicode letter; its complement. |
 | `[0-9]` | ASCII decimal digit only. |
 
-.NET does not implement POSIX classes such as `[[:digit:]]` or `[[:alpha:]]`. Replace them with explicit ranges or Unicode categories, as described in [regexp classes]. They must not be used for validation: they do not mean the POSIX class in this engine.
+POSIX classes such as `[[:digit:]]` or `[[:alpha:]]` match ASCII characters only, as in PennMUSH. See [regexp classes].
 
 ## Boundary assertions
 
@@ -136,7 +136,7 @@ Use `{0,n}` for an upper bound with no lower bound; `{,n}` is not a .NET quantif
 
 A numeric backreference such as `\1` matches the text captured by a group in the pattern. For example, `(sens|respons)e and \1ibility` matches "sense and sensibility" or "response and responsibility".
 
-Name a capture with `(?<name>pattern)` or `(?'name'pattern)`, and refer to it within the pattern with `\k<name>`. For example, `(?<word>sens|respons)e and \k<word>ibility`. PCRE's `(?P<name>pattern)` and `(?P=name)` forms are unsupported.
+Name a capture with `(?<name>pattern)` or `(?'name'pattern)`, and refer to it within the pattern with `\k<name>`. For example, `(?<word>sens|respons)e and \k<word>ibility`. PCRE's `(?P<name>pattern)` and `(?P=name)` forms mean the same.
 
 ## Captures in softcode
 

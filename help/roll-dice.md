@@ -52,9 +52,9 @@ A count or number of sides that comes out as a fraction is rounded down. A die h
 Terms and numbers combine with `+`, `-`, `*`, `/` and `%`, and brackets group as usual. A formula may also use `floor()`, `ceil()`, `round()`, `abs()`, `min()` and `max()`. round() rounds a half up, so 2.5 is 3 and -2.5 is -2.
 
 ```sharp
-> think roll(floor(1d6/2),,text)
+> think roll(lit(floor(1d6/2)),,text)
 floor(1d6[5] / 2) = 2
-> think roll(max(1d6,1d6),,text)
+> think roll(lit(max(1d6,1d6)),,text)
 max(1d6[2], 1d6[5]) = 5
 ```
 

@@ -41,7 +41,7 @@ An example of a puppet:
   Punch> The Finishing Place
   Punch>
   Punch> Obvious exits:
-  Punch> Door \<S\>
+  Punch> Door <S>
   > @force #18=:waves hello
   Punch> Punch waves hello
   > #18 say Hello.

@@ -70,7 +70,7 @@ With exactly three arguments, the third is a label: another name for the registe
 
 ## Reading registers
 
-Registers set via setq() or setr() can be accessed via the r() function. Single-character registers can also be accessed via the %qN substitution, and ones with longer names via %q`<NAME>` (Note that the <>'s are required.) Attempting to access a register that hasn't been set results in an empty string.
+Registers set via setq() or setr() can be accessed via the r() function. Single-character registers can also be accessed via the %qN substitution, and ones with longer names via `%q<NAME>` (Note that the <>'s are required.) Attempting to access a register that hasn't been set results in an empty string.
 
 Register names are case insensitive: setq(A, foo) and setq(a, foo) both set the same register, and %qA and %qa both fetch its value.
 
@@ -96,7 +96,7 @@ In this case, it is a waste to use setq(), since we only use the function result
 Swapping the contents of registers can be done without writing to temporary registers by setting both registers at once, so the code:
 
 ```sharp
-> think setq(0,foo,one,bar)%q0%q`<one>` - [setq(0,r(one),one,%q0)]%q0%q`<one>`
+> think setq(0,foo,one,bar)%q0%q<one> - [setq(0,r(one),one,%q0)]%q0%q<one>
 foobar - barfoo
 ```
 
