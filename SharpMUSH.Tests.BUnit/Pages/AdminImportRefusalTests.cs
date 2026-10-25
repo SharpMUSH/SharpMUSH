@@ -52,10 +52,15 @@ public class AdminImportRefusalTests : TrackingBunitContext
 {
 	private const string Reason = "The configuration store is offline.";
 
-	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null, IReadOnlyList<ImportSessionStatus>? sessions = null)
+	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null, IReadOnlyList<ImportSessionStatus>? sessions = null,
+		bool previousRetained = false)
 	{
-		var client = Track(new HttpClient(new RouteHandler((method, path) => path == "api/databaseconversion/sessions"
-			? Json(HttpStatusCode.OK, JsonSerializer.Serialize(sessions ?? [])) : respond(method, path), bodies))
+		var client = Track(new HttpClient(new RouteHandler((method, path) => (method.Method, path) switch
+		{
+			(_, "api/databaseconversion/sessions") => Json(HttpStatusCode.OK, JsonSerializer.Serialize(sessions ?? [])),
+			("GET", "api/databaseconversion/previous") => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new PreviousWorldStatus(previousRetained))),
+			_ => respond(method, path)
+		}, bodies))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -164,6 +169,38 @@ public class AdminImportRefusalTests : TrackingBunitContext
 
 		cut.WaitForAssertion(() => cut.Find(".mud-alert"), TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Find(".mud-alert").TextContent).Contains($"DatabaseImportFailed({refused})");
+		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
+	}
+
+	/// <summary>
+	/// A conversion that failed, or stopped with no errors (a database with no objects), applied nothing, so it
+	/// does not say it succeeded or that the mush.cnf was applied.
+	/// </summary>
+	[Test]
+	[Arguments(false)]
+	[Arguments(true)]
+	public async Task DatabaseImport_AFailedConversion_DoesNotReportTheMushCnfApplied(bool stoppedWithoutErrors)
+	{
+		var result = stoppedWithoutErrors
+			? new ConversionResult { Aborted = true }
+			: new ConversionResult { Errors = ["Not a PennMUSH database."] };
+		AddServices((_, path) => path switch
+		{
+			"api/databaseconversion/upload" => Started(),
+			"api/databaseconversion/progress/s1" => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionProgress
+			{
+				TotalObjects = 10, ProcessedObjects = 10, CurrentPhase = "Done", PercentageComplete = 100
+			})),
+			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(result))
+		});
+
+		var cut = await StartConversionWithConfig();
+
+		// The progress view has a grid too, so wait for the failed result itself.
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("ConversionErrors")) throw new InvalidOperationException("no result yet");
+		}, TimeSpan.FromSeconds(5));
 		await Assert.That(cut.Markup).DoesNotContain("AdmImportConfigApplied");
 	}
 
@@ -372,4 +409,84 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".dbimport-dropzone")).IsEmpty();
 	}
 
+	[Test]
+	public async Task RecentImportsNameTheFileTheServerAndWhereEachStands()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path),
+			sessions: [new("s1", "Committed", new ConversionResult { SourceName = "TinyMUX" }, null, DateTimeOffset.UnixEpoch, "unload.flat")]);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-session"));
+		await Assert.That(cut.Find(".dbimport-session-file").TextContent).IsEqualTo("unload.flat");
+		await Assert.That(cut.Find(".dbimport-session-format").TextContent).IsEqualTo("TinyMUX");
+		await Assert.That(cut.Find(".dbimport-session-state").TextContent).IsEqualTo("AdmImportStateCommitted");
+		await Assert.That(cut.Find(".dbimport-session-started").TextContent).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task APreviousWorldCanBeDiscardedOnceConfirmed()
+	{
+		var asked = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path == "api/databaseconversion/previous/discard"
+				? Json(HttpStatusCode.OK, JsonSerializer.Serialize(new PreviousWorldStatus(false)))
+				: throw new InvalidOperationException("Unexpected request: " + path);
+		}, previousRetained: true);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-discard-previous"));
+		await Assert.That(cut.Find(".dbimport-discard-previous").HasAttribute("disabled")).IsTrue();
+		await cut.Find(".dbimport-confirm-discard input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+		await Click(cut, "AdmImportDiscardPrevious");
+		cut.WaitForState(() => cut.FindAll(".dbimport-previous").Count == 0);
+		await Assert.That(asked).IsEquivalentTo(["POST api/databaseconversion/previous/discard"]);
+	}
+
+	/// <summary>
+	/// The database picker takes any file, since a PennMUSH outdb has no extension and any input may be gzipped, and
+	/// the configuration slot names the file the chosen server keeps its settings in.
+	/// </summary>
+	[Test]
+	public async Task TheDatabasePickerTakesAnyFileAndTheConfigurationSlotNamesTheServersFile()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path));
+		var cut = Render<ImportDatabase>();
+		await Assert.That(cut.FindComponent<InputFile>().Find("input").GetAttribute("accept")).IsNull();
+		cut.FindComponent<InputFile>().UploadFiles(InputFileContent.CreateFromText("+X992001\n~0\n***END OF DUMP***\n", "netmux.flat.gz"));
+		cut.WaitForAssertion(() => cut.Find(".dbimport-config-label"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".dbimport-config-label").TextContent).IsEqualTo("AdmImportConfigAuto");
+		await cut.InvokeAsync(() => cut.FindComponent<MudRadioGroup<string>>().Instance.ValueChanged.InvokeAsync("tinymux"));
+		cut.WaitForState(() => cut.Find(".dbimport-config-label").TextContent == "AdmImportConfigTinyMUX", TimeSpan.FromSeconds(5));
+		await cut.InvokeAsync(() => cut.FindComponent<MudRadioGroup<string>>().Instance.ValueChanged.InvokeAsync("rhostmush"));
+		cut.WaitForState(() => cut.Find(".dbimport-config-label").TextContent == "AdmImportConfigRhostMUSH", TimeSpan.FromSeconds(5));
+	}
+
+	/// <summary>Each server has its own folded export guide, and none sends the reader off to a code host.</summary>
+	[Test]
+	public async Task EachServerHasAnExportGuide()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path));
+		var cut = Render<ImportDatabase>();
+		await Assert.That(cut.FindAll(".import-guide summary").Select(summary => summary.TextContent))
+			.IsEquivalentTo(["AdmImportPennGuideTitle", "AdmImportMuxGuideTitle", "AdmImportRhostGuideTitle"]);
+		await Assert.That(cut.Markup).DoesNotContain("github.com");
+	}
+
+	/// <summary>A committed import offers its rollback only while the world it replaced is still kept.</summary>
+	[Test]
+	[Arguments(true)]
+	[Arguments(false)]
+	public async Task ACommittedImportOffersRollbackOnlyWhileThePreviousWorldIsKept(bool previousRetained)
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path),
+			sessions: [new("s1", "Committed", new ConversionResult { SourceName = "PennMUSH" }, null, DateTimeOffset.UnixEpoch, "outdb")],
+			previousRetained: previousRetained);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-resume"));
+		if (previousRetained) cut.WaitForAssertion(() => cut.Find(".dbimport-previous"));
+		await cut.Find(".dbimport-resume").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-grid"));
+		await Assert.That(cut.FindAll(".dbimport-rollback").Count).IsEqualTo(previousRetained ? 1 : 0);
+	}
 }
+

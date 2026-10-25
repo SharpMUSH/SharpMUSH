@@ -736,9 +736,6 @@
   <data name="DropDatabaseFile" xml:space="preserve">
     <value>Drop the database file here or click</value>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Supported formats: .db, .flat, .txt (max 100MB)</value>
-  </data>
   <data name="Uploading" xml:space="preserve">
     <value>Uploading...</value>
   </data>
@@ -5162,11 +5159,71 @@
   <data name="AdmSetupPkgBBoardsAppDesc" xml:space="preserve">
     <value>A Boards page in the portal where players read boards, follow conversations, and post, comment and reply.</value>
   </data>
-  <data name="AdmImportConfigRecommended" xml:space="preserve">
+  <data name="AdmImportDatabaseFormats" xml:space="preserve">
+    <value>A PennMUSH outdb or a TinyMUX or RhostMUSH flatfile, plain or gzip (.gz), up to 100 MB</value>
+  </data>
+  <data name="AdmImportConfigAuto" xml:space="preserve">
+    <value>Configuration (mush.cnf, netmux.conf or netrhost.conf, recommended)</value>
+  </data>
+  <data name="AdmImportConfigPennMUSH" xml:space="preserve">
     <value>Configuration (mush.cnf, recommended)</value>
   </data>
+  <data name="AdmImportConfigTinyMUX" xml:space="preserve">
+    <value>Configuration (netmux.conf, recommended)</value>
+  </data>
+  <data name="AdmImportConfigRhostMUSH" xml:space="preserve">
+    <value>Configuration (netrhost.conf, recommended)</value>
+  </data>
+  <data name="AdmImportGuideDatabase" xml:space="preserve">
+    <value>the database</value>
+  </data>
+  <data name="AdmImportGuideMail" xml:space="preserve">
+    <value>mail</value>
+  </data>
+  <data name="AdmImportGuideChat" xml:space="preserve">
+    <value>channels</value>
+  </data>
+  <data name="AdmImportGuideConfig" xml:space="preserve">
+    <value>the configuration</value>
+  </data>
+  <data name="AdmImportPennGuideTitle" xml:space="preserve">
+    <value>PennMUSH: which files to upload</value>
+  </data>
+  <data name="AdmImportPennDumpTitle" xml:space="preserve">
+    <value>Take a fresh dump</value>
+  </data>
+  <data name="AdmImportPennDump" xml:space="preserve">
+    <value>Run @dump as a wizard and wait for the dump to finish, or upload the files the last scheduled dump wrote. The game can keep running.</value>
+  </data>
+  <data name="AdmImportPennFilesTitle" xml:space="preserve">
+    <value>Upload the dump as it is</value>
+  </data>
+  <data name="AdmImportPennFiles" xml:space="preserve">
+    <value>PennMUSH compresses its dumps with gzip by default. Upload the .gz files as they are; the import unpacks them. If your mush.cnf changes output_database, mail_database or chat_database, take the files it names.</value>
+  </data>
+  <data name="AdmImportPennIncludes" xml:space="preserve">
+    <value>The import does not follow include lines (alias.cnf, restrict.cnf), and the report lists each one it passed over. Paste the included files' lines into mush.cnf to keep their settings.</value>
+  </data>
+  <data name="AdmImportMuxGuideTitle" xml:space="preserve">
+    <value>TinyMUX: which files to upload</value>
+  </data>
+  <data name="AdmImportMuxUnloadTitle" xml:space="preserve">
+    <value>Write a flatfile</value>
+  </data>
+  <data name="AdmImportMuxUnload" xml:space="preserve">
+    <value>Stop the game, then run db_unload from its game/data directory. It writes the database, channels and mail as flatfiles.</value>
+  </data>
+  <data name="AdmImportMuxOlder" xml:space="preserve">
+    <value>Before TinyMUX 2.14, comsys.db and mail.db are already in game/data: run ./db_unload netmux netmux.flat and upload those two as they are.</value>
+  </data>
+  <data name="AdmImportMuxFilesTitle" xml:space="preserve">
+    <value>Upload the files</value>
+  </data>
+  <data name="AdmImportMuxIncludes" xml:space="preserve">
+    <value>The import does not follow include lines (alias.conf, compat.conf), and the report lists each one it passed over. Paste the included files' lines into netmux.conf to keep their settings. The flatfile, mail.db and comsys.db may be gzipped to fit under 100 MB.</value>
+  </data>
   <data name="AdmImportConfigHint" xml:space="preserve">
-    <value>Give the source game's mush.cnf if you have it. It is applied first, so the master room, player start, ancestors and handlers are your game's; without it the game keeps SharpMUSH's defaults.</value>
+    <value>Give the source game's configuration file if you have it. It is applied first, so the master room, player start, ancestors and handlers are your game's; without it the game keeps SharpMUSH's defaults.</value>
   </data>
   <data name="AdmImportConfigApplied" xml:space="preserve">
     <value>The configuration from {0} was applied before the database.</value>
@@ -9141,7 +9198,7 @@
     <value>Build and run the offline exporter</value>
   </data>
   <data name="AdmImportRhostBuild" xml:space="preserve">
-    <value>Get the SharpMUSH source and install the SDK pinned in global.json. From the repository root, build RhostExport and run the example below. You also need a trusted, reviewed Rhost dbconvert executable and a matching backend/ABI profile bound to that executable’s SHA256. The linked fixture recipe gives the converter/profile build instructions; a profile hash alone does not make an executable safe.</value>
+    <value>Get the SharpMUSH source and install the SDK pinned in global.json. From the repository root, build RhostExport and run the example below. You also need a trusted, reviewed Rhost dbconvert executable and a matching backend/ABI profile bound to that executable’s SHA256. The fixture recipe named below gives the converter/profile build instructions; a profile hash alone does not make an executable safe.</value>
   </data>
   <data name="AdmImportRhostToolLink" xml:space="preserve">
     <value>RhostExport source and instructions</value>
@@ -9168,13 +9225,13 @@
     <value>Inspect manifest.json for source provenance, counts, warnings and omitted mail. Compare a healthy-source inventory where available; keep the original native backup.</value>
   </data>
   <data name="AdmImportRhostUpload" xml:space="preserve">
-    <value>Choose the generated world.flat in the database picker below. Select RhostMUSH if needed, then put mail.dump in the mail field and folders.dump in the Rhost mail-folders field. Include the source game’s mush.cnf in the recommended configuration field to preserve its object roles.</value>
+    <value>Choose the generated world.flat in the database picker below. Select RhostMUSH if needed, then put mail.dump in the mail field and folders.dump in the Rhost mail-folders field. Include the source game’s netrhost.conf in the recommended configuration field to preserve its object roles.</value>
   </data>
   <data name="AdmImportRhostCompleteness" xml:space="preserve">
     <value>A successful export and a valid flatfile do not prove that every external attribute was retrieved. Backing-store corruption can still produce an incomplete export.</value>
   </data>
   <data name="AdmImportRhostRehearse" xml:space="preserve">
-    <value>Rehearse on a disposable SharpMUSH instance and keep a backup of the destination world before importing. This import writes the configured world directly; it does not stage a separate world for transactional promotion.</value>
+    <value>Keep the native backup until the imported game has been checked. The import is staged apart from the running world, and the world it replaces is kept until you discard it.</value>
   </data>
   <data name="AdmDiscordAccessRestricted" xml:space="preserve">
     <value>Linked accounts only</value>
@@ -9214,6 +9271,60 @@
   </data>
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Restore previous world and restart</value>
+  </data>
+  <data name="AdmImportNotes" xml:space="preserve">
+    <value>Expected ({0})</value>
+  </data>
+  <data name="AdmImportNotesLead" xml:space="preserve">
+    <value>What every import of this kind does. Check any configuration lines listed here for settings to carry over by hand; the downloaded log lists them too.</value>
+  </data>
+  <data name="AdmImportPreviousKept" xml:space="preserve">
+    <value>Previous world kept</value>
+  </data>
+  <data name="AdmImportPreviousKeptLead" xml:space="preserve">
+    <value>The last import kept the world it replaced, so that import can still be rolled back. No other import can be promoted until it is discarded.</value>
+  </data>
+  <data name="AdmImportConfirmDiscardPrevious" xml:space="preserve">
+    <value>I confirm deleting the previous world. The last import can no longer be rolled back.</value>
+  </data>
+  <data name="AdmImportDiscardPrevious" xml:space="preserve">
+    <value>Discard previous world</value>
+  </data>
+  <data name="AdmImportSessionUnnamed" xml:space="preserve">
+    <value>File not recorded</value>
+  </data>
+  <data name="AdmImportStatePreparing" xml:space="preserve">
+    <value>Preparing</value>
+  </data>
+  <data name="AdmImportStateConverting" xml:space="preserve">
+    <value>Converting</value>
+  </data>
+  <data name="AdmImportStateValidating" xml:space="preserve">
+    <value>Checking</value>
+  </data>
+  <data name="AdmImportStateReady" xml:space="preserve">
+    <value>Ready to promote</value>
+  </data>
+  <data name="AdmImportStatePromotionRequested" xml:space="preserve">
+    <value>Promoting at restart</value>
+  </data>
+  <data name="AdmImportStateCommitting" xml:space="preserve">
+    <value>Promoting</value>
+  </data>
+  <data name="AdmImportStateCommitted" xml:space="preserve">
+    <value>Promoted</value>
+  </data>
+  <data name="AdmImportStateAborted" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="AdmImportStateRecoveryRequired" xml:space="preserve">
+    <value>Needs rollback</value>
+  </data>
+  <data name="AdmImportStateRollbackRequested" xml:space="preserve">
+    <value>Rolling back at restart</value>
+  </data>
+  <data name="AdmImportStateRolledBack" xml:space="preserve">
+    <value>Rolled back</value>
   </data>
   <data name="WikiCollections" xml:space="preserve"><value>Collections</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Browse all categories</value></data>

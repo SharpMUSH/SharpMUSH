@@ -3412,10 +3412,6 @@
     <value>Obsługiwane formaty: .cnf, .conf, .txt (maks. 1 MB)</value>
     <comment>MT — file extensions kept as machine identifiers</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Obsługiwane formaty: .db, .txt (maks. 100 MB)</value>
-    <comment>MT — file extensions kept as machine identifiers</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Temp. (C)</value>
     <comment>MT — unit symbol unchanged</comment>

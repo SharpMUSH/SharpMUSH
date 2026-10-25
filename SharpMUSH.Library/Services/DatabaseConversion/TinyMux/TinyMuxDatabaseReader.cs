@@ -323,6 +323,9 @@ public static partial class TinyMuxDatabaseReader
 
 		/// <summary>What was carried over approximately or dropped, with how often.</summary>
 		private readonly SortedDictionary<string, List<int>> _tally = new(StringComparer.Ordinal);
+
+		/// <summary>TinyMUX's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
+		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
 		private readonly HashSet<string> _flagsUsed = new(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
 		private int _longValues;
@@ -330,11 +333,12 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
 		private readonly List<SoftcodeRewrite> _rewrites = [];
 
-		private void Tally(string what, int dbref)
+		private void Tally(string what, int dbref, bool routine = false)
 		{
-			if (!_tally.TryGetValue(what, out var dbrefs))
+			var tally = routine ? _routine : _tally;
+			if (!tally.TryGetValue(what, out var dbrefs))
 			{
-				_tally[what] = dbrefs = [];
+				tally[what] = dbrefs = [];
 			}
 
 			dbrefs.Add(dbref);
@@ -406,7 +410,7 @@ public static partial class TinyMuxDatabaseReader
 
 				if (TinyMuxNames.DroppedAttributes.TryGetValue(number, out var why))
 				{
-					Tally($"Attribute number {number} not imported: {why}", raw.DBRef);
+					Tally($"Attribute number {number} not imported: {why}", raw.DBRef, routine: true);
 					continue;
 				}
 
@@ -596,7 +600,7 @@ public static partial class TinyMuxDatabaseReader
 
 					if (mapping.Dropped is { } dropped)
 					{
-						Tally($"Flag {mapping.Source} not imported: {dropped}", raw.DBRef);
+						Tally($"Flag {mapping.Source} not imported: {dropped}", raw.DBRef, routine: true);
 						continue;
 					}
 
@@ -762,14 +766,20 @@ public static partial class TinyMuxDatabaseReader
 					"max_attribute_value_length is raised to 32768 so they can still be edited.");
 			}
 
-			foreach (var (what, dbrefs) in _tally)
+			notes.AddRange(Tallied(_tally));
+			_database.RoutineNotes.AddRange(Tallied(_routine));
+
+			_database.SoftcodeRewrites.AddRange(_rewrites);
+		}
+
+		private static IEnumerable<string> Tallied(SortedDictionary<string, List<int>> tally)
+		{
+			foreach (var (what, dbrefs) in tally)
 			{
 				var distinct = dbrefs.Distinct().ToList();
 				var sample = string.Join(" ", distinct.Take(10).Select(dbref => $"#{dbref}"));
-				notes.Add($"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})");
+				yield return $"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})";
 			}
-
-			_database.SoftcodeRewrites.AddRange(_rewrites);
 		}
 	}
 

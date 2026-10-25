@@ -175,6 +175,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var errors = context.Errors;
 		var warnings = context.Warnings;
 		warnings.AddRange(pennDatabase.ImportNotes);
+		context.Notes.AddRange(pennDatabase.RoutineNotes);
 		var rewrites = pennDatabase.SoftcodeRewrites;
 		if (rewrites.Count > 0)
 		{
@@ -198,7 +199,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		_logger.LogInformation("Converting {Count} {Source} objects to SharpMUSH format", totalObjects, pennDatabase.SourceName);
 
-		void ReportProgress(string phase, double percentComplete)
+		void ReportProgress(string phase, double percentComplete, int? processed = null)
 		{
 			if (progress == null) return;
 
@@ -210,7 +211,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			progress.Report(new ConversionProgress
 			{
 				TotalObjects = totalObjects,
-				ProcessedObjects = playersConverted + roomsConverted + thingsConverted + exitsConverted,
+				ProcessedObjects = processed ?? playersConverted + roomsConverted + thingsConverted + exitsConverted,
 				PlayersCreated = playersConverted,
 				RoomsCreated = roomsConverted,
 				ThingsCreated = thingsConverted,
@@ -226,6 +227,19 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			});
 		}
 
+		// Within a phase, a report each half percent of the source's objects: a large game spends minutes in one.
+		var (phase, phaseStart, phaseEnd) = ("Creating objects", 0.0, 0.25);
+		var step = Math.Max(1, totalObjects / 200);
+		context.Advance = done =>
+		{
+			if (done % step == 0)
+			{
+				// Until the objects exist, how many have been made is the count to show.
+				ReportProgress(phase, phaseStart + (phaseEnd - phaseStart) * Math.Min(done, totalObjects) / totalObjects,
+					phase == "Creating objects" ? done : null);
+			}
+		};
+
 		try
 		{
 			// Ahead of the first progress report, since nothing to report on exists until it has run.
@@ -239,16 +253,20 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			exitsConverted = objectCounts.exits;
 			ReportProgress("Objects created", 0.25);
 
+			(phase, phaseStart, phaseEnd) = ("Linking objects", 0.25, 0.50);
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
 			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
+			(phase, phaseStart, phaseEnd) = ("Creating attributes", 0.50, 0.75);
 			attributesConverted = await CreateAttributesAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Attributes created", 0.75);
 
+			(phase, phaseStart, phaseEnd) = ("Creating locks", 0.75, 0.90);
 			locksConverted = await CreateLocksAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Locks created", 0.90);
+			context.Advance = null;
 
 			mailAliasesConverted = await ImportMailAliasesAsync(pennDatabase, context, cancellationToken);
 			mailMessagesConverted = await ImportMailMessagesAsync(pennDatabase, context, cancellationToken);
@@ -279,6 +297,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				ChannelMembersConverted = channelMembersConverted,
 				Errors = errors,
 				Warnings = warnings,
+				Notes = context.Notes,
 				Duration = stopwatch.Elapsed
 			};
 
@@ -293,7 +312,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			// The packages were uninstalled before the failure; don't leave the world without them.
 			await ReinstallPackagesAsync(context);
 			stopwatch.Stop();
-			result = result with { Errors = errors, Warnings = warnings, Duration = stopwatch.Elapsed, Aborted = true };
+			result = result with { Errors = errors, Warnings = warnings, Notes = context.Notes, Duration = stopwatch.Elapsed, Aborted = true };
 		}
 
 		return result;
@@ -358,7 +377,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 
 			removed.Add((uint)number);
-			context.Warnings.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
+			context.Notes.Add($"Removed SharpMUSH's seeded {name} (#{number}) so the imported object numbers are kept; " +
 				$"{context.SourceName} has no such object.");
 		}
 
@@ -401,7 +420,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			};
 			if (kept.Count > 0)
 			{
-				context.Warnings.Add($"Kept {string.Join(", ", kept)}: the imported mush.cnf names them, so they are " +
+				context.Notes.Add($"Kept {string.Join(", ", kept)}: the imported mush.cnf names them, so they are " +
 					"the source game's objects at those numbers.");
 			}
 
@@ -412,7 +431,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.WrittenDatabaseOptions = cleared;
 			_configurationReload?.SignalChange();
 			// Only the options this import cleared: one the mush.cnf named was kept, and is reported above.
-			context.Warnings.Add($"Unset {string.Join(", ", unset)}: they named the removed objects.");
+			context.Notes.Add($"Unset {string.Join(", ", unset)}: they named the removed objects.");
 		}
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
@@ -987,20 +1006,18 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	/// <summary>
-	/// The source definitions this server already has, as one line for the lot: a stock PennMUSH table
+	/// The source definitions this server already has, as one note for the lot: a stock PennMUSH table
 	/// overlaps SharpMUSH's almost entirely, and a line each would bury the rest of the report.
 	/// </summary>
-	/// <remarks>The report names the first ten; the server log has every one.</remarks>
-	private void ReportKept(string kind, List<string> kept, PennMUSHConversionContext context)
+	private static void ReportKept(string kind, List<string> kept, PennMUSHConversionContext context)
 	{
 		if (kept.Count == 0)
 		{
 			return;
 		}
 
-		context.Warnings.Add($"{kept.Count} source {kind} definition(s) already exist here, " +
-			$"so SharpMUSH's own are kept ({Sample(kept)}{(kept.Count > 10 ? "; the server log lists all of them" : "")})");
-		_logger.LogInformation("Source {Kind} definitions kept as SharpMUSH's own: {Names}", kind, string.Join(" ", kept));
+		context.Notes.Add($"{kept.Count} source {kind} definition(s) already exist here, " +
+			$"so SharpMUSH's own are kept: {string.Join(" ", kept)}");
 	}
 
 	private static string Sample(List<string> names)
@@ -1217,9 +1234,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		SharpRoom? room0 = null; // Cache the limbo room to avoid repeated lookups
 
 		// A stable sort: every source object in dump order, then the #0-#2 that cannot keep their number.
+		var done = 0;
 		foreach (var pennObj in pennDatabase.Objects.OrderBy(o => o.DBRef <= 2))
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			context.Advance?.Invoke(++done);
 
 			// Skip the seeded objects already standing in for source objects
 			if (dbrefMapping.ContainsKey(pennObj.DBRef))
@@ -1364,9 +1383,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		_logger.LogInformation("Establishing object relationships for {Count} objects", pennDatabase.Objects.Count);
 
+		var done = 0;
 		foreach (var pennObj in pennDatabase.Objects)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			context.Advance?.Invoke(++done);
 
 			if (!context.DbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
@@ -2268,9 +2289,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var tinyMuxSubstitutions = new AttributeMentions();
 		var listSeparators = new AttributeMentions();
 
+		var done = 0;
 		foreach (var pennObj in pennDatabase.Objects)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			context.Advance?.Invoke(++done);
 
 			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{
@@ -2610,9 +2633,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_logger.LogInformation("Creating locks");
 		var count = 0;
 
+		var done = 0;
 		foreach (var pennObj in pennDatabase.Objects)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			context.Advance?.Invoke(++done);
 
 			if (!dbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef))
 			{

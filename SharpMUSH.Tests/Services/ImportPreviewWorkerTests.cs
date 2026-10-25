@@ -73,12 +73,38 @@ public class ImportPreviewWorkerTests
 			"package_manager 7");
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
-		await Assert.That(preview.Result!.Warnings).Contains("package_manager names #7, which is not a player in the imported database.");
+		await Assert.That(preview.Result!.Notes).Contains(note => note.StartsWith("package_manager named #7, which is not a player in the imported database"));
 		await using var staged = Open(preview.WorldPath);
 		var configuration = await staged.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
 		await Assert.That(configuration?.Database.PackageManager).IsNotEqualTo(7u);
 		var manager = await staged.GetObjectNodeAsync(new DBRef((int)configuration!.Database.PackageManager!.Value));
 		await Assert.That(manager is AnySharpObject and SharpPlayer).IsTrue();
+	}
+
+	/// <summary>
+	/// A gzipped dump, as PennMUSH writes by default, previews as the plain one does, and the configuration lines the
+	/// import could not carry over are in the report: the include it did not follow as a warning, the directive
+	/// SharpMUSH has no option for as a note.
+	/// </summary>
+	[Test]
+	public async Task GzippedSourcePreviewsAndTheConfigurationReportsWhatItLeftOut()
+	{
+		var (journal, source, _) = await SetupAsync();
+		var compressed = source + ".gz";
+		await using (var input = File.OpenRead(source))
+		await using (var output = File.Create(compressed))
+		await using (var gzip = new System.IO.Compression.GZipStream(output, System.IO.Compression.CompressionLevel.Optimal))
+			await input.CopyToAsync(gzip);
+		var compressedHash = SHA256.HashData(await File.ReadAllBytesAsync(compressed));
+		var coordinator = new ImportPreviewCoordinator(journal, NullLogger<ImportPreviewCoordinator>.Instance);
+		var preview = await coordinator.PreviewAsync(new DatabaseImportFiles(compressed, Format: DatabaseImportFormat.RhostMUSH),
+			"chunk_swap_file data/chunkswap\ninclude alias.cnf\nmud_name Gzipped");
+		await Assert.That(preview.Failure).IsNull();
+		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
+		await Assert.That(preview.Result!.TotalObjects).IsGreaterThan(0);
+		await Assert.That(preview.Result.Warnings).Contains(warning => warning.StartsWith("Configuration: include alias.cnf: not followed"));
+		await Assert.That(preview.Result.Notes).Contains("Configuration: 1 directive(s) SharpMUSH has no option for, not carried over: chunk_swap_file.");
+		await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(compressed))).IsEquivalentTo(compressedHash);
 	}
 
 	[Test]

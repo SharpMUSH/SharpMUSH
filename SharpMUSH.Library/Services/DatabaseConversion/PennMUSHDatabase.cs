@@ -62,6 +62,12 @@ public class PennMUSHDatabase
 	public List<string> ImportNotes { get; set; } = [];
 
 	/// <summary>
+	/// What the reader leaves out of every database of its kind, such as the bookkeeping a server keeps in its
+	/// own attributes and flags. The import reports them with its notes rather than its warnings.
+	/// </summary>
+	public List<string> RoutineNotes { get; set; } = [];
+
+	/// <summary>
 	/// Every attribute whose softcode the reader rewrote so SharpMUSH reads it as the source server did, with
 	/// its text before and after. The import reports them in a list of their own.
 	/// </summary>

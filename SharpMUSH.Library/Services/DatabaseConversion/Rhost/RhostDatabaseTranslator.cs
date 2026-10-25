@@ -116,6 +116,7 @@ public static partial class RhostDatabaseTranslator
 			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
 			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
 		database.ImportNotes = report.Finish();
+		database.RoutineNotes = report.FinishRoutine();
 		database.SoftcodeRewrites = report.Rewrites;
 		return database;
 	}
@@ -394,11 +395,11 @@ public static partial class RhostDatabaseTranslator
 
 		string name;
 		uint definitionFlags = 0;
-		if (attribute.Number is > 0 and < 256)
+		if (attribute.Number is (> 0 and < 256) or (>= RhostNameTables.InlineStart and < RhostNameTables.InlineEnd))
 		{
 			if (RhostNameTables.SkippedAttributes.TryGetValue(attribute.Number, out var reason))
 			{
-				report.Note($"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef);
+				report.Note($"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef, routine: true);
 				return null;
 			}
 
@@ -518,11 +519,16 @@ public static partial class RhostDatabaseTranslator
 	}
 
 	/// <summary>
-	/// A lock as SharpMUSH reads it. RhostMUSH's lock attributes already write objects as <c>#n</c>, and
-	/// its key syntax (<c>&amp;</c>, <c>|</c>, <c>!</c>, <c>=</c>, <c>+</c>, <c>$</c>, <c>@</c>, <c>attr:value</c>)
-	/// is the one SharpMUSH reads.
+	/// A lock as SharpMUSH reads it. RhostMUSH's lock attributes write each object as <c>(#n)</c>, and its key
+	/// syntax (<c>&amp;</c>, <c>|</c>, <c>!</c>, <c>=</c>, <c>+</c>, <c>$</c>, <c>@</c>, <c>attr:value</c>) is the one
+	/// SharpMUSH reads, except that SharpMUSH wants a prefix right before the object: <c>$(#73)</c> is <c>$#73</c>.
+	/// An <c>attr:value</c> or <c>attr/value</c> key's value, which runs to the next <c>&amp;</c>, <c>|</c> or
+	/// <c>)</c>, is left as it is.
 	/// </summary>
-	private static string LockKey(string text) => text.Trim();
+	private static string LockKey(string text) => PrefixedObject().Replace(text.Trim(), "$1$2");
+
+	[GeneratedRegex(@"(?<![:/][^&|)]*)([=+$@])\((#-?\d+)\)")]
+	private static partial Regex PrefixedObject();
 
 	[GeneratedRegex(@"(?<![#\w])(\d+)(?!\w)")]
 	private static partial Regex BareNumbers();
@@ -598,6 +604,9 @@ public static partial class RhostDatabaseTranslator
 	{
 		private readonly SortedDictionary<string, List<int>> _decisions = new(StringComparer.Ordinal);
 
+		/// <summary>RhostMUSH's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
+		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
+
 		public List<string> Lines { get; } = [];
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
@@ -605,11 +614,12 @@ public static partial class RhostDatabaseTranslator
 
 		public void Line(string line) => Lines.Add(line);
 
-		public void Note(string decision, int dbref)
+		public void Note(string decision, int dbref, bool routine = false)
 		{
-			if (!_decisions.TryGetValue(decision, out var dbrefs))
+			var decisions = routine ? _routine : _decisions;
+			if (!decisions.TryGetValue(decision, out var dbrefs))
 			{
-				_decisions[decision] = dbrefs = [];
+				decisions[decision] = dbrefs = [];
 			}
 
 			if (dbrefs.Count == 0 || dbrefs[^1] != dbref)
@@ -622,14 +632,19 @@ public static partial class RhostDatabaseTranslator
 		{
 			var lines = new List<string>(Lines.Count + _decisions.Count);
 			lines.Add(Lines[0]);
-			foreach (var (decision, dbrefs) in _decisions)
-			{
-				var sample = string.Join(" ", dbrefs.Take(10).Select(d => $"#{d}"));
-				lines.Add($"{decision} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})");
-			}
-
+			lines.AddRange(Decided(_decisions));
 			lines.AddRange(Lines.Skip(1));
 			return lines;
 		}
+
+		public List<string> FinishRoutine() => [.. Decided(_routine)];
+
+		private static IEnumerable<string> Decided(SortedDictionary<string, List<int>> decisions)
+			=> decisions.Select(decision =>
+			{
+				var (text, dbrefs) = decision;
+				var sample = string.Join(" ", dbrefs.Take(10).Select(d => $"#{d}"));
+				return $"{text} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})";
+			});
 	}
 }

@@ -41,6 +41,15 @@ internal sealed class PennMUSHConversionContext
 	public List<string> Warnings { get; } = [];
 
 	/// <summary>
+	/// What every import of this kind does and the report says only for the record: the seeded objects it
+	/// removed, the definitions SharpMUSH already had. Kept apart so they do not bury the warnings.
+	/// </summary>
+	public List<string> Notes { get; } = [];
+
+	/// <summary>Told how many of the source's objects the running phase has worked through.</summary>
+	public Action<int>? Advance { get; set; }
+
+	/// <summary>
 	/// Source values the conversion could not carry — a flag, power or warning SharpMUSH has no
 	/// counterpart for, or one it does not allow on that type — keyed by what was dropped, with the
 	/// source dbrefs that had it. A flag every player carries would otherwise be a warning per player.

@@ -3412,10 +3412,6 @@
     <value>Understøttede formater: .cnf, .conf, .txt (maks. 1 MB)</value>
     <comment>MT</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Understøttede formater: .db, .txt (maks. 100 MB)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Temp. (C)</value>
     <comment>MT</comment>

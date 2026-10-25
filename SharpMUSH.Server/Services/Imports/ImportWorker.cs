@@ -27,7 +27,7 @@ public static class ImportWorker
 		if (session.Directory != Path.GetFullPath(directory) || session.State != ImportSessionState.Preparing)
 			throw new IOException("Import worker session is not preparing.");
 		using var ownership = new FileStream(Path.Combine(session.Directory, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-		using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+		using var deadline = new CancellationTokenSource(ImportInputs.Deadline(request.Files));
 		try
 		{
 			foreach (var input in new[] { request.Files.Database, request.Files.Mail, request.Files.Chat, request.Files.MailFolders }.OfType<string>())
@@ -68,6 +68,7 @@ public static class ImportWorker
 					return 0;
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, deadline.Token);
+				if (configuration is not null) ReportConfiguration(configuration, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
 					throw new IOException("The staged object count is below the conversion's reported count.");
@@ -106,6 +107,19 @@ public static class ImportWorker
 		}
 	}
 
+	/// <summary>
+	/// The configuration lines that were not carried over. An include the upload could not follow is a warning,
+	/// since its settings are lost unless they are pasted into the file; the rest, and the directives SharpMUSH has
+	/// no option for, are notes.
+	/// </summary>
+	private static void ReportConfiguration(PennMushConfigImport configuration, ConversionResult result)
+	{
+		foreach (var line in configuration.Skipped)
+			(line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) ? result.Warnings : result.Notes).Add("Configuration: " + line);
+		if (configuration.Unrecognized.Count > 0)
+			result.Notes.Add($"Configuration: {configuration.Unrecognized.Count} directive(s) SharpMUSH has no option for, not carried over: {string.Join(", ", configuration.Unrecognized)}.");
+	}
+
 	private static async Task EnsurePackageManagerAsync(IMediator mediator, IConfigOptionWriter options,
 		ConversionResult result, CancellationToken ct)
 	{
@@ -116,8 +130,6 @@ public static class ImportWorker
 			return;
 		// A mush.cnf written for SharpMUSH (the shipped mushcnf.dst among them) names its own seeded #7, which
 		// in the imported database is whatever the source game had there.
-		if (configured is { } named)
-			result.Warnings.Add($"package_manager names #{named}, which is not a player in the imported database.");
 		// No bundled packages have run in this private host. The converter therefore had no packages
 		// to reinstall, but it still removed the seeded manager to preserve source object numbers.
 		var name = "Package Manager";
@@ -130,7 +142,9 @@ public static class ImportWorker
 			throw new InvalidOperationException("The staged package manager could not be initialized.");
 		await mediator.Send(new SetObjectFlagCommand(created, wizard), ct);
 		await options.UpdateAsync(value => value with { Database = value.Database with { PackageManager = (uint)manager.Number } }, ct);
-		result.Warnings.Add($"Created a private Package Manager '{name}' at #{manager.Number}, beyond the imported live objects, for bundled-package startup.");
+		result.Notes.Add(configured is { } named && named != (uint)manager.Number
+			? $"package_manager named #{named}, which is not a player in the imported database, so a Package Manager '{name}' was created at #{manager.Number}."
+			: $"Created a Package Manager '{name}' at #{manager.Number}, past the imported objects, for the bundled packages.");
 	}
 
 	private sealed class WorkerProgress(string directory) : IProgress<ConversionProgress>

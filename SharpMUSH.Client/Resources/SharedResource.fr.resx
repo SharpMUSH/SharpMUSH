@@ -3547,10 +3547,6 @@
     <value>Formats pris en charge : .cnf, .conf, .txt (1 Mo maximum)</value>
     <comment>MT — unit written « Mo » per EnumUnitMegabytes</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Formats pris en charge : .db, .txt (100 Mo maximum)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Temp. (C)</value>
     <comment>MT — abbreviation and unit letter identical in French</comment>

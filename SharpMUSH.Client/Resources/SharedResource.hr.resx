@@ -3412,10 +3412,6 @@
     <value>Podržani formati: .cnf, .conf, .txt (najviše 1 MB)</value>
     <comment>MT — file extensions kept as machine identifiers</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Podržani formati: .db, .txt (najviše 100 MB)</value>
-    <comment>MT — file extensions kept as machine identifiers</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Temp. (C)</value>
     <comment>MT — unit symbol kept; "Temp." is the same abbreviation in Croatian</comment>

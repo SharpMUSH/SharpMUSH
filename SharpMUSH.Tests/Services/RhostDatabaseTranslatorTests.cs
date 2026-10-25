@@ -136,6 +136,37 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Lock UserLock"))).IsTrue();
 	}
 
+	/// <summary>RhostMUSH writes an object in a lock as <c>(#n)</c>, after a prefix too: <c>$(#1)</c> is <c>$#1</c>.</summary>
+	[Test]
+	public async Task APrefixedObjectInALockLosesItsParentheses()
+	{
+		var flatfile = RhostFlatfileReader.ReadStrict("+V7\n+S2\n+N256\n"
+			+ "!0\nLimbo\n-1\n-1\n-1\n-1\n\n1\n0\n0\n<\n"
+			+ "!1\nWizard\n0\n-1\n0\n-1\n\n1\n0\n3\n>42\n=(#0)|@(#1)\n>63\n$(#1)\n>61\n!(#0)&+(#1)\n>59\nTAG:=(#1)|=(#1)\n<\n"
+			+ RhostFlatfileReader.EndOfDump + "\n");
+
+		var wizard = RhostDatabaseTranslator.Translate(flatfile).Objects.First(o => o.DBRef == 1);
+
+		await Assert.That(wizard.Locks["Basic"].Expression).IsEqualTo("=#0|@#1");
+		await Assert.That(wizard.Locks["Give"].Expression).IsEqualTo("$#1");
+		await Assert.That(wizard.Locks["Page"].Expression).IsEqualTo("!(#0)&+#1");
+		await Assert.That(wizard.Locks["Enter"].Expression).IsEqualTo("TAG:=(#1)|=#1");
+	}
+
+	/// <summary>The built-in attributes numbered from 2100000000: server state is left behind, the rest imported.</summary>
+	[Test]
+	public async Task BuiltInAttributesAboveTheUserAttributesAreNamed()
+	{
+		var flatfile = RhostFlatfileReader.ReadStrict("+V7\n+S1\n+N256\n"
+			+ "!0\nWizard\n0\n-1\n0\n-1\n\n0\n0\n3\n>2100000000\n1 0 0\n>2100000005\n@pemit me=Mail!\n<\n"
+			+ RhostFlatfileReader.EndOfDump + "\n");
+
+		var database = RhostDatabaseTranslator.Translate(flatfile);
+
+		await Assert.That(database.Objects[0].Attributes.Select(a => a.Name)).IsEquivalentTo(["AMAIL"]);
+		await Assert.That(database.RoutineNotes.Any(n => n.StartsWith("Attribute ConnInfo: not imported"))).IsTrue();
+	}
+
 	/// <summary>Without a lock attribute, the header's lock is read, its bare numbers made dbrefs.</summary>
 	[Test]
 	public async Task TheHeaderLockStandsInForAMissingLockAttribute()

@@ -3412,10 +3412,6 @@
     <value>Поддържани формати: .cnf, .conf, .txt (макс. 1MB)</value>
     <comment>MT — extensions and unit left as-is</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Поддържани формати: .db, .txt (макс. 100MB)</value>
-    <comment>MT</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Темп. (C)</value>
     <comment>MT — abbreviation kept short for a table column; unit letter left in Latin</comment>

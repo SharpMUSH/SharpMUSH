@@ -4,7 +4,7 @@ using System.Text;
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
-/// The whole report of one database import as plain text: what was converted, every error and warning, and
+/// The whole report of one database import as plain text: what was converted, every error, warning and note, and
 /// each rewritten attribute with its text before and after. The import page offers it as a download and a
 /// start-up import writes it to disk, so an administrator can read it at leisure or send it in for help.
 /// </summary>
@@ -43,6 +43,7 @@ public static class ImportLog
 
 		Lines(log, "Errors", result.Errors);
 		Lines(log, "Warnings", result.Warnings);
+		Lines(log, "Expected", result.Notes);
 
 		if (result.SoftcodeRewrites.Count > 0)
 		{

@@ -26,6 +26,9 @@ public record ConversionResult
 	public List<string> Errors { get; init; } = [];
 	public List<string> Warnings { get; init; } = [];
 
+	/// <summary>What every import of this kind does, reported for the record rather than as a warning.</summary>
+	public List<string> Notes { get; init; } = [];
+
 	/// <summary>
 	/// Every attribute whose softcode the import rewrote so SharpMUSH reads it as the source server did, with its
 	/// text before and after. Empty for a PennMUSH import, whose softcode is kept as written.
@@ -41,8 +44,14 @@ public record ConversionResult
 	/// </summary>
 	public bool Aborted { get; init; }
 
-	public bool IsSuccessful => Errors.Count == 0;
+	public bool IsSuccessful => !Aborted && Errors.Count == 0;
 }
 
 /// <summary>Safe journal discovery; excludes private paths, source configuration, and key material.</summary>
-public sealed record ImportSessionStatus(string SessionId, string State, ConversionResult? Result, string? Failure);
+/// <param name="Started">When the preview was started; unknown for an import that predates it.</param>
+/// <param name="SourceFile">The database's file name; unknown for an import that predates it.</param>
+public sealed record ImportSessionStatus(string SessionId, string State, ConversionResult? Result, string? Failure,
+	DateTimeOffset? Started = null, string? SourceFile = null);
+
+/// <summary>Whether the world the last promotion replaced is still kept, which stops another promotion.</summary>
+public sealed record PreviousWorldStatus(bool Retained);

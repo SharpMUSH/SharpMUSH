@@ -23,15 +23,15 @@ public sealed class StartupImportCoordinator(ImportPreviewCoordinator previews, 
 			var preview = await previews.PreviewAsync(files, configuration, baseline, cancellationToken);
 			if (preview.State != ImportSessionState.Ready)
 				return new(StartupImportState.Failed, preview.Id, preview.Failure ?? "Startup import did not validate.");
-			journal.Save(preview with { StartupFingerprint = fingerprint });
+			journal.Save(preview with { StartupFingerprint = fingerprint, SourceFile = Path.GetFileName(files.Database) });
 			journal.RequestPromotion(preview.Id, cancellationToken);
 			logger.LogWarning("Startup import {SessionId} is validated; a process restart is required to install its world and configuration", preview.Id);
 			return new(StartupImportState.RestartRequested, preview.Id);
 		}
 		catch (Exception error)
 		{
-			logger.LogError("Startup import was not committed: {ErrorType}", error.GetType().Name);
-			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.GetType().Name);
+			logger.LogError(error, "Startup import was not committed: {Reason}", error.Message);
+			return new(StartupImportState.Failed, Failure: "Startup import failed: " + error.Message);
 		}
 	}
 

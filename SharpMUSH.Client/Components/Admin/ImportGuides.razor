@@ -1,0 +1,103 @@
+@inject IStringLocalizer<SharedResource> Loc
+
+@* How to get each server's files out, one folded section per server. *@
+<KitCard>
+    <details class="import-guide import-guide-pennmush">
+        <summary>@Loc["AdmImportPennGuideTitle"]</summary>
+        <div class="import-guide-body">
+            <ol>
+                <li>
+                    <strong>@Loc["AdmImportPennDumpTitle"]</strong>
+                    <p>@Loc["AdmImportPennDump"]</p>
+                    <pre><code>@@dump</code></pre>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportPennFilesTitle"]</strong>
+                    <p>@Loc["AdmImportPennFiles"]</p>
+                    <ul>
+                        <li><code>game/data/outdb.gz</code>: @Loc["AdmImportGuideDatabase"]</li>
+                        <li><code>game/data/maildb.gz</code>: @Loc["AdmImportGuideMail"]</li>
+                        <li><code>game/data/chatdb.gz</code>: @Loc["AdmImportGuideChat"]</li>
+                        <li><code>game/mush.cnf</code>: @Loc["AdmImportGuideConfig"]</li>
+                    </ul>
+                    <p>@Loc["AdmImportPennIncludes"]</p>
+                </li>
+            </ol>
+        </div>
+    </details>
+    <details class="import-guide import-guide-tinymux">
+        <summary>@Loc["AdmImportMuxGuideTitle"]</summary>
+        <div class="import-guide-body">
+            <ol>
+                <li>
+                    <strong>@Loc["AdmImportMuxUnloadTitle"]</strong>
+                    <p>@Loc["AdmImportMuxUnload"]</p>
+                    <pre><code>cd game/data
+./db_unload netmux netmux.flat -C comsys.db -m mail.db</code></pre>
+                    <p>@Loc["AdmImportMuxOlder"]</p>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportMuxFilesTitle"]</strong>
+                    <ul>
+                        <li><code>game/data/netmux.flat</code>: @Loc["AdmImportGuideDatabase"]</li>
+                        <li><code>game/data/mail.db</code>: @Loc["AdmImportGuideMail"]</li>
+                        <li><code>game/data/comsys.db</code>: @Loc["AdmImportGuideChat"]</li>
+                        <li><code>game/netmux.conf</code>: @Loc["AdmImportGuideConfig"]</li>
+                    </ul>
+                    <p>@Loc["AdmImportMuxIncludes"]</p>
+                </li>
+            </ol>
+        </div>
+    </details>
+    <details class="import-guide import-guide-rhostmush">
+        <summary>@Loc["AdmImportRhostGuideTitle"]</summary>
+        <div class="import-guide-body">
+            <p>@Loc["AdmImportRhostPortable"]</p>
+            <ol>
+                <li>
+                    <strong>@Loc["AdmImportRhostBackupTitle"]</strong>
+                    <p>@Loc["AdmImportRhostBackup"]</p>
+                    <p>@Loc["AdmImportRhostSupported"]</p>
+                    <ul>
+                        <li>@Loc["AdmImportRhostLegacy"]</li>
+                        <li>@Loc["AdmImportRhostMdbx"]</li>
+                    </ul>
+                    <p>@Loc["AdmImportRhostNames"]</p>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostBuildTitle"]</strong>
+                    <p>@Loc["AdmImportRhostBuild"]</p>
+                    <ul>
+                        <li><code>tools/RhostExport/README.md</code>: @Loc["AdmImportRhostToolLink"]</li>
+                        <li><code>SharpMUSH.Tests/Services/TestData/RhostNative/README.md</code>: @Loc["AdmImportRhostRecipeLink"]</li>
+                    </ul>
+                    <pre><code>dotnet build tools/RhostExport
+
+dotnet run --no-build --project tools/RhostExport -- \
+  --source /backups/rhost-offline \
+  --base netrhost.gdbm \
+  --checkpoint netrhost.db \
+  --backend legacy-qdbm \
+  --exporter /opt/rhost-verified/legacy/dbconvert \
+  --profile /opt/rhost-verified/legacy/exporter-profile.json \
+  --output /backups/rhost-portable-new</code></pre>
+                    <p>@Loc["AdmImportRhostPaths"]</p>
+                    <p>@Loc["AdmImportRhostMdbxCommand"]</p>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostMailTitle"]</strong>
+                    <p>@Loc["AdmImportRhostMail"]</p>
+                    <pre><code>  --mail /backups/rhost-offline/mail.dump \
+  --folders /backups/rhost-offline/folders.dump</code></pre>
+                </li>
+                <li>
+                    <strong>@Loc["AdmImportRhostUploadTitle"]</strong>
+                    <p>@Loc["AdmImportRhostInspect"]</p>
+                    <p>@Loc["AdmImportRhostUpload"]</p>
+                    <p>@Loc["AdmImportRhostCompleteness"]</p>
+                    <p>@Loc["AdmImportRhostRehearse"]</p>
+                </li>
+            </ol>
+        </div>
+    </details>
+</KitCard>
