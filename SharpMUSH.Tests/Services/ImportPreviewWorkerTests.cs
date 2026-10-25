@@ -73,7 +73,7 @@ public class ImportPreviewWorkerTests
 			"package_manager 7");
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
-		await Assert.That(preview.Result!.Notes).Contains(note => note.StartsWith("package_manager named #7, which is not a player in the imported database"));
+		await Assert.That(preview.Result!.Notes).Contains(note => note.StartsWith("The configuration's package_manager is #7, which is not a player in the imported database"));
 		await using var staged = Open(preview.WorldPath);
 		var configuration = await staged.GetExpandedServerData<SharpMUSHOptions>(nameof(SharpMUSHOptions));
 		await Assert.That(configuration?.Database.PackageManager).IsNotEqualTo(7u);
