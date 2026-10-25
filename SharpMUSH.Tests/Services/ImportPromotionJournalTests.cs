@@ -69,6 +69,49 @@ public class ImportPromotionJournalTests
 	}
 
 	[Test]
+	public async Task DiscardingThePreviousWorldLetsAnotherImportBePromoted()
+	{
+		var live = Path.Combine(_root, "live");
+		var journal = new ImportPromotionJournal(live);
+		await Populate(live, "Live sentinel");
+		foreach (var sentinel in new[] { "First import", "Second import" })
+		{
+			var session = journal.Create();
+			await Populate(session.WorldPath, sentinel);
+			Directory.CreateDirectory(session.KeyRingPath);
+			journal.MarkReady(session.Id);
+			if (journal.RetainsPreviousWorld)
+			{
+				await Assert.That(() => journal.RequestPromotion(session.Id)).Throws<IOException>();
+				journal.DiscardPrevious();
+			}
+			journal.RequestPromotion(session.Id);
+			journal.ApplyPendingBeforeHostConstruction();
+			await Assert.That(journal.RetainsPreviousWorld).IsTrue();
+		}
+		await using var reopened = Open(live);
+		await Assert.That(Contains(reopened, "Second import")).IsTrue();
+	}
+
+	[Test]
+	public async Task ThePreviousWorldIsKeptWhileACommitMayNeedIt()
+	{
+		var live = Path.Combine(_root, "live");
+		var journal = new ImportPromotionJournal(live);
+		var session = journal.Create();
+		await Populate(live, "Live sentinel");
+		await Populate(session.WorldPath, "Imported sentinel");
+		Directory.CreateDirectory(session.KeyRingPath);
+		journal.MarkReady(session.Id);
+		journal.RequestPromotion(session.Id);
+		journal.ApplyPendingBeforeHostConstruction();
+		journal.Save(journal.Get(session.Id) with { State = ImportSessionState.RecoveryRequired });
+
+		await Assert.That(() => journal.DiscardPrevious()).Throws<InvalidOperationException>();
+		await Assert.That(Directory.Exists(live + ".previous")).IsTrue();
+	}
+
+	[Test]
 	public async Task CanceledPrecommitAndPreexistingRollbackNeverReplaceLiveData()
 	{
 		var live = Path.Combine(_root, "live");

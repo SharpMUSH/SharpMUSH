@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Collections.Concurrent;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,7 +18,7 @@ namespace SharpMUSH.Server.Controllers;
 [Authorize(Policy = PortalPermission.ServerAdmin)]
 public class DatabaseConversionController(ImportSessionRegistry sessions, ImportPromotionJournal journal,
 	MushCnfImportService configuration, IStorageCapacityService capacity, IAuditLog audit,
-	IHostApplicationLifetime lifetime, ILogger<DatabaseConversionController> logger) : ControllerBase
+	IHostApplicationLifetime lifetime, TimeProvider clock, ILogger<DatabaseConversionController> logger) : ControllerBase
 {
 	private const long MaxUploadFileSize = 100 * 1024 * 1024;
 	private const long MaxConfigFileSize = 1024 * 1024;
@@ -62,7 +61,8 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 				using var reader = new StreamReader(configFile.OpenReadStream());
 				text = await reader.ReadToEndAsync(cancellationToken);
 			}
-			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken), directory);
+			var id = sessions.Start(files, text, await configuration.SnapshotAsync(cancellationToken), directory,
+				clock.GetUtcNow(), Path.GetFileName(file.FileName));
 			started = true;
 			logger.LogInformation("Import preview {SessionId} started by account {AccountId}", id, User.FindFirstValue(ClaimTypes.NameIdentifier));
 			return Ok(new { sessionId = id, message = "Isolated import preview started; promotion requires a separate restart confirmation." });
@@ -98,7 +98,30 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 
 	[HttpGet("sessions")]
 	public ActionResult<IReadOnlyList<ImportSessionStatus>> ListSessions()
-		=> Ok(journal.List().Select(session => new ImportSessionStatus(session.Id, session.State.ToString(), session.Result, session.Failure)).ToArray());
+		=> Ok(journal.List().Select(session => new ImportSessionStatus(session.Id, session.State.ToString(), session.Result, session.Failure,
+			session.Started, session.SourceFile)).ToArray());
+
+	[HttpGet("previous")]
+	public ActionResult<PreviousWorldStatus> GetPreviousWorld() => Ok(new PreviousWorldStatus(journal.RetainsPreviousWorld));
+
+	public sealed record DiscardConfirmation(bool ConfirmDiscard);
+
+	/// <summary>Deletes the world the last promotion replaced, which the next promotion needs out of the way.</summary>
+	[HttpPost("previous/discard")]
+	public async Task<ActionResult> DiscardPreviousWorld(DiscardConfirmation confirmation)
+	{
+		if (!confirmation.ConfirmDiscard) return BadRequest("Discarding the previous world requires explicit confirmation.");
+		try
+		{
+			journal.DiscardPrevious();
+		}
+		catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException)
+		{
+			return Conflict("The previous world cannot be discarded: " + error.Message);
+		}
+		await RecordAuditAsync("previous", "database.import.discard-previous", "The world the last import replaced was deleted.");
+		return Ok(new PreviousWorldStatus(false));
+	}
 
 	[HttpGet("status/{sessionId}")]
 	public ActionResult GetStatus(string sessionId)
@@ -124,7 +147,7 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		{
 			journal.RequestPromotion(sessionId, cancellationToken);
 			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
-			await RecordRestartAuditAsync(sessionId, "database.import.promote", "Validated preview approved; process restart requested.");
+			await RecordAuditAsync(sessionId, "database.import.promote", "Validated preview approved; process restart requested.");
 			return Accepted(new { sessionId, state = "restartRequired" });
 		}
 		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
@@ -140,14 +163,14 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		{
 			journal.RequestRollback(sessionId);
 			Response.OnCompleted(() => { lifetime.StopApplication(); return Task.CompletedTask; });
-			await RecordRestartAuditAsync(sessionId, "database.import.rollback", "Retained matching world/key-ring rollback approved; restart requested.");
+			await RecordAuditAsync(sessionId, "database.import.rollback", "Retained matching world/key-ring rollback approved; restart requested.");
 			return Accepted(new { sessionId, state = "restartRequired" });
 		}
 		catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException)
 		{ return Conflict("The retained world cannot be restored: " + error.Message); }
 	}
 
-	private async Task RecordRestartAuditAsync(string sessionId, string action, string details)
+	private async Task RecordAuditAsync(string sessionId, string action, string details)
 	{
 		try
 		{
@@ -156,205 +179,8 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		}
 		catch (Exception)
 		{
-			// IAuditLog is best-effort after the action; durable restart intent already exists.
-			logger.LogWarning("Import restart audit failed; the durable restart intent remains active.");
+			// IAuditLog is best-effort after the action, which has already happened.
+			logger.LogWarning("Import audit {Action} failed; the action itself stands.", action);
 		}
-	}
-}
-
-// Retained converter-session compatibility harness; production endpoints use ImportSessionRegistry.
-public static class DatabaseConversionSession
-{
-	private static readonly ConcurrentDictionary<string, SessionData> _sessions = new();
-
-	private class SessionData
-	{
-		public Task<ConversionResult>? ConversionTask { get; set; }
-		public ConversionProgress? CurrentProgress { get; set; }
-		public ConversionResult? Result { get; set; }
-		public CancellationTokenSource CancellationSource { get; set; } = new();
-		/// <summary>The uploaded database and, when they came with it, the maildb, chatdb and mail folder dump.</summary>
-		public string?[] TempFilePaths { get; init; } = [];
-	}
-
-	/// <summary>Deletes the upload's temporary files; one that is still in use is logged and left.</summary>
-	public static void DeleteTempFiles(IEnumerable<string?> paths, ILogger logger)
-	{
-		foreach (var path in paths)
-		{
-			try
-			{
-				if (path is not null && File.Exists(path))
-				{
-					File.Delete(path);
-				}
-			}
-			catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-			{
-				logger.LogWarning(ex, "Failed to delete temporary file: {Path}", path);
-			}
-		}
-	}
-
-	public static void StartConversion(
-		string sessionId,
-		IPennMUSHDatabaseConverter converter,
-		DatabaseImportFiles files,
-		ILogger logger,
-		CancellationToken cancellationToken,
-		Func<Task>? restoreConfiguration = null)
-	{
-		var sessionData = new SessionData
-		{
-			TempFilePaths = [files.Database, files.Mail, files.Chat, files.MailFolders]
-		};
-
-		var progress = new Progress<ConversionProgress>(p =>
-		{
-			if (_sessions.TryGetValue(sessionId, out var session))
-			{
-				session.CurrentProgress = p;
-			}
-		});
-
-		var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-			cancellationToken,
-			sessionData.CancellationSource.Token);
-
-		sessionData.ConversionTask = converter.ConvertDatabaseAsync(files, progress, linkedCts.Token)
-			.ContinueWith(async task =>
-			{
-				// Every way out — success, fault, cancellation — is done with the uploaded files.
-				DeleteTempFiles(sessionData.TempFilePaths, logger);
-
-				// A conversion that did not finish leaves the game on the configuration it had before the upload. The
-				// converter answers a cancellation or a fatal error as an aborted result, not a faulted task.
-				if (restoreConfiguration is not null && (!task.IsCompletedSuccessfully || task.Result.Aborted))
-				{
-					try
-					{
-						await restoreConfiguration();
-					}
-					catch (Exception ex)
-					{
-						logger.LogError(ex, "Could not restore the configuration the conversion's mush.cnf replaced");
-					}
-				}
-				try
-				{
-					if (task.IsCompletedSuccessfully)
-					{
-						var result = task.Result;
-						if (_sessions.TryGetValue(sessionId, out var session))
-						{
-							session.Result = result;
-						}
-
-						return result;
-					}
-					else if (task.IsFaulted)
-					{
-						logger.LogError(task.Exception?.InnerException, "Error during conversion");
-						if (task.Exception?.InnerException != null)
-						{
-							throw task.Exception.InnerException;
-						}
-						throw new InvalidOperationException("Conversion failed with unknown error");
-					}
-					else
-					{
-						throw new OperationCanceledException("Conversion was cancelled");
-					}
-				}
-				catch (Exception ex)
-				{
-					logger.LogError(ex, "Error processing conversion result");
-					throw;
-				}
-			}, TaskScheduler.Default).Unwrap();
-
-		_sessions[sessionId] = sessionData;
-
-		// Use CancellationToken.None to ensure cleanup runs even if request is cancelled
-		_ = Task.Delay(TimeSpan.FromHours(1), CancellationToken.None)
-			.ContinueWith(_ =>
-			{
-				try
-				{
-					_sessions.TryRemove(sessionId, out var removedSession);
-
-					removedSession?.CancellationSource?.Dispose();
-
-					if (removedSession != null)
-					{
-						DeleteTempFiles(removedSession.TempFilePaths, logger);
-					}
-				}
-				catch (Exception ex)
-				{
-					logger.LogError(ex, "Error during session cleanup for {SessionId}", sessionId);
-				}
-			}, TaskScheduler.Default);
-	}
-
-	/// <summary>
-	/// The session's latest progress report, or <see langword="null"/> when there is no such session.
-	/// </summary>
-	/// <remarks>
-	/// The converter reports nothing until it has parsed the dump, which on a large database takes a
-	/// while. A session in that gap answers a zero report rather than <see langword="null"/>: the
-	/// endpoint's 404 is how the import page learns the session is gone (a restart, the hourly
-	/// cleanup), and a 404 during that gap told it a conversion still running had been lost.
-	/// </remarks>
-	public static ConversionProgress? GetProgress(string sessionId)
-	{
-		return _sessions.TryGetValue(sessionId, out var session)
-			? session.CurrentProgress ?? new ConversionProgress { CurrentPhase = "Starting" }
-			: null;
-	}
-
-	public static async Task<ConversionResult?> GetResult(string sessionId)
-	{
-		if (!_sessions.TryGetValue(sessionId, out var session))
-		{
-			return null;
-		}
-
-		if (session.Result != null)
-		{
-			return session.Result;
-		}
-
-		var task = session.ConversionTask;
-		if (task == null || !task.IsCompleted)
-		{
-			return null;
-		}
-
-		try
-		{
-			return await task;
-		}
-		catch (Exception)
-		{
-			return null;
-		}
-	}
-
-	public static bool CancelConversion(string sessionId)
-	{
-		if (!_sessions.TryGetValue(sessionId, out var session))
-		{
-			return false;
-		}
-
-		if (session.ConversionTask?.IsCompleted == true)
-		{
-			return false;
-		}
-
-		// The conversion's continuation deletes the uploaded files once the import has let go of them.
-		session.CancellationSource.Cancel();
-		return true;
 	}
 }

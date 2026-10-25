@@ -36,13 +36,39 @@
         <MudAlert Severity="Severity.Warning" Dense="true">@_pollError</MudAlert>
     }
 
+    @* The world the last promotion replaced is kept so that import can be rolled back, and while it is no
+       other preview can be promoted. Discarding it is the administrator's call, made here rather than on
+       the server's disk. *@
+    @if (_previousRetained && !_isConverting && !_restartRequested)
+    {
+        <KitCard Title="@Loc["AdmImportPreviousKept"]" Class="dbimport-previous">
+            <div class="dbimport-body">
+                <MudText Typo="Typo.body2">@Loc["AdmImportPreviousKeptLead"]</MudText>
+                <MudCheckBox T="bool" Class="dbimport-confirm-discard" @bind-Value="_confirmDiscard" Disabled="_isDiscarding"
+                             Label="@Loc["AdmImportConfirmDiscardPrevious"]" />
+                <div class="dbimport-actions dbimport-actions-start">
+                    <CapsuleButton Class="dbimport-discard-previous" Icon="@Icons.Material.Filled.DeleteForever"
+                                   Disabled="@(!_confirmDiscard || _isDiscarding)" OnClick="DiscardPreviousWorld">@Loc["AdmImportDiscardPrevious"]</CapsuleButton>
+                </div>
+            </div>
+        </KitCard>
+    }
+
     @if (!_isConverting && _result is null && _sessions.Count > 0)
     {
         <KitCard Title="@Loc["AdmImportSessions"]">
-            @foreach (var session in _sessions)
-            {
-                <CapsuleButton Class="dbimport-resume" OnClick="@(() => ResumeSession(session))">@session.SessionId — @session.State</CapsuleButton>
-            }
+            <div class="dbimport-sessions">
+                @* The ten most recent: older ones are finished with, and the journal keeps them all. *@
+                @foreach (var session in _sessions.Take(10))
+                {
+                    <button type="button" class="dbimport-session dbimport-resume" @onclick="@(() => ResumeSession(session))">
+                        <span class="dbimport-session-file">@(session.SourceFile ?? Loc["AdmImportSessionUnnamed"])</span>
+                        <span class="dbimport-session-format">@session.Result?.SourceName</span>
+                        <span class="dbimport-session-started">@session.Started?.ToLocalTime().ToString("g")</span>
+                        <span class="dbimport-session-state">@Loc["AdmImportState" + session.State]</span>
+                    </button>
+                }
+            </div>
         </KitCard>
     }
 
@@ -354,6 +380,24 @@
                                 </MudList>
                             </div>
                         }
+
+                        @* What every import of this kind does (the seeded objects it removed, the definitions SharpMUSH
+                           already had), folded away so the warnings above are what the eye lands on. *@
+                        @if (_result.Notes.Any())
+                        {
+                            <div class="dbimport-tile dbimport-tile-wide">
+                                <details class="dbimport-notes">
+                                    <summary class="dbimport-notes-summary">@Loc["AdmImportNotes", _result.Notes.Count]</summary>
+                                    <MudText Typo="Typo.body2">@Loc["AdmImportNotesLead"]</MudText>
+                                    <ul class="dbimport-note-list">
+                                        @foreach (var note in _result.Notes)
+                                        {
+                                            <li>@note</li>
+                                        }
+                                    </ul>
+                                </details>
+                            </div>
+                        }
                     </div>
 
                     <div class="dbimport-actions dbimport-actions-start">
@@ -392,8 +436,40 @@
 
     protected override async Task OnInitializedAsync()
     {
-        if (await ConversionService.GetSessionsAsync() is IReadOnlyList<ImportSessionStatus> sessions)
-            _sessions = sessions;
+        var sessions = ConversionService.GetSessionsAsync();
+        var previous = ConversionService.GetPreviousWorldAsync();
+        if (await sessions is IReadOnlyList<ImportSessionStatus> list)
+            _sessions = list;
+        _previousRetained = await previous is PreviousWorldStatus { Retained: true };
+    }
+
+    private bool _previousRetained;
+    private bool _confirmDiscard;
+    private bool _isDiscarding;
+
+    private async Task DiscardPreviousWorld()
+    {
+        if (!_confirmDiscard || _isDiscarding) return;
+        _isDiscarding = true;
+        try
+        {
+            switch (await ConversionService.DiscardPreviousWorldAsync())
+            {
+                case Success:
+                    _previousRetained = false;
+                    _canRollback = false;
+                    _error = null;
+                    break;
+                case ApiFailure failure:
+                    _error = failure.Message;
+                    break;
+            }
+        }
+        finally
+        {
+            _isDiscarding = false;
+            _confirmDiscard = false;
+        }
     }
 
     private async Task ResumeSession(ImportSessionStatus session)

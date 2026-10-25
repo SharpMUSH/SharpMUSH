@@ -22,6 +22,10 @@ public sealed record ImportSession(string Id, string Directory, ImportSessionSta
 	public ImportIdentityMapping? IdentityMapping { get; init; }
 	public bool IdentityMappingPrepared { get; init; }
 	public bool RollbackIdentityTransferred { get; init; }
+	/// <summary>When the preview was started, for the list of recent imports.</summary>
+	public DateTimeOffset? Started { get; init; }
+	/// <summary>The uploaded database's file name, for the list of recent imports.</summary>
+	public string? SourceFile { get; init; }
 }
 
 /// <summary>
@@ -59,7 +63,7 @@ public sealed class ImportPromotionJournal
 		return new FileStream(_live + ".engine.lock", FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 	}
 
-	public ImportSession Create()
+	public ImportSession Create(DateTimeOffset? started = null, string? sourceFile = null)
 	{
 		lock (_sync)
 		{
@@ -72,7 +76,7 @@ public sealed class ImportPromotionJournal
 					throw new InvalidOperationException("Another import session is active; finish or abort it first.");
 			}
 			var id = Guid.NewGuid().ToString("N");
-			var session = new ImportSession(id, Path.Combine(_root, id), ImportSessionState.Preparing);
+			var session = new ImportSession(id, Path.Combine(_root, id), ImportSessionState.Preparing) { Started = started, SourceFile = sourceFile };
 			PrivateDirectory(session.Directory);
 			try { Save(session); }
 			catch
@@ -280,10 +284,33 @@ public sealed class ImportPromotionJournal
 		}
 	}
 
+	/// <summary>Whether the world (or key ring) the last promotion replaced is still kept beside the live one.</summary>
+	public bool RetainsPreviousWorld
+		=> System.IO.Directory.Exists(_live + ".previous") || System.IO.Directory.Exists(LiveKeyRingPath + ".previous");
+
+	/// <summary>
+	/// Deletes the world and key ring the last promotion replaced, so another can be promoted. The import that
+	/// replaced them can no longer be rolled back.
+	/// </summary>
+	public void DiscardPrevious()
+	{
+		lock (_sync)
+		{
+			if (File.Exists(_pending)) throw new InvalidOperationException("A restart operation is pending.");
+			if (!RetainsPreviousWorld) throw new IOException("No previous world is kept.");
+			// An interrupted commit may need the previous world to recover.
+			if (List().Any(session => session.State is ImportSessionState.PromotionRequested or ImportSessionState.Committing
+				or ImportSessionState.RecoveryRequired or ImportSessionState.RollbackRequested))
+				throw new InvalidOperationException("An import needs the previous world to finish or recover.");
+			if (System.IO.Directory.Exists(_live + ".previous")) System.IO.Directory.Delete(_live + ".previous", recursive: true);
+			if (System.IO.Directory.Exists(LiveKeyRingPath + ".previous")) System.IO.Directory.Delete(LiveKeyRingPath + ".previous", recursive: true);
+		}
+	}
+
 	private void EnsureNoPrevious()
 	{
 		if (System.IO.Directory.Exists(_live + ".previous") || System.IO.Directory.Exists(LiveKeyRingPath + ".previous"))
-			throw new IOException("A previous world or key ring is retained; archive it before another promotion.");
+			throw new IOException("The world the last import replaced is still kept; discard it before another promotion.");
 	}
 
 	public static void PrivateDirectory(string path)

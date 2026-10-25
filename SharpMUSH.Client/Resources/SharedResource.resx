@@ -9215,6 +9215,60 @@
   <data name="AdmImportRollback" xml:space="preserve">
     <value>Restore previous world and restart</value>
   </data>
+  <data name="AdmImportNotes" xml:space="preserve">
+    <value>Expected ({0})</value>
+  </data>
+  <data name="AdmImportNotesLead" xml:space="preserve">
+    <value>What every import of this kind does. Nothing here needs fixing; the downloaded log lists it too.</value>
+  </data>
+  <data name="AdmImportPreviousKept" xml:space="preserve">
+    <value>Previous world kept</value>
+  </data>
+  <data name="AdmImportPreviousKeptLead" xml:space="preserve">
+    <value>The last import kept the world it replaced, so that import can still be rolled back. No other import can be promoted until it is discarded.</value>
+  </data>
+  <data name="AdmImportConfirmDiscardPrevious" xml:space="preserve">
+    <value>I confirm deleting the previous world. The last import can no longer be rolled back.</value>
+  </data>
+  <data name="AdmImportDiscardPrevious" xml:space="preserve">
+    <value>Discard previous world</value>
+  </data>
+  <data name="AdmImportSessionUnnamed" xml:space="preserve">
+    <value>File not recorded</value>
+  </data>
+  <data name="AdmImportStatePreparing" xml:space="preserve">
+    <value>Preparing</value>
+  </data>
+  <data name="AdmImportStateConverting" xml:space="preserve">
+    <value>Converting</value>
+  </data>
+  <data name="AdmImportStateValidating" xml:space="preserve">
+    <value>Checking</value>
+  </data>
+  <data name="AdmImportStateReady" xml:space="preserve">
+    <value>Ready to promote</value>
+  </data>
+  <data name="AdmImportStatePromotionRequested" xml:space="preserve">
+    <value>Promoting at restart</value>
+  </data>
+  <data name="AdmImportStateCommitting" xml:space="preserve">
+    <value>Promoting</value>
+  </data>
+  <data name="AdmImportStateCommitted" xml:space="preserve">
+    <value>Promoted</value>
+  </data>
+  <data name="AdmImportStateAborted" xml:space="preserve">
+    <value>Stopped</value>
+  </data>
+  <data name="AdmImportStateRecoveryRequired" xml:space="preserve">
+    <value>Needs rollback</value>
+  </data>
+  <data name="AdmImportStateRollbackRequested" xml:space="preserve">
+    <value>Rolling back at restart</value>
+  </data>
+  <data name="AdmImportStateRolledBack" xml:space="preserve">
+    <value>Rolled back</value>
+  </data>
   <data name="WikiCollections" xml:space="preserve"><value>Collections</value></data>
   <data name="WikiBrowseAllCategories" xml:space="preserve"><value>Browse all categories</value></data>
   <data name="WikiAllCollections" xml:space="preserve"><value>All collections</value></data>

@@ -52,10 +52,15 @@ public class AdminImportRefusalTests : TrackingBunitContext
 {
 	private const string Reason = "The configuration store is offline.";
 
-	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null, IReadOnlyList<ImportSessionStatus>? sessions = null)
+	private void AddServices(Func<HttpMethod, string, HttpResponseMessage> respond, List<string>? bodies = null, IReadOnlyList<ImportSessionStatus>? sessions = null,
+		bool previousRetained = false)
 	{
-		var client = Track(new HttpClient(new RouteHandler((method, path) => path == "api/databaseconversion/sessions"
-			? Json(HttpStatusCode.OK, JsonSerializer.Serialize(sessions ?? [])) : respond(method, path), bodies))
+		var client = Track(new HttpClient(new RouteHandler((method, path) => (method.Method, path) switch
+		{
+			(_, "api/databaseconversion/sessions") => Json(HttpStatusCode.OK, JsonSerializer.Serialize(sessions ?? [])),
+			("GET", "api/databaseconversion/previous") => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new PreviousWorldStatus(previousRetained))),
+			_ => respond(method, path)
+		}, bodies))
 		{
 			BaseAddress = new Uri("https://localhost:8081/")
 		});
@@ -404,4 +409,36 @@ public class AdminImportRefusalTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".dbimport-dropzone")).IsEmpty();
 	}
 
+	[Test]
+	public async Task RecentImportsNameTheFileTheServerAndWhereEachStands()
+	{
+		AddServices((_, path) => throw new InvalidOperationException("Unexpected request: " + path),
+			sessions: [new("s1", "Committed", new ConversionResult { SourceName = "TinyMUX" }, null, DateTimeOffset.UnixEpoch, "unload.flat")]);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-session"));
+		await Assert.That(cut.Find(".dbimport-session-file").TextContent).IsEqualTo("unload.flat");
+		await Assert.That(cut.Find(".dbimport-session-format").TextContent).IsEqualTo("TinyMUX");
+		await Assert.That(cut.Find(".dbimport-session-state").TextContent).IsEqualTo("AdmImportStateCommitted");
+		await Assert.That(cut.Find(".dbimport-session-started").TextContent).IsNotEmpty();
+	}
+
+	[Test]
+	public async Task APreviousWorldCanBeDiscardedOnceConfirmed()
+	{
+		var asked = new List<string>();
+		AddServices((method, path) =>
+		{
+			asked.Add($"{method} {path}");
+			return path == "api/databaseconversion/previous/discard"
+				? Json(HttpStatusCode.OK, JsonSerializer.Serialize(new PreviousWorldStatus(false)))
+				: throw new InvalidOperationException("Unexpected request: " + path);
+		}, previousRetained: true);
+		var cut = Render<ImportDatabase>();
+		cut.WaitForAssertion(() => cut.Find(".dbimport-discard-previous"));
+		await Assert.That(cut.Find(".dbimport-discard-previous").HasAttribute("disabled")).IsTrue();
+		await cut.Find(".dbimport-confirm-discard input").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+		await Click(cut, "AdmImportDiscardPrevious");
+		cut.WaitForState(() => cut.FindAll(".dbimport-previous").Count == 0);
+		await Assert.That(asked).IsEquivalentTo(["POST api/databaseconversion/previous/discard"]);
+	}
 }

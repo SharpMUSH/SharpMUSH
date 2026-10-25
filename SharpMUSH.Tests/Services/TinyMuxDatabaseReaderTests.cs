@@ -172,11 +172,12 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(database.SharesPipingSubstitutions).IsTrue();
 	}
 
-	/// <summary>Every lossy choice is in the notes the import reports.</summary>
+	/// <summary>Every lossy choice is in the notes the import reports, TinyMUX's own bookkeeping apart.</summary>
 	[Test]
 	public async Task ReportsWhatItChanged()
 	{
-		var notes = (await ReadV5()).ImportNotes;
+		var database = await ReadV5();
+		var notes = database.ImportNotes;
 
 		await Assert.That(notes).Contains(note => note.StartsWith("Flag SEETHRU imported as TRANSPARENT"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Power control_all granted as the control.all permission"));
@@ -184,7 +185,8 @@ public class TinyMuxDatabaseReaderTests
 		await Assert.That(notes).Contains(note => note.Contains("SpeechLock on an object that is not AUDITORIUM"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Zone object's EnterLock copied"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Imported from a TinyMUX flatfile") && note.Contains("rhost_list"));
-		await Assert.That(notes).Contains(note => note.StartsWith("Attribute number 25 not imported"));
+		await Assert.That(database.RoutineNotes).Contains(note => note.StartsWith("Attribute number 25 not imported"));
+		await Assert.That(notes).DoesNotContain(note => note.StartsWith("Attribute number 25 not imported"));
 	}
 
 	/// <summary>Version 2: Latin-1 text, raw ANSI colour, and the default lock in each object's header.</summary>

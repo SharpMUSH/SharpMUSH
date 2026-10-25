@@ -164,7 +164,7 @@ public class RhostDatabaseTranslatorTests
 		var database = RhostDatabaseTranslator.Translate(flatfile);
 
 		await Assert.That(database.Objects[0].Attributes.Select(a => a.Name)).IsEquivalentTo(["AMAIL"]);
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Attribute ConnInfo: not imported"))).IsTrue();
+		await Assert.That(database.RoutineNotes.Any(n => n.StartsWith("Attribute ConnInfo: not imported"))).IsTrue();
 	}
 
 	/// <summary>Without a lock attribute, the header's lock is read, its bare numbers made dbrefs.</summary>
