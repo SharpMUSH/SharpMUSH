@@ -109,12 +109,9 @@ public partial class LightningDatabase
 		var categories = new Dictionary<string, long>(StringComparer.Ordinal);
 		if (visibility.IncludedPageIds is { } included)
 		{
-			var seen = new HashSet<long>();
-			foreach (var id in included)
-			{
-				if (!TryParseWikiPageId(id, out var key) || !seen.Add(key)) continue;
-				if (ReadWikiSummary(tx, key) is { } summary && WikiSummaryAdmitted(visibility, key, summary)) Add(summary, 1);
-			}
+			foreach (var (_, summary) in ReadWikiSummaries(tx, CanonicalWikiPageKeys(included).Distinct())
+				.Where(page => WikiSummaryAdmitted(visibility, page.Key, page.Summary)))
+				Add(summary, 1);
 		}
 		else
 		{
@@ -125,14 +122,15 @@ public partial class LightningDatabase
 
 			// The totals count every draft only for a reader who sees every draft; anyone else sees their own.
 			if (!visibility.IncludeDrafts && visibility.AuthorDbref is { Length: > 0 } author)
-				foreach (var (key, _) in tx.Range(Tables.WikiDraft, WikiDraftPrefix(author)))
-					if (ReadWikiSummary(tx, Keys.ReadDbref(key.AsSpan(key.Length - 8))) is { } summary) Add(summary, 1);
+				foreach (var (_, summary) in ReadWikiSummaries(tx, tx.Range(Tables.WikiDraft, WikiDraftPrefix(author))
+					.Select(entry => Keys.ReadDbref(entry.Key.AsSpan(entry.Key.Length - 8)))))
+					Add(summary, 1);
 
 			// Every page the totals and drafts above counted that this reader may not see.
-			foreach (var key in WikiPagesWithheld(tx, visibility))
-				if (ReadWikiSummary(tx, key) is { } summary && visibility.Admits(summary.Published, summary.AuthorDbref)
-					&& !WikiSummaryAdmitted(visibility, key, summary))
-					Add(summary, -1);
+			foreach (var (_, summary) in ReadWikiSummaries(tx, WikiPagesWithheld(tx, visibility))
+				.Where(page => visibility.Admits(page.Summary.Published, page.Summary.AuthorDbref)
+					&& !WikiSummaryAdmitted(visibility, page.Key, page.Summary)))
+				Add(summary, -1);
 		}
 
 		tally = new WikiTally(checked((int)total), categories.Where(pair => pair.Value > 0)
@@ -144,11 +142,9 @@ public partial class LightningDatabase
 		void Add(WikiPageSummary summary, int delta)
 		{
 			total += delta;
-			foreach (var category in summary.Categories.Select(c => c.ToUpperInvariant()).Distinct(StringComparer.Ordinal))
-			{
-				var name = category.ToLowerInvariant();
+			foreach (var name in summary.Categories.Select(c => c.ToUpperInvariant()).Distinct(StringComparer.Ordinal)
+				.Select(c => c.ToLowerInvariant()))
 				categories[name] = categories.GetValueOrDefault(name) + delta;
-			}
 		}
 	}
 
@@ -159,9 +155,8 @@ public partial class LightningDatabase
 	/// </summary>
 	private static HashSet<long> WikiPagesWithheld(ITx tx, WikiVisibility visibility)
 	{
-		var keys = new HashSet<long>();
-		foreach (var id in (visibility.ExcludedPageIds ?? Enumerable.Empty<string>()).Concat(visibility.Hidden?.PageIds ?? Enumerable.Empty<string>()))
-			if (TryParseWikiPageId(id, out var key) && WikiPageId(key) == id) keys.Add(key);
+		var keys = CanonicalWikiPageKeys((visibility.ExcludedPageIds ?? Enumerable.Empty<string>())
+			.Concat(visibility.Hidden?.PageIds ?? Enumerable.Empty<string>())).ToHashSet();
 		if (visibility.Hidden is not { } hidden) return keys;
 		foreach (var ns in hidden.Namespaces)
 			foreach (var (key, _) in WikiNamespaceEntries(tx, ns))
@@ -184,6 +179,15 @@ public partial class LightningDatabase
 
 	private static WikiPageSummary? ReadWikiSummary(ITx tx, long key)
 		=> tx.TryGet(Tables.WikiSummary, WikiPageKey(key), out var value) ? WikiPageSummary.Decode(value) : null;
+
+	/// <summary>The summary of each of <paramref name="keys"/> that has one.</summary>
+	private static IEnumerable<(long Key, WikiPageSummary Summary)> ReadWikiSummaries(ITx tx, IEnumerable<long> keys)
+		=> keys.Select(key => ReadWikiSummary(tx, key) is { } summary ? (key, summary) : default((long, WikiPageSummary)?))
+			.OfType<(long Key, WikiPageSummary Summary)>();
+
+	/// <summary>The key of each of <paramref name="ids"/> written as this store writes a page id; no other spelling matches a page.</summary>
+	private static IEnumerable<long> CanonicalWikiPageKeys(IEnumerable<string> ids)
+		=> ids.Select(id => TryParseWikiPageId(id, out var key) && WikiPageId(key) == id ? key : (long?)null).OfType<long>();
 
 	/// <summary>
 	/// The fields of a page a count or a read requirement needs, kept apart from its body: a published byte, then the

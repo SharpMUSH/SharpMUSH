@@ -69,12 +69,8 @@ public class WikiPageCountTests : LightningDatabaseFixture
 	}
 
 	private async Task<List<WikiPage>> CurrentAsync(IEnumerable<WikiPage> pages)
-	{
-		var current = new List<WikiPage>();
-		foreach (var page in pages)
-			if (await Db.GetPageByIdAsync(page.Id) is WikiPage found) current.Add(found);
-		return current;
-	}
+		=> [.. (await Task.WhenAll(pages.Select(page => Db.GetPageByIdAsync(page.Id))))
+			.Select(found => found is WikiPage page ? page : null).OfType<WikiPage>()];
 
 	[Test]
 	public async Task CountsMatchThePagesForEveryReader()
@@ -136,9 +132,8 @@ public class WikiPageCountTests : LightningDatabaseFixture
 		// Every other page's summary and body would throw if a count read them.
 		await Db.Store.WriteAsync(tx =>
 		{
-			foreach (var page in pages.Skip(10))
+			foreach (var key in pages.Skip(10).Select(page => Keys.Dbref(long.Parse(page.Id["wiki_page/".Length..]))))
 			{
-				var key = Keys.Dbref(long.Parse(page.Id["wiki_page/".Length..]));
 				tx.Put(Tables.WikiSummary, key, "not json"u8);
 				tx.Put(Tables.WikiPage, key, "not json"u8);
 			}

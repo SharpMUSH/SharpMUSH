@@ -62,6 +62,9 @@ public partial class LightningDatabase
 		return false;
 	}
 
+	/// <summary>An admitted index row: its key, the page's key, and the page when admitting it read the page.</summary>
+	private sealed record WikiWindowRow(byte[] Index, long Key, WikiPage? Page);
+
 	/// <summary>
 	/// Reads one admitted row past the page in the direction of travel, so <see cref="WikiPageWindow.Next"/> (forward) or
 	/// <see cref="WikiPageWindow.Previous"/> (backward) is null only when nothing the reader may see lies beyond it.
@@ -83,18 +86,19 @@ public partial class LightningDatabase
 		};
 		if (entries is null) return new Error<string>("That page of the listing is not one this wiki wrote.");
 
-		var rows = new List<(byte[] Index, long Key, WikiPage? Page)>(take + 1);
+		var rows = new List<WikiWindowRow>(take + 1);
 		var skipped = false;
-		foreach (var entry in entries)
+		foreach (var row in entries
+			.Select(entry => admit(entry) is { } admitted ? new WikiWindowRow(entry.Key, admitted.Key, admitted.Page) : null)
+			.OfType<WikiWindowRow>())
 		{
-			if (admit(entry) is not { } admitted) continue;
 			if (skip > 0)
 			{
 				skip--;
 				skipped = true;
 				continue;
 			}
-			rows.Add((entry.Key, admitted.Key, admitted.Page));
+			rows.Add(row);
 			if (rows.Count > take) break;
 		}
 		var beyond = rows.Count > take;
