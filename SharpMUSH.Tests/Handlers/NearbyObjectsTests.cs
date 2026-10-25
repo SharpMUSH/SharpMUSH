@@ -41,7 +41,8 @@ public class NearbyObjectsTests
 
 		var nearby = await NearbyObjects.ForAsync(Mediator, await Node(self)).Select(o => o.Object().DBRef.Number).ToListAsync();
 
-		int[] expected = [self.Number, carried.Number, before.Number, after.Number];
+		// The location lists its newest arrival first.
+		int[] expected = [self.Number, carried.Number, after.Number, before.Number];
 		await Assert.That(nearby).IsEquivalentTo(expected, CollectionOrdering.Matching);
 	}
 }
