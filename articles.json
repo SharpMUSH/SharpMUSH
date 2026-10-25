@@ -11640,6 +11640,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:pack()",
+    "lookup": "pack()",
+    "title": "pack()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:parent()",
     "lookup": "parent()",
     "title": "parent()",
@@ -12553,6 +12561,14 @@
     "id": "legacy:unique()",
     "lookup": "unique()",
     "title": "unique()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
+    "id": "legacy:unpack()",
+    "lookup": "unpack()",
+    "title": "unpack()",
     "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"

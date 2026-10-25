@@ -28,7 +28,8 @@
 |              |              |              |              |
 |--------------|--------------|--------------|--------------|
 | [BAND()]     | [BASECONV()] | [BNAND()]    | [BNOT()]     |
-| [BOR()]      | [BXOR()]     | [SHL()]      | [SHR()]      |
+| [BOR()]      | [BXOR()]     | [PACK()]     | [SHL()]      |
+| [SHR()]      | [UNPACK()]   |              |              |
 
 # Boolean Functions
   Boolean functions all return 0 or 1 as an answer.
@@ -2286,9 +2287,9 @@ think hastype(test object, PLAYER THING)
 # if()
 # ifelse()
 `if(<condition>, <true expression>[, <false expression>])`<br>
-`ifelse(<condition>, <true expression>, <false expression>)`
+`ifelse(<condition>, <true expression>[, <false expression>])`
 
-  These functions evaluate the `<condition>` and return `<true expression>` if the `<condition>` is true, or `<false expression>` (if provided) if the `<condition>` is false. Only the returned `<expression>` is evaluated.
+  These functions evaluate the `<condition>` and return `<true expression>` if the `<condition>` is true, or `<false expression>` (if provided) if the `<condition>` is false. Only the returned `<expression>` is evaluated. The two are the same function: PennMUSH requires all three arguments of ifelse(), RhostMUSH does not.
 
   In the expression that is evaluated, "#$" stands for the evaluated `<condition>`, unless a switch() around or inside it names its own `<string>`. The value is never evaluated as code. The branch also counts as a switch on the `<condition>` for stext(), %$0 and slev(). See [compatibility parser in case and if].
 
@@ -3869,6 +3870,37 @@ think objevals(me,v(DATA`TEXT))
 - [LOCKOWNER()]
 - [@chown]
 - [@atrchown]
+:::
+
+# pack()
+`pack(<number>[, <radix>[, <baseconv digits>]])`
+
+  Writes the integer `<number>` in base `<radix>`, which is 2 to 64 and defaults to 64. unpack() reads it back. The digits are:
+
+  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$"
+
+  Every one of them can appear in an attribute name, so a radix-64 number makes a short attribute name. A negative number is written with a leading `-`, except in radix 63 and 64, which have no digit to spare for it.
+
+  When `<baseconv digits>` is true, the digits are baseconv()'s instead: lower case up to radix 36, and its base64 url string above that. pack(<number>,<radix>,1) is baseconv(<number>,10,<radix>).
+
+  pack() and unpack() come from TinyMUX and RhostMUSH.
+
+  Examples:
+```sharp
+think pack(255,16)
+FF
+think pack(255)
+3$
+think pack(255,16,1)
+ff
+think pack(-10,2)
+-1010
+```
+
+
+::: seealso
+- [UNPACK()]
+- [BASECONV()]
 :::
 
 # parent()
@@ -5840,6 +5872,30 @@ think unique(1|2|3|3, n, |, _)
 ::: seealso
 - [SETUNION()]
 - [SORT()]
+:::
+# unpack()
+`unpack(<string>[, <radix>[, <baseconv digits>]])`
+
+  Reads `<string>` as an integer in base `<radix>`, which is 2 to 64 and defaults to 64, and returns it in decimal. It uses pack()'s digits, so upper and lower case are different digits. A leading `-` makes the number negative. A character that is not a digit of `<radix>` returns #-1 NUMBER IS NOT VALID FOR INPUT RADIX; RhostMUSH reads up to that character instead.
+
+  When `<baseconv digits>` is true, it reads baseconv()'s digits instead, as baseconv(<string>,<radix>,10) does.
+
+  Examples:
+```sharp
+think unpack(FF,16)
+255
+think unpack(3$)
+255
+think unpack(ff,16,1)
+255
+think unpack(ff,16)
+#-1 NUMBER IS NOT VALID FOR INPUT RADIX
+```
+
+
+::: seealso
+- [PACK()]
+- [BASECONV()]
 :::
 # unmark()
 `unmark(<string>)`
