@@ -1,0 +1,21 @@
+# Softcode audit (#2268) checks. A player or thing hears what the objects it carries say: notify_except
+# passes na_loc, which yields the location before its contents (pennmush src/notify.c). do_set_atr
+# reports the attribute's stored, upper-cased name (src/attrib.c).
+
+::case use.ause  an object's @ause pose reaches the player carrying it
+::login wiz Wiz wizpass
+::as wiz
+@create Revolver
+@use Revolver=You pull the trigger.
+@ause Revolver=POSE fires into the air.
+use revolver
+
+::case speech.contained  a carried object's pose and speech reach its holder
+@create Popgun
+@force Popgun=pose pops.
+@force Popgun=say hi
+
+::case attr.case  the set and cleared messages name the attribute upper-cased
+&lowattr me=value
+@set me=otherattr:value
+&lowattr me

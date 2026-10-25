@@ -56,14 +56,16 @@ public partial class QueueLoadTests
 	}
 
 	[Test]
-	public async Task PsSummaryPrintsTheAverages()
+	[Arguments("@ps/summary")]
+	[Arguments("@ps/count")]
+	public async Task PsSummaryPrintsTheAverages(string command)
 	{
 		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services,
 			WebAppFactoryArg.Services.GetRequiredService<IMediator>(), connections, "PsLoad");
 
 		await WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle)
-			.CommandParse(player.Handle, connections, MarkupText.Plain("@ps/summary"));
+			.CommandParse(player.Handle, connections, MarkupText.Plain(command));
 
 		await Assert.That(WebAppFactoryArg.Notifications.For(player.DbRef).Any(line => LoadAverageLine().IsMatch(line)))
 			.IsTrue();

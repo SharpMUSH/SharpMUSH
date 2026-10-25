@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.17.0
+version: 1.17.1
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -489,6 +489,8 @@ objects:
       #      line's parts by name: the line drawn by the speaker's FORMAT`<VERB> or else the type's FORMAT,
       #      under the pose's rule.
       #   3. Otherwise ⇒ @message/spoof the pose to the room exactly as before (so a pose outside any
+      #      %q<hearers> is the room's contents, led by the location itself when that is a player or thing
+      #      (PennMUSH's na_loc), so whoever carries the poser hears it.
       #      scene behaves like the un-hooked built-in -- the emit is never lost).
       # So a CAPTURED pose is framed (a rule naming the poser and the pose, one under it naming the scene, or a
       # scene tag); an uncaptured one is a plain pose. The rule must come AFTER addpose because it reads the new pose id.
@@ -503,7 +505,7 @@ objects:
       # missing from the archive, and only from the scene, never from the room.
 
       INC`CAPTURE`DECIDE: |-
-        think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`IS`APPROVED,%#)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))]
+        think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`IS`APPROVED,%#)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]
 
       # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
       # posed and the pose, over a rule naming the scene, or for a band, message or notice type as one line tagged
@@ -527,7 +529,7 @@ objects:
       # Built-in POSE (MoreCommands.Pose) emits: "<name> <message>" to the room.
       CMD`CAPTURE`POSE:
         value: |-
-          $(?is)^(pose |\:)(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,:)); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%q<words>,line,%q<poser_name> %q<words>,heard,%q<poser_name> %q<words>,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>},{@message/spoof [lcon(%q<room_id>)]=%q<poser_name> %q<words>,%#/FORMAT`POSE,%q<words>,##}
+          $(?is)^(pose |\:)(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,:)); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,pose,,%q<poser_name> %q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,POSE,self,,words,%q<words>,line,%q<poser_name> %q<words>,heard,%q<poser_name> %q<words>,hearers,%q<hearers>,scene,%q<scene_id>,room,%q<room_id>},{@message/spoof %q<hearers>=%q<poser_name> %q<words>,%#/FORMAT`POSE,%q<words>,##}
         flags: [REGEXP]
 
       # Built-in SAY (MoreCommands.Say) emits "You say, \"<msg>\"" to the speaker
@@ -537,19 +539,19 @@ objects:
       # lcon() (the speaker is filtered out by dbref number, since lcon() may list objids).
       CMD`CAPTURE`SAY:
         value: |-
-          $(?is)^(say |")(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,")); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,say,,%q<poser_name> says\, "%q<words>"; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,SAY,self,You say[chr(44)] "%q<words>",words,%q<words>,line,%q<poser_name> says[chr(44)] "%q<words>",heard,%q<poser_name> says[chr(44)] "%q<words>",hearers,[iter(lcon(%q<room_id>),if(strmatch(before(%i0,:),%#),,%i0))],scene,%q<scene_id>,room,%q<room_id>},{@message/spoof %#=You say[chr(44)] "%q<words>",%#/FORMAT`SAY,%q<words>,##; @message/spoof [iter(lcon(%q<room_id>),if(strmatch(before(%i0,:),%#),,%i0))]=%q<poser_name> says[chr(44)] "%q<words>",%#/FORMAT`SAY,%q<words>,##}
+          $(?is)^(say |")(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,")); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,say,,%q<poser_name> says\, "%q<words>"; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,SAY,self,You say[chr(44)] "%q<words>",words,%q<words>,line,%q<poser_name> says[chr(44)] "%q<words>",heard,%q<poser_name> says[chr(44)] "%q<words>",hearers,[iter(%q<hearers>,if(strmatch(before(%i0,:),%#),,%i0))],scene,%q<scene_id>,room,%q<room_id>},{@message/spoof %#=You say[chr(44)] "%q<words>",%#/FORMAT`SAY,%q<words>,##; @message/spoof [iter(%q<hearers>,if(strmatch(before(%i0,:),%#),,%i0))]=%q<poser_name> says[chr(44)] "%q<words>",%#/FORMAT`SAY,%q<words>,##}
         flags: [REGEXP]
 
       # Built-in SEMIPOSE (MoreCommands.SemiPose) emits "<name><message>" (no space).
       CMD`CAPTURE`SEMI:
         value: |-
-          $(?is)^(semipose |;)(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,chr(59))); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,semipose,,%q<poser_name>%q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,SEMIPOSE,self,,words,%q<words>,line,%q<poser_name>%q<words>,heard,%q<poser_name>%q<words>,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>},{@message/spoof [lcon(%q<room_id>)]=%q<poser_name>%q<words>,%#/FORMAT`SEMIPOSE,%q<words>,##}
+          $(?is)^(semipose |;)(.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%2,chr(59))); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,semipose,,%q<poser_name>%q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,SEMIPOSE,self,,words,%q<words>,line,%q<poser_name>%q<words>,heard,%q<poser_name>%q<words>,hearers,%q<hearers>,scene,%q<scene_id>,room,%q<room_id>},{@message/spoof %q<hearers>=%q<poser_name>%q<words>,%#/FORMAT`SEMIPOSE,%q<words>,##}
         flags: [REGEXP]
 
       # Built-in @EMIT emits "<message>" verbatim (no name) to the room.
       CMD`CAPTURE`EMIT:
         value: |-
-          $(?is)^@emit (.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%1,|)); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%q<words>,line,%q<words>,heard,%q<words>,hearers,[lcon(%q<room_id>)],scene,%q<scene_id>,room,%q<room_id>},{@message/spoof [lcon(%q<room_id>)]=%q<words>,%#/FORMAT`EMIT,%q<words>,##}
+          $(?is)^@emit (.*)$: think setq(words,u(%!/FUN`SPEECHMOD,%#,%1,|)); @include %!/INC`CAPTURE`DECIDE; @if %q<will_capture>={@scene/addpose %q<scene_id>=%#,[scenemember(%q<scene_id>,%#,showas)],%q<room_id>,ic,emit,,%q<words>; @include/args %!/INC`CAPTURE`LINE=type,IC,verb,EMIT,self,,words,%q<words>,line,%q<words>,heard,%q<words>,hearers,%q<hearers>,scene,%q<scene_id>,room,%q<room_id>},{@message/spoof %q<hearers>=%q<words>,%#/FORMAT`EMIT,%q<words>,##}
         flags: [REGEXP]
 
       # ---- web compose ----------------------------------------------------------

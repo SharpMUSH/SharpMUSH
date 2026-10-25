@@ -24,19 +24,6 @@ public class GameCommandTests
 	[Test]
 	[Category("NotImplemented")]
 	[Skip("Not Yet Implemented")]
-	public async ValueTask BuyCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("buy sword"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You try to buy 'sword'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ScoreCommand()
 	{
 		var executor = WebAppFactoryArg.ExecutorDBRef;

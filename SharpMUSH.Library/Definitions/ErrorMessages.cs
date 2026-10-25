@@ -1270,6 +1270,7 @@ public static partial class ErrorMessages
 		/// </summary>
 		public const string CreateDbrefUnavailable = "That is not a valid dbref.";
 		public const string MoneyFunctionNotSupported = "The money() function is not supported. SharpMUSH does not track money or pennies.";
+		public const string BuyCommandNotSupported = "The buy command is not supported. SharpMUSH does not track money or pennies.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageSentToRecipientsFormat = "Message sent to {0} recipient(s).";
 

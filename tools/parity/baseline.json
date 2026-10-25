@@ -237,6 +237,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "48-audit-checks/use.ause#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "48-argument-counts/argc.login#0",
    "command": "Wiz wizpass"
   },

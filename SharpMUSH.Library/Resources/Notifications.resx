@@ -1457,6 +1457,9 @@
   <data name="MoneyFunctionNotSupported" xml:space="preserve">
     <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>
   </data>
+  <data name="BuyCommandNotSupported" xml:space="preserve">
+    <value>The buy command is not supported. SharpMUSH does not track money or pennies.</value>
+  </data>
   <data name="MessageSentToRecipientsFormat" xml:space="preserve">
     <value>Message sent to {0} recipient(s).</value>
   </data>

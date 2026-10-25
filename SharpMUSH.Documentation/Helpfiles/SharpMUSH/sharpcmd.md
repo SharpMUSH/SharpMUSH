@@ -2612,7 +2612,7 @@ The PRICELIST attribute can be set, but nothing reads it: SharpMUSH has no money
 # buy
 `buy <item>[ from <vendor>][ for <cost>]`
 
-The buy command is not implemented: SharpMUSH has no money. It reads no PRICELIST, checks no @lock/pay and runs no @buy attributes; it only says that buying needs an economy system.
+SharpMUSH does not track money, so buy only says so, as [money()] does: "The buy command is not supported. SharpMUSH does not track money or pennies." It reads no PRICELIST, checks no @lock/pay and runs no @buy attributes. See [compatibility economy].
 
 
 ::: seealso
