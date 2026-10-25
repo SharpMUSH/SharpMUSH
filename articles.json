@@ -10486,6 +10486,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:error()",
+    "lookup": "error()",
+    "title": "error()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:escape()",
     "lookup": "escape()",
     "title": "escape()",
