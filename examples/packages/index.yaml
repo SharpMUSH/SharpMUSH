@@ -147,7 +147,7 @@ packages:
   - path: finger/
     name: Finger
     package: finger
-    version: 1.3.0
+    version: 1.3.1
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits with +config
   - path: summary/
     name: Summary
