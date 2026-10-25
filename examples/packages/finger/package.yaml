@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -137,6 +137,15 @@ objects:
         alias(%<target>)
       SHOW`LASTON: |-
         u(%!/FUN`DISPLAY`LASTON,%<target>,%<viewer>)
+      # A worked-out field +finger/set still sets: SET`<KEY> is run with %q<cmd_right_side> the text.
+      SET: |-
+        Worked-out fields +finger/set sets, one leaf per key.
+      # The player's @alias, set as the player when it is their own, so the game's rules for an alias apply and
+      # the game tells them why it refused; staff setting someone else's are told the reason here.
+      SET`ALIAS:
+        value: |-
+          @assert cor(strlen(%q<cmd_right_side>),hasattr(%q<set_target>,ALIAS))=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not set.,warn); think setq(set_failure,objeval(if(comp(%q<set_target>,%q<viewer_objid>),%!,%q<set_target>),if(strlen(%q<cmd_right_side>),attrib_set(%q<set_target>/ALIAS,%q<cmd_right_side>),attrib_set(%q<set_target>/ALIAS)))); @assert not(strlen(%q<set_failure>))=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> did not change[if(comp(%q<set_target>,%q<viewer_objid>),: %q<set_failure>)].,error); @pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label>[if(strlen(%q<cmd_right_side>),: %q<cmd_right_side>,%bis cleared.)],ok); @include %!/INC`DO`TELL
+        flags: [cmdsyntax]
 
       DATA: |-
         Settings and constants.
@@ -494,7 +503,7 @@ objects:
         value: |-
           @assert strlen(%q<cmd_left_side>)=@pemit %#=notice(FINGER,Which field? +%q<cmd_word>/%q<cmd_switch> <field>[if(strmatch(%q<cmd_switch>,set),=<text>)],warn); think u(%!/FUN`SET`PARSE,%q<cmd_left_side>); @assert strlen(%q<set_target>)=@pemit %#=notice(FINGER,There is no player called '[before(%q<cmd_left_side>,/)]'.,warn); @assert cor(%q<viewer_is_editor>,not(comp(%q<set_target>,%q<viewer_objid>)))=@pemit %#=notice(FINGER,Only staff change someone else's fields.,error); think setq(set_field,u(%!/FUN`FIELD`FIND,%q<set_typed>)); @assert strlen(%q<set_field>)=@pemit %#=notice(FINGER,There is no field called '%q<set_typed>'. +finger/fields lists them.,warn); think setqm(set_key,last(%q<set_field>,`),
           set_label,get(%!/%q<set_field>),
-          set_whose,if(comp(%q<set_target>,%q<viewer_objid>),name(%q<set_target>)'s,your)); @assert not(u(%!/FUN`FIELD`WORKEDOUT,%q<set_key>))=@pemit %#=notice(FINGER,%q<set_label> is worked out by the game: nobody sets it.,warn)
+          set_whose,if(comp(%q<set_target>,%q<viewer_objid>),name(%q<set_target>)'s,your)); @assert cor(not(u(%!/FUN`FIELD`WORKEDOUT,%q<set_key>)),cand(strmatch(%q<cmd_switch>,set),hasattr(%!,SET`%q<set_key>)))=@pemit %#=notice(FINGER,%q<set_label> is worked out by the game: nobody sets it.,warn)
         flags: [cmdsyntax]
       # %0 <field> or <player>/<field>: sets set_target (the player, empty when no player has that name) and
       # set_typed (the field as typed).
@@ -507,7 +516,7 @@ objects:
       # +finger/set [<player>/]<field>=<text>. Nothing after the = clears it.
       INC`CMD`SET:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(FINGER,+%q<cmd_word>/set <field>=<text> sets a field. +finger/fields lists them.,warn); @include %!/INC`NEED`FIELD; @assert cor(%q<viewer_is_editor>,not(u(%!/FUN`FIELD`LOCKED,%q<set_key>)))=@pemit %#=notice(FINGER,Only staff set %q<set_label>.,error); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`LENGTH))=@pemit %#=notice(FINGER,Keep %q<set_label> to [get(%!/DATA`CONFIG`LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`DO`STORE}; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not set.,warn); &PROFILE`%q<set_key> %q<set_target>; @pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is cleared.,ok); @include %!/INC`DO`TELL
+          @assert %q<cmd_has_equals>=@pemit %#=notice(FINGER,+%q<cmd_word>/set <field>=<text> sets a field. +finger/fields lists them.,warn); @include %!/INC`NEED`FIELD; @assert cor(%q<viewer_is_editor>,not(u(%!/FUN`FIELD`LOCKED,%q<set_key>)))=@pemit %#=notice(FINGER,Only staff set %q<set_label>.,error); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`LENGTH))=@pemit %#=notice(FINGER,Keep %q<set_label> to [get(%!/DATA`CONFIG`LENGTH)] characters.,warn); @break hasattr(%!,SET`%q<set_key>)={@include %!/SET`%q<set_key>}; @break strlen(%q<cmd_right_side>)={@include %!/INC`DO`STORE}; @assert hasattr(%q<set_target>,PROFILE`%q<set_key>)=@pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is not set.,warn); &PROFILE`%q<set_key> %q<set_target>; @pemit %#=notice(FINGER,capstr(%q<set_whose>) %q<set_label> is cleared.,ok); @include %!/INC`DO`TELL
         flags: [cmdsyntax]
       # Stores %q<cmd_right_side>. A new value is readable by everyone, its PROFILE root too; one already set keeps
       # its flags, so a field the player hid stays hidden.
@@ -569,7 +578,7 @@ objects:
         - `+finger/set <field>=<text>` sets a field: `+finger/set age=32`. A field is named by its key or its label: `+finger/set full name=Wren Ash`.
         - `+finger/set <field>=` with nothing after the `=` clears it.
 
-        What you type is kept as typed, less the spaces around the =: brackets and percent signs are plain text. Some fields, such as Alias and Last on, are worked out by the game, and some a game keeps for staff to set.
+        What you type is kept as typed, less the spaces around the =: brackets and percent signs are plain text. Alias is your `@alias`, and setting it here sets that; if the game refuses it, you are told why. Some fields, such as Last on, are worked out by the game, and some a game keeps for staff to set.
 
         ## Hiding a field
 
