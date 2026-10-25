@@ -157,4 +157,59 @@ public class BitwiseFunctionUnitTests
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	/// <summary>Each answer is what TinyMUX 2.14 gave for the same call; RhostMUSH 5.13 agrees on all but the invalid digits.</summary>
+	[Test]
+	[Arguments("pack(255,16)", "FF")]
+	[Arguments("pack(255)", "3$")]
+	[Arguments("pack(-255,16)", "-FF")]
+	[Arguments("pack(0,16)", "0")]
+	[Arguments("pack(64)", "10")]
+	[Arguments("pack(10,2)", "1010")]
+	[Arguments("pack(-10,2)", "-1010")]
+	[Arguments("pack(61,62)", "z")]
+	[Arguments("pack(12345678901234,16)", "B3A73CE2FF2")]
+	[Arguments("pack(9223372036854775807,16)", "7FFFFFFFFFFFFFFF")]
+	[Arguments("pack(255,16,1)", "ff")]
+	[Arguments("pack(255,16,0)", "FF")]
+	[Arguments("pack(61,62,1)", "9")]
+	[Arguments("pack(-255,16,1)", "-ff")]
+	[Arguments("pack(-1,64)", "#-1 NEGATIVE NUMBER IS NOT REPRESENTABLE IN OUTPUT RADIX")]
+	[Arguments("pack(1,1)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
+	[Arguments("pack(1,65)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
+	[Arguments("pack(abc,16)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("pack(1.5,16)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("pack(5,16.5)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("pack(255,)", "#-1 ARGUMENTS MUST BE NUMBERS")]
+	[Arguments("unpack(FF,16)", "255")]
+	[Arguments("unpack(10)", "64")]
+	[Arguments("unpack(-FF,16)", "-255")]
+	[Arguments("unpack(@,64)", "62")]
+	[Arguments("unpack($,64)", "63")]
+	[Arguments("unpack(zz,64)", "3965")]
+	[Arguments("unpack(Z,36)", "35")]
+	[Arguments("unpack(,16)", "0")]
+	[Arguments("unpack(+5,10)", "5")]
+	[Arguments("unpack(ff,16,1)", "255")]
+	[Arguments("unpack(z,36,1)", "35")]
+	[Arguments("unpack(ff,16)", "#-1 NUMBER IS NOT VALID FOR INPUT RADIX")]
+	[Arguments("unpack(G,16)", "#-1 NUMBER IS NOT VALID FOR INPUT RADIX")]
+	[Arguments("unpack(FF,16,1)", "#-1 NUMBER IS NOT VALID FOR INPUT RADIX")]
+	[Arguments("unpack(1,1)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
+	[Arguments("unpack(FF,)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
+	public async Task PackAndUnpack(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("FFFFFFFFFFFFFFFFFFFF", "16")]
+	[Arguments("zzzzzzzzzzzzzzzzzzzz", "64")]
+	[Arguments("-101010101010101010101010101010101010101010101010101010101010101010", "2")]
+	public async Task UnpackThenPackGivesTheNumberBack(string text, string radix)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain($"pack(unpack({text},{radix}),{radix})"));
+		await Assert.That(result.ToPlainText()).IsEqualTo(text);
+	}
 }

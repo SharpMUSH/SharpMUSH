@@ -13,5 +13,8 @@ public record SoftcodeRewrite(string Attribute, string Note, string Before, stri
 	/// <summary>Whether the rewrite could not carry some of the code over exactly.</summary>
 	public bool ByHand => Note.Contains("check by hand", StringComparison.Ordinal);
 
+	/// <summary>Whether a colour code the rewrite could not convert was removed.</summary>
+	public bool ColourRemoved => Note.Contains("colour-code-removed", StringComparison.Ordinal);
+
 	public override string ToString() => $"{Attribute}: {Note}";
 }

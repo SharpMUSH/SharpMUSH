@@ -29,10 +29,19 @@ public static partial class ReadPennMushConfig
 	/// portal: its <c>include</c> lines are reported rather than followed, so it cannot name a file on
 	/// the server and have that file's settings read back into the configuration.
 	/// </param>
-	public static PennMushConfigImport Import(string configFile, bool followIncludes = true)
+	/// <param name="dialect">
+	/// The server that wrote the file. A TinyMUX or RhostMUSH directive that names a SharpMUSH option under another
+	/// name (<see cref="ConfigurationDirectives"/>) is read as that option.
+	/// </param>
+	public static PennMushConfigImport Import(string configFile, bool followIncludes = true,
+		ConfigurationDialect dialect = ConfigurationDialect.PennMUSH)
 	{
 		List<string> skipped = [];
-		var text = ReadWithIncludes(configFile, skipped, followIncludes);
+		var text = ReadWithIncludes(configFile, skipped, followIncludes)
+			.Select(line => DirectiveName(line) is { } name && ConfigurationDirectives.PennName(name, dialect) is var penn && penn != name
+				? penn + line.TrimStart()[name.Length..]
+				: line)
+			.ToList();
 
 		var propertyDictionary = ConfigMetadata.PropertyToAttributeName;
 		var configDictionary = ConfigMetadata.AttributeToPropertyName.Keys

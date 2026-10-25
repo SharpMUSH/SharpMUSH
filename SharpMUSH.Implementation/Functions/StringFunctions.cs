@@ -1186,8 +1186,11 @@ public partial class Functions
 		return (result ?? CallState.Empty) with { HadErrors = result?.HadErrors == true || parsedIfElse.HadErrors };
 	}
 
-	/// <summary>PennMUSH registers <c>ifelse</c> as <c>fun_if</c> with three required arguments (<c>src/function.c:504</c>).</summary>
-	[SharpFunction(Name = "ifelse", MinArgs = 3, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["expression"])]
+	/// <summary>
+	/// PennMUSH registers <c>ifelse</c> as <c>fun_if</c> with three required arguments (<c>src/function.c:504</c>);
+	/// RhostMUSH lets the false branch be left out, as if() does.
+	/// </summary>
+	[SharpFunction(Name = "ifelse", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.NoParse, ParameterNames = ["expression"])]
 	public ValueTask<CallState> IfElse(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> If(parser, _2);
 

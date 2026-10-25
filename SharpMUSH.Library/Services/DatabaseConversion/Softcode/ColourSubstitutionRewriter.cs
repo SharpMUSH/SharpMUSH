@@ -15,7 +15,7 @@ public enum ColourSubstitutionDialect
 	/// <summary>
 	/// RhostMUSH (default build): the TinyMUX forms, plus xterm indexes (<c>%c0x46</c>, <c>%c0X15</c> for a
 	/// background) and a code taken from a register (<c>%c%qy</c>); an unknown letter is left as literal text,
-	/// and a code Rhost assembles at run time (<c>%c0X[printf(...)]</c>) is reported.
+	/// and a code Rhost assembles at run time (<c>%c0X[printf(...)]</c>) is removed and reported.
 	/// </summary>
 	RhostMush
 }
@@ -64,8 +64,10 @@ public sealed record ColourRewriteResult(string Text, bool Changed, IReadOnlyLis
 /// becomes <c>ansi(h[ifelse(x,c,r)],%0)</c>).</para>
 /// <para>What cannot be carried over exactly is rewritten as far as these rules go and named in
 /// <see cref="ColourRewriteResult.Flags"/>: colour kept in a register, a reset or an <c>ansi()</c> inside a
-/// call under open colour, colour that leaks out of a call into the caller, and (Rhost) codes assembled at
-/// run time or read from a register. A body whose brackets do not balance is left as it is.</para>
+/// call under open colour, colour that leaks out of a call into the caller, and (Rhost) codes read from a
+/// register. A code that cannot be rewritten at all, one assembled at run time or one with no colour after it,
+/// is removed, since SharpMUSH would read it as the last command or an attribute; that is named too. A body whose
+/// brackets do not balance is left as it is.</para>
 /// <para>The rules and their checks against live TinyMUX and RhostMUSH servers are in the colour
 /// substitution design notes; this is a port of that prototype.</para>
 /// </remarks>
@@ -86,8 +88,14 @@ public static partial class ColourSubstitutionRewriter
 	/// <summary>Flag: codes at the end of a unit with no text after them were dropped.</summary>
 	public const string TrailingCodesDropped = "trailing-codes-dropped";
 
-	/// <summary>Flag (RhostMUSH): a code assembled at run time, which no rewrite can see.</summary>
-	public const string ComputedColourCode = "computed-colour-code";
+	/// <summary>
+	/// Flag: a code whose colour comes from a call or a substitution (<c>%c0X[printf(...)]</c>), which no rewrite
+	/// can see. It was removed with what it reads, so the text after it is not coloured.
+	/// </summary>
+	public const string ComputedColourCode = "computed-colour-code-removed";
+
+	/// <summary>Flag (RhostMUSH): a <c>%c</c> or <c>%x</c> with no colour after it, removed.</summary>
+	public const string UnconvertibleColourCode = "unconvertible-colour-code-removed";
 
 	/// <summary>Flag (RhostMUSH): a code read from a register, right only if the register holds code letters.</summary>
 	public const string ColourCodeFromRegister = "colour-code-from-register";
@@ -125,6 +133,11 @@ public static partial class ColourSubstitutionRewriter
 		if (parser.Computed)
 		{
 			writer.Flags.Add(ComputedColourCode);
+		}
+
+		if (parser.Unconvertible)
+		{
+			writer.Flags.Add(UnconvertibleColourCode);
 		}
 
 		if (rhost && RegisterCode().IsMatch(body))
@@ -206,8 +219,12 @@ public static partial class ColourSubstitutionRewriter
 	[GeneratedRegex(@"\G%[cCxX]([a-zA-Z])")]
 	private static partial Regex UnknownCode();
 
-	[GeneratedRegex(@"\G%[cCxX](0[xX])?[\[%]")]
+	[GeneratedRegex(@"\G%[cCxX](0[xX])?(?=[\[%])")]
 	private static partial Regex ComputedCode();
+
+	/// <summary>A substitution a computed code reads its colour from: a register, an argument, a named argument.</summary>
+	[GeneratedRegex(@"\G%([qQiIvVwW][0-9a-zA-Z]|<[^>]*>|.)")]
+	private static partial Regex Substitution();
 
 	[GeneratedRegex("%[cCxX]%[qQ]")]
 	private static partial Regex RegisterCode();
@@ -277,6 +294,8 @@ public static partial class ColourSubstitutionRewriter
 		private int _i;
 
 		public bool Computed { get; private set; }
+
+		public bool Unconvertible { get; private set; }
 
 		public Unit Parse(bool commands)
 		{
@@ -447,9 +466,12 @@ public static partial class ColourSubstitutionRewriter
 				}
 			}
 
-			if (rhost && ComputedCode().IsMatch(body, _i))
+			if (ComputedCode().Match(body, _i) is { Success: true } computed)
 			{
+				// What the call or substitution returns is code letters, which would print as text without the code.
 				Computed = true;
+				_i = EndOfOperand(_i + computed.Length);
+				return;
 			}
 
 			if (UnknownCode().Match(body, _i) is { Success: true } unknown)
@@ -460,8 +482,44 @@ public static partial class ColourSubstitutionRewriter
 				return;
 			}
 
+			if (body.Length > _i + 1 && body[_i + 1] is 'c' or 'C' or 'x' or 'X')
+			{
+				// TinyMUX prints what follows a code it cannot read, as here; RhostMUSH prints the code too, which
+				// SharpMUSH would read as the last command. A code at the end is a reset on both.
+				Unconvertible |= rhost && _i + 2 < body.Length;
+				_i += 2;
+				return;
+			}
+
 			unit.Items.Add(new Item(ItemKind.Text, body.Substring(_i, Math.Min(2, body.Length - _i))));
 			_i += 2;
+		}
+
+		/// <summary>Where the bracketed call or the substitution starting at <paramref name="start"/> ends.</summary>
+		private int EndOfOperand(int start)
+		{
+			if (body[start] == '%')
+			{
+				return start + Substitution().Match(body, start).Length;
+			}
+
+			var depth = 0;
+			for (var i = start; i < body.Length; i++)
+			{
+				switch (body[i])
+				{
+					case '\\':
+						i++;
+						break;
+					case '[':
+						depth++;
+						break;
+					case ']' when --depth == 0:
+						return i + 1;
+				}
+			}
+
+			return body.Length;
 		}
 
 		private static bool Started(Unit unit) => unit.Items.Exists(item => !(item.Kind == ItemKind.Text && string.IsNullOrWhiteSpace(item.Text)));

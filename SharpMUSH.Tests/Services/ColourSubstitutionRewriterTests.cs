@@ -133,12 +133,37 @@ public class ColourSubstitutionRewriterTests
 	/// </summary>
 	[Test]
 	[Arguments("[list(a,[iter(b,if(1,%c0x00,%c0xEF)%c0X[printf($02s,1)]Z,,)]%cn,,c)]",
-		"[list(a,[iter(b,ansi(if(1,+xterm0,+xterm239),%c0X[printf($02s,1)]Z),,)],,c)]", "computed-colour-code")]
+		"[list(a,[iter(b,ansi(if(1,+xterm0,+xterm239),Z),,)],,c)]", "computed-colour-code-removed")]
 	[Arguments("x(a,[iter(b,if(1,%cr,%cg)Z)]%cn,c)", "x(a,[iter(b,ansi(if(1,r,g),Z))],c)", "")]
 	[Arguments("x(a,[if(1,%cr,%cg)]%cn,c)", "x(a,,c)", "trailing-codes-dropped")]
 	public async Task KeepsACallThatPicksAColourBesideText(string body, string expected, string flags)
 	{
 		var result = ColourSubstitutionRewriter.Rewrite(body, RhostExpression);
+
+		await Assert.That(result.Text).IsEqualTo(expected);
+		await Assert.That(string.Join(' ', result.Flags.Order(StringComparer.Ordinal))).IsEqualTo(flags);
+	}
+
+	/// <summary>
+	/// A code that cannot be rewritten is removed, since SharpMUSH would read <c>%c</c> as the last command. One
+	/// whose colour comes from a call or a substitution goes with what it reads, whose result would print as text.
+	/// TinyMUX prints what follows a code it cannot read, so removing the code alone is exact there; RhostMUSH
+	/// printed the code too. A code at the end is a reset on both.
+	/// </summary>
+	[Test]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "A%c0X[printf($02s,pack(%0,16))]B", "AB", "computed-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "A%c[u(colour)]B", "AB", "computed-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "A%c%0B", "AB", "computed-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.TinyMux, "A%c[add(1,1)]B", "AB", "computed-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.TinyMux, "A%c%q0B", "AB", "computed-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "A%c B", "A B", "unconvertible-colour-code-removed")]
+	[Arguments(ColourSubstitutionDialect.TinyMux, "A%c B", "A B", "")]
+	[Arguments(ColourSubstitutionDialect.TinyMux, "A%c0x46B", "A0x46B", "")]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "AB%c", "AB", "")]
+	[Arguments(ColourSubstitutionDialect.RhostMush, "%c%q0A%cn", "ansi(%q0,A)", "colour-code-from-register")]
+	public async Task RemovesACodeItCannotRewrite(ColourSubstitutionDialect dialect, string body, string expected, string flags)
+	{
+		var result = ColourSubstitutionRewriter.Rewrite(body, new ColourRewriteOptions(dialect, ColourRewriteMode.Expression));
 
 		await Assert.That(result.Text).IsEqualTo(expected);
 		await Assert.That(string.Join(' ', result.Flags.Order(StringComparer.Ordinal))).IsEqualTo(flags);
