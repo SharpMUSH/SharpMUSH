@@ -215,13 +215,13 @@ public class CommandPaletteTests : BunitContext
 		await cut.InvokeAsync(() => cut.Render(p => p.Add(x => x.Open, true)));
 		try
 		{
-			await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(1);
+			await Assert.That(await cut.InvokeAsync(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus"))).IsEqualTo(1);
 			await Assert.That(closes).IsEqualTo(0);
 		}
 		finally { remembering.SetVoidResult(); }
 		await capturedAgain.Task.WaitAsync(TimeSpan.FromSeconds(5));
-		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus")).IsEqualTo(1);
-		await Assert.That(JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus")).IsEqualTo(2);
+		await Assert.That(await cut.InvokeAsync(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.restoreFocus"))).IsEqualTo(1);
+		await Assert.That(await cut.InvokeAsync(() => JSInterop.Invocations.Count(call => call.Identifier == "sharpmushLayout.rememberFocus"))).IsEqualTo(2);
 		await Assert.That(closes).IsEqualTo(0);
 	}
 
