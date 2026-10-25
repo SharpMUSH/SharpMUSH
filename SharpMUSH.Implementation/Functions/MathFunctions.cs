@@ -161,13 +161,6 @@ public partial class Functions
 	/// for anything outside the long range. PennMUSH saturates instead -- its 32-bit trunc() answers
 	/// 2147483647 for trunc(100000000000000000000) -- so this saturates at the 64-bit bounds.
 	/// </summary>
-	private long TruncateToInt64(decimal value)
-		=> value >= long.MaxValue
-			? long.MaxValue
-			: value <= long.MinValue
-				? long.MinValue
-				: (long)Math.Truncate(value);
-
 	[SharpFunction(Name = "max", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number..."])]
 	public ValueTask<CallState> Max(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ArgHelpers.AggregateDecimals(parser, Math.Max);
@@ -770,9 +763,27 @@ public partial class Functions
 	public ValueTask<CallState> Sign(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> ArgHelpers.EvaluateDecimalToInteger(parser, x => Math.Sign(x));
 
-	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.DecimalsOnly, ParameterNames = ["number"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_trunc</c> (<c>src/funmath.c</c>): <c>strtol</c> with no number check, so the
+	/// leading integer of any text ("101dalmatians" is 101, text with none is 0). Out of range saturates.
+	/// </summary>
+	[SharpFunction(Name = "trunc", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number"])]
 	public ValueTask<CallState> Truncate(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ArgHelpers.EvaluateDecimalToInteger(parser, TruncateToInt64);
+		=> ValueTask.FromResult<CallState>(LeadingInteger(parser.CurrentState.Arguments["0"].Message.ToPlainText()));
+
+	private static long LeadingInteger(string text)
+	{
+		var span = text.AsSpan().TrimStart(" \t\r\n\v\f");
+		var negative = span is ['-', ..];
+		if (span is ['-' or '+', ..]) span = span[1..];
+
+		var digits = span.Length - span.TrimStart("0123456789").Length;
+		if (digits == 0) return 0;
+
+		return long.TryParse(span[..digits], NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+			? negative ? -value : value
+			: negative ? long.MinValue : long.MaxValue;
+	}
 
 	[SharpFunction(Name = "acos", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["cosine", "angle-type"])]
 	public async ValueTask<CallState> ACos(IMUSHCodeParser parser, SharpFunctionAttribute _2)
@@ -1015,7 +1026,12 @@ public partial class Functions
 			return ValueTask.FromResult<CallState>(ErrorMessages.Returns.Numbers);
 		}
 
-		return ValueTask.FromResult<CallState>(Math.Pow(baseNum, exponent));
+		// fun_power answers OUT OF RANGE when pow() raises a floating-point exception: a pole (0 to a
+		// negative power), an invalid result, overflow or underflow.
+		var power = Math.Pow(baseNum, exponent);
+		return ValueTask.FromResult<CallState>(!double.IsFinite(power) || double.IsSubnormal(power) || power == 0 && baseNum != 0
+			? ErrorMessages.Returns.OutOfRange
+			: power);
 	}
 
 	[SharpFunction(Name = "round", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["number", "places", "pad"])]

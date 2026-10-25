@@ -454,6 +454,20 @@ public class MathFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>fun_trunc reads the leading integer of any text, as strtol does, with no number check.</summary>
+	[Test]
+	[Arguments("trunc(101abc)", "101")]
+	[Arguments("val(101dalmatians)", "101")]
+	[Arguments("trunc(-3.9)", "-3")]
+	[Arguments("trunc(%b+7x)", "7")]
+	[Arguments("trunc(abc)", "0")]
+	[Arguments("trunc()", "0")]
+	public async Task TruncReadsTheLeadingInteger(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	/// <summary>
 	/// Converting a decimal outside the long range throws rather than wrapping, so the conversion
 	/// saturates. PennMUSH saturates too, at its own 32-bit bounds.

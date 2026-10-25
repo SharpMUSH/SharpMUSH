@@ -1,0 +1,11 @@
+# Numbers from the softcode audit (#2268): trunc() and its alias val() read the leading integer of
+# any text, and power() answers OUT OF RANGE where pow() raises a floating-point exception.
+::case num.login
+::login wiz Wiz wizpass
+think ok
+
+::case num.trunc  the leading integer, as strtol reads it
+think [trunc(101abc)] [val(101dalmatians)] [trunc(-3.9)] [trunc(abc)] [trunc()] [trunc(+7x)]
+
+::case num.power  a pole, an invalid result, overflow and underflow are out of range
+think [power(0,-1)] [power(-8,0.5)] [power(10,400)] [power(10,-400)] [power(0,2)] [power(2,10)]
