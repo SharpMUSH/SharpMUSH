@@ -164,6 +164,11 @@ public class MiscFunctionUnitTests
 
 	[Test]
 	[Arguments("power(2,3)", "8")]
+	[Arguments("power(0,-1)", "#-1 OUT OF RANGE")]
+	[Arguments("power(-8,0.5)", "#-1 OUT OF RANGE")]
+	[Arguments("power(10,400)", "#-1 OUT OF RANGE")]
+	[Arguments("power(10,-400)", "#-1 OUT OF RANGE")]
+	[Arguments("power(0,2)", "0")]
 	public async Task Power(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
