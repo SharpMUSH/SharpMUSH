@@ -232,9 +232,12 @@ public class LookService(
 			return MarkupText.Empty;
 		}
 
-		var defaultFormattedName = await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
-			await FlagView.ForAsync(look.Looker, connectionService),
-			name: await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
+		// unparse_room (src/unparse.c:71) obeys MYOPIC.
+		var defaultFormattedName = await look.Looker.IsMyopic()
+			? await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look)
+			: await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
+				await FlagView.ForAsync(look.Looker, connectionService),
+				name: await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
 
 		if (!look.Viewing.IsRoom || !look.ViewingFromInside)
 		{
@@ -467,7 +470,10 @@ public class LookService(
 
 		// PennMUSH: wizards/see_all see Name(#dbrefFlags), mortals see plain Name
 		// The flag view is needed only for the Name(#dbrefFlags) form.
-		var flagView = await look.Looker.IsSee_All() ? await FlagView.ForAsync(look.Looker, connectionService) : null;
+		// unparse_object_myopic (look.c:261): a MYOPIC looker sees plain names too.
+		var flagView = await look.Looker.IsSee_All() && !await look.Looker.IsMyopic()
+			? await FlagView.ForAsync(look.Looker, connectionService)
+			: null;
 
 		// One item at a time into one text: plain stretches accumulate and only each hilighted name is a
 		// part of its own. A MarkupText per line joined at the end held every line twice and built each

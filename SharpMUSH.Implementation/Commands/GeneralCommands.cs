@@ -129,6 +129,12 @@ public partial class Commands
 
 			if (locate is AnySharpObject located)
 			{
+				if (!await MaySeeFromHereAsync(executor, located))
+				{
+					await NotifyService.Notify(executor, ErrorMessages.Notifications.CantSeeThatFromHere, executor);
+					return new CallState(ErrorMessages.Returns.CantSeeThatFromHere);
+				}
+
 				viewing = located;
 			}
 		}
@@ -144,6 +150,34 @@ public partial class Commands
 		}
 
 		return await LookService.LookRoom(parser, executor, viewing, key, lookOutside);
+	}
+
+	/// <summary>
+	/// PennMUSH look_at (<c>src/look.c:720-729</c>): an object that is not nearby, and is not the looker's own
+	/// location, can be looked at from afar only by a LONG_FINGERS or SEE_ALL looker, or when it has a
+	/// description that is not NEARBY. With no description at all, <c>read_remote_desc</c> decides.
+	/// </summary>
+	private async ValueTask<bool> MaySeeFromHereAsync(AnySharpObject looker, AnySharpObject target)
+	{
+		if (looker.AsOptionalContent is AnySharpContent content
+				&& (await content.Location()).Object().DBRef == target.Object().DBRef)
+		{
+			return true;
+		}
+
+		if (await Library.Services.LocateService.Nearby(looker, target)
+				|| await looker.HasLongFingers()
+				|| await looker.IsSee_All())
+		{
+			return true;
+		}
+
+		return await AttributeService.GetAttributeAsync(await HelperFunctions.GetGod(Mediator), target, "DESCRIBE",
+				IAttributeService.AttributeMode.Read, true) switch
+		{
+			SharpAttribute[] describe => !describe[^1].IsNearby(),
+			_ => Configuration.CurrentValue.Attribute.ReadRemoteDesc
+		};
 	}
 
 	[SharpCommand(Name = "EXAMINE", Output = CommandOutput.Value, Switches = ["BRIEF", "DEBUG", "MORTAL", "PARENT", "ALL", "OPAQUE"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]

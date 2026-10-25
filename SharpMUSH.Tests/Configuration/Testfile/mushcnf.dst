@@ -975,7 +975,7 @@ page_aliases no
 # for MUX users, such as 'addcom <alias>=<channel>', then '<alias>
 # <message> for chatting instead of '+<channel> <message>'; see 'help
 # muxcomsys' for more details.
-use_muxcomm no
+use_muxcomm yes
 
 # Should +whatever "hi! strip the initial quote and produce <whatever> X says,
 # "hi!", or not (producing <whatever> X says, ""hi!"). This also affects

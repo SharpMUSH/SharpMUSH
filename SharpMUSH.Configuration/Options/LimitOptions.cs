@@ -65,7 +65,8 @@ public record LimitOptions(
 		Group = "Players",
 		Order = 3,
 		Min = 0,
-		Max = 1000)]
+		Max = 1000,
+		Unused = "Named registers are not counted: the bundled packages set hundreds in one queue entry.")]
 	uint MaxNamedQRegisters,
 
 	[property: SharpConfig(
@@ -104,7 +105,7 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "keepalive_timeout",
 		Category = "Limit",
-		Description = "Seconds between TCP keepalive probes",
+		Description = "Seconds a KEEPALIVE player's telnet connection may go without output before it is sent a NOP",
 		ValidationPattern = @"^\d+$",
 		Group = "Connections",
 		Order = 6,

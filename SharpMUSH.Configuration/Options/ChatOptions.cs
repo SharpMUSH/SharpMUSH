@@ -32,7 +32,7 @@ public record ChatOptions(
 	[property: SharpConfig(
 		Name = "max_player_chans",
 		Category = "Chat",
-		Description = "Maximum channels a single player can join",
+		Description = "Maximum channels a non-staff player may own",
 		ValidationPattern = @"^\d+$",
 		Group = "Limits",
 		Order = 2,

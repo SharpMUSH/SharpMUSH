@@ -178,14 +178,18 @@ public partial class Commands
 	};
 
 	/// <summary>
-	/// PennMUSH's consistency check, for a world LMDB keeps consistent as it writes: <c>@dbck</c> reads the newest
-	/// backup through instead, so a damaged copy is found before it is needed, and raises <c>DB`DBCK</c> when it
-	/// passes.
+	/// PennMUSH's consistency check, for a world LMDB keeps consistent as it writes: <c>@dbck</c> tells the owners
+	/// of disconnected rooms about them, then reads the newest backup through, so a damaged copy is found before
+	/// it is needed, and raises <c>DB`DBCK</c> when it passes.
 	/// </summary>
 	[SharpCommand(Name = "@DBCK", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> DatabaseCheck(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		// dbck() (src/destroy.c:1081): the room check is the part of Penn's pass a world still needs.
+		await ConnectedRoomCheck.WarnOwnersAsync(Mediator, NotifyService, PermissionService, ConnectionService,
+			new DBRef((int)Configuration.CurrentValue.Database.BaseRoom),
+			Configuration.CurrentValue.Database.ExitsConnectRooms);
 		return await WorldBackupService.CheckLatestAsync() switch
 		{
 			WorldBackupCheck check => await BackupCheckedAsync(executor, check),

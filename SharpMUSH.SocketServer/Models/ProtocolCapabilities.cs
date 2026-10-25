@@ -80,6 +80,14 @@ public static class OutputFormatNegotiation
 /// <param name="Telnet">
 /// False after <c>SOCKSET telnet=no</c>: a prompt is then written as a line, with no <c>IAC GA</c> or <c>IAC EOR</c>.
 /// </param>
+/// <param name="NoAccents">
+/// Whether the connected player is set NOACCENTS, which sends ASCII to every one of their terminal connections as
+/// <c>SOCKSET stripaccents</c> does to one (PennMUSH <c>src/notify.c:443</c>).
+/// </param>
+/// <param name="KeepAlive">
+/// Whether the connected player is set KEEPALIVE: a telnet connection that has sent nothing for
+/// <c>keepalive_timeout</c> is sent <c>IAC NOP</c>, so a router does not drop it as idle.
+/// </param>
 public record ProtocolCapabilities(
 	bool SupportsAnsi = true,
 	bool SupportsXterm256 = false,
@@ -98,7 +106,9 @@ public record ProtocolCapabilities(
 	int CellWidth = 0,
 	int CellHeight = 0,
 	string? GmcpModules = null,
-	bool Telnet = true
+	bool Telnet = true,
+	bool NoAccents = false,
+	bool KeepAlive = false
 )
 {
 	/// <summary>
@@ -106,7 +116,9 @@ public record ProtocolCapabilities(
 	/// knows (<see cref="Terminal"/>) shows UTF-8 whether or not it says so; most never do.
 	/// </summary>
 	[JsonIgnore]
-	public string OutputCharset => TerminalCharsets.Resolve(Pins, Charset, SupportsUtf8 || Terminal is not null);
+	public string OutputCharset => TerminalCharsets.Resolve(
+		NoAccents ? (Pins ?? TerminalPins.None) with { StripAccents = true } : Pins, Charset,
+		SupportsUtf8 || Terminal is not null);
 
 	/// <summary>Whether output is written in UTF-8; otherwise each character the client cannot show is replaced.</summary>
 	[JsonIgnore]

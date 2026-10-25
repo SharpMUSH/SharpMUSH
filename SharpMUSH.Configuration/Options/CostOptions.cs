@@ -80,6 +80,7 @@ public record CostOptions(
 		Group = "Command Costs",
 		Order = 3,
 		Min = 0,
-		Max = 10000)]
+		Max = 10000,
+		Unused = "SharpMUSH has no money: pennies are never counted or charged.")]
 	uint FindCost
 );

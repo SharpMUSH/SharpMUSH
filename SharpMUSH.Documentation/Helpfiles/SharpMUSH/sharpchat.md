@@ -171,7 +171,7 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 - `<alias> off` > `@channel/gag <channel>`
 - `<alias> who` > `@channel/who <channel>`
 
-Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
+Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. These commands and aliases work only while the `use_muxcomm` option is on; otherwise they answer `Command disabled.` Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
 
 ::: seealso
 - [@channel]

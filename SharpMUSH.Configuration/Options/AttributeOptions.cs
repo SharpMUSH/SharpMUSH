@@ -36,7 +36,7 @@ public record AttributeOptions(
 	[property: SharpConfig(
 		Name = "startups",
 		Category = "Attribute",
-		Description = "Run @startup attributes when objects are created",
+		Description = "Run every @startup attribute when the server starts",
 		Group = "Behavior",
 		Order = 1)]
 	bool Startups,

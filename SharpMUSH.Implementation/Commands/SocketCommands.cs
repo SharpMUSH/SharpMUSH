@@ -743,6 +743,8 @@ public partial class Commands
 		var xterm256Enabled = await player.HasFlag("XTERM256");
 		var truecolorEnabled = await player.HasFlag("TRUECOLOR");
 		var showSeparators = await player.HasFlag("SHOW_SEPARATORS");
+		var noAccents = await player.HasFlag("NOACCENTS");
+		var keepAlive = await player.HasFlag("KEEPALIVE");
 
 		if (MessageBus != null)
 		{
@@ -752,7 +754,9 @@ public partial class Commands
 				colorEnabled,
 				xterm256Enabled,
 				truecolorEnabled,
-				showSeparators
+				showSeparators,
+				noAccents,
+				keepAlive
 			));
 
 			Logger?.LogDebug("Synced output preferences for handle {Handle}: ANSI={Ansi}, COLOR={Color}, XTERM256={Xterm}, TRUECOLOR={Truecolor}",
@@ -863,6 +867,13 @@ public partial class Commands
 		using (LoginOutput.To(playerRef, handle))
 		{
 			await LookAfterLoginAsync(parser, handle, player);
+		}
+
+		// check_connect (src/bsd.c:4380): after the look, a player set ON-VACATION is reminded of it. The login line's
+		// budget may already be spent on the server's work before the look; this is the server's too.
+		if (await player.Object.HasFlag("ON-VACATION", CancellationToken.None))
+		{
+			await NotifyService.Notify(handle, ErrorMessages.Notifications.WelcomeBackFromVacation);
 		}
 	}
 

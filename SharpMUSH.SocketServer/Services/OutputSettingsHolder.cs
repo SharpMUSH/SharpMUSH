@@ -13,6 +13,8 @@ public sealed class OutputSettingsHolder
 
 	private volatile string? _mediaBaseUrl;
 
+	private long _keepAliveTicks = DefaultKeepAlive.Ticks;
+
 	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	/// <summary>The <c>ascii_translations</c> table; empty for none.</summary>
@@ -21,6 +23,12 @@ public sealed class OutputSettingsHolder
 	/// <summary><c>media_base_url</c>, sent to a GMCP client as <c>Client.Media.Default</c>; null for none.</summary>
 	public string? MediaBaseUrl => _mediaBaseUrl;
 
+	/// <summary>PennMUSH's <c>keepalive_timeout</c> default, used until the main process says otherwise.</summary>
+	public static readonly TimeSpan DefaultKeepAlive = TimeSpan.FromMinutes(5);
+
+	/// <summary><c>keepalive_timeout</c>: how long a KEEPALIVE player's telnet connection is silent before it is sent a NOP.</summary>
+	public TimeSpan KeepAlive => TimeSpan.FromTicks(Interlocked.Read(ref _keepAliveTicks));
+
 	/// <summary>Completes when the first settings from the main process arrive.</summary>
 	public Task Received => _received.Task;
 
@@ -28,6 +36,10 @@ public sealed class OutputSettingsHolder
 	public bool Replace(OutputSettingsMessage message)
 	{
 		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
+		if (message.KeepAliveSeconds > 0)
+		{
+			Interlocked.Exchange(ref _keepAliveTicks, TimeSpan.FromSeconds(message.KeepAliveSeconds).Ticks);
+		}
 		var mediaBaseUrl = string.IsNullOrWhiteSpace(message.MediaBaseUrl) ? null : message.MediaBaseUrl.Trim();
 		var changed = Interlocked.Exchange(ref _mediaBaseUrl, mediaBaseUrl) != mediaBaseUrl;
 		_received.TrySetResult();

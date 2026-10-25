@@ -60,12 +60,21 @@ public static class ChannelAdd
 			return new CallState(ErrorMessages.Returns.InvalidChannelName);
 		}
 
+		// PennMUSH do_channel_admin (src/extchat.c:1710, 1727): max_channels bounds the whole game, and
+		// max_player_chans the channels one non-staff player may own.
+		var allChannels = await Mediator.CreateStream(new GetChannelListQuery()).CountAsync();
+		if (allChannels >= Configuration.CurrentValue.Chat.MaxChannels)
+		{
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatNoRoomForChannels, executor);
+			return new CallState(ErrorMessages.Returns.TooManyChannels);
+		}
+
 		var ownedChannels = await Mediator.CreateStream(
 			new GetChannelsOwnedByQuery(executorOwner.Object.DBRef)).CountAsync();
 
-		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxChannels)
+		if (!await executor.IsPriv() && ownedChannels >= Configuration.CurrentValue.Chat.MaxPlayerChannels)
 		{
-			await NotifyService.Notify(executor, ErrorMessages.Returns.TooManyChannels, executor);
+			await NotifyService.Notify(executor, ErrorMessages.Notifications.ChatOwnTooManyChannels, executor);
 			return new CallState(ErrorMessages.Returns.TooManyChannels);
 		}
 

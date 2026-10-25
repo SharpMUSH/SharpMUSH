@@ -812,6 +812,8 @@ public class CommFeedPackageTests(ServerWebAppFactory factory)
 	{
 		var creator = await ViewerAsync("CommCreator");
 		var channel = UniqueChannel("CommCreate");
+		// max_player_chans is 0, as PennMUSH ships it: only royalty and wizards create channels.
+		await God($"@set {creator.Number}=ROYALTY");
 
 		await using var watch = await OobWatch.OpenAsync(factory);
 		var sent = await watch.SentWhile(() => Run(creator, $"@channel/add {channel}=player"), Run, creator);

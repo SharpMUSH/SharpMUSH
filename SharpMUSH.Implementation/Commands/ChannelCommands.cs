@@ -133,10 +133,31 @@ public partial class Commands
 		};
 	}
 
+	/// <summary>
+	/// PennMUSH's comsys commands (<c>src/extchat.c</c> cmd_addcom and the rest) answer "Command disabled."
+	/// while <c>use_muxcomm</c> is off.
+	/// </summary>
+	private async ValueTask<CallState?> MuxCommDisabledAsync(IMUSHCodeParser parser)
+	{
+		if (Configuration.CurrentValue.Chat.UseMuxComm)
+		{
+			return null;
+		}
+
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		await NotifyService.Notify(executor, ErrorMessages.Notifications.CommandDisabled, executor);
+		return new CallState(ErrorMessages.Returns.CommandDisabled);
+	}
+
 	[SharpCommand(Name = "ADDCOM", Switches = [], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["channel", "alias"])]
 	public async ValueTask<Option<CallState>> AddCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await MuxCommDisabledAsync(parser) is { } disabled)
+		{
+			return disabled;
+		}
+
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -207,6 +228,11 @@ public partial class Commands
 	[SharpCommand(Name = "DELCOM", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["alias"])]
 	public async ValueTask<Option<CallState>> DeleteCom(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await MuxCommDisabledAsync(parser) is { } disabled)
+		{
+			return disabled;
+		}
+
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -275,6 +301,11 @@ public partial class Commands
 	[SharpCommand(Name = "@CLIST", Switches = ["FULL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = ["channel"])]
 	public async ValueTask<Option<CallState>> ChannelList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await MuxCommDisabledAsync(parser) is { } disabled)
+		{
+			return disabled;
+		}
+
 		// @clist is an alias for @channel/list, with /full switch being ignored
 		var switches = parser.CurrentState.Switches.Contains("FULL")
 			? new[] { "LIST" }
@@ -295,6 +326,11 @@ public partial class Commands
 		MaxArgs = 0, ParameterNames = ["alias", "title"])]
 	public async ValueTask<Option<CallState>> ComTitle(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await MuxCommDisabledAsync(parser) is { } disabled)
+		{
+			return disabled;
+		}
+
 		var arg0Check = parser.CurrentState.Arguments.TryGetValue("0", out var arg0CallState);
 		var arg1Check = parser.CurrentState.Arguments.TryGetValue("1", out var arg1CallState);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -363,6 +399,11 @@ public partial class Commands
 	[SharpCommand(Name = "COMLIST", Switches = [], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> ComList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
+		if (await MuxCommDisabledAsync(parser) is { } disabled)
+		{
+			return disabled;
+		}
+
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false,
