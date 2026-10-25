@@ -95,7 +95,7 @@ public class CommandTrie
 
 		foreach (var (commandName, commandInfo) in commandLibrary)
 		{
-			// SOCKET commands (CONNECT/WHO/QUIT/REGISTER/LOGIN/MAKE/PLAY) are dispatched exclusively
+			// SOCKET commands (CONNECT/WHO/QUIT/REGISTER/LOGIN/CREATE/PLAY/CLAIM) are dispatched exclusively
 			// by the dedicated pre-login SOCKET blocks in the visitor (exact match for any Handle,
 			// unambiguous-prefix abbreviation only while pre-login). They must NOT enter the general
 			// in-game command trie: FindAbbreviation would otherwise abbreviate them for a logged-in

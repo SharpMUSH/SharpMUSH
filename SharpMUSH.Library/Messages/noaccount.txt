@@ -1,0 +1,8 @@
+
+[1;36m[ACCOUNT][0m This character is not on an account.
+An account is one login for all your characters here and for the web portal.
+It can also sign in through a service such as Discord where this game offers
+one.
+To put this character on an account: QUIT, then register <name> [email]
+<password> or login if you have one, then claim <character> <password>.
+Type help accounts for more.

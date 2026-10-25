@@ -12,8 +12,7 @@ namespace SharpMUSH.Tests.Commands;
 /// The connect screen is the first thing a telnet player reads. It advertised
 /// <c>create &lt;name&gt; &lt;password&gt;</c>, which is not a command — typing it answers
 /// "No such command available at login." — and said nothing at all about the account flow
-/// (register / login / make / play), which is the only route to a character for someone who has
-/// never played here.
+/// (register / login), which is the only route to a character for someone who has never played here.
 /// </summary>
 public class ConnectBannerTests
 {
@@ -44,7 +43,8 @@ public class ConnectBannerTests
 	}
 
 	/// <summary>
-	/// The account flow is the telnet mirror of the portal's register / login / create-character.
+	/// The banner offers the ways into an account (register, login), not create, play and claim, which work only
+	/// once login has put the connection in account mode; the account menu lists those.
 	/// </summary>
 	[Test]
 	public async Task TheBannerDocumentsTheAccountFlow()
@@ -53,12 +53,25 @@ public class ConnectBannerTests
 
 		await Assert.That(advertised).Contains("register");
 		await Assert.That(advertised).Contains("login");
-		await Assert.That(advertised).Contains("make");
-		await Assert.That(advertised).Contains("play");
-		await Assert.That(advertised).Contains("claim");
 		await Assert.That(advertised).Contains("connect");
 		await Assert.That(advertised).Contains("WHO");
 		await Assert.That(advertised).Contains("QUIT");
+		await Assert.That(advertised).DoesNotContain("create");
+		await Assert.That(advertised).DoesNotContain("play");
+		await Assert.That(advertised).DoesNotContain("claim");
+	}
+
+	/// <summary>
+	/// SCREENREADER and WHO are the first commands beside the logo, right under the welcome, so a screen reader
+	/// reaches them before the ways in.
+	/// </summary>
+	[Test]
+	public async Task TheBannerOffersTheScreenReaderAndWhoFirst()
+	{
+		var advertised = AdvertisedCommands(Banner);
+
+		await Assert.That(advertised.Take(2)).IsEquivalentTo(["SCREENREADER", "WHO"]);
+		await Assert.That(Banner.Split('\n')[1][35..]).StartsWith("SCREENREADER");
 	}
 
 	/// <summary>The banner really is what a freshly opened socket receives.</summary>
@@ -70,12 +83,12 @@ public class ConnectBannerTests
 		var messages = ConnectScreenTests.NotificationsTo(WebAppFactoryArg, handle);
 
 		await Assert.That(messages.Any(m => m.Contains("Welcome to SharpMUSH!"))).IsTrue();
-		await Assert.That(messages.Any(m => Regex.IsMatch(m, @"play +<character>"))).IsTrue();
+		await Assert.That(messages.Any(m => Regex.IsMatch(m, @"login +<name-or-email> <password>"))).IsTrue();
 	}
 
 	/// <summary>
-	/// Command words the banner instructs a player to type: the first word of any line beside the logo (its 33
-	/// columns and the gap of two after them) that is not a section heading.
+	/// Command words the banner instructs a player to type, in order: the first word of any line beside the logo (its
+	/// 33 columns and the gap of two after them) that is not a section heading.
 	/// </summary>
 	private static string[] AdvertisedCommands(string banner) =>
 		banner.Split('\n')

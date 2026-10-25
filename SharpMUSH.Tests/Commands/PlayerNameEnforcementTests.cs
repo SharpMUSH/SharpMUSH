@@ -51,7 +51,7 @@ public class PlayerNameEnforcementTests
 	private async Task<List<string>> MakeAs(long handle, string name)
 	{
 		var before = WebAppFactoryArg.Notifications.CountForHandle(handle);
-		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"make {name} somepassword"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"create {name} somepassword"));
 		return [.. WebAppFactoryArg.Notifications.ForHandle(handle).Skip(before)];
 	}
 

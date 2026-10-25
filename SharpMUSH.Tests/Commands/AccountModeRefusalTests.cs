@@ -6,7 +6,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// The MAKE and PLAY socket commands require AccountMode, and there are two ways to not be in it:
+/// The CREATE and PLAY socket commands require AccountMode, and there are two ways to not be in it:
 /// never having authenticated, and having already bound a character. Exact-match SOCKET commands are
 /// dispatched for ANY handle (see <c>SharpMUSHParserVisitor</c>'s socket block — only the abbreviation
 /// path is pre-login-only), so a player in the game who types <c>play &lt;other&gt;</c> reaches these
@@ -82,7 +82,7 @@ public class AccountModeRefusalTests
 			await ConnectionService.BindAccount(handle, "accounts/refusal-make");
 			await ConnectionService.Bind(handle, new DBRef(1, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
 
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make Newbie secretpassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("create Newbie secretpassword"));
 
 			await Assert.That(Saw(handle, ReconnectAdvice)).IsTrue();
 			await Assert.That(Saw(handle, LoginPrompt)).IsFalse();
@@ -99,11 +99,11 @@ public class AccountModeRefusalTests
 		var handle = await TestIsolationHelpers.RegisterTestHandleAsync(ConnectionService);
 		try
 		{
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("make Newbie secretpassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain("create Newbie secretpassword"));
 
 			await Assert.That(Saw(handle, LoginPrompt)).IsTrue();
 			await Assert.That(Saw(handle, "register <name> [email] <password>")).IsTrue()
-				.Because("a newcomer who read make on the connect screen has no account to log in to yet");
+				.Because("a newcomer who typed create at the connect screen has no account to log in to yet");
 		}
 		finally
 		{

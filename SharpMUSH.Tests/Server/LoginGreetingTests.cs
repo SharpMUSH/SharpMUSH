@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Server;
 /// The first line of every telnet session. It used to be
 /// <c>"Welcome back, #12:1786227218582!"</c> — the <see cref="DBRef"/> was passed straight in as
 /// the format argument, so its <c>ToString()</c> rendered — and a character created seconds
-/// earlier by <c>make</c> was welcomed "back" to a game it had never seen.
+/// earlier by <c>create</c> was welcomed "back" to a game it had never seen.
 /// </summary>
 public class LoginGreetingTests
 {
@@ -72,7 +72,7 @@ public class LoginGreetingTests
 	}
 
 	/// <summary>
-	/// A character made in the portal is bound by a token login, not by <c>make</c>, so nothing marks it as
+	/// A character made in the portal is bound by a token login, not by <c>create</c>, so nothing marks it as
 	/// new; it has simply never connected, which its missing <c>LAST</c> says.
 	/// </summary>
 	[Test]
@@ -107,21 +107,21 @@ public class LoginGreetingTests
 	}
 
 	/// <summary>
-	/// End to end through the command a player actually types: <c>make</c> creates the character
+	/// End to end through the command a player actually types: <c>create</c> creates the character
 	/// and walks it straight into play, which is the one moment a character has genuinely never
 	/// been here before.
 	/// </summary>
 	[Test, NotInParallel([nameof(LoginGreetingTests), "ConfigMutation"])]
-	public async Task MakeGreetsTheBrandNewCharacterAsNew()
+	public async Task CreateGreetsTheBrandNewCharacterAsNew()
 	{
-		var username = TestIsolationHelpers.GenerateUniqueName("greetmake");
+		var username = TestIsolationHelpers.GenerateUniqueName("greetcreate");
 		var characterName = $"Grt{Guid.NewGuid():N}"[..12];
 
 		var handle = await RegisterHandleAsync();
 		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"register {username} some-password-1"));
 		await Assert.That(await AccountService.GetByUsernameAsync(username)).IsNotNull();
 
-		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"make {characterName} some-password-1"));
+		await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"create {characterName} some-password-1"));
 
 		await Assert.That(GreetingKeyTo(handle))
 			.IsEqualTo(nameof(ErrorMessages.Notifications.WelcomeFirstLoginFormat));

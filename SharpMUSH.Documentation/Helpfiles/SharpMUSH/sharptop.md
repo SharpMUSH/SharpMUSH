@@ -49,7 +49,7 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 
   For information on how to send and read mail using SharpMUSH's built-in mail system, `@mail`, see [gs mail].
 
-  To make an account and a character at the login screen, see [register], [make] and [play]. A game with a web portal offers the same there, and serves its [wiki].
+  To make an account and a character at the login screen, see [register], [create] and [play]. A game with a web portal offers the same there, and serves its [wiki].
 
   To have the server address you in another language, see [@locale].
 

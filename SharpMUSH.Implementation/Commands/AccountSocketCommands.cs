@@ -99,7 +99,7 @@ public partial class Commands
 		await NotifyService.Notify(handle, $"Account '{account.Username}' created successfully.");
 		await NotifyService.Notify(handle, await MessageService.RenderAsync(GameMessage.NewUser, handle) is MString newUserText
 			? newUserText
-			: AccountMenu("Your account is ready", "You have no characters yet.", [], MenuMakeFirst, MenuClaim));
+			: AccountMenu("Your account is ready", "You have no characters yet.", [], MenuCreateFirst, MenuClaim));
 		return new CallState(account.Id!);
 	}
 
@@ -204,16 +204,16 @@ public partial class Commands
 
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
 		await NotifyService.Notify(handle, characters.Count == 0
-			? AccountMenu($"Logged in as {account.Username}", "You have no characters yet.", [], MenuMakeFirst, MenuClaim)
+			? AccountMenu($"Logged in as {account.Username}", "You have no characters yet.", [], MenuCreateFirst, MenuClaim)
 			: AccountMenu($"Logged in as {account.Username}", "Your characters:",
 				[.. characters.Select(c => ServerLayout.CommandLink($"{c.Object.Name} (#{c.Object.Key})", $"play {c.Object.Name}"))],
-				MenuPlay, MenuMakeAnother, MenuClaim));
+				MenuPlay, MenuCreateAnother, MenuClaim));
 
 		return new CallState(account.Id!);
 	}
 
-	private static readonly (string Command, string Does) MenuMakeFirst = ("make <character> <password>", "create your first character");
-	private static readonly (string Command, string Does) MenuMakeAnother = ("make <character> <password>", "create another character");
+	private static readonly (string Command, string Does) MenuCreateFirst = ("create <character> <password>", "create your first character");
+	private static readonly (string Command, string Does) MenuCreateAnother = ("create <character> <password>", "create another character");
 	private static readonly (string Command, string Does) MenuClaim = ("claim <character> <password>", "add a character you already have");
 	private static readonly (string Command, string Does) MenuPlay = ("play <character>", "enter the game as one of them");
 
@@ -240,10 +240,10 @@ public partial class Commands
 	/// <summary>
 	/// Creates a new character and links it to the current account, then logs in.
 	/// Only available in AccountMode.
-	/// <para>Syntax: <c>make CharacterName Password</c></para>
+	/// <para>Syntax: <c>create CharacterName Password</c></para>
 	/// </summary>
-	[SharpCommand(Name = "MAKE", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 2, MaxArgs = 2, ParameterNames = ["name", "password"])]
-	public async ValueTask<Option<CallState>> MakeCharacter(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	[SharpCommand(Name = "CREATE", Behavior = CommandBehavior.SOCKET | CommandBehavior.NoParse, MinArgs = 2, MaxArgs = 2, ParameterNames = ["name", "password"])]
+	public async ValueTask<Option<CallState>> CreateCharacter(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var handle = parser.CurrentState.Handle!.Value;
 		var connectionData = ConnectionService.Get(handle);
@@ -289,7 +289,7 @@ public partial class Commands
 
 		if (string.IsNullOrWhiteSpace(charName) || string.IsNullOrWhiteSpace(charPassword))
 		{
-			await NotifyService.Notify(handle, "Usage: make <character> <password>");
+			await NotifyService.Notify(handle, "Usage: create <character> <password>");
 			return new None();
 		}
 
@@ -346,7 +346,7 @@ public partial class Commands
 
 		await CompletePlayerLoginAsync(parser, handle, foundPlayer, playerDbRef);
 
-		Logger?.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via MAKE",
+		Logger?.LogInformation("Account {AccountId}: created character {Name} (#{Key}) via CREATE",
 			accountId, charName, foundPlayer.Object.Key);
 
 		return new CallState(playerDbRef);
@@ -396,7 +396,7 @@ public partial class Commands
 		{
 			await NotifyService.Notify(handle,
 				$"No character named '{charName}' is linked to your account.\n" +
-				"Use: make <name> <password>    to create a new character\n" +
+				"Use: create <name> <password>  to create a new character\n" +
 				"Use: claim <name> <password>   to link a character you already have");
 			return new None();
 		}
@@ -419,7 +419,7 @@ public partial class Commands
 
 	/// <summary>
 	/// Links an existing character to the current account, proven by the character's own password: a
-	/// character made with <c>create</c>, <c>@pcreate</c> or a database import, before the account existed.
+	/// character made with <c>@pcreate</c> or a database import, before the account existed.
 	/// Only available in AccountMode. The last word is the password, so a name may contain spaces.
 	/// <para>Syntax: <c>claim CharacterName Password</c></para>
 	/// </summary>
@@ -496,7 +496,7 @@ public partial class Commands
 	/// True if the telnet connection at <paramref name="handle"/> is sitelocked out of
 	/// <paramref name="surfaceFlag"/>, notifying it with the standard restriction message when so.
 	/// Mirrors <see cref="SocketCommands.Connect"/>'s inline sitelock gate: the account-mode surfaces
-	/// (REGISTER/LOGIN/MAKE/PLAY) are unauthenticated entry points into account mutation exactly like
+	/// (REGISTER/LOGIN/CREATE/PLAY/CLAIM) are unauthenticated entry points into account mutation exactly like
 	/// CONNECT, so they must be gated the same way. SharpMUSH.Implementation cannot reference the
 	/// Server-layer <c>SitelockGuard</c>, so this calls <see cref="SitelockMatcher.IsBlocked"/> directly
 	/// off the connection's origin metadata, same as <see cref="SocketCommands.Connect"/> does.
@@ -516,7 +516,7 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// Refuses an account-menu command (MAKE / PLAY) that arrived outside AccountMode, saying which of the
+	/// Refuses an account-menu command (CREATE / PLAY / CLAIM) that arrived outside AccountMode, saying which of the
 	/// two very different reasons applies.
 	///
 	/// <para>Both surfaces used to answer "You must be logged in to an account first", which is only true
@@ -526,8 +526,8 @@ public partial class Commands
 	/// refused as well. Telnet is one session per character by design — no in-session character switching —
 	/// so the honest answer is that switching means reconnecting.</para>
 	///
-	/// <para>A connection that never authenticated is most often a newcomer who read <c>make</c> on the
-	/// connect screen, so while player creation is on the refusal names <c>register</c> before <c>login</c>.</para>
+	/// <para>A connection that never authenticated is most often a newcomer who typed PennMUSH's <c>create</c>, so
+	/// while player creation is on the refusal names <c>register</c> before <c>login</c>.</para>
 	/// </summary>
 	/// <param name="handle">The connection to notify.</param>
 	/// <param name="state">The connection's current state; <c>LoggedIn</c> selects the in-game wording.</param>

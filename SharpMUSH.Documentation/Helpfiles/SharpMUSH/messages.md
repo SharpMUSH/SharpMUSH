@@ -30,8 +30,9 @@ The server shows a connection a few fixed texts: the connect screen, the message
 | Message of the day | `MOTD` | to every player after logging in |
 | Wizard message of the day | `WIZMOTD` | after the MOTD, to wizards and royalty |
 | Guest message | `GUEST` | to a guest, after the MOTD |
+| No account | `NOACCOUNT` | after the MOTD, to a character on no account other than a guest |
 | New account | `NEWUSER` | after `register` creates an account |
-| Registration closed | `REGISTER` | instead of `register` or `make` while player creation is off |
+| Registration closed | `REGISTER` | instead of `register` or `create` while player creation is off |
 | Logins disabled | `DOWN` | before the refusal while logins are off |
 | Goodbye | `QUIT` | after `QUIT` and `LOGOUT` |
 
@@ -49,9 +50,9 @@ The object's attributes are evaluated with the object as executor. `%#` is the p
 
 The package's messages are built with the layout functions (see [LAYOUT FUNCTIONS]), so each reader gets them at their own width:
 
-- `CONNECT` is a [FLEX()] of two items: the logo as a [FIGURE()] and the ways in beside it, each section under a [RULE()] with its commands lined up by [FIELDS()]. The web portal shows the logo as a picture, the game's own `/assets/logo.png`, and so does an MXP or Pueblo client once `mud_url` is set (see [@CONFIG NET]). A terminal that cannot show it gets the text art in `LOGO`, in the logo's green. On a screen too narrow for both, the ways in go under the logo. A section is left out while the option behind it (`player_creation`, `guests`) is off.
+- `CONNECT` is a [FLEX()] of two items: the logo as a [FIGURE()] and, beside it, the welcome, `SCREENREADER` and `WHO`, then the ways in, each section under a [RULE()] with its commands lined up by [FIELDS()]. The web portal shows the logo as a picture, the game's own `/assets/logo.png`, and so does an MXP or Pueblo client once `mud_url` is set (see [@CONFIG NET]). A terminal that cannot show it gets the text art in `LOGO`, in the logo's green. On a screen too narrow for both, the ways in go under the logo. A section is left out while the option behind it (`player_creation`, `guests`) is off. `create`, `play` and `claim` need `login` first, so the account menu lists them.
 - `MOTD` greets the player by name and says how many players are connected.
-- `WIZMOTD`, `GUEST`, `REGISTER` and `DOWN` are a [NOTICE()].
+- `WIZMOTD`, `GUEST`, `NOACCOUNT`, `REGISTER` and `DOWN` are a [NOTICE()]. `NOACCOUNT` goes on to say what an account is for and how to put the character on one.
 - The screens shown before login, `CONNECT` and `REGISTER`, carry no command links. After login, `help` and `WHO` in `MOTD` and `GUEST` are command links ([CMDLINK()]). The object holds the Send_OOB @power for the links and the picture.
 
 The stored texts SharpMUSH ships follow the same layout, as an ASCII client 78 columns wide sees it, less what only softcode can know, such as the player's name. They list every way in, whatever the options say.

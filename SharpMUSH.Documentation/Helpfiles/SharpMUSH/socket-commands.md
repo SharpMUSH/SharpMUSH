@@ -45,8 +45,8 @@ In addition, the following commands can only be used at the login screen:
 - [cv]
 - [claim]
 - [connect]
+- [create]
 - [login]
-- [make]
 - [play]
 - [register]
 

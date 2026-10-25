@@ -53,7 +53,7 @@ public class SuspectSiteTests
 
 		using (Suspecting(host))
 		{
-			await WebAppFactoryArg.CommandParser.CommandParse(handle, Connections, MarkupText.Plain($"make {name} somepassword"));
+			await WebAppFactoryArg.CommandParser.CommandParse(handle, Connections, MarkupText.Plain($"create {name} somepassword"));
 		}
 
 		await Assert.That(Connections.Get(handle)?.Ref).IsNotNull();

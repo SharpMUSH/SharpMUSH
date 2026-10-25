@@ -8,7 +8,7 @@ using System.Text;
 namespace SharpMUSH.Tests.Commands;
 
 /// <summary>
-/// Regression coverage for the telnet REGISTER/LOGIN/MAKE argument-splitting bug: these
+/// Regression coverage for the telnet REGISTER/LOGIN/CREATE argument-splitting bug: these
 /// commands are <c>CommandBehavior.SOCKET | CommandBehavior.NoParse</c>, so the parser never
 /// populates <c>Arguments["1"]</c>/<c>["2"]</c> — the entire remainder of the line after the
 /// command word lands in <c>Arguments["0"]</c> alone. The previous implementation read

@@ -12,7 +12,7 @@
 # Player Events
 
 - **player\`create** (*objid*, *name*, *how*, *descriptor*, *email*)
-- Triggered when a player is created. *<how>* is one of "pcreate" or "create". If the player was `@pcreated`, %# is whoever did the `@pcreate`. If the player was made with `make` at the connect screen, %# is #1, *<how>* is "create" and *<descriptor>* is the connection that made it. *<email>* is empty: an account's email belongs to the account, not to the character.
+- Triggered when a player is created. *<how>* is one of "pcreate" or "create". If the player was `@pcreated`, %# is whoever did the `@pcreate`. If the player was made with `create` at the connect screen, %# is #1, *<how>* is "create" and *<descriptor>* is the connection that made it. *<email>* is empty: an account's email belongs to the account, not to the character.
 
 - **player\`connect** (*objid*, *connections*, *descriptor*)
 - Similar to `@aconnect`, but for events, and so you can use descriptor.

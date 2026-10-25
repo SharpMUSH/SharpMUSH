@@ -168,7 +168,7 @@ public class AccountService(
 	/// The account's cached role and permission scopes are derived from its characters, so linking
 	/// one makes them stale. Invalidating here rather than at each caller is what makes a brand-new
 	/// player's first character take effect immediately instead of on the cache's next expiry:
-	/// every route to a link — the REST endpoints, the in-game MAKE command, bootstrap/setup — goes
+	/// every route to a link — the REST endpoints, the connect screen's CREATE command, bootstrap/setup — goes
 	/// through this method, so none of them can forget.
 	/// </remarks>
 	public async ValueTask LinkCharacterAsync(string accountId, DBRef characterRef, CancellationToken ct = default)
