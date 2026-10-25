@@ -58,7 +58,7 @@ The @malias command is used to create, view, and manipulate @mail aliases, or li
 
 The first form above creates a new alias for the given list of players.
 
-`@malias/desc` sets the alias's description, which is shown when aliases are listed.
+`@malias/desc` sets the alias's description, which is shown when aliases are listed. `/describe` is the same switch.
 
 `@malias/rename` renames an alias.
 
@@ -93,7 +93,7 @@ The first form above creates a new alias for the given list of players.
 
 `@malias/use` controls who may use an alias. Players who may use an alias will see it in their @malias list, and can @mail to the alias.
 
-`@malias/see` controls who may list the members of an alias.
+`@malias/see` controls who may list the members of an alias. `/useflag` and `/seeflag` are the same as `/use` and `/see`.
 
 An empty permission list allows any player. The permission list may also be a space-separated list of one or more of "owner", "members" (of the alias), and "admin".
 
@@ -113,7 +113,7 @@ By default, the owner and alias members may see and use the alias, but only the 
 
 `@malias/all` is an admin-only command that lists all aliases in the MUSH.
 
-`@malias/stat` is an admin-only command that displays statistics about the number of aliases and members of aliases in use.
+`@malias/stat` is an admin-only command that displays statistics about the number of aliases and members of aliases in use. `/stats` is the same switch.
 
 `@malias/chown` is a wizard-only command that changes the owner of an alias.
 

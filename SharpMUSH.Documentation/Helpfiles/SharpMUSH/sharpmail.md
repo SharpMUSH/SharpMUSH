@@ -76,11 +76,12 @@ The following switches are available:
 * `/urgent` - mail is marked as "Urgent"
 * `/silent` - no notification to sender that mail was sent
 * `/nosig` - no mail signature
+* `/noeval` - `<player-list>`, `<subject>` and `<msg>` are not evaluated
 
 If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 
 - `@mail/fwd <msg-list>=<player-list>`
-* This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded".
+* This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded". `/forward` is the same switch.
 
 # Mail Folders
 # Mail-folders

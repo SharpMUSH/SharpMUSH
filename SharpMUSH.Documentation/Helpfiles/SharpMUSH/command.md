@@ -5,7 +5,7 @@
   "lookup": "@command",
   "aliases": [],
   "sections": [
-    {"id": "alias-clone", "heading": "Aliases, clones and switches", "lookup": "@command switches", "aliases": ["@command/alias", "@command/clone", "@command/delete", "@command/disable", "@command/enable", "@command/quiet"]},
+    {"id": "alias-clone", "heading": "Aliases, clones and switches", "lookup": "@command switches", "aliases": ["@command/alias", "@command/clone", "@command/delete", "@command/disable", "@command/enable", "@command/off", "@command/on", "@command/quiet"]},
     {"id": "restrict", "heading": "Restricting a command", "lookup": "@command restrictions", "aliases": ["@command/restrict"]},
     {"id": "args", "heading": "Naming arguments", "lookup": "@command arguments", "aliases": ["@command/args"]},
     {"id": "permanent", "heading": "Making changes permanent", "lookup": "@command permanent changes"},
@@ -59,6 +59,7 @@ Switches include:
 - /delete : Delete a command added with @command/add or /alias. God only.
 - /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
+- /off and /on : The same as /disable and /enable.
 
 The `/quiet` switch can be used to suppress output from @command.
 

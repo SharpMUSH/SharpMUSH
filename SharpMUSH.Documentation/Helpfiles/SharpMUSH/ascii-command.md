@@ -12,13 +12,13 @@
 -->
 # @ascii
 
-`@ascii`<br>
+`@ascii[/list]`<br>
 `@ascii <character>=<text>`<br>
 `@ascii/remove <character>`
 
 A client that is not sent UTF-8 gets each character it cannot show as the nearest one it can (see [CHARSET]). `@ascii` keeps the game's own table of stand-ins, which come before the built-in ones.
 
-`@ascii` with no argument lists the table: each character, its code point, and the text sent for it.
+`@ascii` with no argument, or `@ascii/list`, lists the table: each character, its code point, and the text sent for it.
 
 The table is kept with the game's configuration and is the same one the web portal's ASCII Translations page edits. Using `@ascii` needs the config.admin permission.
 
