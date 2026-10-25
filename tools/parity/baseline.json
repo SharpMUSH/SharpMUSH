@@ -249,6 +249,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "41-register-regex-audit/rra.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "50-mail/mail.fwd-by-name#0",
    "command": "Alice alicepass"
   },

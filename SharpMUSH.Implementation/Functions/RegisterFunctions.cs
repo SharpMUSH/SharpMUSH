@@ -373,27 +373,67 @@ public partial class Functions
 			return (await ParseRawArgument(parser, numberedArguments.Last().Value.Message))!;
 		}
 
-		// Note: MarkupString should be immutable - verify this if register behavior issues occur
-		var validPeek = parser.CurrentState.Registers.TryPeek(out var currentRegisters);
-		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
-		parser.CurrentState.Registers.Push(newRegisters);
-
+		// fun_letq evaluates every name and value in the caller's scope before the body gets its own.
+		var pairs = new List<(string Name, MString Value)>();
 		for (var i = 0; i < numberedArguments.Count - 1; i += 2)
 		{
-			everythingIsOkay &= parser.CurrentState.AddRegister(
-				numberedArguments[i.ToString()].Message.ToPlainText().ToUpper(),
-				numberedArguments[(i + 1).ToString()].Message);
+			var name = (await ParseRawArgument(parser, numberedArguments[i.ToString()].Message))?.Message?.ToPlainText() ?? string.Empty;
+			var value = (await ParseRawArgument(parser, numberedArguments[(i + 1).ToString()].Message))?.Message ?? MarkupText.Empty;
+			pairs.Add((name.ToUpper(), value));
 		}
 
-		if (everythingIsOkay)
+		parser.CurrentState.Registers.TryPeek(out var currentRegisters);
+		var newRegisters = new LetScope(currentRegisters!);
+		parser.CurrentState.Registers.Push(newRegisters);
+
+		var local = new HashSet<string>();
+		foreach (var (pairName, value) in pairs)
 		{
-			var parsed = await ParseRawArgument(parser, numberedArguments.Last().Value.Message);
-			_ = parser.CurrentState.Registers.TryPop(out _);
-			return parsed!;
+			var name = RegisterLabels.Resolve(newRegisters, pairName);
+			everythingIsOkay &= parser.CurrentState.AddRegister(name, value);
+			local.Add(name);
 		}
 
+		if (!everythingIsOkay)
+		{
+			_ = parser.CurrentState.Registers.TryPop(out _);
+			return new CallState(ErrorMessages.Returns.BadRegName);
+		}
+
+		var parsed = await ParseRawArgument(parser, numberedArguments.Last().Value.Message);
 		_ = parser.CurrentState.Registers.TryPop(out _);
-		return new CallState(ErrorMessages.Returns.BadRegName);
+		PassUnnamedRegisters(newRegisters, currentRegisters!, local);
+		return parsed!;
+	}
+
+	/// <summary>
+	/// A letq() body's registers. <see cref="Stopped"/> is PE_REGS_QSTOP: an unsetq() with no argument cleared the
+	/// scope, which hides the caller's registers while the body runs but leaves them to the caller (clear_allq,
+	/// src/funmisc.c:573-603).
+	/// </summary>
+	private sealed class LetScope(Dictionary<string, MString> caller) : Dictionary<string, MString>(caller)
+	{
+		public bool Stopped { get; set; }
+	}
+
+	/// <summary>
+	/// PE_REGS_LET (src/function.c): only the registers letq() named are its own. Every other register the
+	/// body set or cleared is the caller's, so the change is copied back.
+	/// </summary>
+	private static void PassUnnamedRegisters(LetScope scope, Dictionary<string, MString> caller,
+		HashSet<string> local)
+	{
+		foreach (var (name, value) in scope.Where(register => !local.Contains(register.Key)))
+		{
+			caller[name] = value;
+		}
+
+		if (scope.Stopped) return;
+
+		foreach (var name in caller.Keys.Where(name => !local.Contains(name) && !scope.ContainsKey(name)).ToList())
+		{
+			caller.Remove(name);
+		}
 	}
 
 	[SharpFunction(Name = "listq", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi)]
@@ -426,7 +466,11 @@ public partial class Functions
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
 			// No pattern, or a lone "*" among them, clears the whole scope.
-			if (patterns.Length == 0 || patterns.Contains("*")) registers.Clear();
+			if (patterns.Length == 0 || patterns.Contains("*"))
+			{
+				registers.Clear();
+				if (registers is LetScope let) let.Stopped = true;
+			}
 			else
 			{
 				var matching = patterns

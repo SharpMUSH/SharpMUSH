@@ -39,6 +39,14 @@ public class FlowFunctionUnitTests
 	[Arguments("setr(A, 1):[letq(A, 2, %qA)]:%qA", "1:2:1")]
 	// Penn letq.2: letq with single arg (body only) does not save/restore
 	[Arguments("setr(A, 1):[letq(setr(A, 2))]:%qA", "1:2:2")]
+	// A register letq did not name is the caller's, set or cleared
+	[Arguments("[setr(B,1)][letq(A,2,setr(B,2))]:%qB", "12:2")]
+	[Arguments("[setq(C,1)][letq(A,2,unsetq(C))]:[r(C)]", ":")]
+	// unsetq() with no argument hides the caller's registers only while the body runs (clear_allq)
+	[Arguments("[setq(B,outer)][letq(A,inner,[unsetq()]%qA%qB)]:%qB", ":outer")]
+	// Names and values are evaluated
+	[Arguments("letq(A,add(1,1),%qA)", "2")]
+	[Arguments("letq(lcstr(X),y,%qX)", "y")]
 	public async Task LetQ(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

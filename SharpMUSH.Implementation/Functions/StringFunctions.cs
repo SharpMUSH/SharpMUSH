@@ -1763,15 +1763,58 @@ public partial class Functions
 				countControls ? ControlCharacterWidth.One : ControlCharacterWidth.Zero));
 	}
 
-	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern"])]
+	/// <summary>
+	/// PennMUSH's <c>fun_strmatch</c> (<c>src/funstr.c</c>): on a match, each register named in the third
+	/// argument takes the capture of the <c>*</c> or <c>?</c> at its position; <c>-</c> skips one.
+	/// </summary>
+	[SharpFunction(Name = "strmatch", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["string", "pattern", "registers"])]
 	public ValueTask<CallState> StringMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var str = parser.CurrentState.Arguments["0"].Message;
-		var pattern = parser.CurrentState.Arguments["1"].Message;
+		var pattern = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var plain = str.ToPlainText();
+		var match = SoftcodeRegex.Wildcard(pattern).Match(plain);
 
-		var match = MushText.IsWildcardMatch(str, pattern);
+		if (!match.Success || !parser.CurrentState.Arguments.TryGetValue("2", out var registers))
+		{
+			return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
+		}
 
-		return ValueTask.FromResult(new CallState(match ? "1" : "0"));
+		var result = new StringBuilder("1");
+		var names = registers.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		for (var i = 0; i < names.Length; i++)
+		{
+			var group = match.Groups[i + 1];
+			var capture = group.Success ? PlainSlice(str, plain, group.Index, group.Length) : MarkupText.Empty;
+			if (names[i] != "-" && !parser.CurrentState.AddRegister(names[i].ToUpperInvariant(), capture))
+			{
+				result.Append(ErrorMessages.Returns.BadRegName);
+			}
+		}
+
+		return ValueTask.FromResult(new CallState(result.ToString()));
+	}
+
+	/// <summary>
+	/// The part of <paramref name="text"/> that offsets into its plain text pick out. Point markup such as a sound
+	/// rides on a carrier character the plain text leaves out, so the offsets are moved past each carrier.
+	/// </summary>
+	private static MString PlainSlice(MString text, string plain, int index, int length)
+	{
+		if (length == 0) return MarkupText.Empty;
+		if (text.Text.Length == plain.Length) return text.Substring(index, length);
+
+		var raw = text.Text;
+		int start = -1, end = -1;
+		for (int r = 0, p = 0; r < raw.Length && p < index + length; r++)
+		{
+			if (raw[r] != plain[p]) continue;
+			if (p == index) start = r;
+			end = r + 1;
+			p++;
+		}
+
+		return text.Substring(start, end - start);
 	}
 
 	// Two arguments are TinyMUX's arity (switch(x,default) is the default); PennMUSH refuses them, so
