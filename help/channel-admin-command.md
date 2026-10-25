@@ -31,7 +31,7 @@
 
 ## Creating, deleting and wiping
 
-`@channel/add` creates a new channel with the privileges in *<privlist>*, the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_channels` limit allows unless you are staff.
+`@channel/add` creates a new channel with the privileges in *<privlist>*, the same list `@channel/privs` takes, and it is required. You may not own more channels than the `max_player_chans` limit allows unless you are staff, and nobody may create one once the game has `max_channels`.
 
 `@channel/delete` removes a channel. Only channel admins can do this.
 
