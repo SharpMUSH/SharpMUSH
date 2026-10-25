@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Authorization;
@@ -12,6 +13,7 @@ using SharpMUSH.Library.Wiki.Semantics;
 using SharpMUSH.Server.Authentication;
 using SharpMUSH.Library.Logging;
 using SharpMUSH.Server.Middleware;
+using SharpMUSH.Server.RateLimiting;
 using SharpMUSH.Server.Services;
 
 namespace SharpMUSH.Server.Controllers;
@@ -25,7 +27,9 @@ namespace SharpMUSH.Server.Controllers;
 /// <c>FilterVisibleAsync</c>, <c>VisibilityAsync</c> and <c>RefusalAsync</c> read the request principal and ask
 /// <see cref="IWikiAccessService"/>; they are the page-level gates, and a listing endpoint that forgot one of them would leak unpublished pages while
 /// every other assertion about it stayed green. One declaration, inherited, cannot be forgotten.
+/// The same goes for the <see cref="WikiReadRateLimit"/> policy every wiki controller is under.
 /// </remarks>
+[EnableRateLimiting(WikiReadRateLimit.PolicyName)]
 public abstract class WikiControllerBase(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,

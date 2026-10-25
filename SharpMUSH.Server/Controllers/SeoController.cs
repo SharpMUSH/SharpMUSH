@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.RateLimiting;
+using SharpMUSH.Server.Services;
 using System.Security;
 using System.Text;
 
@@ -21,10 +24,12 @@ namespace SharpMUSH.Server.Controllers;
 // AssumeDefaultVersionWhenUnspecified is on, so these root-served documents keep answering
 // unversioned crawler requests.
 [ApiController]
+[EnableRateLimiting(WikiReadRateLimit.PolicyName)]
 public class SeoController(
 	IWikiService wikiService,
 	IWikiLocalizationService localization,
 	IWikiAccessService access,
+	SitemapCache sitemap,
 	ILogger<SeoController> logger) : ControllerBase
 {
 	private const int PageSize = 500;
@@ -39,6 +44,7 @@ public class SeoController(
 	{
 		var baseUrl = $"{Request.Scheme}://{Request.Host}";
 		var now = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
+		var entries = await sitemap.GetAsync(SitemapEntriesAsync, HttpContext.RequestAborted);
 
 		var sb = new StringBuilder();
 		sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -47,37 +53,42 @@ public class SeoController(
 		AppendUrl(sb, $"{baseUrl}/", now);
 		AppendUrl(sb, $"{baseUrl}/wiki", now);
 
-		// What a logged-out reader may see: no drafts, and nothing whose read requirements the everyone role misses.
-		var visibility = await access.VisibilityAsync(await access.AnonymousAsync(HttpContext.RequestAborted));
-		var skip = 0;
-		var total = 0;
-		while (true)
-		{
-			var chunk = await wikiService.GetAllPagesAsync(skip, PageSize);
-			foreach (var page in chunk.Where(page => page.Published && visibility.Admits(page)))
-			{
-				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only
-				// translation is an unpublished draft.
-				AppendUrl(
-					sb,
-					baseUrl + PathFor(page),
-					page.UpdatedAt.ToString("yyyy-MM-dd"),
-					await localization.GetVisibleLocalesAsync(page, includeDrafts: false));
-				total++;
-			}
-
-			if (chunk.Count < PageSize)
-				break;
-
-			skip += PageSize;
-		}
+		foreach (var entry in entries)
+			AppendUrl(sb, baseUrl + entry.Path, entry.UpdatedAt.ToString("yyyy-MM-dd"), entry.Locales);
 
 		sb.AppendLine("</urlset>");
 
-		logger.LogDebug("Sitemap generated with {Count} published wiki pages", total);
-
 		Response.Headers.CacheControl = "public, max-age=3600";
 		return Content(sb.ToString(), "application/xml; charset=utf-8");
+	}
+
+	/// <summary>
+	/// Every published page a logged-out reader may see: no drafts, and nothing whose read requirements the
+	/// everyone role misses.
+	/// </summary>
+	private async Task<IReadOnlyList<SitemapEntry>> SitemapEntriesAsync(CancellationToken ct)
+	{
+		var visibility = await access.VisibilityAsync(await access.AnonymousAsync(ct));
+		var entries = new List<SitemapEntry>();
+		WikiPageScanPosition position = new WikiPageScanStart();
+		while (true)
+		{
+			var batch = await wikiService.ScanPagesAsync(visibility, position, PageSize);
+			foreach (var page in batch.Pages.Where(page => page.Published && visibility.Admits(page)))
+			{
+				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only
+				// translation is an unpublished draft.
+				entries.Add(new SitemapEntry(PathFor(page), page.UpdatedAt,
+					await localization.GetVisibleLocalesAsync(page, includeDrafts: false)));
+			}
+
+			if (batch.Next is not WikiPageScanContinuation next) break;
+			position = next;
+			ct.ThrowIfCancellationRequested();
+		}
+
+		logger.LogDebug("Sitemap built with {Count} published wiki pages", entries.Count);
+		return entries;
 	}
 
 	/// <summary>

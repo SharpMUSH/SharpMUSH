@@ -64,6 +64,7 @@ public class ServerTestWebApplicationBuilderFactory<TProgram>(
 		builder.UseSetting("RateLimiting:PublicApi:PermitLimit", "100000");
 		builder.UseSetting("RateLimiting:PublicApi:WindowSeconds", "60");
 		builder.UseSetting("RateLimiting:PublicApi:QueueLimit", "100000");
+		builder.UseSetting("RateLimiting:WikiRead:PermitLimit", "100000");
 
 		Log.Logger = TestDiagnostics.CreateLogger();
 		TestDiagnostics.ConfigureHost(builder);

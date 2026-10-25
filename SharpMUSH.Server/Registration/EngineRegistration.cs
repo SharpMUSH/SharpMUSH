@@ -313,6 +313,7 @@ internal static class EngineRegistration
 		// Pre-render cache for bot-facing static HTML (backed by the shared IMemoryCache from FusionCache setup).
 		services.AddMemoryCache();
 		services.AddSingleton<Server.Services.IPrerenderCacheService, Server.Services.PrerenderCacheService>();
+		services.AddSingleton<Server.Services.SitemapCache>();
 		// One name lookup per distinct editor per request, for the wiki DTOs' LastEditedBy / EditorName.
 		services.AddScoped<Server.Services.IWikiNameResolver, Server.Services.WikiNameResolver>();
 
