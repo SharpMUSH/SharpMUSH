@@ -70,11 +70,11 @@ We got an array: ["bar",10]
 
 ## Nested pretty printer
 
-A JSON pretty-printer can recurse on arrays and objects while preserving the already-encoded primitive values in %1. The callback's %0 tells it which type it received. Extra arguments carry indentation depth (%3) and whether to print an object key (%4).
+A JSON pretty-printer can recurse on arrays and objects. A string arrives in %1 as its bare text, so the printer quotes it again with json(string,%1); numbers, booleans and null arrive as written. The callback's %0 tells it which type it received. Extra arguments carry indentation depth (%3) and whether to print an object key (%4).
 
 ```sharp
 > &pretty_json me=u(me/pretty_json_sub,json_query(%0,type),%0,,0,0)
-> &pretty_json_sub me=repeat(%t,%3)[if(%4,[json(string,%2)]:%b)][switch(%0,object,\{%r[json_map(%=,%1,\,%r,inc(%3),1)]%r[repeat(%t,%3)]\},array,\[%r[json_map(%=,%1,\,%r,inc(%3),0)]%r[repeat(%t,%3)]\],%1)]
+> &pretty_json_sub me=repeat(%t,%3)[if(%4,[json(string,%2)]:%b)][switch(%0,object,\{%r[json_map(%=,%1,\,%r,inc(%3),1)]%r[repeat(%t,%3)]\},array,\[%r[json_map(%=,%1,\,%r,inc(%3),0)]%r[repeat(%t,%3)]\],string,json(string,%1),%1)]
 ```
 
 Call the printer with nested values:
