@@ -110,5 +110,16 @@ public class FunctionInheritanceTests : ServerTestBase
 		await Assert.That(await Eval($"get(#{child.Number}/LATE)")).IsEqualTo(string.Empty);
 	}
 
+	/// <summary><c>fetch_ufun_attrib</c> reads a bare attribute name off the executor.</summary>
+	[Test]
+	public async Task UdefaultReadsABareAttributeOffTheExecutor()
+	{
+		var (parent, child) = await ParentAndChild("Bare");
+		await Cmd($"&TWICE #{parent.Number}=[mul(%0,2)]");
+
+		await Assert.That(await EvalAs(child, "udefault(TWICE,none,4)")).IsEqualTo("8");
+		await Assert.That(await EvalAs(child, "udefault(NOSUCHATTR,none,4)")).IsEqualTo("none");
+	}
+
 	private static string TrailingDbref(string created) => created.Trim().Split(' ')[^1].Trim().TrimEnd('.');
 }

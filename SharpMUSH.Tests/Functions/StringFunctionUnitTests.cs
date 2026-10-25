@@ -713,4 +713,43 @@ public class StringFunctionUnitTests
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
+
+	// fun_speak (src/funstr.c:2162): the say string is followed by a space, : skips the spaces after it,
+	// ; poses with a space when one follows it, and an empty string says nothing.
+	[Test]
+	[Arguments("speak(&Bob,hello,yells:)", "Bob yells: \"hello\"")]
+	[Arguments("speak(&Bob,hello)", "Bob says, \"hello\"")]
+	[Arguments("speak(&Bob,:  waves)", "Bob waves")]
+	[Arguments("speak(&Bob,; waves)", "Bob waves")]
+	[Arguments("speak(&Bob,;'s here)", "Bob's here")]
+	[Arguments("speak(&Bob,|Thunder.)", "Thunder.")]
+	[Arguments("speak(&Bob,)", "")]
+	public async Task SpeakFormatsSpeech(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	/// <summary>A sound is not a space: the spaces after : go, and the sound among them stays.</summary>
+	[Test]
+	public async Task SpeakKeepsASoundAmongTheSpacesItTrims()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("speak(&Bob,:[sound(ding.wav)]  waves)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("Bob waves");
+		await Assert.That(result.Text.Contains(MarkupText.PointCarrier)).IsTrue();
+	}
+
+	// The transformation gets the fragment as %0, the speaker as %1 and the fragment's number as %2.
+	[Test]
+	[Arguments("ucstr(%0)", ":waves. \"hello\" and \"bye\"", "Bob waves. HELLO and BYE")]
+	[Arguments("ucstr(%0)", "hello", "Bob says, HELLO")]
+	[Arguments("%1:%2", "hello", "Bob says, &Bob:0")]
+	[Arguments("%1:%2", ":nods \"a\" \"b\"", "Bob nods &Bob:1&Bob:2")]
+	public async Task SpeakTransformsFragments(string transform, string speech, string expected)
+	{
+		var thing = TestIsolationHelpers.GenerateUniqueName("Speak");
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"[setq(0,create({thing}))][attrib_set(%q0/TRANSFORM,lit({transform}))][speak(&Bob,{speech},,%q0/TRANSFORM)]"));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 }

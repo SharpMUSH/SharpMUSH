@@ -32,8 +32,6 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	private static readonly ConcurrentDictionary<(string Open, string Close), Regex> SpeechPatternCache = new();
-
 	[SharpFunction(Name = "after", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["string", "substring"])]
 	public ValueTask<CallState> After(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -94,41 +92,47 @@ public partial class Functions
 		var transformObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 3, "");
 		var isNullObjAttr = ArgHelpers.NoParseDefaultNoParseArgument(args, 4, "");
 
-		var speech = new SpeechInput(
-			SpeakerArgument: args["0"],
-			Text: StripSpeechPrefix(speakString),
-			Type: MessageHelpers.DetermineMessageType(speakString.ToPlainText()),
-			SayString: ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "says, "),
-			Open: ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\""),
-			Close: ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "\""));
+		// fun_speak (src/funstr.c:2197): a say string that is empty or starts with a space is "says,".
+		var sayString = ArgHelpers.NoParseDefaultNoParseArgument(args, 2, "");
+		if (sayString.ToPlainText() is "" or [' ', ..]) sayString = MarkupText.Plain("says,");
+		var open = ArgHelpers.NoParseDefaultNoParseArgument(args, 5, "\"");
+		if (open.Length == 0) open = MarkupText.Plain("\"");
+		var close = ArgHelpers.NoParseDefaultNoParseArgument(args, 6, "");
+		if (close.Length == 0) close = open;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await SpeakerAsync(parser, executor, speaker) switch
 		{
 			CallState refusal => refusal,
+			SpeechSpeaker when speakString.Length == 0 => CallState.Empty,
 			SpeechSpeaker resolved => await SpeechTransformAsync(parser, executor, transformObjAttr, isNullObjAttr) switch
 			{
 				CallState refusal => refusal,
-				None => new CallState(SpeechClosed(speech, MarkupText.Concat(SpeechPrefix(speech, resolved.Name), speech.Text))),
-				SpeechTransform transform => await TransformedSpeechAsync(parser, executor, speech, resolved, transform)
+				None => new CallState(SpokenAsIs(SplitSpeech(speakString, resolved.Name, sayString, open, close))),
+				SpeechTransform transform => await TransformedSpeechAsync(parser, executor,
+					SplitSpeech(speakString, resolved.Name, sayString, open, close), resolved, transform)
 			}
 		};
 	}
 
-	/// <summary>The arguments speak() formats, with the speech's leading token (or quote) taken off.</summary>
-	private sealed record SpeechInput(
-		CallState SpeakerArgument,
+	/// <summary>
+	/// speak()'s string with its leading token taken off: what goes before the speech (the name for a
+	/// pose), whether it is said, and the say string and quotes it is said with.
+	/// </summary>
+	private sealed record SpeechParts(
+		MString Head,
 		MString Text,
-		INotifyService.NotificationType Type,
+		bool Say,
+		MString Name,
 		MString SayString,
 		MString Open,
 		MString Close);
 
-	/// <summary>Who speak() speaks as: the object, and the name its speech carries.</summary>
-	private sealed record SpeechSpeaker(AnySharpObject Object, MString Name);
+	/// <summary>Who speak() speaks as: the object, the name its speech carries, and the %1 a transformation gets.</summary>
+	private sealed record SpeechSpeaker(AnySharpObject Object, MString Name, string Reference);
 
-	/// <summary>speak()'s transformation attribute, and the optional attribute that skips a fragment.</summary>
+	/// <summary>speak()'s transformation attribute, and the optional attribute used when it gives nothing.</summary>
 	private sealed record SpeechTransform(
 		AnySharpObject Object,
 		string Attribute,
@@ -141,16 +145,65 @@ public partial class Functions
 	/// <summary>The transformation to apply, none at all, or the error speak() returns instead.</summary>
 	private union SpeechTransformOrRefusal(SpeechTransform, None, CallState);
 
-	/// <summary>Strip the prefix (including quotes)</summary>
-	private static MString StripSpeechPrefix(MString speakString)
-		=> speakString.ToPlainText() switch
+	/// <summary>A located <c>[obj/]attr</c> argument, or the error speak() returns instead.</summary>
+	private union SpeechAttributeOrRefusal(SpeechTransform, CallState);
+
+	/// <summary>
+	/// fun_speak's token switch (src/funstr.c:2232): <c>:</c> poses with a space, <c>;</c> without one
+	/// (with one when a space follows it), <c>|</c> emits, and anything else is said, a leading <c>"</c>
+	/// taken off under chat_strip_quote.
+	/// </summary>
+	private SpeechParts SplitSpeech(MString speakString, MString name, MString sayString, MString open, MString close)
+	{
+		var rest = speakString.Substring(1, speakString.Length - 1);
+		var (head, text, say) = speakString.ToPlainText() switch
 		{
-			[':', .. _]
-				or [';', .. _]
-				or ['|', .. _]
-				or ['"', .. _] => speakString.Substring(1, speakString.Length - 1),
-			_ => speakString
+			[':', ..] => (MarkupText.Concat(name, MarkupText.Space), WithoutLeadingSpaces(rest), false),
+			[';', ' ', ..] => (MarkupText.Concat(name, MarkupText.Space), WithoutLeadingSpaces(rest), false),
+			[';', ..] => (name, rest, false),
+			['|', ..] => (MarkupText.Empty, rest, false),
+			['"', ..] when Configuration.CurrentValue.Cosmetic.ChatStripQuote => (MarkupText.Empty, rest, true),
+			_ => (MarkupText.Empty, speakString, true)
 		};
+		return new SpeechParts(head, text, say, name, sayString, open, close);
+	}
+
+	/// <summary>The text without its leading spaces; a sound or other point among them stays.</summary>
+	private static MString WithoutLeadingSpaces(MString text)
+	{
+		var plain = text.ToPlainText();
+		var spaces = plain.TakeWhile(c => c == ' ').Count();
+		if (spaces == 0) return text;
+
+		var cut = PlainOffsets(text, plain)[spaces];
+		var points = Enumerable.Range(0, cut).Where(index => text.Text[index] != ' ').Select(index => text.Substring(index, 1));
+		return MarkupText.Concat([.. points, text.Substring(cut, text.Length - cut)]);
+	}
+
+	/// <summary>
+	/// Where each character of <paramref name="plain"/>, the plain text of <paramref name="text"/>, sits in its
+	/// <see cref="MarkupText.Text"/>, with the text's length after the last. Point markup rides on carrier
+	/// characters the plain text leaves out, so the two count differently.
+	/// </summary>
+	private static int[] PlainOffsets(MString text, string plain)
+	{
+		var raw = text.Text;
+		var offsets = new int[plain.Length + 1];
+		for (int r = 0, p = 0; r < raw.Length && p < plain.Length; r++)
+		{
+			if (raw[r] == plain[p]) offsets[p++] = r;
+		}
+
+		offsets[plain.Length] = raw.Length;
+		return offsets;
+	}
+
+	/// <summary>Speech nothing transforms: said as <c>Name says, "text"</c>, or posed or emitted as it is.</summary>
+	private static MString SpokenAsIs(SpeechParts speech)
+		=> speech.Say
+			? MarkupText.Concat([speech.Name, MarkupText.Space, speech.SayString, MarkupText.Plain(" \""), speech.Text,
+				MarkupText.Plain("\"")])
+			: MarkupText.Concat(speech.Head, speech.Text);
 
 	/// <summary>
 	/// A <c>&amp;name</c> speaker is that name, spoken by the executor. Any other speaker is located;
@@ -160,7 +213,7 @@ public partial class Functions
 	{
 		if (speaker.ToPlainText().StartsWith('&'))
 		{
-			return new SpeechSpeaker(executor, speaker.Substring(1, speaker.Length - 1));
+			return new SpeechSpeaker(executor, speaker.Substring(1, speaker.Length - 1), speaker.ToPlainText());
 		}
 
 		var maybeFound = await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
@@ -171,28 +224,11 @@ public partial class Functions
 			case Error<CallState> error:
 				return error.Value;
 			case AnySharpObject found when await PermissionService.Controls(executor, found):
-				return new SpeechSpeaker(found, MarkupText.Plain(found.Object().Name));
+				return new SpeechSpeaker(found, MarkupText.Plain(found.Object().Name), $"#{found.Object().DBRef.Number}");
 			default:
-				return new SpeechSpeaker(executor, MarkupText.Plain(executor.Object().Name));
+				return new SpeechSpeaker(executor, MarkupText.Plain(executor.Object().Name), $"#{executor.Object().DBRef.Number}");
 		}
 	}
-
-	/// <summary>
-	/// If not Emit, use Speakername. Build the prefix using ConcatMany to avoid O(N²) sequential concat.
-	/// </summary>
-	private static MString SpeechPrefix(SpeechInput speech, MString speakerName)
-		=> speech.Type switch
-		{
-			INotifyService.NotificationType.Emit => MarkupText.Empty,
-			INotifyService.NotificationType.Pose => MarkupText.Concat([speakerName, MarkupText.Space]),
-			INotifyService.NotificationType.Say =>
-				MarkupText.Concat([speakerName, MarkupText.Space, speech.SayString, speech.Open]),
-			_ => MarkupText.Concat([speakerName])
-		};
-
-	/// <summary>Said speech ends with the close quote.</summary>
-	private static MString SpeechClosed(SpeechInput speech, MString composed)
-		=> speech.Type is INotifyService.NotificationType.Say ? MarkupText.Concat(composed, speech.Close) : composed;
 
 	/*
 	  If <transform> is specified (an object/attribute pair or attribute, as with map() and similar functions),
@@ -219,17 +255,10 @@ public partial class Functions
 			return new None();
 		}
 
-		if (HelperFunctions.SplitObjectAndAttr(transformObjAttr.ToPlainText()) is not { } splitTransform)
+		return await SpeechAttributeAsync(parser, executor, transformObjAttr) switch
 		{
-			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
-		}
-
-		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-				splitTransform.Object, LocateFlags.All) switch
-		{
-			Error<CallState> error => error.Value,
-			AnySharpObject found => await WithSpeechNullCheckAsync(parser, executor,
-				new SpeechTransform(found, splitTransform.Attribute), isNullObjAttr)
+			CallState refusal => refusal,
+			SpeechTransform found => await WithSpeechNullCheckAsync(parser, executor, found, isNullObjAttr)
 		};
 	}
 
@@ -241,64 +270,145 @@ public partial class Functions
 			return transform;
 		}
 
-		if (HelperFunctions.SplitObjectAndAttr(isNullObjAttr.ToPlainText()) is not { } splitNull)
+		return await SpeechAttributeAsync(parser, executor, isNullObjAttr) switch
+		{
+			CallState refusal => refusal,
+			SpeechTransform found => transform with { NullObject = found.Object, NullAttribute = found.Attribute }
+		};
+	}
+
+	/// <summary>A <c>[obj/]attr</c> argument of speak(), the executor's own attribute when no object is named.</summary>
+	private async ValueTask<SpeechAttributeOrRefusal> SpeechAttributeAsync(IMUSHCodeParser parser,
+		AnySharpObject executor, MString objAttr)
+	{
+		if (HelperFunctions.SplitOptionalObjectAndAttr(objAttr.ToPlainText()) is not { } split)
 		{
 			return new CallState(ErrorMessages.Returns.ObjectAttributeString);
 		}
 
+		if (split.Object is not { } objectName)
+		{
+			return new SpeechTransform(executor, split.Attribute);
+		}
+
 		return await LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor,
-				splitNull.Object, LocateFlags.All) switch
+				objectName, LocateFlags.All) switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject found => transform with { NullObject = found, NullAttribute = splitNull.Attribute }
+			AnySharpObject found => new SpeechTransform(found, split.Attribute)
 		};
 	}
 
 	/// <summary>
-	/// Runs the transformation over each delimited fragment. As before, a transformed string contributes
-	/// only its evaluations' errors to the answer, not its text.
+	/// fun_speak's transformation loop (src/funstr.c:2273-2359), quirks kept: each fragment between
+	/// <c>open</c> and <c>close</c> (or from the start of said speech that does not open with a quote) is
+	/// replaced by the transformation's result, or the null attribute's when that is empty. Said speech
+	/// writes its close quote only between fragments, and only when it began with an open quote.
 	/// </summary>
 	private async ValueTask<CallState> TransformedSpeechAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		SpeechInput speech, SpeechSpeaker speaker, SpeechTransform transform)
+		SpeechParts speech, SpeechSpeaker speaker, SpeechTransform transform)
 	{
-		var hadErrors = false;
-		var speakString = speech.Text;
-		var safeOpen = Regex.Escape(speech.Open.ToPlainText());
-		var safeClose = Regex.Escape(speech.Close.ToPlainText());
-		var pattern = SpeechPatternCache.GetOrAdd((safeOpen, safeClose),
-			static key => SoftcodeRegex.Create($"{key.Open}(?<Content>[^{key.Close}]){key.Close}", RegexOptions.None)
-		);
+		var text = speech.Text;
+		var plain = text.ToPlainText();
+		var offsets = PlainOffsets(text, plain);
+		// From plain offset a to b; from the start, any point before the first character comes too.
+		MString Slice(int from, int to) => text.Substring(from == 0 ? 0 : offsets[from], offsets[to] - (from == 0 ? 0 : offsets[from]));
+		// PennMUSH's chopstr (src/strutil.c:137) over plain characters: the first limit - 1 from a, or all the
+		// rest when no longer than limit.
+		MString ChopFrom(int from, int limit) => plain.Length - from <= limit ? Slice(from, plain.Length) : Slice(from, from + limit - 1);
+		var open = speech.Open.ToPlainText();
+		var close = speech.Close.ToPlainText();
+		var firstOpen = plain.IndexOf(open, StringComparison.Ordinal);
 
-		var markupContents = pattern.Matches(speakString.ToPlainText())
-			.Select(x => x.Groups["Content"]);
-
-		foreach (var markupContent in markupContents)
+		if (!speech.Say && firstOpen < 0)
 		{
-			var content = speakString.Substring(markupContent.Index, markupContent.Length);
-			Dictionary<string, CallState> FragmentArgs() => new()
-			{
-				{ "0", speech.SpeakerArgument },
-				{ "1", new CallState(MarkupText.Plain(speaker.Object.Object().DBRef.ToString())) },
-				{ "2", new CallState(content) }
-			};
-
-			if (transform is { NullObject: { } nullObject, NullAttribute: { } nullAttribute })
-			{
-				var nullEvaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-					parser, executor, nullObject, nullAttribute, FragmentArgs());
-
-				hadErrors |= nullEvaluated.HadErrors;
-				if (nullEvaluated.Message.Truthy(parser)) continue;
-			}
-
-			var evaluated = await AttributeService.EvaluateAttributeFunctionResultAsync(
-				parser, executor, transform.Object, transform.Attribute, FragmentArgs());
-
-			hadErrors |= evaluated.HadErrors;
-			speakString = speakString.Replace(markupContent.Index, markupContent.Length, evaluated.Message);
+			return new CallState(SpokenAsIs(speech));
 		}
 
-		return new CallState(SpeechClosed(speech, SpeechPrefix(speech, speaker.Name))) { HadErrors = hadErrors };
+		var output = new List<MString> { speech.Head };
+		var say = speech.Say;
+		var fragment = 0;
+		var startingFragment = false;
+		int start;
+
+		if (say)
+		{
+			output.Add(MarkupText.Concat([speech.Name, MarkupText.Space, speech.SayString, MarkupText.Space]));
+			fragment = -1;
+			// In say mode, a delimiter other than a quote is treated as pose mode.
+			say = open == "\"";
+		}
+
+		if (plain.StartsWith(open, StringComparison.Ordinal))
+		{
+			if (say) output.Add(speech.Open);
+			start = open.Length;
+		}
+		else if (!say && firstOpen >= 0)
+		{
+			output.Add(ChopFrom(0, firstOpen + 1));
+			fragment = 0;
+			start = firstOpen + open.Length;
+		}
+		else
+		{
+			start = 0;
+			startingFragment = true;
+		}
+
+		var hadErrors = false;
+		var end = -1;
+		while (start < plain.Length)
+		{
+			fragment++;
+			var closeAt = plain.IndexOf(close, start, StringComparison.Ordinal);
+			var piece = Slice(start, closeAt >= 0 ? closeAt : plain.Length);
+			end = closeAt >= 0 ? closeAt + close.Length : -1;
+
+			var result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor,
+				transform.Object, transform.Attribute, new Dictionary<string, CallState>
+				{
+					{ "0", new CallState(piece) },
+					{ "1", new CallState(speaker.Reference) },
+					{ "2", new CallState(fragment.ToString()) }
+				});
+			hadErrors |= result.HadErrors;
+
+			if (result.Message.Length == 0 && transform is { NullObject: { } nullObject, NullAttribute: { } nullAttribute })
+			{
+				result = await AttributeService.EvaluateAttributeFunctionResultAsync(parser, executor,
+					nullObject, nullAttribute, new Dictionary<string, CallState>
+					{
+						{ "0", new CallState(speaker.Reference) },
+						{ "1", new CallState(fragment.ToString()) }
+					});
+				hadErrors |= result.HadErrors;
+			}
+
+			output.Add(result.Message);
+
+			if (end < 0 || end >= plain.Length) break;
+			if (!startingFragment && say) output.Add(speech.Close);
+
+			var nextOpen = plain.IndexOf(open, end, StringComparison.Ordinal);
+			if (nextOpen < 0) break;
+
+			// Text between fragments is copied only when it is longer than the open delimiter.
+			if (nextOpen - end > open.Length)
+			{
+				output.Add(ChopFrom(end, nextOpen - end + 1));
+			}
+
+			start = nextOpen + open.Length;
+			end = -1;
+		}
+
+		if (end >= 0 && end < plain.Length)
+		{
+			output.Add(Slice(end, plain.Length));
+		}
+
+		return new CallState(MarkupText.Concat(output)) { HadErrors = hadErrors };
 	}
 
 	/// <summary>

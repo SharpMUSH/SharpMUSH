@@ -223,6 +223,21 @@ public class SceneOocIntegrationTests
 		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name}: QUIET WORDS");
 	}
 
+	/// <summary>
+	/// The scene's pose capture calls SPEECHMOD as the built-in speech does, with the words and the type token
+	/// by name as well as by position.
+	/// </summary>
+	[Test]
+	public async Task Pose_capture_passes_SPEECHMOD_its_named_arguments()
+	{
+		var (sceneId, poser, _) = await SceneRoomAsync("Named");
+		await God1($"&SPEECHMOD {poser.Dbref}=[ucstr(%<message>)]%<type>");
+
+		await RunAs(poser.Handle, "pose waves");
+
+		await Assert.That(await LastPoseAsync(sceneId, "content")).IsEqualTo($"{poser.Name} WAVES:");
+	}
+
 	[Test]
 	public async Task Ooc_with_no_scene_at_all_is_only_heard()
 	{

@@ -115,6 +115,8 @@ public class SynchronousFunctionResultTests
 		var value = mode switch { "syntax" => "[", "literal" => "#-1 EXCEPTION: ordinary text", _ => "valid" };
 		await attributes.SetAttributeAsync(actor, actor, name, MarkupText.Plain(value));
 		await attributes.SetAttributeAsync(actor, actor, name + "TRANSFORM", MarkupText.Plain("transformed"));
+		// speak() calls its null attribute only for a fragment the transformation leaves empty.
+		await attributes.SetAttributeAsync(actor, actor, name + "EMPTY", MarkupText.Plain("[null(empty)]"));
 		if (kind.StartsWith("foreach"))
 		{
 			// foreach() transforms characters through a ufun, so its error-carrying argument has to
@@ -134,7 +136,7 @@ public class SynchronousFunctionResultTests
 			"sql" => $"mapsql(me/{name},SELECT 1)",
 			"sqlheader" => $"mapsql(me/{name},SELECT 1,,1)",
 			"speak" => $"speak(&Speaker,|\"a\",,me/{name})",
-			"speaknull" => $"speak(&Speaker,|\"a\",,me/{name}TRANSFORM,me/{name})",
+			"speaknull" => $"speak(&Speaker,|\"a\",,me/{name}EMPTY,me/{name})",
 			"allof" => $"allof({child},|)",
 			"allofdelimiter" => $"allof(1,2,{child})",
 			"benchmark" => $"benchmark({child},1)",

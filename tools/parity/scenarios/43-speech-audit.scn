@@ -1,0 +1,43 @@
+# Speech from the softcode audit (#2268): say keeps trailing spaces, @speechmod rewrites what is said,
+# speak() takes a transform attribute on the speaker and spaces a custom say string, and udefault()
+# takes a bare attribute name.
+::case sp.login
+::login wiz Wiz wizpass
+think ok
+
+::case sp.trailing  say keeps the spaces at the end of what is said
+say [ljust(foo,6)]
+
+::case sp.speechmod  SPEECHMOD rewrites what is said
+@speechmod me=ucstr(%0)!
+say hello
+pose waves
+;'s waving
+@emit Hi there
+@speechmod me
+
+::case sp.speak  speak() with a transform attribute, and a custom say string
+&SPKTRANS me=Fragment %1 is: %0
+think [speak(me,test,,SPKTRANS)]
+think [speak(me,Test.,yells:)]
+&SPKTRANS me
+&SPKUP me=ucstr(%0)
+think [speak(me,:waves. "hello" and "bye",,SPKUP)]
+think [speak(me,"hello,,SPKUP)]
+think [speak(&Bob,;'s here. "hi" there,,SPKUP)]
+think [speak(me,|An emit "with speech",,SPKUP)]
+&SPKSKIP me=if(strmatch(%0,x),,%0)
+&SPKNULL me=<%0:%1>
+think [speak(me,:says "x" and "y",,SPKSKIP,SPKNULL)]
+&SPKREF me=%1:%2
+think [speak(&Bob,:nods "a" "b",,SPKREF)]
+think [speak(&Bob,hello,,SPKREF)]
+&SPKREF me
+&SPKUP me
+&SPKSKIP me
+&SPKNULL me
+
+::case sp.udefault  udefault() with a bare attribute name
+&UDTEST me=*%0*
+think [udefault(UDTEST,-- BOOM --,ACK)] [udefault(NOSUCHATTR,-- BOOM --,ACK)]
+&UDTEST me
