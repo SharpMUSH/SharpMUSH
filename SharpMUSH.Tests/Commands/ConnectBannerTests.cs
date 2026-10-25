@@ -62,8 +62,8 @@ public class ConnectBannerTests
 	}
 
 	/// <summary>
-	/// SCREENREADER and WHO come first, right under the welcome and above the logo, so a screen reader reaches them
-	/// before anything else.
+	/// SCREENREADER and WHO are the first commands beside the logo, right under the welcome, so a screen reader
+	/// reaches them before the ways in.
 	/// </summary>
 	[Test]
 	public async Task TheBannerOffersTheScreenReaderAndWhoFirst()
@@ -71,7 +71,7 @@ public class ConnectBannerTests
 		var advertised = AdvertisedCommands(Banner);
 
 		await Assert.That(advertised.Take(2)).IsEquivalentTo(["SCREENREADER", "WHO"]);
-		await Assert.That(Banner.Split('\n')[1]).StartsWith("SCREENREADER");
+		await Assert.That(Banner.Split('\n')[1][35..]).StartsWith("SCREENREADER");
 	}
 
 	/// <summary>The banner really is what a freshly opened socket receives.</summary>
@@ -87,12 +87,12 @@ public class ConnectBannerTests
 	}
 
 	/// <summary>
-	/// Command words the banner instructs a player to type, in order: the first word of any line above the logo, or
-	/// beside it (its 33 columns and the gap of two after them), that is not a section heading.
+	/// Command words the banner instructs a player to type, in order: the first word of any line beside the logo (its
+	/// 33 columns and the gap of two after them) that is not a section heading.
 	/// </summary>
 	private static string[] AdvertisedCommands(string banner) =>
 		banner.Split('\n')
-			.Select(line => line.Length > 35 && line[..35].All(c => c is ' ' or '=' or '-') ? line[35..].Trim() : line.Trim())
+			.Select(line => line.Length > 35 ? line[35..].Trim() : string.Empty)
 			.Where(text => text.Length > 0 && !text.EndsWith(':') && !text.EndsWith('!'))
 			.Select(text => text.Split(' ', StringSplitOptions.RemoveEmptyEntries)[0])
 			.Where(word => Regex.IsMatch(word, "^[A-Za-z]+$"))

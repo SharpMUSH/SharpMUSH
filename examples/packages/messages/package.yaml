@@ -28,12 +28,11 @@ objects:
     # screen find the guest characters, so it offers connect guest only when one exists.
     powers: [Send_OOB, Search]
     attributes:
-      # The connect screen: the welcome and the commands for a screen reader and WHO first, so a screen reader
-      # reaches them before the logo, then the logo as a picture with the ways in beside it, or under it on a
-      # screen too narrow for both. A terminal that cannot show the picture gets LOGO in the logo's green
-      # instead, read with v() so its spacing reaches the screen as written.
+      # The connect screen: the logo as a picture, with the welcome, the commands for a screen reader and WHO, and
+      # the ways in beside it, or under it on a screen too narrow for both. A terminal that cannot show the picture
+      # gets LOGO in the logo's green instead, read with v() so its spacing reaches the screen as written.
       CONNECT: |-
-        u(FUN`CONNECT`TOP)%r%r[flex(,item(figure(/assets/logo.png,The SharpMUSH logo,ansi(#00f5b7,v(LOGO))),33),item(u(FUN`CONNECT`MENU),,40))]
+        flex(,item(figure(/assets/logo.png,The SharpMUSH logo,ansi(#00f5b7,v(LOGO))),33),item(u(FUN`CONNECT`TOP)%r%r[u(FUN`CONNECT`MENU)],,40))
       LOGO: |2-
                   ==         ==
                  ====       ====
@@ -67,7 +66,7 @@ objects:
       FUN`ONLINE: |-
         u(FUN`DISPLAY`ONLINECOUNT)
 
-      # The lines above the logo: the welcome, then SCREENREADER and WHO.
+      # The top of the text beside the logo: the welcome, then SCREENREADER and WHO.
       FUN`CONNECT`TOP: |-
         Welcome to [tone(strong,mudname())]!%r[fields(u(FUN`LAYOUT`LIST),SCREENREADER,using a screen reader,WHO,who is online)]
       # The text beside the logo. A way in that the game has turned off is left out. create, play and claim work
