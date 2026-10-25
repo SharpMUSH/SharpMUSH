@@ -322,9 +322,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	internal static string RewriteSummary(string sourceName, IReadOnlyCollection<SoftcodeRewrite> rewrites)
 	{
 		var byHand = rewrites.Count(rewrite => rewrite.ByHand);
+		var removed = rewrites.Count(rewrite => rewrite.ColourRemoved);
 		return $"Softcode was rewritten in {rewrites.Count} attribute(s) so SharpMUSH reads it as {sourceName} did; " +
 			"each one is listed under Rewritten softcode" +
-			(byHand > 0 ? $", and {byHand} of them say check by hand where the rewrite could not carry the code over exactly." : ".");
+			(byHand > 0 ? $", and {byHand} of them say check by hand where the rewrite could not carry the code over exactly." : ".") +
+			(removed > 0 ? $" In {removed} of them a colour code that could not be converted was removed, so that text is no longer coloured." : "");
 	}
 
 	/// <summary>

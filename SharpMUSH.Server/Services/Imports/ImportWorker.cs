@@ -36,7 +36,12 @@ public static class ImportWorker
 			var source = await new DatabaseImportPreflight(new PennMUSHDatabaseParser(NullLogger<PennMUSHDatabaseParser>.Instance))
 				.ReadAsync(request.Files, deadline.Token);
 			var configuration = File.Exists(session.ConfigurationPath)
-				? ReadPennMushConfig.Import(session.ConfigurationPath, followIncludes: false) : null;
+				? ReadPennMushConfig.Import(session.ConfigurationPath, followIncludes: false, source.Dialect switch
+				{
+					DatabaseDialect.TinyMUX => ConfigurationDialect.TinyMUX,
+					DatabaseDialect.RhostMUSH => ConfigurationDialect.RhostMUSH,
+					_ => ConfigurationDialect.PennMUSH
+				}) : null;
 			ConversionResult result;
 			var host = await new IsolatedImportHostFactory().CreateAsync(session, deadline.Token);
 			try

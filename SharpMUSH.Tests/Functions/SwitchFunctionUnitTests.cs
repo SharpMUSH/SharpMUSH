@@ -183,6 +183,16 @@ public class SwitchFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>RhostMUSH's ifelse() leaves the false branch out as if() does; RhostMUSH 5.13 gives these.</summary>
+	[Test]
+	[Arguments("[ifelse(1,yes)]|[ifelse(0,yes)]|[ifelse(1,a,b)]|[ifelse(0,a,b)]", "yes||a|b")]
+	[Arguments("ifelse(1)", "#-1 FUNCTION (IFELSE) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1")]
+	public async Task IfElseTakesTwoOrThreeArguments(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
 	/// <summary>
 	/// #$ is the subject in the list or default that runs, as PennMUSH's fun_switch splices it. A nested switch's
 	/// #$ names the outermost switch whose list it is written in. case(), caseall(), if() and ifelse() bind it too,
