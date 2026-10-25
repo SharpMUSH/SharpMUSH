@@ -218,6 +218,10 @@ internal static class WebHostRegistration
 			// which opt in with [EnableRateLimiting]. See PublicApiRateLimit.
 			opts.AddPublicApiPolicy(configuration);
 
+			// "wiki-read": a fixed window per client IP on the wiki API and the sitemap, for callers who are
+			// not signed in. See WikiReadRateLimit.
+			opts.AddWikiReadPolicy(configuration);
+
 			// "mcp" policy: partitioned per client IP so one source can't brute-force the
 			// character+password auth on /mcp, while a legitimate agent (single IP) still gets
 			// generous tool-call throughput. Partitioning keeps one caller's bursts from throttling

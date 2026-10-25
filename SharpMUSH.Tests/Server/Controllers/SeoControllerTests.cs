@@ -6,9 +6,11 @@ using SharpMUSH.Tests.Authentication;
 using SharpMUSH.Configuration.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
+using SharpMUSH.Server.Services;
 using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Tests.Server.Controllers;
@@ -20,7 +22,7 @@ namespace SharpMUSH.Tests.Server.Controllers;
 /// </summary>
 public class SeoControllerTests
 {
-	private static SeoController MakeController(WikiStoreService wiki)
+	private static SeoController MakeController(WikiStoreService wiki, SitemapCache? sitemap = null)
 	{
 		// A real localization service over the same storage, not a substitute: a double would return an
 		// empty locale list for every page and the sitemap's alternates would never be exercised.
@@ -29,7 +31,7 @@ public class SeoControllerTests
 		var localization = new WikiLocalizationService(
 			wiki, new WikiLocaleResolver(monitor), NullLogger<WikiLocalizationService>.Instance);
 		var access = new WikiAccessService(wiki, InMemoryRoleRegistry.Seeded(), new PermissionResolver());
-		var controller = new SeoController(wiki, localization, access, NullLogger<SeoController>.Instance);
+		var controller = new SeoController(wiki, localization, access, sitemap ?? new SitemapCache(new Clock()), NullLogger<SeoController>.Instance);
 
 		var httpContext = new DefaultHttpContext();
 		httpContext.Request.Scheme = "https";
@@ -125,5 +127,109 @@ public class SeoControllerTests
 		await Assert.That(text).Contains("Disallow: /admin/");
 		await Assert.That(text).Contains("Disallow: /api/");
 		await Assert.That(text).Contains("User-agent: *");
+	}
+
+	private sealed class Clock : TimeProvider
+	{
+		public DateTimeOffset Now { get; set; } = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+		public override DateTimeOffset GetUtcNow() => Now;
+	}
+
+	/// <summary>
+	/// A crawler fetching the sitemap again within <see cref="SitemapCache.Lifetime"/> gets the list already built,
+	/// not another scan of every page; once it has passed, the list is built again.
+	/// </summary>
+	[Test]
+	public async Task Sitemap_IsBuiltOncePerLifetime()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		var clock = new Clock();
+		var sitemap = new SitemapCache(clock);
+		var first = (await wiki.CreateAsync("First Page", "# one", "#1")).Expect<WikiPage>();
+		await GetSitemapXml(MakeController(wiki, sitemap));
+
+		var later = (await wiki.CreateAsync("Later Page", "# two", "#1")).Expect<WikiPage>();
+		var cached = await GetSitemapXml(MakeController(wiki, sitemap));
+		await Assert.That(cached).Contains(first.Slug);
+		await Assert.That(cached).DoesNotContain(later.Slug);
+
+		clock.Now += SitemapCache.Lifetime;
+		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).Contains(later.Slug);
+	}
+
+	/// <summary>
+	/// The list may be minutes old, but a page closed to logged-out readers since it was built leaves the sitemap at
+	/// once: each request checks the cached pages against what the everyone role may read now.
+	/// </summary>
+	[Test]
+	public async Task Sitemap_FromTheCache_LeavesOutAPageClosedSinceItWasBuilt()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		var sitemap = new SitemapCache(new Clock());
+		var page = (await wiki.CreateAsync("Soon Closed", "# closing", "#1")).Expect<WikiPage>();
+		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).Contains(page.Slug);
+
+		(await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id),
+			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = [PortalPermission.WikiEdit] }, "#1")).Expect<None>();
+
+		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).DoesNotContain(page.Slug);
+	}
+
+	/// <summary>
+	/// A client that hangs up while the list is being built does not cancel the build: it finishes and is cached,
+	/// so the next request does not scan the wiki again.
+	/// </summary>
+	[Test]
+	public async Task SitemapCache_ABuildOutlivesTheCallerThatStartedIt()
+	{
+		var sitemap = new SitemapCache(new Clock());
+		using var hangUp = new CancellationTokenSource();
+		var builds = 0;
+		IReadOnlyList<SitemapEntry> entries = [];
+
+		await sitemap.GetAsync(async ct =>
+		{
+			builds++;
+			await hangUp.CancelAsync();
+			ct.ThrowIfCancellationRequested();
+			return entries;
+		}, hangUp.Token);
+		await sitemap.GetAsync(_ =>
+		{
+			builds++;
+			return Task.FromResult(entries);
+		}, CancellationToken.None);
+
+		await Assert.That(builds).IsEqualTo(1);
+	}
+
+	/// <summary>The cached list holds pages, not URLs, so each request's own host is what its URLs carry.</summary>
+	[Test]
+	public async Task Sitemap_FromTheCache_UsesTheRequestsHost()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		var sitemap = new SitemapCache(new Clock());
+		var page = (await wiki.CreateAsync("Hosted Page", "# hosted", "#1")).Expect<WikiPage>();
+		await GetSitemapXml(MakeController(wiki, sitemap));
+
+		var other = MakeController(wiki, sitemap);
+		other.HttpContext.Request.Host = new HostString("mirror.example.org");
+
+		await Assert.That(await GetSitemapXml(other)).Contains($"https://mirror.example.org/wiki/main/{page.Slug}");
+	}
+
+	/// <summary>The sitemap reads pages in batches; every batch's pages are listed, not only the first.</summary>
+	[Test]
+	public async Task Sitemap_ListsPagesPastTheFirstBatch()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		var slugs = new List<string>();
+		for (var i = 0; i < 501; i++)
+			slugs.Add((await wiki.CreateAsync($"Batch Page {i:D3}", "# body", "#1")).Expect<WikiPage>().Slug);
+
+		var xml = await GetSitemapXml(MakeController(wiki));
+
+		foreach (var slug in slugs)
+			await Assert.That(xml).Contains($"/wiki/main/{slug}<");
 	}
 }
