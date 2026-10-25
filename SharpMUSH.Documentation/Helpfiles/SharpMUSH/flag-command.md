@@ -24,9 +24,10 @@
 # @flag
 
 `@flag <flag name>`<br>
-`@flag/list [<flag name pattern>]`
+`@flag/list [<flag name pattern>]`<br>
+`@flag/debug <flag name>`
 
-This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show.
+This command manipulates the list of flags in the database. With no switches, the command displays information about the given flag, including aliases and permissions. `@flag/list` lists names of enabled flags, and may be given a wildcarded pattern to restrict which names it will show. `@flag/debug` shows the same information as `@flag <flag name>` with the flag's stored id first, and needs the config.admin permission.
 
 - [@flag managing]: the God-only switches that change the flag table
 - [@flag adding flags]: adding a new flag, and its arguments

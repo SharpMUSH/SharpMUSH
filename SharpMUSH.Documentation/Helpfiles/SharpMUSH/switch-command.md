@@ -44,7 +44,7 @@
 # @switch
 
 `@switch[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`<br>
-`@select <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
+`@select[/<switch>] <string>=<expr1>, <action1> [,<exprN>, <actionN>]... [,<default>]`
 
 For those of you familiar with programming, these command acts like if/then/else or switch/case. It compares `<string>` against whatever each `<expr>` evaluates to. If `<string>` and `<expr>` match, the action list associated with that `<expr>` is carried out. If no match is found, the `<default>` action list is carried out. @switch runs `<action>`s for all matching `<expr>`s by default, while @select only runs the `<action>` for the first matching `<expr>`.
 
@@ -76,6 +76,8 @@ When using `@switch/inline`, an @break in an `<action>` will stop the calling ac
 - /clearregs: q-registers are all reset before each `<action>` is run. Most useful when used in combination with /localize. `/clearreg`, RhostMUSH's spelling, is the same switch.
 
 `@switch/inplace` is an alias for `@switch/inline/nobreak/localize`.
+
+@select takes `/notify`, `/regexp`, `/inline`, `/inplace`, `/nobreak`, `/localize` and `/clearregs`, which work as they do for @switch: `@select/regexp`, for example.
 
 ::: seealso
 - [SWITCH WILDCARDS]

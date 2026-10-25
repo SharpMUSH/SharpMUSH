@@ -52,7 +52,7 @@
 
 ## Listing channels
 
-`@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@CHANNEL LIST] explains the output in detail. If a *\<prefix\>* is given, only channels whose names begin with *\<prefix\>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information.
+`@channel/list` shows a list of all the channels you can see, along with some basic information such as whether you are on the channel, how it's locked, etc. [@CHANNEL LIST] explains the output in detail. If a *\<prefix\>* is given, only channels whose names begin with *\<prefix\>* are shown. If the /on switch is given, only channels you've joined are shown. If /off is given, channels you are on will not be shown. The /quiet switch shows just a list of channel names, without any extra information. `@clist` is the same as `@channel/list` with no switches or prefix; `@clist/full` is accepted, for PennMUSH softcode, and lists the same way.
 
 `@channel/what` shows the name, description, owner, priv flags, mogrifier and buffer size for all channels, or all channels whose names begin with *\<prefix\>* if one is given. Channels you may decompile also show their locks.
 
