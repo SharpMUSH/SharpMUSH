@@ -116,7 +116,6 @@ public class RealityRoutingTests
 		var permissions = new PermissionService(Substitute.For<ILockService>(), Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
 		await Assert.That(await permissions.CanSee(sender, receiver)).IsFalse();
 		await Assert.That(await permissions.CanSee(sender, receiver.Object())).IsFalse();
-		await Assert.That(await permissions.CanFind(sender, receiver)).IsFalse();
 		await Assert.That(await permissions.CanInteract(sender, receiver, interaction)).IsFalse();
 		await reality.Received(1).CanPerceiveAsync(receiver.Object().DBRef, sender.Object().DBRef);
 	}

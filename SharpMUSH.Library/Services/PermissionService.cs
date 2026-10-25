@@ -338,17 +338,6 @@ public class PermissionService(
 		return true;
 	}
 
-	public async ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target)
-	{
-		if (!await reality.CanPerceiveAsync(viewer.Object().DBRef, target.Object().DBRef)) return false;
-		if (await viewer.IsSee_All())
-		{
-			return true;
-		}
-
-		return !await target.HasFlag("UNFINDABLE");
-	}
-
 	/// <summary>
 	/// Check if viewer can execute an attribute on target.
 	/// Checks full attribute path - all parent attributes must allow evaluation.
