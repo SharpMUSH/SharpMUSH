@@ -794,8 +794,8 @@ public class MarkdownFunctionUnitTests
 		foreach (var attribute in new[]
 		{
 			"&FUN`VAL {0}=%1",
-			"&FUN`TABLE`SPEC {0}=[json_query(%1,unescape)][json_query(%q<wd>,get,%2)]",
-			"&FUN`TABLE`CELL {0}=[rendermarkdown([json_query(%1,unescape)],[max(10,json_query(%q<wd>,get,%2))])]",
+			"&FUN`TABLE`SPEC {0}=%1[json_query(%q<wd>,get,%2)]",
+			"&FUN`TABLE`CELL {0}=[rendermarkdown(%1,[max(10,json_query(%q<wd>,get,%2))])]",
 			"&FUN`TABLE`ROW {0}=[lalign(%q<spec>,[json_map({0}/FUN`TABLE`CELL,%0,|)],|)]",
 			"&FUN`TABLE`ROWJ {0}=[u({0}/FUN`TABLE`ROW,%1)]",
 			"&FUN`TABLE`HEAD {0}=[ansi(h,[u({0}/FUN`TABLE`ROW,[json_query(%0,get,head)])])]",

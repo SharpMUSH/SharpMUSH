@@ -165,7 +165,7 @@ public partial class Functions
 					var args = new Dictionary<string, CallState>
 					{
 						{ "0", new CallState(JsonHelpers.GetJsonType(rootElement)) },
-						{ "1", new CallState(rootElement.GetRawText()) }
+						{ "1", new CallState(JsonHelpers.MapValue(rootElement)) }
 					};
 					foreach (var ua in userArgs) args[ua.Key] = ua.Value;
 					result.Add(await EvalWithArgs(args));
@@ -178,7 +178,7 @@ public partial class Functions
 						var arrayArgs = new Dictionary<string, CallState>
 						{
 							{ "0", new CallState(JsonHelpers.GetJsonType(element)) },
-							{ "1", new CallState(element.GetRawText()) },
+							{ "1", new CallState(JsonHelpers.MapValue(element)) },
 							{ "2", new CallState(arrayIndex.ToString()) }
 						};
 						foreach (var ua in userArgs) arrayArgs[ua.Key] = ua.Value;
@@ -193,7 +193,7 @@ public partial class Functions
 						var objArgs = new Dictionary<string, CallState>
 						{
 							{ "0", new CallState(JsonHelpers.GetJsonType(property.Value)) },
-							{ "1", new CallState(property.Value.GetRawText()) },
+							{ "1", new CallState(JsonHelpers.MapValue(property.Value)) },
 							{ "2", new CallState(property.Name) }
 						};
 						foreach (var ua in userArgs) objArgs[ua.Key] = ua.Value;
@@ -236,7 +236,7 @@ public partial class Functions
 				}
 				var patchDoc = JsonNode.Parse(arg2);
 				var merged = ApplyMergePatch(jsonDoc, patchDoc);
-				return new CallState(merged?.ToJsonString() ?? "null");
+				return new CallState(merged?.ToJsonString(JsonHelpers.RelaxedJsonOptions) ?? "null");
 			}
 
 			if (action == "sort")
@@ -259,7 +259,7 @@ public partial class Functions
 					}, StringComparer.Ordinal)
 					.ToArray();
 
-				return new CallState(new JsonArray(sorted).ToJsonString());
+				return new CallState(new JsonArray(sorted).ToJsonString(JsonHelpers.RelaxedJsonOptions));
 			}
 
 			var jsonPath = JsonPath.Parse(arg2);
@@ -285,7 +285,7 @@ public partial class Functions
 				if (pathExists)
 				{
 					// Key already exists — return unchanged
-					return new CallState(jsonDoc?.ToJsonString() ?? "null");
+					return new CallState(jsonDoc?.ToJsonString(JsonHelpers.RelaxedJsonOptions) ?? "null");
 				}
 				// Path doesn't exist yet — use JSON Pointer derived from JSONPath to add
 				var insertPointer = JsonPathToPointer(arg2);
@@ -294,8 +294,8 @@ public partial class Functions
 				var insertPatch = new JsonPatch(PatchOperation.Add(insertPointer.Value, jsonDoc2));
 				var insertResult = insertPatch.Apply(jsonDoc);
 				return insertResult.IsSuccess
-					? new CallState(insertResult.Result!.ToJsonString())
-					: new CallState(jsonDoc?.ToJsonString() ?? "null");
+					? new CallState(insertResult.Result!.ToJsonString(JsonHelpers.RelaxedJsonOptions))
+					: new CallState(jsonDoc?.ToJsonString(JsonHelpers.RelaxedJsonOptions) ?? "null");
 			}
 
 			if (action == "set")
@@ -317,7 +317,7 @@ public partial class Functions
 				var setPatch = new JsonPatch(PatchOperation.Add(setPointer, jsonDoc2));
 				var setResult = setPatch.Apply(jsonDoc);
 				return setResult.IsSuccess
-					? new CallState(setResult.Result!.ToJsonString())
+					? new CallState(setResult.Result!.ToJsonString(JsonHelpers.RelaxedJsonOptions))
 					: new CallState(string.Format(ErrorMessages.Returns.JsonSetFailedFormat, setResult.Error));
 			}
 
@@ -326,13 +326,13 @@ public partial class Functions
 				if (!pathExists)
 				{
 					// replace of nonexistent key → no-op, return original
-					return new CallState(jsonDoc?.ToJsonString() ?? "null");
+					return new CallState(jsonDoc?.ToJsonString(JsonHelpers.RelaxedJsonOptions) ?? "null");
 				}
 				var replacePointer = JsonPointer.Parse(pathResult.Matches![0].Location!.AsJsonPointer());
 				var replacePatch = new JsonPatch(PatchOperation.Replace(replacePointer, jsonDoc2!));
 				var replaceResult = replacePatch.Apply(jsonDoc);
 				return replaceResult.IsSuccess
-					? new CallState(replaceResult.Result!.ToJsonString())
+					? new CallState(replaceResult.Result!.ToJsonString(JsonHelpers.RelaxedJsonOptions))
 					: new CallState(string.Format(ErrorMessages.Returns.JsonReplaceFailedFormat, replaceResult.Error));
 			}
 
@@ -341,13 +341,13 @@ public partial class Functions
 				if (!pathExists)
 				{
 					// remove of nonexistent key → no-op, return original
-					return new CallState(jsonDoc?.ToJsonString() ?? "null");
+					return new CallState(jsonDoc?.ToJsonString(JsonHelpers.RelaxedJsonOptions) ?? "null");
 				}
 				var removePointer = JsonPointer.Parse(pathResult.Matches![0].Location!.AsJsonPointer());
 				var removePatch = new JsonPatch(PatchOperation.Remove(removePointer));
 				var removeResult = removePatch.Apply(jsonDoc);
 				return removeResult.IsSuccess
-					? new CallState(removeResult.Result!.ToJsonString())
+					? new CallState(removeResult.Result!.ToJsonString(JsonHelpers.RelaxedJsonOptions))
 					: new CallState(string.Format(ErrorMessages.Returns.JsonRemoveFailedFormat, removeResult.Error));
 			}
 
