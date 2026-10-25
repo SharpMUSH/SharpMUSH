@@ -23,6 +23,7 @@ public sealed class SitemapCache(TimeProvider time)
 	private readonly SemaphoreSlim _building = new(1, 1);
 	private volatile Built? _built;
 
+	/// <summary>The cached list, or <paramref name="build"/>'s. <paramref name="ct"/> stops only this caller's wait.</summary>
 	public async Task<IReadOnlyList<SitemapEntry>> GetAsync(
 		Func<CancellationToken, Task<IReadOnlyList<SitemapEntry>>> build, CancellationToken ct)
 	{
@@ -33,7 +34,9 @@ public sealed class SitemapCache(TimeProvider time)
 		{
 			if (_built is { } current && IsFresh(current)) return current.Entries;
 
-			var entries = await build(ct);
+			// The build is shared and cached, so one caller's disconnect must not throw it away: a client that
+			// opens the sitemap and hangs up would otherwise keep the server rescanning the wiki without filling it.
+			var entries = await build(CancellationToken.None);
 			_built = new Built(entries, time.GetUtcNow());
 			return entries;
 		}

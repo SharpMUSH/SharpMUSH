@@ -175,6 +175,34 @@ public class SeoControllerTests
 		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).DoesNotContain(page.Slug);
 	}
 
+	/// <summary>
+	/// A client that hangs up while the list is being built does not cancel the build: it finishes and is cached,
+	/// so the next request does not scan the wiki again.
+	/// </summary>
+	[Test]
+	public async Task SitemapCache_ABuildOutlivesTheCallerThatStartedIt()
+	{
+		var sitemap = new SitemapCache(new Clock());
+		using var hangUp = new CancellationTokenSource();
+		var builds = 0;
+		IReadOnlyList<SitemapEntry> entries = [];
+
+		await sitemap.GetAsync(async ct =>
+		{
+			builds++;
+			await hangUp.CancelAsync();
+			ct.ThrowIfCancellationRequested();
+			return entries;
+		}, hangUp.Token);
+		await sitemap.GetAsync(_ =>
+		{
+			builds++;
+			return Task.FromResult(entries);
+		}, CancellationToken.None);
+
+		await Assert.That(builds).IsEqualTo(1);
+	}
+
 	/// <summary>The cached list holds pages, not URLs, so each request's own host is what its URLs carry.</summary>
 	[Test]
 	public async Task Sitemap_FromTheCache_UsesTheRequestsHost()
