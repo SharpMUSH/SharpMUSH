@@ -48,16 +48,17 @@ public class MushListTests
 
 	private static MarkupText OldRest(MarkupText d, MarkupText t) => MarkupText.Join(d, Split(d, t).Skip(1));
 
-	private static MarkupText OldExtract(MarkupText d, MarkupText t, int first, int length)
+	/// <summary>fun_extract over the whole split list: positions count from 1, or back from the end when negative,
+	/// and a negative length runs up to the item at that position.</summary>
+	private static MarkupText PennExtract(MarkupText d, MarkupText t, int first, int length)
 	{
 		var list = Split(d, t);
-		var range = first > 0
-			? list.Skip(first - 1)
-			: Enumerable.TakeLast(list, (int)Math.Min(int.MaxValue, Math.Abs((long)first)));
-		var result = length > 0
-			? range.Take(length)
-			: Enumerable.TakeLast(range, (int)Math.Min(int.MaxValue, Math.Abs((long)length)));
-		return MarkupText.Join(d, result);
+		long Position(int value) => value < 0 ? list.Length + 1L + value : value;
+		var start = Position(first) - 1;
+		var count = length < 0 ? Position(length) - start : length;
+		return start < 0 || start >= list.Length || count < 1
+			? MarkupText.Join(d, [])
+			: MarkupText.Join(d, list.Skip((int)start).Take((int)Math.Min(count, list.Length)));
 	}
 
 	private static string Describe(MarkupText text) => $"'{text.Text}'/{text.Render(MarkupFormat.Html)}";
@@ -87,7 +88,7 @@ public class MushListTests
 				foreach (var first in Positions)
 					foreach (var length in Positions)
 						Check($"Extract({first},{length})", delimiter, text,
-							OldExtract(delimiter, text, first, length), MushList.Extract(delimiter, text, first, length));
+							PennExtract(delimiter, text, first, length), MushList.Extract(delimiter, text, first, length));
 			}
 
 		await Assert.That(differences.Take(10)).IsEmpty();
@@ -112,7 +113,7 @@ public class MushListTests
 			if (MushList.Count(delimiter, text) != Split(delimiter, text).Length
 				|| !Same(OldFirst(delimiter, text), MushList.First(delimiter, text))
 				|| !Same(OldRest(delimiter, text), MushList.Rest(delimiter, text))
-				|| !Same(OldExtract(delimiter, text, first, length), MushList.Extract(delimiter, text, first, length)))
+				|| !Same(PennExtract(delimiter, text, first, length), MushList.Extract(delimiter, text, first, length)))
 				differences.Add($"{Describe(text)} on {Describe(delimiter)} extract({first},{length})");
 		}
 
@@ -196,7 +197,7 @@ public class MushListTests
 		})
 		{
 			await Assert.That(Same(OldRest(delimiter, text), MushList.Rest(delimiter, text))).IsTrue();
-			await Assert.That(Same(OldExtract(delimiter, text, 7, 9_000), MushList.Extract(delimiter, text, 7, 9_000))).IsTrue();
+			await Assert.That(Same(PennExtract(delimiter, text, 7, 9_000), MushList.Extract(delimiter, text, 7, 9_000))).IsTrue();
 		}
 	}
 

@@ -254,7 +254,7 @@ public class ListFunctionUnitTests
 	[Arguments("extract(a|b|c,2,3,|)", "b|c")]
 	[Arguments("extract(a b c d e,2,-2)", "b c d")]
 	[Arguments("extract(a b c d e,-2,2)", "d e")]
-	[Arguments("extract(a b c d e,-2,-1)", "d")]
+	[Arguments("extract(a b c d e,-2,-1)", "d e")]
 	[Arguments("extract(a b c d e,2,0)", "")]
 	public async Task Extract(string function, string expected)
 	{
