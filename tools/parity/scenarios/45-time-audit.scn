@@ -1,0 +1,12 @@
+# time() with a zone, from the softcode audit (#2268): UTC, a whole number of hours and a fractional one
+# are zones, and anything that is neither a zone nor an object is an invalid time zone.
+::case time.login
+::login wiz Wiz wizpass
+think ok
+
+::case time.zone  time() reads UTC and numeric offsets as zones
+think [lte(abs(sub(convtime(time(utc),UTC),secs())),2)]
+think [lte(abs(add(sub(convtime(time(-8),UTC),convtime(time(utc),UTC)),28800)),2)]
+think [lte(abs(sub(sub(convtime(time(5.5),UTC),convtime(time(utc),UTC)),19800)),2)]
+think [time(Nowhere/Atlantis)]
+think [time(24)]

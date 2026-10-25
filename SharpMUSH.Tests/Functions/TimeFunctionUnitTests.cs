@@ -36,10 +36,41 @@ public class TimeFunctionUnitTests
 	[Test]
 	[Arguments("America/New_York")]
 	[Arguments("Australia/Sydney")]
+	[Arguments("America/Argentina/Buenos_Aires")]
 	public async Task TimeInAZoneKeepsSummerTime(string zone)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lte(abs(sub(convtime(time({zone}),UTC),convtime(timefmt($a $b $d $H:$M:$S $Y,secs(),{zone}),UTC))),2)"));
 		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	/// <summary>
+	/// time() reads its argument as parse_timezone_arg does: UTC in any case, a whole number of hours as the
+	/// Etc/GMT zone, any other number under 24 as that many hours (past the 14 hours and whole minutes a zone allows), and nothing else that is not a zone or an object.
+	/// Each answer is the offset from time(utc), give or take the seconds the calls take.
+	/// </summary>
+	[Test]
+	[Arguments("utc", "0")]
+	[Arguments("UTC", "0")]
+	[Arguments("-8", "-28800")]
+	[Arguments("5.5", "19800")]
+	[Arguments("15", "54000")]
+	[Arguments("-23.5", "-84600")]
+	[Arguments("5.501", "19803")]
+	public async Task TimeReadsAZoneArgument(string zone, string offset)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"lte(abs(sub(sub(convtime(time({zone}),UTC),convtime(time(utc),UTC)),{offset})),2)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	[Arguments("time(Nowhere/Atlantis)")]
+	[Arguments("time(24)")]
+	[Arguments("time(no_such_object_or_zone)")]
+	public async Task TimeRefusesAnUnknownZone(string call)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 INVALID TIME ZONE");
 	}
 
 	/// <summary>
@@ -55,7 +86,7 @@ public class TimeFunctionUnitTests
 	[Arguments("convtime(2026-10-30 20:00,UTC)", "1793390400")]
 	[Arguments("convtime(2026-10-30T20:00:00Z,America/New_York)", "1793390400")]
 	[Arguments("convtime(2026-10-30T20:00:00+02:00,UTC)", "1793383200")]
-	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIMEZONE")]
+	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIME ZONE")]
 	[Arguments("convtime(2027-03-14 02:30,America/New_York)", "#-1 INVALID TIME")]
 	[Arguments("convtime(Sun Mar 14 02:30:00 2027,America/New_York)", "1805009400")]
 	public async Task ConvTimeReadsAWallClockInTheZone(string call, string expected)
