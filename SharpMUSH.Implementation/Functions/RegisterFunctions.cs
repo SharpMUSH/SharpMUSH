@@ -383,7 +383,7 @@ public partial class Functions
 		}
 
 		parser.CurrentState.Registers.TryPeek(out var currentRegisters);
-		var newRegisters = currentRegisters!.ToDictionary(k => k.Key, kv => kv.Value);
+		var newRegisters = new LetScope(currentRegisters!);
 		parser.CurrentState.Registers.Push(newRegisters);
 
 		var local = new HashSet<string>();
@@ -401,22 +401,34 @@ public partial class Functions
 		}
 
 		var parsed = await ParseRawArgument(parser, numberedArguments.Last().Value.Message);
-		_ = parser.CurrentState.Registers.TryPop(out var scope);
-		PassUnnamedRegisters(scope!, currentRegisters!, local);
+		_ = parser.CurrentState.Registers.TryPop(out _);
+		PassUnnamedRegisters(newRegisters, currentRegisters!, local);
 		return parsed!;
+	}
+
+	/// <summary>
+	/// A letq() body's registers. <see cref="Stopped"/> is PE_REGS_QSTOP: an unsetq() with no argument cleared the
+	/// scope, which hides the caller's registers while the body runs but leaves them to the caller (clear_allq,
+	/// src/funmisc.c:573-603).
+	/// </summary>
+	private sealed class LetScope(Dictionary<string, MString> caller) : Dictionary<string, MString>(caller)
+	{
+		public bool Stopped { get; set; }
 	}
 
 	/// <summary>
 	/// PE_REGS_LET (src/function.c): only the registers letq() named are its own. Every other register the
 	/// body set or cleared is the caller's, so the change is copied back.
 	/// </summary>
-	private static void PassUnnamedRegisters(Dictionary<string, MString> scope, Dictionary<string, MString> caller,
+	private static void PassUnnamedRegisters(LetScope scope, Dictionary<string, MString> caller,
 		HashSet<string> local)
 	{
 		foreach (var (name, value) in scope.Where(register => !local.Contains(register.Key)))
 		{
 			caller[name] = value;
 		}
+
+		if (scope.Stopped) return;
 
 		foreach (var name in caller.Keys.Where(name => !local.Contains(name) && !scope.ContainsKey(name)).ToList())
 		{
@@ -454,7 +466,11 @@ public partial class Functions
 		if (parser.CurrentState.Registers.TryPeek(out var registers))
 		{
 			// No pattern, or a lone "*" among them, clears the whole scope.
-			if (patterns.Length == 0 || patterns.Contains("*")) registers.Clear();
+			if (patterns.Length == 0 || patterns.Contains("*"))
+			{
+				registers.Clear();
+				if (registers is LetScope let) let.Stopped = true;
+			}
 			else
 			{
 				var matching = patterns

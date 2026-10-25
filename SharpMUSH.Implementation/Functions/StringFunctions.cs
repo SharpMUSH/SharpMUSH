@@ -1772,7 +1772,8 @@ public partial class Functions
 	{
 		var str = parser.CurrentState.Arguments["0"].Message;
 		var pattern = parser.CurrentState.Arguments["1"].Message.ToPlainText();
-		var match = SoftcodeRegex.Wildcard(pattern).Match(str.ToPlainText());
+		var plain = str.ToPlainText();
+		var match = SoftcodeRegex.Wildcard(pattern).Match(plain);
 
 		if (!match.Success || !parser.CurrentState.Arguments.TryGetValue("2", out var registers))
 		{
@@ -1784,7 +1785,7 @@ public partial class Functions
 		for (var i = 0; i < names.Length; i++)
 		{
 			var group = match.Groups[i + 1];
-			var capture = group.Success ? str.Substring(group.Index, group.Length) : MarkupText.Empty;
+			var capture = group.Success ? PlainSlice(str, plain, group.Index, group.Length) : MarkupText.Empty;
 			if (names[i] != "-" && !parser.CurrentState.AddRegister(names[i].ToUpperInvariant(), capture))
 			{
 				result.Append(ErrorMessages.Returns.BadRegName);
@@ -1792,6 +1793,28 @@ public partial class Functions
 		}
 
 		return ValueTask.FromResult(new CallState(result.ToString()));
+	}
+
+	/// <summary>
+	/// The part of <paramref name="text"/> that offsets into its plain text pick out. Point markup such as a sound
+	/// rides on a carrier character the plain text leaves out, so the offsets are moved past each carrier.
+	/// </summary>
+	private static MString PlainSlice(MString text, string plain, int index, int length)
+	{
+		if (length == 0) return MarkupText.Empty;
+		if (text.Text.Length == plain.Length) return text.Substring(index, length);
+
+		var raw = text.Text;
+		int start = -1, end = -1;
+		for (int r = 0, p = 0; r < raw.Length && p < index + length; r++)
+		{
+			if (raw[r] != plain[p]) continue;
+			if (p == index) start = r;
+			end = r + 1;
+			p++;
+		}
+
+		return text.Substring(start, end - start);
 	}
 
 	// Two arguments are TinyMUX's arity (switch(x,default) is the default); PennMUSH refuses them, so

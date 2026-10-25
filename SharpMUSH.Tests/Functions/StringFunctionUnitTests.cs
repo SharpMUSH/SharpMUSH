@@ -385,6 +385,9 @@ public class StringFunctionUnitTests
 
 	[Test]
 	[Arguments("[strmatch(foo:bar,*:*,0 1)]/%q0/%q1", "1/foo/bar")]
+	// A sound's carrier is not text, so it does not shift a capture
+	[Arguments("[strmatch([sound(ding.wav)]foo:bar,*:*,0 1)]/%q0/%q1", "1/foo/bar")]
+	[Arguments("[strmatch(foo[sound(ding.wav)]:bar,*:*,0 1)]/%q0/%q1", "1/foo/bar")]
 	[Arguments("[strmatch(abc,?b?,- x)]/%qx", "1/c")]
 	[Arguments("[strmatch(nope,*:*,y)]/%qy", "0/")]
 	[Arguments("strmatch(FOO,f*)", "1")]

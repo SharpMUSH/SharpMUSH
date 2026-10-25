@@ -42,6 +42,8 @@ public class FlowFunctionUnitTests
 	// A register letq did not name is the caller's, set or cleared
 	[Arguments("[setr(B,1)][letq(A,2,setr(B,2))]:%qB", "12:2")]
 	[Arguments("[setq(C,1)][letq(A,2,unsetq(C))]:[r(C)]", ":")]
+	// unsetq() with no argument hides the caller's registers only while the body runs (clear_allq)
+	[Arguments("[setq(B,outer)][letq(A,inner,[unsetq()]%qA%qB)]:%qB", ":outer")]
 	// Names and values are evaluated
 	[Arguments("letq(A,add(1,1),%qA)", "2")]
 	[Arguments("letq(lcstr(X),y,%qX)", "y")]
