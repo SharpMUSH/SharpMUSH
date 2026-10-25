@@ -48,6 +48,11 @@ public record ObjectSearchFilter
 	public DBRef? Parent { get; init; }
 
 	/// <summary>
+	/// Only objects with no parent: PennMUSH's <c>PARENT</c> class with an empty restriction.
+	/// </summary>
+	public bool NoParent { get; init; }
+
+	/// <summary>
 	/// Filter by flag name. Object must have this flag. Null means no flag filtering.
 	/// </summary>
 	public string? HasFlag { get; init; }
@@ -85,7 +90,7 @@ public record ObjectSearchFilter
 	/// </summary>
 	public bool HasFilters => Types != null || Owner != null || NamePattern != null ||
 														MinDbRef != null || MaxDbRef != null || Zone != null ||
-														Parent != null || HasFlag != null || HasPower != null || AttributeValue != null ||
+														Parent != null || NoParent || HasFlag != null || HasPower != null || AttributeValue != null ||
 														Skip != null || Limit != null;
 }
 

@@ -162,6 +162,9 @@ public class RegexFunctionUnitTests
 
 	[Test]
 	[Arguments("reglmatchall(I am testing a test,test,%b,|)", "3|5")]
+	[Arguments("reglmatchall(I am testing a test,test)", "3 5")]
+	[Arguments("reglmatchall(I am testing a test, test, , |)", "3|5")]
+	[Arguments("reglmatchall(a|b|ab,b,|)", "2|3")]
 	public async Task Reglmatchall(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));

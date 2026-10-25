@@ -651,9 +651,9 @@ public class RestrictedExpressionTests
 	}
 
 	[Test]
-	[Arguments("-2147483648", "1", "a")]
-	[Arguments("1", "-2147483648", "a b")]
-	[Arguments("-2147483648", "-2147483648", "a b")]
+	[Arguments("-2147483648", "1", "")]
+	[Arguments("1", "-2147483648", "")]
+	[Arguments("-2147483648", "-2147483648", "")]
 	public async Task ExtractHandlesMinimumSignedPositionsWithoutAnException(string start, string length, string expected)
 	{
 		await Assert.That(await Eval($"extract(a b,{start},{length})")).IsEqualTo(expected);

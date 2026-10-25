@@ -131,6 +131,16 @@ public static partial class ArgHelpers
 	private static bool StartsUnsigned(string? text)
 		=> text.AsSpan().TrimStart(" \t\r\n\v\f") is [] or [('+' or (>= '0' and <= '9')), ..];
 
+	/// <summary>
+	/// A list delimiter argument: a space when it is missing or empty, as PennMUSH's <c>delim_check</c> reads
+	/// one. An output separator keeps an empty argument empty, so it is read with
+	/// <see cref="NoParseDefaultNoParseArgument(OrderedArguments, int, MString)"/> instead.
+	/// </summary>
+	public static MString Delimiter(OrderedArguments args, int item)
+		=> args.Count - 1 < item || string.IsNullOrEmpty(args[item.ToString()]?.Message.ToPlainText())
+			? MarkupText.Space
+			: args[item.ToString()].Message;
+
 	public static MString NoParseDefaultNoParseArgument(OrderedArguments args, int item,
 		MString defaultValue)
 	{

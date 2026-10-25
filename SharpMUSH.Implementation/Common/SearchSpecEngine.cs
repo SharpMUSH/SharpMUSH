@@ -55,6 +55,7 @@ public static class SearchSpecEngine
 		int? maxDbRef = null;
 		DBRef? zone = null;
 		DBRef? parent = null;
+		var noParent = false;
 		string? hasFlag = null;
 		string? hasPower = null;
 		var start = 1;
@@ -119,9 +120,18 @@ public static class SearchSpecEngine
 					var maybeZone = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
 					if (maybeZone is AnySharpObject zoneObject) zone = zoneObject.Object().DBRef;
 					break;
+				// An empty restriction means objects with no parent; one that names nothing is refused
+				// (fill_search_spec, src/wiz.c).
+				case "PARENT" when restriction.Length == 0:
+					parent = null;
+					noParent = true;
+					break;
 				case "PARENT":
 					var maybeParent = await locateService.Locate(parser, executor, executor, restriction, LocateFlags.All);
-					if (maybeParent is AnySharpObject parentObject) parent = parentObject.Object().DBRef;
+					if (maybeParent is not AnySharpObject parentObject)
+						return new Error<string>(nameof(ErrorMessages.Notifications.SearchUnknownParent));
+					noParent = false;
+					parent = parentObject.Object().DBRef;
 					break;
 				case "FLAG":
 				case "FLAGS":
@@ -237,6 +247,7 @@ public static class SearchSpecEngine
 			MaxDbRef = maxDbRef,
 			Zone = zone,
 			Parent = parent,
+			NoParent = noParent,
 			HasFlag = hasFlag,
 			HasPower = hasPower,
 			Owner = ownerFilter,

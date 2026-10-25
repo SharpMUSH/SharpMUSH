@@ -384,7 +384,11 @@ public class StringFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("merge(a|b|c,1|2|3,|)", "a1 b2 c3")]
+	[Arguments("merge(a|b|c,1|2|3,|)", "a|b|c")]
+	[Arguments("merge(AB--EF,abcdef,-)", "ABcdEF")]
+	[Arguments("merge(AB[space(2)]EF,abcdef,)", "ABcdEF")]
+	[Arguments("merge(a-b-c,1x2y3,-)", "axbyc")]
+	[Arguments("merge(abc,de,b)", "#-1 STRING LENGTHS MUST BE EQUAL")]
 	public async Task Merge(string str, string expectedText)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
