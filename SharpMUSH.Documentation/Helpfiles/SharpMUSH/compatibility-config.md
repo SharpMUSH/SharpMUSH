@@ -99,7 +99,7 @@ With `tiny_booleans` on, a leading signed integer determines truth. Thus `text` 
 
 ## Numeric compatibility: `tiny_math`, `null_eq_zero`
 
-**A choice.** `null_eq_zero` is on by default, where PennMUSH ships it off, because most MUSH softcode expects an empty value to count as zero: `add(3,)` returns 3. A `mush.cnf` import applies the value the file names.
+`null_eq_zero` is on by default, where PennMUSH ships it off, because most MUSH softcode expects an empty value to count as zero: `add(3,)` returns 3. A `mush.cnf` import applies the value the file names.
 
 Arithmetic and numeric comparisons read `tiny_math` and `null_eq_zero` at call time, including indirect `#apply` calls. With `tiny_math` off, the complete argument must be a number; an empty argument is zero only when `null_eq_zero` is on. Scientific notation is accepted. Real-valued arguments also accept hexadecimal notation, such as `0x10` and `-0x1.8p2` (16 and -6).
 
