@@ -2,6 +2,7 @@ using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using System.Buffers;
 using System.Globalization;
+using System.Text;
 using System.Runtime.InteropServices;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
@@ -820,447 +821,125 @@ public partial class Functions
 			executor, executor, arg0, LocateFlags.All, found => found.TypeString());
 	}
 
+	/// <remarks>PennMUSH's <c>fun_colors</c> (<c>src/markup.c</c>), over <see cref="PennColors"/>.</remarks>
 	[SharpFunction(Name = "colors", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["ansi-string", "strip"])]
 	public ValueTask<CallState> Colors(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
-		var colorsConfig = ColorConfiguration?.CurrentValue;
-
-		if (colorsConfig == null || colorsConfig.Colors.Length == 0)
+		if (ColorConfiguration?.CurrentValue is not { Colors.Length: > 0 } colorsConfig)
 		{
 			return ValueTask.FromResult(new CallState(string.Empty));
 		}
 
-		if (args.Count == 0 || string.IsNullOrEmpty(args["0"]?.Message.ToPlainText()))
-		{
-			var allColors = colorsConfig.Colors
-				.Select(c => c.name)
-				.Distinct();
+		var palette = PennColors.For(colorsConfig);
+		var first = args.TryGetValue("0", out var firstArg) ? firstArg.Message.ToPlainText() : string.Empty;
 
-			return ValueTask.FromResult(new CallState(string.Join(" ", allColors)));
+		if (!args.TryGetValue("1", out var formatArg))
+		{
+			// With a pattern every row may match, xterm ones too; without, only the named colours.
+			var names = first.Length == 0
+				? palette.Named.Select(c => c.Name)
+				: palette.Colors.Select(c => c.Name).Where(name => MushText.IsWildcardMatch(MarkupText.Plain(name), first));
+			return ValueTask.FromResult(new CallState(string.Join(" ", names)));
 		}
 
-		if (args.Count == 1 || (args.Count == 2 && string.IsNullOrEmpty(args["1"]?.Message.ToPlainText())))
+		return ValueTask.FromResult(new CallState(PennColors.Define(first, palette) switch
 		{
-			var wildcardPattern = args["0"].Message.ToPlainText();
-			var matchingColors = colorsConfig.Colors
-				.Where(c => MushText.IsWildcardMatch(MarkupText.Plain(c.name), wildcardPattern))
-				.Select(c => c.name)
-				.Distinct();
-
-			return ValueTask.FromResult(new CallState(string.Join(" ", matchingColors)));
-		}
-
-		var colorSpec = args["0"].Message.ToPlainText();
-		var formatSpec = args["1"].Message.ToPlainText().ToLowerInvariant();
-
-		var includeStyles = formatSpec.Contains("styles");
-		var formatType = formatSpec.Replace("styles", "").Trim();
-
-		var (foregroundSpec, backgroundSpec, styles) = ParseColorSpecification(colorSpec);
-
-		var result = formatType switch
-		{
-			"hex" or "x" => FormatColorsAsHex(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
-			"rgb" or "r" => FormatColorsAsRgb(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
-			"xterm256" or "d" => FormatColorsAsXterm(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig, hexFormat: false),
-			"xterm256x" or "h" => FormatColorsAsXterm(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig, hexFormat: true),
-			"16color" or "c" => FormatColorsAs16Color(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
-			"name" => FormatColorsAsName(foregroundSpec, backgroundSpec, styles, includeStyles, colorsConfig),
-			"auto" => FormatColorsAsAuto(colorSpec, foregroundSpec, backgroundSpec, styles, includeStyles),
-			_ => ErrorMessages.Returns.InvalidFormat
-		};
-
-		return ValueTask.FromResult(new CallState(result));
+			PennColors.Definition definition => ColorInformation(definition, formatArg.Message.ToPlainText(), palette),
+			Error<string> error => error.Value
+		}));
 	}
 
-	/// <summary>
-	/// Parse a color specification into foreground, background, and styles
-	/// </summary>
-	private (string? foreground, string? background, string styles) ParseColorSpecification(string spec)
-	{
-		string? foreground = null;
-		string? background = null;
-		var styles = new List<char>();
+	private enum ColorStyle { Hex, Ansi16, Xterm256, Xterm256Hex, Rgb, Name, Auto }
 
-		foreach (var part in spec.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+	/// <summary><c>fun_colors</c> with two arguments: one colour code described in the formats asked for.</summary>
+	private static string ColorInformation(PennColors.Definition definition, string formats, PennColors.Palette palette)
+	{
+		if (definition.Foreground is "" or "n" or "d" && definition.Background is "" or "n" or "D")
 		{
-			if (part.StartsWith('/'))
+			return ErrorMessages.Returns.ColorsRequiresAColor;
+		}
+
+		var style = ColorStyle.Hex;
+		var withStyles = false;
+		foreach (var word in formats.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+		{
+			switch (word)
 			{
-				background = part[1..];
+				case "hex" or "x": style = ColorStyle.Hex; break;
+				case "16color" or "c": style = ColorStyle.Ansi16; break;
+				case "256color" or "xterm256" or "d": style = ColorStyle.Xterm256; break;
+				case "xterm256x" or "h": style = ColorStyle.Xterm256Hex; break;
+				case "rgb" or "r": style = ColorStyle.Rgb; break;
+				case "name": style = ColorStyle.Name; break;
+				case "auto": style = ColorStyle.Auto; break;
+				case "styles": withStyles = true; break;
+				default: return ErrorMessages.Returns.InvalidArgument;
+			}
+		}
+
+		var hilite = definition.Bits.HasFlag(PennColors.Styles.Hilite);
+		var result = new StringBuilder();
+		if (withStyles)
+		{
+			// A foreground carries its own h below.
+			if (definition.Foreground.Length == 0 && hilite) result.Append('h');
+			if (definition.Bits.HasFlag(PennColors.Styles.Underscore)) result.Append('u');
+			if (definition.Bits.HasFlag(PennColors.Styles.Flash)) result.Append('f');
+			if (definition.Bits.HasFlag(PennColors.Styles.Invert)) result.Append('i');
+		}
+
+		foreach (var (color, background) in new[] { (definition.Foreground, false), (definition.Background, true) })
+		{
+			if (color.Length == 0)
+			{
 				continue;
 			}
 
-			// The code letters run ahead of any named colour; each is a style, kept once.
-			var codeLetters = part.AsSpan().IndexOfAnyExcept(AnsiCodeLetters) switch
+			if (background && style is not (ColorStyle.Ansi16 or ColorStyle.Auto))
 			{
-				-1 => part.Length,
-				var end => end
-			};
-
-			foreach (var style in part.AsSpan(0, codeLetters))
-			{
-				if (!styles.Contains(style))
-				{
-					styles.Add(style);
-				}
+				result.Append('/');
 			}
 
-			var colorPart = part[codeLetters..];
-			if (!string.IsNullOrWhiteSpace(colorPart))
+			var lit = !background && hilite;
+			switch (style)
 			{
-				foreground = colorPart;
-			}
-		}
+				case ColorStyle.Auto:
+					if (background && definition.Foreground.Length > 0)
+					{
+						result.Append(definition.Foreground.Length > 1 && color.Length == 1 ? " " : color.Length > 1 ? "/" : "");
+					}
 
-		return (foreground, background, new string(CollectionsMarshal.AsSpan(styles)));
-	}
-
-	/// <summary>The single letters an ansi() code spells its styles and colours with.</summary>
-	private static readonly SearchValues<char> AnsiCodeLetters = SearchValues.Create("fuihxrgybmcwXRGYBMCW");
-
-	private string FormatColorsAsHex(string? foreground, string? background, string styles, bool includeStyles,
-		SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var result = new List<string>();
-
-		if (includeStyles && !string.IsNullOrEmpty(styles))
-		{
-			result.Add(styles);
-		}
-
-		if (!string.IsNullOrEmpty(foreground))
-		{
-			var hex = ConvertColorToHex(foreground, config);
-			if (hex != null)
-			{
-				result.Add(hex);
+					result.Append(color);
+					if (!background && color.Length == 1 && hilite) result.Append('h');
+					break;
+				case ColorStyle.Hex:
+					result.Append(CultureInfo.InvariantCulture, $"#{PennColors.ColorToHex(color, lit, palette):x6}");
+					break;
+				case ColorStyle.Rgb:
+					var rgb = PennColors.ColorToHex(color, lit, palette);
+					result.Append(CultureInfo.InvariantCulture, $"{(rgb >> 16) & 0xFF} {(rgb >> 8) & 0xFF} {rgb & 0xFF}");
+					break;
+				case ColorStyle.Ansi16:
+					var (letter, mapped) = PennColors.Map16(color, background, palette);
+					result.Append(letter);
+					if (!background && (mapped || hilite)) result.Append('h');
+					break;
+				case ColorStyle.Xterm256:
+					result.Append(PennColors.Map256(color, lit, palette));
+					break;
+				case ColorStyle.Xterm256Hex:
+					result.Append(PennColors.Map256(color, lit, palette).ToString("x", CultureInfo.InvariantCulture));
+					break;
+				case ColorStyle.Name:
+					var hex = PennColors.ColorToHex(color, false, palette);
+					var names = palette.Named.Where(c => c.Rgb == hex).Select(c => c.Name).ToArray();
+					result.Append(names.Length > 0 ? string.Join(" ", names) : ErrorMessages.Returns.NoMatchingColorName);
+					break;
 			}
 		}
 
-		if (!string.IsNullOrEmpty(background))
-		{
-			var hex = ConvertColorToHex(background, config);
-			if (hex != null)
-			{
-				result.Add($"/{hex}");
-			}
-		}
-
-		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
-	}
-
-	private string FormatColorsAsRgb(string? foreground, string? background, string styles, bool includeStyles,
-		SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var result = new List<string>();
-
-		if (includeStyles && !string.IsNullOrEmpty(styles))
-		{
-			result.Add(styles);
-		}
-
-		if (!string.IsNullOrEmpty(foreground))
-		{
-			var rgb = ConvertColorToRgb(foreground, config);
-			if (rgb != null)
-			{
-				result.Add(rgb);
-			}
-		}
-
-		if (!string.IsNullOrEmpty(background))
-		{
-			var rgb = ConvertColorToRgb(background, config);
-			if (rgb != null)
-			{
-				result.Add($"/{rgb}");
-			}
-		}
-
-		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
-	}
-
-	private string FormatColorsAsXterm(string? foreground, string? background, string styles, bool includeStyles,
-		SharpMUSH.Configuration.Options.ColorsOptions config, bool hexFormat)
-	{
-		var result = new List<string>();
-
-		if (includeStyles && !string.IsNullOrEmpty(styles))
-		{
-			result.Add(styles);
-		}
-
-		if (!string.IsNullOrEmpty(foreground))
-		{
-			var xterm = ConvertColorToXterm(foreground, config);
-			if (xterm != null)
-			{
-				result.Add(hexFormat ? xterm.Value.ToString("x") : xterm.Value.ToString());
-			}
-		}
-
-		if (!string.IsNullOrEmpty(background))
-		{
-			var xterm = ConvertColorToXterm(background, config);
-			if (xterm != null)
-			{
-				var formatted = hexFormat ? xterm.Value.ToString("x") : xterm.Value.ToString();
-				result.Add($"/{formatted}");
-			}
-		}
-
-		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
-	}
-
-	private string FormatColorsAs16Color(string? foreground, string? background, string styles, bool includeStyles,
-		SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var result = new List<string>();
-
-		if (includeStyles && !string.IsNullOrEmpty(styles))
-		{
-			result.Add(styles);
-		}
-
-		if (!string.IsNullOrEmpty(foreground))
-		{
-			var ansi = ConvertColorTo16Color(foreground, config);
-			if (ansi != null)
-			{
-				result.Add(ansi);
-			}
-		}
-
-		if (!string.IsNullOrEmpty(background))
-		{
-			var ansi = ConvertColorTo16Color(background, config);
-			if (ansi != null)
-			{
-				result.Add(ansi.ToUpperInvariant());
-			}
-		}
-
-		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.InvalidColor;
-	}
-
-	private string FormatColorsAsName(string? foreground, string? background, string styles, bool includeStyles,
-		SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var result = new List<string>();
-
-		if (includeStyles && !string.IsNullOrEmpty(styles))
-		{
-			result.Add(styles);
-		}
-
-		if (!string.IsNullOrEmpty(foreground))
-		{
-			var names = ConvertColorToNames(foreground, config);
-			if (names.Count > 0)
-			{
-				result.AddRange(names);
-			}
-			else
-			{
-				return ErrorMessages.Returns.NoMatchingColorName;
-			}
-		}
-
-		if (!string.IsNullOrEmpty(background))
-		{
-			var names = ConvertColorToNames(background, config);
-			if (names.Count > 0)
-			{
-				result.AddRange(names.Select(n => $"/{n}"));
-			}
-			else
-			{
-				return ErrorMessages.Returns.NoMatchingColorName;
-			}
-		}
-
-		return result.Count > 0 ? string.Join(" ", result) : ErrorMessages.Returns.NoMatchingColorName;
-	}
-
-	private string FormatColorsAsAuto(string originalSpec, string? foreground, string? background, string styles, bool includeStyles)
-	{
-		return originalSpec;
-	}
-
-	private string? ConvertColorToHex(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		if (colorSpec.StartsWith('#'))
-		{
-			return colorSpec;
-		}
-
-		if (colorSpec.StartsWith('+'))
-		{
-			colorSpec = colorSpec[1..];
-		}
-
-		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
-		{
-			return "#" + color.rgb[2..];
-		}
-
-		if (int.TryParse(colorSpec, out var xtermNum) && XtermColor(config, xtermNum) is { } xtermColor)
-		{
-			return "#" + xtermColor.rgb[2..];
-		}
-
-		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2)
-			&& XtermColor(config, xtermNum2) is { } xtermColor2)
-		{
-			return "#" + xtermColor2.rgb[2..];
-		}
-
-		return null;
-	}
-
-	/// <summary>The first configured colour at an xterm index, or null when the palette has none there.</summary>
-	private static ColorIdentity? XtermColor(SharpMUSH.Configuration.Options.ColorsOptions config, int xterm)
-		=> config.Colors.FirstOrDefault(c => c.xterm == xterm);
-
-	private string? ConvertColorToRgb(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var hex = ConvertColorToHex(colorSpec, config);
-		if (hex == null)
-		{
-			return null;
-		}
-
-		// Parse hex to RGB using Span<char> to avoid substring allocations
-		var hexSpan = hex.AsSpan();
-		var r = int.Parse(hexSpan.Slice(1, 2), System.Globalization.NumberStyles.HexNumber);
-		var g = int.Parse(hexSpan.Slice(3, 2), System.Globalization.NumberStyles.HexNumber);
-		var b = int.Parse(hexSpan.Slice(5, 2), System.Globalization.NumberStyles.HexNumber);
-
-		return $"{r} {g} {b}";
-	}
-
-	private int? ConvertColorToXterm(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		if (int.TryParse(colorSpec, out var xtermNum) && xtermNum >= 0 && xtermNum <= 255)
-		{
-			return xtermNum;
-		}
-
-		if (colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out var xtermNum2))
-		{
-			return xtermNum2;
-		}
-
-		if (colorSpec.StartsWith('+'))
-		{
-			colorSpec = colorSpec[1..];
-		}
-
-		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
-		{
-			return color.xterm;
-		}
-
-		return null;
-	}
-
-	private string? ConvertColorTo16Color(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var xterm = ConvertColorToXterm(colorSpec, config);
-		if (xterm == null)
-		{
-			return null;
-		}
-
-		// This is a simplified mapping - PennMUSH has more sophisticated color distance calculations
-		return xterm.Value switch
-		{
-			0 => "x",
-			1 => "r",
-			2 => "g",
-			3 => "y",
-			4 => "b",
-			5 => "m",
-			6 => "c",
-			7 => "w",
-			8 => "hx",
-			9 => "hr",
-			10 => "hg",
-			11 => "hy",
-			12 => "hb",
-			13 => "hm",
-			14 => "hc",
-			15 => "hw",
-			_ => MapXtermColorTo16Color(xterm.Value, config)
-		};
-	}
-
-	private string MapXtermColorTo16Color(int xterm, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		if (XtermColor(config, xterm) is not { rgb: { } rgb })
-		{
-			return "w";
-		}
-
-		var rgbSpan = rgb.AsSpan();
-		var r = int.Parse(rgbSpan.Slice(2, 2), System.Globalization.NumberStyles.HexNumber);
-		var g = int.Parse(rgbSpan.Slice(4, 2), System.Globalization.NumberStyles.HexNumber);
-		var b = int.Parse(rgbSpan.Slice(6, 2), System.Globalization.NumberStyles.HexNumber);
-
-		var brightness = (r + g + b) / 3;
-		var highlight = brightness > 128 ? "h" : "";
-
-		return (r, g, b) switch
-		{
-			_ when r > g && r > b => highlight + "r",
-			_ when g > r && g > b => highlight + "g",
-			_ when b > r && b > g => highlight + "b",
-			_ when r > b && g > b => highlight + "y",
-			_ when r > g && b > g => highlight + "m",
-			_ when g > r && b > r => highlight + "c",
-			_ when brightness < 64 => "x",
-			_ => highlight + "w"
-		};
-	}
-
-	private List<string> ConvertColorToNames(string colorSpec, SharpMUSH.Configuration.Options.ColorsOptions config)
-	{
-		var result = new List<string>();
-
-		if (colorSpec.StartsWith('+'))
-		{
-			colorSpec = colorSpec[1..];
-		}
-
-		if (config.ColorsByName.TryGetValue(colorSpec, out var color))
-		{
-			if (config.ColorsByRgb.TryGetValue(color.rgb, out var colors))
-			{
-				result.AddRange(colors.Select(c => c.name));
-			}
-			return result;
-		}
-
-		if (colorSpec.StartsWith('#'))
-		{
-			var rgb = "0x" + colorSpec[1..];
-			if (config.ColorsByRgb.TryGetValue(rgb, out var colors))
-			{
-				result.AddRange(colors.Select(c => c.name));
-			}
-			return result;
-		}
-
-		if ((int.TryParse(colorSpec, out var xtermNum) ||
-				(colorSpec.StartsWith("xterm") && int.TryParse(colorSpec[5..], out xtermNum)))
-			&& XtermColor(config, xtermNum) is { } xtermColor
-			&& config.ColorsByRgb.TryGetValue(xtermColor.rgb, out var xtermNames))
-		{
-			result.AddRange(xtermNames.Select(c => c.name));
-		}
-
-		return result;
+		return result.ToString();
 	}
 
 	[SharpFunction(Name = "motd", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
