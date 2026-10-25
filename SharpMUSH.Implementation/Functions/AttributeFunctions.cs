@@ -1098,12 +1098,13 @@ public partial class Functions
 		var hadErrors = selector.HadErrors;
 		CallState Preserve(CallState result) => result with { HadErrors = hadErrors || result.HadErrors };
 		var objectAndAttribute = selector.Message;
-		var split = HelperFunctions.SplitObjectAndAttr(objectAndAttribute.ToPlainText());
+		// fetch_ufun_attrib (src/funufun.c:319): a bare attribute name is the executor's.
+		var split = HelperFunctions.SplitOptionalObjectAndAttr(objectAndAttribute.ToPlainText());
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (split is not { Object: var objectName, Attribute: var attributeName })
 			return Preserve(new CallState(string.Format(ErrorMessages.Returns.BadArgumentFormat, nameof(Get).ToUpperInvariant())));
 		return Preserve(await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			objectName, LocateFlags.All, async actualObject =>
+			objectName ?? "me", LocateFlags.All, async actualObject =>
 			{
 				var attribute = await AttributeService.GetAttributeAsync(executor, actualObject, attributeName,
 					mode: IAttributeService.AttributeMode.Execute, parent: true);

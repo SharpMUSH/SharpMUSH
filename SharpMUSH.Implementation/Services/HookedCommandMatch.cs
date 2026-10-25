@@ -40,7 +40,8 @@ public static class HookedCommandMatch
 			return new None();
 		}
 
-		var trimmed = input.Trim(TrimType.TrimBoth);
+		// run_cmd_hook matches the evaluated command as process_command built it, trailing spaces and all.
+		var trimmed = input.Trim(TrimType.TrimStart);
 		if (SoftcodeRegex.Match(command.CompiledRegex, trimmed.ToPlainText()) is not { Success: true } match
 				|| !await locks.Evaluate(LockType.Command, thing, player)
 				|| !await locks.Evaluate(LockType.Use, thing, player))
