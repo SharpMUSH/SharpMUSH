@@ -182,7 +182,7 @@ Wizard tests. "Fragment 1 is: Hi." And... "Fragment 2 is: Bye." The end.
 ```
 
 ```sharp
-> @emit speak(me, :tests. "Hi." And... `<<Bye.>`> The end., ,va, , `<<, >`>)
+> @emit speak(me, :tests. "Hi." And... <<Bye.>> The end., ,va, , <<, >>)
 Wizard tests. "Hi." And... "Fragment 1 is: Bye." The end.
 ```
 

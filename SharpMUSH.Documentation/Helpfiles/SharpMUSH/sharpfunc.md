@@ -447,7 +447,7 @@ You say, "r baz"
 ```sharp
     > &s me=Bats are similar to Rats which are afraid of Cats
     > say allof(grab(v(s),rats),grab(v(s),mats),grab(v(s),bats),)
-    You say, "Rats Bats"
+    You say, "RatsBats"
 ```
 
 ```sharp
@@ -1230,12 +1230,12 @@ think decompose(box(Hello,Greeting,30,{{"border":"ascii"}}))
 ```sharp
 &TEST me=apple orange banana
 say default(me/Test, No fruits!)
-You say "apple orange banana"
+You say, "apple orange banana"
 ```
 ```sharp
     > &TEST ME
     > say default(me/Test, No fruits!)
-    You say "No fruits!"
+    You say, "No fruits!"
 ```
 
 ::: seealso
@@ -1452,12 +1452,12 @@ SHA256(foo) => 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
 ```sharp
 &TEST me=You have lost [rand(10)] marbles.
 say edefault(me/Test,You have no marbles.)
-You say "You have lost 6 marbles."
+You say, "You have lost 6 marbles."
 ```
 
     > &TEST me<br>
     > say edefault(me/Test,You have no marbles.)<br>
-    You say "You have no marbles."
+    You say, "You have no marbles."
 
 
 ::: seealso
@@ -1481,7 +1481,7 @@ You say "You have lost 6 marbles."
   Example:
 ```sharp
 say edit(this is a test,^,I think%b,$,.,a test,an exam)
-You say "I think this is an exam."
+You say, "I think this is an exam."
 ```
 
   edit() can not replace a literal single ^ or $. Use regedit() for that.
@@ -1503,14 +1503,14 @@ You say "I think this is an exam."
   Examples:
 ```sharp
 say elements(Foo Ack Beep Moo Zot,2 4)
-You say "Ack Moo"
+You say, "Ack Moo"
 ```
 
     > say elements(Foof|Ack|Beep|Moo,3 1,|)<br>
-    You say "Beep|Foof"
+    You say, "Beep|Foof"
 
     > say elements(The last word is foo, -1)<br>
-    You say "foo"
+    You say, "foo"
 
 
 ::: seealso
@@ -2066,11 +2066,11 @@ think syntaxdiagnostics(me/TOTAL,function)
   Examples:
 ```sharp
 say graball(This is a test of a test,test)
-You say "test test"
+You say, "test test"
 say graball(This|is|testing|a|test,tes*,|)
-You say "testing|test"
+You say, "testing|test"
 say regraball(This is testing a test,s$)
-You say "This is"
+You say, "This is"
 ```
 
 
@@ -2815,7 +2815,7 @@ think lmath(add, 1|2|3, |)
 # ln()
 `ln(<number>)`
 
-  Returns the natural log of `<number>`. This is equivalent to log(`<number>`, e).
+  Returns the natural log of `<number>`. This is equivalent to `log(<number>, e)`.
 
 
 ::: seealso
@@ -4221,11 +4221,11 @@ think pidinfo(lpids(me,semaphore),queue object command,|)
   Examples:
 ```sharp
 say randextract(this is a test,3)
-You say "this test a"
+You say, "this test a"
 say randextract(this@is@a@test,3,@)
-You say "this@a@test"
+You say, "this@a@test"
 say randextract(this is a test,3,,L,*)
-You say "this*is*a"
+You say, "this*is*a"
 say randextract(this is a test,6,,D)
 You say, "this test is this is is"
 ```
@@ -4253,9 +4253,9 @@ You say, "this test is this is is"
   Examples:
 ```sharp
 say regedit(this test is the best string, %(?<char>.%)est, $<char>rash)
-You say "this trash is the best string"
+You say, "this trash is the best string"
 say regeditall(this test is the best string, %(.%)est, capstr($1)rash)
-You say "this Trash is the Brash string"
+You say, "this Trash is the Brash string"
 ```
 
 
@@ -4324,7 +4324,7 @@ You say "this Trash is the Brash string"
   Examples:
 ```sharp
 say render(<Test 1> & [tagwrap(u,Test 2)], html)
-You say, "&lt;Test 1&gt; &amp; \<u\>Test 2</u>"
+You say, "&lt;Test 1&gt; &amp; <u>Test 2</u>"
 ```
 
 
@@ -5116,13 +5116,13 @@ You don\'t say
 
   Example:
 ```sharp
-say starttime()%r[restarttime()]
-You say "Sat Dec  7 00:09:13 1991
-You say "Sat Dec  7 00:09:13 1991
-@shutdown/reboot
-say starttime()%r[restarttime()]
-You say "Sat Dec  7 00:09:13 1991
-Tue Sep 22 13:54:04 2015
+> say starttime()%r[restarttime()]
+You say, "Sat Dec  7 00:09:13 1991
+Sat Dec  7 00:09:13 1991"
+> @shutdown/reboot
+> say starttime()%r[restarttime()]
+You say, "Sat Dec  7 00:09:13 1991
+Tue Sep 22 13:54:04 2015"
 ```
 
 
@@ -5837,10 +5837,10 @@ say ucstr2(gr[chr(252)]n)
 ```sharp
 &TEST me=center(%0,5,*)
 say udefault(Test,-- BOOM --,ACK)
-You say "*ACK*"
+You say, "*ACK*"
 &TEST me
 say udefault(me/Test,-- BOOM --,ACK)
-You say "-- BOOM --"
+You say, "-- BOOM --"
 ```
 
 
