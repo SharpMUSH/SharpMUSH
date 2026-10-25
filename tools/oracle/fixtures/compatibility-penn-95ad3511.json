@@ -321,8 +321,7 @@
       },
       "expression": "not(1,2)",
       "expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2",
-      "intent": "intentional error wording difference; argument-count behavior is covered separately",
-      "sharpmush_expected": "#-1 FUNCTION (NOT) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2"
+      "intent": "parity"
     },
     {
       "configuration": {
@@ -554,7 +553,7 @@
       "expression": "[setq(probe,clean)][not(setq(probe,changed),1)]|%q<probe>",
       "expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2|changed",
       "intent": "intentional arity-before-evaluation divergence; invalid calls cannot change registers",
-      "sharpmush_expected": "#-1 FUNCTION (NOT) EXPECTS AT MOST 1 ARGUMENTS BUT GOT 2|clean"
+      "sharpmush_expected": "#-1 FUNCTION (NOT) EXPECTS 1 ARGUMENTS BUT GOT 2|clean"
     },
     {
       "configuration": {
