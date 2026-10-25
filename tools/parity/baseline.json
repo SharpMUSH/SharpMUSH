@@ -37,10 +37,6 @@
    "command": "think [loc(first(lcon(*Alice)))=loc(*Alice)] [owner(first(lcon(*Alice)))=owner(*Alice)]"
   },
   {
-   "key": "10-player-commands/flags.set#4",
-   "command": "@set me=BOGUS"
-  },
-  {
    "key": "10-player-commands/obj.attrs#0",
    "command": "&FOO Widget=bar"
   },
@@ -251,6 +247,14 @@
   {
    "key": "44-objects-audit/obj.login#0",
    "command": "Wiz wizpass"
+  },
+  {
+   "key": "44-objects-audit/obj.open#3",
+   "command": "@tel/silent me=#0"
+  },
+  {
+   "key": "44-objects-audit/obj.room-desc#2",
+   "command": "@tel/silent me=#0"
   },
   {
    "key": "43-speech-audit/sp.login#0",
