@@ -81,7 +81,7 @@ public static class OutputFormatNegotiation
 /// False after <c>SOCKSET telnet=no</c>: a prompt is then written as a line, with no <c>IAC GA</c> or <c>IAC EOR</c>.
 /// </param>
 /// <param name="NoAccents">
-/// Whether the connected player is set NOACCENTS, which sends ASCII to every one of their connections as
+/// Whether the connected player is set NOACCENTS, which sends ASCII to every one of their terminal connections as
 /// <c>SOCKSET stripaccents</c> does to one (PennMUSH <c>src/notify.c:443</c>).
 /// </param>
 /// <param name="KeepAlive">

@@ -518,7 +518,7 @@ Widget
 
 **Flag: NOACCENTS (players)**
 
-A NOACCENTS player is sent plain ASCII on every connection, with each accented letter sent as the plain letter it is based on. It does what `@sockset stripaccents=yes` does to one connection. Clearing the flag goes back to what each connection negotiated.
+A NOACCENTS player is sent plain ASCII on every telnet connection, with each accented letter sent as the plain letter it is based on. It does what `@sockset stripaccents=yes` does to one connection. The portal's terminal shows text as written. Clearing the flag goes back to what each connection negotiated.
 
 
 ::: seealso
