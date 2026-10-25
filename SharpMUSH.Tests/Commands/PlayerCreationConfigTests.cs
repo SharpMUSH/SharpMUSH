@@ -51,7 +51,7 @@ public class PlayerCreationConfigTests
 		// internally (CreateAccountAsync + BindAccount), rather than driving it through the
 		// `register` socket command itself: that command's own arg-splitting only ever
 		// populates a single positional argument for space-separated NoParse commands
-		// (pre-existing behavior of REGISTER/LOGIN/MAKE, unrelated to this task), so
+		// (pre-existing behavior of REGISTER/LOGIN/CREATE, unrelated to this task), so
 		// "register name password" cannot reach AccountMode via CommandParse in this harness.
 		await ConnectionService.Register(handle, "localhost", "localhost", "test",
 			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8);
@@ -114,7 +114,7 @@ public class PlayerCreationConfigTests
 			{
 				Net = options.Net with { PlayerCreation = false }
 			});
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"make {TestIsolationHelpers.GenerateUniqueName("MakeCharacter")} somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"create {TestIsolationHelpers.GenerateUniqueName("CreateCharacter")} somepassword"));
 
 			await Assert.That(HeardBy(handle)).Contains("Player creation is disabled on this server.");
 		});
@@ -129,7 +129,7 @@ public class PlayerCreationConfigTests
 			{
 				Net = options.Net with { PlayerCreation = false }
 			});
-			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"make {TestIsolationHelpers.GenerateUniqueName("MakeCharacter")} somepassword"));
+			await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain($"create {TestIsolationHelpers.GenerateUniqueName("CreateCharacter")} somepassword"));
 
 			await Assert.That(HeardBy(handle)).Contains("Custom registration message.");
 		});

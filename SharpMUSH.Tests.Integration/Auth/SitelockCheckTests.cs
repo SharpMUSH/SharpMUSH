@@ -291,7 +291,7 @@ public class SitelockCheckTests(ServerWebAppFactory factory)
 
 	/// <summary>
 	/// The telnet account-mode REGISTER surface is gated on <c>!create</c> (its sibling LOGIN/PLAY
-	/// on <c>!connect</c>, MAKE on <c>!create</c>). The gate is the first statement in the command,
+	/// on <c>!connect</c>, CREATE on <c>!create</c>). The gate is the first statement in the command,
 	/// so it fires through <c>CommandParse</c> even though these commands' multi-word args cannot be
 	/// split into separate positional slots (a pre-existing NoParse single-arg-grammar limitation,
 	/// unrelated to this gate — see PlayerCreationConfigTests, which likewise reaches REGISTER/MAKE's

@@ -24,7 +24,7 @@ An account is one login for the web portal and the account menu at the connect s
 
 A character can reach an account four ways:
 
-- `make <character> <password>` at the account menu, or New character on the portal, creates one already linked. See [make].
+- `create <character> <password>` at the account menu, or New character on the portal, creates one already linked. See [create].
 - `claim <character> <password>` at the account menu, `@account/claim <character>=<password>` in the game, or Claim an existing character on the portal, links one that already exists. See [accounts claiming].
 - Staff link one with `@account/link` or the portal's character page. See [accounts staff].
 - The first person to finish the portal's setup claims character #1.
@@ -56,7 +56,7 @@ Softcode reads links with [account()] and [accountchars()], and hears about them
 
 ::: seealso
 - [claim]
-- [make]
+- [create]
 - [login]
 - [@account]
 - [ACCOUNT()]

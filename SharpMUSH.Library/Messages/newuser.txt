@@ -1,5 +1,5 @@
 
 -< [1mYour account is ready[0m >----------------------------------------------------
-make <character> <password>   create your first character
-claim <character> <password>  add a character you already have
-play <character>              enter the game as one of them
+create <character> <password>  create your first character
+claim <character> <password>   add a character you already have
+play <character>               enter the game as one of them

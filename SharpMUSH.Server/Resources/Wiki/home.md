@@ -9,7 +9,7 @@ by any authorised user.
 - [Get started with Sharpie](/welcome) for an optional guide matched to your experience.
 - [Sign in or register](/login), then create or select a character to open [Play](/play).
 - Prefer a MU* client? Make an account with `register <name> [email] <password>`,
-  a character with `make <character> <password>`, and next time log in with
+  a character with `create <character> <password>`, and next time log in with
   `connect <character> <password>`.
 - Read this game's rules and character requirements before joining a scene.
 

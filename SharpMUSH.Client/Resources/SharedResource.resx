@@ -6737,6 +6737,12 @@
   <data name="AdmMsgGuestDesc" xml:space="preserve">
     <value>Shown to a guest after the message of the day.</value>
   </data>
+  <data name="AdmMsgNoAccountTitle" xml:space="preserve">
+    <value>No account</value>
+  </data>
+  <data name="AdmMsgNoAccountDesc" xml:space="preserve">
+    <value>Shown after the message of the day to a character on no account, saying what an account is for and how to get one.</value>
+  </data>
   <data name="AdmMsgNewUserTitle" xml:space="preserve">
     <value>New account</value>
   </data>

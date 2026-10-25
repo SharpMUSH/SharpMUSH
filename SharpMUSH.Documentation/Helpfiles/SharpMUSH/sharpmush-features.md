@@ -44,7 +44,7 @@ SharpMUSH plays PennMUSH softcode and imports PennMUSH, RhostMUSH and TinyMUX da
 
 ## Accounts and the web portal
 
-- Players can hold a web-portal account with several characters linked to it. At the login screen, [register] and [login] reach the account, and [make] and [play] create and connect its characters. Wizards manage accounts with [@account].
+- Players can hold a web-portal account with several characters linked to it. At the login screen, [register] and [login] reach the account, and [create] and [play] create and connect its characters. Wizards manage accounts with [@account].
 - [@locale] sets the language the server addresses you in.
 
 ## Roles and permissions

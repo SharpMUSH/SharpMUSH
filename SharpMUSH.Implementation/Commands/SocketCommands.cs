@@ -804,7 +804,7 @@ public partial class Commands
 	/// The shared post-login sequence run after a handle is bound to <paramref name="player"/>:
 	/// syncs output preferences, shows login messages, announces the connection, queues the connect
 	/// events and hooks, and performs auto-look. Identical across
-	/// CONNECT (name/password and OTT token) and the account-mode MAKE/PLAY commands; guest logins
+	/// CONNECT (name/password and OTT token) and the account-mode CREATE/PLAY commands; guest logins
 	/// share the same sequence but additionally show the guest file, hence <paramref name="isGuest"/>.
 	/// </summary>
 	private async ValueTask CompletePlayerLoginAsync(
@@ -948,8 +948,9 @@ public partial class Commands
 			: null;
 
 	/// <summary>
-	/// Shows the post-login messages: the MOTD, the wizard MOTD to wizards and royalty, and the guest message to a
-	/// guest. An <c>@motd</c> or <c>@wizmotd</c> stands in for its message while it is set.
+	/// Shows the post-login messages: the MOTD, the wizard MOTD to wizards and royalty, the guest message to a
+	/// guest, and to any other character on no account the message saying what one is for. An <c>@motd</c> or
+	/// <c>@wizmotd</c> stands in for its message while it is set.
 	/// </summary>
 	private async Task ShowPostLoginMessages(long handle, AnySharpObject player, bool isGuest = false)
 	{
@@ -965,6 +966,10 @@ public partial class Commands
 		if (isGuest)
 		{
 			await ShowAsync(GameMessage.Guest, null);
+		}
+		else if (await AccountService.GetAccountForCharacterAsync(player.Object().DBRef) is null)
+		{
+			await ShowAsync(GameMessage.NoAccount, null);
 		}
 
 		async ValueTask ShowAsync(GameMessage message, string? temporary)

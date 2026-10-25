@@ -237,6 +237,21 @@ public partial class GameMessageServiceTests
 		await Assert.That(shown.ToPlainText()).IsEqualTo($"Hello, {viewerObject.Object().Name}. 0");
 	}
 
+	/// <summary>The object's no-account message names the character it is shown to, and how to claim it.</summary>
+	[Test]
+	public async Task TheMessagesObjectNamesTheCharacterWithNoAccount()
+	{
+		var (service, _) = await WithMessagesObjectAsync();
+		var viewer = await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, Mediator, "MsgNoAcct");
+		var viewerObject = (await Mediator.Send(new GetObjectNodeQuery(viewer))).Expect<AnySharpObject>();
+		var name = viewerObject.Object().Name;
+
+		var shown = (await service.RenderAsync(GameMessage.NoAccount, 7, viewerObject)).Expect<MString>().ToPlainText();
+
+		await Assert.That(shown).Contains($"{name} is not on an account.");
+		await Assert.That(shown).Contains($"claim {name} <password>");
+	}
+
 	/// <summary>A service over an in-memory record, with <c>messages_object</c> naming <paramref name="messagesObject"/>.</summary>
 	private GameMessageService Build(int? messagesObject = null)
 	{

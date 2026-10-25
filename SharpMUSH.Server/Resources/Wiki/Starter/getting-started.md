@@ -11,7 +11,7 @@ players in real time. You don't need to know any code to play.
    experience, or head straight to [Play](/play).
 2. [Sign in or register](/login), then create, select or link your character.
    From a MU* client, make an account with `register <name> [email] <password>`,
-   then a character with `make <character> <password>`. Next time, log in with
+   then a character with `create <character> <password>`. Next time, log in with
    `connect <character> <password>`.
    > **Fill in:** The address and port MU* clients connect to.
 3. Read the [[Theme]] and [[Policies]] pages.

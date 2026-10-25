@@ -17,7 +17,7 @@ namespace SharpMUSH.Tests.Commands;
 /// commands were dispatched only by exact case-insensitive name match, so any abbreviation
 /// (e.g. typing "con god pass") fell through to "No such command available at login." even
 /// though the abbreviation is unambiguous (CONNECT is the only registered SOCKET command
-/// starting with "C" among WHO/CONNECT/QUIT/REGISTER/LOGIN/MAKE/PLAY).
+/// starting with "CON").
 ///
 /// These tests drive the real dispatch path in
 /// <c>SharpMUSHParserVisitor.EvaluateCommands</c> through <c>Parser.CommandParse</c> against
@@ -132,9 +132,7 @@ public class SocketCommandAbbreviationTests
 	}
 
 	/// <summary>
-	/// A nonsense token matches zero registered SOCKET commands (not an ambiguous prefix —
-	/// among WHO/CONNECT/QUIT/REGISTER/LOGIN/MAKE/PLAY no two commands share a first letter, so
-	/// there is no real ambiguous-prefix case to exercise here). It connects nothing and shows the
+	/// A nonsense token matches zero registered SOCKET commands (not an ambiguous prefix). It connects nothing and shows the
 	/// connect screen again, as PennMUSH check_connect does, so the player sees the commands that work.
 	/// </summary>
 	[Test, NotInParallel([nameof(SocketCommandAbbreviationTests), "ConfigMutation"])]

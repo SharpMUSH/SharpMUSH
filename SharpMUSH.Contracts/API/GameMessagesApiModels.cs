@@ -18,6 +18,9 @@ public enum GameMessage
 	/// <summary>Shown to a guest after the MOTD.</summary>
 	Guest,
 
+	/// <summary>Shown after the MOTD to a character on no account, other than a guest.</summary>
+	NoAccount,
+
 	/// <summary>Shown after <c>register</c> creates an account.</summary>
 	NewUser,
 
