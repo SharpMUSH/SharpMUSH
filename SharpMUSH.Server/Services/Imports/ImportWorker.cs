@@ -27,7 +27,7 @@ public static class ImportWorker
 		if (session.Directory != Path.GetFullPath(directory) || session.State != ImportSessionState.Preparing)
 			throw new IOException("Import worker session is not preparing.");
 		using var ownership = new FileStream(Path.Combine(session.Directory, "worker.lock"), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
-		using var deadline = new CancellationTokenSource(TimeSpan.FromMinutes(10));
+		using var deadline = new CancellationTokenSource(ImportInputs.Deadline(request.Files));
 		try
 		{
 			foreach (var input in new[] { request.Files.Database, request.Files.Mail, request.Files.Chat, request.Files.MailFolders }.OfType<string>())
@@ -68,6 +68,7 @@ public static class ImportWorker
 					return 0;
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, deadline.Token);
+				if (configuration is not null) ReportConfiguration(configuration, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
 					throw new IOException("The staged object count is below the conversion's reported count.");
@@ -104,6 +105,19 @@ public static class ImportWorker
 			foreach (var name in new[] { "request.json", "mush.cnf", "world.source", "mail.source", "chat.source", "folders.source" })
 				File.Delete(Path.Combine(session.Directory, name));
 		}
+	}
+
+	/// <summary>
+	/// The configuration lines that were not carried over. An include the upload could not follow is a warning,
+	/// since its settings are lost unless they are pasted into the file; the rest, and the directives SharpMUSH has
+	/// no option for, are notes.
+	/// </summary>
+	private static void ReportConfiguration(PennMushConfigImport configuration, ConversionResult result)
+	{
+		foreach (var line in configuration.Skipped)
+			(line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) ? result.Warnings : result.Notes).Add("Configuration: " + line);
+		if (configuration.Unrecognized.Count > 0)
+			result.Notes.Add($"Configuration: {configuration.Unrecognized.Count} directive(s) SharpMUSH has no option for, not carried over: {string.Join(", ", configuration.Unrecognized)}.");
 	}
 
 	private static async Task EnsurePackageManagerAsync(IMediator mediator, IConfigOptionWriter options,

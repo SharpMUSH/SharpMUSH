@@ -34,14 +34,18 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 				if (new FileInfo(source).Length > 512L << 20) throw new IOException("An import input exceeds the 512 MiB worker limit.");
 				var destination = Path.Combine(session.Directory, name);
 				var before = await HashAsync(source, cancellationToken);
+				var compressed = ImportInputs.IsGzip(source);
 				await using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read);
 				await using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None);
 				if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(destination, UnixFileMode.UserRead | UnixFileMode.UserWrite);
-				await input.CopyToAsync(output, cancellationToken);
+				if (compressed) await ImportInputs.DecompressAsync(input, output, cancellationToken);
+				else await input.CopyToAsync(output, cancellationToken);
 				await output.FlushAsync(cancellationToken);
 				await output.DisposeAsync();
 				var after = await HashAsync(source, cancellationToken);
-				if (!before.AsSpan().SequenceEqual(after) || !(await HashAsync(destination, cancellationToken)).AsSpan().SequenceEqual(after))
+				// A decompressed copy is checked by the gzip trailer's checksum, not against the source's hash.
+				if (!before.AsSpan().SequenceEqual(after)
+					|| (!compressed && !(await HashAsync(destination, cancellationToken)).AsSpan().SequenceEqual(after)))
 					throw new IOException("An import source changed while it was copied.");
 				sources[source] = after;
 				return destination;
@@ -94,7 +98,8 @@ public sealed class ImportPreviewCoordinator(ImportPromotionJournal journal, ILo
 			await File.WriteAllTextAsync(Path.Combine(session.Directory, "request.json"), JsonSerializer.Serialize(request), cancellationToken);
 			if (!OperatingSystem.IsWindows()) File.SetUnixFileMode(Path.Combine(session.Directory, "request.json"), UnixFileMode.UserRead | UnixFileMode.UserWrite);
 			using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-			deadline.CancelAfter(TimeSpan.FromMinutes(10));
+			// A minute past the worker's own deadline, so the worker is the one to say it ran out of time.
+			deadline.CancelAfter(ImportInputs.Deadline(copied) + TimeSpan.FromMinutes(1));
 			await RunWorkerAsync(session, deadline.Token);
 			session = journal.Get(session.Id);
 			foreach (var (source, hash) in sources)

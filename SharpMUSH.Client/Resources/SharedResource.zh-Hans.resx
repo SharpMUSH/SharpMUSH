@@ -3412,10 +3412,6 @@
     <value>支持的格式：.cnf、.conf、.txt（最大 1MB）</value>
     <comment>MT</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>支持的格式：.db、.txt（最大 100MB）</value>
-    <comment>MT</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>温度（C）</value>
     <comment>MT</comment>

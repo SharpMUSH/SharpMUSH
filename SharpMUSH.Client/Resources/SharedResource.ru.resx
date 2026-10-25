@@ -3412,10 +3412,6 @@
     <value>Поддерживаемые форматы: .cnf, .conf, .txt (макс. 1 МБ)</value>
     <comment>MT — file extensions kept as-is (machine identifiers); MB rendered as МБ.</comment>
   </data>
-  <data name="SupportedFormatsDb" xml:space="preserve">
-    <value>Поддерживаемые форматы: .db, .txt (макс. 100 МБ)</value>
-    <comment>MT — file extensions kept as-is.</comment>
-  </data>
   <data name="TempC" xml:space="preserve">
     <value>Темп. (C)</value>
     <comment>MT — unit letter kept as-is.</comment>
