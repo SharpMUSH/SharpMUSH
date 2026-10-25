@@ -1779,7 +1779,7 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(match.Success ? "1" : "0"));
 		}
 
-		var result = "1";
+		var result = new StringBuilder("1");
 		var names = registers.Message.ToPlainText().Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		for (var i = 0; i < names.Length; i++)
 		{
@@ -1787,11 +1787,11 @@ public partial class Functions
 			var capture = group.Success ? str.Substring(group.Index, group.Length) : MarkupText.Empty;
 			if (names[i] != "-" && !parser.CurrentState.AddRegister(names[i].ToUpperInvariant(), capture))
 			{
-				result += ErrorMessages.Returns.BadRegName;
+				result.Append(ErrorMessages.Returns.BadRegName);
 			}
 		}
 
-		return ValueTask.FromResult(new CallState(result));
+		return ValueTask.FromResult(new CallState(result.ToString()));
 	}
 
 	// Two arguments are TinyMUX's arity (switch(x,default) is the default); PennMUSH refuses them, so
