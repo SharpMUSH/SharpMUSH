@@ -153,4 +153,38 @@ public class WikiCollectionsControllerTests
 		await Assert.That(rows).IsEmpty();
 		await Assert.That(controller.Response.Headers["X-Total-Count"].ToString()).IsEqualTo("0");
 	}
+
+	[Test]
+	public async Task APageNamesThePagesEitherSideAndAnUnknownTokenReadsAsTheOffset()
+	{
+		var (controller, wiki, packages) = Build();
+		var owned = new List<PackageWikiPageRecord>();
+		for (var i = 0; i < 120; i++)
+			owned.Add(Own((await wiki.CreateAsync($"Spell {i:D3}", "ORC", "#1", categories: ["Spells"])).Expect<WikiPage>()));
+		packages.GetAllPackageWikiPagesAsync().Returns(Task.FromResult<IReadOnlyList<PackageWikiPageRecord>>(owned));
+		async Task<(List<string> Titles, string Previous, string Next, string Total)> PageAsync(int skip = 0, string? after = null,
+			string? before = null)
+		{
+			controller.ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() };
+			var rows = Value<List<WikiPageSummaryDto>>(await controller.Pages("package:pf2e-remaster", skip, 50, "Spells",
+				after: after, before: before));
+			var headers = controller.Response.Headers;
+			return ([.. rows.Select(row => row.Title)], headers["X-Previous-Page"].ToString(), headers["X-Next-Page"].ToString(),
+				headers["X-Total-Count"].ToString());
+		}
+
+		var first = await PageAsync();
+		await Assert.That(first.Titles.First()).IsEqualTo("Spell 000");
+		await Assert.That(first.Previous).IsEmpty();
+		await Assert.That(first.Total).IsEqualTo("120");
+		var second = await PageAsync(50, after: first.Next);
+		await Assert.That(second.Titles.First()).IsEqualTo("Spell 050");
+		var third = await PageAsync(100, after: second.Next);
+		await Assert.That(third.Titles).Count().IsEqualTo(20);
+		await Assert.That(third.Next).IsEmpty();
+		var back = await PageAsync(50, before: third.Previous);
+		await Assert.That(back.Titles).IsEquivalentTo(second.Titles);
+		var forged = await PageAsync(50, after: "c1.forged");
+		await Assert.That(forged.Titles).IsEquivalentTo(second.Titles);
+	}
 }

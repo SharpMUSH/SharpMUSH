@@ -181,7 +181,7 @@ public class WikiRequestRoutingTests
 			var scalar = scalars.Single();
 			await Assert.That(scalar.Category).IsEqualTo(member.Categories.Single());
 			var visibility = scalar.Visibility;
-			var listing = messages.OfType<GetWikiPagesByCategoryQuery>().Single();
+			var listing = messages.OfType<GetWikiPagesByCategoryWindowQuery>().Single();
 			await Assert.That(visibility).IsEqualTo(listing.Visibility);
 			await Assert.That(visibility.IncludedPageIds?.ToArray() ?? []).IsEquivalentTo(selected.Select(page => page.Id));
 			await Assert.That(visibility.ExcludedPageIds is null).IsTrue();
@@ -378,6 +378,8 @@ public class WikiRequestRoutingTests
 		await Wiki.CountPagesByStateAsync(WikiVisibility.All);
 		await Wiki.CountPagesByCategoryAsync(WikiVisibility.All);
 		await Wiki.GetByCategoryAsync("Mixed Case");
+		await Wiki.GetByCategoryWindowAsync("Mixed Case", new WikiPageAt(0), 5, WikiVisibility.All);
+		await Wiki.GetAllPagesWindowAsync(new WikiPageAt(0), 5, WikiVisibility.All);
 		await Assert.That((await Wiki.GetRevisionsAsync(page.Id)).Count).IsEqualTo(2);
 		await Wiki.GetRevisionAsync(page.Id, 1);
 		var translation = (await Wiki.UpsertTranslationAsync(page.Id, "fr-ca", "Titre", "**Traduit**", "translation author",
@@ -404,7 +406,7 @@ public class WikiRequestRoutingTests
 		{
 			"GetWikiPageBySlugQuery", "GetWikiPageByIdQuery", "GetRecentWikiPagesQuery", "GetWikiPagesQuery",
 			"CountWikiPagesQuery", "CountWikiPagesByStateQuery", "CountWikiPagesByCategoryQuery", "GetWikiPagesByCategoryQuery",
-			"GetWikiRequirementsQuery", "GetPinnedWikiCategoriesQuery", "GetWikiRevisionsQuery", "GetWikiRevisionsBeforeQuery",
+			"GetWikiPagesByCategoryWindowQuery", "GetWikiPagesWindowQuery", "GetWikiRequirementsQuery", "GetPinnedWikiCategoriesQuery", "GetWikiRevisionsQuery", "GetWikiRevisionsBeforeQuery",
 			"GetWikiRevisionQuery", "GetWikiTranslationSummariesQuery", "GetWikiTranslationsQuery", "GetWikiTranslationQuery",
 			"CreateWikiPageCommand", "UpdateWikiPageBodyCommand", "DeleteWikiPageCommand", "SetWikiRequirementsCommand",
 			"SetWikiPageTitleCommand", "SetWikiPageMetadataCommand", "SetWikiPageFactsCommand", "SetWikiCategoryPinnedCommand", "WriteWikiTranslationCommand",

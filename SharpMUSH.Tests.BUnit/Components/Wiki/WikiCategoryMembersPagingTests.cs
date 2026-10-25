@@ -170,6 +170,37 @@ public class WikiCategoryMembersPagingTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task NextAndPreviousSendTheServersTokensAndKeepThemInTheRoute()
+	{
+		_api.Members = uri =>
+		{
+			var query = Query(uri);
+			var skip = int.TryParse(query["skip"], out var value) ? value : 0;
+			var response = _api.DefaultBatch(uri);
+			response.Headers.Add("X-Next-Page", $"c1.next{skip + 50}");
+			if (skip > 0) response.Headers.Add("X-Previous-Page", $"c1.previous{skip}");
+			return Task.FromResult(response);
+		};
+		var cut = Open("/wiki/category/guides?" + Journey);
+		WaitForMember(cut, "Package member 000");
+		await Pager(cut, 1).ClickAsync(new());
+		WaitForMember(cut, "Package member 050");
+		await Assert.That(Query(_api.MemberRequests.Last())["after"]).IsEqualTo("c1.next50");
+		await Assert.That(Query(new Uri(_nav.Uri))["membersAfter"]).IsEqualTo("c1.next50");
+		await Pager(cut, 1).ClickAsync(new());
+		WaitForMember(cut, "Package member 100");
+		await Pager(cut, 0).ClickAsync(new());
+		WaitForMember(cut, "Package member 050");
+		await Assert.That(Query(_api.MemberRequests.Last())["before"]).IsEqualTo("c1.previous100");
+		await Assert.That(Query(new Uri(_nav.Uri))["membersBefore"]).IsEqualTo("c1.previous100");
+		await Assert.That(Query(new Uri(_nav.Uri))["membersAfter"]).IsNull();
+		await Pager(cut, 0).ClickAsync(new());
+		WaitForMember(cut, "Package member 000");
+		await Assert.That(Query(new Uri(_nav.Uri))["membersBefore"]).IsNull();
+		await Assert.That(Query(_api.MemberRequests.Last())["before"]).IsNull();
+	}
+
+	[Test]
 	public async Task NextAndPreviousKeepIndependentReturnOffsetAndDoNotReloadTheBody()
 	{
 		var cut = Open("/wiki/category/guides?" + Journey);

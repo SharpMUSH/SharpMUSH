@@ -75,6 +75,7 @@ public class WikiCategoryReadinessTests
 			case 1: await db.CountPagesInCategoryAsync("a", admitted); break;
 			case 2: await db.CountPagesByCategoryAsync(admitted); break;
 			case 3: await db.GetPagesByCategoryAsync("a", 0, 0, admitted); break;
+			case 4: await db.GetPagesByCategoryWindowAsync("a", new WikiPageAt(0), 10, admitted); break;
 			default: throw new ArgumentOutOfRangeException(nameof(reader));
 		}
 	}
@@ -229,7 +230,8 @@ public class WikiCategoryReadinessTests
 			if (damage == "label-utf8") key[2] = 0xff;
 			await db.Store.WriteAsync(tx => tx.Put(Tables.WikiByCategory, key, value));
 			var visibility = WikiVisibility.PublishedOnly with { ExcludedPageIds = new HashSet<string> { "wiki_page/9000" } };
-			for (var reader = 0; reader < 3; reader++)
+			// The listings reach the entry; the counts are kept apart from the index and do not.
+			foreach (var reader in new[] { 0, 4 })
 				await Assert.That(await Failure(() => Read(db, reader, visibility)) is InvalidDataException).IsTrue();
 		});
 
@@ -277,9 +279,10 @@ public class WikiCategoryReadinessTests
 			{
 				Hidden = new WikiReadRestrictions(false, new HashSet<string> { "main" }, new HashSet<string>(), new HashSet<string>())
 			};
-			// Namespace/category restrictions require source metadata; JSON failure proves it was consulted.
-			await Assert.That(await Failure(() => Read(db, 1, hidden)) is System.Text.Json.JsonException).IsTrue();
-			await Assert.That(await Failure(() => Read(db, 2, hidden)) is System.Text.Json.JsonException).IsTrue();
+			// A namespace restriction reads the page's kept summary, not its body.
+			await Assert.That(await db.CountPagesInCategoryAsync("a", hidden)).IsEqualTo(0);
+			await Assert.That(await db.CountPagesByCategoryAsync(hidden)).IsEmpty();
+			await Assert.That(await db.GetPagesByCategoryAsync("a", 0, 10, hidden)).IsEmpty();
 		});
 
 	[Test]

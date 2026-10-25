@@ -69,6 +69,12 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<IReadOnlyList<WikiPage>> GetByCategoryAsync(string category, int skip = 0, int take = 50, WikiVisibility? visibility = null)
 		=> store.GetPagesByCategoryAsync(WikiHelpers.CategoryKey(category), skip, take, visibility ?? WikiVisibility.All);
 
+	public Task<Result<WikiPageWindow>> GetByCategoryWindowAsync(string category, WikiPageCursor cursor, int take, WikiVisibility visibility)
+		=> store.GetPagesByCategoryWindowAsync(WikiHelpers.CategoryKey(category), cursor, take, visibility);
+
+	public Task<Result<WikiPageWindow>> GetAllPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility)
+		=> store.GetPagesWindowAsync(cursor, take, visibility);
+
 	public async Task<Result<WikiPage>> CreateAsync(
 		string title,
 		string markdown,

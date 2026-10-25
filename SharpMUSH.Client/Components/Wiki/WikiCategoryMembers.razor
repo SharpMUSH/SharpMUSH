@@ -62,12 +62,15 @@
     /// <summary>Show members without links while the reader's return origin is still being checked.</summary>
     [Parameter] public bool HoldLinks { get; set; }
     private string? EffectiveLocale => Locale ?? WikiLocaleLinks.FromUri(Nav.Uri);
-    private (string Category, string? Collection, string? Locale, int Skip)? _loaded;
+    private (string Category, string? Collection, string? Locale, int Skip, string? After, string? Before)? _loaded;
     private bool _loading = true;
     private bool _failed;
     private bool _disposed;
     private int _version;
     private int _skip;
+    // The server's token for where the page starts; the URL carries it as membersAfter or membersBefore.
+    private string? _after;
+    private string? _before;
     private WikiPageBatch? _batch;
     private string? _collectionLabel;
     private ElementReference _range;
@@ -81,11 +84,14 @@
 
     protected override async Task OnParametersSetAsync()
     {
+        var query = WikiBrowseState.ReadQuery(Nav.Uri);
+        var position = new WikiBrowseState("game", Skip: MembersSkip, After: query.GetValueOrDefault("membersAfter"),
+            Before: query.GetValueOrDefault("membersBefore")).Normalize();
         var selection = (WikiCategories.Key(Category), string.IsNullOrWhiteSpace(MembersCollection) ? null : MembersCollection.Trim(), EffectiveLocale,
-            new WikiBrowseState("game", Skip: MembersSkip).Normalize().Skip);
+            position.Skip, position.After, position.Before);
         if (_loaded == selection) return;
         _loaded = selection;
-        _skip = selection.Item4;
+        (_skip, _after, _before) = (position.Skip, position.After, position.Before);
         await ReloadAsync();
     }
 
@@ -117,6 +123,7 @@
         var version = Interlocked.Increment(ref _version);
         var requestedUri = Nav.Uri;
         var offset = _skip;
+        var (after, before) = (_after, _before);
         Clear();
         var navigationResult = selection.Collection is { } scope
             ? await Wiki.GetNavigationAsync(collection: scope, lang: selection.Locale)
@@ -135,11 +142,16 @@
             _failed = true;
             return;
         }
-        var result = await Wiki.GetCollectionPagesAsync(navigation.Collection, offset, WikiBrowseState.PageSize, selection.Category, lang: selection.Locale);
+        var result = await Wiki.GetCollectionPagesAsync(navigation.Collection, offset, WikiBrowseState.PageSize, selection.Category,
+            lang: selection.Locale, after: after, before: before);
         if (_disposed || version != _version) return;
-        if (result is WikiPageBatch changed && changed.Total > 0 && offset >= changed.Total)
+        // Read back to the start, the page is the first whatever offset the link said.
+        if (result is WikiPageBatch { Previous: null } started && before is not null && started.Pages.Count > 0)
+            (offset, before) = (0, null);
+        if (result is WikiPageBatch changed && changed.Total > 0 && (offset >= changed.Total || changed.Pages.Count == 0 && after is not null))
         {
-            offset = ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize;
+            offset = Math.Min(offset, ((changed.Total - 1) / WikiBrowseState.PageSize) * WikiBrowseState.PageSize);
+            (after, before) = (null, null);
             result = await Wiki.GetCollectionPagesAsync(navigation.Collection, offset, WikiBrowseState.PageSize, selection.Category, lang: selection.Locale);
             if (_disposed || version != _version) return;
         }
@@ -162,13 +174,13 @@
             _collectionLabel = navigation.Collection == "game" ? Loc["WikiGameCollection"] : navigation.Collection == "all" ? Loc["WikiAllCollections"]
                 : navigation.Collections.FirstOrDefault(collection => collection.Id == navigation.Collection)?.Name ?? Loc["WikiCollections"];
         }
-        _skip = offset;
-        _loaded = (selection.Category, selection.Collection, selection.Locale, offset);
+        (_skip, _after, _before) = (offset, after, before);
+        _loaded = (selection.Category, selection.Collection, selection.Locale, offset, after, before);
         _loading = false;
         // Canonical replacement must reuse this response and must never erase a newer route.
         if (requestedUri == Nav.Uri && new Uri(requestedUri).AbsolutePath == WikiCategories.Route(selection.Category))
         {
-            var target = PageHref(offset);
+            var target = PageHref(offset, after, before);
             if (new Uri(requestedUri).PathAndQuery + new Uri(requestedUri).Fragment != target) Nav.NavigateTo(target, replace: true);
         }
     }
@@ -176,12 +188,16 @@
     private string? MemberHref(WikiPageSummary page) => HoldLinks ? null : WikiJourneyLinks.Page(page.Namespace, page.Slug, BrowseState,
         MembersCollection, _skip, EffectiveLocale);
 
-    private string PageHref(int offset)
+    private string PageHref(int offset, string? after, string? before)
     {
         var current = new Uri(Nav.Uri);
         var query = WikiBrowseState.ReadQuery(Nav.Uri);
         query.Remove("membersSkip");
+        query.Remove("membersAfter");
+        query.Remove("membersBefore");
         if (offset > 0) query["membersSkip"] = offset.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        if (offset > 0 && after is not null) query["membersAfter"] = after;
+        else if (offset > 0 && before is not null) query["membersBefore"] = before;
         return current.AbsolutePath + (query.Count == 0 ? string.Empty : "?" + string.Join('&', query.Select(pair => Uri.EscapeDataString(pair.Key) + "=" + Uri.EscapeDataString(pair.Value)))) + current.Fragment;
     }
 
@@ -191,21 +207,23 @@
         @if (_batch is { } batch)
         {
             <nav class="wiki-cat-paging" aria-label="@Loc["WikiBrowseMembers"]">
-                <button type="button" disabled="@(_skip == 0)" @onclick="() => NavigateAsync(Math.Max(0, _skip - WikiBrowseState.PageSize))">@Loc["WikiPreviousPage"]</button>
+                <button type="button" disabled="@(_skip == 0)" @onclick="PreviousAsync">@Loc["WikiPreviousPage"]</button>
                 <button type="button" disabled="@((long)_skip + batch.Pages.Count >= batch.Total)" @onclick="NextAsync">@Loc["WikiNextPage"]</button>
             </nav>
         }
     };
 
-    private Task NextAsync() => NavigateAsync(new WikiBrowseState("game", Skip: _skip).Next().Skip);
+    private Task PreviousAsync() => NavigateAsync(new WikiBrowseState("game", Skip: _skip).Previous(_batch?.Previous));
 
-    private async Task NavigateAsync(int offset)
+    private Task NextAsync() => NavigateAsync(new WikiBrowseState("game", Skip: _skip).Next(_batch?.Next));
+
+    private async Task NavigateAsync(WikiBrowseState position)
     {
         if (_loaded is not { } selection || _disposed) return;
-        _skip = offset;
-        _loaded = (selection.Category, selection.Collection, selection.Locale, offset);
+        (_skip, _after, _before) = (position.Skip, position.After, position.Before);
+        _loaded = (selection.Category, selection.Collection, selection.Locale, position.Skip, position.After, position.Before);
         _focusRange = true;
-        Nav.NavigateTo(PageHref(offset));
+        Nav.NavigateTo(PageHref(position.Skip, position.After, position.Before));
         await ReloadAsync();
     }
 

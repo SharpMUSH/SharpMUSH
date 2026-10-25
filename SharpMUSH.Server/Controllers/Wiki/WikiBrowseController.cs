@@ -160,10 +160,10 @@ public class WikiBrowseController(
 		var includeDrafts = await IncludeDraftsAsync();
 		var total = 0;
 		var newest = new List<LocalizedWikiPage>(take + 1);
-		for (var skip = 0; ; skip += NewestBatch)
+		WikiPageCursor cursor = new WikiPageAt(0);
+		while (await Wiki.GetByCategoryWindowAsync(category, cursor, NewestBatch, visibility) is WikiPageWindow batch)
 		{
-			var batch = await Wiki.GetByCategoryAsync(category, skip, NewestBatch, visibility);
-			var visible = await FilterVisibleAsync(batch);
+			var visible = await FilterVisibleAsync(batch.Pages);
 			var localized = await Localization.LocalizeAllAsync(visible, lang, includeDrafts);
 			foreach (var page in localized.Where(page => page.Page.Namespace.Equals(ns, StringComparison.OrdinalIgnoreCase)))
 			{
@@ -173,7 +173,8 @@ public class WikiBrowseController(
 				newest.Insert(at < 0 ? newest.Count : at, page);
 				if (newest.Count > take) newest.RemoveAt(take);
 			}
-			if (batch.Count < NewestBatch) break;
+			if (batch.Next is not { } next) break;
+			cursor = new WikiPageAfter(next);
 			HttpContext.RequestAborted.ThrowIfCancellationRequested();
 		}
 		return Ok(new WikiCategoryNewestDto([.. await SummariesAsync(newest)], total));

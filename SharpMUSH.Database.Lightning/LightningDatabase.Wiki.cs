@@ -118,6 +118,9 @@ public partial class LightningDatabase : IWikiStore
 		page = null;
 		if (!WikiVisibilityAdmits(visibility, value) || !visibility.AdmitsPageId(WikiPageId(key))) return false;
 		if (!visibility.NeedsPageMetadata) return true;
+		// A read requirement needs the namespace and categories, which the page's summary holds without its body.
+		if (string.IsNullOrWhiteSpace(visibility.Search) && ReadWikiSummary(tx, key) is { } summary)
+			return visibility.Hidden?.Hides(summary.Namespace, summary.Categories, WikiPageId(key)) != true;
 		page = ReadWikiPage(tx, key);
 		return page is not null && visibility.Admits(page);
 	}
@@ -150,6 +153,7 @@ public partial class LightningDatabase : IWikiStore
 			else tx.Delete(Tables.WikiByCategory, key);
 		}
 		WikiFactEntries(tx, pageKey, r, add);
+		WikiCountEntries(tx, pageKey, r, add);
 
 		void Apply(TableDef table, byte[] key)
 		{
@@ -382,7 +386,9 @@ public partial class LightningDatabase : IWikiStore
 	// `Published ?? true` rather than `== true`, so a row written before the field existed counts the
 	// same way it displays; the index value already carries it that way.
 	public Task<int> CountPagesAsync(string? ns, WikiVisibility visibility)
-		=> Task.FromResult(Store.Read(tx => WikiAdmitted(tx, WikiNamespaceEntries(tx, ns), visibility).Count()));
+		=> Task.FromResult(Store.Read(tx => ns is null && TryTallyWikiPages(tx, visibility, out var tally)
+			? tally.Total
+			: WikiAdmitted(tx, WikiNamespaceEntries(tx, ns), visibility).Count()));
 
 	public Task<WikiPageCounts> CountPagesByStateAsync(WikiVisibility visibility)
 		=> Task.FromResult(Store.Read(tx =>
@@ -401,6 +407,7 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult<IReadOnlyDictionary<string, int>>(Store.Read(tx =>
 		{
 			RequireWikiCategoryReady(tx);
+			if (TryTallyWikiPages(tx, visibility, out var tally)) return tally.Categories;
 			var counts = new Dictionary<string, int>(StringComparer.Ordinal);
 			foreach (var (key, value) in tx.Range(Tables.WikiByCategory, []))
 			{
@@ -429,7 +436,13 @@ public partial class LightningDatabase : IWikiStore
 		=> Task.FromResult(Store.Read(tx =>
 		{
 			RequireWikiCategoryReady(tx);
-			return WikiCategoryAdmitted(tx, WikiLabelPrefix(category), visibility).Count();
+			var prefix = WikiLabelPrefix(category);
+			// A collection is counted from its own pages only when it holds fewer than the category does.
+			var stored = tx.TryGet(Tables.WikiCount, WikiCategoryCountKey(prefix), out var count) ? ReadWikiCount(count) : default;
+			return (visibility.IncludedPageIds is not { } included || included.Count < stored.Published + stored.Drafts)
+				&& TryTallyWikiPages(tx, visibility, out var tally)
+				? tally.Categories.GetValueOrDefault(Keys.ReadStr(prefix.AsSpan(0, prefix.Length - 1)).ToLowerInvariant())
+				: WikiCategoryAdmitted(tx, prefix, visibility).Count();
 		}));
 
 	public async Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)

@@ -116,6 +116,11 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		{ LandingPage = landing });
 	}
 
+	private Task<Result<WikiPageWindow>> WindowAsync(string? category, WikiPageCursor cursor, int take, WikiVisibility visibility)
+		=> string.IsNullOrWhiteSpace(category)
+			? Wiki.GetAllPagesWindowAsync(cursor, take, visibility)
+			: Wiki.GetByCategoryWindowAsync(category, cursor, take, visibility);
+
 	private async Task<WikiVisibility> SearchAsync(WikiVisibility visibility, string? search, string? lang)
 	{
 		if (string.IsNullOrWhiteSpace(search)) return visibility;
@@ -139,9 +144,17 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		return visibility with { IncludedPageIds = matching };
 	}
 
+	/// <summary>
+	/// GET /api/wiki/collections/{collection}/pages?skip=0&amp;take=50&amp;category=Spells&amp;after=…
+	/// One page of a collection, or of one category in it, with the count in <c>X-Total-Count</c>. <c>X-Next-Page</c>
+	/// and <c>X-Previous-Page</c> carry the tokens for the pages either side, sent back as <c>after</c> and
+	/// <c>before</c>; a token reads from where the last page stopped, where <c>skip</c> reads every row before it.
+	/// A token the wiki did not write is read as <c>skip</c>.
+	/// </summary>
 	[HttpGet("collections/{collection}/pages")]
 	public async Task<IActionResult> Pages(string collection, [FromQuery] int skip = 0, [FromQuery] int take = 50,
-		[FromQuery] string? category = null, [FromQuery] string? search = null, [FromQuery] string? lang = null)
+		[FromQuery] string? category = null, [FromQuery] string? search = null, [FromQuery] string? lang = null,
+		[FromQuery] string? after = null, [FromQuery] string? before = null)
 	{
 		if (search?.Length > 200) return BadRequest("Search must be at most 200 characters.");
 		// Use only the already-authenticated principal here. This endpoint does not opt into OAuth.
@@ -153,18 +166,18 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 		if (collection is not ("game" or "all") && await Wiki.CountPagesAsync(null, visibility) == 0) return NotFound();
 		visibility = await SearchAsync(visibility, search, lang);
 		(skip, take) = ClampPage(skip, take);
-		IReadOnlyList<WikiPage> rows;
-		int total;
-		if (string.IsNullOrWhiteSpace(category))
-		{
-			rows = await Wiki.GetAllPagesAsync(skip, take, visibility: visibility);
-			total = await Wiki.CountPagesAsync(null, visibility);
-		}
-		else
-		{
-			rows = await Wiki.GetByCategoryAsync(category, skip, take, visibility);
-			total = await Wiki.CountPagesInCategoryAsync(category, visibility);
-		}
+		WikiPageCursor cursor = after is { Length: > 0 } ? new WikiPageAfter(after)
+			: before is { Length: > 0 } ? new WikiPageBefore(before)
+			: new WikiPageAt(skip);
+		var read = await WindowAsync(category, cursor, take, visibility);
+		if (read is not WikiPageWindow) read = await WindowAsync(category, new WikiPageAt(skip), take, visibility);
+		if (read is not WikiPageWindow window) return Problem("The wiki listing could not be read.");
+		var rows = window.Pages;
+		var total = string.IsNullOrWhiteSpace(category)
+			? await Wiki.CountPagesAsync(null, visibility)
+			: await Wiki.CountPagesInCategoryAsync(category, visibility);
+		if (window.Next is { } next) Response.Headers["X-Next-Page"] = next;
+		if (window.Previous is { } previous) Response.Headers["X-Previous-Page"] = previous;
 		Response.Headers["X-Total-Count"] = total.ToString(System.Globalization.CultureInfo.InvariantCulture);
 		return Ok((await LocalizedListAsync(rows, lang)).Select(row =>
 		{

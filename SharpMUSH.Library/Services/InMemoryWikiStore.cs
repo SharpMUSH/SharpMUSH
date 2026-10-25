@@ -121,6 +121,74 @@ public sealed class InMemoryWikiStore : IWikiStore
 			.Take(take)
 			.ToList());
 
+	public Task<Result<WikiPageWindow>> GetPagesByCategoryWindowAsync(string category, WikiPageCursor cursor, int take,
+		WikiVisibility visibility)
+		=> Task.FromResult(Window(_pagesById.Values.Where(p => p.Categories.Contains(category, StringComparer.OrdinalIgnoreCase)),
+			p => [p.Title, p.Id], 2, cursor, take, visibility));
+
+	public Task<Result<WikiPageWindow>> GetPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility)
+		=> Task.FromResult(Window(_pagesById.Values, p => [p.Namespace, p.Slug, p.Id], 3, cursor, take, visibility));
+
+	/// <summary>
+	/// A cursor page over <paramref name="pages"/> in the order of <paramref name="key"/>, whose last part is the page id
+	/// compared as a number, as the Lightning store's page key is. A token is that key as JSON.
+	/// </summary>
+	private static Result<WikiPageWindow> Window(IEnumerable<WikiPage> pages, Func<WikiPage, string[]> key, int parts,
+		WikiPageCursor cursor, int take, WikiVisibility visibility)
+	{
+		ArgumentOutOfRangeException.ThrowIfNegativeOrZero(take);
+		const string prefix = "memory-wiki-window:v1:";
+		static int Compare(string[] a, string[] b)
+		{
+			for (var i = 0; i < a.Length - 1; i++)
+				if (StringComparer.Ordinal.Compare(a[i], b[i]) is var order and not 0) return order;
+			return long.Parse(a[^1], CultureInfo.InvariantCulture).CompareTo(long.Parse(b[^1], CultureInfo.InvariantCulture));
+		}
+		string Token(WikiPage page) => WikiPageWindows.Encode(System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(key(page)), prefix);
+		string[]? Decode(string token)
+		{
+			try
+			{
+				return WikiPageWindows.Decode(token, prefix) is { } bytes
+					&& System.Text.Json.JsonSerializer.Deserialize<string[]>(bytes) is { } decoded
+					&& decoded.Length == parts && decoded.All(part => part is not null)
+					&& long.TryParse(decoded[^1], NumberStyles.None, CultureInfo.InvariantCulture, out _)
+						? decoded : null;
+			}
+			catch (System.Text.Json.JsonException) { return null; }
+		}
+
+		var ordered = pages.Where(visibility.Admits).Select(page => (Page: page, Key: key(page)))
+			.Order(Comparer<(WikiPage Page, string[] Key)>.Create((a, b) => Compare(a.Key, b.Key))).ToList();
+		switch (cursor)
+		{
+			case WikiPageAt offset:
+				return Forward(ordered.Skip(Math.Max(0, offset.Skip)).ToList(), offset.Skip > 0);
+			case WikiPageAfter after:
+				return Decode(after.Token) is { } from
+					? Forward(ordered.Where(row => Compare(row.Key, from) > 0).ToList(), true)
+					: new Error<string>("That page of the listing is not one this wiki wrote.");
+			case WikiPageBefore before:
+				if (Decode(before.Token) is not { } until)
+					return new Error<string>("That page of the listing is not one this wiki wrote.");
+				var earlier = ordered.Where(row => Compare(row.Key, until) < 0).ToList();
+				var rows = earlier.TakeLast(take).Select(row => row.Page).ToList();
+				return rows.Count == 0
+					? new WikiPageWindow(rows, null, before.Token)
+					: new WikiPageWindow(rows, earlier.Count > take ? Token(rows[0]) : null, Token(rows[^1]));
+			default:
+				return new Error<string>("Unknown listing position.");
+		}
+
+		WikiPageWindow Forward(List<(WikiPage Page, string[] Key)> rest, bool earlier)
+		{
+			var rows = rest.Take(take).Select(row => row.Page).ToList();
+			return rows.Count == 0
+				? new WikiPageWindow(rows, null, null)
+				: new WikiPageWindow(rows, earlier ? Token(rows[0]) : null, rest.Count > take ? Token(rows[^1]) : null);
+		}
+	}
+
 	private static IEnumerable<WikiPage> Visible(IEnumerable<WikiPage> pages, WikiVisibility visibility)
 		=> pages.Where(visibility.Admits);
 

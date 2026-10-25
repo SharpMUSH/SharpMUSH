@@ -140,6 +140,12 @@ public static class Tables
 	public static readonly TableDef WikiRecent = TableDef.Index("wiki.recent");
 	public static readonly TableDef WikiByNamespace = TableDef.Index("wiki.ns");
 	public static readonly TableDef WikiByCategory = TableDef.Index("wiki.cat");
+	/// <summary>Published and draft page counts, in all and per category label. See <c>LightningDatabase.WikiCounts.cs</c>.</summary>
+	public static readonly TableDef WikiCount = TableDef.Node("wiki.count");
+	/// <summary>Page key → the visibility, namespace and categories a count reads, without the page's body.</summary>
+	public static readonly TableDef WikiSummary = TableDef.Node("wiki.summary");
+	/// <summary>Each author's drafts: author + 0x00 + page key → empty.</summary>
+	public static readonly TableDef WikiDraft = TableDef.Index("wiki.draft");
 	/// <summary>The fact index: property + 0x00 + typed value + page key → empty. See <c>LightningDatabase.WikiFactIndex.cs</c>.</summary>
 	public static readonly TableDef WikiFact = TableDef.Index("wiki.fact");
 	/// <summary>The properties facts may state, keyed by property id. See <c>LightningDatabase.WikiProperties.cs</c>.</summary>

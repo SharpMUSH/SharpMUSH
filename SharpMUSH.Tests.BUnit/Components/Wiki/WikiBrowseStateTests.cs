@@ -67,6 +67,53 @@ public class WikiBrowseStateTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task NextAndPreviousReadFromTheServersTokensAndTheRouteKeepsThem()
+	{
+		_api.Cursors = true;
+		var cut = Browse("?skip=500");
+		await cut.FindAll(".wiki-collection-paging button")[1].ClickAsync(new());
+		var location = new Uri(_nav.Uri);
+		await Assert.That(Query(location, "skip")).IsEqualTo("550");
+		await Assert.That(Query(location, "after")).IsEqualTo("at-549");
+		await Assert.That(Query(RowRequests[^1], "after")).IsEqualTo("at-549");
+		cut.WaitForState(() => cut.Find(".wiki-collection-page").TextContent.Contains("Rule 0550"));
+		await cut.FindAll(".wiki-collection-paging button")[0].ClickAsync(new());
+		location = new Uri(_nav.Uri);
+		await Assert.That(Query(location, "skip")).IsEqualTo("500");
+		await Assert.That(Query(location, "before")).IsEqualTo("at-550");
+		await Assert.That(Query(location, "after")).IsNull();
+		cut.WaitForState(() => cut.Find(".wiki-collection-page").TextContent.Contains("Rule 0500"));
+	}
+
+	[Test]
+	public async Task ReloadWithATokenAsksForTheSamePageByIt()
+	{
+		_api.Cursors = true;
+		var cut = Browse("?skip=550&after=at-549");
+		await Assert.That(Query(RowRequests[0], "after")).IsEqualTo("at-549");
+		await Assert.That(cut.Find(".wiki-collection-page").TextContent).Contains("Rule 0550");
+	}
+
+	[Test]
+	public async Task ReadingBackToTheStartIsTheFirstPageWhateverTheLinkSaid()
+	{
+		_api.Cursors = true;
+		var cut = Browse("?skip=150&before=at-50");
+		cut.WaitForState(() => Query(new Uri(_nav.Uri), "skip") is null);
+		await Assert.That(Query(new Uri(_nav.Uri), "before")).IsNull();
+		await Assert.That(cut.Find(".wiki-collection-page").TextContent).Contains("Rule 0000");
+	}
+
+	[Test]
+	public async Task ATokenThatIsNotOneTheServerWritesNeverReachesTheApi()
+	{
+		_api.Cursors = true;
+		Browse("?skip=50&after=" + Uri.EscapeDataString("<script>"));
+		await Assert.That(Query(RowRequests[0], "after")).IsNull();
+		await Assert.That(Query(RowRequests[0], "skip")).IsEqualTo("50");
+	}
+
+	[Test]
 	public async Task ReloadRestoresTheSameResultRange()
 	{
 		using (var first = Browse("?q=Rule&category=guides&skip=500&lang=fr"))
