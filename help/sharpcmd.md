@@ -2782,7 +2782,7 @@ See [cd], [ch] and [cv] to connect dark, hidden or visible.
 # register
 `register <name> [<email>] <password>`
 
-Creates a web-portal account from the login screen and puts your connection into account mode, where [make], [play] and [claim] work. Characters are then linked to the account rather than carrying their own login.
+Creates a web-portal account from the login screen and puts your connection into account mode, where [create], [play] and [claim] work. Characters are then linked to the account rather than carrying their own login.
 
 The game may refuse the command from your address; see [@sitelock].
 
@@ -2791,14 +2791,14 @@ This is a SharpMUSH command; PennMUSH's `register` mails a password for a new ch
 
 ::: seealso
 - [login]
-- [make]
+- [create]
 - [play]
 - [@account]
 :::
 # login
 `login <name-or-email> <password>`
 
-Authenticates to an existing account from the login screen and puts your connection into account mode, where [make], [play] and [claim] work. It does not connect you to a character; use [play] for that.
+Authenticates to an existing account from the login screen and puts your connection into account mode, where [create], [play] and [claim] work. It does not connect you to a character; use [play] for that.
 
 This is a SharpMUSH command; PennMUSH has no account layer.
 
@@ -2806,15 +2806,15 @@ This is a SharpMUSH command; PennMUSH has no account layer.
 ::: seealso
 - [register]
 - [play]
-- [make]
+- [create]
 - [connect]
 :::
-# make
-`make <character> <password>`
+# create
+`create <character> <password>`
 
 Creates a character, links it to the account you are logged in to, and connects you to it. Only works in account mode, which [login] and [register] put you in. To add a character that already exists, use [claim].
 
-This is a SharpMUSH command; PennMUSH's equivalent is `create`, which makes an unlinked character.
+PennMUSH's `create` makes a character with no account before you log in. SharpMUSH's needs an account: before [login] or [register], it tells you to use one of them first.
 
 
 ::: seealso
@@ -2832,14 +2832,14 @@ This is a SharpMUSH command; PennMUSH has no account layer.
 
 ::: seealso
 - [login]
-- [make]
+- [create]
 - [claim]
 - [connect]
 :::
 # claim
 `claim <character> <password>`
 
-Links a character you already have to the account you are logged in to: one made at the connect screen with `create`, made by staff with [@pcreate], or brought over from a PennMUSH database. The character's own password proves it is yours; for a character on another account of yours, that account's password moves it over. The last word is the password, so a name with spaces needs no quotes. Then [play] connects to it. Only works in account mode, which [login] and [register] put you in.
+Links a character you already have to the account you are logged in to: one made by staff with [@pcreate], or brought over from a PennMUSH database. The character's own password proves it is yours; for a character on another account of yours, that account's password moves it over. The last word is the password, so a name with spaces needs no quotes. Then [play] connects to it. Only works in account mode, which [login] and [register] put you in.
 
 A character with no password cannot be claimed; staff can link it for you. Once you are playing, [@account] `/claim` does the same in the game, and the portal does it from Account, Claim an existing character. See [accounts claiming].
 
@@ -2850,7 +2850,7 @@ This is a SharpMUSH command; PennMUSH has no account layer.
 - [accounts]
 - [login]
 - [play]
-- [make]
+- [create]
 :::
 # version
 `version`

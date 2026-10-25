@@ -8794,9 +8794,9 @@
     "file": "sharpcmd.md"
   },
   {
-    "id": "legacy:make",
-    "lookup": "make",
-    "title": "make",
+    "id": "legacy:create",
+    "lookup": "create",
+    "title": "create",
     "aliases": [],
     "sections": [],
     "file": "sharpcmd.md"

@@ -93,7 +93,7 @@ One is registered and does nothing yet: `websocket_html()` checks its arguments 
   `@locale`: the language the server addresses you in.<br>
   `@map`: `@dolist` passing the element as `%0` rather than substituting it.<br>
   `page/recall`, `page/conversations`, `page/timestamps`: switches that read your own page log; PennMUSH keeps no page log, so the parity harness has no case for them.<br>
-  `register`, `login`, `make`, `play`: the account layer at the login screen.<br>
+  `register`, `login`, `play`, `claim`: the account layer at the login screen. `create` keeps PennMUSH's name, but makes the character on the account you logged in to.<br>
   `version`: `@version` before you have connected. PennMUSH has no bare `version`; it is accepted here because crawlers and players from MUX-family servers type it, and it publishes nothing `INFO` does not.<br>
   `~<command>`: run one command under strict parsing.
 

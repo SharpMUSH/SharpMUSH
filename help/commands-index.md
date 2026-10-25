@@ -47,7 +47,7 @@ In addition to these, there are several types of '@' commands. @-commands are us
 
 ## At the login screen and on a connection
 
-At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, [make] and [play] create and connect its characters, and [claim] adds a character you already have. See [accounts].
+At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, [create] and [play] create and connect its characters, and [claim] adds a character you already have. See [accounts].
 
 Commands that act on your connection rather than your character are listed in [socket commands]. Players used to MUX can also use its channel commands; see [MUX Comsys].
 
