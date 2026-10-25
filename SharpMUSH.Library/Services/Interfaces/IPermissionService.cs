@@ -137,8 +137,6 @@ public interface IPermissionService
 	/// </summary>
 	ValueTask<bool> CanLocate(AnySharpObject who, AnySharpObject what);
 
-	ValueTask<bool> CanFind(AnySharpObject viewer, AnySharpObject target);
-
 	ValueTask<bool> CanSee(AnySharpObject viewer, AnySharpObject target);
 
 	ValueTask<bool> CanSee(AnySharpObject viewer, SharpObject target);
