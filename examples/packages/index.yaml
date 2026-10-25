@@ -82,7 +82,7 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.4.0
+    version: 1.4.1
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-scene/
     name: Radio in scenes
