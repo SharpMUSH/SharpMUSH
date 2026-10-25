@@ -43,6 +43,33 @@ public class TimeFunctionUnitTests
 	}
 
 	/// <summary>
+	/// time() reads its argument as parse_timezone_arg does: UTC in any case, a whole number of hours as the
+	/// Etc/GMT zone, any other number under 24 as that many hours, and nothing else that is not a zone or an object.
+	/// Each answer is the offset from time(utc), give or take the seconds the calls take.
+	/// </summary>
+	[Test]
+	[Arguments("utc", "0")]
+	[Arguments("UTC", "0")]
+	[Arguments("-8", "-28800")]
+	[Arguments("5.5", "19800")]
+	public async Task TimeReadsAZoneArgument(string zone, string offset)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(
+			$"lte(abs(sub(sub(convtime(time({zone}),UTC),convtime(time(utc),UTC)),{offset})),2)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("1");
+	}
+
+	[Test]
+	[Arguments("time(Nowhere/Atlantis)")]
+	[Arguments("time(24)")]
+	[Arguments("time(no_such_object_or_zone)")]
+	public async Task TimeRefusesAnUnknownZone(string call)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(call));
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 INVALID TIME ZONE");
+	}
+
+	/// <summary>
 	/// convtime() reads a date and time with no offset of its own in the zone it is given, whatever the format: 20:00
 	/// on 30 October 2026 is 00:00 UTC the next day in New York (summer time) and 20:00 UTC in London (not).
 	/// A time that names its offset keeps it, and one the zone skips when summer time starts is refused, except in
@@ -55,7 +82,7 @@ public class TimeFunctionUnitTests
 	[Arguments("convtime(2026-10-30 20:00,UTC)", "1793390400")]
 	[Arguments("convtime(2026-10-30T20:00:00Z,America/New_York)", "1793390400")]
 	[Arguments("convtime(2026-10-30T20:00:00+02:00,UTC)", "1793383200")]
-	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIMEZONE")]
+	[Arguments("convtime(2026-10-30 20:00,Nowhere/Special)", "#-1 INVALID TIME ZONE")]
 	[Arguments("convtime(2027-03-14 02:30,America/New_York)", "#-1 INVALID TIME")]
 	[Arguments("convtime(Sun Mar 14 02:30:00 2027,America/New_York)", "1805009400")]
 	public async Task ConvTimeReadsAWallClockInTheZone(string call, string expected)

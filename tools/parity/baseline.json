@@ -245,6 +245,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "45-time-audit/time.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "44-objects-audit/obj.login#0",
    "command": "Wiz wizpass"
   },

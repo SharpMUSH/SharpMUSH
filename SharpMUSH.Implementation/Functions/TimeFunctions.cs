@@ -1,11 +1,14 @@
 ﻿using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Time;
 using System.Collections.Frozen;
@@ -341,30 +344,74 @@ public partial class Functions
 			return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
 		}
 
-		if (TimeZones.TryFind(arg0, out var timeZone))
+		return await TimeZoneArgumentAsync(parser, executor, arg0) switch
 		{
-			return TimeZoneInfo.ConvertTime(DateTimeOffset.Now, timeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture);
+			TimeZoneInfo zone => TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).ToString(PennTimeFormat, CultureInfo.InvariantCulture),
+			Error<string> error => error.Value
+		};
+	}
+
+	/// <summary>
+	/// PennMUSH's <c>parse_timezone_arg</c> (<c>src/tz.c:445-518</c>): <c>UTC</c>, a zone name, an integer as the
+	/// hours east of GMT (<c>Etc/GMT</c> with the sign turned round), or any number of hours under 24; otherwise
+	/// an object's <c>TZ</c> attribute, or the server's zone when it has none. Penn takes only a dbref or objid
+	/// for the object; SharpMUSH also finds one by name, such as <c>*player</c>, once the argument is no zone.
+	/// </summary>
+	private async ValueTask<Result<TimeZoneInfo>> TimeZoneArgumentAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string argument)
+	{
+		if (NamedOrNumericTimeZone(argument) is TimeZoneInfo zone)
+		{
+			return zone;
 		}
 
-		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
-			parser, executor, executor, arg0, LocateFlags.All,
-			async found =>
-			{
-				// parse_timezone_arg (tz.c:463) reads TZ through atr_get.
-				var attr = await AttributeService.GetAttributeAsync(executor, found, "TZ",
-					IAttributeService.AttributeMode.Read, true);
-				if (attr is not SharpAttribute[] tz)
-				{
-					return DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
-				}
+		if (await TimeZoneHolderAsync(parser, executor, argument) is not AnySharpObject found)
+		{
+			return new Error<string>(ErrorMessages.Returns.InvalidTimezone);
+		}
 
-				var attrValue = tz.Last().Value.ToPlainText();
-
-				return TimeZones.TryFind(attrValue, out var dbTimeZone)
-					? TimeZoneInfo.ConvertTime(DateTimeOffset.Now, dbTimeZone).ToString(PennTimeFormat, CultureInfo.InvariantCulture)
-					: DateTimeOffset.Now.ToLocalTime().ToString(PennTimeFormat, CultureInfo.InvariantCulture);
-			});
+		return await AttributeService.GetAttributeAsync(executor, found, "TZ", IAttributeService.AttributeMode.Read, true) is SharpAttribute[] tz
+			? NamedOrNumericTimeZone(tz.Last().Value.ToPlainText())
+			: TimeZoneInfo.Local;
 	}
+
+	private async ValueTask<AnyOptionalSharpObject> TimeZoneHolderAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		string argument)
+		=> HelperFunctions.ParseDbRef(argument) is DBRef dbref
+			? await Mediator.Send(new GetObjectNodeQuery(dbref))
+			: await LocateService.Locate(parser, executor, executor, argument, LocateFlags.All) switch
+			{
+				AnySharpObject named => new AnyOptionalSharpObject(named),
+				_ => new AnyOptionalSharpObject(new None())
+			};
+
+	private static Result<TimeZoneInfo> NamedOrNumericTimeZone(string argument)
+	{
+		if (argument.Equals("UTC", StringComparison.OrdinalIgnoreCase))
+		{
+			return TimeZoneInfo.Utc;
+		}
+
+		if (TimeZoneNamePattern().IsMatch(argument) && TimeZones.TryFind(argument, out var named))
+		{
+			return named;
+		}
+
+		if (int.TryParse(argument, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var hours)
+				&& TimeZones.TryFind($"Etc/GMT{-(long)hours:+0;-0;+0}", out var etc))
+		{
+			return etc;
+		}
+
+		return decimal.TryParse(argument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
+				CultureInfo.InvariantCulture, out var offset) && Math.Abs(offset) < 24
+			? TimeZoneInfo.CreateCustomTimeZone(argument, TimeSpan.FromSeconds((double)Math.Floor(offset * 3600)), argument, argument)
+			: new Error<string>(ErrorMessages.Returns.InvalidTimezone);
+	}
+
+	/// <summary><c>is_valid_tzname</c> (<c>src/tz.c:96-126</c>).</summary>
+	[GeneratedRegex(@"\A[A-Z][A-Za-z0-9_+-]+(?:/[A-Z][A-Za-z0-9_+-]+)?\z")]
+	private static partial Regex TimeZoneNamePattern();
 
 	[SharpFunction(Name = "timecalc", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]

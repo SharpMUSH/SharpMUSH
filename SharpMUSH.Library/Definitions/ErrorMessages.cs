@@ -228,7 +228,7 @@ public static partial class ErrorMessages
 		public const string InvalidSpecPair = "#-1 INVALID SPEC PAIR";
 		public const string InvalidSpecType = "#-1 INVALID SPEC TYPE";
 		public const string InvalidTagName = "#-1 INVALID TAG NAME";
-		public const string InvalidTimezone = "#-1 INVALID TIMEZONE";
+		public const string InvalidTimezone = "#-1 INVALID TIME ZONE";
 		public const string InvalidTimestring = "#-1 INVALID TIMESTRING";
 		public const string InvalidType = "#-1 INVALID TYPE";
 		public const string InvalidValue = "#-1 INVALID VALUE";
