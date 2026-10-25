@@ -1,0 +1,51 @@
+# colors() from the softcode audit (#2268): every conversion PennMUSH's help shows, plus the other
+# formats, background colours, xterm numbers and the errors.
+::case colors.login
+::login wiz Wiz wizpass
+think ok
+
+::case colors.help  the examples in help colors2
+think colors(*yellow*)
+think colors(+yellow, hex)
+think colors(+yellow, xterm256)
+think colors(+yellow, 16color)
+think colors(/+yellow, 16color)
+think colors(#ffff00, name)
+think colors(iuB+red, hex styles)
+think colors(+blue huyG/+black, auto)
+
+::case colors.formats  each format and its short name
+think colors(+orange, rgb)
+think colors(+orange, r)
+think colors(+orange, d)
+think colors(+orange, h)
+think colors(+orange, c)
+think colors(+orange, x)
+think colors(+lightyellow, auto)
+think colors(hr, hex)
+think colors(r, hex)
+think colors(hr, 16color)
+think colors(R, 16color)
+think colors(+xterm200, 16color)
+think colors(+xterm200, hex)
+think colors(200, xterm256x)
+think colors(0xff, d)
+think colors(0xabc, hex)
+think colors(<255 128 0>, hex)
+think colors(<#123456>, xterm256)
+think colors(#123456, 16color)
+think colors(#123456, name)
+think colors(+red/+blue, hex)
+think colors(+red/+blue, 16color)
+think colors(+red/+blue, auto)
+think colors(fhu+red, styles 16color)
+think colors(h, styles)
+
+::case colors.errors  the errors
+think colors(+nosuchcolor, hex)
+think colors(n, hex)
+think colors(+red, bogus)
+think colors(#12345, hex)
+think colors(+red,)
+think words(colors())
+think colors(xterm1*)

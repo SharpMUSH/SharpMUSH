@@ -245,6 +245,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "46-colors-audit/colors.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "45-time-audit/time.login#0",
    "command": "Wiz wizpass"
   },

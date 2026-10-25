@@ -204,6 +204,7 @@ public static partial class ErrorMessages
 		public const string InvalidBase64String = "#-1 INVALID BASE64 STRING";
 		public const string InvalidClass = "#-1 INVALID CLASS";
 		public const string InvalidColor = "#-1 INVALID COLOR";
+		public const string ColorsRequiresAColor = "#-1 COLORS() REQUIRES AT LEAST ONE COLOR";
 		public const string InvalidConnectionId = "#-1 INVALID CONNECTION ID";
 		public const string InvalidEscapeCode = "#-1 INVALID ESCAPE CODE";
 		public const string InvalidField = "#-1 INVALID FIELD";

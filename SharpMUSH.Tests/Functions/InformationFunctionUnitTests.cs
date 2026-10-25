@@ -386,43 +386,39 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
+	/// <summary>
+	/// The downgrades PennMUSH answers: the colour table's first row by name with the colour's value, so +yellow is
+	/// xterm 11 (xterm11 sorts before xterm226 and yellow), and a background letter in upper case.
+	/// </summary>
 	[Test]
-	[Arguments("colors(+yellow, xterm256)")]
-	public async Task Colors_NameToXterm(string str)
+	[Arguments("colors(+yellow, xterm256)", "11")]
+	[Arguments("colors(+orange, xterm256x)", "d6")]
+	[Arguments("colors(+yellow, 16color)", "yh")]
+	[Arguments("colors(/+yellow, 16color)", "Y")]
+	[Arguments("colors(+xterm200, 16color)", "mh")]
+	[Arguments("colors(#ffff00, name)", "yellow yellow1")]
+	[Arguments("colors(#123456, name)", "#-1 NO MATCHING COLOR NAME")]
+	[Arguments("colors(0xabc, hex)", "#0a0b0c")]
+	[Arguments("colors(<255 128 0>, hex)", "#ff8000")]
+	[Arguments("colors(+lightyellow, auto)", "#ffffe0")]
+	[Arguments("colors(fhu+red, styles 16color)", "ufrh")]
+	[Arguments("colors(h, styles)", "#-1 COLORS() REQUIRES AT LEAST ONE COLOR")]
+	public async Task Colors_Downgrades(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
-		var xterm = result.ToPlainText();
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
 
-		await Assert.That(int.TryParse(xterm, out var xtermNum)).IsTrue();
-		await Assert.That(xtermNum).IsGreaterThanOrEqualTo(0);
-		await Assert.That(xtermNum).IsLessThanOrEqualTo(255);
+	/// <summary>A pattern lists in the table's order, which reads a number in a name as a number.</summary>
+	[Test]
+	public async Task Colors_PatternListsXtermNumbersInOrder()
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain("extract(colors(xterm1*),1,4)"));
+		await Assert.That(result.ToPlainText()).IsEqualTo("xterm1 xterm10 xterm11 xterm12");
 	}
 
 	[Test]
-	[Arguments("colors(+yellow, 16color)")]
-	public async Task Colors_NameTo16Color(string str)
-	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
-		var ansiCode = result.ToPlainText();
-
-		await Assert.That(ansiCode).IsNotEmpty();
-		// Yellow should map to 'y' or 'hy' (highlight yellow)
-		await Assert.That(ansiCode.Contains('y')).IsTrue();
-	}
-
-	[Test]
-	[Arguments("colors(#ffff00, name)", "yellow")]
-	public async Task Colors_HexToName(string str, string expectedContains)
-	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
-		var names = result.ToPlainText();
-
-		await Assert.That(names).IsNotEmpty();
-		await Assert.That(names).Contains(expectedContains);
-	}
-
-	[Test]
-	[Arguments("colors(+blue /+black, hex)", "#0000ff /#000000")]
+	[Arguments("colors(+blue /+black, hex)", "#0000ff/#000000")]
 	public async Task Colors_ForegroundAndBackground(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
@@ -430,7 +426,7 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("colors(iuB+red, hex styles)", "iuB #ff0000")]
+	[Arguments("colors(iuB+red, hex styles)", "ui#ff0000/#0000ee")]
 	public async Task Colors_WithStyles(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
@@ -438,7 +434,7 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("colors(+blue huyG/+black, auto)", "+blue huyG/+black")]
+	[Arguments("colors(+blue huyG/+black, auto)", "yh/+black")]
 	public async Task Colors_AutoFormat(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
@@ -446,7 +442,7 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("colors(invalidcolor, hex)", "#-1 INVALID COLOR")]
+	[Arguments("colors(+invalidcolor, hex)", "#-1 INVALID COLOR")]
 	public async Task Colors_InvalidColor(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
@@ -454,7 +450,7 @@ public class InformationFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("colors(+yellow, invalidformat)", "#-1 INVALID FORMAT")]
+	[Arguments("colors(+yellow, invalidformat)", "#-1 INVALID ARGUMENT")]
 	public async Task Colors_InvalidFormat(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
