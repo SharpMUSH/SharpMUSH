@@ -48,7 +48,7 @@ public partial class Commands
 				: 78;
 	}
 
-	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
+	[SharpCommand(Name = "HUH_COMMAND", Behavior = CB.Default | CB.NoParse, MinArgs = 0, MaxArgs = 1, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> HuhCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);

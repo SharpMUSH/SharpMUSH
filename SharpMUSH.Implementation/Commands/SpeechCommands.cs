@@ -27,7 +27,7 @@ public partial class Commands
 		=> ValueTask.FromResult(new Option<CallState>(CallState.Empty));
 
 	// PennMUSH src/command.c: {"THINK", "NOEVAL", cmd_think, CMD_T_ANY | CMD_T_NOGAGGED, 0, 0}.
-	[SharpCommand(Name = "THINK", Output = CommandOutput.Value, Switches = ["NOEVAL"], Behavior = CB.Default, MinArgs = 0, MaxArgs = 1,
+	[SharpCommand(Name = "THINK", Output = CommandOutput.Value, Switches = ["NOEVAL"], Behavior = CB.Default | CB.NoGagged, MinArgs = 0, MaxArgs = 1,
 		ParameterNames = ["expression"])]
 	public async ValueTask<Option<CallState>> Think(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

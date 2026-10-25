@@ -1165,7 +1165,8 @@ public partial class Commands
 		// Only the command queue's size is reported, so it is counted rather than collected.
 		var enqueueCount = await Mediator.CreateStream(new ScheduleEnqueueQuery(targetDbRef)).CountAsync();
 
-		if (switches.Contains("SUMMARY"))
+		// cmd_ps reads /count as /summary (src/cmds.c:1317).
+		if (switches.Contains("SUMMARY") || switches.Contains("COUNT"))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsSummaryHeader), executor);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PsCommandQueueFormat), executor, enqueueCount);

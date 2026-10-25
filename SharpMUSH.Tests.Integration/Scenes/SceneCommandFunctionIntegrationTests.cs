@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using NATS.Client.Core;
 using SharpMUSH.Library;
@@ -68,6 +69,50 @@ public class SceneCommandFunctionIntegrationTests
 		await Assert.That(posesList).Contains(poseId);
 
 		await Assert.That(await Eval($"scenepose({sceneId}, {poseId}, content)")).Contains("hello phase3 pose");
+	}
+
+	[Test]
+	public async Task SceneInvite_LetsAPlayerJoinAnInviteOnlyScene()
+	{
+		var sceneId = await CreateSceneAsync("Invite only");
+		await Cmd($"@scene/set {sceneId}/public=1");
+		await Assert.That(await Eval($"sceneset({sceneId},joinpolicy,invite-only)")).IsEqualTo(sceneId);
+		var guest = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactory.Services, WebAppFactory.Services.GetRequiredService<IMediator>(), Connection, "SceneGuest");
+		var guestRef = $"#{guest.DbRef.Number}";
+		try
+		{
+			await Assert.That(await Eval($"scenejoin({sceneId},{guestRef})"))
+				.IsEqualTo("#-1 This scene is invite-only. Ask its owner for an invitation.");
+
+			await Assert.That(await Eval($"sceneinvite({sceneId},{guestRef})")).IsEqualTo(sceneId);
+			await Assert.That(await Eval($"scenejoin({sceneId},{guestRef})")).IsEqualTo(sceneId);
+			await Assert.That(await Eval($"scenemember({sceneId},{guestRef},role)")).IsEqualTo("participant");
+
+			await Assert.That(await Eval($"sceneinvite({sceneId},{guestRef})")).IsEqualTo("#-1 That player already participates.");
+		}
+		finally
+		{
+			await Connection.Disconnect(guest.Handle);
+		}
+	}
+
+	[Test]
+	public async Task SceneSetPose_ChangesTheTypeAndRefusesABadOne()
+	{
+		var sceneId = await CreateSceneAsync("Set pose");
+		await Cmd($"@scene/set {sceneId}/public=1");
+		var poseId = await Eval($"sceneaddpose({sceneId},{God},,{God},ic,pose,,typed pose)");
+
+		await Assert.That(await Eval($"scenesetpose({poseId},type,OOC)")).IsEqualTo(poseId);
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},type)")).IsEqualTo("ooc");
+
+		await Assert.That(await Eval($"scenesetpose({poseId},mood,grim)")).IsEqualTo(poseId);
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},mood)")).IsEqualTo("grim");
+
+		await Assert.That(await Eval($"scenesetpose({poseId},type,not a type)"))
+			.IsEqualTo("#-1 A pose type is 1 to 32 letters, digits, - and _, starting with a letter or digit.");
+		await Assert.That(await Eval($"scenepose({sceneId},{poseId},type)")).IsEqualTo("ooc");
 	}
 
 	[Test]

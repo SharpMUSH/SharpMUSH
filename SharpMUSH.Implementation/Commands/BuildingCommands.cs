@@ -36,7 +36,7 @@ public partial class Commands
 	/// split the whole of it arrived as one argument, so the dbref could not be read at all.
 	/// NOTE: Cost parameter requires economy/quota system implementation.
 	/// </remarks>
-	[SharpCommand(Name = "@CREATE", Output = CommandOutput.Value, Behavior = CB.Default | CB.EqSplit | CB.RSArgs, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
+	[SharpCommand(Name = "@CREATE", Output = CommandOutput.Value, Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = 3, ParameterNames = ["name", "cost", "dbref"])]
 	public async ValueTask<Option<CallState>> Create(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -135,7 +135,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@SET", Behavior = CB.EqSplit, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
+	[SharpCommand(Name = "@SET", Behavior = CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;

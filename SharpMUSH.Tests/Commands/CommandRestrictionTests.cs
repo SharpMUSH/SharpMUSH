@@ -76,6 +76,21 @@ public class CommandRestrictionTests
 	}
 
 	[Test]
+	[Arguments("think hi")]
+	[Arguments("@create GagThing")]
+	[Arguments("@set me=GAGATTR:1")]
+	[Arguments("@pemit me=hello")]
+	[Arguments("@teleport me=here")]
+	public async Task GaggedPlayer_CannotRunANoGaggedCommand(string command)
+	{
+		var player = await PlayerAsync("CmdGagged", "@set {0}=GAGGED");
+
+		var said = await Run(player, command);
+
+		await Assert.That(said.Select(delivery => delivery.Message)).Contains("Permission denied.");
+	}
+
+	[Test]
 	public async Task Mortal_CanRename()
 	{
 		var player = await PlayerAsync("CmdMortal");
@@ -94,11 +109,10 @@ public class CommandRestrictionTests
 	{
 		var player = await PlayerAsync("CmdLset", grant);
 
-		// lset() is do_lset, which says why it changed nothing — here "No such lock." — so the function's
-		// own answer is one of the player's lines rather than the only one.
-		var said = (await Run(player, "think lset(me/Basic,no_inherit)"))
-			.Where(delivery => delivery.Sender == player.DbRef).Select(delivery => delivery.Message).ToList();
+		// Evaluated as the player rather than through think, which a GAGGED player may not run.
+		var answer = (await WebAppFactoryArg.FunctionParserFor(player.DbRef).FunctionParse(MarkupText.Plain("lset(me/Basic,no_inherit)")))
+			?.Message.ToPlainText();
 
-		await Assert.That(said.Contains(ErrorMessages.Returns.PermissionDenied)).IsEqualTo(denied);
+		await Assert.That(answer == ErrorMessages.Returns.PermissionDenied).IsEqualTo(denied);
 	}
 }

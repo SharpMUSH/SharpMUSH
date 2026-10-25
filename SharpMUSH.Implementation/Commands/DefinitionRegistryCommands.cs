@@ -43,8 +43,8 @@ public partial class Commands : ICommandRestrictionApplier
 	[SharpCommand(Name = "@COMMAND",
 		Switches =
 		[
-			"ADD", "ALIAS", "ARGS", "CLONE", "DELETE", "EqSplit", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
-			"DISABLE", "RESTRICT", "NOPARSE", "RSNoParse"
+			"ADD", "ALIAS", "ARGS", "CLONE", "DELETE", "EQSPLIT", "LSARGS", "RSARGS", "NOEVAL", "ON", "OFF", "QUIET", "ENABLE",
+			"DISABLE", "RESTRICT", "NOPARSE", "RSNOPARSE"
 		], Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2, ParameterNames = ["object", "command", "code"])]
 	public async ValueTask<Option<CallState>> Command(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

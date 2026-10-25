@@ -86,6 +86,27 @@ public class QuietConfirmationTests
 	}
 
 	/// <summary>
+	/// <c>do_set_atr</c> reports the attribute's name upper-cased, however it was typed
+	/// (<c>src/attrib.c:2267</c>): <c>&amp;json me=x</c> is <c>Wiz/JSON - Set.</c>.
+	/// </summary>
+	[Test]
+	[Arguments("&{0} me=value", "Set")]
+	[Arguments("@set me={0}:value", "Set")]
+	[Arguments("&{0} me", "Cleared")]
+	public async ValueTask AttributeReportNamesTheAttributeUpperCased(string command, string what)
+	{
+		var player = await PlayerInOwnRoom("CaseAmp", false);
+		var attribute = TestIsolationHelpers.GenerateUniqueName("caseamp").ToLowerInvariant();
+		await As(player, $"&{attribute} me=before");
+
+		var said = await MessagesWhile(player.DbRef, player.Handle,
+			async () => await As(player, string.Format(command, attribute)));
+
+		await Assert.That(said.Any(message => message.EndsWith($"/{attribute.ToUpperInvariant()} - {what}.", StringComparison.Ordinal)))
+			.IsTrue().Because(string.Join(" | ", said));
+	}
+
+	/// <summary>
 	/// The standard-attribute commands (<c>@desc</c>, <c>@succ</c>, ...) are <c>do_set_atr</c> with the
 	/// report flag too, and share its QUIET gate (<c>src/attrib.c:2446</c>).
 	/// </summary>
