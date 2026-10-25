@@ -938,7 +938,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@GREP", Output = CommandOutput.Value, Switches = ["LIST", "PRINT", "ILIST", "IPRINT", "REGEXP", "WILD", "NOCASE", "PARENT"],
-		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "pattern"])]
+		Behavior = CB.Default | CB.EqSplit | CB.RSNoParse | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "pattern"])]
 	public async ValueTask<Option<CallState>> Grep(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -990,7 +990,7 @@ public partial class Commands
 			checkParents,
 			IAttributeService.AttributePatternMode.Wildcard) switch
 		{
-			IAsyncEnumerable<LazySharpAttribute> attributes => await GrepAttributesAsync(parser, executor, attributes, switches, pattern),
+			IAsyncEnumerable<LazySharpAttribute> attributes => await GrepAttributesAsync(parser, executor, targetObject, attributes, switches, pattern),
 			Error<string> error => await GrepUnreadableAsync(executor, error.Value)
 		};
 	}
@@ -1031,7 +1031,7 @@ public partial class Commands
 	/// (<see cref="LazySharpAttributeExtensions.ReadValueOnceAsync"/>).
 	/// </summary>
 	private async ValueTask<Option<CallState>> GrepAttributesAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		IAsyncEnumerable<LazySharpAttribute> attributes, IEnumerable<string> switches, string pattern)
+		AnySharpObject targetObject, IAsyncEnumerable<LazySharpAttribute> attributes, IEnumerable<string> switches, string pattern)
 	{
 		var options = GrepOptions.From(switches, pattern);
 		var matchingAttributes = new List<(LazySharpAttribute Attribute, MString Value)>();
@@ -1066,7 +1066,8 @@ public partial class Commands
 		else
 		{
 			var attrNames = string.Join(" ", matchingAttributes.Select(a => a.Attribute.LongName));
-			await NotifyService.Notify(executor, attrNames, executor);
+			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.GrepMatchesFormat), executor,
+				pattern, targetObject.Object().Name, targetObject.Object().DBRef.Number, attrNames);
 		}
 
 		// The attribute list grep() gives, whichever way the matches were shown.

@@ -311,7 +311,7 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
+	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -443,7 +443,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit, MinArgs = 1, MaxArgs = 2,
+	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 1, MaxArgs = 2,
 		Switches = ["LIST", "INSIDE", "SILENT"], ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{

@@ -1366,7 +1366,8 @@ public static partial class ErrorMessages
 		public const string GrepWildcardTimedOutFormat = "Wildcard pattern timed out: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GrepInvalidWildcardFormat = "Invalid wildcard pattern: {0}";
-		public const string GrepNoMatchingAttributesFound = "No matching attributes found.";
+		public const string GrepNoMatchingAttributesFound = "No matches.";
+		public const string GrepMatchesFormat = "Matches of '{0}' on {1}(#{2}): {3}";
 
 		public const string IncludeMustSpecifyAttributePath = "You must specify an object/attribute to include.";
 		public const string IncludeMustSpecifyObjectAttributePath = "You must specify an object/attribute path.";

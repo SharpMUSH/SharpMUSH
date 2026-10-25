@@ -1251,7 +1251,7 @@ event Trigger the ``OBJECT`FLAG`` event when this flag is set or cleared. Only m
 
 @grep returns a list of all attributes on `<object>` which match `<pattern>`. If `<attrs>` is specified, only attributes which match the wildcard pattern `<attrs>` are checked; it defaults to "*". Use "**" for all attributes.
 
-`@grep` outputs the names of the attributes matched, as `grep()` returns them.
+`@grep` prints `Matches of '<pattern>' on <object>(#<dbref>): ` and then the names of the attributes matched, as `grep()` returns them. When nothing matches it prints `No matches.`
 
 By default, attributes which contain the string `<pattern>` are returned. However, if the `/wild` switch is given, `<pattern>` is treated as a wildcard pattern, and attributes which match the pattern are returned. If the `/regexp` switch is given, `<pattern>` is treated as a regular expression, and attributes matching the regexp are returned. Please note that `<pattern>` will NOT be evaluated, so you can easily grep for code strings.
 

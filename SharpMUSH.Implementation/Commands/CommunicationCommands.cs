@@ -97,7 +97,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> NoSpoofPrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Private, true);
 
-	[SharpCommand(Name = "@NSPROMPT", Switches = ["SILENT", "NOISY", "NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+	[SharpCommand(Name = "@NSPROMPT", Switches = ["SILENT", "NOISY", "NOEVAL", "SPOOF"], Behavior = CB.Default | CB.EqSplit,
 		MinArgs = 2, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public async ValueTask<Option<CallState>> NoSpoofPrompt(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Prompt, true);
@@ -117,7 +117,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Omit, false);
 
-	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit,
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public async ValueTask<Option<CallState>> PrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Private, false);

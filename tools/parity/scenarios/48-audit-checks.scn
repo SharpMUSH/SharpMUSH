@@ -1,6 +1,7 @@
 # Softcode audit (#2268) checks. A player or thing hears what the objects it carries say: notify_except
 # passes na_loc, which yields the location before its contents (pennmush src/notify.c). do_set_atr
-# reports the attribute's stored, upper-cased name (src/attrib.c).
+# reports the attribute's stored, upper-cased name (src/attrib.c). Command evaluation flags follow
+# src/command.c.
 
 ::case use.ause  an object's @ause pose reaches the player carrying it
 ::login wiz Wiz wizpass
@@ -19,3 +20,8 @@ use revolver
 &lowattr me=value
 @set me=otherattr:value
 &lowattr me
+
+::case grep.noparse  @grep searches for its pattern as typed (RS_NOPARSE, src/command.c:173)
+&GREPTEXT me=has [add(1,1)] here
+@grep me=[add(1,1)]
+@grep me=nowhere-to-be-found

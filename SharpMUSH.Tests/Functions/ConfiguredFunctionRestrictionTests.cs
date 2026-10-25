@@ -61,13 +61,10 @@ public class ConfiguredFunctionRestrictionTests
 		return player;
 	}
 
+	// Evaluated as the player rather than through think, which a GAGGED player may not run.
 	private async Task<string> Think(TestIsolationHelpers.TestPlayer who, string expression)
-	{
-		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(who.DbRef);
-		await Parser.CommandParse(who.Handle, ConnectionService, MarkupText.Plain($"think {expression}"));
-		return WebAppFactoryArg.Notifications.DeliveriesFor(who.DbRef).Skip(before)
-			.Single(delivery => delivery.Sender == who.DbRef).Message;
-	}
+		=> (await WebAppFactoryArg.FunctionParserFor(who.DbRef).FunctionParse(MarkupText.Plain(expression)))?.Message.ToPlainText()
+			?? string.Empty;
 
 	/// <summary>The issue's acceptance case: <c>lstats: [noguest]</c> refuses a guest, and removing it loosens it.</summary>
 	[Test]
