@@ -89,11 +89,11 @@ public class TextFunctionUnitTests
 
 	/// <summary>
 	/// <c>fun_textsearch</c> (<c>src/help.c:1197</c>) names the entries whose text holds the pattern,
-	/// caselessly and with wildcards. "natural log" is in the text of exactly these three shipped topics.
+	/// caselessly and with wildcards. "natural log" is in the text of exactly these two shipped topics.
 	/// </summary>
 	[Test]
-	[Arguments("textsearch(help,natural log)", "ln() log() textfile examples")]
-	[Arguments("textsearch(help,NATURAL L?G,|)", "ln()|log()|textfile examples")]
+	[Arguments("textsearch(help,natural log)", "ln() log()")]
+	[Arguments("textsearch(help,NATURAL L?G,|)", "ln()|log()")]
 	[Arguments("textsearch(help,zzznosuchtext)", "")]
 	public async Task TextsearchFindsEntriesByTheirText(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);

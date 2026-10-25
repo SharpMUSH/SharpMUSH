@@ -65,7 +65,7 @@ The action list receives:
 - `%<headers>`: every header of the reply, as a JSON object. Each name is in lower case, and its value is a string, or a list of strings when the header came more than once. Read one with json_query().
 - `%<http-overflow>`: 1 if the body was longer than one value can hold and was cut short, otherwise 0. The object holding `<attr>` is also told "Too much HTTP data received; excess truncated."
 
-These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers %q`<status>`, %q`<content-type>` and %q`<http-overflow>`, as PennMUSH does.
+These are named arguments, so they belong to the action list alone. With the `http_qregisters` option on (a PennMUSH database import turns it on), they are also set as the q-registers `%q<status>`, `%q<content-type>` and `%q<http-overflow>`, as PennMUSH does.
 
 ## Data and headers
 
@@ -91,7 +91,7 @@ Otherwise the whole command is refused with "A secret in the headers may not be 
 
 ## PennMUSH registers
 
-With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: %q`<content-type>` sets the type of `<data>` when no `<headers>` are given, and %q`<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
+With the `http_qregisters` option on, two q-registers set when @http runs are read as PennMUSH reads them: `%q<content-type>` sets the type of `<data>` when no `<headers>` are given, and `%q<userpass>`, of the form `<user>:<password>`, is sent as HTTP Basic login. Without that option, q-registers are not read: a register left over from other code never decides where a password goes.
 
 ## Examples
 
