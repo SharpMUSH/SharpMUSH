@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -313,10 +313,10 @@ objects:
       FUN`PAINT: |-
         if(strmatch(setr(paint_toned,tone(%0,%1)),#-*),ansi(%0,%1),%q<paint_toned>)
       # %0 a colour as typed: 1 when it is a theme colour tone() knows, a colour colors() knows (+red, #ff8800,
-      # xterm123), or ansi()'s letter codes (hg, hcB). ansi() itself ignores what it does not know, so it cannot
-      # tell.
+      # <255 136 0>, +xterm123), or ansi()'s letter codes (hg, hcB). ansi() itself ignores what it does not know,
+      # so it cannot tell, and neither can colors() for a bare word: it reads "sparkly" as letter codes.
       FUN`COLOUR`VALID: |-
-        cand(strlen(%0),cor(not(strmatch(tone(%0,x),#-*)),not(strmatch(colors(%0,hex),#-*)),regmatch(%0,^\[fhiunxXrRgGyYbBmMcCwW\]+$)))
+        cand(strlen(%0),cor(not(strmatch(tone(%0,x),#-*)),cand(regmatch(%0,^\[+#<0-9\]),not(strmatch(colors(%0,hex),#-*))),regmatch(%0,^\[fhiunxXrRgGyYbBmMcCwW\]+$)))
       # The feed's tie-in: each listener's copy of a line, read by name (help @feed tie-ins): key the
       # frequency's id, recipient the listener, name the alterego it was sent under.
       FEED`RADIO`FORMAT: |-
