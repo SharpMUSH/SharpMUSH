@@ -347,9 +347,17 @@ public partial class Functions
 		return await TimeZoneArgumentAsync(parser, executor, arg0) switch
 		{
 			TimeZoneInfo zone => TimeZoneInfo.ConvertTime(DateTimeOffset.Now, zone).ToString(PennTimeFormat, CultureInfo.InvariantCulture),
+			TimeSpan offset => (DateTime.UtcNow + offset).ToString(PennTimeFormat, CultureInfo.InvariantCulture),
 			Error<string> error => error.Value
 		};
 	}
+
+	/// <summary>
+	/// The zone time() reads: a named zone, or a number of hours east of UTC added as it is, as Penn adds
+	/// <c>tz_offset</c> (<c>src/funtime.c:153</c>). An offset is not a <see cref="TimeZoneInfo"/>, which
+	/// allows only whole minutes within 14 hours.
+	/// </summary>
+	private union TimeZoneArgument(TimeZoneInfo, TimeSpan, Error<string>);
 
 	/// <summary>
 	/// PennMUSH's <c>parse_timezone_arg</c> (<c>src/tz.c:445-518</c>): <c>UTC</c>, a zone name, an integer as the
@@ -357,12 +365,13 @@ public partial class Functions
 	/// an object's <c>TZ</c> attribute, or the server's zone when it has none. Penn takes only a dbref or objid
 	/// for the object; SharpMUSH also finds one by name, such as <c>*player</c>, once the argument is no zone.
 	/// </summary>
-	private async ValueTask<Result<TimeZoneInfo>> TimeZoneArgumentAsync(IMUSHCodeParser parser, AnySharpObject executor,
+	private async ValueTask<TimeZoneArgument> TimeZoneArgumentAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string argument)
 	{
-		if (NamedOrNumericTimeZone(argument) is TimeZoneInfo zone)
+		var direct = NamedOrNumericTimeZone(argument);
+		if (direct is not Error<string>)
 		{
-			return zone;
+			return direct;
 		}
 
 		if (await TimeZoneHolderAsync(parser, executor, argument) is not AnySharpObject found)
@@ -385,7 +394,7 @@ public partial class Functions
 				_ => new AnyOptionalSharpObject(new None())
 			};
 
-	private static Result<TimeZoneInfo> NamedOrNumericTimeZone(string argument)
+	private static TimeZoneArgument NamedOrNumericTimeZone(string argument)
 	{
 		if (argument.Equals("UTC", StringComparison.OrdinalIgnoreCase))
 		{
@@ -405,12 +414,13 @@ public partial class Functions
 
 		return decimal.TryParse(argument, NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint,
 				CultureInfo.InvariantCulture, out var offset) && Math.Abs(offset) < 24
-			? TimeZoneInfo.CreateCustomTimeZone(argument, TimeSpan.FromSeconds((double)Math.Floor(offset * 3600)), argument, argument)
+			? TimeSpan.FromSeconds((double)Math.Floor(offset * 3600))
 			: new Error<string>(ErrorMessages.Returns.InvalidTimezone);
 	}
 
-	/// <summary><c>is_valid_tzname</c> (<c>src/tz.c:96-126</c>).</summary>
-	[GeneratedRegex(@"\A[A-Z][A-Za-z0-9_+-]+(?:/[A-Z][A-Za-z0-9_+-]+)?\z")]
+	/// <summary><c>is_valid_tzname</c> (<c>src/tz.c:96-126</c>), but with any number of parts: Penn refuses installed
+	/// zones such as <c>America/Argentina/Buenos_Aires</c>.</summary>
+	[GeneratedRegex(@"\A[A-Z][A-Za-z0-9_+-]+(?:/[A-Z][A-Za-z0-9_+-]+)*\z")]
 	private static partial Regex TimeZoneNamePattern();
 
 	[SharpFunction(Name = "timecalc", MinArgs = 1, MaxArgs = int.MaxValue,

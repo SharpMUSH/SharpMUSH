@@ -36,6 +36,7 @@ public class TimeFunctionUnitTests
 	[Test]
 	[Arguments("America/New_York")]
 	[Arguments("Australia/Sydney")]
+	[Arguments("America/Argentina/Buenos_Aires")]
 	public async Task TimeInAZoneKeepsSummerTime(string zone)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain($"lte(abs(sub(convtime(time({zone}),UTC),convtime(timefmt($a $b $d $H:$M:$S $Y,secs(),{zone}),UTC))),2)"));
@@ -44,7 +45,7 @@ public class TimeFunctionUnitTests
 
 	/// <summary>
 	/// time() reads its argument as parse_timezone_arg does: UTC in any case, a whole number of hours as the
-	/// Etc/GMT zone, any other number under 24 as that many hours, and nothing else that is not a zone or an object.
+	/// Etc/GMT zone, any other number under 24 as that many hours (past the 14 hours and whole minutes a zone allows), and nothing else that is not a zone or an object.
 	/// Each answer is the offset from time(utc), give or take the seconds the calls take.
 	/// </summary>
 	[Test]
@@ -52,6 +53,9 @@ public class TimeFunctionUnitTests
 	[Arguments("UTC", "0")]
 	[Arguments("-8", "-28800")]
 	[Arguments("5.5", "19800")]
+	[Arguments("15", "54000")]
+	[Arguments("-23.5", "-84600")]
+	[Arguments("5.501", "19803")]
 	public async Task TimeReadsAZoneArgument(string zone, string offset)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(
