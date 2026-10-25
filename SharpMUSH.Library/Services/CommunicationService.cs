@@ -97,6 +97,25 @@ public partial class CommunicationService(
 		}
 	}
 
+	public async ValueTask NotifyExceptAsync(
+		AnySharpObject executor,
+		AnySharpObject location,
+		AnySharpObject? except,
+		SharpMessage message,
+		InteractType interact)
+	{
+		if (!location.Equals(except) && await permissionService.CanInteract(executor, location, interact))
+		{
+			await notifyService.Notify(location, message, executor, INotifyService.NotificationType.Emit);
+		}
+
+		if (location.AsOptionalContainer is AnySharpContainer container)
+		{
+			await SendToRoomAsync(executor, container, _ => message, INotifyService.NotificationType.Emit,
+				excludeObjects: except is null ? null : [except], interact: interact);
+		}
+	}
+
 	public async ValueTask<DeliveryResult> SendToObjectAsync(
 		IMUSHCodeParser parser,
 		AnySharpObject executor,

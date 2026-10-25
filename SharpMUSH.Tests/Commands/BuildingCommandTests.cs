@@ -970,10 +970,10 @@ public class BuildingCommandTests
 	}
 
 	/// <summary>
-	/// With neither @describe nor @descformat, look retains the default description.
+	/// With neither @describe nor @descformat, a room shows no description: look_room passes no default.
 	/// </summary>
 	[Test]
-	public async ValueTask Look_Room_NoDescriptionOrFormat_ShowsDefault()
+	public async ValueTask Look_Room_NoDescriptionOrFormat_ShowsNoDescription()
 	{
 		var token = TestIsolationHelpers.GenerateUniqueName("lndf");
 		var player = await CreatePlayer($"LookRoomDefault{token}");
@@ -985,9 +985,46 @@ public class BuildingCommandTests
 
 		var before = WebAppFactoryArg.Notifications.CountFor(player.DbRef);
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("look"));
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, $"RoomDefault_{token}", startIndex: before);
 		var messages = WebAppFactoryArg.Notifications.For(player.DbRef).Skip(before).ToList();
 
-		await Assert.That(messages).Contains("You see nothing special.");
+		await Assert.That(messages).DoesNotContain("You see nothing special.");
+	}
+
+	/// <summary>do_real_open refuses a name ok_object_name rejects: here a trailing space before the alias.</summary>
+	[Test]
+	public async ValueTask Open_NameWithTrailingSpace_IsRefused()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("StrangeExit");
+		var before = WebAppFactoryArg.Notifications.CountFor(Actor.DbRef);
+		var result = await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@open {name} ;alias"));
+
+		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.BadObjectName);
+		await WebAppFactoryArg.Notifications.WaitForAsync(Actor.DbRef, "That's a strange name for an exit!", startIndex: before);
+	}
+
+	/// <summary>
+	/// do_set_atr's LISTEN branch and set_flag's PUPPET notice: whoever holds the object hears it gain and
+	/// lose its ears.
+	/// </summary>
+	[Test]
+	public async ValueTask ListenAndPuppet_AnnounceHearing()
+	{
+		var thing = await CreateFixtureThing("EarThing");
+		var name = (await Mediator.Send(new GetObjectNodeQuery(thing))).Expect<SharpThing>().Object.Name;
+
+		foreach (var (command, heard) in new[]
+		{
+			($"@listen {thing}=*", $"{name} grows ears and can now hear."),
+			($"@listen {thing}", $"{name} loses its ears and becomes deaf."),
+			($"@set {thing}=puppet", $"{name} is now listening."),
+			($"@set {thing}=!puppet", $"{name} is no longer listening.")
+		})
+		{
+			var before = WebAppFactoryArg.Notifications.CountFor(Actor.DbRef);
+			await Parser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain(command));
+			await WebAppFactoryArg.Notifications.WaitForAsync(Actor.DbRef, heard, startIndex: before);
+		}
 	}
 
 	/// <summary>

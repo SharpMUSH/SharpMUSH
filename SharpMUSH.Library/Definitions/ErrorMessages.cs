@@ -1003,6 +1003,23 @@ public static partial class ErrorMessages
 		/// exit while standing somewhere that is not one.
 		/// </summary>
 		public const string ExitsOnlyFromRooms = "You can only make exits out of rooms.";
+		/// <summary><c>do_set_atr</c>, on a LISTEN set on an object that could not hear (<c>src/attrib.c:2438-2442</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string GrowsEarsFormat = "{0} grows ears and can now hear.";
+		/// <summary><c>do_set_atr</c>, on a LISTEN cleared that leaves the object unable to hear (<c>src/attrib.c:2433-2437</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string LosesEarsFormat = "{0} loses its ears and becomes deaf.";
+		/// <summary><c>set_flag</c>, on PUPPET or MONITOR making a non-player listen (<c>src/flags.c</c>).</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NowListeningFormat = "{0} is now listening.";
+		/// <summary><c>set_flag</c>, on PUPPET or MONITOR cleared from a non-player that no longer listens.</summary>
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string NoLongerListeningFormat = "{0} is no longer listening.";
+		/// <summary>
+		/// <c>do_real_open</c>'s refusal of a name <c>ok_object_name</c> rejects (<c>src/create.c:119-121</c>):
+		/// the exit's name or one of its aliases is not a legal name.
+		/// </summary>
+		public const string StrangeExitName = "That's a strange name for an exit!";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string LinkedToNameFormat = "Linked to {0}.";
 		/// <summary>

@@ -249,6 +249,10 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "44-objects-audit/obj.login#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "43-speech-audit/sp.login#0",
    "command": "Wiz wizpass"
   },

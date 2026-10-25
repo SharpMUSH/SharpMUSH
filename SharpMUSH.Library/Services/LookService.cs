@@ -205,7 +205,10 @@ public class LookService(
 				: null;
 	}
 
-	/// <summary>@idescribe from inside a player or thing when it has one, else @describe, else the fallback text.</summary>
+	/// <summary>
+	/// @idescribe from inside a player or thing when it has one, else @describe, else the fallback text. A room,
+	/// or a container looked at from inside, has none (look_room passes no default, src/look.c:494-505).
+	/// </summary>
 	private async ValueTask<Description> StoredDescriptionAsync(Look look)
 	{
 		if (look.TryIdesc
@@ -220,7 +223,9 @@ public class LookService(
 		return await attributeService.GetAttributeAsync(look.God, look.Viewing, "DESCRIBE",
 				IAttributeService.AttributeMode.Read, true) is SharpAttribute[] descChain
 			? new Description(descChain.Last().Value, "DESCRIBE", UsedIdesc: false, Custom: false)
-			: new Description(MarkupText.Plain("You see nothing special."), null, UsedIdesc: false, Custom: false);
+			: new Description(look.Viewing.IsRoom || look.ViewingFromInside
+				? MarkupText.Empty
+				: MarkupText.Plain("You see nothing special."), null, UsedIdesc: false, Custom: false);
 	}
 
 	private async ValueTask<MString> FormatNameAsync(Look look)

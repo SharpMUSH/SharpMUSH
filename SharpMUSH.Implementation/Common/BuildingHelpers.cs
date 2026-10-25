@@ -557,6 +557,13 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.NotARoom);
 		}
 
+		// create.c:119-121.
+		if (ExitNameAndAliases(exitName.ToPlainText()) is not (string name, string[] aliases))
+		{
+			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StrangeExitName), executor);
+			return new Error<string>(ErrorMessages.Returns.BadObjectName);
+		}
+
 		// create.c:127 then :130 — who may open here is settled before a slot is charged for it.
 		if (!await CanOpenFromAsync(permissionService, lockService, executor, sourceRoom))
 		{
@@ -564,15 +571,34 @@ public static class BuildingHelpers
 			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 		}
 
-		var parts = exitName.ToPlainText().Split(';');
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 
-		return await ExitChargedAsync(mediator, configuration, notifyService, executor, parts[0], parts[1..],
+		return await ExitChargedAsync(mediator, configuration, notifyService, executor, name, aliases,
 			sourceRoom, owner, requestedDbref, modified) switch
 		{
 			DBRef opened => await OpenedAsync(mediator, cycleChecker, notifyService, executor, opened),
 			Error<string> refused => refused
 		};
+	}
+
+	/// <summary>
+	/// <c>ok_object_name</c>'s exit case (<c>src/predicat.c:808-850</c>): the name before the first
+	/// <c>;</c>, then each alias with its leading spaces dropped. Each must be a legal name, and an empty
+	/// alias may only come last. <see langword="null"/> when Penn would refuse the name.
+	/// </summary>
+	private static (string Name, string[] Aliases)? ExitNameAndAliases(string requested)
+	{
+		var parts = requested.Split(';');
+		if (!ObjectNames.IsLegal(parts[0], isExit: true))
+		{
+			return null;
+		}
+
+		var aliases = parts[1..].Select(alias => alias.TrimStart(' ')).ToArray();
+		var empty = Array.IndexOf(aliases, string.Empty);
+		return (empty < 0 || empty == aliases.Length - 1) && aliases.All(alias => alias.Length == 0 || ObjectNames.IsLegal(alias, isExit: true))
+			? (parts[0], aliases.Where(alias => alias.Length > 0).ToArray())
+			: null;
 	}
 
 	/// <summary>

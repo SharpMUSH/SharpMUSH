@@ -1160,7 +1160,9 @@ Normally, exits appear in a room's Obvious exits list in the order they were cre
 ### Example
 ```sharp
 > @dig/teleport Test Room
-> @open Two ; @open Three ; @open One
+> @open Two
+> @open Three
+> @open One
 > look
 Test Room(#3Rn)
 Obvious exits:
