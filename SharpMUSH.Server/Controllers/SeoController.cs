@@ -45,6 +45,8 @@ public class SeoController(
 		var baseUrl = $"{Request.Scheme}://{Request.Host}";
 		var now = DateTimeOffset.UtcNow.ToString("yyyy-MM-dd");
 		var entries = await sitemap.GetAsync(SitemapEntriesAsync, HttpContext.RequestAborted);
+		// The list may be minutes old; what a logged-out reader may see is asked now.
+		var visibility = await AnonymousVisibilityAsync(HttpContext.RequestAborted);
 
 		var sb = new StringBuilder();
 		sb.AppendLine("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
@@ -53,8 +55,8 @@ public class SeoController(
 		AppendUrl(sb, $"{baseUrl}/", now);
 		AppendUrl(sb, $"{baseUrl}/wiki", now);
 
-		foreach (var entry in entries)
-			AppendUrl(sb, baseUrl + entry.Path, entry.UpdatedAt.ToString("yyyy-MM-dd"), entry.Locales);
+		foreach (var entry in entries.Where(entry => visibility.Admits(entry.Page)))
+			AppendUrl(sb, baseUrl + PathFor(entry.Page), entry.Page.UpdatedAt.ToString("yyyy-MM-dd"), entry.Locales);
 
 		sb.AppendLine("</urlset>");
 
@@ -68,7 +70,7 @@ public class SeoController(
 	/// </summary>
 	private async Task<IReadOnlyList<SitemapEntry>> SitemapEntriesAsync(CancellationToken ct)
 	{
-		var visibility = await access.VisibilityAsync(await access.AnonymousAsync(ct));
+		var visibility = await AnonymousVisibilityAsync(ct);
 		var entries = new List<SitemapEntry>();
 		WikiPageScanPosition position = new WikiPageScanStart();
 		while (true)
@@ -78,8 +80,7 @@ public class SeoController(
 			{
 				// Bot-facing, so includeDrafts: false — the sitemap must never advertise a locale whose only
 				// translation is an unpublished draft.
-				entries.Add(new SitemapEntry(PathFor(page), page.UpdatedAt,
-					await localization.GetVisibleLocalesAsync(page, includeDrafts: false)));
+				entries.Add(new SitemapEntry(page, await localization.GetVisibleLocalesAsync(page, includeDrafts: false)));
 			}
 
 			if (batch.Next is not WikiPageScanContinuation next) break;
@@ -90,6 +91,10 @@ public class SeoController(
 		logger.LogDebug("Sitemap built with {Count} published wiki pages", entries.Count);
 		return entries;
 	}
+
+	/// <summary>What a logged-out reader may see: no drafts, and nothing whose read requirements the everyone role misses.</summary>
+	private async Task<WikiVisibility> AnonymousVisibilityAsync(CancellationToken ct)
+		=> await access.VisibilityAsync(await access.AnonymousAsync(ct));
 
 	/// <summary>
 	/// GET /robots.txt

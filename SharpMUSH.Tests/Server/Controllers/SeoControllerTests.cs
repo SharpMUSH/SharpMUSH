@@ -6,6 +6,7 @@ using SharpMUSH.Tests.Authentication;
 using SharpMUSH.Configuration.Options;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Wiki;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Server.Controllers;
@@ -156,7 +157,25 @@ public class SeoControllerTests
 		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).Contains(later.Slug);
 	}
 
-	/// <summary>The cached list holds paths, so each request's own host is what its URLs carry.</summary>
+	/// <summary>
+	/// The list may be minutes old, but a page closed to logged-out readers since it was built leaves the sitemap at
+	/// once: each request checks the cached pages against what the everyone role may read now.
+	/// </summary>
+	[Test]
+	public async Task Sitemap_FromTheCache_LeavesOutAPageClosedSinceItWasBuilt()
+	{
+		var wiki = InMemoryWikiStore.CreateService();
+		var sitemap = new SitemapCache(new Clock());
+		var page = (await wiki.CreateAsync("Soon Closed", "# closing", "#1")).Expect<WikiPage>();
+		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).Contains(page.Slug);
+
+		(await wiki.SetRequirementsAsync(WikiRuleTarget.ForPage(page.Id),
+			new Dictionary<WikiAction, IReadOnlyList<string>> { [WikiAction.Read] = [PortalPermission.WikiEdit] }, "#1")).Expect<None>();
+
+		await Assert.That(await GetSitemapXml(MakeController(wiki, sitemap))).DoesNotContain(page.Slug);
+	}
+
+	/// <summary>The cached list holds pages, not URLs, so each request's own host is what its URLs carry.</summary>
 	[Test]
 	public async Task Sitemap_FromTheCache_UsesTheRequestsHost()
 	{
