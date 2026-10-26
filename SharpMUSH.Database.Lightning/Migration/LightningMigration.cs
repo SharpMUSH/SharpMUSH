@@ -27,18 +27,19 @@ public partial class LightningDatabase
 	internal static ReadOnlySpan<byte> WorldFormatKey => "world_format"u8;
 
 	/// <summary>
-	/// The core migrations in the order they run, each with the world format it brings a world to. A change
-	/// to what the provider stores is a migration added at the end with the next format, so
-	/// <see cref="WorldFormat"/> moves with it and an older server refuses the world it writes.
+	/// The core migrations in the order they run, each with the world format it brings a world to. Everything
+	/// before the first release is format 1. A change to what the provider stores is a migration added at the
+	/// end with the next format, so <see cref="WorldFormat"/> moves with it and an older server refuses the
+	/// world it writes.
 	/// </summary>
 	internal static readonly CoreMigration[] CoreMigrations =
 	[
 		new(1, InitialMigrationId, (db, _, ct) => db.ApplyInitialMigrationAsync(ct)),
-		new(2, AccountCredentialMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAccountCredentials, ct)),
-		new(3, SessionDigestMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateSessionDigests, ct)),
-		new(4, OnboardingMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateOnboarding, ct)),
-		new(5, WikiCategoryCheckpointCodec.MigrationId, (db, options, ct) => db.MigrateWikiCategoryValuesAsync(options, ct)),
-		new(6, WikiCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiCounts, ct)),
+		new(1, AccountCredentialMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAccountCredentials, ct)),
+		new(1, SessionDigestMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateSessionDigests, ct)),
+		new(1, OnboardingMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateOnboarding, ct)),
+		new(1, WikiCategoryCheckpointCodec.MigrationId, (db, options, ct) => db.MigrateWikiCategoryValuesAsync(options, ct)),
+		new(1, WikiCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiCounts, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>

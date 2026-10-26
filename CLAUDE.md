@@ -256,7 +256,8 @@ a constructor cycle is broken with `Lazy<T>` (registered as an open generic), no
 whose handler calls a service; migration is awaited once in `Program` right after the host is built, before any service that reads the database is resolved.
 A change to what the Lightning provider stores is a new entry at the end of `LightningDatabase.CoreMigrations` with the next
 format number; the world is stamped with the last one (`WorldFormat`) and a server refuses a world stamped newer than its own.
-`WorldFormatTests` fail a migration that records a `mig:` marker without an entry, or skips a number.
+Every migration before the first release is format 1. `WorldFormatTests` fail a migration that records a `mig:` marker
+without an entry, or a format that goes back or skips a number.
 
 ### Authentication Architecture
 

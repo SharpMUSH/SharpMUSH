@@ -12,13 +12,15 @@ namespace SharpMUSH.Tests.Database.Lightning;
 public class WorldFormatTests
 {
 	[Test]
-	public async Task EachCoreMigrationBringsTheNextFormat()
+	public async Task CoreMigrationFormatsStartAtOneAndNeverSkip()
 	{
 		var formats = LightningDatabase.CoreMigrations.Select(migration => migration.Format).ToArray();
+		var steps = formats.Zip(formats.Skip(1), (before, after) => after - before).ToArray();
 
-		await Assert.That(formats.SequenceEqual(Enumerable.Range(1, formats.Length))).IsTrue()
-			.Because("a migration added at the end takes the next format, so the stamp moves with every change to what is stored");
-		await Assert.That(LightningDatabase.WorldFormat).IsEqualTo(formats.Length);
+		await Assert.That(formats[0]).IsEqualTo(1);
+		await Assert.That(steps.All(step => step is 0 or 1)).IsTrue()
+			.Because("a migration added at the end keeps the format or takes the next one, never an older or a skipped one");
+		await Assert.That(LightningDatabase.WorldFormat).IsEqualTo(formats[^1]);
 	}
 
 	[Test]
