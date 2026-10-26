@@ -28,4 +28,14 @@ public class WikiFactIndexBuilderTests
 		await Assert.That(builder.Idle.IsCompleted).IsTrue();
 		await Assert.That(mediator.ReceivedCalls().Count()).IsEqualTo(1);
 	}
+
+	[Test]
+	public async Task StoppingAfterDisposalDoesNotThrow()
+	{
+		var builder = new WikiFactIndexBuilder(Substitute.For<IMediator>(), NullLogger<WikiFactIndexBuilder>.Instance);
+		builder.Dispose();
+
+		await builder.StopAsync();
+		await Assert.That(builder.Idle.IsCompleted).IsTrue();
+	}
 }

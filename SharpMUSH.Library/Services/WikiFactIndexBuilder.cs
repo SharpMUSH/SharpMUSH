@@ -98,9 +98,7 @@ public sealed class WikiFactIndexBuilder(IMediator mediator, ILogger<WikiFactInd
 		}
 	}
 
-	public void Dispose()
-	{
-		_stopping.Cancel();
-		_stopping.Dispose();
-	}
+	// The source holds no timer and no wait handle, so it is only cancelled: a host can still call StopAsync after
+	// its container has disposed this.
+	public void Dispose() => _stopping.Cancel();
 }
