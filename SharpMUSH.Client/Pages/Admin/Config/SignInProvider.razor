@@ -6,7 +6,7 @@
 @inject ExternalProviderConfigurationService Providers
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["AdmSigninPageTitle"]</PageTitle>
+<AdminPageTitle Page="@Loc["AdmSigninPageTitle"]" />
 <div class="config-section-page page-stack">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@(_status is null ? Loc["AdmSigninPageTitle"] : Loc["AdmSigninTitle",_status.DisplayName])" Description="@Loc["AdmSigninDescription"]" />
     @if (_error is not null)

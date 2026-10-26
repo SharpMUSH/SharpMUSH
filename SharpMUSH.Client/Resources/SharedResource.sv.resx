@@ -136,10 +136,6 @@
     <value>Attribut</value>
     <comment>MT — corpus term.</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — identical to English; 'admin' is used as-is in Swedish.</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Kopplade loss {0} från '{1}'.</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>Lägg till en remote</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — identical to English; used as-is in Swedish.</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} tillämpades (revision {2}).</value>
     <comment>MT — 'revision' kept here (package install history, a VCS-like sense), unlike the wiki strings where revision is rendered 'version'.</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Snabbåtgärder</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Senaste ändringarna</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planera en scen</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Godkännande krävs</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Scenen har inget rum förrän den startar: den spelas där värden är när scenen startar.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Bläddra bland medlemmar</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Utvalda ämnen</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Börja här</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Ändrade sidor, 7 dagar</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Visa alla {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

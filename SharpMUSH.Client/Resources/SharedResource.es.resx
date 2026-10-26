@@ -136,10 +136,6 @@
     <value>Atributo</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — kept short for the breadcrumb; full form is Administración</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Se ha desvinculado {0} de '{1}'.</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>Añadir un remoto</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Administración</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} aplicado (revisión {2}).</value>
     <comment>MT</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Acciones rápidas</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Cambios recientes</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programar una escena</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Se necesita aprobación</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>La escena no tiene sala hasta que empieza: se juega donde esté su anfitrión al iniciarla.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Explorar miembros</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Temas destacados</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Empieza aquí</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Páginas cambiadas, 7 días</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Ver las {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

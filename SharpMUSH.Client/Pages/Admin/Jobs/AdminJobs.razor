@@ -8,7 +8,7 @@
 @inject IAuthorizationService Authorization
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["JobsTitle"]</PageTitle>
+<AdminPageTitle Page="@Loc["JobsTitle"]" />
 <div class="page-stack page-stack--padded jobs">
     <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["JobsTitle"]" Description="@Loc["JobsIntro"]">
         <Actions>

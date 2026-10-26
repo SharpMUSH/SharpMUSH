@@ -32,6 +32,13 @@
     color: var(--text);
 }
 
+.pkg-row-id {
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    color: var(--text-faint);
+    margin-bottom: 2px;
+}
+
 .pkg-row-meta {
     display: flex;
     flex-wrap: wrap;

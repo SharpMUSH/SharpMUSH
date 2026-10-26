@@ -19,6 +19,15 @@
         if (el) el.scrollTop = 0;
     };
 
+    // Moves focus to a heading (a wizard step's title once the step changes), so a keyboard or screen-reader
+    // user carries on from there rather than from the top of the page. A heading takes focus only from script.
+    window.SharpMUSH.focusHeading = function (selector) {
+        var el = document.querySelector(selector);
+        if (!el) return;
+        if (!el.hasAttribute("tabindex")) el.setAttribute("tabindex", "-1");
+        el.focus({ preventScroll: true });
+    };
+
     // Brings the element with this id into view: an application row a link's #fragment names, drawn after
     // the page loaded and so too late for the browser's own jump.
     window.SharpMUSH.scrollToId = function (id) {

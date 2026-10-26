@@ -136,10 +136,6 @@
     <value>Atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Administrare</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>{0} a fost dezasociat de „{1}”.</value>
     <comment>MT — assumed {0} is a character name and {1} an account</comment>
@@ -2153,10 +2149,6 @@
     <value>Adăugarea unui remote</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Administrare</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} aplicat (revizia {2}).</value>
     <comment>MT — assumed {0} is a package name and {1} a version</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Acțiuni rapide</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Modificări recente</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programează o scenă</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Este necesară aprobarea</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Scena nu are o cameră până nu începe: se joacă acolo unde se află gazda când o pornește.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Răsfoiește membrii</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Subiecte recomandate</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Începe aici</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Pagini modificate, 7 zile</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Vezi toate cele {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -5,7 +5,7 @@
 @inject AdminServerService ServerService
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["AdmServerTitle"] — @Loc["AdmBreadcrumb"] — <GameName /></PageTitle>
+<AdminPageTitle Page="@Loc["AdmServerTitle"]" />
 
 @* The server's own figures, read in-process and refreshed every ten seconds while the page is open.
    Restarting stays with @shutdown in the game; the page only reports. *@

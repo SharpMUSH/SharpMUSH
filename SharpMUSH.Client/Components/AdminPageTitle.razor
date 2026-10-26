@@ -1,0 +1,10 @@
+@inject NavigationManager Navigation
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A Build & manage page's tab title: the page, the group the menu lists it under, and the game. *@
+<PageTitle>@Page — @Loc[BuildNavCatalog.AreaLabelKey(Navigation.ToBaseRelativePath(Navigation.Uri))] — <GameName /></PageTitle>
+
+@code {
+    /// <summary>The page's own name.</summary>
+    [Parameter, EditorRequired] public string Page { get; set; } = string.Empty;
+}

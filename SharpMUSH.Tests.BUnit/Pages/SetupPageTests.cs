@@ -4,6 +4,7 @@ using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -405,9 +406,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		await cut.Find("#setup-username").ChangeAsync("headwiz");
-		await cut.Find("#setup-password").ChangeAsync("password-one");
-		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-one");
 		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
@@ -887,9 +888,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true, completeSessionToken: ""));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		await cut.Find("#setup-username").ChangeAsync("headwiz");
-		await cut.Find("#setup-password").ChangeAsync("password-one");
-		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-one");
 		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
@@ -938,9 +939,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		ownedHttpClients.Add(this.AddSetupTestServices(needsSetup: true));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		await cut.Find("#setup-username").ChangeAsync("headwiz");
-		await cut.Find("#setup-password").ChangeAsync("password-one");
-		await cut.Find("#setup-confirm").ChangeAsync("password-two");
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-two");
 		await cut.Find("button.setup-submit").ClickAsync();
 
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthPasswordsDoNotMatch");
@@ -955,15 +956,38 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				completeBody: "Setup has already been completed."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		await cut.Find("#setup-username").ChangeAsync("headwiz");
-		await cut.Find("#setup-password").ChangeAsync("password-one");
-		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-one");
 		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>
 		{
 			if (!cut.Find(".setup-error").TextContent.Contains("AuthSetupAlreadyCompleted"))
 				throw new InvalidOperationException("conflict error not mapped yet");
+		});
+
+		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthSetupAlreadyCompleted");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Setup_EnterInTheConfirmField_SubmitsTheClaim()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(
+				needsSetup: true,
+				completeStatus: HttpStatusCode.Conflict,
+				completeBody: "Setup has already been completed."));
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-one");
+		await cut.Find("#setup-confirm").KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Find(".setup-error").TextContent.Contains("AuthSetupAlreadyCompleted"))
+				throw new InvalidOperationException("the claim was not sent");
 		});
 
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AuthSetupAlreadyCompleted");
@@ -978,9 +1002,9 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 				completeBody: "Username is already taken."));
 
 		var cut = Render<SharpMUSH.Client.Pages.Setup>();
-		await cut.Find("#setup-username").ChangeAsync("headwiz");
-		await cut.Find("#setup-password").ChangeAsync("password-one");
-		await cut.Find("#setup-confirm").ChangeAsync("password-one");
+		await cut.Find("#setup-username").InputAsync("headwiz");
+		await cut.Find("#setup-password").InputAsync("password-one");
+		await cut.Find("#setup-confirm").InputAsync("password-one");
 		await cut.Find("button.setup-submit").ClickAsync();
 
 		cut.WaitForAssertion(() =>

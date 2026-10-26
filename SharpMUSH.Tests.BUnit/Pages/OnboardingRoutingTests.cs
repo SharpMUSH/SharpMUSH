@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -172,9 +173,26 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
 		var inputs = cut.FindAll("input");
-		await inputs[0].ChangeAsync("newbie");
-		await inputs[2].ChangeAsync("hunter2-hunter2");
+		await inputs[0].InputAsync("newbie");
+		await inputs[2].InputAsync("hunter2-hunter2");
 		await cut.Find("button.register-submit").ClickAsync();
+
+		WaitForNavigation(cut, "/characters/new");
+
+		await Assert.That(Nav.Uri).EndsWith("/characters/new");
+	}
+
+	[TUnit.Core.Test]
+	public async Task Registration_EnterInThePasswordField_Registers()
+	{
+		SeedServices(characters: []);
+		Nav.NavigateTo("/login?tab=register");
+
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		var inputs = cut.FindAll("input");
+		await inputs[0].InputAsync("newbie");
+		await inputs[2].InputAsync("hunter2-hunter2");
+		await cut.FindAll("input")[2].KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 
 		WaitForNavigation(cut, "/characters/new");
 
@@ -189,8 +207,8 @@ public class OnboardingRoutingTests : TrackingBunitContext, IAsyncDisposable
 
 		var cut = Render<SharpMUSH.Client.Pages.Login>();
 		var inputs = cut.FindAll("input");
-		await inputs[0].ChangeAsync("newbie");
-		await inputs[2].ChangeAsync("hunter2");
+		await inputs[0].InputAsync("newbie");
+		await inputs[2].InputAsync("hunter2");
 		await cut.Find("button.register-submit").ClickAsync();
 
 		await Assert.That(Nav.Uri).EndsWith("/login?tab=register");

@@ -6,7 +6,7 @@
 @inject BannedNamesService BannedNamesService
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["BannedNames"] - @Loc["Configuration"]</PageTitle>
+<AdminPageTitle Page="@Loc["BannedNames"]" />
 
 <div class="config-section-page" data-config-option="BannedNames.BannedNames">
     <PlainPageHeader Kicker="@Loc["ResConfigSectionKicker"]" Title="@Loc["BannedPlayerNames"]" Description="@Loc["BannedNamesDescription"]" />

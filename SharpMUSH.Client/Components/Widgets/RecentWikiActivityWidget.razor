@@ -41,9 +41,22 @@
     /// <summary>In a page's main column the widget takes the main card rather than the aside one.</summary>
     private bool InMain => Zone == nameof(WidgetZone.MainContent);
 
+    /// <summary>How many changes the card and the Home tile read: as many as the recent-changes page lists.</summary>
+    public const int Fetched = 50;
+
+    /// <summary>
+    /// How many of <paramref name="recent"/> changed in the week before <paramref name="now"/>; with a + when every
+    /// one fetched did, since more may have.
+    /// </summary>
+    public static string ChangedInAWeek(IReadOnlyList<WikiPageSummary> recent, DateTimeOffset now)
+    {
+        var count = recent.Count(p => p.UpdatedAt >= now.AddDays(-7));
+        return count == Fetched ? $"{count}+" : count.ToString();
+    }
+
     private RenderFragment AllChanges => __builder =>
     {
-        <a class="recent-wiki-all" href="/wiki/recent">@Loc["NavWikiRecentChanges"]</a>
+        <a class="recent-wiki-all" href="/wiki/recent">@(_recentChanges is { Count: > 0 } all ? Loc["WidRecentSeeAll", all.Count] : Loc["NavWikiRecentChanges"])</a>
     };
 
     private IReadOnlyList<WikiPageSummary>? _recentChanges;
@@ -51,7 +64,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _recentChanges = await WikiService.GetRecentChangesAsync(10);
+        _recentChanges = await WikiService.GetRecentChangesAsync(Fetched);
         _loading = false;
     }
 

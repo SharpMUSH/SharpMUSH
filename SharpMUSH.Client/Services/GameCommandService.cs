@@ -38,4 +38,16 @@ public class GameCommandService(IHttpClientFactory httpClientFactory)
 		Client.PostApiAsync<PortalEvalRequest, PortalCommandResponse>(
 			"api/commands/eval", new PortalEvalRequest(expression, arguments, objectDbref, character),
 			"The server returned no evaluation result.");
+
+	/// <summary>
+	/// Whether the tab's character is approved to take part (<c>isapproved(%#)</c>), as scenes require; null when the
+	/// server did not say, so a page leaves its controls as they were rather than closing them on a failed request.
+	/// </summary>
+	public async Task<bool?> IsApprovedAsync() =>
+		await EvaluateAsync("isapproved(%#)") switch
+		{
+			PortalCommandResponse { Result: "1" } => true,
+			PortalCommandResponse { Result: "0" } => false,
+			_ => null,
+		};
 }

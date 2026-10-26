@@ -179,11 +179,26 @@ public class PackagesController(
 				package,
 				await registry.CountManagedAttributesAsync(package.Id),
 				await registry.CountPackageObjectsAsync(package.Id),
-				dependents[package.Id].ToList()));
+				dependents[package.Id].ToList(),
+				BundledTitle(package)));
 		}
 
 		return Ok(result);
 	}
+
+	/// <summary>The title of a package installed from the bundled catalogue, read from its embedded manifest.</summary>
+	private string? BundledTitle(InstalledPackageRecord package) =>
+		BundledPackages.IsCatalogueSource(package.SourceRepo) && BundledPackages.Contains(package.Id)
+			? BundledTitles.GetOrAdd(package.Id, id => manifests.ParseManifest(BundledPackages.ManifestYaml(id)) switch
+			{
+				ParsedPackageManifest parsed => parsed.Manifest.Title,
+				_ => null,
+			})
+			: null;
+
+	/// <summary>Bundled manifests are compiled into the server, so their titles are read once.</summary>
+	private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, string?> BundledTitles =
+		new(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>Revision history for an installed package (snapshot payloads omitted).</summary>
 	[HttpGet("{id}/revisions")]

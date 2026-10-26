@@ -6,6 +6,10 @@
             <span class="pkg-row-name">@Name</span>
             @Tags
         </div>
+        @if (Id is not null)
+        {
+            <div class="pkg-row-id">@Id</div>
+        }
         <div class="pkg-row-meta">
             @Meta
         </div>
@@ -23,6 +27,9 @@
 
     [Parameter] public string? IconTitle { get; set; }
     [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>The id, beneath a <see cref="Name"/> that is a title; null when the name is the id.</summary>
+    [Parameter] public string? Id { get; set; }
     [Parameter] public RenderFragment? Tags { get; set; }
     [Parameter] public RenderFragment? Meta { get; set; }
     [Parameter] public RenderFragment? Actions { get; set; }

@@ -30,10 +30,18 @@
             @if (_acting is not null && !_starting && !_scheduling)
             {
                 @* Scheduling runs +scene/schedule the same way: a scene for later, with no room until it starts. *@
-                <CapsuleButton Icon="@Icons.Material.Outlined.EditCalendar" Class="scene-schedule-open"
+                @* Only an approved character takes part in scenes; one that is not sees why the buttons are closed. *@
+                @if (_approved == false)
+                {
+                    <span class="scene-approval-needed" id="scene-approval-needed">@Loc["RolSceneApprovalNeeded"]</span>
+                }
+                <CapsuleButton Icon="@Icons.Material.Outlined.EditCalendar" Class="scene-schedule-open" Disabled="@(_approved == false)"
+                               DescribedBy="@(_approved == false ? "scene-approval-needed" : null)"
                                OnClick="OpenSchedule">@Loc["RolScheduleScene"]</CapsuleButton>
                 <div class="scene-start">
-                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" OnClick="@(() => { _starting = true; _scheduledNote = null; })">@Loc["RolStartScene"]</CapsuleButton>
+                    <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" Disabled="@(_approved == false)"
+                                   DescribedBy="@(_approved == false ? "scene-approval-needed" : null)"
+                                   OnClick="@(() => { _starting = true; _scheduledNote = null; })">@Loc["RolStartScene"]</CapsuleButton>
                 </div>
             }
         </Actions>
@@ -149,7 +157,7 @@
         <div class="scenes-list">
             @foreach (var scene in _scenes)
             {
-                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(_acting is not null)" />
+                <SceneCard @key="scene.Id" Scene="scene" CanJoin="@(_acting is not null && _approved != false)" />
             }
         </div>
     }
@@ -182,6 +190,9 @@
     /// <summary>The character this tab acts as: whose scenes "Your scenes" lists, and who can join a live one.</summary>
     private AccountAuthService.CharacterSummary? _acting;
 
+    /// <summary>Whether <see cref="_acting"/> is approved; null until the server says, and when there is no character.</summary>
+    private bool? _approved;
+
     private string Heading => _filter switch
     {
         ScenesFilter.Mine => Loc["NavScenesMine"],
@@ -207,6 +218,7 @@
         _ = LoadCatalogueAsync();
         await AccountAuth.InitAsync();
         _acting = ActingCharacter();
+        _ = CheckApprovalAsync();
         await LoadAsync();
     }
 
@@ -233,6 +245,7 @@
     private void OnActingChanged() => _ = InvokeAsync(async () =>
     {
         _acting = ActingCharacter();
+        _ = CheckApprovalAsync();
         await LoadAsync();
         StateHasChanged();
     });
@@ -250,6 +263,18 @@
 
     private AccountAuthService.CharacterSummary? ActingCharacter() =>
         AccountAuth.IsLoggedIn ? AccountAuth.ActiveCharacter : null;
+
+    /// <summary>Asks whether the acting character is approved, alongside the list; the header redraws on the answer.</summary>
+    private async Task CheckApprovalAsync()
+    {
+        var acting = _acting;
+        _approved = null;
+        if (acting is null) return;
+        var approved = await Commands.IsApprovedAsync();
+        if (!ReferenceEquals(acting, _acting)) return;
+        _approved = approved;
+        await InvokeAsync(StateHasChanged);
+    }
 
     private async Task LoadAsync()
     {

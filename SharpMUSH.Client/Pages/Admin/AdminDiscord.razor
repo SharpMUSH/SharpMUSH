@@ -13,7 +13,7 @@
 @inject TimeProvider Time
 @implements IDisposable
 
-<PageTitle>@Loc["AdmDiscordTitle"] — @Loc["AdmBreadcrumb"] — <GameName /></PageTitle>
+<AdminPageTitle Page="@Loc["AdmDiscordTitle"]" />
 
 <FeatureGate Feature="@GameFeatures.Discord">
     <ChildContent>

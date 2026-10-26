@@ -4,6 +4,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject SceneService SceneService
 @inject AccountAuthService AccountAuth
+@inject GameCommandService Commands
 @implements IDisposable
 
 <PageTitle>@Loc["NavScenesLive"] — <GameName /></PageTitle>
@@ -63,7 +64,9 @@
         var ticket = _reload.Begin();
         var pending = SceneService.GetActiveScenesAsync();
         await AccountAuth.InitAsync();
-        var canJoin = AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null;
+        // A character that is not approved may watch a live scene but not join it.
+        var canJoin = AccountAuth.IsLoggedIn && AccountAuth.ActiveCharacter is not null
+            && await Commands.IsApprovedAsync() != false;
         var result = await pending;
         if (!_reload.IsCurrent(ticket)) return;
         _canJoin = canJoin;

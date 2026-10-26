@@ -10,6 +10,13 @@
 	gap: 12px;
 }
 
+/* Why Schedule and Start are closed to a character that is not approved. */
+.scene-approval-needed {
+	align-self: center;
+	color: var(--text-faint);
+	font-size: 0.8125rem;
+}
+
 .scene-start-form {
 	display: flex;
 	flex-wrap: wrap;
