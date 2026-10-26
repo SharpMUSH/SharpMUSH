@@ -42,7 +42,7 @@ public static class DiscordCommandModule
 	/// <summary>How long a link or unlink waits on Discord before the admin is told it did not answer.</summary>
 	private static readonly TimeSpan DiscordTimeout = TimeSpan.FromSeconds(60);
 
-	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "LIST", "GATE", "UNRESTRICTED", "RESTRICT", "SPEAK", "OFF", "MAP", "UNMAP",
+	[SharpCommand(Name = "@DISCORD", Switches = ["LINK", "UNLINK", "RESUME", "CONNECT", "GATE", "UNRESTRICTED", "RESTRICT", "SPEAK", "OFF", "MAP", "UNMAP",
 			"CONFIRM", "ENFORCE", "REPORT", "DRIFT", "APPLY", "BANS", "EVENT", "START", "END"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGuest | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "role"])]
 	public static async ValueTask<Option<CallState>> Discord(IMUSHCodeParser parser, SharpCommandAttribute _2)
