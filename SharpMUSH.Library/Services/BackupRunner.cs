@@ -26,7 +26,7 @@ public class BackupRunner(
 	{
 		var dump = options.CurrentValue.Dump;
 
-		// src/timer.c:209 dbsave_warn_event: the event, then the message to everyone.
+		// src/timer.c:209 dbsave_warn_event: the event, then the message (to wizards; see ShowAsync).
 		if (minutes == 5)
 		{
 			await events.TriggerEventAsync(SharpEvents.Dump5Min, null, dump.DumpWarning5Min ?? "", NoFork);
@@ -56,7 +56,7 @@ public class BackupRunner(
 		};
 	}
 
-	/// <summary>src/game.c:645-651: <c>DUMP`COMPLETE</c> (message, forking), then the message to everyone.</summary>
+	/// <summary>src/game.c:645-651: <c>DUMP`COMPLETE</c> (message, forking), then the message (to wizards; see ShowAsync).</summary>
 	private async ValueTask<Result<WorldBackup>> WrittenAsync(DBRef? enactor, string? message, WorldBackup written)
 	{
 		await events.TriggerEventAsync(SharpEvents.BackupComplete, enactor, written.Name, written.SizeBytes.ToString());
@@ -75,11 +75,15 @@ public class BackupRunner(
 		return error;
 	}
 
+	/// <summary>
+	/// The save notices go to wizards only. PennMUSH tells everyone because its save pauses the game; a copy
+	/// runs beside the live world here, so a player told the game may freeze is told something untrue.
+	/// </summary>
 	private async ValueTask ShowAsync(string? message)
 	{
 		if (!string.IsNullOrEmpty(message))
 		{
-			await broadcast.BroadcastAsync(message);
+			await broadcast.BroadcastToFlagAsync("WIZARD", message);
 		}
 	}
 }

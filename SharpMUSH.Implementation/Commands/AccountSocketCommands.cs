@@ -201,15 +201,39 @@ public partial class Commands
 		}
 
 		await ConnectionService.BindAccount(handle, account.Id!);
+		await NotifyService.Notify(handle, await AccountMenuFor(account));
 
+		return new CallState(account.Id!);
+	}
+
+	/// <summary>
+	/// A line the account menu does not know: <c>Huh?</c> and the menu again, so a typo after <c>login</c> or
+	/// <c>register</c> shows the account is still signed in, not the logged-out connect screen.
+	/// </summary>
+	/// <returns>False when <paramref name="handle"/> is bound to no account, which leaves the connect screen to the caller.</returns>
+	public async ValueTask<bool> RepeatAccountMenuAsync(long handle)
+	{
+		if (ConnectionService.Get(handle) is not { State: IConnectionService.ConnectionState.AccountMode } connection
+				|| !connection.Metadata.TryGetValue("AccountId", out var accountId)
+				|| await AccountService.GetByIdAsync(accountId) is not SharpAccount account)
+		{
+			return false;
+		}
+
+		await NotifyService.Notify(handle, "Huh?");
+		await NotifyService.Notify(handle, await AccountMenuFor(account));
+		return true;
+	}
+
+	/// <summary>The menu a signed-in account sees: its characters and what it can do next.</summary>
+	private async ValueTask<MarkupText> AccountMenuFor(SharpAccount account)
+	{
 		var characters = await AccountService.GetCharactersAsync(account.Id!);
-		await NotifyService.Notify(handle, characters.Count == 0
+		return characters.Count == 0
 			? AccountMenu($"Logged in as {account.Username}", "You have no characters yet.", [], MenuCreateFirst, MenuClaim)
 			: AccountMenu($"Logged in as {account.Username}", "Your characters:",
 				[.. characters.Select(c => ServerLayout.CommandLink($"{c.Object.Name} (#{c.Object.Key})", $"play {c.Object.Name}"))],
-				MenuPlay, MenuCreateAnother, MenuClaim));
-
-		return new CallState(account.Id!);
+				MenuPlay, MenuCreateAnother, MenuClaim);
 	}
 
 	private static readonly (string Command, string Does) MenuCreateFirst = ("create <character> <password>", "create your first character");

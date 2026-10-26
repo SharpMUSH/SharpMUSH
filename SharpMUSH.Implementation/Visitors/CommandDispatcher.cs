@@ -92,9 +92,13 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 			await LogCommandAsync(visitor, commandText);
 
-			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is not null)
+			if (parser.CurrentState.Executor is null && parser.CurrentState.Handle is long handle)
 			{
-				await RepeatConnectScreen(parser.CurrentState.Handle.Value);
+				if (!await RepeatAccountMenu(handle))
+				{
+					await RepeatConnectScreen(handle);
+				}
+
 				return new None();
 			}
 
@@ -225,6 +229,14 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// </summary>
 	private static MString CommandSlice(MString src, IEvaluationStringContext firstCommandMatch)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
+
+	/// <summary>
+	/// An unknown command at the account menu shows that menu again. The menu lives with the account's socket
+	/// commands on the <see cref="Commands.Commands"/> singleton, which is what the command library resolves to.
+	/// </summary>
+	private async ValueTask<bool> RepeatAccountMenu(long handle)
+		=> services.Provider.GetService<ILibraryProvider<CommandDefinition>>() is Commands.Commands commands
+			&& await commands.RepeatAccountMenuAsync(handle);
 
 	/// <summary>
 	/// An unknown command at the login prompt shows the connect screen again, which lists the ones that work.
