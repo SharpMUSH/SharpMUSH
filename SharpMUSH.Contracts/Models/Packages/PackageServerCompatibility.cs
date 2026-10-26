@@ -102,10 +102,9 @@ public sealed record PackageMaximumOverride(string Server, string Maximum, DateT
 /// <param name="Current">The server's version.</param>
 public sealed record EngineVersion(PackageVersion Current)
 {
-	/// <summary>Reads an assembly version (<c>2.0.0.0</c>): its first three components, the fourth dropped.</summary>
-	public static EngineVersion FromAssemblyVersion(string assemblyVersion)
-	{
-		var version = Version.Parse(assemblyVersion);
-		return new EngineVersion(new PackageVersion(version.Major, version.Minor, Math.Max(version.Build, 0)));
-	}
+	/// <summary>Reads the engine's version as the build stamped it (<c>1.0.0</c>, <c>1.1.0-rc.1</c>).</summary>
+	public static EngineVersion Parse(string version) =>
+		PackageVersion.TryParse(version, out var parsed)
+			? new EngineVersion(parsed)
+			: throw new FormatException($"SharpMUSHVersion '{version}' is not a version.");
 }
