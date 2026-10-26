@@ -137,6 +137,15 @@ public static class CacheKeys
 	public static string AttributesTag(int number) => $"object-attributes:#{number}";
 
 	/// <summary>
+	/// Tag on object <paramref name="number"/>'s cached grants (<c>GetObjectGrantsQuery</c>). Apart from
+	/// <see cref="ObjectTag"/> because grants come from the object's roles and overrides only: a move,
+	/// a rename or a lock write expires the object's key, and with the object tag it dropped its grants
+	/// too, so the next privilege check rebuilt them from storage. Removed by the commands that write
+	/// roles or overrides on the object (directly, or as a flag or power) and by its deletion.
+	/// </summary>
+	public static string GrantsTag(int number) => $"object-grants:#{number}";
+
+	/// <summary>
 	/// Every cached entry a write to <paramref name="attribute"/> on <paramref name="dbref"/> makes
 	/// stale, by key.
 	///

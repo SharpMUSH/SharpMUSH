@@ -9,5 +9,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record UnsetObjectPowerCommand(AnySharpObject Target, SharpPower Flag) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheKeys.GrantsTag(Target.Object().DBRef.Number)];
 }

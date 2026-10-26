@@ -28,6 +28,7 @@ public record DeleteObjectCommand(DBRef Target) : ICommand<bool>, ICacheInvalida
 		Definitions.CacheTags.ExitList,
 		Definitions.CacheTags.ObjectContents,
 		Definitions.CacheKeys.AttributesTag(Target.Number),
+		Definitions.CacheKeys.GrantsTag(Target.Number),
 		Definitions.CacheTags.InheritedAttributes,
 		Definitions.CacheTags.ObjectOwnership,
 		Definitions.CacheTags.ObjectLocks,

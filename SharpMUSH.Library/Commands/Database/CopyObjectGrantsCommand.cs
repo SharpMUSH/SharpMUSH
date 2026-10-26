@@ -13,5 +13,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record CopyObjectGrantsCommand(AnySharpObject Source, AnySharpObject Target) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheKeys.GrantsTag(Target.Object().DBRef.Number)];
 }

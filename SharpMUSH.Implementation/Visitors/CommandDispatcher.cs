@@ -1,3 +1,4 @@
+using Antlr4.Runtime.Misc;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Configuration.Options;
@@ -198,7 +199,12 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		if (firstCommandMatch is not { SourceInterval.Length: > 0 })
 			return null;
 
-		var command = firstCommandMatch.GetText().TrimStart();
+		// The source text over the command's span, the slice CommandSlice takes. GetText() rebuilt it from
+		// the parse tree, a new string at every level, so a long nested line paid for its whole text
+		// several times over to name its first word.
+		var command = firstCommandMatch.Start.InputStream
+			.GetText(Interval.Of(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex))
+			.TrimStart();
 
 		var spaceIndex = command.AsSpan().IndexOf(' ');
 		if (spaceIndex != -1)

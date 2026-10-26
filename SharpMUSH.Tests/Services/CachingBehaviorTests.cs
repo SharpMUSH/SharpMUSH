@@ -155,6 +155,42 @@ public class CachingBehaviorTests
 	}
 
 	/// <summary>
+	/// An object's grants come from its roles and overrides, so a move leaves them cached; a flag that is
+	/// stored as a role still expires them. A move used to remove them with the object's tag, and every
+	/// privilege check after it rebuilt them from storage.
+	/// </summary>
+	[Test]
+	public async Task AMoveLeavesTheMoversGrantsCachedAndARoleFlagExpiresThem()
+	{
+		var mediator = WebAppFactory.Services.GetRequiredService<Mediator.IMediator>();
+
+		var room = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("GrantsMove")}"))).Message.ToPlainText()!);
+		var thing = Library.Models.DBRef.Parse((await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@create {TestIsolationHelpers.GenerateUniqueName("GrantsMove")}"))).Message.ToPlainText()!);
+		var query = new GetObjectGrantsQuery(thing.Number, false);
+
+		// The checks that follow a move read the grants again, so an expired entry comes back rebuilt:
+		// the entry is compared by instance, not by presence. A role change anywhere expires every
+		// object's grants (CacheTags.Grants), and parallel tests make them, so the move is retried until
+		// one lands between two such sweeps.
+		var kept = false;
+		for (var attempt = 0; !kept && attempt < 10; attempt++)
+		{
+			var before = await mediator.Send(query);
+			await Parser.CommandParse(1, ConnectionService,
+				MarkupText.Plain($"@tel #{thing.Number}={(attempt % 2 == 0 ? $"#{room.Number}" : "me")}"));
+			kept = ReferenceEquals(before, await mediator.Send(query));
+		}
+
+		await Assert.That(kept).IsTrue();
+
+		var royal = await mediator.Send(query);
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set #{thing.Number}=ROYALTY"));
+		await Assert.That(ReferenceEquals(royal, await mediator.Send(query))).IsFalse();
+	}
+
+	/// <summary>
 	/// A contents list is stored as the dbrefs it names and resolved through the object node cache,
 	/// so the object it hands out is the object cache's instance, not a second snapshot.
 	/// </summary>
