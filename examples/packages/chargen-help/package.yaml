@@ -1,9 +1,9 @@
 format: "1.16"
 package: chargen-help
 title: "Character applications: +help topics"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Character applications topics into +help: registers the chargen package's help with the +help librarian."
+description: "Puts the Character applications topics into +help: registers the chargen package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [chargen, help, bridge]
@@ -11,11 +11,11 @@ category: Characters
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. chargen keeps its topics on its own help
-# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# object, and plus-help reads any object registered with its librarian. This package is that registration, and the lines that point its messages at +help;
 # uninstalling it takes the topics out of +help, and neither package changes.
 depends:
   - package: chargen
-    version: ">=2.5"
+    version: ">=2.6"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/chargen/
@@ -33,3 +33,14 @@ objects:
     attributes:
       SRC`CHARGEN: |-
         {{chargen/chargen_help}}
+
+  # Lines the chargen package's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{chargen/chargen}}"
+    attributes:
+      HINT`COMMANDS: |-
+        +help app lists the commands.
+      HINT`FORM: |-
+        +help app form has the rest.
+      HINT`OPTIONS: |-
+        +help app form lists them.

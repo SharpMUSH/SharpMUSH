@@ -1,0 +1,33 @@
+# SharpMUSH's front door inside the all-in-one container (deploy/fly/Dockerfile). The host's proxy
+# (Fly's or Railway's) ends TLS and hands plain HTTP to :8000; everything behind Caddy is on
+# localhost.
+{
+	admin localhost:2019
+	servers {
+		# Fly's proxy reaches the machine from a private address and names the client in X-Forwarded-For.
+		# A host whose proxy comes from elsewhere sets SHARPMUSH_TRUSTED_PROXIES to its ranges.
+		trusted_proxies static {$SHARPMUSH_TRUSTED_PROXIES:private_ranges}
+	}
+}
+
+:8000 {
+	encode zstd gzip
+
+	route {
+		# The first-boot guard, written by sharpmush-start and emptied once /setup is finished.
+		import /data/state/guard/*.caddy
+
+		@ws path /ws /ws/*
+		handle @ws {
+			reverse_proxy 127.0.0.1:4202 {
+				header_up X-Forwarded-For {client_ip}
+			}
+		}
+
+		handle {
+			reverse_proxy 127.0.0.1:8080 {
+				header_up X-Forwarded-For {client_ip}
+			}
+		}
+	}
+}

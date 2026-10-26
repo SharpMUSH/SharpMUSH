@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.5.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -220,10 +220,14 @@ objects:
         cmd_right,trim(after(%q<cmd_argument>,=)),
         cmd_route,ucstr(firstof(%q<cmd_switch>,if(%q<cmd_equals>,SEND,if(strlen(%q<cmd_argument>),USAGE,LIST)))),
         viewer_key,u({{radio}}/FUN`KEY,%#))
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # radio-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # The switch is one the radio or another package takes, a page goes only with a paged route, and a page of 0
       # answers with the usage line. Sets extension_object, the object whose INC`<route> runs.
       INC`COMMAND`CHECK: |-
-        @assert cor(not(strlen(%q<cmd_switch>)),member(get({{radio}}/DATA`SWITCHES),%q<cmd_switch>),hasattr({{radio}},EXT`%q<cmd_switch>))=@pemit %#=notice(RADIO,+radio has no /%q<cmd_switch> switch. +help radio lists them.,warn); @assert cor(not(strlen(%q<cmd_page>)),match(LIST RECALL,%q<cmd_route>))=@pemit %#=notice(RADIO,+radio/%q<cmd_switch> takes no page number.,warn); @assert cor(not(strlen(%q<cmd_page>)),%q<cmd_page>)=@pemit %#=notice(RADIO,get({{radio}}/DATA`USAGE`%q<cmd_route>),warn); think setq(extension_object,if(cand(strlen(%q<cmd_switch>),hasattr({{radio}},EXT`%q<cmd_switch>)),u({{radio}}/EXT`%q<cmd_switch>),{{radio}}))
+        @assert cor(not(strlen(%q<cmd_switch>)),member(get({{radio}}/DATA`SWITCHES),%q<cmd_switch>),hasattr({{radio}},EXT`%q<cmd_switch>))=@pemit %#=notice(RADIO,+radio has no /%q<cmd_switch> switch.[u({{radio}}/FUN`HINT,SWITCHES)],warn); @assert cor(not(strlen(%q<cmd_page>)),match(LIST RECALL,%q<cmd_route>))=@pemit %#=notice(RADIO,+radio/%q<cmd_switch> takes no page number.,warn); @assert cor(not(strlen(%q<cmd_page>)),%q<cmd_page>)=@pemit %#=notice(RADIO,get({{radio}}/DATA`USAGE`%q<cmd_route>),warn); think setq(extension_object,if(cand(strlen(%q<cmd_switch>),hasattr({{radio}},EXT`%q<cmd_switch>)),u({{radio}}/EXT`%q<cmd_switch>),{{radio}}))
 
       # ---- reads ----------------------------------------------------------------
       # %0 a player: the key their settings are filed under.
@@ -322,7 +326,7 @@ objects:
 
       # ---- players --------------------------------------------------------------
       INC`USAGE: |-
-        @pemit %#=notice(RADIO,+radio <frequency>=<message> speaks. +help radio lists the rest.,warn)
+        @pemit %#=notice(RADIO,+radio <frequency>=<message> speaks.[u({{radio}}/FUN`HINT,USAGE)],warn)
       # Sets %q<frequency_id> from %q<cmd_left>: any frequency, or one the player is tuned in to.
       INC`NEED`ANY: |-
         think setq(frequency_id,u({{radio}}/FUN`FIND,%q<cmd_left>,u({{radio}}/FUN`IDS))); @assert strlen(%q<cmd_left>)=@pemit %#=notice(RADIO,Which frequency?,warn); @assert not(strmatch(%q<frequency_id>,#-2))=@pemit %#=notice(RADIO,'%q<cmd_left>' begins more than one frequency's name. Type more of it.,warn); @assert isint(%q<frequency_id>)=@pemit %#=notice(RADIO,There is no frequency called '%q<cmd_left>'.,warn)
@@ -393,7 +397,7 @@ objects:
       # Named arguments: list, the list's attribute word (MEMBER, MODERATOR or ADMIN), and listword, its name
       # in a message. %q<frequency_id> and %q<cmd_right> are the frequency and the player, as the command set them.
       INC`DO`LISTADD: |-
-        @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert not(u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>))=@pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] already.,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=squish(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>) %q<target_player>); @pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.,ok)
+        @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert not(u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>))=@pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] already.,warn); think setq(list_next,squish(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>) %q<target_player>)); @assert lte(strlen(%q<list_next>),config(max_attribute_value_length))=@pemit %#=notice(RADIO,[u({{radio}}/FUN`NAME,%q<frequency_id>)] has as many %<listword> as fit in [config(max_attribute_value_length)] bytes.,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=%q<list_next>; @pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.,ok)
       INC`DO`LISTREM: |-
         @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>)=@pemit %#=notice(RADIO,[name(%q<target_player>)] is not one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)].,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=remove(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>),%q<target_player>); @pemit %#=notice(RADIO,[name(%q<target_player>)] is no longer one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)].,ok)
 

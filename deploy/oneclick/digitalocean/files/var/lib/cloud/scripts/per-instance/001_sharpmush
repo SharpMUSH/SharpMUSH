@@ -1,0 +1,14 @@
+#!/bin/bash
+# First boot of a SharpMUSH 1-Click Droplet: start the game on <ip>.sslip.io behind the first-boot
+# guard, then let root log in. The owner can change the domain at the first login (first-login).
+set -euo pipefail
+exec > >(tee -a /var/log/sharpmush-firstboot.log) 2>&1
+
+set -a
+# shellcheck disable=SC1091
+. /opt/sharpmush/state/image.env
+set +a
+/opt/sharpmush/bin/install.sh configure
+
+sed -i '/^Match User root/,/ForceCommand/d' /etc/ssh/sshd_config
+systemctl restart ssh || systemctl restart sshd

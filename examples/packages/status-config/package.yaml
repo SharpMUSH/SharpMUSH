@@ -1,9 +1,9 @@
 format: "1.16"
 package: status-config
 title: "Roleplay status: +config settings"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Roleplay status settings into +config: registers them with the +config registry, so staff see and change them with +config status."
+description: "Puts the Roleplay status settings into +config: registers them with the +config registry, so staff see and change them with +config status, and points its messages at +config."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [status, config, bridge]
@@ -12,10 +12,10 @@ requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. status declares its settings as
 # DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
-# This package is the one leaf that tells the +config registry where they are.
+# This package is the leaf that tells the +config registry where they are, and the lines that point its messages at +config.
 depends:
   - package: status
-    version: ">=1.3"
+    version: ">=1.4"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/status/
@@ -33,3 +33,10 @@ objects:
     attributes:
       SYSTEM`STATUS: |-
         {{status/status}}
+
+  # Lines the status package's messages end with when +config is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{status/status}}"
+    attributes:
+      HINT`STAFF-CONFIG: |-
+        +config status/statuses changes them.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.2.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -69,6 +69,10 @@ objects:
         The longest name of a file, or title of an entry, in characters.
       DATA`CONFIG`NAME-LENGTH`LABEL: |-
         Longest name
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
       DATA`CONFIG`LENGTH: |-
         8000
       DATA`CONFIG`LENGTH`TYPE: |-
@@ -192,10 +196,14 @@ objects:
         value: |-
           $(?is)^\+journal(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,journal,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # info-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(INFO,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(INFO,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(INFO,+%q<cmd_word> has no /%q<cmd_switch> switch. +help %q<cmd_topic> lists them.,warn); @assert cor(not(%q<cmd_paged>),member(v(DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(INFO,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(INFO,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(INFO,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(INFO,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES,%q<cmd_topic>)],warn); @assert cor(not(%q<cmd_paged>),member(v(DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(INFO,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 the switches and %2 the argument, as typed. Sets cmd_word, cmd_topic (its +help topic),
       # cmd_switch_list, cmd_paged and cmd_page (a number as the last switch is the page), cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
@@ -241,7 +249,7 @@ objects:
       # %0 text: why it cannot be kept, or nothing.
       FUN`TEXT`PROBLEM:
         value: |-
-          if(gt(strlen(%0),get(%!/DATA`CONFIG`LENGTH)),Keep the text to [get(%!/DATA`CONFIG`LENGTH)] characters.)
+          if(gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))),Keep the text to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))] characters.)
         flags: [funsyntax]
       # %0 typed names, split at commas when there are any, else at spaces. Sets names_found (their objids) and
       # names_missing (what matched no player, |-separated).
@@ -686,7 +694,7 @@ objects:
       INPUT`WRITE`LINE:
         value: |-
           think setqm(write_key,u(%!/FUN`WRITE`KEY),
-          write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
+          write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH)))=@input/prompt notice(INFO,That line would take it past [u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
         flags: [cmdsyntax]
       # .undo: drops the last line.
       INPUT`WRITE`UNDO:

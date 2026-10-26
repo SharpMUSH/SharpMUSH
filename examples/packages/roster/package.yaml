@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -176,11 +176,15 @@ objects:
         value: |-
           $(?is)^\+roster(/\S*)?(?\: +(.*))?$:@include/args {{roster}}/INC`COMMAND`RUN=switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # roster-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch and who may use it, and runs
       # the routine.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(ROSTER,Only players use the roster.,warn); think u({{roster}}/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(ROSTER,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(ROSTER,+roster has no /%q<cmd_switch> switch. +help roster lists them.,warn); @assert cor(not(member(get({{roster}}/DATA`STAFF`ROUTES),%q<cmd_route>)),u({{roster}}/FUN`IS`STAFF,%#))=@pemit %#=notice(ROSTER,Only roster staff can use +roster/%q<cmd_switch>.,error); @assert cor(not(strlen(%q<cmd_page>)),member(get({{roster}}/DATA`PAGE`ROUTES),%q<cmd_route>))=@pemit %#=notice(ROSTER,if(strlen(%q<cmd_switch>),+roster/%q<cmd_switch>,+roster <name>) takes no page number.,warn); @break strmatch(%q<cmd_route>,*/*)={@trigger/inline/nobreak/spoof %q<cmd_route>}; @include {{roster}}/INC`CMD`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(ROSTER,Only players use the roster.,warn); think u({{roster}}/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(ROSTER,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(ROSTER,+roster has no /%q<cmd_switch> switch.[u({{roster}}/FUN`HINT,SWITCHES)],warn); @assert cor(not(member(get({{roster}}/DATA`STAFF`ROUTES),%q<cmd_route>)),u({{roster}}/FUN`IS`STAFF,%#))=@pemit %#=notice(ROSTER,Only roster staff can use +roster/%q<cmd_switch>.,error); @assert cor(not(strlen(%q<cmd_page>)),member(get({{roster}}/DATA`PAGE`ROUTES),%q<cmd_route>))=@pemit %#=notice(ROSTER,if(strlen(%q<cmd_switch>),+roster/%q<cmd_switch>,+roster <name>) takes no page number.,warn); @break strmatch(%q<cmd_route>,*/*)={@trigger/inline/nobreak/spoof %q<cmd_route>}; @include {{roster}}/INC`CMD`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the switches and %1 the argument, as typed. Sets cmd_page (a last switch of digits), cmd_switch_list
       # (the others), cmd_switch (the one switch), cmd_argument, cmd_left_side and cmd_right_side around the

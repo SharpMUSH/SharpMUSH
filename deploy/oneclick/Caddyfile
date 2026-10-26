@@ -1,0 +1,33 @@
+# The one-click stack's front door (deploy/oneclick/compose.yml).
+# SHARPMUSH_SITE is the domain in direct mode (automatic HTTPS) and ":80" behind a Cloudflare Tunnel.
+{
+	servers {
+		# Only cloudflared may name the client's address; everyone else is the client.
+		trusted_proxies static 172.30.0.11
+	}
+}
+
+{$SHARPMUSH_SITE} {
+	encode zstd gzip
+
+	# route keeps these in the order written, so the guard runs before either handle.
+	route {
+		# The first-boot guard: until the owner finishes /setup, only a browser that opened the setup link
+		# gets in. sharpmush-guard empties this file once the claim is made.
+		import /etc/caddy/guard/*.caddy
+
+		# The web terminal's WebSocket lives on the connection server, not the main server.
+		@ws path /ws /ws/*
+		handle @ws {
+			reverse_proxy connectionserver:4202 {
+				header_up X-Forwarded-For {client_ip}
+			}
+		}
+
+		handle {
+			reverse_proxy sharpmush-server:8080 {
+				header_up X-Forwarded-For {client_ip}
+			}
+		}
+	}
+}

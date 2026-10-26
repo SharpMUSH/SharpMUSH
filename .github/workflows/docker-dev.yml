@@ -11,7 +11,7 @@ on:
           Force-publish images regardless of detected changes (recovery for a failed
           publish run or refresh independently updated base images).
         type: choice
-        options: [all, server, connectionserver, socketserver]
+        options: [all, server, connectionserver, socketserver, fly]
         default: all
 
 permissions:

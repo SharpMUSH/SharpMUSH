@@ -1,9 +1,9 @@
 format: "1.16"
 package: finger-help
 title: "Finger profiles: +help topics"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Finger profiles topics into +help: registers the finger package's help with the +help librarian."
+description: "Puts the Finger profiles topics into +help: registers the finger package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [finger, help, bridge]
@@ -11,11 +11,11 @@ category: Characters
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. finger keeps its topics on its own help
-# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# object, and plus-help reads any object registered with its librarian. This package is that registration, and the lines that point its messages at +help;
 # uninstalling it takes the topics out of +help, and neither package changes.
 depends:
   - package: finger
-    version: ">=1.4"
+    version: ">=1.5"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/finger/
@@ -33,3 +33,10 @@ objects:
     attributes:
       SRC`FINGER: |-
         {{finger/finger_help}}
+
+  # Lines the finger package's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{finger/finger}}"
+    attributes:
+      HINT`SWITCHES: |-
+        +help finger lists them.

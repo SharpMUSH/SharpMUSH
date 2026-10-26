@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -63,10 +63,14 @@ objects:
         value: |-
           $(?is)^\+timezone(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,timezone,table,TIMEZONE,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # time-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(TIME,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(TIME,+%q<cmd_word> has no /%q<cmd_switch> switch. +help time lists them.,warn); @include %!/INC`%q<cmd_route>
+          think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(TIME,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(TIME,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word,
       # cmd_switch_list, cmd_switch, cmd_argument (spaces squeezed), cmd_route (the INC` routine to run), now
@@ -197,7 +201,7 @@ objects:
       # reads back as another hour, and is refused.
       FUN`READ`ERROR:
         value: |-
-          case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'. +help timezone says how they are named.,not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.,comp(timefmt($H:$M,%q<read_instant>,%q<read_zone>),[rjust(%q<read_hour24>,2,0)]:%q<read_minute>),There is no [rjust(%q<read_hour24>,2,0)]:%q<read_minute> on %q<read_date> in %q<read_zone>: the clocks go forward past it.)
+          case(1,not(u(%!/FUN`READ`CLOCKOK)),'[firstof(%q<read_clock>,%q<cmd_argument>)]' is not a time. Write 20:00%, 8pm or 8:30 am.,gt(words(%q<read_zone_typed>),1),Give one time zone after the time%, such as America/New_York.,cand(strlen(%q<read_zone_typed>),not(strlen(%q<read_zone>))),There is no time zone called '%q<read_zone_typed>'.[u(%!/FUN`HINT,ZONES)],not(isnum(%q<read_instant>)),'%q<read_date>' is not a date. Write it as 2026-10-20.,comp(timefmt($H:$M,%q<read_instant>,%q<read_zone>),[rjust(%q<read_hour24>,2,0)]:%q<read_minute>),There is no [rjust(%q<read_hour24>,2,0)]:%q<read_minute> on %q<read_date> in %q<read_zone>: the clocks go forward past it.)
         flags: [funsyntax]
       # The moment FUN`READ`TIME read, in its zone, the game's, the reader's, how far off it is, and, when the Clock's
       # DATA`CONFIG`DISCORD-LINE is on, a Discord timestamp, which Discord shows to each reader in their own time.
@@ -221,7 +225,7 @@ objects:
       # the Clock. God is beyond any object's reach, so the write is checked.
       INC`ZONE`SET:
         value: |-
-          think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'. +help timezone says how they are named.,warn); &TZ %#=%q<zone_found>; @assert strmatch(get(%#/TZ),%q<zone_found>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<zone_found> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.,ok)
+          think setq(zone_found,u({{clock}}/FUN`ZONE`FIND,%q<cmd_argument>)); @assert strlen(%q<zone_found>)=@pemit %#=notice(TIME,There is no time zone called '%q<cmd_argument>'.[u(%!/FUN`HINT,ZONES)],warn); &TZ %#=%q<zone_found>; @assert strmatch(get(%#/TZ),%q<zone_found>)=@pemit %#=notice(TIME,Your TZ attribute could not be set. &TZ me=%q<zone_found> sets it.,error); @pemit %#=notice(TIME,Your time zone is [u({{clock}}/FUN`ZONE`LABEL,%q<zone_found>,%q<now>)]. It is [u({{clock}}/FUN`OOC`SHOW,%q<now>,%q<zone_found>)] for you.,ok)
         flags: [cmdsyntax]
       # +timezone/hide and +timezone/unhide: TZ's visual flag. A zone changed while hidden stays hidden.
       INC`ZONE`HIDE:
@@ -268,7 +272,7 @@ objects:
       # hour counts; zones that share an offset share it, so every zone at the nearest one is listed.
       INC`ZONE`MATCH:
         value: |-
-          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(TIME,Give the time where you are: +timezone/match 8:15pm.,warn); think u(%!/FUN`READ`TIME,%q<cmd_argument>); @assert cand(u(%!/FUN`READ`CLOCKOK),not(strlen(%q<read_zone_typed>)),not(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>))))=@pemit %#=notice(TIME,'%q<cmd_argument>' is not a time. Write the time where you are%, such as 20:15%, 8pm or 8:15 pm.,warn); think u(%!/FUN`MATCH`FIND,add(mul(%q<read_hour24>,60),%q<read_minute>)); @assert words(%q<match_found>)=@pemit %#=notice(TIME,No zone on the game's list is at [rjust(%q<read_hour24>,2,0)]:%q<read_minute> now. +timezone <zone> sets yours by name: +help timezone.,warn); @pemit %#=u(%!/FUN`SCREEN`MATCH)
+          @assert strlen(%q<cmd_argument>)=@pemit %#=notice(TIME,Give the time where you are: +timezone/match 8:15pm.,warn); think u(%!/FUN`READ`TIME,%q<cmd_argument>); @assert cand(u(%!/FUN`READ`CLOCKOK),not(strlen(%q<read_zone_typed>)),not(u(%!/FUN`READ`ISDATE,first(%q<cmd_argument>))))=@pemit %#=notice(TIME,'%q<cmd_argument>' is not a time. Write the time where you are%, such as 20:15%, 8pm or 8:15 pm.,warn); think u(%!/FUN`MATCH`FIND,add(mul(%q<read_hour24>,60),%q<read_minute>)); @assert words(%q<match_found>)=@pemit %#=notice(TIME,No zone on the game's list is at [rjust(%q<read_hour24>,2,0)]:%q<read_minute> now. +timezone <zone> sets yours by name.[u(%!/FUN`HINT,ZONES)],warn); @pemit %#=u(%!/FUN`SCREEN`MATCH)
         flags: [cmdsyntax]
       # %0 a time of day in minutes. Sets match_minutes, match_zones (the Clock's list), match_offsets (how many
       # minutes each zone's clock is ahead of that time, -720 to 719), match_nearest (the offset nearest 0) and

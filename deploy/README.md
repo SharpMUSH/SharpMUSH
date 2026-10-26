@@ -19,6 +19,8 @@ separate, optional overlay for either stack:
 | `docker-compose.telnet-tls.yml` | Opt-in native-client TLS on 4203 with an operator-supplied certificate. See [Native-client TLS](native-client-tls.md). |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
 | `grafana/sharpmush-invocations.json` | Optional Grafana dashboard for function and command timings (see [Function and command timings](#function-and-command-timings)) |
+| `oneclick/` | One-click servers: an installer for any VPS, cloud-init, a Linode StackScript and a DigitalOcean 1-Click image. See [oneclick/README.md](oneclick/README.md) |
+| `fly/` | SharpMUSH in one container for Fly.io. See [fly/README.md](fly/README.md) |
 | `sharpmush.service` | Optional systemd unit — brings the stack up from the compose file on boot |
 | `.env.example` | Template for secrets/config — copy to `.env` and fill in |
 | `.gitignore` | Keeps your real `.env` out of git |

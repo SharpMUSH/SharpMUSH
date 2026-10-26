@@ -227,6 +227,9 @@ services:
       - WATCHTOWER_POLL_INTERVAL=300
       # Allow hosted stopping notifications and game shutdown to finish before SIGKILL.
       - WATCHTOWER_TIMEOUT=60s
+      # watchtower 1.7.1 asks for Docker API 1.25 unless told otherwise; Docker 29 refuses anything below
+      # 1.40 and watchtower exits on start. 1.40 is also what Docker 19.03 and later speak.
+      - DOCKER_API_VERSION=1.40
     networks:
       - sharpmush-net
     mem_limit: 128m

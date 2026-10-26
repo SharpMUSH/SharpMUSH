@@ -1,7 +1,7 @@
 format: "1.16"
 package: highlights
 title: "Favourite poses and highlights"
-version: 1.2.0
+version: 1.2.1
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -166,7 +166,7 @@ objects:
         if(cor(not(isint(%1)),not(member(get({{store}}/PLAYER`[u(%!/FUN`FAVOURITE`KEY,%0)]),%1))),Pose %1 is not one of your favourites.)
       # Pose %<pose> becomes one of %<who>'s favourites. Nothing checks here: the caller asked FUN`FAVOURITE`REFUSAL.
       INC`FAVOURITE`ADD: |-
-        &POSE`%<pose>`BY {{store}}=setunion(get({{store}}/POSE`%<pose>`BY),%<who>); &POSE`%<pose>`SCENE {{store}}=scenepose(,%<pose>,scene); &POSE`%<pose>`AT {{store}}=div(scenepose(,%<pose>,createdat),1000); think setq(favourite_key,u(%!/FUN`FAVOURITE`KEY,%<who>)); &PLAYER`%q<favourite_key> {{store}}=squish(get({{store}}/PLAYER`%q<favourite_key>) %<pose>)
+        think setqm(favourite_key,u(%!/FUN`FAVOURITE`KEY,%<who>),favourite_by,setunion(get({{store}}/POSE`%<pose>`BY),%<who>)); think setq(favourite_list,squish(get({{store}}/PLAYER`%q<favourite_key>) %<pose>)); @assert lte(strlen(%q<favourite_list>),config(max_attribute_value_length))=@pemit %<who>=notice(HIGHLIGHTS,You keep as many favourites as fit in [config(max_attribute_value_length)] bytes. +scene/unfav <pose> makes room.,warn); @assert lte(strlen(%q<favourite_by>),config(max_attribute_value_length))=@pemit %<who>=notice(HIGHLIGHTS,That pose has as many favourites as fit in [config(max_attribute_value_length)] bytes.,warn); &POSE`%<pose>`BY {{store}}=%q<favourite_by>; &POSE`%<pose>`SCENE {{store}}=scenepose(,%<pose>,scene); &POSE`%<pose>`AT {{store}}=div(scenepose(,%<pose>,createdat),1000); &PLAYER`%q<favourite_key> {{store}}=%q<favourite_list>
       # Pose %<pose> is no longer one of %<who>'s favourites; a pose nobody favourites any more leaves the store.
       INC`FAVOURITE`REMOVE: |-
         &POSE`%<pose>`BY {{store}}=setdiff(get({{store}}/POSE`%<pose>`BY),%<who>); think setq(favourite_key,u(%!/FUN`FAVOURITE`KEY,%<who>)); @if words(setr(favourites_left,remove(get({{store}}/PLAYER`%q<favourite_key>),%<pose>)))={&PLAYER`%q<favourite_key> {{store}}=%q<favourites_left>},{&PLAYER`%q<favourite_key> {{store}}}; @if not(words(get({{store}}/POSE`%<pose>`BY)))={@wipe {{store}}/POSE`%<pose>`**; &POSE`%<pose> {{store}}}
