@@ -1811,6 +1811,14 @@
     "file": "compatibility-unresolved.md"
   },
   {
+    "id": "config-alias-command",
+    "lookup": "@config alias",
+    "title": "@config alias",
+    "aliases": [],
+    "sections": [],
+    "file": "config-alias-command.md"
+  },
+  {
     "id": "config-command",
     "lookup": "@config",
     "title": "@config",
@@ -1846,9 +1854,31 @@
         "lookup": "@config cosmetic page and flag display",
         "heading": "Page and flag display",
         "aliases": []
+      },
+      {
+        "id": "pictures",
+        "lookup": "@config cosmetic pictures",
+        "heading": "Pictures and the portal",
+        "aliases": []
       }
     ],
     "file": "config-cosmetic-command.md"
+  },
+  {
+    "id": "config-debug-command",
+    "lookup": "@config debug",
+    "title": "@config debug",
+    "aliases": [],
+    "sections": [],
+    "file": "config-debug-command.md"
+  },
+  {
+    "id": "config-file-command",
+    "lookup": "@config file",
+    "title": "@config file",
+    "aliases": [],
+    "sections": [],
+    "file": "config-file-command.md"
   },
   {
     "id": "config-limits-command",
@@ -1900,9 +1930,23 @@
         "lookup": "@config net sql",
         "heading": "SQL and SSL",
         "aliases": []
+      },
+      {
+        "id": "ignored",
+        "lookup": "@config net ignored",
+        "heading": "Options with no effect",
+        "aliases": []
       }
     ],
     "file": "config-net-command.md"
+  },
+  {
+    "id": "config-onboarding-command",
+    "lookup": "@config onboarding",
+    "title": "@config onboarding",
+    "aliases": [],
+    "sections": [],
+    "file": "config-onboarding-command.md"
   },
   {
     "id": "config-parameters-command",
@@ -1918,6 +1962,14 @@
       }
     ],
     "file": "config-parameters-command.md"
+  },
+  {
+    "id": "config-textfile-command",
+    "lookup": "@config textfile",
+    "title": "@config textfile",
+    "aliases": [],
+    "sections": [],
+    "file": "config-textfile-command.md"
   },
   {
     "id": "config-tiny-command",
@@ -1945,6 +1997,14 @@
       }
     ],
     "file": "config-tiny-command.md"
+  },
+  {
+    "id": "config-wiki-command",
+    "lookup": "@config wiki",
+    "title": "@config wiki",
+    "aliases": [],
+    "sections": [],
+    "file": "config-wiki-command.md"
   },
   {
     "id": "connlog-function",

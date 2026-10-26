@@ -11,6 +11,10 @@ These options control some attribute behavior.
 - `empty_attrs=<boolean>`: Can attributes be set to an empty string?
 - `gender_attr=<string>`: The attribute that holds an object's gender, which pronoun substitution reads and [@gender] sets. SEX when blank, and by default.
 - `reverse_shs=<boolean>`: Accepted but ignored; it has no effect on passwords or logins.
+- `subj_pronoun_attr=<dbref>/<attribute>`: An attribute that gives the subjective pronoun (%s) in place of the built-in one. It is evaluated as with u(), with %0 set to the pronoun the gender would give, and its result is used. Unset by default.
+- `obj_pronoun_attr=<dbref>/<attribute>`: The same for the objective pronoun (%o).
+- `poss_pronoun_attr=<dbref>/<attribute>`: The same for the possessive pronoun (%p).
+- `abs_pronoun_attr=<dbref>/<attribute>`: The same for the absolute possessive pronoun (%a).
 
 # @config chat
 These options control chat system settings.
@@ -37,6 +41,7 @@ These options affect command behavior.
 - `wiz_noaenter=<boolean>`: If yes, dark players don't trigger @aenters.
 - `really_safe=<boolean>`: Does SAFE prevent @nuking?
 - `destroy_possessions=<boolean>`: When a player is destroyed, are their objects as well?
+- `probate_judge=<dbref>`: The player who is given a destroyed player's objects, channels and feed kinds when they are kept. #1 by default.
 
 # @config costs
 SharpMUSH has no money, so only quota_cost has an effect.
@@ -62,6 +67,7 @@ These are database options.
 - `default_home=<dbref>`: The room to send things to when they're homeless.
 - `exits_connect_rooms=<boolean>`: Is a room with any exit of its own counted as connected, so `@dbck` and the scheduled purge don't warn its owner about it? See [FLOATING].
 - `zone_control_zmp_only=<boolean>`: Do we only perform control checks on ZMPs, or do we check ZMOs and ZMRs too?
+- `allow_browser_code=<boolean>`: May plugins ship compiled components that run in visitors' browsers as part of the web portal? Off by default. Turn it on only for plugins you trust.
 
 # @config dump
 These options affect database saves and other periodic checks.
@@ -106,3 +112,6 @@ These options affect logging.
 
 - `log_commands=<boolean>`: Should every command be written to the command log? Commands by SUSPECT players are always written, and commands by NO_LOG objects never are. Passwords are starred out.
 - `log_forces=<boolean>`: Should @force by wizards, and @force of wizard-owned objects, be written to the wizard log?
+- `use_connlog=<boolean>`: Can connlog(), connrecord() and addrlog() read the connection log? On by default; when it is off they return `#-1 CONNECTION LOG DISABLED`.
+
+The server writes its logs through Serilog, set in the Serilog section of its appsettings.json. These options are accepted but ignored: `use_syslog`, `error_log`, `command_log`, `wizard_log`, `checkpt_log`, `trace_log`, `connect_log` and `mem_check`. Staff actions are kept in the audit log as well.

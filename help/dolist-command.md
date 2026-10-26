@@ -26,14 +26,15 @@
 -->
 # @dolist
 
-`@dolist[/<switches>][/notify][/delimit <delim>] <list>=<action list>`
+`@dolist[/<switches>][/notify][/delimit <delim>] <list>=<action list>`<br>
+`@dolist/pid <object> <list>=<action list>`
 
 @dolist queues the `<action list>` for execution once for each element in `<list>`. `<list>` is space-separated, unless the `/delimit` switch is given, in which case it is a `<delim>`-separated list. A marked `<delim>`, such as `%*<|>`, splits only where it is marked: see [list separators]. The `/space` switch asks for the default, a space-separated list, and changes nothing; it comes from RhostMUSH.
 
 With `/inline` or `/inplace`, `@dolist` outputs what the last command it ran output; queued, it outputs nothing. See [command output].
 
 - [@dolist substitutions]: `%i0`, `inum()`, `%d0`, `##` and `#@` in the action list
-- [@dolist notification and delimiters]: `/notify`, `/inline` and the switches that go with it
+- [@dolist notification and delimiters]: `/notify`, `/pid`, `/inline` and the switches that go with it
 - [@dolist iteration examples]: positions and `/notify`
 - [@dolist nested examples]: one @dolist inside another, and inside iter()
 
@@ -47,7 +48,7 @@ For backwards compatibility, "##" also stands for the current element of the lis
 
 ## Notification and delimiters
 
-If the `/notify` switch is given, the command "@notify me" is queued after all copies of `<action list>` have been queued. This is useful for object synchronization with semaphores.
+If the `/notify` switch is given, the command "@notify me" is queued after all copies of `<action list>` have been queued. This is useful for object synchronization with semaphores. With `/pid`, the first word of `<list>` is taken out of it and names the object to notify instead of you; `/notify` wins over `/pid`, and `/delimit` turns it off.
 
 If the `/inline` switch is given, @dolist will run the new action lists instantly, instead of queueing them to be run later.
 

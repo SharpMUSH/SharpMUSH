@@ -63,7 +63,7 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 # cemit()
 # nscemit()
 
-- `@cemit[/noisy|/silent][/noeval] <channel>=<message>`
+- `@cemit[/noisy|/silent][/noeval][/spoof] <channel>=<message>`
 - `@nscemit[/noisy|/silent][/noeval] <channel>=<message>`
 - `cemit(<channel>, <message>[, <noisy>])`
 - `nscemit(<channel>, <message>[, <noisy>])`
@@ -72,7 +72,7 @@ Normally, when an object attempts to speak on the channel system with @chat, usi
 
 You must be able to speak on the channel, or have the See_All and Pemit_All @powers, to @cemit on the channel.
 
-@nscemit is exactly the same, but does not produce nospoof information when used by players with the Can_spoof @power.
+@nscemit is exactly the same, but does not produce nospoof information when used by players with the Can_spoof @power. `@cemit/spoof` is the same as @nscemit.
 
 cemit() and nscemit() work the same as @cemit/silent and @nscemit/silent, respectively. If *\<noisy\>* is given as a true value, they work like @cemit/noisy and @nscemit/noisy, respectively, instead.
 
@@ -158,7 +158,8 @@ which reads `(None)` when nothing matched.
 `addcom <alias>=<channel>`<br>
 `delcom <alias>`<br>
 `comlist`<br>
-`comtitle <alias>=<title>`
+`comtitle <alias>=<title>`<br>
+`@clist[/full]`
 
 SharpMUSH provides the MUX comsys commands for players more familiar with them:
 
@@ -170,6 +171,7 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 - `<alias> on` > `@channel/ungag <channel>`
 - `<alias> off` > `@channel/gag <channel>`
 - `<alias> who` > `@channel/who <channel>`
+- `@clist` > `@channel/list`; the `/full` switch is accepted and changes nothing
 
 Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. These commands and aliases work only while the `use_muxcomm` option is on; otherwise they answer `Command disabled.` Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
 
