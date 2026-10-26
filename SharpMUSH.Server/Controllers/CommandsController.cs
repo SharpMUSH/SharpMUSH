@@ -47,8 +47,8 @@ public class CommandsController(
 	IPermissionService permissions,
 	IRealityPolicy reality) : ControllerBase
 {
-	/// <summary>The longest line accepted, PennMUSH's <c>BUFFER_LEN</c> for a typed command.</summary>
-	public const int MaxCommandLength = 8192;
+	/// <summary>The longest line accepted, the same 5 MiB as a line typed over telnet or in the portal terminal.</summary>
+	public const int MaxCommandLength = 5 * 1024 * 1024;
 
 	/// <summary>The longest expression <c>eval</c> accepts: an attribute's whole text, not one typed line.</summary>
 	public const int MaxExpressionLength = 65536;
