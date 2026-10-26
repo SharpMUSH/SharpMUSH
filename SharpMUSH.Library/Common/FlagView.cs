@@ -64,5 +64,5 @@ public sealed class FlagView
 		=> _connections is not null
 			&& thing.Type.Equals("PLAYER", StringComparison.OrdinalIgnoreCase)
 			&& await _connections.Get(thing.DBRef)
-				.AnyAsync(c => c.PresenceClass != PresenceClasses.Portal && (!c.IsHidden || _seeAll));
+				.AnyAsync(c => c.IsPresent && (!c.IsHidden || _seeAll));
 }

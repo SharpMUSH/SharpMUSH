@@ -89,6 +89,12 @@ public sealed class ConnectionPump(
 		{
 			// Expected on shutdown / RequestAborted.
 		}
+		catch (System.Net.WebSockets.WebSocketException ex)
+			when (ex.WebSocketErrorCode == System.Net.WebSockets.WebSocketError.ConnectionClosedPrematurely)
+		{
+			// A browser tab closed or a network dropped without the close handshake: routine, so one line.
+			logger.LogWarning("Connection {Handle} closed without a close handshake", handle);
+		}
 		catch (Exception ex)
 		{
 			// Intentional per-connection boundary: an unexpected error on one connection is logged and
@@ -108,20 +114,28 @@ public sealed class ConnectionPump(
 				// disconnect if the client does not come back.
 				using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 				var acquired = await sink.OutputGate.WaitAsync(TimeSpan.FromSeconds(5));
+				var detached = false;
+				var heldUntil = DateTimeOffset.UtcNow.Add(grace);
 				if (!acquired)
 				{
-					if (sink.Detach(transport)) ScheduleExpiry(handle, session, grace);
+					if (sink.Detach(transport))
+					{
+						ScheduleExpiry(handle, session, grace);
+						detached = true;
+					}
 				}
 				else try
 					{
 						if (ReferenceEquals(sink.Current, transport))
 						{
 							sink.Detach();
-							try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), teardown.Token); }
+							detached = true;
+							try { await SetExpiryAsync(handle, heldUntil, teardown.Token); }
 							finally { ScheduleExpiry(handle, session, grace); }
 						}
 					}
 					finally { sink.OutputGate.Release(); }
+				if (detached) await AnnounceDetachedAsync(handle, session, heldUntil, teardown.Token);
 			}
 		}
 	}
@@ -210,6 +224,22 @@ public sealed class ConnectionPump(
 		catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
 		{
 			logger.LogWarning(ex, "Could not announce the resumed session for {Handle}; its state is not re-sent", handle);
+		}
+	}
+
+	/// <summary>
+	/// Tells the engine the session is held with nobody reading it, so the player stops counting as online
+	/// until it resumes or expires. A failure leaves the player listed until then, nothing worse.
+	/// </summary>
+	private async Task AnnounceDetachedAsync(long handle, string session, DateTimeOffset heldUntil, CancellationToken ct)
+	{
+		try
+		{
+			await publishEndpoint.Publish(new SessionDetachedMessage(handle, session, heldUntil), ct);
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Could not announce the held session for {Handle}; it stays listed as online", handle);
 		}
 	}
 

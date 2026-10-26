@@ -155,6 +155,10 @@ public class ConnectionPumpTests
 		// Drop now DETACHES rather than disconnecting immediately.
 		await conn.DidNotReceive().DisconnectAsync(42);
 		await Assert.That(tracker.IsDetached(42)).IsTrue();
+		// The engine is told, so the held session stops counting as online.
+		await bus.Received(1).Publish(
+			Arg.Is<SessionDetachedMessage>(m => m.Handle == 42 && m.HeldUntil != default),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -587,5 +591,6 @@ public class ConnectionPumpTests
 		await Assert.That(ReferenceEquals(registry.Get(7)!.Current, newerTransport)).IsTrue();
 		await Assert.That(tracker.IsDetached(7)).IsFalse();
 		await conn.DidNotReceive().DisconnectAsync(7);
+		await bus.DidNotReceive().Publish(Arg.Any<SessionDetachedMessage>(), Arg.Any<CancellationToken>());
 	}
 }

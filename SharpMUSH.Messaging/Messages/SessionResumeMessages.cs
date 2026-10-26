@@ -16,3 +16,11 @@ public record SessionResumeResponseMessage(
 /// none of what was pushed before its <c>lastSeq</c>.
 /// </summary>
 public record SessionResumedMessage(long Handle, string SessionId);
+
+/// <summary>
+/// Sent by the connection server when a socket drops and its session is held for the client to resume,
+/// so the engine stops counting the player as online until <see cref="SessionResumedMessage"/> or
+/// <paramref name="HeldUntil"/>. The two travel on different subjects, so a resume can arrive first;
+/// the deadline bounds how long such a session is wrongly left out.
+/// </summary>
+public record SessionDetachedMessage(long Handle, string SessionId, DateTimeOffset HeldUntil);

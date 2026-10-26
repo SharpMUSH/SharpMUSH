@@ -125,10 +125,31 @@ public sealed class SessionResumedConsumer(IConnectionService connections, IPubl
 {
 	public async Task HandleAsync(SessionResumedMessage message, CancellationToken cancellationToken = default)
 	{
-		if (connections.Get(message.Handle) is not { State: IConnectionService.ConnectionState.LoggedIn, Ref: { } player } connection
+		if (connections.Get(message.Handle) is not { } connection
 			|| connection.Metadata.GetValueOrDefault("SessionId") != message.SessionId)
 			return;
 
+		connections.Update(message.Handle, "Detached", "0");
+		if (connection is not { State: IConnectionService.ConnectionState.LoggedIn, Ref: { } player })
+			return;
+
 		await publisher.Publish(new ConnectionResumedNotification(message.Handle, player), cancellationToken);
+	}
+}
+
+/// <summary>
+/// The connection server is holding a session whose client dropped (<see cref="SessionDetachedMessage"/>).
+/// Until it resumes, nobody is at the other end, so the player is not online
+/// (<see cref="IConnectionService.ConnectionData.IsPresent"/>).
+/// </summary>
+public sealed class SessionDetachedConsumer(IConnectionService connections)
+	: IMessageConsumer<SessionDetachedMessage>
+{
+	public Task HandleAsync(SessionDetachedMessage message, CancellationToken cancellationToken = default)
+	{
+		if (connections.Get(message.Handle) is { } connection
+			&& connection.Metadata.GetValueOrDefault("SessionId") == message.SessionId)
+			connections.Update(message.Handle, "Detached", message.HeldUntil.ToUnixTimeMilliseconds().ToString());
+		return Task.CompletedTask;
 	}
 }
