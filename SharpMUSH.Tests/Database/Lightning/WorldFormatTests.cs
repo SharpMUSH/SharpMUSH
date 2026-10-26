@@ -114,7 +114,7 @@ public class WorldFormatTests
 		}
 	}
 
-	private static string NewPath() => Path.Combine(Path.GetTempPath(), "world-format-" + Guid.NewGuid().ToString("N"));
+	private static string NewPath() => Path.Join(Path.GetTempPath(), "world-format-" + Guid.NewGuid().ToString("N"));
 
 	// relations: null — this fixture bypasses the host's Mediator cache, unlike the production wiring.
 	private static LightningDatabase Create(string path) => new(NullLogger<LightningDatabase>.Instance,
