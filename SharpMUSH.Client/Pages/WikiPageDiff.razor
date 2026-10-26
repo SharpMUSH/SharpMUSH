@@ -41,12 +41,12 @@
         <div class="wikidiff-revbar">
             <div class="wikidiff-revcard">
                 <div class="wikidiff-revdate">@_fromRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
-                <div class="wikidiff-revmeta">@_fromRev.EditorDbref · @Loc["WkRevisionShort", _fromRev.RevisionNumber]</div>
+                <div class="wikidiff-revmeta">@(_fromRev.EditorName ?? _fromRev.EditorDbref) · @Loc["WkRevisionShort", _fromRev.RevisionNumber]</div>
             </div>
             <MudIcon Icon="@Icons.Material.Filled.ArrowForward" Style="font-size:1rem;color:var(--text-faint);flex-shrink:0;" />
             <div class="wikidiff-revcard wikidiff-revcard--new">
                 <div class="wikidiff-revdate">@_toRev.Timestamp.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</div>
-                <div class="wikidiff-revmeta">@_toRev.EditorDbref · @Loc["WkRevisionShort", _toRev.RevisionNumber]</div>
+                <div class="wikidiff-revmeta">@(_toRev.EditorName ?? _toRev.EditorDbref) · @Loc["WkRevisionShort", _toRev.RevisionNumber]</div>
             </div>
         </div>
 

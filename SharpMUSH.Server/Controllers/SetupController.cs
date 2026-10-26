@@ -112,7 +112,8 @@ public class SetupController(
 	[Authorize(Policy = PortalPermission.ServerAdmin)]
 	public async Task<IActionResult> SetPackages([FromBody] SetupPackagesRequest request,
 		CancellationToken cancellationToken)
-		=> await features.ApplyPackagesAsync(request.Installed ?? [], cancellationToken) switch
+		// Not the request's token: a closed tab or a dropped connection must not stop the install part way.
+		=> await features.ApplyPackagesAsync(request.Installed ?? [], CancellationToken.None) switch
 		{
 			Success => Ok(await WizardAsync(cancellationToken)),
 			Error<string> error => Conflict(error.Value),

@@ -685,10 +685,16 @@
     <value>Selected file</value>
   </data>
   <data name="MailDatabaseOptional" xml:space="preserve">
-    <value>Mail database (optional): the PennMUSH maildb, RhostMUSH's .dump.mail from wmail/unload, or TinyMUX's mail.db, for mail and mail aliases</value>
+    <value>Mail database (optional)</value>
+  </data>
+  <data name="AdmImportMailHint" xml:space="preserve">
+    <value>The PennMUSH maildb, RhostMUSH's .dump.mail from wmail/unload, or TinyMUX's mail.db. Brings over mail and mail aliases.</value>
   </data>
   <data name="ChatDatabaseOptional" xml:space="preserve">
-    <value>Chat database (optional): the PennMUSH chatdb or TinyMUX comsys.db, for channels</value>
+    <value>Chat database (optional)</value>
+  </data>
+  <data name="AdmImportChatHint" xml:space="preserve">
+    <value>The PennMUSH chatdb or TinyMUX comsys.db. Brings over channels.</value>
   </data>
   <data name="AdmImportFormat" xml:space="preserve">
     <value>Database format</value>
@@ -712,7 +718,10 @@
     <value>The import changed the softcode in these attributes so SharpMUSH reads it as the old server did. Open one to see its code before and after. Test each one before players connect, and fix by hand any line that says check by hand.</value>
   </data>
   <data name="AdmImportMailFoldersOptional" xml:space="preserve">
-    <value>Mail folders (optional): RhostMUSH's .dump.folder, which says which folder each message is in</value>
+    <value>Mail folders (optional)</value>
+  </data>
+  <data name="AdmImportMailFoldersHint" xml:space="preserve">
+    <value>RhostMUSH's .dump.folder, which says which folder each message is in.</value>
   </data>
   <data name="PreviewFileContent" xml:space="preserve">
     <value>Preview file content</value>
@@ -8340,6 +8349,9 @@
   </data>
   <data name="AdmDiscordForbidden" xml:space="preserve">
     <value>This page needs the discord.admin permission.</value>
+  </data>
+  <data name="AdmDiscordNotInstalled" xml:space="preserve">
+    <value>The Discord link package is not installed. Install it to connect a Discord server:</value>
   </data>
   <data name="AdmDiscordLoadFailed" xml:space="preserve">
     <value>Could not load the Discord link: {0}</value>

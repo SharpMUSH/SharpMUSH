@@ -6,6 +6,7 @@
 @using SharpMUSH.Client.Models.Roles
 @using SharpMUSH.Library.Models.Portal.Discord
 @inject DiscordAdminService Discord
+@inject ServerInfoService ServerInfo
 @inject RoleRegistryClient RoleRegistry
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
@@ -15,6 +16,7 @@
 <PageTitle>@Loc["AdmDiscordTitle"] — @Loc["AdmBreadcrumb"] — <GameName /></PageTitle>
 
 <FeatureGate Feature="@GameFeatures.Discord">
+    <ChildContent>
     <div class="page-stack page-stack--padded adm-discord">
         <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
 
@@ -343,6 +345,13 @@
             </KitCard>
         }
     </div>
+    </ChildContent>
+    <Otherwise>
+        <div class="page-stack page-stack--padded adm-discord">
+            <PlainPageHeader Kicker="@Loc["AdmGroupServer"]" Title="@Loc["AdmDiscordTitle"]" Description="@Loc["AdmDiscordDescription"]" />
+            <EmptyState>@Loc["AdmDiscordNotInstalled"] <a href="/admin/packages">@Loc["PkgPackages"]</a></EmptyState>
+        </div>
+    </Otherwise>
 </FeatureGate>
 
 <ConfigOptionFocus Ready="@(!_loading && !_forbidden)" />
@@ -374,6 +383,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!await ServerInfo.HasFeatureAsync(GameFeatures.Discord))
+        {
+            _loading = false;
+            return;
+        }
+
         var roles = RoleRegistry.ListAsync();
         await LoadAsync();
         _gameRoles = (await roles).Where(role => !Implicit.Contains(role.Slug)).OrderByDescending(role => role.Priority).ToList();

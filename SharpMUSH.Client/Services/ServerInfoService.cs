@@ -61,9 +61,10 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 	/// <summary>
 	/// The game name from the last answer the server gave, without asking; <c>null</c> until it has answered.
 	/// For text that is drawn at once and cannot wait for <see cref="GameNameAsync"/>: the page titles
-	/// (<see cref="Resources.GameNamedLocalizer"/>).
+	/// (<see cref="Resources.GameNamedLocalizer"/>). Kept across <see cref="Refresh"/>, so a page drawn before
+	/// the next answer still names the game.
 	/// </summary>
-	public string? KnownGameName => _lastAnswer is { } answer && !ReferenceEquals(answer, Fallback) ? answer.MudName : null;
+	public string? KnownGameName { get; private set; }
 
 	/// <summary>
 	/// The game's <c>portal_logo</c>, or <c>null</c> when it has none and the portal draws the SharpMUSH logo. On
@@ -124,6 +125,7 @@ public class ServerInfoService(IHttpClientFactory httpClientFactory)
 			var previous = _lastAnswer;
 			if (ReferenceEquals(previous, info)) return info;
 			_lastAnswer = info;
+			KnownGameName = info.MudName;
 			if (previous is not null && Differs(previous, info)) Changed?.Invoke();
 			return info;
 		}

@@ -131,11 +131,11 @@ public static class MsspCatalog
 
 	private static readonly string[] Subgenres =
 	[
-		"Alternate History", "Anime", "Cyberpunk", "Detective", "Discworld", "Dragonlance", "Christian Fiction",
-		"Classical Fantasy", "Crime", "Dark Fantasy", "Epic Fantasy", "Erotic", "Exploration", "Forgotten Realms",
-		"Frankenstein", "Gothic", "High Fantasy", "Magical Realism", "Medieval Fantasy", "Multiverse", "Paranormal",
-		"Post-Apocalyptic", "Military Science Fiction", "Mythology", "Pulp", "Star Wars", "Steampunk", "Suspense",
-		"Time Travel", "Weird Fiction", "World War II", "Urban Fantasy", "None"
+		"Alternate History", "Anime", "Christian Fiction", "Classical Fantasy", "Crime", "Cyberpunk", "Dark Fantasy",
+		"Detective", "Discworld", "Dragonlance", "Epic Fantasy", "Erotic", "Exploration", "Forgotten Realms",
+		"Frankenstein", "Gothic", "High Fantasy", "Magical Realism", "Medieval Fantasy", "Military Science Fiction",
+		"Multiverse", "Mythology", "Paranormal", "Post-Apocalyptic", "Pulp", "Star Wars", "Steampunk", "Suspense",
+		"Time Travel", "Urban Fantasy", "Weird Fiction", "World War II", "None"
 	];
 
 	private static readonly string[] CrawlDelays = ["-1", "1", "5", "11", "23"];
