@@ -54,9 +54,9 @@ public class PennMUSHChannelImportTests
 		await Assert.That(result.ChannelsConverted).IsEqualTo(3);
 		await Assert.That(result.ChannelMembersConverted).IsEqualTo(8);
 		// Only the creation cost, which SharpMUSH has nowhere to keep, is reported; nothing else was changed.
-		await Assert.That(result.Warnings.Where(w => w.StartsWith("Channel"))).IsEquivalentTo(
+		await Assert.That(result.Warnings.Texts().Where(w => w.StartsWith("Channel"))).IsEquivalentTo(
 			["Channel creation costs were not kept, as SharpMUSH does not refund them: Public (1000), Staff (1000)"]);
-		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("The chatdb was saved at"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.StartsWith("The chatdb was saved at"));
 
 		var phases = progress.Reports.Select(p => p.CurrentPhase).ToList();
 		await Assert.That(phases.IndexOf("Channels imported")).IsGreaterThan(phases.IndexOf("Locks created"));
@@ -154,13 +154,13 @@ public class PennMUSHChannelImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.ChannelsConverted).IsEqualTo(2);
 		await Assert.That(result.ChannelMembersConverted).IsEqualTo(2);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("The chatdb was saved at Fri Sep 25 01:00:00 2026"));
-		await Assert.That(result.Warnings).Contains("Channel Broken: owner #7 is not an imported player; given to #1");
-		await Assert.That(result.Warnings).Contains("Channel Broken: unknown channel flag bits 0x1000 were dropped");
-		await Assert.That(result.Warnings).Contains("Channel Broken: mogrifier #7 is not an imported object and was dropped");
-		await Assert.That(result.Warnings).Contains("Channel Broken: dropped member(s) that are not an imported player (#6 #7)");
-		await Assert.That(result.Warnings).Contains("Channel Things: dropped member(s) that are not an imported thing (#4)");
-		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Channel creation costs"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("The chatdb was saved at Fri Sep 25 01:00:00 2026"));
+		await Assert.That(result.Warnings.Texts()).Contains("Channel Broken: owner #7 is not an imported player; given to #1");
+		await Assert.That(result.Warnings.Texts()).Contains("Channel Broken: unknown channel flag bits 0x1000 were dropped");
+		await Assert.That(result.Warnings.Texts()).Contains("Channel Broken: mogrifier #7 is not an imported object and was dropped");
+		await Assert.That(result.Warnings.Texts()).Contains("Channel Broken: dropped member(s) that are not an imported player (#6 #7)");
+		await Assert.That(result.Warnings.Texts()).Contains("Channel Things: dropped member(s) that are not an imported thing (#4)");
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.StartsWith("Channel creation costs"));
 
 		var broken = await ChannelAsync(world, "Broken");
 		await Assert.That(await DescribeAsync(broken)).IsEqualTo("Broken||#1|Player|0");
@@ -230,9 +230,9 @@ public class PennMUSHChannelImportTests
 		var boxed = await ChannelAsync(world, "Boxed");
 		await Assert.That(boxed.JoinLock).IsEqualTo("=#11|+#11|#10|NUM:#2|@#11/Basic");
 		await Assert.That(boxed.SpeakLock).IsEqualTo("#1");
-		await Assert.That(result.Warnings).Contains(w =>
+		await Assert.That(result.Warnings.Texts()).Contains(w =>
 			w.StartsWith("Channel Boxed: join lock names objects imported under new numbers (#2 as #11, #2 as #11, #2 as #11)"));
-		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Channel Boxed: speak lock"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.StartsWith("Channel Boxed: speak lock"));
 		// The mogrifier and the member follow it the same way.
 		var box = await PennMUSHDbrefPreservationTests.NodeAsync(world, 11);
 		await Assert.That(box.Object().Name).IsEqualTo("Box");
@@ -250,7 +250,7 @@ public class PennMUSHChannelImportTests
 			await world.Parser.ParseFileAsync(PennMUSHDbrefPreservationTests.FixturePath));
 
 		await Assert.That(result.ChannelsConverted).IsEqualTo(0);
-		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("chatdb"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.Contains("chatdb"));
 		await Assert.That(await world.Mediator.CreateStream(new GetChannelListQuery()).CountAsync()).IsEqualTo(0);
 	}
 
@@ -271,7 +271,7 @@ public class PennMUSHChannelImportTests
 			await Assert.That(result.Errors).IsEmpty();
 			await Assert.That(result.PlayersConverted).IsGreaterThan(0);
 			await Assert.That(result.ChannelsConverted).IsEqualTo(0);
-			await Assert.That(result.Warnings).Contains(w => w.StartsWith("The chatdb could not be read"));
+			await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("The chatdb could not be read"));
 			await Assert.That((await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Object().Name).IsEqualTo("Alice");
 		}
 		finally
@@ -301,7 +301,7 @@ public class PennMUSHChannelImportTests
 
 				await Assert.That(result.Errors).IsEmpty();
 				await Assert.That(result.ChannelsConverted).IsEqualTo(0);
-				await Assert.That(result.Warnings).Contains(w => w.StartsWith("The chatdb could not be read"));
+				await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("The chatdb could not be read"));
 				await Assert.That((await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Object().Name).IsEqualTo("Alice");
 			}
 		}

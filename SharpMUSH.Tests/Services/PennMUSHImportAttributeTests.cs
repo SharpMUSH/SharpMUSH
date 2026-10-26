@@ -88,7 +88,7 @@ public class PennMUSHImportAttributeTests
 
 		await Assert.That(FlagNames((await ReadAsync(world, widget, "ALIASED"))[^1]))
 			.IsSupersetOf(["MORTAL_DARK", "NO_INHERIT", "NOSPACE"]);
-		await Assert.That(result.Warnings.Where(w => w.Contains("ALIASED"))).IsEmpty();
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("ALIASED"))).IsEmpty();
 	}
 
 	/// <summary>
@@ -105,7 +105,7 @@ public class PennMUSHImportAttributeTests
 
 		await Assert.That(FlagNames((await ReadAsync(world, widget, "SECRET"))[^1]))
 			.IsSupersetOf(["WIZARD", "MORTAL_DARK", "LOCKED"]);
-		await Assert.That(result.Warnings.Where(w => w.Contains("SECRET"))).IsEmpty();
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("SECRET"))).IsEmpty();
 	}
 
 	/// <summary>
@@ -122,7 +122,7 @@ public class PennMUSHImportAttributeTests
 		var odd = (await ReadAsync(world, widget, "ODD"))[^1];
 		await Assert.That(odd.Value.ToPlainText()).IsEqualTo("x");
 		await Assert.That(FlagNames(odd)).DoesNotContain("VISUAL");
-		await Assert.That(result.Warnings)
+		await Assert.That(result.Warnings.Texts())
 			.Contains(w => w.StartsWith("Failed to set flags [visual, sparkly] on attribute ODD of #10"));
 	}
 

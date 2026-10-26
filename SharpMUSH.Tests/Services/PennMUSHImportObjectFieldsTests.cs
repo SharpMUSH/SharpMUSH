@@ -113,13 +113,13 @@ public class PennMUSHImportObjectFieldsTests
 
 		await Assert.That(await FlagNamesAsync(world, "Fields Hall")).IsEquivalentTo(["UNINSPECTED"]);
 
-		await Assert.That(result.Warnings.Any(w => w.Contains("UNINSPECTED"))).IsFalse()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("UNINSPECTED"))).IsFalse()
 			.Because("PennMUSH's UNINSPECTED room flag is seeded (#1130), so it imports instead of being reported");
-		await Assert.That(result.Warnings.Any(w => w.Contains("QUOTAS"))).IsFalse()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("QUOTAS"))).IsFalse()
 			.Because("PennMUSH's QUOTAS power is seeded (#1131), so it imports instead of being reported");
-		await Assert.That(result.Warnings.Any(w => w.Contains("STAFF"))).IsTrue()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("STAFF"))).IsTrue()
 			.Because("a flag SharpMUSH has no counterpart for is still reported, not silently lost");
-		await Assert.That(result.Warnings.Any(w => w.Contains("CONNECTED"))).IsFalse();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("CONNECTED"))).IsFalse();
 	}
 
 	[Test]
@@ -147,7 +147,7 @@ public class PennMUSHImportObjectFieldsTests
 		await Assert.That(alice.Quota).IsEqualTo(2 + 20)
 			.Because("Alice owns the hall and the widget and has 20 left");
 		await Assert.That(await world.Database.GetAttributeAsync(alice.Object.DBRef, ["RQUOTA"]).ToListAsync()).IsEmpty();
-		await Assert.That(result.Warnings.Any(w => w.Contains("pennies", StringComparison.OrdinalIgnoreCase))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("pennies", StringComparison.OrdinalIgnoreCase))).IsTrue();
 	}
 
 	private static async Task<ConversionResult> ImportAsync(IsolatedImportWorld world)

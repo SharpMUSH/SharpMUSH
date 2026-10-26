@@ -322,10 +322,10 @@ public static partial class TinyMuxDatabaseReader
 		};
 
 		/// <summary>What was carried over approximately or dropped, with how often.</summary>
-		private readonly SortedDictionary<string, List<int>> _tally = new(StringComparer.Ordinal);
+		private readonly SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> _tally = new(StringComparer.Ordinal);
 
 		/// <summary>TinyMUX's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
-		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
+		private readonly SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> _routine = new(StringComparer.Ordinal);
 		private readonly HashSet<string> _flagsUsed = new(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
 		private int _longValues;
@@ -333,15 +333,15 @@ public static partial class TinyMuxDatabaseReader
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
 		private readonly List<SoftcodeRewrite> _rewrites = [];
 
-		private void Tally(string what, int dbref, bool routine = false)
+		private void Tally(ImportWarningKind kind, string what, int dbref, bool routine = false)
 		{
 			var tally = routine ? _routine : _tally;
-			if (!tally.TryGetValue(what, out var dbrefs))
+			if (!tally.TryGetValue(what, out var tallied))
 			{
-				tally[what] = dbrefs = [];
+				tally[what] = tallied = (kind, []);
 			}
 
-			dbrefs.Add(dbref);
+			tallied.Dbrefs.Add(dbref);
 		}
 
 		public PennMUSHDatabase Map()
@@ -386,7 +386,7 @@ public static partial class TinyMuxDatabaseReader
 
 			if (raw.HeaderLock is { } headerLock)
 			{
-				locks["Basic"] = TinyMuxLockKey.Write(headerLock, AttributeNameOf, note => Tally(note, raw.DBRef));
+				locks["Basic"] = TinyMuxLockKey.Write(headerLock, AttributeNameOf, note => Tally(ImportWarningKind.Locks, note, raw.DBRef));
 			}
 
 			foreach (var (number, stored) in raw.Attributes)
@@ -410,7 +410,7 @@ public static partial class TinyMuxDatabaseReader
 
 				if (TinyMuxNames.DroppedAttributes.TryGetValue(number, out var why))
 				{
-					Tally($"Attribute number {number} not imported: {why}", raw.DBRef, routine: true);
+					Tally(ImportWarningKind.Attributes, $"Attribute number {number} not imported: {why}", raw.DBRef, routine: true);
 					continue;
 				}
 
@@ -427,7 +427,7 @@ public static partial class TinyMuxDatabaseReader
 
 				if (AttributeNameOf(number) is not { } name)
 				{
-					Tally($"Attribute number {number} not imported: the flatfile does not name it " +
+					Tally(ImportWarningKind.Attributes, $"Attribute number {number} not imported: the flatfile does not name it " +
 						"(TinyMUX warns of this when a backup was taken from a running game)", raw.DBRef);
 					continue;
 				}
@@ -493,7 +493,7 @@ public static partial class TinyMuxDatabaseReader
 
 		private PennMUSHObjectType? Unknown(int type, int dbref)
 		{
-			Tally($"Object of unknown type {type} not imported", dbref);
+			Tally(ImportWarningKind.Objects, $"Object of unknown type {type} not imported", dbref);
 			return null;
 		}
 
@@ -529,7 +529,7 @@ public static partial class TinyMuxDatabaseReader
 				names.AddRange(mapping.Flags);
 				if (mapping.Note is { } note)
 				{
-					Tally($"Attribute flag {mapping.Source} {note}", dbref);
+					Tally(ImportWarningKind.Attributes, $"Attribute flag {mapping.Source} {note}", dbref);
 				}
 			}
 
@@ -542,11 +542,11 @@ public static partial class TinyMuxDatabaseReader
 			string key;
 			try
 			{
-				key = TinyMuxLockKey.Convert(TinyMuxColour.Strip(value), AttributeNameOf, note => Tally($"Lock: {note}", raw.DBRef));
+				key = TinyMuxLockKey.Convert(TinyMuxColour.Strip(value), AttributeNameOf, note => Tally(ImportWarningKind.Locks, $"Lock: {note}", raw.DBRef));
 			}
 			catch (FormatException ex)
 			{
-				Tally($"{mapping.MuxName} not imported: TinyMUX's key could not be read ({ex.Message})", raw.DBRef);
+				Tally(ImportWarningKind.Locks, $"{mapping.MuxName} not imported: TinyMUX's key could not be read ({ex.Message})", raw.DBRef);
 				return;
 			}
 
@@ -560,12 +560,12 @@ public static partial class TinyMuxDatabaseReader
 			{
 				// TinyMUX checks a SpeechLock only in an AUDITORIUM; SharpMUSH checks its Speech lock always.
 				lockName = "SpeechLock";
-				Tally("SpeechLock on an object that is not AUDITORIUM, where TinyMUX ignores it: imported as the " +
+				Tally(ImportWarningKind.Locks, "SpeechLock on an object that is not AUDITORIUM, where TinyMUX ignores it: imported as the " +
 					"user-defined lock SpeechLock, which nothing checks, so it stays without effect", raw.DBRef);
 			}
 			else if (mapping.UserDefined)
 			{
-				Tally($"{mapping.MuxName} imported as the user-defined lock {lockName}: SharpMUSH has no such built-in " +
+				Tally(ImportWarningKind.Locks, $"{mapping.MuxName} imported as the user-defined lock {lockName}: SharpMUSH has no such built-in " +
 					"lock, so nothing checks it unless softcode does (elock())", raw.DBRef);
 			}
 
@@ -594,20 +594,20 @@ public static partial class TinyMuxDatabaseReader
 					if ((word & mask) == 0) continue;
 					if (!table.TryGetValue(mask, out var mapping))
 					{
-						Tally($"Unknown bit 0x{mask:x} of the {label} flag word not imported", raw.DBRef);
+						Tally(ImportWarningKind.Flags, $"Unknown bit 0x{mask:x} of the {label} flag word not imported", raw.DBRef);
 						continue;
 					}
 
 					if (mapping.Dropped is { } dropped)
 					{
-						Tally($"Flag {mapping.Source} not imported: {dropped}", raw.DBRef, routine: true);
+						Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} not imported: {dropped}", raw.DBRef, routine: true);
 						continue;
 					}
 
 					if (mapping.Power is { } power)
 					{
 						powers.Add(power);
-						Tally($"Flag {mapping.Source} imported as the {power} power", raw.DBRef);
+						Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} imported as the {power} power", raw.DBRef);
 						continue;
 					}
 
@@ -617,12 +617,12 @@ public static partial class TinyMuxDatabaseReader
 						if (TinyMuxNames.CustomFlags.Any(custom => custom.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
 						{
 							_flagsUsed.Add(name);
-							Tally($"Flag {mapping.Source} imported as a custom flag {name}: objects keep it and hasflag() sees it, " +
+							Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} imported as a custom flag {name}: objects keep it and hasflag() sees it, " +
 								"but SharpMUSH does nothing with it", raw.DBRef);
 						}
 						else if (!name.Equals(mapping.Source, StringComparison.OrdinalIgnoreCase))
 						{
-							Tally($"Flag {mapping.Source} imported as {string.Join(" and ", mapping.Flags)}", raw.DBRef);
+							Tally(ImportWarningKind.Flags, $"Flag {mapping.Source} imported as {string.Join(" and ", mapping.Flags)}", raw.DBRef);
 						}
 					}
 				}
@@ -630,7 +630,7 @@ public static partial class TinyMuxDatabaseReader
 
 			if (flags.Contains("SLAVE", StringComparer.OrdinalIgnoreCase))
 			{
-				Tally("SLAVE kept as a custom flag, but SharpMUSH does not stop a SLAVE player from building or " +
+				Tally(ImportWarningKind.Flags, "SLAVE kept as a custom flag, but SharpMUSH does not stop a SLAVE player from building or " +
 					"changing anything: restrict them another way", raw.DBRef);
 			}
 
@@ -653,14 +653,14 @@ public static partial class TinyMuxDatabaseReader
 					if ((word & mask) == 0) continue;
 					if (!table.TryGetValue(mask, out var mapping))
 					{
-						Tally($"Unknown bit 0x{mask:x} of the {label} power word not imported", raw.DBRef);
+						Tally(ImportWarningKind.Powers, $"Unknown bit 0x{mask:x} of the {label} power word not imported", raw.DBRef);
 						continue;
 					}
 
 					if (mapping.Permission is { } permission)
 					{
 						permissions.Add(permission);
-						Tally($"Power {mapping.Source} granted as the {permission} permission", raw.DBRef);
+						Tally(ImportWarningKind.Powers, $"Power {mapping.Source} granted as the {permission} permission", raw.DBRef);
 						continue;
 					}
 
@@ -669,12 +669,12 @@ public static partial class TinyMuxDatabaseReader
 					if (TinyMuxNames.CustomPowers.Any(custom => custom.Name.Equals(power, StringComparison.OrdinalIgnoreCase)))
 					{
 						_powersUsed.Add(power);
-						Tally($"Power {mapping.Source} imported as a custom power: objects keep it and haspower() sees it, " +
+						Tally(ImportWarningKind.Powers, $"Power {mapping.Source} imported as a custom power: objects keep it and haspower() sees it, " +
 							"but SharpMUSH does nothing with it", raw.DBRef);
 					}
 					else if (!power.Equals(mapping.Source, StringComparison.OrdinalIgnoreCase))
 					{
-						Tally($"Power {mapping.Source} imported as {power}{(mapping.Source == "dark" ? " (it lets a player be DARK; TinyMUX's also hides from WHO)" : "")}", raw.DBRef);
+						Tally(ImportWarningKind.Powers, $"Power {mapping.Source} imported as {power}{(mapping.Source == "dark" ? " (it lets a player be DARK; TinyMUX's also hides from WHO)" : "")}", raw.DBRef);
 					}
 				}
 			}
@@ -693,7 +693,7 @@ public static partial class TinyMuxDatabaseReader
 				return time.ToUnixTimeSeconds();
 			}
 
-			Tally("A creation or modification time that could not be read was not imported", dbref);
+			Tally(ImportWarningKind.Objects, "A creation or modification time that could not be read was not imported", dbref);
 			return 0;
 		}
 
@@ -714,11 +714,11 @@ public static partial class TinyMuxDatabaseReader
 				if (zoneObject.Locks.TryGetValue("Enter", out var enter))
 				{
 					zoneObject.Locks["Zone"] = enter;
-					Tally("Zone object's EnterLock copied to its Zone lock, which is what grants control of a zone here", zone);
+					Tally(ImportWarningKind.Locks, "Zone object's EnterLock copied to its Zone lock, which is what grants control of a zone here", zone);
 				}
 				else
 				{
-					Tally("Zone object has no EnterLock, so TinyMUX gave no one control through it; it has no Zone lock here either", zone);
+					Tally(ImportWarningKind.Locks, "Zone object has no EnterLock, so TinyMUX gave no one control through it; it has no Zone lock here either", zone);
 				}
 			}
 		}
@@ -755,30 +755,33 @@ public static partial class TinyMuxDatabaseReader
 		private void Report()
 		{
 			var notes = _database.ImportNotes;
-			notes.Add("Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
+			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
+				"Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
 				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math and null_eq_zero, and raises function_recursion_limit to 500 " +
-				"and max_attribute_value_length to 32768, as TinyMUX softcode expects.");
-			notes.Add("TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
-				"so output that relied on it may show extra spaces.");
+				"and max_attribute_value_length to 32768, as TinyMUX softcode expects."));
+			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
+				"TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
+				"so output that relied on it may show extra spaces."));
 			if (_longValues > 0)
 			{
-				notes.Add($"{_longValues} attribute value(s) are longer than 8192 bytes, SharpMUSH's default limit; " +
-					"max_attribute_value_length is raised to 32768 so they can still be edited.");
+				notes.Add(new ImportWarning(ImportWarningKind.Attributes,
+					$"{_longValues} attribute value(s) are longer than 8192 bytes, SharpMUSH's default limit; " +
+					"max_attribute_value_length is raised to 32768 so they can still be edited."));
 			}
 
 			notes.AddRange(Tallied(_tally));
-			_database.RoutineNotes.AddRange(Tallied(_routine));
+			_database.RoutineNotes.AddRange(Tallied(_routine).Select(tallied => tallied.Text));
 
 			_database.SoftcodeRewrites.AddRange(_rewrites);
 		}
 
-		private static IEnumerable<string> Tallied(SortedDictionary<string, List<int>> tally)
+		private static IEnumerable<ImportWarning> Tallied(SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> tally)
 		{
-			foreach (var (what, dbrefs) in tally)
+			foreach (var (what, (kind, dbrefs)) in tally)
 			{
 				var distinct = dbrefs.Distinct().ToList();
 				var sample = string.Join(" ", distinct.Take(10).Select(dbref => $"#{dbref}"));
-				yield return $"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})";
+				yield return new ImportWarning(kind, $"{what} ({dbrefs.Count} time(s), on {sample}{(distinct.Count > 10 ? " ..." : "")})");
 			}
 		}
 	}

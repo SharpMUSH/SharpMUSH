@@ -8,6 +8,7 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="../../SharpMUSH.Contracts/SharpMUSH.Contracts.csproj" />
     <ProjectReference Include="../../SharpMUSH.Library/SharpMUSH.Library.csproj" />
   </ItemGroup>
 </Project>

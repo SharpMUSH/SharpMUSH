@@ -47,7 +47,7 @@ public partial class PennMUSHDatabaseConverter
 			// Forced: the packages all go, so neither a dependent nor an attachment is left behind.
 			if (await _packageInstaller.UninstallAsync(package.Id, force: true, cancellationToken) is Error<string> error)
 			{
-				context.Warnings.Add($"Package '{package.Id}' could not be uninstalled before the import: {error.Value}");
+				context.WarnNeedsAction(ImportWarningKind.Packages, $"Package '{package.Id}' could not be uninstalled before the import: {error.Value}");
 				continue;
 			}
 
@@ -57,7 +57,7 @@ public partial class PennMUSHDatabaseConverter
 
 		if (context.UninstalledPackages.Count > 0)
 		{
-			context.Warnings.Add($"Uninstalled the package(s) {string.Join(", ", context.UninstalledPackages)} " +
+			context.Warn(ImportWarningKind.Packages, $"Uninstalled the package(s) {string.Join(", ", context.UninstalledPackages)} " +
 				"so the imported object numbers are kept; the bundled ones are installed again after the import.");
 		}
 
@@ -80,19 +80,19 @@ public partial class PennMUSHDatabaseConverter
 			}
 			else
 			{
-				context.Warnings.Add($"Package object #{number} could not be removed before the import.");
+				context.WarnNeedsAction(ImportWarningKind.Packages, $"Package object #{number} could not be removed before the import.");
 			}
 		}
 
 		if (_registrations is not null
 			&& await _registrations.Value.ForgetRegistrationsOnAsync([.. packageObjects.Select(number => new DBRef(number))]) is { IsEmpty: false } forgotten)
 		{
-			context.Warnings.Add($"{forgotten.Describe()} They pointed at the removed package objects.");
+			context.Warn(ImportWarningKind.Packages, $"{forgotten.Describe()} They pointed at the removed package objects.");
 		}
 
 		if (deleted.Count > 0)
 		{
-			context.Warnings.Add($"Removed {deleted.Count} package object(s) so the imported object numbers are kept: " +
+			context.Warn(ImportWarningKind.Packages, $"Removed {deleted.Count} package object(s) so the imported object numbers are kept: " +
 				$"{string.Join(", ", deleted.Select(n => $"#{n}"))}.");
 		}
 	}
@@ -165,7 +165,7 @@ public partial class PennMUSHDatabaseConverter
 				.ToList();
 			foreach (var group in waitingOnHandler.GroupBy(package => package.handler, StringComparer.Ordinal))
 			{
-				context.Warnings.Add($"The package(s) {string.Join(", ", group.Select(package => package.id))} were not " +
+				context.WarnNeedsAction(ImportWarningKind.Packages, $"The package(s) {string.Join(", ", group.Select(package => package.id))} were not " +
 					$"installed again: {group.Key} is not set, and they attach to it. Choose the handler in the setup " +
 					"wizard's handler step, or set the option and install them from the package manager.");
 			}
@@ -173,14 +173,14 @@ public partial class PennMUSHDatabaseConverter
 			var others = missing.Except(waitingOnHandler.Select(package => package.id), StringComparer.Ordinal).ToList();
 			if (others.Count > 0)
 			{
-				context.Warnings.Add($"The package(s) {string.Join(", ", others)} were not installed again: " +
+				context.WarnNeedsAction(ImportWarningKind.Packages, $"The package(s) {string.Join(", ", others)} were not installed again: " +
 					"install them from the package manager.");
 			}
 		}
 		catch (Exception ex)
 		{
 			_logger.LogWarning(ex, "Could not reinstall the packages uninstalled before the import");
-			context.Warnings.Add($"The package(s) {string.Join(", ", context.UninstalledPackages)} could not be " +
+			context.WarnNeedsAction(ImportWarningKind.Packages, $"The package(s) {string.Join(", ", context.UninstalledPackages)} could not be " +
 				$"installed again ({ex.Message}): install them from the package manager.");
 		}
 	}

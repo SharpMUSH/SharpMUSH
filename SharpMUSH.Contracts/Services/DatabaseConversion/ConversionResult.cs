@@ -24,7 +24,7 @@ public record ConversionResult
 	public int ChannelsConverted { get; init; }
 	public int ChannelMembersConverted { get; init; }
 	public List<string> Errors { get; init; } = [];
-	public List<string> Warnings { get; init; } = [];
+	public List<ImportWarning> Warnings { get; init; } = [];
 
 	/// <summary>What every import of this kind does, reported for the record rather than as a warning.</summary>
 	public List<string> Notes { get; init; } = [];
@@ -45,6 +45,17 @@ public record ConversionResult
 	public bool Aborted { get; init; }
 
 	public bool IsSuccessful => !Aborted && Errors.Count == 0;
+
+	/// <summary>
+	/// The warnings by kind, the kinds holding one that needs action first and the rest in
+	/// <see cref="ImportWarningKind"/> order; within a kind, the ones that need action come first.
+	/// </summary>
+	public IEnumerable<IGrouping<ImportWarningKind, ImportWarning>> WarningsByKind()
+		=> Warnings
+			.OrderByDescending(warning => warning.NeedsAction)
+			.GroupBy(warning => warning.Kind)
+			.OrderByDescending(group => group.Any(warning => warning.NeedsAction))
+			.ThenBy(group => group.Key);
 }
 
 /// <summary>Safe journal discovery; excludes private paths, source configuration, and key material.</summary>

@@ -61,7 +61,7 @@ public class PennMUSHImportCacheCoherenceTests
 		});
 		var result = await world.Converter.ConvertDatabaseAsync(Fixture(), progress);
 		await Assert.That(result.Errors).IsEmpty();
-		await Assert.That(result.Warnings.Any(warning => warning.Contains("lock", StringComparison.OrdinalIgnoreCase))).IsFalse();
+		await Assert.That(result.Warnings.Texts().Any(warning => warning.Contains("lock", StringComparison.OrdinalIgnoreCase))).IsFalse();
 		var child = (await world.Mediator.Send(new GetObjectNodeQuery(new DBRef(await KeyOfAsync(world, "Cache Child"))))).Expect<AnySharpObject>();
 		var importedLock = child.Object().Locks["Basic"];
 		await Assert.That(importedLock.LockString).IsEqualTo("#TRUE");

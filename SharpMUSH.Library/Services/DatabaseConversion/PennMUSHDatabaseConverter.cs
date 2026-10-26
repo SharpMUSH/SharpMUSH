@@ -118,7 +118,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var database = await RhostDatabaseTranslator.ReadAsync(files.Database, files.Mail, files.MailFolders, cancellationToken);
 		if (!string.IsNullOrEmpty(files.Chat))
 		{
-			database.ImportNotes.Add("The chat database that came with the RhostMUSH flatfile was not read: RhostMUSH has no chatdb.");
+			database.ImportNotes.Add(new ImportWarning(ImportWarningKind.Channels,
+				"The chat database that came with the RhostMUSH flatfile was not read: RhostMUSH has no chatdb."));
 		}
 
 		return database;
@@ -179,7 +180,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var rewrites = pennDatabase.SoftcodeRewrites;
 		if (rewrites.Count > 0)
 		{
-			warnings.Add(RewriteSummary(pennDatabase.SourceName, rewrites));
+			warnings.Add(new ImportWarning(ImportWarningKind.Softcode, RewriteSummary(pennDatabase.SourceName, rewrites),
+				NeedsAction: rewrites.Any(rewrite => rewrite.ByHand)));
 		}
 
 		var stopwatch = Stopwatch.StartNew();
@@ -223,7 +225,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				ElapsedTime = elapsed,
 				EstimatedTimeRemaining = estimatedRemaining,
 				RecentErrors = errors.TakeLast(5).ToList(),
-				RecentWarnings = warnings.TakeLast(5).ToList()
+				RecentWarnings = warnings.TakeLast(5).Select(warning => warning.Text).ToList()
 			});
 		}
 
@@ -374,7 +376,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			if (!await _mediator.Send(new DeleteObjectCommand(new DBRef(number)), cancellationToken))
 			{
-				context.Warnings.Add($"SharpMUSH's seeded {name} (#{number}) could not be removed before the import.");
+				context.WarnNeedsAction(ImportWarningKind.Objects, $"SharpMUSH's seeded {name} (#{number}) could not be removed before the import.");
 				continue;
 			}
 
@@ -438,7 +440,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			_logger.LogWarning(ex, "Could not unset the options that named SharpMUSH's seeded system objects");
-			context.Warnings.Add($"The ancestor, package_manager, http_handler and event_handler options could not be " +
+			context.WarnNeedsAction(ImportWarningKind.Configuration, $"The ancestor, package_manager, http_handler and event_handler options could not be " +
 				$"unset ({ex.Message}); they still name #3-#9, which now hold imported objects. Unset them in the configuration.");
 		}
 	}
@@ -544,7 +546,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (handed.Count > 0)
 		{
-			context.Warnings.Add($"Gave God (#1) {handed.Count} object(s) that SharpMUSH's seeded system objects owned or " +
+			context.Warn(ImportWarningKind.Objects, $"Gave God (#1) {handed.Count} object(s) that SharpMUSH's seeded system objects owned or " +
 				$"held, so they keep working once the seeds are removed: {string.Join(", ", handed.Select(n => $"#{n}"))}.");
 		}
 	}
@@ -707,7 +709,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				[.. definition.SetPermissions], [.. definition.UnsetPermissions], [.. definition.Types]), cancellationToken);
 			if (flag is null)
 			{
-				context.Warnings.Add($"Flag {definition.Name} from the source's flag table could not be created");
+				context.WarnNeedsAction(ImportWarningKind.Flags, $"Flag {definition.Name} from the source's flag table could not be created");
 				continue;
 			}
 
@@ -762,7 +764,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				[.. definition.SetPermissions], [.. definition.UnsetPermissions], [.. definition.Types]), cancellationToken);
 			if (power is null)
 			{
-				context.Warnings.Add($"Power {definition.Name} from the source's power table could not be created");
+				context.WarnNeedsAction(ImportWarningKind.Powers, $"Power {definition.Name} from the source's power table could not be created");
 				continue;
 			}
 
@@ -822,13 +824,13 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (definition.Data.Length > 0)
 			{
-				context.Warnings.Add($"Standard attribute {definition.Name}: its default value is not imported, " +
+				context.Warn(ImportWarningKind.Attributes, $"Standard attribute {definition.Name}: its default value is not imported, " +
 					"because SharpMUSH's attribute table holds none");
 			}
 
 			if (definition.Creator is { } creator && creator != 0 && creator != pennDatabase.GodPlayer)
 			{
-				context.Warnings.Add($"Standard attribute {definition.Name}: #{creator} defined it in the source, " +
+				context.Warn(ImportWarningKind.Attributes, $"Standard attribute {definition.Name}: #{creator} defined it in the source, " +
 					"which SharpMUSH's attribute table does not record");
 			}
 
@@ -838,7 +840,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			string[] flags = [.. named.OfType<SharpAttributeFlag>().Select(flag => flag.Name)];
 			if (flags.Length != named.Length)
 			{
-				context.Warnings.Add($"Standard attribute {definition.Name}: its default flags " +
+				context.Warn(ImportWarningKind.Attributes, $"Standard attribute {definition.Name}: its default flags " +
 					$"[{string.Join(", ", definition.Flags)}] are not imported: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
 				flags = [];
 			}
@@ -859,7 +861,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		ReportKept("standard attribute", kept, context);
 		if (aliased.Count > 0)
 		{
-			context.Warnings.Add($"{aliased.Count} source attribute alias(es) are not imported, because SharpMUSH " +
+			context.Warn(ImportWarningKind.Attributes, $"{aliased.Count} source attribute alias(es) are not imported, because SharpMUSH " +
 				$"resolves an attribute name without them ({Sample(aliased)})");
 		}
 
@@ -920,6 +922,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			=> left.Length == 0 || right.Count == 0 || left.Intersect(right, StringComparer.OrdinalIgnoreCase).Any();
 	}
 
+	/// <summary>Where the report files a warning about a definition of <paramref name="kind"/>, Flag or Power.</summary>
+	private static ImportWarningKind KindOf(string kind) => kind == "Power" ? ImportWarningKind.Powers : ImportWarningKind.Flags;
+
 	/// <summary>
 	/// The source aliases an imported definition may keep. One this server already resolves elsewhere
 	/// would shadow that definition, so it is dropped and reported.
@@ -932,7 +937,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			if (known.Resolve(alias) is { } holder)
 			{
-				context.Warnings.Add(
+				context.Warn(KindOf(kind),
 					$"{kind} {definition.Name}: its alias {alias} is not imported, because {holder.Name} answers to it here");
 			}
 			else
@@ -956,7 +961,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return definition.Letter;
 		}
 
-		context.Warnings.Add(
+		context.Warn(KindOf(kind),
 			$"{kind} {definition.Name}: its letter {definition.Letter} is not imported, because {holder.Name} uses it here");
 		return string.Empty;
 	}
@@ -973,12 +978,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			switch (known.Resolve(alias))
 			{
 				case null:
-					context.Warnings.Add(
+					context.Warn(KindOf(kind),
 						$"{kind} {existing.Name}: SharpMUSH's own definition is kept and does not answer to {alias}");
 					break;
 
 				case { } other when !other.Name.Equals(existing.Name, StringComparison.OrdinalIgnoreCase):
-					context.Warnings.Add($"{kind} {existing.Name}: {alias} names it in the source, but {other.Name} here");
+					context.Warn(KindOf(kind), $"{kind} {existing.Name}: {alias} names it in the source, but {other.Name} here");
 					break;
 			}
 		}
@@ -1003,7 +1008,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		context.Warnings.Add($"{kind} {existing.Name}: the source allows it on {string.Join(" ", lost)}, " +
+		context.Warn(KindOf(kind), $"{kind} {existing.Name}: the source allows it on {string.Join(" ", lost)}, " +
 			"which SharpMUSH's own definition does not, so objects of those types will not keep it");
 	}
 
@@ -1056,7 +1061,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var withPennies = pennDatabase.Objects.Count(o => o.Pennies > 0);
 		if (withPennies > 0)
 		{
-			context.Warnings.Add($"Pennies on {withPennies} object(s) were not imported: SharpMUSH does not track money.");
+			context.Warn(ImportWarningKind.Objects, $"Pennies on {withPennies} object(s) were not imported: SharpMUSH does not track money.");
 		}
 
 		return (counts.Players, counts.Rooms, counts.Things, counts.Exits);
@@ -1251,7 +1256,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (pennObj.Type is not (PennMUSHObjectType.Player or PennMUSHObjectType.Room
 					or PennMUSHObjectType.Thing or PennMUSHObjectType.Exit))
 			{
-				context.Warnings.Add($"Unknown object type for #{pennObj.DBRef}: {pennObj.Type}");
+				context.Warn(ImportWarningKind.Objects, $"Unknown object type for #{pennObj.DBRef}: {pennObj.Type}");
 				continue;
 			}
 
@@ -1277,7 +1282,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				dbrefMapping[pennObj.DBRef] = newDbRef;
 				if (requested is null)
 				{
-					context.Warnings.Add($"#{pennObj.DBRef} ({pennObj.Name}) is a {pennObj.Type}, but SharpMUSH's #{pennObj.DBRef} " +
+					context.Warn(ImportWarningKind.Objects, $"#{pennObj.DBRef} ({pennObj.Name}) is a {pennObj.Type}, but SharpMUSH's #{pennObj.DBRef} " +
 						$"must stay a {(pennObj.DBRef == 1 ? "player" : "room")}; it was imported as #{newDbRef.Number}.");
 				}
 
@@ -1434,7 +1439,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 		{
-			context.Warnings.Add($"Could not retrieve object #{sharpDbRef} for relationship setup");
+			context.Warn(ImportWarningKind.Objects, $"Could not retrieve object #{sharpDbRef} for relationship setup");
 			return;
 		}
 
@@ -1488,7 +1493,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			if (pennObj.Type == PennMUSHObjectType.Exit || pennObj.Link < 0 || pennObj.Link == pennObj.DBRef
 				|| !context.DbrefMapping.TryGetValue(pennObj.Link, out locationDbRef))
 			{
-				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {await LimboAsync()}");
+				context.Warn(ImportWarningKind.Objects, $"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was left in {await LimboAsync()}");
 				return;
 			}
 		}
@@ -1499,12 +1504,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (ContainerOf(locationObj) is not AnySharpContainer container || ContentOf(sharpObj) is not AnySharpContent content)
 		{
 			if (!context.DbrefMapping.ContainsKey(pennObj.Location))
-				context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import, and its home #{pennObj.Link} cannot hold it; it was left in {await LimboAsync()}");
+				context.Warn(ImportWarningKind.Objects, $"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import, and its home #{pennObj.Link} cannot hold it; it was left in {await LimboAsync()}");
 			return;
 		}
 
 		if (!context.DbrefMapping.ContainsKey(pennObj.Location))
-			context.Warnings.Add($"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was put in its home #{pennObj.Link}");
+			context.Warn(ImportWarningKind.Objects, $"Location #{pennObj.Location} of #{pennObj.DBRef} is not in the import; it was put in its home #{pennObj.Link}");
 
 		// A conversion is building a world out of a dump, not moving anyone: there is no
 		// actor, no parser and nobody present to notify, so this places the object
@@ -1536,7 +1541,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (!context.DbrefMapping.TryGetValue(pennObj.Link, out var destDbRef))
 		{
-			context.Warnings.Add($"Destination #{pennObj.Link} of exit #{pennObj.DBRef} is not in the import; the exit was left unlinked");
+			context.Warn(ImportWarningKind.Objects, $"Destination #{pennObj.Link} of exit #{pennObj.DBRef} is not in the import; the exit was left unlinked");
 			return;
 		}
 
@@ -1559,7 +1564,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (!context.DbrefMapping.TryGetValue(pennObj.Parent, out var parentDbRef))
 		{
-			context.Warnings.Add($"Parent #{pennObj.Parent} of #{pennObj.DBRef} is not in the import; it was dropped");
+			context.Warn(ImportWarningKind.Objects, $"Parent #{pennObj.Parent} of #{pennObj.DBRef} is not in the import; it was dropped");
 			return;
 		}
 
@@ -1570,7 +1575,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else
 		{
-			context.Warnings.Add($"Parent object #{pennObj.Parent} not found for object #{pennObj.DBRef}");
+			context.Warn(ImportWarningKind.Objects, $"Parent object #{pennObj.Parent} not found for object #{pennObj.DBRef}");
 		}
 	}
 
@@ -1584,7 +1589,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (!context.DbrefMapping.TryGetValue(pennObj.Zone, out var zoneDbRef))
 		{
-			context.Warnings.Add($"Zone #{pennObj.Zone} of #{pennObj.DBRef} is not in the import; it was dropped");
+			context.Warn(ImportWarningKind.Objects, $"Zone #{pennObj.Zone} of #{pennObj.DBRef} is not in the import; it was dropped");
 			return;
 		}
 
@@ -1595,7 +1600,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 		else
 		{
-			context.Warnings.Add($"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
+			context.Warn(ImportWarningKind.Objects, $"Zone object #{pennObj.Zone} not found for object #{pennObj.DBRef}");
 		}
 	}
 
@@ -1622,7 +1627,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				: await ProbateJudgeAsync(cancellationToken);
 			if (!context.DbrefMapping.TryGetValue(alias.Owner, out var mappedOwner) || mappedOwner.Number != owner)
 			{
-				context.Warnings.Add($"Mail alias +{alias.Name}: owner #{alias.Owner} is not an imported player; given to #{owner}");
+				context.Warn(ImportWarningKind.Mail, $"Mail alias +{alias.Name}: owner #{alias.Owner} is not an imported player; given to #{owner}");
 			}
 
 			var members = new List<int>();
@@ -1641,7 +1646,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			if (dropped.Count > 0)
 			{
-				context.Warnings.Add(
+				context.Warn(ImportWarningKind.Mail,
 					$"Mail alias +{alias.Name}: dropped member(s) that are not imported players ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
 			}
 
@@ -1655,7 +1660,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					imported++;
 					break;
 				case Error<string> error:
-					context.Warnings.Add($"Mail alias +{alias.Name} not imported: {error.Value}");
+					context.Warn(ImportWarningKind.Mail, $"Mail alias +{alias.Name} not imported: {error.Value}");
 					break;
 			}
 		}
@@ -1768,26 +1773,26 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (noRecipient.Count > 0)
 		{
-			context.Warnings.Add($"{noRecipient.Values.Sum()} mail message(s) not imported: the recipient is not an imported player " +
+			context.Warn(ImportWarningKind.Mail, $"{noRecipient.Values.Sum()} mail message(s) not imported: the recipient is not an imported player " +
 				$"({Tally(noRecipient)})");
 		}
 
 		if (noSender.Count > 0)
 		{
-			context.Warnings.Add($"{noSender.Values.Sum()} mail message(s) from a sender that was not imported are from #0, " +
+			context.Warn(ImportWarningKind.Mail, $"{noSender.Values.Sum()} mail message(s) from a sender that was not imported are from #0, " +
 				$"as @mail/debug fix leaves them ({Tally(noSender)})");
 		}
 
 		if (reusedSender.Count > 0)
 		{
-			context.Warnings.Add($"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
+			context.Warn(ImportWarningKind.Mail, $"{reusedSender.Values.Sum()} mail message(s) name a sender whose creation time differs from " +
 				$"the one the message recorded, so {context.SourceName} showed them as from !Purged!; they are imported as from that dbref " +
 				$"({Tally(reusedSender)})");
 		}
 
 		if (badTime > 0)
 		{
-			context.Warnings.Add($"{badTime} mail message(s) had a time sent that could not be read and are dated at the import, " +
+			context.Warn(ImportWarningKind.Mail, $"{badTime} mail message(s) had a time sent that could not be read and are dated at the import, " +
 				"as load_mail dates them");
 		}
 
@@ -1868,17 +1873,17 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		if (mail.ReadError is not null)
 		{
-			context.Warnings.Add($"The maildb could not be read, so no mail aliases or messages were imported: {mail.ReadError}");
+			context.WarnNeedsAction(ImportWarningKind.Mail, $"The maildb could not be read, so no mail aliases or messages were imported: {mail.ReadError}");
 			return;
 		}
 
 		if (mail.MessageCount is null)
 		{
-			context.Warnings.Add("The maildb's message count could not be read; its messages were not imported");
+			context.WarnNeedsAction(ImportWarningKind.Mail, "The maildb's message count could not be read; its messages were not imported");
 		}
 		else if (mail.MessageReadError is not null)
 		{
-			context.Warnings.Add($"The maildb holds {mail.MessageCount} mail message(s) but only {mail.Messages.Count} could be read: " +
+			context.WarnNeedsAction(ImportWarningKind.Mail, $"The maildb holds {mail.MessageCount} mail message(s) but only {mail.Messages.Count} could be read: " +
 				mail.MessageReadError);
 		}
 	}
@@ -1923,7 +1928,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var chat = pennDatabase.Chat;
 		if (chat.ReadError is not null)
 		{
-			context.Warnings.Add($"The chatdb could not be read, so no channels were imported: {chat.ReadError}");
+			context.WarnNeedsAction(ImportWarningKind.Channels, $"The chatdb could not be read, so no channels were imported: {chat.ReadError}");
 			return (0, 0);
 		}
 
@@ -1931,7 +1936,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			&& pennDatabase.Configuration.TryGetValue("savedtime", out var dumpSaved) && chatSaved != dumpSaved)
 		{
 			// load_chatdb's own warning: the two files are not one save of the game.
-			context.Warnings.Add($"The chatdb was saved at {chatSaved} and the database at {dumpSaved}; " +
+			context.Warn(ImportWarningKind.Channels, $"The chatdb was saved at {chatSaved} and the database at {dumpSaved}; " +
 				"channel members may name objects as they were at a different time");
 		}
 
@@ -1952,12 +1957,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					cancellationToken) is AnySharpObject and SharpPlayer judge)
 			{
 				owner = judge;
-				context.Warnings.Add(
+				context.Warn(ImportWarningKind.Channels,
 					$"{label}: owner #{pennChannel.Creator} is not an imported player; given to #{judge.Object.DBRef.Number}");
 			}
 			else
 			{
-				context.Warnings.Add($"{label} not imported: owner #{pennChannel.Creator} is not an imported player, " +
+				context.Warn(ImportWarningKind.Channels, $"{label} not imported: owner #{pennChannel.Creator} is not an imported player, " +
 					"and neither the probate judge nor God is one to give it to");
 				continue;
 			}
@@ -1966,14 +1971,14 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var unknownBits = pennChannel.Flags & ~ChannelPrivilegeBits.Sum(p => p.Bit);
 			if (unknownBits != 0)
 			{
-				context.Warnings.Add($"{label}: unknown channel flag bits 0x{unknownBits:x} were dropped");
+				context.Warn(ImportWarningKind.Channels, $"{label}: unknown channel flag bits 0x{unknownBits:x} were dropped");
 			}
 
 			var name = MarkupString.Ansi.AnsiEscapeParser.Parse(pennChannel.Name);
 			var creation = await _mediator.Send(new CreateChannelCommand(name, privileges, owner), cancellationToken);
 			if (!creation.IsSuccess)
 			{
-				context.Warnings.Add(creation.Value is Error<string> error
+				context.Warn(ImportWarningKind.Channels, creation.Value is Error<string> error
 					? $"{label} not imported: {error.Value}"
 					: $"{label} not imported: a channel of that name already exists");
 				continue;
@@ -1982,7 +1987,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var channel = await _mediator.Send(new GetChannelQuery(name.ToPlainText()), cancellationToken);
 			if (channel is null)
 			{
-				context.Warnings.Add($"{label} not imported: it could not be read back after it was created");
+				context.Warn(ImportWarningKind.Channels, $"{label} not imported: it could not be read back after it was created");
 				continue;
 			}
 
@@ -1994,7 +1999,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 			foreach (var lockName in pennChannel.Locks.Keys.Except(["join", "speak", "modify", "see", "hide"]))
 			{
-				context.Warnings.Add($"{label}: unknown lock '{lockName}' was dropped");
+				context.Warn(ImportWarningKind.Channels, $"{label}: unknown lock '{lockName}' was dropped");
 			}
 
 			await _mediator.Send(new UpdateChannelCommand(channel,
@@ -2015,7 +2020,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		if (costs.Count > 0)
 		{
 			// SharpMUSH neither charges for a channel nor refunds one on @channel/delete, so the price paid has nowhere to go.
-			context.Warnings.Add($"Channel creation costs were not kept, as SharpMUSH does not refund them: {string.Join(", ", costs)}");
+			context.Warn(ImportWarningKind.Channels, $"Channel creation costs were not kept, as SharpMUSH does not refund them: {string.Join(", ", costs)}");
 		}
 
 		_logger.LogInformation("Imported {Channels} channel(s) with {Members} member(s)", channels, members);
@@ -2070,7 +2075,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (moved.Count > 0)
 		{
-			context.Warnings.Add($"{label} names objects imported under new numbers ({string.Join(", ", moved)}); " +
+			context.Warn(ImportWarningKind.Channels, $"{label} names objects imported under new numbers ({string.Join(", ", moved)}); " +
 				$"'{key}' became '{remapped}'");
 		}
 
@@ -2121,7 +2126,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return mogrifier.Object().DBRef.ToString();
 		}
 
-		context.Warnings.Add($"{label}: mogrifier #{channel.Mogrifier} is not an imported object and was dropped");
+		context.Warn(ImportWarningKind.Channels, $"{label}: mogrifier #{channel.Mogrifier} is not an imported object and was dropped");
 		return string.Empty;
 	}
 
@@ -2175,7 +2180,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (dropped.Count > 0)
 		{
-			context.Warnings.Add($"{label}: dropped member(s) that are not an imported " +
+			context.Warn(ImportWarningKind.Channels, $"{label}: dropped member(s) that are not an imported " +
 				$"{(things ? players ? "player or thing" : "thing" : "player")} ({string.Join(" ", dropped.Select(d => $"#{d}"))})");
 		}
 
@@ -2202,7 +2207,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (await MappedAsync(pennObj.Owner, context, cancellationToken) is not (AnySharpObject and SharpPlayer owner))
 		{
-			context.Warnings.Add($"Owner #{pennObj.Owner} of #{pennObj.DBRef} is not an imported player; God keeps it");
+			context.Warn(ImportWarningKind.Players, $"Owner #{pennObj.Owner} of #{pennObj.DBRef} is not an imported player; God keeps it");
 			return;
 		}
 
@@ -2223,7 +2228,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (ContainerOf(await MappedAsync(pennObj.Link, context, cancellationToken)) is not AnySharpContainer container)
 		{
-			context.Warnings.Add(
+			context.Warn(ImportWarningKind.Objects,
 				$"{(target.IsRoom ? "Drop-to" : "Home")} #{pennObj.Link} of #{pennObj.DBRef} is not an imported room, thing or player");
 			return;
 		}
@@ -2250,11 +2255,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var flag = await _mediator.Send(new GetObjectFlagQuery(name), cancellationToken);
 			if (flag is null)
 			{
-				context.NoteUnconverted($"Flag {name.ToUpperInvariant()}, which SharpMUSH does not have", pennObj.DBRef);
+				context.NoteUnconverted(ImportWarningKind.Flags, $"Flag {name.ToUpperInvariant()}, which SharpMUSH does not have", pennObj.DBRef);
 			}
 			else if (!AllowedOn(flag.TypeRestrictions, target))
 			{
-				context.NoteUnconverted($"Flag {flag.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+				context.NoteUnconverted(ImportWarningKind.Flags, $"Flag {flag.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
 			}
 			else
 			{
@@ -2275,11 +2280,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var power = await _mediator.Send(new GetPowerQuery(name), cancellationToken);
 			if (power is null)
 			{
-				context.NoteUnconverted($"Power {name}, which SharpMUSH does not have", pennObj.DBRef);
+				context.NoteUnconverted(ImportWarningKind.Powers, $"Power {name}, which SharpMUSH does not have", pennObj.DBRef);
 			}
 			else if (!AllowedOn(power.TypeRestrictions, target))
 			{
-				context.NoteUnconverted($"Power {power.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
+				context.NoteUnconverted(ImportWarningKind.Powers, $"Power {power.Name}, which SharpMUSH does not allow on a {target.Object().Type}", pennObj.DBRef);
 			}
 			else
 			{
@@ -2303,7 +2308,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 		if (_roleRegistry is null)
 		{
-			context.NoteUnconverted("Depowers, which need the role registry this import runs without", pennObj.DBRef);
+			context.NoteUnconverted(ImportWarningKind.Powers, "Depowers, which need the role registry this import runs without", pennObj.DBRef);
 			return;
 		}
 
@@ -2311,7 +2316,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			if (GamePowers.Find(name) is not { } power)
 			{
-				context.NoteUnconverted($"Depower of {name}, which is not a SharpMUSH power", pennObj.DBRef);
+				context.NoteUnconverted(ImportWarningKind.Powers, $"Depower of {name}, which is not a SharpMUSH power", pennObj.DBRef);
 				continue;
 			}
 
@@ -2333,7 +2338,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var warnings = WarningTypeHelper.ParseWarnings(string.Join(' ', pennObj.Warnings), unknown);
 		foreach (var name in unknown)
 		{
-			context.NoteUnconverted($"Warning {name}, which SharpMUSH does not have", pennObj.DBRef);
+			context.NoteUnconverted(ImportWarningKind.Objects, $"Warning {name}, which SharpMUSH does not have", pennObj.DBRef);
 		}
 
 		await _mediator.Send(new SetObjectWarningsCommand(target, warnings), cancellationToken);
@@ -2359,7 +2364,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		var dbrefMapping = context.DbrefMapping;
 		var errors = context.Errors;
-		var warnings = context.Warnings;
 
 		_logger.LogInformation("Creating attributes");
 		var count = 0;
@@ -2399,7 +2403,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 				{
-					warnings.Add($"Could not retrieve object #{sharpDbRef} for attribute creation");
+					context.Warn(ImportWarningKind.Attributes, $"Could not retrieve object #{sharpDbRef} for attribute creation");
 					continue;
 				}
 
@@ -2416,7 +2420,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						SharpAttributeFlag[] flags = [.. named.OfType<SharpAttributeFlag>()];
 						if (flags.Length != named.Length)
 						{
-							warnings.Add(
+							context.Warn(ImportWarningKind.Attributes,
 								$"Failed to set flags [{string.Join(", ", pennAttr.Flags)}] on attribute " +
 								$"{pennAttr.Name} of #{pennObj.DBRef}: {ErrorMessages.Returns.UnrecognizedAttributeFlag}");
 							flags = [];
@@ -2428,12 +2432,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 					catch (Exception ex)
 					{
-						warnings.Add($"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {ex.Message}");
+						context.Warn(ImportWarningKind.Attributes, $"Failed to set attribute {pennAttr.Name} on #{pennObj.DBRef}: {ex.Message}");
 						_logger.LogDebug(ex, "Attribute creation error");
 					}
 				}
 
-				count += await WriteAttributesAsync(pennObj, sharpDbRef, writes, warnings, cancellationToken);
+				count += await WriteAttributesAsync(pennObj, sharpDbRef, writes, context, cancellationToken);
 			}
 			catch (Exception ex)
 			{
@@ -2446,21 +2450,21 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		foreach (var (source, mentions) in relocated.Where(r => r.Value.Count > 0))
 		{
 			var more = mentions.Count > mentions.Shown.Count ? $" and {mentions.Count - mentions.Shown.Count} more" : string.Empty;
-			warnings.Add($"{mentions.Count} attribute(s) mention #{source}, which was imported as #{dbrefMapping[source].Number}; " +
+			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{mentions.Count} attribute(s) mention #{source}, which was imported as #{dbrefMapping[source].Number}; " +
 				$"softcode is not rewritten, so check them by hand: {string.Join(", ", mentions.Shown)}{more}");
 		}
 
 		if (pipedOutput.Count > 0)
 		{
 			var more = pipedOutput.Count > pipedOutput.Shown.Count ? $" and {pipedOutput.Count - pipedOutput.Shown.Count} more" : string.Empty;
-			warnings.Add($"{pipedOutput.Count} attribute(s) use %>, which {pennDatabase.SourceName} evaluates to > and SharpMUSH to the last command's output; " +
+			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{pipedOutput.Count} attribute(s) use %>, which {pennDatabase.SourceName} evaluates to > and SharpMUSH to the last command's output; " +
 				$"softcode is not rewritten, so write > where > was meant: {string.Join(", ", pipedOutput.Shown)}{more}");
 		}
 
 		if (piping.Count > 0)
 		{
 			var more = piping.Count > piping.Shown.Count ? $" and {piping.Count - piping.Shown.Count} more" : string.Empty;
-			warnings.Add($"{piping.Count} attribute(s) use %| or ;|, which {pennDatabase.SourceName} reads as a plain | and SharpMUSH as command piping; " +
+			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{piping.Count} attribute(s) use %| or ;|, which {pennDatabase.SourceName} reads as a plain | and SharpMUSH as command piping; " +
 				$"softcode is not rewritten, so write | where | was meant: {string.Join(", ", piping.Shown)}{more}");
 		}
 
@@ -2468,7 +2472,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var more = tinyMuxSubstitutions.Count > tinyMuxSubstitutions.Shown.Count
 				? $" and {tinyMuxSubstitutions.Count - tinyMuxSubstitutions.Shown.Count} more" : string.Empty;
-			warnings.Add($"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which {pennDatabase.SourceName} evaluates to m and =< and SharpMUSH " +
+			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{tinyMuxSubstitutions.Count} attribute(s) use %m or %=<, which {pennDatabase.SourceName} evaluates to m and =< and SharpMUSH " +
 				"to the running command and an attribute or argument; softcode is not rewritten, so write m or =< where they were meant: " +
 				$"{string.Join(", ", tinyMuxSubstitutions.Shown)}{more}");
 		}
@@ -2477,7 +2481,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		{
 			var more = listSeparators.Count > listSeparators.Shown.Count
 				? $" and {listSeparators.Count - listSeparators.Shown.Count} more" : string.Empty;
-			warnings.Add($"{listSeparators.Count} attribute(s) use %*<, which PennMUSH evaluates to *< and SharpMUSH to a marked " +
+			context.WarnNeedsAction(ImportWarningKind.Softcode, $"{listSeparators.Count} attribute(s) use %*<, which PennMUSH evaluates to *< and SharpMUSH to a marked " +
 				"list separator; softcode is not rewritten, so write *< where it was meant: " +
 				$"{string.Join(", ", listSeparators.Shown)}{more}");
 		}
@@ -2660,7 +2664,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// name the attributes that did not arrive rather than the object's whole list.
 	/// </summary>
 	private async Task<int> WriteAttributesAsync(PennMUSHObject pennObj, DBRef target,
-		List<(PennMUSHAttribute Source, AttributeWrite Write)> writes, List<string> warnings,
+		List<(PennMUSHAttribute Source, AttributeWrite Write)> writes, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
 	{
 		if (writes.Count == 0)
@@ -2691,12 +2695,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				}
 				else
 				{
-					warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: the store refused it");
+					context.Warn(ImportWarningKind.Attributes, $"Failed to set attribute {source.Name} on #{pennObj.DBRef}: the store refused it");
 				}
 			}
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
-				warnings.Add($"Failed to set attribute {source.Name} on #{pennObj.DBRef}: {ex.Message}");
+				context.Warn(ImportWarningKind.Attributes, $"Failed to set attribute {source.Name} on #{pennObj.DBRef}: {ex.Message}");
 				_logger.LogDebug(ex, "Attribute creation error");
 			}
 		}
@@ -2711,7 +2715,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		var dbrefMapping = context.DbrefMapping;
 		var errors = context.Errors;
-		var warnings = context.Warnings;
 
 		_logger.LogInformation("Creating locks");
 		var count = 0;
@@ -2736,7 +2739,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			{
 				if (await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
 				{
-					warnings.Add($"Could not retrieve object #{sharpDbRef} for lock creation");
+					context.Warn(ImportWarningKind.Locks, $"Could not retrieve object #{sharpDbRef} for lock creation");
 					continue;
 				}
 
@@ -2755,7 +2758,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 					}
 					catch (Exception ex)
 					{
-						warnings.Add($"Failed to set lock {lockName} on #{pennObj.DBRef}: {ex.Message}");
+						context.Warn(ImportWarningKind.Locks, $"Failed to set lock {lockName} on #{pennObj.DBRef}: {ex.Message}");
 						_logger.LogDebug(ex, "Lock creation error");
 					}
 				}

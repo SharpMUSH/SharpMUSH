@@ -46,7 +46,7 @@ public class PennMUSHMailAliasImportTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.MailAliasesConverted).IsEqualTo(3);
-		await Assert.That(result.Warnings).DoesNotContain(w => w.StartsWith("Mail alias"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.StartsWith("Mail alias"));
 
 		// The admin page stops polling at 100%, so nothing may report it before the aliases are in.
 		var phases = progress.Reports.Select(p => p.CurrentPhase).ToList();
@@ -83,8 +83,8 @@ public class PennMUSHMailAliasImportTests
 		var result = await world.Converter.ConvertDatabaseAsync(database);
 
 		await Assert.That(result.MailAliasesConverted).IsEqualTo(1);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Mail alias +Broken: owner #7") && w.EndsWith("given to #1"));
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Mail alias +Broken: dropped member") && w.Contains("#6"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Mail alias +Broken: owner #7") && w.EndsWith("given to #1"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Mail alias +Broken: dropped member") && w.Contains("#6"));
 
 		var alias = (await world.Mediator.CreateStream(new GetMailAliasesQuery()).ToListAsync()).Single();
 		await Assert.That(alias.Owner).IsEqualTo(1);
@@ -121,7 +121,7 @@ public class PennMUSHMailAliasImportTests
 			await Assert.That(result.Errors).IsEmpty();
 			await Assert.That(result.PlayersConverted).IsGreaterThan(0);
 			await Assert.That(result.MailAliasesConverted).IsEqualTo(0);
-			await Assert.That(result.Warnings).Contains(w => w.StartsWith("The maildb could not be read"));
+			await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("The maildb could not be read"));
 			await Assert.That((await PennMUSHDbrefPreservationTests.NodeAsync(world, 3)).Object().Name).IsEqualTo("Alice");
 		}
 		finally

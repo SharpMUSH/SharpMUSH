@@ -59,7 +59,7 @@ public class PennMUSHDatabase
 	/// renamed, values it could not carry, choices it made, one line each. The import reports them ahead of
 	/// its own warnings.
 	/// </summary>
-	public List<string> ImportNotes { get; set; } = [];
+	public List<ImportWarning> ImportNotes { get; set; } = [];
 
 	/// <summary>
 	/// What the reader leaves out of every database of its kind, such as the bookkeeping a server keeps in its

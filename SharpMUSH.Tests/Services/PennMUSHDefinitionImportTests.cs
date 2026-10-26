@@ -103,9 +103,9 @@ public class PennMUSHDefinitionImportTests
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
 		await Assert.That(result.Errors).IsEmpty();
-		await Assert.That(result.Warnings.Where(w => w.Contains("attribute alias"))).IsEmpty()
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("attribute alias"))).IsEmpty()
 			.Because("the source's table aliases only DESC, SUCC and the like, which SharpMUSH reads through");
-		await Assert.That(result.Warnings.Where(w => w.Contains("does not answer to"))).IsEmpty()
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("does not answer to"))).IsEmpty()
 			.Because("SharpMUSH's flags and powers answer to every alias a stock PennMUSH table gives them (#1508)");
 		await Assert.That(result.Notes.Any(w => w.Contains("source flag definition(s) already exist"))).IsTrue();
 	}
@@ -129,7 +129,7 @@ public class PennMUSHDefinitionImportTests
 
 		var widget = await FindAsync(world, "Custom Widget");
 		await Assert.That(await widget.Object().Flags.Value.Select(f => f.Name).ToListAsync()).Contains("ORACLE_TAG");
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_TAG, which SharpMUSH does not have"))).IsFalse()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_TAG, which SharpMUSH does not have"))).IsFalse()
 			.Because("the definition arrived before the object's flags were written");
 	}
 
@@ -175,8 +175,8 @@ public class PennMUSHDefinitionImportTests
 		await Assert.That(await world.Mediator.Send(new GetObjectFlagQuery("DARK")))
 			.IsNotNull().And.Satisfies(flag => flag!.Name, name => name.IsEqualTo("DARK"));
 
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("DARK"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("ON-VACATION"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("DARK"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_SHADOW") && w.Contains("ON-VACATION"))).IsTrue();
 	}
 
 	/// <summary>
@@ -191,18 +191,18 @@ public class PennMUSHDefinitionImportTests
 
 		var power = await world.Mediator.Send(new GetPowerQuery("Oracle_Sight"));
 		await Assert.That(power!.Aliases).IsEquivalentTo(["osight", "oracle_see"]);
-		await Assert.That(result.Warnings.Any(w => w.Contains("Oracle_Sight"))).IsFalse()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("Oracle_Sight"))).IsFalse()
 			.Because("nothing of the power is left behind");
 
 		var note = await AttributeEntryAsync(world, "ORACLE_NOTE");
 		await Assert.That(note).IsNotNull();
 		await Assert.That(note!.DefaultFlags).IsEmpty()
 			.Because("no_such_flag fails the whole set, as string_to_atrflagsets does");
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default flags"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default flags"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue();
 
 		// DESC is PennMUSH's own alias of DESCRIBE, which reads resolve; LOOKTEXT is the source's own.
-		await Assert.That(result.Warnings.Single(w => w.Contains("attribute alias"))).StartsWith("1 source attribute alias(es)")
+		await Assert.That(result.Warnings.Texts().Single(w => w.Contains("attribute alias"))).StartsWith("1 source attribute alias(es)")
 			.And.Contains("LOOKTEXT");
 	}
 
@@ -266,7 +266,7 @@ public class PennMUSHDefinitionImportTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await ImportAsync(world, CustomFixture());
 
-		await Assert.That(result.Warnings.Any(w => w.Contains("Flag ABODE") && w.Contains("THING"))).IsTrue()
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("Flag ABODE") && w.Contains("THING"))).IsTrue()
 			.Because("the source allows ABODE on a thing and SharpMUSH's own definition does not");
 	}
 
@@ -281,7 +281,7 @@ public class PennMUSHDefinitionImportTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await ImportAsync(world, await world.Parser.ParseFileAsync(FixturePath));
 
-		await Assert.That(result.Warnings.Where(w => w.Contains("which SharpMUSH's own definition does not"))).IsEmpty();
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("which SharpMUSH's own definition does not"))).IsEmpty();
 	}
 
 	/// <summary>
@@ -294,9 +294,9 @@ public class PennMUSHDefinitionImportTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await ImportAsync(world, CustomFixture());
 
-		await Assert.That(result.Warnings.Where(w => w.Contains("DESCRIBE") && w.Contains("default value"))).IsEmpty();
-		await Assert.That(result.Warnings.Where(w => w.Contains("DESCRIBE") && w.Contains("#7"))).IsEmpty();
-		await Assert.That(result.Warnings.Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue()
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("DESCRIBE") && w.Contains("default value"))).IsEmpty();
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("DESCRIBE") && w.Contains("#7"))).IsEmpty();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("ORACLE_NOTE") && w.Contains("default value"))).IsTrue()
 			.Because("ORACLE_NOTE is imported, so its unimportable default value is a real loss");
 	}
 
