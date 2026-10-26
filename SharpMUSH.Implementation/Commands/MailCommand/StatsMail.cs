@@ -44,7 +44,9 @@ public static class StatsMail
 
 			switch (await locateService.LocateAndNotifyIfInvalid(
 				parser, executor, executor, arg0.ToPlainText(),
-				LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference))
+				LocateFlags.PlayersPreference | LocateFlags.MatchWildCardForPlayerName |
+				LocateFlags.MatchOptionalWildCardForPlayerName | LocateFlags.OnlyMatchTypePreference |
+				LocateFlags.AbsoluteMatch))
 			{
 				case AnySharpObject and SharpPlayer located:
 					target = located;
