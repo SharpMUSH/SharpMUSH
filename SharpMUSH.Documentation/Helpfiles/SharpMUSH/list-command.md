@@ -32,7 +32,7 @@ Each of those may be given as a switch (`@list/commands`) or as an argument (`@l
 
 By default, information is shown in upper-case. Add the `/lowercase` switch to show output in lowercase instead.
 
-"commands" and "functions" show built-in and local commands/functions by default. The `/builtin` or `/local` switches can be given to limit this.
+"commands" and "functions" show built-in and local commands/functions by default. The `/builtin` or `/local` switches can be given to limit this; `/all` asks for both, which is the default.
 
 ::: seealso
 - [LIST()]

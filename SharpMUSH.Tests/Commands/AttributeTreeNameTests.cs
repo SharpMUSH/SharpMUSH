@@ -85,7 +85,8 @@ public class AttributeTreeNameTests
 		await Assert.That(await Read($"wildgrep({thing},FUN**,cen*)")).IsEqualTo("FUN`FOOTER`DISPLAY`CENTER");
 
 		var listed = await Output($"@grep/list {thing}/FUN**=cent");
-		await Assert.That(listed).Contains("FUN`FOOTER`DISPLAY`CENTER");
+		await Assert.That(listed.Any(line => line.StartsWith("Matches of 'cent' on ", StringComparison.Ordinal)
+			&& line.EndsWith("): FUN`FOOTER`DISPLAY`CENTER", StringComparison.Ordinal))).IsTrue();
 	}
 
 	/// <summary>

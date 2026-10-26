@@ -1385,6 +1385,26 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	{
 		_logger.LogInformation("Establishing object relationships for {Count} objects", pennDatabase.Objects.Count);
 
+		foreach (var pennObj in ArrivalOrder(pennDatabase))
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (!context.DbrefMapping.TryGetValue(pennObj.DBRef, out var sharpDbRef)
+				|| await _mediator.Send(new GetObjectNodeQuery(sharpDbRef), cancellationToken) is not AnySharpObject sharpObj)
+			{
+				continue;
+			}
+
+			try
+			{
+				await SetLocationAsync(pennObj, sharpObj, context, cancellationToken);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Location error for object #{DBRef}", pennObj.DBRef);
+				context.Errors.Add($"Failed to set the location of object #{pennObj.DBRef}: {ex.Message}");
+			}
+		}
+
 		var done = 0;
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -1418,7 +1438,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		await SetLocationAsync(pennObj, sharpObj, context, cancellationToken);
 		await LinkExitAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetParentAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetZoneAsync(pennObj, sharpObj, context, cancellationToken);
@@ -1428,6 +1447,29 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await DenyPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetWarningsAsync(pennObj, sharpObj, context, cancellationToken);
+	}
+
+	/// <summary>
+	/// The order to place objects in so that each container lists its contents as PennMUSH's contents
+	/// list did. A container lists its newest arrival first, so the head of each list is placed last.
+	/// An object no list reaches comes before them all, in dump order.
+	/// </summary>
+	internal static IEnumerable<PennMUSHObject> ArrivalOrder(PennMUSHDatabase pennDatabase)
+	{
+		var byDbref = pennDatabase.Objects.DistinctBy(o => o.DBRef).ToDictionary(o => o.DBRef);
+		var position = new Dictionary<int, int>();
+		foreach (var container in pennDatabase.Objects)
+		{
+			var index = 0;
+			for (var next = container.Contents;
+				next >= 0 && byDbref.TryGetValue(next, out var item) && item.Location == container.DBRef && position.TryAdd(next, index);
+				next = item.Next)
+			{
+				index++;
+			}
+		}
+
+		return pennDatabase.Objects.OrderByDescending(o => position.GetValueOrDefault(o.DBRef, int.MaxValue));
 	}
 
 	/// <summary>Handle location for content objects (players, things, exits).</summary>

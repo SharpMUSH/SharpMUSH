@@ -1457,6 +1457,9 @@
   <data name="MoneyFunctionNotSupported" xml:space="preserve">
     <value>The money() function is not supported. SharpMUSH does not track money or pennies.</value>
   </data>
+  <data name="BuyCommandNotSupported" xml:space="preserve">
+    <value>The buy command is not supported. SharpMUSH does not track money or pennies.</value>
+  </data>
   <data name="MessageSentToRecipientsFormat" xml:space="preserve">
     <value>Message sent to {0} recipient(s).</value>
   </data>
@@ -1996,7 +1999,10 @@
     <value>Invalid wildcard pattern: {0}</value>
   </data>
   <data name="GrepNoMatchingAttributesFound" xml:space="preserve">
-    <value>No matching attributes found.</value>
+    <value>No matches.</value>
+  </data>
+  <data name="GrepMatchesFormat" xml:space="preserve">
+    <value>Matches of '{0}' on {1}(#{2}): {3}</value>
   </data>
 
   <!-- @include command -->

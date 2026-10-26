@@ -46,13 +46,9 @@ public partial class Commands
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		var args = parser.CurrentState.Arguments;
 
-		var itemName = args["0"].Message.ToPlainText();
-		await NotifyService.Notify(executor, $"You try to buy '{itemName}'.", executor);
-		await NotifyService.Notify(executor, "The BUY command requires a full economy system implementation.", executor);
-		await NotifyService.Notify(executor, "Features needed: PRICELIST attribute parsing, @lock/pay checking, penny transfers.", executor);
-
+		// Money is out of scope, so buy answers as money() does.
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.BuyCommandNotSupported), executor);
 		return CallState.Empty;
 	}
 

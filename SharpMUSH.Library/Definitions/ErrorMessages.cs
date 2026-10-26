@@ -1274,6 +1274,7 @@ public static partial class ErrorMessages
 		/// </summary>
 		public const string CreateDbrefUnavailable = "That is not a valid dbref.";
 		public const string MoneyFunctionNotSupported = "The money() function is not supported. SharpMUSH does not track money or pennies.";
+		public const string BuyCommandNotSupported = "The buy command is not supported. SharpMUSH does not track money or pennies.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string MessageSentToRecipientsFormat = "Message sent to {0} recipient(s).";
 
@@ -1369,7 +1370,8 @@ public static partial class ErrorMessages
 		public const string GrepWildcardTimedOutFormat = "Wildcard pattern timed out: {0}";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string GrepInvalidWildcardFormat = "Invalid wildcard pattern: {0}";
-		public const string GrepNoMatchingAttributesFound = "No matching attributes found.";
+		public const string GrepNoMatchingAttributesFound = "No matches.";
+		public const string GrepMatchesFormat = "Matches of '{0}' on {1}(#{2}): {3}";
 
 		public const string IncludeMustSpecifyAttributePath = "You must specify an object/attribute to include.";
 		public const string IncludeMustSpecifyObjectAttributePath = "You must specify an object/attribute path.";

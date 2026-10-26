@@ -241,6 +241,14 @@
    "command": "Bob bobpass"
   },
   {
+   "key": "49-contents-order/contents.import#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "48-audit-checks/use.ause#0",
+   "command": "Wiz wizpass"
+  },
+  {
    "key": "48-argument-counts/argc.login#0",
    "command": "Wiz wizpass"
   },
@@ -287,10 +295,6 @@
   {
    "key": "50-mail/mail.fwd-by-name#1",
    "command": "Bob bobpass"
-  },
-  {
-   "key": "50-mail/mail.fwd-by-name#2",
-   "command": "home"
   },
   {
    "key": "60-command-limits/cl.include-depth#0",
