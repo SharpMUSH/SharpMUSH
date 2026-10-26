@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.Extensions.Logging;
@@ -22,18 +23,45 @@ public partial class LightningDatabase
 	internal const string OnboardingMigrationId = "0004_onboarding_progress_v1";
 	internal const string SessionDigestMigrationId = "0003_session_digest_authority";
 
+	/// <summary>The <c>meta</c> key holding the world format, a 4-byte big-endian integer.</summary>
+	internal static ReadOnlySpan<byte> WorldFormatKey => "world_format"u8;
+
+	/// <summary>
+	/// The core migrations in the order they run, each with the world format it brings a world to. A change
+	/// to what the provider stores is a migration added at the end with the next format, so
+	/// <see cref="WorldFormat"/> moves with it and an older server refuses the world it writes.
+	/// </summary>
+	internal static readonly CoreMigration[] CoreMigrations =
+	[
+		new(1, InitialMigrationId, (db, _, ct) => db.ApplyInitialMigrationAsync(ct)),
+		new(2, AccountCredentialMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAccountCredentials, ct)),
+		new(3, SessionDigestMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateSessionDigests, ct)),
+		new(4, OnboardingMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateOnboarding, ct)),
+		new(5, WikiCategoryCheckpointCodec.MigrationId, (db, options, ct) => db.MigrateWikiCategoryValuesAsync(options, ct)),
+		new(6, WikiCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiCounts, ct)),
+	];
+
+	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>
+	internal static int WorldFormat => CoreMigrations[^1].Format;
+
+	/// <summary>One core migration: the format it brings a world to, its <c>mig:</c> id, and its body, which skips itself once applied.</summary>
+	internal sealed record CoreMigration(int Format, string Id,
+		Func<LightningDatabase, WikiCategoryMigrationOptions, CancellationToken, ValueTask> Apply);
+
 	/// <summary>
 	/// Idempotent world setup, run under <see cref="MigrateLock"/>:
+	/// 0. refuse a world whose stamped format is newer than <see cref="WorldFormat"/>, before anything is written;
 	/// 1. upsert the shared flag/power/attribute-flag/attribute-entry definitions and the system roles and
 	///    categories (always, cheap, and keyed by name, so a plugin installed later still lands its flags);
 	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, their
 	///    showcase image metadata, the ancestor player formats, the <c>system</c> wiki namespace's requirement
 	///    and the <c>character</c> category's pin to the wiki home;
-	/// 3. finish the core account, session, onboarding and category-value migrations, fill the stored configuration's
-	///    defaults for settings added since it was written, then run every plugin's
-	///    not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
+	/// 3. finish the rest of <see cref="CoreMigrations"/>, fill the stored configuration's defaults for settings
+	///    added since it was written, then run every plugin's not-yet-applied
+	///    <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
-	/// 5. ensure the singleton server-state row exists.
+	/// 5. ensure the singleton server-state row exists;
+	/// 6. stamp the world with <see cref="WorldFormat"/>.
 	/// </summary>
 	public async ValueTask Migrate(CancellationToken cancellationToken = default)
 		=> await _credentialGate.RunAsync(() => MigrateCoreAsync(cancellationToken), cancellationToken);
@@ -43,6 +71,8 @@ public partial class LightningDatabase
 		await MigrateLock.WaitAsync(cancellationToken);
 		try
 		{
+			RefuseNewerWorld(Store.Read(ReadWorldFormat));
+
 			var categoryOptions = WikiCategoryMigrationOptions.FromEnvironment();
 			// Execute exactly the immutable ordered snapshot that passed reserved-ID admission.
 			var pluginSteps = _migrationSources.SelectMany(source => source.LightningSteps).ToArray();
@@ -52,21 +82,11 @@ public partial class LightningDatabase
 			InvalidateDefinitions();
 			await Store.WriteAsync(SeedRoles, cancellationToken);
 
-			var initialApplied = Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialMigrationId), out _));
-			if (!initialApplied)
+			foreach (var migration in CoreMigrations)
 			{
-				await Store.WriteAsync(ApplyInitialSeed, cancellationToken);
-				// After the object seed because it writes attributes onto #4 owned by #1, and through
-				// SetAttributeAsync rather than raw puts so the stored values match what a write in game makes.
-				await AncestorSeed.SeedAncestorFormatsAsync(this, cancellationToken);
-				await RecordMigrationAsync(InitialMigrationId, cancellationToken);
+				await migration.Apply(this, categoryOptions, cancellationToken);
 			}
 
-			await Store.WriteAsync(MigrateAccountCredentials, cancellationToken);
-			await Store.WriteAsync(MigrateSessionDigests, cancellationToken);
-			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
-			await MigrateWikiCategoryValuesAsync(categoryOptions, cancellationToken);
-			await Store.WriteAsync(MigrateWikiCounts, cancellationToken);
 			await Store.WriteAsync(FillStoredOptionDefaults, cancellationToken);
 
 			foreach (var step in pluginSteps)
@@ -83,6 +103,7 @@ public partial class LightningDatabase
 
 			await Store.WriteAsync(RecomputeNextDbref, cancellationToken);
 			await Store.WriteAsync(EnsureServerState, cancellationToken);
+			await Store.WriteAsync(StampWorldFormat, cancellationToken);
 		}
 		finally
 		{
@@ -93,6 +114,44 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	/// <summary>Objects #0-#9 and the ancestor formats, once.</summary>
+	private async ValueTask ApplyInitialMigrationAsync(CancellationToken cancellationToken)
+	{
+		if (Store.Read(tx => tx.TryGet(Tables.Meta, Keys.Str("mig:" + InitialMigrationId), out _))) return;
+
+		await Store.WriteAsync(ApplyInitialSeed, cancellationToken);
+		// After the object seed because it writes attributes onto #4 owned by #1, and through
+		// SetAttributeAsync rather than raw puts so the stored values match what a write in game makes.
+		await AncestorSeed.SeedAncestorFormatsAsync(this, cancellationToken);
+		await RecordMigrationAsync(InitialMigrationId, cancellationToken);
+	}
+
+	/// <summary>The world's stamped format, or <see langword="null"/> for a new world or one stamped by no server yet.</summary>
+	internal static int? ReadWorldFormat(ITx tx)
+		=> tx.TryGet(Tables.Meta, WorldFormatKey, out var value) && value.Length == sizeof(int)
+			? BinaryPrimitives.ReadInt32BigEndian(value)
+			: null;
+
+	/// <summary>
+	/// Stops before anything is written when the world was stamped by a newer server: this one would read
+	/// records it does not know with code that predates them, and rewrite them without what it dropped.
+	/// </summary>
+	private static void RefuseNewerWorld(int? stamped)
+	{
+		if (stamped is not { } format || format <= WorldFormat) return;
+
+		throw new InvalidOperationException(
+			$"This world is format {format}, written by a newer SharpMUSH; this server opens format {WorldFormat} and older. " +
+			"Run the newer server, or restore a backup taken before the upgrade.");
+	}
+
+	private static void StampWorldFormat(ITx tx)
+	{
+		var value = new byte[sizeof(int)];
+		BinaryPrimitives.WriteInt32BigEndian(value, WorldFormat);
+		tx.Put(Tables.Meta, WorldFormatKey, value);
 	}
 
 	/// <summary>
