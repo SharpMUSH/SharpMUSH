@@ -172,9 +172,9 @@ services:
       - WATCHTOWER_CLEANUP=true
       - WATCHTOWER_POLL_INTERVAL=300
       - WATCHTOWER_TIMEOUT=60s
-      # watchtower 1.7.1 asks for Docker API 1.25 unless told otherwise, and Docker 29 (what
-      # get.docker.com installs) refuses anything below 1.40.
-      - DOCKER_API_VERSION=1.44
+      # watchtower 1.7.1 asks for Docker API 1.25 unless told otherwise; Docker 29 (what get.docker.com
+      # installs) refuses anything below 1.40. 1.40 is also what Docker 19.03 and later speak.
+      - DOCKER_API_VERSION=1.40
     networks:
       - sharpmush-net
     mem_limit: 128m
