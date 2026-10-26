@@ -8,6 +8,7 @@
   "sections": [
     {"id": "scene", "heading": "scene()", "lookup": "scene()", "aliases": []},
     {"id": "scenelist", "heading": "scenelist()", "lookup": "scenelist()", "aliases": []},
+    {"id": "scenelist-members", "heading": "Scenes by Member", "lookup": "scenelist members", "aliases": ["scenelist mine", "scenelist shared"]},
     {"id": "scenewhere", "heading": "scenewhere()", "lookup": "scenewhere()", "aliases": []},
     {"id": "sceneposes", "heading": "sceneposes()", "lookup": "sceneposes()", "aliases": []},
     {"id": "scenepose", "heading": "scenepose()", "lookup": "scenepose()", "aliases": []},
@@ -68,12 +69,27 @@ The ids of the scenes you may see among the first 50 the filter finds, separated
 - `active`, `finished`: the scenes with that status, latest activity first
 - `scheduled`: the scenes waiting to run, soonest first: those with a time that are not active or finished, and every paused one, the paused ones with no time last
 - `upcoming`: `scheduled` without the scenes more than an hour past their time that never started
-- `mine`: the scenes you are a member of, cancelled ones left out; with `<player>`, every scene of that player's instead
-- `shared`: the scenes two players are both members of, latest activity first, found among the first player's latest 200; with one name, you and that player
+- `mine`, `shared`: the scenes a player is a member of; see [scenelist members]
 
 `<from>` and `<to>` are UTC milliseconds. They limit `active`, `finished`, `scheduled` and `upcoming` to the scenes whose time falls between them, leaving out scenes with no time.
 
-A bound that is not a number is `#-1 BAD ARGUMENT FORMAT TO SCENELIST`, and a player that is not found is `#-1 NO SUCH PLAYER`.
+A bound that is not a number is `#-1 BAD ARGUMENT FORMAT TO SCENELIST`.
+
+```sharp
+> think scenelist(scheduled, soon)
+```
+
+Output: #-1 BAD ARGUMENT FORMAT TO SCENELIST
+
+## Scenes by Member
+
+`scenelist(mine[, <player>])`
+`scenelist(shared, <player>[, <player>])`
+
+- `mine`: the scenes you are a member of, cancelled ones left out; with `<player>`, every scene of that player's instead
+- `shared`: the scenes two players are both members of, latest activity first, found among the first player's latest 200; with one name, you and that player
+
+A player that is not found is `#-1 NO SUCH PLAYER`.
 
 ```sharp
 > think scenelist(shared, Bob)

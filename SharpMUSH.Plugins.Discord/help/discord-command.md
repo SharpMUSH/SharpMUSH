@@ -16,7 +16,13 @@
       "id": "discord-channels",
       "heading": "Linked channels",
       "lookup": "@discord channels",
-      "aliases": ["@discord/link", "@discord/unlink", "@discord/resume", "@discord/gate", "@discord/unrestricted", "@discord/restrict"]
+      "aliases": ["@discord/link", "@discord/unlink", "@discord/resume"]
+    },
+    {
+      "id": "discord-restrict",
+      "heading": "Restricted channels",
+      "lookup": "@discord restrict",
+      "aliases": ["@discord/gate", "@discord/unrestricted", "@discord/restrict"]
     },
     {
       "id": "discord-members",
@@ -46,6 +52,11 @@
       "heading": "Scheduled events",
       "lookup": "@discord events",
       "aliases": ["@discord/event"]
+    },
+    {
+      "id": "discord-event-fields",
+      "heading": "Event fields",
+      "lookup": "@discord event fields"
     }
   ]
 }
@@ -62,11 +73,13 @@ Discord ids are numbers. To copy one, turn on Developer Mode in Discord's User S
 
 - [@discord setup]: the bot's token and connection
 - [@discord channels]: linking, unlinking and resuming channels
+- [@discord restrict]: who may post in a linked channel
 - [@discord members]: linking Discord accounts to game accounts
 - [@discord speak]: choosing who speaks for you in a channel
 - [@discord roles]: Discord roles that follow game roles
 - [@discord bans]: banning on Discord when banned in the game
 - [@discord events]: the game's events in Discord's Events tab
+- [@discord event fields]: what an event's JSON holds
 
 The portal's Discord page, under Build & manage, does the same as these commands.
 
@@ -93,11 +106,8 @@ Once Discord accepts the token, `@discord` ends with a line starting `Add the bo
 - `@discord/link <channel id>`
 - `@discord/unlink <channel id>`
 - `@discord/resume <channel id>`
-- `@discord/gate <channel id>`
-- `@discord/unrestricted <channel id>`
-- `@discord/restrict <channel id>`
 
-Install the discord package from the portal's Packages page first; it adds the `discord` feed kind. `@discord/link` then makes a webhook in the channel, which the bot posts through, and lets only members holding the Linked role send messages there. These commands return the channel id at once and say how it went when Discord answers.
+Install the discord package from the portal's Packages page first; it adds the `discord` feed kind. `@discord/link` then makes a webhook in the channel, which the bot posts through, and lets only members holding the Linked role send messages there. These commands, and those in [@discord restrict], return the channel id at once and say how it went when Discord answers.
 
 ```sharp
 > @discord/link 1234567890123456789
@@ -107,14 +117,21 @@ Output: Linked #ooc in My Game. Lines sent on the feed discord/12345678901234567
 
 - `/unlink` stops posting, deletes the webhook, and puts back who may post in the channel as it was before. The feed and its lines stay in the game. If Discord refuses that permission change, the link stays listed with the error: give the bot the permission it needs and unlink again.
 - `/resume` posts again after a link stopped. `@discord` shows why a link stopped in its State column: a webhook deleted twice within ten minutes, a permission the bot lost, or five posts refused within a minute.
+
+Anything that sends a line on the feed posts it in Discord, such as `@feed/send discord/1234567890123456789=Server restart in ten minutes.` A line sent with `@feed/send/to` is not posted, and neither is one still waiting after a minute. See [@feed].
+
+## Restricted channels
+
+- `@discord/gate <channel id>`
+- `@discord/restrict <channel id>`
+- `@discord/unrestricted <channel id>`
+
 - `/gate` or `/restrict` makes the channel need a linked game account again. `/gate` also retries a permission change that failed while linking.
 - `/unrestricted` lets Discord members without a game account speak too, under their Discord name. Use it for a help channel for newcomers. The portal's Discord page does the same, channel by channel, and shows which channels are unrestricted.
 
 To restrict a channel, the bot notes the channel's Send Messages and Send Messages in Threads settings for `@everyone` and the Linked role, then denies both to `@everyone` and allows both to Linked. Unlinking or unrestricting puts the noted settings back, but only where a setting still holds what the bot wrote: one someone has changed since is left alone, and so is every other permission. A channel linked before the bot noted settings has nothing to put back, so the bot clears its own values and those settings fall back to the category's or the server's.
 
 An unrestricted channel still follows the Discord server's own permissions. In the game, a member without a game account speaks as a guest, under the feed's usual permissions. A send lock on the feed, or on its kind, refuses those guests, since there is no game object to test it against; clear the lock only where anyone on Discord should be able to speak. A member whose game account is disabled or banned cannot speak there either.
-
-Anything that sends a line on the feed posts it in Discord, such as `@feed/send discord/1234567890123456789=Server restart in ten minutes.` A line sent with `@feed/send/to` is not posted, and neither is one still waiting after a minute. See [@feed].
 
 ## Linking members
 
@@ -170,11 +187,17 @@ A game ban always takes the Linked role and every mapped role. With `@discord/ba
 - `@discord/event/start <key>`
 - `@discord/event/end <key>`
 
-`@discord/event` publishes a game event to the server's Events tab, under a key the game chooses, such as a scene's id. The value is a JSON object; build it with [json()], since typed braces would be taken as grouping:
+`@discord/event` publishes a game event to the server's Events tab, under a key the game chooses, such as a scene's id. The value is a JSON object; build it with [json()], since typed braces would be taken as grouping. [@discord event fields] lists what it holds.
 
 ```sharp
 > @discord/event 12=[json(object,name,json(string,Harbour Night),start,add(secs(),86400),location,json(string,https://game.example/scenes/12))]
 ```
+
+Publishing the same key again updates the event while it is still to come. Once it has started or ended, publishing ends it and makes a new one: a paused scene moved to another day is a new event. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
+
+## Event fields
+
+The JSON object given to `@discord/event <key>=<json>` holds:
 
 - `name`: up to 100 characters (required)
 - `start`: seconds since 1970 UTC, as [secs()] gives it, still to come (required)
@@ -182,8 +205,6 @@ A game ban always takes the Linked role and every mapped role. With `@discord/ba
 - `location`: up to 100 characters (required)
 - `description`: up to 1000 characters
 - `server`: the server's id, needed only when the bot is in more than one. A key's event stays in its server: `/end` it there before publishing the key in another
-
-Publishing the same key again updates the event while it is still to come. Once it has started or ended, publishing ends it and makes a new one: a paused scene moved to another day is a new event. `/start` shows the event as happening now. `/end` ends an event that started and cancels one that has not. `@discord/event` alone lists what is published. Each command returns the key at once and says how it went when Discord answers.
 
 ::: seealso
 - [@feed]

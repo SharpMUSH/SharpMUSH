@@ -8,7 +8,7 @@ namespace SharpMUSH.Tests.Documentation;
 /// Whether every help entry fits on a telnet screen. PennMUSH splits its topics so a reader on an 80 by 24
 /// terminal never has one scroll away: of its 1,123 entries, 26 run past 30 rows. Here an entry is a legacy topic,
 /// a declared article's overview, or one of its sections, and it is measured as the terminal shows it, with each
-/// line wrapped at 78 columns. The target is 30 rows, with one extra row allowed.
+/// line wrapped at 78 columns. The target is 30 rows, with one extra row allowed. Shipped plugins' help counts too.
 /// </summary>
 public class HelpHeightTests
 {
@@ -22,8 +22,14 @@ public class HelpHeightTests
 	[Test]
 	public async Task EveryHelpEntryFitsOnATelnetScreen()
 	{
+		var plugins = new DirectoryInfo(TestPaths.RepositoryRoot)
+			.EnumerateDirectories("SharpMUSH.Plugins.*")
+			.Select(project => new DirectoryInfo(Path.Combine(project.FullName, "help")))
+			.Where(help => help.Exists)
+			.SelectMany(help => help.EnumerateFiles("*.md"));
 		var tall = TestPaths.Helpfiles
 			.EnumerateFiles("*.md", SearchOption.AllDirectories)
+			.Concat(plugins)
 			.SelectMany(file => HelpArticleParser.Parse(File.ReadAllText(file.FullName),
 					file.Directory!.Name is "ahelp" or "news" ? file.Directory.Name : "help")
 				.SelectMany(parsed => parsed.Article.Sections.Select(parsed.Article.Entry).Prepend(parsed.Article.Entry()))
