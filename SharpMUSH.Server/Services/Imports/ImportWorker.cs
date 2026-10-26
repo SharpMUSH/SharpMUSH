@@ -114,11 +114,13 @@ public static class ImportWorker
 
 	/// <summary>
 	/// The configuration lines that were not carried over. An include the upload could not follow is a warning,
-	/// since its settings are lost unless they are pasted into the file; the rest, and the directives SharpMUSH has
-	/// no option for, are notes.
+	/// since its settings are lost unless they are pasted into the file, and so is a file that set nothing (another
+	/// of the game's files given in its place); the rest, and the directives SharpMUSH has no option for, are notes.
 	/// </summary>
 	private static void ReportConfiguration(PennMushConfigImport configuration, ConversionResult result)
 	{
+		if (configuration.Named.Count == 0 && configuration.Secrets.Count == 0)
+			result.Warnings.Add("Configuration: the file set no option SharpMUSH knows. Check that it is the game's mush.cnf, netmux.conf or netrhost.conf.");
 		foreach (var line in configuration.Skipped)
 			(line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) ? result.Warnings : result.Notes).Add("Configuration: " + line);
 		if (configuration.Unrecognized.Count > 0)

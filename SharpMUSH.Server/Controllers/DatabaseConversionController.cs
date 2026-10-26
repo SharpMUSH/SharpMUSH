@@ -69,7 +69,7 @@ public class DatabaseConversionController(ImportSessionRegistry sessions, Import
 		}
 		catch (InvalidOperationException)
 		{
-			return Conflict("Another preview or restart operation is active; finish or abort it first.");
+			return Conflict("Another import preview or a restart is in progress. Open it under Recent imports and choose Discard preview, or finish it, first.");
 		}
 		catch (OperationCanceledException)
 		{

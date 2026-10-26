@@ -133,6 +133,7 @@
                     }
 
                     <SectionLabel Class="dbimport-label">@Loc["MailDatabaseOptional"]</SectionLabel>
+                    <div class="dbimport-config-hint">@Loc["AdmImportMailHint"]</div>
                     <MudFileUpload T="IBrowserFile"
                                    FilesChanged="OnMailFileSelected"
                                    MaximumFileCount="1"
@@ -150,6 +151,7 @@
                     @if (TakesChat)
                     {
                         <SectionLabel Class="dbimport-label">@Loc["ChatDatabaseOptional"]</SectionLabel>
+                        <div class="dbimport-config-hint">@Loc["AdmImportChatHint"]</div>
                         <MudFileUpload T="IBrowserFile"
                                        FilesChanged="OnChatFileSelected"
                                        MaximumFileCount="1"
@@ -168,6 +170,7 @@
                     @if (TakesMailFolders)
                     {
                         <SectionLabel Class="dbimport-label">@Loc["AdmImportMailFoldersOptional"]</SectionLabel>
+                        <div class="dbimport-config-hint">@Loc["AdmImportMailFoldersHint"]</div>
                         <MudFileUpload T="IBrowserFile"
                                        FilesChanged="OnMailFolderFileSelected"
                                        MaximumFileCount="1"
