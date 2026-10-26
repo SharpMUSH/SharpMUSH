@@ -55,6 +55,36 @@ public class FeedCommandTests : ServerTestBase
 		=> WebAppFactoryArg.Notifications.For(who.DbRef).Where(line => line.Contains(containing, StringComparison.Ordinal)).ToList();
 
 	[Test]
+	public async Task List_ShowsTheKindsTheExecutorRuns()
+	{
+		await Assert.That(await Heard(_system, "@feed/list")).Contains(_kind);
+		var annList = await Heard(_ann, "@feed/list");
+		await Assert.That(annList).Contains("You run no feed kinds.");
+		await Assert.That(annList).DoesNotContain(_kind);
+	}
+
+	[Test]
+	public async Task Who_ListsTheMembers()
+	{
+		await Assert.That(await Heard(_system, $"@feed/who {_kind}/lobby")).Contains($"Feed {_kind}/lobby has no members.");
+		await Cmd($"@feed/join {_kind}/lobby={Ref(_ann)}");
+
+		var who = await Heard(_system, $"@feed/who {_kind}/lobby");
+
+		await Assert.That(who).Contains($"{_ann.Name}({_ann.DbRef.Number})");
+		await Assert.That(who).DoesNotContain(_bo.Name);
+	}
+
+	[Test]
+	public async Task Delete_RemovesTheFeedOnce()
+	{
+		await Cmd($"@feed/join {_kind}/gone={Ref(_ann)}");
+
+		await Assert.That(await Heard(_system, $"@feed/delete {_kind}/gone")).Contains($"Deleted feed {_kind}/gone, its members and lines.");
+		await Assert.That(await Heard(_system, $"@feed/delete {_kind}/gone")).Contains($"Feed {_kind}/gone has no members or lines.");
+	}
+
+	[Test]
 	public async Task ExternalRouteAndFormatAlwaysSeeNoCharacterEnactor()
 	{
 		await Cmd($"&FEED`{_kind.ToUpperInvariant()}`ROUTE {Ref(_system)}=switch(%#,#-1,{Ref(_ann)},{Ref(_bo)})");
