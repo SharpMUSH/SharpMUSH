@@ -11,7 +11,11 @@ set -euo pipefail
 app=${1:?usage: deploy/fly/launch.sh <app-name> [region]}
 region=${2:-iad}
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-fly=$(command -v fly || command -v flyctl) || { echo "Install flyctl first: https://fly.io/docs/flyctl/install/" >&2; exit 1; }
+# Under WSL a flyctl installed on Windows is found only by its .exe name.
+fly=$(command -v fly || command -v flyctl || command -v fly.exe || command -v flyctl.exe) ||
+	{ echo "Install flyctl first: https://fly.io/docs/flyctl/install/" >&2; exit 1; }
+# Paths are given relative to the checkout, which a Windows flyctl run from WSL also understands.
+cd "$root"
 
 if ! "$fly" status --app "$app" >/dev/null 2>&1; then
 	"$fly" apps create "$app"
@@ -28,9 +32,9 @@ fi
 grep -q 'v6' <<<"$ips" || "$fly" ips allocate-v6 --app "$app"
 
 # One machine: the world's volume can be attached to only one.
-"$fly" deploy "$root" --app "$app" --primary-region "$region" --ha=false \
-	--config "$root/deploy/fly/fly.toml" --dockerfile "$root/deploy/fly/Dockerfile" \
-	--ignorefile "$root/deploy/fly/fly.dockerignore"
+"$fly" deploy . --app "$app" --primary-region "$region" --ha=false \
+	--config deploy/fly/fly.toml --dockerfile deploy/fly/Dockerfile \
+	--ignorefile deploy/fly/fly.dockerignore
 
 echo
 echo "Telnet: port 4201 on the dedicated v4 address below"

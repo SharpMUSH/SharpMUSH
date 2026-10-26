@@ -17,6 +17,9 @@ deploy/fly/launch.sh my-game iad
 fly logs --app my-game --no-tail | grep setup_code
 ```
 
+On Windows, run the script with `bash deploy/fly/launch.sh my-game iad` from PowerShell (WSL); it
+uses the Windows `fly.exe`.
+
 `launch.sh` creates the app, a 10 GB volume (`sharpmush_data`, mounted at `/data`), a dedicated IPv4
 address for telnet, and an IPv6 address, then deploys one `shared-cpu-2x` machine with 2 GB.
 Running it again deploys the current checkout.
