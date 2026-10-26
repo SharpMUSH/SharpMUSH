@@ -66,6 +66,53 @@ public class AttributesTests
 	}
 
 	[Test]
+	public async Task TheAttributeCountFollowsEveryNodeSetClearedWipedOrDestroyed()
+	{
+		var god = await God();
+		var room = (await _db.GetObjectNodeAsync(new DBRef(2))).Expect<AnySharpObject>().AsOptionalContainer.Expect<AnySharpContainer>();
+		var thing = await _db.CreateThingAsync("Counted", room, god, room);
+		var start = await _db.GetAttributeCountAsync(thing);
+
+		await _db.SetAttributeAsync(thing, ["A", "B", "C"], MarkupText.Plain("deep"), god);
+		await _db.SetAttributeAsync(thing, ["A", "B", "C"], MarkupText.Plain("again"), god);
+		await _db.SetAttributeAsync(thing, ["A", "D"], MarkupText.Plain("side"), god);
+		await Assert.That(await _db.GetAttributeCountAsync(thing)).IsEqualTo(start + 4);
+
+		await _db.ClearAttributeAsync(thing, ["A", "D"]);
+		await _db.ClearAttributeAsync(thing, ["A"]);
+		await Assert.That(await _db.GetAttributeCountAsync(thing)).IsEqualTo(start + 3)
+			.Because("a cleared branch keeps its node for the children it still carries");
+
+		await _db.WipeAttributeAsync(thing, ["A"]);
+		await Assert.That(await _db.GetAttributeCountAsync(thing)).IsEqualTo(start);
+
+		await _db.SetAttributeAsync(thing, ["GONE"], MarkupText.Plain("x"), god);
+		await _db.DeleteObjectAsync(thing);
+		await Assert.That(_db.Store.Read(tx => tx.TryGet(Tables.AttrCount, Keys.Dbref(thing.Number), out _))).IsFalse();
+	}
+
+	[Test]
+	public async Task TheCountMigrationCountsAWorldWrittenWithoutCounts()
+	{
+		var god = await God();
+		await _db.SetAttributesAsync(new DBRef(1), [.. Enumerable.Range(0, 50)
+			.Select(i => new AttributeWrite(["MIGRATED", $"ROW{i}"], MarkupText.Plain("v"), god, []))]);
+		var counted = await _db.GetAttributeCountAsync(new DBRef(1));
+		var stored = _db.Store.Read(tx => tx.Range(Tables.AttrMeta, Keys.AttrPrefix(1)).Count());
+		await Assert.That(counted).IsEqualTo(stored);
+
+		await _db.Store.WriteAsync(tx =>
+		{
+			tx.DeletePrefix(Tables.AttrCount, []);
+			return tx.Delete(Tables.Meta, Keys.Str("mig:" + LightningDatabase.AttributeCountMigrationId));
+		});
+		await Assert.That(await _db.GetAttributeCountAsync(new DBRef(1))).IsEqualTo(0);
+
+		await _db.Migrate();
+		await Assert.That(await _db.GetAttributeCountAsync(new DBRef(1))).IsEqualTo(counted);
+	}
+
+	[Test]
 	public async Task WildcardListingStaysWithinOneLevelUnlessDoubleStar()
 	{
 		var god = await God();

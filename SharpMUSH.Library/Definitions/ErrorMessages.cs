@@ -69,6 +69,8 @@ public static partial class ErrorMessages
 		public const string AttrBadName = "That's not a good name for an attribute.";
 		/// <summary>A value longer than <c>max_attribute_value_length</c> bytes.</summary>
 		public const string AttrValueTooLong = "#-1 ATTRIBUTE VALUE TOO LONG";
+		/// <summary>A new attribute that would take its object past <c>max_attrs_per_obj</c>.</summary>
+		public const string TooManyAttributes = "#-1 TOO MANY ATTRIBUTES";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";

@@ -224,7 +224,7 @@ public record SharpMUSHOptions
 			MaxAttributeValueLength: 65536,
 			MailLimit: 300,
 			MaxAliases: 3,
-			MaxAttributesPerObj: 2048,
+			MaxAttributesPerObj: 100000,
 			MaxDbReference: null,
 			// PennMUSH's max_depth defaults to 10 (conf.c:1321).
 			MaxDepth: 10,

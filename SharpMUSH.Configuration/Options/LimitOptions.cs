@@ -27,12 +27,12 @@ public record LimitOptions(
 	[property: SharpConfig(
 		Name = "max_attrs_per_obj",
 		Category = "Limit",
-		Description = "Maximum number of attributes per object",
+		Description = "Maximum number of attributes per object, branches included",
 		ValidationPattern = @"^\d+$",
 		Group = "Database",
 		Order = 2,
 		Min = 10,
-		Max = 10000)]
+		Max = 1000000)]
 	uint MaxAttributesPerObj,
 
 	[property: SharpConfig(

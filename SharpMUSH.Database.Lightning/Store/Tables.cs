@@ -19,6 +19,8 @@ public static class Tables
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");
 	public static readonly TableDef AttrEntry = TableDef.Node("attr.entry");
+	/// <summary>Dbref → how many attribute nodes (branches included) it holds in <see cref="AttrMeta"/>, for <c>max_attrs_per_obj</c>.</summary>
+	public static readonly TableDef AttrCount = TableDef.Node("attr.count");
 	/// <summary>Attribute indexes: UPPER(long name) + 0x00 + the folded value (cut at a character boundary) → dbref
 	/// duplicates, so one value's objects are one duplicate run in dbref order. See <c>LightningDatabase.AttributeIndex.cs</c>.</summary>
 	public static readonly TableDef AttrIdx = TableDef.Index("attr.idx", duplicates: true, fixedDuplicates: true);

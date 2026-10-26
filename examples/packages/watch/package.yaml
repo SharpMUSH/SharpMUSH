@@ -1,7 +1,7 @@
 format: "1.16"
 package: watch
 title: "Watch list"
-version: 1.4.1
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -152,6 +152,11 @@ objects:
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
+      # %0 how many attributes a write may add to {{store}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{store}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
       # %0 an object: the key its records are filed under. An objid cannot be part of an attribute name,
       # so #12:1790888816538 is filed as 12_1790888816538.
       FUN`PLAYER`KEY:
@@ -254,7 +259,7 @@ objects:
       # +watch/add <player>
       INC`WATCH`ADD:
         value: |-
-          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); think setq(watch_by,setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>)); @assert lte(strlen(%q<watch_by>),config(max_attribute_value_length))=@pemit %#=notice(WATCH,[name(%q<watch_target>)] has as many watchers as fit in [config(max_attribute_value_length)] bytes.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=%q<watch_by>; @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
+          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); think setq(watch_by,setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>)); @assert u(%!/FUN`ROOM,4)=@pemit %#=notice(WATCH,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); @assert lte(strlen(%q<watch_by>),config(max_attribute_value_length))=@pemit %#=notice(WATCH,[name(%q<watch_target>)] has as many watchers as fit in [config(max_attribute_value_length)] bytes.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=%q<watch_by>; @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
         flags: [cmdsyntax]
       # +watch/del <player>
       INC`WATCH`DEL:
@@ -317,7 +322,7 @@ objects:
         flags: [cmdsyntax]
       INC`WATCH`HIDE:
         value: |-
-          @assert not(get({{store}}/WATCH`%q<viewer_key>`HIDE))=@pemit %#=notice(WATCH,You are already hidden from watchers.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`HIDE {{store}}=1; @pemit %#=notice(WATCH,Nobody hears when you connect or leave%, and you are left out of everyone's +%q<cmd_word>. +%q<cmd_word>/unhide undoes it.,ok)
+          @assert not(get({{store}}/WATCH`%q<viewer_key>`HIDE))=@pemit %#=notice(WATCH,You are already hidden from watchers.,warn); @assert u(%!/FUN`ROOM,2)=@pemit %#=notice(WATCH,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`HIDE {{store}}=1; @pemit %#=notice(WATCH,Nobody hears when you connect or leave%, and you are left out of everyone's +%q<cmd_word>. +%q<cmd_word>/unhide undoes it.,ok)
         flags: [cmdsyntax]
       INC`WATCH`UNHIDE:
         value: |-
@@ -325,7 +330,7 @@ objects:
         flags: [cmdsyntax]
       INC`WATCH`MUTE:
         value: |-
-          @assert not(get({{store}}/WATCH`%q<viewer_key>`MUTE))=@pemit %#=notice(WATCH,You already hear of nobody.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`MUTE {{store}}=1; @pemit %#=notice(WATCH,You no longer hear when the people you watch connect and leave. +%q<cmd_word> still lists them.,ok)
+          @assert not(get({{store}}/WATCH`%q<viewer_key>`MUTE))=@pemit %#=notice(WATCH,You already hear of nobody.,warn); @assert u(%!/FUN`ROOM,2)=@pemit %#=notice(WATCH,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`MUTE {{store}}=1; @pemit %#=notice(WATCH,You no longer hear when the people you watch connect and leave. +%q<cmd_word> still lists them.,ok)
         flags: [cmdsyntax]
       INC`WATCH`UNMUTE:
         value: |-

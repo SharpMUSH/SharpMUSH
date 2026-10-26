@@ -1,7 +1,7 @@
 format: "1.16"
 package: alts
 title: "Alts"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -70,6 +70,11 @@ objects:
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument, cmd_route
       # (the INC` routine to run), viewer_objid, viewer_account (the id of the account the player is on, or
       # nothing), viewer_key (that id as part of an attribute name) and viewer_is_staff.
+      # %0 how many attributes a write may add to {{store}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{store}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
@@ -188,7 +193,7 @@ objects:
       # +alts/public [on|off]: for the whole account, from any of its characters.
       INC`CMD`PUBLIC:
         value: |-
-          @include %!/INC`NEED`ACCOUNT; @break not(strlen(%q<cmd_argument>))={@pemit %#=notice(ALTS,Your list is [if(u(%!/FUN`IS`PUBLIC,%q<viewer_key>),public,private)]. +alts/public on lets anyone list your alts%, +alts/public off keeps them to you.)}; @assert member(on off,lcstr(%q<cmd_argument>))=@pemit %#=notice(ALTS,+alts/public on lets anyone list your alts%, +alts/public off keeps them to you.,warn); @break strmatch(%q<cmd_argument>,on)={&ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}=1; @pemit %#=notice(ALTS,Your alts are public: anyone can list them with +alts <name>. +alts/hide <name> keeps one off the list.,ok)}; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}; @pemit %#=notice(ALTS,Your alts are private: only you and staff see them.,ok); @include/args %!/INC`DO`TIDY=key,%q<viewer_key>
+          @include %!/INC`NEED`ACCOUNT; @break not(strlen(%q<cmd_argument>))={@pemit %#=notice(ALTS,Your list is [if(u(%!/FUN`IS`PUBLIC,%q<viewer_key>),public,private)]. +alts/public on lets anyone list your alts%, +alts/public off keeps them to you.)}; @assert member(on off,lcstr(%q<cmd_argument>))=@pemit %#=notice(ALTS,+alts/public on lets anyone list your alts%, +alts/public off keeps them to you.,warn); @assert cor(strmatch(%q<cmd_argument>,off),u(%!/FUN`ROOM,2))=@pemit %#=notice(ALTS,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); @break strmatch(%q<cmd_argument>,on)={&ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}=1; @pemit %#=notice(ALTS,Your alts are public: anyone can list them with +alts <name>. +alts/hide <name> keeps one off the list.,ok)}; &ACCOUNT`%q<viewer_key>`PUBLIC {{store}}; @pemit %#=notice(ALTS,Your alts are private: only you and staff see them.,ok); @include/args %!/INC`DO`TIDY=key,%q<viewer_key>
         flags: [cmdsyntax]
 
       # ---- +alts/hide and +alts/unhide ---------------------------------------------
@@ -201,7 +206,7 @@ objects:
       # +alts/hide <alt>
       INC`CMD`HIDE:
         value: |-
-          @include %!/INC`NEED`ALT; @assert u(%!/FUN`IS`LISTED,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,name(%q<alt_target>) is already off your public list.,warn); &ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}=%q<alt_target>; @pemit %#=notice(ALTS,name(%q<alt_target>) is off your public list. Only you and staff see it.,ok)
+          @include %!/INC`NEED`ALT; @assert u(%!/FUN`IS`LISTED,%q<alt_target>,%q<viewer_key>)=@pemit %#=notice(ALTS,name(%q<alt_target>) is already off your public list.,warn); @assert u(%!/FUN`ROOM,2)=@pemit %#=notice(ALTS,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &ACCOUNT`%q<viewer_key> {{store}}=%q<viewer_account>; &ACCOUNT`%q<viewer_key>`HIDDEN`%q<alt_charkey> {{store}}=%q<alt_target>; @pemit %#=notice(ALTS,name(%q<alt_target>) is off your public list. Only you and staff see it.,ok)
         flags: [cmdsyntax]
       # +alts/unhide <alt>
       INC`CMD`UNHIDE:

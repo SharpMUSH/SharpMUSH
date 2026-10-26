@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -234,6 +234,11 @@ objects:
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
+      # %0 how many attributes a write may add to {{calendar}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{calendar}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
       # %0 an object: the key its entries are filed under. An objid cannot be part of an attribute name, so
       # #12:1790888816538 is filed as 12_1790888816538.
       FUN`KEY:
@@ -785,7 +790,7 @@ objects:
       # +avail/busy <when>[=<note>] and +avail/free <when>[=<note>].
       INC`ENTRY`ADD:
         value: |-
-          @assert strlen(%q<cmd_left>)=@pemit %#=notice(AVAIL,[get(%!/DATA`USAGE`ADD)][u(%!/FUN`HINT,WHEN)],warn); think u(%!/FUN`READ`WHEN,%q<cmd_left>,%q<viewer_zone>,%q<viewer_today>); @assert not(strlen(%q<read_error>))=@pemit %#=notice(AVAIL,%q<read_error>,warn); @assert lte(strlen(%q<cmd_right>),u(%!/FUN`CONFIG,NOTE-LENGTH))=@pemit %#=notice(AVAIL,Keep the note to [u(%!/FUN`CONFIG,NOTE-LENGTH)] characters.,warn); @assert lt(words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>)),u(%!/FUN`CONFIG,ENTRIES))=@pemit %#=notice(AVAIL,You keep [u(%!/FUN`CONFIG,ENTRIES)] entries already. +avail/remove <n> makes room.,warn); @assert cor(comp(%q<read_repeat>,once),gt(u(%!/FUN`DAY`AT,%q<read_date>,add(%q<read_minute>,%q<read_length>),%q<viewer_zone>),%q<now>))=@pemit %#=notice(AVAIL,That time has already passed.,warn); think setq(entry_number,u(%!/FUN`PLAYER`NEXT,%q<viewer_key>)); @include %!/INC`ENTRY`WRITE; @pemit %#=notice(AVAIL,Added %q<entry_number>%, [u(%!/FUN`DISPLAY`KIND,%q<cmd_switch>)]: [u(%!/FUN`ENTRY`DESCRIBE,%q<viewer_key>,%q<entry_number>,%q<viewer_zone>)].,ok)
+          @assert strlen(%q<cmd_left>)=@pemit %#=notice(AVAIL,[get(%!/DATA`USAGE`ADD)][u(%!/FUN`HINT,WHEN)],warn); @assert u(%!/FUN`ROOM,14)=@pemit %#=notice(AVAIL,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); think u(%!/FUN`READ`WHEN,%q<cmd_left>,%q<viewer_zone>,%q<viewer_today>); @assert not(strlen(%q<read_error>))=@pemit %#=notice(AVAIL,%q<read_error>,warn); @assert lte(strlen(%q<cmd_right>),u(%!/FUN`CONFIG,NOTE-LENGTH))=@pemit %#=notice(AVAIL,Keep the note to [u(%!/FUN`CONFIG,NOTE-LENGTH)] characters.,warn); @assert lt(words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>)),u(%!/FUN`CONFIG,ENTRIES))=@pemit %#=notice(AVAIL,You keep [u(%!/FUN`CONFIG,ENTRIES)] entries already. +avail/remove <n> makes room.,warn); @assert cor(comp(%q<read_repeat>,once),gt(u(%!/FUN`DAY`AT,%q<read_date>,add(%q<read_minute>,%q<read_length>),%q<viewer_zone>),%q<now>))=@pemit %#=notice(AVAIL,That time has already passed.,warn); think setq(entry_number,u(%!/FUN`PLAYER`NEXT,%q<viewer_key>)); @include %!/INC`ENTRY`WRITE; @pemit %#=notice(AVAIL,Added %q<entry_number>%, [u(%!/FUN`DISPLAY`KIND,%q<cmd_switch>)]: [u(%!/FUN`ENTRY`DESCRIBE,%q<viewer_key>,%q<entry_number>,%q<viewer_zone>)].,ok)
         flags: [cmdsyntax]
       # Writes the entry the read_ registers hold as %q<entry_number>. A leaf with nothing to say is not written.
       INC`ENTRY`WRITE:
@@ -804,7 +809,7 @@ objects:
       # +avail/skip <n>=<date>: one date left out of a repeating entry.
       INC`ENTRY`SKIP:
         value: |-
-          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert not(member(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>))=@pemit %#=notice(AVAIL,Entry %q<entry_number> already leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); &PLAYER`%q<viewer_key>`%q<entry_number>`SKIP {{calendar}}=sort(setunion(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>)); @pemit %#=notice(AVAIL,Entry %q<entry_number> leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,ok)
+          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert not(member(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>))=@pemit %#=notice(AVAIL,Entry %q<entry_number> already leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); @assert u(%!/FUN`ROOM,1)=@pemit %#=notice(AVAIL,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &PLAYER`%q<viewer_key>`%q<entry_number>`SKIP {{calendar}}=sort(setunion(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>)); @pemit %#=notice(AVAIL,Entry %q<entry_number> leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,ok)
         flags: [cmdsyntax]
       # +avail/unskip <n>=<date>.
       INC`ENTRY`UNSKIP:

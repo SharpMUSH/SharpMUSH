@@ -992,6 +992,7 @@ public partial class LightningDatabase
 			UnindexCopies(tx, n, Keys.AttrPrefix(n));
 			tx.DeletePrefix(Tables.AttrMeta, Keys.AttrPrefix(n));
 			tx.DeletePrefix(Tables.AttrVal, Keys.AttrPrefix(n));
+			tx.Delete(Tables.AttrCount, key);
 
 			// Expanded per-object data (dbref + 0x00 + type).
 			tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));

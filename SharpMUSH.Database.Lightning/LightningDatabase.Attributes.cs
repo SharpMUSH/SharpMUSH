@@ -478,6 +478,7 @@ public partial class LightningDatabase
 	{
 		var path = write.Path;
 		var longName = string.Empty;
+		var created = 0;
 		AttributeWriteOutcome outcome = new Success();
 
 		for (var level = 0; level < path.Length; level++)
@@ -490,6 +491,7 @@ public partial class LightningDatabase
 			catch (System.Text.Json.JsonException ex)
 			{ throw new InvalidDataException($"Cannot write unreadable attribute metadata {n}/{longName}.", ex); }
 			var entry = ReadAttributeEntryRecord(tx, longName);
+			if (existing is null) created++;
 
 			// The entry's defaults are a new node's flags; an existing node keeps its own.
 			var flags = new List<string>(existing?.Flags ?? entry?.DefaultFlags ?? []);
@@ -534,6 +536,7 @@ public partial class LightningDatabase
 			}
 		}
 
+		AdjustAttributeCount(tx, n, created);
 		return outcome;
 	}
 
@@ -655,6 +658,7 @@ public partial class LightningDatabase
 			{
 				tx.Delete(Tables.AttrMeta, key);
 				tx.Delete(Tables.AttrVal, key);
+				AdjustAttributeCount(tx, n, -1);
 				DropParentBranchWhenChildless(tx, n, path);
 			}
 
@@ -697,10 +701,10 @@ public partial class LightningDatabase
 
 			UnindexCopy(tx, n, longName);
 			UnindexCopies(tx, n, descendants);
-			tx.Delete(Tables.AttrMeta, key);
+			var removed = (tx.Delete(Tables.AttrMeta, key) ? 1 : 0) + tx.DeletePrefix(Tables.AttrMeta, descendants);
 			tx.Delete(Tables.AttrVal, key);
-			tx.DeletePrefix(Tables.AttrMeta, descendants);
 			tx.DeletePrefix(Tables.AttrVal, descendants);
+			AdjustAttributeCount(tx, n, -removed);
 			DropParentBranchWhenChildless(tx, n, path);
 			if (TouchesAliases(path))
 			{

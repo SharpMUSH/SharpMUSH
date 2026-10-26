@@ -468,7 +468,7 @@ max_dbref 0
 # The maximum number of attributes per object. This prevents
 # denial-of-service attacks involving creating an infinite number
 # of attributes on an object. This value is probably enough.
-max_attrs_per_obj 2048
+max_attrs_per_obj 100000
 
 # The maximum number of mail messages in each player's inbox.
 # Encourages people to clean up their inbox, discourages 

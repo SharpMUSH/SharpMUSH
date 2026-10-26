@@ -42,6 +42,7 @@ public partial class LightningDatabase
 		new(1, WikiCategoryCheckpointCodec.MigrationId, (db, options, ct) => db.MigrateWikiCategoryValuesAsync(options, ct)),
 		new(1, WikiCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiCounts, ct)),
 		new(1, ArrivalOrderMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateArrivalOrder, ct)),
+		new(1, AttributeCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeCounts, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>

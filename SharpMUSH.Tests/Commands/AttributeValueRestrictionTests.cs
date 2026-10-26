@@ -125,6 +125,35 @@ public class AttributeValueRestrictionTests
 		await Assert.That(Told(ErrorMessages.Returns.AttrValueTooLong)).IsTrue();
 	}
 
+	[Test]
+	public async Task Set_RefusesANewAttributePastMaxAttrsPerObj_AndStillReplacesValues()
+	{
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "ManyAttrs");
+		var held = await WebAppFactoryArg.Services.GetRequiredService<Mediator.IMediator>()
+			.Send(new SharpMUSH.Library.Queries.Database.GetAttributeCountQuery(thing));
+		using var limit = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MaxAttributesPerObj = (uint)held + 2 }
+		});
+
+		await CommandAsync($"&FIRST {thing}=1");
+		await CommandAsync($"&SECOND {thing}=2");
+		await CommandAsync($"&THIRD {thing}=3");
+		await CommandAsync($"&FIRST {thing}=again");
+
+		await Assert.That(Told(ErrorMessages.Returns.TooManyAttributes)).IsTrue();
+		await Assert.That(await FunctionAsync($"hasattr({thing},THIRD)")).IsEqualTo("0");
+		await Assert.That(await FunctionAsync($"get({thing}/FIRST)")).IsEqualTo("again");
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/THIRD,3)")).IsEqualTo(ErrorMessages.Returns.TooManyAttributes);
+
+		// A wipe frees its slot; a tree needs one for each level it creates.
+		await CommandAsync($"@wipe {thing}/SECOND");
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/TREE`LEAF,x)")).IsEqualTo(ErrorMessages.Returns.TooManyAttributes);
+		await Assert.That(await FunctionAsync($"attrib_set({thing}/TREE,x)")).IsEqualTo(string.Empty);
+		await Assert.That(await FunctionAsync($"nattr({thing}/**)")).IsEqualTo((held + 2).ToString())
+			.Because("nattr(<object>/**) counts what the limit counts, so softcode can check it");
+	}
+
 	// ---- @attribute/limit and /enum as commands (src/atr_tab.c do_attribute_limit) ----------------
 
 	[Test]
