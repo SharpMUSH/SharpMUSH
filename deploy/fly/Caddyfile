@@ -1,10 +1,12 @@
-# SharpMUSH's front door inside the all-in-one container (deploy/fly/Dockerfile). Fly's proxy ends
-# TLS and hands plain HTTP to :8000; everything behind Caddy is on localhost.
+# SharpMUSH's front door inside the all-in-one container (deploy/fly/Dockerfile). The host's proxy
+# (Fly's or Railway's) ends TLS and hands plain HTTP to :8000; everything behind Caddy is on
+# localhost.
 {
 	admin localhost:2019
 	servers {
 		# Fly's proxy reaches the machine from a private address and names the client in X-Forwarded-For.
-		trusted_proxies static private_ranges
+		# A host whose proxy comes from elsewhere sets SHARPMUSH_TRUSTED_PROXIES to its ranges.
+		trusted_proxies static {$SHARPMUSH_TRUSTED_PROXIES:private_ranges}
 	}
 }
 

@@ -8,7 +8,9 @@ set -euo pipefail
 
 DATA=/data
 STATE=$DATA/state
+# Fly names the app; Railway names the domain it generated for the service.
 DOMAIN=${SHARPMUSH_DOMAIN:-${FLY_APP_NAME:+$FLY_APP_NAME.fly.dev}}
+DOMAIN=${DOMAIN:-${RAILWAY_PUBLIC_DOMAIN:-}}
 DOMAIN=${DOMAIN:-localhost:8000}
 GUARD_PORT=14201
 
@@ -123,7 +125,11 @@ if guard_on; then
 	echo
 	echo "  Finish setting up SharpMUSH in your browser (only this link gets in until you do):"
 	echo "    https://$DOMAIN/?setup_code=$code"
-	echo "  Telnet opens on port 4201 once setup is finished."
+	if [ -n "${RAILWAY_TCP_PROXY_DOMAIN:-}" ]; then
+		echo "  Telnet opens at $RAILWAY_TCP_PROXY_DOMAIN port ${RAILWAY_TCP_PROXY_PORT:-} once setup is finished."
+	else
+		echo "  Telnet opens on port 4201 once setup is finished."
+	fi
 	echo
 fi
 

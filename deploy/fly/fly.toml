@@ -1,6 +1,12 @@
-# SharpMUSH on Fly.io: one machine running deploy/fly/Dockerfile, with the world on a volume.
-# deploy/fly/launch.sh creates the app, its volume and IP addresses, then deploys with this file.
-# The app name and region come from launch.sh's arguments.
+# SharpMUSH on Fly.io: one machine running the all-in-one image, with the world on a volume.
+# launch.sh saves this file as <app>.fly.toml, creates the app, its volume and IP addresses, then
+# deploys with it. The app name and region come from launch.sh's arguments.
+
+# Every deploy pulls the newest build of this tag and restarts the machine, dropping connected
+# players. Nothing deploys on its own. Once SharpMUSH has releases, a release tag
+# (sharpmush-fly:1.0.0) holds the game on one version until you change it here.
+[build]
+  image = "sharpmush/sharpmush-fly:dev"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the
