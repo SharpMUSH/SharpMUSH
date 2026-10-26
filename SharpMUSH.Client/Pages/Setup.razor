@@ -236,7 +236,7 @@
                             <li class="setup-app @(addOn ? "setup-app--addon" : null) @(package.Available ? null : "setup-app--unavailable")" @key="id">
                                 <label class="setup-app-label">
                                     <input id="setup-pkg-@id" class="setup-app-check" type="checkbox"
-                                           checked="@on" disabled="@(_busy || needed is not null || (!package.Available && !on))"
+                                           checked="@on" disabled="@(_busy || needed is not null || (!package.Available && !on) || (package.Bridge && !Joined(package)))"
                                            @onchange="@(e => Choose(id, e.Value is true))" />
                                     <span class="setup-app-text">
                                         <span class="setup-app-title">@PackageTitle(package)</span>
@@ -392,6 +392,9 @@
     /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
     private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>The bridges the administrator turned off. Any other bridge goes in wherever the packages it joins do.</summary>
+    private readonly HashSet<string> _bridgesOff = new(StringComparer.OrdinalIgnoreCase);
+
     /// <summary>Whether the administrator wants the starter wiki pages; ticked until they untick it. A reload
     /// after a failed save keeps their choice.</summary>
     private bool _starterWiki = true;
@@ -487,7 +490,11 @@
         // packages built on the handlers it removed — wherever that can go on now.
         _packages = wizard.Packages;
         _chosen.Clear();
-        _chosen.UnionWith(wizard.Packages.Where(p => p.Installed || p is { Recommended: true, Available: true }).Select(p => p.Id));
+        _chosen.UnionWith(wizard.Packages.Where(p => !p.Bridge && (p.Installed || p is { Recommended: true, Available: true })).Select(p => p.Id));
+        // A bridge that is missing while the packages it joins are installed was turned off.
+        var installed = wizard.Packages.Where(p => p.Installed).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _bridgesOff.Clear();
+        _bridgesOff.UnionWith(wizard.Packages.Where(p => p is { Bridge: true, Installed: false } && p.DependsOn.All(installed.Contains)).Select(p => p.Id));
 
         _starterWikiApplied = wizard.StarterWikiApplied;
         _starterWorldApplied = wizard.StarterWorldApplied;
@@ -661,12 +668,27 @@
 
     private void Choose(string id, bool on)
     {
-        if (on) _chosen.Add(id);
-        else _chosen.Remove(id);
+        var (set, add) = _packages.FirstOrDefault(p => p.Id == id) is { Bridge: true } ? (_bridgesOff, !on) : (_chosen, on);
+        if (add) set.Add(id);
+        else set.Remove(id);
     }
 
-    /// <summary>What will be installed: the ticked packages and every bundled package they depend on.</summary>
-    private HashSet<string> Effective => Closure(_chosen);
+    /// <summary>
+    /// What will be installed: the ticked packages, every bundled package they depend on, and the bridges between them
+    /// that the administrator has not turned off.
+    /// </summary>
+    private HashSet<string> Effective
+    {
+        get
+        {
+            var effective = Closure(_chosen);
+            effective.UnionWith(_packages.Where(p => p.Bridge && !_bridgesOff.Contains(p.Id) && p.DependsOn.All(effective.Contains)).Select(p => p.Id));
+            return effective;
+        }
+    }
+
+    /// <summary>Whether every package <paramref name="bridge"/> joins will be installed.</summary>
+    private bool Joined(BundledPackageState bridge) => bridge.DependsOn.All(Closure(_chosen).Contains);
 
     private HashSet<string> Closure(IEnumerable<string> ids)
     {

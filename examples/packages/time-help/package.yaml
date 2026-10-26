@@ -1,0 +1,35 @@
+format: "1.16"
+package: time-help
+title: "Time and time zones: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Time and time zones topics into +help: registers the time package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [time, help, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. time keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: time
+    version: ">=1.5"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/time/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`TIME: |-
+        {{time/time_help}}

@@ -97,7 +97,8 @@ public class SceneSafetyIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -173,7 +174,7 @@ public class SceneSafetyIntegrationTests
 		}
 		finally
 		{
-			await Installer.UninstallAsync("scene-safety", force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("scene-safety");
 			await Installer.UninstallAsync("scene-verse", force: true, CancellationToken.None);
 		}
 	}

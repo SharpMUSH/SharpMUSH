@@ -67,7 +67,8 @@ public class FingerIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "finger", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("finger must install from the catalogue");
@@ -77,7 +78,7 @@ public class FingerIntegrationTests
 		Finger = objects.First(o => o.Ref == "finger").Objid;
 	}
 
-	private async Task UninstallAsync() => await Installer.UninstallAsync("finger", force: true, CancellationToken.None);
+	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("finger");
 
 	[Test]
 	public async Task FieldsAreSetShownAndCleared()

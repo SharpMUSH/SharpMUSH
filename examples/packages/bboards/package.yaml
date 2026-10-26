@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.5.0
+version: 1.6.0
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -10,28 +10,14 @@ keywords: [bboards, bulletin, boards, forum, myrddin]
 category: Community
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics;
-# http-handler owns the GET/POST verb routers the portal routes hang off;
-# plus-config shows and changes the settings.
+# http-handler owns the GET/POST verb routers the portal routes hang off. bboards-help and bboards-config put the
+# topics into +help and the settings into +config.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
   - package: http-handler
     version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
-      branch: main
-  # The settings below are registered with +config: +config bboards lists them.
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 # Two permissions. Who may read, post, comment on or moderate one board is that board's lock, so a
@@ -2619,16 +2605,3 @@ objects:
         - `+bblock <board>/moderate=<lock>`: who moderates it.
 
         A board with no lock of a kind takes it from the board it is in. An empty lock clears it: `+bblock 5/post=`. For example, `+bblock 5/post=role^approved` lets only approved players post on board 5.
-
-  # ---- +help registration -------------------------------------------------------------
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`BBOARDS: |-
-        {{bboards}}
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`BBOARDS: |-
-        {{bb_help}}

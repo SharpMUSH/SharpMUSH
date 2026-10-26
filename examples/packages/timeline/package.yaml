@@ -1,7 +1,7 @@
 format: "1.16"
 package: timeline
 title: "IC timeline"
-version: 1.0.4
+version: 1.1.0
 authors: [SharpMUSH]
 description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
 license: MIT
@@ -17,12 +17,6 @@ plugins: [scene]
 # The IC calendar is the time package's: its Clock says what IC moment a real one is and how an IC date is written.
 # The scene package keeps the scenes and their details; this one adds two details and reads them back.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
   - package: scene
     version: ">=1.13"
     source:
@@ -34,12 +28,6 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/time/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 objects:
@@ -310,15 +298,3 @@ objects:
         Output: `\[SCENE\] Done: Scene 12 takes place on Saturday, 14 March 2026, 19:30.`
 
         The IC date shows on the scene's card, at the top of its log and on its page in the portal, and places the scene in its players' `+timeline`. `+scene/set icdate=<words>` changes only the words shown, such as `The night of the storm`, and the scene keeps its place. Only the scene's owner, or staff, can date it.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`TIMELINE: |-
-        {{timeline_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`TIMELINE: |-
-        {{timeline}}

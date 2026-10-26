@@ -74,7 +74,8 @@ public class SummaryIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "summary", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("summary must install from the catalogue");
@@ -82,7 +83,7 @@ public class SummaryIntegrationTests
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
-	private async Task UninstallAsync() => await Installer.UninstallAsync("summary", force: true, CancellationToken.None);
+	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("summary");
 
 	[Test]
 	public async Task TheRoomHearsItAndNobodyElse()

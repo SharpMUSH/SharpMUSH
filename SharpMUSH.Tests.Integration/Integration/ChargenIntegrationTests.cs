@@ -99,7 +99,8 @@ public class ChargenIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -110,7 +111,7 @@ public class ChargenIntegrationTests
 	private async Task UninstallAsync()
 	{
 		await Installer.UninstallAsync("chargen-app", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("chargen", force: true, CancellationToken.None);
+		await WebAppFactoryArg.Services.UninstallWithBridgesAsync("chargen");
 	}
 
 	private async Task<JsonElement> Http(string method, string path, string body, TestIsolationHelpers.TestPlayer? viewer)

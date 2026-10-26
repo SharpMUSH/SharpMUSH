@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-char
 title: "GMCP character data"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Char package: Char.Name, Char.Vitals for a client's gauges and Char.Status, from the attributes its settings name, each sent again the moment one of them changes."
 license: MIT
@@ -10,19 +10,6 @@ keywords: [gmcp, mudlet, vitals, status, mud-kit]
 category: MUD clients
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # The shapes are Iron Realms' (IRE). Char.Vitals uses the keys Mudlet's gauges read, as
 # TelnetNegotiationCore's CharVitals type writes them: each attribute's name in lower case, its value a
@@ -251,15 +238,3 @@ objects:
         ## For staff
 
         The package hears about a change through `@attribute/watch`: each vitals and status attribute is watched (added to the attribute table first when it is not there), and ``WATCH`<attribute>`GMCPCHAR`` on the event handler sends the update. An attribute already watched with another pattern is left alone and not sent; the GMCP Char object's ``DATA`FOREIGN`` lists them. See `help @attribute watch`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`GMCP-CHAR: |-
-        {{gmcp_char_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`GMCP-CHAR: |-
-        {{gmcp_char}}

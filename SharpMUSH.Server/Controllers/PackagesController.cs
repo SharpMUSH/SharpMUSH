@@ -33,7 +33,8 @@ public class PackagesController(
 	PluginUploadStore uploads,
 	PackageManifestResolver manifestResolver,
 	IAuditLog audit,
-	EngineVersion engine) : ControllerBase
+	EngineVersion engine,
+	IBundledPackageBootstrap bundled) : ControllerBase
 {
 	/// <summary>The canonical official repo, used when no official remote is configured yet.</summary>
 	public const string DefaultOfficialRepoUrl = "https://github.com/SharpMUSH/SharpMUSH-Packages";
@@ -234,14 +235,15 @@ public class PackagesController(
 		backup is null ? notes : [$"The world was backed up to {backup.Path} first.", .. notes];
 
 	/// <summary>
-	/// Uninstalls a package; 409 when dependents exist and force is not set. A bundled package that
-	/// installs at first boot is recorded as turned off, so the next restart does not put it back.
+	/// Uninstalls a package, and first the bundled bridges over it to +help and +config; 409 when other dependents exist
+	/// and force is not set. A bundled package that installs at first boot is recorded as turned off, so the next restart
+	/// does not put it back.
 	/// </summary>
 	[HttpDelete("{id}")]
 	public async Task<IActionResult> Uninstall(string id, [FromQuery] bool force, [FromServices] GameFeatureService features,
 		CancellationToken cancellationToken)
 	{
-		return await operations.RunAsync("uninstall", token => installer.UninstallAsync(id, force, token), cancellationToken,
+		return await operations.RunAsync("uninstall", UninstallWithBridgesAsync, cancellationToken,
 			_ => Task.FromResult(new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier), "uninstall", id))) switch
 		{
 			PackageOperationRan<Result<Success>> { Result: var result } => result switch
@@ -257,6 +259,13 @@ public class PackagesController(
 			await features.SetDeclinedAsync(id, declined: true);
 			return NoContent();
 		}
+
+		async Task<Result<Success>> UninstallWithBridgesAsync(CancellationToken token)
+			=> await bundled.UninstallBridgesOverAsync(id, token) switch
+			{
+				Success => await installer.UninstallAsync(id, force, token),
+				Error<string> error => error
+			};
 	}
 
 	/// <summary>
@@ -421,6 +430,9 @@ public class PackagesController(
 			cancellationToken, async _ => new BackupProvenance("pre-package", User?.FindFirstValue(ClaimTypes.NameIdentifier),
 				await registry.GetInstalledPackageAsync(manifest.Name) is InstalledPackageRecord ? "update" : "install",
 				$"{manifest.Name} v{manifest.Version}"));
+		// A bridge to +help or +config arrives with the package it joins.
+		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult })
+			await bundled.InstallBridgesAsync(cancellationToken);
 		if (outcome is PackageOperationRan<Result<PackageApplyResult>> { Result: PackageApplyResult }
 			&& manifest.Kind is PackageKind.Plugin or PackageKind.Ui)
 		{

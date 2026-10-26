@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.4.1
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -10,20 +10,6 @@ keywords: [radio, channels, comms, feed]
 category: Community
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  # The settings are registered with +config: +config radio lists them.
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # Who may create frequencies, and who moderates and runs every one of them, is a permission, so it
 # moves with roles: @role/assign <player>=radio-admin, or radio-moderator to moderate every frequency.
@@ -520,17 +506,3 @@ objects:
         - `recall`: how many lines `+radio/recall` shows when no number is given, 50 unless set.
         - `recall-max`: the most lines a player may ask `+radio/recall` for, 500 unless set.
         - `name-length`, `title-length` and `alterego-length`: the longest frequency name, title and alterego, in characters.
-
-  # ---- +config registration -----------------------------------------------------------
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`RADIO: |-
-        {{radio}}
-
-  # ---- +help registration -------------------------------------------------------------
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`RADIO: |-
-        {{radio_help}}

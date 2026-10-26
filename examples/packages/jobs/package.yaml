@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.14.2
+version: 1.15.0
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -10,21 +10,9 @@ keywords: [jobs, requests, tickets, staff, anomaly]
 category: Staff
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics; plus-config the +config settings;
-# http-handler owns the GET/POST verb routers the portal routes hang off.
+# http-handler owns the GET/POST verb routers the portal routes hang off. jobs-help and jobs-config put the topics
+# into +help and the settings into +config.
 depends:
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
   - package: http-handler
     version: ">=1.0"
     source:
@@ -2698,17 +2686,3 @@ objects:
 
         Scene logs need the Scene plugin. Without it, `scene:` steps are left out of every job's
         checklist and `+job/scene` is refused.
-
-  # ---- +config registration -----------------------------------------------------------
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`JOBS: |-
-        {{jobs}}
-
-  # ---- +help registration -------------------------------------------------------------
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`JOBS: |-
-        {{jobs_help}}

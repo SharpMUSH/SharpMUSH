@@ -49,10 +49,15 @@ public static class BundledPackages
 	/// in the image without installing it — the admin installs it from the bundled source when they
 	/// want it. Once installed, bootstrap maintains it either way.
 	/// </param>
+	/// <param name="Bridge">
+	/// Whether this only joins the packages it depends on (a <c>&lt;pkg&gt;-help</c> or <c>&lt;pkg&gt;-config</c>
+	/// registration): it is installed wherever all of them are, as soon as they are, unless the administrator removed it.
+	/// </param>
 	public readonly record struct Descriptor(
 		string PackageId,
 		BundledPackageHandler Requires,
-		bool InstallAtFirstBoot);
+		bool InstallAtFirstBoot,
+		bool Bridge = false);
 
 	/// <summary>
 	/// Bundled packages in dependency order (a dependency precedes its dependents), which is also
@@ -77,27 +82,31 @@ public static class BundledPackages
 		new("scene", BundledPackageHandler.None, InstallAtFirstBoot: true),
 		// Bridges: scene keeps its +help topics and +config settings as its own data, and these register them, so a
 		// game that declines +help or +config still runs scenes. Each installs only where both of its halves are.
-		new("scene-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
-		new("scene-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		new("scene-help", BundledPackageHandler.None, InstallAtFirstBoot: true, Bridge: true),
+		new("scene-config", BundledPackageHandler.None, InstallAtFirstBoot: true, Bridge: true),
 		// The scene in the room, for the command palette: pushes scene_here as players move. Apart from scene
 		// because it needs the event handler and scene does not.
 		new("scene-here", BundledPackageHandler.Event, InstallAtFirstBoot: true),
 		// The getting-started checklist at login and in +welcome, and its bridges to +help and +config. onboarding
 		// depends on nothing; each bridge installs only where both of its halves are.
 		new("onboarding", BundledPackageHandler.Event, InstallAtFirstBoot: true),
-		new("onboarding-help", BundledPackageHandler.None, InstallAtFirstBoot: true),
-		new("onboarding-config", BundledPackageHandler.None, InstallAtFirstBoot: true),
+		new("onboarding-help", BundledPackageHandler.None, InstallAtFirstBoot: true, Bridge: true),
+		new("onboarding-config", BundledPackageHandler.None, InstallAtFirstBoot: true, Bridge: true),
 		// Available, not installed: +wiki lands an object in the master room, and a game that
 		// never asked for a wiki front end should not find one there after an upgrade.
 		new("wiki-reader", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the job queue adds +job, +request and their kin, and its portal
 		// page is a separate application package so a game can run the queue in-game only.
 		new("jobs", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("jobs-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("jobs-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("jobs-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +app and +apps are names a game may already use for its own code, and a game
 		// decides for itself how characters are approved. Its portal page is a separate application package, as
 		// jobs-app is for jobs.
 		new("chargen", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("chargen-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("chargen-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("chargen-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// The checklist's approval step says where the player's application stands.
 		new("onboarding-chargen", BundledPackageHandler.None, InstallAtFirstBoot: false),
@@ -107,6 +116,8 @@ public static class BundledPackages
 		// Available, not installed: +radio lands an object in the master room, and is the worked example of
 		// a system built on @feed.
 		new("radio", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("radio-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("radio-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: joins radio and scene, so +radio/log puts a frequency into a scene.
 		new("radio-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the scene package keeps any detail an owner sets, and a game chooses whether
@@ -114,78 +125,125 @@ public static class BundledPackages
 		new("scene-verse", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +safety is a name a game may already use, and a game chooses its own safety tools.
 		new("scene-safety", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("scene-safety-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("scene-safety-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: favourite poses and the highlights they make add +scene/fav and its kin to the
 		// Scene Logger, and a game chooses whether its players rank poses at all. Its portal page is a separate
 		// application package, as jobs-app is for jobs.
 		new("highlights", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("highlights-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("highlights-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the bulletin boards add +bbread and its kin as game commands, and a
 		// game that already runs its own board code should not find them taken after an upgrade. Its
 		// portal page is a separate application package, as jobs-app is for jobs.
 		new("bboards", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("bboards-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("bboards-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("bboards-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +who and +where are names a game may already use for its own code.
 		new("who-where", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("who-where-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("who-where-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +status is a name a game may already use for its own code. A status shows in
 		// who-where's +who.
 		new("status", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("status-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("status-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +watch and +friend are names a game may already use for its own code.
 		new("watch", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("watch-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("watch-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +finger is a name a game may already use for its own code.
 		new("finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("finger-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("finger-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +summary is a name a game may already use for its own code.
 		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("summary-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("summary-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("time-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("time-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +info and +journal are names a game may already use for its own code.
 		new("info", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("info-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("info-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +health is a staff tool a game turns on when it wants the numbers.
 		new("health", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("health-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("health-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: joins health and jobs, so +health shows staff load.
 		new("health-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +rel is a name a game may already use for its own code. It reads finger's fields.
 		// relationships-scene adds the last scene together and needs the Scene System; relationships-app (the web on a
 		// profile) and relationships-card (a line on the name card) are its portal widgets.
 		new("relationships", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("relationships-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("relationships-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("relationships-scene", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("relationships-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("relationships-card", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: it needs the Scene plugin and the time package, and +timeline is a name a game may use.
 		new("timeline", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("timeline-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("timeline-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: a game links to Discord only when its administrator sets up a bot.
 		new("discord", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: joins game channels to linked Discord channels, so it needs the discord package and
 		// the event handler.
 		new("discord-channels", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("discord-channels-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: publishes scheduled scenes as Discord events, so it needs both plugins and the event
 		// handler.
 		new("discord-scenes", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("discord-scenes-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("discord-scenes-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: which game events notify a player's phone or browser (@push) is the game's
 		// choice, and +notify lands an object in the master room. Its settings page is a separate application
 		// package, as jobs-app is for jobs.
 		new("notifications", BundledPackageHandler.Http, InstallAtFirstBoot: false),
+		new("notifications-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("notifications-app", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: a roster is for games with characters to hand out, and +roster is a name a
 		// game may already use. roster-jobs adds applying through the job queue, for a game that wants that.
 		new("roster", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("roster-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("roster-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("roster-jobs", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("roster-jobs-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("roster-jobs-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +avail builds on time, which a game chooses first. availability keeps when
 		// characters are free and knows nothing of scenes; scene-availability is the bridge that adds +avail/scene
 		// and the scene card's free list where both it and scene are installed.
 		new("availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("availability-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("availability-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("scene-availability", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: the MUD-kit sends MUD clients such as Mudlet the GMCP packages they draw maps,
 		// gauges, inventories and chat windows from. Each is installed on its own, so a game takes only what it uses;
 		// mud-kit installs all five. Event handlers on the configured event_handler, as room-contents and comm-feed.
 		new("gmcp-room", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-room-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-room-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("gmcp-comm", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-comm-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-comm-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("gmcp-items", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-items-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-items-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("gmcp-char", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("gmcp-char-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("gmcp-char-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("mudlet-client", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("mudlet-client-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("mudlet-client-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("mud-kit", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("mud-kit-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: +alts is a name a game may already use for its own code. It hears PLAYER`UNLINK
 		// on the event handler, so an account forgets a hidden character that leaves it.
 		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
+		new("alts-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 	];
 
 	/// <summary>

@@ -1,7 +1,7 @@
 format: "1.16"
 package: time
 title: "Time and time zones"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+time and +timezone: the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets."
 license: MIT
@@ -10,19 +10,6 @@ keywords: [time, timezone, clock, calendar, ic]
 category: Community
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 objects:
   # The command object, in the master room. WIZARD because it adds the commands (@command/add, @hook) and sets
@@ -917,18 +904,6 @@ objects:
         A zone set this way is hidden, since you did not choose to share it: `+timezone/unhide` shares it. A zone you set yourself is never changed. A game may only tell you what it found, and leave setting it to `+timezone/detect`, or ignore it: see `+help time settings`.
 
         Output, on logging in from the web portal in Paris with no zone set: `\[TIME\] Done: Your time zone is now Europe/Paris \(UTC+02:00\), from your client. Only you and staff see it: +timezone/unhide shares it, and +timezone <zone> changes it.`
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`TIME: |-
-        {{time_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`TIME: |-
-        {{clock}}
 
   # A client's zone (clientzone()), at login and whenever a client reports one, handed to the Time object.
   - ref: events

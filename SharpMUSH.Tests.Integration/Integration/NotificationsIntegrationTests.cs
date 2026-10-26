@@ -79,14 +79,15 @@ public class NotificationsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "notifications", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("notifications must install from the catalogue");
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 
-	private Task UninstallAsync() => Installer.UninstallAsync("notifications", force: true, CancellationToken.None);
+	private Task UninstallAsync() => WebAppFactoryArg.Services.UninstallWithBridgesAsync("notifications");
 
 	/// <summary>The value of the switch <paramref name="key"/> on the portal page, as the viewer has it.</summary>
 	private static bool Switch(JsonElement schema, string key) =>

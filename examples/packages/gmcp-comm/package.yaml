@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-comm
 title: "GMCP channels and pages"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Comm package: each channel line and page as Comm.Channel.Text, for a client's chat window, and the channels a player is on as Comm.Channel.List."
 license: MIT
@@ -10,19 +10,6 @@ keywords: [gmcp, mudlet, channels, pages, mud-kit]
 category: MUD clients
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # The shapes are Iron Realms' (IRE), which Mudlet's chat scripts read and TelnetNegotiationCore's
 # CommChannelText type writes:
@@ -161,15 +148,3 @@ objects:
         `sendGMCP%(%[%[Core.Supports.Add %["Comm.Channel 1"%] %]%]%)`.
 
         Staff: `+config gmcp-comm`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`GMCP-COMM: |-
-        {{gmcp_comm}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`GMCP-COMM: |-
-        {{gmcp_comm}}

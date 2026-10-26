@@ -84,8 +84,12 @@ public record SetHandlerRequest(string Mode, int? Dbref = null);
 /// without it — after a PennMUSH import, which removes the handlers it was built on — is offered it ticked.
 /// </param>
 /// <param name="Category">The manifest's <c>category:</c>, which the wizard groups packages by, or null for none.</param>
+/// <param name="Bridge">
+/// Whether it only joins the packages in <paramref name="DependsOn"/> (their +help topics or +config settings): it is
+/// installed wherever they all are, unless the administrator turns it off.
+/// </param>
 public record BundledPackageState(string Id, string Title, string Description, bool Installed, string? Requires, bool Available,
-	IReadOnlyList<string> DependsOn, bool Recommended = false, string? Category = null);
+	IReadOnlyList<string> DependsOn, bool Recommended = false, string? Category = null, bool Bridge = false);
 
 /// <summary>The first-run wizard's state after the game has been claimed.</summary>
 /// <param name="Pending">True from the claim until the administrator finishes or dismisses the wizard.</param>

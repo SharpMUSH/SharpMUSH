@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -10,20 +10,6 @@ keywords: [info, journal, notes]
 category: Characters
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  # The settings are registered with +config: +config info lists them.
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # One permission, for staff who look after files: read anyone's private files and journal, change
 # anyone's files, and lock them. Hand it to one player with @permission/allow <player>=softcode.info.staff.
@@ -864,15 +850,3 @@ objects:
         pinfo|journal|info write
       SEE`JOURNAL: |-
         info|info write
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`INFO: |-
-        {{info}}
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`INFO: |-
-        {{info_help}}

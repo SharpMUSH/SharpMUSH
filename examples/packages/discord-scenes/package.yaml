@@ -1,7 +1,7 @@
 format: "1.16"
 package: discord-scenes
 title: "Discord scheduled scenes"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Scheduled scenes in the Discord server's Events tab: a scene with a time still to come is published as a Discord event, moved when it is rescheduled, shown as happening when it starts, and ended when it finishes or is cancelled."
 license: MIT
@@ -28,18 +28,6 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
-      branch: main
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 objects:
@@ -196,15 +184,3 @@ objects:
         - `+config discord-scenes/length`: how long an event lasts from its start, `3h` as shipped. Discord needs an end; a scene that runs longer is ended when it finishes.
 
         The bot needs the Create Events permission in the server. The package's Discord Scenes object publishes the events, and holds the Discord Admin role to do it. `@discord/event` lists what the game has published \(`help @discord events`\).
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`DISCORD-SCENES: |-
-        {{help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`DISCORD-SCENES: |-
-        {{publisher}}

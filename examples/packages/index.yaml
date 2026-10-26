@@ -14,8 +14,18 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.9.0
+    version: 1.10.0
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
+  - path: who-where-help/
+    name: +who and +where help
+    package: who-where-help
+    version: 1.0.0
+    description: Registers the who-where topics with +help (requires who-where and plus-help)
+  - path: who-where-config/
+    name: +who and +where settings
+    package: who-where-config
+    version: 1.0.0
+    description: Registers the who-where settings with +config (requires who-where and plus-config)
   - path: http-handler/
     package: http-handler
     version: 1.0.5
@@ -34,8 +44,18 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.4.0
-    description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires plus-help, plus-config, http-handler)
+    version: 2.5.0
+    description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires http-handler)
+  - path: chargen-help/
+    name: Character applications help
+    package: chargen-help
+    version: 1.0.0
+    description: Registers the chargen topics with +help (requires chargen and plus-help)
+  - path: chargen-config/
+    name: Character applications settings
+    package: chargen-config
+    version: 1.0.0
+    description: Registers the chargen settings with +config (requires chargen and plus-config)
   - path: chargen-app/
     package: chargen-app
     version: 2.0.2
@@ -67,8 +87,18 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.14.2
+    version: 1.15.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
+  - path: jobs-help/
+    name: Jobs help
+    package: jobs-help
+    version: 1.0.0
+    description: Registers the jobs topics with +help (requires jobs and plus-help)
+  - path: jobs-config/
+    name: Jobs settings
+    package: jobs-config
+    version: 1.0.0
+    description: Registers the jobs settings with +config (requires jobs and plus-config)
   - path: jobs-app/
     name: Jobs in the portal
     package: jobs-app
@@ -82,8 +112,18 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.4.1
+    version: 1.5.0
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
+  - path: radio-help/
+    name: Radio help
+    package: radio-help
+    version: 1.0.0
+    description: Registers the radio topics with +help (requires radio and plus-help)
+  - path: radio-config/
+    name: Radio settings
+    package: radio-config
+    version: 1.0.0
+    description: Registers the radio settings with +config (requires radio and plus-config)
   - path: radio-scene/
     name: Radio in scenes
     package: radio-scene
@@ -112,13 +152,28 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.1.0
+    version: 1.2.0
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
+  - path: scene-safety-help/
+    name: Scene safety tools help
+    package: scene-safety-help
+    version: 1.0.0
+    description: Registers the scene-safety topics with +help (requires scene-safety and plus-help)
+  - path: scene-safety-config/
+    name: Scene safety tools settings
+    package: scene-safety-config
+    version: 1.0.0
+    description: Registers the scene-safety settings with +config (requires scene-safety and plus-config)
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.1.2
-    description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene, http-handler and plus-config)
+    version: 1.2.0
+    description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene and http-handler)
+  - path: highlights-config/
+    name: Favourite poses and highlights settings
+    package: highlights-config
+    version: 1.0.0
+    description: Registers the highlights settings with +config (requires highlights and plus-config)
   - path: highlights-app/
     name: Highlights in the portal
     package: highlights-app
@@ -127,8 +182,18 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.5.0
-    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires plus-help, http-handler and plus-config)
+    version: 1.6.0
+    description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires http-handler)
+  - path: bboards-help/
+    name: Bulletin boards help
+    package: bboards-help
+    version: 1.0.0
+    description: Registers the bboards topics with +help (requires bboards and plus-help)
+  - path: bboards-config/
+    name: Bulletin boards settings
+    package: bboards-config
+    version: 1.0.0
+    description: Registers the bboards settings with +config (requires bboards and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
     package: bboards-app
@@ -137,38 +202,108 @@ packages:
   - path: status/
     name: Status
     package: status
-    version: 1.2.0
+    version: 1.3.0
     description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
+  - path: status-help/
+    name: Roleplay status help
+    package: status-help
+    version: 1.0.0
+    description: Registers the status topics with +help (requires status and plus-help)
+  - path: status-config/
+    name: Roleplay status settings
+    package: status-config
+    version: 1.0.0
+    description: Registers the status settings with +config (requires status and plus-config)
   - path: watch/
     name: Watch
     package: watch
-    version: 1.2.0
+    version: 1.3.0
     description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
+  - path: watch-help/
+    name: Watch list help
+    package: watch-help
+    version: 1.0.0
+    description: Registers the watch topics with +help (requires watch and plus-help)
+  - path: watch-config/
+    name: Watch list settings
+    package: watch-config
+    version: 1.0.0
+    description: Registers the watch settings with +config (requires watch and plus-config)
   - path: finger/
     name: Finger
     package: finger
-    version: 1.3.1
+    version: 1.4.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits with +config
+  - path: finger-help/
+    name: Finger profiles help
+    package: finger-help
+    version: 1.0.0
+    description: Registers the finger topics with +help (requires finger and plus-help)
+  - path: finger-config/
+    name: Finger profiles settings
+    package: finger-config
+    version: 1.0.0
+    description: Registers the finger settings with +config (requires finger and plus-config)
   - path: summary/
     name: Summary
     package: summary
-    version: 1.1.0
-    description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene (requires plus-config)
+    version: 1.2.0
+    description: +summary — a line summing up your last pose, told to your room only and never recorded by a scene
+  - path: summary-help/
+    name: Pose summaries help
+    package: summary-help
+    version: 1.0.0
+    description: Registers the summary topics with +help (requires summary and plus-help)
+  - path: summary-config/
+    name: Pose summaries settings
+    package: summary-config
+    version: 1.0.0
+    description: Registers the summary settings with +config (requires summary and plus-config)
   - path: time/
     name: Time
     package: time
-    version: 1.4.0
+    version: 1.5.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
+  - path: time-help/
+    name: Time and time zones help
+    package: time-help
+    version: 1.0.0
+    description: Registers the time topics with +help (requires time and plus-help)
+  - path: time-config/
+    name: Time and time zones settings
+    package: time-config
+    version: 1.0.0
+    description: Registers the time settings with +config (requires time and plus-config)
   - path: info/
     name: Info Files
     package: info
-    version: 1.1.0
+    version: 1.2.0
     description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
+  - path: info-help/
+    name: Info files and journals help
+    package: info-help
+    version: 1.0.0
+    description: Registers the info topics with +help (requires info and plus-help)
+  - path: info-config/
+    name: Info files and journals settings
+    package: info-config
+    version: 1.0.0
+    description: Registers the info settings with +config (requires info and plus-config)
   - path: health/
     name: Health
     package: health
-    version: 1.1.0
+    version: 1.2.0
     description: +health — staff numbers counted from poses and scenes — who posed, who is drifting away, how each month's approvals stayed, rooms used and dead, and when people play
+  - path: health-help/
+    name: Game health help
+    package: health-help
+    version: 1.0.0
+    description: Registers the health topics with +help (requires health and plus-help)
+  - path: health-config/
+    name: Game health settings
+    package: health-config
+    version: 1.0.0
+    description: Registers the health settings with +config (requires health and plus-config)
   - path: health-jobs/
     name: Health Staff Load
     package: health-jobs
@@ -177,8 +312,18 @@ packages:
   - path: relationships/
     name: Relationships
     package: relationships
-    version: 1.2.0
+    version: 1.3.0
     description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
+  - path: relationships-help/
+    name: Relationships help
+    package: relationships-help
+    version: 1.0.0
+    description: Registers the relationships topics with +help (requires relationships and plus-help)
+  - path: relationships-config/
+    name: Relationships settings
+    package: relationships-config
+    version: 1.0.0
+    description: Registers the relationships settings with +config (requires relationships and plus-config)
   - path: relationships-scene/
     name: Relationships Scene
     package: relationships-scene
@@ -197,8 +342,18 @@ packages:
   - path: timeline/
     name: Timeline
     package: timeline
-    version: 1.0.4
+    version: 1.1.0
     description: IC dates on scenes and a timeline per character — a scene is dated in the IC calendar when it starts, +scene/date dates a flashback, +timeline lists a character's scenes in IC order
+  - path: timeline-help/
+    name: IC timeline help
+    package: timeline-help
+    version: 1.0.0
+    description: Registers the timeline topics with +help (requires timeline and plus-help)
+  - path: timeline-config/
+    name: IC timeline settings
+    package: timeline-config
+    version: 1.0.0
+    description: Registers the timeline settings with +config (requires timeline and plus-config)
   - path: discord/
     name: Discord
     package: discord
@@ -207,18 +362,38 @@ packages:
   - path: discord-channels/
     name: Discord Channels
     package: discord-channels
-    version: 1.1.1
+    version: 1.2.0
     description: Joins a game channel to a linked Discord channel both ways (+discord/channel)
+  - path: discord-channels-help/
+    name: Discord channel bridge help
+    package: discord-channels-help
+    version: 1.0.0
+    description: Registers the discord-channels topics with +help (requires discord-channels and plus-help)
   - path: discord-scenes/
     name: Discord Scenes
     package: discord-scenes
-    version: 1.1.1
+    version: 1.2.0
     description: Scheduled scenes in the Discord server's Events tab, kept in step as they are moved, started, finished or cancelled (requires the Scene and Discord plugins)
+  - path: discord-scenes-help/
+    name: Discord scheduled scenes help
+    package: discord-scenes-help
+    version: 1.0.0
+    description: Registers the discord-scenes topics with +help (requires discord-scenes and plus-help)
+  - path: discord-scenes-config/
+    name: Discord scheduled scenes settings
+    package: discord-scenes-config
+    version: 1.0.0
+    description: Registers the discord-scenes settings with +config (requires discord-scenes and plus-config)
   - path: notifications/
     name: Notifications
     package: notifications
-    version: 1.2.0
-    description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler and plus-help)
+    version: 1.3.0
+    description: +notify — a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses (requires http-handler)
+  - path: notifications-help/
+    name: Push notifications help
+    package: notifications-help
+    version: 1.0.0
+    description: Registers the notifications topics with +help (requires notifications and plus-help)
   - path: notifications-app/
     name: Notifications in the portal
     package: notifications-app
@@ -227,18 +402,48 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.2.1
-    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own (requires plus-help and plus-config)
+    version: 1.3.0
+    description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own
+  - path: roster-help/
+    name: Roster help
+    package: roster-help
+    version: 1.0.0
+    description: Registers the roster topics with +help (requires roster and plus-help)
+  - path: roster-config/
+    name: Roster settings
+    package: roster-config
+    version: 1.0.0
+    description: Registers the roster settings with +config (requires roster and plus-config)
   - path: roster-jobs/
     name: Roster applications in jobs
     package: roster-jobs
-    version: 1.2.0
-    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster, jobs, plus-help and plus-config)
+    version: 1.3.0
+    description: +roster/apply files a job in a Roster bucket; approving it gives the character to the applicant's account (requires roster and jobs)
+  - path: roster-jobs-help/
+    name: Roster applications through jobs help
+    package: roster-jobs-help
+    version: 1.0.0
+    description: Registers the roster-jobs topics with +help (requires roster-jobs and plus-help)
+  - path: roster-jobs-config/
+    name: Roster applications through jobs settings
+    package: roster-jobs-config
+    version: 1.0.0
+    description: Registers the roster-jobs settings with +config (requires roster-jobs and plus-config)
   - path: availability/
     name: Availability
     package: availability
-    version: 1.1.0
+    version: 1.2.0
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
+  - path: availability-help/
+    name: Availability help
+    package: availability-help
+    version: 1.0.0
+    description: Registers the availability topics with +help (requires availability and plus-help)
+  - path: availability-config/
+    name: Availability settings
+    package: availability-config
+    version: 1.0.0
+    description: Registers the availability settings with +config (requires availability and plus-config)
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
@@ -247,38 +452,98 @@ packages:
   - path: gmcp-room/
     name: GMCP Room
     package: gmcp-room
-    version: 1.1.1
-    description: Room.Info for a client's mapper (number, name, area, environment, coordinates, exits from exitmap()), Room.Players, Room.AddPlayer and Room.RemovePlayer (requires plus-help and plus-config)
+    version: 1.2.0
+    description: Room.Info for a client's mapper (number, name, area, environment, coordinates, exits from exitmap()), Room.Players, Room.AddPlayer and Room.RemovePlayer
+  - path: gmcp-room-help/
+    name: GMCP room data help
+    package: gmcp-room-help
+    version: 1.0.0
+    description: Registers the gmcp-room topics with +help (requires gmcp-room and plus-help)
+  - path: gmcp-room-config/
+    name: GMCP room data settings
+    package: gmcp-room-config
+    version: 1.0.0
+    description: Registers the gmcp-room settings with +config (requires gmcp-room and plus-config)
   - path: gmcp-comm/
     name: GMCP Comm
     package: gmcp-comm
-    version: 1.1.1
-    description: Comm.Channel.Text for each channel line and page, for a client's chat window, and Comm.Channel.List (requires plus-help and plus-config)
+    version: 1.2.0
+    description: Comm.Channel.Text for each channel line and page, for a client's chat window, and Comm.Channel.List
+  - path: gmcp-comm-help/
+    name: GMCP channels and pages help
+    package: gmcp-comm-help
+    version: 1.0.0
+    description: Registers the gmcp-comm topics with +help (requires gmcp-comm and plus-help)
+  - path: gmcp-comm-config/
+    name: GMCP channels and pages settings
+    package: gmcp-comm-config
+    version: 1.0.0
+    description: Registers the gmcp-comm settings with +config (requires gmcp-comm and plus-config)
   - path: gmcp-items/
     name: GMCP Items
     package: gmcp-items
-    version: 1.1.1
-    description: Char.Items.List when a client asks or its player arrives, and Char.Items.Add and Char.Items.Remove as things come and go (requires plus-help and plus-config)
+    version: 1.2.0
+    description: Char.Items.List when a client asks or its player arrives, and Char.Items.Add and Char.Items.Remove as things come and go
+  - path: gmcp-items-help/
+    name: GMCP inventory help
+    package: gmcp-items-help
+    version: 1.0.0
+    description: Registers the gmcp-items topics with +help (requires gmcp-items and plus-help)
+  - path: gmcp-items-config/
+    name: GMCP inventory settings
+    package: gmcp-items-config
+    version: 1.0.0
+    description: Registers the gmcp-items settings with +config (requires gmcp-items and plus-config)
   - path: gmcp-char/
     name: GMCP Char
     package: gmcp-char
-    version: 1.2.1
-    description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again whenever one changes; watches those attributes with @attribute/watch (requires plus-help and plus-config)
+    version: 1.3.0
+    description: Char.Name, Char.Vitals and Char.Status from the attributes its settings name, sent again whenever one changes; watches those attributes with @attribute/watch
+  - path: gmcp-char-help/
+    name: GMCP character data help
+    package: gmcp-char-help
+    version: 1.0.0
+    description: Registers the gmcp-char topics with +help (requires gmcp-char and plus-help)
+  - path: gmcp-char-config/
+    name: GMCP character data settings
+    package: gmcp-char-config
+    version: 1.0.0
+    description: Registers the gmcp-char settings with +config (requires gmcp-char and plus-config)
   - path: mudlet-client/
     name: Mudlet Client
     package: mudlet-client
-    version: 1.0.2
-    description: +gui, and Client.GUI, Client.Map and Mudlet's Discord rich presence (External.Discord.Info and Status) from URLs in its settings (requires plus-help and plus-config)
+    version: 1.1.0
+    description: +gui, and Client.GUI, Client.Map and Mudlet's Discord rich presence (External.Discord.Info and Status) from URLs in its settings
+  - path: mudlet-client-help/
+    name: Mudlet interface help
+    package: mudlet-client-help
+    version: 1.0.0
+    description: Registers the mudlet-client topics with +help (requires mudlet-client and plus-help)
+  - path: mudlet-client-config/
+    name: Mudlet interface settings
+    package: mudlet-client-config
+    version: 1.0.0
+    description: Registers the mudlet-client settings with +config (requires mudlet-client and plus-config)
   - path: mud-kit/
     name: MUD Kit
     package: mud-kit
-    version: 1.0.1
+    version: 1.1.0
     description: Everything a MUD client reads over GMCP in one install — gmcp-room, gmcp-comm, gmcp-items, gmcp-char and mudlet-client, and a +help gmcp overview
+  - path: mud-kit-help/
+    name: MUD client kit help
+    package: mud-kit-help
+    version: 1.0.0
+    description: Registers the mud-kit topics with +help (requires mud-kit and plus-help)
   - path: alts/
     name: Alts
     package: alts
-    version: 1.1.0
-    description: +alts — the characters on your account, private until you make the list public, with any one kept off it (requires plus-help)
+    version: 1.2.0
+    description: +alts — the characters on your account, private until you make the list public, with any one kept off it
+  - path: alts-help/
+    name: Alts help
+    package: alts-help
+    version: 1.0.0
+    description: Registers the alts topics with +help (requires alts and plus-help)
   - path: onboarding/
     name: Onboarding
     package: onboarding

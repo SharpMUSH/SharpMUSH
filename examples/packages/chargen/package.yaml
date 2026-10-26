@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.4.0
+version: 2.5.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -10,21 +10,9 @@ keywords: [chargen, applications, approval, review, waitlist]
 category: Characters
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics, plus-config the settings, and http-handler owns the GET/POST verb
-# routers the portal routes hang off.
+# http-handler owns the GET/POST verb routers the portal routes hang off. chargen-help and chargen-config put the
+# topics into +help and the settings into +config.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
   - package: http-handler
     version: ">=1.0"
     source:
@@ -1891,18 +1879,6 @@ objects:
         ```
 
         Output: nothing; the next approval runs it.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`CHARGEN: |-
-        {{chargen_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`CHARGEN: |-
-        {{chargen}}
 
   # ---- portal routes ------------------------------------------------------------------
   # Routes on the HTTP handler, as children of http-handler's GET and POST verbs. The chargen-app package reads

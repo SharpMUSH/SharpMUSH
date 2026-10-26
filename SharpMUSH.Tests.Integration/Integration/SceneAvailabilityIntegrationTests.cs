@@ -74,7 +74,8 @@ public class SceneAvailabilityIntegrationTests
 		WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 		WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 		WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-		WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+		WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+		WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 
 	private async Task ApplyAsync(string package)
 	{
@@ -103,8 +104,8 @@ public class SceneAvailabilityIntegrationTests
 	private async Task UninstallAsync()
 	{
 		if (WithScenes) await Installer.UninstallAsync("scene-availability", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("availability", force: true, CancellationToken.None);
-		await Installer.UninstallAsync("time", force: true, CancellationToken.None);
+		await WebAppFactoryArg.Services.UninstallWithBridgesAsync("availability");
+		await WebAppFactoryArg.Services.UninstallWithBridgesAsync("time");
 	}
 
 	private Task<string> KeyOf(TestIsolationHelpers.TestPlayer player) => Think($"u({Avail}/FUN`KEY,#{player.DbRef.Number})");

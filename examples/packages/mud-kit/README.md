@@ -24,8 +24,8 @@ so a game takes only what it uses.
 - **Event handlers, one level below the event.** Each package adds `` <EVENT>`<PACKAGE> `` attributes to the
   configured event handler, beside room-contents', comm-feed's and the game's own, and never edits
   another's (`help event`).
-- **Settings are `+config`.** Each package declares its settings on its own object and registers it
-  with plus-config: `+config gmcp-room`, `+config gmcp-char`, and so on.
+- **Settings are `+config`.** Each package declares its settings on its own object, and its `-config` bridge
+  registers it with plus-config: `+config gmcp-room`, `+config gmcp-char`, and so on.
 - **Screen readers.** Text a client shows in a window of its own (a chat line) is sent without colour to
   a connection whose client says it is a screen reader, and `+gui` speaks in sentences rather than a box.
 

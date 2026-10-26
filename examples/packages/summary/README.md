@@ -22,7 +22,7 @@ room's Speech lock.
 
 ## Settings
 
-One setting, registered with [`+config`](../plus-config/) (`+config summary`), kept on the Summary object:
+One setting, kept on the Summary object. The `summary-config` bridge registers it with [`+config`](../plus-config/) (`+config summary`):
 
 | Setting | Type | Default | What it changes |
 |---|---|---|---|
@@ -37,6 +37,6 @@ Another package can change what the room is told with a filter on the Summary ob
 ## Objects
 
 - **Summary**, in the master room, `WIZARD`: the command, the setting and the line.
-- **Summary Help**, inside it: the `+help summary` topics, registered with the `+help` librarian.
+- **Summary Help**, inside it: the `+help summary` topics. The `summary-help` bridge registers them with the `+help` librarian.
 
-Requires `plus-help` and `plus-config`.
+Requires nothing else.

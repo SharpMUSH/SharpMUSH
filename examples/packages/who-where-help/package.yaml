@@ -1,0 +1,35 @@
+format: "1.16"
+package: who-where-help
+title: "+who and +where: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the +who and +where topics into +help: registers the who-where package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [who-where, help, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. who-where keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: who-where
+    version: ">=1.10"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/who-where/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: ww_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WHO-WHERE: |-
+        {{who-where/ww_help}}

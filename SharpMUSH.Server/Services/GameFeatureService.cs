@@ -93,7 +93,8 @@ public class GameFeatureService(
 				IsAvailable(package),
 				dependsOn ?? [],
 				package.InstallAtFirstBoot && !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase),
-				category));
+				category,
+				package.Bridge));
 		}
 
 		return states;
@@ -126,6 +127,10 @@ public class GameFeatureService(
 		{
 			switch (await installer.UninstallAsync(id, cancellationToken: cancellationToken))
 			{
+				// A bridge removed with a package it joins goes with that package, not by a choice of its own.
+				case Success when IsBridge(id) && (Catalogue.GetValueOrDefault(id).DependsOn ?? []).Any(plan.Remove.Contains):
+					logger.LogInformation("Bundled package {PackageId} removed by the setup wizard.", id);
+					break;
 				case Success:
 					await SetDeclinedAsync(id, declined: true);
 					logger.LogInformation("Bundled package {PackageId} removed by the setup wizard.", id);
@@ -134,6 +139,15 @@ public class GameFeatureService(
 					failures.Add($"{id} could not be removed: {error.Value}");
 					break;
 			}
+		}
+
+		// A bridge left out while both of its halves stay is one the administrator turned off; without this the halves
+		// installing below would bring it in.
+		var kept = wanted.Concat(plan.Install).Concat(plan.Kept).ToHashSet(StringComparer.OrdinalIgnoreCase);
+		foreach (var bridge in BundledPackages.All.Where(p => p.Bridge && !kept.Contains(p.PackageId)
+			&& (Catalogue.GetValueOrDefault(p.PackageId).DependsOn ?? []).All(kept.Contains)))
+		{
+			await SetDeclinedAsync(bridge.PackageId, declined: true);
 		}
 
 		foreach (var id in plan.Install)
@@ -165,12 +179,12 @@ public class GameFeatureService(
 		=> await serverData.SetExpandedServerDataAsync(new SetupWizardState { Pending = pending });
 
 	/// <summary>
-	/// Records that the administrator removed (or put back) a first-boot package, so bootstrap leaves the
-	/// choice standing. Only first-boot packages are recorded; bootstrap never installs the others.
+	/// Records that the administrator removed (or put back) a first-boot package or a bridge, so bootstrap leaves the
+	/// choice standing. Only those are recorded; bootstrap never installs the others.
 	/// </summary>
 	public async Task SetDeclinedAsync(string packageId, bool declined)
 	{
-		if (!BundledPackages.All.Any(p => p.InstallAtFirstBoot
+		if (!BundledPackages.All.Any(p => (p.InstallAtFirstBoot || p.Bridge)
 				&& string.Equals(p.PackageId, packageId, StringComparison.OrdinalIgnoreCase)))
 		{
 			return;
@@ -198,6 +212,8 @@ public class GameFeatureService(
 			_declinedLock.Release();
 		}
 	}
+
+	private static bool IsBridge(string packageId) => BundledPackages.All.Any(p => p.PackageId == packageId && p.Bridge);
 
 	/// <summary>The <see cref="HandlerKinds"/> value for a bundled package's handler, or null.</summary>
 	public static string? HandlerKind(BundledPackageHandler handler) => handler switch

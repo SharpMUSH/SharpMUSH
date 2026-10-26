@@ -92,7 +92,7 @@ public class DiscordPackagesIntegrationTests
 	{
 		foreach (var package in packages)
 		{
-			await Installer.UninstallAsync(package, force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync(package);
 		}
 	}
 

@@ -131,6 +131,24 @@ public class GameFeatureServiceTests
 	}
 
 	/// <summary>
+	/// A bridge the wizard is not asked for while both of its halves stay is turned off, so the halves arriving do not
+	/// bring it in; one removed with a half it joins is not, so putting that half back brings it back.
+	/// </summary>
+	[Test]
+	public async Task ABridgeLeftOut_IsTurnedOff_UnlessItsHalfGoesToo()
+	{
+		var game = new Game("plus-help", "plus-config", "summary", "summary-help", "jobs", "jobs-help");
+
+		await game.Features().ApplyPackagesAsync(["plus-help", "plus-config", "summary"], CancellationToken.None);
+
+		var declined = (await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
+		await Assert.That(declined).Contains("summary-help");
+		await Assert.That(declined).Contains("summary-config");
+		await Assert.That(declined).DoesNotContain("jobs-help").Because("jobs went, and jobs-help with it");
+		await Assert.That(game.Installed).DoesNotContain("jobs-help");
+	}
+
+	/// <summary>
 	/// Every bundled package that calls the Scene plugin names it in <c>plugins:</c>, so without the plugin none of
 	/// them is offered, and the packages that do not need it still are.
 	/// </summary>
@@ -141,7 +159,9 @@ public class GameFeatureServiceTests
 
 		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
 		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
-			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "radio-scene", "timeline", "highlights", "highlights-app", "scene-availability", "scene-here", "relationships-scene"])
+			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "scene-safety-help", "scene-safety-config",
+				"radio-scene", "timeline", "timeline-help", "timeline-config", "highlights", "highlights-app", "highlights-config",
+				"scene-availability", "scene-here", "relationships-scene"])
 			.Because("highlights-app and the scene bridges call no plugin themselves, but the packages they join do");
 		await Assert.That(new Game().Features().PackagesOver("scene"))
 			.IsEquivalentTo(["scene", "radio-scene", "scene-verse", "scene-safety", "timeline", "highlights", "relationships-scene", "discord-scenes", "scene-availability"]);
@@ -252,7 +272,7 @@ public class GameFeatureServiceTests
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
 			.IsEquivalentTo(["scene"]);
 
-		await features.ApplyPackagesAsync(["plus-help", "scene"], CancellationToken.None);
+		await features.ApplyPackagesAsync(["plus-help", "scene", "scene-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
 			.IsEmpty();
 	}

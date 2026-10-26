@@ -81,7 +81,8 @@ public class TimeIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "time", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("time must install from the catalogue");
@@ -92,7 +93,7 @@ public class TimeIntegrationTests
 		Clock = objects.First(o => o.Ref == "clock").Objid;
 	}
 
-	private async Task UninstallAsync() => await Installer.UninstallAsync("time", force: true, CancellationToken.None);
+	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("time");
 
 	[Test]
 	public async Task TimezoneIsSetFoundAndCleared()

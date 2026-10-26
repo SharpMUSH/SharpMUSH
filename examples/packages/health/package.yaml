@@ -1,7 +1,7 @@
 format: "1.16"
 package: health
 title: "Game health"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+health: staff numbers on how the game is doing, counted from poses and scenes: who posed, who is drifting away, how each month's new players stayed, which rooms are used, and when people play."
 license: MIT
@@ -10,19 +10,6 @@ keywords: [health, activity, staff, statistics, retention]
 category: Staff
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 objects:
   # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and calls
@@ -473,15 +460,3 @@ objects:
         Another package adds lines to the `+health` summary with a filter on the Health object: an attribute named `` FILTER`HEALTH`SCREEN`<name> ``. Filters run in name order with `chain\(\)`, each given the summary so far as `%%0`, the reader as `%%1` and the days as `%%2`, and each returns the summary with its own lines added.
 
         A package adds a view by attaching `` INC`VIEW`<name> `` to the Health object: `+health/<name>` runs it, after the permission check, with `%%q<days>` and `%%q<zone>` set. The health-jobs package adds `+health/staff` this way.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`HEALTH: |-
-        {{health_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`HEALTH: |-
-        {{health}}

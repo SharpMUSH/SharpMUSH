@@ -1,0 +1,35 @@
+format: "1.16"
+package: gmcp-comm-help
+title: "GMCP channels and pages: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the GMCP channels and pages topics into +help: registers the gmcp-comm package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [gmcp-comm, help, bridge]
+category: MUD clients
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. gmcp-comm keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: gmcp-comm
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/gmcp-comm/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`GMCP-COMM: |-
+        {{gmcp-comm/gmcp_comm}}

@@ -1,7 +1,7 @@
 format: "1.16"
 package: mud-kit
 title: "MUD client kit"
-version: 1.0.1
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Everything a MUD client such as Mudlet reads over GMCP, in one install: gmcp-room, gmcp-comm, gmcp-items, gmcp-char and mudlet-client."
 license: MIT
@@ -14,12 +14,6 @@ requires_server: ">=0.1"
 # and uninstalls on its own too, so a game takes only what it uses. Uninstalling mud-kit takes only
 # the overview; the five stay until they are uninstalled themselves.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
   - package: gmcp-room
     version: ">=1.0"
     source:
@@ -77,9 +71,3 @@ objects:
         A client that lists the GMCP modules it wants when it connects is sent only those. One that lists none, such as TinTin++ or MUSHclient, is sent everything.
 
         `terminfo%(me%)` shows `gmcp` when your connection agreed to GMCP, and `gmcpsupports%(me%)` the modules your client listed.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`MUD-KIT: |-
-        {{mud_kit_help}}

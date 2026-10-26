@@ -39,7 +39,8 @@ public class PackagesControllerInstalledTests
 		var controller = new PackagesController(registry, source, manifests, Substitute.For<IPackageInstallService>(),
 			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>(), uploads,
 			new PackageManifestResolver(registry, source, manifests, uploads),
-			Substitute.For<IAuditLog>(), new EngineVersion(new PackageVersion(2, 0, 0)));
+			Substitute.For<IAuditLog>(), new EngineVersion(new PackageVersion(2, 0, 0)),
+			Substitute.For<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 
 		var result = (IReadOnlyList<InstalledPackageDto>)((OkObjectResult)(await controller.GetInstalled()).Result!).Value!;
 
@@ -66,7 +67,8 @@ public class PackagesControllerInstalledTests
 		var uploads = new PluginUploadStore(directories, manifests, NullLogger<PluginUploadStore>.Instance);
 		var controller = new PackagesController(registry, source, manifests, Substitute.For<IPackageInstallService>(),
 			Substitute.For<IPackageAuthoringService>(), Substitute.For<IPackageOperationRunner>(), uploads,
-			new PackageManifestResolver(registry, source, manifests, uploads), Substitute.For<IAuditLog>(), new(new(2, 0, 0)));
+			new PackageManifestResolver(registry, source, manifests, uploads), Substitute.For<IAuditLog>(), new(new(2, 0, 0)),
+			Substitute.For<IBundledPackageBootstrap>());
 		var gate = new SharpMUSH.Library.Services.PackageOperationGate();
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
