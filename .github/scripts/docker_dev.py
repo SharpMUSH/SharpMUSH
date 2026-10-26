@@ -31,9 +31,16 @@ REPOSITORIES = {
 
 def published_revision(image):
     tag = f'sharpmush/{REPOSITORIES[image]}:dev'
-    # Registry errors fail the run; they must not silently trigger all publications.
-    raw = subprocess.check_output(['docker', 'buildx', 'imagetools', 'inspect', tag,
-                                   '--format', '{{json .Image}}'], text=True)
+    # Registry errors fail the run; they must not silently trigger all publications. A tag that was
+    # never pushed (a new repository) is built.
+    inspect = subprocess.run(['docker', 'buildx', 'imagetools', 'inspect', tag,
+                              '--format', '{{json .Image}}'], text=True, capture_output=True)
+    if inspect.returncode != 0:
+        if 'not found' in inspect.stderr.lower():
+            print(f'::warning::{tag} is not published yet; building it')
+            return None
+        raise subprocess.CalledProcessError(inspect.returncode, inspect.args, inspect.stdout, inspect.stderr)
+    raw = inspect.stdout
     revision = image_revision(json.loads(raw))
     if revision:
         try:
