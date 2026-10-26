@@ -57,19 +57,19 @@ public class PackageServerRangeInstallTests
 	public async Task AServerAboveTheMaximum_AppliesOnlyOnceConfirmed_AndTheChoiceIsRecorded()
 	{
 		var id = FreshId();
-		var manifest = Manifest(id, "1.0.0", "maximum_server: \"1\"");
+		var manifest = Manifest(id, "1.0.0", "maximum_server: \"0\"");
 
 		var plan = await Installer.PlanAsync(manifest);
 		await Assert.That(plan.Compatibility!.Fit).IsEqualTo(PackageServerFit.AboveMaximum);
 		await Assert.That(plan.IsBlocked).IsFalse();
 
 		var refused = (await ApplyAsync(manifest)).Expect<Error<string>>();
-		await Assert.That(refused.Value).Contains("runs on SharpMUSH up to 1");
+		await Assert.That(refused.Value).Contains("runs on SharpMUSH up to 0");
 
 		var applied = (await ApplyAsync(manifest, allowPastMaximum: true)).Expect<PackageApplyResult>();
-		await Assert.That(applied.Notes.Any(n => n.Contains("past maximum_server 1"))).IsTrue();
+		await Assert.That(applied.Notes.Any(n => n.Contains("past maximum_server 0"))).IsTrue();
 		var installed = (await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>();
-		await Assert.That(installed.PastMaximum!.Maximum).IsEqualTo("1");
+		await Assert.That(installed.PastMaximum!.Maximum).IsEqualTo("0");
 
 		// A version without the bound is inside the range again, and the record says so.
 		(await ApplyAsync(Manifest(id, "1.0.1", ""))).Expect<PackageApplyResult>();
@@ -77,7 +77,7 @@ public class PackageServerRangeInstallTests
 
 		// A rollback restores the mark that revision carried, in either direction.
 		(await Installer.RollbackAsync(id, 1)).Expect<PackageRollbackResult>();
-		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum!.Maximum).IsEqualTo("1");
+		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum!.Maximum).IsEqualTo("0");
 		(await Installer.RollbackAsync(id, 2)).Expect<PackageRollbackResult>();
 		await Assert.That((await Registry.GetInstalledPackageAsync(id)).Expect<InstalledPackageRecord>().PastMaximum).IsNull();
 
@@ -88,7 +88,7 @@ public class PackageServerRangeInstallTests
 	public async Task AServerNewerThanVerified_OnlyWarns()
 	{
 		var id = FreshId();
-		var manifest = Manifest(id, "1.0.0", "verified_server: \"1.0\"");
+		var manifest = Manifest(id, "1.0.0", "verified_server: \"0.1\"");
 
 		var plan = await Installer.PlanAsync(manifest);
 		await Assert.That(plan.Compatibility!.Fit).IsEqualTo(PackageServerFit.NewerThanVerified);
