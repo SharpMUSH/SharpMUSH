@@ -1,7 +1,7 @@
 format: "1.16"
 package: softcode-editor
 title: "Softcode line editor"
-version: 1.1.1
+version: 1.1.2
 authors: [SharpMUSH]
 description: "@editor — an @input-driven line editor for function and command softcode."
 license: MIT
@@ -74,7 +74,7 @@ objects:
       # Adds %<line> to the draft, keeping the draft before it for .u.
       INC`DRAFT`APPEND: |-
         think setqm(draft,get(%!/DATA`%j`DRAFT),
-        appended,get(%!/DATA`%j`APPENDED)); &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; &DATA`%j`DRAFT %!=%q<draft>[if(cor(strlen(%q<draft>),%q<appended>),%r)]%<line>; &DATA`%j`APPENDED %!=inc(%q<appended>); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
+        appended,get(%!/DATA`%j`APPENDED)); @break strmatch(attrib_set(%!/DATA`%j`DRAFT,%q<draft>[if(cor(strlen(%q<draft>),%q<appended>),%r)]%<line>),#-1*)={@pemit/port %j=notice(EDITOR,That line would make the code longer than an attribute can hold%, so it is left out.,warn); @input/prompt u(%!/FUN`DISPLAY`PROMPT)}; &DATA`%j`UNDO %!=%q<draft>; &DATA`%j`UNDOAPPENDED %!=%q<appended>; &DATA`%j`APPENDED %!=inc(%q<appended>); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`LIST: |-
         @pemit/port %j=u(%!/FUN`DISPLAY`LIST); @input/prompt u(%!/FUN`DISPLAY`PROMPT)
       INPUT`HELP: |-

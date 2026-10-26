@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.6.0
+version: 2.6.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -885,7 +885,7 @@ objects:
       # One line typed for +app/write: %0, never evaluated.
       INPUT`WRITE`LINE:
         value: |-
-          think setq(app_key,u(%!/FUN`APP`KEY,%#)); &APP`%q<app_key>`WRITING {{store}}=get({{store}}/APP`%q<app_key>`WRITING)[if(strlen(get({{store}}/APP`%q<app_key>`WRITING)),%r)]%0; @input/prompt Next line, or .done to save:
+          think setq(app_key,u(%!/FUN`APP`KEY,%#)); think setq(write_old,get({{store}}/APP`%q<app_key>`WRITING)); @assert not(strmatch(attrib_set({{store}}/APP`%q<app_key>`WRITING,%q<write_old>[if(strlen(%q<write_old>),%r)]%0),#-1*))=@input/prompt notice(APP,That line would make it longer than the game can keep%, so it is left out. .done saves the rest.,warn); @input/prompt Next line, or .done to save:
         flags: [cmdsyntax]
       # The end of +app/write: .done, or the time running out.
       INPUT`WRITE`DONE:

@@ -555,6 +555,32 @@ public partial class BBoardsIntegrationTests
 	}
 
 	[Test]
+	public async Task ALineTheCommentCannotHoldIsLeftOut()
+	{
+		try
+		{
+			await InstallAsync();
+			var admin = await Player("BbLongA", "bboard-admin");
+			var mira = await Player("BbLongM");
+			var board = await Board(admin, "BbLong");
+			var post = await Post(admin, board, "Long", "Answer at length.");
+			var line = new string('a', 5000);
+
+			await TypedUntil(mira, $"+bbreader {post}", "Answer at length.");
+			await TypedUntil(mira, "c", "Every line is text now.");
+			await Typed(mira, line);
+			// The two lines together pass the 8192-byte attribute limit.
+			await TypedUntil(mira, line, "so it is left out.");
+			await TypedUntil(mira, ".toss", "Dropped.");
+			await TypedUntil(mira, "q", "Left the reader.");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task TheReaderGoesUpToTheTopAndOpensNumbersFromThere()
 	{
 		try
