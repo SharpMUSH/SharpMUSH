@@ -550,8 +550,11 @@ public partial record ParserState
 	public ParserState ForAttributeArguments(Dictionary<string, CallState> arguments) => this with
 	{
 		Arguments = arguments,
-		EnvironmentRegisters = arguments,
-		SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
+		Context = Context with
+		{
+			EnvironmentRegisters = arguments,
+			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments)
+		}
 	};
 
 	/// <inheritdoc cref="EvaluationContext.Handle"/>

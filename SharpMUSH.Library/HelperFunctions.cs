@@ -49,11 +49,14 @@ public static partial class HelperFunctions
 		=> obj.Object().GrantsAsync(cancellationToken);
 
 	/// <inheritdoc cref="GrantsAsync(AnySharpObject, CancellationToken)"/>
-	public static async Task<ObjectGrants> GrantsAsync(this SharpObject obj, CancellationToken cancellationToken)
+	public static Task<ObjectGrants> GrantsAsync(this SharpObject obj, CancellationToken cancellationToken)
 	{
-		var grants = await obj.Grants.WithCancellation(cancellationToken);
-		return DelegatedApp.ActingAs(obj.DBRef) is { } app ? grants.Within(app.Scopes) : grants;
+		var grants = obj.Grants.WithCancellation(cancellationToken);
+		return DelegatedApp.ActingAs(obj.DBRef) is { } app ? WithinAsync(grants, app) : grants;
 	}
+
+	private static async Task<ObjectGrants> WithinAsync(Task<ObjectGrants> grants, DelegatedApp app)
+		=> (await grants).Within(app.Scopes);
 
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x). The WIZARD flag is the <c>wizard</c> role, so

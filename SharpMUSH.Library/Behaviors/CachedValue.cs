@@ -9,5 +9,13 @@ public sealed class CachedValue<T>(T value, long epoch, IEnumerable<string> tags
 	public long Epoch { get; } = epoch;
 	public ImmutableArray<string> Tags { get; } = [.. tags.Distinct(StringComparer.Ordinal)];
 
-	public bool IsCurrent(ObjectVersions versions) => Tags.All(tag => !versions.ChangedAfter(tag, Epoch));
+	public bool IsCurrent(ObjectVersions versions)
+	{
+		foreach (var tag in Tags)
+		{
+			if (versions.ChangedAfter(tag, Epoch)) return false;
+		}
+
+		return true;
+	}
 }
