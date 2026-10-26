@@ -332,15 +332,15 @@ public partial class Functions
 	private static string SpellfixTransliterate(string text)
 	{
 		var result = new System.Text.StringBuilder(text.Length);
-		foreach (var ch in text)
+		foreach (var rune in text.EnumerateRunes())
 		{
-			if (ch <= 127)
+			if (rune.IsAscii)
 			{
-				result.Append(ch);
+				result.Append((char)rune.Value);
 				continue;
 			}
 
-			var ascii = ch.ToString().Normalize(System.Text.NormalizationForm.FormD).Where(c => c <= 127).ToArray();
+			var ascii = rune.ToString().Normalize(System.Text.NormalizationForm.FormD).Where(c => c <= 127).ToArray();
 			if (ascii.Length == 0)
 			{
 				result.Append('?');
