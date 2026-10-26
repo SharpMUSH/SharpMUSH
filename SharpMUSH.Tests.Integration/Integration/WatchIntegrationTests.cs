@@ -153,6 +153,24 @@ public class WatchIntegrationTests
 	}
 
 	[Test]
+	public async Task WithoutTheHelpBridge_AMessageNamesNoHelpTopic()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("NoHelpAnn");
+			(await Installer.UninstallAsync("watch-help", force: false, CancellationToken.None)).Expect<Success>();
+
+			await Assert.That(await As(ann, "+watch/bogus")).Contains("+watch has no /bogus switch.").And.DoesNotContain("+help");
+			await Assert.That(await As(ann, "+watch something")).Contains("+watch/add <name> watches someone.").And.DoesNotContain("+help");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task SettingsAreChangedThroughPlusConfig()
 	{
 		try

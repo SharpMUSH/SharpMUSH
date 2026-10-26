@@ -1,7 +1,7 @@
 format: "1.16"
 package: watch
 title: "Watch list"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -118,11 +118,15 @@ objects:
         value: |-
           $(?is)^\+friend(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,friend,table,WATCH,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # watch-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch and the page, and runs the
       # routine. Only players keep a watch list.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(WATCH,Only players keep a watch list.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(WATCH,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(WATCH,+%q<cmd_word> has no /%q<cmd_switch> switch. +help watch lists them.,warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(WATCH,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(WATCH,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(WATCH,Only players keep a watch list.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(WATCH,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(WATCH,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(WATCH,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(WATCH,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_table,
       # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1), cmd_switch (the
@@ -245,7 +249,7 @@ objects:
         flags: [cmdsyntax]
       INC`WATCH`USAGE:
         value: |-
-          @pemit %#=notice(WATCH,+%q<cmd_word> lists who you watch that is on. +%q<cmd_word>/add <name> watches someone. +help watch lists the rest.,warn)
+          @pemit %#=notice(WATCH,+%q<cmd_word> lists who you watch that is on. +%q<cmd_word>/add <name> watches someone.[u(%!/FUN`HINT,USAGE)],warn)
         flags: [cmdsyntax]
       # +watch/add <player>
       INC`WATCH`ADD:

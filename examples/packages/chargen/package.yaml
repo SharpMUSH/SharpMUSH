@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.5.0
+version: 2.6.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -253,11 +253,15 @@ objects:
         value: |-
           $(?is)^\+apps(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,apps,table,APPS,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # chargen-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switches and the page, and runs the
       # routine. Only players have applications.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(APP,Only players have applications.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert strlen(%q<cmd_route>)=@pemit %#=notice(APP,if(strlen(%q<cmd_switch>),+%q<cmd_word> has no /%q<cmd_switch> switch.,+%q<cmd_word> takes nothing after it.) +help app lists the commands.,warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(APP,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(APP,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(APP,Only players have applications.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<table>,%<switches>,%<argument>); @assert strlen(%q<cmd_route>)=@pemit %#=notice(APP,if(strlen(%q<cmd_switch>),+%q<cmd_word> has no /%q<cmd_switch> switch.,+%q<cmd_word> takes nothing after it.)[u(%!/FUN`HINT,COMMANDS)],warn); @assert cor(not(%q<page_given>),member(get(%!/DATA`PAGED),%q<cmd_route>))=@pemit %#=notice(APP,+%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)] takes no page number.,warn); @assert gt(%q<page_number>,0)=@pemit %#=notice(APP,Pages start at 1: +%q<cmd_word>[if(strlen(%q<cmd_switch>),/%q<cmd_switch>)]/2 is the second.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 its route table, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_table,
       # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1),
@@ -986,7 +990,7 @@ objects:
       # +apps/fields: every section and its fields.
       INC`APPS`FIELDS:
         value: |-
-          think setq(form_fields,u(%!/FUN`FORM`ALLFIELDS)); @pemit %#=box(iter(u(%!/FUN`FORM`SECTIONS),rule(u(%!/FUN`SECTION`NAME,%i0) [tone(muted,order [u(%!/FUN`FORM`SECTION`ORDER,%i0)])])%r[u(%!/FUN`DISPLAY`FIELDS,u(%!/FUN`FORM`FIELDS,%i0))],%b,%r)%r[rule()]%r[tone(muted,if(%q<viewer_admin>,+apps/field <key> shows one in full. +apps/field <key>=<section>/<label> adds or moves one. +help app form has the rest.,+apps/field <key> shows one in full. +app/set <field>=<text> fills one in.))],Application form)
+          think setq(form_fields,u(%!/FUN`FORM`ALLFIELDS)); @pemit %#=box(iter(u(%!/FUN`FORM`SECTIONS),rule(u(%!/FUN`SECTION`NAME,%i0) [tone(muted,order [u(%!/FUN`FORM`SECTION`ORDER,%i0)])])%r[u(%!/FUN`DISPLAY`FIELDS,u(%!/FUN`FORM`FIELDS,%i0))],%b,%r)%r[rule()]%r[tone(muted,if(%q<viewer_admin>,+apps/field <key> shows one in full. +apps/field <key>=<section>/<label> adds or moves one.[u(%!/FUN`HINT,FORM)],+apps/field <key> shows one in full. +app/set <field>=<text> fills one in.))],Application form)
         flags: [cmdsyntax]
       # %0 fields: a table of them, or a line saying there are none.
       FUN`DISPLAY`FIELDS:
@@ -1034,7 +1038,7 @@ objects:
       # each submission, and for staff the store's attributes that define it.
       FUN`DISPLAY`FIELD:
         value: |-
-          box(lfields(,u(%!/FUN`DISPLAY`FIELD`LABELS,%0),u(%!/FUN`DISPLAY`FIELD`VALUES,%0),%*<|>)%r[rule(On each character)]%r[u(%!/FUN`DISPLAY`FIELD`KEPT,%0)][if(%1,%r[rule(On [name({{store}})] %([num({{store}})]%))]%r[u(%!/FUN`DISPLAY`FIELD`STORE,%0)])]%r[rule()]%r[tone(muted,if(%1,+apps/field/<option> [lcstr(%0)]=<value> changes an option. +help app form lists them.,+app/set [lcstr(%0)][if(u(%!/FUN`FIELD`CHAPTERED,%0),/<chapter>)]=<text> fills it in.))],Field: [u(%!/FUN`FIELD`LABEL,%0)])
+          box(lfields(,u(%!/FUN`DISPLAY`FIELD`LABELS,%0),u(%!/FUN`DISPLAY`FIELD`VALUES,%0),%*<|>)%r[rule(On each character)]%r[u(%!/FUN`DISPLAY`FIELD`KEPT,%0)][if(%1,%r[rule(On [name({{store}})] %([num({{store}})]%))]%r[u(%!/FUN`DISPLAY`FIELD`STORE,%0)])]%r[rule()]%r[tone(muted,if(%1,+apps/field/<option> [lcstr(%0)]=<value> changes an option.[u(%!/FUN`HINT,OPTIONS)],+app/set [lcstr(%0)][if(u(%!/FUN`FIELD`CHAPTERED,%0),/<chapter>)]=<text> fills it in.))],Field: [u(%!/FUN`FIELD`LABEL,%0)])
         flags: [funsyntax]
       # %0 a field: the labels of its options, %*<|> between them, in the order FUN`DISPLAY`FIELD`VALUES gives them.
       FUN`DISPLAY`FIELD`LABELS:

@@ -1,9 +1,9 @@
 format: "1.16"
 package: bboards-help
 title: "Bulletin boards: +help topics"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Bulletin boards topics into +help: registers the bboards package's help with the +help librarian."
+description: "Puts the Bulletin boards topics into +help: registers the bboards package's help with the +help librarian, and points its messages at +help."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [bboards, help, bridge]
@@ -11,11 +11,11 @@ category: Community
 requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. bboards keeps its topics on its own help
-# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# object, and plus-help reads any object registered with its librarian. This package is that registration, and the lines that point its messages at +help;
 # uninstalling it takes the topics out of +help, and neither package changes.
 depends:
   - package: bboards
-    version: ">=1.6"
+    version: ">=1.7"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/bboards/
@@ -33,3 +33,10 @@ objects:
     attributes:
       SRC`BBOARDS: |-
         {{bboards/bb_help}}
+
+  # Lines the bboards package's messages end with when +help is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{bboards/bboards}}"
+    attributes:
+      HINT`COMMANDS: |-
+        +help bboards lists them.
