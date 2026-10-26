@@ -9,7 +9,7 @@ packages:
   - path: builder-graph/
     name: Builder Graph
     package: builder-graph
-    version: 0.3.0
+    version: 0.3.1
     description: Room topology in the reusable HTML/JavaScript host, with coordinates, checks, export, import and drag-to-place
   - path: who-where/
     name: Who/Where
@@ -57,7 +57,7 @@ packages:
   - path: hello-ui/
     name: Hello UI
     package: hello-ui
-    version: 1.0.0
+    version: 1.0.1
     description: "Managed DLL package (Phase 4) — a UI plugin: controller + IApplicationSource page under \"Examples\""
   - path: wiki-reader/
     name: Wiki Reader
