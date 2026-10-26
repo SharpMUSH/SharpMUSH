@@ -12,5 +12,7 @@ namespace SharpMUSH.Library.Commands.Database;
 public record InvalidateGrantsCommand(int? Number) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => Number is { } number ? [Definitions.CacheKeys.Object(number)] : [];
-	public string[] CacheTags => Number is null ? [Definitions.CacheTags.Grants] : [];
+	public string[] CacheTags => Number is { } number
+		? [Definitions.CacheKeys.GrantsTag(number)]
+		: [Definitions.CacheTags.Grants];
 }
