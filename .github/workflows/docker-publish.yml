@@ -75,12 +75,9 @@ jobs:
           context: .
           file: ./SharpMUSH.RenderingWorker/Dockerfile
           push: true
-          # sharpmush-connectionserver is the renderer's old name, kept for installs that still use it.
           tags: |
             sharpmush/sharpmush-renderer:${{ steps.meta.outputs.version }}
             ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-renderer:latest' || '' }}
-            sharpmush/sharpmush-connectionserver:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-connectionserver:latest' || '' }}
           labels: |
             org.opencontainers.image.title=SharpMUSH Renderer
             org.opencontainers.image.description=Rendering worker for SharpMUSH
@@ -117,12 +114,9 @@ jobs:
           pull: true
           build-args: |
             SHARPMUSH_IMAGE_TAG=${{ steps.meta.outputs.version }}
-          # sharpmush-fly is this image's old name, kept for launched games that still use it.
           tags: |
             sharpmush/sharpmush-allinone:${{ steps.meta.outputs.version }}
             ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-allinone:latest' || '' }}
-            sharpmush/sharpmush-fly:${{ steps.meta.outputs.version }}
-            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-fly:latest' || '' }}
           labels: |
             org.opencontainers.image.title=SharpMUSH all-in-one
             org.opencontainers.image.description=SharpMUSH in one container, for one-container hosts
@@ -142,7 +136,7 @@ jobs:
           echo "- \`sharpmush/sharpmush-server:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-server:latest\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### Renderer (also as sharpmush-connectionserver)" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Renderer" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-renderer:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-renderer:latest\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -150,6 +144,6 @@ jobs:
           echo "- \`sharpmush/sharpmush-socketserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "### All-in-one (also as sharpmush-fly)" >> "$GITHUB_STEP_SUMMARY"
+          echo "### All-in-one" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-allinone:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-allinone:latest\`" >> "$GITHUB_STEP_SUMMARY"
