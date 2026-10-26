@@ -260,4 +260,77 @@ public class FollowCommandTests
 		await Assert.That(recorder.For(leader.DbRef)).Contains($"{followerName} stops following you.");
 		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse();
 	}
+
+	/// <summary>
+	/// <c>desert &lt;follower&gt;</c> and <c>dismiss &lt;follower&gt;</c> as a mortal. Both read the follower's
+	/// <c>FOLLOWING</c>, which the leader cannot examine; read as the leader, it looked absent, so desert said
+	/// nothing and dismiss answered "is not following you".
+	/// </summary>
+	[Test]
+	[Arguments("desert")]
+	[Arguments("dismiss")]
+	public async ValueTask MortalLeader_StopsANamedFollower(string command)
+	{
+		var room = await DigRoomAsync("FollowStopRoom");
+		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowStopLeader", room);
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowStopFollower", room);
+		await FollowAndReport(follower, leader.DbRef);
+		var recorder = WebAppFactoryArg.Notifications;
+		var leaderBefore = recorder.CountFor(leader.DbRef);
+		var followerBefore = recorder.CountFor(follower.DbRef);
+
+		await Parser.CommandParse(leader.Handle, ConnectionService, MarkupText.Plain($"{command} {follower.Name}"));
+
+		await Assert.That(recorder.For(leader.DbRef).Skip(leaderBefore).Single()).Contains(follower.Name);
+		await Assert.That(recorder.For(follower.DbRef).Skip(followerBefore).Single()).Contains(leader.Name);
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse();
+		await Assert.That((await Parser.FunctionParse(MarkupText.Plain($"followers(#{leader.DbRef.Number})")))?.Message.ToPlainText())
+			.IsEqualTo("");
+	}
+
+	[Test]
+	public async ValueTask Desert_WithNoName_StopsFollowingAndDismissesEveryone()
+	{
+		var room = await DigRoomAsync("DesertAllRoom");
+		var leader = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DesertAllLeader", room);
+		var middle = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DesertAllMiddle", room);
+		var follower = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DesertAllFollower", room);
+		await FollowAndReport(middle, leader.DbRef);
+		await FollowAndReport(follower, middle.DbRef);
+
+		await Parser.CommandParse(middle.Handle, ConnectionService, MarkupText.Plain("desert"));
+
+		await Assert.That((await FollowingOf(middle.DbRef)).Exists).IsFalse();
+		await Assert.That((await FollowingOf(follower.DbRef)).Exists).IsFalse();
+	}
+
+	/// <summary>A name that matches nothing is reported once, by the lookup; the commands used to add a second line.</summary>
+	[Test]
+	[Arguments("follow")]
+	[Arguments("desert")]
+	[Arguments("dismiss")]
+	public async ValueTask NamingNobody_IsReportedOnce(string command)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "FollowNobody", await DigRoomAsync("FollowNobodyRoom"));
+		var recorder = WebAppFactoryArg.Notifications;
+		var before = recorder.CountFor(player.DbRef);
+
+		await Parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"{command} {TestIsolationHelpers.GenerateUniqueName("NobodyHere")}"));
+
+		await Assert.That(recorder.For(player.DbRef).Skip(before)).IsEquivalentTo(["I can't see that here."]);
+	}
+
+	private async Task<DBRef> DigRoomAsync(string prefix)
+	{
+		var dug = await Parser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName(prefix)}"));
+		return DBRef.Parse(dug.Message.ToPlainText().Trim());
+	}
 }
