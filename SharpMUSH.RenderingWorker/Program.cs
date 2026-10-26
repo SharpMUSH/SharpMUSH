@@ -15,7 +15,7 @@ public static class Program
 		if (args.Contains("--healthcheck"))
 		{
 			var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
-			Environment.ExitCode = await IsHealthyAsync(configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock") ? 0 : 1;
+			Environment.ExitCode = await IsHealthyAsync(RenderingEndpoints.FromConfiguration(configuration)) ? 0 : 1;
 			return;
 		}
 		await using var app = CreateApplication(args);
@@ -29,13 +29,27 @@ public static class Program
 
 		var builder = WebApplication.CreateBuilder(args);
 		builder.Logging.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
-		socketPath ??= builder.Configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock";
-		Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(socketPath))!);
-		RemoveStaleSocket(socketPath);
+		RenderingEndpoint endpoint = socketPath is not null
+			? new RenderSocket(socketPath)
+			: RenderingEndpoints.FromConfiguration(builder.Configuration);
+		if (endpoint is RenderSocket socket)
+		{
+			Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(socket.Path))!);
+			RemoveStaleSocket(socket.Path);
+		}
 		builder.WebHost.ConfigureKestrel(options =>
 		{
 			options.Limits.MaxRequestBodySize = 16 * 1024 * 1024;
-			options.ListenUnixSocket(socketPath, listen => listen.Protocols = HttpProtocols.Http2);
+			switch (endpoint)
+			{
+				case RenderSocket unix:
+					options.ListenUnixSocket(unix.Path, listen => listen.Protocols = HttpProtocols.Http2);
+					break;
+				case RenderAddress address:
+					// Every interface, IPv6 included: the hosts that run the worker apart reach it over private IPv6.
+					options.ListenAnyIP(address.Uri.Port, listen => listen.Protocols = HttpProtocols.Http2);
+					break;
+			}
 		});
 		builder.Services.AddSingleton<TerminalPictureStore>();
 		builder.Services.AddSingleton<ConnectionPictures>();
@@ -72,23 +86,11 @@ public static class Program
 		return app;
 	}
 
-	public static async Task<bool> IsHealthyAsync(string socketPath)
+	public static async Task<bool> IsHealthyAsync(RenderingEndpoint endpoint)
 	{
-		using var handler = new SocketsHttpHandler
-		{
-			ConnectCallback = async (_, ct) =>
-			{
-				var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-				try
-				{
-					await socket.ConnectAsync(new UnixDomainSocketEndPoint(socketPath), ct);
-					return new NetworkStream(socket, ownsSocket: true);
-				}
-				catch { socket.Dispose(); throw; }
-			}
-		};
+		using var handler = RenderingEndpoints.CreateHandler(endpoint);
 		using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
-		using var request = new HttpRequestMessage(HttpMethod.Get, "http://renderer/health")
+		using var request = new HttpRequestMessage(HttpMethod.Get, new Uri(RenderingEndpoints.BaseAddress(endpoint), "/health"))
 		{
 			Version = System.Net.HttpVersion.Version20,
 			VersionPolicy = HttpVersionPolicy.RequestVersionExact
