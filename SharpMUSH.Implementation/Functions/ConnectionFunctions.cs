@@ -605,7 +605,9 @@ public partial class Functions
 	private IAsyncEnumerable<AnySharpObject> VisibleWhoPlayers(AnySharpObject looker, bool powered) =>
 		ExistingObjects(ConnectionService
 				.GetAll()
-				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn)
+				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
+					// The portal's background session is someone reading the site, not playing: it is never online.
+					&& x.PresenceClass != PresenceClasses.Portal)
 				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
 				// this whole WHO family exactly as DARK always did, unless the caller is privileged -
 				// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503). `powered`

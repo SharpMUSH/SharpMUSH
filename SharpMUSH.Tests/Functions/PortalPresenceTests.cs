@@ -9,9 +9,9 @@ using System.Collections.Concurrent;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// A <c>portal</c>-class connection is excluded from the mortal WHO (<c>mwho()</c>, what GET`ONLINE
-/// uses) regardless of caller, but still listed by the raw <c>lwho()</c>; a <c>play</c> connection
-/// appears in both.
+/// A <c>portal</c>-class connection is someone reading the portal, not playing: it is left out of
+/// <c>mwho()</c>, <c>lwho()</c>, <c>nwho()</c> and a wizard's WHO alike; a <c>play</c> connection
+/// appears in all of them.
 /// </summary>
 public class PortalPresenceTests
 {
@@ -48,7 +48,7 @@ public class PortalPresenceTests
 		(await Parser.EvaluateAsync(MarkupText.Plain(function))).ToPlainText();
 
 	[Test, NotInParallel(nameof(PortalPresenceTests))]
-	public async Task PortalConnection_ExcludedFromMwho_ButListedByLwho()
+	public async Task PortalConnection_ExcludedFromMwhoAndLwho()
 	{
 		var services = WebAppFactoryArg.Services;
 		var mediator = services.GetRequiredService<IMediator>();
@@ -63,11 +63,46 @@ public class PortalPresenceTests
 			await Assert.That(mortalWho).DoesNotContain($"#{portalRef.Number}");
 
 			var rawWho = await WhoAsync("lwho()");
-			await Assert.That(rawWho).Contains($"#{portalRef.Number}");
+			await Assert.That(rawWho).DoesNotContain($"#{portalRef.Number}");
+
+			var rawWhoIds = await WhoAsync("lwhoid()");
+			await Assert.That(rawWhoIds.Select(x => x.Split(':')[0])).DoesNotContain($"#{portalRef.Number}");
 		}
 		finally
 		{
 			await connectionService.Disconnect(handle);
+		}
+	}
+
+	[Test, NotInParallel(nameof(PortalPresenceTests))]
+	public async Task PortalConnection_NotInAWizardsWho()
+	{
+		var services = WebAppFactoryArg.Services;
+		var mediator = services.GetRequiredService<IMediator>();
+		var connectionService = services.GetRequiredService<IConnectionService>();
+
+		var portalName = TestIsolationHelpers.GenerateUniqueName("PortalWho");
+		var portalRef = await TestIsolationHelpers.CreateNamedTestPlayerAsync(services, mediator, portalName);
+		var handle = await ConnectAsAsync(portalRef, PresenceClasses.Portal);
+		// A player on a play connection beside it, so the listing is known to show names this long.
+		var playName = TestIsolationHelpers.GenerateUniqueName("PlayWho");
+		var playRef = await TestIsolationHelpers.CreateNamedTestPlayerAsync(services, mediator, playName);
+		var playHandle = await ConnectAsAsync(playRef, PresenceClasses.Play);
+
+		try
+		{
+			// Handle 1 is God's connection; read only what this WHO wrote to it.
+			var before = WebAppFactoryArg.Notifications.CountForHandle(1);
+			await Parser.CommandParse(1, connectionService, MarkupText.Plain("WHO"));
+			var listing = WebAppFactoryArg.Notifications.ForHandle(1).Skip(before).ToList();
+
+			await Assert.That(listing.Any(line => line.Contains(playName, StringComparison.Ordinal))).IsTrue();
+			await Assert.That(listing.Where(line => line.Contains(portalName, StringComparison.Ordinal))).IsEmpty();
+		}
+		finally
+		{
+			await connectionService.Disconnect(handle);
+			await connectionService.Disconnect(playHandle);
 		}
 	}
 
@@ -85,6 +120,9 @@ public class PortalPresenceTests
 		{
 			var mortalWho = await WhoAsync("mwho()");
 			await Assert.That(mortalWho).Contains($"#{playRef.Number}");
+
+			var rawWho = await WhoAsync("lwho()");
+			await Assert.That(rawWho).Contains($"#{playRef.Number}");
 		}
 		finally
 		{
