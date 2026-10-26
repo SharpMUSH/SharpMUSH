@@ -296,7 +296,7 @@ spec:
               cpu: "500m"
               memory: "512Mi"
         - name: renderer
-          image: docker.io/sharpmush/sharpmush-connectionserver:dev
+          image: docker.io/sharpmush/sharpmush-renderer:dev
           imagePullPolicy: IfNotPresent
           securityContext:
             allowPrivilegeEscalation: false

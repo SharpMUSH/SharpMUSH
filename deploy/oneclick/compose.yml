@@ -71,7 +71,7 @@ services:
     logging: *default-logging
 
   renderer:
-    image: sharpmush/sharpmush-connectionserver:${SHARPMUSH_IMAGE_TAG:-dev}
+    image: sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG:-dev}
     stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true

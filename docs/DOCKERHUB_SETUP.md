@@ -9,12 +9,12 @@ The repository has two Docker publishing workflows:
 ### 1. Production Releases (version tags)
 Automatically builds and publishes Docker images to DockerHub whenever a new version tag is pushed. The workflow builds two images:
 - `sharpmush/sharpmush-server` - The main SharpMUSH server
-- `sharpmush/sharpmush-connectionserver` - The connection server
+- `sharpmush/sharpmush-renderer` - The rendering worker
 
 ### 2. Dev Builds (main branch)
 Automatically builds and publishes Docker images with the `dev` tag on every push to the `main` branch:
 - `sharpmush/sharpmush-server:dev` - Latest development build of the server
-- `sharpmush/sharpmush-connectionserver:dev` - Latest development build of the connection server
+- `sharpmush/sharpmush-renderer:dev` - Latest development build of the rendering worker
 
 ## Required GitHub Secrets
 
@@ -84,8 +84,8 @@ git push origin v1.0.0
 When you push a tag like `v1.0.0`, the workflow will publish:
 - `sharpmush/sharpmush-server:1.0.0`
 - `sharpmush/sharpmush-server:latest`
-- `sharpmush/sharpmush-connectionserver:1.0.0`
-- `sharpmush/sharpmush-connectionserver:latest`
+- `sharpmush/sharpmush-renderer:1.0.0`
+- `sharpmush/sharpmush-renderer:latest`
 - `sharpmush/sharpmush-socketserver:1.0.0`
 - `sharpmush/sharpmush-socketserver:latest`
 
@@ -99,7 +99,7 @@ The dev workflow automatically runs on **every push to the `main` branch**:
 
 Every push to `main` updates:
 - `sharpmush/sharpmush-server:dev`
-- `sharpmush/sharpmush-connectionserver:dev`
+- `sharpmush/sharpmush-renderer:dev`
 
 These images reflect the latest state of the `main` branch and are used by `docker-compose-hub.yml` for development/testing purposes.
 
@@ -127,7 +127,7 @@ After setting up the secrets:
 3. You should see the **Publish Docker Images** workflow running
 4. Once complete, verify the images are on DockerHub at:
    - https://hub.docker.com/r/sharpmush/sharpmush-server
-   - https://hub.docker.com/r/sharpmush/sharpmush-connectionserver
+   - https://hub.docker.com/r/sharpmush/sharpmush-renderer
 
 ## Troubleshooting
 
@@ -137,7 +137,7 @@ After setting up the secrets:
 - Check that the token has Write permissions
 
 ### Images Not Appearing on DockerHub
-- Verify the repository names are correct (`sharpmush/sharpmush-server` and `sharpmush/sharpmush-connectionserver`)
+- Verify the repository names are correct (`sharpmush/sharpmush-server` and `sharpmush/sharpmush-renderer`)
 - Ensure the DockerHub account has permission to push to these repositories
 - Check the workflow logs in the Actions tab for detailed error messages
 

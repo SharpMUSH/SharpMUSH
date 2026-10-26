@@ -5,7 +5,7 @@
 # Deploying this app restarts the edge and drops connected players, so launch.sh deploys it only
 # when asked (--update-edge). The server and renderer update without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-fly:dev"
+  image = "sharpmush/sharpmush-allinone:dev"
 
 [env]
   SHARPMUSH_ROLE = "edge"

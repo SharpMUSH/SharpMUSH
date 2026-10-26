@@ -775,7 +775,7 @@ The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local b
 
 **The Cloudflare stack updates itself.** Every merge to `main` runs the full test suite and then
 publishes changed images to Docker Hub (`.github/workflows/docker-dev.yml`):
-`sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-connectionserver:dev`
+`sharpmush/sharpmush-server:dev` for the engine, `sharpmush/sharpmush-renderer:dev`
 for the renderer, and `sharpmush/sharpmush-socketserver:dev` for the socket owner. The
 `watchtower` service polls every 5 minutes and recreates the **engine and renderer** when their
 image tags change, pruning superseded images. Both of those updates keep live telnet and

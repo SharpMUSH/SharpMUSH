@@ -4,7 +4,7 @@
 #
 # Deploying this app restarts the server without dropping anyone: the edge keeps players' sockets.
 [build]
-  image = "sharpmush/sharpmush-fly:dev"
+  image = "sharpmush/sharpmush-allinone:dev"
 
 [env]
   SHARPMUSH_ROLE = "server"

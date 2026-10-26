@@ -28,15 +28,15 @@ if ($LASTEXITCODE -ne 0) {
     exit 1 
 }
 
-# 2. Build and Push ConnectionServer
-Write-Host "Processing ConnectionServer..." -ForegroundColor Cyan
+# 2. Build and Push the renderer
+Write-Host "Processing the renderer..." -ForegroundColor Cyan
 Write-Host "  Building..." -ForegroundColor Gray
 # Note: Context is root (.), Dockerfile is in subdirectory
-docker build -t sharpmush/sharpmush-connectionserver:$Tag -f SharpMUSH.RenderingWorker/Dockerfile .
+docker build -t sharpmush/sharpmush-renderer:$Tag -f SharpMUSH.RenderingWorker/Dockerfile .
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed"; exit 1 }
 
 Write-Host "  Pushing..." -ForegroundColor Gray
-docker push sharpmush/sharpmush-connectionserver:$Tag
+docker push sharpmush/sharpmush-renderer:$Tag
 if ($LASTEXITCODE -ne 0) { 
     Write-Error "Push failed."
     exit 1 
@@ -45,4 +45,4 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "Successfully pushed images to DockerHub!" -ForegroundColor Green
 Write-Host "  - sharpmush/sharpmush-server:$Tag"
-Write-Host "  - sharpmush/sharpmush-connectionserver:$Tag"
+Write-Host "  - sharpmush/sharpmush-renderer:$Tag"
