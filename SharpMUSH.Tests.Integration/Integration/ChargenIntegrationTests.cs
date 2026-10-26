@@ -374,9 +374,11 @@ public class ChargenIntegrationTests
 				.Because("the next chapter gets an empty box");
 			await Assert.That(await God($"think [get(#{applicant.DbRef.Number}/BG1)]")).IsEqualTo("Born on the barges.");
 
+			// A long field holds as much as an attribute does.
+			var limit = int.Parse(await God("think config(max_attribute_value_length)"));
 			var tooLong = await Http("POST", "/chargen/act",
-				$$"""{"op":"save","field_background.1":"Born on the barges.","field_background.2":"{{new string('x', 8001)}}"}""", applicant);
-			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_background.2").GetString()).IsEqualTo("Keep background to 8000 characters.");
+				$$"""{"op":"save","field_background.1":"Born on the barges.","field_background.2":"{{new string('x', limit + 1)}}"}""", applicant);
+			await Assert.That(tooLong.GetProperty("errors").GetProperty("field_background.2").GetString()).IsEqualTo($"Keep background to {limit} characters.");
 		}
 		finally
 		{

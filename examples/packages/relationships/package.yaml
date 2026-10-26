@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -148,6 +148,10 @@ objects:
         Card fields
       DATA`CONFIG`CARD-FIELDS`EXAMPLE: |-
         FULLNAME PRONOUNS AGE
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
       DATA`CONFIG`NOTE-LENGTH: |-
         2000
       DATA`CONFIG`NOTE-LENGTH`TYPE: |-
@@ -156,10 +160,8 @@ objects:
         2000
       DATA`CONFIG`NOTE-LENGTH`MIN: |-
         1
-      DATA`CONFIG`NOTE-LENGTH`MAX: |-
-        8000
       DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
-        The longest private note, in characters.
+        The longest private note, in characters. The game's limit on an attribute's length caps it too.
       DATA`CONFIG`NOTE-LENGTH`LABEL: |-
         Longest note
       DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
@@ -643,7 +645,7 @@ objects:
       # +rel/note <name>=<text>: a private note about anyone, never visual. Nothing after the = clears it.
       INC`CMD`NOTE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<rel_other_key>)=@pemit %#=notice(REL,You have no note about %q<rel_other_name>.,warn); &RELNOTE`%q<rel_other_key> %#; @pemit %#=notice(REL,Your note about %q<rel_other_name> is cleared.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),u(%!/FUN`CAP,v(DATA`CONFIG`NOTE-LENGTH)))=@pemit %#=notice(REL,Keep it to [u(%!/FUN`CAP,v(DATA`CONFIG`NOTE-LENGTH))] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<rel_other_key>)=@pemit %#=notice(REL,You have no note about %q<rel_other_name>.,warn); &RELNOTE`%q<rel_other_key> %#; @pemit %#=notice(REL,Your note about %q<rel_other_name> is cleared.,ok)
         flags: [cmdsyntax]
       INC`STORE`NOTE:
         value: |-
@@ -859,7 +861,7 @@ objects:
         `+config relationships` lists them, and `+config relationships/<setting>=<value>` changes one.
 
         - `card-fields`: the `+finger` fields shown at the top of `+rel <name>`, by key. `FULLNAME PRONOUNS` by default; `+config/add relationships/card-fields=age` adds one.
-        - `note-length`: the longest private note, in characters, 1 to 8000. 2000 by default.
+        - `note-length`: the longest private note, in characters. 2000 by default; an attribute's length limit caps it too.
         - `text-length`: the longest line about a relationship, 1 to 1000. 200 by default.
         - `web-reach`: how far the portal's web reaches. 1, the default, draws a character and the people they know; 2 adds the people those know.
         - `types`: the relationship types, a table. `+help rel types` explains it.

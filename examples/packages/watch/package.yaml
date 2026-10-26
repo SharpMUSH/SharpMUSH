@@ -1,7 +1,7 @@
 format: "1.16"
 package: watch
 title: "Watch list"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "Watch: +watch tells you when the people you follow connect and leave, and shows their +who status."
 license: MIT
@@ -254,7 +254,7 @@ objects:
       # +watch/add <player>
       INC`WATCH`ADD:
         value: |-
-          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>); @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
+          @include %!/INC`WATCH`NEED`TARGET; @assert comp(%q<watch_target>,%q<viewer_objid>)=@pemit %#=notice(WATCH,You cannot watch yourself.,warn); think setq(watch_list,u(%!/FUN`WATCH`LIST,%q<viewer_key>)); @assert not(member(%q<watch_list>,%q<watch_target>))=@pemit %#=notice(WATCH,You already watch [name(%q<watch_target>)].,warn); @assert lt(words(%q<watch_list>),get(%!/DATA`CONFIG`MAX))=@pemit %#=notice(WATCH,You watch [get(%!/DATA`CONFIG`MAX)] people%, as many as you can. +%q<cmd_word>/del <name> makes room.,warn); think setq(watch_by,setunion(get({{store}}/WATCH`%q<watch_target_key>`BY),%q<viewer_objid>)); @assert lte(strlen(%q<watch_by>),config(max_attribute_value_length))=@pemit %#=notice(WATCH,[name(%q<watch_target>)] has as many watchers as fit in [config(max_attribute_value_length)] bytes.,warn); &WATCH`%q<viewer_key> {{store}}=%q<viewer_objid>; &WATCH`%q<viewer_key>`LIST {{store}}=trim(%q<watch_list> %q<watch_target>); &WATCH`%q<watch_target_key> {{store}}=%q<watch_target>; &WATCH`%q<watch_target_key>`BY {{store}}=%q<watch_by>; @pemit %#=notice(WATCH,You watch [name(%q<watch_target>)] now: you hear when they connect and leave.,ok)
         flags: [cmdsyntax]
       # +watch/del <player>
       INC`WATCH`DEL:

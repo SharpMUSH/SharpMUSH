@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.6.0
+version: 2.6.1
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -141,6 +141,10 @@ objects:
         Mail when offline
       DATA`CONFIG`MAIL-OFFLINE`EXAMPLE: |-
         yes
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
       DATA`CONFIG`COMMENT-LENGTH: |-
         4000
       DATA`CONFIG`COMMENT-LENGTH`TYPE: |-
@@ -149,10 +153,8 @@ objects:
         4000
       DATA`CONFIG`COMMENT-LENGTH`MIN: |-
         1
-      DATA`CONFIG`COMMENT-LENGTH`MAX: |-
-        8000
       DATA`CONFIG`COMMENT-LENGTH`DESCRIPTION: |-
-        The longest comment, staff note or decision message, in characters.
+        The longest comment, staff note or decision message, in characters. The game's limit on an attribute's length caps it too.
       DATA`CONFIG`COMMENT-LENGTH`LABEL: |-
         Longest comment
       DATA`CONFIG`COMMENT-LENGTH`EXAMPLE: |-
@@ -421,7 +423,7 @@ objects:
       # %0 a field: the most characters it takes, in each chapter for a field in chapters.
       FUN`FIELD`MAX:
         value: |-
-          firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),8000,500))
+          u(%!/FUN`CAP,firstof(get({{store}}/FIELD`%0`MAX),if(strmatch(u(%!/FUN`FIELD`TYPE,%0),long),config(max_attribute_value_length),500)))
         flags: [funsyntax]
       # %0 a field: 1 when it comes in chapters, its attribute a pattern.
       FUN`FIELD`CHAPTERED:
@@ -885,7 +887,7 @@ objects:
       # One line typed for +app/write: %0, never evaluated.
       INPUT`WRITE`LINE:
         value: |-
-          think setq(app_key,u(%!/FUN`APP`KEY,%#)); &APP`%q<app_key>`WRITING {{store}}=get({{store}}/APP`%q<app_key>`WRITING)[if(strlen(get({{store}}/APP`%q<app_key>`WRITING)),%r)]%0; @input/prompt Next line, or .done to save:
+          think setq(app_key,u(%!/FUN`APP`KEY,%#)); think setq(write_old,get({{store}}/APP`%q<app_key>`WRITING)); @assert not(strmatch(attrib_set({{store}}/APP`%q<app_key>`WRITING,%q<write_old>[if(strlen(%q<write_old>),%r)]%0),#-1*))=@input/prompt notice(APP,That line would take it past [config(max_attribute_value_length)] bytes%, so it is left out. .done saves the rest.,warn); @input/prompt Next line, or .done to save:
         flags: [cmdsyntax]
       # The end of +app/write: .done, or the time running out.
       INPUT`WRITE`DONE:
@@ -915,7 +917,7 @@ objects:
       # +app/comment <section>=<text> for the owner, +app/comment <name>[/<section>]=<text> for a reviewer.
       INC`APP`COMMENT:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(APP,if(%q<viewer_staff>,+app/comment <name>/<section>=<text>%, or <name>=<text> for the whole application.,+app/comment <section>=<text>%, or =<text> for the whole application.),warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(APP,Say something after the =.,warn); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`COMMENT-LENGTH))=@pemit %#=notice(APP,Keep a comment to [get(%!/DATA`CONFIG`COMMENT-LENGTH)] characters.,warn); @include %!/INC`APP`COMMENT`TARGET; @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,0,kind,comment; @pemit %#=notice(APP,Comment added.,ok); @if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,name(%#) commented on their application. +app [name(%#)] reads it.}},{@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%#) commented on your application. +app shows it.}
+          @assert %q<cmd_has_equals>=@pemit %#=notice(APP,if(%q<viewer_staff>,+app/comment <name>/<section>=<text>%, or <name>=<text> for the whole application.,+app/comment <section>=<text>%, or =<text> for the whole application.),warn); @assert strlen(%q<cmd_right_side>)=@pemit %#=notice(APP,Say something after the =.,warn); @assert lte(strlen(%q<cmd_right_side>),u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))=@pemit %#=notice(APP,Keep a comment to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH))] characters.,warn); @include %!/INC`APP`COMMENT`TARGET; @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,0,kind,comment; @pemit %#=notice(APP,Comment added.,ok); @if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,name(%#) commented on their application. +app [name(%#)] reads it.}},{@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%#) commented on your application. +app shows it.}
         flags: [cmdsyntax]
       # The application +app/comment is about, and the section: a reviewer names the character, an applicant comments
       # on their own. Sets app_key, app_objid, app_state and comment_section.
@@ -926,7 +928,7 @@ objects:
       # +app/note <name>[/<section>]=<text>: a comment only reviewers read.
       INC`APP`NOTE:
         value: |-
-          @include %!/INC`NEED`REVIEWER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(APP,+app/note <name>/<section>=<text>%, or <name>=<text> for the whole application.,warn); @assert lte(strlen(%q<cmd_right_side>),get(%!/DATA`CONFIG`COMMENT-LENGTH))=@pemit %#=notice(APP,Keep a comment to [get(%!/DATA`CONFIG`COMMENT-LENGTH)] characters.,warn); @include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(comment_typed,trim(after(%q<cmd_left_side>,/))); @assert cor(not(strlen(%q<comment_typed>)),strlen(setr(comment_section,u(%!/FUN`SECTION`FIND,%q<comment_typed>))))=@pemit %#=notice(APP,There is no section '%q<comment_typed>'.,warn); @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,1,kind,comment; @pemit %#=notice(APP,Staff note added. [name(%q<app_objid>)] does not see it.,ok)
+          @include %!/INC`NEED`REVIEWER; @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_right_side>))=@pemit %#=notice(APP,+app/note <name>/<section>=<text>%, or <name>=<text> for the whole application.,warn); @assert lte(strlen(%q<cmd_right_side>),u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))=@pemit %#=notice(APP,Keep a comment to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH))] characters.,warn); @include/args %!/INC`NEED`TARGET=name,before(%q<cmd_left_side>,/); think setq(comment_typed,trim(after(%q<cmd_left_side>,/))); @assert cor(not(strlen(%q<comment_typed>)),strlen(setr(comment_section,u(%!/FUN`SECTION`FIND,%q<comment_typed>))))=@pemit %#=notice(APP,There is no section '%q<comment_typed>'.,warn); @include/args %!/INC`DO`COMMENT=section,%q<comment_section>,author,%q<viewer_objid>,text,%q<cmd_right_side>,private,1,kind,comment; @pemit %#=notice(APP,Staff note added. [name(%q<app_objid>)] does not see it.,ok)
         flags: [cmdsyntax]
 
       # ---- reviewers --------------------------------------------------------------
@@ -1226,7 +1228,7 @@ objects:
       # reviewer's Staff only switch.
       WEB`FORM`INPUT`COMMENT:
         value: |-
-          setq(web_box,firstof(lcstr(%0),all))[u(%!/WEB`FORM`INPUT,comment_%q<web_box>,if(%1,if(strlen(%0),Comment on this section,Comment on the whole application),if(strlen(%0),Reply to staff on this section,Message to staff)),textarea,,0,get(%!/DATA`CONFIG`COMMENT-LENGTH))][if(%1,%r[json(object,kind,json(string,field),key,json(string,private_%q<web_box>),label,json(string,Staff only),type,json(string,boolean))])]
+          setq(web_box,firstof(lcstr(%0),all))[u(%!/WEB`FORM`INPUT,comment_%q<web_box>,if(%1,if(strlen(%0),Comment on this section,Comment on the whole application),if(strlen(%0),Reply to staff on this section,Message to staff)),textarea,,0,u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))][if(%1,%r[json(object,kind,json(string,field),key,json(string,private_%q<web_box>),label,json(string,Staff only),type,json(string,boolean))])]
         flags: [funsyntax]
       # %0 the rows field, %1 the text when there are none: a timeline of comments.
       WEB`FORM`TIMELINE:
@@ -1333,7 +1335,7 @@ objects:
       # %0 a key, %1 its state, %2 the character's name: the decision buttons.
       WEB`FORM`DECISION:
         value: |-
-          if(strmatch(%1,approved),u(%!/WEB`FORM`BUTTON,Retire,retire,%0,error,Retire %2? They lose the approved role and their place goes to the next on the waitlist.),u(%!/WEB`FORM`INPUT,message,Message to the applicant,textarea,Asking for changes needs one%; approving does not.,0,get(%!/DATA`CONFIG`COMMENT-LENGTH))%r[u(%!/WEB`FORM`BUTTON,Ask for changes,return,%0,warning)]%r[u(%!/WEB`FORM`BUTTON,Approve,approve,%0,success,Approve %2?[if(u(%!/FUN`PLACES`FULL),%bEvery place is taken%, so they go on the waitlist.)])])
+          if(strmatch(%1,approved),u(%!/WEB`FORM`BUTTON,Retire,retire,%0,error,Retire %2? They lose the approved role and their place goes to the next on the waitlist.),u(%!/WEB`FORM`INPUT,message,Message to the applicant,textarea,Asking for changes needs one%; approving does not.,0,u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))%r[u(%!/WEB`FORM`BUTTON,Ask for changes,return,%0,warning)]%r[u(%!/WEB`FORM`BUTTON,Approve,approve,%0,success,Approve %2?[if(u(%!/FUN`PLACES`FULL),%bEvery place is taken%, so they go on the waitlist.)])])
         flags: [funsyntax]
 
       # %0 the viewer, %1 queue, waitlist, all or decided: a list of applications, for a reviewer. Anyone else
@@ -1487,13 +1489,13 @@ objects:
       # %0 a comment box: 1 when what was posted in it is too long.
       WEB`COMMENT`LONG:
         value: |-
-          gt(strlen(u(%!/WEB`BODY`GET,comment_%0)),get(%!/DATA`CONFIG`COMMENT-LENGTH))
+          gt(strlen(u(%!/WEB`BODY`GET,comment_%0)),u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH)))
         flags: [funsyntax]
       # Adds what is typed in each comment box (comment_<section>, comment_all), a reviewer's Staff only when
       # private_<section> is on, and tells whoever should know. Sets web_commented to how many were added.
       WEB`SAVE`COMMENTS:
         value: |-
-          think setq(web_boxes,squish(iter(lcstr(u(%!/FUN`FORM`SECTIONS)) all,if(strlen(trim(u(%!/WEB`BODY`GET,comment_%i0))),%i0)))); think setq(web_long,iter(filterbool(%!/WEB`COMMENT`LONG,%q<web_boxes>),json(object,comment_%i0,json(string,Keep a comment to [get(%!/DATA`CONFIG`COMMENT-LENGTH)] characters.)),%b,%r)); @assert not(strlen(%q<web_long>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_long>)); think setq(web_commented,words(%q<web_boxes>)); @dolist/inline %q<web_boxes>={@include/args %!/INC`DO`COMMENT=section,if(comp(##,all),ucstr(##)),author,%q<viewer_objid>,text,trim(u(%!/WEB`BODY`GET,comment_##)),private,cand(%q<viewer_staff>,u(%!/WEB`BODY`ON,private_##)),kind,comment}; @if %q<web_commented>={@if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,name(%q<viewer_objid>) commented on their application. +app [name(%q<viewer_objid>)] reads it.}},{@if words(squish(iter(%q<web_boxes>,if(u(%!/WEB`BODY`ON,private_%i0),,%i0))))={@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%q<viewer_objid>) commented on your application. +app shows it.}}}
+          think setq(web_boxes,squish(iter(lcstr(u(%!/FUN`FORM`SECTIONS)) all,if(strlen(trim(u(%!/WEB`BODY`GET,comment_%i0))),%i0)))); think setq(web_long,iter(filterbool(%!/WEB`COMMENT`LONG,%q<web_boxes>),json(object,comment_%i0,json(string,Keep a comment to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`COMMENT-LENGTH))] characters.)),%b,%r)); @assert not(strlen(%q<web_long>))=think setq(web_response,u(%!/WEB`RESULT`ERRORS,%q<web_long>)); think setq(web_commented,words(%q<web_boxes>)); @dolist/inline %q<web_boxes>={@include/args %!/INC`DO`COMMENT=section,if(comp(##,all),ucstr(##)),author,%q<viewer_objid>,text,trim(u(%!/WEB`BODY`GET,comment_##)),private,cand(%q<viewer_staff>,u(%!/WEB`BODY`ON,private_##)),kind,comment}; @if %q<web_commented>={@if strmatch(%q<app_objid>,%q<viewer_objid>)={@if strmatch(%q<app_state>,submitted)={@include/args %!/INC`DO`TELLSTAFF=text,name(%q<viewer_objid>) commented on their application. +app [name(%q<viewer_objid>)] reads it.}},{@if words(squish(iter(%q<web_boxes>,if(u(%!/WEB`BODY`ON,private_%i0),,%i0))))={@include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%q<viewer_objid>) commented on your application. +app shows it.}}}
         flags: [cmdsyntax]
       # Stops an action only the applicant may take on someone else's application.
       WEB`NEED`MINE:
@@ -1809,7 +1811,7 @@ objects:
         | `type` | `text` \(a line\), `long` \(paragraphs\) or `choice` |
         | `choices` | for a choice field: the choices, split by vertical bars |
         | `required` | `yes` when it must be filled in before submitting |
-        | `max` | the most characters: 500 for text and 8000 for long by default, in each chapter for a field in chapters |
+        | `max` | the most characters: 500 for text and as many as an attribute holds for long by default, in each chapter for a field in chapters |
         | `order` | where it comes in its section |
         | `help` | a line shown under an empty field |
         | `attribute` | the attribute on the character that holds the answer: the key by default. One with a `*` is a pattern, and the field comes in chapters \(`+help app chapters`\) |
