@@ -277,17 +277,19 @@ public class JobsIntegrationTests
 			await As(player, "+request/softcode Code help=think [add(1,2)]; @pemit %#=hi%r");
 
 			var lists = new List<string>();
-			foreach (var name in new[] { "+job", "+jobs", "+myjob", "+myjobs", "+ticket", "+tickets" })
+			foreach (var name in new[] { "+job", "+jobs", "+myjob", "+myjobs", "+ticket", "+tickets", "+requests" })
 			{
 				lists.Add(await As(player, name));
 			}
 
 			await Assert.That(lists.Distinct().Count()).IsEqualTo(1)
-				.Because("+job, +jobs, +myjob, +myjobs, +ticket and +tickets behave alike");
+				.Because("+job, +jobs, +myjob, +myjobs, +ticket, +tickets and +requests behave alike");
 			await Assert.That(lists[0]).Contains("Broken exit").And.Contains("Building");
 
 			await Assert.That(await As(player, "+tickets 2")).Contains("think [add(1,2)]; @pemit %#=hi%r")
 				.Because("a /softcode message shows exactly as typed");
+			await Assert.That(await As(player, "+request 1")).Contains("The north exit goes nowhere.")
+				.Because("+request <#> reads a job, as in AnomalyJobs");
 
 			await Assert.That(await As(player, "+job/frobnicate 1")).Contains("+job has no /frobnicate switch.");
 			await Assert.That(await As(player, "+job/reply 99=Hello?")).Contains("There is no job 99.");

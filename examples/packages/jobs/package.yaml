@@ -1,7 +1,7 @@
 format: "1.16"
 package: jobs
 title: "Jobs"
-version: 1.14.1
+version: 1.14.2
 authors: [SharpMUSH]
 description: "Jobs: requests from players to staff, worked in buckets, with the +job/+request commands players of AnomalyJobs and Volund's job system know, and the routes the jobs-app portal application reads."
 license: MIT
@@ -427,19 +427,19 @@ objects:
         Checklist is up to 20 steps of up to 100 characters, separated by |. Start a step with scene: to ask for a scene log. Empty has none.
 
       # ---- commands -------------------------------------------------------------
-      # +job, +jobs, +myjob, +myjobs, +ticket and +tickets: one command. Which word is typed changes
+      # +job, +jobs, +myjob, +myjobs, +ticket, +tickets and +requests: one command. Which word is typed changes
       # nothing; what a person sees and may do comes from their permissions and the job. %1 is the
       # switches, %2 what follows, both exactly as typed.
       CMD`JOB:
         value: |-
-          $(?is)^\+(?\:my)?(?\:jobs?|tickets?)(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2)[setq(cmd_switch_matched,u({{jobs}}/FUN`SWITCH`MATCH,%q<cmd_switch>,JOB))]; @assert cor(not(strlen(%q<cmd_switch>)),strlen(%q<cmd_switch_matched>))=@pemit %#=notice(JOBS,uargs({{jobs}}/FUN`ERROR`SWITCH,switch,%q<cmd_switch>,kind,JOB,command,+job,topic,jobs commands),warn); think setqm(cmd_switch,%q<cmd_switch_matched>,
+          $(?is)^\+(?\:my)?(?\:jobs?|tickets?|requests)(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2)[setq(cmd_switch_matched,u({{jobs}}/FUN`SWITCH`MATCH,%q<cmd_switch>,JOB))]; @assert cor(not(strlen(%q<cmd_switch>)),strlen(%q<cmd_switch_matched>))=@pemit %#=notice(JOBS,uargs({{jobs}}/FUN`ERROR`SWITCH,switch,%q<cmd_switch>,kind,JOB,command,+job,topic,jobs commands),warn); think setqm(cmd_switch,%q<cmd_switch_matched>,
           cmd_route,u({{jobs}}/FUN`COMMAND`ROUTE,%q<cmd_switch>,%q<cmd_argument>)); @assert cor(not(strlen(%q<cmd_page>)),member(get({{jobs}}/DATA`PAGE`ROUTES),%q<cmd_route>))=@pemit %#=notice(JOBS,if(strlen(%q<cmd_switch>),+job/%q<cmd_switch>,+job <#>) takes no page number.,warn); @include {{jobs}}/INC`JOB`%q<cmd_route>
         flags: [REGEXP]
-      # +request [<bucket>/]<title>=<text>. What comes before the first / names a bucket only when it is
+      # +request [<bucket>/]<title>=<text>, or +request <#> to read a job. What comes before the first / names a bucket only when it is
       # a bucket's full name, so "+request Help w/ exits=..." is a title in the default bucket.
       CMD`REQUEST:
         value: |-
-          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2); @break strmatch(%q<cmd_switch>,draft)={@include {{jobs}}/INC`DRAFT}; @assert not(strlen(%q<cmd_switch>%q<cmd_page>))=@pemit %#=notice(JOBS,+request has no /%q<cmd_switch>%q<cmd_page> switch. Add /softcode to show your text as typed.,warn); @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn); think setq(file_bucket,if(strmatch(%q<cmd_left_side>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<cmd_left_side>,/),%#))); @include/args {{jobs}}/INC`FILE`CHECKED=bucket,firstof(%q<file_bucket>,u({{jobs}}/FUN`BUCKET`FIND,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))),title,if(strlen(%q<file_bucket>),trim(after(%q<cmd_left_side>,/)),%q<cmd_left_side>),text,%q<cmd_right_side>
+          $(?is)^\+request(/\S*)?(?\: +(.*))?$: think u({{jobs}}/FUN`COMMAND`PARSE,%1,%2); @break strmatch(%q<cmd_switch>,draft)={@include {{jobs}}/INC`DRAFT}; @break cand(not(strlen(%q<cmd_switch>%q<cmd_page>)),not(%q<cmd_has_equals>),isint(%q<cmd_argument>))={@include {{jobs}}/INC`JOB`VIEW}; @assert not(strlen(%q<cmd_switch>%q<cmd_page>))=@pemit %#=notice(JOBS,+request has no /%q<cmd_switch>%q<cmd_page> switch. Add /softcode to show your text as typed.,warn); @assert cand(%q<cmd_has_equals>,strlen(%q<cmd_left_side>))=@pemit %#=notice(JOBS,+request [chr(91)]<bucket>/[chr(93)]<title>=<text>,warn); think setq(file_bucket,if(strmatch(%q<cmd_left_side>,*/*),u({{jobs}}/FUN`BUCKET`SEEN,before(%q<cmd_left_side>,/),%#))); @include/args {{jobs}}/INC`FILE`CHECKED=bucket,firstof(%q<file_bucket>,u({{jobs}}/FUN`BUCKET`FIND,get({{jobs}}/DATA`CONFIG`DEFAULT-BUCKET))),title,if(strlen(%q<file_bucket>),trim(after(%q<cmd_left_side>,/)),%q<cmd_left_side>),text,%q<cmd_right_side>
         flags: [REGEXP]
       # +bug, +typo, +pitch and +apply <title>=<text>: +request into a set bucket (DATA`CONFIG`<word>-BUCKET).
       CMD`SHORTCUT:
@@ -1828,7 +1828,7 @@ objects:
       # sets them on every boot. /noparse and /rsnoparse hand the hooks the text as typed; /inline runs them
       # in place, as a built-in command would run.
       STARTUP: |-
-        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`JOB}; @command/add/noparse/rsnoparse +request; @hook/override/inline +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
+        @dolist/inline +job +jobs +myjob +myjobs +ticket +tickets +requests={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`JOB}; @command/add/noparse/rsnoparse +request; @hook/override/inline +request={{jobs}},CMD`REQUEST; @dolist/inline +bug +typo +pitch +apply={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`SHORTCUT}; @dolist/inline +bucket +buckets={@command/add/noparse/rsnoparse ##; @hook/override/inline ##={{jobs}},CMD`BUCKET}; @function job={{jobs}},FUN`API`JOB; @function jobs={{jobs}},FUN`API`JOBS; @function jobentries={{jobs}},FUN`API`JOBENTRIES; &DATA`TICK`RUN {{jobs}}=secs()[rand(100000)]; @trigger {{jobs}}/TRIG`TICK=get({{jobs}}/DATA`TICK`RUN)
       AINSTALL: |-
         @teleport {{jobs}}=#2; @trigger {{jobs}}/STARTUP
       # After an update: the commands, functions and timer again.
@@ -2329,7 +2329,7 @@ objects:
         - `+jobs`: your open jobs, and for staff, what needs them.
         - `+job <#>`: read one. `+job/reply <#>=<text>` answers it.
 
-        `+job`, `+jobs`, `+myjob`, `+myjobs`, `+ticket` and `+tickets` are the same command, so use the one you know.
+        `+job`, `+jobs`, `+myjob`, `+myjobs`, `+ticket`, `+tickets` and `+requests` are the same command, and `+request <#>` reads a job, so use the one you know.
       HELP`REQUEST: |-
         ## Filing
 
