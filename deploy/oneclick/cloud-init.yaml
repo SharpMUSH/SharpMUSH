@@ -4,8 +4,9 @@
 # below; every line may stay empty. A few minutes after the server boots, log in over SSH: the
 # welcome message has the link that finishes setup in your browser.
 #
-# Your provider keeps a copy of this text with the server, so prefer a Cloudflare API token limited to
-# the one zone, and revoke it once the server is up (the installer only needs it once).
+# Your provider keeps a copy of this text with the server, and any process on it can read that copy
+# back, so prefer a Cloudflare API token limited to the one zone and revoke it once the server is up
+# (the installer only needs it once). Backup keys are added after launch over SSH, for the same reason.
 write_files:
   - path: /root/sharpmush-answers.env
     permissions: "0600"
@@ -17,13 +18,6 @@ write_files:
       CLOUDFLARE_API_TOKEN=
       # Optional: an existing tunnel's token instead (point its hostname at http://caddy:80).
       CLOUDFLARE_TUNNEL_TOKEN=
-      # Optional nightly backups, e.g. b2:bucket:sharpmush or s3:https://<account>.r2.cloudflarestorage.com/bucket
-      RESTIC_REPOSITORY=
-      RESTIC_PASSWORD=
-      B2_ACCOUNT_ID=
-      B2_ACCOUNT_KEY=
-      AWS_ACCESS_KEY_ID=
-      AWS_SECRET_ACCESS_KEY=
       # Which version of the installer and its files to use.
       SHARPMUSH_SOURCE_REF=main
 
