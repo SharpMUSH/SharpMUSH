@@ -16,7 +16,7 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 	private static readonly bool Shaped =
 		typeof(TRequest) != typeof(GetObjectNodeByNumberQuery) && ObjectShaped<TResponse>.Supported;
 
-	public async ValueTask<TResponse> Handle(
+	public ValueTask<TResponse> Handle(
 		TRequest message,
 		MessageHandlerDelegate<TRequest, TResponse> next,
 		CancellationToken cancellationToken
@@ -24,15 +24,21 @@ public class QueryCachingBehavior<TRequest, TResponse>(IFusionCache cache, Objec
 	{
 		if (Shaped)
 		{
-			return await HandleShapedAsync(message, next, cancellationToken);
+			return HandleShapedAsync(message, next, cancellationToken);
 		}
 
 		if (message is not GetObjectNodeByNumberQuery
 			&& !(message.Profile == CacheEntryProfile.Object && CacheKeys.TryParseObjectNumber(message.CacheKey, out _)))
 		{
-			return await HandleValueAsync(message, next, cancellationToken);
+			return HandleValueAsync(message, next, cancellationToken);
 		}
 
+		return HandleObjectAsync(message, next, cancellationToken);
+	}
+
+	private async ValueTask<TResponse> HandleObjectAsync(TRequest message, MessageHandlerDelegate<TRequest, TResponse> next,
+		CancellationToken cancellationToken)
+	{
 		// A key-invalidated object entry carries no tag stamp, so a write that lands while the factory
 		// runs would leave the stored entry pre-write. The version is read before and compared after
 		// the store: the removal then happens after the store in every interleaving (see ObjectVersions).

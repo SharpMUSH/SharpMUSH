@@ -20,72 +20,76 @@ public class StreamQueryCachingBehavior<TRequest, TResponse>(IFusionCache cache,
 	// cache on each read, so every result hands out the one instance per object (see IObjectShaped).
 	private static readonly bool Shaped = ObjectShaped<TResponse>.Supported;
 
-	public async IAsyncEnumerable<TResponse> Handle(
+	// Two iterators rather than one, so a read carries only its own branch's state.
+	public IAsyncEnumerable<TResponse> Handle(
 		TRequest message,
 		StreamHandlerDelegate<TRequest, TResponse> next,
-		[EnumeratorCancellation] CancellationToken cancellationToken
+		CancellationToken cancellationToken
 	)
+		=> Shaped ? HandleShaped(message, next, cancellationToken) : HandleList(message, next, cancellationToken);
+
+	private async IAsyncEnumerable<TResponse> HandleShaped(TRequest message, StreamHandlerDelegate<TRequest, TResponse> next,
+		[EnumeratorCancellation] CancellationToken cancellationToken)
 	{
-		if (Shaped)
+		// On a miss the handler has just resolved every object through the node cache; those are what
+		// a re-resolve of the stored refs would hand out, so a list this call stored is yielded as read
+		// rather than resolved a second time.
+		CachedValue<CachedObjectRefs>? produced = null;
+		TResponse[] read = [];
+		var stored = await cache.GetOrSetAsync<CachedValue<CachedObjectRefs>>(message.CacheKey,
+			async (ctx, ct) =>
+			{
+				var epoch = versions.Epoch;
+				var values = await next(message, ct)
+					.Where(value => ObjectShaped<TResponse>.RefOf(value).HasValue)
+					.ToArrayAsync(ct);
+				var refs = values.Select(value => ObjectShaped<TResponse>.RefOf(value)!.Value).ToArray();
+				ctx.Options.Size = Math.Clamp(refs.Length, 1, CacheEntryProfiles.MaxEntrySize);
+				EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number));
+				read = values;
+				return produced = new CachedValue<CachedObjectRefs>(new CachedObjectRefs(refs), epoch, ctx.Tags ?? []);
+			},
+			options: CacheEntryProfiles.For(message.Profile),
+			tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
+			token: cancellationToken);
+
+		if (!stored.IsCurrent(versions))
 		{
-			// On a miss the handler has just resolved every object through the node cache; those are what
-			// a re-resolve of the stored refs would hand out, so a list this call stored is yielded as read
-			// rather than resolved a second time.
-			CachedValue<CachedObjectRefs>? produced = null;
-			TResponse[] read = [];
-			var stored = await cache.GetOrSetAsync<CachedValue<CachedObjectRefs>>(message.CacheKey,
-				async (ctx, ct) =>
-				{
-					var epoch = versions.Epoch;
-					var values = await next(message, ct)
-						.Where(value => ObjectShaped<TResponse>.RefOf(value).HasValue)
-						.ToArrayAsync(ct);
-					var refs = values.Select(value => ObjectShaped<TResponse>.RefOf(value)!.Value).ToArray();
-					ctx.Options.Size = Math.Clamp(refs.Length, 1, CacheEntryProfiles.MaxEntrySize);
-					EmbeddedObjectTags.Apply(ctx, message, refs.Select(r => r.Number));
-					read = values;
-					return produced = new CachedValue<CachedObjectRefs>(new CachedObjectRefs(refs), epoch, ctx.Tags ?? []);
-				},
-				options: CacheEntryProfiles.For(message.Profile),
-				tags: message.CacheTags.Length > 0 ? message.CacheTags : null,
-				token: cancellationToken);
-
-			if (!stored.IsCurrent(versions))
+			await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
+			if (!ReferenceEquals(stored, produced))
 			{
-				await cache.RemoveAsync(message.CacheKey, token: CancellationToken.None);
-				if (!ReferenceEquals(stored, produced))
-				{
-					await foreach (var value in next(message, cancellationToken).WithCancellation(cancellationToken)) yield return value;
-					yield break;
-				}
-			}
-
-			if (ReferenceEquals(stored, produced))
-			{
-				foreach (var value in read)
-				{
-					// The resolved values are already in hand; the token still ends the walk, as each lookup did.
-					cancellationToken.ThrowIfCancellationRequested();
-					yield return value;
-				}
-
+				await foreach (var value in next(message, cancellationToken).WithCancellation(cancellationToken)) yield return value;
 				yield break;
 			}
+		}
 
-			foreach (var reference in stored.Value.Refs)
+		if (ReferenceEquals(stored, produced))
+		{
+			foreach (var value in read)
 			{
-				// An object gone since the list was stored is simply not in it any more, and the full
-				// object id means a recycled number is gone too, not the object that took its place.
-				var node = await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken);
-				if (ObjectShaped<TResponse>.TryFromNode(node, out var value))
-				{
-					yield return value;
-				}
+				// The resolved values are already in hand; the token still ends the walk, as each lookup did.
+				cancellationToken.ThrowIfCancellationRequested();
+				yield return value;
 			}
 
 			yield break;
 		}
 
+		foreach (var reference in stored.Value.Refs)
+		{
+			// An object gone since the list was stored is simply not in it any more, and the full
+			// object id means a recycled number is gone too, not the object that took its place.
+			var node = await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken);
+			if (ObjectShaped<TResponse>.TryFromNode(node, out var value))
+			{
+				yield return value;
+			}
+		}
+	}
+
+	private async IAsyncEnumerable<TResponse> HandleList(TRequest message, StreamHandlerDelegate<TRequest, TResponse> next,
+		[EnumeratorCancellation] CancellationToken cancellationToken)
+	{
 		CachedValue<List<TResponse>>? producedList = null;
 		var list = await cache.GetOrSetAsync<CachedValue<List<TResponse>>>(message.CacheKey,
 			async (ctx, ct) =>
