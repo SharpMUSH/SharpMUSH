@@ -1,5 +1,6 @@
 using System.Text;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
 using Microsoft.Extensions.Logging;
 using Testcontainers.Nats;
 
@@ -23,6 +24,9 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
 
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	// Replaces NatsBuilder's default command, whose --debug --trace logs every message the bus
+	// carries: one Integration run wrote a 2.7 GB container log.
+	private static readonly string[] NatsCommand = ["-c", NatsConfigPath, "--http_port", "8222", "--jetstream"];
 
 	// JetStream reserves each stream's MaxBytes against max_file_store when the stream is created, and
 	// left unset that limit is 75% of the disk that happens to be free. Short-lived streams with budgets
@@ -44,7 +48,7 @@ public sealed class NatsTestContainerStrategy : NatsStrategy
 		{
 			var builder = new NatsBuilder(NatsImage)
 				.WithResourceMapping(NatsConfig, NatsConfigPath)
-				.WithCommand("-c", NatsConfigPath)
+				.WithCommand(new OverwriteEnumerable<string>(NatsCommand))
 				.WithLabel("reuse-id", "SharpMUSH-NATS")
 				.WithReuse(true)   // shared across Server and ConnectionServer processes
 													 // Port-based readiness instead of the image default's log-message wait. A reused

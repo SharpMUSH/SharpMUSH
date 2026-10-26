@@ -14,46 +14,43 @@ public class NetworkCommandTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
+	/// <summary>
+	/// PennMUSH <c>cmd_http</c> (<c>cmds.c:1870-1877</c>): a mortal is refused, and a wizard who names no
+	/// URL is asked for one.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask HttpCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@http https://example.com"));
+		var mortal = await Players.PlayerAsync("HttpMortal");
+		var wizard = await Players.WizardAsync("HttpWizard");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "What do you want to query?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(await Players.HeardRunning(mortal, "@http")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(wizard, "@http")).IsEquivalentTo(["What do you want to query?"]);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SqlCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@sql SELECT * FROM test"));
+		var mortal = await Players.PlayerAsync("SqlMortal");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(await Players.HeardRunning(mortal, "@sql SELECT 1")).IsEquivalentTo(["Permission denied."]);
 	}
 
+	/// <summary>@mapsql runs the attribute once per row, with the row number in %0 and the columns from %1.</summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask MapsqlCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@mapsql SELECT * FROM test"));
+		var wizard = await Players.WizardAsync("MapsqlWizard");
+		var token = TestIsolationHelpers.GenerateUniqueName("MapsqlRow");
+		await Players.RunAsync(wizard, "&ROW me=@pemit me=row %0:%1");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "#-1 SQL IS NOT ENABLED", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var heard = await Players.HeardRunning(wizard, $"@mapsql me/ROW=SELECT '{token}'");
+
+		await Assert.That(heard).Contains($"row 1:{token}");
 	}
 
 	[Test]
@@ -70,29 +67,25 @@ public class NetworkCommandTests
 				Arg.Any<SharpMessage>(), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
+	/// <summary>
+	/// PennMUSH <c>@sockset [&lt;descriptor&gt;][=&lt;option&gt;, &lt;value&gt;]</c>: with no descriptor
+	/// it sets the player's own connection.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SocksetCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@sockset #1=option"));
+		var player = await Players.PlayerAsync("SocksetCmd");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "@SOCKSET: Socket option configuration not yet implemented.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Players.RunAsync(player, "@sockset =width,100");
+
+		await Assert.That(await Players.HeardRunning(player, "think width(me)")).IsEquivalentTo(["100"]);
 	}
 
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SlaveCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@slave"));
+		var mortal = await Players.PlayerAsync("SlaveMortal");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Slave command does nothing for SharpMUSH.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(await Players.HeardRunning(mortal, "@slave")).IsEquivalentTo(["Permission denied."]);
 	}
 }
