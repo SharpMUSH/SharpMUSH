@@ -23,6 +23,7 @@ using SharpMUSH.Library.Services.RecurringJobs;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using TUnit.AspNetCore;
 using TUnit.Core.Interfaces;
 
@@ -278,6 +279,10 @@ public class TelnetIntegrationTests
 	private const int ReceiveTimeoutMs = 20_000;
 	private const int PollingIntervalMs = 200;
 
+	// The connect screen styles its text ("Welcome to \e[1mSharpMUSH\e[0m!"), so the reads compare it
+	// without the escape sequences.
+	private static readonly Regex AnsiEscape = new(@"\x1b\[[0-9;]*[A-Za-z]", RegexOptions.Compiled);
+
 	[ClassDataSource<TelnetIntegrationFixture>(Shared = SharedType.PerClass)]
 	public required TelnetIntegrationFixture Fixture { get; init; }
 
@@ -368,7 +373,7 @@ public class TelnetIntegrationTests
 
 	/// <summary>
 	/// Reads from <paramref name="stream"/> polling every <see cref="PollingIntervalMs"/> ms,
-	/// accumulating stripped text, until <paramref name="stopCondition"/> returns true or the
+	/// accumulating text with telnet negotiation and ANSI escapes stripped, until <paramref name="stopCondition"/> returns true or the
 	/// cancellation token fires.
 	/// </summary>
 	private static async Task<string> ReadUntilAsync(
@@ -387,7 +392,7 @@ public class TelnetIntegrationTests
 				if (bytesRead > 0)
 				{
 					received.Append(StripTelnetControlBytes(buffer, bytesRead));
-					if (stopCondition(received.ToString()))
+					if (stopCondition(AnsiEscape.Replace(received.ToString(), "")))
 						break;
 				}
 			}
@@ -398,7 +403,7 @@ public class TelnetIntegrationTests
 			}
 		}
 
-		return received.ToString();
+		return AnsiEscape.Replace(received.ToString(), "");
 	}
 
 	/// <summary>

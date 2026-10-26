@@ -22,19 +22,6 @@ public class QuotaCommandTests
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private IOptionsWrapper<SharpMUSHOptions> Configuration => WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
 
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask SquotaCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@squota #1=100"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Quota system disabled.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
 	/// <summary>
 	/// Reproduces the @quota/set cache-invalidation gap: SetPlayerQuotaCommand wrote the new
 	/// quota to the DB (fixed in e88c78a7) but only invalidated the PlayerList tag, which

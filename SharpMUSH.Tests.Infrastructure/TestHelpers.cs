@@ -134,6 +134,7 @@ public static class TestHelpers
 		private readonly ConcurrentDictionary<long, ConcurrentQueue<string>> _byHandle = new();
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<SharpMessage>> _rawByRecipient = new();
 		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<Delivery>> _deliveriesByRecipient = new();
+		private readonly ConcurrentDictionary<DBRef, ConcurrentQueue<string>> _promptsByRecipient = new();
 
 		internal void Record(DBRef recipient, string message)
 			=> _byRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
@@ -166,6 +167,14 @@ public static class TestHelpers
 		/// </summary>
 		internal void RecordHandle(long handle, string message)
 			=> _byHandle.GetOrAdd(handle, _ => new ConcurrentQueue<string>()).Enqueue(message);
+
+		/// <summary>
+		/// Records a prompt (<c>@prompt</c>, <c>prompt()</c>): text sent with a telnet GOAHEAD, through
+		/// <see cref="INotifyService.Prompt(DBRef, SharpMessage, AnySharpObject?, INotifyService.NotificationType)"/>
+		/// rather than <c>Notify</c>, so it is kept apart from <see cref="For(DBRef)"/>.
+		/// </summary>
+		internal void RecordPrompt(DBRef recipient, string message)
+			=> _promptsByRecipient.GetOrAdd(recipient, _ => new ConcurrentQueue<string>()).Enqueue(message);
 
 		/// <summary>Everything <paramref name="who"/> has been notified of so far, in order.</summary>
 		public List<string> For(DBRef who)
@@ -237,6 +246,14 @@ public static class TestHelpers
 		/// <summary>How many notifications connection <paramref name="handle"/> has had, for windowing.</summary>
 		public int CountForHandle(long handle)
 			=> _byHandle.TryGetValue(handle, out var queue) ? queue.Count : 0;
+
+		/// <summary>Every prompt <paramref name="who"/> has been sent so far, in order.</summary>
+		public List<string> PromptsFor(DBRef who)
+			=> _promptsByRecipient.TryGetValue(who, out var queue) ? [.. queue] : [];
+
+		/// <summary>How many prompts <paramref name="who"/> has had, for windowing.</summary>
+		public int PromptCountFor(DBRef who)
+			=> _promptsByRecipient.TryGetValue(who, out var queue) ? queue.Count : 0;
 	}
 
 	/// <summary>
@@ -315,6 +332,17 @@ public static class TestHelpers
 				call.ArgAt<SharpMessage>(1),
 				call.ArgAt<AnySharpObject?>(2),
 				call.ArgAt<INotifyService.NotificationType>(3)));
+
+		notifier
+			.When(x => x.Prompt(Arg.Any<DBRef>(), Arg.Any<SharpMessage>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call => recorder?.RecordPrompt(call.ArgAt<DBRef>(0), PlainText(call.ArgAt<SharpMessage>(1))));
+
+		notifier
+			.When(x => x.Prompt(Arg.Any<AnySharpObject>(), Arg.Any<SharpMessage>(),
+				Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>()))
+			.Do(call => recorder?.RecordPrompt(call.ArgAt<AnySharpObject>(0).Object().DBRef,
+				PlainText(call.ArgAt<SharpMessage>(1))));
 
 		// Localized notifications (e.g. @include's "No such attribute: …") must also reach the
 		// HTTP capture, mirroring the real NotifyService — formatted with the neutral locale. The

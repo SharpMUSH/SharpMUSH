@@ -14,6 +14,7 @@ public class MiscCommandTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
 	[Test]
@@ -70,56 +71,46 @@ public class MiscCommandTests
 		await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(NotifyService, nameof(ErrorMessages.Notifications.GrepNoMatchingAttributesFound), executor, executor)).IsTrue();
 	}
 
+	/// <summary>PennMUSH <c>cmd_session</c> (<c>cmds.c:1810-1816</c>): a mortal gets the mortal WHO.</summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask SessionCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("session"));
+		var player = await Players.PlayerAsync("SessionCmd");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "Player")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var lines = (await Players.HeardRunning(player, "session")).Single().Split('\n');
+
+		await Assert.That(lines[0]).StartsWith("Player Name");
+		await Assert.That(lines.Any(line => line.StartsWith(player.Name, StringComparison.Ordinal))).IsTrue();
 	}
 
+	/// <summary>Once logged in, <c>connect</c> is not a command, so PennMUSH answers with its Huh? message.</summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask ConnectCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("connect player password"));
+		var player = await Players.PlayerAsync("ConnectCmd");
+		var before = WebAppFactoryArg.Notifications.CountForHandle(player.Handle);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), TestHelpers.MatchingMessage("Huh?  (Type \"help\" for help.)"), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Players.RunAsync(player, "connect player password");
+
+		await Assert.That(WebAppFactoryArg.Notifications.ForHandle(player.Handle).Skip(before))
+			.IsEquivalentTo(["Huh?  (Type \"help\" for help.)"]);
 	}
 
+	/// <summary>@prompt and @nsprompt send the message to the target as a prompt and nothing else.</summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask PromptCommand()
+	[Arguments("@prompt")]
+	[Arguments("@nsprompt")]
+	public async ValueTask PromptCommand(string command)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@prompt #1=Enter value:"));
+		var room = await Players.DigRoomAsync("PromptRoom");
+		var sender = await Players.PlayerAsync("PromptSender", room);
+		var target = await Players.PlayerAsync("PromptTarget", room);
+		var token = TestIsolationHelpers.GenerateUniqueName("Prompt");
+		var promptsBefore = WebAppFactoryArg.Notifications.PromptCountFor(target.DbRef);
 
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
-	}
+		var heard = await Players.HeardWhile(target, () => Players.RunAsync(sender, $"{command}/silent {target.Name}={token}"));
 
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask NspromptCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@nsprompt #1=Enter value:"));
-
-		await NotifyService
-			.DidNotReceive()
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Any<SharpMessage>(), Arg.Any<AnySharpObject?>(), Arg.Any<INotifyService.NotificationType>());
+		await Assert.That(WebAppFactoryArg.Notifications.PromptsFor(target.DbRef).Skip(promptsBefore)).IsEquivalentTo([token]);
+		await Assert.That(heard).IsEmpty();
 	}
 }

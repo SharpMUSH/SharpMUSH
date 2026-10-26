@@ -13,32 +13,23 @@ public class NotificationCommandTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 
+	/// <summary>
+	/// <c>@message</c> tells each recipient its attribute evaluated with the arguments, or the default
+	/// message when it has no such attribute.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask MessageCommand()
+	[Arguments("MSGFMT", "Got: token")]
+	[Arguments("NOSUCHATTR", "Default here")]
+	public async ValueTask MessageCommand(string attribute, string expected)
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@message #1=Test message"));
+		var player = await Players.PlayerAsync("MessageCmd");
+		await Players.RunAsync(player, "&MSGFMT me=Got: %0");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextStartsWith(msg, "#-1")), TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
+		var heard = await Players.HeardRunning(player, $"@message me=Default here,{attribute},token");
 
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask SuggestCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("@suggest Test suggestion"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Category 'test suggestion' does not exist.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(heard).IsEquivalentTo([expected]);
 	}
 }

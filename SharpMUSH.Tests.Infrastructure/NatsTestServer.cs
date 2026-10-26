@@ -1,3 +1,4 @@
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using Testcontainers.Nats;
 using TUnit.Core.Interfaces;
@@ -13,6 +14,9 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 	private const string NatsImage = "nats:2.14-alpine";
 	private const int MaxPayloadBytes = 6 * 1024 * 1024; // 6 MB
 	private const string NatsConfigPath = "/etc/nats/nats.conf";
+	// Replaces NatsBuilder's default command, whose --debug --trace logs every message the bus
+	// carries: one Integration run wrote a 2.7 GB container log.
+	private static readonly string[] NatsCommand = ["-c", NatsConfigPath, "--http_port", "8222", "--jetstream"];
 	// JetStream reserves each stream's MaxBytes against max_file_store when the stream is created, and
 	// left unset that limit is 75% of the disk that happens to be free. Short-lived streams with budgets
 	// (docs/design/messaging-retention.md) would then fail with "insufficient storage resources" on a
@@ -28,7 +32,7 @@ public class NatsTestServer : IAsyncInitializer, IAsyncDisposable
 	public IContainer Instance => field ??= new NatsBuilder(NatsImage)
 		.WithNetwork(DockerNetwork.Instance)
 		.WithBindMount(_configTempFile, NatsConfigPath)
-		.WithCommand("-c", NatsConfigPath)
+		.WithCommand(new OverwriteEnumerable<string>(NatsCommand))
 		.WithReuse(false)
 		.WithLabel(TestContainerJanitor.OwnerLabels)
 		.WithLogger(TestDiagnostics.ContainerLogger)

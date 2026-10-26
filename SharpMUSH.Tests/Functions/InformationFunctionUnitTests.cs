@@ -31,12 +31,11 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo("PennMUSH Emulation by SharpMUSH");
 	}
 
-	[Category("NotImplemented")]
-	[Test, Skip("Not Yet Implemented")]
+	[Test]
 	public async Task Name()
 	{
-		var result = await Parser.EvaluateAsync(MarkupText.Plain("name(%#)"));
-		await Assert.That(result.ToPlainText()).IsEqualTo("One");
+		var (player, name) = await MintPlayerAsync("NameFn");
+		await Assert.That(await Eval($"name({player})")).IsEqualTo(name);
 	}
 
 	[Test]

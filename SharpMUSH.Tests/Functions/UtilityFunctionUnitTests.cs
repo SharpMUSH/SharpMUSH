@@ -794,18 +794,8 @@ public class UtilityFunctionUnitTests
 			.Because("a freshly created thing is not a wizard - without this the assertion above proves nothing");
 	}
 
-	/// <summary>
-	/// A bare dbref is an object lock: only that object passes it. SharpMUSH returns 1 for every
-	/// victim, so a lock written as <c>@lock &lt;obj&gt;=#123</c> admits everyone.
-	///
-	/// <para>Measured alongside <see cref="TestLock_EvaluateLock"/>, which shows the evaluator
-	/// itself works - <c>testlock(FLAG^WIZARD, ...)</c> correctly returns 1 for #1 and 0 for a new
-	/// thing. Only the bare-dbref key form is broken, so this is boolexp parsing rather than lock
-	/// evaluation. Skipped rather than deleted so the gap stays visible and named; fixing it means
-	/// touching the lock parser and belongs in its own change.</para>
-	/// </summary>
+	/// <summary>A bare dbref is an object lock: only that object passes it.</summary>
 	[Test]
-	[Skip("Bare-dbref lock keys always pass - see the doc comment. Tracked separately.")]
 	public async Task TestLock_BareDbrefKey_OnlyThatObjectPasses()
 	{
 		var subject = (await Parser.FunctionParse(MarkupText.Plain("create(test_obj_TESTLOCK_subject)")))?.Message.ToPlainText()!;

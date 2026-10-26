@@ -18,6 +18,7 @@ public class MovementCommandTests
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
 
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 
@@ -304,15 +305,31 @@ public class MovementCommandTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>
+	/// PennMUSH <c>do_enter</c> (<c>move.c:922-960</c>): a thing the player controls admits them
+	/// without ENTER_OK.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask EnterCommand()
 	{
-		var player = await CreateTestPlayerAsync("EnterCmd");
-		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("enter #1"));
+		var player = await Players.PlayerAsync("EnterCmd");
+		var box = TestIsolationHelpers.GenerateUniqueName("EnterBox");
+		await Players.RunAsync(player, $"@create {box}");
+		await Players.RunAsync(player, $"drop {box}");
 
-		await Assert.That(ToldThemselves(player.DbRef, message => message == "You can't enter that.")).IsTrue();
+		await Players.RunAsync(player, $"enter {box}");
+
+		await Assert.That(await Players.HeardRunning(player, "think name(loc(me))")).IsEquivalentTo([box]);
+	}
+
+	/// <summary>PennMUSH <c>do_enter</c> (<c>move.c:935-937</c>): a room cannot be entered.</summary>
+	[Test]
+	public async ValueTask EnterRoomIsDenied()
+	{
+		var room = await Players.DigRoomAsync("EnterRoomTarget");
+		var wizard = await Players.WizardAsync("EnterRoomWizard");
+
+		await Assert.That(await Players.HeardRunning(wizard, $"enter {room}")).IsEquivalentTo(["Permission denied."]);
 	}
 
 	[Test]

@@ -15,10 +15,14 @@ namespace SharpMUSH.Tests.Integration.Mcp;
 /// <c>validate</c> tool against the live parser.
 ///
 /// Marked <see cref="ExplicitAttribute"/> because, like the other integration tests here, they
-/// so are excluded from the default (no-Docker) test run. The MCP endpoint is enabled for the
+/// are excluded from the default (no-Docker) test run. The MCP endpoint is enabled for the
 /// test host via <c>ServerTestWebApplicationBuilderFactory.ConfigureStartupConfiguration</c>.
+///
+/// The endpoint answers 429 past <c>Mcp:MaxConcurrentRequests</c> (4) requests in flight
+/// (<c>McpHttpAdmission</c>), and the SDK client does not retry, so the tests run one at a time.
 /// </summary>
 [Explicit]
+[NotInParallel]
 [ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 public class McpEndpointTests(ServerWebAppFactory factory)
 {

@@ -17,35 +17,10 @@ public class GameCommandTests
 
 	private INotifyService NotifyService => WebAppFactoryArg.Services.GetRequiredService<INotifyService>();
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
+	private OwnRoomPlayers Players => new(WebAppFactoryArg);
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 	private TestHelpers.NotificationRecorder Notifications => WebAppFactoryArg.Notifications;
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask BuyCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("buy sword"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You try to buy 'sword'.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask ScoreCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("score"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "The SCORE command is not supported.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
 
 	[Test]
 	public async ValueTask TeachCommandEchoesToRoomAndExecutesOnce()
@@ -171,56 +146,43 @@ public class GameCommandTests
 
 	private sealed record TeachPlayer(DBRef DbRef, long Handle, string Name);
 
+	/// <summary>
+	/// PennMUSH <c>add_follow</c> (<c>move.c:1253-1259</c>): the leader is told, then the follower gets the
+	/// FOLLOW default.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask FollowCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("follow #1"));
+		var room = await Players.DigRoomAsync("FollowRoom");
+		var leader = await Players.PlayerAsync("FollowLeader", room);
+		var follower = await Players.PlayerAsync("Follower", room);
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You can't follow yourself.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		var followerHeard = new List<string>();
+		var leaderHeard = await Players.HeardWhile(leader, async () =>
+			followerHeard = await Players.HeardRunning(follower, $"follow {leader.Name}"));
+
+		await Assert.That(followerHeard).IsEquivalentTo([$"You begin following {leader.Name}."]);
+		await Assert.That(leaderHeard).IsEquivalentTo([$"{follower.Name} begins following you."]);
 	}
 
+	/// <summary>
+	/// PennMUSH <c>del_follow</c> (<c>move.c:1292-1307</c>): <c>unfollow &lt;leader&gt;</c> tells the leader,
+	/// then gives the follower the UNFOLLOW default.
+	/// </summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask UnfollowCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("unfollow"));
+		var room = await Players.DigRoomAsync("UnfollowRoom");
+		var leader = await Players.PlayerAsync("UnfollowLeader", room);
+		var follower = await Players.PlayerAsync("Unfollower", room);
+		await Players.RunAsync(follower, $"follow {leader.Name}");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You aren't following anyone.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
+		var followerHeard = new List<string>();
+		var leaderHeard = await Players.HeardWhile(leader, async () =>
+			followerHeard = await Players.HeardRunning(follower, $"unfollow {leader.Name}"));
 
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask DesertCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("desert"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You stop following and dismiss all followers.", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
-	}
-
-	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
-	public async ValueTask DismissCommand()
-	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("dismiss #1"));
-
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "You dismiss all your followers. (0 dismissed)", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(followerHeard).IsEquivalentTo([$"You stop following {leader.Name}."]);
+		await Assert.That(leaderHeard).IsEquivalentTo([$"{follower.Name} stops following you."]);
 	}
 
 	[Test]
@@ -264,16 +226,17 @@ public class GameCommandTests
 		await Assert.That(result).IsNotNull();
 	}
 
+	/// <summary>PennMUSH <c>cmd_with</c> (<c>game.c:1389-1422</c>): runs a $-command on that one object.</summary>
 	[Test]
-	[Category("NotImplemented")]
-	[Skip("Not Yet Implemented")]
 	public async ValueTask WithCommand()
 	{
-		var executor = WebAppFactoryArg.ExecutorDBRef;
-		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain("with #1"));
+		var player = await Players.PlayerAsync("WithCmd");
+		var box = TestIsolationHelpers.GenerateUniqueName("WithBox");
+		var marker = TestIsolationHelpers.GenerateUniqueName("WithRan");
+		await Players.RunAsync(player, $"@create {box}");
+		await Players.RunAsync(player, $"&CMD {box}=$withprobe:@pemit %#={marker}");
+		await Players.RunAsync(player, $"@set {box}=!NO_COMMAND");
 
-		await NotifyService
-			.Received(1)
-			.Notify(TestHelpers.MatchingObject(executor), "Do what with them?", TestHelpers.MatchingObject(executor), INotifyService.NotificationType.Announce);
+		await Assert.That(await Players.HeardRunning(player, $"with {box}=withprobe")).IsEquivalentTo([marker]);
 	}
 }
