@@ -1,7 +1,7 @@
 format: "1.16"
 package: info
 title: "Info files and journals"
-version: 1.3.0
+version: 1.3.1
 authors: [SharpMUSH]
 description: "+info and +pinfo files, and a journal per character whose entries can be shared."
 license: MIT
@@ -69,6 +69,10 @@ objects:
         The longest name of a file, or title of an entry, in characters.
       DATA`CONFIG`NAME-LENGTH`LABEL: |-
         Longest name
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
       DATA`CONFIG`LENGTH: |-
         8000
       DATA`CONFIG`LENGTH`TYPE: |-
@@ -245,7 +249,7 @@ objects:
       # %0 text: why it cannot be kept, or nothing.
       FUN`TEXT`PROBLEM:
         value: |-
-          if(gt(strlen(%0),get(%!/DATA`CONFIG`LENGTH)),Keep the text to [get(%!/DATA`CONFIG`LENGTH)] characters.)
+          if(gt(strlen(%0),u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))),Keep the text to [u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))] characters.)
         flags: [funsyntax]
       # %0 typed names, split at commas when there are any, else at spaces. Sets names_found (their objids) and
       # names_missing (what matched no player, |-separated).
@@ -690,7 +694,7 @@ objects:
       INPUT`WRITE`LINE:
         value: |-
           think setqm(write_key,u(%!/FUN`WRITE`KEY),
-          write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),get(%!/DATA`CONFIG`LENGTH))=@input/prompt notice(INFO,That line would take it past [get(%!/DATA`CONFIG`LENGTH)] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
+          write_next,if(hasattr({{info_store}},%q<write_key>`TEXT),get({{info_store}}/%q<write_key>`TEXT)%r%0,%0)); @assert lte(strlen(%q<write_next>),u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH)))=@input/prompt notice(INFO,That line would take it past [u(%!/FUN`CAP,get(%!/DATA`CONFIG`LENGTH))] characters%, so it is left out. .done saves the rest.,warn); &%q<write_key>`TEXT {{info_store}}=%q<write_next>
         flags: [cmdsyntax]
       # .undo: drops the last line.
       INPUT`WRITE`UNDO:

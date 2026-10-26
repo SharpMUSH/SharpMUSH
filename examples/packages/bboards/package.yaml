@@ -887,7 +887,7 @@ objects:
         reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
       # Any other line while writing, %0 exactly as typed: added to the text.
       INPUT`POSTING`TEXT: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));@break strmatch(attrib_set(%q<reader_holder>/BBOARD`READER`TEXT,if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)),#-1*)={@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That line would make it longer than the game can keep%, so it is left out.);@include {{bboards}}/INC`READER`START};@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));@break strmatch(attrib_set(%q<reader_holder>/BBOARD`READER`TEXT,if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)),#-1*)={@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That line would take it past [config(max_attribute_value_length)] bytes%, so it is left out.);@include {{bboards}}/INC`READER`START};@include {{bboards}}/INC`READER`START
       # Shows what the reader is on again.
       INC`READER`LOOK: |-
         think setqm(reader_look_place,get(%q<reader_holder>/BBOARD`HERE),

@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.6.0
+version: 1.6.1
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -397,7 +397,7 @@ objects:
       # Named arguments: list, the list's attribute word (MEMBER, MODERATOR or ADMIN), and listword, its name
       # in a message. %q<frequency_id> and %q<cmd_right> are the frequency and the player, as the command set them.
       INC`DO`LISTADD: |-
-        @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert not(u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>))=@pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] already.,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=squish(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>) %q<target_player>); @pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.,ok)
+        @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert not(u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>))=@pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] already.,warn); think setq(list_next,squish(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>) %q<target_player>)); @assert lte(strlen(%q<list_next>),config(max_attribute_value_length))=@pemit %#=notice(RADIO,[u({{radio}}/FUN`NAME,%q<frequency_id>)] has as many %<listword> as fit in [config(max_attribute_value_length)] bytes.,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=%q<list_next>; @pemit %#=notice(RADIO,[name(%q<target_player>)] is one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.,ok)
       INC`DO`LISTREM: |-
         @assert strlen(setr(target_player,u({{radio}}/FUN`PLAYER,%q<cmd_right>)))=@pemit %#=notice(RADIO,I don't know a player called '%q<cmd_right>'.,warn); @assert u({{radio}}/FUN`ON,%q<frequency_id>,%q<target_player>,%<list>)=@pemit %#=notice(RADIO,[name(%q<target_player>)] is not one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)].,warn); &DATA`FREQUENCY`%q<frequency_id>`LIST`%<list> {{radio}}=remove(get({{radio}}/DATA`FREQUENCY`%q<frequency_id>`LIST`%<list>),%q<target_player>); @pemit %#=notice(RADIO,[name(%q<target_player>)] is no longer one of the %<listword> of [u({{radio}}/FUN`NAME,%q<frequency_id>)].,ok)
 
