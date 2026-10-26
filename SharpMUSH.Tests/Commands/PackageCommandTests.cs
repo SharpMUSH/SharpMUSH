@@ -167,6 +167,6 @@ public class PackageCommandTests
 		await Assert.That(WebAppFactoryArg.Notifications.For(_wizard.DbRef))
 			.DoesNotContain(message => message.StartsWith("#-1 EXCEPTION: ", StringComparison.Ordinal));
 		await ExpectNotify(message =>
-			message == "#-1 COMMAND (@PACKAGE) EXPECTS AT LEAST 1 ARGUMENTS BUT GOT 0");
+			message == "@package: too few arguments (needs 1, got 0). Type: help @package");
 	}
 }

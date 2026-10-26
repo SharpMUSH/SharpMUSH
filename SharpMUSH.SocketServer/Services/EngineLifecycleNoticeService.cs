@@ -19,8 +19,8 @@ public sealed class EngineLifecycleNoticeService(
 			if (timestamp <= _lastEvent) return;
 			_lastEvent = timestamp;
 			var text = ready
-				? "\r\n[SharpMUSH] The game is ready. You may continue.\r\n"
-				: "\r\n[SharpMUSH] The game is restarting. Your connection will remain open; please wait.\r\n";
+				? "\r\nGAME: The game is ready. You may continue.\r\n"
+				: "\r\nGAME: The game is restarting. Your connection will remain open; please wait.\r\n";
 			await Parallel.ForEachAsync(connections.GetAll(), new ParallelOptions
 			{
 				MaxDegreeOfParallelism = 16,

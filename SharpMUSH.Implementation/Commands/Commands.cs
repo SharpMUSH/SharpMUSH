@@ -279,7 +279,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	/// <summary>
 	/// Rejects an invocation carrying fewer arguments than the command declares in
-	/// <see cref="SharpCommandAttribute.MinArgs"/>, reporting the arity the way functions already do.
+	/// <see cref="SharpCommandAttribute.MinArgs"/>: the player is told what was missing and where its help is, and
+	/// the command returns the arity error the way functions do.
 	/// <para>Commands declare MinArgs but the engine never enforced it, so a handler that indexed
 	/// <c>Arguments["0"]</c> without checking threw <see cref="KeyNotFoundException"/> on a bare
 	/// invocation. Enforcing it centrally in the dispatcher was measured and rejected: it pre-empts
@@ -298,11 +299,11 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 			return null;
 		}
 
-		var message = string.Format(ErrorMessages.Returns.TooFewCommandArguments,
-			attribute.Name, attribute.MinArgs, count);
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		await NotifyService.Notify(executor, message, executor);
-		return new CallState(message);
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TooFewCommandArgumentsFormat),
+			executor, attribute.Name.ToLowerInvariant(), attribute.MinArgs, count);
+		return new CallState(string.Format(ErrorMessages.Returns.TooFewCommandArguments,
+			attribute.Name, attribute.MinArgs, count));
 	}
 
 	/// <summary>

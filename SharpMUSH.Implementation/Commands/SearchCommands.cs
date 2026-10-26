@@ -708,7 +708,10 @@ public partial class Commands
 			_ => $"@create {run.ObjectRef}"
 		});
 
-		await foreach (var flag in obj.Flags.Value.Where(flag => !run.SkipDefaults || !IsDefaultFlag(obj.Type, flag.Name)))
+		// The object's type comes back as a flag of its own name; the create line above already makes it.
+		await foreach (var flag in obj.Flags.Value.Where(flag =>
+			!flag.Name.Equals(obj.Type, StringComparison.OrdinalIgnoreCase)
+			&& (!run.SkipDefaults || !IsDefaultFlag(obj.Type, flag.Name))))
 		{
 			run.Add($"@set {run.ObjectRef}={flag.Name}");
 		}

@@ -57,7 +57,7 @@ public class CommandArityTests
 
 		await Assert.That(messages).DoesNotContain(m => m.StartsWith("#-1 EXCEPTION: "));
 		await Assert.That(messages).Contains(
-			$"#-1 COMMAND ({reportedName}) EXPECTS AT LEAST {minArgs} ARGUMENTS BUT GOT 0");
+			$"{command}: too few arguments (needs {minArgs}, got 0). Type: help {command}");
 	}
 
 	/// <summary>
@@ -76,7 +76,7 @@ public class CommandArityTests
 		var messages = NotificationsTo(player.DbRef);
 
 		await Assert.That(messages).DoesNotContain(m => m.StartsWith("#-1 EXCEPTION: "));
-		await Assert.That(messages).Contains("#-1 COMMAND (&) EXPECTS AT LEAST 2 ARGUMENTS BUT GOT 1");
+		await Assert.That(messages).Contains("&: too few arguments (needs 2, got 1). Type: help &");
 	}
 
 	/// <summary>

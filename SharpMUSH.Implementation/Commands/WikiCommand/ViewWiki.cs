@@ -8,7 +8,10 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using MarkupString.Layout;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Wiki;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
@@ -271,6 +274,15 @@ public static class ViewWiki
 				? await wikiService.GetRevisionsAsync(page.Id)
 				: await wikiService.GetRevisionsForLocaleAsync(page.Id, stream, 0, 20);
 
+			var editors = new Dictionary<string, string>();
+			foreach (var editor in revisions.Select(r => r.EditorDbref).Distinct())
+			{
+				editors[editor] = DBRef.TryParse(editor, out var parsed) && parsed is { } dbref
+					&& await mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject who
+						? who.Object().Name
+						: editor;
+			}
+
 			history = ServerLayout.Listing(
 				[
 					new TableColumn(MarkupText.Plain("Rev")) { Alignment = Alignment.Right, Wrap = false },
@@ -279,7 +291,7 @@ public static class ViewWiki
 					new TableColumn(MarkupText.Plain("Summary")) { Min = 10 },
 				],
 				revisions.Select(r => (IEnumerable<string>)
-					[$"r{r.RevisionNumber}", r.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), r.EditorDbref, r.EditSummary ?? ""]));
+					[$"r{r.RevisionNumber}", r.Timestamp.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture), editors[r.EditorDbref], r.EditSummary ?? ""]));
 		}
 		else
 		{

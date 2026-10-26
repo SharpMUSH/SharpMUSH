@@ -400,6 +400,22 @@ public class UtilityCommandTests
 	}
 
 	/// <summary>
+	/// The object's type is not a flag: @decompile leaves it out, so its output replays without a
+	/// "I don't recognize that flag" line.
+	/// </summary>
+	[Test]
+	public async ValueTask DecompileLeavesOutTheTypeFlag()
+	{
+		var testPlayer = await CreateWizardAsync("DecompileType");
+		var thing = TestIsolationHelpers.GenerateUniqueName("DecompThing");
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@create {thing}"));
+		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain($"@decompile {thing}"));
+
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith($"@create {thing}", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Equals($"@set {thing}=THING", StringComparison.OrdinalIgnoreCase))).IsEmpty();
+	}
+
+	/// <summary>
 	/// page/noeval with escaped = doesn't crash (PennMUSH testpage.t: page.1 regression).
 	/// </summary>
 	[Test]

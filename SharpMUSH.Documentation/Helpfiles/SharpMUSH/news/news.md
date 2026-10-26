@@ -1,8 +1,6 @@
 # News
 
-News and updates for SharpMUSH.
-
-Welcome to SharpMUSH! Check here for the latest news and updates.
+News and announcements for this game. Staff post them here.
 
 Use `news <topic>` to read news on a specific topic.<br>
 Use `news/search <text>` to search news content.
