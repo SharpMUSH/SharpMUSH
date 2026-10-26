@@ -30,7 +30,7 @@
     [http_service.checks.headers]
       X-Forwarded-Proto = "https"
 
-# Telnet, as raw TCP. Needs a dedicated IPv4 address (launch.sh allocates one) or IPv6.
+# Telnet, as raw TCP: over IPv6, or IPv4 with a dedicated address (launch.sh --dedicated-ipv4).
 [[services]]
   internal_port = 4201
   protocol = "tcp"
