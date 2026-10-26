@@ -67,7 +67,7 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.14.1
+    version: 1.14.2
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-app/
     name: Jobs in the portal
