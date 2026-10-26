@@ -1043,6 +1043,8 @@ This sends `<message>` to everyone in your location. Nothing is added to the mes
 
 The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
+The `/room` switch sends `<message>` to your outermost container instead, as @lemit does, and with it `/silent` and `/noisy` work as they do for @lemit. Without `/room` they change nothing.
+
 @emit can be abbreviated as `\`, and `emit` is another name for it.
 
 
@@ -1259,15 +1261,11 @@ event Trigger the ``OBJECT`FLAG`` event when this flag is set or cleared. Only m
 
 @grep returns a list of all attributes on `<object>` which match `<pattern>`. If `<attrs>` is specified, only attributes which match the wildcard pattern `<attrs>` are checked; it defaults to "*". Use "**" for all attributes.
 
-`@grep` outputs the names of the attributes matched, as `grep()` returns them.
+`@grep` prints `Matches of '<pattern>' on <object>(#<dbref>): ` and then the names of the attributes matched, as `grep()` returns them. When nothing matches it prints `No matches.`
 
-By default, attributes which contain the string `<pattern>` are returned. However, if the `/wild` switch is given, `<pattern>` is treated as a wildcard pattern, and attributes which match the pattern are returned. If the `/regexp` switch is given, `<pattern>` is treated as a regular expression, and attributes matching the regexp are returned. Please note that `<pattern>` will NOT be evaluated, so you can easily grep for code strings.
+By default, attributes which contain the string `<pattern>` are returned. However, if the `/wild` switch is given, `<pattern>` is treated as a wildcard pattern, and attributes which match the pattern are returned. If the `/regexp` switch is given, `<pattern>` is treated as a regular expression, and attributes matching the regexp are returned. Please note that `<pattern>` will NOT be evaluated, so you can easily grep for code strings. All matches are case-sensitive, unless the `/nocase` switch is given.
 
-All matches are case-sensitive, unless the `/nocase` switch is given.
-
-@grep only shows a list of matching attributes. However, you can specify the `/print` switch, in which case attribute values are also shown, with the matching substrings ansi-highlighted if appropriate.
-
-If the `/parent` switch is given, attributes `<object>` inherits from its parent(s) will be checked as well.
+@grep only shows a list of matching attributes. However, you can specify the `/print` switch, in which case attribute values are also shown, with the matching substrings ansi-highlighted if appropriate. If the `/parent` switch is given, attributes `<object>` inherits from its parent(s) will be checked as well.
 
 For backwards compatability, the `/list` switch provides the default behaviour of listing attributes without printing the values, and `/ilist` and `/iprint` are aliases for `/list/nocase` and `/print/nocase`.
 
@@ -1643,15 +1641,15 @@ The `<password>` must not contain whitespace, unprintable characters, or '='.
 # @nszemit
 # @nsoemit
 # @nsprompt
-`@nsemit[/<switch>] [<message>]`<br>
-`@nslemit[/<switch>] <message>`<br>
-`@nspemit[/switches] <object>=<message>`<br>
-`@nsprompt[/switches] <object>=<message>`<br>
-`@nsremit[/switches] <object>=<message>`<br>
-`@nsoemit[/<switch>] [<room>/]<object> [<object>...]=<message>`<br>
-`@nszemit <zone>=<message>`
+`@nsemit[/room][/silent|/noisy][/noeval][/spoof] [<message>]`<br>
+`@nslemit[/silent|/noisy][/noeval][/spoof] <message>`<br>
+`@nspemit[/list][/port][/silent|/noisy][/noeval] <object>=<message>`<br>
+`@nsprompt[/silent|/noisy][/noeval][/spoof] <object>=<message>`<br>
+`@nsremit[/list][/silent|/noisy][/noeval][/spoof] <object>=<message>`<br>
+`@nsoemit[/noeval][/spoof] [<room>/]<object> [<object>...]=<message>`<br>
+`@nszemit[/silent|/noisy] <zone>=<message>`
 
-These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. They take the same switches as their respective commands, with a few exceptions (`/spoof`, and for @nspemit, `/contents`). SharpMUSH also supports the privileged `/port` and `/port/list` forms on @nspemit.
+These commands work like @emit, @lemit, @pemit, @prompt, @remit, @oemit, and @zemit, respectively, but will not include nospoof information if used by Wizards or someone with the Can_spoof @power. They are meant to be used by commands in the master room where the nospoof information is just useless noise. Each switch works as it does on the respective command; @nspemit has no `/contents` or `/spoof`. SharpMUSH also supports the privileged `/port` and `/port/list` forms on @nspemit.
 
 
 ::: seealso
@@ -2373,10 +2371,10 @@ The `/silent` switch suppresses the confirmation message, and `/noisy` causes it
 :::
 # ahelp
 # anews
-`ahelp [<topic>]`<br>
-`anews [<topic>]`
+`ahelp[/search] [<topic>]`<br>
+`anews[/search] [<topic>]`
 
-These commands, if enabled, show the admin-only help or news files for the MUSH. Only Wizards may use them.
+These commands, if enabled, show the admin-only help or news files for the MUSH. Only Wizards may use them. `ahelp/search` and `anews/search` list the entries whose text contains `<topic>`, as `help/search` does.
 # brief
 `brief[/opaque] [<object>]`
 
@@ -2620,7 +2618,7 @@ The PRICELIST attribute can be set, but nothing reads it: SharpMUSH has no money
 # buy
 `buy <item>[ from <vendor>][ for <cost>]`
 
-The buy command is not implemented: SharpMUSH has no money. It reads no PRICELIST, checks no @lock/pay and runs no @buy attributes; it only says that buying needs an economy system.
+SharpMUSH does not track money, so buy only says so, as [money()] does: "The buy command is not supported. SharpMUSH does not track money or pennies." It reads no PRICELIST, checks no @lock/pay and runs no @buy attributes. See [compatibility economy].
 
 
 ::: seealso
@@ -2756,9 +2754,9 @@ The score command is not supported: SharpMUSH does not track money, so it only s
 - [TRACK_MONEY]
 :::
 # think
-`think <message>`
+`think[/noeval] <message>`
 
-You can use this command to send a private message to yourself. Pronoun substitution is performed. This is essentially equivalent to doing a "`@pemit/silent me=<message>`".
+You can use this command to send a private message to yourself. Pronoun substitution is performed. This is essentially equivalent to doing a "`@pemit/silent me=<message>`". With `/noeval`, `<message>` is shown as typed, without being evaluated.
 
 `think` outputs the text it shows.
 
@@ -2960,9 +2958,9 @@ Anyone who is not a wizard or royalty and lacks the See_All power gets the listi
 - [who]
 :::
 # with
-`with[/room] <obj>=<command>`
+`with[/room][/noeval] <obj>=<command>`
 
-Attempts to run a user-defined command on a specific object. If the `/room` switch is given, `<obj>` must be a room or your current location, and its contents are checked for commands as if it was a master room.
+Attempts to run a user-defined command on a specific object. If the `/room` switch is given, `<obj>` must be a room or your current location, and its contents are checked for commands as if it was a master room. With `/noeval`, `<obj>` and `<command>` are used as typed, without being evaluated.
 
 `with` outputs what the command it ran output. See [command output].
 
