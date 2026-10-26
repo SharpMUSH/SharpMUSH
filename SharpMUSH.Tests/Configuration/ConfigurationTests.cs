@@ -70,4 +70,18 @@ public class ConfigurationTests
 
 		await Assert.That(result.Failed).IsFalse();
 	}
+
+	[Test]
+	[Arguments("", false)]
+	[Arguments("#0/SUBJ", false)]
+	[Arguments("SUBJ", true)]
+	public async Task ValidateSharpOptions_PronounAttributeMayBeCleared(string value, bool failed)
+	{
+		var options = TestSharpMushOptions.Create();
+		options = options with { Attribute = options.Attribute with { SubjectivePronounAttribute = value } };
+
+		var result = new ValidateSharpOptions().Validate(null, options);
+
+		await Assert.That(result.Failed).IsEqualTo(failed);
+	}
 }

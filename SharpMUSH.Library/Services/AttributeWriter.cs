@@ -358,6 +358,12 @@ internal sealed class AttributeWriter(
 		// silently drop the attribute from the clone. Penn never validates a copy at all.
 		var fullName = string.Join('`', write.AttrPath).ToUpperInvariant();
 
+		if (!write.IsAttributeCopy
+				&& !await validateService.Valid(IValidateService.ValidationType.AttributeValue, value, new None()))
+		{
+			return new Error<string>(ErrorMessages.Returns.AttrValueTooLong);
+		}
+
 		if (!write.IsAttributeCopy && ForwardListRestriction.Applies(fullName)
 				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, write.Obj, fullName,
 					value.ToPlainText()) is Error<string> badList)

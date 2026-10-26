@@ -67,6 +67,8 @@ public static partial class ErrorMessages
 		public const string AttrSetPermissions = "#-1 NO PERMISSION TO SET ATTRIBUTE";
 		/// <summary>PennMUSH <c>do_set_atr</c> on <c>AE_BADNAME</c>.</summary>
 		public const string AttrBadName = "That's not a good name for an attribute.";
+		/// <summary>A value longer than <c>max_attribute_value_length</c> bytes.</summary>
+		public const string AttrValueTooLong = "#-1 ATTRIBUTE VALUE TOO LONG";
 
 		public const string InvalidArgument = "#-1 INVALID ARGUMENT";
 		public const string Integer = "#-1 ARGUMENT MUST BE INTEGER";
