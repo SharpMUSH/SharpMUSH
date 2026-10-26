@@ -40,7 +40,7 @@ public class NewsCommandTests
 		await NotifyService
 			.Received(1)
 			.Notify(TestHelpers.MatchingObject(testPlayer.DbRef), Arg.Is<SharpMessage>(msg =>
-				TestHelpers.MessagePlainTextContains(msg, "SharpMUSH")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
+				TestHelpers.MessagePlainTextContains(msg, "Welcome to the game")), TestHelpers.MatchingObject(testPlayer.DbRef), INotifyService.NotificationType.Announce);
 	}
 
 	[Test]

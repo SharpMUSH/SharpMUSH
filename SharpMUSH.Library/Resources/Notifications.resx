@@ -3189,4 +3189,7 @@ PLAYERS:</value>
   <data name="SecretRefusedFormat" xml:space="preserve">
     <value>{0}</value>
   </data>
+  <data name="TooFewCommandArgumentsFormat" xml:space="preserve">
+    <value>{0}: too few arguments (needs {1}, got {2}). Type: help {0}</value>
+  </data>
 </root>

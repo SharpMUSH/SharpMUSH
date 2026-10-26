@@ -186,17 +186,18 @@ public partial class Commands
 		foreach (var entry in inventory.Entries)
 		{
 			parts.Add(new Rule(MarkupText.Plain(entry.Backup.Name + (entry.Backup.IsLatest ? " (latest in group)" : ""))));
+			var provenance = entry.Backup.Provenance;
+			var initiator = provenance?.Initiator is { } reference ? await InitiatorName(reference) : null;
 			parts.Add(new Fields([.. Facts(
 				("Created", entry.Timestamp), ("Backup size", entry.Size), ("Reason", entry.Reason),
-				("Initiator", entry.Backup.Provenance?.Initiator ?? "unknown"),
-				("Operation", entry.Backup.Provenance?.Operation ?? "unknown"),
-				("Package", entry.Backup.Provenance?.Package ?? "unknown"),
+				("Initiator", initiator), ("Operation", provenance?.Operation), ("Package", provenance?.Package),
 				("Status", entry.Backup.Status), ("Retention", entry.Keep > 0 ? $"{entry.Group}; keep {entry.Keep}" : $"{entry.Group}; automatic copies disabled"),
 				("Recovery path", entry.Backup.Path))]));
 		}
 
 		if (inventory.Total == 0) parts.Add(new TextBlock(MarkupText.Plain("No backups on disk.")));
-		parts.Add(new TextBlock(MarkupText.Plain($"Page {page}/{inventory.Pages}; {inventory.Total} copies. @storage/backups <page> or @backup/list <page>.")));
+		var copies = inventory.Total == 1 ? "1 copy" : $"{inventory.Total} copies";
+		parts.Add(new TextBlock(MarkupText.Plain($"Page {page}/{inventory.Pages}; {copies}. @storage/backups <page> or @backup/list <page>.")));
 		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("Backup inventory"), [.. parts]), 78, HouseLook.Look));
 	}
 
@@ -244,9 +245,21 @@ public partial class Commands
 		return fields;
 	}
 
-	/// <summary>Labelled figures, to sit in the same column as <see cref="Meters"/>.</summary>
-	private static IEnumerable<Field> Facts(params (string Label, string Value)[] rows) =>
-		rows.Select(row => new Field(MarkupText.Plain(row.Label), new TextBlock(MarkupText.Plain(row.Value))));
+	/// <summary>Labelled figures, to sit in the same column as <see cref="Meters"/>; a row with no value is left out.</summary>
+	private static IEnumerable<Field> Facts(params (string Label, string? Value)[] rows)
+	{
+		foreach (var (label, value) in rows)
+		{
+			if (value is not null) yield return new Field(MarkupText.Plain(label), new TextBlock(MarkupText.Plain(value)));
+		}
+	}
+
+	/// <summary>Who asked for a backup, by name: <c>God (#1)</c>, or the recorded reference once the object is gone.</summary>
+	private async ValueTask<string> InitiatorName(string reference) =>
+		DBRef.TryParse(reference, out var parsed) && parsed is { } dbref
+			&& await Mediator.Send(new GetObjectNodeQuery(dbref)) is AnySharpObject initiator
+				? $"{initiator.Object().Name} (#{dbref.Number})"
+				: reference;
 
 	private async ValueTask StorageHistoryAsync(AnySharpObject executor)
 	{

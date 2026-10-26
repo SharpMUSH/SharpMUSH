@@ -26,7 +26,7 @@ public static class ServerLayout
 	/// divider meeting the frame's sides.
 	/// </summary>
 	public static Block Panel(MarkupText title, params ReadOnlySpan<Block> parts) =>
-		new Frame(parts.Length == 1 ? parts[0] : new Stack([.. parts])) { Title = title };
+		new Frame(parts.Length == 1 ? Filled(parts[0]) : new Stack([.. Filled(parts)])) { Title = title };
 
 	/// <summary>
 	/// The lines round a section that is read as text and copied from (mail): double lines to a client that
@@ -42,8 +42,24 @@ public static class ServerLayout
 	public static Block Section(MarkupText title, params ReadOnlySpan<Block> parts) =>
 		new Stack([
 			new Rule(title) { Border = SectionBorder, TitleAlignment = Alignment.Left },
-			.. parts,
+			.. Filled(parts),
 			new Rule { Border = SectionBorder }]);
+
+	/// <summary>
+	/// A table among a panel's or a section's parts reaches its width, so the rule under its headings meets the
+	/// frame: its last column takes the room left over, unless one of its columns already grows.
+	/// </summary>
+	private static Block Filled(Block part) =>
+		part is Table { Columns: [.., var last] columns } table && !columns.Any(column => column.Grow > 0)
+			? table with { Columns = columns.SetItem(columns.Length - 1, last with { Grow = 1 }) }
+			: part;
+
+	private static IEnumerable<Block> Filled(ReadOnlySpan<Block> parts)
+	{
+		var filled = new List<Block>(parts.Length);
+		foreach (var part in parts) filled.Add(Filled(part));
+		return filled;
+	}
 
 	/// <summary>
 	/// The game's look when no <see cref="Services.Interfaces.IHouseLookService"/> is at hand: <c>layout_border</c>'s

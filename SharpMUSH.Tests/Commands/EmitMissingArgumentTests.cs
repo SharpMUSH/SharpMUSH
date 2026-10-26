@@ -43,7 +43,8 @@ public class EmitMissingArgumentTests
 		var result = await Factory.CommandParser.CommandParse(player.Handle, connection, MarkupText.Plain("@nsprompt me"));
 		var expected = string.Format(ErrorMessages.Returns.TooFewCommandArguments, "@NSPROMPT", 2, 1);
 		await Assert.That(result.Message.ToPlainText()).IsEqualTo(expected);
-		await Assert.That(Factory.Notifications.For(player.DbRef)).Contains(expected);
+		await Assert.That(Factory.Notifications.For(player.DbRef))
+			.Contains("@nsprompt: too few arguments (needs 2, got 1). Type: help @nsprompt");
 	}
 
 	[Test]

@@ -284,7 +284,7 @@ public sealed partial class WorldBackupWriter(
 					metadata = null;
 					status = "invalid metadata; not recoverable";
 				}
-				else status = "complete; verification unrecorded";
+				else status = "complete";
 			}
 			catch (Exception ex) when (ex is JsonException or IOException or UnauthorizedAccessException)
 			{

@@ -515,6 +515,8 @@ public static partial class ErrorMessages
 		public const string LocalFunctionReset = "Removed {0} unpreserved owner-local functions.";
 		public const string LocalFunctionChanged = "Owner-local function {0}: {1}.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string TooFewCommandArgumentsFormat = "{0}: too few arguments (needs {1}, got {2}). Type: help {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AccountClosedFormat = "Account '{0}' closed; active sessions revoked.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string AccountMarkedDeletedFormat = "Account '{0}' marked deleted; active sessions revoked. The account record is retained.";

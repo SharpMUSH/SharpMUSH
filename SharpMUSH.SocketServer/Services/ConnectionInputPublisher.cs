@@ -20,7 +20,7 @@ public static class ConnectionInputPublisher
 			try
 			{
 				await connection.OutputFunction(connection.EncodingFunction().GetBytes(
-					"\r\n[SharpMUSH] Command delivery could not be confirmed. Please wait for recovery and check before retrying.\r\n"))
+					"\r\nGAME: Command delivery could not be confirmed. Please wait for recovery and check before retrying.\r\n"))
 					.AsTask().WaitAsync(TimeSpan.FromSeconds(2), ct);
 			}
 			catch (Exception noticeError) when (noticeError is not OperationCanceledException || !ct.IsCancellationRequested)
