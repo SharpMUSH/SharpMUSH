@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Reality;
 using Mediator;
 using NSubstitute;
 using SharpMUSH.Library.Models;
@@ -23,7 +24,7 @@ public class ListenerRoutingServiceTests
 	private readonly IMessageBus _messageBus = Substitute.For<IMessageBus>();
 
 	private ListenerRoutingService CreateService() =>
-		new(_mediator, _patternMatcher, _permissionService, _lockService, _connectionService, _serviceProvider, _messageBus);
+		new(_mediator, _patternMatcher, _permissionService, _lockService, _connectionService, _serviceProvider, _messageBus, DisabledRealityPolicy.Instance);
 
 	private async Task AssertNothingWasConsulted()
 	{

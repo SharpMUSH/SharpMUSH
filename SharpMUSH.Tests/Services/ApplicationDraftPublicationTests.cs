@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Reality;
 using MarkupString;
 using System.Collections.Concurrent;
 using System.Text;
@@ -47,7 +48,7 @@ public class ApplicationDraftPublicationTests
 		await connections.Bind(1, new DBRef(2, 2));
 		var original = connections.Get(1)!;
 		var bus = Substitute.For<IMessageBus>();
-		var notify = new NotifyService(bus, connections, new LocalizationService());
+		var notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, null, null, null);
 		var earlier = notify.Lane.Reserve(1, "original");
 		var pending = notify.NotifyToBinding(original, "original", "private draft").AsTask();
 		await Assert.That(pending.IsCompleted).IsFalse();
@@ -72,7 +73,7 @@ public class ApplicationDraftPublicationTests
 			started.TrySetResult();
 			await release.Task;
 		});
-		var notify = new NotifyService(bus, connections, new LocalizationService());
+		var notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, null, null, null);
 		var pending = notify.NotifyToBinding(original, "original", "private draft").AsTask();
 		await started.Task;
 		var retiring = connections.Unbind(1).AsTask();
@@ -101,7 +102,7 @@ public class ApplicationDraftPublicationTests
 			started.TrySetResult();
 			await release.Task;
 		});
-		var notify = new NotifyService(bus, connections, new LocalizationService());
+		var notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, null, null, null);
 		var publishing = notify.NotifyToBinding(original, "original", "private draft").AsTask();
 		await started.Task;
 		var binding = connections.Bind(1, new DBRef(3, 3)).AsTask();
@@ -130,7 +131,7 @@ public class ApplicationDraftPublicationTests
 	{
 		var connections = await Connections();
 		var bus = Substitute.For<IMessageBus>();
-		var notify = new NotifyService(bus, connections, new LocalizationService());
+		var notify = new NotifyService(bus, connections, new LocalizationService(), DisabledRealityPolicy.Instance, null, null, null);
 		await notify.NotifyToSession(1, "original", "private");
 		connections.Update(1, "SessionId", "replacement");
 		await notify.NotifyToSession(1, "original", "stale private");

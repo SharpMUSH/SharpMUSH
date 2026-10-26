@@ -33,7 +33,7 @@ public class RealityRoutingTests
 		reality.CanPerceiveAsync(target.Object().DBRef, actor.Object().DBRef).Returns(false);
 		var locks = Substitute.For<ILockService>();
 		locks.Evaluate(LockType.Interact, target, actor).Returns(true);
-		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
+		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality, Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(() => Substitute.For<IAttributeService>()));
 		await Assert.That(await permissions.CanInteract(actor, target, (IPermissionService.InteractType)publishedValue)).IsEqualTo(!hearing);
 	}
 
@@ -98,7 +98,7 @@ public class RealityRoutingTests
 		var locks = Substitute.For<ILockService>();
 		locks.Evaluate(LockType.Interact, receiver, executor).Returns(lockAllowed);
 		locks.Evaluate(LockType.Interact, receiver, source).Returns(!lockAllowed);
-		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
+		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality, Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(() => Substitute.For<IAttributeService>()));
 		await Assert.That(await permissions.CanInteract(executor, receiver, IPermissionService.InteractType.Hear, source))
 			.IsEqualTo(visible && lockAllowed);
 		await locks.DidNotReceive().Evaluate(LockType.Interact, receiver, source);
@@ -113,7 +113,7 @@ public class RealityRoutingTests
 		var sender = factory.CreatePlayer(1, "God");
 		AnySharpObject receiver = factory.CreateRoom(2, "room");
 		var reality = Substitute.For<IRealityPolicy>();
-		var permissions = new PermissionService(Substitute.For<ILockService>(), Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality);
+		var permissions = new PermissionService(Substitute.For<ILockService>(), Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(), reality, Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(() => Substitute.For<IAttributeService>()));
 		await Assert.That(await permissions.CanSee(sender, receiver)).IsFalse();
 		await Assert.That(await permissions.CanSee(sender, receiver.Object())).IsFalse();
 		await Assert.That(await permissions.CanInteract(sender, receiver, interaction)).IsFalse();

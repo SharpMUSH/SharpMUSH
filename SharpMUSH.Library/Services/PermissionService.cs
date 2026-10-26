@@ -17,19 +17,6 @@ public class PermissionService(
 	IConnectionService connectionService,
 	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService
 {
-	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
-	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options)
-		: this(lockService, options, DisabledRealityPolicy.Instance) { }
-
-	/// <summary>
-	/// Retains the published reality-aware constructor for legacy callers. <see cref="IsHearer"/> is
-	/// the only member that needs the two remaining dependencies, and it postdates this signature, so
-	/// nothing bound to it can reach them.
-	/// </summary>
-	public PermissionService(ILockService lockService, IOptionsMonitor<SharpMUSHOptions> options,
-		IRealityPolicy reality)
-		: this(lockService, options, reality, null!, null!) { }
-
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 
