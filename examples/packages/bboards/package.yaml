@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.6.0
+version: 1.7.1
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -362,7 +362,7 @@ objects:
       # Every +bb<word> command. %1 the word, %2 the switches, %3 what follows, all exactly as typed.
       CMD`BB:
         value: |-
-          $(?is)^\+bb([a-z]*)(/\S*)?(?\: +(.*))?$:think u({{bboards}}/FUN`COMMAND`PARSE,%1,%2,%3);@assert strlen(%q<cmd_route>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no +bb[lcstr(%1)] command. +help bboards lists them.);@include/nobreak {{bboards}}/INC`DO`FIRSTUSE;@include {{bboards}}/INC`CMD`%q<cmd_route>
+          $(?is)^\+bb([a-z]*)(/\S*)?(?\: +(.*))?$:think u({{bboards}}/FUN`COMMAND`PARSE,%1,%2,%3);@assert strlen(%q<cmd_route>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,There is no +bb[lcstr(%1)] command.[u({{bboards}}/FUN`HINT,COMMANDS)]);@include/nobreak {{bboards}}/INC`DO`FIRSTUSE;@include {{bboards}}/INC`CMD`%q<cmd_route>
         flags: [REGEXP]
       # %0 word, %1 switches, %2 argument, all raw. Sets %q<cmd_word> the word, %q<cmd_route>, %q<cmd_switch_list> every
       # switch but a page, %q<page_number> a last switch of digits (+bbread/2 5/3), %q<cmd_format_switch> md or mush when
@@ -887,7 +887,7 @@ objects:
         reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`WRITE %q<reader_holder>;&BBOARD`READER`TEXT %q<reader_holder>;think u({{bboards}}/FUN`COMMAND`PARSE,if(strmatch(%q<reader_write_kind>,r),reply,comment),,%q<reader_write_text>)[setq(reader_place,get(%q<reader_holder>/BBOARD`HERE))];@include/nobreak {{bboards}}/INC`CMD`COMMENT;@include {{bboards}}/INC`READER`START
       # Any other line while writing, %0 exactly as typed: added to the text.
       INPUT`POSTING`TEXT: |-
-        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));&BBOARD`READER`TEXT %q<reader_holder>=if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0);@include {{bboards}}/INC`READER`START
+        think u({{bboards}}/FUN`READER`CONTEXT);think setq(reader_write_text,get(%q<reader_holder>/BBOARD`READER`TEXT));@break strmatch(attrib_set(%q<reader_holder>/BBOARD`READER`TEXT,if(strlen(%q<reader_write_text>),%q<reader_write_text>%%r%0,%0)),#-1*)={@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,That line would take it past [config(max_attribute_value_length)] bytes%, so it is left out.);@include {{bboards}}/INC`READER`START};@include {{bboards}}/INC`READER`START
       # Shows what the reader is on again.
       INC`READER`LOOK: |-
         think setqm(reader_look_place,get(%q<reader_holder>/BBOARD`HERE),
@@ -1261,8 +1261,12 @@ objects:
       # +bbinfo <board>: its settings and locks.
       INC`CMD`INFO: |-
         @include/args {{bboards}}/INC`NEED`BOARD=path,%q<cmd_argument>;@pemit %q<message_target>=u({{bboards}}/FUN`SCREEN`INFO,%q<path_current>)
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # bboards-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       FUN`SCREEN`DEFAULTS: |-
-        rule(BBoard defaults)%r[fields(,Timeout,u(%!/FUN`DISPLAY`DAYS,u({{bboards}}/FUN`STORE`SETTING,,TIMEOUT)),Pins,u({{bboards}}/FUN`STORE`SETTING,,PINS),Comments,at most [u({{bboards}}/FUN`STORE`SETTING,,COMMENTS)] a post)]%r[rule()]%r+config bboards changes them.%b·%b+bbconfig all shows every board.
+        rule(BBoard defaults)%r[fields(,Timeout,u(%!/FUN`DISPLAY`DAYS,u({{bboards}}/FUN`STORE`SETTING,,TIMEOUT)),Pins,u({{bboards}}/FUN`STORE`SETTING,,PINS),Comments,at most [u({{bboards}}/FUN`STORE`SETTING,,COMMENTS)] a post)]%r[rule()]%r+bbconfig all shows every board.[u(%!/FUN`HINT,DEFAULTS)]
       # Lock text %0 cut to 16 characters with .. when longer.
       FUN`DISPLAY`SHORTLOCK: |-
         if(gt(strlen(%0),16),left(%0,14)..,%0)
@@ -1368,7 +1372,7 @@ objects:
         @name %q<config_board>=%q<config_value>;&RENUM [u({{bboards}}/FUN`STORE`PARENT,%q<config_board>)]=get({{store}}/SEQ);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`OK,%q<config_board_label> is now called %q<config_value>.)
       # +bbconfig default/<option>=<value>: the defaults are +config settings, so it says where they are.
       INC`CONFIG`DEFAULT: |-
-        @assert match(timeout pins comments,%q<config_option>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are timeout%, pins and comments.);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are +config settings: +config bboards/default-%q<config_option>=<value>.)
+        @assert match(timeout pins comments,%q<config_option>)=@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are timeout%, pins and comments.);@pemit %q<message_target>=u({{bboards}}/FUN`MESSAGE`WARNING,The defaults are the game's settings%, not a board's.[u({{bboards}}/FUN`HINT,DEFAULT,%q<config_option>)])
       # The boards at level %0 shown in the same category as board %1, in display order.
       FUN`STORE`CATEGORYPEERS: |-
         setq(category_current,u(%!/FUN`STORE`CATEGORYOF,%0,%1))[squish(iter(u(%!/FUN`STORE`BOARDS,%0),if(strmatch(u(%!/FUN`STORE`CATEGORYOF,%0,%i0),%q<category_current>),%i0)))]
@@ -2428,7 +2432,7 @@ objects:
     flags: [NO_COMMAND]
     attributes:
       CFG: |-
-        Board settings. A board's own leaf overrides the +config default (FUN`STORE`SETTING).
+        Board settings. A board's own leaf overrides the game's default (FUN`STORE`SETTING).
 
   # The parent of every post. Marks an object as a post; holds nothing else.
   - ref: post_proto

@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.3.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -148,6 +148,10 @@ objects:
         Card fields
       DATA`CONFIG`CARD-FIELDS`EXAMPLE: |-
         FULLNAME PRONOUNS AGE
+      # %0 a length in characters: no more than an attribute holds, which is the game's
+      # max_attribute_value_length.
+      FUN`CAP: |-
+        min(%0,config(max_attribute_value_length))
       DATA`CONFIG`NOTE-LENGTH: |-
         2000
       DATA`CONFIG`NOTE-LENGTH`TYPE: |-
@@ -156,10 +160,8 @@ objects:
         2000
       DATA`CONFIG`NOTE-LENGTH`MIN: |-
         1
-      DATA`CONFIG`NOTE-LENGTH`MAX: |-
-        8000
       DATA`CONFIG`NOTE-LENGTH`DESCRIPTION: |-
-        The longest private note, in characters.
+        The longest private note, in characters. The game's limit on an attribute's length caps it too.
       DATA`CONFIG`NOTE-LENGTH`LABEL: |-
         Longest note
       DATA`CONFIG`NOTE-LENGTH`EXAMPLE: |-
@@ -297,10 +299,14 @@ objects:
         value: |-
           $(?is)^\+rel(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # relationships-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(REL,Only players use +rel.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(REL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(REL,+rel has no /%q<cmd_switch> switch. +help rel lists them.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(REL,Only players use +rel.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(REL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(REL,+rel has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument,
       # cmd_has_equals, cmd_name (the name: before the = when there is one), cmd_right_side (after the =),
@@ -501,7 +507,7 @@ objects:
         flags: [funsyntax]
       FUN`LIST`DRAW:
         value: |-
-          if(words(%q<list_confirmed>),u(%!/FUN`DISPLAY`TABLE,%q<viewer_objid>,%q<list_confirmed>,%#),None yet. +rel/set <name>=<type> asks someone.)[if(words(%q<list_asking>),%r[rule(Asking you)]%r[iter(%q<list_asking>,u(%!/FUN`LIST`ASKING,%i0),,%r)])][if(words(%q<list_asked>),%r[rule(Waiting on them)]%r[iter(%q<list_asked>,u(%!/FUN`LIST`ASKED,%i0),,%r)])]%r[rule()]%r[tone(muted,+rel <name> shows someone's card · +rel/types lists the types · +help rel)]
+          if(words(%q<list_confirmed>),u(%!/FUN`DISPLAY`TABLE,%q<viewer_objid>,%q<list_confirmed>,%#),None yet. +rel/set <name>=<type> asks someone.)[if(words(%q<list_asking>),%r[rule(Asking you)]%r[iter(%q<list_asking>,u(%!/FUN`LIST`ASKING,%i0),,%r)])][if(words(%q<list_asked>),%r[rule(Waiting on them)]%r[iter(%q<list_asked>,u(%!/FUN`LIST`ASKED,%i0),,%r)])]%r[rule()]%r[tone(muted,+rel <name> shows someone's card · +rel/types lists the types[u(%!/FUN`HINT,FOOTER)])]
         flags: [funsyntax]
       # %0 someone who asked the player: what they ask, and links to answer.
       FUN`LIST`ASKING:
@@ -639,7 +645,7 @@ objects:
       # +rel/note <name>=<text>: a private note about anyone, never visual. Nothing after the = clears it.
       INC`CMD`NOTE:
         value: |-
-          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),v(DATA`CONFIG`NOTE-LENGTH))=@pemit %#=notice(REL,Keep it to [v(DATA`CONFIG`NOTE-LENGTH)] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<rel_other_key>)=@pemit %#=notice(REL,You have no note about %q<rel_other_name>.,warn); &RELNOTE`%q<rel_other_key> %#; @pemit %#=notice(REL,Your note about %q<rel_other_name> is cleared.,ok)
+          @assert %q<cmd_has_equals>=@pemit %#=notice(REL,+rel/note <name>=<text> keeps a note only you see.,warn); @include %!/INC`COMMAND`OTHER; @assert lte(strlen(%q<cmd_right_side>),u(%!/FUN`CAP,v(DATA`CONFIG`NOTE-LENGTH)))=@pemit %#=notice(REL,Keep it to [u(%!/FUN`CAP,v(DATA`CONFIG`NOTE-LENGTH))] characters.,warn); @break strlen(%q<cmd_right_side>)={@include %!/INC`STORE`NOTE}; @assert hasattr(%#,RELNOTE`%q<rel_other_key>)=@pemit %#=notice(REL,You have no note about %q<rel_other_name>.,warn); &RELNOTE`%q<rel_other_key> %#; @pemit %#=notice(REL,Your note about %q<rel_other_name> is cleared.,ok)
         flags: [cmdsyntax]
       INC`STORE`NOTE:
         value: |-
@@ -855,7 +861,7 @@ objects:
         `+config relationships` lists them, and `+config relationships/<setting>=<value>` changes one.
 
         - `card-fields`: the `+finger` fields shown at the top of `+rel <name>`, by key. `FULLNAME PRONOUNS` by default; `+config/add relationships/card-fields=age` adds one.
-        - `note-length`: the longest private note, in characters, 1 to 8000. 2000 by default.
+        - `note-length`: the longest private note, in characters. 2000 by default; an attribute's length limit caps it too.
         - `text-length`: the longest line about a relationship, 1 to 1000. 200 by default.
         - `web-reach`: how far the portal's web reaches. 1, the default, draws a character and the people they know; 2 adds the people those know.
         - `types`: the relationship types, a table. `+help rel types` explains it.

@@ -36,6 +36,24 @@ class PublishedRevisionTests(unittest.TestCase):
                                   'socketserver': ['Socket/change']})
 
 
+class FlyImageTests(unittest.TestCase):
+    def test_rebuilds_when_its_own_files_change(self):
+        def diff(*args):
+            return 'deploy/fly/start.sh\0' if args[-2] == 'a' * 40 else 'README.md\0SharpMUSH.Server/x.cs\0'
+        with patch('docker_dev.git', side_effect=diff):
+            with patch('docker_dev.published_revision', return_value='a' * 40):
+                self.assertTrue(docker_dev.fly_changed('head'))
+            with patch('docker_dev.published_revision', return_value='b' * 40):
+                self.assertFalse(docker_dev.fly_changed('head'))
+
+    def test_missing_or_unlabelled_image_rebuilds(self):
+        with patch('docker_dev.published_revision', return_value=None):
+            self.assertTrue(docker_dev.fly_changed('head'))
+        with patch('docker_dev.published_revision',
+                   side_effect=subprocess.CalledProcessError(1, 'docker')):
+            self.assertTrue(docker_dev.fly_changed('head'))
+
+
 class BatchedChangesTests(unittest.TestCase):
     def test_skipped_push_and_partial_publication_use_real_git_history(self):
         from test_image_impact import ImageImpactTests

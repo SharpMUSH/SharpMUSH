@@ -121,6 +121,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Built from the three images on Docker Hub, so it comes after them and follows any of them.
+      - name: Build and push all-in-one Fly.io image (dev)
+        id: push_fly
+        if: >-
+          steps.changes.outputs.fly == 'true' ||
+          steps.push_server.outcome == 'success' ||
+          steps.push_conn.outcome == 'success' ||
+          steps.push_socket.outcome == 'success' ||
+          (github.event_name == 'workflow_dispatch' &&
+           (inputs.publish == 'all' || inputs.publish == 'fly'))
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          file: ./deploy/fly/Dockerfile
+          push: true
+          pull: true
+          tags: sharpmush/sharpmush-fly:dev
+          labels: |
+            org.opencontainers.image.title=SharpMUSH for Fly.io
+            org.opencontainers.image.description=SharpMUSH in one container, for one-container hosts (dev build)
+            org.opencontainers.image.version=dev
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
       - name: Summary
         run: |
           {
@@ -140,6 +164,11 @@ jobs:
               echo '- `sharpmush/sharpmush-socketserver:dev` — **pushed; replacing this image drops live sockets**'
             else
               echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
+            fi
+            if [ "${{ steps.push_fly.outcome }}" = "success" ]; then
+              echo '- `sharpmush/sharpmush-fly:dev` — **pushed; nothing updates to it until its operator deploys it**'
+            else
+              echo '- `sharpmush/sharpmush-fly:dev` — not published'
             fi
             echo ""
             echo "**Commit:** ${{ github.sha }}"

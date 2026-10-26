@@ -153,6 +153,46 @@ public class WatchIntegrationTests
 	}
 
 	[Test]
+	public async Task WithoutTheHelpBridge_AMessageNamesNoHelpTopic()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("NoHelpAnn");
+			(await Installer.UninstallAsync("watch-help", force: false, CancellationToken.None)).Expect<Success>();
+
+			await Assert.That(await As(ann, "+watch/bogus")).Contains("+watch has no /bogus switch.").And.DoesNotContain("+help");
+			await Assert.That(await As(ann, "+watch something")).Contains("+watch/add <name> watches someone.").And.DoesNotContain("+help");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
+	public async Task APlayerWatchedByAsManyAsFitIsRefusedMore()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("FullAnn");
+			var bo = await Player("FullBo");
+			var limit = int.Parse(await God("think config(max_attribute_value_length)"));
+			// A watcher list that fills the attribute but for five bytes, too few for one more objid.
+			await God($"&WATCH`{await Key(bo)}`BY {Store}={new string('x', limit - 5)}");
+
+			await Assert.That(await As(ann, $"+watch/add {bo.Name}")).Contains($"has as many watchers as fit in {limit} bytes.");
+			await Assert.That(await God($"think strlen(get({Store}/WATCH`{await Key(ann)}`LIST))")).IsEqualTo("0")
+				.Because("a refused watch is not added to the watcher's own list");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task SettingsAreChangedThroughPlusConfig()
 	{
 		try

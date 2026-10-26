@@ -1,0 +1,226 @@
+# SharpMUSH — the stack the one-click installers set up (deploy/oneclick/install.sh).
+#
+# The same services as deploy/docker-compose.prod.yml, run from published images, with Caddy in
+# front in both web modes so the first-boot guard (guard/guard.caddy) covers the portal either way:
+#   direct      Caddy takes 80/443 and fetches a Let's Encrypt certificate for SHARPMUSH_DOMAIN.
+#   cloudflare  COMPOSE_PROFILES=cloudflare. cloudflared dials out to the tunnel and hands requests to
+#               Caddy on :80; nothing web-facing is published on the host.
+# install.sh writes .env beside this file. Run it again to change the answers; edit by hand only
+# what it does not ask about.
+
+# Caddy and cloudflared addresses on sharpmush-net, written once. sharpmush-server and
+# connectionserver trust X-Forwarded-For only from Caddy; Caddy trusts it only from cloudflared.
+name: sharpmush
+
+x-caddy-ip: &caddy-ip 172.30.0.10
+x-cloudflared-ip: &cloudflared-ip 172.30.0.11
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  nats:
+    image: nats:2.10-alpine
+    container_name: sharpmush-nats
+    command: ["-js", "-sd", "/data", "-m", "8222", "-c", "/etc/nats/nats.conf"]
+    volumes:
+      - nats-data:/data
+      - ./nats.conf:/etc/nats/nats.conf:ro
+    networks:
+      - sharpmush-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q http://localhost:8222/healthz -O /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    logging: *default-logging
+
+  connectionserver:
+    image: sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG:-dev}
+    container_name: sharpmush-connectionserver
+    # Not a watchtower target: recreating it drops every connected player (deploy/connection-updates.md).
+    labels:
+      - com.centurylinklabs.watchtower.enable=false
+    stop_grace_period: 60s
+    volumes:
+      - render-socket:/run/sharpmush
+    environment:
+      Rendering__SocketPath: /run/sharpmush/render.sock
+      NATS_URL: "nats://nats:4222"
+      ForwardedHeaders__KnownProxies__0: *caddy-ip
+    depends_on:
+      renderer:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    ports:
+      # 127.0.0.1 while the first-boot guard holds (nobody but the box can reach telnet), 0.0.0.0 once
+      # the owner has finished /setup. sharpmush-guard flips it.
+      - "${SHARPMUSH_TELNET_BIND:-0.0.0.0}:4201:4201"
+    networks:
+      - sharpmush-net
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    logging: *default-logging
+
+  renderer:
+    image: sharpmush/sharpmush-connectionserver:${SHARPMUSH_IMAGE_TAG:-dev}
+    stop_grace_period: 60s
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    environment:
+      - Rendering__SocketPath=/run/sharpmush/render.sock
+    volumes:
+      - render-socket:/run/sharpmush
+    networks:
+      - renderer-egress
+    restart: unless-stopped
+    logging: *default-logging
+
+  sharpmush-server:
+    image: sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG:-dev}
+    container_name: sharpmush-server
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    stop_grace_period: 60s
+    environment:
+      SHARPMUSH_LIGHTNING_PATH: data/lightning
+      SHARPMUSH_LIGHTNING_SYNC: periodic
+      SHARPMUSH_BACKUP_INTERVAL: 6h
+      SHARPMUSH_BACKUP_KEEP: 2
+      SHARPMUSH_BACKUP_PATH: data/backup
+      Wiki__AssetRoot: /app/data/wiki-assets
+      NATS_URL: "nats://nats:4222"
+      ASPNETCORE_URLS: "http://+:8080"
+      ASPNETCORE_Kestrel__Certificates__Default__Path: ""
+      ASPNETCORE_Kestrel__Certificates__Default__Password: ""
+      ForwardedHeaders__KnownProxies__0: *caddy-ip
+    volumes:
+      - app-data:/app/data
+    ports:
+      - "127.0.0.1:9092:9092"
+    depends_on:
+      nats:
+        condition: service_healthy
+      connectionserver:
+        condition: service_started
+    networks:
+      - sharpmush-net
+    mem_limit: 768m
+    cpus: 1.5
+    restart: unless-stopped
+    logging: *default-logging
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: sharpmush-caddy
+    environment:
+      # A domain name in direct mode, ":80" (plain HTTP, reached only through the tunnel) in cloudflare mode.
+      - SHARPMUSH_SITE=${SHARPMUSH_SITE:?run install.sh to write .env}
+    ports:
+      # 127.0.0.1 in cloudflare mode, so the portal is never served around the tunnel.
+      - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:80:80"
+      - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:443:443"
+      - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./guard:/etc/caddy/guard:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - sharpmush-server
+      - connectionserver
+    networks:
+      sharpmush-net:
+        ipv4_address: *caddy-ip
+    mem_limit: 128m
+    cpus: 0.5
+    restart: unless-stopped
+    logging: *default-logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.7.1
+    container_name: sharpmush-cloudflared
+    profiles: [cloudflare]
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    depends_on:
+      - caddy
+    networks:
+      sharpmush-net:
+        ipv4_address: *cloudflared-ip
+    mem_limit: 128m
+    cpus: 0.5
+    restart: unless-stopped
+    logging: *default-logging
+
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    container_name: sharpmush-watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WATCHTOWER_LABEL_ENABLE=true
+      - WATCHTOWER_CLEANUP=true
+      - WATCHTOWER_POLL_INTERVAL=300
+      - WATCHTOWER_TIMEOUT=60s
+      # watchtower 1.7.1 asks for Docker API 1.25 unless told otherwise; Docker 29 (what get.docker.com
+      # installs) refuses anything below 1.40. 1.40 is also what Docker 19.03 and later speak.
+      - DOCKER_API_VERSION=1.40
+    networks:
+      - sharpmush-net
+    mem_limit: 128m
+    cpus: 0.25
+    restart: unless-stopped
+    logging: *default-logging
+
+  # Opt-in: COMPOSE_PROFILES gains "backup" when install.sh is given a restic repository.
+  backup:
+    image: mazzolino/restic:1.8
+    container_name: sharpmush-backup
+    hostname: sharpmush
+    profiles: [backup]
+    environment:
+      - RUN_ON_STARTUP=false
+      - BACKUP_CRON=0 30 3 * * *
+      - RESTIC_REPOSITORY=${RESTIC_REPOSITORY:-}
+      - RESTIC_PASSWORD=${RESTIC_PASSWORD:-}
+      - RESTIC_BACKUP_SOURCES=/data/backup /data/wiki-assets /data/lightning.dataprotection-keys /data/lightning.plugins
+      - RESTIC_BACKUP_ARGS=--tag sharpmush --host sharpmush --exclude /data/backup/.incoming-*
+      - RESTIC_FORGET_ARGS=--keep-daily 7 --keep-weekly 4 --prune
+      - B2_ACCOUNT_ID=${B2_ACCOUNT_ID:-}
+      - B2_ACCOUNT_KEY=${B2_ACCOUNT_KEY:-}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - app-data:/data:ro
+    networks:
+      - sharpmush-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    logging: *default-logging
+
+volumes:
+  render-socket:
+  app-data:
+  nats-data:
+  caddy-data:
+  caddy-config:
+
+networks:
+  renderer-egress:
+    driver: bridge
+  sharpmush-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.30.0.0/24
