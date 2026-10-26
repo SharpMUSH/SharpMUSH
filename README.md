@@ -2,7 +2,7 @@
 
 **Build and run your own multiplayer text world.**
 
-SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and world building. Create rooms and characters, write softcode, and manage your game through a browser-based portal. SharpMUSH targets PennMUSH compatibility so existing worlds have a path forward.
+SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and world building. A game plays out in a MU\* client, a browser and a Discord server at once, and its systems are written in softcode that builders and players can read and change.
 
 **[Try the live example](https://mush.sharpmush.com)** · **[Run a game](https://sharpmush.com/guides/docker-quickstart/)** · **[Read the docs](https://sharpmush.com)**
 
@@ -12,10 +12,13 @@ SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and 
 
 ## A world you can make your own
 
-- **Build together.** Create interconnected rooms, characters and shared stories with familiar MUSH softcode.
-- **Manage in a browser.** Use the web portal for characters, scenes, game information and administration.
-- **Add capabilities.** Install [softcode packages](https://github.com/SharpMUSH/SharpMUSH.Packages), or extend the server with [C# plugins](https://sharpmush.com/guides/plugins/).
-- **Bring an existing world.** Read the [PennMUSH migration guide](https://sharpmush.com/guides/pennmush-migration/) and [compatibility reference](https://sharpmush.com/reference/compatibility/) before moving your game.
+- **Build together.** Create rooms, characters and shared stories with familiar MUSH softcode.
+- **Play from anywhere.** Connect with a MU\* client or the [web portal](https://sharpmush.com/guides/web-portal/), which has a Play terminal, mail, scenes and the wiki, and works on a phone and with [screen readers](https://sharpmush.com/guides/screen-readers/). MUD clients such as Mudlet get a map and gauges over [GMCP](https://sharpmush.com/guides/mud-clients/).
+- **Bridge Discord.** [Link Discord channels](https://sharpmush.com/guides/discord/) to the game, so lines go both ways under each member's chosen character. Players can [sign in with Discord](https://sharpmush.com/guides/sign-in-services/), Google and others.
+- **Run roleplay and staff work.** [Scenes](https://sharpmush.com/guides/scenes/) log roleplay as it happens, the wiki holds pages with [facts](https://sharpmush.com/guides/wiki-facts/) the portal and softcode can search, and [jobs](https://sharpmush.com/guides/jobs/) track what players ask staff for.
+- **Softcode first.** Game systems ship as [softcode packages](https://sharpmush.com/guides/packages/) you install, upgrade and remove, and [portal pages](https://sharpmush.com/guides/applications/) can be softcode too. [C# plugins](https://sharpmush.com/guides/plugins/) add to the engine without a fork.
+- **Let other tools in.** [Apps](https://sharpmush.com/guides/connected-apps/) act as a character with only the rights its player allowed, and editors check softcode through the [language server](https://sharpmush.com/guides/editor-support/).
+- **Bring an existing world.** [Import](https://sharpmush.com/guides/pennmush-migration/) a PennMUSH, RhostMUSH or TinyMUX database with its mail. SharpMUSH runs PennMUSH softcode, with the [differences](https://sharpmush.com/reference/compatibility/) listed, and understands much of TinyMUX and RhostMUSH softcode too.
 
 ## Join in
 
