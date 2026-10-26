@@ -100,7 +100,8 @@ public partial class Commands
 					var (clearMessage, cleared) = clearResult switch
 					{
 						Success => (
-							string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name, attrName),
+							string.Format(ErrorMessages.Notifications.AttributeCleared, realLocated.Object().Name,
+								attrName.ToUpperInvariant()),
 							$"{realLocated.Object().Name}/{attrNameParsed}"),
 						Error<string> failure => (failure.Value, string.Empty)
 					};
@@ -135,7 +136,8 @@ public partial class Commands
 				var (setMessage, stored) = setResult switch
 				{
 					WrittenAttribute => (
-						string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name, attrNameParsed),
+						string.Format(ErrorMessages.Notifications.AttributeSet, realLocated.Object().Name,
+							attrName.ToUpperInvariant()),
 						$"{realLocated.Object().Name}/{attrNameParsed}"),
 					Error<string> failure => (failure.Value, string.Empty)
 				};

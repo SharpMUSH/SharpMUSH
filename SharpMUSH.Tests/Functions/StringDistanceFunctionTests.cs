@@ -35,7 +35,7 @@ public class StringDistanceFunctionTests
 
 	// Replaces the world's suggestion data, which @suggest and every other suggest() reads.
 	[Test, NotInParallel]
-	public async Task SuggestRetainsItsCaseFoldingAndCodeUnitRanking()
+	public async Task SuggestFoldsCaseAndAccentsAsSpellfixDoes()
 	{
 		var data = Factory.Services.GetRequiredService<IExpandedObjectDataService>();
 		var original = await data.GetExpandedServerDataAsync<SuggestionData>();
@@ -44,12 +44,15 @@ public class StringDistanceFunctionTests
 			await data.SetExpandedServerDataAsync(new SuggestionData(new Dictionary<string, HashSet<string>>
 			{
 				["distancecase"] = ["A", "b"],
-				["distanceunits"] = ["ab", "é"]
+				["distanceunits"] = ["ab", "é"],
+				["distanceemoji"] = ["dog\U0001F600", "dig"]
 			}));
 			var folded = await Parser.EvaluateAsync(MarkupText.Plain("suggest(distancecase,a,|)"));
-			await Assert.That(folded.Text).IsEqualTo("A|b");
+			await Assert.That(folded.Text).IsEqualTo("A");
 			var units = await Parser.EvaluateAsync(MarkupText.Plain("suggest(distanceunits,é,|)"));
-			await Assert.That(units.Text).IsEqualTo("ab|é");
+			await Assert.That(units.Text).IsEqualTo("é|AB");
+			var emoji = await Parser.EvaluateAsync(MarkupText.Plain("suggest(distanceemoji,dag,|)"));
+			await Assert.That(emoji.Text).IsEqualTo("DIG|DOG\U0001F600");
 		}
 		finally { await data.SetExpandedServerDataAsync(original ?? new SuggestionData()); }
 	}

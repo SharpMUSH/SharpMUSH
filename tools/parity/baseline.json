@@ -169,6 +169,10 @@
    "command": "think [upcstr(abc)] [lcstr(ABC)] [capstr(abc def)] [trim(  a b  )] [trim(xxaxx,x,b)]"
   },
   {
+   "key": "30-softcode/sc.suggest#0",
+   "command": "@dolist/inline dog cat bird bard beard board birds=@suggest/add paritypets=##"
+  },
+  {
    "key": "35-function-families/ff.login#0",
    "command": "Wiz wizpass"
   },

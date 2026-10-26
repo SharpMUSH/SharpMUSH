@@ -184,3 +184,23 @@ think %s %o %p %a %S
 @sex me=woman
 think %s %o %p %a %S
 @sex me=
+
+::case sc.set-report-case  "- Set." and "- Cleared." name the attribute upper-cased, as stored (do_set_atr, src/attrib.c:2267)
+::as wiz
+&setcase me=1
+think [lattr(me/setcase)]
+&setcase me
+@set me=setcase:red
+@set me=setcase:
+&setcase me=
+
+::case sc.suggest  suggest() returns only the close words, upper-cased (spellfix1 MATCH, src/help.c:1853)
+::as wiz
+@dolist/inline dog cat bird bard beard board birds=@suggest/add paritypets=##
+think [suggest(paritypets,birb)]
+think [suggest(paritypets,dgo,|)]
+think [suggest(paritypets,Cat)]
+think [suggest(paritypets,zzz)]
+think [suggest(paritypets,berd,|)]
+think [suggest(paritypets,berd,|,2)]
+think [suggest(paritypets,bird*,|)]

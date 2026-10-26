@@ -352,7 +352,8 @@ public class UtilityFunctionUnitTests
 			// "aple" is a misspelling of apple
 			var result1 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple)")))?.Message.ToString();
 			await Assert.That(result1).IsNotNull();
-			await Assert.That(result1).Contains("apple");
+			await Assert.That(result1).Contains("APPLE");
+			await Assert.That(result1).DoesNotContain("BANANA");
 
 			var result2 = (await Parser.FunctionParse(MarkupText.Plain("suggest(test,aple,|)")))?.Message.ToString();
 			await Assert.That(result2).IsNotNull();
