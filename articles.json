@@ -15577,7 +15577,14 @@
         "aliases": [
           "@discord/link",
           "@discord/unlink",
-          "@discord/resume",
+          "@discord/resume"
+        ]
+      },
+      {
+        "id": "discord-restrict",
+        "lookup": "@discord restrict",
+        "heading": "Restricted channels",
+        "aliases": [
           "@discord/gate",
           "@discord/unrestricted",
           "@discord/restrict"
@@ -15622,6 +15629,12 @@
         "aliases": [
           "@discord/event"
         ]
+      },
+      {
+        "id": "discord-event-fields",
+        "lookup": "@discord event fields",
+        "heading": "Event fields",
+        "aliases": []
       }
     ],
     "file": "discord-command.md",
@@ -15737,6 +15750,15 @@
         "lookup": "scenelist()",
         "heading": "scenelist()",
         "aliases": []
+      },
+      {
+        "id": "scenelist-members",
+        "lookup": "scenelist members",
+        "heading": "Scenes by Member",
+        "aliases": [
+          "scenelist mine",
+          "scenelist shared"
+        ]
       },
       {
         "id": "scenewhere",
