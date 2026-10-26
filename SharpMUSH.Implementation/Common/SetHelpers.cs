@@ -142,7 +142,7 @@ public static class SetHelpers
 			if (!areQuiet && !await AttributeWriteReport.IsSuppressedAsync(executor, found, written))
 			{
 				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.AttributeSet), executor,
-					found.Object().Name, attribute);
+					found.Object().Name, attribute.ToUpperInvariant());
 			}
 
 			return new CallState(string.Empty);

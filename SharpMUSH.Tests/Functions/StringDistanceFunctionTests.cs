@@ -35,7 +35,7 @@ public class StringDistanceFunctionTests
 
 	// Replaces the world's suggestion data, which @suggest and every other suggest() reads.
 	[Test, NotInParallel]
-	public async Task SuggestRetainsItsCaseFoldingAndCodeUnitRanking()
+	public async Task SuggestFoldsCaseAndAccentsAsSpellfixDoes()
 	{
 		var data = Factory.Services.GetRequiredService<IExpandedObjectDataService>();
 		var original = await data.GetExpandedServerDataAsync<SuggestionData>();
@@ -47,9 +47,9 @@ public class StringDistanceFunctionTests
 				["distanceunits"] = ["ab", "é"]
 			}));
 			var folded = await Parser.EvaluateAsync(MarkupText.Plain("suggest(distancecase,a,|)"));
-			await Assert.That(folded.Text).IsEqualTo("A|b");
+			await Assert.That(folded.Text).IsEqualTo("A");
 			var units = await Parser.EvaluateAsync(MarkupText.Plain("suggest(distanceunits,é,|)"));
-			await Assert.That(units.Text).IsEqualTo("ab|é");
+			await Assert.That(units.Text).IsEqualTo("é|AB");
 		}
 		finally { await data.SetExpandedServerDataAsync(original ?? new SuggestionData()); }
 	}

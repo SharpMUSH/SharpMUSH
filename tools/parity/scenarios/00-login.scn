@@ -14,3 +14,18 @@ think [name(%#)] [hasflag(%#,WIZARD)] [hasflag(%#,ROYALTY)]
 ::login-fail bad Alice wrong
 ::case login.unknown  An unknown player is refused
 ::login-fail nobody Nobody whatever
+::case login.warn-interval  no automatic building warnings arrive in the first minutes after startup
+# PennMUSH's first automatic warning check comes warn_interval (1 hour by default) after startup
+# (options.warn_counter, src/conf.c:1507; src/timer.c:186). This file runs first, while both servers are
+# young, so God, who owns the fixture room, stays connected until each has been up 75 seconds.
+::as god
+::until WARNWAIT1
+@wait [bound(sub(75,sub(secs(),convtime(starttime()))),0,15)]=think WARNWAIT1
+::until WARNWAIT2
+@wait [bound(sub(75,sub(secs(),convtime(starttime()))),0,15)]=think WARNWAIT2
+::until WARNWAIT3
+@wait [bound(sub(75,sub(secs(),convtime(starttime()))),0,15)]=think WARNWAIT3
+::until WARNWAIT4
+@wait [bound(sub(75,sub(secs(),convtime(starttime()))),0,15)]=think WARNWAIT4
+::until WARNWAIT5
+@wait [bound(sub(75,sub(secs(),convtime(starttime()))),0,15)]=think WARNWAIT5

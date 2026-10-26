@@ -40,8 +40,8 @@ public class DictionaryWordsBootstrapTests
 
 			await Loader.LoadAsync(path, CancellationToken.None);
 
-			await Assert.That(await Suggest("ardvark")).IsEqualTo("aardvark|zebra");
-			await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("suggest(pets,dgo)"))).ToPlainText()).IsEqualTo("dog");
+			await Assert.That(await Suggest("ardvark")).IsEqualTo("AARDVARK");
+			await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("suggest(pets,dag)"))).ToPlainText()).IsEqualTo("DOG");
 		}
 		finally
 		{
@@ -66,11 +66,12 @@ public class DictionaryWordsBootstrapTests
 			await File.WriteAllTextAsync(path, "second\n");
 			File.SetLastWriteTimeUtc(path, new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 			await Loader.LoadAsync(path, CancellationToken.None);
-			await Assert.That(await Suggest("first")).IsEqualTo("first");
+			await Assert.That(await Suggest("first")).IsEqualTo("FIRST");
 
 			File.SetLastWriteTimeUtc(path, new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc));
 			await Loader.LoadAsync(path, CancellationToken.None);
-			await Assert.That(await Suggest("first")).IsEqualTo("second");
+			await Assert.That(await Suggest("first")).IsEqualTo(string.Empty);
+			await Assert.That(await Suggest("secnd")).IsEqualTo("SECOND");
 		}
 		finally
 		{

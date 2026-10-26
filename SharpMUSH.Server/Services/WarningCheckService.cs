@@ -68,13 +68,14 @@ public partial class WarningCheckService(
 
 		logger.LogInformation("Warning check service started - will run every {Interval}", _warnInterval);
 
-		// Wait a bit before first check to let the system start up
-		await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
-
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			try
 			{
+				// PennMUSH counts warn_interval down from boot (src/conf.c:1507, src/timer.c:186), so the first
+				// check comes one interval after startup, not straight away.
+				await Task.Delay(_warnInterval, stoppingToken);
+
 				logger.LogInformation("Starting automatic warning check of all objects");
 
 				var objectsChecked = await warningService.CheckAllObjectsAsync();
@@ -83,8 +84,6 @@ public partial class WarningCheckService(
 
 				// PennMUSH spec: db`wcheck, after the scheduled check only, never after a manual @wcheck.
 				await eventService.TriggerEventAsync(SharpEvents.DbWcheck, null);
-
-				await Task.Delay(_warnInterval, stoppingToken);
 			}
 			catch (OperationCanceledException)
 			{
@@ -93,15 +92,6 @@ public partial class WarningCheckService(
 			catch (Exception ex) when (IsCatchableExceptionType(ex))
 			{
 				logger.LogError(ex, "Error in warning check service");
-
-				try
-				{
-					await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
-				}
-				catch (OperationCanceledException)
-				{
-					break;
-				}
 			}
 		}
 
