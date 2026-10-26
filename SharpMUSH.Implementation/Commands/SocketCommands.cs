@@ -79,7 +79,7 @@ public partial class Commands
 
 		var rows = new List<ImmutableArray<Block>>();
 		await foreach (var player in everyone
-			.Where(player => player.Ref.HasValue && (isWizard || player.PresenceClass != PresenceClasses.Portal)))
+			.Where(player => player.Ref.HasValue && player.PresenceClass != PresenceClasses.Portal))
 		{
 			// PennMUSH dump_users skips a descriptor whose player is not a GoodObject. A handle can
 			// outlive the object it is bound to — @nuke a connected player, or a stale entry recovered

@@ -246,7 +246,7 @@ public partial class Commands
 		var everyone = ConnectionService.GetAll();
 		var playerList = new List<ImmutableArray<Block>>();
 		var listed = everyone.Where(player => player.Ref.HasValue
-			&& (isAdmin || player.PresenceClass != PresenceClasses.Portal));
+			&& player.PresenceClass != PresenceClasses.Portal);
 		await foreach (var connection in listed)
 		{
 			// Like WHO, a descriptor whose player is gone is left out rather than failing the listing.
