@@ -9,6 +9,8 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 @inject IJSRuntime JS
+@inject ServerInfoService ServerInfo
+@implements IDisposable
 
 <PageTitle>@Loc["AuthFirstRunSetup"] — <GameName /></PageTitle>
 
@@ -417,6 +419,18 @@
     /// Each step starts at its top. The shell, not the window, scrolls, and it kept the offset of the step
     /// before: a long step (handlers) left the next one opening below its heading.
     /// </summary>
+    /// <summary>
+    /// The heading names the game, and naming it is step 3: once a step has told the server something new,
+    /// ask again and draw the heading with the answer.
+    /// </summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
+    {
+        await ServerInfo.GameNameAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => ServerInfo.Changed -= OnServerInfoChanged;
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_step == _shownStep) return;
@@ -427,6 +441,8 @@
 
     protected override async Task OnInitializedAsync()
     {
+        ServerInfo.Changed += OnServerInfoChanged;
+
         // "Have we asked yet?" and "what did the server say?" are separate questions: NeedsSetupAsync
         // answers the second three ways — needed / not needed / couldn't ask — and Resolving is the
         // first. Only a definitive "already claimed" leaves the claim form; a check that came back and
