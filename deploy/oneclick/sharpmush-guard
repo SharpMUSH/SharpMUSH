@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# Run by sharpmush-guard.timer while the first-boot guard holds. Once the game reports that /setup is
+# finished, it opens the portal and telnet to everyone and turns its own timer off.
+set -euo pipefail
+
+SHARPMUSH_DIR=${SHARPMUSH_DIR:-/opt/sharpmush}
+[ -f "$SHARPMUSH_DIR/state/guard-lifted" ] && exit 0
+
+# Asked from inside Caddy's container, which the server trusts to say the request came over HTTPS.
+status=$(docker exec sharpmush-caddy wget -qO- -T 5 --header 'X-Forwarded-Proto: https' \
+	http://sharpmush-server:8080/api/setup/status 2>/dev/null) || exit 0
+case "$status" in
+	*'"needsSetup":false'*) ;;
+	*) exit 0 ;;
+esac
+
+echo "# The owner finished /setup; the guard is off." > "$SHARPMUSH_DIR/guard/guard.caddy"
+docker exec sharpmush-caddy caddy reload --config /etc/caddy/Caddyfile
+sed -i 's/^SHARPMUSH_TELNET_BIND=.*/SHARPMUSH_TELNET_BIND=0.0.0.0/' "$SHARPMUSH_DIR/.env"
+(cd "$SHARPMUSH_DIR" && docker compose up -d connectionserver)
+touch "$SHARPMUSH_DIR/state/guard-lifted"
+sed -i '/Finish setup in your browser/,/Telnet opens to everyone/d' "$SHARPMUSH_DIR/state/summary.txt" 2>/dev/null || true
+systemctl disable --now sharpmush-guard.timer

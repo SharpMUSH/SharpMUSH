@@ -1,0 +1,38 @@
+#cloud-config
+# SharpMUSH on any VPS: paste this into the "user data" (cloud-init) box when you create an Ubuntu
+# 24.04 or Debian 12 server with at least 2 GB of memory (4 GB is comfortable). Fill in what you want
+# below; every line may stay empty. A few minutes after the server boots, log in over SSH: the
+# welcome message has the link that finishes setup in your browser.
+#
+# Your provider keeps a copy of this text with the server, so prefer a Cloudflare API token limited to
+# the one zone, and revoke it once the server is up (the installer only needs it once).
+write_files:
+  - path: /root/sharpmush-answers.env
+    permissions: "0600"
+    content: |
+      # The portal's domain, e.g. mush.example.com. Empty: the game starts on <ip>.sslip.io.
+      SHARPMUSH_DOMAIN=
+      # Optional, with a domain on Cloudflare: sets up the tunnel and DNS for you.
+      # Token permissions: Account > Cloudflare Tunnel > Edit, Zone > DNS > Edit, Zone > Zone > Read.
+      CLOUDFLARE_API_TOKEN=
+      # Optional: an existing tunnel's token instead (point its hostname at http://caddy:80).
+      CLOUDFLARE_TUNNEL_TOKEN=
+      # Optional nightly backups, e.g. b2:bucket:sharpmush or s3:https://<account>.r2.cloudflarestorage.com/bucket
+      RESTIC_REPOSITORY=
+      RESTIC_PASSWORD=
+      B2_ACCOUNT_ID=
+      B2_ACCOUNT_KEY=
+      AWS_ACCESS_KEY_ID=
+      AWS_SECRET_ACCESS_KEY=
+      # Which version of the installer and its files to use.
+      SHARPMUSH_SOURCE_REF=main
+
+runcmd:
+  - - bash
+    - -c
+    - |
+      set -euo pipefail
+      set -a; . /root/sharpmush-answers.env; set +a
+      curl -fsSL "https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/${SHARPMUSH_SOURCE_REF:-main}/deploy/oneclick/install.sh" -o /root/sharpmush-install.sh
+      bash /root/sharpmush-install.sh 2>&1 | tee /var/log/sharpmush-install.log
+      shred -u /root/sharpmush-answers.env /root/sharpmush-install.sh

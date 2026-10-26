@@ -1,0 +1,4 @@
+# Build context for deploy/fly/Dockerfile: only what it copies (launch.sh passes --ignorefile).
+*
+!nats.conf
+!deploy/fly/
