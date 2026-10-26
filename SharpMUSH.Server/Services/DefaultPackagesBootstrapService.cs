@@ -47,9 +47,19 @@ public class DefaultPackagesBootstrapService(
 			return;
 		}
 
+		await InstallOrUpgradeAllAsync(BundledPackages.All, cancellationToken);
+	}
+
+	/// <summary>
+	/// Installs or upgrades each of <paramref name="packages"/> that this game should have: one installed already, one
+	/// installed at first boot, or a bridge, unless the administrator removed it, its handler or plugin is missing, or
+	/// a package it depends on is not installed.
+	/// </summary>
+	private async Task InstallOrUpgradeAllAsync(IEnumerable<BundledPackages.Descriptor> packages, CancellationToken cancellationToken)
+	{
 		var declined = (await serverData.GetExpandedServerDataAsync<DeclinedBundledPackages>())?.PackageIds ?? [];
 
-		foreach (var package in BundledPackages.All.Where(HasHandler))
+		foreach (var package in packages.Where(HasHandler))
 		{
 			// A package over a plugin that is turned off or failed to load would install commands that call into nothing.
 			if (BundledPackages.RequiredPlugins(package.PackageId, manifests).FirstOrDefault(p => !PluginRunning(p)) is { } plugin)
@@ -73,8 +83,10 @@ public class DefaultPackagesBootstrapService(
 			// creates it. It still maintains one the admin has installed: the flag decides whether
 			// a package arrives, not whether it is kept current once it is here. Skipping the
 			// upgrade instead would leave an opted-in package frozen at the version that shipped
-			// the day it was installed, with no upgrade path short of a manual reinstall.
-			if (!package.InstallAtFirstBoot && await registry.GetInstalledPackageAsync(package.PackageId) is NotFound)
+			// the day it was installed, with no upgrade path short of a manual reinstall. A bridge
+			// is not a choice of its own: it follows the packages it joins.
+			if (package is { InstallAtFirstBoot: false, Bridge: false }
+					&& await registry.GetInstalledPackageAsync(package.PackageId) is NotFound)
 			{
 				logger.LogDebug("Bundled {PackageId} is available but not installed; leaving it to the admin.",
 					package.PackageId);
@@ -90,6 +102,18 @@ public class DefaultPackagesBootstrapService(
 			{
 				logger.LogDebug("Bundled {PackageId} needs {Missing}, which this game does not have; not installing it.",
 					package.PackageId, string.Join(", ", missing));
+				continue;
+			}
+
+			// A bridge names the objects of this build's packages. Under the same id from a remote or a fork, a package
+			// is the admin's own, and may not have them.
+			if (package.Bridge && await registry.GetInstalledPackageAsync(package.PackageId) is NotFound
+					&& await BundledPackages.Dependencies(package.PackageId, manifests).ToAsyncEnumerable()
+						.AnyAsync(async (dependency, _) => await registry.GetInstalledPackageAsync(dependency)
+							is InstalledPackageRecord { SourceRepo: var repo } && !BundledPackages.IsCatalogueSource(repo), cancellationToken))
+			{
+				logger.LogDebug("Bundled bridge {PackageId} joins a package installed from elsewhere; not installing it.",
+					package.PackageId);
 				continue;
 			}
 
@@ -110,6 +134,8 @@ public class DefaultPackagesBootstrapService(
 			await InstallOrUpgradeAsync(package.PackageId, cancellationToken);
 		}
 
+		await InstallBridgesAsync(cancellationToken);
+
 		var installed = new List<string>();
 		foreach (var packageId in packageIds)
 		{
@@ -120,6 +146,31 @@ public class DefaultPackagesBootstrapService(
 		}
 
 		return installed;
+	}
+
+	/// <inheritdoc />
+	public async Task InstallBridgesAsync(CancellationToken cancellationToken)
+		=> await InstallOrUpgradeAllAsync(BundledPackages.All.Where(p => p.Bridge), cancellationToken);
+
+	/// <inheritdoc />
+	public async Task<Result<Success>> UninstallBridgesOverAsync(string packageId, CancellationToken cancellationToken)
+	{
+		var bridges = BundledPackages.All.Where(p => p.Bridge
+			&& BundledPackages.Dependencies(p.PackageId, manifests).Contains(packageId, StringComparer.OrdinalIgnoreCase));
+		foreach (var bridge in bridges)
+		{
+			if (await registry.GetInstalledPackageAsync(bridge.PackageId) is NotFound)
+			{
+				continue;
+			}
+
+			if (await installer.UninstallAsync(bridge.PackageId, cancellationToken: cancellationToken) is Error<string> error)
+			{
+				return error;
+			}
+		}
+
+		return new Success();
 	}
 
 	private bool PluginRunning(string pluginId)

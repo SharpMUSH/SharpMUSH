@@ -514,7 +514,7 @@ public class PackageBatchExecutionTests
 			_provider = new ServiceCollection().AddSingleton(_ => service ?? throw new InvalidOperationException()).BuildServiceProvider();
 			Service = service = new(resolver, registry, installer, Plugins, manager, capabilities, Runner, Runs,
 				_provider.GetRequiredService<IServiceScopeFactory>(), lifetime, new(new(1, 0, 0)), new(true), features, uploads,
-				Substitute.For<IAuditLog>(), NullLogger<PackageBatchService>.Instance);
+				Substitute.For<IAuditLog>(), Substitute.For<IBundledPackageBootstrap>(), NullLogger<PackageBatchService>.Instance);
 		}
 		public void Add(string id, string? dependency = null, string? plugin = null)
 		{

@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -11,26 +11,14 @@ category: Community
 requires_server: ">=0.1"
 
 # The time package keeps each player's zone in TZ and reads it through its Clock, so an entry is kept in its owner's
-# own time. +help carries the topics and +config the settings. Nothing here knows about scenes: scene-availability
-# adds +avail/scene and the scene card's free list on top of this package.
+# own time. Nothing here knows about scenes: scene-availability adds +avail/scene and the scene card's free list on top
+# of this package. availability-help and availability-config put its topics into +help and its settings into +config.
 depends:
   - package: time
     version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/time/
-      branch: main
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 objects:
@@ -994,15 +982,3 @@ objects:
         `` think u\(<Availability>/FUN`FREE`AT,*Ann,1792054800,1792062000\) ``
 
         Output: `0`
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`AVAIL: |-
-        {{availability_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`AVAIL: |-
-        {{availability}}

@@ -25,7 +25,7 @@ shows as online only when the reader could already see it connected in `WHO`.
 - **Alts Store** (inside Alts, `no_command`) keeps each account's choices by account id, never on a character,
   so a choice follows the account: ``ACCOUNT`<key>`PUBLIC`` and ``ACCOUNT`<key>`HIDDEN`<character>``.
 - ``PLAYER`UNLINK`ALTS`` on the event handler forgets a hidden character when it leaves its account.
-- Help is registered with `+help` (`+help alts`, `+help alts staff`).
+- **Alts Help** carries the topics. The `alts-help` bridge registers them with `+help` (`+help alts`, `+help alts staff`).
 
-Requires `plus-help`, a configured event handler, and the `account()`/`accountchars()` functions and the
+Requires a configured event handler, and the `account()`/`accountchars()` functions and the
 ``PLAYER`UNLINK`` event.

@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster
 title: "Roster"
-version: 1.2.1
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Roster: characters kept for players to take on. Staff add characters to the roster, hand them to an account and take them back; players see who is available. The roster defines no way to apply: a game says how in a setting, or installs roster-jobs."
 license: MIT
@@ -10,19 +10,6 @@ keywords: [roster, characters, accounts, canon, staff]
 category: Characters
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # Who manages the roster is a permission, so it moves with roles: @role/assign <player>=roster-admin, or
 # @permission/allow <player>=softcode.roster.manage for one person. Nobody holds it until something allows
@@ -738,15 +725,3 @@ objects:
         - Players ask staff, and staff use `+roster/assign`. Say how to ask with `+config roster/how-to-get=<text>`.
         - Players apply through the job queue: install the `roster-jobs` package, which adds `+roster/apply`.
         - A game's own code calls `` INC`API`ASSIGN `` when its own process says yes. See `+help roster code`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`ROSTER: |-
-        {{roster_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`ROSTER: |-
-        {{roster}}

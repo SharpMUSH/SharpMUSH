@@ -37,18 +37,22 @@ public class BundledBridgeBootstrapTests
 			=> throw new NotSupportedException();
 	}
 
-	[Test]
-	public async Task ABridge_WaitsForBothOfThePackagesItJoins()
+	/// <summary>
+	/// A bootstrap over a game that has <paramref name="installed"/>, from the bundled source unless named in
+	/// <paramref name="fromElsewhere"/>, with the event and HTTP handlers unset; <paramref name="planned"/> collects
+	/// the packages it tries to install. Each plan is refused, so nothing is installed.
+	/// </summary>
+	private static DefaultPackagesBootstrapService Bootstrap(string[] installed, string[] declined, List<string> planned,
+		params string[] fromElsewhere)
 	{
-		string[] installed = ["plus-help", "plus-config", "messages"];
 		var registry = Substitute.For<IPackageRegistryService>();
 		registry.GetInstalledPackageAsync(Arg.Any<string>()).Returns(call =>
 			installed.Contains(call.Arg<string>())
 				? new Found<InstalledPackageRecord>(new InstalledPackageRecord(call.Arg<string>(), "99.0.0",
-					BundledPackageSource.SourceRepo, null, BundledPackageSource.SourceCommit, null, DateTimeOffset.UnixEpoch, 1))
+					fromElsewhere.Contains(call.Arg<string>()) ? "https://example.org/fork" : BundledPackageSource.SourceRepo,
+					null, BundledPackageSource.SourceCommit, null, DateTimeOffset.UnixEpoch, 1))
 				: new Found<InstalledPackageRecord>(new NotFound()));
 
-		var planned = new List<string>();
 		var installer = Substitute.For<IPackageInstallService>();
 		installer.PlanAsync(Arg.Any<PackageManifest>(), Arg.Any<IReadOnlyDictionary<string, string>?>(), Arg.Any<CancellationToken>())
 			.Returns(call =>
@@ -66,13 +70,58 @@ public class BundledBridgeBootstrapTests
 			Database = options.Database with { HttpHandler = null, EventHandler = null }
 		});
 
-		var bootstrap = new DefaultPackagesBootstrapService(new PackageManifestService(), registry, installer, wrapper,
-			new ServerData(new DeclinedBundledPackages { PackageIds = ["scene"] }), PluginCatalog.ForPlugins([new ScenePlugin()]),
+		return new DefaultPackagesBootstrapService(new PackageManifestService(), registry, installer, wrapper,
+			new ServerData(new DeclinedBundledPackages { PackageIds = [.. declined] }), PluginCatalog.ForPlugins([new ScenePlugin()]),
 			NullLogger<DefaultPackagesBootstrapService>.Instance);
+	}
 
-		await bootstrap.StartAsync(CancellationToken.None);
+	[Test]
+	public async Task ABridge_WaitsForBothOfThePackagesItJoins()
+	{
+		var planned = new List<string>();
+
+		await Bootstrap(["plus-help", "plus-config", "messages"], ["scene"], planned).StartAsync(CancellationToken.None);
 
 		await Assert.That(planned).IsEmpty()
 			.Because("scene was turned off, so scene-help and scene-config have nothing to join");
+	}
+
+	/// <summary>
+	/// A bridge that is not installed at first boot still follows the packages it joins: once a game has summary, its
+	/// bridges to +help and +config install, and no other package's do.
+	/// </summary>
+	[Test]
+	public async Task ABridge_ArrivesWithThePackageItJoins()
+	{
+		var planned = new List<string>();
+
+		await Bootstrap(["plus-help", "plus-config", "summary"], [], planned).InstallBridgesAsync(CancellationToken.None);
+
+		await Assert.That(planned).IsEquivalentTo(["summary-help", "summary-config"]);
+	}
+
+	/// <summary>A bridge the administrator removed stays removed, and the other half of the pair still arrives.</summary>
+	[Test]
+	public async Task ABridgeTheAdministratorRemoved_StaysRemoved()
+	{
+		var planned = new List<string>();
+
+		await Bootstrap(["plus-help", "plus-config", "summary"], ["summary-help"], planned).InstallBridgesAsync(CancellationToken.None);
+
+		await Assert.That(planned).IsEquivalentTo(["summary-config"]);
+	}
+
+	/// <summary>
+	/// A package installed from a remote or a fork under a bundled id is the administrator's own, and may not have the
+	/// objects the bridge names, so the bridge is not installed over it.
+	/// </summary>
+	[Test]
+	public async Task ABridge_OverAPackageFromElsewhere_IsNotInstalled()
+	{
+		var planned = new List<string>();
+
+		await Bootstrap(["plus-help", "plus-config", "summary"], [], planned, "summary").InstallBridgesAsync(CancellationToken.None);
+
+		await Assert.That(planned).IsEmpty();
 	}
 }

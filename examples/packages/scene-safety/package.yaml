@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -15,20 +15,8 @@ requires_server: ">=0.1"
 plugins: [scene]
 
 # The scene package draws the +scene card and the join message, where the summary and a joining player's own
-# warning are added, +help carries the topics below, and +config the settings.
+# warning are added. scene-safety-help and scene-safety-config put the topics into +help and the settings into +config.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
   - package: scene
     version: ">=1.7"
     source:
@@ -556,15 +544,3 @@ objects:
         - `signal-wait`: how long a player waits between signals. 60 seconds.
 
         Lines and veils are kept on the Safety Store inside it. A player's own are shown only to them, and a scene owner sees only counts. Staff who can examine every object can read the store.
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`SAFETY: |-
-        {{safety}}
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`SAFETY: |-
-        {{safety_help}}

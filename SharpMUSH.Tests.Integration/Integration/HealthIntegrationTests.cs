@@ -68,7 +68,8 @@ public class HealthIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, package, null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because($"{package} must install from the catalogue");
@@ -169,7 +170,7 @@ public class HealthIntegrationTests
 		}
 		finally
 		{
-			await Installer.UninstallAsync("health", force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("health");
 		}
 	}
 
@@ -195,7 +196,7 @@ public class HealthIntegrationTests
 		}
 		finally
 		{
-			await Installer.UninstallAsync("health", force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("health");
 		}
 	}
 
@@ -235,8 +236,8 @@ public class HealthIntegrationTests
 		finally
 		{
 			await Installer.UninstallAsync("health-jobs", force: true, CancellationToken.None);
-			await Installer.UninstallAsync("health", force: true, CancellationToken.None);
-			await Installer.UninstallAsync("jobs", force: true, CancellationToken.None);
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("health");
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("jobs");
 		}
 	}
 }

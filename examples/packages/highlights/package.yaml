@@ -1,7 +1,7 @@
 format: "1.16"
 package: highlights
 title: "Favourite poses and highlights"
-version: 1.1.2
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -29,12 +29,6 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 objects:
@@ -302,10 +296,3 @@ objects:
 
         Staff change how far back the highlights reach, how many poses a page shows, and whether players
         may favourite their own poses, with `+config highlights`.
-
-  # +config highlights: the settings on the Highlights Store.
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`HIGHLIGHTS: |-
-        {{store}}

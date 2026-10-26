@@ -130,6 +130,42 @@ public class BundledPackagesTests
 	}
 
 	/// <summary>
+	/// The catalogue is walked in order, so every package comes after all the bundled packages it depends on, and a
+	/// bridge can install as soon as the last of the packages it joins has.
+	/// </summary>
+	[Test]
+	public async Task EveryPackage_ComesAfterWhatItDependsOn()
+	{
+		var order = BundledPackages.All.Select(d => d.PackageId).ToList();
+
+		foreach (var descriptor in BundledPackages.All)
+		{
+			foreach (var dependency in BundledPackages.Dependencies(descriptor.PackageId, _manifests))
+			{
+				await Assert.That(order.IndexOf(dependency)).IsLessThan(order.IndexOf(descriptor.PackageId))
+					.Because($"{descriptor.PackageId} depends on {dependency}");
+			}
+		}
+	}
+
+	/// <summary>
+	/// A package does not depend on +help or +config: a bridge joins them, so a game without either still runs it.
+	/// plus-config keeps its own topics in +help, and wiki-reader's whole job is putting the wiki into +help.
+	/// </summary>
+	[Test]
+	public async Task OnlyBridges_DependOnHelpOrConfig()
+	{
+		string[] exempt = ["plus-config", "wiki-reader"];
+		foreach (var descriptor in BundledPackages.All.Where(d => !exempt.Contains(d.PackageId)))
+		{
+			var dependsOnEither = BundledPackages.Dependencies(descriptor.PackageId, _manifests)
+				.Any(dependency => dependency is "plus-help" or "plus-config");
+			await Assert.That(dependsOnEither).IsEqualTo(descriptor.Bridge)
+				.Because($"{descriptor.PackageId} is {(descriptor.Bridge ? "" : "not ")}a bridge");
+		}
+	}
+
+	/// <summary>
 	/// wiki-reader is the first available-not-installed package: it ships in the image so an admin
 	/// can install it offline, but it puts a +wiki object in the master room, which no game should
 	/// get without asking for it.

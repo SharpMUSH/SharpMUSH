@@ -1,0 +1,35 @@
+format: "1.16"
+package: time-config
+title: "Time and time zones: +config settings"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Time and time zones settings into +config: registers them with the +config registry, so staff see and change them with +config time."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [time, config, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. time declares its settings as
+# DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
+# This package is the one leaf that tells the +config registry where they are.
+depends:
+  - package: time
+    version: ">=1.5"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/time/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  - ref: config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`TIME: |-
+        {{time/clock}}

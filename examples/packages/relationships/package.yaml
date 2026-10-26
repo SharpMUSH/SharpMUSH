@@ -1,7 +1,7 @@
 format: "1.16"
 package: relationships
 title: "Relationships"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+rel: relationships that both players confirm, a card for any character with your private note about them, and the routes the portal draws the web and the name card from."
 license: MIT
@@ -10,27 +10,14 @@ keywords: [relationships, roleplay, character, card, web]
 category: Characters
 requires_server: ">=0.1"
 
-# plus-help carries the +help topics, http-handler the verb routers the portal routes hang off, plus-config the
-# settings, and finger the profile fields the in-game card shows at its top.
+# http-handler carries the verb routers the portal routes hang off, and finger the profile fields the in-game card
+# shows at its top. relationships-help and relationships-config put the topics into +help and the settings into +config.
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
   - package: http-handler
     version: ">=1.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
-      branch: main
-  # The settings are registered with +config: +config relationships lists them.
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
   - package: finger
     version: ">=1.2"
@@ -872,15 +859,3 @@ objects:
         - `text-length`: the longest line about a relationship, 1 to 1000. 200 by default.
         - `web-reach`: how far the portal's web reaches. 1, the default, draws a character and the people they know; 2 adds the people those know.
         - `types`: the relationship types, a table. `+help rel types` explains it.
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`RELATIONSHIPS: |-
-        {{relationships}}
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`RELATIONSHIPS: |-
-        {{rel_help}}

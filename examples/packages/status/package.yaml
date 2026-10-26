@@ -1,7 +1,7 @@
 format: "1.16"
 package: status
 title: "Roleplay status"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -11,18 +11,6 @@ category: Community
 requires_server: ">=0.1"
 
 depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
   - package: who-where
     version: ">=1.3"
     source:
@@ -605,15 +593,3 @@ objects:
     attributes:
       FILTER`WHO`STATUS`STATUS: |-
         setq(status_who_key,PLAYER`[edit(objid(%1),#,,:,_)])[setq(status_who_name,get({{store}}/%q<status_who_key>`NAME))][setq(status_who_until,get({{store}}/%q<status_who_key>`UNTIL))][if(cand(strlen(%q<status_who_name>),hasattr({{store}},STATUS`%q<status_who_name>),cor(not(strlen(%q<status_who_until>)),gt(%q<status_who_until>,secs()))),setq(status_who_line,get({{store}}/%q<status_who_key>`LINE))[setq(status_who_text,firstof(get({{store}}/STATUS`%q<status_who_name>`TAG),%q<status_who_name>)[if(strlen(%q<status_who_line>),: %q<status_who_line>)])][if(gt(strlen(%q<status_who_text>),40),left(%q<status_who_text>,37)...,%q<status_who_text>)],%0)]
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`STATUS: |-
-        {{status_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`STATUS: |-
-        {{status}}

@@ -41,7 +41,8 @@ public class BundledCatalogueTests(ServerWebAppFactory factory)
 		factory.Services.GetRequiredService<SharpMUSH.Server.Services.PluginUploadStore>(),
 		factory.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 		factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IAuditLog>(),
-		factory.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+		factory.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+		factory.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 
 	private static T Value<T>(ActionResult<T> result) where T : class =>
 		result.Value ?? (T)((ObjectResult)result.Result!).Value!;

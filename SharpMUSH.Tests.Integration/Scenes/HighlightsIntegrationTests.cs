@@ -99,7 +99,8 @@ public class HighlightsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "highlights", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("highlights must install from the catalogue");
@@ -111,7 +112,7 @@ public class HighlightsIntegrationTests
 
 	private async Task UninstallAsync()
 	{
-		await Installer.UninstallAsync("highlights", force: true, CancellationToken.None);
+		await WebAppFactoryArg.Services.UninstallWithBridgesAsync("highlights");
 		await WebAppFactoryArg.QueueBarrierAsync();
 	}
 

@@ -1,0 +1,35 @@
+format: "1.16"
+package: summary-config
+title: "Pose summaries: +config settings"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Pose summaries settings into +config: registers them with the +config registry, so staff see and change them with +config summary."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [summary, config, bridge]
+category: Scenes
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. summary declares its settings as
+# DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
+# This package is the one leaf that tells the +config registry where they are.
+depends:
+  - package: summary
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/summary/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  - ref: summary_config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`SUMMARY: |-
+        {{summary/summary}}

@@ -81,7 +81,8 @@ public class AltsIntegrationTests
 			WebAppFactoryArg.Services.GetRequiredService<PluginUploadStore>(),
 			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Server.Services.PackageManifestResolver>(),
 			WebAppFactoryArg.Services.GetRequiredService<IAuditLog>(),
-			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>());
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Models.Packages.EngineVersion>(),
+			WebAppFactoryArg.Services.GetRequiredService<SharpMUSH.Library.Services.Interfaces.IBundledPackageBootstrap>());
 		var applied = await controller.Apply(
 			new ApplyRequest(BundledPackages.RemoteName, "alts", null, null, null), CancellationToken.None);
 		await Assert.That(applied.Result).IsTypeOf<OkObjectResult>().Because("alts must install from the catalogue");
@@ -91,7 +92,7 @@ public class AltsIntegrationTests
 		Store = objects.First(o => o.Ref == "store").Objid;
 	}
 
-	private async Task UninstallAsync() => await Installer.UninstallAsync("alts", force: true, CancellationToken.None);
+	private async Task UninstallAsync() => await WebAppFactoryArg.Services.UninstallWithBridgesAsync("alts");
 
 	[Test]
 	public async Task AListIsPrivateUntilTheAccountMakesItPublic()

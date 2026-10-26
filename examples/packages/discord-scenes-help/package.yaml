@@ -1,0 +1,35 @@
+format: "1.16"
+package: discord-scenes-help
+title: "Discord scheduled scenes: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Discord scheduled scenes topics into +help: registers the discord-scenes package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [discord-scenes, help, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. discord-scenes keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: discord-scenes
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/discord-scenes/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`DISCORD-SCENES: |-
+        {{discord-scenes/help}}

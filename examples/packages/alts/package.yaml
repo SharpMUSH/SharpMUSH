@@ -1,7 +1,7 @@
 format: "1.16"
 package: alts
 title: "Alts"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "+alts: list the characters on your account, and choose whether anyone else may. Private until you make the list public; hide one alt and the rest stay listed."
 license: MIT
@@ -10,13 +10,6 @@ keywords: [alts, account, characters, privacy]
 category: Characters
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
 
 objects:
   # The command object, in the master room. WIZARD because it adds the command (@command/add, @hook) and asks
@@ -302,9 +295,3 @@ objects:
         Staff with the `players.view` permission, the one `account\(\)` checks, see every character on an account with `+alts <name>`, hidden ones marked, whatever the account chose. The footer names the account.
 
         The choices are kept on the Alts Store, inside the Alts object in the master room, by account: `` ACCOUNT`<key>`PUBLIC `` and `` ACCOUNT`<key>`HIDDEN`<character> ``, where `<key>` is the account's id from `account\(\)` with `/` written as `_`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`ALTS: |-
-        {{alts_help}}

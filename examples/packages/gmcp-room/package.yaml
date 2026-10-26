@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-room
 title: "GMCP room data"
-version: 1.1.1
+version: 1.2.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Room package: Room.Info for a mapper (number, name, area, environment, coordinates and exits), Room.Players, Room.AddPlayer and Room.RemovePlayer, as each player moves, connects and disconnects."
 license: MIT
@@ -9,22 +9,6 @@ homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [gmcp, mudlet, mapper, room, mud-kit]
 category: MUD clients
 requires_server: ">=0.1"
-
-# +help carries the topic below, and +config the settings. Both dependencies are what make
-# {{plus-help/librarian}} and {{plus-config/registry}} legal attach targets.
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # The shapes are Iron Realms' (IRE), which Mudlet's mapper scripts read and TelnetNegotiationCore's
 # RoomInfo type writes:
@@ -232,15 +216,3 @@ objects:
         - A player's `FULLNAME` attribute is the name shown in full.
 
         Staff can name other attributes: `+config gmcp-room`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`GMCP-ROOM: |-
-        {{gmcp_room}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`GMCP-ROOM: |-
-        {{gmcp_room}}

@@ -232,6 +232,7 @@ file sealed class SetupApiHandler(
 			Package("room-contents", "event", [], recommended: true),
 			Package("plus-help", null, []),
 			Package("scene", null, ["plus-help"]),
+			Package("scene-help", null, ["scene", "plus-help"], bridge: true),
 			Package("wiki-reader", null, ["plus-help"]),
 		},
 	};
@@ -239,9 +240,10 @@ file sealed class SetupApiHandler(
 	private object Handler(string kind, int? dbref, string? name, string[] packages) =>
 		new { kind, dbref, name, isWizard = true, packages = dbref is null ? [] : packages.Where(_installed.Contains).ToArray() };
 
-	private object Package(string id, string? requires, string[] dependsOn, bool recommended = false) => new
+	private object Package(string id, string? requires, string[] dependsOn, bool recommended = false, bool bridge = false) => new
 	{
 		recommended,
+		bridge,
 		id,
 		title = $"Title of {id}",
 		description = $"{id} manifest description",
@@ -500,6 +502,41 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Find(".setup-error").TextContent).Contains("AdmSetupFinishFailed");
 		await Assert.That(cut.Markup).DoesNotContain("AuthSetupComplete");
 		await Assert.That(handler.FinishCalls).IsEqualTo(1);
+	}
+
+	/// <summary>
+	/// A bridge goes with the packages it joins: one missing while they are installed was turned off and starts unticked,
+	/// it cannot be ticked while one of them is unticked, and ticked again it is installed with them.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Packages_ABridgeFollowsThePackagesItJoins()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=packages");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() => cut.Find("button.setup-pkg-all"));
+		await cut.Find("button.setup-pkg-all").ClickAsync();
+		await Assert.That(cut.Find("#setup-pkg-scene-help").HasAttribute("checked")).IsFalse()
+			.Because("scene and plus-help are installed without it, so it was turned off");
+
+		await cut.Find("#setup-pkg-scene").ChangeAsync(false);
+		await Assert.That(cut.Find("#setup-pkg-scene-help").HasAttribute("disabled")).IsTrue()
+			.Because("scene is unticked, so the bridge has nothing to join");
+
+		await cut.Find("#setup-pkg-scene").ChangeAsync(true);
+		await cut.Find("#setup-pkg-scene-help").ChangeAsync(true);
+		await Assert.That(cut.Find("#setup-pkg-scene-help").HasAttribute("checked")).IsTrue();
+		await cut.Find("button.setup-save").ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AuthSetupComplete"))
+				throw new InvalidOperationException("finished state not rendered yet");
+		});
+		using var sent = JsonDocument.Parse(handler.PackageChoices[0]);
+		var installed = sent.RootElement.GetProperty("installed").EnumerateArray().Select(e => e.GetString()!).ToList();
+		await Assert.That(installed).Contains("scene-help");
 	}
 
 	/// <summary>An administrator who unticks the starter wiki pages gets none.</summary>

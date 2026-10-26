@@ -21,7 +21,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 	IAdministrativeCapabilityService capabilities, IPackageOperationRunner operations,
 	PackageBatchRunRegistry runs, IServiceScopeFactory scopes, IHostApplicationLifetime lifetime,
 	EngineVersion engine, PluginInstallOptions installOptions, GameFeatureService features,
-	PluginUploadStore uploads, IAuditLog audit, ILogger<PackageBatchService> logger)
+	PluginUploadStore uploads, IAuditLog audit, IBundledPackageBootstrap bundled, ILogger<PackageBatchService> logger)
 {
 	private const long MaxBatchPayloadBytes = 64 * 1024 * 1024;
 	private sealed record Prepared(PackageBatchPlanResponse Plan, string Fingerprint, IReadOnlyList<PackageBatchCandidate> Candidates);
@@ -158,6 +158,10 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 									break;
 								case PackageBatchAction.Uninstall:
 									var removesPlugin = await registry.GetInstalledPackageAsync(step.Intent.TargetId) is InstalledPackageRecord { Kind: PackageKind.Plugin };
+									// A bridge removed with a package it joins goes with that package, not by a choice of its own.
+									var bridgeGoesWithItsHalf = BundledPackages.All.Any(p => p.Bridge && Same(p.PackageId, step.Intent.TargetId))
+										&& (await registry.GetPackageDependenciesAsync(step.Intent.TargetId)).Any(dependency => snapshot.Plan.Steps.Any(other =>
+											other.Intent.Action == PackageBatchAction.Uninstall && Same(other.Intent.TargetId, dependency.DependsOnId)));
 									if (removesPlugin)
 									{
 										var blocked = await plugins.GetBlockersAsync(step.Intent.TargetId, false, token);
@@ -177,7 +181,7 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 											steps[index] = steps[index] with { Message = "Files removed; the plugin is still running until the server restarts." };
 										}
 									}
-									await features.SetDeclinedAsync(step.Intent.TargetId, declined: true);
+									if (!bridgeGoesWithItsHalf) await features.SetDeclinedAsync(step.Intent.TargetId, declined: true);
 									break;
 								case PackageBatchAction.PluginOn:
 								case PackageBatchAction.PluginOff:
@@ -228,6 +232,8 @@ public sealed class PackageBatchService(PackageManifestResolver resolver, IPacka
 				PackageOperationRan<Finished> ran => ran.Result,
 				PackageOperationRefused => new Finished(PackageBatchRunState.Failed, "The queue or automatic backup refused the batch; no steps ran.")
 			};
+			// A bridge to +help or +config arrives with the package it joins.
+			if (HasCompleted()) await bundled.InstallBridgesAsync(hostToken);
 			runs.Update(admission.Run.Id, finished.State, steps, finished.Message);
 		}
 		catch (OperationCanceledException) { runs.Update(admission.Run.Id, HasCompleted() ? PackageBatchRunState.Partial : PackageBatchRunState.Cancelled, steps, "Execution stopped. Refresh actual state."); }

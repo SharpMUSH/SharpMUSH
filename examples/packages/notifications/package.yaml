@@ -1,7 +1,7 @@
 format: "1.16"
 package: notifications
 title: "Push notifications"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Notifications: a page or @mail sends a push notification to the player's phone or browser while they are away, as each player chooses with +notify."
 license: MIT
@@ -10,19 +10,13 @@ keywords: [notifications, push, page, mail, portal]
 category: Community
 requires_server: ">=0.1"
 
-# Its portal routes are children of http-handler's GET and POST verbs, and its help is a +help source.
+# Its portal routes are children of http-handler's GET and POST verbs. notifications-help puts its topics into +help.
 depends:
   - package: http-handler
     version: ">=1.0 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/http-handler/
-      branch: main
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
       branch: main
 
 objects:
@@ -161,12 +155,6 @@ objects:
         `` @trigger/args <notifications object>/API`SEND=to,<player>,kind,<NAME>,title,<title>,text,<text>,path,<portal page>,topic,<topic> ``
 
         It sends nothing when the player turned that kind off, and leaves the text out unless they turned preview on. The kind shows in `+notify` and on the portal page by itself. See `help @push`.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`NOTIFICATIONS: |-
-        {{notify_help}}
 
   # The events that notify: a page to everyone it reached but the pager, and new @mail.
   - ref: events

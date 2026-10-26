@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.3.1
+version: 1.4.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -10,20 +10,6 @@ keywords: [finger, profile, character, ooc]
 category: Characters
 requires_server: ">=0.1"
 
-depends:
-  - package: plus-help
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  # The settings are registered with +config: +config finger lists them.
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
-      branch: main
 
 # One permission, for staff who keep profiles: set anyone's fields, and the fields only staff set. Hand it to one
 # player with @permission/allow <player>=softcode.finger.edit.
@@ -632,15 +618,3 @@ objects:
         - `columns`: how many columns the other fields are dealt into, 1 to 4. 2 by default.
         - `length`: the longest value, in characters. 1000 by default.
         - `fields`: the fields, a table, above.
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`FINGER: |-
-        {{finger}}
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`FINGER: |-
-        {{finger_help}}

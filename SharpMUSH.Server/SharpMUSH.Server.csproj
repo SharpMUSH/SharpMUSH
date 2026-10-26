@@ -367,6 +367,14 @@
       <Link>BundledPackages\jobs.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.jobs.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs-help\package.yaml">
+      <Link>BundledPackages\jobs-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\jobs-config\package.yaml">
+      <Link>BundledPackages\jobs-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.jobs-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\jobs-app\package.yaml">
       <Link>BundledPackages\jobs-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.jobs-app.package.yaml</LogicalName>
@@ -374,6 +382,14 @@
     <EmbeddedResource Include="..\examples\packages\chargen\package.yaml">
       <Link>BundledPackages\chargen.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.chargen.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-help\package.yaml">
+      <Link>BundledPackages\chargen-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\chargen-config\package.yaml">
+      <Link>BundledPackages\chargen-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.chargen-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\chargen-app\package.yaml">
       <Link>BundledPackages\chargen-app.package.yaml</Link>
@@ -386,6 +402,14 @@
     <EmbeddedResource Include="..\examples\packages\radio\package.yaml">
       <Link>BundledPackages\radio.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.radio.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\radio-help\package.yaml">
+      <Link>BundledPackages\radio-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.radio-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\radio-config\package.yaml">
+      <Link>BundledPackages\radio-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.radio-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\radio-scene\package.yaml">
       <Link>BundledPackages\radio-scene.package.yaml</Link>
@@ -403,9 +427,21 @@
       <Link>BundledPackages\scene-safety.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-safety-help\package.yaml">
+      <Link>BundledPackages\scene-safety-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\scene-safety-config\package.yaml">
+      <Link>BundledPackages\scene-safety-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.scene-safety-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\highlights\package.yaml">
       <Link>BundledPackages\highlights.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.highlights.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\highlights-config\package.yaml">
+      <Link>BundledPackages\highlights-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.highlights-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\highlights-app\package.yaml">
       <Link>BundledPackages\highlights-app.package.yaml</Link>
@@ -415,6 +451,14 @@
       <Link>BundledPackages\bboards.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\bboards-help\package.yaml">
+      <Link>BundledPackages\bboards-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.bboards-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\bboards-config\package.yaml">
+      <Link>BundledPackages\bboards-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.bboards-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\bboards-app\package.yaml">
       <Link>BundledPackages\bboards-app.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.bboards-app.package.yaml</LogicalName>
@@ -423,33 +467,97 @@
       <Link>BundledPackages\who-where.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\who-where-help\package.yaml">
+      <Link>BundledPackages\who-where-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.who-where-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\who-where-config\package.yaml">
+      <Link>BundledPackages\who-where-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.who-where-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\status\package.yaml">
       <Link>BundledPackages\status.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.status.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\status-help\package.yaml">
+      <Link>BundledPackages\status-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.status-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\status-config\package.yaml">
+      <Link>BundledPackages\status-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.status-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\watch\package.yaml">
       <Link>BundledPackages\watch.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.watch.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\watch-help\package.yaml">
+      <Link>BundledPackages\watch-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.watch-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\watch-config\package.yaml">
+      <Link>BundledPackages\watch-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.watch-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\finger\package.yaml">
       <Link>BundledPackages\finger.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.finger.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\finger-help\package.yaml">
+      <Link>BundledPackages\finger-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.finger-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\finger-config\package.yaml">
+      <Link>BundledPackages\finger-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.finger-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\summary\package.yaml">
       <Link>BundledPackages\summary.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.summary.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\summary-help\package.yaml">
+      <Link>BundledPackages\summary-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.summary-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\summary-config\package.yaml">
+      <Link>BundledPackages\summary-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.summary-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\time\package.yaml">
       <Link>BundledPackages\time.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.time.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\time-help\package.yaml">
+      <Link>BundledPackages\time-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.time-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\time-config\package.yaml">
+      <Link>BundledPackages\time-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.time-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\info\package.yaml">
       <Link>BundledPackages\info.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.info.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\info-help\package.yaml">
+      <Link>BundledPackages\info-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.info-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\info-config\package.yaml">
+      <Link>BundledPackages\info-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.info-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\health\package.yaml">
       <Link>BundledPackages\health.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.health.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\health-help\package.yaml">
+      <Link>BundledPackages\health-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.health-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\health-config\package.yaml">
+      <Link>BundledPackages\health-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.health-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\health-jobs\package.yaml">
       <Link>BundledPackages\health-jobs.package.yaml</Link>
@@ -458,6 +566,14 @@
     <EmbeddedResource Include="..\examples\packages\relationships\package.yaml">
       <Link>BundledPackages\relationships.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.relationships.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships-help\package.yaml">
+      <Link>BundledPackages\relationships-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\relationships-config\package.yaml">
+      <Link>BundledPackages\relationships-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.relationships-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\relationships-scene\package.yaml">
       <Link>BundledPackages\relationships-scene.package.yaml</Link>
@@ -475,6 +591,14 @@
       <Link>BundledPackages\timeline.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.timeline.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\timeline-help\package.yaml">
+      <Link>BundledPackages\timeline-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.timeline-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\timeline-config\package.yaml">
+      <Link>BundledPackages\timeline-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.timeline-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord\package.yaml">
       <Link>BundledPackages\discord.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord.package.yaml</LogicalName>
@@ -483,13 +607,29 @@
       <Link>BundledPackages\discord-channels.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord-channels.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\discord-channels-help\package.yaml">
+      <Link>BundledPackages\discord-channels-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.discord-channels-help.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\discord-scenes\package.yaml">
       <Link>BundledPackages\discord-scenes.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.discord-scenes.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\discord-scenes-help\package.yaml">
+      <Link>BundledPackages\discord-scenes-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.discord-scenes-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\discord-scenes-config\package.yaml">
+      <Link>BundledPackages\discord-scenes-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.discord-scenes-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\notifications\package.yaml">
       <Link>BundledPackages\notifications.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.notifications.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\notifications-help\package.yaml">
+      <Link>BundledPackages\notifications-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.notifications-help.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\notifications-app\package.yaml">
       <Link>BundledPackages\notifications-app.package.yaml</Link>
@@ -499,13 +639,37 @@
       <Link>BundledPackages\roster.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.roster.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-help\package.yaml">
+      <Link>BundledPackages\roster-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-config\package.yaml">
+      <Link>BundledPackages\roster-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\roster-jobs\package.yaml">
       <Link>BundledPackages\roster-jobs.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-jobs-help\package.yaml">
+      <Link>BundledPackages\roster-jobs-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\roster-jobs-config\package.yaml">
+      <Link>BundledPackages\roster-jobs-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.roster-jobs-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\availability\package.yaml">
       <Link>BundledPackages\availability.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.availability.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\availability-help\package.yaml">
+      <Link>BundledPackages\availability-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.availability-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\availability-config\package.yaml">
+      <Link>BundledPackages\availability-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.availability-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-availability\package.yaml">
       <Link>BundledPackages\scene-availability.package.yaml</Link>
@@ -515,29 +679,77 @@
       <Link>BundledPackages\gmcp-room.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-room-help\package.yaml">
+      <Link>BundledPackages\gmcp-room-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-room-config\package.yaml">
+      <Link>BundledPackages\gmcp-room-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-room-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\gmcp-comm\package.yaml">
       <Link>BundledPackages\gmcp-comm.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-comm-help\package.yaml">
+      <Link>BundledPackages\gmcp-comm-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-comm-config\package.yaml">
+      <Link>BundledPackages\gmcp-comm-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-comm-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\gmcp-items\package.yaml">
       <Link>BundledPackages\gmcp-items.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-items-help\package.yaml">
+      <Link>BundledPackages\gmcp-items-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-items-config\package.yaml">
+      <Link>BundledPackages\gmcp-items-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-items-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\gmcp-char\package.yaml">
       <Link>BundledPackages\gmcp-char.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-char-help\package.yaml">
+      <Link>BundledPackages\gmcp-char-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\gmcp-char-config\package.yaml">
+      <Link>BundledPackages\gmcp-char-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.gmcp-char-config.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\mudlet-client\package.yaml">
       <Link>BundledPackages\mudlet-client.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\mudlet-client-help\package.yaml">
+      <Link>BundledPackages\mudlet-client-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\mudlet-client-config\package.yaml">
+      <Link>BundledPackages\mudlet-client-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.mudlet-client-config.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\mud-kit\package.yaml">
       <Link>BundledPackages\mud-kit.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.mud-kit.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\mud-kit-help\package.yaml">
+      <Link>BundledPackages\mud-kit-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.mud-kit-help.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\alts\package.yaml">
       <Link>BundledPackages\alts.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.alts.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\alts-help\package.yaml">
+      <Link>BundledPackages\alts-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.alts-help.package.yaml</LogicalName>
     </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the

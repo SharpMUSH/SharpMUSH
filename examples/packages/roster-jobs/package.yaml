@@ -1,7 +1,7 @@
 format: "1.16"
 package: roster-jobs
 title: "Roster applications through jobs"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Roster applications through the job queue: +roster/apply files a job in a Roster bucket, and approving the job gives the character to the applicant's account."
 license: MIT
@@ -24,18 +24,6 @@ depends:
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/jobs/
-      branch: main
-  - package: plus-help
-    version: ">=1.0 <2.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-help/
-      branch: main
-  - package: plus-config
-    version: ">=1.0"
-    source:
-      repo: https://github.com/SharpMUSH/SharpMUSH
-      path: examples/packages/plus-config/
       branch: main
 
 # Who decides applications is who works the Roster bucket, as with every bucket: softcode.jobs.roster, or
@@ -195,15 +183,3 @@ objects:
         Nobody can file in the Roster bucket with `+request`: applications come only from `+roster/apply`.
 
         `+config roster-jobs/max-open` is how many applications one account may have open. 3 by default.
-
-  - ref: help_registration
-    target: "{{plus-help/librarian}}"
-    attributes:
-      SRC`ROSTER-JOBS: |-
-        {{roster_jobs_help}}
-
-  - ref: config_registration
-    target: "{{plus-config/registry}}"
-    attributes:
-      SYSTEM`ROSTER-JOBS: |-
-        {{applications}}

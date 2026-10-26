@@ -1,0 +1,35 @@
+format: "1.16"
+package: summary-help
+title: "Pose summaries: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Pose summaries topics into +help: registers the summary package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [summary, help, bridge]
+category: Scenes
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. summary keeps its topics on its own help
+# object, and plus-help reads any object registered with its librarian. This package is only that registration;
+# uninstalling it takes the topics out of +help, and neither package changes.
+depends:
+  - package: summary
+    version: ">=1.2"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/summary/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: summary_help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`SUMMARY: |-
+        {{summary/summary_help}}
