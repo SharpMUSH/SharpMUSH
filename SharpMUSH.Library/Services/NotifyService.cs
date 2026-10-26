@@ -40,14 +40,6 @@ public class NotifyService(
 		IRealityPolicy reality, IListenerRoutingService? listenerRoutingService, IMediator? mediator, IHttpOutputCapture? httpOutputCapture)
 		: this(publishEndpoint, connections, localizationService, reality, listenerRoutingService, mediator, httpOutputCapture, null) { }
 
-	/// <summary>Retains the published constructor for legacy callers, with reality filtering disabled.</summary>
-	public NotifyService(IMessageBus publishEndpoint, IConnectionService connections,
-		ILocalizationService localizationService, IListenerRoutingService? listenerRoutingService = null,
-		IMediator? mediator = null, IHttpOutputCapture? httpOutputCapture = null)
-		: this(publishEndpoint, connections, localizationService, DisabledRealityPolicy.Instance,
-			listenerRoutingService, mediator, httpOutputCapture)
-	{ }
-
 	// A notification caches only perception results, never a connection binding.
 	private async ValueTask<bool> CanReceiveBound(long handle, DBRef intended, AnySharpObject? sender, Dictionary<DBRef, bool> perceptions)
 	{

@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Reality;
 using System.Runtime.CompilerServices;
 using Mediator;
 using Microsoft.Extensions.Options;
@@ -32,7 +33,7 @@ public class QueueControlPermissionCancellationTests
 			ValueTask.FromResult<AnyOptionalSharpObject>(call.Arg<GetObjectNodeQuery>().DBRef.Number == 40 ? (AnyOptionalSharpObject)player : target));
 		var options = Substitute.For<IOptionsMonitor<SharpMUSHOptions>>();
 		options.CurrentValue.Returns(TestSharpMushOptions.Create());
-		var permissions = new PermissionService(Substitute.For<ILockService>(), options);
+		var permissions = new PermissionService(Substitute.For<ILockService>(), options, DisabledRealityPolicy.Instance, Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(() => Substitute.For<IAttributeService>()));
 		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
 		using var cleanup = new CancellationTokenSource();
 		async IAsyncEnumerable<SharpPower> Powers([EnumeratorCancellation] CancellationToken token = default)

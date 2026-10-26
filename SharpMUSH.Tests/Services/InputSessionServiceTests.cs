@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Authorization;
 using System.Collections.Concurrent;
 using System.Text;
@@ -212,7 +213,7 @@ public class InputSessionServiceTests
 		{ publication.TrySetResult(call.Arg<MarkupOutputMessage>()); return Task.CompletedTask; });
 		var localization = Substitute.For<ILocalizationService>();
 		localization.Format(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<object[]>()).Returns(call => call.ArgAt<string>(0));
-		var notify = new NotifyService(bus, h.Connections, localization);
+		var notify = new NotifyService(bus, h.Connections, localization, DisabledRealityPolicy.Instance, null, null, null);
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
 		await sessions.StartAsync(caller, MarkupText.Empty, InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		var session = sessions.GetCapturing(1)!;
@@ -254,7 +255,7 @@ public class InputSessionServiceTests
 		MarkupPromptMessage? published = null;
 		bus.HandlePublish(Arg.Any<MarkupPromptMessage>(), Arg.Any<CancellationToken>()).Returns(call =>
 		{ published = call.Arg<MarkupPromptMessage>(); return Task.CompletedTask; });
-		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance, null, null, null);
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
 		await sessions.StartAsync(caller, MarkupText.Plain("private prompt"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60));
 		if (reprompt) await sessions.PromptAsync(caller, MarkupText.Plain("another private prompt"));
@@ -1261,7 +1262,7 @@ public class InputSessionServiceTests
 		});
 		var localization = Substitute.For<ILocalizationService>();
 		localization.Format(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<object[]>()).Returns(call => call.ArgAt<string>(0));
-		var notify = new NotifyService(bus, h.Connections, localization);
+		var notify = new NotifyService(bus, h.Connections, localization, DisabledRealityPolicy.Instance, null, null, null);
 		var sessions = new InputSessionService(h.Connections, h.Mediator, h.Attributes, h.Permissions, notify, h.Time);
 
 		var started = sessions.StartAsync(caller, MarkupText.Plain("first"), InputRoutes.To(h.Target.Object.DBRef, "CALLBACK"), InputMatch.Exact, TimeSpan.FromSeconds(60)).AsTask();
@@ -1405,7 +1406,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
-		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance, null, null, null);
 		await h.Connect(1);
 		await h.Connect(2, orderedPrompts: true);
 		var session = Guid.NewGuid();
@@ -1424,7 +1425,7 @@ public class InputSessionServiceTests
 	{
 		var h = new Harness();
 		var bus = Substitute.For<SharpMUSH.Messaging.Abstractions.IMessageBus>();
-		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>());
+		var notify = new NotifyService(bus, h.Connections, Substitute.For<ILocalizationService>(), DisabledRealityPolicy.Instance, null, null, null);
 		await h.Connect(1);
 		await h.Connect(2, orderedPrompts: true);
 

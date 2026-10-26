@@ -22,10 +22,6 @@ public class SchedulerHandlerLifetimeTests
 	[Arguments("attribute", false)]
 	[Arguments("delay", false)]
 	[Arguments("timeout", false)]
-	[Arguments("legacy-command", false)]
-	[Arguments("legacy-attribute", false)]
-	[Arguments("legacy-delay", false)]
-	[Arguments("legacy-timeout", false)]
 	[Arguments("reserve", false)]
 	[Arguments("command", true)]
 	public async Task LiveAdmissionCancellationReachesTheBlockedProvider(string operation, bool inherited)
@@ -61,10 +57,6 @@ public class SchedulerHandlerLifetimeTests
 				case "attribute": await new AdmissionAsyncScheduleHandler(scheduler).Handle(new(() => ValueTask.FromResult(state), target), request.Token); break;
 				case "delay": await new AdmissionDelayedScheduleHandler(scheduler).Handle(new(command, state, TimeSpan.FromHours(1)), request.Token); break;
 				case "timeout": await new AdmissionScheduleTimeoutHandler(scheduler).Handle(new(command, state, target, 0, TimeSpan.FromHours(1)), request.Token); break;
-				case "legacy-command": await new ScheduleHandler(scheduler).Handle(new(command, state, target, 0), request.Token); break;
-				case "legacy-attribute": await new AsyncScheduleHandler(scheduler).Handle(new(() => ValueTask.FromResult(state), target), request.Token); break;
-				case "legacy-delay": await new DelayedScheduleHandler(scheduler).Handle(new(command, state, TimeSpan.FromHours(1)), request.Token); break;
-				case "legacy-timeout": await new ScheduleTimeoutHandler(scheduler).Handle(new(command, state, target, 0, TimeSpan.FromHours(1)), request.Token); break;
 				case "reserve": using (await new ReservedCommandListHandler(scheduler).Handle(new(command, state), request.Token)) { } break;
 			}
 		}

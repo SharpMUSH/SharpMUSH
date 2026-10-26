@@ -51,7 +51,7 @@ public class NoSpoofEmitRealityTests
 		locks.Evaluate(LockType.Interact, recipient, executor).Returns(lockAllowed);
 		locks.Evaluate(LockType.Interact, recipient, enactor).Returns(!lockAllowed);
 		var permissions = new PermissionService(locks, Substitute.For<IOptionsMonitor<SharpMUSHOptions>>(),
-			enabled ? reality : DisabledRealityPolicy.Instance);
+			enabled ? reality : DisabledRealityPolicy.Instance, Substitute.For<IConnectionService>(), new Lazy<IAttributeService>(() => Substitute.For<IAttributeService>()));
 		var mediator = Substitute.For<IMediator>();
 		mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 			new AnyOptionalSharpObject(call.Arg<GetObjectNodeQuery>().DBRef.Equals(executor.Object().DBRef)
