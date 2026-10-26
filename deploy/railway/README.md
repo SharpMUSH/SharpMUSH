@@ -2,9 +2,9 @@
 
 Railway runs the same image as Fly (`sharpmush/sharpmush-allinone`, built from
 `deploy/fly/Dockerfile`) as three services, one per role (`deploy/fly/README.md`, "Roles"): the
-edge holds every player's socket, so updating the server or the renderer drops nobody. A Railway template turns the settings
-below into a **Deploy on Railway** button; Railway templates are made in a Railway account's
-template composer, not from a file in this repository.
+edge holds every player's socket, so updating the server or the renderer drops nobody. A Railway
+template turns the settings below into a **Deploy on Railway** button; Railway templates are made
+in a Railway account's template composer, not from a file in this repository.
 
 ## Template settings
 
