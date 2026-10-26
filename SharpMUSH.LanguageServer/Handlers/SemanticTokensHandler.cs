@@ -43,6 +43,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 		{
 			var tokensData = _parser.GetSemanticTokens(document.Text, MushParseMode.ForFileName(uri).ToParseType());
 
+			// The parser's data is delta-encoded; the builder takes each token where it is and encodes the deltas itself.
+			var line = 0;
+			var character = 0;
 			for (int i = 0; i < tokensData.Data.Length; i += 5)
 			{
 				var deltaLine = tokensData.Data[i];
@@ -51,7 +54,9 @@ public class SemanticTokensHandler : SemanticTokensHandlerBase
 				var tokenType = tokensData.Data[i + 3];
 				var modifiers = tokensData.Data[i + 4];
 
-				builder.Push(deltaLine, deltaChar, length, tokenType, modifiers);
+				line += deltaLine;
+				character = deltaLine == 0 ? character + deltaChar : deltaChar;
+				builder.Push(line, character, length, tokenType, modifiers);
 			}
 		}
 		catch (Exception ex)
