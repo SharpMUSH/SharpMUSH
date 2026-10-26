@@ -46,8 +46,7 @@ grep -q 'v6' <<<"$ips" || "$fly" ips allocate-v6 --app "$app"
 
 # One machine: the world's volume can be attached to only one.
 "$fly" deploy . --app "$app" --primary-region "$region" --ha=false \
-	--config deploy/fly/fly.toml --dockerfile deploy/fly/Dockerfile \
-	--ignorefile deploy/fly/fly.dockerignore
+	--config deploy/fly/fly.toml
 
 echo
 if grep 'v4' <<<"$("$fly" ips list --app "$app")" | grep -vq 'shared'; then

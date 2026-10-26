@@ -55,8 +55,7 @@ if (-not ($ips | Where-Object { $_ -match 'v6' })) {
 Push-Location $root
 try {
 	Invoke-Fly deploy . --app $App --primary-region $Region --ha=false `
-		--config deploy/fly/fly.toml --dockerfile deploy/fly/Dockerfile `
-		--ignorefile deploy/fly/fly.dockerignore
+		--config deploy/fly/fly.toml
 }
 finally {
 	Pop-Location

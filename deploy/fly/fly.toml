@@ -1,6 +1,14 @@
 # SharpMUSH on Fly.io: one machine running deploy/fly/Dockerfile, with the world on a volume.
 # deploy/fly/launch.sh creates the app, its volume and IP addresses, then deploys with this file.
 # The app name and region come from launch.sh's arguments.
+#
+# Without the CLI: in Fly's dashboard, launch an app from a GitHub fork of SharpMUSH with the
+# repository root as the working directory and deploy/fly/fly.toml as the config path.
+
+# Relative to this file; the build context is the repository root.
+[build]
+  dockerfile = "Dockerfile"
+  ignorefile = "fly.dockerignore"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the
