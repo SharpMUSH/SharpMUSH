@@ -14,7 +14,7 @@ packages:
   - path: who-where/
     name: Who/Where
     package: who-where
-    version: 1.10.0
+    version: 1.10.1
     description: +who by name or idle, or matching a name; +where grouped under a line per location, or sorted by location or name; other packages add a Status column to +who with filters
   - path: who-where-help/
     name: +who and +where help
