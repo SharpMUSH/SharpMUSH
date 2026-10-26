@@ -15,13 +15,16 @@
 
 `@storage`<br>
 `@storage/history`<br>
-`@storage/purge`
+`@storage/purge`<br>
+`@storage/backups [<page>]`
 
 Wizard-only. Reports where the world's disk goes, and what the version histories inside it hold. This is a SharpMUSH command; PennMUSH keeps its database in memory and has no file to report on.
 
 - [@storage panel]: the bars and figures `@storage` shows, and why the file never shrinks
 - [@storage history]: the kinds of history the world keeps
 - [@storage purge]: running a retention pass, and what a policy never removes
+
+`@storage/backups` lists the backup copies on disk, a page at a time, the same as `@backup/list`. It is the only form of `@storage` that takes a page number.
 
 ## The storage panel
 

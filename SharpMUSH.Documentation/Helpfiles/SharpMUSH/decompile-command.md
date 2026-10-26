@@ -31,7 +31,7 @@
 
 `@decompile` outputs the dbref of the object decompiled.
 
-All output lines are prefixed with `<prefix>`, if one is given. This is useful for creating client-side scripts for editing code.
+All output lines are prefixed with `<prefix>`, if one is given. This is useful for creating client-side scripts for editing code. The `/prefix` switch is accepted and changes nothing; the prefix is what follows the `=`.
 
 You can either @decompile an entire object, or just certain parts of it. To @decompile just a few attributes, for example, you could type:
 ```sharp

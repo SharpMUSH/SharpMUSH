@@ -59,6 +59,7 @@ Switches include:
 - /delete : Delete a command added with @command/add or /alias. God only.
 - /disable : Disable a command added in the hardcode. A disabled command is not a command at all: what was typed goes on to $-commands and then Huh?.
 - /enable : Re-enable a command disabled with @command/disable.
+- /off and /on : the same as /disable and /enable.
 
 The `/quiet` switch can be used to suppress output from @command.
 

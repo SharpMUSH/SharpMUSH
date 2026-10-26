@@ -23,7 +23,7 @@
 -->
 # @notify
 
-`@notify[/any][/all] <object>[/<attribute>][=<number>]`<br>
+`@notify[/any][/all][/quiet] <object>[/<attribute>][=<number>]`<br>
 `@notify/setq <object>[/<attribute>]=<qreg1>,<qval1>[,...]`
 
 This command notifies a semaphore, allowing commands queued for that semaphore to be executed.
@@ -35,6 +35,8 @@ If the `/all` switch is given, then all queue entries associated with the select
 If the `/all` switch was not used, and there were not enough queue entries waiting to satisfy the requested `<number>`, then the semaphore becomes negative, and subsequent @waits will not block until it reaches 0 again.
 
 You may not specify both the `/any` switch and a specific attribute. Similarly, you may not specify both the `/all` switch and a number.
+
+@notify tells you "Notified." unless you, or your owner, are set QUIET, or the `/quiet` switch is given.
 
 ## Storing the counter
 
