@@ -227,4 +227,39 @@ public class DbWalkPermissionTests
 		await Assert.That(await EvalAs(new DBRef(1), $"xcon(#{room.Number},a,2)"))
 			.IsEqualTo("#-1 ARGUMENT MUST BE INTEGER");
 	}
+
+	/// <summary>Each window form walks the same list as its l-function: the visible forms leave out what is dark.</summary>
+	[Test]
+	[Arguments("xexits", "lexits")]
+	[Arguments("xvexits", "lvexits")]
+	[Arguments("xthings", "lthings")]
+	[Arguments("xvthings", "lvthings")]
+	[Arguments("xplayers", "lplayers")]
+	[Arguments("xvplayers", "lvplayers")]
+	[Arguments("xcon", "lcon")]
+	[Arguments("xvcon", "lvcon")]
+	public async Task EveryWindowFormMatchesItsList(string window, string list)
+	{
+		var room = await Dig("WalkKindsRoom");
+		var elsewhere = await Dig("WalkKindsElsewhere");
+		await God($"@open {TestIsolationHelpers.GenerateUniqueName("WalkLit")}=#{elsewhere.Number},,#{room.Number}");
+		var darkExit = DBRef.Parse((await God($"@open {TestIsolationHelpers.GenerateUniqueName("WalkDark")}=#{elsewhere.Number},,#{room.Number}")).Trim());
+		await God($"@set #{darkExit.Number}=DARK");
+		await God($"@tel #{(await Create(TestIsolationHelpers.GenerateUniqueName("WalkLitThing"))).Number}=#{room.Number}");
+		var darkThing = await Create(TestIsolationHelpers.GenerateUniqueName("WalkDarkThing"));
+		await God($"@tel #{darkThing.Number}=#{room.Number}");
+		await God($"@set #{darkThing.Number}=DARK");
+		// lvplayers() lists only players who are connected.
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "WalkKindsPlayer", room);
+
+		var listed = (await EvalAs(new DBRef(1), $"{list}(#{room.Number})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var windowed = (await EvalAs(new DBRef(1), $"{window}(#{room.Number},1,10)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var rest = (await EvalAs(new DBRef(1), $"{window}(#{room.Number},2,10)")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+		await Assert.That(listed).IsNotEmpty();
+		await Assert.That(windowed).IsEquivalentTo(listed);
+		await Assert.That(rest).IsEquivalentTo(listed.Skip(1).ToArray());
+		await ConnectionService.Disconnect(player.Handle);
+	}
 }

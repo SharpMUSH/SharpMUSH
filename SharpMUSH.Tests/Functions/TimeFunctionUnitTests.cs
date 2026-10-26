@@ -231,6 +231,9 @@ public class TimeFunctionUnitTests
 	[Arguments("timefmt($H:$M:$S,0,UTC)", "00:00:00")]
 	[Arguments("timefmt($y,0,UTC)", "70")]
 	[Arguments("timefmt($Y,0,UTC)", "1970")]
+	[Arguments("timefmt($U $W,0,UTC)", "00 00")]
+	[Arguments("timefmt($U $W,1778371200,UTC)", "19 18")]
+	[Arguments("timefmt($U $W,1778457600,UTC)", "19 19")]
 	public async Task Timefmt(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
@@ -240,7 +243,25 @@ public class TimeFunctionUnitTests
 	// SECSCALC tests - based on pennfunc.md examples
 	[Test]
 	[Arguments("secscalc(1d2h3m4s)", "93784")]
+	[Arguments("secscalc(0, 5 days)", "432000")]
+	[Arguments("secscalc(0, 2 hours, 30 minutes, 10 seconds)", "9010")]
+	[Arguments("secscalc(0, 1 month)", "2678400")]
+	[Arguments("secscalc(0, 1 year)", "31536000")]
+	[Arguments("secscalc(0, weekday 3)", "518400")]
+	[Arguments("secscalc(0, utc, unixepoch)", "0")]
 	public async Task Secscalc(string str, string expected)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
+		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
+	}
+
+	[Test]
+	[Arguments("timecalc(0, +2 weeks)", "Thu Jan 15 00:00:00 1970")]
+	[Arguments("timecalc(0, -1 day)", "Wed Dec 31 00:00:00 1969")]
+	[Arguments("timecalc(0, 3 hours, 4 minutes, 5 seconds)", "Thu Jan 01 03:04:05 1970")]
+	[Arguments("timecalc(0, 1 month, 1 year)", "Mon Feb 01 00:00:00 1971")]
+	[Arguments("timecalc(0, weekday 5)", "Fri Jan 02 00:00:00 1970")]
+	public async Task TimecalcOffsets(string str, string expected)
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(str));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

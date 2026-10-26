@@ -34,6 +34,15 @@ public class ThemeCommandTests
 	}
 
 	[Test]
+	public async Task ThemeList_ShowsTheThemesOnOffer()
+	{
+		var (heard, _) = await AsPlayer("@theme/list");
+
+		await Assert.That(heard.Single()).Contains("Layout themes");
+		await Assert.That(heard.Single().Split('\n').Any(line => line.Contains("fantasy") && line.Contains("built-in"))).IsTrue();
+	}
+
+	[Test]
 	public async Task Theme_KeepsWhatThePlayerChose()
 	{
 		var (heard, theme) = await AsPlayer("@theme me=fantasy");
