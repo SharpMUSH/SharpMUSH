@@ -26,19 +26,24 @@ powershell -ExecutionPolicy Bypass -File deploy\fly\launch.ps1 my-game iad
 `bash deploy/fly/launch.sh` from PowerShell runs under WSL and also works; it uses the Windows
 `fly.exe`.
 
-`launch.sh` creates the app, a 10 GB volume (`sharpmush_data`, mounted at `/data`), a dedicated IPv4
-address for telnet, and an IPv6 address, then deploys one `shared-cpu-2x` machine with 2 GB.
-Running it again deploys the current checkout.
+`launch.sh` creates the app, a 10 GB volume (`sharpmush_data`, mounted at `/data`), an IPv6 address
+and a shared IPv4 address, then deploys one `shared-cpu-2x` machine with 2 GB. Running it again
+deploys the current checkout.
+
+Fly's shared IPv4 address carries only HTTP, so the portal and the web terminal reach everyone but
+telnet on port 4201 answers over IPv6 alone. Players whose network has no IPv6 can't reach it. Add
+`--dedicated-ipv4` (`-DedicatedIPv4` for `launch.ps1`) to give the app an IPv4 address of its own
+for telnet; running the script again with it adds one to an existing app.
 
 Open the `setup_code` link from the log to finish `/setup`. Until then the portal answers only that
 link, and telnet listens on an inside port. Once setup is finished both open, and players connect
-to the dedicated IPv4 address on port 4201. `SHARPMUSH_GUARD=off` in `fly.toml`'s `[env]` skips the
+to `<app>.fly.dev` on port 4201. `SHARPMUSH_GUARD=off` in `fly.toml`'s `[env]` skips the
 guard.
 
 ## Cost
 
-At Fly's list prices: the machine (shared-cpu-2x, 2 GB), $2/month for the dedicated IPv4 address,
-and $0.15 per GB per month for the volume. Fly bills by the second; see fly.io/pricing.
+At Fly's list prices: the machine (shared-cpu-2x, 2 GB), $2/month for a dedicated IPv4 address if
+you add one, and $0.15 per GB per month for the volume. Fly bills by the second; see fly.io/pricing.
 
 ## Your own domain
 
