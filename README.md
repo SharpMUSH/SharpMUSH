@@ -26,8 +26,7 @@ SharpMUSH is an open-source MUSH server for collaborative stories, roleplay and 
 
 ## Release Status
 
-Currently, there is no Release Candidate for SharpMUSH.
-We are still in the early stages of development, and are working on getting a stable release out.
+The first release, 1.0.0, is being prepared. See [CHANGELOG.md](./CHANGELOG.md) for what each release contains.
 
 ## Docker Deployment
 

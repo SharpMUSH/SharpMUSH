@@ -37,7 +37,7 @@ Copyright, License, and Credits for SharpMUSH 1.x.
 
 I. Copyrights
 
-SharpMUSH 1.x, Copyright (c) 2024, Harry Cordewener
+SharpMUSH 1.x, Copyright (c) 2024-2026, Harry Cordewener
 
 Some code used in this server may have been derived from the PennMUSH source code. PennMUSH is Copyright (c) 1995-2006, T. Alexander Popiel <talek@pennmush.org> and Shawn Wagner <raevnos@pennmush.org>.
 

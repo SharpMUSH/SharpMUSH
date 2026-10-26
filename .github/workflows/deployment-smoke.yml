@@ -1,6 +1,8 @@
 name: Disposable deployment smoke
 
 on:
+  push:
+    branches: [main]
   pull_request:
     paths:
       - '.github/workflows/deployment-smoke.yml'

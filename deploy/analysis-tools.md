@@ -1,6 +1,6 @@
 # Set up editor and AI analysis
 
-This path assumes an already configured HTTPS game and an **existing character with a game password**. Analysis uses that character name/password, not the portal account email, a portal cookie, an API key or a GitHub login. Analysis does not save attributes or run commands. The remote work in PR #1800 is merged; use a server build containing it, and build the editor/bridge from the matching checkout.
+This path assumes an already configured HTTPS game and an **existing character with a game password**. Analysis uses that character name/password, not the portal account email, a portal cookie, an API key or a GitHub login. Analysis does not save attributes or run commands. Build the editor/bridge from the same checkout as the server.
 
 The commands below are instructions for an operator, not stages run during this documentation update. No game, character credentials, TLS keys, exposed listener or IDE session was created to validate this recipe.
 

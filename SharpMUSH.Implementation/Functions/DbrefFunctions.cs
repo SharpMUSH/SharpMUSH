@@ -9,6 +9,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -826,18 +827,17 @@ public partial class Functions
 
 	[SharpFunction(Name = "numversion", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public ValueTask<CallState> NumVersion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(NumericVersion(System.Version.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion)));
+		=> ValueTask.FromResult<CallState>(NumericVersion(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion).Current));
 
 	/// <summary>
 	/// PennMUSH's NUMVERSION layout (hdrs/version.h): three digits each for minor, patch and
-	/// patchlevel below the major version, so 1.8.8p0 is 1008008000. SharpMUSH's fourth version part
-	/// stands in for the patchlevel.
+	/// patchlevel below the major version, so 1.8.8p0 is 1008008000. SharpMUSH has no patchlevel,
+	/// so the last three digits are 000.
 	/// </summary>
-	private static string NumericVersion(System.Version version)
+	private static string NumericVersion(PackageVersion version)
 		=> (version.Major * 1_000_000_000L
 			+ version.Minor * 1_000_000L
-			+ Math.Max(version.Build, 0) * 1_000L
-			+ Math.Max(version.Revision, 0)).ToString(CultureInfo.InvariantCulture);
+			+ version.Patch * 1_000L).ToString(CultureInfo.InvariantCulture);
 
 	/// <summary>
 	/// PennMUSH's <c>fun_parent</c> (<c>src/fundb.c</c>). With a second argument it first does what

@@ -1,6 +1,7 @@
-format: 1
+format: "1.16"
 package: hello-ui
-version: 1.0.0
+title: "Hello UI"
+version: 1.0.1
 kind: plugin
 authors: [SharpMUSH Examples]
 description: "End-to-end UI plugin (controller + IApplicationSource) shipped as a plugin package"
