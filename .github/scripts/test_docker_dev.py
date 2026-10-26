@@ -35,6 +35,17 @@ class PublishedRevisionTests(unittest.TestCase):
         self.assertEqual(result, {'server': ['Game/change'], 'connectionserver': ['Conn/change'],
                                   'socketserver': ['Socket/change']})
 
+    def test_reads_each_image_under_its_current_name(self):
+        tags = []
+        def inspect(args, text):
+            tags.append(args[4])
+            return '{}'
+        with patch('subprocess.check_output', side_effect=inspect):
+            for image in ('server', 'connectionserver', 'socketserver', 'fly'):
+                docker_dev.published_revision(image)
+        self.assertEqual(tags, ['sharpmush/sharpmush-server:dev', 'sharpmush/sharpmush-renderer:dev',
+                                'sharpmush/sharpmush-socketserver:dev', 'sharpmush/sharpmush-allinone:dev'])
+
 
 class FlyImageTests(unittest.TestCase):
     def test_rebuilds_when_its_own_files_change(self):

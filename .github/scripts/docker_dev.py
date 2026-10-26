@@ -20,8 +20,19 @@ def image_revision(data):
     return None
 
 
+# The Docker Hub repository each image is published under. The workflows also push every build to
+# the name it had before (sharpmush-connectionserver, sharpmush-fly) so installs that still name it
+# keep updating; those names never carry a different process.
+REPOSITORIES = {
+    'server': 'sharpmush-server',
+    'connectionserver': 'sharpmush-renderer',
+    'socketserver': 'sharpmush-socketserver',
+    'fly': 'sharpmush-allinone',
+}
+
+
 def published_revision(image):
-    tag = f'sharpmush/sharpmush-{image}:dev'
+    tag = f'sharpmush/{REPOSITORIES[image]}:dev'
     # Registry errors fail the run; they must not silently trigger all publications.
     raw = subprocess.check_output(['docker', 'buildx', 'imagetools', 'inspect', tag,
                                    '--format', '{{json .Image}}'], text=True)
@@ -42,7 +53,7 @@ def fly_changed(head):
     try:
         base = published_revision('fly')
     except subprocess.CalledProcessError:
-        print('::warning::sharpmush/sharpmush-fly:dev is not published yet; building it')
+        print(f'::warning::sharpmush/{REPOSITORIES["fly"]}:dev is not published yet; building it')
         return True
     if not base:
         return True

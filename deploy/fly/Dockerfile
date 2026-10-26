@@ -3,11 +3,11 @@
 # the whole machine, which is the price of fitting on these hosts.
 #
 # Build from the repository root (it needs nats.conf):
-#   docker build -f deploy/fly/Dockerfile -t sharpmush-fly .
+#   docker build -f deploy/fly/Dockerfile -t sharpmush-allinone .
 ARG SHARPMUSH_IMAGE_TAG=dev
 FROM sharpmush/sharpmush-server:${SHARPMUSH_IMAGE_TAG} AS server
 FROM sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG} AS connection
-FROM sharpmush/sharpmush-connectionserver:${SHARPMUSH_IMAGE_TAG} AS renderer
+FROM sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG} AS renderer
 FROM nats:2.10-alpine AS nats
 FROM caddy:2-alpine AS caddy
 
