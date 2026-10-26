@@ -177,7 +177,7 @@ public class TinyMuxDatabaseReaderTests
 	public async Task ReportsWhatItChanged()
 	{
 		var database = await ReadV5();
-		var notes = database.ImportNotes;
+		var notes = database.ImportNotes.Texts();
 
 		await Assert.That(notes).Contains(note => note.StartsWith("Flag SEETHRU imported as TRANSPARENT"));
 		await Assert.That(notes).Contains(note => note.StartsWith("Power control_all granted as the control.all permission"));

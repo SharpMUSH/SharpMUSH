@@ -47,15 +47,15 @@ public class PennMUSHDanglingReferenceTests
 		var result = await world.Converter.ConvertDatabaseAsync(Fixture());
 
 		await Assert.That(result.Errors).IsEmpty();
-		await Assert.That(result.Warnings).Contains("Location #99 of #3 is not in the import; it was put in its home #4");
-		await Assert.That(result.Warnings).Contains("Parent #98 of #3 is not in the import; it was dropped");
-		await Assert.That(result.Warnings).Contains("Zone #97 of #3 is not in the import; it was dropped");
-		await Assert.That(result.Warnings).Contains("Destination #96 of exit #5 is not in the import; the exit was left unlinked");
-		await Assert.That(result.Warnings).Contains("Location #95 of #6 is not in the import; it was left in #0");
-		await Assert.That(result.Warnings).Contains("Owner #94 of #7 is not an imported player; God keeps it");
-		await Assert.That(result.Warnings).Contains("Location #93 of #8 is not in the import, and its home #5 cannot hold it; it was left in #0");
-		await Assert.That(result.Warnings).DoesNotContain("Location #93 of #8 is not in the import; it was put in its home #5");
-		await Assert.That(result.Warnings).Contains("Location #92 of #9 is not in the import; it was left in #0");
+		await Assert.That(result.Warnings.Texts()).Contains("Location #99 of #3 is not in the import; it was put in its home #4");
+		await Assert.That(result.Warnings.Texts()).Contains("Parent #98 of #3 is not in the import; it was dropped");
+		await Assert.That(result.Warnings.Texts()).Contains("Zone #97 of #3 is not in the import; it was dropped");
+		await Assert.That(result.Warnings.Texts()).Contains("Destination #96 of exit #5 is not in the import; the exit was left unlinked");
+		await Assert.That(result.Warnings.Texts()).Contains("Location #95 of #6 is not in the import; it was left in #0");
+		await Assert.That(result.Warnings.Texts()).Contains("Owner #94 of #7 is not an imported player; God keeps it");
+		await Assert.That(result.Warnings.Texts()).Contains("Location #93 of #8 is not in the import, and its home #5 cannot hold it; it was left in #0");
+		await Assert.That(result.Warnings.Texts()).DoesNotContain("Location #93 of #8 is not in the import; it was put in its home #5");
+		await Assert.That(result.Warnings.Texts()).Contains("Location #92 of #9 is not in the import; it was left in #0");
 
 		var home = await FindAsync(world, "Dangling Home");
 		var lost = await FindAsync(world, "Dangling Lost");

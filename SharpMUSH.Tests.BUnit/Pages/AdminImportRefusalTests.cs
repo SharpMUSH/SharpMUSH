@@ -247,6 +247,14 @@ public class AdminImportRefusalTests : TrackingBunitContext
 	}
 
 	private void AddRewriteServices(params SoftcodeRewrite[] rewrites)
+		=> AddResultServices(new ConversionResult
+		{
+			SourceName = "RhostMUSH",
+			Warnings = [new ImportWarning(ImportWarningKind.Softcode, $"Softcode was rewritten in {rewrites.Length} attribute(s)")],
+			SoftcodeRewrites = [.. rewrites]
+		});
+
+	private void AddResultServices(ConversionResult result)
 		=> AddServices((_, path) => path switch
 		{
 			"api/databaseconversion/upload" => Started(),
@@ -254,13 +262,33 @@ public class AdminImportRefusalTests : TrackingBunitContext
 			{
 				TotalObjects = 10, ProcessedObjects = 10, CurrentPhase = "Done", PercentageComplete = 100
 			})),
-			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(new ConversionResult
-			{
-				SourceName = "RhostMUSH",
-				Warnings = [$"Softcode was rewritten in {rewrites.Length} attribute(s)"],
-				SoftcodeRewrites = [.. rewrites]
-			}))
+			_ => Json(HttpStatusCode.OK, JsonSerializer.Serialize(result))
 		});
+
+	/// <summary>The warnings come grouped by kind, the kinds with something to act on first and those warnings first.</summary>
+	[Test]
+	public async Task DatabaseImport_GroupsWarningsByKind_NeedsActionFirst()
+	{
+		AddResultServices(new ConversionResult
+		{
+			SourceName = "RhostMUSH",
+			Warnings =
+			[
+				new ImportWarning(ImportWarningKind.Flags, "Flag ZONEMASTER: dropped"),
+				new ImportWarning(ImportWarningKind.Players, "Passwords stored as DES crypt"),
+				new ImportWarning(ImportWarningKind.Players, "Passwords stored as bcrypt", NeedsAction: true)
+			]
+		});
+
+		var cut = await StartConversion();
+
+		cut.WaitForAssertion(() => cut.Find(".dbimport-warning-group"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".dbimport-warning-kind").Select(heading => heading.TextContent))
+			.IsEquivalentTo(["AdmImportKindPlayers (2)", "AdmImportKindFlags (1)"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		var players = cut.FindAll(".dbimport-warning-group")[0].QuerySelectorAll(".dbimport-warning");
+		await Assert.That(players[0].TextContent).Contains("AdmImportNeedsAction").And.Contains("Passwords stored as bcrypt");
+		await Assert.That(players[1].TextContent).DoesNotContain("AdmImportNeedsAction");
+	}
 
 	[Test]
 	public async Task ConfigHome_SaysWhyItHasNoCounts()

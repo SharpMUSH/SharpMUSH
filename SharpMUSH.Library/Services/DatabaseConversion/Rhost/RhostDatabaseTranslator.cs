@@ -78,7 +78,7 @@ public static partial class RhostDatabaseTranslator
 	public static PennMUSHDatabase Translate(RhostFlatfile flatfile, RhostMail? mail = null)
 	{
 		var report = new Report();
-		report.Line($"Read a {ServerName} flatfile, format version {flatfile.FormatVersion}, with {flatfile.Objects.Count} " +
+		report.Line(ImportWarningKind.Other, $"Read a {ServerName} flatfile, format version {flatfile.FormatVersion}, with {flatfile.Objects.Count} " +
 			$"object(s) and {flatfile.UserAttributes.Count} user attribute name(s).");
 
 		var byNumber = flatfile.Objects.ToDictionary(o => o.DBRef);
@@ -108,15 +108,15 @@ public static partial class RhostDatabaseTranslator
 		if (mail is not null)
 		{
 			database.Mail = mail.Mail;
-			report.Lines.AddRange(mail.Notes);
+			report.Lines.AddRange(mail.Notes.Select(note => new ImportWarning(ImportWarningKind.Mail, note)));
 		}
 
-		report.Line($"mail is now another name for @mail: listing and reading mail work as in {ServerName}, but " +
+		report.Line(ImportWarningKind.Mail, $"mail is now another name for @mail: listing and reading mail work as in {ServerName}, but " +
 			$"mail <players>=<text> sends <text> at once, as @mail does, where {ServerName} would start a message with it as the subject.");
-		report.Line($"{ServerName} comsys channels are not imported: a stock {ServerName} runs its channels in softcode " +
+		report.Line(ImportWarningKind.Channels, $"{ServerName} comsys channels are not imported: a stock {ServerName} runs its channels in softcode " +
 			"(SOFTCOM), which comes across with the objects that hold it; a game built with the hardcoded comsys keeps each " +
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");
-		report.Line($"Imported from a {ServerName} flatfile: the import turns on paren_groups, tiny_trim_fun, rhost_edit, " +
+		report.Line(ImportWarningKind.Softcode, $"Imported from a {ServerName} flatfile: the import turns on paren_groups, tiny_trim_fun, rhost_edit, " +
 			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
 			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
 		database.ImportNotes = report.Finish();
@@ -141,13 +141,13 @@ public static partial class RhostDatabaseTranslator
 
 		if (type is not { } objectType)
 		{
-			report.Note("Destroyed objects (garbage) not imported", source.DBRef);
+			report.Note(ImportWarningKind.Objects, "Destroyed objects (garbage) not imported", source.DBRef);
 			return null;
 		}
 
 		if (source.Type == RhostObjectType.Zone)
 		{
-			report.Note("Zone-type objects imported as things", source.DBRef);
+			report.Note(ImportWarningKind.Objects, "Zone-type objects imported as things", source.DBRef);
 		}
 
 		var flags = new List<string>();
@@ -188,7 +188,7 @@ public static partial class RhostDatabaseTranslator
 			if (RhostNameTables.LockAttributes.TryGetValue(attribute.Number, out var lockName))
 			{
 				locks[lockName] = new PennMUSHLock(LockKey(attribute.Value), Creator: attribute.Owner);
-				report.Note($"Lock attribute {RhostNameTables.BuiltInAttributes[attribute.Number]}: imported as the {lockName} lock", source.DBRef);
+				report.Note(ImportWarningKind.Locks, $"Lock attribute {RhostNameTables.BuiltInAttributes[attribute.Number]}: imported as the {lockName} lock", source.DBRef);
 				continue;
 			}
 
@@ -210,7 +210,7 @@ public static partial class RhostDatabaseTranslator
 
 		if (source.Pennies != 0)
 		{
-			report.Note("Pennies not imported: SharpMUSH does not track money", source.DBRef);
+			report.Note(ImportWarningKind.Objects, "Pennies not imported: SharpMUSH does not track money", source.DBRef);
 		}
 
 		return new PennMUSHObject
@@ -250,11 +250,11 @@ public static partial class RhostDatabaseTranslator
 			case PennMUSHObjectType.Exit:
 				if (source.Location == Home)
 				{
-					report.Note("Exits that lead HOME left unlinked, as a PennMUSH import leaves them", source.DBRef);
+					report.Note(ImportWarningKind.Objects, "Exits that lead HOME left unlinked, as a PennMUSH import leaves them", source.DBRef);
 				}
 				else if (source.Location < -1)
 				{
-					report.Note("Exits with a variable destination left unlinked", source.DBRef);
+					report.Note(ImportWarningKind.Objects, "Exits with a variable destination left unlinked", source.DBRef);
 				}
 
 				return (source.Exits, -1, source.Location);
@@ -262,7 +262,7 @@ public static partial class RhostDatabaseTranslator
 			case PennMUSHObjectType.Room:
 				if (source.Link == Home)
 				{
-					report.Note("Rooms whose drop-to is HOME: the drop-to is not imported", source.DBRef);
+					report.Note(ImportWarningKind.Objects, "Rooms whose drop-to is HOME: the drop-to is not imported", source.DBRef);
 				}
 
 				return (-1, source.Exits, source.Link);
@@ -283,7 +283,7 @@ public static partial class RhostDatabaseTranslator
 			.ToList();
 		if (zones.Count > 1)
 		{
-			report.Note($"Objects in more than one zone: only the first is kept, as SharpMUSH has one zone per object", source.DBRef);
+			report.Note(ImportWarningKind.Objects, $"Objects in more than one zone: only the first is kept, as SharpMUSH has one zone per object", source.DBRef);
 		}
 
 		return zones.Count > 0 ? zones[0] : -1;
@@ -310,7 +310,7 @@ public static partial class RhostDatabaseTranslator
 				definitions.Flag(custom, bit.StaffOnly);
 			}
 
-			report.Note(Decision(bit), source.DBRef);
+			report.Note(ImportWarningKind.Flags, Decision(bit), source.DBRef);
 		}
 
 		foreach (var (wordIndex, bitValue, name) in RhostNameTables.ToggleNames)
@@ -318,7 +318,7 @@ public static partial class RhostDatabaseTranslator
 			if ((source.Toggles[wordIndex - 4] & bitValue) != 0
 					&& !RhostNameTables.ToggleBits.Any(b => b.Word == wordIndex && b.Bit == bitValue))
 			{
-				report.Note($"Toggle {name}: dropped, as SharpMUSH has no such setting", source.DBRef);
+				report.Note(ImportWarningKind.Flags, $"Toggle {name}: dropped, as SharpMUSH has no such setting", source.DBRef);
 			}
 		}
 	}
@@ -361,10 +361,10 @@ public static partial class RhostDatabaseTranslator
 				powers.Add(name);
 			}
 
-			report.Note(power.Power is null
+			report.Note(ImportWarningKind.Powers, power.Power is null
 				? $"Power {power.Name}: imported as a power of its own, {power.Name}"
 				: $"Power {power.Name}: imported as the {power.Power} power", source.DBRef);
-			report.Note($"Power levels: {ServerName} grants a power at a level (guildmaster, architect, councilor); a " +
+			report.Note(ImportWarningKind.Powers, $"Power levels: {ServerName} grants a power at a level (guildmaster, architect, councilor); a " +
 				"SharpMUSH power is held or not, so each is imported as held whatever its level", source.DBRef);
 		}
 
@@ -379,11 +379,11 @@ public static partial class RhostDatabaseTranslator
 			if (depower.Power is { } taken)
 			{
 				denied.Add(taken);
-				report.Note($"Depower {depower.Name}: imported as a deny on the {taken} power's permission", source.DBRef);
+				report.Note(ImportWarningKind.Powers, $"Depower {depower.Name}: imported as a deny on the {taken} power's permission", source.DBRef);
 			}
 			else
 			{
-				report.Note($"Depower {depower.Name}: dropped, as SharpMUSH has no power it takes away", source.DBRef);
+				report.Note(ImportWarningKind.Powers, $"Depower {depower.Name}: dropped, as SharpMUSH has no power it takes away", source.DBRef);
 			}
 		}
 	}
@@ -403,19 +403,19 @@ public static partial class RhostDatabaseTranslator
 		{
 			if (RhostNameTables.SkippedAttributes.TryGetValue(attribute.Number, out var reason))
 			{
-				report.Note($"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef, routine: true);
+				report.Note(ImportWarningKind.Attributes, $"Attribute {Builtin(attribute.Number)}: not imported, {reason}", source.DBRef, routine: true);
 				return null;
 			}
 
 			if (RhostNameTables.UnmatchedLockAttributes.TryGetValue(attribute.Number, out var meaning))
 			{
-				report.Note($"Lock {Builtin(attribute.Number)} ({meaning}): SharpMUSH has no such lock, so it is kept as an " +
+				report.Note(ImportWarningKind.Locks, $"Lock {Builtin(attribute.Number)} ({meaning}): SharpMUSH has no such lock, so it is kept as an " +
 					"attribute and checks nothing", source.DBRef);
 			}
 
 			if (!RhostNameTables.BuiltInAttributes.ContainsKey(attribute.Number))
 			{
-				report.Note($"Attribute number {attribute.Number}: not imported, {ServerName} defines no attribute by it", source.DBRef);
+				report.Note(ImportWarningKind.Attributes, $"Attribute number {attribute.Number}: not imported, {ServerName} defines no attribute by it", source.DBRef);
 				return null;
 			}
 
@@ -424,20 +424,20 @@ public static partial class RhostDatabaseTranslator
 				: Builtin(attribute.Number).ToUpperInvariant();
 			if (renamed is not null)
 			{
-				report.Note($"Attribute {Builtin(attribute.Number)}: imported as {renamed}, SharpMUSH's name for it", source.DBRef);
+				report.Note(ImportWarningKind.Attributes, $"Attribute {Builtin(attribute.Number)}: imported as {renamed}, SharpMUSH's name for it", source.DBRef);
 			}
 		}
 		else if (attribute.Number >= 256)
 		{
 			if (!flatfile.UserAttributes.TryGetValue(attribute.Number, out var definition))
 			{
-				report.Note($"Attributes numbered with no +A header to name them: not imported", source.DBRef);
+				report.Note(ImportWarningKind.Attributes, $"Attributes numbered with no +A header to name them: not imported", source.DBRef);
 				return null;
 			}
 
 			if (RhostNameTables.SkippedUserAttributes.TryGetValue(definition.Name, out var reason))
 			{
-				report.Note($"Attribute {definition.Name}: not imported, {reason}", source.DBRef);
+				report.Note(ImportWarningKind.Attributes, $"Attribute {definition.Name}: not imported, {reason}", source.DBRef);
 				return null;
 			}
 
@@ -452,7 +452,7 @@ public static partial class RhostDatabaseTranslator
 		var value = Rewritten(attribute.Value, source.DBRef, name, report);
 		if (value.Length > LongValue)
 		{
-			report.Line($"#{source.DBRef}/{name}: {value.Length} characters long, more than the {LongValue} SharpMUSH's softcode " +
+			report.Line(ImportWarningKind.Attributes, $"#{source.DBRef}/{name}: {value.Length} characters long, more than the {LongValue} SharpMUSH's softcode " +
 				"buffers expect; check it reads whole.");
 		}
 
@@ -486,13 +486,13 @@ public static partial class RhostDatabaseTranslator
 					flags.Add(sharp);
 				}
 
-				report.Note(flag.Note is null
+				report.Note(ImportWarningKind.Attributes, flag.Note is null
 					? $"Attribute flag {flag.Name}: imported as {sharp}"
 					: $"Attribute flag {flag.Name}: imported as {sharp}; {flag.Note}", dbref);
 			}
 			else
 			{
-				report.Note($"Attribute flag {flag.Name}: dropped, as SharpMUSH has no such attribute flag", dbref);
+				report.Note(ImportWarningKind.Attributes, $"Attribute flag {flag.Name}: dropped, as SharpMUSH has no such attribute flag", dbref);
 			}
 		}
 
@@ -544,7 +544,7 @@ public static partial class RhostDatabaseTranslator
 			return time.ToUnixTimeSeconds();
 		}
 
-		report.Note($"Objects whose {which} time does not read: dated at the import", dbref);
+		report.Note(ImportWarningKind.Objects, $"Objects whose {which} time does not read: dated at the import", dbref);
 		return 0;
 	}
 
@@ -565,7 +565,7 @@ public static partial class RhostDatabaseTranslator
 			_ when stored.StartsWith("XX", StringComparison.Ordinal) && stored.Skip(2).All(char.IsAsciiDigit) => "SHS" + Rehashed,
 			_ => "plaintext, or a form checked as plaintext" + Rehashed
 		};
-		report.Note($"Passwords stored as {form}", dbref);
+		report.Note(ImportWarningKind.Players, $"Passwords stored as {form}", dbref, needsAction: form.EndsWith(Unchecked, StringComparison.Ordinal));
 	}
 
 	/// <summary>Each recipient's synthesized MAILFOLDERS attribute, from the folder dump's folder names.</summary>
@@ -606,49 +606,53 @@ public static partial class RhostDatabaseTranslator
 	/// <summary>The notes: single lines, and decisions gathered with the objects they touched.</summary>
 	private sealed class Report
 	{
-		private readonly SortedDictionary<string, List<int>> _decisions = new(StringComparer.Ordinal);
+		private readonly SortedDictionary<string, (ImportWarningKind Kind, bool NeedsAction, List<int> Dbrefs)> _decisions =
+			new(StringComparer.Ordinal);
 
 		/// <summary>RhostMUSH's own bookkeeping left out, which every import of its flatfiles leaves out.</summary>
-		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
+		private readonly SortedDictionary<string, (ImportWarningKind Kind, bool NeedsAction, List<int> Dbrefs)> _routine =
+			new(StringComparer.Ordinal);
 
-		public List<string> Lines { get; } = [];
+		public List<ImportWarning> Lines { get; } = [];
 
 		/// <summary>The attributes whose softcode was rewritten, reported apart from the notes.</summary>
 		public List<SoftcodeRewrite> Rewrites { get; } = [];
 
-		public void Line(string line) => Lines.Add(line);
+		public void Line(ImportWarningKind kind, string line) => Lines.Add(new ImportWarning(kind, line));
 
-		public void Note(string decision, int dbref, bool routine = false)
+		public void Note(ImportWarningKind kind, string decision, int dbref, bool routine = false, bool needsAction = false)
 		{
 			var decisions = routine ? _routine : _decisions;
-			if (!decisions.TryGetValue(decision, out var dbrefs))
+			if (!decisions.TryGetValue(decision, out var decided))
 			{
-				decisions[decision] = dbrefs = [];
+				decisions[decision] = decided = (kind, needsAction, []);
 			}
 
-			if (dbrefs.Count == 0 || dbrefs[^1] != dbref)
+			if (decided.Dbrefs.Count == 0 || decided.Dbrefs[^1] != dbref)
 			{
-				dbrefs.Add(dbref);
+				decided.Dbrefs.Add(dbref);
 			}
 		}
 
-		public List<string> Finish()
+		public List<ImportWarning> Finish()
 		{
-			var lines = new List<string>(Lines.Count + _decisions.Count);
+			var lines = new List<ImportWarning>(Lines.Count + _decisions.Count);
 			lines.Add(Lines[0]);
 			lines.AddRange(Decided(_decisions));
 			lines.AddRange(Lines.Skip(1));
 			return lines;
 		}
 
-		public List<string> FinishRoutine() => [.. Decided(_routine)];
+		public List<string> FinishRoutine() => [.. Decided(_routine).Select(decided => decided.Text)];
 
-		private static IEnumerable<string> Decided(SortedDictionary<string, List<int>> decisions)
+		private static IEnumerable<ImportWarning> Decided(
+			SortedDictionary<string, (ImportWarningKind Kind, bool NeedsAction, List<int> Dbrefs)> decisions)
 			=> decisions.Select(decision =>
 			{
-				var (text, dbrefs) = decision;
+				var (text, (kind, needsAction, dbrefs)) = decision;
 				var sample = string.Join(" ", dbrefs.Take(10).Select(d => $"#{d}"));
-				return $"{text} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})";
+				return new ImportWarning(kind,
+					$"{text} ({dbrefs.Count} object(s): {sample}{(dbrefs.Count > 10 ? " ..." : string.Empty)})", needsAction);
 			});
 	}
 }

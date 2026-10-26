@@ -132,7 +132,7 @@ public class RhostNativeExportImportTests
 				.PreviewAsync(new DatabaseImportFiles(actualPath, Path.Join(result.OutputDirectory, "mail.dump"),
 					MailFolders: Path.Join(result.OutputDirectory, "folders.dump"), Format: DatabaseImportFormat.RhostMUSH));
 			await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
-			await Assert.That(preview.Result!.Warnings.Any(warning => warning.Contains("Destroyed objects (garbage) not imported", StringComparison.Ordinal))).IsTrue();
+			await Assert.That(preview.Result!.Warnings.Texts().Any(warning => warning.Contains("Destroyed objects (garbage) not imported", StringComparison.Ordinal))).IsTrue();
 			await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(Path.Combine(live, "data.mdb")))).IsEquivalentTo(liveBefore);
 			await Assert.That(await SourceHashesAsync(source)).IsEqualTo(before);
 			journal.RequestPromotion(preview.Id);

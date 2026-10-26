@@ -57,8 +57,9 @@ public partial class PennMUSHDatabaseConverter
 
 		if (!string.IsNullOrEmpty(files.MailFolders))
 		{
-			database.ImportNotes.Add("The mail folder file that came with the TinyMUX flatfile was not read: " +
-				"the folder file is RhostMUSH's, and a TinyMUX import reads only mail.db.");
+			database.ImportNotes.Add(new ImportWarning(ImportWarningKind.Mail,
+				"The mail folder file that came with the TinyMUX flatfile was not read: " +
+				"the folder file is RhostMUSH's, and a TinyMUX import reads only mail.db."));
 		}
 
 		return database;
@@ -88,7 +89,7 @@ public partial class PennMUSHDatabaseConverter
 			{
 				if (ConfigOptionWriter.PropertyOf(name) is not { } property)
 				{
-					context.Warnings.Add($"The {source.SourceName} import would set {name}, which this server does not have; " +
+					context.Warn(ImportWarningKind.Configuration, $"The {source.SourceName} import would set {name}, which this server does not have; " +
 						"set its equivalent by hand.");
 					continue;
 				}
@@ -116,7 +117,7 @@ public partial class PennMUSHDatabaseConverter
 		catch (Exception ex) when (ex is not OperationCanceledException)
 		{
 			_logger.LogWarning(ex, "Could not set {Options} for the imported {Source} softcode", names, source.SourceName);
-			context.Warnings.Add($"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
+			context.WarnNeedsAction(ImportWarningKind.Configuration, $"{names} could not be set ({ex.Message}); the imported {source.SourceName} softcode needs them: " +
 				"set them in the configuration and reload it.");
 		}
 	}
@@ -159,7 +160,7 @@ public partial class PennMUSHDatabaseConverter
 
 		if (_roleRegistry is null)
 		{
-			context.Warnings.Add($"Permissions were not granted to {string.Join(" ", holders.Select(o => $"#{o.DBRef}"))}: " +
+			context.WarnNeedsAction(ImportWarningKind.Powers, $"Permissions were not granted to {string.Join(" ", holders.Select(o => $"#{o.DBRef}"))}: " +
 				"no role store is available to this import; grant them with @role.");
 			return;
 		}

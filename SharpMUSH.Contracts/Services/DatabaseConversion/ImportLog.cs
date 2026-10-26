@@ -42,7 +42,7 @@ public static class ImportLog
 		Count(log, "Channel members", result.ChannelMembersConverted);
 
 		Lines(log, "Errors", result.Errors);
-		Lines(log, "Warnings", result.Warnings);
+		Warnings(log, result);
 		Lines(log, "Expected", result.Notes);
 
 		if (result.SoftcodeRewrites.Count > 0)
@@ -76,6 +76,26 @@ public static class ImportLog
 		foreach (var line in lines)
 		{
 			log.AppendLine($"  {line}");
+		}
+	}
+
+	/// <summary>The warnings under a heading for each kind, a warning that needs action marked so.</summary>
+	private static void Warnings(StringBuilder log, ConversionResult result)
+	{
+		if (result.Warnings.Count == 0)
+		{
+			return;
+		}
+
+		log.AppendLine();
+		log.AppendLine(CultureInfo.InvariantCulture, $"Warnings ({result.Warnings.Count})");
+		foreach (var kind in result.WarningsByKind())
+		{
+			log.AppendLine(CultureInfo.InvariantCulture, $"  {kind.Key} ({kind.Count()})");
+			foreach (var warning in kind)
+			{
+				log.AppendLine($"    {(warning.NeedsAction ? "Needs action: " : "")}{warning.Text}");
+			}
 		}
 	}
 

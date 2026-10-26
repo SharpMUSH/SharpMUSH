@@ -52,9 +52,9 @@ public class TinyMuxImportTests
 		await Assert.That(database.Objects.First(o => o.DBRef == 4).Attributes
 			.Where(a => a.Name.StartsWith("CHANALIAS`")).Select(a => (a.Name, a.Value)))
 			.IsEquivalentTo([("CHANALIAS`PUB", "Public"), ("CHANALIAS`ST", "Staff")]);
-		await Assert.That(database.ImportNotes).Contains(note => note.StartsWith("Channel Staff: 1 member(s) had it turned off"));
-		await Assert.That(database.ImportNotes).Contains(note => note.StartsWith("Channel Staff: TinyMUX listed it only to its members"));
-		await Assert.That(database.ImportNotes).DoesNotContain(note => note.StartsWith("Channel Public: TinyMUX listed it only"));
+		await Assert.That(database.ImportNotes.Texts()).Contains(note => note.StartsWith("Channel Staff: 1 member(s) had it turned off"));
+		await Assert.That(database.ImportNotes.Texts()).Contains(note => note.StartsWith("Channel Staff: TinyMUX listed it only to its members"));
+		await Assert.That(database.ImportNotes.Texts()).DoesNotContain(note => note.StartsWith("Channel Public: TinyMUX listed it only"));
 	}
 
 	[Test]
@@ -107,11 +107,11 @@ public class TinyMuxImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.ChannelsConverted).IsEqualTo(2);
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(2);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a TinyMUX flatfile") && w.Contains("rhost_list"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Imported from a TinyMUX flatfile") && w.Contains("rhost_list"));
 		// %m is a register in TinyMUX as here, so its softcode is not warned about.
-		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("%m"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.Contains("%m"));
 		await Assert.That(result.SoftcodeRewrites).IsNotEmpty();
-		await Assert.That(result.Warnings).Contains(w =>
+		await Assert.That(result.Warnings.Texts()).Contains(w =>
 			w.StartsWith($"Softcode was rewritten in {result.SoftcodeRewrites.Count} attribute(s) so SharpMUSH reads it as TinyMUX did"));
 
 		var widget = await NodeAsync(world, 5);

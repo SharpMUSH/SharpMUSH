@@ -19,7 +19,12 @@ public class ImportLogTests
 			PlayersConverted = 2,
 			AttributesConverted = 7,
 			Duration = TimeSpan.FromSeconds(83),
-			Warnings = ["A warning"],
+			Warnings =
+			[
+				new ImportWarning(ImportWarningKind.Flags, "Flag X: imported as Y"),
+				new ImportWarning(ImportWarningKind.Players, "Passwords stored as bcrypt"),
+				new ImportWarning(ImportWarningKind.Flags, "Flag Z: dropped", NeedsAction: true)
+			],
 			SoftcodeRewrites =
 			[
 				new SoftcodeRewrite("#9/DESCRIBE", "%c/%x colour written as ansi()", "%crRed%cn\nline two", "ansi(r,Red)\nline two")
@@ -47,8 +52,12 @@ public class ImportLogTests
 			  Channels: 0
 			  Channel members: 0
 
-			Warnings (1)
-			  A warning
+			Warnings (3)
+			  Flags (2)
+			    Needs action: Flag Z: dropped
+			    Flag X: imported as Y
+			  Players (1)
+			    Passwords stored as bcrypt
 
 			Rewritten softcode (1)
 

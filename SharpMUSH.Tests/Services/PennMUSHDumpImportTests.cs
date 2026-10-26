@@ -109,7 +109,7 @@ public class PennMUSHDumpImportTests
 		await using var world = await IsolatedImportWorld.CreateAsync();
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
-		await Assert.That(result.Warnings.Where(w => w.Contains("does not answer to") || w.Contains("names it in the source")))
+		await Assert.That(result.Warnings.Texts().Where(w => w.Contains("does not answer to") || w.Contains("names it in the source")))
 			.IsEmpty();
 	}
 

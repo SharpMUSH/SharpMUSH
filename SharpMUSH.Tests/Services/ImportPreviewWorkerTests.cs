@@ -102,7 +102,7 @@ public class ImportPreviewWorkerTests
 		await Assert.That(preview.Failure).IsNull();
 		await Assert.That(preview.State).IsEqualTo(ImportSessionState.Ready);
 		await Assert.That(preview.Result!.TotalObjects).IsGreaterThan(0);
-		await Assert.That(preview.Result.Warnings).Contains(warning => warning.StartsWith("Configuration: include alias.cnf: not followed"));
+		await Assert.That(preview.Result.Warnings.Texts()).Contains(warning => warning.StartsWith("Configuration: include alias.cnf: not followed"));
 		await Assert.That(preview.Result.Notes).Contains("Configuration: 1 directive(s) SharpMUSH has no option for, not carried over: chunk_swap_file.");
 		await Assert.That(SHA256.HashData(await File.ReadAllBytesAsync(compressed))).IsEquivalentTo(compressedHash);
 	}

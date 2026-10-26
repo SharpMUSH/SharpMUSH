@@ -50,7 +50,7 @@ public class PennMUSHMailImportTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(11);
-		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("mail message", StringComparison.OrdinalIgnoreCase));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.Contains("mail message", StringComparison.OrdinalIgnoreCase));
 
 		await Assert.That(await MailboxAsync(world, 3)).IsEquivalentTo(new[]
 		{
@@ -185,9 +185,9 @@ public class PennMUSHMailImportTests
 		var result = await world.Converter.ConvertDatabaseAsync(database);
 
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(2);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("1 mail message(s) not imported") && w.Contains("#6: 1"));
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("1 mail message(s) from a sender that was not imported") && w.Contains("#7: 1"));
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("1 mail message(s) name a sender whose creation time") && w.Contains("#3: 1"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("1 mail message(s) not imported") && w.Contains("#6: 1"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("1 mail message(s) from a sender that was not imported") && w.Contains("#7: 1"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("1 mail message(s) name a sender whose creation time") && w.Contains("#3: 1"));
 
 		await Assert.That(await MailboxAsync(world, 4)).IsEquivalentTo(new[]
 		{
@@ -215,7 +215,7 @@ public class PennMUSHMailImportTests
 		var result = await world.Converter.ConvertDatabaseAsync(database);
 
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(1);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("The maildb holds 2 mail message(s) but only 1 could be read"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("The maildb holds 2 mail message(s) but only 1 could be read"));
 		await Assert.That(await MailboxAsync(world, 4)).IsEquivalentTo(new[] { "#3|Keep|Filed|SAVED|read" },
 			TUnit.Assertions.Enums.CollectionOrdering.Matching);
 
