@@ -24,6 +24,10 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 	private readonly INatsKVStore _store;
 	private readonly ILogger<NatsConnectionStateStore> _logger;
 
+	// This process's mutations of one handle take turns, so they never race each other's revision; the
+	// revision check is left to settle writes from another process.
+	private readonly SemaphoreSlim[] _mutationGates = Enumerable.Range(0, 64).Select(_ => new SemaphoreSlim(1, 1)).ToArray();
+
 	internal NatsConnectionStateStore(NatsConnection nats, INatsKVStore store, ILogger<NatsConnectionStateStore> logger)
 	{
 		_nats = nats;
@@ -202,6 +206,21 @@ public sealed class NatsConnectionStateStore : IConnectionStateStore, IAsyncDisp
 
 	private async Task<bool> MutateAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct,
 		string? sessionId = null, Func<ConnectionStateData, bool>? validate = null)
+	{
+		var gate = _mutationGates[(ulong)handle % (ulong)_mutationGates.Length];
+		await gate.WaitAsync(ct);
+		try
+		{
+			return await MutateGatedAsync(handle, mutate, ct, sessionId, validate);
+		}
+		finally
+		{
+			gate.Release();
+		}
+	}
+
+	private async Task<bool> MutateGatedAsync(long handle, Action<ConnectionStateData> mutate, CancellationToken ct,
+		string? sessionId, Func<ConnectionStateData, bool>? validate)
 	{
 		DateTimeOffset? incarnation = null;
 		for (var attempt = 0; attempt < 16; attempt++)

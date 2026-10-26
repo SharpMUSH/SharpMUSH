@@ -75,6 +75,42 @@ public class NatsConnectionStateMutationTests
 	}
 
 	[Test]
+	public async Task ManyWritersOnOneConnectionAllLand()
+	{
+		var kv = Substitute.For<INatsKVStore>();
+		var gate = new Lock();
+		var current = (Json: JsonSerializer.Serialize(Data()), Revision: 1UL);
+		kv.TryGetEntryAsync<string>("conn.42", Arg.Any<ulong>(), Arg.Any<INatsDeserialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(_ => ReadAsync());
+		kv.TryUpdateAsync("conn.42", Arg.Any<string>(), Arg.Any<ulong>(), Arg.Any<INatsSerialize<string>>(), Arg.Any<CancellationToken>())
+			.Returns(call => UpdateAsync(call.ArgAt<string>(1), call.ArgAt<ulong>(2)));
+		await using var store = Create(kv);
+
+		// More writers than one update's retries: each must wait its turn rather than lose every race.
+		await Task.WhenAll(Enumerable.Range(0, 40).Select(i => Task.Run(() => store.UpdateMetadataAsync(42, $"Key{i}", "1"))));
+
+		var stored = JsonSerializer.Deserialize<ConnectionStateData>(current.Json)!;
+		await Assert.That(Enumerable.Range(0, 40).All(i => stored.Metadata.ContainsKey($"Key{i}"))).IsTrue();
+
+		async ValueTask<NatsResult<NatsKVEntry<string>>> ReadAsync()
+		{
+			await Task.Yield();
+			lock (gate) return new(new NatsKVEntry<string>("sharpmush-connections", "conn.42") { Value = current.Json, Revision = current.Revision });
+		}
+
+		async ValueTask<NatsResult<ulong>> UpdateAsync(string json, ulong revision)
+		{
+			await Task.Yield();
+			lock (gate)
+			{
+				if (revision != current.Revision) return Conflict();
+				current = (json, current.Revision + 1);
+				return new(current.Revision);
+			}
+		}
+	}
+
+	[Test]
 	public async Task AccountModeMetadataUpdatesPersistedState()
 	{
 		var kv = Substitute.For<INatsKVStore>();
