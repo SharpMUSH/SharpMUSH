@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- The handler tests build the same standalone libraries the server starts with. -->
+    <InternalsVisibleTo Include="SharpMUSH.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.9" />
     <!-- Reached transitively (OmniSharp -> Nerdbank.Streams -> Microsoft.VisualStudio.Threading).
          Pinned here only to carry PrivateAssets="all": the analyzers still apply to this project, but
