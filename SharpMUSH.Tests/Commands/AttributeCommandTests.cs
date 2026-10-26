@@ -503,6 +503,10 @@ public class AttributeCommandTests
 	public async ValueTask Test_Edit_RegexAll_LargeInputCopiesLinearly()
 	{
 		const int matches = 20_000;
+		using var configuration = TestOptionsOverride.Scope(options => options with
+		{
+			Limit = options.Limit with { MaxAttributeValueLength = 1_000_000 }
+		});
 		var objDbRef = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "EditRegexAllLarge");
 		var owner = (await Database.GetObjectNodeAsync(new(1))).Expect<SharpPlayer>();
 		var text = string.Concat(Enumerable.Repeat("abcdefghix", matches));

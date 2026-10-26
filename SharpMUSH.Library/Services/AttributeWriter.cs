@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Softcode;
+using System.Text;
 
 namespace SharpMUSH.Library.Services;
 
@@ -358,8 +359,8 @@ internal sealed class AttributeWriter(
 		// silently drop the attribute from the clone. Penn never validates a copy at all.
 		var fullName = string.Join('`', write.AttrPath).ToUpperInvariant();
 
-		if (!write.IsAttributeCopy
-				&& !await validateService.Valid(IValidateService.ValidationType.AttributeValue, value, new None()))
+		if (!write.IsAttributeCopy && Encoding.UTF8.GetByteCount(value.ToPlainText())
+				> configuration.CurrentValue.Limit.MaxAttributeValueLength)
 		{
 			return new Error<string>(ErrorMessages.Returns.AttrValueTooLong);
 		}
