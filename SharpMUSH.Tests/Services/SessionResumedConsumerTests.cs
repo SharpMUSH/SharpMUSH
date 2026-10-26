@@ -62,4 +62,67 @@ public class SessionResumedConsumerTests
 
 		await publisher.DidNotReceive().Publish(Arg.Any<ConnectionResumedNotification>(), Arg.Any<CancellationToken>());
 	}
+
+	[Test]
+	public async Task A_resumed_session_is_no_longer_held()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(42).Returns(new IConnectionService.ConnectionData(42, Player, IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8,
+			new ConcurrentDictionary<string, string> { ["SessionId"] = "session" }));
+
+		await new SessionResumedConsumer(connections, Substitute.For<IPublisher>())
+			.HandleAsync(new SessionResumedMessage(42, "session"));
+
+		connections.Received(1).Update(42, "Detached", "0");
+	}
+}
+
+/// <summary>
+/// A socket dropped and the connection server holds its session. Nobody is reading it, so the player is
+/// not online until it resumes or the hold ends.
+/// </summary>
+public class SessionDetachedConsumerTests
+{
+	private static IConnectionService.ConnectionData Connection(ConcurrentDictionary<string, string> metadata)
+		=> new(42, new DBRef(7, 1234L), IConnectionService.ConnectionState.LoggedIn,
+			_ => ValueTask.CompletedTask, _ => ValueTask.CompletedTask, () => Encoding.UTF8, metadata);
+
+	[Test]
+	public async Task A_held_session_records_when_the_hold_ends()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(42).Returns(Connection(new() { ["SessionId"] = "session" }));
+		var heldUntil = DateTimeOffset.FromUnixTimeMilliseconds(1_800_000_000_000);
+
+		await new SessionDetachedConsumer(connections).HandleAsync(new SessionDetachedMessage(42, "session", heldUntil));
+
+		connections.Received(1).Update(42, "Detached", "1800000000000");
+	}
+
+	[Test]
+	public async Task Another_incarnation_of_the_handle_is_not_marked()
+	{
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(42).Returns(Connection(new() { ["SessionId"] = "newer" }));
+
+		await new SessionDetachedConsumer(connections)
+			.HandleAsync(new SessionDetachedMessage(42, "session", DateTimeOffset.FromUnixTimeMilliseconds(4102444800000)));
+
+		connections.DidNotReceive().Update(Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>());
+	}
+
+	[Test]
+	public async Task Only_a_hold_that_has_not_ended_hides_the_connection()
+	{
+		// 2100 and 1970: either side of any clock the test runs under.
+		const string future = "4102444800000";
+		const string past = "1000";
+
+		await Assert.That(Connection(new() { ["Detached"] = future }).IsPresent).IsFalse();
+		await Assert.That(Connection(new() { ["Detached"] = past }).IsPresent).IsTrue();
+		await Assert.That(Connection(new() { ["Detached"] = "0" }).IsPresent).IsTrue();
+		await Assert.That(Connection(new()).IsPresent).IsTrue();
+		await Assert.That(Connection(new() { ["PresenceClass"] = "portal" }).IsPresent).IsFalse();
+	}
 }

@@ -587,7 +587,7 @@ public partial class Functions
 		ExistingObjects(ConnectionService
 				.GetAll()
 				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-					&& x.PresenceClass != PresenceClasses.Portal
+					&& x.IsPresent
 					// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
 					// this whole WHO family exactly as DARK always did - see WHO's own row filtering in
 					// SocketCommands.cs for the same isHiddenRow = isDark || connection.IsHidden pattern.
@@ -606,8 +606,9 @@ public partial class Functions
 		ExistingObjects(ConnectionService
 				.GetAll()
 				.Where(x => x.Ref is not null && x.State == IConnectionService.ConnectionState.LoggedIn
-					// The portal's background session is someone reading the site, not playing: it is never online.
-					&& x.PresenceClass != PresenceClasses.Portal)
+					// The portal's background session is someone reading the site, not playing, and a held
+					// session has no one at the other end: neither is online.
+					&& x.IsPresent)
 				// @hide (per-connection Hidden, distinct from the DARK flag) must exclude a player from
 				// this whole WHO family exactly as DARK always did, unless the caller is privileged -
 				// PennMUSH's fun_nwho/fun_xwho: `if (!Hidden(d) || powered)` (bsd.c:6438,6503). `powered`
