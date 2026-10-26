@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Net.WebSockets;
 using System.Text;
+using TelnetNegotiationCore.Interpreters;
 
 namespace SharpMUSH.SocketServer.ProtocolHandlers;
 
@@ -8,6 +9,12 @@ namespace SharpMUSH.SocketServer.ProtocolHandlers;
 public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string hostname, bool isSecure = false)
 	: IDuplexTransport
 {
+	/// <summary>
+	/// The longest message accepted: the same as a telnet line, so a command typed in the browser may be
+	/// as long as one typed in a MUD client. A longer message closes the connection with 1009.
+	/// </summary>
+	public const int MaxMessageBytes = TelnetInterpreter.DefaultMaxBufferSize;
+
 	private readonly SemaphoreSlim _sendLock = new(1, 1);
 
 	public string Kind => "websocket";
@@ -64,6 +71,12 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 					return null;
 				}
 
+				if (messageBuffer.Length + result.Count > MaxMessageBytes)
+				{
+					await CloseAsync(WebSocketCloseStatus.MessageTooBig, $"A message may be at most {MaxMessageBytes} bytes.", ct);
+					return null;
+				}
+
 				messageBuffer.Write(buffer, 0, result.Count);
 			}
 
@@ -75,22 +88,25 @@ public sealed class WebSocketTransport(WebSocket socket, string remoteIp, string
 		}
 	}
 
-	public async Task CloseAsync(CancellationToken ct = default)
+	public Task CloseAsync(CancellationToken ct = default)
+		=> CloseAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", ct);
+
+	private async Task CloseAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
 	{
 		using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
 		deadline.CancelAfter(TimeSpan.FromSeconds(5));
-		try { await CloseOutputAsync(deadline.Token); }
+		try { await CloseOutputAsync(status, description, deadline.Token); }
 		catch (OperationCanceledException) { socket.Abort(); throw; }
 	}
 
-	private async Task CloseOutputAsync(CancellationToken ct)
+	private async Task CloseOutputAsync(WebSocketCloseStatus status, string description, CancellationToken ct)
 	{
 		await _sendLock.WaitAsync(ct);
 		try
 		{
 			// The receive loop owns incoming frames, including the peer's close response.
 			if (socket.State is WebSocketState.Open or WebSocketState.CloseReceived)
-				await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, "Connection closed", ct);
+				await socket.CloseOutputAsync(status, description, ct);
 		}
 		finally
 		{
