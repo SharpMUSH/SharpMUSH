@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Text;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 
@@ -52,8 +51,7 @@ public static partial class TinyMuxDatabaseReader
 		["tiny_trim_fun"] = true,
 		["tiny_math"] = true,
 		["null_eq_zero"] = true,
-		["function_recursion_limit"] = 500u,
-		["max_attribute_value_length"] = 32768u
+		["function_recursion_limit"] = 500u
 	};
 
 	/// <summary>Where the read model's <see cref="PennMUSHDatabase.Configuration"/> records the flatfile version.</summary>
@@ -328,7 +326,6 @@ public static partial class TinyMuxDatabaseReader
 		private readonly SortedDictionary<string, List<int>> _routine = new(StringComparer.Ordinal);
 		private readonly HashSet<string> _flagsUsed = new(StringComparer.OrdinalIgnoreCase);
 		private readonly HashSet<string> _powersUsed = new(StringComparer.OrdinalIgnoreCase);
-		private int _longValues;
 
 		/// <summary>One line for each attribute whose colour substitutions were rewritten or need a look.</summary>
 		private readonly List<SoftcodeRewrite> _rewrites = [];
@@ -435,11 +432,6 @@ public static partial class TinyMuxDatabaseReader
 				if (number == TinyMuxNames.AliasAttribute)
 				{
 					aliases = [.. value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
-				}
-
-				if (Encoding.UTF8.GetByteCount(value) > 8192)
-				{
-					_longValues++;
 				}
 
 				attributes.Add(new PennMUSHAttribute
@@ -756,15 +748,10 @@ public static partial class TinyMuxDatabaseReader
 		{
 			var notes = _database.ImportNotes;
 			notes.Add("Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math and null_eq_zero, and raises function_recursion_limit to 500 " +
-				"and max_attribute_value_length to 32768, as TinyMUX softcode expects.");
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math and null_eq_zero, and raises function_recursion_limit to 500, " +
+				"as TinyMUX softcode expects.");
 			notes.Add("TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
 				"so output that relied on it may show extra spaces.");
-			if (_longValues > 0)
-			{
-				notes.Add($"{_longValues} attribute value(s) are longer than 8192 bytes, SharpMUSH's default limit; " +
-					"max_attribute_value_length is raised to 32768 so they can still be edited.");
-			}
 
 			notes.AddRange(Tallied(_tally));
 			_database.RoutineNotes.AddRange(Tallied(_routine));

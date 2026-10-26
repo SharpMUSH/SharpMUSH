@@ -221,7 +221,7 @@ public record SharpMUSHOptions
 			GuestPaycheck: 0,
 			IdleTimeout: 0,
 			KeepaliveTimeout: 300,
-			MaxAttributeValueLength: 8192,
+			MaxAttributeValueLength: 65536,
 			MailLimit: 300,
 			MaxAliases: 3,
 			MaxAttributesPerObj: 2048,

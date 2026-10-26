@@ -34,7 +34,7 @@ Limits and other constants.
 
 - `max_dbref=<dbref>`: The highest dbref an object can have. If 0, there is no limit on database size.
 - `max_attrs_per_obj=<number>`: The maximum attributes an object can have.
-- `max_attribute_value_length=<number>`: The longest attribute value, in UTF-8 bytes of its plain text, that `valid(attrvalue, ...)` accepts. From 100 to 1000000; 8192 by default.
+- `max_attribute_value_length=<number>`: The longest attribute value, in UTF-8 bytes of its plain text, that `valid(attrvalue, ...)` accepts. From 100 to 1000000; 65536 by default.
 - `max_logins=<number>`: The maximum number of connected players.
 - `max_guests=<number>`: The maximum number of connected guests. If 0, no limit. If -1, limited by the number of guest players in the db.
 - `max_named_qregs=<number>`: Accepted but ignored: SharpMUSH does not limit named q-registers.
