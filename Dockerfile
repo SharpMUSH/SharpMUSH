@@ -4,7 +4,10 @@ WORKDIR /src
 COPY . .
 # Restore once for the whole solution, then publish with --no-restore so neither publish re-restores.
 RUN dotnet restore
-RUN dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app --no-restore
+# The release tag's version (docker-publish.yml); left empty, Directory.Build.props supplies it.
+ARG SHARPMUSH_VERSION=
+RUN dotnet publish SharpMUSH.Server/SharpMUSH.Server.csproj -c Release -o /app --no-restore \
+    ${SHARPMUSH_VERSION:+-p:SharpMUSHVersion=$SHARPMUSH_VERSION}
 # Publish the Blazor WASM portal and bundle its static assets into the server's web root, so a
 # single image serves the API + SignalR + the portal at one origin. Without this the server has no
 # wwwroot/index.html and "/" returns 404. The endpoints manifest goes into the content root beside

@@ -30,12 +30,23 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # The tag is the version: v1.0.0 builds 1.0.0 (passed into the server as SharpMUSHVersion, which
+      # version(), @version and MSSP report). A manual run must be started on a tag too.
       - name: Extract version from tag
         id: meta
         run: |
-          # Extract version from tag (e.g., v1.0.0 -> 1.0.0)
+          if [[ "$GITHUB_REF" != refs/tags/v* ]]; then
+            echo "::error::Run this workflow on a v* tag; $GITHUB_REF is not one."
+            exit 1
+          fi
           VERSION=${GITHUB_REF#refs/tags/v}
+          if ! grep -qF "## [$VERSION]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no '## [$VERSION]' section."
+            exit 1
+          fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          # A prerelease (1.0.0-rc.1) does not move :latest.
+          if [[ "$VERSION" == *-* ]]; then echo "latest=false" >> "$GITHUB_OUTPUT"; else echo "latest=true" >> "$GITHUB_OUTPUT"; fi
           echo "Building version: $VERSION"
 
       - name: Build and push SharpMUSH Server
@@ -44,9 +55,11 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
+          build-args: |
+            SHARPMUSH_VERSION=${{ steps.meta.outputs.version }}
           tags: |
             sharpmush/sharpmush-server:${{ steps.meta.outputs.version }}
-            sharpmush/sharpmush-server:latest
+            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-server:latest' || '' }}
           labels: |
             org.opencontainers.image.title=SharpMUSH Server
             org.opencontainers.image.description=Modern MUSH server implementation
@@ -64,7 +77,7 @@ jobs:
           push: true
           tags: |
             sharpmush/sharpmush-connectionserver:${{ steps.meta.outputs.version }}
-            sharpmush/sharpmush-connectionserver:latest
+            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-connectionserver:latest' || '' }}
           labels: |
             org.opencontainers.image.title=SharpMUSH ConnectionServer
             org.opencontainers.image.description=Rendering worker for SharpMUSH
@@ -82,7 +95,7 @@ jobs:
           push: true
           tags: |
             sharpmush/sharpmush-socketserver:${{ steps.meta.outputs.version }}
-            sharpmush/sharpmush-socketserver:latest
+            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-socketserver:latest' || '' }}
           labels: |
             org.opencontainers.image.title=SharpMUSH SocketServer
             org.opencontainers.image.description=Stable socket owner for SharpMUSH

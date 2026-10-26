@@ -232,7 +232,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IPackageSettingService, PackageSettingService>();
 		services.AddPackageWriteTransactions<SharpMUSH.Database.Lightning.LightningDatabase>();
 		services.AddSingleton<IPackageWikiService, PackageWikiService>();
-		services.AddSingleton(EngineVersion.FromAssemblyVersion(Implementation.Generated.VersionInfo.SharpMUSHVersion));
+		services.AddSingleton(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion));
 		services.AddSingleton<IPackageInstallService, PackageInstallService>();
 		// Portal package operations run as queue entries, after a pre-operation backup (#1332, #1333).
 		services.AddSingleton<IPackageOperationRunner, PackageOperationRunner>();

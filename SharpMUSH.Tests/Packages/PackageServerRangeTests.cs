@@ -130,10 +130,11 @@ public class PackageServerRangeTests
 	}
 
 	[Test]
-	public async Task TheEngineVersion_IsTheAssemblyVersionWithoutItsFourthComponent()
+	public async Task TheEngineVersion_IsTheBuildsSharpMUSHVersion()
 	{
-		await Assert.That(EngineVersion.FromAssemblyVersion("2.1.3.0").Current).IsEqualTo(new PackageVersion(2, 1, 3));
-		await Assert.That(EngineVersion.FromAssemblyVersion(Implementation.Generated.VersionInfo.SharpMUSHVersion).Current.ToString() + ".0")
+		await Assert.That(EngineVersion.Parse("2.1.3").Current).IsEqualTo(new PackageVersion(2, 1, 3));
+		await Assert.That(EngineVersion.Parse("1.1.0-rc.1").Current).IsEqualTo(new PackageVersion(1, 1, 0, "rc.1"));
+		await Assert.That(EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion).Current.ToString())
 			.IsEqualTo(Implementation.Generated.VersionInfo.SharpMUSHVersion);
 	}
 }

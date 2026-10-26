@@ -63,6 +63,8 @@ The production workflow automatically runs when you push a version tag to the re
 
 #### Creating a Version Tag
 
+The tag sets the version. Before tagging, make sure `CHANGELOG.md` has a `## [1.0.0]` section for it (the workflow refuses a tag without one) and that `SharpMUSHVersion` in `Directory.Build.props` names the same version, so builds from the tagged commit agree with the images.
+
 ```bash
 # Create a new version tag (e.g., v1.0.0)
 git tag v1.0.0
@@ -73,8 +75,9 @@ git push origin v1.0.0
 
 #### Version Tag Format
 
-- Tags must follow the format: `v*.*.*` (e.g., `v1.0.0`, `v2.1.3`, `v0.9.0`)
-- The workflow will automatically extract the version number and use it to tag the Docker images
+- Tags must follow the format: `v*.*.*` (e.g., `v1.0.0`, `v2.1.3`, `v1.1.0-rc.1`)
+- The workflow extracts the version number, tags the Docker images with it, and builds the server with it, so `version()`, `@version` and MSSP report it
+- This is the engine's version. The plugin NuGets (`SharpMUSH.Library`, `SharpMUSH.Implementation.Generated`) carry the plugin contract version and are released apart, with a `plugin-nuget/v*` tag
 
 #### What Gets Published (Version Tags)
 
@@ -83,8 +86,10 @@ When you push a tag like `v1.0.0`, the workflow will publish:
 - `sharpmush/sharpmush-server:latest`
 - `sharpmush/sharpmush-connectionserver:1.0.0`
 - `sharpmush/sharpmush-connectionserver:latest`
+- `sharpmush/sharpmush-socketserver:1.0.0`
+- `sharpmush/sharpmush-socketserver:latest`
 
-The `latest` tag is always updated to point to the most recent version.
+A prerelease tag (one with a `-`, such as `v1.1.0-rc.1`) publishes only the versioned images; `latest` stays on the last release.
 
 ### Dev Build (Main Branch Pushes)
 
@@ -106,7 +111,7 @@ You can also manually trigger either workflow from the GitHub Actions UI:
 1. Go to **Actions** tab in your repository
 2. Select **Publish Docker Images** workflow
 3. Click **Run workflow**
-4. Select the branch/tag and click **Run workflow**
+4. Select a `v*` tag (the workflow refuses a branch) and click **Run workflow**
 
 ### For Dev Builds:
 1. Go to **Actions** tab in your repository
@@ -117,7 +122,7 @@ You can also manually trigger either workflow from the GitHub Actions UI:
 ## Verifying the Workflow
 
 After setting up the secrets:
-1. Create and push a test tag: `git tag v0.0.1 && git push origin v0.0.1`
+1. Push a release tag as described above, or run the workflow manually on an existing one
 2. Go to the **Actions** tab in your repository
 3. You should see the **Publish Docker Images** workflow running
 4. Once complete, verify the images are on DockerHub at:

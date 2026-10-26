@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Models.Packages;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -151,8 +152,8 @@ public class InformationFunctionUnitTests
 	public async Task Numversion()
 	{
 		// PennMUSH's layout: 1.8.8p0 is 1008008000.
-		var version = Version.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion);
-		var expected = $"{version.Major}{version.Minor:000}{Math.Max(version.Build, 0):000}{Math.Max(version.Revision, 0):000}";
+		var version = EngineVersion.Parse(Implementation.Generated.VersionInfo.SharpMUSHVersion).Current;
+		var expected = $"{version.Major}{version.Minor:000}{version.Patch:000}000";
 
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("numversion()"));
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);

@@ -31,6 +31,21 @@
     <DotNetPackageVersion>11.0.0-rc.2.26504.105</DotNetPackageVersion>
   </PropertyGroup>
 
+  <!--
+    The engine's version: what version(), numversion(), @version, MSSP's CODEBASE and a package's
+    requires_server/maximum_server checks see. It is the release the tree is heading for, and the
+    release tag overrides it (docker-publish.yml passes the tag's version as -p:SharpMUSHVersion).
+    It is not the plugin contract version (PluginContractVersion, the SharpMUSH.Library and
+    SharpMUSH.Implementation.Generated packages), which moves only when that contract changes.
+    Bump it with the next CHANGELOG.md section.
+  -->
+  <PropertyGroup>
+    <SharpMUSHVersion Condition="'$(SharpMUSHVersion)' == ''">1.0.0</SharpMUSHVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="SharpMUSHVersion" />
+  </ItemGroup>
+
   <!-- Keep the runner, assertions, generators, and ASP.NET integration on one release. -->
   <PropertyGroup>
     <TUnitVersion>1.66.27</TUnitVersion>
