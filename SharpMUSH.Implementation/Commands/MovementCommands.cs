@@ -656,7 +656,6 @@ public partial class Commands
 
 		if (targetResult is not AnySharpObject target)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
@@ -806,49 +805,34 @@ public partial class Commands
 
 		if (targetResult is not AnySharpObject target)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
-		var followingAttr = await AttributeService.GetAttributeAsync(executor, executor, AttrFollowing,
-			IAttributeService.AttributeMode.Read, false);
-
-		if (followingAttr is SharpAttribute[] followingChain)
+		if (await LeaderOfAsync(executor) is { } leader && leader.Object().DBRef == target.Object().DBRef)
 		{
-			var followingDbref = followingChain.Last().Value.ToPlainText();
-			if (followingDbref == target.Object().DBRef.ToString())
+			// del_follow(player, who) — both lists (move.c:1197).
+			var cleared = await StopFollowingAsync(executor);
+			if (cleared is Error<string> error)
 			{
-				// del_follow(player, who) — both lists (move.c:1197).
-				var cleared = await StopFollowingAsync(executor);
-				if (cleared is Error<string> error)
-				{
-					await NotifyService.Notify(executor, error.Value, executor);
-					return CallState.Empty;
-				}
-
-				await NotifyService.Notify(executor, $"You stop following {target.Object().Name}.", executor);
+				await NotifyService.Notify(executor, error.Value, executor);
+				return CallState.Empty;
 			}
+
+			await NotifyService.Notify(executor, $"You stop following {target.Object().Name}.", executor);
 		}
 
-		var targetFollowingAttr = await AttributeService.GetAttributeAsync(executor, target, AttrFollowing,
-			IAttributeService.AttributeMode.Read, false);
-
-		if (targetFollowingAttr is SharpAttribute[] targetFollowingChain)
+		if (await LeaderOfAsync(target) is { } targetLeader && targetLeader.Object().DBRef == executor.Object().DBRef)
 		{
-			var targetFollowingDbref = targetFollowingChain.Last().Value.ToPlainText();
-			if (targetFollowingDbref == executor.Object().DBRef.ToString())
+			// del_follow(who, player) — the other direction (move.c:1198).
+			var dismissed = await StopFollowingAsync(target);
+			if (dismissed is Error<string> error)
 			{
-				// del_follow(who, player) — the other direction (move.c:1198).
-				var dismissed = await StopFollowingAsync(target);
-				if (dismissed is Error<string> error)
-				{
-					await NotifyService.Notify(executor, error.Value, executor);
-					return CallState.Empty;
-				}
-
-				await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
-				await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.", executor);
+				await NotifyService.Notify(executor, error.Value, executor);
+				return CallState.Empty;
 			}
+
+			await NotifyService.Notify(executor, $"You dismiss {target.Object().Name}.", executor);
+			await NotifyService.Notify(target, $"{executor.Object().Name} deserts you. You stop following.", executor);
 		}
 
 		return CallState.Empty;
@@ -882,21 +866,10 @@ public partial class Commands
 
 		if (targetResult is not AnySharpObject target)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.DontSeeThatHere), executor);
 			return CallState.Empty;
 		}
 
-		var followingAttr = await AttributeService.GetAttributeAsync(executor, target, AttrFollowing,
-			IAttributeService.AttributeMode.Read, false);
-
-		if (followingAttr is not SharpAttribute[] followingChain)
-		{
-			await NotifyService.Notify(executor, $"{target.Object().Name} is not following you.", executor);
-			return CallState.Empty;
-		}
-
-		var followingDbref = followingChain.Last().Value.ToPlainText();
-		if (followingDbref != executor.Object().DBRef.ToString())
+		if (await LeaderOfAsync(target) is not { } leader || leader.Object().DBRef != executor.Object().DBRef)
 		{
 			await NotifyService.Notify(executor, $"{target.Object().Name} is not following you.", executor);
 			return CallState.Empty;
