@@ -85,7 +85,7 @@ public record AttributeOptions(
 		Name = "poss_pronoun_attr",
 		Category = "Attribute",
 		Description = "Object + Attribute name for possessive pronouns (his/her)",
-		ValidationPattern = @"^#\d+/\S+$",
+		ValidationPattern = @"^(#\d+/\S+)?$",
 		Group = "Pronouns",
 		Order = 2,
 		Tooltip = "Format: #dbref/attributename")]
@@ -95,7 +95,7 @@ public record AttributeOptions(
 		Name = "abs_pronoun_attr",
 		Category = "Attribute",
 		Description = "Object + Attribute name for absolute possessive pronouns (his/hers)",
-		ValidationPattern = @"^#\d+/\S+$",
+		ValidationPattern = @"^(#\d+/\S+)?$",
 		Group = "Pronouns",
 		Order = 3,
 		Tooltip = "Format: #dbref/attributename")]
@@ -105,7 +105,7 @@ public record AttributeOptions(
 		Name = "obj_pronoun_attr",
 		Category = "Attribute",
 		Description = "Object + Attribute name for objective pronouns (him/her)",
-		ValidationPattern = @"^#\d+/\S+$",
+		ValidationPattern = @"^(#\d+/\S+)?$",
 		Group = "Pronouns",
 		Order = 4,
 		Tooltip = "Format: #dbref/attributename")]
@@ -115,7 +115,7 @@ public record AttributeOptions(
 		Name = "subj_pronoun_attr",
 		Category = "Attribute",
 		Description = "Object + Attribute name for subjective pronouns (he/she)",
-		ValidationPattern = @"^#\d+/\S+$",
+		ValidationPattern = @"^(#\d+/\S+)?$",
 		Group = "Pronouns",
 		Order = 5,
 		Tooltip = "Format: #dbref/attributename")]

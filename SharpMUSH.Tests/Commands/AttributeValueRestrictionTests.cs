@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -105,6 +107,22 @@ public class AttributeValueRestrictionTests
 		var attr = await EnumAttributeAsync("Red Green Blue");
 
 		await Assert.That(await FunctionAsync($"valid(attrvalue,{typed},{attr})")).IsEqualTo(expected);
+	}
+
+	[Test]
+	public async Task Set_RefusesAValueLongerThanMaxAttributeValueLength_AndKeepsTheOldOne()
+	{
+		var limit = (int)WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()
+			.CurrentValue.Limit.MaxAttributeValueLength;
+		var attr = TestIsolationHelpers.GenerateUniqueName("LONG").ToUpperInvariant();
+		var thing = await TestIsolationHelpers.CreateTestThingAsync(CommandParser, ConnectionService, "LongSet");
+		await CommandAsync($"&{attr} {thing}={new string('x', limit)}");
+
+		await CommandAsync($"&{attr} {thing}={new string('y', limit + 1)}");
+
+		await Assert.That(await FunctionAsync($"strlen(get({thing}/{attr}))")).IsEqualTo(limit.ToString());
+		await Assert.That(await FunctionAsync($"left(get({thing}/{attr}),1)")).IsEqualTo("x");
+		await Assert.That(Told(ErrorMessages.Returns.AttrValueTooLong)).IsTrue();
 	}
 
 	// ---- @attribute/limit and /enum as commands (src/atr_tab.c do_attribute_limit) ----------------
