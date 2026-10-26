@@ -103,6 +103,10 @@ public class FingerIntegrationTests
 			var seen = await As(bo, $"+finger {ann.Name}");
 			await Assert.That(seen).Contains($"Full Name: {name}").And.Contains("[add(1,2)] 50%")
 				.And.DoesNotContain("Species").And.Contains($"+oocfinger {ann.Name}");
+			// me is whoever typed it; a #dbref and a *name name a player as they do anywhere else.
+			await Assert.That(await As(bo, "+finger me")).Contains(bo.Name).And.Contains("Full Name: -");
+			await Assert.That(await As(bo, $"+finger #{ann.DbRef.Number}")).Contains($"Full Name: {name}");
+			await Assert.That(await As(bo, $"+finger *{ann.Name}")).Contains($"Full Name: {name}");
 			await Assert.That(await As(bo, $"+oocfinger {ann.Name}")).Contains("US Eastern").And.Contains($"{ann.Name} · OOC")
 				.And.Contains("Last on:");
 

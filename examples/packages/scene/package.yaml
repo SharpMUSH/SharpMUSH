@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.17.1
+version: 1.17.2
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
@@ -1347,8 +1347,8 @@ objects:
       SEE`POT: |-
         scene pose|scene join
       HELP`SCENE: |-
-        A **scene** is a shared, logged piece of roleplay. Anyone in the room can be in one; the log
-        is readable afterwards, in-game and in the portal.
+        A **scene** is a shared, logged piece of roleplay. Any approved character in the room can be in
+        one; the log is readable afterwards, in-game and in the portal.
 
         ## Getting in
 
