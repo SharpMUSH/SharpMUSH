@@ -155,6 +155,8 @@ public class SceneMembershipAndPoseOrderTests
 		var byCommand = await CreatePlayerAsync("UnmemberC");
 		await Eval($"sceneaddmember({sceneId},{byFunction},participant)");
 		await Eval($"sceneaddmember({sceneId},{byCommand},gm)");
+		await Assert.That(await Eval($"scenemember({sceneId},{byFunction})")).IsEqualTo("participant");
+		await Assert.That(await Eval($"scenemember({sceneId},{byCommand})")).IsEqualTo("gm");
 
 		await Assert.That(await Eval($"sceneunmember({sceneId},{byFunction})")).IsEqualTo(sceneId);
 		await Assert.That(await Cmd($"@scene/unmember {sceneId}={byCommand}")).IsEqualTo(sceneId);
