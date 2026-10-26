@@ -11,19 +11,25 @@ namespace SharpMUSH.Implementation.Commands.MailCommand;
 
 public static class RetractMail
 {
-	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, IExpandedObjectDataService objectDataService, ILocateService locateService, IMediator mediator, INotifyService notifyService, string target, string msgList)
+	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService, IMediator mediator, INotifyService notifyService, string target, string msgList)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
+		// The list counts what the executor sent that player, as @mail/review shows it; the player is found
+		// anywhere, as @mail/review finds them.
 		var maybeLocate = await locateService.LocateAndNotifyIfInvalid(parser,
 			executor, executor, target,
-			LocateFlags.PlayersPreference | LocateFlags.OnlyMatchTypePreference);
+			LocateFlags.PlayersPreference |
+			LocateFlags.MatchWildCardForPlayerName |
+			LocateFlags.MatchOptionalWildCardForPlayerName |
+			LocateFlags.OnlyMatchTypePreference |
+			LocateFlags.AbsoluteMatch);
 
 		if (maybeLocate is not (AnySharpObject and SharpPlayer targetPlayer))
 		{
 			return MarkupText.Plain(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		return await MessageListHelper.Handle(parser, objectDataService, mediator, notifyService, MarkupText.Plain(msgList), targetPlayer) switch
+		return MessageListHelper.HandleSent(mediator, MarkupText.Plain(msgList), executor, targetPlayer) switch
 		{
 			IAsyncEnumerable<SharpMail> foundMailList => await RetractAsync(mediator, notifyService, executor, foundMailList),
 			Error<string> error => MarkupText.Plain(error.Value)
