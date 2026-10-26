@@ -82,7 +82,7 @@ public partial class Commands
 			[.., "NUKE"] => await AdminMail.Handle(parser, Mediator, NotifyService, LocateService, arg0, arg1, switches),
 			[.., "REVIEW"] => await ReviewMail.Handle(parser, LocateService, Mediator, NotifyService, arg0, arg1, switches),
 			[.., "RETRACT"] when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
-				=> await RetractMail.Handle(parser, ObjectDataService, LocateService, Mediator, NotifyService,
+				=> await RetractMail.Handle(parser, LocateService, Mediator, NotifyService,
 					arg0!.ToPlainText(), arg1!.ToPlainText()),
 			// cmds.c:1041 — FWD and FORWARD are the same switch, and take a message list (extmail.c:1235).
 			[.., "FWD"] or [.., "FORWARD"] when executor.IsPlayer
