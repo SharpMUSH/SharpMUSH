@@ -1,3 +1,8 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Microsoft.Extensions.Logging;
+using SharpMUSH.Configuration;
+using SharpMUSH.Configuration.Options;
 using SharpMUSH.Database.Lightning.Migration;
 using SharpMUSH.Database.Lightning.Records;
 using SharpMUSH.Database.Lightning.Store;
@@ -24,7 +29,8 @@ public partial class LightningDatabase
 	/// 2. apply the initial migration once, gated on <see cref="InitialMigrationId"/>: objects #0-#9, their
 	///    showcase image metadata, the ancestor player formats, the <c>system</c> wiki namespace's requirement
 	///    and the <c>character</c> category's pin to the wiki home;
-	/// 3. finish the core account, session, onboarding and category-value migrations, then run every plugin's
+	/// 3. finish the core account, session, onboarding and category-value migrations, fill the stored configuration's
+	///    defaults for settings added since it was written, then run every plugin's
 	///    not-yet-applied <see cref="Library.Plugins.LightningMigrationStep"/>;
 	/// 4. recompute <c>next_dbref</c> from the objects actually on disk;
 	/// 5. ensure the singleton server-state row exists.
@@ -61,6 +67,7 @@ public partial class LightningDatabase
 			await Store.WriteAsync(MigrateOnboarding, cancellationToken);
 			await MigrateWikiCategoryValuesAsync(categoryOptions, cancellationToken);
 			await Store.WriteAsync(MigrateWikiCounts, cancellationToken);
+			await Store.WriteAsync(FillStoredOptionDefaults, cancellationToken);
 
 			foreach (var step in pluginSteps)
 			{
@@ -86,6 +93,24 @@ public partial class LightningDatabase
 		}
 
 		ReloadDefinitions();
+	}
+
+	/// <summary>
+	/// Gives the stored configuration a default for every section and setting added since it was written.
+	/// Runs on every start, not once, because each release can add settings.
+	/// </summary>
+	private void FillStoredOptionDefaults(ITx tx)
+	{
+		var key = Keys.Str(nameof(SharpMUSHOptions));
+		if (!tx.TryGet(Tables.ExpandedSrv, key, out var bytes)
+			|| JsonNode.Parse(bytes) is not JsonObject stored) return;
+
+		var defaults = JsonSerializer.SerializeToNode(SharpMUSHOptions.Default(), ExpandedDataJsonOptions)!.AsObject();
+		var filled = StoredOptionsDefaults.Fill(stored, defaults);
+		if (filled.Count == 0) return;
+
+		tx.Put(Tables.ExpandedSrv, key, JsonSerializer.SerializeToUtf8Bytes(stored, ExpandedDataJsonOptions));
+		_logger.LogInformation("Stored configuration given the shipped default for: {Settings}", string.Join(", ", filled));
 	}
 
 	private static void MigrateOnboarding(ITx tx)
