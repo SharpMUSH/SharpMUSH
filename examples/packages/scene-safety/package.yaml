@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene-safety
 title: "Scene safety tools"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Scene safety: lines and veils kept on your account, never shown to anyone, a scene owner's anonymous count of where they touch the scene's content warnings, and +safety/pause or /skip, which reaches only the scene's owner."
 license: MIT
@@ -157,11 +157,15 @@ objects:
         value: |-
           $(?is)^\+safety(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # scene-safety-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine. Only
       # players keep lines and veils.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(SAFETY,Only players keep lines and veils.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SAFETY,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SAFETY,+safety has no /%q<cmd_switch> switch. +help safety lists them.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(SAFETY,Only players keep lines and veils.,warn); think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(SAFETY,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(SAFETY,+safety has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch (the one switch),
       # cmd_argument, cmd_route (the INC` routine to run), viewer_key (where the player's lines and veils are
@@ -358,7 +362,7 @@ objects:
       # +safety <text>: a switch is needed.
       INC`SAFETY`ARG:
         value: |-
-          @pemit %#=notice(SAFETY,+safety takes a switch: +safety/line <topic> or +safety/veil <topic>. +help safety lists them.,warn)
+          @pemit %#=notice(SAFETY,+safety takes a switch: +safety/line <topic> or +safety/veil <topic>.[u(%!/FUN`HINT,SWITCHES)],warn)
         flags: [cmdsyntax]
       # +safety/line <topic>[|<topic>...] and +safety/veil: %<kind> the list added to, %<other> the other one,
       # which loses them, %<noun> line or veil.

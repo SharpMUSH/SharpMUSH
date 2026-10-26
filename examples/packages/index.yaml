@@ -44,12 +44,12 @@ packages:
     description: comm.channels/comm.message/comm.who OOB v2 pushes — channels, pages only to who received them, and live channel member lists — for the portal Play sidebar (bundled default)
   - path: chargen/
     package: chargen
-    version: 2.5.0
+    version: 2.6.0
     description: Character applications reviewed as drafts, with comments per section, rounds, a public queue and an optional cap (requires http-handler)
   - path: chargen-help/
     name: Character applications help
     package: chargen-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the chargen topics with +help (requires chargen and plus-help)
   - path: chargen-config/
     name: Character applications settings
@@ -87,17 +87,17 @@ packages:
   - path: jobs/
     name: Jobs
     package: jobs
-    version: 1.15.0
+    version: 1.16.0
     description: +job, +request and their kin — a request queue with role-worked buckets, due dates and bucket hooks (requires http-handler)
   - path: jobs-help/
     name: Jobs help
     package: jobs-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the jobs topics with +help (requires jobs and plus-help)
   - path: jobs-config/
     name: Jobs settings
     package: jobs-config
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the jobs settings with +config (requires jobs and plus-config)
   - path: jobs-app/
     name: Jobs in the portal
@@ -112,12 +112,12 @@ packages:
   - path: radio/
     name: Radio
     package: radio
-    version: 1.5.0
+    version: 1.6.0
     description: +radio — frequencies to tune in to, speak on and recall, with moderators, admins and locks; the worked example of a system built on @feed
   - path: radio-help/
     name: Radio help
     package: radio-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the radio topics with +help (requires radio and plus-help)
   - path: radio-config/
     name: Radio settings
@@ -152,12 +152,12 @@ packages:
   - path: scene-safety/
     name: Scene safety
     package: scene-safety
-    version: 1.2.0
+    version: 1.3.0
     description: Lines and veils on the account, a scene owner's anonymous count of where they touch its content warnings, and +safety/pause and /skip for the owner alone (requires scene)
   - path: scene-safety-help/
     name: Scene safety tools help
     package: scene-safety-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the scene-safety topics with +help (requires scene-safety and plus-help)
   - path: scene-safety-config/
     name: Scene safety tools settings
@@ -182,17 +182,17 @@ packages:
   - path: bboards/
     name: BBoards
     package: bboards
-    version: 1.6.0
+    version: 1.7.0
     description: +bbread/+bbpost bulletin boards that nest, with comments and replies, pinned posts, locks and per-reader unread tracking (requires http-handler)
   - path: bboards-help/
     name: Bulletin boards help
     package: bboards-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the bboards topics with +help (requires bboards and plus-help)
   - path: bboards-config/
     name: Bulletin boards settings
     package: bboards-config
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the bboards settings with +config (requires bboards and plus-config)
   - path: bboards-app/
     name: BBoards in the portal
@@ -202,27 +202,27 @@ packages:
   - path: status/
     name: Status
     package: status
-    version: 1.3.0
+    version: 1.4.0
     description: +status — LFRP or RP_OK, from a list the game keeps, shown in +who (requires who-where)
   - path: status-help/
     name: Roleplay status help
     package: status-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the status topics with +help (requires status and plus-help)
   - path: status-config/
     name: Roleplay status settings
     package: status-config
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the status settings with +config (requires status and plus-config)
   - path: watch/
     name: Watch
     package: watch
-    version: 1.3.0
+    version: 1.4.0
     description: +watch and +friend — hearing when the people you watch connect and leave (requires who-where)
   - path: watch-help/
     name: Watch list help
     package: watch-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the watch topics with +help (requires watch and plus-help)
   - path: watch-config/
     name: Watch list settings
@@ -232,12 +232,12 @@ packages:
   - path: finger/
     name: Finger
     package: finger
-    version: 1.4.0
+    version: 1.5.0
     description: +finger and +oocfinger — a character's IC and OOC profile, from a field list the game edits with +config
   - path: finger-help/
     name: Finger profiles help
     package: finger-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the finger topics with +help (requires finger and plus-help)
   - path: finger-config/
     name: Finger profiles settings
@@ -262,12 +262,12 @@ packages:
   - path: time/
     name: Time
     package: time
-    version: 1.5.0
+    version: 1.6.0
     description: +time and +timezone — the game's time and each player's own, a time converted between zones, and an IC date and clock the game sets
   - path: time-help/
     name: Time and time zones help
     package: time-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the time topics with +help (requires time and plus-help)
   - path: time-config/
     name: Time and time zones settings
@@ -277,12 +277,12 @@ packages:
   - path: info/
     name: Info Files
     package: info
-    version: 1.2.0
+    version: 1.3.0
     description: +info, +pinfo and +journal — public and private files on a character, and a journal shared entry by entry
   - path: info-help/
     name: Info files and journals help
     package: info-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the info topics with +help (requires info and plus-help)
   - path: info-config/
     name: Info files and journals settings
@@ -312,12 +312,12 @@ packages:
   - path: relationships/
     name: Relationships
     package: relationships
-    version: 1.3.0
+    version: 1.4.0
     description: +rel — typed relationships both players confirm, a card for any character with your private note, and the routes the portal draws the web and the name card from
   - path: relationships-help/
     name: Relationships help
     package: relationships-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the relationships topics with +help (requires relationships and plus-help)
   - path: relationships-config/
     name: Relationships settings
@@ -402,12 +402,12 @@ packages:
   - path: roster/
     name: Roster
     package: roster
-    version: 1.3.0
+    version: 1.4.0
     description: +roster — characters that can be played, given to accounts and returned, with their history; no approval process of its own
   - path: roster-help/
     name: Roster help
     package: roster-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the roster topics with +help (requires roster and plus-help)
   - path: roster-config/
     name: Roster settings
@@ -432,12 +432,12 @@ packages:
   - path: availability/
     name: Availability
     package: availability
-    version: 1.2.0
+    version: 1.3.0
     description: +avail — when each character is busy or free, as dates and repeating patterns, and the times a group are all free
   - path: availability-help/
     name: Availability help
     package: availability-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the availability topics with +help (requires availability and plus-help)
   - path: availability-config/
     name: Availability settings
@@ -537,12 +537,12 @@ packages:
   - path: alts/
     name: Alts
     package: alts
-    version: 1.2.0
+    version: 1.3.0
     description: +alts — the characters on your account, private until you make the list public, with any one kept off it
   - path: alts-help/
     name: Alts help
     package: alts-help
-    version: 1.0.0
+    version: 1.1.0
     description: Registers the alts topics with +help (requires alts and plus-help)
   - path: onboarding/
     name: Onboarding

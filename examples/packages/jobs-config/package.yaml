@@ -1,9 +1,9 @@
 format: "1.16"
 package: jobs-config
 title: "Jobs: +config settings"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
-description: "Puts the Jobs settings into +config: registers them with the +config registry, so staff see and change them with +config jobs."
+description: "Puts the Jobs settings into +config: registers them with the +config registry, so staff see and change them with +config jobs, and points its messages at +config."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [jobs, config, bridge]
@@ -12,10 +12,10 @@ requires_server: ">=0.1"
 
 # A bridge: it joins two packages that do not know about each other. jobs declares its settings as
 # DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
-# This package is the one leaf that tells the +config registry where they are.
+# This package is the leaf that tells the +config registry where they are, and the lines that point its messages at +config.
 depends:
   - package: jobs
-    version: ">=1.15"
+    version: ">=1.16"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/jobs/
@@ -33,3 +33,10 @@ objects:
     attributes:
       SYSTEM`JOBS: |-
         {{jobs/jobs}}
+
+  # Lines the jobs package's messages end with when +config is here, through its FUN`HINT: HINT`<message>.
+  - ref: message_hints
+    target: "{{jobs/jobs}}"
+    attributes:
+      HINT`DEFAULT-BUCKET: |-
+        Point +config jobs/default-bucket elsewhere first.

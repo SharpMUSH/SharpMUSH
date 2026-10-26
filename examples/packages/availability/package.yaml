@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -174,7 +174,7 @@ objects:
       DATA`WORDS`FILLER: |-
         on at the of and in each for
       DATA`USAGE`ADD: |-
-        Say when, such as +avail/busy weekdays 9:00-17:00=Work or +avail/free 2026-10-24 19:00-23:00. +help avail when lists what a time can say.
+        Say when, such as +avail/busy weekdays 9:00-17:00=Work or +avail/free 2026-10-24 19:00-23:00.
 
       # Which routine each switch runs: DATA`ROUTE`<switch>. BARE is the command alone, ARG the command with
       # something after it and no switch. Another package adds a switch with a leaf here and the INC` it names
@@ -206,10 +206,14 @@ objects:
         value: |-
           $(?is)^\+avail(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # availability-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(AVAIL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(AVAIL,+avail has no /%q<cmd_switch> switch. +help avail lists them.,warn); @assert hastype(%#,PLAYER)=@pemit %#=notice(AVAIL,Only a character keeps times.,warn); @include %!/INC`%q<cmd_route>
+          think u(%!/FUN`COMMAND`PARSE,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(AVAIL,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(AVAIL,+avail has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @assert hastype(%#,PLAYER)=@pemit %#=notice(AVAIL,Only a character keeps times.,warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument (spaces
       # squeezed), cmd_left and cmd_right (either side of the first =; the right as typed, so a note keeps its
@@ -354,7 +358,7 @@ objects:
           strlen(setr(read_word_clock,u(%!/FUN`READ`CLOCK,%0,1))),u(%!/FUN`READ`PLACECLOCK,%q<read_word_clock>),
           strlen(setr(read_word_days,u(%!/FUN`READ`DAYS,%0))),u(%!/FUN`READ`PLACEDAYS,%q<read_word_days>),
           strlen(setr(read_word_ordinal,u(%!/FUN`READ`ORDINAL,%0))),u(%!/FUN`READ`PLACEORDINAL,%q<read_word_ordinal>,%0),
-          setq(read_error,'%0' is not a day%, a date or a time I can read. +help avail when lists what a time can say.)))
+          setq(read_error,'%0' is not a day%, a date or a time I can read.[u(%!/FUN`HINT,WHEN)])))
         flags: [funsyntax]
       # %0 the number after every.
       FUN`READ`EVERY:
@@ -781,7 +785,7 @@ objects:
       # +avail/busy <when>[=<note>] and +avail/free <when>[=<note>].
       INC`ENTRY`ADD:
         value: |-
-          @assert strlen(%q<cmd_left>)=@pemit %#=notice(AVAIL,get(%!/DATA`USAGE`ADD),warn); think u(%!/FUN`READ`WHEN,%q<cmd_left>,%q<viewer_zone>,%q<viewer_today>); @assert not(strlen(%q<read_error>))=@pemit %#=notice(AVAIL,%q<read_error>,warn); @assert lte(strlen(%q<cmd_right>),u(%!/FUN`CONFIG,NOTE-LENGTH))=@pemit %#=notice(AVAIL,Keep the note to [u(%!/FUN`CONFIG,NOTE-LENGTH)] characters.,warn); @assert lt(words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>)),u(%!/FUN`CONFIG,ENTRIES))=@pemit %#=notice(AVAIL,You keep [u(%!/FUN`CONFIG,ENTRIES)] entries already. +avail/remove <n> makes room.,warn); @assert cor(comp(%q<read_repeat>,once),gt(u(%!/FUN`DAY`AT,%q<read_date>,add(%q<read_minute>,%q<read_length>),%q<viewer_zone>),%q<now>))=@pemit %#=notice(AVAIL,That time has already passed.,warn); think setq(entry_number,u(%!/FUN`PLAYER`NEXT,%q<viewer_key>)); @include %!/INC`ENTRY`WRITE; @pemit %#=notice(AVAIL,Added %q<entry_number>%, [u(%!/FUN`DISPLAY`KIND,%q<cmd_switch>)]: [u(%!/FUN`ENTRY`DESCRIBE,%q<viewer_key>,%q<entry_number>,%q<viewer_zone>)].,ok)
+          @assert strlen(%q<cmd_left>)=@pemit %#=notice(AVAIL,[get(%!/DATA`USAGE`ADD)][u(%!/FUN`HINT,WHEN)],warn); think u(%!/FUN`READ`WHEN,%q<cmd_left>,%q<viewer_zone>,%q<viewer_today>); @assert not(strlen(%q<read_error>))=@pemit %#=notice(AVAIL,%q<read_error>,warn); @assert lte(strlen(%q<cmd_right>),u(%!/FUN`CONFIG,NOTE-LENGTH))=@pemit %#=notice(AVAIL,Keep the note to [u(%!/FUN`CONFIG,NOTE-LENGTH)] characters.,warn); @assert lt(words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>)),u(%!/FUN`CONFIG,ENTRIES))=@pemit %#=notice(AVAIL,You keep [u(%!/FUN`CONFIG,ENTRIES)] entries already. +avail/remove <n> makes room.,warn); @assert cor(comp(%q<read_repeat>,once),gt(u(%!/FUN`DAY`AT,%q<read_date>,add(%q<read_minute>,%q<read_length>),%q<viewer_zone>),%q<now>))=@pemit %#=notice(AVAIL,That time has already passed.,warn); think setq(entry_number,u(%!/FUN`PLAYER`NEXT,%q<viewer_key>)); @include %!/INC`ENTRY`WRITE; @pemit %#=notice(AVAIL,Added %q<entry_number>%, [u(%!/FUN`DISPLAY`KIND,%q<cmd_switch>)]: [u(%!/FUN`ENTRY`DESCRIBE,%q<viewer_key>,%q<entry_number>,%q<viewer_zone>)].,ok)
         flags: [cmdsyntax]
       # Writes the entry the read_ registers hold as %q<entry_number>. A leaf with nothing to say is not written.
       INC`ENTRY`WRITE:

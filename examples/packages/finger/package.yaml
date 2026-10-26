@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -284,10 +284,14 @@ objects:
         value: |-
           $(?is)^\+oocfinger(/\S*)?(?\: +(.*))?$:@include/args %!/INC`COMMAND`RUN=word,oocfinger,view,OOC,switches,%1,argument,%2
         flags: [regexp, cmdsyntax]
+      # A line a bridge adds to one of this object's messages: HINT`<message>, set here by a bridge such as
+      # finger-help. %1 on are passed to it. Nothing when no bridge set one, so the message stands without it.
+      FUN`HINT: |-
+        if(hasattr(%!,HINT`%0),%b[u(%!/HINT`%0,%1,%2)])
       # Parses the command into registers every routine shares, checks the switch, and runs the routine.
       INC`COMMAND`RUN:
         value: |-
-          @assert hastype(%#,player)=@pemit %#=notice(FINGER,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<view>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(FINGER,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(FINGER,+%q<cmd_word> has no /%q<cmd_switch> switch. +help finger lists them.,warn); @include %!/INC`%q<cmd_route>
+          @assert hastype(%#,player)=@pemit %#=notice(FINGER,Only players use +%<word>.,warn); think u(%!/FUN`COMMAND`PARSE,%<word>,%<view>,%<switches>,%<argument>); @assert lte(words(%q<cmd_switch_list>),1)=@pemit %#=notice(FINGER,Use one switch at a time.,warn); @assert strlen(%q<cmd_route>)=@pemit %#=notice(FINGER,+%q<cmd_word> has no /%q<cmd_switch> switch.[u(%!/FUN`HINT,SWITCHES)],warn); @include %!/INC`%q<cmd_route>
         flags: [cmdsyntax]
       # %0 the word, %1 its view, %2 the switches and %3 the argument, as typed. Sets cmd_word, cmd_view,
       # cmd_switch_list, cmd_switch, cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the
