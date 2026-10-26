@@ -34,6 +34,7 @@ Limits and other constants.
 
 - `max_dbref=<dbref>`: The highest dbref an object can have. If 0, there is no limit on database size.
 - `max_attrs_per_obj=<number>`: The maximum attributes an object can have.
+- `max_attribute_value_length=<number>`: The longest attribute value, in UTF-8 bytes of its plain text, that `valid(attrvalue, ...)` accepts. From 100 to 1000000; 8192 by default.
 - `max_logins=<number>`: The maximum number of connected players.
 - `max_guests=<number>`: The maximum number of connected guests. If 0, no limit. If -1, limited by the number of guest players in the db.
 - `max_named_qregs=<number>`: Accepted but ignored: SharpMUSH does not limit named q-registers.
@@ -58,6 +59,7 @@ Limits and other constants.
 
 - `function_recursion_limit=<number>`: The depth to which softcode functions can call more functions.
 - `function_invocation_limit=<number>`: The maximum number of softcode functions that can be called in one command.
+- `guest_output_limit=<number>`: The most characters one function may produce while a guest's input is evaluated, from 1024 to 5242880; 65536 by default. Everyone else may produce 5242880.
 - `guest_paycheck=<number>`: How many pennies guests get each day.
 - `max_guest_pennies=<number>`: The maximum pennies a guest can have.
 - `player_name_len=<number>`: The maximum length of a player name.

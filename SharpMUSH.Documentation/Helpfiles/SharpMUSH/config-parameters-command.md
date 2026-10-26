@@ -13,20 +13,7 @@
 
 Many of the mush's run-time options can be set from the game by wizards, using `@config/set <option>=<new value>`. Those that can be set with visible changes are listed below, grouped by category. See `help @config <category>` for details on each.
 
-Categories:
-- [@config attribs]
-- [@config chat]
-- [@config cmds]
-- [@config cosmetic]
-- [@config costs]
-- [@config db]
-- [@config dump]
-- [@config flags]
-- [@config funcs]
-- [@config limits]
-- [@config log]
-- [@config net]
-- [@config tiny]
+Categories: [@config alias], [@config attribs], [@config chat], [@config cmds], [@config cosmetic], [@config costs], [@config db], [@config debug], [@config dump], [@config file], [@config flags], [@config funcs], [@config limits], [@config log], [@config net], [@config onboarding], [@config textfile], [@config tiny], [@config wiki].
 
 The categories and groups are the same as those `@config` lists.
 

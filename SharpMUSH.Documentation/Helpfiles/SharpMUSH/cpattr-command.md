@@ -21,7 +21,7 @@
 
 @mvattr works the same, but also attempts to remove the original attribute after copying it.
 
-Attribute flags are copied as well, unless the `/noflagcopy` switch is given. This is recommended when copying from a non-standard attribute to a standard one.
+Attribute flags are copied as well, unless the `/noflagcopy` switch is given. This is recommended when copying from a non-standard attribute to a standard one. The `/convert` switch is accepted and changes nothing.
 
 - [@cpattr examples]: copying one attribute to several objects and names
 - [@cpattr patterns]: copying every attribute that matches a wildcard
