@@ -36,6 +36,20 @@ def published_revision(image):
     return revision
 
 
+def fly_changed(head):
+    """The Fly image copies the three images and adds deploy/fly/ and nats.conf; the workflow
+    rebuilds it after any of the three is pushed, so only its own files are compared here."""
+    try:
+        base = published_revision('fly')
+    except subprocess.CalledProcessError:
+        print('::warning::sharpmush/sharpmush-fly:dev is not published yet; building it')
+        return True
+    if not base:
+        return True
+    changed = git('diff', '--name-only', '--no-renames', '-z', base, head).split('\0')
+    return any(path == 'nats.conf' or path.startswith('deploy/fly/') for path in changed)
+
+
 def published_impact(head):
     result = {}
     for image in IMAGES:
@@ -54,6 +68,7 @@ def main():
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         for image, paths in result.items():
             output.write(f'{image}={str(bool(paths)).lower()}\n')
+        output.write(f'fly={str(fly_changed(os.environ["GITHUB_SHA"])).lower()}\n')
 
 
 if __name__ == '__main__':

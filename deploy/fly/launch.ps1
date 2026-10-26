@@ -1,29 +1,40 @@
-# Launches SharpMUSH on Fly.io from a checkout of this repository, on Windows:
+# Launches SharpMUSH on Fly.io from the published image, on Windows, with no checkout needed:
 #
 #   fly auth login
-#   powershell -ExecutionPolicy Bypass -File deploy\fly\launch.ps1 my-game iad [-DedicatedIPv4]
+#   & ([scriptblock]::Create((irm https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/deploy/fly/launch.ps1))) my-game iad [-DedicatedIPv4]
 #
-# The same steps as launch.sh. Safe to run again: it creates only what is missing, then deploys. The
-# app gets IPv6 and a shared IPv4 address, both free. The shared IPv4 carries only the web portal, so
-# telnet is reachable over IPv6 alone; -DedicatedIPv4 adds an IPv4 address of the app's own ($2/month
-# at Fly) for telnet.
+# The same steps as launch.sh. The app's settings live in <app>.fly.toml in the current directory,
+# downloaded the first time. Safe to run again: it creates only what is missing, then deploys the
+# newest image, which restarts the machine and drops connected players. The app gets IPv6 and a
+# shared IPv4 address, both free. The shared IPv4 carries only the web portal, so telnet is
+# reachable over IPv6 alone; -DedicatedIPv4 adds an IPv4 address of the app's own ($2/month at Fly)
+# for telnet.
+#
+# It runs in the caller's session, so it stops with throw, never exit, which would close the window.
 param(
 	[Parameter(Mandatory = $true)][string]$App,
 	[string]$Region = 'iad',
 	[switch]$DedicatedIPv4
 )
 
-$root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
+$ref = if ($env:SHARPMUSH_SOURCE_REF) { $env:SHARPMUSH_SOURCE_REF } else { 'main' }
+$config = "$App.fly.toml"
 $found = Get-Command fly, flyctl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
 if (-not $found) {
-	Write-Host 'Install flyctl first: https://fly.io/docs/flyctl/install/'
-	exit 1
+	throw 'Install flyctl first: https://fly.io/docs/flyctl/install/'
 }
 $fly = $found.Source
 
 function Invoke-Fly {
 	& $fly @args
 	if ($LASTEXITCODE -ne 0) { throw "fly $args failed (exit code $LASTEXITCODE)" }
+}
+
+if (-not (Test-Path $config)) {
+	Invoke-WebRequest -UseBasicParsing -OutFile "$config.tmp" `
+		"https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/$ref/deploy/fly/fly.toml"
+	Move-Item "$config.tmp" $config
+	Write-Host "Wrote $config; edit it and run this again to change the app's settings."
 }
 
 & $fly status --app $App *> $null
@@ -52,15 +63,7 @@ if (-not ($ips | Where-Object { $_ -match 'v6' })) {
 }
 
 # One machine: the world's volume can be attached to only one.
-Push-Location $root
-try {
-	Invoke-Fly deploy . --app $App --primary-region $Region --ha=false `
-		--config deploy/fly/fly.toml --dockerfile deploy/fly/Dockerfile `
-		--ignorefile deploy/fly/fly.dockerignore
-}
-finally {
-	Pop-Location
-}
+Invoke-Fly deploy --app $App --config $config --primary-region $Region --ha=false
 
 Write-Host ''
 $ips = @(Invoke-Fly ips list --app $App)

@@ -8,7 +8,8 @@ the same installer, `install.sh`, which runs the stack in `compose.yml` from pub
 | Any VPS | Pastes `cloud-init.yaml` into the provider's user-data box, or runs the installer over SSH | `cloud-init.yaml`, `install.sh` |
 | Akamai / Linode | Deploys the public StackScript and fills in its form | `linode-stackscript.sh` |
 | DigitalOcean | Creates a Droplet from the 1-Click image | `digitalocean/` |
-| Fly.io | Runs `deploy/fly/launch.sh <app>` | `../fly/` (see its README) |
+| Fly.io | Runs `deploy/fly/launch.sh <app>`, which needs no checkout | `../fly/` (see its README) |
+| Railway | Deploys the template | `../railway/` (see its README) |
 
 Over SSH:
 
