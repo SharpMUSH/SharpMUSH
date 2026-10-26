@@ -79,6 +79,12 @@ The following switches are available:
 
 If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 
+There is no `/reply` switch. To answer a message, send one to its sender:
+
+```
+@mail Bob=Re: Dinner/Thanks, I'll be there.
+```
+
 - `@mail/fwd <msg-list>=<player-list>`
 * This sends a copy of all the messages in *<msg-list>* to all the players in *<player-list>*. The copy will appear to have been sent by you (not the original sender), and its status will be "Forwarded".
 
