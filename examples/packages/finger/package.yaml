@@ -1,7 +1,7 @@
 format: "1.16"
 package: finger
 title: "Finger profiles"
-version: 1.4.0
+version: 1.4.1
 authors: [SharpMUSH]
 description: "+finger and +oocfinger: a character's IC and OOC profile, from a field list the game edits with +config."
 license: MIT
@@ -376,10 +376,11 @@ objects:
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
-      # %0 typed text: the objid of the player it names, or nothing.
+      # %0 typed text: the objid of the player it names, or nothing. me is whoever typed it; pmatch() run here would
+      # read it as this object.
       FUN`FIND`PLAYER:
         value: |-
-          if(isdbref(setr(found_player,pmatch(%0))),objid(%q<found_player>))
+          if(isdbref(setr(found_player,pmatch(if(strmatch(trim(%0),me),%#,%0)))),objid(%q<found_player>))
         flags: [funsyntax]
       # %0 seconds: a short duration, 5m or 2h.
       FUN`DISPLAY`DURATION:
@@ -554,7 +555,7 @@ objects:
         `+finger` shows a character's in-character profile, and `+oocfinger` the player's out-of-character one.
 
         - `+finger` and `+oocfinger` show your own.
-        - `+finger <name>` and `+oocfinger <name>` show someone else's.
+        - `+finger <name>` and `+oocfinger <name>` show someone else's. `me`, a `#dbref` and `*name` work too.
         - `+finger/fields` lists every field, which command shows it, and whether you have set it.
 
         A field nobody has filled in is left out, except on your own, where it shows as `-`.
