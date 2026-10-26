@@ -90,10 +90,7 @@ jobs:
           context: .
           file: ./SharpMUSH.RenderingWorker/Dockerfile
           push: true
-          # sharpmush-connectionserver is the renderer's old name, kept for installs that still use it.
-          tags: |
-            sharpmush/sharpmush-renderer:dev
-            sharpmush/sharpmush-connectionserver:dev
+          tags: sharpmush/sharpmush-renderer:dev
           labels: |
             org.opencontainers.image.title=SharpMUSH Renderer
             org.opencontainers.image.description=Rendering worker for SharpMUSH (dev build)
@@ -140,10 +137,7 @@ jobs:
           file: ./deploy/fly/Dockerfile
           push: true
           pull: true
-          # sharpmush-fly is this image's old name, kept for launched games that still use it.
-          tags: |
-            sharpmush/sharpmush-allinone:dev
-            sharpmush/sharpmush-fly:dev
+          tags: sharpmush/sharpmush-allinone:dev
           labels: |
             org.opencontainers.image.title=SharpMUSH all-in-one
             org.opencontainers.image.description=SharpMUSH in one container, for one-container hosts (dev build)
@@ -162,7 +156,7 @@ jobs:
               echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
             fi
             if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
-              echo "- \`sharpmush/sharpmush-renderer:dev\` (and \`sharpmush-connectionserver:dev\`) — **pushed**"
+              echo "- \`sharpmush/sharpmush-renderer:dev\` — **pushed**"
             else
               echo "- \`sharpmush/sharpmush-renderer:dev\` — not published (inputs unchanged, or not selected on a manual run); rendering worker unchanged"
             fi
@@ -172,7 +166,7 @@ jobs:
               echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
             fi
             if [ "${{ steps.push_fly.outcome }}" = "success" ]; then
-              echo '- `sharpmush/sharpmush-allinone:dev` (and `sharpmush-fly:dev`) — **pushed; nothing updates to it until its operator deploys it**'
+              echo '- `sharpmush/sharpmush-allinone:dev` — **pushed; nothing updates to it until its operator deploys it**'
             else
               echo '- `sharpmush/sharpmush-allinone:dev` — not published'
             fi

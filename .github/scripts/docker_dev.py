@@ -20,9 +20,7 @@ def image_revision(data):
     return None
 
 
-# The Docker Hub repository each image is published under. The workflows also push every build to
-# the name it had before (sharpmush-connectionserver, sharpmush-fly) so installs that still name it
-# keep updating; those names never carry a different process.
+# The Docker Hub repository each image is published under.
 REPOSITORIES = {
     'server': 'sharpmush-server',
     'connectionserver': 'sharpmush-renderer',

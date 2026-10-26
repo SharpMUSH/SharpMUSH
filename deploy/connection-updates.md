@@ -4,7 +4,7 @@ The stable SocketServer owns telnet and `/ws` sockets, their protocol state, and
 
 Where the two cannot share a volume (separate Fly.io apps or Railway services), set `Rendering__Address` on both to an address on the host's private network, such as `http://my-game-renderer.internal:5100`, and the worker listens there instead of on the socket. The worker asks for no credentials, so that address must never be public.
 
-The renderer was first published as `sharpmush/sharpmush-connectionserver`, and every renderer build is still pushed under that name too, so a Compose file that names it keeps updating to the same process. An image name is never reused for a different process: that changes which process an existing Compose file pulls under an unchanged tag, which is the Watchtower hazard the migration section below describes. The all-in-one image for Fly.io and Railway is likewise also pushed as `sharpmush/sharpmush-fly`, its first name. The source project was renamed from `SharpMUSH.ConnectionServer` to `SharpMUSH.RenderingWorker` without touching any image, service or configuration key; `ConnectionServer__*` settings still configure SocketServer.
+An image name is never reused for a different process: that would change which process an existing Compose file pulls under an unchanged tag, which is the Watchtower hazard the migration section below describes. The source project was renamed from `SharpMUSH.ConnectionServer` to `SharpMUSH.RenderingWorker` without touching any image, service or configuration key; `ConnectionServer__*` settings still configure SocketServer.
 
 ## Changes to browser control frames
 
