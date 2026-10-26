@@ -10,6 +10,23 @@ so launching needs no checkout. Railway runs the same image (`deploy/railway/`).
 The cost of fitting in one container: every update restarts the whole machine and drops connected
 players, where the compose stack keeps their sockets open across engine updates.
 
+## Roles
+
+`SHARPMUSH_ROLE` picks what one container of this image runs, so the same image can also run as
+three parts that update apart:
+
+| Role | Runs | Needs |
+|---|---|---|
+| `all` (default) | everything, the renderer on a Unix socket | |
+| `edge` | Caddy, NATS, the connection server: every player's socket | `SHARPMUSH_SERVER_ADDRESS` (host:port), `Rendering__Address` |
+| `server` | the game server and the world | `SHARPMUSH_NATS_URL` |
+| `renderer` | the rendering worker | `Rendering__Address` |
+
+Updating the server or the renderer then drops nobody. Only the edge may be public: NATS, the
+server and the renderer ask for no credentials, so they must be reachable on the host's private
+network alone. The server trusts forwarded headers from `SHARPMUSH_TRUSTED_PROXIES` (default: any
+address, since only the edge can reach it).
+
 ## Launch
 
 ```bash
