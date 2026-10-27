@@ -178,6 +178,33 @@ public class OnboardingIntegrationTests
 	}
 
 	[Test]
+	public async Task AGuestStartsFreshOnceItsLastConnectionCloses()
+	{
+		var guest = await Player("ObGuest");
+		var player = await Player("ObStays");
+		await God($"@power #{guest.DbRef.Number}=Guest");
+
+		foreach (var who in new[] { guest, player })
+		{
+			await As(who, "+welcome/done basics");
+			await As(who, "+welcome/hide");
+		}
+
+		// Another connection is still open: nothing changes.
+		await God($"@trigger/args #9/PLAYER`DISCONNECT`ONBOARDING=objid,#{guest.DbRef.Number},connections,1");
+		await Assert.That(await Think($"hasattr(#{guest.DbRef.Number},ONBOARDING`DONE`BASICS)")).IsEqualTo("1");
+
+		foreach (var who in new[] { guest, player })
+		{
+			await God($"@trigger/args #9/PLAYER`DISCONNECT`ONBOARDING=objid,#{who.DbRef.Number},connections,0");
+		}
+
+		await Assert.That(await Think($"lattr(#{guest.DbRef.Number}/ONBOARDING**)")).IsEmpty();
+		await Assert.That(await Think($"lattr(#{player.DbRef.Number}/ONBOARDING**)"))
+			.Contains("ONBOARDING`DONE`BASICS").And.Contains("ONBOARDING`HIDE");
+	}
+
+	[Test]
 	public async Task StaffAddAStepWithConfig()
 	{
 		var staff = await Player("ObStaff");

@@ -1,7 +1,7 @@
 format: "1.16"
 package: onboarding
 title: "Getting-started checklist"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "A getting-started checklist for new characters: shown at login while a step is open and any time with +welcome, each step with more to read under +welcome <number>. The game chooses the steps."
 license: MIT
@@ -27,7 +27,8 @@ objects:
   #   SHOW`<KEY>   %0 the player: false to leave the step off this player's list.
   #   NOTE`<KEY>   %0 the player: a line shown in place of the hint, such as where an application stands.
   # A player's progress is on the player: ONBOARDING`DONE`<KEY> (when they ticked it), ONBOARDING`HIDE (1: not at
-  # login) and ONBOARDING`SEEN (when it was first shown at login).
+  # login) and ONBOARDING`SEEN (when it was first shown at login). A guest's is cleared when its last connection
+  # closes, so the next person on that guest starts fresh.
   #
   # Trees: CMD` the hooked command, INC`COMMAND` the dispatch, INC`WELCOME` one routine per switch, EVENT` the login
   # copy, FUN`STEP` the reads, FUN`DISPLAY` the screens. DATA` the settings and the routes, one leaf each.
@@ -244,6 +245,14 @@ objects:
           cand(not(strmatch(num(%0),#1)),not(get(%0/ONBOARDING`HIDE)),switch(v(DATA`CONFIG`LOGIN),open,words(u(%!/FUN`STEP`OPEN,%0)),first,not(hasattr(%0,ONBOARDING`SEEN)),0))
         flags: [funsyntax]
 
+      # ---- logout ---------------------------------------------------------------
+      # %<player> closed their last connection, handed on by the event handler's PLAYER`DISCONNECT`ONBOARDING. A guest is
+      # shared, so its progress goes with the person who used it.
+      EVENT`DISCONNECT:
+        value: |-
+          @assert haspower(%<player>,Guest); @wipe %<player>/ONBOARDING
+        flags: [cmdsyntax]
+
       # ---- steps ----------------------------------------------------------------
       # %0 a player: the keys of the steps on their list, in order.
       FUN`STEP`KEYS:
@@ -435,11 +444,14 @@ objects:
         - `` SHOW`<STEP> ``: false leaves the step off that player's list. `describe` and `approval` are left off a guest's.
         - `` NOTE`<STEP> ``: a line shown in place of the hint, such as where an application stands.
 
-        A package adds a step by attaching an entry to the store and its code to the Onboarding object. What a player has done is on the player: `` ONBOARDING`DONE`<STEP> `` for each step they ticked off, and `` ONBOARDING`HIDE `` when they hid the list.
+        A package adds a step by attaching an entry to the store and its code to the Onboarding object. What a player has done is on the player: `` ONBOARDING`DONE`<STEP> `` for each step they ticked off, and `` ONBOARDING`HIDE `` when they hid the list. A guest's is cleared when its last connection closes.
 
-  # Login: the checklist at a player's login, on the connection that logged in.
+  # Login: the checklist at a player's login, on the connection that logged in. Logout: a guest's progress cleared.
   - ref: events
     target: "{{$event_handler}}"
     attributes:
       PLAYER`CONNECT`ONBOARDING: |-
         @trigger/args {{guide}}/EVENT`CONNECT=player,%<objid>,descriptor,%<descriptor>
+      # connections is how many the player still has: only the last one closing counts.
+      PLAYER`DISCONNECT`ONBOARDING: |-
+        @assert eq(%<connections>,0); @trigger/args {{guide}}/EVENT`DISCONNECT=player,%<objid>
