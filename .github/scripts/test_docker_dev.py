@@ -35,6 +35,26 @@ class PublishedRevisionTests(unittest.TestCase):
         self.assertEqual(result, {'server': ['Game/change'], 'connectionserver': ['Conn/change'],
                                   'socketserver': ['Socket/change']})
 
+    def test_reads_each_image_under_its_current_name(self):
+        tags = []
+        def inspect(args, text, capture_output):
+            tags.append(args[4])
+            return subprocess.CompletedProcess(args, 0, '{}', '')
+        with patch('subprocess.run', side_effect=inspect):
+            for image in ('server', 'connectionserver', 'socketserver', 'fly'):
+                docker_dev.published_revision(image)
+        self.assertEqual(tags, ['sharpmush/sharpmush-server:dev', 'sharpmush/sharpmush-renderer:dev',
+                                'sharpmush/sharpmush-socketserver:dev', 'sharpmush/sharpmush-allinone:dev'])
+
+    def test_never_pushed_tag_builds_and_other_registry_errors_fail(self):
+        def failing(stderr):
+            return lambda args, text, capture_output: subprocess.CompletedProcess(args, 1, '', stderr)
+        with patch('subprocess.run', side_effect=failing('ERROR: docker.io/sharpmush/sharpmush-renderer:dev: not found')):
+            self.assertIsNone(docker_dev.published_revision('connectionserver'))
+        with patch('subprocess.run', side_effect=failing('ERROR: unexpected status: 503 Service Unavailable')):
+            with self.assertRaises(subprocess.CalledProcessError):
+                docker_dev.published_revision('connectionserver')
+
 
 class FlyImageTests(unittest.TestCase):
     def test_rebuilds_when_its_own_files_change(self):

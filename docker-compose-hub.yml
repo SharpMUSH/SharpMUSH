@@ -45,7 +45,7 @@ services:
 
   # Rendering can restart independently; the stable connectionserver service owns client sockets.
   renderer:
-    image: sharpmush/sharpmush-connectionserver:dev
+    image: sharpmush/sharpmush-renderer:dev
     stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true

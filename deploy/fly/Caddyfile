@@ -24,8 +24,9 @@
 			}
 		}
 
+		# The game server: beside Caddy, or at its private address when it runs apart (start.sh).
 		handle {
-			reverse_proxy 127.0.0.1:8080 {
+			reverse_proxy {$SHARPMUSH_SERVER_ADDRESS} {
 				header_up X-Forwarded-For {client_ip}
 			}
 		}

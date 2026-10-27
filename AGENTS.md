@@ -119,7 +119,7 @@ Browser (Blazor WASM)
 | `SharpMUSH.Server` | ASP.NET Core host — REST API, SignalR hub, Blazor WASM file serving, middleware stack |
 | `SharpMUSH.Client` | Blazor WASM web portal (MudBlazor 9.x) |
 | `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Image `sharpmush-socketserver`, compose service `connectionserver` |
-| `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-connectionserver`, compose service `renderer` |
+| `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-renderer`, compose service `renderer` |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |
 | `SharpMUSH.Database.Lightning` | LMDB embedded provider through Lightning.NET; one directory per world; writes run one at a time (on the caller's thread when nothing is queued, else group-committed on the writer thread), sync policy per `SHARPMUSH_LIGHTNING_SYNC` |

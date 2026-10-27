@@ -1,0 +1,28 @@
+# SharpMUSH on Fly.io, split: the game server and the world. launch.sh saves this file as
+# <game>.server.fly.toml, filling in the game's name, and deploys it as the app
+# <game>-server. It has no public address; the edge reaches it on the game's private network.
+#
+# Deploying this app restarts the server without dropping anyone: the edge keeps players' sockets.
+[build]
+  image = "sharpmush/sharpmush-allinone:dev"
+
+[env]
+  SHARPMUSH_ROLE = "server"
+  SHARPMUSH_NATS_URL = "nats://{game}.internal:4222"
+
+[mounts]
+  source = "sharpmush_data"
+  destination = "/data"
+  initial_size = "10gb"
+
+[checks]
+  [checks.listening]
+    type = "tcp"
+    port = 8080
+    grace_period = "60s"
+    interval = "15s"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-2x"
+  memory = "2gb"
