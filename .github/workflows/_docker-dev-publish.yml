@@ -42,6 +42,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      # arm64 images run on Oracle Cloud's free tier and ARM servers. The .NET build stages run on
+      # the runner's own platform; emulation only carries each image's last few steps.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -67,6 +74,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: ./Dockerfile
           push: true
           tags: sharpmush/sharpmush-server:dev
@@ -88,6 +96,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: ./SharpMUSH.RenderingWorker/Dockerfile
           push: true
           tags: sharpmush/sharpmush-renderer:dev
@@ -109,6 +118,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: ./SharpMUSH.SocketServer/Dockerfile
           push: true
           tags: sharpmush/sharpmush-socketserver:dev
@@ -134,6 +144,7 @@ jobs:
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
+          platforms: linux/amd64,linux/arm64
           file: ./deploy/fly/Dockerfile
           push: true
           pull: true
