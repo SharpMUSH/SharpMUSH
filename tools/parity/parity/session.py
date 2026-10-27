@@ -76,9 +76,10 @@ class Session:
         return f"{self._prefix}{self.name}x{self._seq}"
 
     def _read_until(self, marker: bytes) -> bytes:
+        """Everything before `marker`, consumed with it; an empty marker waits for any text."""
         deadline = time.monotonic() + self._timeout
         while True:
-            idx = self._text.find(marker)
+            idx = self._text.find(marker) if marker else (0 if self._text else -1)
             if idx >= 0:
                 consumed = self._text[:idx]
                 self._text = self._text[idx + len(marker):]
@@ -123,7 +124,12 @@ class Session:
 
     def read_banner(self) -> str:
         """Consume the connect screen and return it. The banner is site content (connect.txt),
-        recorded for the report but never compared."""
+        recorded for the report but never compared.
+
+        SharpMUSH draws the screen when the connection registers, apart from the input queue, so an
+        INFO sent at once can be answered first and the screen land in a later step. The INFO goes out
+        only once the screen has started to arrive."""
+        self._read_until(b"")
         return self._info_sync()
 
     def sync_prelogin(self) -> str:
