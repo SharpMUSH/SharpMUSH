@@ -1,4 +1,7 @@
+using System.Net.Security;
+using System.Security.Authentication;
 using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.ResourceDetectors.Container;
@@ -243,13 +246,36 @@ public class Program
 			// not because of which port number it came in on. UseHttps() with no argument takes the
 			// certificate from Kestrel:Certificates:Default and throws at startup if there is none,
 			// which is why the port is opt-in: a misconfigured cert fails loudly rather than quietly
-			// serving plaintext on a port players believe is encrypted.
+			// serving plaintext on a port players believe is encrypted. TelnetSslCertificatePath
+			// instead reads PEM files that may not exist yet and may be renewed while running (the
+			// one-click stack copies Caddy's), refusing handshakes until there is a certificate.
 			if (connectionServerOptions.TelnetSslPort > 0)
 			{
+				var certificate = string.IsNullOrEmpty(connectionServerOptions.TelnetSslCertificatePath)
+					? null
+					: new TelnetTlsCertificate(
+						connectionServerOptions.TelnetSslCertificatePath,
+						string.IsNullOrEmpty(connectionServerOptions.TelnetSslKeyPath) ? null : connectionServerOptions.TelnetSslKeyPath,
+						options.ApplicationServices.GetRequiredService<ILogger<TelnetTlsCertificate>>());
+
 				options.ListenAnyIP(connectionServerOptions.TelnetSslPort, listenOptions =>
 				{
 					listenOptions.UseTcpKeepAlive(keepAlive);
-					listenOptions.UseHttps();
+					if (certificate is null)
+					{
+						listenOptions.UseHttps();
+					}
+					else
+					{
+						listenOptions.UseHttps(new TlsHandshakeCallbackOptions
+						{
+							OnConnection = _ => ValueTask.FromResult(new SslServerAuthenticationOptions
+							{
+								ServerCertificateContext = certificate.Current()
+									?? throw new AuthenticationException("There is no TLS telnet certificate yet.")
+							})
+						});
+					}
 					listenOptions.UseConnectionHandler<TelnetServer>();
 				});
 			}

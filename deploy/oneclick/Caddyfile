@@ -31,3 +31,7 @@
 		}
 	}
 }
+
+# The TLS telnet name when it is not the portal's (install.sh writes it), so Caddy keeps a certificate
+# for it. The telnet-tls service copies that certificate to the socket server.
+import /etc/caddy/sites/*.caddy

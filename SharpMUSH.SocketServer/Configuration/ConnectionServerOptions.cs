@@ -41,6 +41,17 @@ public class ConnectionServerOptions
 	public int TelnetSslPort { get; set; } = 0;
 
 	/// <summary>
+	/// PEM certificate (leaf, then its intermediates) for <see cref="TelnetSslPort"/>, read from disk
+	/// instead of Kestrel's default certificate. Set, the listener opens even before the file exists
+	/// and refuses handshakes until it does, and a renewed file is picked up by the next handshake, so
+	/// renewing drops nobody. Used by the one-click stack, where Caddy obtains the certificate.
+	/// </summary>
+	public string TelnetSslCertificatePath { get; set; } = "";
+
+	/// <summary>The PEM private key for <see cref="TelnetSslCertificatePath"/>.</summary>
+	public string TelnetSslKeyPath { get; set; } = "";
+
+	/// <summary>
 	/// Starting descriptor number for Telnet connections
 	/// </summary>
 	public long TelnetDescriptorStart { get; set; } = 0;

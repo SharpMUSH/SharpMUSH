@@ -65,6 +65,7 @@ build {
       "${path.root}/../Caddyfile",
       "${path.root}/../install.sh",
       "${path.root}/../sharpmush-guard",
+      "${path.root}/../sharpmush-telnet-tls-sync",
       "${path.root}/../../../nats.conf",
     ]
     destination = "/tmp/sharpmush-oneclick/"

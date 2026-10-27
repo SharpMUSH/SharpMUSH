@@ -9,7 +9,9 @@
 #                             DNS-only telnet record. Needs Account > Cloudflare Tunnel > Edit,
 #                             Zone > DNS > Edit and Zone > Zone > Read. Used once, never stored.
 #   CLOUDFLARE_TUNNEL_TOKEN   Or: an existing tunnel's token. Point its public hostname at http://caddy:80.
-#   SHARPMUSH_TELNET_HOST     The telnet record the API token creates (default telnet.<domain>).
+#   SHARPMUSH_TELNET_HOST     The telnet record the API token creates (default telnet.<domain>). Also
+#                             the name TLS telnet (4203) is served under; without it, the domain's,
+#                             and none behind a tunnel, whose domain points at Cloudflare.
 #   SHARPMUSH_IMAGE_TAG       Image tag to run (default dev).
 #   SHARPMUSH_GUARD           "off" serves the portal and telnet to everyone before /setup is done.
 #   RESTIC_REPOSITORY, RESTIC_PASSWORD, B2_ACCOUNT_ID, B2_ACCOUNT_KEY, AWS_ACCESS_KEY_ID,
@@ -59,10 +61,11 @@ install_packages() {
 
 write_files() {
 	log "Writing the stack to $SHARPMUSH_DIR"
-	mkdir -p "$SHARPMUSH_DIR"/{guard,state,bin}
+	mkdir -p "$SHARPMUSH_DIR"/{guard,sites,state,bin}
 	fetch compose.yml deploy/oneclick/compose.yml "$SHARPMUSH_DIR/compose.yml"
 	fetch Caddyfile deploy/oneclick/Caddyfile "$SHARPMUSH_DIR/Caddyfile"
 	fetch sharpmush-guard deploy/oneclick/sharpmush-guard "$SHARPMUSH_DIR/bin/sharpmush-guard"
+	fetch sharpmush-telnet-tls-sync deploy/oneclick/sharpmush-telnet-tls-sync "$SHARPMUSH_DIR/bin/sharpmush-telnet-tls-sync"
 	if [ -f "$HERE/nats.conf" ]; then cp "$HERE/nats.conf" "$SHARPMUSH_DIR/nats.conf"
 	elif [ -f "$HERE/../../nats.conf" ]; then cp "$HERE/../../nats.conf" "$SHARPMUSH_DIR/nats.conf"
 	else curl -fsSL "$SOURCE_URL/nats.conf" -o "$SHARPMUSH_DIR/nats.conf"; fi
@@ -71,6 +74,7 @@ write_files() {
 	else curl -fsSL "$SOURCE_URL/deploy/oneclick/install.sh" -o "$SHARPMUSH_DIR/bin/install.sh"; fi
 	chmod 755 "$SHARPMUSH_DIR/bin/"*
 	[ -f "$SHARPMUSH_DIR/guard/guard.caddy" ] || echo "# No guard yet." > "$SHARPMUSH_DIR/guard/guard.caddy"
+	[ -f "$SHARPMUSH_DIR/sites/telnet.caddy" ] || echo "# No telnet name yet." > "$SHARPMUSH_DIR/sites/telnet.caddy"
 	ln -sf "$SHARPMUSH_DIR/bin/install.sh" /usr/local/bin/sharpmush-install
 	cat > /usr/local/bin/sharpmush-configure <<EOF
 #!/bin/sh
@@ -142,6 +146,7 @@ open_firewall() {
 	ufw allow 443/tcp >/dev/null
 	ufw allow 443/udp >/dev/null
 	ufw allow 4201/tcp >/dev/null
+	ufw allow 4203/tcp >/dev/null
 	ufw --force enable >/dev/null
 }
 
@@ -259,6 +264,47 @@ cloudflare_setup() {
 	cf_dns_upsert "$zone_id" A "$SHARPMUSH_TELNET_HOST" "$(public_ip)" false
 }
 
+# TLS telnet (4203) needs a name players connect to that resolves to this server, and Caddy's
+# certificate for it. Direct mode has one already: the domain. Behind a tunnel the domain points at
+# Cloudflare, so only the DNS-only telnet record will do, and its certificate comes over 443 (TLS-ALPN),
+# published for that alone: Caddy has no other site on 443 there, and 80 stays on 127.0.0.1.
+telnet_tls() {
+	local sites=$SHARPMUSH_DIR/sites/telnet.caddy
+	mkdir -p "$SHARPMUSH_DIR/sites"
+	if [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+		SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_HOST:-}
+		SHARPMUSH_HTTPS_BIND=0.0.0.0
+		[ -n "$SHARPMUSH_TELNET_TLS_HOST" ] || SHARPMUSH_HTTPS_BIND=127.0.0.1
+	else
+		SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_HOST:-$SHARPMUSH_DOMAIN}
+		SHARPMUSH_HTTPS_BIND=0.0.0.0
+	fi
+
+	if [ -z "$SHARPMUSH_TELNET_TLS_HOST" ] || [ "$SHARPMUSH_TELNET_TLS_HOST" = "$SHARPMUSH_DOMAIN" ]; then
+		echo "# No telnet name apart from the portal's." > "$sites"
+	elif [ -n "${CLOUDFLARE_TUNNEL_TOKEN:-}" ]; then
+		cat > "$sites" <<EOF
+# Written by install.sh: keeps a certificate for TLS telnet's name. Port 80 is not public behind the
+# tunnel, so the certificate is fetched over 443 alone.
+$SHARPMUSH_TELNET_TLS_HOST {
+	tls {
+		issuer acme {
+			disable_http_challenge
+		}
+	}
+	respond "Telnet over TLS is on port 4203." 404
+}
+EOF
+	else
+		cat > "$sites" <<EOF
+# Written by install.sh: keeps a certificate for TLS telnet's name.
+$SHARPMUSH_TELNET_TLS_HOST {
+	respond "Telnet over TLS is on port 4203." 404
+}
+EOF
+	fi
+}
+
 arm_guard() {
 	if [ "${SHARPMUSH_GUARD:-on}" = off ] || [ -f "$SHARPMUSH_DIR/state/guard-lifted" ]; then
 		echo "# The guard is off." > "$SHARPMUSH_DIR/guard/guard.caddy"
@@ -298,8 +344,10 @@ write_env() {
 SHARPMUSH_DOMAIN=${SHARPMUSH_DOMAIN}
 SHARPMUSH_SITE=${SHARPMUSH_SITE}
 SHARPMUSH_HTTP_BIND=${SHARPMUSH_HTTP_BIND}
+SHARPMUSH_HTTPS_BIND=${SHARPMUSH_HTTPS_BIND}
 SHARPMUSH_TELNET_BIND=${SHARPMUSH_TELNET_BIND}
 SHARPMUSH_TELNET_HOST=${SHARPMUSH_TELNET_HOST:-}
+SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_TLS_HOST}
 SHARPMUSH_IMAGE_TAG=${SHARPMUSH_IMAGE_TAG:-dev}
 SHARPMUSH_GUARD=${SHARPMUSH_GUARD:-on}
 CLOUDFLARE_TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
@@ -320,6 +368,9 @@ write_summary() {
 		echo
 		echo "  SharpMUSH  https://$SHARPMUSH_DOMAIN"
 		echo "  Telnet     $telnet 4201"
+		if [ -n "$SHARPMUSH_TELNET_TLS_HOST" ]; then
+			echo "  TLS telnet $SHARPMUSH_TELNET_TLS_HOST 4203 (turn on SSL/TLS in the client)"
+		fi
 		if [ -f "$SHARPMUSH_DIR/state/setup-code" ] && [ ! -f "$SHARPMUSH_DIR/state/guard-lifted" ] \
 			&& [ "${SHARPMUSH_GUARD:-on}" != off ]; then
 			echo
@@ -356,6 +407,7 @@ configure() {
 		docker rm -f sharpmush-cloudflared >/dev/null 2>&1 || true
 	fi
 
+	telnet_tls
 	arm_guard
 	write_env
 	write_summary

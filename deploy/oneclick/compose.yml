@@ -4,7 +4,10 @@
 # front in both web modes so the first-boot guard (guard/guard.caddy) covers the portal either way:
 #   direct      Caddy takes 80/443 and fetches a Let's Encrypt certificate for SHARPMUSH_DOMAIN.
 #   cloudflare  COMPOSE_PROFILES=cloudflare. cloudflared dials out to the tunnel and hands requests to
-#               Caddy on :80; nothing web-facing is published on the host.
+#               Caddy on :80; nothing web-facing is published on the host. 443 is published only to
+#               get the TLS telnet certificate for the DNS-only telnet name (sites/telnet.caddy).
+# TLS telnet on 4203 uses the certificate Caddy keeps for SHARPMUSH_TELNET_TLS_HOST, copied by the
+# telnet-tls service.
 # install.sh writes .env beside this file. Run it again to change the answers; edit by hand only
 # what it does not ask about.
 
@@ -50,10 +53,15 @@ services:
     stop_grace_period: 60s
     volumes:
       - render-socket:/run/sharpmush
+      - telnet-tls:/run/sharpmush-tls:ro
     environment:
       Rendering__SocketPath: /run/sharpmush/render.sock
       NATS_URL: "nats://nats:4222"
       ForwardedHeaders__KnownProxies__0: *caddy-ip
+      # Refuses handshakes until telnet-tls has copied a certificate, and serves each renewal as it lands.
+      ConnectionServer__TelnetSslPort: "4203"
+      ConnectionServer__TelnetSslCertificatePath: /run/sharpmush-tls/telnet.crt
+      ConnectionServer__TelnetSslKeyPath: /run/sharpmush-tls/telnet.key
     depends_on:
       renderer:
         condition: service_healthy
@@ -63,6 +71,7 @@ services:
       # 127.0.0.1 while the first-boot guard holds (nobody but the box can reach telnet), 0.0.0.0 once
       # the owner has finished /setup. sharpmush-guard flips it.
       - "${SHARPMUSH_TELNET_BIND:-0.0.0.0}:4201:4201"
+      - "${SHARPMUSH_TELNET_BIND:-0.0.0.0}:4203:4203"
     networks:
       - sharpmush-net
     mem_limit: 512m
@@ -128,11 +137,13 @@ services:
     ports:
       # 127.0.0.1 in cloudflare mode, so the portal is never served around the tunnel.
       - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:80:80"
-      - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:443:443"
+      # 0.0.0.0 in cloudflare mode too when there is a telnet name, for its certificate's TLS-ALPN challenge.
+      - "${SHARPMUSH_HTTPS_BIND:-0.0.0.0}:443:443"
       - "${SHARPMUSH_HTTP_BIND:-0.0.0.0}:443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./guard:/etc/caddy/guard:ro
+      - ./sites:/etc/caddy/sites:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
@@ -143,6 +154,22 @@ services:
         ipv4_address: *caddy-ip
     mem_limit: 128m
     cpus: 0.5
+    restart: unless-stopped
+    logging: *default-logging
+
+  telnet-tls:
+    image: caddy:2-alpine
+    container_name: sharpmush-telnet-tls
+    entrypoint: ["/usr/local/bin/sharpmush-telnet-tls-sync"]
+    environment:
+      - SHARPMUSH_TELNET_TLS_HOST=${SHARPMUSH_TELNET_TLS_HOST:-}
+    volumes:
+      - ./bin/sharpmush-telnet-tls-sync:/usr/local/bin/sharpmush-telnet-tls-sync:ro
+      - caddy-data:/caddy-data:ro
+      - telnet-tls:/tls
+    network_mode: none
+    mem_limit: 32m
+    cpus: 0.1
     restart: unless-stopped
     logging: *default-logging
 
@@ -216,6 +243,7 @@ volumes:
   nats-data:
   caddy-data:
   caddy-config:
+  telnet-tls:
 
 networks:
   renderer-egress:
