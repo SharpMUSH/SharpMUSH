@@ -15,11 +15,12 @@
   SHARPMUSH_SERVER_ADDRESS = "{game}-server.internal:8080"
   Rendering__Address = "http://{game}-renderer.internal:5100"
 
-# NATS's store and the first-boot guard's state. The world is on the server's volume.
+# NATS's store and the first-boot guard's state. The world is on the server's volume. NATS's streams
+# may hold up to 3 GiB between them (nats.conf), so the volume is bigger than that.
 [mounts]
   source = "sharpmush_edge"
   destination = "/data"
-  initial_size = "1gb"
+  initial_size = "4gb"
 
 # The portal. Fly ends TLS and hands Caddy plain HTTP.
 [http_service]
