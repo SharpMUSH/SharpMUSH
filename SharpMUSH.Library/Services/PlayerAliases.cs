@@ -3,11 +3,12 @@ using SharpMUSH.Library.DiscriminatedUnions;
 namespace SharpMUSH.Library.Services;
 
 /// <summary>
-/// A player's aliases are its <c>ALIAS</c> attribute, as in PennMUSH: there is no other copy to write.
-/// The provider indexes them for player lookup in the same transaction as every write to that
-/// attribute (<c>reset_player_list</c>, <c>src/plyrlist.c</c>), so <c>*alias</c>, page and
-/// <see cref="Models.SharpPlayer.Aliases"/> follow whatever wrote it — <c>@alias</c>, <c>&amp;ALIAS</c>,
-/// <c>@set</c>, <c>@name</c>, <c>alias()</c>, <c>@wipe</c> or the PennMUSH importer.
+/// A player's or an exit's aliases are its <c>ALIAS</c> attribute, as in PennMUSH: there is no other copy
+/// to write. The provider indexes them for lookup in the same transaction as every write to that
+/// attribute (<c>reset_player_list</c>, <c>src/plyrlist.c</c>), so <c>*alias</c>, page, exit matching,
+/// <see cref="Models.SharpPlayer.Aliases"/> and <see cref="Models.SharpExit.Aliases"/> follow whatever wrote
+/// it — <c>@open</c>, <c>@alias</c>, <c>&amp;ALIAS</c>, <c>@set</c>, <c>@name</c>, <c>alias()</c>, <c>@wipe</c>
+/// or the PennMUSH importer.
 /// </summary>
 public static class PlayerAliases
 {

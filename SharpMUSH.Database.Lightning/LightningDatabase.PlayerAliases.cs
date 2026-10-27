@@ -6,10 +6,10 @@ using SharpMUSH.Library.Services;
 namespace SharpMUSH.Database.Lightning;
 
 /// <summary>
-/// A player's aliases are its <c>ALIAS</c> attribute (<see cref="PlayerAliases"/>). Player lookup reads
+/// A player's or an exit's aliases are its <c>ALIAS</c> attribute (<see cref="PlayerAliases"/>). Lookup reads
 /// <see cref="Tables.ObjName"/>, so the record's <see cref="ObjectRecord.Aliases"/> and the index rows for
 /// them are derived from that attribute here, inside the transaction that wrote it: every attribute write
-/// that can touch <c>ALIAS</c> calls <see cref="SyncPlayerAliases"/>, which is PennMUSH's
+/// that can touch <c>ALIAS</c> calls <see cref="SyncAliases"/>, which is PennMUSH's
 /// <c>reset_player_list</c> (<c>src/plyrlist.c</c>) for this store.
 /// </summary>
 public partial class LightningDatabase
@@ -19,13 +19,12 @@ public partial class LightningDatabase
 		=> path.Length > 0 && PlayerAliases.IsAliasAttribute(path[0]);
 
 	/// <summary>
-	/// Makes player <paramref name="dbref"/>'s indexed aliases those its <c>ALIAS</c> attribute holds now.
-	/// Anything that is not a player has no player aliases (an exit's are part of its name), so it is left
-	/// alone.
+	/// Makes player or exit <paramref name="dbref"/>'s indexed aliases those its <c>ALIAS</c> attribute holds
+	/// now. A room or thing has no aliases (PennMUSH's <c>match_aliases</c>), so it is left alone.
 	/// </summary>
-	internal void SyncPlayerAliases(ITx tx, long dbref)
+	internal void SyncAliases(ITx tx, long dbref)
 	{
-		if (ReadObject(tx, dbref) is not { Record: { Type: DatabaseConstants.TypePlayer } record })
+		if (ReadObject(tx, dbref) is not { Record: { Type: DatabaseConstants.TypePlayer or DatabaseConstants.TypeExit } record })
 		{
 			return;
 		}

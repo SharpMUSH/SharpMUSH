@@ -409,7 +409,7 @@ public partial class LightningDatabase
 			var outcome = WriteAttributePath(tx, n, found.Record.Type, write, watched);
 			if (TouchesAliases(write.Path))
 			{
-				SyncPlayerAliases(tx, n);
+				SyncAliases(tx, n);
 			}
 
 			return outcome;
@@ -437,10 +437,10 @@ public partial class LightningDatabase
 				WriteAttributePath(tx, n, found.Record.Type, write, WatchedAttributes.None.Names);
 			}
 
-			// The importer's path: an imported player's ALIAS is indexed as it lands.
+			// The importer's path: an imported player's or exit's ALIAS is indexed as it lands.
 			if (writes.Any(write => TouchesAliases(write.Path)))
 			{
-				SyncPlayerAliases(tx, n);
+				SyncAliases(tx, n);
 			}
 
 			return true;
@@ -664,7 +664,7 @@ public partial class LightningDatabase
 
 			if (TouchesAliases(path))
 			{
-				SyncPlayerAliases(tx, n);
+				SyncAliases(tx, n);
 			}
 
 			return outcome;
@@ -708,7 +708,7 @@ public partial class LightningDatabase
 			DropParentBranchWhenChildless(tx, n, path);
 			if (TouchesAliases(path))
 			{
-				SyncPlayerAliases(tx, n);
+				SyncAliases(tx, n);
 			}
 
 			return outcome;

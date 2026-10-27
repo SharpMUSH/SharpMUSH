@@ -72,6 +72,46 @@ public class InformationFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo($"{exitName};fa;fb");
 	}
 
+	/// <summary>
+	/// An exit's aliases are its ALIAS attribute (PennMUSH <c>create.c:151-153</c>, <c>set.c:140-147</c>):
+	/// <c>@open</c> writes it, and <c>@alias</c> and <c>@name</c> rewrite it, so fullname(), fullalias() and
+	/// matching all follow the attribute.
+	/// </summary>
+	[Test]
+	public async Task ExitAliasesFollowTheAliasAttribute()
+	{
+		var destDbRef = (await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("AliasDest")}"))).Message.ToPlainText()!.Trim();
+		var exitName = TestIsolationHelpers.GenerateUniqueName("AliasExit");
+		var exitDbRef = (await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@open {exitName};ea={destDbRef}"))).Message.ToPlainText()!.Trim();
+
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"get({exitDbRef}/ALIAS)"))).ToPlainText())
+			.IsEqualTo("ea");
+
+		var aliasedA = TestIsolationHelpers.GenerateUniqueName("eb");
+		var aliasedB = TestIsolationHelpers.GenerateUniqueName("ec");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@alias {exitDbRef}={aliasedA};{aliasedB}"));
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullname({exitDbRef})"))).ToPlainText())
+			.IsEqualTo($"{exitName};{aliasedA};{aliasedB}");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"objid({aliasedB})"))).ToPlainText())
+			.IsEqualTo(exitDbRef);
+
+		var renamed = TestIsolationHelpers.GenerateUniqueName("AliasRenamed");
+		var renamedAlias = TestIsolationHelpers.GenerateUniqueName("ed");
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@name {exitDbRef}={renamed};{renamedAlias}"));
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullname({exitDbRef})"))).ToPlainText())
+			.IsEqualTo($"{renamed};{renamedAlias}");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullalias({exitDbRef})"))).ToPlainText())
+			.IsEqualTo(renamedAlias);
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"objid({aliasedB})"))).ToPlainText())
+			.StartsWith("#-1");
+
+		await CommandParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@name {exitDbRef}={renamed};"));
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullname({exitDbRef})"))).ToPlainText())
+			.IsEqualTo(renamed);
+	}
+
 	[Test]
 	[Arguments("accname(%#)", "")]
 	public async Task Accname(string str, string expected)

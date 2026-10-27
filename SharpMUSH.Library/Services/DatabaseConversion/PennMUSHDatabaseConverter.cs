@@ -2427,7 +2427,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 						}
 
 						var creator = await CreatorAsync(pennAttr, dbrefMapping, creators, cancellationToken) ?? objectOwner;
-						var value = MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
+						// An exit's ALIAS also holds the aliases its name carried (ExitNameAndAliases).
+						var value = pennObj.Type == PennMUSHObjectType.Exit && PlayerAliases.IsAliasAttribute(pennAttr.Name)
+							? MString.Plain(string.Join(PlayerAliases.Delimiter, ExitNameAndAliases(pennObj).Aliases))
+							: MarkupString.Ansi.AnsiEscapeParser.Parse(pennAttr.Value);
 						writes.Add((pennAttr, new AttributeWrite(pennAttr.Name.Split('`'), value, creator, flags)));
 					}
 					catch (Exception ex)

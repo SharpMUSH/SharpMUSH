@@ -53,16 +53,30 @@ public class ObjectNameService(
 				return await SetPlayerName(executor, obj, name.ToPlainText(), notify);
 
 			default:
-				var split = name.Split(";");
-				await mediator.Send(new SetNameCommand(obj, split[0]));
-				if (split.Length > 1)
-				{
-					await attributeService.SetAttributeAsync(executor, obj, "ALIAS",
-						MarkupText.Join(MarkupText.Plain(";"), split[1..]));
-				}
-
-				return obj.Object().DBRef;
+				return await SetExitName(executor, obj, name);
 		}
+	}
+
+	/// <summary>
+	/// <c>do_name</c>'s exit case (PennMUSH <c>src/set.c:103-147</c>): <c>Name</c> leaves ALIAS alone,
+	/// <c>Name;alias;...</c> sets it to the aliases, and <c>Name;</c> clears it.
+	/// </summary>
+	private async ValueTask<CallState> SetExitName(AnySharpObject executor, AnySharpObject exit, MString name)
+	{
+		var split = name.Split(PlayerAliases.Delimiter.ToString());
+		await mediator.Send(new SetNameCommand(exit, split[0]));
+		if (split.Length == 1)
+		{
+			return exit.Object().DBRef;
+		}
+
+		var aliases = PlayerAliases.Split(string.Join(PlayerAliases.Delimiter, split[1..].Select(alias => alias.ToPlainText())));
+		_ = aliases.Length == 0
+			? await attributeService.ClearAttributeAsync(executor, exit, PlayerAliases.AttributeName,
+				IAttributeService.AttributePatternMode.Exact)
+			: await attributeService.SetAttributeAsync(executor, exit, PlayerAliases.AttributeName,
+				MarkupText.Plain(string.Join(PlayerAliases.Delimiter, aliases)));
+		return exit.Object().DBRef;
 	}
 
 	/// <summary>
