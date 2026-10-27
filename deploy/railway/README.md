@@ -27,7 +27,7 @@ variables and fill those names in.
 | Volume | mounted at `/data` (NATS's store, the setup guard's state) |
 | Public networking | a generated domain, port `8000` |
 | TCP proxy | port `4201` |
-| Healthcheck path | `/health` |
+| Healthcheck path | none |
 
 `server`, from `sharpmush/sharpmush-server:dev`, with the world:
 
@@ -58,6 +58,10 @@ trusts only Railway. The server trusts forwarded headers from any address for th
 the edge reaches it, from a private address that changes with each deploy. The server and the
 renderer get no public networking: NATS, the server and the renderer ask for no credentials, and
 Railway's private network reaches only this project.
+
+The edge has no healthcheck. Railway gives a service its private name only once a deployment
+passes its healthcheck, and the edge's `/health` answers from the server, which cannot start until
+it reaches NATS at the edge's private name. With one set, neither comes up.
 
 The setup link in the edge's deploy log uses the generated domain (`RAILWAY_PUBLIC_DOMAIN`), and the
 log names the TCP proxy's host and port (`RAILWAY_TCP_PROXY_DOMAIN`, `RAILWAY_TCP_PROXY_PORT`).
