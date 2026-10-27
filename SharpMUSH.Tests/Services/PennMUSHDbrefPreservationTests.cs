@@ -215,7 +215,7 @@ public class PennMUSHDbrefPreservationTests
 
 		// A stock table overlaps SharpMUSH's almost entirely: one note, naming every definition (#1508).
 		await Assert.That(result.Notes.Single(w => w.Contains("source flag definition(s) already exist here"))).DoesNotContain("...");
-		await Assert.That(result.Warnings.Any(w => w.Contains("already exist here"))).IsFalse();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("already exist here"))).IsFalse();
 	}
 
 	/// <summary>
@@ -280,7 +280,7 @@ public class PennMUSHDbrefPreservationTests
 		var attribute = (await world.Database.GetAttributeAsync(logger, ["CMD`SAY"]).ToListAsync()).Single();
 		await Assert.That((await attribute.Owner.WithCancellation(CancellationToken.None))!.Object.DBRef.Number)
 			.IsEqualTo(1);
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("Gave God (#1)") && w.Contains($"#{logger.Number}")))
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("Gave God (#1)") && w.Contains($"#{logger.Number}")))
 			.IsTrue();
 	}
 
@@ -353,7 +353,7 @@ public class PennMUSHDbrefPreservationTests
 
 		var result = await world.Converter.ConvertDatabaseAsync(await world.Parser.ParseFileAsync(FixturePath));
 
-		var line = result.Warnings.Single(w => w.Contains("were not installed again"));
+		var line = result.Warnings.Texts().Single(w => w.Contains("were not installed again"));
 		await Assert.That(line).StartsWith("The package(s) http-handler were not installed again: http_handler is not set")
 			.And.Contains("setup wizard's handler step");
 	}
@@ -531,7 +531,7 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That((await NodeAsync(world, 10)).Object().Name).IsEqualTo("Ten");
 		await Assert.That((await NodeAsync(world, 11)).Object().Name).IsEqualTo("Box");
 		await Assert.That((await NodeAsync(world, 2)).IsRoom).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("#2 (Box)") && w.Contains("#11"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("#2 (Box)") && w.Contains("#11"))).IsTrue();
 	}
 
 	/// <summary>
@@ -570,11 +570,11 @@ public class PennMUSHDbrefPreservationTests
 		await Assert.That(ten.Object().Locks["Use"].LockString).IsEqualTo("@#11/Basic");
 		await Assert.That(ten.Object().Locks["Enter"].LockString).IsEqualTo("COUNT:#2");
 		await Assert.That(ten.Object().Locks["Page"].LockString).IsEqualTo("TAG:foo #2|!(#11 & $#11)");
-		await Assert.That(result.Warnings.Any(w => w.Contains("#10 Basic lock") && w.Contains("'=#2|#1' became '=#11|#1'"))).IsTrue();
-		await Assert.That(result.Warnings.Any(w => w.Contains("#10 Enter lock"))).IsFalse();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("#10 Basic lock") && w.Contains("'=#2|#1' became '=#11|#1'"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("#10 Enter lock"))).IsFalse();
 
 		await Assert.That(await AttributeAsync(world, 10, "FOO")).IsEqualTo("[name(#2)] #20 ##2");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("2 attribute(s) mention #2, which was imported as #11")
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("2 attribute(s) mention #2, which was imported as #11")
 			&& w.EndsWith(": #11/SELF, #10/FOO"))).IsTrue();
 	}
 
@@ -607,7 +607,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "ARROW")).IsEqualTo("think a %> b");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("3 attribute(s) use %>")
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("3 attribute(s) use %>")
 			&& w.EndsWith(": #10/ARROW, #10/AFTER, #10/BACKSLASH"))).IsTrue();
 	}
 
@@ -640,7 +640,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "PIPE")).IsEqualTo("look ;| say %0");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("3 attribute(s) use %| or ;|")
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("3 attribute(s) use %| or ;|")
 			&& w.EndsWith(": #10/SUB, #10/PIPE, #10/SPACED"))).IsTrue();
 	}
 
@@ -672,7 +672,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "ATTR")).IsEqualTo("think %=<desc>");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("3 attribute(s) use %m or %=<")
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("3 attribute(s) use %m or %=<")
 			&& w.EndsWith(": #10/COMMAND, #10/UPPER, #10/ATTR"))).IsTrue();
 	}
 
@@ -702,7 +702,7 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(await AttributeAsync(world, 10, "SEP")).IsEqualTo("think iter(a b,##,,%*<|>)");
-		await Assert.That(result.Warnings.Any(w => w.StartsWith("1 attribute(s) use %*<") && w.EndsWith(": #10/SEP"))).IsTrue();
+		await Assert.That(result.Warnings.Texts().Any(w => w.StartsWith("1 attribute(s) use %*<") && w.EndsWith(": #10/SEP"))).IsTrue();
 	}
 
 	/// <summary>

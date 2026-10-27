@@ -110,20 +110,20 @@ public class RhostImportTests
 			SidefxFlag = true,
 			RhostList = true
 		});
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
 		// RhostMUSH's mail command, added beside the aliases @mail already had.
 		await Assert.That(stored.Alias.CommandAliases["@MAIL"]).Contains("mail");
 		await Assert.That(stored.Alias.CommandAliases["@EMIT"]).IsEquivalentTo(["emit"]);
-		await Assert.That(result.Warnings).Contains(w => w.StartsWith("mail is now another name for @mail"));
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("mail is now another name for @mail"));
 		// The reader's decisions lead the warnings.
-		await Assert.That(result.Warnings[0]).StartsWith("Read a RhostMUSH flatfile");
+		await Assert.That(result.Warnings[0].Text).StartsWith("Read a RhostMUSH flatfile");
 		// %m is TinyMUX's and RhostMUSH's last command, as it is here: no PennMUSH warning about it.
-		await Assert.That(result.Warnings).DoesNotContain(w => w.Contains("use %m or %=<"));
+		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.Contains("use %m or %=<"));
 		// Rewritten softcode is a list of its own, with one warning pointing at it.
 		await Assert.That(result.SoftcodeRewrites).IsNotEmpty();
-		await Assert.That(result.SoftcodeRewrites).DoesNotContain(rewrite => result.Warnings.Contains(rewrite.ToString()));
+		await Assert.That(result.SoftcodeRewrites).DoesNotContain(rewrite => result.Warnings.Texts().Contains(rewrite.ToString()));
 		await Assert.That(result.SourceName).IsEqualTo("RhostMUSH");
-		await Assert.That(result.Warnings).Contains(w =>
+		await Assert.That(result.Warnings.Texts()).Contains(w =>
 			w.StartsWith($"Softcode was rewritten in {result.SoftcodeRewrites.Count} attribute(s) so SharpMUSH reads it as RhostMUSH did"));
 	}
 

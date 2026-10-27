@@ -120,9 +120,16 @@ public static class ImportWorker
 	private static void ReportConfiguration(PennMushConfigImport configuration, ConversionResult result)
 	{
 		if (configuration.Named.Count == 0 && configuration.Secrets.Count == 0)
-			result.Warnings.Add("Configuration: the file set no option SharpMUSH knows. Check that it is the game's mush.cnf, netmux.conf or netrhost.conf.");
+			result.Warnings.Add(new ImportWarning(ImportWarningKind.Configuration,
+				"Configuration: the file set no option SharpMUSH knows. Check that it is the game's mush.cnf, netmux.conf or netrhost.conf.",
+				NeedsAction: true));
 		foreach (var line in configuration.Skipped)
-			(line.StartsWith("include ", StringComparison.OrdinalIgnoreCase) ? result.Warnings : result.Notes).Add("Configuration: " + line);
+		{
+			if (line.StartsWith("include ", StringComparison.OrdinalIgnoreCase))
+				result.Warnings.Add(new ImportWarning(ImportWarningKind.Configuration, "Configuration: " + line, NeedsAction: true));
+			else
+				result.Notes.Add("Configuration: " + line);
+		}
 		if (configuration.Unrecognized.Count > 0)
 			result.Notes.Add($"Configuration: {configuration.Unrecognized.Count} directive(s) SharpMUSH has no option for, not carried over: {string.Join(", ", configuration.Unrecognized)}.");
 	}

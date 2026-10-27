@@ -25,7 +25,7 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(database.Objects.Select(o => o.DBRef)).IsEquivalentTo(Enumerable.Range(0, 11));
 		await Assert.That(Object(database, 6).Type).IsEqualTo(PennMUSHObjectType.Room);
 		await Assert.That(Object(database, 9).Type).IsEqualTo(PennMUSHObjectType.Thing);
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Destroyed objects (garbage) not imported") && n.Contains("#11")))
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Destroyed objects (garbage) not imported") && n.Contains("#11")))
 			.IsTrue();
 	}
 
@@ -41,7 +41,7 @@ public class RhostDatabaseTranslatorTests
 
 		var home = Object(database, 8);
 		await Assert.That(home.Location).IsEqualTo(6);
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Exits that lead HOME left unlinked") && n.Contains("#8")))
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Exits that lead HOME left unlinked") && n.Contains("#8")))
 			.IsTrue();
 	}
 
@@ -58,7 +58,7 @@ public class RhostDatabaseTranslatorTests
 
 		var immortal = database.FlagDefinitions.First(f => f.Name == "IMMORTAL");
 		await Assert.That(immortal.SetPermissions).IsEquivalentTo(["wizard"]);
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Flag COUNCILOR: imported as the ROYALTY flag and role and a flag of its own"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag COUNCILOR: imported as the ROYALTY flag and role and a flag of its own"))).IsTrue();
 	}
 
 	[Test]
@@ -73,7 +73,7 @@ public class RhostDatabaseTranslatorTests
 
 		var widget = Object(database, 9);
 		await Assert.That(widget.Flags).Contains("SIDEFX").And.DoesNotContain("ZONEMASTER");
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Flag ZONEMASTER: dropped"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag ZONEMASTER: dropped"))).IsTrue();
 
 		await Assert.That(Object(database, 1).Flags).Contains("XTERM256").And.Contains("COLOR").And.DoesNotContain("CONNECTED");
 	}
@@ -85,7 +85,7 @@ public class RhostDatabaseTranslatorTests
 		var alice = Object(database, 3);
 
 		await Assert.That(alice.Flags).Contains("HEAR_CONNECT").And.Contains("KEEPALIVE");
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Toggle VPAGE: dropped") && n.Contains("#3") && n.Contains("#4")))
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Toggle VPAGE: dropped") && n.Contains("#3") && n.Contains("#4")))
 			.IsTrue();
 	}
 
@@ -98,8 +98,8 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(Object(database, 3).Powers).Contains("Boot");
 		await Assert.That(Object(database, 4).Powers).Contains("See_Queue");
 		await Assert.That(Object(database, 4).DeniedPowers).IsEquivalentTo(["See_All"]);
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Depower NUKE: dropped"))).IsTrue();
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Power levels:"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Depower NUKE: dropped"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Power levels:"))).IsTrue();
 	}
 
 	[Test]
@@ -133,7 +133,7 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(Object(database, 6).Locks["Speech"].Expression).IsEqualTo("(#4)");
 		// UserLock has no SharpMUSH lock: kept as an attribute, and reported.
 		await Assert.That(widget.Attributes.Select(a => a.Name)).Contains("USERLOCK");
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Lock UserLock"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Lock UserLock"))).IsTrue();
 	}
 
 	/// <summary>RhostMUSH writes an object in a lock as <c>(#n)</c>, after a prefix too: <c>$(#1)</c> is <c>$#1</c>.</summary>
@@ -201,8 +201,21 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(Object(database, 3).Password).IsEqualTo("$1$abc$9dV135Rc3U8Xbm2DxadgF0");
 		await Assert.That(Object(database, 3).Aliases).IsEquivalentTo(["Al"]);
 		await Assert.That(Object(database, 3).Attributes.Select(a => a.Name)).DoesNotContain("PASSWORD");
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Passwords stored as bcrypt") && n.Contains("#5"))).IsTrue();
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("Passwords stored as DES crypt") && n.Contains("#4"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Passwords stored as bcrypt") && n.Contains("#5"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Passwords stored as DES crypt") && n.Contains("#4"))).IsTrue();
+	}
+
+	[Test]
+	public async Task PasswordsSharpMUSHCannotCheckNeedAction_AndThoseItRehashesDoNot()
+	{
+		var database = await TranslateAsync();
+
+		var bcrypt = database.ImportNotes.Single(n => n.Text.StartsWith("Passwords stored as bcrypt"));
+		var des = database.ImportNotes.Single(n => n.Text.StartsWith("Passwords stored as DES crypt"));
+		await Assert.That(bcrypt.Kind).IsEqualTo(ImportWarningKind.Players);
+		await Assert.That(bcrypt.NeedsAction).IsTrue();
+		await Assert.That(des.Kind).IsEqualTo(ImportWarningKind.Players);
+		await Assert.That(des.NeedsAction).IsFalse();
 	}
 
 	/// <summary>Colour, character codes and literal timefmt() formats are rewritten, each attribute reported.</summary>
@@ -258,7 +271,7 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(archived.Folder).IsEqualTo(1);
 		await Assert.That(archived.Body).IsEqualTo("A second message for Bob.\nWith two lines.");
 		await Assert.That(Object(database, 4).Attributes.First(a => a.Name == "MAILFOLDERS").Value).IsEqualTo("1:ARCHIVE:1");
-		await Assert.That(database.ImportNotes.Any(n => n.Contains("sent anonymously"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.Contains("sent anonymously"))).IsTrue();
 	}
 
 	[Test]
@@ -266,6 +279,6 @@ public class RhostDatabaseTranslatorTests
 	{
 		var database = await TranslateAsync();
 
-		await Assert.That(database.ImportNotes.Any(n => n.StartsWith("RhostMUSH comsys channels are not imported"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("RhostMUSH comsys channels are not imported"))).IsTrue();
 	}
 }

@@ -9287,6 +9287,45 @@
   <data name="AdmImportNotes" xml:space="preserve">
     <value>Expected ({0})</value>
   </data>
+  <data name="AdmImportKindPlayers" xml:space="preserve">
+    <value>Players</value>
+  </data>
+  <data name="AdmImportKindObjects" xml:space="preserve">
+    <value>Objects</value>
+  </data>
+  <data name="AdmImportKindAttributes" xml:space="preserve">
+    <value>Attributes</value>
+  </data>
+  <data name="AdmImportKindFlags" xml:space="preserve">
+    <value>Flags</value>
+  </data>
+  <data name="AdmImportKindPowers" xml:space="preserve">
+    <value>Powers</value>
+  </data>
+  <data name="AdmImportKindLocks" xml:space="preserve">
+    <value>Locks</value>
+  </data>
+  <data name="AdmImportKindSoftcode" xml:space="preserve">
+    <value>Softcode</value>
+  </data>
+  <data name="AdmImportKindMail" xml:space="preserve">
+    <value>Mail</value>
+  </data>
+  <data name="AdmImportKindChannels" xml:space="preserve">
+    <value>Channels</value>
+  </data>
+  <data name="AdmImportKindPackages" xml:space="preserve">
+    <value>Packages</value>
+  </data>
+  <data name="AdmImportKindConfiguration" xml:space="preserve">
+    <value>Configuration</value>
+  </data>
+  <data name="AdmImportKindOther" xml:space="preserve">
+    <value>Other</value>
+  </data>
+  <data name="AdmImportNeedsAction" xml:space="preserve">
+    <value>Needs action</value>
+  </data>
   <data name="AdmImportNotesLead" xml:space="preserve">
     <value>What every import of this kind does. Check any configuration lines listed here for settings to carry over by hand; the downloaded log lists them too.</value>
   </data>

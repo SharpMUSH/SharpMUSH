@@ -123,7 +123,7 @@ public static class TinyMuxComsysReader
 	public static void Apply(PennMUSHDatabase database, Comsys comsys, int version)
 	{
 		var objects = database.Objects.ToDictionary(o => o.DBRef);
-		var notes = database.ImportNotes;
+		void Note(string note) => database.ImportNotes.Add(new ImportWarning(ImportWarningKind.Channels, note));
 		var channels = new List<PennMUSHChannel>();
 		foreach (var channel in comsys.Chat.Channels)
 		{
@@ -136,24 +136,24 @@ public static class TinyMuxComsysReader
 			if ((type & (PlayerTransmit | PlayerReceive)) != (PlayerTransmit | PlayerReceive)
 				|| (type & (ObjectTransmit | ObjectReceive)) != (ObjectTransmit | ObjectReceive))
 			{
-				notes.Add($"{label}: TinyMUX's per-type transmit and receive switches are not kept; " +
+				Note($"{label}: TinyMUX's per-type transmit and receive switches are not kept; " +
 					"use the channel's speak lock to limit who may talk");
 			}
 
 			if ((type & Spoof) != 0)
 			{
-				notes.Add($"{label}: SPOOF (comtitles replace the speaker's name) is not kept, as SharpMUSH has no such channel setting");
+				Note($"{label}: SPOOF (comtitles replace the speaker's name) is not kept, as SharpMUSH has no such channel setting");
 			}
 
 			if ((type & Public) == 0)
 			{
-				notes.Add($"{label}: TinyMUX listed it only to its members and staff; it is listed to everyone who passes its see lock here");
+				Note($"{label}: TinyMUX listed it only to its members and staff; it is listed to everyone who passes its see lock here");
 			}
 
 			var header = TinyMuxColour.ToAnsi(channel.Description, version);
 			if (!TinyMuxColour.Strip(channel.Description).Equals($"[{channel.Name}]", StringComparison.Ordinal))
 			{
-				notes.Add($"{label}: its header '{TinyMuxColour.Strip(channel.Description)}' is kept as the channel's description; " +
+				Note($"{label}: its header '{TinyMuxColour.Strip(channel.Description)}' is kept as the channel's description; " +
 					"SharpMUSH shows a channel's name in its messages");
 			}
 
@@ -170,7 +170,7 @@ public static class TinyMuxComsysReader
 				CopyLock(lockHolder, "Use", "speak", locks);
 				if (CopyLock(lockHolder, "Enter", "see", locks))
 				{
-					notes.Add($"{label}: its receive lock (the channel object's EnterLock) is imported as the see lock, " +
+					Note($"{label}: its receive lock (the channel object's EnterLock) is imported as the see lock, " +
 						"which also hides the channel from those who fail it");
 				}
 			}
@@ -191,12 +191,12 @@ public static class TinyMuxComsysReader
 
 			if (off > 0)
 			{
-				notes.Add($"{label}: {off} member(s) had it turned off; they are members here and hear it again");
+				Note($"{label}: {off} member(s) had it turned off; they are members here and hear it again");
 			}
 
 			if (titlesOff > 0)
 			{
-				notes.Add($"{label}: {titlesOff} member(s) had comtitles hidden, which SharpMUSH does not keep per member");
+				Note($"{label}: {titlesOff} member(s) had comtitles hidden, which SharpMUSH does not keep per member");
 			}
 
 			channels.Add(channel with
@@ -217,7 +217,7 @@ public static class TinyMuxComsysReader
 		{
 			if (!objects.TryGetValue(who, out var holder))
 			{
-				notes.Add($"Channel aliases of #{who} not imported: it is not in the flatfile");
+				Note($"Channel aliases of #{who} not imported: it is not in the flatfile");
 				continue;
 			}
 
@@ -232,7 +232,7 @@ public static class TinyMuxComsysReader
 
 		if (aliasCount > 0)
 		{
-			notes.Add($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom and comlist use; " +
+			Note($"{aliasCount} comsys alias(es) imported as CHANALIAS` attributes, which addcom, delcom and comlist use; " +
 				"the comsys administration commands (@ccreate, @cset, allcom, clearcom ...) are not available");
 		}
 	}

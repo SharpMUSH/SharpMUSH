@@ -373,14 +373,25 @@
                         {
                             <div class="dbimport-tile dbimport-tile-wide">
                                 <SectionLabel Class="dbimport-label dbimport-label-warning">@Loc["WarningsLabel", _result.Warnings.Count]</SectionLabel>
-                                <MudList T="string" Dense="true">
-                                    @foreach (var warning in _result.Warnings)
-                                    {
-                                        <MudListItem T="string">
-                                            <MudText Color="Color.Warning">@warning</MudText>
-                                        </MudListItem>
-                                    }
-                                </MudList>
+                                @* By kind, the kinds with something to act on first, and those warnings first within each. *@
+                                @foreach (var kind in _result.WarningsByKind())
+                                {
+                                    <section class="dbimport-warning-group" data-kind="@kind.Key">
+                                        <h3 class="dbimport-warning-kind">@Loc[$"AdmImportKind{kind.Key}"] (@kind.Count())</h3>
+                                        <ul class="dbimport-warning-list">
+                                            @foreach (var warning in kind)
+                                            {
+                                                <li class="@(warning.NeedsAction ? "dbimport-warning dbimport-warning-action" : "dbimport-warning")">
+                                                    @if (warning.NeedsAction)
+                                                    {
+                                                        <span class="dbimport-needs-action">@Loc["AdmImportNeedsAction"]</span>
+                                                    }
+                                                    @warning.Text
+                                                </li>
+                                            }
+                                        </ul>
+                                    </section>
+                                }
                             </div>
                         }
 

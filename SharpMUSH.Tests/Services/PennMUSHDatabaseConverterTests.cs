@@ -501,6 +501,6 @@ public class PennMUSHDatabaseConverterTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.IsSuccessful).IsTrue();
-		await Assert.That(result.Warnings).Contains(warning => warning.Contains("paren_groups"));
+		await Assert.That(result.Warnings.Texts()).Contains(warning => warning.Contains("paren_groups"));
 	}
 }

@@ -38,7 +38,12 @@ internal sealed class PennMUSHConversionContext
 	public List<string> Errors { get; } = [];
 
 	/// <summary>Things the conversion carried on past, but that the caller should see.</summary>
-	public List<string> Warnings { get; } = [];
+	public List<ImportWarning> Warnings { get; } = [];
+
+	public void Warn(ImportWarningKind kind, string text) => Warnings.Add(new ImportWarning(kind, text));
+
+	/// <summary>A warning an administrator has to act on, which the report puts first.</summary>
+	public void WarnNeedsAction(ImportWarningKind kind, string text) => Warnings.Add(new ImportWarning(kind, text, NeedsAction: true));
 
 	/// <summary>
 	/// What every import of this kind does and the report says only for the record: the seeded objects it
@@ -54,25 +59,25 @@ internal sealed class PennMUSHConversionContext
 	/// counterpart for, or one it does not allow on that type — keyed by what was dropped, with the
 	/// source dbrefs that had it. A flag every player carries would otherwise be a warning per player.
 	/// </summary>
-	public SortedDictionary<string, List<int>> Unconverted { get; } = new(StringComparer.OrdinalIgnoreCase);
+	private SortedDictionary<string, (ImportWarningKind Kind, List<int> Dbrefs)> Unconverted { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-	public void NoteUnconverted(string what, int dbref)
+	public void NoteUnconverted(ImportWarningKind kind, string what, int dbref)
 	{
-		if (!Unconverted.TryGetValue(what, out var dbrefs))
+		if (!Unconverted.TryGetValue(what, out var unconverted))
 		{
-			Unconverted[what] = dbrefs = [];
+			Unconverted[what] = unconverted = (kind, []);
 		}
 
-		dbrefs.Add(dbref);
+		unconverted.Dbrefs.Add(dbref);
 	}
 
 	/// <summary>Turns <see cref="Unconverted"/> into one warning each.</summary>
 	public void ReportUnconverted()
 	{
-		foreach (var (what, dbrefs) in Unconverted)
+		foreach (var (what, (kind, dbrefs)) in Unconverted)
 		{
 			var sample = string.Join(" ", dbrefs.Take(10).Select(dbref => $"#{dbref}"));
-			Warnings.Add($"{what}: not imported on {dbrefs.Count} object(s) ({sample}{(dbrefs.Count > 10 ? " ..." : "")})");
+			Warn(kind, $"{what}: not imported on {dbrefs.Count} object(s) ({sample}{(dbrefs.Count > 10 ? " ..." : "")})");
 		}
 	}
 }

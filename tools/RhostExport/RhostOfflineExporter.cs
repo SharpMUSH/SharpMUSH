@@ -111,7 +111,7 @@ public sealed class RhostOfflineExporter
 				}
 			}
 			catch (FormatException ex) { throw new InvalidDataException("Malformed portable export: " + ex.Message, ex); }
-			var warnings = RhostDatabaseTranslator.Translate(flat, parsedMail).ImportNotes;
+			var warnings = RhostDatabaseTranslator.Translate(flat, parsedMail).ImportNotes.Select(note => note.Text).ToList();
 			warnings.Add("Export validation cannot independently prove every external attribute was present or readable; retain the coherent offline source backup.");
 			if (mail is null) warnings.Add("Portable mail was not supplied; dbconvert does not export native mail stores.");
 			for (var i = 0; i < inputs.Count; i++)
