@@ -53,7 +53,7 @@ my-game`), so no other app in the Fly organization can reach the parts that ask 
 
 `launch.sh` downloads `edge.fly.toml`, `server.fly.toml` and `renderer.fly.toml` into the current
 directory under those names, with the game's name filled in, then creates the apps, volumes and
-addresses and deploys the server, the renderer and the edge, in that order. Keep the `.fly.toml`
+addresses and deploys the edge, the server and the renderer, in that order. Keep the `.fly.toml`
 files: they hold each part's settings, and the script reuses them when run again.
 
 `--single` (`-Single`) runs the game as one app, `my-game`, with the `all` role and its settings in
