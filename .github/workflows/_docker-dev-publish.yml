@@ -131,6 +131,30 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Built from the socket server image on Docker Hub, so it comes after it and follows it.
+      - name: Build and push edge image (dev)
+        id: push_edge
+        if: >-
+          steps.changes.outputs.edge == 'true' ||
+          steps.push_socket.outcome == 'success' ||
+          (github.event_name == 'workflow_dispatch' &&
+           (inputs.publish == 'all' || inputs.publish == 'edge'))
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          file: ./deploy/fly/Dockerfile
+          target: edge
+          push: true
+          pull: true
+          tags: sharpmush/sharpmush-edge:dev
+          labels: |
+            org.opencontainers.image.title=SharpMUSH edge
+            org.opencontainers.image.description=Caddy, NATS and the socket server, for split one-container hosts (dev build)
+            org.opencontainers.image.version=dev
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
       # Built from the three images on Docker Hub, so it comes after them and follows any of them.
       - name: Build and push all-in-one image (dev)
         id: push_allinone
@@ -175,6 +199,11 @@ jobs:
               echo '- `sharpmush/sharpmush-socketserver:dev` — **pushed; replacing this image drops live sockets**'
             else
               echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
+            fi
+            if [ "${{ steps.push_edge.outcome }}" = "success" ]; then
+              echo '- `sharpmush/sharpmush-edge:dev` — **pushed; nothing updates to it until its operator deploys it**'
+            else
+              echo '- `sharpmush/sharpmush-edge:dev` — not published'
             fi
             if [ "${{ steps.push_allinone.outcome }}" = "success" ]; then
               echo '- `sharpmush/sharpmush-allinone:dev` — **pushed; nothing updates to it until its operator deploys it**'

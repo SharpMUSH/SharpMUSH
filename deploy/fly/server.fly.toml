@@ -4,11 +4,21 @@
 #
 # Deploying this app restarts the server without dropping anyone: the edge keeps players' sockets.
 [build]
-  image = "sharpmush/sharpmush-allinone:dev"
+  image = "sharpmush/sharpmush-server:dev"
 
 [env]
-  SHARPMUSH_ROLE = "server"
-  SHARPMUSH_NATS_URL = "nats://{game}.internal:4222"
+  NATS_URL = "nats://{game}.internal:4222"
+  # The edge reaches it from a private address that changes whenever its machine is replaced, and
+  # nothing else can reach it.
+  ForwardedHeaders__KnownNetworks__0 = "0.0.0.0/0"
+  ForwardedHeaders__KnownNetworks__1 = "::/0"
+  # Everything it keeps, on the volume.
+  SHARPMUSH_LIGHTNING_PATH = "/data/lightning"
+  SHARPMUSH_LIGHTNING_SYNC = "periodic"
+  SHARPMUSH_BACKUP_PATH = "/data/backup"
+  SHARPMUSH_BACKUP_INTERVAL = "6h"
+  SHARPMUSH_BACKUP_KEEP = "2"
+  Wiki__AssetRoot = "/data/wiki-assets"
 
 [mounts]
   source = "sharpmush_data"

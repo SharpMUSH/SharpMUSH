@@ -2,14 +2,13 @@
 # Starts SharpMUSH's processes in one container and stops the container when any of them dies, so
 # the host restarts it. Everything the game keeps is under /data (the volume).
 #
-# SHARPMUSH_ROLE picks which of them this container runs:
-#   all       everything, the renderer on a Unix socket (the default)
-#   edge      Caddy, NATS and the connection server: every player's socket. Updating it drops them.
-#   server    the game server and the world. Updating it drops nobody.
-#   renderer  the rendering worker. Updating it drops nobody.
-# Run apart, the parts find each other on the host's private network: the edge reaches the server at
-# SHARPMUSH_SERVER_ADDRESS (host:port) and the renderer at Rendering__Address, and the server reaches
-# NATS at SHARPMUSH_NATS_URL. Nothing but the edge may be public: the others ask for no credentials.
+# SHARPMUSH_ROLE picks which of them this container runs (each image sets its own):
+#   all   everything, the renderer on a Unix socket (sharpmush-allinone)
+#   edge  Caddy, NATS and the connection server: every player's socket (sharpmush-edge). Updating it
+#         drops them. The sharpmush-server and sharpmush-renderer images run beside it on the host's
+#         private network: the edge reaches the server at SHARPMUSH_SERVER_ADDRESS (host:port) and
+#         the renderer at Rendering__Address. Nothing but the edge may be public: NATS, the server
+#         and the renderer ask for no credentials.
 #
 # Until the owner finishes /setup, the portal answers only a browser that opened the setup link
 # printed in the log, and telnet listens on an inside port only. Set SHARPMUSH_GUARD=off to skip that.
@@ -17,10 +16,9 @@ set -euo pipefail
 
 ROLE=${SHARPMUSH_ROLE:-all}
 case "$ROLE" in
-	all | edge | server | renderer) ;;
-	*) echo "sharpmush-start: SHARPMUSH_ROLE must be all, edge, server or renderer, not $ROLE" >&2; exit 1 ;;
+	all | edge) ;;
+	*) echo "sharpmush-start: SHARPMUSH_ROLE must be all or edge, not $ROLE" >&2; exit 1 ;;
 esac
-runs() { [ "$ROLE" = all ] || [ "$ROLE" = "$1" ]; }
 
 DATA=/data
 STATE=$DATA/state
@@ -39,9 +37,9 @@ mkdir -p "$STATE/guard" /run/sharpmush
 chown app:app "$DATA" "$STATE" "$STATE/guard" /run/sharpmush
 for dir in nats caddy; do mkdir -p "$DATA/$dir" && chown app:app "$DATA/$dir"; done
 
-# --- the first-boot guard, kept where Caddy runs ---------------------------------------------------
+# --- the first-boot guard ------------------------------------------------------------------------
 
-guard_on() { runs edge && [ "${SHARPMUSH_GUARD:-on}" != off ] && [ ! -f "$STATE/guard-lifted" ]; }
+guard_on() { [ "${SHARPMUSH_GUARD:-on}" != off ] && [ ! -f "$STATE/guard-lifted" ]; }
 
 if guard_on; then
 	[ -s "$STATE/setup-code" ] || head -c 12 /dev/urandom | od -An -tx1 | tr -d ' \n' > "$STATE/setup-code"
@@ -111,34 +109,24 @@ start_connection() {
 	pid[connection]=$!
 }
 
-if runs edge; then
-	# Every interface, so a server run apart reaches it over the private network.
-	as_app_bg nats-server -a :: -js -sd "$DATA/nats" -m 8222 -c /etc/sharpmush/nats.conf &
-	pid[nats]=$!
-	wait_for nats bash -c 'exec 3<>/dev/tcp/127.0.0.1/4222'
-fi
+# Every interface, so a server run apart reaches it over the private network.
+as_app_bg nats-server -a :: -js -sd "$DATA/nats" -m 8222 -c /etc/sharpmush/nats.conf &
+pid[nats]=$!
+wait_for nats bash -c 'exec 3<>/dev/tcp/127.0.0.1/4222'
 
-if runs renderer; then
+if [ "$ROLE" = all ]; then
 	(cd /app/renderer && exec setpriv --reuid=app --regid=app --init-groups dotnet SharpMUSH.RenderingWorker.dll) &
 	pid[renderer]=$!
-	if [ "$ROLE" = all ]; then wait_for renderer test -S /run/sharpmush/render.sock; fi
+	wait_for renderer test -S /run/sharpmush/render.sock
 fi
 
-if runs edge; then start_connection; fi
+start_connection
 
-if runs server; then
-	if [ "$ROLE" = all ]; then
-		server_env=(NATS_URL=nats://127.0.0.1:4222 ASPNETCORE_URLS=http://127.0.0.1:8080
-			ForwardedHeaders__KnownProxies__0=127.0.0.1)
-	else
-		# Apart, the server has no public address: the edge is the only proxy that reaches it, from a
-		# private address that changes whenever its machine is replaced.
-		server_env=(NATS_URL="${SHARPMUSH_NATS_URL:?the server role needs SHARPMUSH_NATS_URL}"
-			ASPNETCORE_URLS=http://+:8080)
-		read -ra networks <<<"${SHARPMUSH_TRUSTED_PROXIES:-0.0.0.0/0 ::/0}"
-		for i in "${!networks[@]}"; do server_env+=("ForwardedHeaders__KnownNetworks__$i=${networks[$i]}"); done
-	fi
+if [ "$ROLE" = all ]; then
 	(cd /app/server && exec env \
+		NATS_URL=nats://127.0.0.1:4222 \
+		ASPNETCORE_URLS=http://127.0.0.1:8080 \
+		ForwardedHeaders__KnownProxies__0=127.0.0.1 \
 		SHARPMUSH_LIGHTNING_PATH="$DATA/lightning" \
 		SHARPMUSH_LIGHTNING_SYNC=periodic \
 		SHARPMUSH_BACKUP_INTERVAL=6h \
@@ -147,15 +135,12 @@ if runs server; then
 		Wiki__AssetRoot="$DATA/wiki-assets" \
 		ASPNETCORE_Kestrel__Certificates__Default__Path= \
 		ASPNETCORE_Kestrel__Certificates__Default__Password= \
-		"${server_env[@]}" \
 		setpriv --reuid=app --regid=app --init-groups dotnet SharpMUSH.Server.dll) &
 	pid[server]=$!
 fi
 
-if runs edge; then
-	XDG_DATA_HOME=$DATA/caddy XDG_CONFIG_HOME=$DATA/caddy as_app_bg caddy run --config /etc/sharpmush/Caddyfile &
-	pid[caddy]=$!
-fi
+XDG_DATA_HOME=$DATA/caddy XDG_CONFIG_HOME=$DATA/caddy as_app_bg caddy run --config /etc/sharpmush/Caddyfile &
+pid[caddy]=$!
 
 stop_all() {
 	kill -TERM "${pid[@]}" 2>/dev/null || true

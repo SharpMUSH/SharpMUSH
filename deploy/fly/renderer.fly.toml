@@ -5,10 +5,9 @@
 #
 # Deploying this app restarts the renderer without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-allinone:dev"
+  image = "sharpmush/sharpmush-renderer:dev"
 
 [env]
-  SHARPMUSH_ROLE = "renderer"
   # The renderer listens on this address's port.
   Rendering__Address = "http://{game}-renderer.internal:5100"
 
