@@ -98,6 +98,15 @@ public interface IWikiService
 	async Task<int> CountPagesInCategoryAsync(string category, WikiVisibility visibility)
 		=> (await CountPagesByCategoryAsync(visibility)).GetValueOrDefault(WikiHelpers.CategoryKey(category));
 
+	/// <summary>The ids of the pages <paramref name="visibility"/> admits in <paramref name="category"/>.</summary>
+	Task<IReadOnlyList<string>> GetPageIdsByCategoryAsync(string category, WikiVisibility visibility);
+
+	/// <summary>
+	/// The ids of the pages <paramref name="visibility"/> admits whose own title, or any translation's title, contains
+	/// <paramref name="term"/> ignoring case. The caller checks the title the reader is shown.
+	/// </summary>
+	Task<IReadOnlyList<string>> FindPagesByTitleAsync(string term, WikiVisibility visibility);
+
 	/// <summary>
 	/// Gives each category in <paramref name="names"/> that has no page a page in the category namespace,
 	/// titled with the name exactly as typed, so <c>Places of Note</c> keeps its capitals although its key is

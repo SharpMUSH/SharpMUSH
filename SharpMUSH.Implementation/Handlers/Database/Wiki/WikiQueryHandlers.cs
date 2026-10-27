@@ -61,6 +61,18 @@ public sealed class ScanWikiPagesQueryHandler(IWikiStore store) : IQueryHandler<
 		=> new(store.ScanPagesAsync(query.Visibility, query.Position, query.Take));
 }
 
+public sealed class GetWikiPageIdsByCategoryQueryHandler(IWikiStore store) : IQueryHandler<GetWikiPageIdsByCategoryQuery, IReadOnlyList<string>>
+{
+	public ValueTask<IReadOnlyList<string>> Handle(GetWikiPageIdsByCategoryQuery query, CancellationToken cancellationToken)
+		=> new(store.GetPageIdsByCategoryAsync(query.Category, query.Visibility));
+}
+
+public sealed class FindWikiPagesByTitleQueryHandler(IWikiStore store) : IQueryHandler<FindWikiPagesByTitleQuery, IReadOnlyList<string>>
+{
+	public ValueTask<IReadOnlyList<string>> Handle(FindWikiPagesByTitleQuery query, CancellationToken cancellationToken)
+		=> new(store.FindPagesByTitleAsync(query.Term, query.Visibility));
+}
+
 public sealed class GetWikiPagesByCategoryQueryHandler(IWikiStore store) : IQueryHandler<GetWikiPagesByCategoryQuery, IReadOnlyList<WikiPage>>
 {
 	public ValueTask<IReadOnlyList<WikiPage>> Handle(GetWikiPagesByCategoryQuery query, CancellationToken cancellationToken)

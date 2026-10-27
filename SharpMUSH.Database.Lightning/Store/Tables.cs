@@ -148,6 +148,8 @@ public static class Tables
 	public static readonly TableDef WikiSummary = TableDef.Node("wiki.summary");
 	/// <summary>Each author's drafts: author + 0x00 + page key → empty.</summary>
 	public static readonly TableDef WikiDraft = TableDef.Index("wiki.draft");
+	/// <summary>Title trigrams: three upper-cased code units + page key + locale → empty. See <c>LightningDatabase.WikiTitles.cs</c>.</summary>
+	public static readonly TableDef WikiTitle = TableDef.Index("wiki.title");
 	/// <summary>The fact index: property + 0x00 + typed value + page key → empty. See <c>LightningDatabase.WikiFactIndex.cs</c>.</summary>
 	public static readonly TableDef WikiFact = TableDef.Index("wiki.fact");
 	/// <summary>The properties facts may state, keyed by property id. See <c>LightningDatabase.WikiProperties.cs</c>.</summary>

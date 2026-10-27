@@ -63,8 +63,8 @@ public class MigrationTests
 			await Assert.That(godName).IsEqualTo("God");
 
 			var migrations = db.Store.Read(tx => tx.Range(Tables.Meta, Keys.Str("mig:")).Select(e => Codec.Deserialize<MigrationRecord>(e.Value).Id).ToArray());
-			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId, LightningDatabase.OnboardingMigrationId, LightningDatabase.ArrivalOrderMigrationId, LightningDatabase.AttributeCountMigrationId, WikiCategoryCheckpointCodec.MigrationId, LightningDatabase.WikiCountMigrationId])
-				.Because("a new world records exactly the initial seed, account credential, session digest, onboarding, arrival order, attribute count, category value and wiki count migrations");
+			await Assert.That(migrations).IsEquivalentTo([LightningDatabase.InitialMigrationId, LightningDatabase.AccountCredentialMigrationId, LightningDatabase.SessionDigestMigrationId, LightningDatabase.OnboardingMigrationId, LightningDatabase.ArrivalOrderMigrationId, LightningDatabase.AttributeCountMigrationId, WikiCategoryCheckpointCodec.MigrationId, LightningDatabase.WikiCountMigrationId, LightningDatabase.WikiTitleMigrationId])
+				.Because("a new world records exactly the initial seed, account credential, session digest, onboarding, arrival order, attribute count, category value, wiki count and wiki title migrations");
 		}
 		finally
 		{

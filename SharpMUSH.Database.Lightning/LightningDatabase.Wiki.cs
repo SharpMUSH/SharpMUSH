@@ -154,6 +154,7 @@ public partial class LightningDatabase : IWikiStore
 		}
 		WikiFactEntries(tx, pageKey, r, add);
 		WikiCountEntries(tx, pageKey, r, add);
+		WikiTitleEntries(tx, pageKey, string.Empty, r.Title, add);
 
 		void Apply(TableDef table, byte[] key)
 		{
@@ -526,6 +527,7 @@ public partial class LightningDatabase : IWikiStore
 			// One prefix sweep per child table: every locale's revision stream and every translation of
 			// this page share the page id as their first key segment.
 			tx.DeletePrefix(Tables.WikiRev, WikiPagePrefix(pageId));
+			WikiTranslationTitleEntriesRemoved(tx, found.Key);
 			tx.DeletePrefix(Tables.WikiTr, WikiPagePrefix(pageId));
 			tx.Delete(Tables.WikiSlug, WikiSlugKey(found.Record.Namespace, found.Record.Slug));
 			WikiListIndexes(tx, found.Key, found.Record, add: false);
@@ -732,6 +734,8 @@ public partial class LightningDatabase : IWikiStore
 				RevisionNumber = revision
 			};
 
+			if (existing is not null) WikiTitleEntries(tx, found.Key, locale, existing.Title, add: false);
+			WikiTitleEntries(tx, found.Key, locale, title, add: true);
 			tx.Put(Tables.WikiTr, key, Codec.Serialize(record));
 			AppendWikiRevision(tx, canonicalPageId, locale, revision, body.Markdown, editorDbref, editSummary, at);
 			return MapWikiTranslation(record);
@@ -744,8 +748,10 @@ public partial class LightningDatabase : IWikiStore
 		{
 			var canonicalPageId = CanonicalWikiPageId(pageId);
 			var key = WikiTranslationKey(canonicalPageId, locale);
-			if (!tx.TryGet(Tables.WikiTr, key, out _)) return new NotFound();
+			if (!tx.TryGet(Tables.WikiTr, key, out var bytes)) return new NotFound();
 
+			if (TryParseWikiPageId(canonicalPageId, out var pageKey))
+				WikiTitleEntries(tx, pageKey, locale, Codec.Deserialize<WikiTranslationRecord>(bytes).Title, add: false);
 			tx.DeletePrefix(Tables.WikiRev, WikiRevPrefix(canonicalPageId, locale));
 			tx.Delete(Tables.WikiTr, key);
 			return new None();
