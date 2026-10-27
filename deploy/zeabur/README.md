@@ -16,7 +16,7 @@ npx zeabur@latest template deploy -f deploy/zeabur/template.yaml   # try it in a
 npx zeabur@latest template create -f deploy/zeabur/template.yaml   # publish it
 ```
 
-`create` prints the template's code (the end of its `zeabur.com/templates/<code>` address). After a
+The template's code is the end of its `zeabur.com/templates/<code>` address. After a
 change to this file, update the published template with
 `npx zeabur@latest template update -c <code> -f deploy/zeabur/template.yaml`; projects already
 deployed keep what they were created with. The button's code is under the template's share button
