@@ -7,7 +7,7 @@ every player's socket, so updating the server or the renderer drops nobody. A Ra
 turns the settings below into a **Deploy on Railway** button; Railway templates are made in a
 Railway account's template composer, not from a file in this repository. The published one:
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/Fk8PBS?referralCode=fcp2a2&utm_medium=integration&utm_source=button&utm_campaign=generic)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/sharpmush-dev?referralCode=fcp2a2&utm_medium=integration&utm_source=button&utm_campaign=generic)
 
 ## Template settings
 
