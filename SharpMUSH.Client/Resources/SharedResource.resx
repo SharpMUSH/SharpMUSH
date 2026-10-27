@@ -9983,4 +9983,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>Picture</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Where this map is</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>Region {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Level up</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Level down</value>
+  </data>
 </root>

@@ -6548,4 +6548,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>Slika</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Gdje je ova karta</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>Regija {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Razinu više</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Razinu niže</value>
+  </data>
 </root>

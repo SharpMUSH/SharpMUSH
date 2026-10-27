@@ -19,7 +19,7 @@ public class WorldMapReaderTests
 	private readonly IAttributeService _attributes = Substitute.For<IAttributeService>();
 	private readonly IRealityPolicy _reality = Substitute.For<IRealityPolicy>();
 	private readonly Dictionary<(int Number, string Name), string> _values = new();
-	private readonly Dictionary<int, List<SharpRoom>> _zones = new();
+	private readonly Dictionary<int, List<SharpObject>> _zones = new();
 	private readonly AnySharpObject _builder;
 	private readonly AnySharpObject _viewer;
 	private readonly SharpRoom _start;
@@ -32,7 +32,7 @@ public class WorldMapReaderTests
 		_mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
 			ValueTask.FromResult<AnyOptionalSharpObject>(Find(call.Arg<GetObjectNodeQuery>().DBRef.Number) is { } found ? found : new None()));
 		_mediator.CreateStream(Arg.Any<GetObjectsByZoneQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
-			(_zones.GetValueOrDefault(call.Arg<GetObjectsByZoneQuery>().Zone is DBRef zone ? zone.Number : -1) ?? []).Select(room => room.Object).ToAsyncEnumerable());
+			(_zones.GetValueOrDefault(call.Arg<GetObjectsByZoneQuery>().Zone is DBRef zone ? zone.Number : -1) ?? []).ToAsyncEnumerable());
 		_mediator.CreateStream(Arg.Any<GetExitsQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<SharpExit>());
 		_reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
 		_permissions.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(false);
@@ -62,23 +62,21 @@ public class WorldMapReaderTests
 		return map;
 	}
 
-	private static void Zone(AnySharpObject target, AnySharpObject zone) =>
+	private void Zone(AnySharpObject target, AnySharpObject zone)
+	{
 		target.Object().Zone = new(async _ =>
 		{
 			await ValueTask.CompletedTask;
 			return zone;
 		});
+		_zones.TryAdd(zone.Object().DBRef.Number, []);
+		_zones[zone.Object().DBRef.Number].Add(target.Object());
+	}
 
 	private SharpRoom Room(int number, string name, AnySharpObject map)
 	{
 		var room = _objects.CreateRoom(number, name);
-		room.Object.Zone = new(async _ =>
-		{
-			await ValueTask.CompletedTask;
-			return map;
-		});
-		_zones.TryAdd(map.Object().DBRef.Number, []);
-		_zones[map.Object().DBRef.Number].Add(room);
+		Zone(new AnySharpObject(room), map);
 		return room;
 	}
 
@@ -210,5 +208,53 @@ public class WorldMapReaderTests
 
 		await Assert.That((await Reader.ReadAsync(viewer, 50, default)).Expect<MapDto>().Here).IsEqualTo("#10");
 		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Here).IsNull();
+	}
+
+	[Test]
+	public async Task ARegionIsAMapZonedToThisOneAndHereFollowsTheZonesUp()
+	{
+		var earth = Map(50, "Earth", MapKinds.Graph);
+		var states = Map(51, "United States", MapKinds.Coordinates);
+		var city = Map(52, "New York", MapKinds.Coordinates);
+		var hidden = Map(53, "Secret base", MapKinds.Graph);
+		var rock = _objects.CreateThing(54, "Rock", _start, _builder);
+		Zone(states, earth);
+		Zone(hidden, earth);
+		Zone(rock, earth);
+		Zone(city, states);
+		var street = Room(10, "Flatbush Avenue", city);
+		_values[(51, "MAP`POS`X")] = "300";
+		_values[(51, "MAP`POS`Y")] = "120";
+		_values[(51, "MAP`SIZE`W")] = "200";
+		_reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Is<DBRef>(target => target.Number == 53), Arg.Any<CancellationToken>()).Returns(false);
+		var walker = _objects.CreatePlayer(4, "Walker", street);
+
+		var map = (await Reader.ReadAsync(walker, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Regions.Select(region => (region.Id, region.Name))).IsEquivalentTo([("#51", "United States")])
+			.Because("the rock is no map, and the viewer cannot perceive the secret base");
+		await Assert.That(map.Regions.Single().Position).IsEquivalentTo([300d, 120d]);
+		await Assert.That(map.Regions.Single().Size).IsEquivalentTo([200d, 1d]);
+		await Assert.That(map.HereRegion).IsEqualTo("#51").Because("New York, the street's zone, is zoned to the United States");
+		await Assert.That(map.Here).IsNull();
+		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().HereRegion).IsNull();
+	}
+
+	[Test]
+	public async Task AMapNamesItsLevelsAndTheOneItOpensOn()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		_values[(50, WorldMapReader.LevelAttribute)] = "-1";
+		_attributes.GetAttributePatternAsync(harbour, harbour, "MAP`LEVEL`*", false, IAttributeService.AttributePatternMode.Wildcard)
+			.Returns(new SharpAttributesOrError(new[]
+			{
+				Attribute("MAP`LEVEL`-1", "Sewers"), Attribute("MAP`LEVEL`0", "Streets"), Attribute("MAP`LEVEL`1", " "),
+				Attribute("MAP`LEVEL`ROOF", "Rooftops"),
+			}));
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Level).IsEqualTo(-1);
+		await Assert.That(map.LevelNames).IsEquivalentTo(new Dictionary<int, string> { [-1] = "Sewers", [0] = "Streets" });
 	}
 }

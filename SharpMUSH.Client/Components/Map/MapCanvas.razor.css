@@ -45,6 +45,11 @@
 	stroke-dasharray: 6 4;
 }
 
+.map-box--region {
+	fill: var(--surface-2);
+	stroke-dasharray: 10 5;
+}
+
 .map-box--here {
 	stroke: var(--accent);
 	stroke-width: 4;
@@ -82,6 +87,11 @@
 	text-align: center;
 	overflow: hidden;
 	cursor: pointer;
+}
+
+.map-room--region {
+	text-decoration: none;
+	font-weight: 600;
 }
 
 .map-room:focus-visible {

@@ -2,7 +2,7 @@
 @using SharpMUSH.Library.API
 @inject IStringLocalizer<SharedResource> Loc
 
-@* One level of a map: each room a box at its place, each exit between two rooms on the level a line (with an arrow
+@* One level of a map: each room a box at its place, each region (a map inside this one) a dashed box that opens it, each exit between two rooms on the level a line (with an arrow
    when it runs one way only), and the rooms the map does not place in a dashed strip below. The drawing is a
    picture only; the rooms are buttons over it, so they take focus, read in order and scroll into view. The figure
    is drawn at Zoom pixels per drawing unit inside a scrolling frame, so panning is the browser's own scrolling,
@@ -42,7 +42,16 @@
             }
         </svg>
         <div class="map-rooms">
-            @foreach (var room in _rooms)
+            @foreach (var room in _rooms.Where(room => room.Region))
+            {
+                var here = room.Room.Id == Layout.Map.HereRegion;
+                <a class="map-room map-room--region @(here ? "map-room--here" : null)" style="@Box(room)"
+                   href="@($"/map/{room.Room.Id[1..]}")" title="@room.Room.Name"
+                   aria-label="@(here ? $"{Loc["NavMapRegion", room.Room.Name]}, {Loc["NavMapYouAreHere"]}" : Loc["NavMapRegion", room.Room.Name].Value)">
+                    <span class="map-room-name">@room.Room.Name</span>
+                </a>
+            }
+            @foreach (var room in _rooms.Where(room => !room.Region))
             {
                 var here = room.Room.Id == Layout.Map.Here;
                 <button type="button" class="map-room @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
@@ -154,7 +163,8 @@
     {
         "map-box",
         room.Placed ? null : "map-box--unplaced",
-        room.Room.Id == Layout.Map.Here ? "map-box--here" : null,
+        room.Region ? "map-box--region" : null,
+        room.Room.Id == Layout.Map.Here || room.Room.Id == Layout.Map.HereRegion ? "map-box--here" : null,
         room.Room.Id == Selected ? "map-box--selected" : null,
     }.Where(c => c is not null));
 

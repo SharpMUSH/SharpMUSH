@@ -19,6 +19,7 @@ file sealed class WorldMapApiHandler : HttpMessageHandler
 {
 	public static readonly MapSummaryDto City = new("#51", "City", MapKinds.Graph, null);
 	public static readonly MapSummaryDto Harbour = new("#50", "Harbour", MapKinds.Coordinates, "#51");
+	public static readonly MapSummaryDto Caves = new("#52", "Caves", MapKinds.Coordinates, "#50");
 
 	public static readonly MapDto HarbourMap = new(Harbour, null,
 		[
@@ -33,13 +34,33 @@ file sealed class WorldMapApiHandler : HttpMessageHandler
 			new("#32", "Up", ["u"], "#11", "#12", null),
 			new("#33", "Road", [], "#10", "#20", City),
 		],
-		"#10", Truncated: false);
+		"#10", Truncated: false)
+	{
+		LevelNames = new Dictionary<int, string> { [1] = "Lantern deck" },
+	};
+
+	/// <summary>The city, with the harbour drawn on it as a region the sailor is inside.</summary>
+	public static readonly MapDto CityMap = new(City, [400, 300], [new("#20", "Square", [80, 80], null)], [], null, Truncated: false)
+	{
+		Regions = [new("#50", "Harbour", [250, 150], [120, 80])],
+		HereRegion = "#50",
+	};
+
+	/// <summary>Caves under the harbour that open on the sewers, a visitor's level, below the sailor's.</summary>
+	public static readonly MapDto CavesMap = new(Caves, null,
+		[new("#40", "Drain", [0, 0, -1], null), new("#41", "Grotto", [0, 0, 0], null)], [], null, Truncated: false)
+	{
+		Level = -1,
+		LevelNames = new Dictionary<int, string> { [-1] = "Sewers" },
+	};
 
 	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
 		Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') switch
 		{
-			"api/maps" => Json(new[] { City, Harbour }),
+			"api/maps" => Json(new[] { City, Harbour, Caves }),
 			"api/maps/50" => Json(HarbourMap),
+			"api/maps/51" => Json(CityMap),
+			"api/maps/52" => Json(CavesMap),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
 		});
 
@@ -113,10 +134,54 @@ public class WorldMapPageTests : TrackingBunitContext
 		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
 		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
 
-		var level = cut.FindAll("button[role=radio]").First(button => button.TextContent == "NavMapLevel(1)");
+		var level = cut.FindAll("button[role=radio]").First(button => button.TextContent == "Lantern deck");
 		await level.ClickAsync();
 
 		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).Contains("Lamp room");
+		await Assert.That(cut.FindAll("button[role=radio]").Select(button => button.TextContent))
+			.IsEquivalentTo(["NavMapLevel(0)", "Lantern deck"]).Because("a level without a name is numbered");
+	}
+
+	[Test]
+	public async Task AVisitorStartsOnTheMapsOwnLevelAndStepsUp()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 52));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+
+		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).IsEquivalentTo(["Drain"]);
+		await Assert.That(cut.Find("[aria-label=NavMapLevelDown]").HasAttribute("disabled")).IsTrue();
+
+		await cut.Find("[aria-label=NavMapLevelUp]").ClickAsync();
+
+		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).IsEquivalentTo(["Grotto"]);
+		await Assert.That(cut.Find("[aria-label=NavMapLevelUp]").HasAttribute("disabled")).IsTrue();
+	}
+
+	[Test]
+	public async Task TheTrailNamesTheRegionsAMapIsInside()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 52));
+		cut.WaitForAssertion(() => cut.Find(".map-trail"));
+
+		await Assert.That(cut.FindAll(".map-trail a").Select(link => (link.TextContent, link.GetAttribute("href"))))
+			.IsEquivalentTo([("City", "/map/51"), ("Harbour", "/map/50")]);
+		await Assert.That(cut.Find(".map-trail [aria-current=page]").TextContent).IsEqualTo("Caves");
+	}
+
+	[Test]
+	public async Task ARegionIsDrawnOnItsParentAndOpensIt()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 51));
+		cut.WaitForAssertion(() => cut.Find("a.map-room--region"));
+
+		var region = cut.Find("a.map-room--region");
+		await Assert.That(region.GetAttribute("href")).IsEqualTo("/map/50");
+		await Assert.That(region.ClassList).Contains("map-room--here").Because("the sailor stands in a room inside the harbour");
+		await Assert.That(region.GetAttribute("aria-label")).IsEqualTo("NavMapRegion(Harbour), NavMapYouAreHere");
+		await Assert.That(cut.FindAll(".map-trail")).IsEmpty().Because("the city is inside no other map");
 	}
 
 	[Test]
@@ -222,5 +287,21 @@ public class MapLayoutTests
 		await Assert.That(MapLayout.Direction(new("#1", "Out", ["o"], "#1", "#2", null))).IsNull();
 		await Assert.That(MapLayout.Direction(new("#1", "Ladder", ["U"], "#1", "#2", null))).IsEqualTo((0, 0, 1));
 		await Assert.That(MapLayout.Direction(new("#1", "Southwest", [], "#1", "#2", null))).IsEqualTo((-1, -1, 0));
+	}
+
+	[Test]
+	public async Task ARegionIsPlacedAsARoomIs()
+	{
+		var map = Map(MapKinds.Coordinates, [new("#1", "Quay", [0, 0, 0], null)], []);
+		var layout = new MapLayout(map with
+		{
+			Regions = [new("#60", "Old Town", [2, 0, 0], [2, 2]), new("#61", "Docks", null, null)],
+		});
+
+		await Assert.That(layout.Rooms["#60"].Region).IsTrue();
+		await Assert.That(layout.Rooms["#60"].X).IsEqualTo(2 * MapLayout.Cell);
+		await Assert.That(layout.Rooms["#60"].Width).IsEqualTo(2 * MapLayout.Cell);
+		await Assert.That(layout.Rooms["#61"].Placed).IsFalse();
+		await Assert.That(layout.Unplaced(0).Select(room => room.Room.Name)).IsEquivalentTo(["Docks"]);
 	}
 }

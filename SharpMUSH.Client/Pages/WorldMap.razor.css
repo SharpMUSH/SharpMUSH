@@ -98,3 +98,33 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+
+.map-trail ol {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	color: var(--text-dim);
+}
+
+.map-trail li + li::before {
+	content: "/";
+	margin-right: 6px;
+}
+
+.map-trail a {
+	color: var(--accent);
+}
+
+.map-trail [aria-current] {
+	color: var(--text);
+}
+
+.map-levels {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}

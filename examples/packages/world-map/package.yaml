@@ -67,4 +67,46 @@ objects:
 
         A game may have as many maps as it likes, each of its own kind. An exit from a room on one map to a room on another is drawn as a door; choosing it opens the other map.
 
-        A map zoned to another map is a region inside it: ``@chzone Harbour=#50`` puts the Harbour map inside map #50, so the portal lists it under that one.
+        A map zoned to another map is a region inside it. See `+help map regions`.
+
+        A grid shows one level at a time. See `+help map levels`.
+      HELP`MAP`REGIONS: |-
+        A map zoned to another map is a region inside it. Regions nest as deep as you like: Sol System, Earth, United States, New York, Brooklyn.
+
+        The portal lists a region under its map and names the maps it is inside above it. On its map, a region is a box that opens it, placed by its own ``MAP`COORDS`` (``MAP`POS`` on a graph map) and ``MAP`SIZE``, as a room is. Without them it is drawn in the row below. While you stand anywhere inside a region, its box is marked.
+
+        Holding the Harbour map:
+
+        ```
+        @create Fish Market
+        &MAP`KIND Fish Market=graph
+        @chzone Fish Market=Harbour
+        &MAP`COORDS`X Fish Market=4
+        &MAP`COORDS`Y Fish Market=0
+        &MAP`SIZE`W Fish Market=2
+        ```
+
+        Output:
+        ```
+        Created: Object #71.
+        Fish Market/MAP`KIND - Set.
+        Zone changed.
+        Fish Market/MAP`COORDS`X - Set.
+        Fish Market/MAP`COORDS`Y - Set.
+        Fish Market/MAP`SIZE`W - Set.
+        ```
+      HELP`MAP`LEVELS: |-
+        A `coordinates` or `compass` map shows one level at a time. The arrows beside the level names step up and down, and choosing a room's up or down exit goes to its level.
+
+        ``MAP`LEVEL`<level>`` names a level; a level without a name is numbered. ``MAP`LEVEL`` is the level a visitor sees first. Someone standing on the map starts on their own level.
+
+        ```
+        &MAP`LEVEL`-1 Harbour=Sewers
+        &MAP`LEVEL Harbour=-1
+        ```
+
+        Output:
+        ```
+        Harbour/MAP`LEVEL`-1 - Set.
+        Harbour/MAP`LEVEL - Set.
+        ```

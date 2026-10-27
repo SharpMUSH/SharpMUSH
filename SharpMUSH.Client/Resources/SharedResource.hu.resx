@@ -6548,4 +6548,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>Kép</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Hol van ez a térkép</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>{0} régió</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Egy szinttel feljebb</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Egy szinttel lejjebb</value>
+  </data>
 </root>

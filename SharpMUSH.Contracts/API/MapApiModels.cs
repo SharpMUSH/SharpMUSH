@@ -30,7 +30,23 @@ public sealed record MapSummaryDto(string Id, string Name, string Kind, string? 
 /// <param name="Here">The viewer's room, when it is on this map.</param>
 /// <param name="Truncated">The map has more rooms or exits than one read returns; some are left out.</param>
 public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<MapRoomDto> Rooms, IReadOnlyList<MapExitDto> Exits,
-	string? Here, bool Truncated);
+	string? Here, bool Truncated)
+{
+	/// <summary>
+	/// The maps zoned to this one that the viewer may see: the regions inside it, each placed as a room is, from the
+	/// region's own <c>MAP`COORDS</c> or <c>MAP`POS</c> and <c>MAP`SIZE</c>.
+	/// </summary>
+	public IReadOnlyList<MapRoomDto> Regions { get; init; } = [];
+
+	/// <summary>The region the viewer's room is inside, however deep, when it is inside one of <see cref="Regions"/>.</summary>
+	public string? HereRegion { get; init; }
+
+	/// <summary>The level the map opens on for a viewer who is not on it: its <c>MAP`LEVEL</c>; null when unset.</summary>
+	public int? Level { get; init; }
+
+	/// <summary>Level names by level: <c>MAP`LEVEL`-1</c> set to <c>Sewers</c> names level -1.</summary>
+	public IReadOnlyDictionary<int, string> LevelNames { get; init; } = new Dictionary<int, string>();
+}
 
 /// <param name="Id">The room's dbref.</param>
 /// <param name="Position">

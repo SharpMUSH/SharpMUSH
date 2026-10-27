@@ -4,7 +4,9 @@ namespace SharpMUSH.Client.Components.Map;
 
 /// <summary>A room where the map draws it: its cell (or pixel, on a graph map), its size and its level.</summary>
 /// <param name="Placed">Whether the map says where it is. An unplaced room is drawn in the strip below its level: the level of a room an exit joins it to.</param>
-public sealed record MapPlacement(MapRoomDto Room, double X, double Y, double Width, double Height, int Level, bool Placed);
+/// <param name="Region">A map inside this one rather than a room: choosing it opens that map.</param>
+public sealed record MapPlacement(MapRoomDto Room, double X, double Y, double Width, double Height, int Level, bool Placed,
+	bool Region = false);
 
 /// <summary>
 /// Where each room of a <see cref="MapDto"/> is drawn. No UI state, so the page and the tests share it.
@@ -14,6 +16,8 @@ public sealed record MapPlacement(MapRoomDto Room, double X, double Y, double Wi
 /// north is y + 1, up is z + 1. A room no compass exit reaches, or whose cell is taken, is unplaced.</item>
 /// <item>A graph map puts a room at its <c>MAP`POS</c>, in the backdrop's pixels, on one level.</item>
 /// </list>
+/// A region (a map zoned to this one) is placed as a room is on a coordinate or graph map; on a compass map only by its
+/// stored <c>MAP`COORDS</c>, since no exit leads to it.
 /// Screen y grows downward, so a map's y is negated: north is up.
 /// </summary>
 public sealed class MapLayout
@@ -40,7 +44,7 @@ public sealed class MapLayout
 
 	public MapDto Map { get; }
 
-	/// <summary>Every room, placed or not, by dbref.</summary>
+	/// <summary>Every room and region, placed or not, by dbref.</summary>
 	public IReadOnlyDictionary<string, MapPlacement> Rooms { get; }
 
 	/// <summary>The levels that have a placed room, lowest first; 0 alone when none has.</summary>
@@ -53,16 +57,21 @@ public sealed class MapLayout
 		Map = map;
 		var placed = map.Map.Kind switch
 		{
-			MapKinds.Graph => Graph(map),
+			MapKinds.Graph => Graph(map.Rooms),
 			MapKinds.Compass => Compass(map),
-			_ => Grid(map, map.Rooms),
+			_ => Grid(map.Rooms),
 		};
+		foreach (var (id, region) in IsGraph ? Graph(map.Regions) : Grid(map.Regions)) placed.TryAdd(id, region with { Region = true });
 		var rooms = new Dictionary<string, MapPlacement>(placed);
 		Levels = placed.Count == 0 ? [0] : [.. placed.Values.Select(p => p.Level).Distinct().Order()];
 		var ground = Levels.Contains(0) ? 0 : Levels[0];
 		foreach (var room in map.Rooms.Where(room => !rooms.ContainsKey(room.Id)))
 		{
 			rooms[room.Id] = new(room, 0, 0, Side(room, 0), Side(room, 1), NeighbourLevel(map, placed, room.Id) ?? ground, Placed: false);
+		}
+		foreach (var region in map.Regions.Where(region => !rooms.ContainsKey(region.Id)))
+		{
+			rooms[region.Id] = new(region, 0, 0, Side(region, 0), Side(region, 1), ground, Placed: false, Region: true);
 		}
 		Rooms = rooms;
 	}
@@ -115,10 +124,10 @@ public sealed class MapLayout
 	private double Side(MapRoomDto room, int axis) =>
 		(room.Size is { Length: > 1 } size ? size[axis] : 1) * (IsGraph ? (room.Size is null ? GraphRoom : 1) : Cell);
 
-	private Dictionary<string, MapPlacement> Graph(MapDto map)
+	private Dictionary<string, MapPlacement> Graph(IEnumerable<MapRoomDto> rooms)
 	{
 		var placed = new Dictionary<string, MapPlacement>();
-		foreach (var room in map.Rooms)
+		foreach (var room in rooms)
 		{
 			if (room.Position is not [var x, var y, ..]) continue;
 			var (width, height) = (Side(room, 0), Side(room, 1));
@@ -128,7 +137,7 @@ public sealed class MapLayout
 		return placed;
 	}
 
-	private Dictionary<string, MapPlacement> Grid(MapDto map, IEnumerable<MapRoomDto> rooms)
+	private Dictionary<string, MapPlacement> Grid(IEnumerable<MapRoomDto> rooms)
 	{
 		var placed = new Dictionary<string, MapPlacement>();
 		foreach (var room in rooms)
@@ -149,7 +158,7 @@ public sealed class MapLayout
 
 	private Dictionary<string, MapPlacement> Compass(MapDto map)
 	{
-		var placed = Grid(map, map.Rooms);
+		var placed = Grid(map.Rooms);
 		var cells = new Dictionary<(int X, int Y, int Z), string>();
 		var cellOf = new Dictionary<string, (int X, int Y, int Z)>();
 		foreach (var p in placed.Values.OrderBy(p => Number(p.Room.Id)))

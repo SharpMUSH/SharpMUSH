@@ -6548,4 +6548,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>Imagem</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Onde fica este mapa</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>Região {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Subir um nível</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Descer um nível</value>
+  </data>
 </root>

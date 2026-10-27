@@ -73,10 +73,29 @@
                 }
                 else
                 {
+                    @if (Trail() is { Count: > 0 } trail)
+                    {
+                        <nav class="map-trail" aria-label="@Loc["NavMapTrail"]">
+                            <ol>
+                                @foreach (var map in trail)
+                                {
+                                    <li><a href="@($"/map/{map.Id[1..]}")">@map.Name</a></li>
+                                }
+                                <li aria-current="page">@_layout.Map.Map.Name</li>
+                            </ol>
+                        </nav>
+                    }
                     @if (_layout.Levels.Count > 1)
                     {
-                        <TypeChips Items="@LevelChips" Selected="@_level.ToString(System.Globalization.CultureInfo.InvariantCulture)"
-                                   SelectedChanged="SelectLevel" AriaLabel="@Loc["NavMapLevels"]" />
+                        var at = _layout.Levels.ToList().IndexOf(_level);
+                        <div class="map-levels">
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ArrowDownward" AriaLabel="@Loc["NavMapLevelDown"]"
+                                           Disabled="@(at <= 0)" OnClick="() => StepLevel(-1)" />
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ArrowUpward" AriaLabel="@Loc["NavMapLevelUp"]"
+                                           Disabled="@(at >= _layout.Levels.Count - 1)" OnClick="() => StepLevel(1)" />
+                            <TypeChips Items="@LevelChips" Selected="@_level.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       SelectedChanged="SelectLevel" AriaLabel="@Loc["NavMapLevels"]" />
+                        </div>
                     }
                     @if (_layout.Map.Truncated)
                     {
@@ -160,6 +179,7 @@
                 _selected = map.Here;
                 _level = map.Here is { } here && _layout.Rooms.TryGetValue(here, out var room)
                     ? room.Level
+                    : map.Level is { } level && _layout.Levels.Contains(level) ? level
                     : _layout.Levels.Contains(0) ? 0 : _layout.Levels[0];
                 break;
             case ApiFailure failure:
@@ -180,8 +200,32 @@
     });
 
     private IReadOnlyList<(string Key, string Label)> LevelChips =>
-        _layout?.Levels.Select(level => (level.ToString(System.Globalization.CultureInfo.InvariantCulture),
-            Loc["NavMapLevel", level].Value)).ToList() ?? [];
+        _layout?.Levels.Select(level => (level.ToString(System.Globalization.CultureInfo.InvariantCulture), LevelName(level))).ToList() ?? [];
+
+    private string LevelName(int level) =>
+        _layout?.Map.LevelNames.TryGetValue(level, out var name) == true ? name : Loc["NavMapLevel", level].Value;
+
+    /// <summary>The level <paramref name="by"/> places above (or below) the one on show, among the levels that have rooms.</summary>
+    private void StepLevel(int by)
+    {
+        if (_layout is null) return;
+        var at = _layout.Levels.ToList().IndexOf(_level) + by;
+        if (at >= 0 && at < _layout.Levels.Count) _level = _layout.Levels[at];
+    }
+
+    /// <summary>The regions this map is inside, outermost first.</summary>
+    private List<MapSummaryDto> Trail()
+    {
+        var trail = new List<MapSummaryDto>();
+        if (_maps is null || _layout is null) return trail;
+        var byId = _maps.ToDictionary(map => map.Id);
+        for (var at = _parents.GetValueOrDefault(_layout.Map.Map.Id); at is not null && byId.TryGetValue(at, out var map);
+             at = _parents.GetValueOrDefault(at))
+        {
+            trail.Insert(0, map);
+        }
+        return trail;
+    }
 
     private void SelectLevel(string key)
     {

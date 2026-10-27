@@ -6548,4 +6548,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>Изображение</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Где находится эта карта</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>Регион {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Уровнем выше</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Уровнем ниже</value>
+  </data>
 </root>

@@ -6548,4 +6548,16 @@
   <data name="NavMapKindGraph" xml:space="preserve">
     <value>图片</value>
   </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>此地图所在位置</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>区域 {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>上一层</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>下一层</value>
+  </data>
 </root>

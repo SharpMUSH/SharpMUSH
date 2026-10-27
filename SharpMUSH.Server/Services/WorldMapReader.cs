@@ -23,9 +23,13 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const string KindAttribute = "MAP`KIND";
 	public const string WidthAttribute = "MAP`SIZE`W";
 	public const string HeightAttribute = "MAP`SIZE`H";
+	public const string LevelAttribute = "MAP`LEVEL";
 	public const int MaxMaps = 500;
 	public const int MaxRooms = 2000;
 	public const int MaxExits = 8000;
+
+	/// <summary>How many zones up from the viewer's room a region is looked for.</summary>
+	public const int MaxDepth = 32;
 
 	/// <summary>A room's cell on a coordinate or compass map.</summary>
 	public static readonly IReadOnlyList<string> Coordinates = ["MAP`COORDS`X", "MAP`COORDS`Y", "MAP`COORDS`Z"];
@@ -71,9 +75,19 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		var truncated = false;
 
 		var rooms = new List<(AnySharpObject Room, MapRoomDto Dto)>();
+		var regions = new List<MapRoomDto>();
 		await foreach (var member in mediator.CreateStream(new GetObjectsByZoneQuery(map.Object().DBRef), ct))
 		{
-			if (!string.Equals(member.Type, "ROOM", StringComparison.OrdinalIgnoreCase)) continue;
+			if (!string.Equals(member.Type, "ROOM", StringComparison.OrdinalIgnoreCase))
+			{
+				if (regions.Count < MaxMaps && member.DBRef != map.Object().DBRef
+					&& await MapAsync(viewer, member.DBRef.Number, ct) is { } region)
+				{
+					regions.Add(new($"#{member.DBRef.Number}", region.Object().Name, await NumbersAsync(region, region, position, ct),
+						Positive(await NumbersAsync(region, region, Size, ct))));
+				}
+				continue;
+			}
 			if (rooms.Count == MaxRooms)
 			{
 				truncated = true;
@@ -108,9 +122,49 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			}
 		}
 
-		var here = (await viewer.Where()).Object().DBRef.Number;
+		var where = (await viewer.Where()).Object();
+		var here = where.DBRef.Number;
 		return new MapDto(summary, Positive(await NumbersAsync(map, map, Size, ct)), [.. rooms.Select(entry => entry.Dto)], exits,
-			onMap.Contains(here) ? $"#{here}" : null, truncated);
+			onMap.Contains(here) ? $"#{here}" : null, truncated)
+		{
+			Regions = regions,
+			HereRegion = await HereRegionAsync(where, map, regions, ct),
+			Level = int.TryParse(await OwnValueAsync(map, map, LevelAttribute), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture,
+				out var level) ? level : null,
+			LevelNames = await LevelNamesAsync(map),
+		};
+	}
+
+	/// <summary>
+	/// The region of <paramref name="regions"/> that <paramref name="where"/> is inside: up its zone, and that zone's zone,
+	/// until one is zoned to <paramref name="map"/>. Null when its own zone is the map, or the chain never reaches it.
+	/// </summary>
+	private static async Task<string?> HereRegionAsync(SharpObject where, AnySharpObject map, List<MapRoomDto> regions,
+		CancellationToken ct)
+	{
+		string? inside = null;
+		var at = where;
+		for (var step = 0; step < MaxDepth && await at.Zone.WithCancellation(ct) is AnySharpObject zone; step++)
+		{
+			if (zone.Object().DBRef == map.Object().DBRef) return regions.Any(region => region.Id == inside) ? inside : null;
+			(inside, at) = ($"#{zone.Object().DBRef.Number}", zone.Object());
+		}
+		return null;
+	}
+
+	/// <summary>The names <paramref name="map"/> gives its levels, one <c>MAP`LEVEL`&lt;level&gt;</c> each; a blank one names nothing.</summary>
+	private async Task<IReadOnlyDictionary<int, string>> LevelNamesAsync(AnySharpObject map)
+	{
+		var names = new Dictionary<int, string>();
+		if (await attributes.GetAttributePatternAsync(map, map, $"{LevelAttribute}`*", checkParents: false,
+				IAttributeService.AttributePatternMode.Wildcard) is not SharpAttribute[] found) return names;
+		foreach (var attribute in found)
+		{
+			var name = attribute.Value.ToPlainText().Trim();
+			if (name.Length > 0 && int.TryParse(attribute.LongName.AsSpan(LevelAttribute.Length + 1), NumberStyles.AllowLeadingSign,
+					CultureInfo.InvariantCulture, out var level)) names[level] = name;
+		}
+		return names;
 	}
 
 	/// <summary>Object <paramref name="number"/> when it holds its own <c>MAP`KIND</c> naming a kind, and <paramref name="viewer"/> may see it.</summary>
