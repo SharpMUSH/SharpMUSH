@@ -10,6 +10,7 @@ the same installer, `install.sh`, which runs the stack in `compose.yml` from pub
 | DigitalOcean | Creates a Droplet from the 1-Click image | `digitalocean/` |
 | Fly.io | Runs `deploy/fly/launch.sh <app>`, which needs no checkout | `../fly/` (see its README) |
 | Railway | Deploys the template | `../railway/` (see its README) |
+| Zeabur | Deploys the template | `../zeabur/` (see its README) |
 
 Over SSH:
 

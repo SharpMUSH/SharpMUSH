@@ -1,0 +1,130 @@
+# yaml-language-server: $schema=https://schema.zeabur.app/template.json
+# SharpMUSH on Zeabur: the edge, the game server and the renderer as three services, one per image,
+# on the project's private network. See README.md beside this file.
+apiVersion: zeabur.com/v1
+kind: Template
+metadata:
+  name: SharpMUSH
+spec:
+  description: A MUSH server for text roleplaying games, with telnet and a web portal.
+  icon: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/SharpMUSH.Client/wwwroot/icon-192.png
+  tags:
+    - Game
+  variables:
+    - key: PUBLIC_DOMAIN
+      type: DOMAIN
+      name: Portal domain
+      description: The address of the game's web portal.
+  readme: |
+    # SharpMUSH
+
+    A MUSH server for text roleplaying games, with telnet and a web portal.
+
+    The template runs three services. `edge` holds every player's connection (the portal, telnet
+    and the message bus), `server` runs the game and keeps the world on its volume, and `renderer`
+    formats output for each client. Updating `server` or `renderer` drops nobody; updating `edge`
+    drops everyone connected.
+
+    After the first deploy, open the setup link printed in the `edge` service's log. Until setup is
+    finished, only that link reaches the portal and telnet is closed.
+  services:
+    - name: renderer
+      icon: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/SharpMUSH.Client/wwwroot/icon-192.png
+      template: PREBUILT_V2
+      spec:
+        source:
+          image: sharpmush/sharpmush-renderer:dev
+        ports:
+          # HTTP/2 without TLS, for the edge only. Declared as HTTP so that it gets no public
+          # forwarded address; no domain is bound to it.
+          - id: render
+            port: 5100
+            type: HTTP
+        env:
+          Rendering__Address:
+            default: http://renderer.zeabur.internal:5100
+
+    - name: edge
+      icon: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/SharpMUSH.Client/wwwroot/icon-192.png
+      template: PREBUILT_V2
+      domainKey:
+        - port: web
+          variable: PUBLIC_DOMAIN
+      dependencies:
+        - renderer
+      spec:
+        source:
+          image: sharpmush/sharpmush-edge:dev
+        ports:
+          - id: web
+            port: 8000
+            type: HTTP
+          # Telnet. Zeabur forwards a public host and port to it.
+          - id: telnet
+            port: 4201
+            type: TCP
+          # NATS, for the server only. It asks for no credentials, so it is declared as HTTP: a TCP
+          # port would get a public forwarded address. No domain is bound to it.
+          - id: nats
+            port: 4222
+            type: HTTP
+        volumes:
+          # NATS's store and the setup guard's state.
+          - id: data
+            dir: /data
+        env:
+          SHARPMUSH_DOMAIN:
+            default: ${ZEABUR_WEB_DOMAIN}
+          # Port 8000 is reached only through Zeabur's proxy, which names the visitor and says the
+          # visit came over HTTPS.
+          SHARPMUSH_TRUSTED_PROXIES:
+            default: 0.0.0.0/0 ::/0
+          SHARPMUSH_SERVER_ADDRESS:
+            default: server.zeabur.internal:8080
+          Rendering__Address:
+            default: http://renderer.zeabur.internal:5100
+        instructions:
+          - type: TEXT
+            title: Telnet
+            content: ${PORT_FORWARDED_HOSTNAME} port ${TELNET_PORT_FORWARDED_PORT}, once setup is finished
+          - type: TEXT
+            title: Setup
+            content: Open the setup link printed in this service's log.
+
+    - name: server
+      icon: https://raw.githubusercontent.com/SharpMUSH/SharpMUSH/main/SharpMUSH.Client/wwwroot/icon-192.png
+      template: PREBUILT_V2
+      dependencies:
+        - edge
+      spec:
+        source:
+          image: sharpmush/sharpmush-server:dev
+        ports:
+          # The game server, for the edge only. No domain is bound to it.
+          - id: game
+            port: 8080
+            type: HTTP
+        volumes:
+          # The world, its backups and the wiki's files.
+          - id: data
+            dir: /data
+        env:
+          NATS_URL:
+            default: nats://edge.zeabur.internal:4222
+          # Only the edge reaches it, from a private address that changes with each deploy.
+          ForwardedHeaders__KnownNetworks__0:
+            default: 0.0.0.0/0
+          ForwardedHeaders__KnownNetworks__1:
+            default: ::/0
+          SHARPMUSH_LIGHTNING_PATH:
+            default: /data/lightning
+          SHARPMUSH_LIGHTNING_SYNC:
+            default: periodic
+          SHARPMUSH_BACKUP_PATH:
+            default: /data/backup
+          SHARPMUSH_BACKUP_INTERVAL:
+            default: 6h
+          SHARPMUSH_BACKUP_KEEP:
+            default: "2"
+          Wiki__AssetRoot:
+            default: /data/wiki-assets
