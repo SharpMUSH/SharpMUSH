@@ -67,10 +67,13 @@ chown app:app "$STATE/guard/guard.caddy"
 
 setup_needed() { # 0: setup is pending, 1: finished, 2: no answer. Asked of the server directly,
 	# which trusts its proxy to say the request came over HTTPS.
-	local reply
-	reply=$(timeout 5 bash -c 'exec 3<>"/dev/tcp/${SHARPMUSH_SERVER_ADDRESS%:*}/${SHARPMUSH_SERVER_ADDRESS##*:}" &&
+	# /dev/tcp takes an IPv6 address without its brackets.
+	local reply host=${SHARPMUSH_SERVER_ADDRESS%:*}
+	host=${host#[}
+	host=${host%]}
+	reply=$(timeout 5 bash -c 'exec 3<>"/dev/tcp/$1/$2" &&
 		printf "GET /api/setup/status HTTP/1.0\r\nHost: localhost\r\nX-Forwarded-Proto: https\r\n\r\n" >&3 &&
-		cat <&3' 2>/dev/null) || true
+		cat <&3' _ "$host" "${SHARPMUSH_SERVER_ADDRESS##*:}" 2>/dev/null) || true
 	case "$reply" in
 		*'"needsSetup":false'*) return 1 ;;
 		*'"needsSetup":true'*) return 0 ;;
