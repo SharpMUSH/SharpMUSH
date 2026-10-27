@@ -28,7 +28,7 @@ public static class RenderingEndpoints
 	public static SocketsHttpHandler CreateHandler(RenderingEndpoint endpoint) => endpoint switch
 	{
 		RenderSocket socket => new SocketsHttpHandler { ConnectCallback = (_, ct) => ConnectAsync(socket.Path, ct) },
-		RenderAddress => new SocketsHttpHandler(),
+		RenderAddress => new SocketsHttpHandler { UseProxy = false },
 	};
 
 	public static Uri BaseAddress(RenderingEndpoint endpoint) => endpoint switch
