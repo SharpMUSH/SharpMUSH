@@ -18,10 +18,12 @@ public static class MapTree
 	private static bool InLoop(Dictionary<string, string?> parents, string id)
 	{
 		var seen = new HashSet<string>();
-		for (var at = parents[id]; at is not null && parents.ContainsKey(at); at = parents[at])
+		var at = parents[id];
+		while (at is not null && parents.TryGetValue(at, out var next))
 		{
 			if (at == id) return true;
 			if (!seen.Add(at)) return false;
+			at = next;
 		}
 		return false;
 	}
