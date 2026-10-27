@@ -1321,6 +1321,12 @@
         "lookup": "compatibility arguments tinymux s forms of shared functions",
         "heading": "TinyMUX\u0027s forms of shared functions",
         "aliases": []
+      },
+      {
+        "id": "rhostmush-s-forms-of-shared-functions",
+        "lookup": "compatibility arguments rhostmush s forms of shared functions",
+        "heading": "RhostMUSH\u0027s forms of shared functions",
+        "aliases": []
       }
     ],
     "file": "compatibility-arguments.md"
@@ -1601,6 +1607,12 @@
         "aliases": []
       },
       {
+        "id": "functions-from-tinymux-and-rhostmush",
+        "lookup": "compatibility names functions from tinymux and rhostmush",
+        "heading": "Functions from TinyMUX and RhostMUSH",
+        "aliases": []
+      },
+      {
         "id": "sharpmush-only-commands",
         "lookup": "compatibility names sharpmush only commands",
         "heading": "SharpMUSH-only commands",
@@ -1772,33 +1784,15 @@
     "aliases": [],
     "sections": [
       {
-        "id": "command-scheduling-queued-or-inline-1132",
-        "lookup": "compatibility unresolved command scheduling queued or inline 1132",
-        "heading": "\u0060$\u0060-command scheduling: queued or inline (#1132)",
+        "id": "empty-on-a-sticky-item",
+        "lookup": "compatibility unresolved empty on a sticky item",
+        "heading": "\u0060EMPTY\u0060 on a \u0060STICKY\u0060 item",
         "aliases": []
       },
       {
-        "id": "connection-hooks-run-inline-1006-item-14",
-        "lookup": "compatibility unresolved connection hooks run inline 1006 item 14",
-        "heading": "Connection hooks run inline (#1006 item 14)",
-        "aliases": []
-      },
-      {
-        "id": "halt-and-players-1006-items-1-and-2",
-        "lookup": "compatibility unresolved halt and players 1006 items 1 and 2",
-        "heading": "HALT and players (#1006 items 1 and 2)",
-        "aliases": []
-      },
-      {
-        "id": "empty-on-a-sticky-item-1006-item-4",
-        "lookup": "compatibility unresolved empty on a sticky item 1006 item 4",
-        "heading": "\u0060EMPTY\u0060 on a \u0060STICKY\u0060 item (#1006 item 4)",
-        "aliases": []
-      },
-      {
-        "id": "queue-fairness-between-owners-1006-item-15",
-        "lookup": "compatibility unresolved queue fairness between owners 1006 item 15",
-        "heading": "Queue fairness between owners (#1006 item 15)",
+        "id": "queue-fairness-between-owners",
+        "lookup": "compatibility unresolved queue fairness between owners",
+        "heading": "Queue fairness between owners",
         "aliases": []
       },
       {
