@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using SharpMUSH.SocketServer.Services;
 
 namespace SharpMUSH.Tests.ConnectionServer;
 
@@ -12,11 +13,11 @@ public class RenderingWorkerHealthTests
 		await using var worker = SharpMUSH.RenderingWorker.Program.CreateApplication(TestDiagnostics.HostArguments, socketPath);
 		try
 		{
-			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(socketPath)).IsFalse();
+			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(new RenderSocket(socketPath))).IsFalse();
 			await worker.StartAsync();
-			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(socketPath)).IsTrue();
+			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(new RenderSocket(socketPath))).IsTrue();
 			await worker.StopAsync();
-			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(socketPath)).IsFalse();
+			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(new RenderSocket(socketPath))).IsFalse();
 		}
 		finally
 		{
@@ -34,7 +35,7 @@ public class RenderingWorkerHealthTests
 		{
 			listener.Bind(new UnixDomainSocketEndPoint(socketPath));
 			listener.Listen(1);
-			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(socketPath)
+			await Assert.That(await SharpMUSH.RenderingWorker.Program.IsHealthyAsync(new RenderSocket(socketPath))
 				.WaitAsync(TimeSpan.FromSeconds(10))).IsFalse();
 		}
 		finally

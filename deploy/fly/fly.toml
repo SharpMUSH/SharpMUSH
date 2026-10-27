@@ -4,9 +4,9 @@
 
 # Every deploy pulls the newest build of this tag and restarts the machine, dropping connected
 # players. Nothing deploys on its own. Once SharpMUSH has releases, a release tag
-# (sharpmush-fly:1.0.0) holds the game on one version until you change it here.
+# (sharpmush-allinone:1.0.0) holds the game on one version until you change it here.
 [build]
-  image = "sharpmush/sharpmush-fly:dev"
+  image = "sharpmush/sharpmush-allinone:dev"
 
 [env]
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the

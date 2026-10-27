@@ -36,7 +36,8 @@ The first release, 1.0.0, is being prepared. See [CHANGELOG.md](./CHANGELOG.md) 
 SharpMUSH is available as Docker images on DockerHub:
 - `sharpmush/sharpmush-server` - Main server
 - `sharpmush/sharpmush-socketserver` - Stable telnet/WebSocket socket owner
-- `sharpmush/sharpmush-connectionserver` - Replaceable rendering worker
+- `sharpmush/sharpmush-renderer` - Replaceable rendering worker
+- `sharpmush/sharpmush-allinone` - All three in one image, for hosts that run one container per app (Fly.io, Railway)
 
 For information on setting up automatic DockerHub publishing when new versions are released, see [DockerHub Setup Guide](./docs/DOCKERHUB_SETUP.md).
 

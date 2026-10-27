@@ -1,0 +1,25 @@
+# SharpMUSH on Fly.io, split: the rendering worker. launch.sh saves this file as
+# <game>.renderer.fly.toml, filling in the game's name, and deploys it as the app
+# <game>-renderer. It keeps nothing and has no public address; the edge reaches it on the game's
+# private network.
+#
+# Deploying this app restarts the renderer without dropping anyone.
+[build]
+  image = "sharpmush/sharpmush-allinone:dev"
+
+[env]
+  SHARPMUSH_ROLE = "renderer"
+  # The renderer listens on this address's port.
+  Rendering__Address = "http://{game}-renderer.internal:5100"
+
+[checks]
+  [checks.listening]
+    type = "tcp"
+    port = 5100
+    grace_period = "30s"
+    interval = "15s"
+    timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

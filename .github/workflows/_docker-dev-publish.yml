@@ -79,7 +79,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push ConnectionServer rendering worker (dev)
+      - name: Build and push rendering worker (dev)
         id: push_conn
         if: >-
           steps.changes.outputs.connectionserver == 'true' ||
@@ -90,9 +90,9 @@ jobs:
           context: .
           file: ./SharpMUSH.RenderingWorker/Dockerfile
           push: true
-          tags: sharpmush/sharpmush-connectionserver:dev
+          tags: sharpmush/sharpmush-renderer:dev
           labels: |
-            org.opencontainers.image.title=SharpMUSH ConnectionServer
+            org.opencontainers.image.title=SharpMUSH Renderer
             org.opencontainers.image.description=Rendering worker for SharpMUSH (dev build)
             org.opencontainers.image.version=dev
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -122,7 +122,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       # Built from the three images on Docker Hub, so it comes after them and follows any of them.
-      - name: Build and push all-in-one Fly.io image (dev)
+      - name: Build and push all-in-one image (dev)
         id: push_fly
         if: >-
           steps.changes.outputs.fly == 'true' ||
@@ -137,9 +137,9 @@ jobs:
           file: ./deploy/fly/Dockerfile
           push: true
           pull: true
-          tags: sharpmush/sharpmush-fly:dev
+          tags: sharpmush/sharpmush-allinone:dev
           labels: |
-            org.opencontainers.image.title=SharpMUSH for Fly.io
+            org.opencontainers.image.title=SharpMUSH all-in-one
             org.opencontainers.image.description=SharpMUSH in one container, for one-container hosts (dev build)
             org.opencontainers.image.version=dev
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -156,9 +156,9 @@ jobs:
               echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
             fi
             if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
-              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — **pushed**"
+              echo "- \`sharpmush/sharpmush-renderer:dev\` — **pushed**"
             else
-              echo "- \`sharpmush/sharpmush-connectionserver:dev\` — not published (inputs unchanged, or not selected on a manual run); rendering worker unchanged"
+              echo "- \`sharpmush/sharpmush-renderer:dev\` — not published (inputs unchanged, or not selected on a manual run); rendering worker unchanged"
             fi
             if [ "${{ steps.push_socket.outcome }}" = "success" ]; then
               echo '- `sharpmush/sharpmush-socketserver:dev` — **pushed; replacing this image drops live sockets**'
@@ -166,9 +166,9 @@ jobs:
               echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
             fi
             if [ "${{ steps.push_fly.outcome }}" = "success" ]; then
-              echo '- `sharpmush/sharpmush-fly:dev` — **pushed; nothing updates to it until its operator deploys it**'
+              echo '- `sharpmush/sharpmush-allinone:dev` — **pushed; nothing updates to it until its operator deploys it**'
             else
-              echo '- `sharpmush/sharpmush-fly:dev` — not published'
+              echo '- `sharpmush/sharpmush-allinone:dev` — not published'
             fi
             echo ""
             echo "**Commit:** ${{ github.sha }}"

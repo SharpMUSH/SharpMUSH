@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Json;
-using System.Net.Sockets;
 using SharpMUSH.SocketServer.Models;
 
 namespace SharpMUSH.SocketServer.Services;
@@ -22,27 +21,12 @@ public sealed class RemoteOutputRenderer : IMarkupOutputRenderer, IOutputTransfo
 		_mssp = mssp;
 		_settings = settings;
 		_stopping = lifetime.ApplicationStopping;
-		var socketPath = configuration["Rendering:SocketPath"] ?? "/run/sharpmush/render.sock";
-		_client = new HttpClient(new SocketsHttpHandler
+		var endpoint = RenderingEndpoints.FromConfiguration(configuration);
+		var handler = RenderingEndpoints.CreateHandler(endpoint);
+		handler.EnableMultipleHttp2Connections = false;
+		_client = new HttpClient(handler)
 		{
-			ConnectCallback = async (_, ct) =>
-			{
-				var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-				try
-				{
-					await socket.ConnectAsync(new UnixDomainSocketEndPoint(socketPath), ct);
-					return new NetworkStream(socket, ownsSocket: true);
-				}
-				catch
-				{
-					socket.Dispose();
-					throw;
-				}
-			},
-			EnableMultipleHttp2Connections = false
-		})
-		{
-			BaseAddress = new Uri("http://renderer"),
+			BaseAddress = RenderingEndpoints.BaseAddress(endpoint),
 			DefaultRequestVersion = HttpVersion.Version20,
 			DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact,
 			Timeout = Timeout.InfiniteTimeSpan
