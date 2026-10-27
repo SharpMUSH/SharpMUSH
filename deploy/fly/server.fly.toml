@@ -8,10 +8,6 @@
 
 [env]
   NATS_URL = "nats://{game}.internal:4222"
-  # HTTP only: the edge is its proxy, and Fly's private network carries nothing else to it.
-  ASPNETCORE_URLS = "http://+:8080"
-  ASPNETCORE_Kestrel__Certificates__Default__Path = ""
-  ASPNETCORE_Kestrel__Certificates__Default__Password = ""
   # The edge reaches it from a private address that changes whenever its machine is replaced, and
   # nothing else can reach it.
   ForwardedHeaders__KnownNetworks__0 = "0.0.0.0/0"
