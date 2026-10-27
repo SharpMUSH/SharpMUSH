@@ -374,7 +374,10 @@ public partial class Commands : ICommandRestrictionApplier
 		return new CallState(name);
 	}
 
-	/// <summary><c>alias_command</c>: a second name for an existing command, which must not already be taken.</summary>
+	/// <summary>
+	/// <c>alias_command</c>: a second name for an existing command, which must not already be taken. A
+	/// <paramref name="name"/> with switches (<c>@FORCE/INPLACE</c>) gives an alias that runs the command with them.
+	/// </summary>
 	private async ValueTask<Option<CallState>> AliasCommandAsync(AnySharpObject executor, string name, string alias, bool quiet)
 	{
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
@@ -392,7 +395,9 @@ public partial class Commands : ICommandRestrictionApplier
 		bool aliased;
 		lock (_commandTableLock)
 		{
-			aliased = CommandLibrary.TryGetValue(name, out var command) && CommandLibrary.TryAdd(alias, command);
+			aliased = name.Contains('/')
+				? SwitchAliasDefinition(name) is { } carrying && CommandLibrary.TryAdd(alias, (carrying, true))
+				: CommandLibrary.TryGetValue(name, out var command) && CommandLibrary.TryAdd(alias, command);
 			CommandTrie.Invalidate(CommandLibrary);
 		}
 
