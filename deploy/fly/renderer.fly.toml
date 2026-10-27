@@ -5,7 +5,7 @@
 #
 # Deploying this app restarts the renderer without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-fly:dev"
+  image = "sharpmush/sharpmush-allinone:dev"
 
 [env]
   SHARPMUSH_ROLE = "renderer"

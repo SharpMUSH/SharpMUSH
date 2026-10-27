@@ -3,8 +3,8 @@
 Fly runs one container per machine, and a volume attaches to one machine. `Dockerfile` copies the
 published server, connection server and renderer images, NATS and Caddy into one image, and
 `start.sh` starts the processes its role names and stops the container if any of them stops. CI
-publishes it as `sharpmush/sharpmush-fly:dev`, rebuilt whenever one of the images it copies is, so
-launching needs no checkout. Railway runs the same image (`deploy/railway/`).
+publishes it as `sharpmush/sharpmush-allinone:dev`, rebuilt whenever one of the images it copies
+is, so launching needs no checkout. Railway runs the same image (`deploy/railway/`).
 
 ## Roles
 

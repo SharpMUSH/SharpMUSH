@@ -1,14 +1,14 @@
 # SharpMUSH on Railway
 
-Railway runs the same image as Fly (`sharpmush/sharpmush-fly`, built from `deploy/fly/Dockerfile`)
-as three services, one per role (`deploy/fly/README.md`, "Roles"): the edge holds every player's
-socket, so updating the server or the renderer drops nobody. A Railway template turns the settings
-below into a **Deploy on Railway** button; Railway templates are made in a Railway account's
-template composer, not from a file in this repository.
+Railway runs the same image as Fly (`sharpmush/sharpmush-allinone`, built from
+`deploy/fly/Dockerfile`) as three services, one per role (`deploy/fly/README.md`, "Roles"): the
+edge holds every player's socket, so updating the server or the renderer drops nobody. A Railway
+template turns the settings below into a **Deploy on Railway** button; Railway templates are made
+in a Railway account's template composer, not from a file in this repository.
 
 ## Template settings
 
-Three services in one project, each from the Docker image `sharpmush/sharpmush-fly:dev`, with
+Three services in one project, each from the Docker image `sharpmush/sharpmush-allinone:dev`, with
 automatic image updates off. They reach each other on the project's private network, under the
 names Railway gives them (`<service>.railway.internal`); the `${{...}}` values below are Railway
 reference variables and fill those names in.
