@@ -9,6 +9,7 @@
 @create Revolver
 @use Revolver=You pull the trigger.
 @ause Revolver=POSE fires into the air.
+::until fires into the air.
 use revolver
 
 ::case speech.contained  a carried object's pose and speech reach its holder
