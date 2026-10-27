@@ -105,9 +105,9 @@ public_addresses() {
 	grep -q 'v6' <<<"$ips" || "$fly" ips allocate-v6 --app "$app"
 }
 
-# deploy <app> <config>: one machine, since a volume can be attached to only one.
+# deploy <app> <config> [flag...]: one machine, since a volume can be attached to only one.
 deploy() {
-	"$fly" deploy --app "$1" --config "$2" --primary-region "$region" --ha=false
+	"$fly" deploy --app "$1" --config "$2" --primary-region "$region" --ha=false "${@:3}"
 }
 
 launch_single() {
@@ -131,11 +131,18 @@ launch_split() {
 	create_volume "$app-server" sharpmush_data 10
 	public_addresses
 
+	# A new game's edge comes first: the server waits for its NATS before it answers. The edge's own
+	# health check asks the server, so it is not waited for.
+	local fresh=false
+	if [ -z "$("$fly" machines list --app "$app" --quiet)" ]; then
+		fresh=true
+		deploy "$app" "$app.edge.fly.toml" --detach
+	fi
 	deploy "$app-server" "$app.server.fly.toml"
 	deploy "$app-renderer" "$app.renderer.fly.toml"
-	if [ "$update_edge" = true ] || [ -z "$("$fly" machines list --app "$app" --quiet)" ]; then
+	if [ "$fresh" = false ] && [ "$update_edge" = true ]; then
 		deploy "$app" "$app.edge.fly.toml"
-	else
+	elif [ "$fresh" = false ]; then
 		echo "The edge was left running, so nobody was dropped. --update-edge updates it too, dropping everyone."
 	fi
 }

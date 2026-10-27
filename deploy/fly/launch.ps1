@@ -85,8 +85,8 @@ function New-PublicAddresses {
 }
 
 # One machine, since a volume can be attached to only one.
-function Invoke-Deploy([string]$Name, [string]$Config) {
-	Invoke-Fly deploy --app $Name --config $Config --primary-region $Region --ha=false
+function Invoke-Deploy([string]$Name, [string]$Config, [string[]]$Flags = @()) {
+	Invoke-Fly deploy --app $Name --config $Config --primary-region $Region --ha=false @Flags
 }
 
 # A game already launched keeps its layout.
@@ -118,12 +118,14 @@ else {
 	New-Volume "$App-server" sharpmush_data 10
 	New-PublicAddresses
 
+	# A new game's edge comes first: the server waits for its NATS before it answers. The edge's own
+	# health check asks the server, so it is not waited for.
+	$fresh = -not (Invoke-Fly machines list --app $App --quiet | Out-String).Trim()
+	if ($fresh) { Invoke-Deploy $App $edgeConfig @('--detach') }
 	Invoke-Deploy "$App-server" "$App.server.fly.toml"
 	Invoke-Deploy "$App-renderer" "$App.renderer.fly.toml"
-	if ($UpdateEdge -or -not (Invoke-Fly machines list --app $App --quiet | Out-String).Trim()) {
-		Invoke-Deploy $App $edgeConfig
-	}
-	else {
+	if (-not $fresh -and $UpdateEdge) { Invoke-Deploy $App $edgeConfig }
+	elseif (-not $fresh) {
 		Write-Host 'The edge was left running, so nobody was dropped. -UpdateEdge updates it too, dropping everyone.'
 	}
 }
