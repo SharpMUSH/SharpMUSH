@@ -47,7 +47,7 @@ my-game`), so no other app in the Fly organization can reach the parts that ask 
 
 | App | Image | Settings | Machine | Volume | Public |
 |---|---|---|---|---|---|
-| `my-game` | `sharpmush-edge` | `my-game.edge.fly.toml` | shared-cpu-1x, 1 GB | `sharpmush_edge`, 1 GB | portal, telnet |
+| `my-game` | `sharpmush-edge` | `my-game.edge.fly.toml` | shared-cpu-1x, 1 GB | `sharpmush_edge`, 4 GB | portal, telnet |
 | `my-game-server` | `sharpmush-server` | `my-game.server.fly.toml` | shared-cpu-2x, 2 GB | `sharpmush_data`, 10 GB | no |
 | `my-game-renderer` | `sharpmush-renderer` | `my-game.renderer.fly.toml` | shared-cpu-1x, 512 MB | none | no |
 

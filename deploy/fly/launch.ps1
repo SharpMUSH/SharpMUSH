@@ -114,7 +114,7 @@ else {
 	New-App $App $App
 	New-App "$App-server" $App
 	New-App "$App-renderer" $App
-	New-Volume $App sharpmush_edge 1
+	New-Volume $App sharpmush_edge 4
 	New-Volume "$App-server" sharpmush_data 10
 	New-PublicAddresses
 

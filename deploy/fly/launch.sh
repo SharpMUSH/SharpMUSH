@@ -127,7 +127,7 @@ launch_split() {
 	create_app "$app" "$app"
 	create_app "$app-server" "$app"
 	create_app "$app-renderer" "$app"
-	create_volume "$app" sharpmush_edge 1
+	create_volume "$app" sharpmush_edge 4
 	create_volume "$app-server" sharpmush_data 10
 	public_addresses
 
