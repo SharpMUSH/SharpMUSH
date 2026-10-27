@@ -1,7 +1,7 @@
 format: "1.16"
 package: radio
 title: "Radio"
-version: 1.6.1
+version: 1.7.0
 authors: [SharpMUSH]
 description: "Radio: +radio frequencies players tune in to, speak on and recall, with moderators, admins and their own locks. Built on @feed: the engine keeps each frequency's lines and listeners; this package keeps the names, lists and rules."
 license: MIT
@@ -210,6 +210,9 @@ objects:
       # switch of digits, the page asked for), cmd_switch (the switches without it), cmd_argument, cmd_equals (1 when
       # it has an =), cmd_left and cmd_right (either side of the =), cmd_route (the INC` routine to run) and
       # viewer_key (where the player's settings are filed).
+      # %0 how many attributes a write may add to {{radio}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM: |-
+        lte(add(nattr({{radio}}/**),%0),config(max_attrs_per_obj))
       FUN`COMMAND`PARSE: |-
         setqm(cmd_switches,lcstr(after(%0,/)),
         cmd_page,if(regmatch(last(%q<cmd_switches>,/),^\[0-9\]+$),last(%q<cmd_switches>,/)),
@@ -356,11 +359,11 @@ objects:
       # /title, /alterego and /color set one of the player's own settings on a frequency; nothing after the
       # = clears it.
       INC`TITLE: |-
-        @include {{radio}}/INC`NEED`JOINED; think setq(title_length,u({{radio}}/FUN`CONFIG,TITLE-LENGTH)); @assert lte(strlen(%q<cmd_right>),%q<title_length>)=@pemit %#=notice(RADIO,A title is up to %q<title_length> characters.,warn); &DATA`PLAYER`%q<viewer_key>`TITLE`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,if(strlen(%q<cmd_right>),Your title on [u({{radio}}/FUN`NAME,%q<frequency_id>)] is now %q<cmd_right>.,You have no title on [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.),ok)
+        @include {{radio}}/INC`NEED`JOINED; @assert u({{radio}}/FUN`ROOM,3)=@pemit %#=notice(RADIO,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); think setq(title_length,u({{radio}}/FUN`CONFIG,TITLE-LENGTH)); @assert lte(strlen(%q<cmd_right>),%q<title_length>)=@pemit %#=notice(RADIO,A title is up to %q<title_length> characters.,warn); &DATA`PLAYER`%q<viewer_key>`TITLE`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,if(strlen(%q<cmd_right>),Your title on [u({{radio}}/FUN`NAME,%q<frequency_id>)] is now %q<cmd_right>.,You have no title on [u({{radio}}/FUN`NAME,%q<frequency_id>)] now.),ok)
       INC`ALTEREGO: |-
-        @include {{radio}}/INC`NEED`JOINED; think setq(alterego_length,u({{radio}}/FUN`CONFIG,ALTEREGO-LENGTH)); @assert cand(lte(strlen(%q<cmd_right>),%q<alterego_length>),not(strmatch(%q<cmd_right>,*/*)))=@pemit %#=notice(RADIO,An alterego is up to %q<alterego_length> characters with no /.,warn); &DATA`PLAYER`%q<viewer_key>`ALTEREGO`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,if(strlen(%q<cmd_right>),You speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)] as %q<cmd_right> now.,You speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)] under your own name now.),ok)
+        @include {{radio}}/INC`NEED`JOINED; @assert u({{radio}}/FUN`ROOM,3)=@pemit %#=notice(RADIO,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); think setq(alterego_length,u({{radio}}/FUN`CONFIG,ALTEREGO-LENGTH)); @assert cand(lte(strlen(%q<cmd_right>),%q<alterego_length>),not(strmatch(%q<cmd_right>,*/*)))=@pemit %#=notice(RADIO,An alterego is up to %q<alterego_length> characters with no /.,warn); &DATA`PLAYER`%q<viewer_key>`ALTEREGO`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,if(strlen(%q<cmd_right>),You speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)] as %q<cmd_right> now.,You speak on [u({{radio}}/FUN`NAME,%q<frequency_id>)] under your own name now.),ok)
       INC`COLOR: |-
-        @include {{radio}}/INC`NEED`JOINED; @assert cor(not(strlen(%q<cmd_right>)),u({{radio}}/FUN`COLOUR`VALID,%q<cmd_right>))=@pemit %#=notice(RADIO,'%q<cmd_right>' is not a colour. Use a theme colour such as info or success%, or ansi() codes such as hg or +red.,warn); &DATA`PLAYER`%q<viewer_key>`COLOR`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,You see [u({{radio}}/FUN`PAINT,firstof(%q<cmd_right>,u({{radio}}/FUN`CONFIG,COLOR)),u({{radio}}/FUN`NAME,%q<frequency_id>))] like this now.,ok)
+        @include {{radio}}/INC`NEED`JOINED; @assert u({{radio}}/FUN`ROOM,3)=@pemit %#=notice(RADIO,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); @assert cor(not(strlen(%q<cmd_right>)),u({{radio}}/FUN`COLOUR`VALID,%q<cmd_right>))=@pemit %#=notice(RADIO,'%q<cmd_right>' is not a colour. Use a theme colour such as info or success%, or ansi() codes such as hg or +red.,warn); &DATA`PLAYER`%q<viewer_key>`COLOR`%q<frequency_id> {{radio}}=%q<cmd_right>; @pemit %#=notice(RADIO,You see [u({{radio}}/FUN`PAINT,firstof(%q<cmd_right>,u({{radio}}/FUN`CONFIG,COLOR)),u({{radio}}/FUN`NAME,%q<frequency_id>))] like this now.,ok)
       INC`EXAMINE: |-
         @include {{radio}}/INC`NEED`ANY; @assert u({{radio}}/FUN`CAN`JOIN,%q<frequency_id>,%#)=@pemit %#=notice(RADIO,You may not tune in to [u({{radio}}/FUN`NAME,%q<frequency_id>)].,error); @pemit %#=u({{radio}}/FUN`SCREEN`EXAMINE)
       # %q<frequency_id> as the reader sees it, with its locks for an admin.

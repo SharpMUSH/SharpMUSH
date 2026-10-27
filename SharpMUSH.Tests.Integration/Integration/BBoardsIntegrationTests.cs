@@ -564,12 +564,13 @@ public partial class BBoardsIntegrationTests
 			var mira = await Player("BbLongM");
 			var board = await Board(admin, "BbLong");
 			var post = await Post(admin, board, "Long", "Answer at length.");
-			var line = new string('a', 5000);
+			var limit = int.Parse(await God("think config(max_attribute_value_length)"));
+			var line = new string('a', limit / 2 + 1);
 
 			await TypedUntil(mira, $"+bbreader {post}", "Answer at length.");
 			await TypedUntil(mira, "c", "Every line is text now.");
 			await Typed(mira, line);
-			// The two lines together pass the 8192-byte attribute limit.
+			// The two lines together pass the attribute limit.
 			await TypedUntil(mira, line, "so it is left out.");
 			await TypedUntil(mira, ".toss", "Dropped.");
 			await TypedUntil(mira, "q", "Left the reader.");

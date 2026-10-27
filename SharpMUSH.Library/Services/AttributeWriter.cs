@@ -365,6 +365,11 @@ internal sealed class AttributeWriter(
 			return new Error<string>(ErrorMessages.Returns.AttrValueTooLong);
 		}
 
+		if (!write.IsAttributeCopy && await TooManyAttributesAsync(write, plan))
+		{
+			return new Error<string>(ErrorMessages.Returns.TooManyAttributes);
+		}
+
 		if (!write.IsAttributeCopy && ForwardListRestriction.Applies(fullName)
 				&& await ForwardListRestriction.CheckAsync(mediator, permissionService, write.Obj, fullName,
 					value.ToPlainText()) is Error<string> badList)
@@ -377,6 +382,18 @@ internal sealed class AttributeWriter(
 			MString stored => await StoreAsync(write, plan, stored),
 			Error<string> refused => refused
 		};
+	}
+
+	/// <summary>
+	/// PennMUSH's can_create_attr (src/attrib.c:489-494): the levels this write creates may not take the object past
+	/// <c>max_attrs_per_obj</c>. A write that only replaces values creates nothing and is never refused.
+	/// </summary>
+	private async ValueTask<bool> TooManyAttributesAsync(AttributeWrite write, WritePlan plan)
+	{
+		var created = write.AttrPath.Length - plan.CreatedFrom;
+		return created > 0
+			&& await mediator.Send(new GetAttributeCountQuery(write.Obj.Object().DBRef)) + created
+				> configuration.CurrentValue.Limit.MaxAttributesPerObj;
 	}
 
 	/// <summary>

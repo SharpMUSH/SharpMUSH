@@ -1,7 +1,7 @@
 format: "1.16"
 package: status
 title: "Roleplay status"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Status: +status says whether you are looking for roleplay (LFRP) or glad to be asked (RP_OK), shown in +who. The game keeps the list of statuses."
 license: MIT
@@ -227,6 +227,11 @@ objects:
       # cmd_switch_list (every switch but a page), page_given and page_number (a last switch of digits, else 1), cmd_switch (the
       # one other switch), cmd_argument, cmd_has_equals, cmd_left_side and cmd_right_side around the first =,
       # cmd_route (the INC` routine to run), page_size (rows on one page), viewer_objid and viewer_key.
+      # %0 how many attributes a write may add to {{store}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{store}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_word,lcstr(%0),
@@ -383,7 +388,7 @@ objects:
       # loses its line, note and place first.
       INC`STATUS`TOUCH:
         value: |-
-          @if cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),comp(get({{store}}/PLAYER`%q<viewer_key>`NAME),%q<status_name>))={@include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>}; &PLAYER`%q<viewer_key> {{store}}=%q<viewer_objid>; &PLAYER`%q<viewer_key>`NAME {{store}}=%q<status_name>; &PLAYER`%q<viewer_key>`SET {{store}}=secs(); &PLAYER`%q<viewer_key>`UNTIL {{store}}=u(%!/FUN`STATUS`UNTIL,%q<status_name>)
+          @assert u(%!/FUN`ROOM,6)=@pemit %#=notice(STATUS,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); @if cor(not(u(%!/FUN`STATUS`ACTIVE,%q<viewer_key>)),comp(get({{store}}/PLAYER`%q<viewer_key>`NAME),%q<status_name>))={@include/args %!/INC`STATUS`CLEAR=key,%q<viewer_key>}; &PLAYER`%q<viewer_key> {{store}}=%q<viewer_objid>; &PLAYER`%q<viewer_key>`NAME {{store}}=%q<status_name>; &PLAYER`%q<viewer_key>`SET {{store}}=secs(); &PLAYER`%q<viewer_key>`UNTIL {{store}}=u(%!/FUN`STATUS`UNTIL,%q<status_name>)
         flags: [cmdsyntax]
       # Clears the status filed under %<key>, leaves first.
       INC`STATUS`CLEAR:

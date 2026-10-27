@@ -25,6 +25,9 @@ public interface IAttributeStore
 	/// </summary>
 	IAsyncEnumerable<SharpAttribute> GetDiscoveryAttributesAsync(DBRef dbref, CancellationToken cancellationToken = default);
 
+	/// <summary>How many attribute nodes the object holds, branches included: what <c>max_attrs_per_obj</c> limits.</summary>
+	ValueTask<long> GetAttributeCountAsync(DBRef dbref, CancellationToken cancellationToken = default);
+
 	// TODO: Return type for attribute pattern queries needs reconsideration.
 	// Attribute patterns return multiple attribute paths, so return type should ideally be
 	// IEnumerable<IEnumerable<SharpAttribute>> to represent full paths for each match.

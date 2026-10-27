@@ -193,6 +193,31 @@ public class WatchIntegrationTests
 	}
 
 	[Test]
+	public async Task AWatchTheStoreHasNoRoomForIsRefused()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("RoomAnn");
+			var bo = await Player("RoomBo");
+			var held = int.Parse(await God($"think nattr({Store}/**)"));
+			// One attribute short of the four a first watch writes.
+			using var limit = TestOptionsOverride.Scope(options => options with
+			{
+				Limit = options.Limit with { MaxAttributesPerObj = (uint)held + 3 }
+			});
+
+			await Assert.That(await As(ann, $"+watch/add {bo.Name}")).Contains("There is no room to record that");
+			await Assert.That(await God($"think nattr({Store}/**)")).IsEqualTo(held.ToString())
+				.Because("a refused watch writes nothing");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task SettingsAreChangedThroughPlusConfig()
 	{
 		try

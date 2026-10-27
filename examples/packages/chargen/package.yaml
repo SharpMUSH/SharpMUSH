@@ -1,7 +1,7 @@
 format: "1.16"
 package: chargen
 title: "Character applications"
-version: 2.6.1
+version: 2.7.0
 authors: [SharpMUSH]
 description: "Character applications: +app keeps a character's application as a draft until it is submitted, staff comment on each section and return it or approve it, every submission is kept so a reviewer sees what changed, applicants see their place in the queue and the typical wait, and an optional cap on active characters keeps a waitlist. The routes chargen-app shows in the portal."
 license: MIT
@@ -297,6 +297,11 @@ objects:
         flags: [funsyntax]
 
       # ---- shared reads ---------------------------------------------------------
+      # %0 how many attributes a write may add to {{store}}: 1 when they fit under max_attrs_per_obj.
+      FUN`ROOM:
+        value: |-
+          lte(add(nattr({{store}}/**),%0),config(max_attrs_per_obj))
+        flags: [funsyntax]
       # %0 an object: the key its application is filed under. An objid cannot be part of an attribute name,
       # so #12:1790888816538 is filed as 12_1790888816538.
       FUN`APP`KEY:
@@ -772,7 +777,7 @@ objects:
       # Starts the application if it has not been.
       INC`DO`TOUCH:
         value: |-
-          @if not(hasattr({{store}},APP`%q<app_key>))={&APP`%q<app_key> {{store}}=%q<app_objid>; &APP`%q<app_key>`STATE {{store}}=draft; &APP`%q<app_key>`ROUND {{store}}=0; &APP`%q<app_key>`CREATED {{store}}=secs()}
+          @include/args %!/INC`NEED`ROOM=need,if(hasattr({{store}},APP`%q<app_key>),0,4); @if not(hasattr({{store}},APP`%q<app_key>))={&APP`%q<app_key> {{store}}=%q<app_objid>; &APP`%q<app_key>`STATE {{store}}=draft; &APP`%q<app_key>`ROUND {{store}}=0; &APP`%q<app_key>`CREATED {{store}}=secs()}
         flags: [cmdsyntax]
       # Sets slot %<slot> of the draft to %<value>, which already fits it; empty clears it.
       INC`DO`SET:
@@ -783,12 +788,12 @@ objects:
       # for staff only, %<kind> comment, return, approve, waitlist or retire. Sets comment_number.
       INC`DO`COMMENT:
         value: |-
-          think setq(comment_number,inc(default({{store}}/APP`%q<app_key>`COMMENTS,0))); &APP`%q<app_key>`COMMENTS {{store}}=%q<comment_number>; &APP`%q<app_key>`COMMENT`%q<comment_number> {{store}}=%<text>; &APP`%q<app_key>`COMMENT`%q<comment_number>`SECTION {{store}}=%<section>; &APP`%q<app_key>`COMMENT`%q<comment_number>`AUTHOR {{store}}=%<author>; &APP`%q<app_key>`COMMENT`%q<comment_number>`NAME {{store}}=name(%<author>); &APP`%q<app_key>`COMMENT`%q<comment_number>`AT {{store}}=secs(); &APP`%q<app_key>`COMMENT`%q<comment_number>`ROUND {{store}}=default({{store}}/APP`%q<app_key>`ROUND,0); &APP`%q<app_key>`COMMENT`%q<comment_number>`KIND {{store}}=firstof(%<kind>,comment); @if %<private>={&APP`%q<app_key>`COMMENT`%q<comment_number>`PRIVATE {{store}}=1}
+          @include/args %!/INC`NEED`ROOM=need,10; think setq(comment_number,inc(default({{store}}/APP`%q<app_key>`COMMENTS,0))); &APP`%q<app_key>`COMMENTS {{store}}=%q<comment_number>; &APP`%q<app_key>`COMMENT`%q<comment_number> {{store}}=%<text>; &APP`%q<app_key>`COMMENT`%q<comment_number>`SECTION {{store}}=%<section>; &APP`%q<app_key>`COMMENT`%q<comment_number>`AUTHOR {{store}}=%<author>; &APP`%q<app_key>`COMMENT`%q<comment_number>`NAME {{store}}=name(%<author>); &APP`%q<app_key>`COMMENT`%q<comment_number>`AT {{store}}=secs(); &APP`%q<app_key>`COMMENT`%q<comment_number>`ROUND {{store}}=default({{store}}/APP`%q<app_key>`ROUND,0); &APP`%q<app_key>`COMMENT`%q<comment_number>`KIND {{store}}=firstof(%<kind>,comment); @if %<private>={&APP`%q<app_key>`COMMENT`%q<comment_number>`PRIVATE {{store}}=1}
         flags: [cmdsyntax]
       # Submits the draft as the next round. The caller has checked it may be submitted.
       INC`DO`SUBMIT:
         value: |-
-          think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@include/args %!/INC`DO`SUBMIT`FIELD=field,##}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
+          @include/args %!/INC`NEED`ROOM=need,2; think setq(submit_round,inc(default({{store}}/APP`%q<app_key>`ROUND,0))); &CHARGEN`ROUND`%q<submit_round> %q<app_objid>=secs(); @set %q<app_objid>/CHARGEN`ROUND`%q<submit_round>=wizard; @dolist/inline u(%!/FUN`FORM`ALLFIELDS)={@include/args %!/INC`DO`SUBMIT`FIELD=field,##}; &APP`%q<app_key>`ROUND {{store}}=%q<submit_round>; &APP`%q<app_key>`SUBMITTED {{store}}=secs(); &APP`%q<app_key>`STATE {{store}}=submitted; @include/args %!/INC`DO`TELLSTAFF=text,name(%q<app_objid>) [if(gt(%q<submit_round>,1),sent their application back,submitted an application)][if(gt(%q<submit_round>,1),%b%(round %q<submit_round>%))]. +app [name(%q<app_objid>)] reads it.; @trigger/args %!/ON`SUBMIT=0,%q<app_objid>,1,,2,,character,%q<app_objid>,round,%q<submit_round>
         flags: [cmdsyntax]
       # Keeps what field %<field> says in round %q<submit_round>, chapter by chapter for a field in chapters.
       INC`DO`SUBMIT`FIELD:
@@ -803,13 +808,13 @@ objects:
       # Returns the submitted application to its owner, asking for changes: %<actor> who, %<message> what.
       INC`DO`RETURN:
         value: |-
-          @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`STATE {{store}}=changes; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,%<message>,private,0,kind,return; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%<actor>) asked for changes to your application: %<message> +app shows it.; @trigger/args %!/ON`RETURN=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
+          @include/args %!/INC`NEED`ROOM=need,12; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`STATE {{store}}=changes; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,%<message>,private,0,kind,return; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,name(%<actor>) asked for changes to your application: %<message> +app shows it.; @trigger/args %!/ON`RETURN=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>
         flags: [cmdsyntax]
       # Approves the submitted application, %<actor> who, %<message> what they said, if anything. With the cap
       # reached it goes on the waitlist instead.
       INC`DO`APPROVE:
         value: |-
-          @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`BY {{store}}=%<actor>; @if u(%!/FUN`PLACES`FULL)={&APP`%q<app_key>`STATE {{store}}=waitlist; &APP`%q<app_key>`WAITLISTED {{store}}=secs(); &APP`%q<app_key>`DECIDED {{store}}=secs(); @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved. Every place is taken%, so it waits for one.),private,0,kind,waitlist; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,Your application is approved%, and waits for a place: every place is taken. You get one when it opens.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)]; @trigger/args %!/ON`WAITLIST=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>},{@include/args %!/INC`DO`ADMIT=actor,%<actor>,message,%<message>,record,1}
+          @include/args %!/INC`NEED`ROOM=need,13; @include %!/INC`DO`RECORDWAIT; &APP`%q<app_key>`BY {{store}}=%<actor>; @if u(%!/FUN`PLACES`FULL)={&APP`%q<app_key>`STATE {{store}}=waitlist; &APP`%q<app_key>`WAITLISTED {{store}}=secs(); &APP`%q<app_key>`DECIDED {{store}}=secs(); @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,firstof(%<message>,Approved. Every place is taken%, so it waits for one.),private,0,kind,waitlist; @include/args %!/INC`DO`TELL=who,%q<app_objid>,subject,Your application,text,Your application is approved%, and waits for a place: every place is taken. You get one when it opens.[if(strlen(%<message>),%b[name(%<actor>)] said: %<message>)]; @trigger/args %!/ON`WAITLIST=0,%q<app_objid>,1,%<actor>,2,%<message>,character,%q<app_objid>,actor,%<actor>,message,%<message>},{@include/args %!/INC`DO`ADMIT=actor,%<actor>,message,%<message>,record,1}
         flags: [cmdsyntax]
       # Approves the application for good: the state, the role, the comment (%<record> 1 to write it) and the hook.
       INC`DO`ADMIT:
@@ -825,10 +830,20 @@ objects:
       # Retires the approved application, %<actor> who: the role goes, and the place frees.
       INC`DO`RETIRE:
         value: |-
-          &APP`%q<app_key>`STATE {{store}}=retired; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; think setq(retire_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<retire_role>),valid(rolename,%q<retire_role>),hasrole(%q<app_objid>,%q<retire_role>))={@role/unassign %q<app_objid>=%q<retire_role>}; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,Retired.,private,0,kind,retire; @trigger/args %!/ON`RETIRE=0,%q<app_objid>,1,%<actor>,2,,character,%q<app_objid>,actor,%<actor>; @include/localize %!/INC`DO`ADMITNEXT
+          @include/args %!/INC`NEED`ROOM=need,12; &APP`%q<app_key>`STATE {{store}}=retired; &APP`%q<app_key>`DECIDED {{store}}=secs(); &APP`%q<app_key>`BY {{store}}=%<actor>; think setq(retire_role,get(%!/DATA`CONFIG`APPROVED-ROLE)); @if cand(strlen(%q<retire_role>),valid(rolename,%q<retire_role>),hasrole(%q<app_objid>,%q<retire_role>))={@role/unassign %q<app_objid>=%q<retire_role>}; @include/args %!/INC`DO`COMMENT=section,,author,%<actor>,text,Retired.,private,0,kind,retire; @trigger/args %!/ON`RETIRE=0,%q<app_objid>,1,%<actor>,2,,character,%q<app_objid>,actor,%<actor>; @include/localize %!/INC`DO`ADMITNEXT
         flags: [cmdsyntax]
 
       # ---- guards ---------------------------------------------------------------
+      # %<need> how many attributes the write ahead may add to the store. Stops it, telling the player and the
+      # portal, when they would take the store past max_attrs_per_obj.
+      INC`NEED`ROOM:
+        value: |-
+          @assert u(%!/FUN`ROOM,%<need>)={@pemit %#=notice(APP,u(%!/FUN`ROOM`TEXT),warn); think setq(web_response,u(%!/WEB`RESULT`ERROR,u(%!/FUN`ROOM`TEXT)))}
+        flags: [cmdsyntax]
+      FUN`ROOM`TEXT:
+        value: |-
+          There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.
+        flags: [funsyntax]
       # Sets app_key and app_objid to the player's own application.
       INC`NEED`MINE:
         value: |-
@@ -882,7 +897,7 @@ objects:
       # +app/write <field>[/<chapter>]: collects lines until .done, then saves them as the field or the chapter.
       INC`APP`WRITE:
         value: |-
-          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert not(strmatch(setr(field_slot,u(%!/FUN`SLOT`FIND,%q<cmd_argument>)),#-1 *))=@pemit %#=notice(APP,after(%q<field_slot>,#-1%b),warn); @assert not(u(%!/FUN`SLOT`CROWDED,%q<app_key>,%q<field_slot>))=@pemit %#=notice(APP,u(%!/FUN`SLOT`CROWDED`TEXT,%q<field_slot>),warn); @include %!/INC`DO`TOUCH; &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}=%q<field_slot>; @input/start Type [lcstr(u(%!/FUN`SLOT`LABEL,%q<field_slot>))]%, as many lines as you like. It replaces what is there. Send .done on a line by itself to save it.=.done,INPUT`WRITE`DONE,*,INPUT`WRITE`LINE,1800
+          @include %!/INC`NEED`MINE; @include %!/INC`NEED`EDITABLE; @assert not(strmatch(setr(field_slot,u(%!/FUN`SLOT`FIND,%q<cmd_argument>)),#-1 *))=@pemit %#=notice(APP,after(%q<field_slot>,#-1%b),warn); @assert not(u(%!/FUN`SLOT`CROWDED,%q<app_key>,%q<field_slot>))=@pemit %#=notice(APP,u(%!/FUN`SLOT`CROWDED`TEXT,%q<field_slot>),warn); @include/args %!/INC`NEED`ROOM=need,6; @include %!/INC`DO`TOUCH; &APP`%q<app_key>`WRITING {{store}}; &APP`%q<app_key>`WRITING`FIELD {{store}}=%q<field_slot>; @input/start Type [lcstr(u(%!/FUN`SLOT`LABEL,%q<field_slot>))]%, as many lines as you like. It replaces what is there. Send .done on a line by itself to save it.=.done,INPUT`WRITE`DONE,*,INPUT`WRITE`LINE,1800
         flags: [cmdsyntax]
       # One line typed for +app/write: %0, never evaluated.
       INPUT`WRITE`LINE:
