@@ -41,3 +41,41 @@ jobs:
       - name: Clean up only this job's disposable resources
         if: always()
         run: python3 .github/scripts/smoke_deployment.py --cleanup
+
+  arm64:
+    name: arm64 images start
+    # A native arm64 runner: .NET does not run reliably under QEMU, so emulation proves nothing here.
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Build the server, renderer and socket server for arm64
+        run: |
+          docker build -t arm64/server -f Dockerfile .
+          docker build -t arm64/renderer -f SharpMUSH.RenderingWorker/Dockerfile .
+          docker build -t arm64/socketserver -f SharpMUSH.SocketServer/Dockerfile .
+      - name: Start them and wait for each to answer
+        run: |
+          set -euo pipefail
+          docker network create arm64
+          docker volume create arm64-render
+          docker run -d --name nats --network arm64 nats:2.10-alpine -js
+          docker run -d --name renderer -v arm64-render:/run/sharpmush arm64/renderer
+          docker run -d --name server --network arm64 -p 8080:8080 \
+            -e NATS_URL=nats://nats:4222 -e ASPNETCORE_URLS=http://+:8080 arm64/server
+          docker run -d --name socketserver --network arm64 -v arm64-render:/run/sharpmush \
+            -e NATS_URL=nats://nats:4222 -e Rendering__SocketPath=/run/sharpmush/render.sock arm64/socketserver
+          for _ in $(seq 1 90); do
+            if curl -fsS http://127.0.0.1:8080/ready >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8080/ready
+          docker exec renderer dotnet SharpMUSH.RenderingWorker.dll --healthcheck
+          test "$(docker inspect -f '{{.State.Running}}' socketserver)" = true
+          docker exec server uname -m
+      - name: Logs
+        if: always()
+        run: for c in server renderer socketserver; do echo "== $c"; docker logs "$c" 2>&1 | tail -40 || true; done
