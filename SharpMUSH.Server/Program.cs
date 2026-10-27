@@ -139,6 +139,9 @@ public class Program
 			return next(context);
 		});
 
+		// Before anything that can answer on its own (startup page, redirects, static files), so those carry them too.
+		app.UseMiddleware<SecurityHeadersMiddleware>();
+
 		// Early, so it can compress what everything below serves. Responses that already carry a
 		// Content-Encoding — the precompressed portal assets — are skipped, never encoded twice.
 		app.UseResponseCompression();
