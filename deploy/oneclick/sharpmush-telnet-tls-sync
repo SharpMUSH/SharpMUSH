@@ -1,0 +1,28 @@
+#!/bin/sh
+# Runs in the telnet-tls service (deploy/oneclick/compose.yml). Copies the certificate Caddy keeps for
+# SHARPMUSH_TELNET_TLS_HOST to where the socket server reads it for TLS telnet on 4203, readable by the
+# socket server's group (1654) only: Caddy's own copy is readable by root alone. The socket server picks
+# up each new copy on its next handshake, so a renewal drops nobody.
+set -u
+
+host=${SHARPMUSH_TELNET_TLS_HOST:-}
+if [ -z "$host" ]; then
+	echo "No name for TLS telnet; nothing to copy."
+	while :; do sleep 3600; done
+fi
+
+copy() { # copy <source> <name in /tls>
+	cp "$1" "/tls/.$2.new" && chown 0:1654 "/tls/.$2.new" && chmod 0640 "/tls/.$2.new" && mv -f "/tls/.$2.new" "/tls/$2"
+}
+
+while :; do
+	# Under the issuer's directory: acme-v02.api.letsencrypt.org-directory, a ZeroSSL fallback, or local.
+	crt=$(ls -t /caddy-data/caddy/certificates/*/"$host"/"$host".crt 2>/dev/null | head -n 1)
+	if [ -n "$crt" ]; then
+		key=${crt%.crt}.key
+		if ! cmp -s "$crt" /tls/telnet.crt || ! cmp -s "$key" /tls/telnet.key; then
+			copy "$key" telnet.key && copy "$crt" telnet.crt && echo "Copied the certificate for $host."
+		fi
+	fi
+	sleep 60
+done
