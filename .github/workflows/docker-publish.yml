@@ -115,6 +115,27 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push edge image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          file: ./deploy/fly/Dockerfile
+          target: edge
+          push: true
+          pull: true
+          build-args: |
+            SHARPMUSH_IMAGE_TAG=${{ steps.meta.outputs.version }}
+          tags: |
+            sharpmush/sharpmush-edge:${{ steps.meta.outputs.version }}
+            ${{ steps.meta.outputs.latest == 'true' && 'sharpmush/sharpmush-edge:latest' || '' }}
+          labels: |
+            org.opencontainers.image.title=SharpMUSH edge
+            org.opencontainers.image.description=Caddy, NATS and the socket server, for split one-container hosts
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
       - name: Build and push all-in-one image
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
@@ -154,6 +175,10 @@ jobs:
           echo "### SocketServer — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-socketserver:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-socketserver:latest\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Edge — replacement drops live connections" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-edge:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- \`sharpmush/sharpmush-edge:latest\`" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "### All-in-one" >> "$GITHUB_STEP_SUMMARY"
           echo "- \`sharpmush/sharpmush-allinone:${VERSION}\`" >> "$GITHUB_STEP_SUMMARY"

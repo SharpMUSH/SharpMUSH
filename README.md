@@ -37,7 +37,8 @@ SharpMUSH is available as Docker images on DockerHub:
 - `sharpmush/sharpmush-server` - Main server
 - `sharpmush/sharpmush-socketserver` - Stable telnet/WebSocket socket owner
 - `sharpmush/sharpmush-renderer` - Replaceable rendering worker
-- `sharpmush/sharpmush-allinone` - All three in one image, for hosts that run one container per app (Fly.io, Railway)
+- `sharpmush/sharpmush-edge` - Caddy, NATS and the socket server in one image, run beside the server and renderer images on hosts that run one container per app (Fly.io, Railway)
+- `sharpmush/sharpmush-allinone` - Everything in one image, for a one-app game on those hosts
 
 For information on setting up automatic DockerHub publishing when new versions are released, see [DockerHub Setup Guide](./docs/DOCKERHUB_SETUP.md).
 

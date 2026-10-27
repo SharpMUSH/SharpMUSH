@@ -5,10 +5,9 @@
 # Deploying this app restarts the edge and drops connected players, so launch.sh deploys it only
 # when asked (--update-edge). The server and renderer update without dropping anyone.
 [build]
-  image = "sharpmush/sharpmush-allinone:dev"
+  image = "sharpmush/sharpmush-edge:dev"
 
 [env]
-  SHARPMUSH_ROLE = "edge"
   # Set to your own domain once it points at the app (fly certs add <domain>); the setup link in the
   # log uses it. Empty means <game>.fly.dev.
   SHARPMUSH_DOMAIN = ""
