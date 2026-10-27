@@ -62,6 +62,13 @@ public class WorldMapReaderTests
 		return map;
 	}
 
+	private static void Zone(AnySharpObject target, AnySharpObject zone) =>
+		target.Object().Zone = new(async _ =>
+		{
+			await ValueTask.CompletedTask;
+			return zone;
+		});
+
 	private SharpRoom Room(int number, string name, AnySharpObject map)
 	{
 		var room = _objects.CreateRoom(number, name);
@@ -104,19 +111,21 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
-	public async Task ParentIsKeptOnlyWhenItIsAMap()
+	public async Task ParentIsTheMapsZoneWhenThatIsAMap()
 	{
-		Map(50, "City", MapKinds.Graph);
-		Map(51, "Harbour", MapKinds.Coordinates);
-		Map(52, "Caves", MapKinds.Compass);
-		_values[(51, WorldMapReader.ParentAttribute)] = "#50";
-		_values[(52, WorldMapReader.ParentAttribute)] = "#3";
+		var city = Map(50, "City", MapKinds.Graph);
+		var harbour = Map(51, "Harbour", MapKinds.Coordinates);
+		var caves = Map(52, "Caves", MapKinds.Compass);
+		Zone(harbour, city);
+		Zone(caves, _viewer);
+		Zone(city, city);
 		Indexed(50, 51, 52);
 
 		var maps = (await Reader.ListAsync(_viewer, default)).ToDictionary(map => map.Id);
 
 		await Assert.That(maps["#51"].Parent).IsEqualTo("#50");
 		await Assert.That(maps["#52"].Parent).IsNull().Because("#3 is a player, not a map");
+		await Assert.That(maps["#50"].Parent).IsNull().Because("a map zoned to itself is inside nothing");
 	}
 
 	[Test]

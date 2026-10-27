@@ -110,6 +110,7 @@
     private const double MaxZoom = 3;
 
     private IReadOnlyList<MapSummaryDto>? _maps;
+    private IReadOnlyDictionary<string, string?> _parents = new Dictionary<string, string?>();
     private bool _listFailed;
     private MapLayout? _layout;
     private bool _loading;
@@ -142,6 +143,7 @@
             IReadOnlyList<MapSummaryDto> maps => (maps, false),
             _ => ((IReadOnlyList<MapSummaryDto>)[], true),
         };
+        _parents = MapTree.Parents(_maps);
     }
 
     private async Task LoadMapAsync()
@@ -209,8 +211,7 @@
 
     private RenderFragment Tree(string? parent) => __builder =>
     {
-        var ids = _maps!.Select(m => m.Id).ToHashSet();
-        var level = _maps!.Where(m => parent is null ? m.Parent is null || !ids.Contains(m.Parent) : m.Parent == parent).ToList();
+        var level = _maps!.Where(m => _parents[m.Id] == parent).ToList();
         if (level.Count == 0) return;
         <ul class="map-tree">
             @foreach (var map in level)
@@ -219,10 +220,7 @@
                 <li>
                     <a class="map-tree-link @(current ? "map-tree-link--on" : null)" href="@($"/map/{map.Id[1..]}")"
                        aria-current="@(current ? "page" : null)">@map.Name</a>
-                    @if (map.Id != parent)
-                    {
-                        @Tree(map.Id)
-                    }
+                    @Tree(map.Id)
                 </li>
             }
         </ul>

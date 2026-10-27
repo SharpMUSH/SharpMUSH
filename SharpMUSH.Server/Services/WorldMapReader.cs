@@ -13,7 +13,7 @@ namespace SharpMUSH.Server.Services;
 
 /// <summary>
 /// The world-map package's maps, read for one viewer. A map is an object holding its own <c>MAP`KIND</c>; its rooms
-/// are the rooms zoned to it. Setting <c>MAP`KIND</c> publishes the map, so a viewer who may not examine its rooms
+/// are the rooms zoned to it, and a map zoned to another map is a region inside that one. Setting <c>MAP`KIND</c> publishes the map, so a viewer who may not examine its rooms
 /// still sees the ones they can perceive and that are not DARK. What the map says about its rooms (their coordinates,
 /// where a variable exit goes) is read as the map's owner, the builder who published it, never as the viewer.
 /// </summary>
@@ -21,7 +21,6 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	IAttributeService attributes)
 {
 	public const string KindAttribute = "MAP`KIND";
-	public const string ParentAttribute = "MAP`PARENT";
 	public const string WidthAttribute = "MAP`SIZE`W";
 	public const string HeightAttribute = "MAP`SIZE`H";
 	public const int MaxMaps = 500;
@@ -126,8 +125,9 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	private async Task<MapSummaryDto> SummaryAsync(AnySharpObject viewer, AnySharpObject map, CancellationToken ct)
 	{
 		var kind = MapKinds.Parse(await OwnValueAsync(map, map, KindAttribute)) ?? MapKinds.Graph;
-		var parent = ParseDbref(await OwnValueAsync(map, map, ParentAttribute)) is int number
-			&& number != map.Object().DBRef.Number && await MapAsync(viewer, number, ct) is not null
+		var parent = await map.Object().Zone.WithCancellation(ct) is AnySharpObject zone
+			&& zone.Object().DBRef.Number is var number && number != map.Object().DBRef.Number
+			&& await MapAsync(viewer, number, ct) is not null
 				? $"#{number}"
 				: null;
 		return new($"#{map.Object().DBRef.Number}", map.Object().Name, kind, parent);
@@ -200,11 +200,6 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 
 	/// <summary>A size: each side at least 1, a missing one as 1.</summary>
 	private static double[]? Positive(double[]? size) => size?.Select(side => Math.Max(side, 1)).ToArray();
-
-	private static int? ParseDbref(string value) =>
-		value.StartsWith('#') && int.TryParse(value.AsSpan(1).TrimEnd(), NumberStyles.None, CultureInfo.InvariantCulture, out var number)
-			? number
-			: null;
 
 	private static int Number(string dbref) => int.Parse(dbref.AsSpan(1), CultureInfo.InvariantCulture);
 }

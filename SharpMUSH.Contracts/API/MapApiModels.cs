@@ -22,7 +22,7 @@ public static class MapKinds
 /// <summary>A map as the map list shows it.</summary>
 /// <param name="Id">The map object's dbref, <c>#12</c>.</param>
 /// <param name="Kind">One of <see cref="MapKinds"/>.</param>
-/// <param name="Parent">The dbref of the map its <c>MAP`PARENT</c> puts it inside, when that is a map the viewer may see.</param>
+/// <param name="Parent">The dbref of the map it is zoned to, when that is a map the viewer may see: the region it is inside.</param>
 public sealed record MapSummaryDto(string Id, string Name, string Kind, string? Parent);
 
 /// <summary>One map: the rooms zoned to it that the viewer may see, and their exits.</summary>

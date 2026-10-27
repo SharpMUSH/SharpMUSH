@@ -67,4 +67,4 @@ objects:
 
         A game may have as many maps as it likes, each of its own kind. An exit from a room on one map to a room on another is drawn as a door; choosing it opens the other map.
 
-        ``&MAP`PARENT Harbour=#50`` puts the Harbour map inside map #50, so the portal lists it under that one.
+        A map zoned to another map is a region inside it: ``@chzone Harbour=#50`` puts the Harbour map inside map #50, so the portal lists it under that one.
