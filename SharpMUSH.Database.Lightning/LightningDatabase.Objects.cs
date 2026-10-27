@@ -238,6 +238,8 @@ public partial class LightningDatabase
 	private static DBRef WriteExit(ITx tx, long dbref, string name, string[] aliases, long locKey, long ownerKey,
 		long now, long modified)
 	{
+		// The list as SyncAliases would read it back from ALIAS.
+		aliases = PlayerAliases.Split(string.Join(PlayerAliases.Delimiter, aliases));
 		tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(new ObjectRecord
 		{
 			Name = name,
@@ -254,6 +256,16 @@ public partial class LightningDatabase
 		foreach (var alias in aliases)
 		{
 			tx.Put(Tables.ObjName, Keys.Lower(alias), Keys.Dbref(dbref));
+		}
+
+		// create.c:151-153: the aliases are the exit's ALIAS attribute, which every later write keeps the
+		// record in step with (SyncAliases).
+		if (aliases.Length > 0)
+		{
+			var list = MString.Plain(string.Join(PlayerAliases.Delimiter, aliases));
+			WriteAttributePath(tx, dbref, DatabaseConstants.TypeExit, new PreparedAttributeWrite(
+				[PlayerAliases.AttributeName], Keys.Str(MarkupTextSerializer.Serialize(list)), ownerKey, [], list),
+				WatchedAttributes.None.Names);
 		}
 
 		// The exit's own location is its source room (at_location, same table Location() reads).
