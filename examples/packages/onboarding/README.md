@@ -43,6 +43,8 @@ steps.
   it for one player.
 - **Per player.** A step can leave itself off a player's list: a guest gets no description or approval step, and
   the channel step shows only where there is a channel to join. Numbers follow the player's own list.
+- **Guests start fresh.** When a guest's last connection closes, its progress is cleared, so the next person on
+  that guest sees the whole list again.
 
 ## Steps
 
