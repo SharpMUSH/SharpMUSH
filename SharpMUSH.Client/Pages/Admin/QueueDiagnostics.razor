@@ -5,7 +5,7 @@
 @inject AccountAuthService Account
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["DiagTitle"]</PageTitle>
+<AdminPageTitle Page="@Loc["DiagTitle"]" />
 <div class="page-stack page-stack--padded diag-page">
     <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["DiagTitle"]" Description="@Loc["DiagDescription"]" />
     <KitCard>

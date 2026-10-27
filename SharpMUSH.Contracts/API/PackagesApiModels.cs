@@ -34,11 +34,13 @@ public sealed record RemoteRequest(string Name, string Url, string Trust, string
 /// <param name="ManagedAttributeCount">How many attributes the package manages.</param>
 /// <param name="ObjectCount">How many objects it created.</param>
 /// <param name="Dependents">Installed packages that depend on it (uninstall blocking).</param>
+/// <param name="Title">The name the package is listed under, when the server knows it (a bundled package); else null.</param>
 public sealed record InstalledPackageDto(
 	InstalledPackageRecord Package,
 	int ManagedAttributeCount,
 	int ObjectCount,
-	IReadOnlyList<string> Dependents);
+	IReadOnlyList<string> Dependents,
+	string? Title = null);
 
 /// <summary>One revision in a package's history (snapshot payloads omitted).</summary>
 public sealed record RevisionDto(int Revision, string Kind, string Version, string Commit, DateTimeOffset AppliedAt);

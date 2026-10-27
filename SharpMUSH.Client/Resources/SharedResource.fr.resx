@@ -511,9 +511,6 @@
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Ouvrir {0} dans un nouvel onglet</value>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-  </data>
   <data name="PkgClose" xml:space="preserve">
     <value>Fermer</value>
   </data>
@@ -1439,9 +1436,6 @@
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
     <value>Échec de l'enregistrement: {0}</value>
-  </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
   </data>
   <data name="AdmAccountsTitle" xml:space="preserve">
     <value>Comptes</value>
@@ -3395,10 +3389,6 @@
     <value>Progression</value>
     <comment>MT</comment>
   </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Modifications récentes</value>
-    <comment>MT</comment>
-  </data>
   <data name="Reply" xml:space="preserve">
     <value>Répondre</value>
     <comment>MT — read as the mail action (neighbouring keys Subject/To/SendMessage), not the noun</comment>
@@ -5261,6 +5251,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planifier une scène</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Approbation requise</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>La scène n'a pas de salle avant de commencer : elle se joue là où se trouve son hôte au moment du lancement.</value>
   </data>
@@ -5789,4 +5783,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Parcourir les pages</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Rubriques à découvrir</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Commencez ici</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Pages modifiées, 7 jours</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Voir les {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

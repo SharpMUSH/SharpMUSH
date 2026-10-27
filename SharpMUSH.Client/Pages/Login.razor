@@ -66,16 +66,16 @@
                     <MudTextField @bind-Value="_regUsername" Label="@Loc["AuthUsername"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                                  Disabled="_busy" />
+                                  Disabled="_busy" Immediate="true" OnKeyDown="OnRegisterKeyDown" />
                     <MudTextField @bind-Value="_regEmail" Label="@Loc["AuthEmailOptional"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Email"
-                                  Disabled="_busy" />
+                                  Disabled="_busy" Immediate="true" OnKeyDown="OnRegisterKeyDown" />
                     <MudTextField @bind-Value="_regPassword" Label="@Loc["AuthPassword"]"
                                   InputType="InputType.Password" HelperText="@Loc["AuthPasswordTooShort"]"
                                   Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                                   Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                                  Disabled="_busy" />
+                                  Disabled="_busy" Immediate="true" OnKeyDown="OnRegisterKeyDown" />
                     <MudCheckBox id="register-remember" @bind-Value="_rememberMe" Label="@Loc["AuthRememberMe"]"
                                  Color="Color.Primary" Dense="true" Class="mb-2" Disabled="_busy" />
 
@@ -270,5 +270,11 @@
     {
         if (e.Key == "Enter")
             await LoginAsync();
+    }
+
+    private async Task OnRegisterKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_busy)
+            await RegisterAsync();
     }
 }

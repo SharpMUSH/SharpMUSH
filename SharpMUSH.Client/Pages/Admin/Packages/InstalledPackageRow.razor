@@ -3,7 +3,8 @@
 
 @* An installed package: its kind, version, source and update state, and the check, README, history and uninstall actions. *@
 <PackageRow Icon="@KindIcon(Package.Package.Kind)" Kind="@Package.Package.Kind.ToString().ToLowerInvariant()"
-            IconTitle="@KindName(Package.Package.Kind)" Name="@Package.Package.Id">
+            IconTitle="@KindName(Package.Package.Kind)" Name="@(Package.Title ?? Package.Package.Id)"
+            Id="@(Package.Title is null ? null : Package.Package.Id)">
     <Tags>
         @if (Package.Package.Kind != PackageKind.Softcode)
         {

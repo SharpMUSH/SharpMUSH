@@ -215,6 +215,39 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(1);
 	}
 
+	/// <summary>Only an approved character takes part: one that is not is offered Watch, and the archive closes
+	/// Schedule and Start with the reason beside them.</summary>
+	[Test]
+	public async Task AnUnapprovedCharacter_IsOfferedWatch_AndTheArchiveSaysWhyItCannotStartAScene()
+	{
+		_api.Extra["POST /api/commands/eval"] = """{"output":[],"result":"0","truncated":false}""";
+
+		var live = RenderAt<ScenesActive>("/scenes/active", await ActingAsync(this));
+		live.WaitForAssertion(() => live.Find(".scene-card"), TimeSpan.FromSeconds(5));
+		await Assert.That(live.Find(".scene-card-actions a.kit-capsule--primary").TextContent.Trim()).IsEqualTo("Watch live");
+
+		Nav.NavigateTo("/scenes");
+		var archive = Render<SharpMUSH.Client.Pages.Scenes>();
+		archive.WaitForAssertion(() => archive.Find(".scene-approval-needed"), TimeSpan.FromSeconds(5));
+		await Assert.That(archive.Find(".scene-approval-needed").TextContent).IsEqualTo("Approval needed");
+		var start = archive.Find(".scene-start button");
+		await Assert.That(start.HasAttribute("disabled")).IsTrue();
+		await Assert.That(start.GetAttribute("aria-describedby")).IsEqualTo("scene-approval-needed");
+		await Assert.That(archive.Find("button.scene-schedule-open").HasAttribute("disabled")).IsTrue();
+	}
+
+	[Test]
+	public async Task AnApprovedCharacter_MayStartAScene()
+	{
+		_api.Extra["POST /api/commands/eval"] = """{"output":[],"result":"1","truncated":false}""";
+
+		var cut = RenderAt<SharpMUSH.Client.Pages.Scenes>("/scenes", await ActingAsync(this));
+		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-start button").HasAttribute("disabled")).IsFalse();
+		await Assert.That(cut.FindAll(".scene-approval-needed").Count).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task LiveCards_OfferWatch_ToAnAnonymousVisitor()
 	{

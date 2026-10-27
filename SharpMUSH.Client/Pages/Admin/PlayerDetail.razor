@@ -8,7 +8,7 @@
 @inject ISnackbar Snackbar
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Title — @Loc["AdmBreadcrumb"] — <GameName /></PageTitle>
+<AdminPageTitle Page="@Title" />
 
 <div class="page-stack page-stack--padded adm-char">
     <BackLink Href="/admin/characters">@Loc["Characters"]</BackLink>

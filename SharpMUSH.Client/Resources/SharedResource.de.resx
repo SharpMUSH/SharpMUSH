@@ -136,10 +136,6 @@
     <value>Attribute</value>
     <comment>MT — glossary term left as written; it doubles as the German plural.</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>{0} von '{1}' getrennt.</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>Remote hinzufügen</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} angewendet (Revision {2}).</value>
     <comment>MT</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Schnellaktionen</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Letzte Änderungen</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Szene planen</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Freigabe erforderlich</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Die Szene hat keinen Raum, bis sie beginnt: Sie läuft dort, wo die Gastgeber beim Start sind.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Einträge ansehen</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Ausgewählte Themen</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Hier beginnen</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Geänderte Seiten, 7 Tage</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Alle {0} ansehen</value>
+    <comment>MT</comment>
+  </data>
 </root>

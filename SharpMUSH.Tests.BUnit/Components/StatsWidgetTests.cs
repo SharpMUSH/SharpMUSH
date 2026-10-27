@@ -217,6 +217,35 @@ public class StatsWidgetTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".mud-paper").Count).IsEqualTo(0);
 	}
 
+	/// <summary>The wiki tile says what it counts and links to the list it counts from.</summary>
+	[TUnit.Core.Test]
+	public async Task TheWikiTile_CountsPagesChangedInAWeek_AndLinksToRecentChanges()
+	{
+		Wire(this, new StatsHandler());
+
+		var cut = Render<StatsWidget>();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.Markup.Contains("—")) throw new InvalidOperationException("stats not loaded yet");
+		}, TimeSpan.FromSeconds(5));
+
+		var tile = cut.Find("a.stats-tile");
+		await Assert.That(tile.GetAttribute("href")).IsEqualTo("/wiki/recent");
+		await Assert.That(tile.QuerySelector(".stats-tile-label")!.TextContent).IsEqualTo("WidPagesChangedThisWeek");
+		await Assert.That(tile.QuerySelector(".stats-tile-value")!.TextContent).IsEqualTo("0");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AWeeksChanges_LeaveOutOlderOnes_AndSayPlusWhenTheFetchIsFull()
+	{
+		var now = new DateTimeOffset(2026, 10, 26, 12, 0, 0, TimeSpan.Zero);
+		static SharpMUSH.Client.Models.WikiPageSummary Page(DateTimeOffset at) => new("p", "P", "main", at, 1);
+
+		await Assert.That(RecentWikiActivityWidget.ChangedInAWeek([Page(now.AddDays(-1)), Page(now.AddDays(-8))], now)).IsEqualTo("1");
+		var full = Enumerable.Range(0, RecentWikiActivityWidget.Fetched).Select(_ => Page(now.AddHours(-1))).ToList();
+		await Assert.That(RecentWikiActivityWidget.ChangedInAWeek(full, now)).IsEqualTo($"{RecentWikiActivityWidget.Fetched}+");
+	}
+
 	[TUnit.Core.Test]
 	public async Task PlayersOnline_CountsPeople_NotConnections()
 	{

@@ -15,12 +15,15 @@
     <div class="stats-tiles">
         @foreach (var tile in Tiles)
         {
-            <div class="stats-tile">
-                <div class="stats-tile-label">@Loc[tile.LabelKey]</div>
-                @* The placeholder is the same dash whether the value is still loading or could not
-                   be fetched; the title says which, without a banner or a spinner that never ends. *@
-                <div class="stats-tile-value" title="@(tile.Failed ? Loc["WidUnavailable"].Value : null)">@tile.Value</div>
-            </div>
+            @* A tile with a list behind it links to that list. *@
+            @if (tile.Href is not null)
+            {
+                <a class="stats-tile stats-tile--link" href="@tile.Href">@TileBody(tile)</a>
+            }
+            else
+            {
+                <div class="stats-tile">@TileBody(tile)</div>
+            }
         }
     </div>
 </div>
@@ -30,7 +33,7 @@
     [Parameter] public string Zone { get; set; } = string.Empty;
 
     /// <summary>A count once it is known; null both while loading and when the fetch failed.</summary>
-    private int? _recent;
+    private string? _recent;
     private int? _characters;
     private int? _online;
     private int? _activeScenes;
@@ -47,13 +50,21 @@
     /// </summary>
     private bool _scenesOn;
 
-    private (string LabelKey, string Value, bool Failed)[] Tiles =>
+    private (string LabelKey, string Value, bool Failed, string? Href)[] Tiles =>
     [
-        ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed),
-        .. (_scenesOn ? [("WidActiveScenes", _activeScenes?.ToString() ?? "—", _activeScenesFailed)] : Array.Empty<(string, string, bool)>()),
-        ("RecentChanges",    _recent?.ToString() ?? "—", _recentFailed),
-        ("Characters",       _characters?.ToString() ?? "—", _charactersFailed),
+        ("WidPlayersOnline", _online?.ToString() ?? "—", _onlineFailed, null),
+        .. (_scenesOn ? [("WidActiveScenes", _activeScenes?.ToString() ?? "—", _activeScenesFailed, null)] : Array.Empty<(string, string, bool, string?)>()),
+        ("WidPagesChangedThisWeek", _recent ?? "—", _recentFailed, "/wiki/recent"),
+        ("Characters",       _characters?.ToString() ?? "—", _charactersFailed, null),
     ];
+
+    private RenderFragment TileBody((string LabelKey, string Value, bool Failed, string? Href) tile) => __builder =>
+    {
+        <div class="stats-tile-label">@Loc[tile.LabelKey]</div>
+        @* The placeholder is the same dash whether the value is still loading or could not
+           be fetched; the title says which, without a banner or a spinner that never ends. *@
+        <div class="stats-tile-value" title="@(tile.Failed ? Loc["WidUnavailable"].Value : null)">@tile.Value</div>
+    };
 
     /// <summary>
     /// Only the active-scenes count depends on who is asking — the server counts the private scenes the
@@ -82,7 +93,9 @@
     // and only one of them is something the portal actually knows.
     private async Task LoadRecentAsync()
     {
-        _recent = await WikiService.GetRecentChangesResultAsync(10) is IReadOnlyList<WikiPageSummary> recent ? recent.Count : null;
+        _recent = await WikiService.GetRecentChangesResultAsync(RecentWikiActivityWidget.Fetched) is IReadOnlyList<WikiPageSummary> recent
+            ? RecentWikiActivityWidget.ChangedInAWeek(recent, DateTimeOffset.UtcNow)
+            : null;
         _recentFailed = _recent is null;
     }
 

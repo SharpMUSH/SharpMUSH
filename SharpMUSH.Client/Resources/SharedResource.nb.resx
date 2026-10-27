@@ -136,10 +136,6 @@
     <value>Attributt</value>
     <comment>MT — corpus term.</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — same short form in Norwegian.</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Koblet {0} fra «{1}».</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>Legg til en remote</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} er tatt i bruk (revisjon {2}).</value>
     <comment>MT — {0}/{1} assumed to be a package name and a version.</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Hurtighandlinger</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Nylige endringer</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planlegg en scene</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Krever godkjenning</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Scenen har ikke noe rom før den starter: den foregår der verten er når scenen starter.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Bla gjennom medlemmer</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Utvalgte emner</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Start her</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Endrede sider, 7 dager</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Se alle {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -9,7 +9,7 @@
 }
 else
 {
-    <button @ref="_element" type="button" class="@Css" aria-label="@AriaLabel" aria-pressed="@PressedAttr" aria-expanded="@ExpandedAttr" disabled="@Disabled" @onclick="OnClick">@Inner</button>
+    <button @ref="_element" type="button" class="@Css" aria-label="@AriaLabel" aria-pressed="@PressedAttr" aria-expanded="@ExpandedAttr" aria-describedby="@DescribedBy" disabled="@Disabled" @onclick="OnClick">@Inner</button>
 }
 
 @code {
@@ -27,6 +27,9 @@ else
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public string? Class { get; set; }
     [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>The id of the text that says why the button is as it is (aria-describedby), such as why it is disabled.</summary>
+    [Parameter] public string? DescribedBy { get; set; }
 
     private ElementReference _element;
 

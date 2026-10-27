@@ -136,10 +136,6 @@
     <value>Atrybut</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — kept short for a breadcrumb; AdmKicker ("Administration") carries the full "Administracja"</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Odłączono postać „{0}” od konta „{1}”.</value>
     <comment>MT — restructured: the verb governs the accusative, so {0} was placed in quoted apposition after "postać" to keep the interpolated name uninflected</comment>
@@ -2153,10 +2149,6 @@
     <value>Dodawanie źródła zdalnego</value>
     <comment>MT — heading form, distinct from the PkgAddRemote button</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — short nav section label, kept as in AdmBreadcrumb</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>Zastosowano: {0} {1} (wersja {2}).</value>
     <comment>MT — restructured with a colon so the package name and version stay uninflected</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Szybkie akcje</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Ostatnie zmiany</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Zaplanuj scenę</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Wymagane zatwierdzenie</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Scena nie ma pokoju, dopóki się nie zacznie: odbywa się tam, gdzie gospodarz jest w chwili jej rozpoczęcia.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Przeglądaj elementy</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Wyróżnione tematy</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Zacznij tutaj</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Zmienione strony, 7 dni</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Zobacz wszystkie ({0})</value>
+    <comment>MT</comment>
+  </data>
 </root>

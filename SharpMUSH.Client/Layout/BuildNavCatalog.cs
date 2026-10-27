@@ -133,6 +133,21 @@ public static class BuildNavCatalog
 	};
 
 	/// <summary>
+	/// The <c>SharedResource</c> name of the area a Build &amp; manage page belongs to, for its tab title: the
+	/// group of the entry whose page <paramref name="path"/> is or sits under (<c>/admin/config/mssp</c> is
+	/// Configuration's, so Server), else Build &amp; manage itself.
+	/// </summary>
+	public static string AreaLabelKey(string path)
+	{
+		var page = "/" + path.Split('?', '#')[0].Trim('/');
+		var entry = All
+			.Where(e => page.Equals(e.Href, StringComparison.OrdinalIgnoreCase)
+				|| page.StartsWith(e.Href + "/", StringComparison.OrdinalIgnoreCase))
+			.MaxBy(e => e.Href.Length);
+		return entry is null ? "NavBuildManage" : GroupLabelKey(entry.Group) ?? "NavBuildManage";
+	}
+
+	/// <summary>
 	/// The entries <paramref name="user"/> may see, in menu order: the overview first when anything
 	/// outside Build is visible, since that is where the rail's link and the configuration's way back go.
 	/// </summary>

@@ -6,7 +6,7 @@
 @inject IHttpClientFactory HttpClients
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["SnapshotsTitle"]</PageTitle>
+<AdminPageTitle Page="@Loc["SnapshotsTitle"]" />
 <div class="page-stack page-stack--padded snapshots">
     <PlainPageHeader Kicker="@Loc["NavSectionBuild"]" Title="@Loc["SnapshotsTitle"]" Description="@Loc["SnapshotsIntro"]" />
 

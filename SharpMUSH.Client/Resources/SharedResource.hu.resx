@@ -136,10 +136,6 @@
     <value>Attribútum</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>{0} leválasztva a következőről: „{1}”.</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>Távoli forrás hozzáadása</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>{0} {1} alkalmazva ({2}. változat).</value>
     <comment>MT</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Gyorsműveletek</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Legutóbbi módosítások</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Jelenet ütemezése</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Jóváhagyás szükséges</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>A jelenetnek nincs szobája, amíg el nem kezdődik: ott zajlik, ahol a házigazda az indításkor van.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Tagok böngészése</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Kiemelt témák</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Kezdd itt</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Módosított oldalak, 7 nap</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Mind a(z) {0} megtekintése</value>
+    <comment>MT</comment>
+  </data>
 </root>

@@ -136,10 +136,6 @@
     <value>属性</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>管理</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>已将 {0} 与“{1}”解除关联。</value>
     <comment>MT</comment>
@@ -2153,10 +2149,6 @@
     <value>添加远程源</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>管理</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>已应用 {0} {1}（修订版 {2}）。</value>
     <comment>MT</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>快捷操作</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>最近更改</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>安排场景</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>需要审批</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>场景开始前没有房间：主持人开始场景时身在何处，场景就在何处进行。</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>浏览成员</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>精选主题</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>从这里开始</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>7 天内更改的页面</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>查看全部 {0} 项</value>
+    <comment>MT</comment>
+  </data>
 </root>

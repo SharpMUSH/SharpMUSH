@@ -136,10 +136,6 @@
     <value>Атрибут</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Администриране</value>
-    <comment>MT</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Връзката на {0} с „{1}“ е премахната.</value>
     <comment>MT — restructured so both names sit after prepositions; the participle agrees with «връзката», not with the interpolated names</comment>
@@ -2153,10 +2149,6 @@
     <value>Добавяне на отдалечено хранилище</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Администриране</value>
-    <comment>MT</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>Приложено: {0} {1} (версия {2}).</value>
     <comment>MT — restructured to a neuter impersonal so the participle need not agree with the interpolated package name; per sheet revision → версия</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Бързи действия</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Скорошни промени</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Насрочи сцена</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Нужно е одобрение</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Сцената няма стая, докато не започне: провежда се там, където е домакинът, когато я започне.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Преглед на членовете</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Избрани теми</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Започнете оттук</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Променени страници, 7 дни</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Виж всички {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

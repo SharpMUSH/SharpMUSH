@@ -136,10 +136,6 @@
     <value>Атрибут</value>
     <comment>MT — correct spelling «атрибут» per locale sheet (corpus misspelling not followed).</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Администрирование</value>
-    <comment>MT — consistent with the «Администрирование ·» kicker decision from batches 001–006.</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Персонаж «{0}» отвязан от аккаунта «{1}».</value>
     <comment>MT — assumed {0} is a character name and {1} an account name; head nouns added so both names stay nominative in quotes and the participle agrees with «персонаж». [normalized: аккаунт, matching the rest of the locale]</comment>
@@ -2153,10 +2149,6 @@
     <value>Добавление источника</value>
     <comment>MT — heading rendered as a noun phrase, distinguishing it from the PkgAddRemote button.</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Администрирование</value>
-    <comment>MT — consistent with AdmKicker and AdmBreadcrumb.</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>применено: {0} {1} (версия {2}).</value>
     <comment>MT — restructured: the participle cannot agree with an interpolated package name, so it is made impersonal neuter and the name/version follow a colon. revision → версия per locale sheet.</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Быстрые действия</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Последние изменения</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Запланировать сцену</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Требуется одобрение</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>У сцены нет комнаты до начала: она проходит там, где ведущий находится в момент запуска.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Просмотреть элементы</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Избранные темы</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Начните здесь</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Изменённые страницы, 7 дней</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Показать все ({0})</value>
+    <comment>MT</comment>
+  </data>
 </root>

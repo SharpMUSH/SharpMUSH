@@ -19,6 +19,16 @@
 	min-width: 0;
 }
 
+.stats-tile--link {
+	color: inherit;
+	text-decoration: none;
+}
+
+.stats-tile--link:hover,
+.stats-tile--link:focus-visible {
+	border-color: var(--accent);
+}
+
 .stats-tile-label {
 	font-family: var(--font-mono);
 	font-size: 10px;

@@ -1110,9 +1110,6 @@
   <data name="Wiki" xml:space="preserve">
     <value>Wiki</value>
   </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Recent changes</value>
-  </data>
   <data name="SceneArchive" xml:space="preserve">
     <value>Scenes</value>
   </data>
@@ -1401,9 +1398,6 @@
   </data>
   <data name="AuthOpenInNewTab" xml:space="preserve">
     <value>Open {0} in a new tab</value>
-  </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
   </data>
   <data name="PkgClose" xml:space="preserve">
     <value>Close</value>
@@ -2489,9 +2483,6 @@
   </data>
   <data name="LayAppSaveFailed" xml:space="preserve">
     <value>Save failed: {0}</value>
-  </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
   </data>
   <data name="AdmGuestsSection" xml:space="preserve">
     <value>Guest characters</value>
@@ -7253,6 +7244,9 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Schedule a scene</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Approval needed</value>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>The scene has no room until it starts: it runs wherever its host is when they start it.</value>
   </data>
@@ -9877,5 +9871,11 @@
   </data>
   <data name="WikiPropRemoved" xml:space="preserve">
     <value>Removed {0}.</value>
+  </data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Pages changed, 7 days</value>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>See all {0}</value>
   </data>
 </root>

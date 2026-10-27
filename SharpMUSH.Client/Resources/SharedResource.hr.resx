@@ -136,10 +136,6 @@
     <value>Atribut</value>
     <comment>MT</comment>
   </data>
-  <data name="AdmBreadcrumb" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — kept short for a breadcrumb; the full word is used for AdmKicker</comment>
-  </data>
   <data name="AdmCharacterUnlinked" xml:space="preserve">
     <value>Lik {0} odvojen je od '{1}'.</value>
     <comment>MT — added the head noun "Lik" so the unquoted character name {0} can stay in the nominative</comment>
@@ -2153,10 +2149,6 @@
     <value>Dodavanje udaljenog izvora</value>
     <comment>MT</comment>
   </data>
-  <data name="PkgAdminSection" xml:space="preserve">
-    <value>Admin</value>
-    <comment>MT — kept short as a section label</comment>
-  </data>
   <data name="PkgApplied" xml:space="preserve">
     <value>Primijenjeno: {0} {1} (revizija {2}).</value>
     <comment>MT — restructured with a colon so the package name/version placeholders stay in the nominative</comment>
@@ -2727,10 +2719,6 @@
   </data>
   <data name="QuickActions" xml:space="preserve">
     <value>Brze radnje</value>
-    <comment>MT</comment>
-  </data>
-  <data name="RecentChanges" xml:space="preserve">
-    <value>Nedavne promjene</value>
     <comment>MT</comment>
   </data>
   <data name="Refresh" xml:space="preserve">
@@ -5954,6 +5942,10 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Zakaži scenu</value>
   </data>
+  <data name="RolSceneApprovalNeeded" xml:space="preserve">
+    <value>Potrebno odobrenje</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>Scena nema sobu dok ne počne: odvija se gdje je domaćin kad je pokrene.</value>
   </data>
@@ -6482,4 +6474,12 @@
   <data name="WikiBrowseMembers" xml:space="preserve"><value>Pregledaj članove</value></data>
   <data name="WikiFeaturedTopics" xml:space="preserve"><value>Istaknute teme</value></data>
   <data name="WikiStartHere" xml:space="preserve"><value>Počnite ovdje</value></data>
+  <data name="WidPagesChangedThisWeek" xml:space="preserve">
+    <value>Promijenjene stranice, 7 dana</value>
+    <comment>MT</comment>
+  </data>
+  <data name="WidRecentSeeAll" xml:space="preserve">
+    <value>Prikaži sve {0}</value>
+    <comment>MT</comment>
+  </data>
 </root>

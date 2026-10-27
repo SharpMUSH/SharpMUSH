@@ -330,19 +330,19 @@
                 <MudTextField id="setup-username" @bind-Value="_username" Label="@Loc["AuthUsername"]"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Person"
-                              Disabled="_busy" autocomplete="username" />
+                              Disabled="_busy" autocomplete="username" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <MudTextField id="setup-password" @bind-Value="_password" Label="@Loc["AuthPassword"]"
                               InputType="InputType.Password"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                              Disabled="_busy" autocomplete="new-password" />
+                              Disabled="_busy" autocomplete="new-password" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <MudTextField id="setup-confirm" @bind-Value="_confirm" Label="@Loc["AuthConfirmPassword"]"
                               InputType="InputType.Password"
                               Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-3"
                               Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock"
-                              Disabled="_busy" autocomplete="new-password" />
+                              Disabled="_busy" autocomplete="new-password" Immediate="true" OnKeyDown="OnClaimKeyDown" />
 
                 <button class="setup-submit" type="button" disabled="@_busy" @onclick="SubmitAsync">
                     @(_busy ? Loc["AuthSettingUp"] : Loc["AuthCreateAdminAccount"])
@@ -437,8 +437,14 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (_step == _shownStep) return;
+        var moved = _shownStep != Step.Resolving;
         _shownStep = _step;
-        try { await JS.InvokeVoidAsync("SharpMUSH.scrollToTop", ".onboarding-shell"); }
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.scrollToTop", ".onboarding-shell");
+            // A new step's heading takes focus, as a page would; the first step the page opens on leaves it at the top.
+            if (moved) await JS.InvokeVoidAsync("SharpMUSH.focusHeading", ".setup-card .setup-title");
+        }
         catch (JSException) { /* no portal-interop.js (tests): nothing scrolled */ }
     }
 
@@ -507,6 +513,12 @@
         _ when message.Contains("already taken", StringComparison.OrdinalIgnoreCase) => Loc["AuthUsernameTaken"],
         _ => message,
     };
+
+    private async Task OnClaimKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !_busy)
+            await SubmitAsync();
+    }
 
     private async Task SubmitAsync()
     {

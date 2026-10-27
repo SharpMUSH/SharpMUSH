@@ -9,7 +9,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 @inject NavigationManager Nav
 
-<PageTitle>@Loc["PkgBatchReview"] — <GameName /></PageTitle>
+<AdminPageTitle Page="@Loc["PkgBatchReview"]" />
 <div class="page-stack page-stack--padded pkg-batch-review">
     <PlainPageHeader Title="@Loc["PkgBatchReview"]" Description="@Loc["PkgBatchDescription"]" />
     <PackageBatchQueue Busy="@(_busy || Running || Packages.Batch.AdmissionBlocked)" />

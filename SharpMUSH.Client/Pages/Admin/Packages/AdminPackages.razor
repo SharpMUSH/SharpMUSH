@@ -9,7 +9,7 @@
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
 
-<PageTitle>@Loc["PkgPackages"] — @Loc["PkgAdminSection"] — <GameName /></PageTitle>
+<AdminPageTitle Page="@Loc["PkgPackages"]" />
 
 <div class="page-stack page-stack--padded pkg-page">
     <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["PkgSoftcodePackages"]" Description="@Loc["PkgInstalledDescription"]">
@@ -104,7 +104,7 @@
                         _updates.TryGetValue(p.Package.Id, out var update);
                         <InstalledPackageRow Package="p" Update="update" Busy="_busy"
                                              OnCheck="@(() => CheckUpdateAsync(p.Package.Id))"
-                                             OnReadme="@(() => ShowReadmeAsync(p.Package.Id, p.Package.Id))"
+                                             OnReadme="@(() => ShowReadmeAsync(p.Title ?? p.Package.Id, p.Package.Id))"
                                              OnHistory="@(() => OpenHistoryAsync(p.Package.Id))"
                                              OnUninstall="@(() => OpenUninstall(p))" />
                     }
@@ -244,8 +244,10 @@
         if (_tab == PkgTab.Updates)
             rows = rows.Where(p => _updates.TryGetValue(p.Package.Id, out var u) && u.UpdateAvailable);
         if (!string.IsNullOrWhiteSpace(_search))
-            rows = rows.Where(p => p.Package.Id.Contains(_search, StringComparison.OrdinalIgnoreCase));
-        return rows;
+            rows = rows.Where(p => p.Package.Id.Contains(_search, StringComparison.OrdinalIgnoreCase)
+                || p.Title?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true);
+        // Listed by what each row is called, its title where it has one.
+        return rows.OrderBy(p => p.Title ?? p.Package.Id, StringComparer.CurrentCultureIgnoreCase);
     }
 
     private PackageReadmeDialog? _readme;
