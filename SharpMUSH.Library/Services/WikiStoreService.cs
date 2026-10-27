@@ -44,6 +44,12 @@ public sealed class WikiStoreService(IWikiStore store, WikiMarkdigPipeline rende
 	public Task<WikiPageScanBatch> ScanPagesAsync(WikiVisibility visibility, WikiPageScanPosition position, int take)
 		=> store.ScanPagesAsync(visibility, position, take);
 
+	public Task<IReadOnlyList<string>> GetPageIdsByCategoryAsync(string category, WikiVisibility visibility)
+		=> store.GetPageIdsByCategoryAsync(WikiHelpers.CategoryKey(category), visibility);
+
+	public Task<IReadOnlyList<string>> FindPagesByTitleAsync(string term, WikiVisibility visibility)
+		=> store.FindPagesByTitleAsync(term, visibility);
+
 	public async Task<IReadOnlyList<WikiPage>> NameCategoriesAsync(IEnumerable<string> names, IEnumerable<string> alreadyFiled,
 		string authorDbref, string sourceLocale)
 	{

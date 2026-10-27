@@ -49,6 +49,12 @@ public sealed class MediatorWikiStore(IMediator mediator) : IWikiStore
 	public Task<Result<WikiPageWindow>> GetPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility)
 		=> mediator.Send(new GetWikiPagesWindowQuery(cursor, take, visibility)).AsTask();
 
+	public Task<IReadOnlyList<string>> GetPageIdsByCategoryAsync(string category, WikiVisibility visibility)
+		=> mediator.Send(new GetWikiPageIdsByCategoryQuery(category, visibility)).AsTask();
+
+	public Task<IReadOnlyList<string>> FindPagesByTitleAsync(string term, WikiVisibility visibility)
+		=> mediator.Send(new FindWikiPagesByTitleQuery(term, visibility)).AsTask();
+
 	public Task<Result<WikiPage>> CreatePageAsync(WikiPage page, string? editSummary = null)
 		=> mediator.Send(new CreateWikiPageCommand(page, editSummary)).AsTask();
 

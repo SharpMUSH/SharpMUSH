@@ -74,6 +74,33 @@ public interface IWikiStore
 	/// <summary>A page of every namespace's pages in <see cref="GetPagesAsync"/>'s order, read from <paramref name="cursor"/>.</summary>
 	Task<Result<WikiPageWindow>> GetPagesWindowAsync(WikiPageCursor cursor, int take, WikiVisibility visibility);
 
+	/// <summary>The ids of the pages <paramref name="visibility"/> admits in <paramref name="category"/>, without their bodies.</summary>
+	/// <remarks>The default reads the pages; indexed stores override it.</remarks>
+	async Task<IReadOnlyList<string>> GetPageIdsByCategoryAsync(string category, WikiVisibility visibility)
+		=> [.. (await GetPagesByCategoryAsync(category, 0, int.MaxValue, visibility)).Select(page => page.Id)];
+
+	/// <summary>
+	/// The ids of the pages <paramref name="visibility"/> admits whose own title, or the title of any of their
+	/// translations, contains <paramref name="term"/> ignoring case. A reader sees one of those titles, so the caller
+	/// checks the one it shows.
+	/// </summary>
+	/// <remarks>The default reads every admitted page; indexed stores override it.</remarks>
+	async Task<IReadOnlyList<string>> FindPagesByTitleAsync(string term, WikiVisibility visibility)
+	{
+		var found = new List<string>();
+		WikiPageScanPosition position = new WikiPageScanStart();
+		while (true)
+		{
+			var batch = await ScanPagesAsync(visibility, position, 128);
+			foreach (var page in batch.Pages)
+				if (page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+					|| (await GetTranslationSummariesAsync(page.Id)).Any(t => t.Title.Contains(term, StringComparison.OrdinalIgnoreCase)))
+					found.Add(page.Id);
+			if (batch.Next is not WikiPageScanContinuation continuation) return found;
+			position = continuation;
+		}
+	}
+
 	/// <summary>
 	/// Stores <paramref name="page"/> under a newly allocated id, ignoring the one it carries, with its
 	/// body as source revision 1, summarised as <paramref name="editSummary"/>. <c>Error</c> when its

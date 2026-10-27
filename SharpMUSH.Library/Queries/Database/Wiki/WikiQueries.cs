@@ -43,6 +43,12 @@ public sealed record GetWikiPagesByCategoryWindowQuery(string Category, WikiPage
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetPagesWindowAsync"/>. Uncached.</summary>
 public sealed record GetWikiPagesWindowQuery(WikiPageCursor Cursor, int Take, WikiVisibility Visibility) : IQuery<Result<WikiPageWindow>>;
 
+/// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetPageIdsByCategoryAsync"/>. Uncached.</summary>
+public sealed record GetWikiPageIdsByCategoryQuery(string Category, WikiVisibility Visibility) : IQuery<IReadOnlyList<string>>;
+
+/// <summary>Forwards normalized storage data to <see cref="IWikiStore.FindPagesByTitleAsync"/>. Uncached.</summary>
+public sealed record FindWikiPagesByTitleQuery(string Term, WikiVisibility Visibility) : IQuery<IReadOnlyList<string>>;
+
 /// <summary>Forwards normalized storage data to <see cref="IWikiStore.GetRequirementsAsync"/>. Requirements are cached by the tagged request policy.</summary>
 public sealed record GetWikiRequirementsQuery() : IQuery<IReadOnlyList<WikiRequirementSet>>, ICacheable
 {

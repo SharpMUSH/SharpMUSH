@@ -121,25 +121,29 @@ public sealed class WikiCollectionsController(IWikiService wiki, IWikiLocalizati
 			? Wiki.GetAllPagesWindowAsync(cursor, take, visibility)
 			: Wiki.GetByCategoryWindowAsync(category, cursor, take, visibility);
 
+	/// <summary>
+	/// <paramref name="visibility"/> narrowed to the pages whose title, as this reader is shown it or as written, or one of
+	/// whose category names holds <paramref name="search"/>. The store finds the pages in those categories and the pages
+	/// with a title in any language holding it, so only those are read and localized.
+	/// </summary>
 	private async Task<WikiVisibility> SearchAsync(WikiVisibility visibility, string? search, string? lang)
 	{
 		if (string.IsNullOrWhiteSpace(search)) return visibility;
 		var term = search.Trim();
 		var names = await Localization.GetCategoryNamesAsync(lang, visibility);
 		var matching = new HashSet<string>(StringComparer.Ordinal);
-		const int batchSize = 128;
-		WikiPageScanPosition position = new WikiPageScanStart();
-		while (true)
+		foreach (var category in (await Wiki.CountPagesByCategoryAsync(visibility)).Keys
+			.Where(key => WikiHelpers.CategoryLabel(key, names).Contains(term, StringComparison.OrdinalIgnoreCase)))
+			matching.UnionWith(await Wiki.GetPageIdsByCategoryAsync(category, visibility));
+
+		var includeDrafts = await IncludeDraftsAsync();
+		foreach (var id in await Wiki.FindPagesByTitleAsync(term, visibility))
 		{
-			var batch = await Wiki.ScanPagesAsync(visibility, position, batchSize);
-			var localized = await Localization.LocalizeAllAsync(batch.Pages, lang, await IncludeDraftsAsync());
-			foreach (var row in localized.Where(row => row.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
-				|| row.Page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
-				|| row.Page.Categories.Any(key => WikiHelpers.CategoryLabel(key, names).Contains(term, StringComparison.OrdinalIgnoreCase))))
-				matching.Add(row.Page.Id);
-			if (batch.Next is not WikiPageScanContinuation continuation) break;
-			position = continuation;
 			HttpContext.RequestAborted.ThrowIfCancellationRequested();
+			if (matching.Contains(id) || await Wiki.GetByIdAsync(id) is not WikiPage page) continue;
+			if (page.Title.Contains(term, StringComparison.OrdinalIgnoreCase)
+				|| (await Localization.LocalizeAsync(page, lang, includeDrafts)).Title.Contains(term, StringComparison.OrdinalIgnoreCase))
+				matching.Add(id);
 		}
 		return visibility with { IncludedPageIds = matching };
 	}

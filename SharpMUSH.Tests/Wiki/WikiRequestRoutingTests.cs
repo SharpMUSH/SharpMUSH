@@ -272,7 +272,7 @@ public class WikiRequestRoutingTests
 	[Test]
 	[Arguments(false)]
 	[Arguments(true)]
-	public async Task LocalizedCollectionSearchSeeksCandidatesInsteadOfRestartingPositiveOffsets(bool nulBoundary)
+	public async Task LocalizedCollectionSearchLooksUpTitlesInsteadOfScanningPages(bool nulBoundary)
 	{
 		var id = Guid.NewGuid().ToString("N");
 		var package = "search-seek-" + id;
@@ -283,7 +283,7 @@ public class WikiRequestRoutingTests
 		var translatedTitle = "La " + needle;
 		try
 		{
-			// Slugs put the sole translated-title match beyond both 128-row search boundaries.
+			// Slugs put the sole translated-title match beyond the 128-row batches a scan would read.
 			for (var i = 0; i < 257; i++)
 			{
 				var page = (await Wiki.CreateAsync($"Seek {id} {i:D3}", sourceBody, "#1", sourceLocale: "en",
@@ -314,16 +314,13 @@ public class WikiRequestRoutingTests
 			await Assert.That(payload).DoesNotContain(sourceBody);
 			await Assert.That(payload).DoesNotContain(translatedBody);
 			var messages = Factory.Requests.Messages.ToArray();
-			var scans = messages.OfType<ScanWikiPagesQuery>().ToArray();
-			await Assert.That(scans.Length >= 3).IsTrue();
 			var initial = messages.OfType<CountWikiPagesQuery>().First().Visibility;
 			await Assert.That(initial.IncludedPageIds?.ToArray() ?? []).IsEquivalentTo(pages.Select(page => page.Id));
-			foreach (var scan in scans)
-			{
-				await Assert.That(scan.Visibility).IsEqualTo(initial);
-			}
-			await Assert.That(scans[0].Position is WikiPageScanStart).IsTrue();
-			await Assert.That(scans.Skip(1).All(scan => scan.Position is WikiPageScanContinuation)).IsTrue();
+			// One title lookup over the collection; no scan of its pages.
+			var lookup = messages.OfType<FindWikiPagesByTitleQuery>().Single();
+			await Assert.That(lookup.Term).IsEqualTo(needle);
+			await Assert.That(lookup.Visibility).IsEqualTo(initial);
+			await Assert.That(messages.OfType<ScanWikiPagesQuery>()).IsEmpty();
 			await Assert.That(messages.OfType<GetWikiPagesQuery>().Where(query => query.Ns is null && query.Skip > 0)).IsEmpty();
 		}
 		finally
