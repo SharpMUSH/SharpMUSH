@@ -21,6 +21,11 @@
       "lookup": "compatibility names sharpmush only functions"
     },
     {
+      "id": "functions-from-tinymux-and-rhostmush",
+      "heading": "Functions from TinyMUX and RhostMUSH",
+      "lookup": "compatibility names functions from tinymux and rhostmush"
+    },
+    {
       "id": "sharpmush-only-commands",
       "heading": "SharpMUSH-only commands",
       "lookup": "compatibility names sharpmush only commands"
@@ -87,6 +92,10 @@ hi
 
 One is registered and does nothing yet: `websocket_html()` checks its arguments and returns nothing. Use `oob()` for GMCP. `objmem()` always answers 0.
 
+## Functions from TinyMUX and RhostMUSH
+
+PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostMUSH; the rest come from RhostMUSH: `citer()`, `columns()`, `elementpos()`, `error()`, `inf()`, `ladd()` and the other list arithmetic, `land()` and the other list logic, `listdiff()`, `listinter()`, `listunion()`, `nameq()`, `nsiter()`, `privatize()`, `setqm()`, `setrm()`, `u2()`, `u2local()`, `u2default()`, `u2ldefault()` and `while()`. Each one's help says where it differs from the original.
+
 ## SharpMUSH-only commands
 
   `@account`: administers web-portal accounts.<br>
@@ -95,7 +104,8 @@ One is registered and does nothing yet: `websocket_html()` checks its arguments 
   `page/recall`, `page/conversations`, `page/timestamps`: switches that read your own page log; PennMUSH keeps no page log, so the parity harness has no case for them.<br>
   `register`, `login`, `play`, `claim`: the account layer at the login screen. `create` keeps PennMUSH's name, but makes the character on the account you logged in to.<br>
   `version`: `@version` before you have connected. PennMUSH has no bare `version`; it is accepted here because crawlers and players from MUX-family servers type it, and it publishes nothing `INFO` does not.<br>
-  `~<command>`: run one command under strict parsing.
+  `~<command>`: run one command under strict parsing.<br>
+  `addcom`, `delcom`, `comlist`, `comtitle`, `@clist`: TinyMUX's channel commands, while the `use_muxcomm` option is on (see [muxcomsys]).
 
 ## SharpMUSH-only flags and powers
 
