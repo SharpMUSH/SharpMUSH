@@ -10,17 +10,22 @@ is, so launching needs no checkout. Railway runs the same image (`deploy/railway
 
 `SHARPMUSH_ROLE` picks what one container of this image runs:
 
-| Role | Runs | Needs |
-|---|---|---|
-| `all` (default) | everything, the renderer on a Unix socket | |
-| `edge` | Caddy, NATS, the connection server: every player's socket | `SHARPMUSH_SERVER_ADDRESS` (host:port), `Rendering__Address` |
-| `server` | the game server and the world | `SHARPMUSH_NATS_URL` |
-| `renderer` | the rendering worker | `Rendering__Address` |
+| Role | Runs | Needs | Volume at `/data` |
+|---|---|---|---|
+| `all` (default) | everything, the renderer on a Unix socket | | the world, NATS, the setup guard |
+| `edge` | Caddy, NATS, the connection server: every player's socket | `SHARPMUSH_SERVER_ADDRESS` (host:port), `Rendering__Address` | NATS, the setup guard |
+| `server` | the game server and the world | `SHARPMUSH_NATS_URL` | the world and its backups |
+| `renderer` | the rendering worker | `Rendering__Address` | none |
 
 Run as three parts, updating the server or the renderer drops nobody, as under the compose stack.
-Only the edge may be public: NATS, the server and the renderer ask for no credentials, so they must
-be reachable on the host's private network alone. The server trusts forwarded headers from
-`SHARPMUSH_TRUSTED_PROXIES` (default: any address, since only the edge can reach it).
+The edge and the server each need a volume of their own; without one, an update loses what they
+wrote.
+
+Only the edge may be public: NATS, the server and the renderer ask for no credentials, so only the
+game's own parts may reach them. On Fly that means a private network made for the game
+(`fly apps create --network`), since the organization's default network reaches every app in it.
+The server trusts forwarded headers from `SHARPMUSH_TRUSTED_PROXIES` (default: any address, since
+only the edge can reach it).
 
 ## Launch
 
