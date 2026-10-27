@@ -1,5 +1,7 @@
 # Stage 1: Build
-FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
+# Built on the runner's own platform: the output is portable .NET, with every architecture's
+# native libraries, so an arm64 image needs no emulated compile.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 WORKDIR /src
 COPY . .
 # Restore once for the whole solution, then publish with --no-restore so neither publish re-restores.
