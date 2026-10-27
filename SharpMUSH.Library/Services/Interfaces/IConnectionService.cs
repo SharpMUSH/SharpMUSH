@@ -67,6 +67,21 @@ public interface IConnectionService
 
 		public string PresenceClass => Metadata.GetValueOrDefault(nameof(PresenceClass), PresenceClasses.Play);
 
+		/// <summary>
+		/// The connection server holds this session for a client that dropped, waiting for it to resume
+		/// (<c>SessionDetachedMessage</c>), and nobody is reading it. <c>Detached</c> holds the end of the
+		/// hold in Unix milliseconds, <c>0</c> once the client is back.
+		/// </summary>
+		public bool IsDetached => Metadata.TryGetValue("Detached", out var value)
+			&& long.TryParse(value, out var heldUntil)
+			&& heldUntil > DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+		/// <summary>
+		/// Someone is playing through this connection: not the portal's background session and not a
+		/// session held after its client dropped. WHO and online checks count only these.
+		/// </summary>
+		public bool IsPresent => PresenceClass != PresenceClasses.Portal && !IsDetached;
+
 		public int CommandCount
 			=> int.TryParse(Metadata.GetValueOrDefault("CommandCount", "0"), out var cnt) ? cnt : 0;
 

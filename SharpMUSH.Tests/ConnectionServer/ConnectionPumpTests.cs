@@ -49,6 +49,7 @@ public class ConnectionPumpTests
 		private bool _fired;
 		public List<byte[]> Sent { get; } = [];
 		public bool Closed { get; private set; }
+		public bool FailSends { get; set; }
 		public string Kind => "fake";
 		public string RemoteIp => "1.2.3.4";
 		public string Hostname => "host";
@@ -56,6 +57,7 @@ public class ConnectionPumpTests
 
 		public Task SendAsync(ReadOnlyMemory<byte> data, CancellationToken ct)
 		{
+			if (FailSends) return Task.FromException(new IOException("socket gone"));
 			Sent.Add(data.ToArray());
 			return Task.CompletedTask;
 		}
@@ -155,6 +157,10 @@ public class ConnectionPumpTests
 		// Drop now DETACHES rather than disconnecting immediately.
 		await conn.DidNotReceive().DisconnectAsync(42);
 		await Assert.That(tracker.IsDetached(42)).IsTrue();
+		// The engine is told, so the held session stops counting as online.
+		await bus.Received(1).Publish(
+			Arg.Is<SessionDetachedMessage>(m => m.Handle == 42 && m.HeldUntil != default),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -267,6 +273,40 @@ public class ConnectionPumpTests
 		await Assert.That(transport.Closed).IsTrue();
 		var last = System.Text.Encoding.UTF8.GetString(transport.Sent[^1]);
 		await Assert.That(last).Contains("\"type\":\"bye\"");
+	}
+
+	[Test]
+	public async Task A_failed_send_announces_the_held_session()
+	{
+		var bus = Substitute.For<IMessageBus>();
+		var conn = Substitute.For<IConnectionServerService>();
+		var desc = Substitute.For<IDescriptorGeneratorService>();
+		var tracker = new DetachedSessionTracker(new ManualScheduler());
+		Func<byte[], ValueTask>? output = null;
+		_ = conn.RegisterAsync(
+			Arg.Any<long>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(),
+			Arg.Do<Func<byte[], ValueTask>>(o => output = o), Arg.Any<Func<byte[], ValueTask>>(),
+			Arg.Any<Func<System.Text.Encoding>>(),
+			Arg.Any<Action>(),
+			Arg.Any<Func<string, string, ValueTask>?>(),
+			Arg.Any<SharpMUSH.SocketServer.Models.ProtocolCapabilities?>(),
+			sessionId: Arg.Any<string?>(), cancellationToken: Arg.Any<CancellationToken>());
+
+		var pump = MakePump(bus, conn, desc, tracker: tracker);
+		DrainCallbackTransport? transport = null;
+		// The socket dies on a send while the pump is still reading, so the output path detaches it first.
+		transport = new DrainCallbackTransport(async () =>
+		{
+			transport!.FailSends = true;
+			await output!("hi"u8.ToArray());
+		}, "{\"type\":\"hello\"}");
+
+		await pump.RunAsync(transport, candidateHandle: 42, CancellationToken.None);
+
+		await Assert.That(tracker.IsDetached(42)).IsTrue();
+		await bus.Received(1).Publish(
+			Arg.Is<SessionDetachedMessage>(m => m.Handle == 42 && m.HeldUntil != default),
+			Arg.Any<CancellationToken>());
 	}
 
 	[Test]
@@ -587,5 +627,6 @@ public class ConnectionPumpTests
 		await Assert.That(ReferenceEquals(registry.Get(7)!.Current, newerTransport)).IsTrue();
 		await Assert.That(tracker.IsDetached(7)).IsFalse();
 		await conn.DidNotReceive().DisconnectAsync(7);
+		await bus.DidNotReceive().Publish(Arg.Any<SessionDetachedMessage>(), Arg.Any<CancellationToken>());
 	}
 }

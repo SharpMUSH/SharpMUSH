@@ -37,6 +37,8 @@ public sealed class ConnectionPump(
 			if (sink is not null && sink.Detach(transport))
 			{
 				ScheduleExpiry(candidateHandle, sink.SessionId, grace);
+				using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+				await AnnounceDetachedAsync(candidateHandle, sink.SessionId, DateTimeOffset.UtcNow.Add(grace), deadline.Token);
 			}
 			else if (connectionService.Get(candidateHandle) is null)
 				descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
@@ -89,6 +91,12 @@ public sealed class ConnectionPump(
 		{
 			// Expected on shutdown / RequestAborted.
 		}
+		catch (System.Net.WebSockets.WebSocketException ex)
+			when (ex.WebSocketErrorCode == System.Net.WebSockets.WebSocketError.ConnectionClosedPrematurely)
+		{
+			// A browser tab closed or a network dropped without the close handshake: routine, so one line.
+			logger.LogWarning("Connection {Handle} closed without a close handshake", handle);
+		}
 		catch (Exception ex)
 		{
 			// Intentional per-connection boundary: an unexpected error on one connection is logged and
@@ -108,20 +116,28 @@ public sealed class ConnectionPump(
 				// disconnect if the client does not come back.
 				using var teardown = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 				var acquired = await sink.OutputGate.WaitAsync(TimeSpan.FromSeconds(5));
+				var detached = false;
+				var heldUntil = DateTimeOffset.UtcNow.Add(grace);
 				if (!acquired)
 				{
-					if (sink.Detach(transport)) ScheduleExpiry(handle, session, grace);
+					if (sink.Detach(transport))
+					{
+						ScheduleExpiry(handle, session, grace);
+						detached = true;
+					}
 				}
 				else try
 					{
 						if (ReferenceEquals(sink.Current, transport))
 						{
 							sink.Detach();
-							try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), teardown.Token); }
+							detached = true;
+							try { await SetExpiryAsync(handle, heldUntil, teardown.Token); }
 							finally { ScheduleExpiry(handle, session, grace); }
 						}
 					}
 					finally { sink.OutputGate.Release(); }
+				if (detached) await AnnounceDetachedAsync(handle, session, heldUntil, teardown.Token);
 			}
 		}
 	}
@@ -213,6 +229,22 @@ public sealed class ConnectionPump(
 		}
 	}
 
+	/// <summary>
+	/// Tells the engine the session is held with nobody reading it, so the player stops counting as online
+	/// until it resumes or expires. A failure leaves the player listed until then, nothing worse.
+	/// </summary>
+	private async Task AnnounceDetachedAsync(long handle, string session, DateTimeOffset heldUntil, CancellationToken ct)
+	{
+		try
+		{
+			await publishEndpoint.Publish(new SessionDetachedMessage(handle, session, heldUntil), ct);
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Could not announce the held session for {Handle}; it stays listed as online", handle);
+		}
+	}
+
 	private async Task SetExpiryAsync(long handle, DateTimeOffset? expiry, CancellationToken ct)
 	{
 		if (stateStore is not null)
@@ -293,11 +325,14 @@ public sealed class ConnectionPump(
 				logger.LogWarning(ex, "Socket output failed for {Handle}; preserving replay and detaching transport", handle);
 				if (sink.Detach(current))
 				{
+					var heldUntil = DateTimeOffset.UtcNow.Add(grace);
 					using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-					try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), deadline.Token); }
+					try { await SetExpiryAsync(handle, heldUntil, deadline.Token); }
 					catch (Exception expiryError) { logger.LogWarning(expiryError, "Could not persist detached expiry for {Handle}", handle); }
 					finally { ScheduleExpiry(handle, session, grace); }
 					await CloseTransportAsync(current);
+					using var announce = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+					await AnnounceDetachedAsync(handle, session, heldUntil, announce.Token);
 				}
 			}
 		}

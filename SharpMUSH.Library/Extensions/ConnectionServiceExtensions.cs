@@ -11,11 +11,12 @@ public static class ConnectionServiceExtensions
 	public static async ValueTask<bool> IsConnected(this IConnectionService connectionService, AnySharpObject obj) =>
 		await connectionService.Get(obj.Object().DBRef).AnyAsync();
 
-	/// <summary>True if the object has a play-class connection — a real interactive session. Portal-class
-	/// background connections (the web client's system terminal) don't count, so a character only browsing
-	/// the portal is offline for presence (WHO, room contents, CONNECTED).</summary>
+	/// <summary>True if the object has a present connection (<see cref="IConnectionService.ConnectionData.IsPresent"/>).
+	/// Portal-class background connections (the web client's system terminal) and sessions held after their
+	/// client dropped don't count, so a character only browsing the portal is offline for presence (WHO,
+	/// room contents, CONNECTED).</summary>
 	public static async ValueTask<bool> IsOnline(this IConnectionService connectionService, AnySharpObject obj) =>
 		await connectionService.Get(obj.Object().DBRef)
-			.Where(c => c.PresenceClass != PresenceClasses.Portal)
+			.Where(c => c.IsPresent)
 			.AnyAsync();
 }
