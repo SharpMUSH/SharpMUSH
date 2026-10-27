@@ -6482,4 +6482,70 @@
     <value>Se alle {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Verdenskart</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Kart</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Velg et kart.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Dette spillet har ingen kart ennå.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Velg en karakter for å se kartet.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Dette spillet har ikke noe verdenskart.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Det finnes ikke noe kart her, eller du får ikke se det.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Ingen rom på dette kartet er synlige for deg.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Nivå {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Nivåer</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Zoom inn</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Zoom ut</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Du er her</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Utganger</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Ingen utganger du kan se.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Ikke plassert på kartet</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Til kartet {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>et sted du ikke kan se</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Dette kartet er for stort til å vises på én gang, så noen rom er utelatt.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Rutenett</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompass</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Bilde</value>
+  </data>
 </root>

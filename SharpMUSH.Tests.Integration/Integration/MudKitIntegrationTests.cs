@@ -251,8 +251,8 @@ public class MudKitIntegrationTests
 			await God($"@open North;n={to},South;s,{from}");
 			await God($"&AREA {to}=Harbour");
 			await God($"&ENVIRONMENT {to}=docks");
-			await God($"&X {to}=3");
-			await God($"&Y {to}=-4");
+			await God($"&MAP`COORDS`X {to}=3");
+			await God($"&MAP`COORDS`Y {to}=-4");
 
 			var mover = await ClientAsync("GrMover", from, "Room 1 Char 1");
 			var left = await ClientAsync("GrLeft", from);

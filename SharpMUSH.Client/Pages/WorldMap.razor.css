@@ -1,0 +1,100 @@
+.map-page {
+	padding: var(--cpad);
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.map-panes {
+	display: grid;
+	grid-template-columns: minmax(10rem, 14rem) minmax(0, 1fr);
+	gap: 16px;
+	align-items: start;
+}
+
+.map-main {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-width: 0;
+}
+
+.map-note {
+	color: var(--text-dim);
+	margin: 0;
+}
+
+.map-tree {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.map-tree .map-tree {
+	padding-left: 14px;
+	border-left: 1px solid var(--border-soft);
+	margin-left: 6px;
+}
+
+.map-tree-link {
+	display: block;
+	padding: 6px 10px;
+	border-radius: var(--radius-row);
+	color: var(--text);
+	text-decoration: none;
+}
+
+.map-tree-link:hover {
+	background: var(--surface-2);
+}
+
+.map-tree-link--on {
+	background: var(--surface-2);
+	color: var(--accent);
+	font-weight: 600;
+}
+
+.map-room-body {
+	padding: 12px 16px;
+}
+
+.map-exits {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: grid;
+	gap: 6px;
+}
+
+.map-exits li {
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+	flex-wrap: wrap;
+}
+
+.map-exit-name {
+	font-weight: 600;
+}
+
+.map-exit-to {
+	background: none;
+	border: 0;
+	padding: 0;
+	color: var(--accent);
+	font: inherit;
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.map-exit-to--unknown {
+	color: var(--text-faint);
+	text-decoration: none;
+	cursor: default;
+}
+
+@container page (max-width: 48rem) {
+	.map-panes {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

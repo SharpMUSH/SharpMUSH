@@ -5791,4 +5791,70 @@
     <value>Voir les {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Carte du monde</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Cartes</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Choisissez une carte.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Ce jeu n'a pas encore de carte.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Choisissez un personnage pour voir la carte.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Ce jeu n'a pas de carte du monde.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Il n'y a pas de carte ici, ou vous ne pouvez pas la voir.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Vous ne voyez aucune pièce de cette carte.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Niveau {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Niveaux</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Zoom avant</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Zoom arrière</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Vous êtes ici</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Sorties</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Aucune sortie visible.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Pas placée sur la carte</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Vers la carte {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>un endroit que vous ne voyez pas</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Cette carte est trop grande pour être affichée d'un coup ; certaines pièces sont omises.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Grille</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Boussole</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Image</value>
+  </data>
 </root>

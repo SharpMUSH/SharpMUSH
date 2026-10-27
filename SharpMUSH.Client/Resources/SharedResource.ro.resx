@@ -6482,4 +6482,70 @@
     <value>Vezi toate cele {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Harta lumii</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Hărți</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Alege o hartă.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Acest joc nu are încă hărți.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Alege un personaj ca să vezi harta.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Acest joc nu are o hartă a lumii.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Aici nu există nicio hartă sau nu ai voie să o vezi.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Nu poți vedea nicio cameră de pe această hartă.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Nivelul {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Niveluri</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Mărește</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Micșorează</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Ești aici</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Ieșiri</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Nicio ieșire pe care să o poți vedea.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nu este plasată pe hartă</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Către harta {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>undeva ce nu poți vedea</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Această hartă este prea mare pentru a fi afișată deodată, așa că unele camere lipsesc.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Grilă</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Busolă</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Imagine</value>
+  </data>
 </root>

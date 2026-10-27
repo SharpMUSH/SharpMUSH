@@ -1,0 +1,205 @@
+using Mediator;
+using NSubstitute;
+using SharpMUSH.Library.API;
+using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Server.Services;
+using SharpMUSH.Tests.Services;
+
+namespace SharpMUSH.Tests.Applications;
+
+public class WorldMapReaderTests
+{
+	private readonly TestObjectFactory _objects = new();
+	private readonly IMediator _mediator = Substitute.For<IMediator>();
+	private readonly IPermissionService _permissions = Substitute.For<IPermissionService>();
+	private readonly IAttributeService _attributes = Substitute.For<IAttributeService>();
+	private readonly IRealityPolicy _reality = Substitute.For<IRealityPolicy>();
+	private readonly Dictionary<(int Number, string Name), string> _values = new();
+	private readonly Dictionary<int, List<SharpRoom>> _zones = new();
+	private readonly AnySharpObject _builder;
+	private readonly AnySharpObject _viewer;
+	private readonly SharpRoom _start;
+
+	public WorldMapReaderTests()
+	{
+		_start = _objects.CreateRoom(1, "Elsewhere");
+		_builder = _objects.CreatePlayer(2, "Builder", _start);
+		_viewer = _objects.CreatePlayer(3, "Viewer", _start);
+		_mediator.Send(Arg.Any<GetObjectNodeQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+			ValueTask.FromResult<AnyOptionalSharpObject>(Find(call.Arg<GetObjectNodeQuery>().DBRef.Number) is { } found ? found : new None()));
+		_mediator.CreateStream(Arg.Any<GetObjectsByZoneQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+			(_zones.GetValueOrDefault(call.Arg<GetObjectsByZoneQuery>().Zone is DBRef zone ? zone.Number : -1) ?? []).Select(room => room.Object).ToAsyncEnumerable());
+		_mediator.CreateStream(Arg.Any<GetExitsQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<SharpExit>());
+		_reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		_permissions.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(false);
+		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
+			IAttributeService.AttributeMode.Read, false).Returns(call =>
+		{
+			var key = (call.ArgAt<AnySharpObject>(1).Object().DBRef.Number, call.ArgAt<string>(2));
+			return ValueTask.FromResult<OptionalSharpAttributeOrError>(_values.TryGetValue(key, out var value)
+				? new[] { Attribute(key.Item2, value) }
+				: new None());
+		});
+	}
+
+	private WorldMapReader Reader => new(_mediator, _permissions, _reality, _attributes);
+
+	private AnySharpObject? Find(int number) =>
+		_objects.GetAllRooms().Select(room => new AnySharpObject(room)).Concat(_objects.GetAllObjects())
+			.FirstOrDefault(o => o.Object().DBRef.Number == number);
+
+	private static SharpAttribute Attribute(string name, string value) =>
+		new("a", "a", name, [], null, name, null!, null!, null!) { Value = MarkupText.Plain(value) };
+
+	private AnySharpObject Map(int number, string name, string kind)
+	{
+		var map = _objects.CreateThing(number, name, _start, _builder);
+		_values[(number, WorldMapReader.KindAttribute)] = kind;
+		return map;
+	}
+
+	private SharpRoom Room(int number, string name, AnySharpObject map)
+	{
+		var room = _objects.CreateRoom(number, name);
+		room.Object.Zone = new(async _ =>
+		{
+			await ValueTask.CompletedTask;
+			return map;
+		});
+		_zones.TryAdd(map.Object().DBRef.Number, []);
+		_zones[map.Object().DBRef.Number].Add(room);
+		return room;
+	}
+
+	private void Indexed(params int[] numbers) =>
+		_mediator.Send(Arg.Any<GetIndexedAttributeQuery>(), Arg.Any<CancellationToken>()).Returns(
+			ValueTask.FromResult<IndexedAttributeResult>(new IndexedAttributePage(
+				[.. numbers.Select(number => new IndexedAttributeHit(number, 0, -1, IndexedAttributeFacts.None))], null)));
+
+	private static void Dark(SharpRoom room) =>
+		room.Object.Flags = new(() => new[]
+		{
+			new SharpObjectFlag
+			{
+				Name = "DARK", Symbol = "D", SetPermissions = [], UnsetPermissions = [], System = true, TypeRestrictions = []
+			}
+		}.ToAsyncEnumerable());
+
+	[Test]
+	public async Task ListsOnlyObjectsWhoseKindIsAKind()
+	{
+		Map(50, "Harbour", MapKinds.Coordinates);
+		Map(51, "Not a map", "spiral");
+		Map(52, "Caves", "Compass");
+		Indexed(50, 51, 52);
+
+		var maps = await Reader.ListAsync(_viewer, default);
+
+		await Assert.That(maps.Select(map => (map.Id, map.Kind))).IsEquivalentTo([("#52", MapKinds.Compass), ("#50", MapKinds.Coordinates)]);
+		await Assert.That(maps[0].Name).IsEqualTo("Caves");
+	}
+
+	[Test]
+	public async Task ParentIsKeptOnlyWhenItIsAMap()
+	{
+		Map(50, "City", MapKinds.Graph);
+		Map(51, "Harbour", MapKinds.Coordinates);
+		Map(52, "Caves", MapKinds.Compass);
+		_values[(51, WorldMapReader.ParentAttribute)] = "#50";
+		_values[(52, WorldMapReader.ParentAttribute)] = "#3";
+		Indexed(50, 51, 52);
+
+		var maps = (await Reader.ListAsync(_viewer, default)).ToDictionary(map => map.Id);
+
+		await Assert.That(maps["#51"].Parent).IsEqualTo("#50");
+		await Assert.That(maps["#52"].Parent).IsNull().Because("#3 is a player, not a map");
+	}
+
+	[Test]
+	public async Task PositionsAreReadAsTheMapsKindSays()
+	{
+		var grid = Map(50, "Harbour", MapKinds.Coordinates);
+		Room(10, "Quay", grid);
+		_values[(10, "MAP`COORDS`X")] = "3";
+		_values[(10, "MAP`COORDS`Y")] = "-1";
+		_values[(10, "MAP`POS`X")] = "900";
+		_values[(10, "MAP`SIZE`W")] = "2";
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Rooms.Single().Position).IsEquivalentTo([3d, -1d, 0d]);
+		await Assert.That(map.Rooms.Single().Size).IsEquivalentTo([2d, 1d]);
+
+		var picture = Map(51, "City", MapKinds.Graph);
+		Room(11, "Square", picture);
+		_values[(11, "MAP`POS`X")] = "120.5";
+		_values[(11, "MAP`POS`Y")] = "80";
+		_values[(11, "MAP`COORDS`X")] = "3";
+
+		var city = (await Reader.ReadAsync(_viewer, 51, default)).Expect<MapDto>();
+
+		await Assert.That(city.Rooms.Single().Position).IsEquivalentTo([120.5, 80d]);
+		await Assert.That(city.Rooms.Single().Size).IsNull();
+	}
+
+	[Test]
+	public async Task ADarkRoomIsLeftOutForAViewerWhoMayNotExamineIt()
+	{
+		var grid = Map(50, "Harbour", MapKinds.Coordinates);
+		Room(10, "Quay", grid);
+		Dark(Room(11, "Smugglers' cellar", grid));
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+		await Assert.That(map.Rooms.Select(room => room.Id)).IsEquivalentTo(["#10"]);
+
+		_permissions.CanExamine(_builder, Arg.Any<AnySharpObject>()).Returns(true);
+		var built = (await Reader.ReadAsync(_builder, 50, default)).Expect<MapDto>();
+		await Assert.That(built.Rooms.Select(room => room.Id)).IsEquivalentTo(["#10", "#11"]);
+	}
+
+	[Test]
+	public async Task AnExitToAnotherMapNamesThatMap()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var city = Map(51, "City", MapKinds.Graph);
+		var quay = Room(10, "Quay", harbour);
+		var gate = Room(11, "Gate", harbour);
+		var square = Room(20, "Square", city);
+		var north = _objects.CreateExit(30, "North", ["n"], quay, gate).Expect<SharpExit>();
+		var road = _objects.CreateExit(31, "Road", [], quay, square).Expect<SharpExit>();
+		_mediator.CreateStream(Arg.Any<GetExitsQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+			call.Arg<GetExitsQuery>().DBRef is DBRef { Number: 10 } ? new[] { north, road }.ToAsyncEnumerable() : AsyncEnumerable.Empty<SharpExit>());
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+		var exits = map.Exits.ToDictionary(exit => exit.Id);
+
+		await Assert.That(exits["#30"].Destination).IsEqualTo("#11");
+		await Assert.That(exits["#30"].Aliases).IsEquivalentTo(["n"]);
+		await Assert.That(exits["#30"].DestinationMap).IsNull();
+		await Assert.That(exits["#31"].Destination).IsEqualTo("#20");
+		await Assert.That(exits["#31"].DestinationMap?.Name).IsEqualTo("City");
+	}
+
+	[Test]
+	public async Task AnObjectWithoutAKindIsNoMap()
+	{
+		_objects.CreateThing(50, "Plain thing", _start, _builder);
+
+		await Assert.That(await Reader.ReadAsync(_viewer, 50, default) is NotFound).IsTrue();
+	}
+
+	[Test]
+	public async Task TheViewersRoomIsHereOnlyOnItsOwnMap()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var quay = Room(10, "Quay", harbour);
+		var viewer = _objects.CreatePlayer(4, "Sailor", quay);
+
+		await Assert.That((await Reader.ReadAsync(viewer, 50, default)).Expect<MapDto>().Here).IsEqualTo("#10");
+		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Here).IsNull();
+	}
+}

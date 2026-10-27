@@ -6482,4 +6482,70 @@
     <value>Zobacz wszystkie ({0})</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Mapa świata</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Mapy</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Wybierz mapę.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Ta gra nie ma jeszcze map.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Wybierz postać, aby zobaczyć mapę.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Ta gra nie ma mapy świata.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Nie ma tu mapy albo nie możesz jej zobaczyć.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Na tej mapie nie ma pomieszczenia, które możesz zobaczyć.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Poziom {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Poziomy</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Powiększ</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Pomniejsz</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Jesteś tutaj</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Wyjścia</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Brak widocznych wyjść.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nieumieszczone na mapie</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Do mapy {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>w miejsce, którego nie widzisz</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Ta mapa jest zbyt duża, by pokazać ją naraz, więc pominięto niektóre pomieszczenia.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Siatka</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Obraz</value>
+  </data>
 </root>

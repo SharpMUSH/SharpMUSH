@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-room
 title: "GMCP room data"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Room package: Room.Info for a mapper (number, name, area, environment, coordinates and exits), Room.Players, Room.AddPlayer and Room.RemovePlayer, as each player moves, connects and disconnects."
 license: MIT
@@ -164,11 +164,11 @@ objects:
       DATA`CONFIG`ENVIRONMENT`EXAMPLE: |-
         TERRAIN
       DATA`CONFIG`COORDINATES: |-
-        X Y Z
+        MAP`COORDS`X MAP`COORDS`Y MAP`COORDS`Z
       DATA`CONFIG`COORDINATES`TYPE: |-
         list
       DATA`CONFIG`COORDINATES`DEFAULT: |-
-        X Y Z
+        MAP`COORDS`X MAP`COORDS`Y MAP`COORDS`Z
       DATA`CONFIG`COORDINATES`MIN: |-
         2
       DATA`CONFIG`COORDINATES`MAX: |-
@@ -178,7 +178,7 @@ objects:
       DATA`CONFIG`COORDINATES`LABEL: |-
         Coordinate attributes
       DATA`CONFIG`COORDINATES`EXAMPLE: |-
-        MAP`X MAP`Y MAP`Z
+        X Y Z
       DATA`CONFIG`FULLNAME: |-
         FULLNAME
       DATA`CONFIG`FULLNAME`TYPE: |-
@@ -212,7 +212,7 @@ objects:
 
         - A room's **area** is its `AREA` attribute, or else the name of its zone.
         - Its **environment** is its `ENVIRONMENT` attribute, such as `forest`.
-        - Its **coordinates** are its `X`, `Y` and `Z` attributes. A room with none is sent none.
+        - Its **coordinates** are its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` attributes, as the World map reads them. A room with none is sent none.
         - A player's `FULLNAME` attribute is the name shown in full.
 
         Staff can name other attributes: `+config gmcp-room`.

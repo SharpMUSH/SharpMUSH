@@ -1,0 +1,70 @@
+format: "1.16"
+package: world-map
+title: "World map"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [map, world, grid, building, portal]
+category: Building
+requires_server: ">=0.1"
+
+# The portal reads the maps through api/maps, which lists them from this index: an object is a map when it holds
+# its own MAP`KIND. The package owns no code; the Map Guide only carries the +help topic.
+attributes:
+  MAP`KIND:
+    index: type:thing
+
+objects:
+  - ref: world_map
+    type: thing
+    name: Map Guide
+    flags: [no_command]
+    attributes:
+      HELP: |-
+        The World map in the portal, and how to make a map of your rooms.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`MAP: |-
+        zones|gmcp room
+      HELP`MAP: |-
+        The portal's **World map** draws each map of the game from its rooms and the exits between them. Everyone can look at a map; the room you are in is marked.
+
+        A map is a thing whose ``MAP`KIND`` attribute says how it is drawn. A room is on the map that is its zone.
+
+        - `coordinates`: a grid. Each room sits in the cell its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` name, one level (z) at a time, north up.
+        - `compass`: placed by its exits. A room north of another is drawn above it; `up` and `down` change the level.
+        - `graph`: each room at the point its ``MAP`POS`X`` and ``MAP`POS`Y`` name, with no grid.
+
+        A room covers one cell unless its ``MAP`SIZE`W`` and ``MAP`SIZE`H`` say more.
+
+        ## Making a map
+
+        In a room called Boathouse:
+
+        ```
+        @create Harbour
+        &MAP`KIND Harbour=coordinates
+        @chzone here=Harbour
+        &MAP`COORDS`X here=3
+        &MAP`COORDS`Y here=-1
+        ```
+
+        Output:
+        ```
+        Created: Object #32.
+        Harbour/MAP`KIND - Set.
+        Unlocked zone Harbour(#32Tn) - automatically zone-locking to itself
+        Zone changed.
+        Boathouse/MAP`COORDS`X - Set.
+        Boathouse/MAP`COORDS`Y - Set.
+        ```
+
+        Do the same in each room of the harbour. A room without coordinates is drawn in a row below the grid.
+
+        ## Several maps
+
+        A game may have as many maps as it likes, each of its own kind. An exit from a room on one map to a room on another is drawn as a door; choosing it opens the other map.
+
+        ``&MAP`PARENT Harbour=#50`` puts the Harbour map inside map #50, so the portal lists it under that one.

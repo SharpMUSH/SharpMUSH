@@ -6482,4 +6482,70 @@
     <value>查看全部 {0} 项</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>世界地图</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>地图</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>请选择一张地图。</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>本游戏还没有地图。</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>请选择一个角色来查看地图。</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>本游戏没有世界地图。</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>这里没有地图，或者你无权查看。</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>这张地图上没有你能看到的房间。</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>第 {0} 层</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>楼层</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>放大</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>缩小</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>你在这里</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>出口</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>没有你能看到的出口。</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>未放置在地图上</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>前往地图 {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>你看不到的地方</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>这张地图太大，无法一次全部显示，部分房间已省略。</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>网格</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>罗盘</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>图片</value>
+  </data>
 </root>

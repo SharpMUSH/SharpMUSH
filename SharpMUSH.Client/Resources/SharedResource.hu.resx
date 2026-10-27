@@ -6482,4 +6482,70 @@
     <value>Mind a(z) {0} megtekintése</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Világtérkép</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Térképek</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Válassz térképet.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Ennek a játéknak még nincs térképe.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Válassz karaktert a térkép megtekintéséhez.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Ennek a játéknak nincs világtérképe.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Itt nincs térkép, vagy nem láthatod.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Ezen a térképen egyetlen szobát sem láthatsz.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>{0}. szint</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Szintek</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Nagyítás</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Kicsinyítés</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Itt vagy</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Kijáratok</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Nincs látható kijárat.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nincs elhelyezve a térképen</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Tovább a(z) {0} térképre</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>valahová, amit nem láthatsz</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Ez a térkép túl nagy ahhoz, hogy egyszerre megjelenjen, ezért néhány szoba kimaradt.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Rács</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Iránytű</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Kép</value>
+  </data>
 </root>

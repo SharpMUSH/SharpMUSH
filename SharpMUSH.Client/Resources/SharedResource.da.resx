@@ -6482,4 +6482,70 @@
     <value>Se alle {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Verdenskort</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Kort</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Vælg et kort.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Dette spil har ingen kort endnu.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Vælg en figur for at se kortet.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Dette spil har intet verdenskort.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Der er intet kort her, eller du må ikke se det.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Der er ingen rum på dette kort, som du kan se.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Niveau {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Niveauer</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Zoom ind</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Zoom ud</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Du er her</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Udgange</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Ingen udgange, du kan se.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Ikke placeret på kortet</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Til kortet {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>et sted, du ikke kan se</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Dette kort er for stort til at blive vist på én gang, så nogle rum er udeladt.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Gitter</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Billede</value>
+  </data>
 </root>

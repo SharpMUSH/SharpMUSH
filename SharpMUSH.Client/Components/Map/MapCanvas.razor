@@ -1,0 +1,183 @@
+@using System.Globalization
+@using SharpMUSH.Library.API
+@inject IStringLocalizer<SharedResource> Loc
+
+@* One level of a map: each room a box at its place, each exit between two rooms on the level a line (with an arrow
+   when it runs one way only), and the rooms the map does not place in a dashed strip below. The drawing is a
+   picture only; the rooms are buttons over it, so they take focus, read in order and scroll into view. The figure
+   is drawn at Zoom pixels per drawing unit inside a scrolling frame, so panning is the browser's own scrolling,
+   by wheel, trackpad or finger. *@
+<div class="map-frame" tabindex="-1">
+    <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom);">
+        <svg viewBox="@Num(_left) @Num(_top) @Num(_width) @Num(_height)" class="map-svg" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+            <defs>
+                <marker id="@ArrowId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                    <path d="M0,0 L10,5 L0,10 z" class="map-arrow" />
+                </marker>
+            </defs>
+            @if (!Layout.IsGraph)
+            {
+                @foreach (var line in GridLines())
+                {
+                    <line class="map-grid" x1="@Num(line.X1)" y1="@Num(line.Y1)" x2="@Num(line.X2)" y2="@Num(line.Y2)" />
+                }
+            }
+            @foreach (var edge in _edges)
+            {
+                <line class="map-edge" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
+                      marker-end="@(edge.OneWay ? $"url(#{ArrowId})" : null)" />
+            }
+            @foreach (var room in _rooms)
+            {
+                <rect class="@RoomClass(room)" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
+                      width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
+                @if (_vertical.TryGetValue(room.Room.Id, out var vertical))
+                {
+                    @Vertical(room, vertical)
+                }
+                @if (_doors.Contains(room.Room.Id))
+                {
+                    <circle class="map-door" cx="@Num(room.X + room.Width - Inset - 9)" cy="@Num(room.Y + Inset + 9)" r="5" />
+                }
+            }
+        </svg>
+        <div class="map-rooms">
+            @foreach (var room in _rooms)
+            {
+                var here = room.Room.Id == Layout.Map.Here;
+                <button type="button" class="map-room @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
+                        style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
+                        aria-label="@(here ? $"{room.Room.Name}, {Loc["NavMapYouAreHere"]}" : room.Room.Name)"
+                        title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
+                        @ref="_buttons[room.Room.Id]">
+                    <span class="map-room-name">@room.Room.Name</span>
+                </button>
+            }
+        </div>
+    </figure>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MapLayout Layout { get; set; } = default!;
+    [Parameter] public int Level { get; set; }
+
+    /// <summary>Pixels per drawing unit.</summary>
+    [Parameter] public double Zoom { get; set; } = 1;
+
+    [Parameter] public string? Selected { get; set; }
+    [Parameter] public EventCallback<string> OnSelect { get; set; }
+
+    private const double Inset = 6;
+    private const double Margin = 24;
+
+    private readonly string _arrowId = "map-arrow-" + Guid.NewGuid().ToString("N")[..8];
+    private string ArrowId => _arrowId;
+
+    private readonly Dictionary<string, ElementReference> _buttons = new();
+    private List<MapPlacement> _rooms = [];
+    private List<Edge> _edges = [];
+    private readonly Dictionary<string, (bool Up, bool Down)> _vertical = new();
+    private readonly HashSet<string> _doors = [];
+    private double _left, _top, _width, _height;
+
+    private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay);
+
+    protected override void OnParametersSet()
+    {
+        _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
+        var bounds = Layout.Bounds(Level);
+        (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
+        (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
+
+        var shown = _rooms.ToDictionary(room => room.Room.Id);
+        var links = Layout.Map.Exits.Where(exit => exit.Destination is not null)
+            .Select(exit => (exit.Source, To: exit.Destination!)).ToHashSet();
+        _edges = [];
+        _vertical.Clear();
+        _doors.Clear();
+        var drawn = new HashSet<(string, string)>();
+        foreach (var exit in Layout.Map.Exits)
+        {
+            if (!shown.TryGetValue(exit.Source, out var from)) continue;
+            if (exit.DestinationMap is not null) _doors.Add(exit.Source);
+            if (exit.Destination is not { } to) continue;
+            if (Layout.Rooms.TryGetValue(to, out var target) && target.Placed && from.Placed && target.Level != from.Level)
+            {
+                var up = target.Level > from.Level;
+                var (u, d) = _vertical.GetValueOrDefault(exit.Source);
+                _vertical[exit.Source] = (u || up, d || !up);
+                continue;
+            }
+            if (!shown.TryGetValue(to, out var end) || to == exit.Source) continue;
+            var pair = string.CompareOrdinal(exit.Source, to) < 0 ? (exit.Source, to) : (to, exit.Source);
+            if (!drawn.Add(pair)) continue;
+            var oneWay = !links.Contains((to, exit.Source));
+            var (x1, y1) = Centre(from);
+            var (x2, y2) = Centre(end);
+            // A one-way line stops at the edge of the room it points to, so the arrow shows.
+            if (oneWay) (x2, y2) = Toward(x1, y1, end);
+            _edges.Add(new(x1, y1, x2, y2, oneWay));
+        }
+    }
+
+    /// <summary>Moves focus to <paramref name="id"/>'s room, which scrolls it into view.</summary>
+    public async Task FocusAsync(string id)
+    {
+        if (_buttons.TryGetValue(id, out var button)) await button.FocusAsync();
+    }
+
+    private RenderFragment Vertical(MapPlacement room, (bool Up, bool Down) vertical) => __builder =>
+    {
+        var x = room.X + Inset + 10;
+        var y = room.Y + Inset + 6;
+        <g class="map-vertical">
+            @if (vertical.Up)
+            {
+                <path d="@($"M{Num(x)},{Num(y + 8)} l5,-8 l5,8 z")" />
+            }
+            @if (vertical.Down)
+            {
+                <path d="@($"M{Num(x + 12)},{Num(y)} l5,8 l5,-8 z")" />
+            }
+        </g>
+    };
+
+    private IEnumerable<(double X1, double Y1, double X2, double Y2)> GridLines()
+    {
+        var bounds = Layout.Bounds(Level, includeUnplaced: false);
+        if (!Layout.On(Level).Any()) yield break;
+        for (var x = bounds.Left; x <= bounds.Right + 0.5; x += MapLayout.Cell) yield return (x, bounds.Top, x, bounds.Bottom);
+        for (var y = bounds.Top; y <= bounds.Bottom + 0.5; y += MapLayout.Cell) yield return (bounds.Left, y, bounds.Right, y);
+    }
+
+    private string RoomClass(MapPlacement room) => string.Join(' ', new[]
+    {
+        "map-box",
+        room.Placed ? null : "map-box--unplaced",
+        room.Room.Id == Layout.Map.Here ? "map-box--here" : null,
+        room.Room.Id == Selected ? "map-box--selected" : null,
+    }.Where(c => c is not null));
+
+    private static (double X, double Y) Centre(MapPlacement room) => (room.X + room.Width / 2, room.Y + room.Height / 2);
+
+    /// <summary>Where the line from (x, y) to <paramref name="room"/>'s centre meets its box.</summary>
+    private static (double X, double Y) Toward(double x, double y, MapPlacement room)
+    {
+        var (cx, cy) = Centre(room);
+        var (dx, dy) = (cx - x, cy - y);
+        var halfW = room.Width / 2 - Inset;
+        var halfH = room.Height / 2 - Inset;
+        var scale = Math.Max(Math.Abs(dx) / Math.Max(halfW, 1), Math.Abs(dy) / Math.Max(halfH, 1));
+        return scale <= 1 ? (cx, cy) : (cx - dx / scale, cy - dy / scale);
+    }
+
+    private string Box(MapPlacement room) =>
+        $"left: {Percent(room.X + Inset - _left, _width)}%; top: {Percent(room.Y + Inset - _top, _height)}%; " +
+        $"width: {Percent(room.Width - 2 * Inset, _width)}%; height: {Percent(room.Height - 2 * Inset, _height)}%;";
+
+    private static string Percent(double at, double of) => Num(of <= 0 ? 0 : at / of * 100);
+
+    private static string Px(double value) => Num(value) + "px";
+
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

@@ -6482,4 +6482,70 @@
     <value>Виж всички {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Карта на света</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Карти</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Изберете карта.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Тази игра все още няма карти.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Изберете персонаж, за да видите картата.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Тази игра няма карта на света.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Тук няма карта или не можете да я видите.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>На тази карта няма стая, която можете да видите.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Ниво {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Нива</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Увеличаване</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Намаляване</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Вие сте тук</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Изходи</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Няма изходи, които можете да видите.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Не е поставена на картата</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Към картата {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>някъде, където не виждате</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Тази карта е твърде голяма, за да се покаже наведнъж, затова някои стаи са пропуснати.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Решетка</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Компас</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Изображение</value>
+  </data>
 </root>

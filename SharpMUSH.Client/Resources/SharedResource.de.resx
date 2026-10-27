@@ -6482,4 +6482,70 @@
     <value>Alle {0} ansehen</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Weltkarte</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Karten</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Wähle eine Karte.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Dieses Spiel hat noch keine Karten.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Wähle einen Charakter, um die Karte zu sehen.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Dieses Spiel hat keine Weltkarte.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Hier gibt es keine Karte, oder du darfst sie nicht sehen.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Auf dieser Karte gibt es keinen Raum, den du sehen kannst.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Ebene {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Ebenen</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Vergrößern</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Verkleinern</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Du bist hier</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Ausgänge</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Keine Ausgänge, die du sehen kannst.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nicht auf der Karte platziert</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Zur Karte {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>irgendwohin, wo du nicht hinsehen kannst</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Diese Karte ist zu groß, um sie auf einmal zu zeigen; einige Räume fehlen.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompass</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Bild</value>
+  </data>
 </root>

@@ -39,6 +39,7 @@
     }
     <FeatureGate Feature="@GameFeatures.Scenes">@Item("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"], IsUnder("/scenes"))</FeatureGate>
     @Item("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"], IsUnder("/wiki"))
+    <FeatureGate Feature="@GameFeatures.WorldMap">@Item("/map", Icons.Material.Outlined.Map, Loc["NavWorldMap"], IsUnder("/map"))</FeatureGate>
     @Item("/characters", Icons.Material.Outlined.Groups, Loc["Characters"], IsUnder("/characters") || IsUnder("/character"))
     @if (_characterActive)
     {

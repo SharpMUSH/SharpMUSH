@@ -6482,4 +6482,70 @@
     <value>Показать все ({0})</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Карта мира</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Карты</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Выберите карту.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>В этой игре пока нет карт.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Выберите персонажа, чтобы увидеть карту.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>В этой игре нет карты мира.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Здесь нет карты, или вам нельзя её видеть.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>На этой карте нет ни одной видимой вам комнаты.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Уровень {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Уровни</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Приблизить</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Отдалить</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Вы здесь</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Выходы</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Нет видимых вам выходов.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Не размещена на карте</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>На карту {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>куда-то, чего вы не видите</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Эта карта слишком велика, чтобы показать её целиком, поэтому часть комнат пропущена.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Сетка</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Компас</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Изображение</value>
+  </data>
 </root>

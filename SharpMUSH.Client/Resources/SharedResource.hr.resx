@@ -6482,4 +6482,70 @@
     <value>Prikaži sve {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Karta svijeta</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Karte</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Odaberite kartu.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Ova igra još nema karata.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Odaberite lik da biste vidjeli kartu.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Ova igra nema kartu svijeta.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Ovdje nema karte ili je ne smijete vidjeti.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Na ovoj karti nema prostorije koju možete vidjeti.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Razina {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Razine</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Povećaj</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Smanji</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Vi ste ovdje</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Izlazi</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Nema izlaza koje možete vidjeti.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nije smještena na karti</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Na kartu {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>negdje što ne možete vidjeti</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Ova je karta prevelika da bi se prikazala odjednom pa su neke prostorije izostavljene.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Mreža</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Slika</value>
+  </data>
 </root>

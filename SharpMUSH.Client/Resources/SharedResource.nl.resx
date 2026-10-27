@@ -6482,4 +6482,70 @@
     <value>Alle {0} bekijken</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Wereldkaart</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Kaarten</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Kies een kaart.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Dit spel heeft nog geen kaarten.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Kies een personage om de kaart te zien.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Dit spel heeft geen wereldkaart.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Hier is geen kaart, of je mag hem niet zien.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Je kunt geen enkele kamer op deze kaart zien.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Niveau {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Niveaus</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Inzoomen</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Uitzoomen</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Je bent hier</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Uitgangen</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Geen uitgangen die je kunt zien.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Niet op de kaart geplaatst</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Naar de kaart {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>ergens die je niet kunt zien</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Deze kaart is te groot om in één keer te tonen, dus sommige kamers ontbreken.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Raster</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Afbeelding</value>
+  </data>
 </root>

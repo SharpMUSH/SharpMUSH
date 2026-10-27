@@ -751,6 +751,14 @@
       <Link>BundledPackages\alts-help.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.alts-help.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\world-map\package.yaml">
+      <Link>BundledPackages\world-map.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.world-map.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\world-map-help\package.yaml">
+      <Link>BundledPackages\world-map-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.world-map-help.package.yaml</LogicalName>
+    </EmbeddedResource>
     <!-- The help pages a fresh game's wiki is seeded with. Prose, so it lives in .md files rather
          than in const string literals inside StartupHandler. LogicalName is explicit because the
          file names carry hyphens. -->
