@@ -25,6 +25,7 @@ REPOSITORIES = {
     'server': 'sharpmush-server',
     'renderer': 'sharpmush-renderer',
     'socketserver': 'sharpmush-socketserver',
+    'edge': 'sharpmush-edge',
     'allinone': 'sharpmush-allinone',
 }
 
@@ -52,13 +53,14 @@ def published_revision(image):
     return revision
 
 
-def allinone_changed(head):
-    """The all-in-one image copies the three images and adds deploy/fly/ and nats.conf; the workflow
-    rebuilds it after any of the three is pushed, so only its own files are compared here."""
+def own_files_changed(image, head):
+    """The edge and all-in-one images copy the published images and add deploy/fly/ and nats.conf;
+    the workflow rebuilds them after an image they copy is pushed, so only their own files are
+    compared here."""
     try:
-        base = published_revision('allinone')
+        base = published_revision(image)
     except subprocess.CalledProcessError:
-        print(f'::warning::sharpmush/{REPOSITORIES["allinone"]}:dev is not published yet; building it')
+        print(f'::warning::sharpmush/{REPOSITORIES[image]}:dev is not published yet; building it')
         return True
     if not base:
         return True
@@ -84,7 +86,8 @@ def main():
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         for image, paths in result.items():
             output.write(f'{image}={str(bool(paths)).lower()}\n')
-        output.write(f'allinone={str(allinone_changed(os.environ["GITHUB_SHA"])).lower()}\n')
+        for image in ('edge', 'allinone'):
+            output.write(f'{image}={str(own_files_changed(image, os.environ["GITHUB_SHA"])).lower()}\n')
 
 
 if __name__ == '__main__':
