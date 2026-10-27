@@ -235,18 +235,18 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: connectionserver
+  name: socketserver
 spec:
   replicas: 1
   strategy:
     type: Recreate
   selector:
     matchLabels:
-      app: connectionserver
+      app: socketserver
   template:
     metadata:
       labels:
-        app: connectionserver
+        app: socketserver
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9091"
@@ -320,10 +320,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: connectionserver
+  name: socketserver
 spec:
   selector:
-    app: connectionserver
+    app: socketserver
   ports:
     - name: telnet
       port: 4201
@@ -351,11 +351,11 @@ spec:
 apiVersion: monitoring.googleapis.com/v1
 kind: PodMonitoring
 metadata:
-  name: connectionserver-monitoring
+  name: socketserver-monitoring
 spec:
   selector:
     matchLabels:
-      app: connectionserver
+      app: socketserver
   endpoints:
     - port: metrics
       path: /metrics
@@ -372,7 +372,7 @@ metadata:
 spec:
   defaultBackend:
     service:
-      name: connectionserver
+      name: socketserver
       port:
         number: 4202
   rules:
@@ -403,6 +403,6 @@ spec:
             pathType: ImplementationSpecific
             backend:
               service:
-                name: connectionserver
+                name: socketserver
                 port:
                   number: 4202

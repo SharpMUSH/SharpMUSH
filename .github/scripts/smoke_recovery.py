@@ -271,7 +271,7 @@ def run_recovery_checks(compose: list[str], *, https_port: int, ca_file: Path,
     print("PASS: supported @backup produced a completed real LMDB copy", flush=True)
 
     # Quiesce filesystem state; LMDB itself was copied by the supported @backup command.
-    dc("stop", "sharpmush-server", "connectionserver")
+    dc("stop", "sharpmush-server", "socketserver")
     before_files = "\n".join(sorted(inventory().splitlines()))
     require(".uploads/" in before_files and "plugins.state.json" in before_files,
             "The fixture does not contain hidden upload and disabled-plugin state")
@@ -286,12 +286,12 @@ def run_recovery_checks(compose: list[str], *, https_port: int, ca_file: Path,
     require(len(snapshots) == 1, "The smoke repository is not fresh or snapshot creation was ambiguous")
     snapshot_id = snapshots[0]["id"]
 
-    dc("start", "connectionserver", "sharpmush-server")
+    dc("start", "socketserver", "sharpmush-server")
     api.ready()
     api.login(username, password)
     require(api.command("&SMOKE_RECOVERY me=after_snapshot", "get(me/SMOKE_RECOVERY)")["result"] == "after_snapshot",
             "The newer world mutation did not persist before recovery")
-    dc("stop", "sharpmush-server", "connectionserver")
+    dc("stop", "sharpmush-server", "socketserver")
     app_shell("rm -rf /app/data/lightning.plugins /app/data/wiki-assets /app/data/lightning.dataprotection-keys; "
               "mkdir -p /app/data/lightning.plugins/stale-after-snapshot; "
               "printf stale > /app/data/lightning.plugins/stale-after-snapshot/Stale.dll")
@@ -302,7 +302,7 @@ def run_recovery_checks(compose: list[str], *, https_port: int, ca_file: Path,
     require("\n".join(sorted(inventory().splitlines())) == before_files,
             "Restored content/modes differ: plugin/upload/key/asset data or stale code remains")
     print("PASS: local Restic snapshot restored by the documented shell, including hidden files and modes", flush=True)
-    dc("start", "connectionserver", "sharpmush-server")
+    dc("start", "socketserver", "sharpmush-server")
     api.ready()
     require(api.login(username, password) == account_id, "The restored account could not log in with its original identity")
     require(api.evaluate("objid(me)") == identity, "The restored world changed the administrator's object identity")

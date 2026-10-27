@@ -37,7 +37,7 @@ class NativeTlsDocumentationTests(unittest.TestCase):
         for required in (
             "1654:1654", "fullchain.pem", "privkey.pem", "create_host_path: false",
             "-verify_hostname", "-verify_return_error", "Plaintext 4201 stays enabled",
-            "docker compose restart connectionserver", "WebSocket", "disconnect",
+            "docker compose restart socketserver", "WebSocket", "disconnect",
             "ExecStartPre", "ExecStart", "ExecStop", "operator-managed",
         ):
             with self.subTest(required=required):
@@ -144,7 +144,7 @@ class NativeTlsComposeTests(unittest.TestCase):
     def test_bases_need_no_tls_settings(self):
         for base in BASES:
             with self.subTest(base=base):
-                connection = self.model(base)["services"]["connectionserver"]
+                connection = self.model(base)["services"]["socketserver"]
                 self.assertNotIn("ConnectionServer__TelnetSslPort", connection["environment"])
                 self.assertFalse(any(p["target"] == 4203 for p in connection["ports"]))
                 self.assertTrue(any(p["target"] == 4201 for p in connection["ports"]))
@@ -163,7 +163,7 @@ class NativeTlsComposeTests(unittest.TestCase):
             with self.subTest(base=base):
                 baseline = self.model(base)
                 model = self.model(base, overlay=True, cert_dir=self.certificates)
-                connection = model["services"]["connectionserver"]
+                connection = model["services"]["socketserver"]
                 environment = connection["environment"]
                 self.assertEqual(environment["ConnectionServer__TelnetSslPort"], "4203")
                 self.assertEqual(environment["ASPNETCORE_Kestrel__Certificates__Default__Path"],
@@ -187,7 +187,7 @@ class NativeTlsComposeTests(unittest.TestCase):
                 # model: renderer socket, plaintext port, proxy trust and all other
                 # services must be unchanged, including the web /ws infrastructure.
                 stripped = copy.deepcopy(model)
-                service = stripped["services"]["connectionserver"]
+                service = stripped["services"]["socketserver"]
                 for key in (
                     "ConnectionServer__TelnetSslPort",
                     "ASPNETCORE_Kestrel__Certificates__Default__Path",

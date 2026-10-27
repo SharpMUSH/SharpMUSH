@@ -24,15 +24,15 @@ class PublishedRevisionTests(unittest.TestCase):
         }))
 
     def test_each_image_uses_its_own_published_baseline(self):
-        bases = dict(server='a' * 40, connectionserver='b' * 40, socketserver=None)
+        bases = dict(server='a' * 40, renderer='b' * 40, socketserver=None)
         def compare(base, head):
             return ({'server': ['Game/change'] if base == bases['server'] else [],
-                     'connectionserver': ['Conn/change'] if base == bases['connectionserver'] else [],
+                     'renderer': ['Conn/change'] if base == bases['renderer'] else [],
                      'socketserver': ['Socket/change'] if base == '0' * 40 else []}, [])
         with patch('docker_dev.published_revision', side_effect=lambda image: bases[image]), \
              patch('docker_dev.compare', side_effect=compare):
             result = docker_dev.published_impact('head')
-        self.assertEqual(result, {'server': ['Game/change'], 'connectionserver': ['Conn/change'],
+        self.assertEqual(result, {'server': ['Game/change'], 'renderer': ['Conn/change'],
                                   'socketserver': ['Socket/change']})
 
     def test_reads_each_image_under_its_current_name(self):
@@ -41,7 +41,7 @@ class PublishedRevisionTests(unittest.TestCase):
             tags.append(args[4])
             return subprocess.CompletedProcess(args, 0, '{}', '')
         with patch('subprocess.run', side_effect=inspect):
-            for image in ('server', 'connectionserver', 'socketserver', 'fly'):
+            for image in ('server', 'renderer', 'socketserver', 'allinone'):
                 docker_dev.published_revision(image)
         self.assertEqual(tags, ['sharpmush/sharpmush-server:dev', 'sharpmush/sharpmush-renderer:dev',
                                 'sharpmush/sharpmush-socketserver:dev', 'sharpmush/sharpmush-allinone:dev'])
@@ -50,10 +50,10 @@ class PublishedRevisionTests(unittest.TestCase):
         def failing(stderr):
             return lambda args, text, capture_output: subprocess.CompletedProcess(args, 1, '', stderr)
         with patch('subprocess.run', side_effect=failing('ERROR: docker.io/sharpmush/sharpmush-renderer:dev: not found')):
-            self.assertIsNone(docker_dev.published_revision('connectionserver'))
+            self.assertIsNone(docker_dev.published_revision('renderer'))
         with patch('subprocess.run', side_effect=failing('ERROR: unexpected status: 503 Service Unavailable')):
             with self.assertRaises(subprocess.CalledProcessError):
-                docker_dev.published_revision('connectionserver')
+                docker_dev.published_revision('renderer')
 
 
 class FlyImageTests(unittest.TestCase):
@@ -62,16 +62,16 @@ class FlyImageTests(unittest.TestCase):
             return 'deploy/fly/start.sh\0' if args[-2] == 'a' * 40 else 'README.md\0SharpMUSH.Server/x.cs\0'
         with patch('docker_dev.git', side_effect=diff):
             with patch('docker_dev.published_revision', return_value='a' * 40):
-                self.assertTrue(docker_dev.fly_changed('head'))
+                self.assertTrue(docker_dev.allinone_changed('head'))
             with patch('docker_dev.published_revision', return_value='b' * 40):
-                self.assertFalse(docker_dev.fly_changed('head'))
+                self.assertFalse(docker_dev.allinone_changed('head'))
 
     def test_missing_or_unlabelled_image_rebuilds(self):
         with patch('docker_dev.published_revision', return_value=None):
-            self.assertTrue(docker_dev.fly_changed('head'))
+            self.assertTrue(docker_dev.allinone_changed('head'))
         with patch('docker_dev.published_revision',
                    side_effect=subprocess.CalledProcessError(1, 'docker')):
-            self.assertTrue(docker_dev.fly_changed('head'))
+            self.assertTrue(docker_dev.allinone_changed('head'))
 
 
 class BatchedChangesTests(unittest.TestCase):
@@ -107,11 +107,11 @@ class BatchedChangesTests(unittest.TestCase):
             with patch('docker_dev.published_revision', return_value=published):
                 result = docker_dev.published_impact(head)
             self.assertEqual(result, {'server': ['Game/Program.cs'],
-                                      'connectionserver': ['Conn/Program.cs'], 'socketserver': []})
+                                      'renderer': ['Conn/Program.cs'], 'socketserver': []})
             with patch('docker_dev.published_revision', side_effect=lambda image:
                        game_published if image == 'server' else published):
                 result = docker_dev.published_impact(head)
-            self.assertEqual(result, {'server': [], 'connectionserver': ['Conn/Program.cs'],
+            self.assertEqual(result, {'server': [], 'renderer': ['Conn/Program.cs'],
                                       'socketserver': []})
 
 

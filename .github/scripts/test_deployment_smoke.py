@@ -20,7 +20,7 @@ class DeploymentSmokeTests(unittest.TestCase):
         services = {name: {"container_name": "production-" + name, "restart": "unless-stopped",
                            "ports": [{"target": 80, "published": "80"}],
                            "environment": {}, "volumes": [], "image": "original"}
-                    for name in ("nats", "renderer", "connectionserver", "sharpmush-server", "caddy", "backup")}
+                    for name in ("nats", "renderer", "socketserver", "sharpmush-server", "caddy", "backup")}
         services["backup"]["environment"] = {
             "RESTIC_REPOSITORY": "cloud:production", "RESTIC_PASSWORD": "not-a-secret",
             "B2_ACCOUNT_ID": "not-real", "B2_ACCOUNT_KEY": "not-real",
@@ -28,17 +28,17 @@ class DeploymentSmokeTests(unittest.TestCase):
         }
         services["backup"]["volumes"] = [{"type": "volume", "source": "app-data", "target": "/data", "read_only": True}]
         services["caddy"]["volumes"] = [{"target": "/etc/caddy/Caddyfile", "source": "/production/Caddyfile"}]
-        for name in ("renderer", "connectionserver", "sharpmush-server"):
+        for name in ("renderer", "socketserver", "sharpmush-server"):
             services[name]["build"] = {"context": "/repo"}
-        services["connectionserver"]["environment"]["ConnectionServer__TelnetSslPort"] = "4203"
-        services["connectionserver"]["volumes"] = [{"type": "bind", "source": "/tmp/fixture/certificates",
+        services["socketserver"]["environment"]["ConnectionServer__TelnetSslPort"] = "4203"
+        services["socketserver"]["volumes"] = [{"type": "bind", "source": "/tmp/fixture/certificates",
                                                     "target": "/run/sharpmush-tls", "read_only": True}]
         return {"services": services, "volumes": {"app-data": {"name": "production-data"}},
                 "networks": {"sharpmush-net": {"name": "production-net"}, "renderer-egress": {}}}
 
     def isolate(self, source):
         return isolated_model(source, project="smush-smoke-123-1", workdir=Path("/tmp/fixture"),
-                              image_tags={n: "local-" + n for n in ("renderer", "connectionserver", "sharpmush-server")},
+                              image_tags={n: "local-" + n for n in ("renderer", "socketserver", "sharpmush-server")},
                               ports={"plaintext": 14201, "tls": 14203, "https": 14443})
 
     def test_only_loopback_ports_are_published(self):
@@ -52,7 +52,7 @@ class DeploymentSmokeTests(unittest.TestCase):
         model = self.isolate(self.model())
         self.assertTrue(all(n["internal"] for name, n in model["networks"].items() if name != "smoke-ingress"))
         self.assertEqual({name for name, service in model["services"].items()
-                          if "smoke-ingress" in service.get("networks", {})}, {"caddy", "connectionserver"})
+                          if "smoke-ingress" in service.get("networks", {})}, {"caddy", "socketserver"})
         self.assertNotIn("internal", model["networks"]["smoke-ingress"])
         for resources in (model["networks"], model["volumes"]):
             self.assertTrue(all(r["name"].startswith("smush-smoke-123-1_") for r in resources.values()))
@@ -74,7 +74,7 @@ class DeploymentSmokeTests(unittest.TestCase):
 
     def test_images_are_local_and_cannot_be_pulled(self):
         model = self.isolate(self.model())
-        for name in ("renderer", "connectionserver", "sharpmush-server"):
+        for name in ("renderer", "socketserver", "sharpmush-server"):
             service = model["services"][name]
             self.assertEqual(service["image"], "local-" + name)
             self.assertEqual(service["pull_policy"], "never")
@@ -82,10 +82,10 @@ class DeploymentSmokeTests(unittest.TestCase):
 
     def test_explicit_missing_bind_guard_survives_compose_json_round_trip(self):
         model = self.isolate(self.model())
-        certificate = model["services"]["connectionserver"]["volumes"][0]
+        certificate = model["services"]["socketserver"]["volumes"][0]
         self.assertIs(certificate["bind"]["create_host_path"], False)
         source = self.model()
-        source["services"]["connectionserver"]["volumes"] = []
+        source["services"]["socketserver"]["volumes"] = []
         with self.assertRaises(AssertionError):
             self.isolate(source)
 
@@ -112,7 +112,7 @@ class DeploymentSmokeTests(unittest.TestCase):
             validate_compose_round_trip(model)
 
     def test_caddy_keeps_production_routes_but_uses_only_manual_tls(self):
-        original = "{$SHARPMUSH_DOMAIN} {\n handle /ws { reverse_proxy connectionserver:4202 }\n}\n"
+        original = "{$SHARPMUSH_DOMAIN} {\n handle /ws { reverse_proxy socketserver:4202 }\n}\n"
         adapted = test_caddyfile(original)
         self.assertIn("https://localhost:443", adapted)
         self.assertIn("tls /run/smoke-tls/fullchain.pem /run/smoke-tls/privkey.pem", adapted)

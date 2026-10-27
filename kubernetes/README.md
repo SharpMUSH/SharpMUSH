@@ -46,7 +46,7 @@ kubectl get all
 
 # View logs
 kubectl logs -f deployment/sharpmush
-kubectl logs -f deployment/connectionserver
+kubectl logs -f deployment/socketserver
 
 # Delete deployment
 kubectl delete -f kubernetes/dev-k8s.yaml
@@ -84,7 +84,7 @@ kubectl logs <pod-name>
 kubectl get services
 
 # Port forward if needed
-kubectl port-forward service/connectionserver 4201:4201
+kubectl port-forward service/socketserver 4201:4201
 ```
 
 **Clean slate:**

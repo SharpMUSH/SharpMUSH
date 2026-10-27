@@ -199,13 +199,13 @@ class SmokeTlsSafetyTests(unittest.TestCase):
     def test_rejects_public_listener_or_writable_certificate_mount(self):
         directory = Path("/tmp/generated-certificates")
         project = "smush-smoke-123-1"
-        baseline = {"name": project, "services": {"connectionserver": {
+        baseline = {"name": project, "services": {"socketserver": {
             "ports": [{"published": "4203", "host_ip": "127.0.0.1"}],
             "volumes": [{"target": smoke.TLS_TARGET, "type": "bind", "source": str(directory), "read_only": True}],
         }}}
         for mutation in ("public", "writable"):
             model = json.loads(json.dumps(baseline))
-            service = model["services"]["connectionserver"]
+            service = model["services"]["socketserver"]
             if mutation == "public":
                 service["ports"][0]["host_ip"] = "0.0.0.0"
             else:

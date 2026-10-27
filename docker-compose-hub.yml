@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  connectionserver:
+  socketserver:
     restart: unless-stopped
     image: sharpmush/sharpmush-socketserver:dev
     # Deliberately NOT a watchtower target: this service owns every telnet and /ws kernel socket,
@@ -43,7 +43,7 @@ services:
     networks:
       - sharpmush-net
 
-  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  # Rendering can restart independently; the stable socketserver service owns client sockets.
   renderer:
     image: sharpmush/sharpmush-renderer:dev
     stop_grace_period: 60s
@@ -83,7 +83,7 @@ services:
     depends_on:
       nats:
         condition: service_healthy
-      connectionserver:
+      socketserver:
         condition: service_started
     ports:
       - "127.0.0.1:8080:8080" # Portal, REST API and live updates; loopback only, so nobody else can claim /setup

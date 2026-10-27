@@ -11,7 +11,7 @@
 	# Set the portal's Server URI to wss://{$SHARPMUSH_DOMAIN}/ws so it stays same-origin.
 	@ws path /ws /ws/*
 	handle @ws {
-		reverse_proxy connectionserver:4202
+		reverse_proxy socketserver:4202
 	}
 
 	# Everything else — Blazor portal, REST API, and the SignalR hub (/hubs/game) — goes to

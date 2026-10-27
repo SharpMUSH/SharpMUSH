@@ -18,7 +18,7 @@ services:
       timeout: 5s
       retries: 5
 
-  connectionserver:
+  socketserver:
     restart: unless-stopped
     build:
       context: ./
@@ -46,7 +46,7 @@ services:
     networks:
       - sharpmush-net
 
-  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  # Rendering can restart independently; the stable socketserver service owns client sockets.
   renderer:
     build:
       context: ./
@@ -90,7 +90,7 @@ services:
     depends_on:
       nats:
         condition: service_healthy
-      connectionserver:
+      socketserver:
         condition: service_started
     ports:
       - "127.0.0.1:8080:8080" # Portal, REST API and live updates; loopback only, so nobody else can claim /setup

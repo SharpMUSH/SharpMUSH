@@ -19,7 +19,7 @@
 		# The web terminal's WebSocket lives on the connection server, not the main server.
 		@ws path /ws /ws/*
 		handle @ws {
-			reverse_proxy connectionserver:4202 {
+			reverse_proxy socketserver:4202 {
 				header_up X-Forwarded-For {client_ip}
 			}
 		}

@@ -14,7 +14,7 @@ Docker-published ports can bypass ordinary host firewall rules such as ufw. Use
 [Docker-aware filtering](https://docs.docker.com/engine/network/packet-filtering-firewalls/)
 or remove the unwanted mapping, and verify reachability from outside the host.
 
-TLS terminates in `connectionserver`, not a TCP proxy, so the game retains the socket's client
+TLS terminates in `socketserver`, not a TCP proxy, so the game retains the socket's client
 address. Caddy/Cloudflare continue to handle only web HTTPS and the existing `/ws` route.
 The game's `ssl_port` setting advertises the MSSP port; it does not enable the listener.
 
@@ -149,10 +149,10 @@ in each command. Reloading the unit does not restart the game.
   test -d "$SHARPMUSH_TELNET_TLS_CERT_DIR"
   docker compose config --quiet
   # Uses the normal image user, 1654:1654, and opens no listener:
-  docker compose run --rm --no-deps --entrypoint sh connectionserver -c \
+  docker compose run --rm --no-deps --entrypoint sh socketserver -c \
     'test -r /run/sharpmush-tls/fullchain.pem && test -r /run/sharpmush-tls/privkey.pem'
   docker compose up -d
-  docker compose logs --tail=100 connectionserver
+  docker compose logs --tail=100 socketserver
 )
 ```
 
@@ -196,21 +196,21 @@ Arrange renewal before expiry with your CA tooling. Copy the renewed full chain 
 key into the same dedicated directory, preserving the permissions above. Finish installing
 both files before restarting, and avoid overlapping a restart with half of a new pair.
 
-**Restart `connectionserver` to load the replacement.** Changing PEM files alone is not the
+**Restart `socketserver` to load the replacement.** Changing PEM files alone is not the
 rotation procedure for this code-configured listener, and this guide promises no hot reload
 or zero-disconnection renewal:
 
 ```bash
 # With the same base + overlay selected; announce the disconnection first.
-docker compose restart connectionserver
-docker compose logs --tail=100 connectionserver
+docker compose restart socketserver
+docker compose logs --tail=100 socketserver
 ```
 
 This drops every native and WebSocket connection owned by that service, even if only the
 TLS certificate changed. Engine/renderer-only restarts do not load a new socket-owner
 certificate. Repeat the verified remote handshake and compare the served certificate's
 serial/expiry with the replacement; then reconnect a native client and the web terminal.
-If renewal changes the directory or Compose settings, use `docker compose up -d connectionserver`
+If renewal changes the directory or Compose settings, use `docker compose up -d socketserver`
 to recreate it with those settings, rather than `restart`.
 
 ### Certbot renewal hook for the worked recipe
@@ -240,7 +240,7 @@ openssl x509 -in "$certdir/fullchain.pem.new" -noout -checkhost telnet.mush.exam
 mv "$certdir/fullchain.pem.new" "$certdir/fullchain.pem"
 mv "$certdir/privkey.pem.new" "$certdir/privkey.pem"
 cd /opt/SharpMUSH/deploy
-docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml restart connectionserver
+docker compose -f docker-compose.cloudflare.yml -f docker-compose.telnet-tls.yml restart socketserver
 HOOK
 sudo chmod 0700 /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet
 sudo sh -n /etc/letsencrypt/renewal-hooks/deploy/sharpmush-telnet

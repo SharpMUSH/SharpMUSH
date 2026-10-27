@@ -23,9 +23,9 @@ def image_revision(data):
 # The Docker Hub repository each image is published under.
 REPOSITORIES = {
     'server': 'sharpmush-server',
-    'connectionserver': 'sharpmush-renderer',
+    'renderer': 'sharpmush-renderer',
     'socketserver': 'sharpmush-socketserver',
-    'fly': 'sharpmush-allinone',
+    'allinone': 'sharpmush-allinone',
 }
 
 
@@ -52,13 +52,13 @@ def published_revision(image):
     return revision
 
 
-def fly_changed(head):
-    """The Fly image copies the three images and adds deploy/fly/ and nats.conf; the workflow
+def allinone_changed(head):
+    """The all-in-one image copies the three images and adds deploy/fly/ and nats.conf; the workflow
     rebuilds it after any of the three is pushed, so only its own files are compared here."""
     try:
-        base = published_revision('fly')
+        base = published_revision('allinone')
     except subprocess.CalledProcessError:
-        print(f'::warning::sharpmush/{REPOSITORIES["fly"]}:dev is not published yet; building it')
+        print(f'::warning::sharpmush/{REPOSITORIES["allinone"]}:dev is not published yet; building it')
         return True
     if not base:
         return True
@@ -84,7 +84,7 @@ def main():
     with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
         for image, paths in result.items():
             output.write(f'{image}={str(bool(paths)).lower()}\n')
-        output.write(f'fly={str(fly_changed(os.environ["GITHUB_SHA"])).lower()}\n')
+        output.write(f'allinone={str(allinone_changed(os.environ["GITHUB_SHA"])).lower()}\n')
 
 
 if __name__ == '__main__':

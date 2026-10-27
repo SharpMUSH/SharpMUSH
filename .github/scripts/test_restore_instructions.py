@@ -156,7 +156,7 @@ class RestoreInstructionsTests(unittest.TestCase):
 
     def test_restart_is_conditional_on_successful_restore(self):
         _, after_command = restore_command()
-        self.assertRegex(after_command, r"^\s*&&[ \t]*\\\n\s*docker compose -f docker-compose\.prod\.yml start connectionserver sharpmush-server")
+        self.assertRegex(after_command, r"^\s*&&[ \t]*\\\n\s*docker compose -f docker-compose\.prod\.yml start socketserver sharpmush-server")
 
     def test_host_restore_selects_production_file_explicitly(self):
         commands = re.findall(r"^[ \t]*docker compose[^\n]*", host_commands(), re.M)

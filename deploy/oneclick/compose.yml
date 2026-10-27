@@ -9,7 +9,7 @@
 # what it does not ask about.
 
 # Caddy and cloudflared addresses on sharpmush-net, written once. sharpmush-server and
-# connectionserver trust X-Forwarded-For only from Caddy; Caddy trusts it only from cloudflared.
+# socketserver trust X-Forwarded-For only from Caddy; Caddy trusts it only from cloudflared.
 name: sharpmush
 
 x-caddy-ip: &caddy-ip 172.30.0.10
@@ -41,9 +41,9 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
-  connectionserver:
+  socketserver:
     image: sharpmush/sharpmush-socketserver:${SHARPMUSH_IMAGE_TAG:-dev}
-    container_name: sharpmush-connectionserver
+    container_name: sharpmush-socketserver
     # Not a watchtower target: recreating it drops every connected player (deploy/connection-updates.md).
     labels:
       - com.centurylinklabs.watchtower.enable=false
@@ -72,6 +72,7 @@ services:
 
   renderer:
     image: sharpmush/sharpmush-renderer:${SHARPMUSH_IMAGE_TAG:-dev}
+    container_name: sharpmush-renderer
     stop_grace_period: 60s
     labels:
       - com.centurylinklabs.watchtower.enable=true
@@ -109,7 +110,7 @@ services:
     depends_on:
       nats:
         condition: service_healthy
-      connectionserver:
+      socketserver:
         condition: service_started
     networks:
       - sharpmush-net
@@ -136,7 +137,7 @@ services:
       - caddy-config:/config
     depends_on:
       - sharpmush-server
-      - connectionserver
+      - socketserver
     networks:
       sharpmush-net:
         ipv4_address: *caddy-ip
