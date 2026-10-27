@@ -28,7 +28,7 @@
     on is the NU1605 downgrade that fails every project under TreatWarningsAsErrors.
   -->
   <PropertyGroup>
-    <DotNetPackageVersion>11.0.0-rc.2.26504.105</DotNetPackageVersion>
+    <DotNetPackageVersion>11.0.0-rc.3.26522.148</DotNetPackageVersion>
   </PropertyGroup>
 
   <!--
