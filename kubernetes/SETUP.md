@@ -63,7 +63,7 @@ telnet localhost 4201
 kubectl logs -f deployment/sharpmush
 
 # ConnectionServer logs
-kubectl logs -f deployment/connectionserver
+kubectl logs -f deployment/socketserver
 
 # NATS logs
 kubectl logs -f deployment/sharpmush-infra -c nats
@@ -166,7 +166,7 @@ kubectl get pods -w
 
 # Delete specific resources
 kubectl delete deployment sharpmush
-kubectl delete service connectionserver
+kubectl delete service socketserver
 kubectl delete pvc sharpmush-data-pvc   # deletes the world
 
 # Delete everything from the manifest

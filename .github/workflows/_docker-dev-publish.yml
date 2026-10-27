@@ -80,11 +80,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build and push rendering worker (dev)
-        id: push_conn
+        id: push_renderer
         if: >-
-          steps.changes.outputs.connectionserver == 'true' ||
+          steps.changes.outputs.renderer == 'true' ||
           (github.event_name == 'workflow_dispatch' &&
-           (inputs.publish == 'all' || inputs.publish == 'connectionserver'))
+           (inputs.publish == 'all' || inputs.publish == 'renderer'))
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
@@ -123,14 +123,14 @@ jobs:
 
       # Built from the three images on Docker Hub, so it comes after them and follows any of them.
       - name: Build and push all-in-one image (dev)
-        id: push_fly
+        id: push_allinone
         if: >-
-          steps.changes.outputs.fly == 'true' ||
+          steps.changes.outputs.allinone == 'true' ||
           steps.push_server.outcome == 'success' ||
-          steps.push_conn.outcome == 'success' ||
+          steps.push_renderer.outcome == 'success' ||
           steps.push_socket.outcome == 'success' ||
           (github.event_name == 'workflow_dispatch' &&
-           (inputs.publish == 'all' || inputs.publish == 'fly'))
+           (inputs.publish == 'all' || inputs.publish == 'allinone'))
         uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
         with:
           context: .
@@ -155,7 +155,7 @@ jobs:
             else
               echo "- \`sharpmush/sharpmush-server:dev\` — not published (inputs unchanged, or not selected on a manual run); watchtower will not restart it"
             fi
-            if [ "${{ steps.push_conn.outcome }}" = "success" ]; then
+            if [ "${{ steps.push_renderer.outcome }}" = "success" ]; then
               echo "- \`sharpmush/sharpmush-renderer:dev\` — **pushed**"
             else
               echo "- \`sharpmush/sharpmush-renderer:dev\` — not published (inputs unchanged, or not selected on a manual run); rendering worker unchanged"
@@ -165,7 +165,7 @@ jobs:
             else
               echo '- `sharpmush/sharpmush-socketserver:dev` — not published; existing sockets stay up'
             fi
-            if [ "${{ steps.push_fly.outcome }}" = "success" ]; then
+            if [ "${{ steps.push_allinone.outcome }}" = "success" ]; then
               echo '- `sharpmush/sharpmush-allinone:dev` — **pushed; nothing updates to it until its operator deploys it**'
             else
               echo '- `sharpmush/sharpmush-allinone:dev` — not published'

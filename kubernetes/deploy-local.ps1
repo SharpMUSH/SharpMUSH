@@ -133,7 +133,7 @@ Write-Host "  telnet localhost 4201" -ForegroundColor White
 Write-Host ""
 Write-Host "To view logs:" -ForegroundColor Cyan
 Write-Host "  kubectl logs -f deployment/sharpmush" -ForegroundColor White
-Write-Host "  kubectl logs -f deployment/connectionserver" -ForegroundColor White
+Write-Host "  kubectl logs -f deployment/socketserver" -ForegroundColor White
 Write-Host ""
 Write-Host "To delete the deployment:" -ForegroundColor Cyan
 Write-Host "  ./kubernetes/deploy-local.ps1 -Delete" -ForegroundColor White

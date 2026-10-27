@@ -118,7 +118,7 @@ Browser (Blazor WASM)
 |---------|------|
 | `SharpMUSH.Server` | ASP.NET Core host — REST API, SignalR hub, Blazor WASM file serving, middleware stack |
 | `SharpMUSH.Client` | Blazor WASM web portal (MudBlazor 9.x) |
-| `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Image `sharpmush-socketserver`, compose service `connectionserver` |
+| `SharpMUSH.SocketServer` | Raw telnet/WebSocket gateway; owns client sockets and bridges to Server via NATS. Image `sharpmush-socketserver`, compose service `socketserver` |
 | `SharpMUSH.RenderingWorker` | Renders markup for a connection's protocol; restarts without dropping sockets. Image `sharpmush-renderer`, compose service `renderer` |
 | `SharpMUSH.Library` | Core interfaces, models, service contracts (`ISharpDatabase`, all `I*Service`) |
 | `SharpMUSH.Implementation` | MUSH parser (ANTLR4), commands, functions, substitutions |

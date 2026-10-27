@@ -2,7 +2,7 @@
 #
 # Layout (see deploy/README.md):
 #   nats              — message bus (JetStream), the ONLY required backing service
-#   connectionserver  — telnet :4201 + websocket gateway
+#   socketserver      — telnet :4201 + websocket gateway
 #   sharpmush-server  — ASP.NET Core: REST + SignalR + Blazor portal, LMDB embedded (one directory on disk)
 #   backup            — restic sidecar: nightly encrypted snapshot of the game data to your bucket
 #   caddy             — OPTIONAL reverse proxy giving the web portal automatic HTTPS (Let's Encrypt)
@@ -11,7 +11,7 @@
 # Copy .env.example -> .env and fill it in before `docker compose -f deploy/docker-compose.prod.yml up -d`.
 
 # Caddy's address on sharpmush-net, written once. Caddy is pinned to it (networks, below), and
-# sharpmush-server and connectionserver trust X-Forwarded-For only from it. It must sit inside the
+# sharpmush-server and socketserver trust X-Forwarded-For only from it. It must sit inside the
 # subnet set at the bottom of this file.
 x-caddy-ip: &caddy-ip 172.28.0.10
 
@@ -45,18 +45,18 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
-  connectionserver:
+  socketserver:
     build:
       context: ../
       dockerfile: SharpMUSH.SocketServer/Dockerfile
     image: sharpmush/sharpmush-socketserver:latest
-    container_name: sharpmush-connectionserver
+    container_name: sharpmush-socketserver
     # Deliberately NOT a watchtower target. This service owns every telnet and /ws kernel socket,
     # so recreating it disconnects everyone who is logged in — which is the one thing the split
     # exists to avoid. Engine and renderer updates are the ones watchtower carries, and those keep
     # the sockets. Replace this one yourself, during an announced window:
-    #   docker compose -f docker-compose.prod.yml pull connectionserver
-    #   docker compose -f docker-compose.prod.yml up -d connectionserver
+    #   docker compose -f docker-compose.prod.yml pull socketserver
+    #   docker compose -f docker-compose.prod.yml up -d socketserver
     # Setting this to true buys unattended socket-owner updates at the cost of dropping every
     # player without warning whenever its image tag moves.
     labels:
@@ -86,11 +86,12 @@ services:
     restart: unless-stopped
     logging: *default-logging
 
-  # Rendering can restart independently; the stable connectionserver service owns client sockets.
+  # Rendering can restart independently; the stable socketserver service owns client sockets.
   renderer:
     build:
       context: ../
       dockerfile: SharpMUSH.RenderingWorker/Dockerfile
+    container_name: sharpmush-renderer
     image: sharpmush/sharpmush-renderer:latest
     stop_grace_period: 60s
     labels:
@@ -177,7 +178,7 @@ services:
     depends_on:
       nats:
         condition: service_healthy
-      connectionserver:
+      socketserver:
         condition: service_started
     networks:
       - sharpmush-net
@@ -243,7 +244,7 @@ services:
       - caddy-config:/config
     depends_on:
       - sharpmush-server
-      - connectionserver
+      - socketserver
     networks:
       # Pinned (not the plain list form used elsewhere) so its IP is stable across recreates —
       # sharpmush-server's ForwardedHeaders:KnownProxies trusts this exact address (Task 14).

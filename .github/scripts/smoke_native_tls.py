@@ -1,7 +1,7 @@
 """Disposable, loopback-only Docker smoke checks for native TLS and proxied /ws.
 
 The orchestrator owns image builds, Compose creation, readiness, and final cleanup.
-This module only mutates that project's connectionserver and its generated test PEMs.
+This module only mutates that project's socketserver and its generated test PEMs.
 No application login or production credential is needed: WHO answers at the login screen.
 """
 
@@ -348,7 +348,7 @@ def _validate_isolation(compose: list[str], cert_dir: Path) -> str:
         for port in service.get("ports", []):
             if port.get("published") and port.get("host_ip") != "127.0.0.1":
                 raise ValueError("Every published smoke port must bind to 127.0.0.1")
-    mounts = model["services"]["connectionserver"].get("volumes", [])
+    mounts = model["services"]["socketserver"].get("volumes", [])
     certificate = [mount for mount in mounts if mount.get("target") == TLS_TARGET]
     if len(certificate) != 1 or Path(certificate[0]["source"]).resolve() != cert_dir:
         raise ValueError("Socket owner does not mount the generated fixture directory")
@@ -358,7 +358,7 @@ def _validate_isolation(compose: list[str], cert_dir: Path) -> str:
 
 
 def _container(compose: list[str], project: str) -> str:
-    identifiers = _run(compose + ["ps", "--all", "--quiet", "connectionserver"]).stdout.split()
+    identifiers = _run(compose + ["ps", "--all", "--quiet", "socketserver"]).stdout.split()
     if len(identifiers) != 1 or not re.fullmatch(r"[0-9a-f]{12,64}", identifiers[0]):
         raise RuntimeError("Expected exactly one disposable socket-owner container")
     identifier = identifiers[0]
@@ -368,8 +368,8 @@ def _container(compose: list[str], project: str) -> str:
     return identifier
 
 
-def _restore_connectionserver(compose: list[str], tls_port: int, ca: Path) -> None:
-    _run(compose + ["up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "connectionserver"])
+def _restore_socketserver(compose: list[str], tls_port: int, ca: Path) -> None:
+    _run(compose + ["up", "-d", "--no-deps", "--no-build", "--pull", "never", "--force-recreate", "socketserver"])
     _wait_tls(tls_port, ca)
 
 
@@ -379,25 +379,25 @@ def _negative_mount_and_permissions(compose: list[str], project: str, tls_port: 
         folder = Path(temporary)
         missing = folder / "must-not-be-created"
         override = folder / "negative.json"
-        override.write_text(json.dumps({"services": {"connectionserver": {
+        override.write_text(json.dumps({"services": {"socketserver": {
             "restart": "no", "volumes": [{"type": "bind", "source": str(missing),
                 "target": TLS_TARGET, "read_only": True, "bind": {"create_host_path": False}}]}}}))
         try:
             result = _run(compose + ["-f", str(override), "up", "-d", "--no-deps", "--no-build",
-                                    "--pull", "never", "--force-recreate", "connectionserver"], check=False)
+                                    "--pull", "never", "--force-recreate", "socketserver"], check=False)
             if result.returncode == 0 or missing.exists() or "bind" not in (result.stdout + result.stderr).lower():
                 raise RuntimeError("Docker did not reject the missing certificate bind without creating it")
         finally:
-            _restore_connectionserver(compose, tls_port, ca)
+            _restore_socketserver(compose, tls_port, ca)
         print("TLS smoke: Docker rejected the missing certificate directory", flush=True)
 
         mode = stat.S_IMODE(key.stat().st_mode)
-        override.write_text(json.dumps({"services": {"connectionserver": {"restart": "no"}}}))
+        override.write_text(json.dumps({"services": {"socketserver": {"restart": "no"}}}))
         try:
             key.chmod(0)
-            _run(compose + ["exec", "-T", "connectionserver", "sh", "-c", f"test ! -r {TLS_TARGET}/privkey.pem"])
+            _run(compose + ["exec", "-T", "socketserver", "sh", "-c", f"test ! -r {TLS_TARGET}/privkey.pem"])
             _run(compose + ["-f", str(override), "up", "-d", "--no-deps", "--no-build",
-                           "--pull", "never", "--force-recreate", "connectionserver"])
+                           "--pull", "never", "--force-recreate", "socketserver"])
             identifier = _container(compose, project)
             deadline = time.monotonic() + TIMEOUT
             while time.monotonic() < deadline:
@@ -409,7 +409,7 @@ def _negative_mount_and_permissions(compose: list[str], project: str, tls_port: 
                 raise RuntimeError("Socket owner did not exit after losing private-key read access")
             if state["ExitCode"] == 0:
                 raise RuntimeError("Unreadable-key startup unexpectedly exited successfully")
-            logs = _run(compose + ["logs", "--no-color", "--tail", "100", "connectionserver"]).stdout
+            logs = _run(compose + ["logs", "--no-color", "--tail", "100", "socketserver"]).stdout
             if "privkey.pem" not in logs or "denied" not in logs.lower():
                 raise RuntimeError("Startup failure did not identify private-key access denial")
             try:
@@ -419,7 +419,7 @@ def _negative_mount_and_permissions(compose: list[str], project: str, tls_port: 
                 pass
         finally:
             key.chmod(mode)
-            _restore_connectionserver(compose, tls_port, ca)
+            _restore_socketserver(compose, tls_port, ca)
         print("TLS smoke: UID 1654 cannot start with an unreadable private key", flush=True)
 
 
@@ -429,7 +429,7 @@ def run_tls_checks(compose: list[str], *, tls_port: int, plaintext_port: int,
     cert_dir = Path(cert_dir).resolve()
     project = _validate_isolation(compose, cert_dir)
     _container(compose, project)
-    _run(compose + ["exec", "-T", "connectionserver", "sh", "-c",
+    _run(compose + ["exec", "-T", "socketserver", "sh", "-c",
                    f'test "$(id -u):$(id -g)" = "1654:1654" && test -r {TLS_TARGET}/fullchain.pem && test -r {TLS_TARGET}/privkey.pem'])
     ca = cert_dir / "ca.pem"
     initial = _wait_tls(tls_port, ca)
@@ -458,7 +458,7 @@ def run_tls_checks(compose: list[str], *, tls_port: int, plaintext_port: int,
     _negative_mount_and_permissions(compose, project, tls_port, cert_dir)
     with _connect_tls(tls_port, ca) as existing:
         renew_certificates(cert_dir)
-        _run(compose + ["restart", "connectionserver"], timeout=150)
+        _run(compose + ["restart", "socketserver"], timeout=150)
         replacement = _wait_tls(tls_port, ca)
         if replacement == initial:
             raise RuntimeError("Socket-owner restart did not present the replacement certificate")

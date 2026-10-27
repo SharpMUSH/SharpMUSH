@@ -17,7 +17,7 @@ esac
 echo "# The owner finished /setup; the guard is off." > "$SHARPMUSH_DIR/guard/guard.caddy"
 docker exec sharpmush-caddy caddy reload --config /etc/caddy/Caddyfile
 sed -i 's/^SHARPMUSH_TELNET_BIND=.*/SHARPMUSH_TELNET_BIND=0.0.0.0/' "$SHARPMUSH_DIR/.env"
-(cd "$SHARPMUSH_DIR" && docker compose up -d connectionserver)
+(cd "$SHARPMUSH_DIR" && docker compose up -d socketserver)
 touch "$SHARPMUSH_DIR/state/guard-lifted"
 sed -i '/Finish setup in your browser/,/Telnet opens to everyone/d' "$SHARPMUSH_DIR/state/summary.txt" 2>/dev/null || true
 systemctl disable --now sharpmush-guard.timer

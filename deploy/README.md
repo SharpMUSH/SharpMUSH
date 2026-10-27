@@ -14,7 +14,7 @@ separate, optional overlay for either stack:
 
 | File | Purpose |
 |------|---------|
-| `docker-compose.prod.yml` | The stack: nats, connectionserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
+| `docker-compose.prod.yml` | The stack: nats, socketserver, sharpmush-server, backup, and **Caddy** for TLS. Use this if the box faces the internet directly. |
 | `docker-compose.cloudflare.yml` | Same stack but fronted by a **Cloudflare Tunnel** instead of Caddy (no open web ports). Native clients still connect directly. See the Cloudflare section below. |
 | `docker-compose.telnet-tls.yml` | Opt-in native-client TLS on 4203 with an operator-supplied certificate. See [Native-client TLS](native-client-tls.md). |
 | `Caddyfile` | Automatic-HTTPS reverse proxy config used by `docker-compose.prod.yml` |
@@ -62,9 +62,9 @@ When upgrading an existing root-owned socket volume, stop both services and chan
 its ownership before starting the new images (this maintenance disconnects clients):
 
 ```bash
-docker compose -f docker-compose.prod.yml stop connectionserver renderer
+docker compose -f docker-compose.prod.yml stop socketserver renderer
 docker compose -f docker-compose.prod.yml run --rm --no-deps --user 0:0 --entrypoint chown renderer -R 1654:1654 /run/sharpmush
-docker compose -f docker-compose.prod.yml up -d connectionserver renderer
+docker compose -f docker-compose.prod.yml up -d socketserver renderer
 ```
 
 Use your selected Compose file for all three commands. SocketServer waits for the
@@ -181,7 +181,7 @@ Without the overlay, `TelnetSslPort` defaults to `0` and there is no TLS listene
 
 Caddy and Cloudflare provide HTTPS for the web portal and WebSocket terminal only. This overlay
 does not discover Caddy's certificates, provision ACME certificates, or renew them. Certificate
-changes require a deliberate `connectionserver` restart, which disconnects its native and
+changes require a deliberate `socketserver` restart, which disconnects its native and
 WebSocket clients.
 
 If you **don't** use Caddy (e.g. you terminate TLS at a load balancer), remember the browser
@@ -292,13 +292,13 @@ This is the part the Zero Trust dashboard is for. It does **not** touch telnet.
    - **Subdomain/domain:** `mush.example.com`
    - **Path:** `ws`  *(matches `/ws`)*
    - **Service type:** `HTTP`
-   - **URL:** `connectionserver:4202`
+   - **URL:** `socketserver:4202`
 
    Then set the portal's terminal **Server URI** to `wss://mush.example.com/ws` (same origin —
    no mixed-content). WebSockets traverse the tunnel with no extra config.
 
    > Alternative: instead of a path route, use a dedicated hostname — add
-   > `ws.mush.example.com` → `HTTP` → `connectionserver:4202` and point the Server URI at
+   > `ws.mush.example.com` → `HTTP` → `socketserver:4202` and point the Server URI at
    > `wss://ws.mush.example.com/ws`. Either works; the path route keeps everything same-origin.
 
 ### Part B — the telnet side (plain DNS, no Zero Trust involved)
@@ -473,7 +473,7 @@ Do not continue after a failed stop or Restic restore command.
 
 ```bash
 RESTORE_VOLUME="sharpmush-restore-$(date -u +%Y%m%dT%H%M%SZ)-$$"
-docker compose -f docker-compose.prod.yml stop sharpmush-server connectionserver &&
+docker compose -f docker-compose.prod.yml stop sharpmush-server socketserver &&
 
 # 1. Restore into a scratch volume. The -v is what makes the files outlive the container;
 #    without it restic writes into the container's own filesystem and they are gone.
@@ -519,7 +519,7 @@ docker compose -f docker-compose.prod.yml run --rm --no-deps -v "$RESTORE_VOLUME
   fi
   rm -rf "$target/lightning.plugins"
   cp -a "$source/lightning.plugins" "$target/lightning.plugins"' && \
-  docker compose -f docker-compose.prod.yml start connectionserver sharpmush-server
+  docker compose -f docker-compose.prod.yml start socketserver sharpmush-server
 ```
 
 If the plugin directory is absent, stop and inspect the selected recovery point. An older backup
@@ -785,8 +785,8 @@ The **socket owner is not auto-updated**: it holds every client's kernel socket,
 disconnects everyone. Pull it deliberately, when you are willing to drop players:
 
 ```bash
-docker compose -f docker-compose.cloudflare.yml pull connectionserver
-docker compose -f docker-compose.cloudflare.yml up -d connectionserver
+docker compose -f docker-compose.cloudflare.yml pull socketserver
+docker compose -f docker-compose.cloudflare.yml up -d socketserver
 ```
 
 Nothing on the box ever builds, and no inbound access is required. There is no separate client

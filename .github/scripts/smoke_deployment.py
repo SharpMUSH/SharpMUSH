@@ -25,10 +25,10 @@ import ssl
 ROOT = Path(__file__).resolve().parents[2]
 IMAGES = {
     "sharpmush-server": "Dockerfile",
-    "connectionserver": "SharpMUSH.SocketServer/Dockerfile",
+    "socketserver": "SharpMUSH.SocketServer/Dockerfile",
     "renderer": "SharpMUSH.RenderingWorker/Dockerfile",
 }
-SERVICES = ("nats", "renderer", "connectionserver", "sharpmush-server", "caddy", "backup")
+SERVICES = ("nats", "renderer", "socketserver", "sharpmush-server", "caddy", "backup")
 
 
 def run(command, *, capture=False, timeout=120, check=True):
@@ -99,11 +99,11 @@ def isolated_model(source, *, project, workdir, image_tags, ports):
     # publishable endpoint; every host mapping still binds loopback. The engine,
     # broker, renderer and backup remain on internal networks only.
     model["networks"]["smoke-ingress"] = {"name": project + "_smoke-ingress", "driver": "bridge"}
-    for name in ("caddy", "connectionserver"):
+    for name in ("caddy", "socketserver"):
         model["services"][name].setdefault("networks", {})["smoke-ingress"] = None
     model["volumes"]["smoke-repository"] = {"name": project + "_smoke-repository"}
     model["volumes"]["smoke-restore"] = {"name": project + "_smoke-restore"}
-    connection = model["services"]["connectionserver"]
+    connection = model["services"]["socketserver"]
     certificate_mounts = [v for v in connection.get("volumes", []) if v["target"] == "/run/sharpmush-tls"]
     if len(certificate_mounts) != 1 or certificate_mounts[0].get("type") != "bind" or not certificate_mounts[0].get("read_only"):
         raise AssertionError("TLS overlay must mount exactly one read-only certificate directory")
@@ -180,8 +180,8 @@ def wait_ready(https_port, ca_file, timeout=120):
 
 
 def verify_published_ports(compose, ports):
-    for service, target, label in (("connectionserver", 4201, "plaintext"),
-                                   ("connectionserver", 4203, "tls"), ("caddy", 443, "https")):
+    for service, target, label in (("socketserver", 4201, "plaintext"),
+                                   ("socketserver", 4203, "tls"), ("caddy", 443, "https")):
         mapped = run(compose + ["port", service, str(target)], capture=True).stdout.strip()
         if mapped != f"127.0.0.1:{ports[label]}":
             raise RuntimeError(f"Docker did not publish {service}:{target} on its expected loopback port")
@@ -275,7 +275,7 @@ def main():
              "-t", builder_image, str(ROOT)], timeout=300)
         print("PASS: all production images built from the exact checkout", flush=True)
         run(compose + ["up", "-d", "--no-build", "--wait", "--wait-timeout", "120",
-                       "nats", "renderer", "connectionserver", "sharpmush-server", "caddy"], timeout=180)
+                       "nats", "renderer", "socketserver", "sharpmush-server", "caddy"], timeout=180)
         verify_published_ports(compose, ports)
         wait_ready(ports["https"], ca_file)
         print("PASS: real Compose stack ready through verified HTTPS proxy", flush=True)

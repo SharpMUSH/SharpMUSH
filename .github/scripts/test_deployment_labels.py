@@ -1,6 +1,6 @@
 """Watchtower scope policy: the socket owner is never an unattended-update target.
 
-Recreating `connectionserver` closes every telnet and /ws kernel socket it holds, so labelling it
+Recreating `socketserver` closes every telnet and /ws kernel socket it holds, so labelling it
 `watchtower.enable=true` turns a routine image publish into an unannounced disconnect for everyone
 logged in — players see the engine's restart notices and then their client drops. Engine and
 renderer replacement keeps those sockets, so those two are the ones that may update themselves.
@@ -20,9 +20,8 @@ COMPOSE_FILES = [
 
 LABEL = "com.centurylinklabs.watchtower.enable"
 
-# The socket owner is the Compose service named `connectionserver` (it kept that name so existing
-# proxy routes keep working; its image is sharpmush-socketserver).
-SOCKET_OWNER = "connectionserver"
+# The socket owner is the Compose service `socketserver` (image sharpmush-socketserver).
+SOCKET_OWNER = "socketserver"
 AUTO_UPDATABLE = {"renderer", "sharpmush-server"}
 
 

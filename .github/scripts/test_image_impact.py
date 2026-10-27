@@ -18,8 +18,8 @@ class ImageImpactTests(unittest.TestCase):
     def impact(self, *paths):
         return analyze(paths, [self.files.__getitem__])
 
-    def test_game_only_does_not_restart_connectionserver(self):
-        self.assertEqual(self.impact("Game/Program.cs"), {"server": ["Game/Program.cs"], "connectionserver": [], "socketserver": []})
+    def test_game_only_does_not_restart_renderer(self):
+        self.assertEqual(self.impact("Game/Program.cs"), {"server": ["Game/Program.cs"], "renderer": [], "socketserver": []})
 
     def test_shared_dependency_restarts_both(self):
         self.assertTrue(all(self.impact("Shared/Message.cs").values()))
@@ -30,14 +30,14 @@ class ImageImpactTests(unittest.TestCase):
                 self.assertTrue(all(self.impact(path).values()))
 
     def test_linked_resource(self):
-        self.assertEqual(self.impact("resources/banner.txt"), {"server": ["resources/banner.txt"], "connectionserver": [], "socketserver": []})
+        self.assertEqual(self.impact("resources/banner.txt"), {"server": ["resources/banner.txt"], "renderer": [], "socketserver": []})
 
     def test_explicit_docker_copy_inputs(self):
         self.files["Dockerfile"] += '\nCOPY ["assets", "/app/assets"]\nCOPY --from=build /app /output'
-        self.assertEqual(self.impact("assets/banner.txt"), {"server": ["assets/banner.txt"], "connectionserver": [], "socketserver": []})
+        self.assertEqual(self.impact("assets/banner.txt"), {"server": ["assets/banner.txt"], "renderer": [], "socketserver": []})
 
     def test_dockerfile_only_affects_its_image(self):
-        self.assertEqual(self.impact("Dockerfile"), {"server": ["Dockerfile"], "connectionserver": [], "socketserver": []})
+        self.assertEqual(self.impact("Dockerfile"), {"server": ["Dockerfile"], "renderer": [], "socketserver": []})
 
     def test_unrelated_files_do_not_publish(self):
         self.assertFalse(any(self.impact("README.md", "Tests/Test.cs").values()))
@@ -79,7 +79,7 @@ class ImageImpactTests(unittest.TestCase):
 
     def test_renderer_only_keeps_client_sockets(self):
         result = self.impact("Conn/Renderer.cs")
-        self.assertTrue(result["connectionserver"])
+        self.assertTrue(result["renderer"])
         self.assertFalse(result["socketserver"])
         self.assertIn("drops: NO", report(result))
 
@@ -92,7 +92,7 @@ class ImageImpactTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         result = analyze(["SharpMUSH.RenderingWorker/Services/MarkupOutputRenderer.cs"],
                          [lambda path: (root / path).read_text()])
-        self.assertTrue(result["connectionserver"])
+        self.assertTrue(result["renderer"])
         self.assertFalse(result["socketserver"])
 
     def test_repository_closure_and_embedded_packages(self):
@@ -100,7 +100,7 @@ class ImageImpactTests(unittest.TestCase):
         read = lambda path: (root / path).read_text()
         result = analyze(["examples/packages/plus-help/package.yaml", "SharpMUSH.Messaging/Messages.cs"], [read])
         self.assertEqual(len(result["server"]), 2)
-        self.assertEqual(result["connectionserver"], ["SharpMUSH.Messaging/Messages.cs"])
+        self.assertEqual(result["renderer"], ["SharpMUSH.Messaging/Messages.cs"])
 
 
 if __name__ == "__main__":
