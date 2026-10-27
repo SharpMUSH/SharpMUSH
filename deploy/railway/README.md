@@ -32,9 +32,6 @@ variables and fill those names in.
 | Setting | Value |
 |---|---|
 | Variable `NATS_URL` | `nats://${{edge.RAILWAY_PRIVATE_DOMAIN}}:4222` |
-| Variable `ASPNETCORE_URLS` | `http://+:8080` |
-| Variable `ASPNETCORE_Kestrel__Certificates__Default__Path` | empty |
-| Variable `ASPNETCORE_Kestrel__Certificates__Default__Password` | empty |
 | Variable `ForwardedHeaders__KnownNetworks__0` | `0.0.0.0/0` |
 | Variable `ForwardedHeaders__KnownNetworks__1` | `::/0` |
 | Variable `SHARPMUSH_LIGHTNING_PATH` | `/data/lightning` |
@@ -56,10 +53,9 @@ variables and fill those names in.
 `SHARPMUSH_TRUSTED_PROXIES` lets Caddy believe Railway's edge about the visitor's address and that
 the visit came over HTTPS. Port 8000 is reachable only through that edge, so trusting every source
 trusts only Railway. The server trusts forwarded headers from any address for the same reason: only
-the edge reaches it, from a private address that changes with each deploy. The server's certificate
-variables are empty because it serves plain HTTP to the edge. The server and the renderer get no
-public networking: NATS, the server and the renderer ask for no credentials, and Railway's private
-network reaches only this project.
+the edge reaches it, from a private address that changes with each deploy. The server and the
+renderer get no public networking: NATS, the server and the renderer ask for no credentials, and
+Railway's private network reaches only this project.
 
 The setup link in the edge's deploy log uses the generated domain (`RAILWAY_PUBLIC_DOMAIN`), and the
 log names the TCP proxy's host and port (`RAILWAY_TCP_PROXY_DOMAIN`, `RAILWAY_TCP_PROXY_PORT`).

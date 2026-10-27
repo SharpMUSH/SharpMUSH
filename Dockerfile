@@ -28,7 +28,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:11.0
 WORKDIR /app
 COPY --from=build /app .
 EXPOSE 8080 8081 4201 4202 4203 9092
-ENV ASPNETCORE_URLS=http://+:8080;https://+:8081
-ENV ASPNETCORE_Kestrel__Certificates__Default__Path=/app/sharpmush-dev.pfx
-ENV ASPNETCORE_Kestrel__Certificates__Default__Password=DevPassword123!
+# Plain HTTP: the image is always run behind a proxy that ends TLS. A dev certificate copied above
+# serves HTTPS only when ASPNETCORE_URLS and ASPNETCORE_Kestrel__Certificates__Default__Path name it.
+ENV ASPNETCORE_URLS=http://+:8080
 ENTRYPOINT ["dotnet", "SharpMUSH.Server.dll"]
