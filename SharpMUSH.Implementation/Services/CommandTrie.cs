@@ -143,6 +143,8 @@ public class CommandTrie
 	/// <c>@tel</c> is <c>@teleport</c> while nothing else begins <c>@tel</c>, a lone <c>s</c> is not
 	/// <c>say</c> (<c>score</c>, <c>semipose</c> and <c>session</c> begin with it too), and adding a command
 	/// can take an abbreviation away from another, as it does in PennMUSH.</para>
+	/// <para>One letter names only a command spelled that way, never one it begins: a player typing
+	/// <c>n</c> in a room with no such exit is trying to walk, and gets <c>huh</c> rather than NEWS.</para>
 	/// </summary>
 	/// <param name="prefix">The command name or abbreviation (case-insensitive)</param>
 	/// <returns>The command it names, or null when it names none or more than one</returns>
@@ -163,7 +165,7 @@ public class CommandTrie
 		if (node.Command is CommandDefinition exact)
 			return (node.CommandName!, exact);
 
-		return SoleCommandUnder(node);
+		return lowerPrefix.Length == 1 ? null : SoleCommandUnder(node);
 	}
 
 	/// <summary>The one command in <paramref name="node"/>'s subtree, or null when it holds none or several.</summary>

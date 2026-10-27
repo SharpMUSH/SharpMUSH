@@ -56,4 +56,15 @@ public class CommandAbbreviationTests
 		await Assert.That(trie.FindAbbreviation("w")?.CommandName).IsEqualTo("W");
 		await Assert.That(trie.FindAbbreviation("wh")).IsNull();
 	}
+
+	[Test]
+	public async Task OneLetter_NamesOnlyACommandSpelledThatWay()
+	{
+		var trie = TrieOf("NEWS", "L", "LOOK", "LEAVE");
+
+		await Assert.That(trie.FindAbbreviation("n")).IsNull()
+			.Because("a lone direction letter with no exit is a walk, not NEWS");
+		await Assert.That(trie.FindAbbreviation("ne")?.CommandName).IsEqualTo("NEWS");
+		await Assert.That(trie.FindAbbreviation("l")?.CommandName).IsEqualTo("L");
+	}
 }
