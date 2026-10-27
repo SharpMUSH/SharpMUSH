@@ -44,6 +44,11 @@
       "id": "tinymux-s-forms-of-shared-functions",
       "heading": "TinyMUX's forms of shared functions",
       "lookup": "compatibility arguments tinymux s forms of shared functions"
+    },
+    {
+      "id": "rhostmush-s-forms-of-shared-functions",
+      "heading": "RhostMUSH's forms of shared functions",
+      "lookup": "compatibility arguments rhostmush s forms of shared functions"
     }
   ]
 }
@@ -146,16 +151,18 @@ For Latin-1 text the two servers count alike. Beyond it, PennMUSH counts the byt
 
 **A choice.**
 
-**PennMUSH** answers `stext()` with `#-1 ARGUMENT MUST BE INTEGER`, and declares `lwhoid()` with at most one argument, so `lwhoid(me,online)` is an argument-count error.<br>
-**SharpMUSH** treats `stext()` as `stext(0)`, the innermost switch, and lets `lwhoid()` take the `<status>` argument `lwho()` takes.<br>
-**Why.** An omitted level means the innermost one everywhere else. PennMUSH serves `lwho()` and `lwhoid()` with one C function and only declares them differently.<br>
-**Workaround.** Write `stext(0)`, and give `lwhoid()` at most one argument, for code that has to run on both.
+**PennMUSH** answers `stext()` with `#-1 ARGUMENT MUST BE INTEGER`, declares `lwhoid()` with at most one argument, so `lwhoid(me,online)` is an argument-count error, and requires an option name for `config()`.<br>
+**SharpMUSH** treats `stext()` as `stext(0)`, the innermost switch, lets `lwhoid()` take the `<status>` argument `lwho()` takes, and answers `config()` with every option name.<br>
+**Why.** An omitted level means the innermost one everywhere else. PennMUSH serves `lwho()` and `lwhoid()` with one C function and only declares them differently. A list of option names lets softcode find a setting without knowing its name in advance.<br>
+**Workaround.** Write `stext(0)`, give `lwhoid()` at most one argument, and name an option for `config()`, for code that has to run on both.
 
 ```sharp
 > think switch(a,a,stext())
 a
 > think switch(a,a,stext(0))
 a
+> think gt(words(config()),100)
+1
 ```
 
 ## `ansi()` and `lit()`
@@ -181,3 +188,19 @@ default|5|1||a b
 > think setunion(B a c,b, ,|,a)
 B|a|b|c
 ```
+
+## RhostMUSH's forms of shared functions
+
+**A choice.**
+**PennMUSH** refuses `ifelse()` with two arguments, and `map()` with more than four.<br>
+**SharpMUSH** answers them as RhostMUSH does: `ifelse(<condition>, <true expression>)` is `if()`, and `map()` passes every argument after `<osep>` to the attribute as %1, %2 and so on, in place of the position.<br>
+**Why.** RhostMUSH code that uses these forms runs. Both are errors in PennMUSH, so no working PennMUSH code changes.<br>
+**Workaround.** Give `ifelse()` a third argument, and pass `map()` no more than four, for code that has to run on both.
+
+```sharp
+> &RHOSTDOC_MAPARG me=<%0|%1>
+> think [ifelse(1,yes)]|[ifelse(0,yes)]|[map(me/RHOSTDOC_MAPARG,a b,,,x)]
+yes||<a|x> <b|x>
+```
+
+`lattr()`, `lattrp()`, `list()`, `edit()` and `printf()` take RhostMUSH's arguments only while an option is on, so a game decides; see [compatibility config].

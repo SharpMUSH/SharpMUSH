@@ -63,7 +63,7 @@ That is the same two fields as `objid(me)`; whole seconds are not:
 
 ## Objids and stamped dbrefs
 
-SharpMUSH's `objid` is `<dbref>:<creation time in milliseconds>`. Where PennMUSH's `unparse_dbref` produces a bare dbref in a message, SharpMUSH may produce the stamped form; the two are not interchangeable as text. Parse an objid with `num()` when you want the dbref alone. The representation choice is deliberate and tracked separately in #1006 item 13.
+SharpMUSH's `objid` is `<dbref>:<creation time in milliseconds>`. Where PennMUSH's `unparse_dbref` produces a bare dbref in a message, SharpMUSH may produce the stamped form; the two are not interchangeable as text. Parse an objid with `num()` when you want the dbref alone. The representation is deliberate.
 
 ## A destroyed object's dbref is not reused
 
