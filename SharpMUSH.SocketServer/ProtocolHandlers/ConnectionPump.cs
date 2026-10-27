@@ -37,6 +37,8 @@ public sealed class ConnectionPump(
 			if (sink is not null && sink.Detach(transport))
 			{
 				ScheduleExpiry(candidateHandle, sink.SessionId, grace);
+				using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+				await AnnounceDetachedAsync(candidateHandle, sink.SessionId, DateTimeOffset.UtcNow.Add(grace), deadline.Token);
 			}
 			else if (connectionService.Get(candidateHandle) is null)
 				descriptorGenerator.ReleaseWebSocketDescriptor(candidateHandle);
@@ -323,11 +325,14 @@ public sealed class ConnectionPump(
 				logger.LogWarning(ex, "Socket output failed for {Handle}; preserving replay and detaching transport", handle);
 				if (sink.Detach(current))
 				{
+					var heldUntil = DateTimeOffset.UtcNow.Add(grace);
 					using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(2));
-					try { await SetExpiryAsync(handle, DateTimeOffset.UtcNow.Add(grace), deadline.Token); }
+					try { await SetExpiryAsync(handle, heldUntil, deadline.Token); }
 					catch (Exception expiryError) { logger.LogWarning(expiryError, "Could not persist detached expiry for {Handle}", handle); }
 					finally { ScheduleExpiry(handle, session, grace); }
 					await CloseTransportAsync(current);
+					using var announce = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+					await AnnounceDetachedAsync(handle, session, heldUntil, announce.Token);
 				}
 			}
 		}
