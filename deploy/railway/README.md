@@ -5,7 +5,9 @@ from `deploy/fly/Dockerfile`; Caddy, NATS and the connection server), the game s
 (`sharpmush/sharpmush-server`) and the renderer (`sharpmush/sharpmush-renderer`). The edge holds
 every player's socket, so updating the server or the renderer drops nobody. A Railway template
 turns the settings below into a **Deploy on Railway** button; Railway templates are made in a
-Railway account's template composer, not from a file in this repository.
+Railway account's template composer, not from a file in this repository. The published one:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/Fk8PBS?referralCode=fcp2a2&utm_medium=integration&utm_source=button&utm_campaign=generic)
 
 ## Template settings
 

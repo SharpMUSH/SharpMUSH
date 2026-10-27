@@ -33,6 +33,10 @@ The first release, 1.0.0, is being prepared. See [CHANGELOG.md](./CHANGELOG.md) 
 
 ## Docker Deployment
 
+To launch a game on a host, see [Launch a Server](https://sharpmush.com/guides/one-click-hosting/), or deploy one on Railway:
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/Fk8PBS?referralCode=fcp2a2&utm_medium=integration&utm_source=button&utm_campaign=generic)
+
 SharpMUSH is available as Docker images on DockerHub:
 - `sharpmush/sharpmush-server` - Main server
 - `sharpmush/sharpmush-socketserver` - Stable telnet/WebSocket socket owner
