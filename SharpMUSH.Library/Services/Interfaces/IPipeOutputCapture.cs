@@ -59,13 +59,13 @@ public sealed class PipeBuffer(int maxLength)
 	/// <summary>
 	/// Appends <paramref name="line"/>, which may hold several lines. When it would take the buffer past its
 	/// limit, the lines of it that fit are kept and the rest, with everything after it, is dropped, so the
-	/// text never ends partway through a line.
+	/// text never ends partway through a line. True when all of <paramref name="line"/> was kept.
 	/// </summary>
-	public void Append(MString line)
+	public bool Append(MString line)
 	{
 		lock (_lines)
 		{
-			if (Truncated) return;
+			if (Truncated) return false;
 
 			var separator = _lines.Count > 0 ? 1 : 0;
 			var room = maxLength - _length - separator;
@@ -73,7 +73,7 @@ public sealed class PipeBuffer(int maxLength)
 			{
 				_lines.Add(line);
 				_length += separator + line.Length;
-				return;
+				return true;
 			}
 
 			Truncated = true;
@@ -83,6 +83,8 @@ public sealed class PipeBuffer(int maxLength)
 				_lines.Add(line.Substring(0, cut));
 				_length += separator + cut;
 			}
+
+			return false;
 		}
 	}
 

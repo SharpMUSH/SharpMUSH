@@ -29,11 +29,11 @@ public class PipeOutputCapture : IPipeOutputCapture
 			return true;
 		}
 
-		// A full @pipe takes nothing more: the rest is shown, as when RhostMUSH turns a full pipe off.
+		// A full @pipe takes nothing more: the rest is shown, as when RhostMUSH turns a full pipe off. The
+		// message that fills it is shown whole, so none of it is lost.
 		if (!_attributePipes.TryGetValue(dbref, out var pipe) || pipe.Buffer.Truncated) return false;
 
-		pipe.Buffer.Append(text);
-		return !pipe.Tee;
+		return pipe.Buffer.Append(text) && !pipe.Tee;
 	}
 
 	public bool Captures(int dbref)

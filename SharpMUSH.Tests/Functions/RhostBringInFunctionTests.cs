@@ -50,6 +50,8 @@ public class RhostBringInFunctionTests : ServerTestBase
 	[Arguments("strfunc(add,1@2@3@4,@)", "10")]
 	[Arguments("strfunc(cat,a\\[b\\]|c,|)", "a[b] c")]
 	[Arguments("strfunc(cat,a\\,b c)", "a,b c")]
+	[Arguments("strfunc(strlen,%bfoo,|)", "4")]
+	[Arguments("strfunc(strlen,foo%b%b,|)", "5")]
 	[Arguments("strfunc(no such,a)", "#-1 FUNCTION (NO SUCH) NOT FOUND")]
 	public async Task StrFunc(string code, string expected)
 	{

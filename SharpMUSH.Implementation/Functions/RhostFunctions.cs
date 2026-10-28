@@ -116,7 +116,7 @@ public partial class Functions
 
 	/// <summary>
 	/// strfunc(): calls a function with the elements of a list as its arguments. Each element is passed as
-	/// it stands, so nothing in it is evaluated again.
+	/// it stands, so nothing in it is evaluated again, and the spaces at its ends are kept.
 	/// </summary>
 	[SharpFunction(Name = "strfunc", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["function", "list", "delimiter"])]
@@ -130,8 +130,19 @@ public partial class Functions
 		}
 
 		var arguments = MushText.SplitList(ArgHelpers.Delimiter(args, 2), args["1"].Message)
-			.Select(element => EscapeSoftcode(element.ToPlainText(), _ => true));
+			.Select(element => KeepEdgeSpaces(EscapeSoftcode(element.ToPlainText(), _ => true)));
 		return await parser.FunctionParse(MarkupText.Plain($"{name}({string.Join(",", arguments)})")) ?? CallState.Empty;
+	}
+
+	/// <summary>Spaces at either end of an argument as <c>%b</c>, which the parser does not trim as it does a space.</summary>
+	private static string KeepEdgeSpaces(string argument)
+	{
+		var trimmed = argument.Trim(' ');
+		if (trimmed.Length == argument.Length) return argument;
+
+		var leading = argument.Length - argument.TrimStart(' ').Length;
+		var trailing = trimmed.Length == 0 ? 0 : argument.Length - argument.TrimEnd(' ').Length;
+		return string.Concat(Enumerable.Repeat("%b", leading)) + trimmed + string.Concat(Enumerable.Repeat("%b", trailing));
 	}
 
 	/// <summary>A backslash before each character the parser gives meaning to, when <paramref name="escapes"/> says so.</summary>
