@@ -5,7 +5,9 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging.Abstractions;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Parsing;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -79,6 +81,10 @@ public static class ImportWorker
 					return 0;
 				}
 				await EnsurePackageManagerAsync(mediator, options, result, configuration?.Sets("package_manager") == true, deadline.Token);
+				var parser = services.GetRequiredService<IMUSHCodeParser>();
+				await ImportedCallScan.ReportAsync(mediator, parser.FunctionLibrary,
+					new SoftcodeSyntaxAnalyzer(parser.FunctionLibrary, services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>()),
+					(await options.CurrentAsync()).Compatibility.Dialect, result, deadline.Token);
 				if (configuration is not null) ReportConfiguration(configuration, result);
 				journal.Save(session with { State = ImportSessionState.Validating, Result = result });
 				if (await mediator.Send(new GetObjectCountQuery(), deadline.Token) < result.TotalObjects)
