@@ -33,5 +33,6 @@ public static class AttributeFlagSeed
 		("funsyntax", "f", true),
 		("internal", "", true),
 		("nodump", "", true),
+		("rhost", "", true),
 	];
 }

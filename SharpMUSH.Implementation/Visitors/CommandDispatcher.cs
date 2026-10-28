@@ -16,6 +16,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using System.Text.RegularExpressions;
 using static SharpMUSHParser;
 
@@ -156,7 +157,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			// Step 4: Check if we are setting an attribute: &... -- we're just treating this as a Single Token Command for now.
 			// Who would rely on a room alias being & anyway?
 			// Step 5: Check @COMMAND in command library
-			var builtIn = FindBuiltIn(parser, command);
+			var builtIn = FindBuiltIn(parser, command, visitor.Configuration.CurrentValue.Compatibility.Dialect);
 			if (builtIn.Definition is CommandDefinition definition)
 			{
 				return await services.Commands.InternalAsync(visitor, parser, src, context, builtIn.RootCommand,
@@ -551,7 +552,11 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// </summary>
 	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition);
 
-	private static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command)
+	/// <summary>
+	/// The built-in <paramref name="command"/> names: one spelled that way, else the one the dialect in force
+	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates.
+	/// </summary>
+	private static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command, string? gameDialect)
 	{
 		// Use CommandTrie for efficient prefix matching instead of LINQ
 		var slashIndex = command.AsSpan().IndexOf('/');
@@ -561,9 +566,14 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			? command[slashIndex..].Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
 			: [];
 
+		var trie = CommandTrie.For(parser.CommandLibrary);
+		if (trie.FindExact(rootCommand) is null
+				&& DialectCommand(parser, trie, gameDialect, rootCommand, switches) is { } dialectCommand)
+			return dialectCommand;
+
 		var matchResult = rootCommand.Equals("HUH_COMMAND", StringComparison.CurrentCultureIgnoreCase)
 			? null
-			: CommandTrie.For(parser.CommandLibrary).FindAbbreviation(rootCommand);
+			: trie.FindAbbreviation(rootCommand);
 
 		// If no match found and rootCommand contains '=', try matching just the part before '='
 		// This handles cases like "addcom=Public" where the command name and args have no space separator.
@@ -573,7 +583,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			if (equalsIndex > 0)
 			{
 				var commandPart = rootCommand[..equalsIndex];
-				matchResult = CommandTrie.For(parser.CommandLibrary).FindAbbreviation(commandPart);
+				matchResult = trie.FindAbbreviation(commandPart);
 				if (matchResult != null)
 				{
 					rootCommand = commandPart;
@@ -584,6 +594,22 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		return matchResult?.Definition is { } definition
 			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. switches], definition)
 			: new BuiltInLookup(rootCommand, switches, null);
+	}
+
+	/// <summary>
+	/// The command the dialect in force means by <paramref name="rootCommand"/>, with the switches the alias
+	/// carries ahead of the typed <paramref name="switches"/>, or null when it means none.
+	/// </summary>
+	private static BuiltInLookup? DialectCommand(IMUSHCodeParser parser, CommandTrie trie, string? gameDialect,
+		string rootCommand, string[] switches)
+	{
+		if (SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, gameDialect)?.CommandFor(rootCommand) is not { } target)
+			return null;
+
+		var parts = target.Split('/');
+		return trie.FindExact(parts[0]) is { } definition
+			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. parts[1..], .. switches], definition)
+			: null;
 	}
 
 	/// <summary>

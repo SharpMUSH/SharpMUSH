@@ -25,7 +25,7 @@ internal static class QueuedCommandMatch
 			body,
 			snapshot with
 			{
-				CurrentEvaluation = new DBAttribute(obj.Object().DBRef, attr.LongName),
+				CurrentEvaluation = DBAttribute.Of(obj.Object().DBRef, attr),
 				Arguments = arguments,
 				Function = null,
 				Executor = obj.Object().DBRef,

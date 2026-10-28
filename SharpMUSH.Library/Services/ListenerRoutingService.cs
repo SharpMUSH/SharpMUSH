@@ -6,6 +6,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
@@ -345,7 +346,8 @@ public class ListenerRoutingService(
 			if (!prefix.Success) continue;
 			await mediator.Send(new ExecuteListenPatternCommand(listener, speaker, match.Attribute.LongName, registers)
 			{
-				Action = match.Attribute.Value.Substring(prefix.Length)
+				Action = match.Attribute.Value.Substring(prefix.Length),
+				Dialect = SoftcodeDialects.Of(match.Attribute)
 			}, ExecutionBudget.CurrentToken);
 		}
 	}

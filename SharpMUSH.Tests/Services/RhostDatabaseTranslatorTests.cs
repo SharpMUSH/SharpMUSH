@@ -111,10 +111,10 @@ public class RhostDatabaseTranslatorTests
 
 		await Assert.That(names).Contains("DESCRIBE").And.Contains("SUCCESS").And.Contains("CMD_HELLO").And.Contains("DATA");
 		await Assert.That(names).DoesNotContain("__OBJID_INTERNAL").And.DoesNotContain("CREATEDSTAMP");
-		await Assert.That(widget.Attributes.First(a => a.Name == "CMD_HELLO").Flags).IsEquivalentTo(["no_inherit"]);
-		await Assert.That(widget.Attributes.First(a => a.Name == "DATA").Flags).IsEquivalentTo(["wizard"]);
+		await Assert.That(widget.Attributes.First(a => a.Name == "CMD_HELLO").Flags).IsEquivalentTo(["rhost", "no_inherit"]);
+		await Assert.That(widget.Attributes.First(a => a.Name == "DATA").Flags).IsEquivalentTo(["rhost", "wizard"]);
 		// The +A header's flags apply to every instance.
-		await Assert.That(widget.Attributes.First(a => a.Name == "SECRETS").Flags).IsEquivalentTo(["no_inherit"]);
+		await Assert.That(widget.Attributes.First(a => a.Name == "SECRETS").Flags).IsEquivalentTo(["rhost", "no_inherit"]);
 		await Assert.That(widget.CreationTime).IsGreaterThan(0);
 		await Assert.That(widget.ModificationTime).IsGreaterThan(widget.CreationTime);
 	}

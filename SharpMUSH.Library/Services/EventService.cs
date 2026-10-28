@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -29,7 +30,7 @@ public class EventService(
 	ILogger<EventService> logger) : IEventService
 {
 	/// <summary>One of the handler's attributes that hears the event.</summary>
-	private sealed record Hearer(string Attribute, MString Body);
+	private sealed record Hearer(string Attribute, MString Body, string? Dialect);
 
 	/// <inheritdoc />
 	public async ValueTask<bool> HasHandlerAsync(string eventName)
@@ -202,7 +203,7 @@ public class EventService(
 
 			foreach (var attribute in matched.Where(attribute => attribute.Value.Length > 0))
 			{
-				found.TryAdd(attribute.LongName, new Hearer(attribute.LongName, attribute.Value));
+				found.TryAdd(attribute.LongName, new Hearer(attribute.LongName, attribute.Value, SoftcodeDialects.Of(attribute)));
 			}
 		}
 
@@ -234,7 +235,7 @@ public class EventService(
 					IAttributeService.AttributeMode.Execute, parent: false) is SharpAttribute[] own
 				&& own.Last().Value.Length > 0)
 		{
-			hearers.Add(new Hearer(eventName, own.Last().Value));
+			hearers.Add(new Hearer(eventName, own.Last().Value, SoftcodeDialects.Of(own.Last())));
 		}
 
 		if (await attributeService.GetAttributePatternAsync(eventHandler, eventHandler, $"{eventName}`*", checkParents: false,
@@ -243,7 +244,7 @@ public class EventService(
 			hearers.AddRange(below
 				.Where(attribute => attribute.Value.Length > 0)
 				.OrderBy(attribute => attribute.LongName, StringComparer.Ordinal)
-				.Select(attribute => new Hearer(attribute.LongName, attribute.Value)));
+				.Select(attribute => new Hearer(attribute.LongName, attribute.Value, SoftcodeDialects.Of(attribute))));
 		}
 
 		return hearers;
@@ -302,7 +303,7 @@ public class EventService(
 			Arguments = new Dictionary<string, CallState>(arguments, StringComparer.OrdinalIgnoreCase),
 			EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
 			SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
-			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute),
+			CurrentEvaluation = new DBAttribute(run.Handler, hearer.Attribute) { Dialect = hearer.Dialect },
 			AttributeChangeDepth = run.AttributeChangeDepth
 		};
 }

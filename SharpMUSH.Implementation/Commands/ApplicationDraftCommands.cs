@@ -103,7 +103,7 @@ public partial class Commands
 				await parser.With(s => s.ForAttributeArguments(inputs) with
 				{
 					EnvironmentRegisters = environment,
-					CurrentEvaluation = new DBAttribute(target.Object().DBRef, attributeBody.LongName)
+					CurrentEvaluation = DBAttribute.Of(target.Object().DBRef, attributeBody)
 				}, p => p.CommandListParse(attributeBody.Value));
 				if (state.Registers.TryPeek(out var registers) && registers.TryGetValue("APPDRAFT_RESULT", out var answer))
 				{

@@ -1,5 +1,6 @@
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
@@ -29,7 +30,8 @@ public static partial class RhostDatabaseTranslator
 	/// <summary>
 	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
 	/// reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c> and <c>list()</c> as
-	/// RhostMUSH defines them, and lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>).
+	/// RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), and
+	/// reads RhostMUSH's names for functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
 	{
@@ -41,6 +43,7 @@ public static partial class RhostDatabaseTranslator
 		["rhost_map_args"] = true,
 		["sidefx_flag"] = true,
 		["rhost_list"] = true,
+		["dialect"] = SoftcodeDialects.Rhost.Key,
 		// RhostMUSH's mail command is mail (see the note Translate gives).
 		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
 	};
@@ -118,7 +121,9 @@ public static partial class RhostDatabaseTranslator
 			"player's channels in the CHANNELS attribute, which is imported as an attribute and not turned into channels.");
 		report.Line(ImportWarningKind.Softcode, $"Imported from a {ServerName} flatfile: the import turns on paren_groups, tiny_trim_fun, rhost_edit, " +
 			"rhost_lattr, rhost_printf, rhost_map_args, sidefx_flag and rhost_list, so the imported softcode reads its " +
-			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count.");
+			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count. " +
+			"It sets dialect to rhost and gives every attribute it brings in the rhost attribute flag, so that code reads " +
+			$"{ServerName}'s names for functions and commands SharpMUSH has under its own, such as wildmatch() and @sudo.");
 		database.ImportNotes = report.Finish();
 		database.RoutineNotes = report.FinishRoutine();
 		database.SoftcodeRewrites = report.Rewrites;
@@ -469,9 +474,13 @@ public static partial class RhostDatabaseTranslator
 
 	private static string Builtin(int number) => RhostNameTables.BuiltInAttributes.GetValueOrDefault(number, $"#{number}");
 
+	/// <summary>
+	/// The SharpMUSH attribute flags <paramref name="bits"/> become, and the <c>rhost</c> flag, which marks the
+	/// attribute as written in RhostMUSH's dialect.
+	/// </summary>
 	private static List<string> AttributeFlags(uint bits, int dbref, Report report)
 	{
-		var flags = new List<string>();
+		var flags = new List<string> { SoftcodeDialects.Rhost.Key };
 		foreach (var flag in RhostNameTables.AttributeFlags)
 		{
 			if ((bits & flag.Bit) == 0 || flag.Note == string.Empty)

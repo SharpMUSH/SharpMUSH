@@ -546,7 +546,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		// any other stays as written, so !text(...) is prose or an unknown function, as it was.
 		Bang? bang = null;
 		if (Bang.Read(functionName, out var readBang) is > 0 and var bangLength
-				&& _services.Functions.IsFunction(parser, functionName[bangLength..]))
+				&& _services.Functions.IsFunction(this, functionName[bangLength..]))
 		{
 			functionName = functionName[bangLength..];
 			bang = readBang;

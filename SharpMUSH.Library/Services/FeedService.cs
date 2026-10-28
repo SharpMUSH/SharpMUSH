@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -190,7 +191,7 @@ public class FeedService(
 				Arguments = arguments,
 				EnvironmentRegisters = arguments,
 				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
-				CurrentEvaluation = new DBAttribute(ownerRef, deliver.LongName.ToUpperInvariant())
+				CurrentEvaluation = new DBAttribute(ownerRef, deliver.LongName.ToUpperInvariant()) { Dialect = SoftcodeDialects.Of(deliver) }
 			}, p => p.WithAttributeDebug(deliver, async debug => await debug.CommandListParseVisitor(deliver.Value)()));
 			return recipients.Select(r => r.Object().DBRef).ToList();
 		}
@@ -271,7 +272,7 @@ public class FeedService(
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments, StringComparer.OrdinalIgnoreCase),
 				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
-				CurrentEvaluation = new DBAttribute(tapObject.Object().DBRef, tap.Attribute)
+				CurrentEvaluation = new DBAttribute(tapObject.Object().DBRef, tap.Attribute) { Dialect = SoftcodeDialects.Of(chain.Last()) }
 			};
 			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(chain.Last().Value.ToPlainText()), state);
 			if (!admission.Accepted)

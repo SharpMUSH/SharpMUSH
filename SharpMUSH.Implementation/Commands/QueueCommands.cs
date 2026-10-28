@@ -1409,7 +1409,7 @@ public partial class Commands
 			Registers = registerStack,
 			// A loop or switch the trigger ran inside does not bind ##, #@ or #$ written in the attribute it runs:
 			// PennMUSH queues that attribute, and splices those tokens only into the loop's own text.
-			CurrentEvaluation = new DBAttribute(targetObject.Object().DBRef, attribute.LongName)
+			CurrentEvaluation = DBAttribute.Of(targetObject.Object().DBRef, attribute)
 		};
 
 		if (!isInline)

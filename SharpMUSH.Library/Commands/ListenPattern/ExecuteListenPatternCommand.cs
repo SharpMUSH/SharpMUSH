@@ -21,4 +21,7 @@ public record ExecuteListenPatternCommand(
 {
 	/// <summary>The parsed MONITOR action, captured with its matched attribute. Direct LISTEN actions resolve by name.</summary>
 	public Option<MString> Action { get; init; } = new None();
+
+	/// <summary>The dialect the captured <see cref="Action"/>'s attribute is written in, or <c>null</c> for the game's.</summary>
+	public string? Dialect { get; init; }
 }

@@ -10,6 +10,7 @@ using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 using static SharpMUSHParser;
 using SharpMUSH.Implementation.Common;
 
@@ -53,7 +54,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 		try
 		{
-			if (!TryResolveFunction(parser, name, out var definition))
+			if (!TryResolveFunction(visitor, ref name, out var definition))
 			{
 				var restricted = IsRestricted(parser);
 				if (!restricted && !SharpMUSHParserVisitor.IsUnknownFunctionAnError(context))
@@ -240,6 +241,29 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	private static bool IsRestricted(IMUSHCodeParser parser)
 		=> EvaluationRestrictions.Current is not null || parser.CurrentState.Restrictions is not null;
 
+	/// <summary>Whether <paramref name="name"/> calls a function: a built-in, an @function, or a name the dialect in force has for one.</summary>
+	public bool IsFunction(SharpMUSHParserVisitor visitor, string name) => TryResolveFunction(visitor, ref name, out _);
+
+	/// <summary>
+	/// <see cref="TryResolveName"/>, and on a miss the SharpMUSH function the dialect in force means by
+	/// <paramref name="name"/> (<see cref="SoftcodeDialects"/>), which <paramref name="name"/> then becomes, so the
+	/// call is that function's in its restrictions and its errors.
+	/// </summary>
+	private bool TryResolveFunction(SharpMUSHParserVisitor visitor, ref string name, out FunctionDefinition definition)
+	{
+		var parser = visitor.Parser;
+		if (TryResolveName(parser, name, out definition))
+			return true;
+
+		if (SoftcodeDialects.InForce(parser.CurrentState.CurrentEvaluation, visitor.Configuration.CurrentValue.Compatibility.Dialect)
+				?.FunctionFor(name) is not { } target
+			|| !TryResolveName(parser, target, out definition))
+			return false;
+
+		name = target;
+		return true;
+	}
+
 	/// <summary>
 	/// The function <paramref name="name"/> calls. Built-ins take precedence; only on a built-in miss do
 	/// we consult the in-memory global user-defined-function registry (@function). Resolved
@@ -247,10 +271,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 	/// call args bound to %0.., and are NOT cached in the shared FunctionLibrary
 	/// (so /enable, /disable, /delete take effect immediately and never leak).
 	/// </summary>
-	/// <summary>Whether <paramref name="name"/> calls a function: a built-in or an @function.</summary>
-	public bool IsFunction(IMUSHCodeParser parser, string name) => TryResolveFunction(parser, name, out _);
-
-	private bool TryResolveFunction(IMUSHCodeParser parser, string name, out FunctionDefinition definition)
+	private bool TryResolveName(IMUSHCodeParser parser, string name, out FunctionDefinition definition)
 	{
 		// fn()'s call names the built-in even when @function/delete has a user function in its place.
 		if (parser.CurrentState.BuiltinCall is { } builtin && builtin.Attribute.Name.Equals(name, StringComparison.OrdinalIgnoreCase))

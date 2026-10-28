@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Configuration.Options;
 using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
@@ -552,7 +553,7 @@ public sealed class InputSessionService : IInputSessionService
 			Enactor = session.Character,
 			Handle = session.Connection.Handle,
 			ConnectionSessionId = session.TransportSessionId,
-			CurrentEvaluation = new DBAttribute(route.Target, route.Attribute),
+			CurrentEvaluation = new DBAttribute(route.Target, route.Attribute) { Dialect = SoftcodeDialects.Of(callback.Last()) },
 			OutputLimit = await FunctionLimits.OutputLimitForAsync(character,
 				_configuration?.CurrentValue.Limit.GuestOutputLimit ?? LimitOptions.DefaultGuestOutputLimit),
 			EnvironmentRegisters = arguments,

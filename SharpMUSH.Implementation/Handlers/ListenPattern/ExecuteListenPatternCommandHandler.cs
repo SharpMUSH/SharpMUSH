@@ -9,6 +9,7 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Implementation.Handlers.ListenPattern;
 
@@ -35,6 +36,7 @@ public class ExecuteListenPatternCommandHandler(
 			var listenerDbRef = request.Listener.Object().DBRef;
 			var speakerDbRef = request.Speaker.Object().DBRef;
 			MString action;
+			var dialect = request.Dialect;
 			if (request.Action is MString captured)
 				action = captured;
 			else
@@ -43,6 +45,7 @@ public class ExecuteListenPatternCommandHandler(
 					IAttributeService.AttributeMode.Execute, parent: true);
 				if (attribute is not SharpAttribute[] { Length: > 0 } chain) return Unit.Value;
 				action = chain.Last().Value;
+				dialect = SoftcodeDialects.Of(chain.Last());
 				var prefix = CommandDiscoveryService.ListenPatternRegex().Match(action.ToPlainText());
 				if (!prefix.Success) prefix = CommandDiscoveryService.CommandPatternRegex().Match(action.ToPlainText());
 				if (prefix.Success) action = action.Substring(prefix.Length);
@@ -56,7 +59,7 @@ public class ExecuteListenPatternCommandHandler(
 				Arguments = arguments,
 				EnvironmentRegisters = new(arguments),
 				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
-				CurrentEvaluation = new DBAttribute(listenerDbRef, request.AttributeName),
+				CurrentEvaluation = new DBAttribute(listenerDbRef, request.AttributeName) { Dialect = dialect },
 				Restrictions = EvaluationRestrictions.Current ?? restrictions
 			};
 			cancellationToken.ThrowIfCancellationRequested();

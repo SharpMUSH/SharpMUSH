@@ -74,6 +74,11 @@
       "id": "rhostmush-side-effect-flag-sidefx-flag",
       "heading": "RhostMUSH side-effect flag: `sidefx_flag`",
       "lookup": "compatibility config rhostmush side effect flag sidefx flag"
+    },
+    {
+      "id": "other-servers-names-dialect",
+      "heading": "Other servers' names: `dialect`",
+      "lookup": "compatibility config other servers names dialect"
     }
   ]
 }
@@ -319,4 +324,13 @@ With `sidefx_flag` off, side-effect functions (pemit(), set(), attrib_set(), cre
 0 1
 > think [attrib_set(me/RHOSTDOC_SIDEFX,ok)][get(me/RHOSTDOC_SIDEFX)]
 ok
+```
+
+## Other servers' names: `dialect`
+
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. SharpMUSH's names, including the abbreviations it accepts, and the game's `@function`s always come first. Importing a RhostMUSH database sets it, and sets the `rhost` attribute flag on every attribute it brings in, so imported code keeps reading RhostMUSH's names if the option is later emptied. See [attribute flags dialect].
+
+```sharp dialect=rhost
+> think wildmatch(a b c,b)
+2
 ```

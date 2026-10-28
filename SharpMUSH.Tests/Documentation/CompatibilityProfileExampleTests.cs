@@ -135,18 +135,18 @@ public class CompatibilityProfileExampleTests
 	}
 
 	/// <summary>
-	/// Applies <c>name</c> (on) or <c>name=off</c> for each option the fence names, found by its
-	/// configuration-file name so the fence reads like the configuration it stands for.
+	/// Applies <c>name</c> (on) or <c>name=off</c> for each option the fence names, and <c>name=value</c> for
+	/// a text option, found by its configuration-file name so the fence reads like the configuration it stands for.
 	/// </summary>
 	private static CompatibilityOptions WithOptions(CompatibilityOptions options, IEnumerable<string> settings)
 	{
 		var result = options with { };
 		foreach (var setting in settings)
 		{
-			var (name, value) = setting.Split('=', 2) switch
+			var (name, state) = setting.Split('=', 2) switch
 			{
-				[var only] => (only, true),
-				[var key, var state] => (key, state is not ("off" or "0" or "no")),
+				[var only] => (only, (string?)null),
+				[var key, var given] => (key, given),
 				_ => throw new InvalidOperationException(setting)
 			};
 
@@ -154,6 +154,9 @@ public class CompatibilityProfileExampleTests
 				.SingleOrDefault(candidate => candidate.GetCustomAttribute<SharpConfigAttribute>()?.Name == name)
 				?? throw new InvalidOperationException($"{Profile}: no compatibility option named '{name}'");
 
+			object? value = property.PropertyType == typeof(bool)
+				? state is not ("off" or "0" or "no")
+				: state;
 			property.SetValue(result, value);
 		}
 

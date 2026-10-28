@@ -1121,7 +1121,7 @@ public partial class Functions
 				var value = chain.Last();
 				return (await parser.With(state => state with
 				{
-					CurrentEvaluation = new DBAttribute(actualObject.Object().DBRef, value.LongName),
+					CurrentEvaluation = DBAttribute.Of(actualObject.Object().DBRef, value),
 					Arguments = arguments,
 					EnvironmentRegisters = arguments,
 					SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(arguments),
@@ -1212,7 +1212,7 @@ public partial class Functions
 		{
 			Arguments = arguments,
 			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-		}), new AttributeFunction(executor, found.LongName.ToUpperInvariant(), found.Value));
+		}), AttributeFunction.Of(executor, found));
 	}
 
 	[SharpFunction(Name = "ulambda", MinArgs = 1, MaxArgs = 33, Flags = FunctionFlags.Regular, ParameterNames = ["parameters", "expression", "arguments..."])]

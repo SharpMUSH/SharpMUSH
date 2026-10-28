@@ -8,6 +8,16 @@ public record DBAttribute(DBRef DB, string Name)
 		=> $"#{DB}/{Name.ToUpper()}";
 
 	/// <summary>
+	/// The dialect the attribute is written in (<see cref="Softcode.SoftcodeDialects"/>), from its flags, or
+	/// <c>null</c> when it has none and reads the game's.
+	/// </summary>
+	public string? Dialect { get; init; }
+
+	/// <summary>The evaluation of <paramref name="attribute"/> on <paramref name="db"/>, in the attribute's dialect.</summary>
+	public static DBAttribute Of(DBRef db, SharpAttribute attribute)
+		=> new(db, attribute.LongName) { Dialect = Softcode.SoftcodeDialects.Of(attribute) };
+
+	/// <summary>
 	/// The evaluation that <c>##</c>, <c>#@</c>, <c>#$</c> and regexp captures bind by: the attribute itself, or for a
 	/// <c>#lambda</c> the attribute around it. PennMUSH splices those tokens into the text before a lambda runs, so a
 	/// lambda is transparent to them.

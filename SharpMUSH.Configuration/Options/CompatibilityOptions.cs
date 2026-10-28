@@ -135,5 +135,14 @@ public record CompatibilityOptions(
 		Description = "list() with two to five arguments is RhostMUSH's loop, which takes TinyMUX's in its first three: it evaluates its second argument for each element and tells each result to the enactor, after an optional header, or to an optional target the enactor controls. list() then needs at least two arguments, so PennMUSH's list() is not reachable",
 		Group = "RhostMUSH Compatibility",
 		Order = 6)]
-	bool RhostList
+	bool RhostList,
+
+	[property: SharpConfig(
+		Name = "dialect",
+		Category = "Compatibility",
+		Description = "Another server's names for functions and commands that typed input and attributes without a dialect flag also read, after SharpMUSH's own: rhost reads RhostMUSH's (wildmatch(), @sudo ...). Empty reads none. A RhostMUSH database import sets it",
+		ValidationPattern = @"^(rhost)?$",
+		Group = "Dialects",
+		Order = 1)]
+	string? Dialect
 );
