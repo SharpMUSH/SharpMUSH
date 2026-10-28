@@ -8904,6 +8904,14 @@
     "file": "sharpcmd.md"
   },
   {
+    "id": "legacy:walk",
+    "lookup": "walk",
+    "title": "walk",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpcmd.md"
+  },
+  {
     "id": "legacy:WARN_ON_MISSING",
     "lookup": "WARN_ON_MISSING",
     "title": "WARN_ON_MISSING",
