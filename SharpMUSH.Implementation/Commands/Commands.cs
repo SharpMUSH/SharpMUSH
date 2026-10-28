@@ -272,9 +272,62 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 			}
 		}
 
+		AddSwitchAliases(Configuration.CurrentValue.Alias.CommandAliases);
+
 		// Store reference to this command library for @command introspection
 		CommandLibrary = _commandLibrary;
 		RememberBuiltinRestrictions();
+	}
+
+	/// <summary>
+	/// Registers the aliases whose target names switches (<c>@FORCE/INPLACE</c> to <c>@sudo</c>): each alias runs the
+	/// command with those switches put before the ones typed. A target whose command or switch does not exist is
+	/// skipped with a warning, as is an alias already taken.
+	/// </summary>
+	private void AddSwitchAliases(Dictionary<string, string[]> aliases)
+	{
+		foreach (var (target, names) in aliases)
+		{
+			if (SwitchAliasDefinition(target) is not { } definition)
+			{
+				continue;
+			}
+
+			foreach (var name in names)
+			{
+				if (!_commandLibrary.TryAdd(name, (definition, true)))
+				{
+					Logger.LogWarning("Command alias {Alias} for {Target} is not registered: {Alias} is already a command", name, target, name);
+				}
+			}
+		}
+	}
+
+	/// <summary>The definition an alias of <paramref name="target"/> runs, or <c>null</c> when it names no switch or no such command.</summary>
+	internal CommandDefinition? SwitchAliasDefinition(string target)
+	{
+		var parts = target.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		if (parts.Length < 2)
+		{
+			return null;
+		}
+
+		if (!_commandLibrary.TryGetValue(parts[0].ToUpperInvariant(), out var command))
+		{
+			Logger.LogWarning("Command alias target {Target} names no command", target);
+			return null;
+		}
+
+		var switches = parts[1..].Select(s => s.ToUpperInvariant()).ToArray();
+		// "*" takes any switch, as @lock's lock types do.
+		var known = command.LibraryInformation.Attribute.Switches ?? [];
+		if (!known.Contains("*") && switches.FirstOrDefault(s => !known.Contains(s, StringComparer.OrdinalIgnoreCase)) is { } unknown)
+		{
+			Logger.LogWarning("Command alias target {Target} names switch {Switch}, which {Command} does not have", target, unknown, parts[0]);
+			return null;
+		}
+
+		return command.LibraryInformation with { ImpliedSwitches = [.. command.LibraryInformation.ImpliedSwitches, .. switches] };
 	}
 
 	/// <summary>

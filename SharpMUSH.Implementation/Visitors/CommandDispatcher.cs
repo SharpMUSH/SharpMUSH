@@ -581,7 +581,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			}
 		}
 
-		return new BuiltInLookup(rootCommand, switches, matchResult?.Definition);
+		return matchResult?.Definition is { } definition
+			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. switches], definition)
+			: new BuiltInLookup(rootCommand, switches, null);
 	}
 
 	/// <summary>
