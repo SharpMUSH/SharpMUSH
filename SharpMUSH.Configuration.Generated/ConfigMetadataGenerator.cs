@@ -141,6 +141,7 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 			+ $"Max = {Emit.Literal(Named(attr, "Max"))}, "
 			+ $"Tooltip = {Emit.Quote(tooltip) ?? "null"}, "
 			+ $"ValidationPattern = {Emit.Quote(validationPattern) ?? "null"}, "
+			+ $"Choices = {Choices(attr)}, "
 			+ $"Dbref = {(Named(attr, "Dbref") is true ? "true" : "false")}, "
 			+ $"Flag = {(Named(attr, "Flag") is true ? "true" : "false")}, "
 			+ $"Image = {(Named(attr, "Image") is true ? "true" : "false")}, "
@@ -150,6 +151,11 @@ public class ConfigMetadataGenerator : IIncrementalGenerator
 
 	private static object? Named(AttributeData attr, string key)
 		=> attr.NamedArguments.FirstOrDefault(kv => kv.Key == key).Value.Value;
+
+	private static string Choices(AttributeData attr)
+		=> attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Choices").Value is { Kind: TypedConstantKind.Array } choices
+			? "new string[] { " + string.Join(", ", choices.Values.Select(choice => Emit.Literal(choice.Value))) + " }"
+			: "null";
 
 	private static IEnumerable<IPropertySymbol> SelectCategoryProperties(INamedTypeSymbol optionsSymbol)
 		=> optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");

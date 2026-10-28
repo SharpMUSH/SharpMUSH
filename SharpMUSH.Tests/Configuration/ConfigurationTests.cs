@@ -84,4 +84,22 @@ public class ConfigurationTests
 
 		await Assert.That(result.Failed).IsEqualTo(failed);
 	}
+
+	[Test]
+	[Arguments("rounded", false)]
+	[Arguments("Rounded", true)]
+	[Arguments("round", true)]
+	public async Task ValidateSharpOptions_ChoiceOptionTakesOnlyItsChoices(string value, bool failed)
+	{
+		var options = TestSharpMushOptions.Create();
+		options = options with { Cosmetic = options.Cosmetic with { LayoutBorder = value } };
+
+		var result = new ValidateSharpOptions().Validate(null, options);
+
+		await Assert.That(result.Failed).IsEqualTo(failed);
+		if (failed)
+		{
+			await Assert.That(result.FailureMessage).Contains("double, single, heavy, rounded, mush, ascii, none");
+		}
+	}
 }

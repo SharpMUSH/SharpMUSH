@@ -104,11 +104,11 @@ A theme is one of these:
 | Kind | Written |
 |---|---|
 | a name from [THEMES()] | `"theme":"nord"` |
-| one of the web portal's themes | `"theme":"cyberpunk"` |
-| a genre | `"theme":"fantasy"` |
-| a theme made from one colour | `"theme":{"seed":"#7aa2f7","harmony":"triadic"}` |
-| a base16 scheme | `"theme":{"base16":["#2e3440", ... sixteen colours]}` |
-| any of these with colours changed | `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}` |
+| a portal theme, [layout theme portal] | `"theme":"cyberpunk"` |
+| a genre, [layout theme genres] | `"theme":"fantasy"` |
+| one colour, [layout theme one colour] | `"theme":{"seed":"#7aa2f7","harmony":"triadic"}` |
+| base16, [layout themes from another theme] | `"theme":{"base16":["#2e3440", ... sixteen colours]}` |
+| any with [layout theme colours] changed | `"theme":{"preset":"nord","colors":{"primary":"#bf616a"}}` |
 
 `terminal` uses only the sixteen standard colours, so each player sees it in the colours their own client is set to. Hundreds of base16 schemes exist for editors and terminals.
 

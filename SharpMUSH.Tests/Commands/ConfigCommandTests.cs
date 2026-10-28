@@ -112,6 +112,19 @@ public class ConfigCommandTests
 		await Assert.That(shown).IsEquivalentTo(new[] { " room_flags                                no_command" });
 	}
 
+	/// <summary>An option that takes one of a fixed set lists the set under its value.</summary>
+	[Test]
+	public async ValueTask ConfigCommand_ChoiceOption_ListsItsChoices()
+	{
+		var shown = await AsWizard("@config layout_border");
+
+		await Assert.That(shown).IsEquivalentTo(new[]
+		{
+			" layout_border                            mush",
+			"   One of: double, single, heavy, rounded, mush, ascii, none"
+		});
+	}
+
 	/// <summary>
 	/// A mapping option lists one entry per line in key order, the first beside the option's name and
 	/// the rest in its value column, never the dictionary's type name.

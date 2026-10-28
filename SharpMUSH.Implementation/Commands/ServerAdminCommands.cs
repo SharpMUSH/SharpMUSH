@@ -1184,6 +1184,11 @@ public partial class Commands
 				}
 
 				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionValueFormat), executor, name, lastValue);
+				if (opt.ConfigAttr.Choices is { Length: > 0 } choices)
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ConfigOptionChoicesFormat), executor,
+						string.Join(", ", choices));
+				}
 			}
 
 			return new CallState(matchingOptions.Count == 1 ? lastValue! : string.Empty);

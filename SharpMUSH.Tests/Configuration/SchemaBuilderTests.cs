@@ -42,6 +42,17 @@ public class SchemaBuilderTests
 		await Assert.That(property.DefaultValue).IsEqualTo(string.Empty).Because("empty is the SharpMUSH logo");
 	}
 
+	/// <summary>An option that takes one of a fixed set is picked from its choices, in their declared order.</summary>
+	[Test]
+	public async Task ChoiceProperty_UsesSelectComponentWithItsChoices()
+	{
+		var property = BuildSchema().Properties["Cosmetic.LayoutBorder"];
+
+		await Assert.That(property.Component).IsEqualTo("select");
+		await Assert.That(property.Options!.Keys).IsEquivalentTo(
+			new[] { "double", "single", "heavy", "rounded", "mush", "ascii", "none" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
 	[Test]
 	[Arguments("", true)]
 	[Arguments("/api/wiki-assets/abc/crest.png", true)]
