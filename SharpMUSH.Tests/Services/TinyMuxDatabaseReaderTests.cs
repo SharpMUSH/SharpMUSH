@@ -86,10 +86,10 @@ public class TinyMuxDatabaseReaderTests
 		var hello = widget.Attributes.First(a => a.Name == "CMD_HELLO");
 		await Assert.That(hello.Value).IsEqualTo("$hello:@pemit %#=Hi");
 		await Assert.That(hello.Owner).IsEqualTo(1);
-		await Assert.That(hello.Flags).IsEquivalentTo(["visual"]);
+		await Assert.That(hello.Flags).IsEquivalentTo(["mux", "visual"]);
 
 		var secret = widget.Attributes.First(a => a.Name == "SECRET");
-		await Assert.That(secret.Flags).IsEquivalentTo(["wizard", "mortal_dark"]);
+		await Assert.That(secret.Flags).IsEquivalentTo(["mux", "wizard", "mortal_dark"]);
 
 		await Assert.That(widget.Attributes.Select(a => a.Name)).DoesNotContain("GONE");
 		await Assert.That(widget.Attributes.Select(a => a.Name)).Contains("DESCRIBE");

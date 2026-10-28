@@ -350,9 +350,14 @@ ok
 
 ## Other servers' names: `dialect`
 
-Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. SharpMUSH's names, including the abbreviations it accepts, and the game's `@function`s always come first. Importing a RhostMUSH database sets it, and sets the `rhost` attribute flag on every attribute it brings in, so imported code keeps reading RhostMUSH's names if the option is later emptied. See [attribute flags dialect].
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`. SharpMUSH's names, including the abbreviations it accepts, and the game's `@function`s always come first. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
 
 ```sharp dialect=rhost
 > think wildmatch(a b c,b)
 2
+```
+
+```sharp dialect=mux
+> think strtrunc(abcdef,3)
+abc
 ```
