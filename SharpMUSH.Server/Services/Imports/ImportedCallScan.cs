@@ -47,9 +47,8 @@ public static partial class ImportedCallScan
 					? SoftcodeDialects.All.GetValueOrDefault(key)
 					: null;
 				var place = $"#{obj.DBRef.Number}/{attribute.LongName}";
-				foreach (var name in analyzer.CalledFunctions(attribute.Value))
+				foreach (var name in analyzer.CalledFunctions(attribute.Value).Where(name => !Known(library, dialect, name)))
 				{
-					if (Known(library, dialect, name)) continue;
 					var entry = missing.TryGetValue(name, out var found) ? found : (0, []);
 					if (entry.Places.Count < MaxPlaces && !entry.Places.Contains(place)) entry.Places.Add(place);
 					missing[name] = (entry.Calls + 1, entry.Places);
