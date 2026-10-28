@@ -5763,10 +5763,10 @@
     <value>Charakter übernehmen</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Verknüpfen Sie einen Charakter, den Sie bereits spielen, mit diesem Konto: einen, der am Verbindungsbildschirm, vom Team oder in einem anderen Spiel erstellt wurde. Sein Passwort beweist, dass er Ihnen gehört.</value>
+    <value>Gehört der Charakter bereits zu diesem Konto? Wähle ihn aus, statt ihn erneut zu beanspruchen. Melde dich an und nutze das Charakterpasswort, um einen eigenen, noch nicht verknüpften Charakter zu verbinden. Fehlt dir das Passwort, frage das Team. Konto- und Charakterpasswörter sind getrennt; das Spiel prüft die Voraussetzungen und mögliche Übertragungsanforderungen.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Sie haben schon einen Charakter? Übernehmen Sie ihn.</value>
+    <value>Möchtest du einen vorhandenen Charakter verknüpfen?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Stattdessen einen neuen Charakter erstellen.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Der Raum hat schon einen Ausgang mit einem dieser Namen.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Spielen lernen</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Über dieses Spiel</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Befehlsreferenz</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Dein Konto ist dein privater Zugang. Ein Charakter ist die Figur, die du in der gemeinsamen Welt spielst. Ein Konto kann mehrere Charaktere besitzen; prüfe vor einer Aktion, welchen Charakter du spielst.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Öffentliches Charakterverzeichnis</value></data>
 </root>

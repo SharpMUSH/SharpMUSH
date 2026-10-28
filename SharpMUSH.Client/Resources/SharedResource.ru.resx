@@ -5763,10 +5763,10 @@
     <value>Привязать персонажа</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Привяжите к этому аккаунту персонажа, за которого вы уже играете: созданного на экране подключения, командой игры или перенесённого из другой игры. Его пароль подтверждает, что он ваш.</value>
+    <value>Персонаж уже принадлежит этой учётной записи? Выберите его вместо повторной привязки. Чтобы привязать собственного непривязанного персонажа, войдите в учётную запись и используйте пароль персонажа. Если его нет, обратитесь к администрации. Пароли учётной записи и персонажа различаются; игра проверяет допустимость привязки и условия возможного переноса.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Уже есть персонаж? Привяжите его.</value>
+    <value>Нужно привязать существующего персонажа?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Создать нового персонажа вместо этого.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>В комнате уже есть выход с одним из этих имён.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Научиться играть</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Об этой игре</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Справочник команд</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Учётная запись — ваш личный вход. Персонаж — тот, кого вы играете в общем мире. Одной учётной записи могут принадлежать несколько персонажей; прежде чем действовать, проверьте, каким персонажем вы играете.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Общедоступный каталог персонажей</value></data>
 </root>

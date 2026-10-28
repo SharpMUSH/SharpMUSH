@@ -5763,10 +5763,10 @@
     <value>Przejmij postać</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Powiąż z tym kontem postać, którą już grasz: utworzoną na ekranie połączenia, przez obsługę lub przeniesioną z innej gry. Jej hasło dowodzi, że należy do ciebie.</value>
+    <value>Postać jest już na tym koncie? Wybierz ją zamiast ponownie ją przypisywać. Aby powiązać własną niepowiązaną postać, zaloguj się i użyj jej hasła. Jeśli go nie masz, poproś obsługę o pomoc. Hasła konta i postaci są oddzielne; gra sprawdza uprawnienia oraz ewentualne warunki przeniesienia.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Masz już postać? Przejmij ją.</value>
+    <value>Chcesz powiązać istniejącą postać?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Zamiast tego utwórz nową postać.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Pokój ma już wyjście o jednej z tych nazw.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Naucz się grać</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>O tej grze</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Spis poleceń</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Konto służy do prywatnego logowania. Postać to osoba, którą odgrywasz we wspólnym świecie. Jedno konto może mieć kilka postaci; przed działaniem sprawdź, którą postacią grasz.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Publiczny katalog postaci</value></data>
 </root>

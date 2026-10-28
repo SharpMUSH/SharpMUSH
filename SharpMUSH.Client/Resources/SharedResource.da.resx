@@ -5763,10 +5763,10 @@
     <value>Gør krav på karakter</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Knyt en karakter, du allerede spiller, til denne konto: en, der er oprettet på forbindelsesskærmen, af staben eller hentet fra et andet spil. Dens adgangskode beviser, at den er din.</value>
+    <value>Er karakteren allerede på denne konto? Vælg den i stedet for at gøre krav på den igen. Log ind og brug karakterens adgangskode for at tilknytte en ikke-tilknyttet karakter, du ejer. Spørg personalet, hvis du ikke har adgangskoden. Konto- og karakteradgangskoder er adskilte; spillet kontrollerer betingelserne og eventuelle krav til overførsel.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Har du allerede en karakter? Gør krav på den.</value>
+    <value>Har du brug for at tilknytte en eksisterende karakter?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Opret en ny karakter i stedet.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Rummet har allerede en udgang med et af disse navne.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Lær at spille</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Om dette spil</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreference</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Din konto er dit private login. En karakter er den, du spiller i den fælles verden. En konto kan eje flere karakterer; kontrollér, hvilken karakter du spiller, før du handler.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karakteroversigt</value></data>
 </root>

@@ -33,7 +33,7 @@ public static class HelpHtmlRenderer
 	private const string TopicUrlPrefix = "help ";
 
 	private static readonly MarkdownPipeline Pipeline =
-		RecursiveMarkdownHelper.ConfigureHelpSyntax(new MarkdownPipelineBuilder()).Build();
+		RecursiveMarkdownHelper.ConfigureHelpSyntax(new MarkdownPipelineBuilder().UseAutoLinks()).Build();
 
 	/// <summary>The class a header-less table gets: a list of names in columns, drawn without borders.</summary>
 	public const string ListTableClass = "help-list";
@@ -92,13 +92,21 @@ public static class HelpHtmlRenderer
 
 		foreach (var link in document.Descendants<LinkInline>())
 		{
-			if (link.Url is null || !link.Url.StartsWith(TopicUrlPrefix, StringComparison.Ordinal))
+			if (link.Url?.StartsWith(TopicUrlPrefix, StringComparison.Ordinal) == true)
 			{
-				continue;
+				var topic = link.Url[TopicUrlPrefix.Length..];
+				link.Url = topicHref(topic) ?? string.Empty;
 			}
-
-			var topic = link.Url[TopicUrlPrefix.Length..];
-			link.Url = topicHref(topic) ?? string.Empty;
+			else if (!link.IsImage && Uri.TryCreate(link.Url, UriKind.Absolute, out var external)
+				&& external.Scheme is "http" or "https")
+			{
+				var attributes = link.GetAttributes();
+				attributes.Properties?.RemoveAll(property =>
+					property.Key.Equals("target", StringComparison.OrdinalIgnoreCase)
+					|| property.Key.Equals("rel", StringComparison.OrdinalIgnoreCase));
+				attributes.AddProperty("target", "_blank");
+				attributes.AddProperty("rel", "noopener noreferrer");
+			}
 		}
 
 		var writer = new StringWriter();

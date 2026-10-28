@@ -5763,10 +5763,10 @@
     <value>Preuzmi lika</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Povežite s ovim računom lika kojeg već igrate: stvorenog na zaslonu za spajanje, od strane osoblja ili prenesenog iz druge igre. Njegova lozinka dokazuje da je vaš.</value>
+    <value>Lik je već na ovom računu? Odaberite ga umjesto da ga ponovno preuzimate. Za povezivanje vlastitog nepovezanog lika prijavite se i upotrijebite lozinku lika. Ako je nemate, obratite se osoblju. Lozinke računa i lika odvojene su; igra provjerava prihvatljivost i uvjete mogućeg prijenosa.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Već imate lika? Preuzmite ga.</value>
+    <value>Trebate povezati postojeći lik?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Umjesto toga stvorite novog lika.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Soba već ima izlaz s jednim od tih imena.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Naučite igrati</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>O ovoj igri</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Pregled naredbi</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Račun je vaša privatna prijava. Lik je onaj kojeg igrate u zajedničkom svijetu. Jedan račun može imati više likova; prije radnje provjerite kojim likom igrate.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Javni imenik likova</value></data>
 </root>

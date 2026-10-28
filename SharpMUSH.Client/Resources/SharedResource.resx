@@ -6612,10 +6612,10 @@
     <value>Claim a character</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Link a character you already play to this account: one made at the game's connect screen, by staff, or brought over from another game. Its password proves it is yours.</value>
+    <value>Already on this account? Select that character instead of claiming it again. To link an unlinked character you own, use its character password after signing in. If you don't have that password, ask staff. Account and character passwords are separate; eligibility and any transfer requirements are checked by the game.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Already have a character? Claim it.</value>
+    <value>Need to link an existing character?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Make a new character instead.</value>
@@ -10289,4 +10289,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>The room already has an exit by one of these names.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Learn to play</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>About this game</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Command reference</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Your account is your private sign-in. A character is who you play in the shared world. One account can own several characters; check which character you are playing before acting.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Public character directory</value></data>
 </root>

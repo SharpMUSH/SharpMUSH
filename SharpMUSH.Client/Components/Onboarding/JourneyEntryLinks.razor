@@ -1,0 +1,32 @@
+@using Microsoft.Extensions.DependencyInjection
+@using SharpMUSH.Library.Models.Portal.Onboarding
+@inject IServiceProvider Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Learning and reference use the existing game-origin routes. About consists only of the
+   server's visibility-filtered configured links, with their authored titles and destinations. *@
+<nav class="journey-links" aria-label="@Loc["Help"]">
+    <a href="/welcome">@Loc["NavJourneyLearn"]</a>
+    @if (_about.Count > 0)
+    {
+        <span class="journey-about">@Loc["NavJourneyAbout"]:
+            @foreach (var link in _about)
+            {
+                <a href="@link.Url">@link.Title</a>
+            }
+        </span>
+    }
+    <a href="/help">@Loc["NavJourneyReference"]</a>
+</nav>
+
+@code {
+    private IReadOnlyList<GuideLink> _about = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Services.GetService<ServerInfoService>() is not { } info) return;
+        if (await info.OnboardingAsync() is not { } presentation) return;
+        _about = new[] { presentation.Welcome, presentation.Rules, presentation.CharacterGuide }
+            .OfType<GuideLink>().ToArray();
+    }
+}

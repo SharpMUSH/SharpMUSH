@@ -5763,10 +5763,10 @@
     <value>Reclamar personaje</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Vincule a esta cuenta un personaje que ya interpreta: uno creado en la pantalla de conexión, por el equipo o traído de otro juego. Su contraseña demuestra que es suyo.</value>
+    <value>¿El personaje ya está en esta cuenta? Selecciónalo en lugar de volver a reclamarlo. Para vincular un personaje tuyo aún no vinculado, inicia sesión y usa su contraseña de personaje. Si no la tienes, pide ayuda al personal. Las contraseñas de cuenta y personaje son distintas; el juego comprueba la elegibilidad y los requisitos de transferencia.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>¿Ya tiene un personaje? Reclámelo.</value>
+    <value>¿Necesitas vincular un personaje existente?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Crear un personaje nuevo en su lugar.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>La sala ya tiene una salida con uno de estos nombres.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Aprender a jugar</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Acerca de este juego</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Referencia de comandos</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Tu cuenta es tu acceso privado. Un personaje es quien interpretas en el mundo compartido. Una cuenta puede tener varios personajes; comprueba con qué personaje juegas antes de actuar.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Directorio público de personajes</value></data>
 </root>

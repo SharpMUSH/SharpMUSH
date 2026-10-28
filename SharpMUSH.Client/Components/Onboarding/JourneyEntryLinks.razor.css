@@ -1,0 +1,20 @@
+.journey-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: .5rem 1rem;
+    font-size: .875rem;
+    color: var(--text-dim);
+}
+
+.journey-links a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: .2em;
+}
+
+.journey-about {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: .25rem .5rem;
+}

@@ -13,6 +13,7 @@
 <div class="home-page @(_hasAside ? "home-page--aside" : null)">
     <div class="page-stack home-main">
         <PlainPageHeader Title="@Loc["HomeWhatsHappening"]" />
+        <SharpMUSH.Client.Components.Onboarding.JourneyEntryLinks />
         <ScopedZone Scope="@LayoutScopes.Home" Zone="WidgetZone.MainContent" />
     </div>
     @if (_hasAside)

@@ -21,6 +21,7 @@
     </div>
 
     <MudPaper Elevation="4" Class="login-card">
+        <MudText Typo="Typo.body2" Class="mb-3 journey-identity">@Loc["AuthJourneyIdentity"]</MudText>
 
         <MudTabs @bind-ActivePanelIndex="_tabIndex" Elevation="0" Rounded="true" Centered="true" Class="mb-3">
             <MudTabPanel Text="@Loc["AuthSignIn"]">

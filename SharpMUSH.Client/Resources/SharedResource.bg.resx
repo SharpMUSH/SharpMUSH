@@ -5763,10 +5763,10 @@
     <value>Заявете героя</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Свържете с този акаунт герой, когото вече играете: създаден на екрана за свързване, от екипа или пренесен от друга игра. Паролата му доказва, че е ваш.</value>
+    <value>Героят вече е в този акаунт? Изберете го, вместо да го заявявате отново. За да свържете свой несвързан герой, влезте в акаунта и използвайте паролата на героя. Ако я нямате, потърсете екипа. Паролите за акаунта и героя са отделни; играта проверява допустимостта и изискванията за прехвърляне.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Вече имате герой? Заявете го.</value>
+    <value>Трябва да свържете съществуващ герой?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Създайте нов герой вместо това.</value>
@@ -6854,4 +6854,9 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Стаята вече има изход с едно от тези имена.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Научете се да играете</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>За тази игра</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Справочник за командите</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Акаунтът е вашият личен достъп. Героят е този, когото играете в споделения свят. Един акаунт може да притежава няколко героя; проверявайте с кой герой играете, преди да действате.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Публичен указател на героите</value></data>
 </root>
