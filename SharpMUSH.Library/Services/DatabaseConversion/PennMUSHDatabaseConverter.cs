@@ -13,10 +13,12 @@ using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.Interfaces;
 using DotNext.Threading;
 using System.Diagnostics;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -37,6 +39,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly IBundledPackageBootstrap? _bundledPackages;
 	private readonly Lazy<IRuntimeRegistrationService>? _registrations;
 	private readonly Lazy<IRoleRegistryService>? _roleRegistry;
+	private readonly RealityPolicy? _reality;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
@@ -48,7 +51,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IPackageInstallService? packageInstaller = null,
 		IBundledPackageBootstrap? bundledPackages = null,
 		Lazy<IRuntimeRegistrationService>? registrations = null,
-		Lazy<IRoleRegistryService>? roleRegistry = null)
+		Lazy<IRoleRegistryService>? roleRegistry = null,
+		RealityPolicy? reality = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
@@ -60,6 +64,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_bundledPackages = bundledPackages;
 		_registrations = registrations;
 		_roleRegistry = roleRegistry;
+		_reality = reality;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
@@ -258,6 +263,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			(phase, phaseStart, phaseEnd) = ("Linking objects", 0.25, 0.50);
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
 			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
+			await ImportRealityAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -665,6 +671,49 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await ImportFlagDefinitionsAsync(pennDatabase.FlagDefinitions, context, cancellationToken);
 		await ImportPowerDefinitionsAsync(pennDatabase.PowerDefinitions, context, cancellationToken);
 		await ImportAttributeDefinitionsAsync(pennDatabase, context, cancellationToken);
+		await ImportRolesAsync(pennDatabase.Roles, context, cancellationToken);
+	}
+
+	/// <summary>
+	/// The roles the source's staff levels need. A role the world already has, by slug, is left as it is, so a
+	/// second import keeps what an administrator changed. Written straight to the role registry, as the depowers are.
+	/// </summary>
+	private async Task ImportRolesAsync(List<SharpRole> roles, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (roles.Count == 0)
+		{
+			return;
+		}
+
+		if (_roleRegistry is null)
+		{
+			context.Warn(ImportWarningKind.Powers, $"Roles for the staff levels ({string.Join(", ", roles.Select(r => r.Slug))}) not imported: they need the role registry this import runs without");
+			return;
+		}
+
+		var now = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		foreach (var role in roles)
+		{
+			if (await _roleRegistry.Value.GetRoleAsync(role.Slug, cancellationToken) is SharpRole)
+			{
+				context.Notes.Add($"Role {role.Slug}: kept as this world has it");
+				continue;
+			}
+
+			await _roleRegistry.Value.UpsertRoleAsync(new SharpRole
+			{
+				Slug = role.Slug,
+				Name = role.Name,
+				Category = role.Category,
+				Color = role.Color,
+				Priority = role.Priority,
+				Permissions = new Dictionary<string, PermissionState>(role.Permissions),
+				CreatedAt = now,
+				UpdatedAt = now
+			});
+			context.Notes.Add($"Role {role.Slug}: created at priority {role.Priority} for {context.SourceName}'s {role.Name} level");
+		}
 	}
 
 	/// <summary>
@@ -1451,6 +1500,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		await SetFlagsAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetPowersAsync(pennObj, sharpObj, context, cancellationToken);
 		await DenyPowersAsync(pennObj, sharpObj, context, cancellationToken);
+		await AssignRolesAsync(pennObj, sharpObj, context, cancellationToken);
 		await SetWarningsAsync(pennObj, sharpObj, context, cancellationToken);
 	}
 
@@ -2321,6 +2371,138 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			}
 
 			await _roleRegistry.Value.SetObjectOverrideAsync(target.Object().Key, power.Scope, PermissionState.Deny);
+		}
+
+		await _mediator.Send(new InvalidateGrantsCommand(target.Object().Key), cancellationToken);
+	}
+
+	/// <summary>
+	/// The source's reality levels as reality layers, and each object's masks as the layers it receives and
+	/// transmits. RhostMUSH and TinyMUX let one object perceive another when the first one's receiving mask shares a bit with
+	/// the other's transmitting mask, so each bit a level names is a layer. The first bit, where both put
+	/// everything by default, is the <c>normal</c> layer every object here starts on, so what is created later
+	/// shares it. A level of several bits is the layers of its bits. An object whose layers come to <c>normal</c>
+	/// both ways keeps no settings of its own. Reality is turned on when any other layer is in use.
+	/// </summary>
+	private async Task ImportRealityAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var levels = pennDatabase.Reality.Levels;
+		var holders = pennDatabase.Objects.Count(o => o.Reality is not null);
+		if (levels.Count == 0)
+		{
+			if (holders > 0)
+			{
+				context.WarnNeedsAction(ImportWarningKind.Objects, $"Reality levels on {holders} object(s) not imported: {context.SourceName}'s " +
+					"configuration file names them, so import it with the database to keep them");
+			}
+
+			return;
+		}
+
+		if (_reality is null)
+		{
+			context.Warn(ImportWarningKind.Objects, "Reality levels not imported: they need the reality settings this import runs without");
+			return;
+		}
+
+		var layers = RealityLayers(levels, context);
+		var config = await _reality.ConfigurationAsync(cancellationToken);
+		var added = layers.Values.Distinct().Where(layer => !config.Layers.Contains(layer)).ToArray();
+		if (config.Layers.Length + added.Length > RealityLayerLimit)
+		{
+			context.WarnNeedsAction(ImportWarningKind.Objects, $"Reality levels not imported: they need {added.Length} more layer(s) than the {RealityLayerLimit} a world may have");
+			return;
+		}
+
+		var inUse = false;
+		var written = 0;
+		foreach (var pennObj in pennDatabase.Objects)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (!context.DbrefMapping.TryGetValue(pennObj.DBRef, out var mapped)
+					|| await _mediator.Send(new GetObjectNodeQuery(mapped), cancellationToken) is not AnySharpObject found
+					|| found.Object().Id is not { } id)
+			{
+				continue;
+			}
+
+			var type = pennObj.Type.ToString().ToLowerInvariant();
+			var receive = LayersOf(pennObj.Reality?.Receive ?? pennDatabase.Reality.Default(type, "rx"));
+			var transmit = LayersOf(pennObj.Reality?.Transmit ?? pennDatabase.Reality.Default(type, "tx"));
+			var descriptions = levels
+				.Where(level => layers.ContainsKey(level.Value) && level.DescriptionAttribute != "DESC"
+					&& transmit.Contains(layers[level.Value])
+					&& pennObj.Attributes.Any(attribute => attribute.Name.Equals(level.DescriptionAttribute, StringComparison.OrdinalIgnoreCase)))
+				.DistinctBy(level => layers[level.Value])
+				.ToDictionary(level => layers[level.Value], level => level.DescriptionAttribute, StringComparer.OrdinalIgnoreCase);
+
+			inUse |= receive.Concat(transmit).Any(layer => layer != NormalLayer);
+			if (receive is [NormalLayer] && transmit is [NormalLayer] && descriptions.Count == 0)
+			{
+				continue;
+			}
+
+			await _reality.SaveObjectAsync(id, new ObjectReality(1, found.Object().DBRef, receive, transmit, descriptions), cancellationToken);
+			written++;
+		}
+
+		await _reality.SaveConfigurationAsync(config with { Layers = [.. config.Layers, .. added], Enabled = config.Enabled || inUse },
+			cancellationToken);
+		context.Notes.Add($"Reality: {layers.Count} reality level bit(s) imported as layers ({string.Join(", ", layers.Values)}); " +
+			$"{written} object(s) given layers of their own{(inUse ? ", and reality turned on" : "")}");
+
+		string[] LayersOf(uint mask)
+			=> [.. layers.Where(layer => (mask & layer.Key) != 0).Select(layer => layer.Value).Distinct()];
+	}
+
+	private const int RealityLayerLimit = 32;
+
+	private const string NormalLayer = "normal";
+
+	/// <summary>
+	/// The layer for each bit a level names: the first bit is <c>normal</c>, and any other the name of the level on
+	/// that bit alone, in lower case, with each character a layer name may not hold made a <c>_</c>. A level of
+	/// several bits is noted as the layers of its bits.
+	/// </summary>
+	private static Dictionary<uint, string> RealityLayers(IReadOnlyList<RealityLevelDirective> levels,
+		PennMUSHConversionContext context)
+	{
+		var layers = new Dictionary<uint, string> { [1] = NormalLayer };
+		foreach (var level in levels.Where(level => BitOperations.IsPow2(level.Value)))
+		{
+			var name = level.Value == 1
+				? NormalLayer
+				: new string([.. level.Name.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' ? c : '_')]);
+			if (!layers.TryAdd(level.Value, name) && level.Value != 1)
+			{
+				continue;
+			}
+
+			context.Notes.Add($"Reality level {level.Name}: imported as the layer {name}");
+		}
+
+		foreach (var level in levels.Where(level => !BitOperations.IsPow2(level.Value)))
+		{
+			var bits = layers.Where(layer => (level.Value & layer.Key) != 0).Select(layer => layer.Value).ToArray();
+			context.Notes.Add($"Reality level {level.Name}: spans several bits, so an object on it is on the layers of those bits ({string.Join(", ", bits)})");
+		}
+
+		return layers;
+	}
+
+	/// <summary>Gives the object the roles the source's staff levels became; the object's grants are then reread.</summary>
+	private async Task AssignRolesAsync(PennMUSHObject pennObj, AnySharpObject target, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		if (pennObj.Roles.Count == 0 || _roleRegistry is null)
+		{
+			return;
+		}
+
+		foreach (var slug in pennObj.Roles)
+		{
+			await _roleRegistry.Value.AssignRoleToObjectAsync(target.Object().Key, slug);
 		}
 
 		await _mediator.Send(new InvalidateGrantsCommand(target.Object().Key), cancellationToken);

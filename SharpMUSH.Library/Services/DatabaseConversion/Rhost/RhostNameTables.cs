@@ -1,4 +1,7 @@
 using System.Collections.Frozen;
+using SharpMUSH.Configuration;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
@@ -14,6 +17,7 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 /// <param name="Custom">The flag of its own it becomes, created by the import; none when null.</param>
 /// <param name="StaffOnly">Whether that custom flag is wizard-set, rather than anyone's.</param>
 /// <param name="Skip">Why it is not imported, when nothing else is given.</param>
+/// <param name="Role">The staff-level role it gives, one of <see cref="RhostNameTables.LevelRoles"/>; none when null.</param>
 public sealed record RhostBitMapping(
 	int Word,
 	uint Bit,
@@ -22,7 +26,8 @@ public sealed record RhostBitMapping(
 	string[] Powers,
 	string? Custom = null,
 	bool StaffOnly = false,
-	string? Skip = null);
+	string? Skip = null,
+	string? Role = null);
 
 /// <summary>A RhostMUSH power or depower: its 2-bit level field in one of the toggle words.</summary>
 /// <param name="Word">The toggle word, 0-based (2-4 powers, 5-7 depowers).</param>
@@ -54,6 +59,27 @@ public static class RhostNameTables
 
 	private const string ServerState = "server state RhostMUSH keeps for itself";
 
+	/// <summary>
+	/// RhostMUSH's staff levels that SharpMUSH has no role for, as the roles an import makes for them, lined up by
+	/// priority among the built-in ones: guildmaster above player, architect above builder, councilor above royalty,
+	/// immortal above wizard. Each has the permissions of the built-in role at its level, and immortal the server's
+	/// administration too. RhostMUSH's royalty, its wizards, is the wizard role.
+	/// </summary>
+	public static readonly IReadOnlyList<SharpRole> LevelRoles =
+	[
+		Level("guildmaster", "Guildmaster", 13, BuiltInRoles.PlayerSlug, PortalPermission.PlayersView, PortalPermission.QueueInspect),
+		Level("architect", "Architect", 16, BuiltInRoles.BuilderSlug),
+		Level("councilor", "Councilor", 22, BuiltInRoles.RoyaltySlug),
+		Level("immortal", "Immortal", 35, BuiltInRoles.WizardSlug, PortalPermission.ServerAdmin)
+	];
+
+	private static SharpRole Level(string slug, string name, int priority, string standin, params string[] more)
+	{
+		var permissions = new Dictionary<string, PermissionState>(BuiltInRoles.All.First(role => role.Slug == standin).Permissions);
+		foreach (var scope in more) permissions[scope] = PermissionState.Allow;
+		return new SharpRole { Slug = slug, Name = name, Category = Categories.Staff, Priority = priority, Permissions = permissions };
+	}
+
 	/// <summary>Every flag and toggle bit RhostMUSH defines, and its fate.</summary>
 	public static readonly IReadOnlyList<RhostBitMapping> Bits =
 	[
@@ -77,8 +103,8 @@ public static class RhostNameTables
 		Same(0, 0x40000, "CHOWN_OK"),
 		Same(0, 0x80000, "ENTER_OK"),
 		Same(0, 0x100000, "VISUAL"),
-		// RhostMUSH's level above its wizards: a wizard here, and a flag of its own so softcode that asks still finds it.
-		new(0, 0x200000, "IMMORTAL", ["WIZARD"], [], "IMMORTAL", true),
+		// RhostMUSH's level above its wizards: a role of its own, and a flag of its own so softcode that asks still finds it.
+		new(0, 0x200000, "IMMORTAL", [], [], "IMMORTAL", true, Role: "immortal"),
 		Skip(0, 0x400000, "HAS_STARTUP", ServerState + " (it has a STARTUP attribute)"),
 		Same(0, 0x800000, "OPAQUE"),
 		Same(0, 0x1000000, "VERBOSE"),
@@ -99,10 +125,10 @@ public static class RhostNameTables
 		Same(1, 0x20, "LIGHT"),
 		Skip(1, 0x40, "HAS_LISTEN", ServerState + " (it has a LISTEN attribute)"),
 		Skip(1, 0x80, "HAS_FWDLIST", ServerState + " (it has a FORWARDLIST attribute)"),
-		// RhostMUSH's councilor level, between its wizards and architects: royalty here, and a flag of its own.
-		new(1, 0x100, "COUNCILOR", ["ROYALTY"], [], "COUNCILOR", true),
+		// RhostMUSH's councilor level, between its wizards and architects: a role of its own, and a flag of its own.
+		new(1, 0x100, "COUNCILOR", [], [], "COUNCILOR", true, Role: "councilor"),
 		Custom(1, 0x200, "GUILDOBJ", true),
-		Custom(1, 0x400, "GUILDMASTER", true),
+		new(1, 0x400, "GUILDMASTER", [], [], "GUILDMASTER", true, Role: "guildmaster"),
 		Custom(1, 0x800, "NO_WALLS"),
 		Custom(1, 0x1000, "REQUIRE_TREES"),
 		Custom(1, 0x4000, "SCLOAK", true),
@@ -120,8 +146,8 @@ public static class RhostNameTables
 		Flag(1, 0x4000000, "ANSICOLOR", "COLOR"),
 		Custom(1, 0x8000000, "NOFLASH"),
 		Same(1, 0x10000000, "SUSPECT"),
-		// RhostMUSH's architect level: a builder here.
-		Power(1, 0x20000000, "ARCHITECT", "Builder"),
+		// RhostMUSH's architect level: a role of its own, with the builder's permissions.
+		new(1, 0x20000000, "ARCHITECT", [], [], Role: "architect"),
 		Skip(1, 0x40000000, "CONNECTED", "session state, cleared on every load"),
 		Custom(1, 0x80000000, "SLAVE", true),
 
@@ -375,6 +401,24 @@ public static class RhostNameTables
 
 	public const int AliasAttribute = 58;
 	public const int CreatedAttribute = 228;
+	public const int RealityAttribute = 244;
+	public const int TotemsAttribute = 83;
+
+	/// <summary>
+	/// The totems RhostMUSH defines itself, all in the tenth totem word, and whether only wizards set each. API_LUA,
+	/// which lets an object reach RhostMUSH's Lua interface, is not here: SharpMUSH has none.
+	/// </summary>
+	public static readonly IReadOnlyList<(TotemDirective Totem, bool StaffOnly)> BuiltInTotems =
+	[
+		.. Enumerable.Range(0, 10).Select(i => (new TotemDirective($"MARKER{i}", 9, 1u << i), true)),
+		(new TotemDirective("PROMPT", 9, 0x800), true),
+		(new TotemDirective("SETQLABEL", 9, 0x80000000), false)
+	];
+
+	/// <summary>The user attribute that lists a cluster's objects, the first of them the one it was made on.</summary>
+	public const string ClusterAttribute = "_CLUSTER";
+
+	private const string ClusterState = "the cluster's bookkeeping; the import merges a cluster into its first object";
 	public const int ModifiedAttribute = 227;
 	public const int NameAttribute = 43;
 
@@ -388,7 +432,7 @@ public static class RhostNameTables
 		[25] = "the money, which SharpMUSH does not track",
 		[43] = "the name, imported as the name",
 		[49] = "the quota in use, which SharpMUSH counts itself; RQUOTA sets the limit",
-		[78] = ServerState, [83] = ServerState, [84] = ServerState + " (login history)", [99] = ServerState,
+		[78] = ServerState, [TotemsAttribute] = "the totems, imported as flags", [84] = ServerState + " (login history)", [99] = ServerState,
 		[128] = ServerState, [155] = ServerState, [175] = ServerState + " (mail password)", [176] = ServerState,
 		[179] = ServerState, [180] = ServerState, [181] = ServerState + " (mail quota)", [182] = ServerState + " (mail quota)",
 		[183] = ServerState + " (mail quota)", [184] = ServerState, [185] = ServerState, [186] = ServerState,
@@ -396,7 +440,7 @@ public static class RhostNameTables
 		[227] = "the modification time, imported as the object's", [228] = "the creation time, imported as the object's",
 		[232] = ServerState + " (traffic counts)", [233] = ServerState + " (traffic counts)", [237] = ServerState,
 		[238] = ServerState, [239] = ServerState, [241] = ServerState, [242] = ServerState, [243] = ServerState,
-		[244] = "reality levels, which SharpMUSH does not have", [247] = ServerState, [249] = ServerState,
+		[RealityAttribute] = "the reality levels, imported as the object's reality layers", [247] = ServerState, [249] = ServerState,
 		[251] = ServerState + " (object tags)",
 		[InlineStart] = ServerState + " (connection counts)", [InlineStart + 1] = ServerState + " (connection record)",
 		[InlineStart + 3] = ServerState, [InlineStart + 4] = ServerState, [InlineStart + 6] = ServerState,
@@ -406,6 +450,8 @@ public static class RhostNameTables
 	public static readonly FrozenDictionary<string, string> SkippedUserAttributes = new Dictionary<string, string>
 	{
 		["__OBJID_INTERNAL"] = ServerState + " (the object's creation stamp, which SharpMUSH's objid carries)",
+		[ClusterAttribute] = ClusterState, ["_CLUSTER_THRESH"] = ClusterState, ["_CLUSTER_ACTION"] = ClusterState,
+		["_CLUSTER_ACTION_FUNC"] = ClusterState,
 	}.ToFrozenDictionary(StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>

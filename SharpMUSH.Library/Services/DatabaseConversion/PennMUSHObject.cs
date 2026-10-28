@@ -1,3 +1,4 @@
+using System.Globalization;
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
@@ -130,6 +131,39 @@ public class PennMUSHObject
 	/// RhostMUSH depower becomes one, and the import denies the power's permission on the object.
 	/// </summary>
 	public List<string> DeniedPowers { get; init; } = [];
+
+	/// <summary>
+	/// Roles the object holds by slug, beyond those its flags and powers stand for: a RhostMUSH staff level
+	/// becomes one, from <see cref="PennMUSHDatabase.Roles"/>.
+	/// </summary>
+	public List<string> Roles { get; init; } = [];
+
+	/// <summary>
+	/// The reality masks the object received and transmitted on in the source (a RhostMUSH or TinyMUX object's levels), which
+	/// <see cref="PennMUSHDatabase.Reality"/> names; null when it had none of its own.
+	/// </summary>
+	public PennMUSHReality? Reality { get; init; }
+
+	/// <summary>
+	/// A RhostMUSH object's ten totem words, which hold its totems as bits; empty when it had none. The import makes
+	/// a flag of each totem the object holds.
+	/// </summary>
+	public IReadOnlyList<uint> Totems { get; init; } = [];
+}
+
+/// <summary>An object's reality masks: the levels it perceives on, and those it is perceived on.</summary>
+public sealed record PennMUSHReality(uint Receive, uint Transmit)
+{
+	/// <summary>
+	/// The masks as RhostMUSH and TinyMUX store them: eight hex digits received and eight transmitted, with a space
+	/// between, or null for a value of any other shape, which both servers ignore.
+	/// </summary>
+	public static PennMUSHReality? Parse(string value)
+		=> value.Length == 17 && value[8] == ' '
+			&& uint.TryParse(value.AsSpan(0, 8), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var receive)
+			&& uint.TryParse(value.AsSpan(9), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var transmit)
+				? new PennMUSHReality(receive, transmit)
+				: null;
 }
 
 /// <summary>

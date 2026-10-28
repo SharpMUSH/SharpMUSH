@@ -382,14 +382,29 @@ public static partial class ReadPennMushConfig
 				&& !name.StartsWith("restrict_", StringComparison.OrdinalIgnoreCase)
 				&& !name.Equals("include", StringComparison.OrdinalIgnoreCase)
 				&& !name.Equals("mssp", StringComparison.OrdinalIgnoreCase)
+				&& !(dialect != ConfigurationDialect.PennMUSH && RealityDirectives.IsDirective(name))
+				&& !(dialect == ConfigurationDialect.RhostMUSH && name.Equals("totem_add", StringComparison.OrdinalIgnoreCase))
 				&& !PennMushConfigImport.SecretDirectives.ContainsKey(name))
 			.Distinct(StringComparer.OrdinalIgnoreCase)
 			.ToList();
 
+		// RhostMUSH and TinyMUX name their reality levels here and keep only their bits on each object; the database
+		// import needs both.
+		var reality = dialect != ConfigurationDialect.PennMUSH
+			? RealityDirectives.Read(text.SelectMany(line => DirectiveName(line) is { } name && RealityDirectives.IsDirective(name)
+				? [(name, DirectiveValue(line))]
+				: Array.Empty<(string, string)>()))
+			: RealityDirectives.None;
+		var totems = dialect == ConfigurationDialect.RhostMUSH
+			? TotemDirective.Read(text.SelectMany(line => DirectiveName(line) is { } name ? [(name, DirectiveValue(line))] : Array.Empty<(string, string)>()))
+			: [];
+
 		return new PennMushConfigImport(work, skipped, named,
 			secrets.Where(secret => secret.Value.Length > 0).ToDictionary(StringComparer.Ordinal))
 		{
-			Unrecognized = unrecognized
+			Unrecognized = unrecognized,
+			Reality = reality,
+			Totems = totems
 		};
 
 		string Get(string key) => configDictionary[propertyDictionary[key]];

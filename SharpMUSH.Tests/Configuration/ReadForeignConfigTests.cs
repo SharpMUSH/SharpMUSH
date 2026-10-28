@@ -64,10 +64,42 @@ public class ReadForeignConfigTests
 		await Assert.That(import.Unrecognized).Contains("dig_cost");
 	}
 
-	private static async Task<PennMushConfigImport> ImportAsync(ConfigurationDialect dialect)
+	/// <summary>
+	/// RhostMUSH names its reality levels and the masks of an object with none of its own in <c>netrhost.conf</c>, in
+	/// decimal or hexadecimal; a level with no usable mask takes the first bit, and a repeated name keeps the first.
+	/// </summary>
+	[Test]
+	public async Task RhostMushRealityLevelsAreRead()
+	{
+		var import = await ImportAsync(ConfigurationDialect.RhostMUSH,
+			"reality_level Real 0x00000001",
+			"reality_level Umbra 2 UMBRADESC",
+			"reality_level Odd nonsense",
+			"reality_level Umbra 8",
+			"reality_level All 0xFFFFFFFF",
+			"def_player_rx 3",
+			"def_room_tx -1");
+
+		await Assert.That(import.Reality.Levels).IsEquivalentTo(new[]
+		{
+			new RealityLevelDirective("Real", 1, "DESC"),
+			new RealityLevelDirective("Umbra", 2, "UMBRADESC"),
+			new RealityLevelDirective("Odd", 1, "DESC"),
+			new RealityLevelDirective("All", uint.MaxValue, "DESC")
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(import.Reality.Default("player", "rx")).IsEqualTo(3u);
+		await Assert.That(import.Reality.Default("player", "tx")).IsEqualTo(1u);
+		await Assert.That(import.Reality.Default("room", "tx")).IsEqualTo(uint.MaxValue);
+		await Assert.That(import.Unrecognized).DoesNotContain("reality_level").And.DoesNotContain("def_player_rx");
+
+		var penn = await ImportAsync(ConfigurationDialect.PennMUSH, "reality_level Real 1");
+		await Assert.That(penn.Reality.Levels).IsEmpty();
+	}
+
+	private static async Task<PennMushConfigImport> ImportAsync(ConfigurationDialect dialect, params string[] more)
 	{
 		var path = Path.Join(Path.GetTempPath(), $"sharpmush-conf-{Guid.NewGuid():N}.conf");
-		await File.WriteAllLinesAsync(path, Lines);
+		await File.WriteAllLinesAsync(path, [.. Lines, .. more]);
 		try
 		{
 			return ReadPennMushConfig.Import(path, followIncludes: false, dialect);
