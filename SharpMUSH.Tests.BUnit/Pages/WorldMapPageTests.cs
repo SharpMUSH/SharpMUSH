@@ -335,6 +335,24 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task MovingARoomShowsItWhereItWillBe()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
+		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("0");
+
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 1)']").ClickAsync();
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapMoveHere(Lighthouse)").ClickAsync();
+
+		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("1").Because("the fields follow the room");
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(1)");
+		await Assert.That(_api.Commands).IsEmpty();
+	}
+
+	[Test]
 	public async Task APictureFromAnHttpAddressIsNotLoaded()
 	{
 		Arrange();

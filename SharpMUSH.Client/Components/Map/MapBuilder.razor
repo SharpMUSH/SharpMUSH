@@ -68,6 +68,7 @@
     private double _x, _y, _width = 1, _height = 1;
     private int _z;
     private string? _editing;
+    private MapPlacement? _shown;
 
     protected override void OnParametersSet()
     {
@@ -77,10 +78,11 @@
             ResetDig();
             if (Cell is var (x, y)) (_from, _exitTo, _exitBack) = DefaultExits(x, y);
         }
-        if (Selected != _editing && Selected is { } id && Layout.Rooms.TryGetValue(id, out var room))
+        // The fields follow the room as the plan moves it, not only when another room is chosen.
+        if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
-            _editing = id;
-            _vertical = 0;
+            if (id != _editing) _vertical = 0;
+            (_editing, _shown) = (id, room);
             (_x, _y, _z) = room.Room.Position switch
             {
                 [var x, var y, var z, ..] => (x, y, (int)z),
@@ -107,13 +109,28 @@
         var beside = Neighbours(x, y).ToList();
         var pick = beside.FirstOrDefault(n => n.Id == Selected);
         if (pick.Id is null && beside.Count > 0) pick = beside[0];
-        if (pick.Id is null) return (null, "", "");
-        var names = MapPlan.DirectionNames((int)(x - pick.X), (int)(y - pick.Y), 0);
-        return (pick.Id, names?.To ?? "", names?.Back ?? "");
+        return pick.Id is null ? (null, "", "") : JoinFrom(pick, x, y);
     }
 
-    /// <summary>The rooms on this level in the eight cells around (x, y), with the cell each is in.</summary>
-    private IEnumerable<(string Id, double X, double Y)> Neighbours(double x, double y)
+    private (string? From, string To, string Back) JoinFrom((string Id, double X, double Y) room, double x, double y)
+    {
+        var names = MapPlan.DirectionNames((int)(x - room.X), (int)(y - room.Y), 0);
+        return (room.Id, names?.To ?? "", names?.Back ?? "");
+    }
+
+    private void ChooseFrom(string? room, double x, double y)
+    {
+        if (Neighbours(x, y).FirstOrDefault(n => n.Id == room) is { Id: not null } beside) (_from, _exitTo, _exitBack) = JoinFrom(beside, x, y);
+    }
+
+    /// <summary>
+    /// The rooms on this level in the eight cells around (x, y), with the cell each is in: those north, south, east or
+    /// west of it first.
+    /// </summary>
+    private IEnumerable<(string Id, double X, double Y)> Neighbours(double x, double y) =>
+        Beside(x, y).OrderBy(room => Math.Abs(room.X - x) + Math.Abs(room.Y - y));
+
+    private IEnumerable<(string Id, double X, double Y)> Beside(double x, double y)
     {
         foreach (var room in Layout.On(Level).Where(room => !room.Region))
         {
@@ -176,6 +193,15 @@
                     @foreach (var room in Layout.Rooms.Values.Where(r => !r.Region).OrderBy(r => r.Room.Name, StringComparer.OrdinalIgnoreCase))
                     {
                         <MudSelectItem Value="@room.Room.Id">@room.Room.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (Neighbours(x, y).ToList() is { Count: > 1 } beside)
+            {
+                <MudSelect T="string" Value="_from" ValueChanged="room => ChooseFrom(room, x, y)" Label="@Loc["NavMapDigFrom"]" Variant="Variant.Outlined">
+                    @foreach (var room in beside)
+                    {
+                        <MudSelectItem Value="@room.Id">@Layout.Rooms[room.Id].Room.Name</MudSelectItem>
                     }
                 </MudSelect>
             }
