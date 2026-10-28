@@ -5,8 +5,8 @@ using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Tests.Database;
 
-// Every test writes and reads back the one server-wide MOTD document.
-[NotInParallel("MotdData")]
+// Every test writes and reads back the one server-wide MOTD document, as MotdCommandTests does through @motd.
+[NotInParallel("Motd")]
 public class MotdDataTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
