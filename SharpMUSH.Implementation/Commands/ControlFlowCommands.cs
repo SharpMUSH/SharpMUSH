@@ -1086,7 +1086,7 @@ public partial class Commands
 
 			// A new evaluation, as queue_include_attribute's PE_REGS_NEWATTR (cque.c): the caller's regexp
 			// captures, ## and #@ stay out of sight of the included actions.
-			return (null, attribute, attributeText, new DBAttribute(targetObject.Object().DBRef, attribute.LongName));
+			return (null, attribute, attributeText, DBAttribute.Of(targetObject.Object().DBRef, attribute));
 		}
 
 		// Execute one already-read target in-place with the shared env args, containing an @break when /nobreak.

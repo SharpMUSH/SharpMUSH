@@ -63,7 +63,7 @@ internal sealed class AttributeEvaluator(
 		return fetched switch
 		{
 			SharpAttribute[] chain => await RunAsOwnerAsync(parser,
-				new AttributeFunction(obj, chain.Last().LongName.ToUpper(), chain.Last().Value),
+				AttributeFunction.Of(obj, chain.Last()),
 				s => s.ForAttributeArguments(args)),
 			None => CallState.Empty,
 			Error<string> error => new CallState(error.Value)
@@ -99,7 +99,7 @@ internal sealed class AttributeEvaluator(
 	private async ValueTask<CallState> RunAsOwnerAsync(IMUSHCodeParser parser, AttributeFunction function,
 		Func<ParserState, ParserState> withArguments)
 	{
-		var (owner, attributeName, code) = function;
+		var (owner, attributeName, code, dialect) = function;
 
 		// PennMUSH: a HALTED object runs none of its softcode. process_expression returns PE_NOTHING for a
 		// halted executor (src/parse.c), so the attribute yields its stored text unevaluated. The HALT flag is
@@ -138,7 +138,7 @@ internal sealed class AttributeEvaluator(
 			var result = await parser.With(s =>
 					withArguments(s) with
 					{
-						CurrentEvaluation = new DBAttribute(owner.Object().DBRef, attributeName),
+						CurrentEvaluation = new DBAttribute(owner.Object().DBRef, attributeName) { Dialect = dialect },
 						Function = attributeName,
 						Executor = owner.Object().DBRef,
 						Caller = s.Executor
@@ -181,7 +181,7 @@ internal sealed class AttributeEvaluator(
 
 		return await FetchUserFunctionAttributeAsync(executor, owner, attributeName, parent: true) switch
 		{
-			SharpAttribute[] chain => new AttributeFunction(owner, chain.Last().LongName.ToUpper(), chain.Last().Value),
+			SharpAttribute[] chain => AttributeFunction.Of(owner, chain.Last()),
 			None => new CallState(ErrorMessages.Returns.NoSuchAttribute),
 			Error<string> error => new CallState(error.Value)
 		};

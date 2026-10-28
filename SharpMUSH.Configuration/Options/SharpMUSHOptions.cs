@@ -113,7 +113,8 @@ public record SharpMUSHOptions
 			RhostPrintf: false,
 			RhostMapArgs: false,
 			SidefxFlag: false,
-			RhostList: false
+			RhostList: false,
+			Dialect: null
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

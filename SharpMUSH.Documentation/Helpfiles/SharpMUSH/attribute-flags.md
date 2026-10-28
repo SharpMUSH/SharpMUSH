@@ -21,6 +21,11 @@
       "lookup": "attribute flags display"
     },
     {
+      "id": "dialect",
+      "heading": "Other servers' names",
+      "lookup": "attribute flags dialect"
+    },
+    {
       "id": "layout",
       "heading": "How formatted values are laid out",
       "lookup": "attribute flags layout"
@@ -88,6 +93,12 @@ If both are set, `cmdsyntax` takes priority, since a command list may itself con
 `cmdsyntax` is **not** related to `no_command` despite the similar name. `no_command` controls whether an attribute is checked for `$`-command and `^`-listen pattern matching -- a behavioral restriction. `cmdsyntax`/`funsyntax` only control how the stored text is laid out when displayed; they never change whether or how the attribute runs. An attribute can be `no_command` and `cmdsyntax` at once, or either alone, with no interaction between them.
 
 Formatting never rewrites the stored attribute; `@decompile` and the raw value returned by `get()`/`v()` are unaffected regardless of these flags.
+
+## Other servers' names
+
+- `rhost`             The attribute is written for RhostMUSH. When it runs, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`. SharpMUSH's own names, and `@function`s, still come first.
+
+An attribute without the flag reads the game's `dialect` option instead, as typed commands do. A RhostMUSH database import sets the option and the flag on every attribute it brings in. See [compatibility config].
 
 ## How formatted values are laid out
 

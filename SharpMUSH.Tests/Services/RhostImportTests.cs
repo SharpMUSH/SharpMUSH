@@ -108,7 +108,8 @@ public class RhostImportTests
 			RhostPrintf = true,
 			RhostMapArgs = true,
 			SidefxFlag = true,
-			RhostList = true
+			RhostList = true,
+			Dialect = "rhost"
 		});
 		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
 		// RhostMUSH's mail command, added beside the aliases @mail already had.

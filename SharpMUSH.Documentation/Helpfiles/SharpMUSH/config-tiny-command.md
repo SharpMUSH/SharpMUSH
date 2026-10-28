@@ -45,3 +45,4 @@ The `rhost_` options below are for a game moved from RhostMUSH. Each is off by d
 - `rhost_printf=<boolean>`: Does printf() read RhostMUSH's `$`-fields, rather than SharpMUSH's `%` directives?
 - `rhost_map_args=<boolean>`: Does map() leave %1 empty when no extra arguments are given, as RhostMUSH does, rather than passing the item's position?
 - `sidefx_flag=<boolean>`: Do side-effect functions work only for an object with the SIDEFX flag or the `softcode.sidefx` permission, as on RhostMUSH? Others get `#-1 FUNCTION DISABLED`.
+- `dialect=<name>`: Whose names for functions and commands do typed input and attributes without a dialect flag also read? `rhost` reads RhostMUSH's, after SharpMUSH's own; empty reads none. See [attribute flags dialect].

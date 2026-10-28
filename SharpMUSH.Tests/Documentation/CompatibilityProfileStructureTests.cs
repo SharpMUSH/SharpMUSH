@@ -51,6 +51,7 @@ public class CompatibilityProfileStructureTests
 		["RhostMUSH map() arguments: `rhost_map_args`"] = "a RhostMUSH option; off, map() is PennMUSH's",
 		["RhostMUSH printf() fields: `rhost_printf`"] = "a RhostMUSH option; off, printf() is SharpMUSH's own",
 		["RhostMUSH side-effect flag: `sidefx_flag`"] = "a RhostMUSH option; off, side-effect functions are PennMUSH's",
+		["Other servers' names: `dialect`"] = "a RhostMUSH option; empty, the default, reads SharpMUSH's names only",
 		["`ansi()` and `lit()`"] = "only the declared maximum differs; behaviour matches",
 		["Time precision"] = "the consequence of the choice *A trailing `<precision>` on the time functions*",
 		["Objids and stamped dbrefs"] = "describes the objid representation the time precision choice leads to",
