@@ -1,3 +1,6 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Library.Models;
+
 namespace SharpMUSH.Library.Services.DatabaseConversion;
 
 /// <summary>
@@ -34,6 +37,19 @@ public class PennMUSHDatabase
 	/// The game's standard-attribute table, from the dump's <c>+ATTRIBUTES LIST</c> section.
 	/// </summary>
 	public List<PennMUSHAttributeDefinition> AttributeDefinitions { get; set; } = [];
+
+	/// <summary>
+	/// Roles the import makes, for the source's staff levels SharpMUSH has none for. One the world already has,
+	/// by slug, is kept as it is.
+	/// </summary>
+	public List<SharpRole> Roles { get; set; } = [];
+
+	/// <summary>
+	/// The source's reality levels, which name the bits of each object's <see cref="PennMUSHObject.Reality"/>. A
+	/// RhostMUSH or TinyMUX flatfile does not hold them; the game's configuration file does, and the import takes them
+	/// from there.
+	/// </summary>
+	public RealityDirectives Reality { get; set; } = RealityDirectives.None;
 
 	/// <summary>
 	/// The game's maildb, when one was given alongside the dump; empty otherwise.

@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Authorization;
@@ -5,7 +7,9 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -37,20 +41,24 @@ public class RhostImportTests
 		var bob = await FindAsync(world, "Bob");
 		var carol = await FindAsync(world, "Carol");
 
-		// WIZARD and ROYALTY are roles here, held rather than stored as flags.
+		// The staff levels are roles here, held rather than stored as flags.
 		var aliceFlags = await alice.Object().Flags.Value.Select(f => f.Name).ToListAsync();
 		await Assert.That(aliceFlags).Contains("COUNCILOR").And.Contains("KEEPALIVE");
-		await Assert.That((await alice.Object().Grants.WithCancellation(CancellationToken.None)).HoldsRole(BuiltInRoles.RoyaltySlug))
-			.IsTrue();
+		var aliceGrants = await alice.Object().Grants.WithCancellation(CancellationToken.None);
+		await Assert.That(aliceGrants.HoldsRole("councilor")).IsTrue();
+		await Assert.That(aliceGrants.Shows(PortalPermission.GameRoyalty)).IsTrue();
 		await Assert.That((await alice.Object().ReadPowersAsync(CancellationToken.None)).Select(p => p.Name)).Contains("Boot");
 
 		var carolFlags = await carol.Object().Flags.Value.Select(f => f.Name).ToListAsync();
 		await Assert.That(carolFlags).Contains("IMMORTAL");
-		await Assert.That((await carol.Object().Grants.WithCancellation(CancellationToken.None)).HoldsRole(BuiltInRoles.WizardSlug))
-			.IsTrue();
+		var carolGrants = await carol.Object().Grants.WithCancellation(CancellationToken.None);
+		await Assert.That(carolGrants.HoldsRole("immortal")).IsTrue();
+		await Assert.That(carolGrants.HoldsRole("guildmaster")).IsTrue();
+		await Assert.That(carolGrants.Has(PortalPermission.GameWizard)).IsTrue();
 
 		var bobGrants = await bob.Object().Grants.WithCancellation(CancellationToken.None);
-		await Assert.That(bobGrants.HoldsRole(BuiltInRoles.BuilderSlug)).IsTrue();
+		await Assert.That(bobGrants.HoldsRole("architect")).IsTrue();
+		await Assert.That(bobGrants.Has(PortalPermission.GamePower("Builder"))).IsTrue();
 		await Assert.That(bobGrants.Context.ObjectOverrides[GamePowers.Find("See_All")!.Scope]).IsEqualTo(PermissionState.Deny);
 	}
 
@@ -140,6 +148,101 @@ public class RhostImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.PlayersConverted).IsGreaterThanOrEqualTo(4);
 	}
+
+	/// <summary>
+	/// With its <c>netrhost.conf</c>, the game's reality levels are layers: the first bit is <c>normal</c>, each other
+	/// named bit a layer of its name, and each object on the layers its masks have bits of. A room transmits on every
+	/// layer by RhostMUSH's default, and a level's own description attribute describes an object on that layer.
+	/// </summary>
+	[Test]
+	public async Task RealityLevelsArriveAsLayers()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		database.Reality = new RealityDirectives(
+			[new RealityLevelDirective("Real", 1, "DESC"), new RealityLevelDirective("Umbra", 2, "DESC"), new RealityLevelDirective("Spirit World", 4, "DATA")],
+			new Dictionary<string, uint>());
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		var config = await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync();
+		await Assert.That(config.Enabled).IsTrue();
+		await Assert.That(config.Layers).IsEquivalentTo(["normal", "umbra", "spirit_world"]);
+
+		var alice = await LayersAsync(world, "Alice");
+		await Assert.That(alice.Receive).IsEquivalentTo(["normal", "umbra"]);
+		await Assert.That(alice.Transmit).IsEquivalentTo(["umbra"]);
+
+		var widget = await LayersAsync(world, "Widget");
+		await Assert.That(widget.Transmit).IsEquivalentTo(["normal", "spirit_world"]);
+		await Assert.That(widget.Descriptions["spirit_world"]).IsEqualTo("DATA");
+
+		var room = await LayersAsync(world, "Testing Room");
+		await Assert.That(room.Receive).IsEquivalentTo(["normal"]);
+		await Assert.That(room.Transmit).IsEquivalentTo(["normal", "umbra", "spirit_world"]);
+
+		var bob = await LayersAsync(world, "Bob");
+		await Assert.That(bob.Receive).IsEquivalentTo(["normal"]);
+		await Assert.That(bob.Transmit).IsEquivalentTo(["normal"]);
+	}
+
+	/// <summary>
+	/// Two bits never become one layer: a level named like another bit's layer gets its bit's number, and a bit only
+	/// a level of several bits names is a layer of its own.
+	/// </summary>
+	[Test]
+	public async Task EachBitIsALayerOfItsOwn()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		database.Reality = new RealityDirectives(
+			[new RealityLevelDirective("Real", 1, "DESC"), new RealityLevelDirective("Normal", 2, "DESC"), new RealityLevelDirective("Spirit", 12, "DESC")],
+			new Dictionary<string, uint>());
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		var config = await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync();
+		await Assert.That(config.Layers).IsEquivalentTo(["normal", "normal-1", "spirit", "spirit-3"]);
+
+		var alice = await LayersAsync(world, "Alice");
+		await Assert.That(alice.Receive).IsEquivalentTo(["normal", "normal-1"]);
+		await Assert.That(alice.Transmit).IsEquivalentTo(["normal-1"]);
+
+		var widget = await LayersAsync(world, "Widget");
+		await Assert.That(widget.Transmit).IsEquivalentTo(["normal", "spirit"]);
+	}
+
+	/// <summary>
+	/// A world that uses only the normal layer still turns reality on when an object keeps settings of its own:
+	/// Alice transmits only on a bit no level names, so no one sees her.
+	/// </summary>
+	[Test]
+	public async Task SettingsOnTheNormalLayerAloneTurnRealityOn()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		database.Reality = new RealityDirectives([new RealityLevelDirective("Real", 1, "DESC")], new Dictionary<string, uint>());
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		await Assert.That((await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync()).Enabled).IsTrue();
+		await Assert.That((await LayersAsync(world, "Alice")).Transmit).IsEmpty();
+	}
+
+	/// <summary>Without the configuration that names them, the levels cannot be layers, and the report says so.</summary>
+	[Test]
+	public async Task RealityLevelsWithoutTheirNamesAreReported()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var result = await world.Converter.ConvertDatabaseAsync(Files(), new Progress<ConversionProgress>());
+
+		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Reality levels on 2 object(s) not imported"));
+		await Assert.That((await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync()).Enabled).IsFalse();
+	}
+
+	private static async Task<ObjectReality> LayersAsync(IsolatedImportWorld world, string name)
+		=> await world.Services.GetRequiredService<RealityPolicy>().ReadObjectAsync((await FindAsync(world, name)).Object().DBRef)
+			?? throw new InvalidOperationException($"{name} has no reality profile");
 
 	private static DatabaseImportFiles Files()
 		=> new(RhostFlatfileReaderTests.FlatfilePath, RhostFlatfileReaderTests.MailPath, null, RhostFlatfileReaderTests.FolderPath);

@@ -253,7 +253,7 @@ public class RhostNativeExportImportTests
 		var wizard = (await FindAsync(world, "Wizard")).Expect<SharpPlayer>();
 		await Assert.That(world.Passwords.PasswordIsValid("potrzebie", wizard.PasswordHash)).IsTrue();
 		var alice = await FindAsync(world, "Alice");
-		await Assert.That((await alice.Object().Grants.WithCancellation(CancellationToken.None)).HoldsRole(BuiltInRoles.RoyaltySlug)).IsTrue();
+		await Assert.That((await alice.Object().Grants.WithCancellation(CancellationToken.None)).HoldsRole("councilor")).IsTrue();
 		var widget = await FindAsync(world, "Widget");
 		var gadget = await FindAsync(world, "Gadget");
 		await Assert.That(widget.Object().Locks["Basic"].LockString).IsEqualTo("(#3)|(#1)");

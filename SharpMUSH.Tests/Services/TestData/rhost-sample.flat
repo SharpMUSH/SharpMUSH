@@ -124,6 +124,8 @@ $1$abc$9dV135Rc3U8Xbm2DxadgF0
 1:0:Al
 >38
 7
+>244
+00000003 00000002
 <
 !4
 Bob
@@ -310,6 +312,8 @@ DATA:Line*
 >259
 first line
 second line
+>244
+00000001 00000005
 <
 !10
 Gadget
@@ -344,6 +348,8 @@ Gadget
 [timefmt($H:$M $y,secs())]|[timefmt(%0,secs())]
 >96
 (#3)
+>83
+0 0 4 0 0 0 0 0 0 2147483649
 <
 !11
 Garbage

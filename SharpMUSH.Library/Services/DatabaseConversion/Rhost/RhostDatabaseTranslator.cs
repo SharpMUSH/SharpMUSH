@@ -1,3 +1,5 @@
+using System.Globalization;
+using SharpMUSH.Configuration;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Softcode;
@@ -10,9 +12,11 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 /// </summary>
 /// <remarks>
 /// <para>Flags, toggles and powers go through <see cref="RhostNameTables"/>: to SharpMUSH's own where one
-/// fits (RhostMUSH's wizard and councilor levels to the WIZARD and ROYALTY roles, its architects to the
-/// builder role), else to a flag or power of their own that the import defines, else they are dropped.
-/// Every decision is a note, with the objects it touched.</para>
+/// fits (RhostMUSH's royalty, its wizards, to the WIZARD role), else to a flag or power of their own that the
+/// import defines, else they are dropped. Its other staff levels become roles of their own
+/// (<see cref="RhostNameTables.LevelRoles"/>). Every decision is a note, with the objects it touched.</para>
+/// <para>Each object's reality levels are carried as its masks; the game's <c>netrhost.conf</c> names them, and
+/// the import turns them into reality layers.</para>
 /// <para>Attribute values are rewritten for SharpMUSH where RhostMUSH reads them differently: colour
 /// substitutions (<see cref="ColourSubstitutionRewriter"/>), character codes and literal <c>timefmt()</c>
 /// formats (<see cref="RhostSoftcodeRewriter"/>). Each attribute that changed is a note of its own.</para>
@@ -89,13 +93,23 @@ public static partial class RhostDatabaseTranslator
 		var definitions = new Definitions();
 		var folderAttributes = FolderAttributes(mail);
 
+		var clusters = Clusters(flatfile, byNumber, report);
 		foreach (var source in flatfile.Objects)
 		{
+			if (clusters.TryGetValue(source.DBRef, out var first) && first != source.DBRef)
+			{
+				report.Note(ImportWarningKind.Objects, $"Cluster objects: merged into their cluster's first object (#{first}), " +
+					"which takes their attributes", source.DBRef);
+				continue;
+			}
+
 			if (Translated(source, flatfile, byNumber, definitions, folderAttributes, report) is { } translated)
 			{
 				objects.Add(translated);
 			}
 		}
+
+		MergeClusters(clusters, objects, flatfile, byNumber, report);
 
 		var database = new PennMUSHDatabase
 		{
@@ -105,6 +119,7 @@ public static partial class RhostDatabaseTranslator
 			Objects = objects,
 			FlagDefinitions = definitions.Flags,
 			PowerDefinitions = definitions.Powers,
+			Roles = [.. RhostNameTables.LevelRoles.Where(role => objects.Any(o => o.Roles.Contains(role.Slug)))],
 			GodPlayer = 1
 		};
 
@@ -124,6 +139,7 @@ public static partial class RhostDatabaseTranslator
 			"parentheses, trim(), edit(), lattr(), printf(), map() and list() the RhostMUSH way and its SIDEFX flags count. " +
 			"It sets dialect to rhost and gives every attribute it brings in the rhost attribute flag, so that code reads " +
 			$"{ServerName}'s names for functions and commands SharpMUSH has under its own, such as wildmatch() and @sudo.");
+		MapTotems(database, RhostNameTables.BuiltInTotems, report);
 		database.ImportNotes = report.Finish();
 		database.RoutineNotes = report.FinishRoutine();
 		database.SoftcodeRewrites = report.Rewrites;
@@ -158,13 +174,16 @@ public static partial class RhostDatabaseTranslator
 		var flags = new List<string>();
 		var powers = new List<string>();
 		var denied = new List<string>();
-		MapBits(source, flags, definitions, powers, report);
+		var roles = new List<string>();
+		MapBits(source, flags, definitions, powers, roles, report);
 		MapPowers(source, powers, denied, definitions, report);
 
 		var (location, exits, link) = Fields(source, objectType, report);
 		var zone = Zone(source, byNumber, report);
 
 		var password = default(string);
+		var reality = default(PennMUSHReality);
+		var totems = Array.Empty<uint>();
 		var aliases = new List<string>();
 		long created = 0;
 		long modified = 0;
@@ -184,6 +203,13 @@ public static partial class RhostDatabaseTranslator
 					continue;
 				case RhostNameTables.ModifiedAttribute:
 					modified = Stamp(attribute.Value, source.DBRef, "modification", report);
+					continue;
+				case RhostNameTables.TotemsAttribute:
+					totems = [.. attribute.Value.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Take(10)
+						.Select(word => long.TryParse(word, CultureInfo.InvariantCulture, out var bits) ? unchecked((uint)bits) : 0u)];
+					continue;
+				case RhostNameTables.RealityAttribute:
+					reality = Reality(attribute.Value, source.DBRef, report);
 					continue;
 				case RhostNameTables.AliasAttribute:
 					aliases.AddRange(attribute.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -234,6 +260,9 @@ public static partial class RhostDatabaseTranslator
 			Flags = flags,
 			Powers = powers,
 			DeniedPowers = denied,
+			Roles = roles,
+			Reality = reality,
+			Totems = totems,
 			CreationTime = created,
 			ModificationTime = modified,
 			Attributes = attributes,
@@ -296,8 +325,134 @@ public static partial class RhostDatabaseTranslator
 
 	private const uint ZoneMasterBit = 0x20;
 
+	/// <summary>
+	/// Makes a flag of each of <paramref name="totems"/>, for a game whose <c>netrhost.conf</c> defines its own, and
+	/// sets it on every object that holds the totem. Only wizards set one, as RhostMUSH lets only them by default.
+	/// </summary>
+	public static void MapTotems(PennMUSHDatabase database, IEnumerable<TotemDirective> totems)
+	{
+		var report = new Report();
+		MapTotems(database, totems.Select(totem => (totem, true)), report);
+		database.ImportNotes.AddRange(report.Decisions());
+	}
+
+	private static void MapTotems(PennMUSHDatabase database, IEnumerable<(TotemDirective Totem, bool StaffOnly)> totems, Report report)
+	{
+		foreach (var (totem, staffOnly) in totems)
+		{
+			var name = totem.Name.ToUpperInvariant();
+			var holders = database.Objects
+				.Where(o => o.Totems.Count > totem.Slot && (o.Totems[totem.Slot] & totem.Value) == totem.Value && !o.Flags.Contains(name))
+				.ToArray();
+			if (holders.Length == 0)
+			{
+				continue;
+			}
+
+			if (!database.FlagDefinitions.Any(f => f.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
+			{
+				string[] perms = staffOnly ? ["wizard"] : [];
+				database.FlagDefinitions.Add(new PennMUSHFlagDefinition { Name = name, SetPermissions = [.. perms], UnsetPermissions = [.. perms] });
+			}
+
+			foreach (var holder in holders)
+			{
+				holder.Flags.Add(name);
+				report.Note(ImportWarningKind.Flags, $"Totem {name}: imported as a flag of its own ({(staffOnly ? "wizards set it" : "anyone may set it")})", holder.DBRef);
+			}
+		}
+	}
+
+	/// <summary>
+	/// Each object in a cluster, by number, and the cluster's first object, the one it was made on. RhostMUSH spreads a
+	/// cluster's attributes over its objects to pass its limit per object; one object here holds them all. Each of a
+	/// cluster's objects lists them all in its <c>_CLUSTER</c> attribute, the first object first.
+	/// </summary>
+	private static Dictionary<int, int> Clusters(RhostFlatfile flatfile, Dictionary<int, RhostFlatfileObject> byNumber, Report report)
+	{
+		var number = flatfile.UserAttributes.FirstOrDefault(entry => entry.Value.Name.Equals(RhostNameTables.ClusterAttribute,
+			StringComparison.OrdinalIgnoreCase)).Key;
+		var clusters = new Dictionary<int, int>();
+		if (number == 0)
+		{
+			return clusters;
+		}
+
+		foreach (var source in flatfile.Objects)
+		{
+			if (clusters.ContainsKey(source.DBRef) || source.Attributes.FirstOrDefault(a => a.Number == number) is not { } listing)
+			{
+				continue;
+			}
+
+			var members = Dbrefs().Matches(listing.Value).Select(match => int.Parse(match.Groups[1].Value, CultureInfo.InvariantCulture))
+				.Where(byNumber.ContainsKey)
+				.Distinct()
+				.ToArray();
+			if (members.Length == 0)
+			{
+				continue;
+			}
+
+			foreach (var member in members)
+			{
+				clusters.TryAdd(member, members[0]);
+			}
+
+			report.Line(ImportWarningKind.Objects, $"Cluster #{members[0]}: its {members.Length} object(s) merged into #{members[0]}.");
+		}
+
+		return clusters;
+	}
+
+	/// <summary>
+	/// Gives each cluster's first object the user attributes of the others, in the order the cluster lists them. A name the
+	/// first object, or an earlier one, already holds keeps that value, and is noted.
+	/// </summary>
+	private static void MergeClusters(Dictionary<int, int> clusters, List<PennMUSHObject> objects, RhostFlatfile flatfile,
+		Dictionary<int, RhostFlatfileObject> byNumber, Report report)
+	{
+		foreach (var (member, first) in clusters.Where(entry => entry.Key != entry.Value))
+		{
+			if (objects.FirstOrDefault(o => o.DBRef == first) is not { } target)
+			{
+				continue;
+			}
+
+			var source = byNumber[member];
+			foreach (var attribute in source.Attributes.Where(a => a.Number >= 256 && a.Number is not (>= RhostNameTables.InlineStart and < RhostNameTables.InlineEnd)))
+			{
+				if (Attribute(attribute, source, flatfile, report) is not { } imported)
+				{
+					continue;
+				}
+
+				if (target.Attributes.Any(a => a.Name.Equals(imported.Name, StringComparison.OrdinalIgnoreCase)))
+				{
+					report.Note(ImportWarningKind.Attributes, $"Cluster attribute {imported.Name}: held by more than one of the cluster's objects; " +
+						$"#{first} keeps the first one's value", member);
+					continue;
+				}
+
+				target.Attributes.Add(imported);
+			}
+		}
+	}
+
+	/// <summary>An object's reality masks (<see cref="PennMUSHReality.Parse"/>); a value RhostMUSH would not read is noted.</summary>
+	private static PennMUSHReality? Reality(string value, int dbref, Report report)
+	{
+		if (PennMUSHReality.Parse(value) is { } reality)
+		{
+			return reality;
+		}
+
+		report.Note(ImportWarningKind.Objects, $"Reality levels that {ServerName} itself would not read, left off", dbref);
+		return null;
+	}
+
 	private static void MapBits(RhostFlatfileObject source, List<string> flags, Definitions definitions, List<string> powers,
-		Report report)
+		List<string> roles, Report report)
 	{
 		foreach (var bit in RhostNameTables.Bits.Concat(RhostNameTables.ToggleBits))
 		{
@@ -309,6 +464,11 @@ public static partial class RhostDatabaseTranslator
 
 			flags.AddRange(bit.Flags);
 			powers.AddRange(bit.Powers);
+			if (bit.Role is { } role)
+			{
+				roles.Add(role);
+			}
+
 			if (bit.Custom is { } custom)
 			{
 				flags.Add(custom);
@@ -334,6 +494,11 @@ public static partial class RhostDatabaseTranslator
 		var parts = new List<string>();
 		parts.AddRange(bit.Flags.Select(f => f is "WIZARD" or "ROYALTY" ? $"the {f} flag and role" : $"the {f} flag"));
 		parts.AddRange(bit.Powers.Select(p => p is "Builder" or "Guest" ? $"the {p} power and role" : $"the {p} power"));
+		if (bit.Role is { } role)
+		{
+			parts.Add($"the {role} role");
+		}
+
 		if (bit.Custom is { } custom)
 		{
 			parts.Add($"a flag of its own, {custom} ({(bit.StaffOnly ? "wizards set it" : "anyone may set it")})");
@@ -546,6 +711,9 @@ public static partial class RhostDatabaseTranslator
 	[GeneratedRegex(@"(?<![#\w])(\d+)(?!\w)")]
 	private static partial Regex BareNumbers();
 
+	[GeneratedRegex(@"#(\d+)")]
+	private static partial Regex Dbrefs();
+
 	private static long Stamp(string text, int dbref, string which, Report report)
 	{
 		if (PennMUSHDatabaseConverter.TryParsePennTime(text, out var time))
@@ -651,6 +819,9 @@ public static partial class RhostDatabaseTranslator
 			lines.AddRange(Lines.Skip(1));
 			return lines;
 		}
+
+		/// <summary>The decisions alone, for a pass made after the flatfile's own.</summary>
+		public IEnumerable<ImportWarning> Decisions() => Decided(_decisions);
 
 		public List<string> FinishRoutine() => [.. Decided(_routine).Select(decided => decided.Text)];
 

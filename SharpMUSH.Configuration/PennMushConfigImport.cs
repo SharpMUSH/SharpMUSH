@@ -34,6 +34,12 @@ public record PennMushConfigImport(SharpMUSHOptions Options, IReadOnlyList<strin
 	/// </summary>
 	public IReadOnlyList<string> Unrecognized { get; init; } = [];
 
+	/// <summary>A RhostMUSH file's reality levels, which the database import gives the world as reality layers.</summary>
+	public RealityDirectives Reality { get; init; } = RealityDirectives.None;
+
+	/// <summary>The totems a RhostMUSH file defines, which the database import turns into flags.</summary>
+	public IReadOnlyList<TotemDirective> Totems { get; init; } = [];
+
 	/// <summary>Whether the file gave <paramref name="name"/> (a configuration name) a value.</summary>
 	public bool Sets(string name) => Named.Contains(name);
 

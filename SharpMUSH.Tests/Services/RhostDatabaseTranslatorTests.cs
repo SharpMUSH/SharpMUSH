@@ -1,3 +1,5 @@
+using SharpMUSH.Configuration;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
@@ -13,6 +15,15 @@ public class RhostDatabaseTranslatorTests
 	private static async Task<PennMUSHDatabase> TranslateAsync()
 		=> await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, RhostFlatfileReaderTests.MailPath,
 			RhostFlatfileReaderTests.FolderPath);
+
+	/// <summary><paramref name="text"/> with <paramref name="lines"/> added to the end of object <paramref name="dbref"/>.</summary>
+	private static string WithAttributes(string text, int dbref, params string[] lines)
+	{
+		var all = text.Split('\n').ToList();
+		var end = all.FindIndex(all.IndexOf($"!{dbref}"), line => line == "<");
+		all.InsertRange(end, lines);
+		return string.Join('\n', all);
+	}
 
 	private static PennMUSHObject Object(PennMUSHDatabase database, int dbref) => database.Objects.First(o => o.DBRef == dbref);
 
@@ -45,20 +56,103 @@ public class RhostDatabaseTranslatorTests
 			.IsTrue();
 	}
 
-	/// <summary>RhostMUSH's staff levels: royalty (its wizards), immortal, councilor, architect, guildmaster.</summary>
+	/// <summary>
+	/// RhostMUSH's staff levels: royalty (its wizards) is the wizard role, and immortal, councilor, architect and
+	/// guildmaster are roles of their own, lined up by priority among the built-in ones.
+	/// </summary>
 	[Test]
 	public async Task StaffLevelsBecomeRolesAndFlagsOfTheirOwn()
 	{
 		var database = await TranslateAsync();
 
 		await Assert.That(Object(database, 1).Flags).Contains("WIZARD");
-		await Assert.That(Object(database, 3).Flags).Contains("ROYALTY").And.Contains("COUNCILOR");
-		await Assert.That(Object(database, 4).Powers).Contains("Builder");
-		await Assert.That(Object(database, 5).Flags).Contains("WIZARD").And.Contains("IMMORTAL").And.Contains("GUILDMASTER");
+		await Assert.That(Object(database, 3).Flags).Contains("COUNCILOR").And.DoesNotContain("ROYALTY");
+		await Assert.That(Object(database, 3).Roles).IsEquivalentTo(["councilor"]);
+		await Assert.That(Object(database, 4).Roles).IsEquivalentTo(["architect"]);
+		await Assert.That(Object(database, 4).Powers).DoesNotContain("Builder");
+		await Assert.That(Object(database, 5).Flags).Contains("IMMORTAL").And.Contains("GUILDMASTER").And.DoesNotContain("WIZARD");
+		await Assert.That(Object(database, 5).Roles).IsEquivalentTo(["immortal", "guildmaster"]);
 
 		var immortal = database.FlagDefinitions.First(f => f.Name == "IMMORTAL");
 		await Assert.That(immortal.SetPermissions).IsEquivalentTo(["wizard"]);
-		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag COUNCILOR: imported as the ROYALTY flag and role and a flag of its own"))).IsTrue();
+		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag COUNCILOR: imported as the councilor role and a flag of its own"))).IsTrue();
+	}
+
+	/// <summary>Only the levels the game uses get a role, each above the built-in role whose permissions it has.</summary>
+	[Test]
+	public async Task LevelRolesLineUpWithTheBuiltInRoles()
+	{
+		var database = await TranslateAsync();
+		var priority = BuiltInRoles.All.ToDictionary(role => role.Slug, role => role.Priority);
+		var roles = database.Roles.ToDictionary(role => role.Slug);
+
+		await Assert.That(roles.Keys).IsEquivalentTo(["guildmaster", "architect", "councilor", "immortal"]);
+		await Assert.That(roles["guildmaster"].Priority).IsGreaterThan(priority[BuiltInRoles.PlayerSlug]).And.IsLessThan(roles["architect"].Priority);
+		await Assert.That(roles["architect"].Priority).IsGreaterThan(priority[BuiltInRoles.BuilderSlug]).And.IsLessThan(priority[BuiltInRoles.RoyaltySlug]);
+		await Assert.That(roles["councilor"].Priority).IsGreaterThan(priority[BuiltInRoles.RoyaltySlug]).And.IsLessThan(priority[BuiltInRoles.WizardSlug]);
+		await Assert.That(roles["immortal"].Priority).IsGreaterThan(priority[BuiltInRoles.WizardSlug]).And.IsLessThan(priority[BuiltInRoles.GodSlug]);
+
+		await Assert.That(roles["architect"].Permissions).ContainsKey(PortalPermission.GamePower("Builder"));
+		await Assert.That(roles["councilor"].Permissions).ContainsKey(PortalPermission.GameRoyalty);
+		await Assert.That(roles["immortal"].Permissions).ContainsKey(PortalPermission.GameWizard).And.ContainsKey(PortalPermission.ServerAdmin);
+		await Assert.That(roles["immortal"].Permissions).DoesNotContainKey(PortalPermission.Administrator);
+	}
+
+	/// <summary>Each object's reality masks, eight hex digits received and eight transmitted, ride along unnamed.</summary>
+	[Test]
+	public async Task RealityMasksAreCarried()
+	{
+		var database = await TranslateAsync();
+
+		await Assert.That(Object(database, 3).Reality).IsEqualTo(new PennMUSHReality(3, 2));
+		await Assert.That(Object(database, 9).Reality).IsEqualTo(new PennMUSHReality(1, 5));
+		await Assert.That(Object(database, 4).Reality).IsNull();
+		await Assert.That(Object(database, 9).Attributes.Select(a => a.Name)).DoesNotContain("RLEVEL");
+	}
+
+	/// <summary>
+	/// RhostMUSH's own totems are flags at once; one a game's <c>netrhost.conf</c> defines is a flag once the
+	/// configuration is read, set on each object holding its bit.
+	/// </summary>
+	[Test]
+	public async Task TotemsBecomeFlags()
+	{
+		var database = await TranslateAsync();
+		var gadget = Object(database, 10);
+
+		await Assert.That(gadget.Flags).Contains("MARKER0").And.Contains("SETQLABEL").And.DoesNotContain("MARKER1");
+		await Assert.That(database.FlagDefinitions.First(f => f.Name == "MARKER0").SetPermissions).IsEquivalentTo(["wizard"]);
+		await Assert.That(database.FlagDefinitions.First(f => f.Name == "SETQLABEL").SetPermissions).IsEmpty();
+		await Assert.That(gadget.Attributes.Select(a => a.Name)).DoesNotContain("*TOTEMS");
+
+		RhostDatabaseTranslator.MapTotems(database, [new TotemDirective("Shiny", 2, 4), new TotemDirective("Dull", 2, 8)]);
+
+		await Assert.That(gadget.Flags).Contains("SHINY").And.DoesNotContain("DULL");
+		await Assert.That(database.FlagDefinitions.Select(f => f.Name)).Contains("SHINY").And.DoesNotContain("DULL");
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Totem SHINY: imported as a flag of its own") && n.Contains("#10"));
+	}
+
+	/// <summary>
+	/// A cluster is one object here: its first object takes the others' attributes, and the others are not imported.
+	/// A name more than one of them holds keeps the first one's value.
+	/// </summary>
+	[Test]
+	public async Task ClustersAreMergedIntoTheirFirstObject()
+	{
+		var text = (await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath))
+			.Replace("+N260\n", "+N262\n+A260\n1:_CLUSTER\n+A261\n1:EXTRA\n");
+		text = WithAttributes(text, 9, ">260", "#9 #10");
+		text = WithAttributes(text, 10, ">260", "#9 #10", ">256", "duplicate", ">261", "merged");
+
+		var database = RhostDatabaseTranslator.Translate(RhostFlatfileReader.Read(text));
+		var widget = Object(database, 9);
+
+		await Assert.That(database.Objects.Select(o => o.DBRef)).DoesNotContain(10);
+		await Assert.That(widget.Attributes.First(a => a.Name == "EXTRA").Value).IsEqualTo("merged");
+		await Assert.That(widget.Attributes.Count(a => a.Name == "CMD_HELLO")).IsEqualTo(1);
+		await Assert.That(widget.Attributes.Select(a => a.Name)).DoesNotContain("_CLUSTER");
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster #9: its 2 object(s) merged into #9"));
+		await Assert.That(database.ImportNotes.Texts()).Contains(n => n.StartsWith("Cluster attribute CMD_HELLO: held by more than one"));
 	}
 
 	[Test]

@@ -11,6 +11,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion;
+using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Services.Imports;
@@ -42,6 +43,11 @@ public static class ImportWorker
 					DatabaseDialect.RhostMUSH => ConfigurationDialect.RhostMUSH,
 					_ => ConfigurationDialect.PennMUSH
 				}) : null;
+			if (configuration is not null)
+			{
+				source.Reality = configuration.Reality;
+				RhostDatabaseTranslator.MapTotems(source, configuration.Totems);
+			}
 			ConversionResult result;
 			var host = await new IsolatedImportHostFactory().CreateAsync(session, deadline.Token);
 			try
