@@ -4,6 +4,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Queries.Database;
@@ -21,7 +22,9 @@ public sealed class StarterWorldState
 /// <summary>
 /// What a new world has to show its first player, made once from the setup wizard: the room new characters arrive
 /// in (<c>player_start</c>) gets a description and an exit, <c>Tutorial</c>, to a room that shows the basics, whose
-/// <c>Out</c> leads back to it, and a Newbie channel opens for questions. Every part goes through the game's own commands as God, and each is left out
+/// <c>Out</c> leads back to it, and a Newbie channel opens for questions. Two zones split the world: <c>OOC</c> holds the
+/// arrival and tutorial rooms, <c>IC</c> the first in-character room, which <c>In Character</c> leads to from the
+/// arrival room for approved characters and staff only. Each zone is a World map with a legend for its rooms. Every part goes through the game's own commands as God, and each is left out
 /// when the game already has it: an arrival room with a description or an exit, or a channel named Newbie. An
 /// imported world is therefore left as it was.
 /// </summary>
@@ -42,6 +45,19 @@ public sealed partial class StarterWorldService(
 		"The basics, one command at a time. Type look to read this again. say Hello (or \"Hello) speaks to the room, "
 		+ "and pose waves (or :waves) acts. page <name>=<message> reaches someone anywhere in the game. help <topic> "
 		+ "explains any command. Out leads back to the arrival room.";
+
+	public const string OocZone = "OOC";
+
+	public const string IcZone = "IC";
+
+	public const string CommonsName = "Commons";
+
+	public const string CommonsDescription =
+		"The first in-character room. Staff describe it and build the game's world out from here. Out leads back to the "
+		+ "arrival room.";
+
+	/// <summary>What a character who may not go in character yet is told at the <c>In Character</c> exit.</summary>
+	public const string CommonsRefusal = "Only approved characters and staff may go in character.";
 
 	public const string Channel = "Newbie";
 
@@ -111,10 +127,81 @@ public sealed partial class StarterWorldService(
 		var outFailed = Failed(await RunAsync("@OPEN", "Out;o", arrivalRef, null, tutorial));
 		if (toFailed || outFailed)
 			failures.Add("The exits between the arrival room and the tutorial room could not all be opened.");
-		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse(tutorial[1..], System.Globalization.CultureInfo.InvariantCulture))), ct) is AnySharpObject made
-			&& await attributes.SetAttributeAsync(god, made, "DESCRIBE", MarkupText.Plain(TutorialDescription)) is Error<string>)
+		if (!await SetAsync(god, tutorial, "DESCRIBE", TutorialDescription, ct))
 			failures.Add("The tutorial room could not be described.");
+
+		failures.AddRange(await ZonesAsync(arrivalRef, tutorial, ct));
 	}
+
+	/// <summary>
+	/// The OOC and IC zones, each a compass map whose legend draws its rooms, and the Commons, the first IC room: its
+	/// <c>In Character</c> exit from <paramref name="arrival"/> passes only a character <c>isapproved()</c> says may play,
+	/// and its <c>Out</c> leads back. <paramref name="arrival"/> and <paramref name="tutorial"/> go in the OOC zone.
+	/// </summary>
+	/// <returns>What could not be made; empty when all of it was.</returns>
+	public async Task<IReadOnlyList<string>> ZonesAsync(string arrival, string tutorial, CancellationToken ct)
+	{
+		var failures = new List<string>();
+		if (await mediator.Send(new GetObjectNodeQuery(God), ct) is not AnySharpObject god)
+		{
+			failures.Add("God could not be found.");
+			return failures;
+		}
+		if (Made(await RunAsync("@CREATE", OocZone)) is not { } ooc || Made(await RunAsync("@CREATE", IcZone)) is not { } ic)
+		{
+			failures.Add("The OOC and IC zones could not be made.");
+			return failures;
+		}
+		if (Made(await RunAsync("@DIG", CommonsName)) is not { } commons)
+		{
+			failures.Add("The first in-character room could not be dug.");
+			return failures;
+		}
+		var made = new (string Target, string Attribute, string Value)[]
+		{
+			(ooc, "MAP`KIND", "compass"), (ooc, "MAP`LEGEND`OOC`LABEL", "Out of character"), (ooc, "MAP`LEGEND`OOC`TONE", "muted"),
+			(ooc, "MAP`LEGEND`OOC`ICON", "chat"),
+			(ic, "MAP`KIND", "compass"), (ic, "MAP`LEGEND`IC`LABEL", "In character"), (ic, "MAP`LEGEND`IC`TONE", "primary"),
+			(ic, "MAP`LEGEND`IC`ICON", "mask"),
+			(arrival, "ENVIRONMENT", "ooc"), (tutorial, "ENVIRONMENT", "ooc"), (commons, "ENVIRONMENT", "ic"),
+			(commons, "DESCRIBE", CommonsDescription),
+		};
+		var set = await made.ToAsyncEnumerable().AllAsync(async (entry, token) => await SetAsync(god, entry.Target, entry.Attribute, entry.Value, token), ct);
+		var zoned = await new[] { (arrival, ooc), (tutorial, ooc), (commons, ic) }.ToAsyncEnumerable()
+			.AllAsync(async (entry, token) => await ZoneAsync(entry.Item1, entry.Item2, token), ct);
+		if (!set || !zoned) failures.Add("The OOC and IC zones could not all be set up.");
+
+		if (Made(await RunAsync("@OPEN", "In Character;ic", commons, null, arrival)) is not { } way
+			|| Failed(await RunAsync("@OPEN", "Out;o", arrival, null, commons)))
+		{
+			failures.Add("The exits between the arrival room and the Commons could not all be opened.");
+			return failures;
+		}
+		// The approval rule is isapproved()'s, so the exit agrees with every +-verb that asks it.
+		await RunAsync("@LOCK", way, "APPROVED/1");
+		if (!await SetAsync(god, way, "APPROVED", "[isapproved(%#)]", ct) || !await SetAsync(god, way, "FAILURE", CommonsRefusal, ct)
+			|| await ObjectAsync(way, ct) is not { } exit || !exit.Object().Locks.ContainsKey("Basic"))
+			failures.Add("The way to the Commons could not be locked to approved characters.");
+		return failures;
+	}
+
+	/// <summary>Puts <paramref name="target"/> in <paramref name="zone"/> with <c>@chzone</c>, and says whether it is there.</summary>
+	private async Task<bool> ZoneAsync(string target, string zone, CancellationToken ct)
+	{
+		await RunAsync("@CHZONE", target, zone);
+		return await ObjectAsync(target, ct) is { } found
+			&& await found.Object().Zone.WithCancellation(ct) is AnySharpObject set
+			&& $"#{set.Object().DBRef.Number}" == zone;
+	}
+
+	private async Task<AnySharpObject?> ObjectAsync(string dbref, CancellationToken ct)
+		=> await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse(dbref[1..], System.Globalization.CultureInfo.InvariantCulture))), ct)
+			is AnySharpObject found ? found : null;
+
+	/// <summary>Sets <paramref name="attribute"/> on the object <paramref name="target"/> names, as God.</summary>
+	private async Task<bool> SetAsync(AnySharpObject god, string target, string attribute, string value, CancellationToken ct)
+		=> await ObjectAsync(target, ct) is { } found
+			&& await attributes.SetAttributeAsync(god, found, attribute, MarkupText.Plain(value)) is not Error<string>;
 
 	private async Task ChannelAsync(List<string> failures, CancellationToken ct)
 	{

@@ -25,9 +25,16 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const string HeightAttribute = "MAP`SIZE`H";
 	public const string LevelAttribute = "MAP`LEVEL";
 	public const string BackdropAttribute = "MAP`BACKDROP";
+	public const string LegendAttribute = "MAP`LEGEND";
+
+	/// <summary>The kind of place a room is: the attribute gmcp-room sends a MUD client's mapper by default.</summary>
+	public const string EnvironmentAttribute = "ENVIRONMENT";
 	public const int MaxMaps = 500;
 	public const int MaxRooms = 2000;
 	public const int MaxExits = 8000;
+
+	/// <summary>How many kinds of place one map's legend names.</summary>
+	public const int MaxLegend = 100;
 
 	/// <summary>How many rooms a route search reaches before it gives up.</summary>
 	public const int MaxRouteRooms = 5000;
@@ -108,7 +115,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, await NumbersAsync(room, room, position, ct),
 				Positive(await NumbersAsync(room, room, Size, ct)))
 			{
-				Editable = canEdit && await permissions.Controls(viewer, room)
+				Editable = canEdit && await permissions.Controls(viewer, room),
+				Environment = await OwnValueAsync(room, room, EnvironmentAttribute) is { Length: > 0 } environment
+					? environment.ToLowerInvariant()
+					: null,
 			}));
 		}
 
@@ -148,6 +158,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			Level = int.TryParse(await OwnValueAsync(map, map, LevelAttribute), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture,
 				out var level) ? level : null,
 			LevelNames = await LevelNamesAsync(map),
+			Legend = await LegendAsync(map, ct),
 			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
 		};
 	}
@@ -280,6 +291,41 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		}
 		return names;
 	}
+
+	/// <summary>
+	/// The legend <paramref name="map"/> draws its rooms by: each <c>MAP`LEGEND`&lt;type&gt;`TONE</c>, <c>`ICON</c> and
+	/// <c>`LABEL</c> on it, then on the map it is zoned to, and so up; a type takes all three from the nearest map that
+	/// names it. Each map's legend is read as that map.
+	/// </summary>
+	private async Task<IReadOnlyList<MapLegendDto>> LegendAsync(AnySharpObject map, CancellationToken ct)
+	{
+		var legend = new Dictionary<string, MapLegendDto>(StringComparer.Ordinal);
+		var seen = new HashSet<int>();
+		for (AnySharpObject? at = map; at is not null && legend.Count < MaxLegend && seen.Count < MaxDepth
+			&& seen.Add(at.Object().DBRef.Number); at = await ParentMapAsync(at, ct))
+		{
+			if (await attributes.GetAttributePatternAsync(at, at, $"{LegendAttribute}`*`*", checkParents: false,
+					IAttributeService.AttributePatternMode.Wildcard) is not SharpAttribute[] found) continue;
+			var types = found
+				.Select(attribute => (Name: attribute.LongName.Split('`'), Value: attribute.Value.ToPlainText().Trim()))
+				.Where(entry => entry.Name.Length == 4 && entry.Value.Length > 0)
+				.GroupBy(entry => entry.Name[2].ToLowerInvariant())
+				.Where(type => !legend.ContainsKey(type.Key));
+			foreach (var type in types)
+			{
+				string? Field(string field) => type.FirstOrDefault(entry => entry.Name[3].Equals(field, StringComparison.OrdinalIgnoreCase)).Value;
+				legend[type.Key] = new(type.Key, Field("LABEL") ?? type.Key, Field("TONE")?.ToLowerInvariant(), Field("ICON"));
+			}
+		}
+		return [.. legend.Values.OrderBy(entry => entry.Label, StringComparer.OrdinalIgnoreCase).Take(MaxLegend)];
+	}
+
+	/// <summary>The map <paramref name="map"/> is zoned to, when that holds a <c>MAP`KIND</c> of its own.</summary>
+	private async Task<AnySharpObject?> ParentMapAsync(AnySharpObject map, CancellationToken ct)
+		=> await map.Object().Zone.WithCancellation(ct) is AnySharpObject zone
+			&& MapKinds.Parse(await OwnValueAsync(zone, zone, KindAttribute)) is not null
+				? zone
+				: null;
 
 	/// <summary>Object <paramref name="number"/> when it holds its own <c>MAP`KIND</c> naming a kind, and <paramref name="viewer"/> may see it.</summary>
 	private async Task<AnySharpObject?> MapAsync(AnySharpObject viewer, int number, CancellationToken ct)
