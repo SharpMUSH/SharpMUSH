@@ -112,6 +112,29 @@ public class InformationFunctionUnitTests
 			.IsEqualTo(renamed);
 	}
 
+	/// <summary>
+	/// PennMUSH <c>do_clone</c> (<c>create.c:777-788</c>): an exit cloned under a name with aliases answers to
+	/// those, and one cloned without a new name takes the original's along with its other attributes.
+	/// </summary>
+	[Test]
+	public async Task ClonedExitKeepsTheAliasesItWasClonedUnder()
+	{
+		var destDbRef = (await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("CloneDest")}"))).Message.ToPlainText()!.Trim();
+		var exitName = TestIsolationHelpers.GenerateUniqueName("CloneExit");
+		var exitDbRef = (await CommandParser.CommandParse(1, ConnectionService,
+			MarkupText.Plain($"@open {exitName};ca={destDbRef}"))).Message.ToPlainText()!.Trim();
+
+		var renamed = TestIsolationHelpers.GenerateUniqueName("CloneRenamed");
+		var renamedClone = (await Parser.EvaluateAsync(MarkupText.Plain($"clone({exitDbRef},{renamed};cb)"))).ToPlainText();
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullname({renamedClone})"))).ToPlainText())
+			.IsEqualTo($"{renamed};cb");
+
+		var sameClone = (await Parser.EvaluateAsync(MarkupText.Plain($"clone({exitDbRef})"))).ToPlainText();
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain($"fullname({sameClone})"))).ToPlainText())
+			.IsEqualTo($"{exitName};ca");
+	}
+
 	[Test]
 	[Arguments("accname(%#)", "")]
 	public async Task Accname(string str, string expected)
