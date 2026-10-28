@@ -21,14 +21,34 @@ public interface IPipeOutputCapture
 	IDisposable BeginCapture(int executor, PipeBuffer buffer);
 
 	/// <summary>
-	/// Offers a piece of output to the active frame. Returns <c>true</c> when it was addressed to the
-	/// piped executor, and the caller then delivers it to no one.
+	/// Offers a piece of output to the active frame, then to <paramref name="dbref"/>'s <c>@pipe</c>. Returns
+	/// <c>true</c> when it was taken away, and the caller then delivers it to no one; an <c>@pipe/tee</c>
+	/// copies it and returns <c>false</c>.
 	/// </summary>
 	bool TryCapture(int dbref, MString text);
 
-	/// <summary>Whether <see cref="TryCapture"/> would take output addressed to <paramref name="dbref"/>.</summary>
+	/// <summary>Whether <see cref="TryCapture"/> would take or copy output addressed to <paramref name="dbref"/>.</summary>
 	bool Captures(int dbref);
+
+	/// <summary>
+	/// Starts RhostMUSH's <c>@pipe</c> for <paramref name="dbref"/>: what it is told from now on, in any queue
+	/// entry, goes into <paramref name="pipe"/> until <see cref="StopAttributePipe"/>. False, and nothing
+	/// changes, when one is already running.
+	/// </summary>
+	bool StartAttributePipe(int dbref, AttributePipe pipe);
+
+	/// <summary>Stops <paramref name="dbref"/>'s <c>@pipe</c> and returns it, or null when none was running.</summary>
+	AttributePipe? StopAttributePipe(int dbref);
+
+	/// <summary><paramref name="dbref"/>'s running <c>@pipe</c>, or null.</summary>
+	AttributePipe? AttributePipeOf(int dbref);
 }
+
+/// <summary>
+/// A running <c>@pipe</c>: the attribute its text is written to when it stops, whether output is also
+/// shown (<c>/tee</c>), and the text so far, bounded by the attribute's length limit.
+/// </summary>
+public sealed record AttributePipe(string Attribute, bool Tee, PipeBuffer Buffer);
 
 /// <summary>The output a piped command produced for its executor, line by line and bounded in total length.</summary>
 public sealed class PipeBuffer(int maxLength)

@@ -98,6 +98,11 @@ public static partial class ErrorMessages
 		public const string Arg1NotFound = "#-1 ARG1 NOT FOUND";
 		public const string Arg2NotFound = "#-1 ARG2 NOT FOUND";
 		public const string BadAttrName = "#-1 BAD ATTR NAME";
+		/// <summary>RhostMUSH's keepflags()/remflags() without the <c>&amp;</c> or <c>|</c> before the flags.</summary>
+		public const string ArgumentsExpected = "#-1 ARGUMENTS EXPECTED";
+		/// <summary>RhostMUSH's ueval() with no <c>/&lt;level&gt;</c> after the attribute.</summary>
+		public const string NoLevelSpecified = "#-1 NO LEVEL SPECIFIED";
+		public const string FlagMatchNeedsOperator = "#-1 FUNCTION REQUIRES '&' OR '|' FOR FLAG MATCHES";
 		/// <summary>PennMUSH's <c>chr()</c> answer for a control character (<c>fun_chr</c>, src/funstr.c).</summary>
 		public const string UnprintableCharacter = "#-1 UNPRINTABLE CHARACTER";
 		public const string TimeInteger = "#-1 TIME INTEGER OUT OF RANGE";

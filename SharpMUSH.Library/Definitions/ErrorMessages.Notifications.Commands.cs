@@ -90,5 +90,24 @@ public static partial class ErrorMessages
 		public const string InputRescueNoneFormat = "{0} has no open input session.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string InputRescuedFormat = "Ended {0}'s input session. Its timeout callback runs now.";
+
+		// RhostMUSH's @pipe.
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeOnFormat = "@pipe: what you are told now goes to {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeTeeFormat = "@pipe: what you are told is now also copied to {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeOffFormat = "@pipe: written to {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeFullFormat = "@pipe: {0} filled up, so the rest was shown to you instead.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeStatusOnFormat = "@pipe: piping to {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeStatusTeeFormat = "@pipe: copying to {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PipeAlreadyFormat = "@pipe: you are already piping to {0}.";
+		public const string PipeNotRunning = "@pipe: you are not piping to an attribute.";
+		public const string PipeNeedsAttribute = "@pipe: name the attribute to pipe to.";
+		public const string PipeNeedsSwitch = "@pipe: use /on, /tee, /off or /status.";
 	}
 }

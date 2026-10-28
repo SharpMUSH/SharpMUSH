@@ -221,13 +221,21 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 		var natsUrl = $"nats://localhost:{natsPort}";
 		Environment.SetEnvironmentVariable("NATS_URL", natsUrl);
 
+		// The substitute and the engine share one pipe capture, so an @pipe the engine starts is the one
+		// the substitute's deliveries are offered to.
+		var pipes = new PipeOutputCapture();
+		var configureTestServices = ConfigureTestServices;
 		_server = new ServerTestWebApplicationBuilderFactory<SharpMUSH.Server.Program>(
 			_customSqlConnectionString ?? MySqlTestServer.Instance.GetConnectionString(),
 			configFile,
-			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications),
+			UseRealNotifications ? null : TestHelpers.CreateNotifyServiceSubstitute(Notifications, pipes),
 			_sqlPlatform, _ownWorldPath = UsesOwnWorld
 				? Path.Join(Path.GetTempPath(), $"sharpmush-lightning-tests-{GetType().Name}-{Guid.NewGuid():N}")
-				: null, ConfigureTestServices);
+				: null, UseRealNotifications ? configureTestServices : services =>
+				{
+					services.AddSingleton<IPipeOutputCapture>(pipes);
+					configureTestServices?.Invoke(services);
+				});
 
 		var provider = _server.Services;
 		var connectionService = provider.GetRequiredService<IConnectionService>();

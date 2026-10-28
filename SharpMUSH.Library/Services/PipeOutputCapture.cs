@@ -1,4 +1,5 @@
 using SharpMUSH.Library.Services.Interfaces;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 
 namespace SharpMUSH.Library.Services;
@@ -17,19 +18,36 @@ public class PipeOutputCapture : IPipeOutputCapture
 		return new CaptureScope(prior);
 	}
 
+	// @pipe outlives a queue entry, so it is kept by dbref rather than in the async flow.
+	private readonly ConcurrentDictionary<int, AttributePipe> _attributePipes = new();
+
 	public bool TryCapture(int dbref, MString text)
 	{
-		if (Frames.Value is not { IsEmpty: false } frames) return false;
+		if (Frames.Value is { IsEmpty: false } frames && frames.Peek() is var (executor, buffer) && executor == dbref)
+		{
+			buffer.Append(text);
+			return true;
+		}
 
-		var (executor, buffer) = frames.Peek();
-		if (executor != dbref) return false;
+		// A full @pipe takes nothing more: the rest is shown, as when RhostMUSH turns a full pipe off.
+		if (!_attributePipes.TryGetValue(dbref, out var pipe) || pipe.Buffer.Truncated) return false;
 
-		buffer.Append(text);
-		return true;
+		pipe.Buffer.Append(text);
+		return !pipe.Tee;
 	}
 
 	public bool Captures(int dbref)
-		=> Frames.Value is { IsEmpty: false } frames && frames.Peek().Executor == dbref;
+		=> Frames.Value is { IsEmpty: false } frames && frames.Peek().Executor == dbref
+			|| _attributePipes.TryGetValue(dbref, out var pipe) && !pipe.Buffer.Truncated;
+
+	public bool StartAttributePipe(int dbref, AttributePipe pipe)
+		=> _attributePipes.TryAdd(dbref, pipe);
+
+	public AttributePipe? StopAttributePipe(int dbref)
+		=> _attributePipes.TryRemove(dbref, out var pipe) ? pipe : null;
+
+	public AttributePipe? AttributePipeOf(int dbref)
+		=> _attributePipes.GetValueOrDefault(dbref);
 
 	private sealed class CaptureScope(ImmutableStack<(int, PipeBuffer)> prior) : IDisposable
 	{

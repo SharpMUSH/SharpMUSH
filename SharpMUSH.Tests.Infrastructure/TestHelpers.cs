@@ -271,13 +271,18 @@ public static class TestHelpers
 	/// Optional sink that also receives every delivered message, so a test can read what was said without
 	/// enumerating <c>ReceivedCalls()</c>. See <see cref="NotificationRecorder"/>.
 	/// </param>
-	public static INotifyService CreateNotifyServiceSubstitute(NotificationRecorder? recorder = null)
+	/// <param name="pipeCapture">
+	/// The pipe capture the host registers, when the test host's <c>@pipe</c> must reach this substitute;
+	/// otherwise one of its own.
+	/// </param>
+	public static INotifyService CreateNotifyServiceSubstitute(NotificationRecorder? recorder = null,
+		SharpMUSH.Library.Services.PipeOutputCapture? pipeCapture = null)
 	{
 		var capture = new SharpMUSH.Library.Services.HttpOutputCapture();
 		// The portal command route's copy of a character's output (POST api/commands), also mirrored.
 		var commandCapture = new SharpMUSH.Library.Services.CommandOutputCapture();
 		// A piped command's output (`look ;| say %|`), taken for the next command and delivered to no one.
-		var pipeCapture = new SharpMUSH.Library.Services.PipeOutputCapture();
+		pipeCapture ??= new SharpMUSH.Library.Services.PipeOutputCapture();
 		var localization = new SharpMUSH.Library.Services.LocalizationService();
 		var notifier = Substitute.For<INotifyService>();
 

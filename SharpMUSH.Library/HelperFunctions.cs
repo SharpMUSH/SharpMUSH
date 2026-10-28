@@ -43,7 +43,8 @@ public static partial class HelperFunctions
 
 	/// <summary>
 	/// The object's grants: its roles, overrides and the scopes they resolve to. While an app acts as the object
-	/// (<see cref="DelegatedApp.Current"/>), only what the app's scopes cover.
+	/// (<see cref="DelegatedApp.Current"/>), only what the app's scopes cover; under a privilege ceiling
+	/// (<see cref="PrivilegeCeiling"/>), only what its roles up to the ceiling grant.
 	/// </summary>
 	public static Task<ObjectGrants> GrantsAsync(this AnySharpObject obj, CancellationToken cancellationToken)
 		=> obj.Object().GrantsAsync(cancellationToken);
@@ -52,11 +53,17 @@ public static partial class HelperFunctions
 	public static Task<ObjectGrants> GrantsAsync(this SharpObject obj, CancellationToken cancellationToken)
 	{
 		var grants = obj.Grants.WithCancellation(cancellationToken);
-		return DelegatedApp.ActingAs(obj.DBRef) is { } app ? WithinAsync(grants, app) : grants;
+		var app = DelegatedApp.ActingAs(obj.DBRef);
+		var ceiling = PrivilegeCeiling.Over(obj.DBRef.Number);
+		return app is null && ceiling is null ? grants : LimitedAsync(grants, app, ceiling);
 	}
 
-	private static async Task<ObjectGrants> WithinAsync(Task<ObjectGrants> grants, DelegatedApp app)
-		=> (await grants).Within(app.Scopes);
+	private static async Task<ObjectGrants> LimitedAsync(Task<ObjectGrants> grants, DelegatedApp? app, int? ceiling)
+	{
+		var limited = await grants;
+		if (app is not null) limited = limited.Within(app.Scopes);
+		return ceiling is { } priority ? limited.AtMost(priority) : limited;
+	}
 
 	/// <summary>
 	/// PennMUSH: Wizard(x) = God(x) || has_wizard_flag(x). The WIZARD flag is the <c>wizard</c> role, so
@@ -100,9 +107,10 @@ public static partial class HelperFunctions
 			.AnyAsync(x => x.Name.Equals("MISTRUST", StringComparison.OrdinalIgnoreCase), cancellationToken);
 	}
 
-	/// <summary>Player #1, unless an app acts as it without every permission group (<see cref="DelegatedScopes.HasEveryGroup"/>).</summary>
+	/// <summary>Player #1, unless an app acts as it without every permission group (<see cref="DelegatedScopes.HasEveryGroup"/>) or a privilege ceiling (<see cref="PrivilegeCeiling"/>) lowers it.</summary>
 	public static bool IsGod(this AnySharpObject obj)
 		=> obj.Object().Key == 1
+			&& PrivilegeCeiling.Over(1) is null
 			&& (DelegatedApp.ActingAs(obj.Object().DBRef) is not { } app || DelegatedScopes.HasEveryGroup(app.Scopes));
 
 	public static ValueTask<bool> IsPriv(this AnySharpObject obj)

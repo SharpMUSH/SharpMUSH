@@ -15,6 +15,7 @@
 | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
 | [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
 | [XATTR()]             | [XGET()]              | [ZFUN()]              | [HASARG()]            |
+| [UEVAL()]             | [STREVAL()]           |                       |                       |
 
 ::: seealso
 - [attributes]
@@ -36,13 +37,14 @@
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|           |           |           |           |
-|-----------|-----------|-----------|-----------|
-| [AND()]   | [CAND()]  | [COR()]   | [EQ()]    |
-| [GT()]    | [GTE()]   | [LAND()]  | [LNOR()]  |
-| [LOR()]   | [LT()]    | [LTE()]   | [LXNOR()] |
-| [LXOR()]  | [NAND()]  | [NEQ()]   | [NOR()]   |
-| [NOT()]   | [OR()]    | [T()]     | [XOR()]   |
+|             |             |             |             |
+|-------------|-------------|-------------|-------------|
+| [AND()]     | [CAND()]    | [COR()]     | [EQ()]      |
+| [GT()]      | [GTE()]     | [LAND()]    | [LNOR()]    |
+| [LOR()]     | [LT()]      | [LTE()]     | [LXNOR()]   |
+| [LXOR()]    | [NAND()]    | [NEQ()]     | [NOR()]     |
+| [NOT()]     | [OR()]      | [T()]       | [XOR()]     |
+| [ISALPHA()] | [ISDIGIT()] | [ISLOWER()] | [ISUPPER()] |
 
 ::: seealso
 - [boolean values]
@@ -121,7 +123,7 @@
 | [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    |
 | [POLL()]         | [POWERS()]       | [QUOTA()]        | [RESTARTS()]     |
 | [ROLES()]        | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
-| [WIZMOTD()]      |                  |                  |                  |
+| [WIZMOTD()]      | [GLOBALROOM()]   |                  |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -146,7 +148,8 @@
 | [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
 | [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
 | [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
-| [WORDPOS()]     | [WORDS()]       |                 |                 |
+| [WORDPOS()]     | [WORDS()]       | [KEEPFLAGS()]   | [KEEPTYPE()]    |
+| [REMFLAGS()]    | [REMTYPE()]     |                 |                 |
 
 ::: seealso
 - [LISTS]
@@ -168,7 +171,8 @@
 | [MUL()]      | [PI()]       | [POWER()]    | [ROOT()]     |
 | [ROUND()]    | [SIGN()]     | [SIN()]      | [SQRT()]     |
 | [STDDEV()]   | [SUB()]      | [TAN()]      | [TRUNC()]    |
-| [VAL()]      |              |              |              |
+| [VAL()]      | [COSH()]     | [FBETWEEN()] | [SINH()]     |
+| [TANH()]     |              |              |              |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
@@ -249,7 +253,7 @@
 | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            |
 | [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               |
 | [TR()]                   | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 | [ESCAPEX()]              |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -294,7 +298,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [STEXT()]          | [STOPEVENT()]      | [SUGGEST()]        | [TAG()]            |
 | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
 | [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
-| [WIPE()]           |                    |                    |                    |
+| [WIPE()]           | [MOVE()]           | [NAMEQM()]         | [STRFUNC()]        |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
