@@ -41,12 +41,12 @@ public partial class Functions
 	public async ValueTask<CallState> ListRLevels(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> new(string.Join(' ', (await Reality(parser).ConfigurationAsync(ExecutionBudget.CurrentToken)).Layers));
 
-	/// <summary>cansee(): whether the first object receives a layer the second transmits, wherever the two are.</summary>
+	/// <summary>cansee(): whether the first object receives a configured layer the second transmits, wherever the two are.</summary>
 	[SharpFunction(Name = "cansee", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["viewer", "target"])]
 	public ValueTask<CallState> CanSee(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> BothAsync(parser, (viewer, target) => ValueTask.FromResult<CallState>(
-			viewer.Receive.Intersect(target.Transmit).Any() || viewer.Object.Equals(target.Object)));
+		=> BothAsync(parser, async (viewer, target) => viewer.Object.Equals(target.Object)
+			|| RealityPolicy.SharedLayers(await Reality(parser).ConfigurationAsync(ExecutionBudget.CurrentToken), viewer, target).Any());
 
 	/// <summary>chkreality(): whether reality lets the first object perceive the second, as everything else asks it.</summary>
 	[SharpFunction(Name = "chkreality", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,

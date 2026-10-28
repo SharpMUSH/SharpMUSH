@@ -342,6 +342,14 @@ public class RealityGameTests
 			await Assert.That(await Eval($"rxlevel({target})")).IsEqualTo("ghost");
 			await Assert.That(await Eval($"txlevel({target},nowhere)")).StartsWith("#-1");
 
+			// A layer taken out of the configuration no longer lets anything see anything.
+			var other = (await mediator.Send(new CreateThingCommand("reality level other", home, player, home))).ToString();
+			await parser.CommandListParse(MarkupText.Plain($"@txlevel {other}=ghost"));
+			await Assert.That(await Eval($"cansee({target},{other})")).IsEqualTo("1");
+			await policy.SaveConfigurationAsync(new(1, false, ["normal"], []), default);
+			await Assert.That(await Eval($"cansee({target},{other})")).IsEqualTo("0");
+			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost"], new() { ["spirit"] = "ghost" }), default);
+
 			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"], new() { ["spirit"] = "ghost" }), default);
 			await Assert.That(await Eval($"chkreality(%#,{target})")).IsEqualTo("0");
 			await parser.CommandListParse(MarkupText.Plain($"@leveldefault {target}"));

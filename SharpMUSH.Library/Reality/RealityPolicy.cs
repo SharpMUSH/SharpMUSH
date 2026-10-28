@@ -54,7 +54,8 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 			.Select(layer => transmitting.Descriptions.GetValueOrDefault(layer)).FirstOrDefault(attribute => attribute is not null);
 	}
 
-	private static IEnumerable<string> SharedLayers(RealityConfiguration config, ObjectReality receiver, ObjectReality target)
+	/// <summary>The configured layers <paramref name="receiver"/> receives and <paramref name="target"/> transmits.</summary>
+	public static IEnumerable<string> SharedLayers(RealityConfiguration config, ObjectReality receiver, ObjectReality target)
 		=> config.Layers.Where(layer => receiver.Receive.Contains(layer, StringComparer.OrdinalIgnoreCase)
 			&& target.Transmit.Contains(layer, StringComparer.OrdinalIgnoreCase));
 
