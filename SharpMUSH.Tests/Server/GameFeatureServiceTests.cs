@@ -219,6 +219,26 @@ public class GameFeatureServiceTests
 			.Because("a new game does not get the wiki reader");
 	}
 
+	/// <summary>
+	/// The World map is offered ticked to a new game without bootstrap installing it, and a game that removed it is not
+	/// offered it again.
+	/// </summary>
+	[Test]
+	public async Task ASuggestedPackage_IsRecommended_UntilRemoved()
+	{
+		var game = new Game();
+
+		var packages = await game.Features().PackagesAsync();
+
+		await Assert.That(packages.Single(p => p.Id == "world-map").Recommended).IsTrue();
+		await Assert.That(BundledPackages.All.Single(p => p.PackageId == "world-map").InstallAtFirstBoot).IsFalse()
+			.Because("an upgraded game is not given a map page it never set up");
+
+		await game.Features().SetDeclinedAsync("world-map", declined: true);
+
+		await Assert.That((await game.Features().PackagesAsync()).Single(p => p.Id == "world-map").Recommended).IsFalse();
+	}
+
 	[Test]
 	public async Task Asking_ForAPackage_InstallsWhatItDependsOnFirst()
 	{

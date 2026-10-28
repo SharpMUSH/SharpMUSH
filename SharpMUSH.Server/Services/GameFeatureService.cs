@@ -93,7 +93,8 @@ public class GameFeatureService(
 				HandlerKind(package.Requires),
 				IsAvailable(package),
 				dependsOn ?? [],
-				package.InstallAtFirstBoot && !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase),
+				(package.InstallAtFirstBoot || package.SuggestAtSetup)
+					&& !declined.Contains(package.PackageId, StringComparer.OrdinalIgnoreCase),
 				category,
 				package.Bridge));
 		}
@@ -180,12 +181,13 @@ public class GameFeatureService(
 		=> await serverData.SetExpandedServerDataAsync(new SetupWizardState { Pending = pending });
 
 	/// <summary>
-	/// Records that the administrator removed (or put back) a first-boot package or a bridge, so bootstrap leaves the
-	/// choice standing. Only those are recorded; bootstrap never installs the others.
+	/// Records that the administrator removed (or put back) a first-boot package, a bridge or a package the wizard
+	/// suggests, so bootstrap leaves the choice standing and the wizard stops offering it ticked. Only those are
+	/// recorded; bootstrap never installs the others.
 	/// </summary>
 	public async Task SetDeclinedAsync(string packageId, bool declined)
 	{
-		if (!BundledPackages.All.Any(p => (p.InstallAtFirstBoot || p.Bridge)
+		if (!BundledPackages.All.Any(p => (p.InstallAtFirstBoot || p.Bridge || p.SuggestAtSetup)
 				&& string.Equals(p.PackageId, packageId, StringComparison.OrdinalIgnoreCase)))
 		{
 			return;

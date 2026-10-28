@@ -53,11 +53,16 @@ public static class BundledPackages
 	/// Whether this only joins the packages it depends on (a <c>&lt;pkg&gt;-help</c> or <c>&lt;pkg&gt;-config</c>
 	/// registration): it is installed wherever all of them are, as soon as they are, unless the administrator removed it.
 	/// </param>
+	/// <param name="SuggestAtSetup">
+	/// Whether the setup wizard offers it ticked although bootstrap does not install it: a game gets it when its
+	/// administrator finishes the wizard, and a game already running is not changed by an upgrade.
+	/// </param>
 	public readonly record struct Descriptor(
 		string PackageId,
 		BundledPackageHandler Requires,
 		bool InstallAtFirstBoot,
-		bool Bridge = false);
+		bool Bridge = false,
+		bool SuggestAtSetup = false);
 
 	/// <summary>
 	/// Bundled packages in dependency order (a dependency precedes its dependents), which is also
@@ -244,9 +249,9 @@ public static class BundledPackages
 		// on the event handler, so an account forgets a hidden character that leaves it.
 		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("alts-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
-		// Available, not installed: the portal's World map, for a game whose builders have marked their maps. A game
-		// with no maps would show players an empty page.
-		new("world-map", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Suggested at setup, not installed at first boot: the portal's World map and its builder, offered ticked to a
+		// new game. A running game that never marked a map would show players an empty page after an upgrade.
+		new("world-map", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("world-map-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 	];
 
