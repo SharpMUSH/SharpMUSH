@@ -20,11 +20,7 @@ public sealed record PrivilegeCeiling(int Priority, ImmutableHashSet<int> Object
 	/// </summary>
 	public static int? Over(int number)
 	{
-		int? lowest = null;
-		foreach (var ceiling in Ambient.Value ?? [])
-			if (ceiling.Objects.Contains(number) && (lowest is null || ceiling.Priority < lowest))
-				lowest = ceiling.Priority;
-		return lowest;
+		return (Ambient.Value ?? []).Where(ceiling => ceiling.Objects.Contains(number)).Min(ceiling => (int?)ceiling.Priority);
 	}
 
 	/// <summary>Until disposed, this ceiling holds on this flow, as well as any already entered.</summary>

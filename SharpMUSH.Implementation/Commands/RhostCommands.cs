@@ -112,13 +112,10 @@ public partial class Commands
 		}
 
 		var text = pipe.Buffer.Text;
-		if (text.Length > 0)
+		if (text.Length > 0 && await AttributeService.SetAttributeAsync(executor, executor, pipe.Attribute, text) is Error<string> error)
 		{
-			if (await AttributeService.SetAttributeAsync(executor, executor, pipe.Attribute, text) is Error<string> error)
-			{
-				await NotifyService.Notify(executor, error.Value, executor);
-				return new CallState(error.Value);
-			}
+			await NotifyService.Notify(executor, error.Value, executor);
+			return new CallState(error.Value);
 		}
 
 		if (pipe.Buffer.Truncated)
