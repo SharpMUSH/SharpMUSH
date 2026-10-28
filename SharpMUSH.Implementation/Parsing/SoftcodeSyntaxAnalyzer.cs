@@ -178,6 +178,67 @@ public sealed class SoftcodeSyntaxAnalyzer(
 	}
 
 	/// <summary>
+	/// The names of the functions <paramref name="text"/> calls, read as a function would be (<c>u()</c>), in the
+	/// order they appear: every call inside square brackets, and a call the text starts with, with the calls in
+	/// their arguments. A name followed by a parenthesis anywhere else may be prose (<c>smile(s)</c>), so it is
+	/// left out. Nothing for text that does not parse or nests too deep.
+	/// </summary>
+	public IReadOnlyList<string> CalledFunctions(MString text)
+	{
+		var plaintext = text.ToPlainText();
+		if (!plaintext.Contains('('))
+		{
+			return [];
+		}
+
+		var tokens = SoftcodeParsePipeline.Lex(plaintext, nameof(CalledFunctions));
+		if (SoftcodeParsePipeline.ExceedsNestingLimit(tokens, SoftcodeParsePipeline.MaxParseNestingDepth,
+			configuration.CurrentValue.Compatibility.ParenGroups, out _))
+		{
+			return [];
+		}
+
+		var context = TryCleanParse(tokens, plaintext, ParseType.Function);
+		if (context is null)
+		{
+			var parser = CreateParser(tokens);
+			parser.RemoveErrorListeners();
+			try
+			{
+				context = SoftcodeParsePipeline.Enter(parser, ParseType.Function);
+			}
+			catch (RecognitionException)
+			{
+				return [];
+			}
+		}
+
+		var names = new List<string>();
+		CollectCalls(context, evaluated: false, names);
+		return names;
+	}
+
+	private static void CollectCalls(Antlr4.Runtime.Tree.IParseTree tree, bool evaluated, List<string> names)
+	{
+		switch (tree)
+		{
+			case SharpMUSHParser.IBracketPatternContext:
+				evaluated = true;
+				break;
+			case SharpMUSHParser.IFunctionContext function when evaluated || function.Start.StartIndex == 0:
+				evaluated = true;
+				names.Add(Bang.FunctionName(function.FUNCHAR().GetText().TrimEnd('(', ' ', '\t', '\r', '\n', '\f')));
+				break;
+		}
+
+		for (var i = 0; i < tree.ChildCount; i++)
+		{
+			ExecutionBudget.CurrentToken.ThrowIfCancellationRequested();
+			CollectCalls(tree.GetChild(i), evaluated, names);
+		}
+	}
+
+	/// <summary>
 	/// Performs semantic analysis on the input text and returns semantic tokens.
 	/// </summary>
 	public IReadOnlyList<SemanticToken> GetSemanticTokens(MString text, ParseType parseType = ParseType.Function)
