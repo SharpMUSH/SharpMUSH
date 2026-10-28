@@ -541,7 +541,7 @@ public partial class Commands
 				NotifyService, arg0, emptyIfMissing1),
 			["DELETE"] when arg0 is not null => await ChannelDelete.Handle(parser, LocateService, ChannelPermissions,
 				Mediator, NotifyService, arg0, emptyIfMissing1),
-			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService, ChannelPermissions,
+			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService, PermissionService, ChannelPermissions,
 				Mediator, NotifyService, arg0, arg1),
 			_ => await NotifyAndReturnChannelUsage(executor)
 		};

@@ -452,7 +452,13 @@ public partial class Functions
 		ParameterNames = ["object", "channel"])]
 	public async ValueTask<CallState> ComsysAlias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var channelName = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var named = parser.CurrentState.Arguments["1"].Message;
+		// An alias stores the channel's full name, so an abbreviation is resolved first.
+		var channelName = await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator, NotifyService,
+			executor, named, false) is SharpChannel channel
+			? channel.Name.ToPlainText()
+			: named.ToPlainText();
 		return await WithControlledObject(parser, async target => new CallState(await FirstAliasFor(target, channelName)));
 	}
 

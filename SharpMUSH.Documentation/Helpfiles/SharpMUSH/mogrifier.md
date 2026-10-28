@@ -14,7 +14,7 @@
 -->
 # mogrifier
 
-A channel's mogrifier is an object whose MOGRIFY\`* attributes rewrite each line said on the channel. `@channel/mogrifier <channel>=<object>` sets it. A speaker who fails the object's `@lock/use` is not mogrified. Every attribute is optional, and one that is absent or evaluates to nothing leaves its part of the line as it was. They run on the mogrifier, with the speaker as %#.
+A channel's mogrifier is an object whose MOGRIFY\`* attributes rewrite each line said on the channel. `@channel/mogrifier <channel>=<object>` sets it, to an object you control. A speaker who fails the object's `@lock/use` is not mogrified. Every attribute is optional, and one that is absent or evaluates to nothing leaves its part of the line as it was. They run on the mogrifier, with the speaker as %#.
 
 Each attribute gets its values by position and by the name shown (see [named arguments]), so `%<message>` reads the message whatever position it has in that attribute.
 

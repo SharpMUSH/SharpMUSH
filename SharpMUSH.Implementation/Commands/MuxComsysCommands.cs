@@ -139,8 +139,8 @@ public partial class Commands
 			"LOG" => await ChannelBuffer.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
 				Configuration, channel, value),
 			"HEADER" => await MuxNoEquivalentAsync(parser, nameof(ErrorMessages.Notifications.CsetNoHeader)),
-			"OBJECT" => await ChannelMogrifier.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
-				channel, value),
+			"OBJECT" => await ChannelMogrifier.Handle(parser, LocateService, PermissionService, ChannelPermissions, Mediator,
+				NotifyService, channel, value),
 			_ => await MuxNoEquivalentAsync(parser, nameof(ErrorMessages.Notifications.CsetNoTimestampLogs))
 		};
 	}

@@ -24,7 +24,7 @@ public class MuxComsysCommandTests
 		{
 			await Parser.CommandParse(1, Connections, MarkupText.Plain($"@set *{player.Name}=WIZARD"));
 			await Scheduler.SettleForTestsAsync();
-			var channel = $"Mux{TestIsolationHelpers.GenerateUniqueName("C")[^6..]}";
+			var channel = $"Mxc{TestIsolationHelpers.GenerateUniqueName("C")[^6..]}";
 
 			await Run(player, $"@ccreate {channel}");
 			await Assert.That(await Think(player, $"MC-PRIVS [sort(lcstr(clflags({channel})))]")).IsEqualTo("MC-PRIVS object player");
@@ -49,6 +49,7 @@ public class MuxComsysCommandTests
 			await Run(player, $"comtitle mc=Herald");
 			await Assert.That(await Think(player, $"MC-ALIAS [comalias(me,{channel})] [comtitle(me,{channel})] [chanobj({channel})]"))
 				.IsEqualTo("MC-ALIAS mc Herald #-1");
+			await Assert.That(await Think(player, $"MC-ABBREV [comalias(me,{channel[..^1]})]")).IsEqualTo("MC-ABBREV mc");
 			await Assert.That(await Think(player, $"MC-OTHER [comalias(#1,{channel})]")).IsEqualTo("MC-OTHER #-1 PERMISSION DENIED");
 
 			await Run(player, "allcom off");
@@ -105,6 +106,8 @@ public class MuxComsysCommandTests
 			await Run(player, $"&COMOFF {thing}={tag} off %n");
 			await Run(player, $"@cset/object {channel}={thing}");
 			await Assert.That(await Think(player, $"MC-CHANOBJ [chanobj({channel})]")).StartsWith($"MC-CHANOBJ {thing}");
+			await Assert.That(await Run(player, $"@cset/object {channel}=#1")).Contains("You must control the mogrifier.");
+			await Assert.That(await Think(player, $"MC-KEPT [chanobj({channel})]")).StartsWith($"MC-KEPT {thing}");
 
 			// @ccreate puts its creator on the channel.
 			await Assert.That(await Run(player, $"@channel/off {channel}")).Contains($"{tag} leave {player.Name}");

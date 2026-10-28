@@ -1157,6 +1157,9 @@
   <data name="CsetNoHeader" xml:space="preserve">
     <value>@cset: SharpMUSH has no channel header. A message always starts with the channel's name.</value>
   </data>
+  <data name="ChatMustControlMogrifier" xml:space="preserve">
+    <value>You must control the mogrifier.</value>
+  </data>
   <data name="CsetNoTimestampLogs" xml:space="preserve">
     <value>@cset: SharpMUSH has no timestamp_logs. @channel/recall shows what the channel keeps.</value>
   </data>
