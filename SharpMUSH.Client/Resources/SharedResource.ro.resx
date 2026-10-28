@@ -6741,10 +6741,10 @@
     <value>Sapă {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Nicio ieșire de pe această hartă nu duce acolo de unde ești.</value>
+    <value>Niciun drum pe care îl vezi nu duce acolo de aici.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>O ieșire de pe acest traseu nu are un nume fără spațiu, așa că traseul nu poate fi scris pe un singur rând.</value>
+    <value>O ieșire de pe acest traseu are un nume pe care walk nu îl acceptă, deci traseul nu poate fi scris pe un rând.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Copiază comanda</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legendă</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Ești în {0}, care nu e pe nicio hartă.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, pe nicio hartă</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Aici acum: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} aici acum</value>
   </data>
 </root>

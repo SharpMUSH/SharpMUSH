@@ -18,7 +18,7 @@ namespace SharpMUSH.Server.Services;
 /// where a variable exit goes) is read as the map's owner, the builder who published it, never as the viewer.
 /// </summary>
 public sealed class WorldMapReader(IMediator mediator, IPermissionService permissions, IRealityPolicy reality,
-	IAttributeService attributes)
+	IAttributeService attributes, IConnectionService connections)
 {
 	public const string KindAttribute = "MAP`KIND";
 	public const string WidthAttribute = "MAP`SIZE`W";
@@ -32,6 +32,9 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const int MaxMaps = 500;
 	public const int MaxRooms = 2000;
 	public const int MaxExits = 8000;
+
+	/// <summary>How many connected players one map read looks at for who is where.</summary>
+	public const int MaxPeople = 1000;
 
 	/// <summary>How many kinds of place one map's legend names.</summary>
 	public const int MaxLegend = 100;
@@ -123,6 +126,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		}
 
 		var onMap = rooms.Select(entry => entry.Room.Object().DBRef.Number).ToHashSet();
+		var people = await PeopleAsync(viewer, onMap, ct);
+		rooms = [.. rooms.Select(entry => people.TryGetValue(entry.Room.Object().DBRef.Number, out var here)
+			? (entry.Room, entry.Dto with { People = [.. here.Order(StringComparer.OrdinalIgnoreCase)] })
+			: entry)];
 		var exits = new List<MapExitDto>();
 		var otherMaps = new Dictionary<int, MapSummaryDto?>();
 		foreach (var (room, dto) in rooms.OrderBy(entry => entry.Room.Object().DBRef.Number))
@@ -139,9 +146,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 				if (!await VisibleAsync(viewer, target, ct)) continue;
 				// A stale list entry must not draw an exit moved out of the room.
 				if ((await exit.Location.WithCancellation(ct)).Object().DBRef != room.Object().DBRef) continue;
-				var (destination, destinationMap) = await DestinationAsync(viewer, publisher, exit, map, onMap, otherMaps, ct);
+				var (destination, destinationName, destinationMap) = await DestinationAsync(viewer, publisher, exit, map, onMap, otherMaps, ct);
 				exits.Add(new($"#{exit.Object.DBRef.Number}", exit.Object.Name, [.. target.Aliases ?? []], dto.Id, destination,
-					destinationMap));
+					destinationMap)
+				{ DestinationName = destinationName });
 			}
 		}
 
@@ -161,6 +169,31 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			Legend = await LegendAsync(map, ct),
 			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
 		};
+	}
+
+	/// <summary>
+	/// The connected players in each room of <paramref name="rooms"/> that <paramref name="viewer"/> may know are there, by
+	/// room: ones <c>loc()</c> would find for them (<c>Can_Locate</c>), that they can see, and that have not hidden from
+	/// <c>WHO</c>, unless they may examine them. At most <see cref="MaxPeople"/> players are looked at.
+	/// </summary>
+	private async Task<Dictionary<int, List<string>>> PeopleAsync(AnySharpObject viewer, HashSet<int> rooms, CancellationToken ct)
+	{
+		var people = new Dictionary<int, List<string>>();
+		var players = connections.GetAll()
+			.Where(connection => connection.Ref is not null && connection.State == IConnectionService.ConnectionState.LoggedIn)
+			.Select(connection => connection.Ref!.Value.Number)
+			.Distinct()
+			.Take(MaxPeople);
+		await foreach (var number in players.WithCancellation(ct))
+		{
+			if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), ct) is not AnySharpObject { IsPlayer: true } player) continue;
+			var room = (await player.Where()).Object().DBRef.Number;
+			if (!rooms.Contains(room) || !await permissions.CanLocate(viewer, player) || !await permissions.CanSee(viewer, player)) continue;
+			if (await connections.IsPlayerHiddenAsync(player.Object().DBRef) && !await permissions.CanExamine(viewer, player)) continue;
+			if (!people.TryGetValue(room, out var here)) people[room] = here = [];
+			here.Add(player.Object().Name);
+		}
+		return people;
 	}
 
 	/// <summary>
@@ -188,6 +221,16 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			nearby.Add(new($"#{number}", room.Object().Name, null, null) { Editable = true });
 		}
 		return nearby;
+	}
+
+	/// <summary>Where <paramref name="viewer"/> stands, and the map that is on when it is one they may see.</summary>
+	public async Task<MapHereDto> HereAsync(AnySharpObject viewer, CancellationToken ct)
+	{
+		var where = (await viewer.Where()).Object();
+		var map = await where.Zone.WithCancellation(ct) is AnySharpObject zone && await MapAsync(viewer, zone.Object().DBRef.Number, ct) is { } found
+			? await SummaryAsync(viewer, found, ct)
+			: null;
+		return new($"#{where.DBRef.Number}", where.Name, map);
 	}
 
 	/// <summary>
@@ -254,11 +297,15 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		return new MapRouteDto(steps, words.Contains(null) ? null : "walk " + string.Join(' ', words));
 	}
 
-	/// <summary>What to type to take an exit: its name, or its first alias with no space (<c>walk</c> splits on spaces); null when none.</summary>
+	/// <summary>
+	/// What to type to take an exit in a <c>walk</c> line: its name, or its first alias with no space, or else its name
+	/// in double quotes; null when it has no name <c>walk</c> can take.
+	/// </summary>
 	public static string? Word(string name, IEnumerable<string> aliases) =>
 		new[] { name }.Concat(aliases)
 			.Select(word => word.Trim())
-			.FirstOrDefault(word => word.Length > 0 && !word.Any(char.IsWhiteSpace));
+			.FirstOrDefault(word => word.Length > 0 && !word.Any(char.IsWhiteSpace))
+		?? (name.Trim() is { Length: > 0 } spaced && !spaced.Contains('"') ? $"\"{spaced}\"" : null);
 
 	/// <summary>
 	/// The region of <paramref name="regions"/> that <paramref name="where"/> is inside: up its zone, and that zone's zone,
@@ -352,22 +399,24 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	/// map it is on when that is another one. A variable or HOME link, or one the publisher cannot read, leads nowhere
 	/// on the map, and the destination relation is never resolved for it.
 	/// </summary>
-	private async Task<(string? Room, MapSummaryDto? Map)> DestinationAsync(AnySharpObject viewer, AnySharpObject publisher,
-		SharpExit exit, AnySharpObject map, HashSet<int> onMap, Dictionary<int, MapSummaryDto?> otherMaps, CancellationToken ct)
+	private async Task<(string? Room, string? Name, MapSummaryDto? Map)> DestinationAsync(AnySharpObject viewer,
+		AnySharpObject publisher, SharpExit exit, AnySharpObject map, HashSet<int> onMap, Dictionary<int, MapSummaryDto?> otherMaps,
+		CancellationToken ct)
 	{
-		if (await LinkedRoomAsync(publisher, exit, ct) is not { } room) return (null, null);
+		if (await LinkedRoomAsync(publisher, exit, ct) is not { } room) return (null, null, null);
 		var number = room.Object().DBRef.Number;
-		if (onMap.Contains(number)) return ($"#{number}", null);
-		if (!await VisibleAsync(viewer, room, ct)) return (null, null);
+		var name = room.Object().Name;
+		if (onMap.Contains(number)) return ($"#{number}", name, null);
+		if (!await VisibleAsync(viewer, room, ct)) return (null, null, null);
 		if (await room.Object().Zone.WithCancellation(ct) is not AnySharpObject zone
-			|| zone.Object().DBRef.Number == map.Object().DBRef.Number) return ($"#{number}", null);
+			|| zone.Object().DBRef.Number == map.Object().DBRef.Number) return ($"#{number}", name, null);
 		var zoneNumber = zone.Object().DBRef.Number;
 		if (!otherMaps.TryGetValue(zoneNumber, out var other))
 		{
 			other = await MapAsync(viewer, zoneNumber, ct) is { } found ? await SummaryAsync(viewer, found, ct) : null;
 			otherMaps[zoneNumber] = other;
 		}
-		return ($"#{number}", other);
+		return ($"#{number}", name, other);
 	}
 
 	/// <summary>

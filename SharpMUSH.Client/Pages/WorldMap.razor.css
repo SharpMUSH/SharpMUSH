@@ -87,15 +87,36 @@
 	text-decoration: underline;
 }
 
-.map-exit-to--unknown {
+.map-exit-to--unknown,
+.map-exit-to--off {
 	color: var(--text-faint);
 	text-decoration: none;
 	cursor: default;
 }
 
+.map-exit-to--off {
+	color: var(--text-dim);
+}
+
+/* A description keeps its own line breaks, as a client shows it. */
+.map-room-desc {
+	margin: 0 0 8px;
+	white-space: pre-line;
+}
+
+.map-room-people {
+	margin: 0 0 8px;
+	color: var(--text-dim);
+}
+
 @container page (max-width: 48rem) {
 	.map-panes {
 		grid-template-columns: minmax(0, 1fr);
+	}
+
+	/* On a phone the map comes first; the list of maps follows it. */
+	.map-list {
+		order: 2;
 	}
 }
 

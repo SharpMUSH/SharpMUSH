@@ -6741,10 +6741,10 @@
     <value>Wykop {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Żadne wyjście na tej mapie nie prowadzi tam z miejsca, w którym jesteś.</value>
+    <value>Żadna widoczna dla ciebie droga nie prowadzi tam stąd.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Wyjście na tej trasie nie ma nazwy bez spacji, więc trasy nie da się wpisać w jednym wierszu.</value>
+    <value>Wyjście na tej trasie ma nazwę, której walk nie przyjmuje, więc trasy nie da się wpisać w jednej linii.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Kopiuj polecenie</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legenda</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Jesteś w {0}, który nie jest na żadnej mapie.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, na żadnej mapie</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Teraz tutaj: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} teraz tutaj</value>
   </data>
 </root>

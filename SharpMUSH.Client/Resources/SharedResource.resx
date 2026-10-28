@@ -10176,10 +10176,10 @@
     <value>Dig {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>No exits on this map lead there from where you are.</value>
+    <value>No way you can see leads there from where you are.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>An exit on this route has no name without a space, so the route can't be typed as one line.</value>
+    <value>An exit on this route has a name walk can't take, so the route can't be typed as one line.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Copy the command</value>
@@ -10195,5 +10195,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legend</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>You are in {0}, which is on no map.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, on no map</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Here now: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} here now</value>
   </data>
 </root>

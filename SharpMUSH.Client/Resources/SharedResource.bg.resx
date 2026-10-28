@@ -6741,10 +6741,10 @@
     <value>Изкопай {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Никой изход на тази карта не води дотам от мястото, където сте.</value>
+    <value>Няма видим за теб път дотам оттук.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Изход по този маршрут няма име без интервал, затова маршрутът не може да се напише на един ред.</value>
+    <value>Изход по този път има име, което walk не приема, затова пътят не може да се напише на един ред.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Копиране на командата</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Легенда</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Ти си в {0}, която не е на никоя карта.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, на никоя карта</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Тук сега: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} тук сега</value>
   </data>
 </root>

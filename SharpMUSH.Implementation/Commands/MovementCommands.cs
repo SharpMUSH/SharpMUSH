@@ -431,14 +431,16 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// <c>walk north up</c>: <c>GOTO</c> through each exit in turn, stopping at the first that fails. Not in
-	/// PennMUSH; a route the World map copies is one line in any client.
+	/// <c>walk north up</c>: <c>GOTO</c> through each exit in turn, stopping at the first that fails. An exit whose name has
+	/// a space is written in double quotes, <c>walk "Harbour road" north</c>. Not in PennMUSH; a route the World map copies
+	/// is one line in any client.
 	/// </summary>
 	[SharpCommand(Name = "WALK", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["exits"])]
 	public async ValueTask<Option<CallState>> Walk(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
-		var steps = parser.CurrentState.Arguments["0"].Message.ToPlainText()
-			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+		var steps = WalkStep().Matches(parser.CurrentState.Arguments["0"].Message.ToPlainText())
+			.Select(step => step.Groups["quoted"].Success ? step.Groups["quoted"].Value : step.Value)
+			.Where(step => step.Length > 0);
 		var reached = CallState.Empty;
 		// Lazily mapped: each step is pushed only once the one before it arrived.
 		var walkers = steps.Select(step => parser.Push(parser.CurrentState with
@@ -455,6 +457,10 @@ public partial class Commands
 		}
 		return reached;
 	}
+
+	/// <summary>One step of <c>walk</c>: a word, or a name in double quotes.</summary>
+	[System.Text.RegularExpressions.GeneratedRegex("\"(?<quoted>[^\"]*)\"|[^\\s\"]+")]
+	private static partial System.Text.RegularExpressions.Regex WalkStep();
 
 	/// <summary>
 	/// PennMUSH <c>fail_lock(player, exit, Basic_Lock, "You can't go that way.", NOTHING)</c>

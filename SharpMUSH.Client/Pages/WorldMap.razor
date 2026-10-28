@@ -74,7 +74,14 @@
                 {
                     @if (_maps is { Count: > 0 })
                     {
-                        <p class="map-note">@Loc["NavMapPick"]</p>
+                        <p class="map-note">
+                            @if (_here is { Map: null } here)
+                            {
+                                @Loc["NavMapHereOffMap", here.Name]
+                                @(" ")
+                            }
+                            @Loc["NavMapPick"]
+                        </p>
                     }
                 }
                 else if (_loading)
@@ -238,6 +245,8 @@
     private int? _shown;
     private MapCanvas? _canvas;
     private MapRouteDto? _route;
+    private MapHereDto? _here;
+    private string? _description;
     private bool _noRoute;
     private bool _walking;
     private string? _walkError;
@@ -246,7 +255,7 @@
     protected override async Task OnInitializedAsync()
     {
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
-        await LoadListAsync();
+        await Task.WhenAll(LoadListAsync(), LoadHereAsync());
     }
 
     protected override async Task OnParametersSetAsync()
@@ -254,6 +263,19 @@
         if (Id == _shown) return;
         _shown = Id;
         await LoadMapAsync();
+    }
+
+    /// <summary>
+    /// Where the character stands. With no map chosen, a character on a map is taken to it; one on no map is told so.
+    /// </summary>
+    private async Task LoadHereAsync()
+    {
+        _here = await Maps.HereAsync() switch
+        {
+            MapHereDto here => here,
+            _ => null,
+        };
+        if (Id is null && _here?.Map is { } map) Nav.NavigateTo($"/map/{map.Id[1..]}", replace: true);
     }
 
     private async Task LoadListAsync()
@@ -298,7 +320,7 @@
         _shown = null;
         _maps = null;
         StateHasChanged();
-        await LoadListAsync();
+        await Task.WhenAll(LoadListAsync(), LoadHereAsync());
         _shown = Id;
         await LoadMapAsync();
         StateHasChanged();
@@ -346,6 +368,19 @@
     }
 
     /// <summary>
+    /// The room's description, as its DESCRIBE evaluates for the character the way <c>look</c> would; null while asked,
+    /// when it has none, or when the character may not read it. Asked with the route, so a stale reply is dropped too.
+    /// </summary>
+    private async Task LoadDescriptionAsync(string id, int asked)
+    {
+        var result = await Commands.EvaluateAsync($"u({id}/DESCRIBE)");
+        if (asked != _routeAsked) return;
+        _description = result is PortalCommandResponse { Result: { Length: > 0 } text } && !text.StartsWith("#-1", StringComparison.Ordinal)
+            ? text
+            : null;
+    }
+
+    /// <summary>
     /// Asks the server the way from where the character stands to room <paramref name="id"/>: it sees every map, so a
     /// route may start or pass through another one. A reply asked before another room, map or character was chosen is
     /// dropped.
@@ -354,7 +389,9 @@
     {
         var asked = ForgetRoute();
         if (_layout?.Rooms.TryGetValue(id, out var room) != true || room!.Region) return;
+        var description = LoadDescriptionAsync(id, asked);
         var result = await Maps.RouteAsync(id);
+        await description;
         if (asked != _routeAsked) return;
         (_route, _noRoute) = result switch
         {
@@ -366,7 +403,7 @@
     /// <summary>Clears the route on show, and makes any reply still on its way stale.</summary>
     private int ForgetRoute()
     {
-        (_route, _noRoute, _walkError) = (null, false, null);
+        (_route, _noRoute, _walkError, _description) = (null, false, null, null);
         return ++_routeAsked;
     }
 
@@ -455,6 +492,14 @@
         <KitCard Class="map-room-panel" Title="@room!.Room.Name"
                  Sub="@(_selected == _layout.Map.Here ? Loc["NavMapYouAreHere"].Value : room.Placed ? null : Loc["NavMapUnplaced"].Value)">
             <div class="map-room-body">
+                @if (_description is { } description)
+                {
+                    <p class="map-room-desc">@description</p>
+                }
+                @if (room.Room.People.Count > 0)
+                {
+                    <p class="map-room-people">@Loc["NavMapPeopleHere", string.Join(", ", room.Room.People)]</p>
+                }
                 @if (exits.Count == 0)
                 {
                     <p class="map-note">@Loc["NavMapNoExits"]</p>
@@ -473,6 +518,10 @@
                                 else if (exit.Destination is { } to && _layout.Rooms.TryGetValue(to, out var target))
                                 {
                                     <button type="button" class="map-exit-to" @onclick="() => GoToRoomAsync(to)">@target.Room.Name</button>
+                                }
+                                else if (exit.DestinationName is { } name)
+                                {
+                                    <span class="map-exit-to map-exit-to--off">@Loc["NavMapOffMap", name]</span>
                                 }
                                 else
                                 {

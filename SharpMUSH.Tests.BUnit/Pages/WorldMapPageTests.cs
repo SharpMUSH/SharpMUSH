@@ -101,12 +101,25 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	/// <summary>The lines run through <c>POST api/commands</c>, in order.</summary>
 	public List<string> Commands { get; } = [];
 
+	/// <summary>What <c>api/maps/here</c> answers; null answers 404.</summary>
+	public MapHereDto? Here { get; set; }
+
+	/// <summary>A pier with two sailors on it, and a ladder down to a room on no map.</summary>
+	public static readonly MapDto PierMap = new(new("#58", "Pier", MapKinds.Coordinates, null), null,
+		[new("#83", "Pier head", [0, 0, 0], null) { People = ["Ada", "Bram"] }],
+		[new("#34", "Ladder", [], "#83", "#84", null) { DestinationName = "Boat" }], null, Truncated: false);
+
 	/// <summary>What an <c>@open</c>'s check reads: 1 when both exits were opened and linked.</summary>
 	public string OpenReads { get; set; } = "1";
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (path == "api/commands/eval" && request.Content is not null)
+		{
+			var asked = await request.Content.ReadFromJsonAsync<PortalEvalRequest>(cancellationToken);
+			return Json(new PortalCommandResponse([], asked!.Expression == "u(#83/DESCRIBE)" ? "Planks, tar\nand gulls." : "", false));
+		}
 		if (path == "api/commands" && request.Content is not null)
 		{
 			var sent = await request.Content.ReadFromJsonAsync<PortalCommandRequest>(cancellationToken);
@@ -124,6 +137,8 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/55" => Json(WorksMap),
 			"api/maps/56" => Json(FarMap),
 			"api/maps/57" => Json(ShoreMap),
+			"api/maps/58" => Json(PierMap),
+			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
@@ -188,6 +203,47 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(kinds).Count().IsEqualTo(2).Because("no room on the shore is forest");
 		await Assert.That(kinds[0]).Contains("Sand");
 		await Assert.That(kinds[1]).Contains("Open water");
+	}
+
+	[Test]
+	public async Task WithNoMapChosenTheMapYouAreOnOpens()
+	{
+		_api.Here = new("#10", "Quay", WorldMapApiHandler.Harbour);
+		Arrange();
+
+		Render<SharpMUSH.Client.Pages.WorldMap>();
+
+		var nav = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+		await Assert.That(nav.Uri).EndsWith("/map/50");
+	}
+
+	[Test]
+	public async Task WithNoMapChosenSomeoneOnNoMapIsToldWhereTheyAre()
+	{
+		_api.Here = new("#0", "Room Zero", null);
+		Arrange();
+
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>();
+
+		cut.WaitForAssertion(() => cut.Find(".map-main .map-note"));
+		await Assert.That(cut.Find(".map-main .map-note").TextContent).Contains("NavMapHereOffMap(Room Zero)");
+	}
+
+	[Test]
+	public async Task ARoomShowsItsDescriptionWhoIsThereAndWhereAnExitOffTheMapLeads()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 58));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+
+		await cut.Find(".map-room").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".map-room-desc"));
+		await Assert.That(cut.Find(".map-room-desc").TextContent).IsEqualTo("Planks, tar\nand gulls.");
+		await Assert.That(cut.Find(".map-room-people").TextContent).IsEqualTo("NavMapPeopleHere(Ada, Bram)");
+		await Assert.That(cut.Find(".map-room-count").TextContent.Trim()).IsEqualTo("2");
+		await Assert.That(cut.Find(".map-room").GetAttribute("aria-label")).IsEqualTo("Pier head, NavMapPeopleCount(2)");
+		await Assert.That(cut.Find(".map-exit-to--off").TextContent).IsEqualTo("NavMapOffMap(Boat)");
 	}
 
 	[Test]

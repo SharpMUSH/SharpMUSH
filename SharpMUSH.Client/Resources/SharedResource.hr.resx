@@ -6741,10 +6741,10 @@
     <value>Iskopaj {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Nijedan izlaz na ovoj karti ne vodi onamo odakle ste.</value>
+    <value>Nijedan put koji vidiš ne vodi onamo odavde.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Izlaz na ovoj ruti nema ime bez razmaka, pa se ruta ne može upisati u jednom retku.</value>
+    <value>Izlaz na ovom putu ima ime koje walk ne prima, pa se put ne može upisati u jedan redak.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Kopiraj naredbu</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legenda</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Nalaziš se u {0}, koja nije ni na jednoj karti.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, ni na jednoj karti</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Ovdje sada: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} ovdje sada</value>
   </data>
 </root>

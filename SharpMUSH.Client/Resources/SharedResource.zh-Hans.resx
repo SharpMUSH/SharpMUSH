@@ -6741,10 +6741,10 @@
     <value>挖 {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>从你所在的位置，这张地图上没有出口通往那里。</value>
+    <value>从你所在之处，没有你能看到的路通往那里。</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>这条路线上有个出口没有不含空格的名称，所以路线无法输入成一行。</value>
+    <value>此路线上有个出口的名称 walk 无法使用，因此路线无法写成一行。</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>复制命令</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>图例</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>你在 {0}，它不在任何地图上。</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}（不在任何地图上）</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>此刻在这里：{0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>此刻有 {0} 人在这里</value>
   </data>
 </root>
