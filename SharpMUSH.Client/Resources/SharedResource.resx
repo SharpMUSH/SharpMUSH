@@ -5027,6 +5027,30 @@
   <data name="AdmSetupUnfinished" xml:space="preserve">
     <value>First-run setup is not finished.</value>
   </data>
+  <data name="AdmSetupStaffTitle" xml:space="preserve">
+    <value>Choose your staff roles</value>
+  </data>
+  <data name="AdmSetupStaffLead" xml:space="preserve">
+    <value>Every game has the Player, Builder, Royalty and Wizard roles. Pick the staff roles that sit beside them. You can edit, add or remove any role later on the Roles page.</value>
+  </data>
+  <data name="AdmSetupStaffSharp" xml:space="preserve">
+    <value>SharpMUSH</value>
+  </data>
+  <data name="AdmSetupStaffSharpDesc" xml:space="preserve">
+    <value>Helper and Moderator. A helper looks up players and the queue; a moderator also handles players, the wiki and media.</value>
+  </data>
+  <data name="AdmSetupStaffRhost" xml:space="preserve">
+    <value>RhostMUSH levels</value>
+  </data>
+  <data name="AdmSetupStaffRhostDesc" xml:space="preserve">
+    <value>Guildmaster, Architect, Councilor and Immortal, each ranked just above the built-in role whose permissions it has. RhostMUSH's Royalty is the Wizard role here. A RhostMUSH import uses these.</value>
+  </data>
+  <data name="AdmSetupStaffKept" xml:space="preserve">
+    <value>Kept because someone holds them: {0}.</value>
+  </data>
+  <data name="AdmSetupStaffFailed" xml:space="preserve">
+    <value>Some staff roles could not be changed: {0}</value>
+  </data>
   <data name="AdmSetupContinueStep" xml:space="preserve">
     <value>Continue</value>
   </data>

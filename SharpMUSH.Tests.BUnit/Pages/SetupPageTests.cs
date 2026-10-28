@@ -63,6 +63,15 @@ file sealed class SetupApiHandler(
 	/// <summary>Each PUT to api/setup/wizard/handlers/{kind}, as "kind body", in order.</summary>
 	public List<string> HandlerChanges { get; } = [];
 
+	/// <summary>The staff roles the game uses, as api/setup/wizard reports them.</summary>
+	public string StaffSet { get; set; } = "sharpmush";
+
+	/// <summary>The other set's roles the game keeps because someone holds them.</summary>
+	public string[] StaffKept { get; set; } = [];
+
+	/// <summary>The bodies PUT to api/setup/wizard/staff-levels, in order.</summary>
+	public List<string> StaffChoices { get; } = [];
+
 	/// <summary>The bodies PUT to api/setup/wizard/packages, in order.</summary>
 	public List<string> PackageChoices { get; } = [];
 
@@ -122,6 +131,15 @@ file sealed class SetupApiHandler(
 			};
 			if (kind == "http") _httpHandler = target;
 			else _eventHandler = target;
+			return Json(Wizard(_wizardPending ?? true));
+		}
+
+		if (path == "api/setup/wizard/staff-levels" && request.Method == HttpMethod.Put)
+		{
+			var body = await request.Content!.ReadAsStringAsync(cancellationToken);
+			StaffChoices.Add(body);
+			using var document = JsonDocument.Parse(body);
+			StaffSet = document.RootElement.GetProperty("set").GetString()!;
 			return Json(Wizard(_wizardPending ?? true));
 		}
 
@@ -221,6 +239,7 @@ file sealed class SetupApiHandler(
 		pending,
 		starterWikiApplied = StarterWikiApplied,
 		starterWorldApplied = StarterWorldApplied,
+		staffLevels = new { set = StaffSet, kept = StaffKept },
 		handlers = new object[]
 		{
 			Handler("http", _httpHandler, _httpHandler is null ? null : "HTTP Handler", ["http-handler", "profile-handler"]),
@@ -427,6 +446,16 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 
 		await cut.Find("button.setup-fresh").ClickAsync();
 		await cut.Find("button.setup-defer-identity").ClickAsync();
+
+		// A new game starts with SharpMUSH's staff roles; saving the step records the choice.
+		await Assert.That(cut.Find("#setup-staff-sharpmush").HasAttribute("checked")).IsTrue();
+		await cut.Find("button.setup-save-staff").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupHandlersTitle"))
+				throw new InvalidOperationException("handlers step not rendered yet");
+		});
+		await Assert.That(handler.StaffChoices).IsEquivalentTo(["{\"set\":\"sharpmush\"}"]);
 
 		// The handler the game has is kept by default; the one it lacks is created.
 		await Assert.That(cut.Find("#setup-handler-http input[value='keep']").HasAttribute("checked")).IsTrue();
@@ -837,11 +866,45 @@ public class SetupPageTests : TrackingBunitContext, IAsyncDisposable
 	}
 
 	/// <summary>
+	/// A game a RhostMUSH import filled starts on RhostMUSH's levels, and says which roles of the other set it keeps
+	/// because someone holds them. Choosing SharpMUSH's roles instead sends that choice.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task Setup_Staff_ARhostImportStartsOnRhostLevels()
+	{
+		ownedHttpClients.Add(this.AddSetupTestServices(out var handler, needsSetup: false, wizard: true));
+		handler.StaffSet = "rhostmush";
+		handler.StaffKept = ["moderator"];
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/setup?step=staff");
+
+		var cut = Render<SharpMUSH.Client.Pages.Setup>();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupStaffTitle"))
+				throw new InvalidOperationException("staff step not rendered yet");
+		});
+
+		await Assert.That(cut.Find("#setup-staff-rhostmush").HasAttribute("checked")).IsTrue();
+		await Assert.That(cut.Find("#setup-staff-sharpmush").HasAttribute("checked")).IsFalse();
+		await Assert.That(cut.Markup).Contains("AdmSetupStaffKept(moderator)");
+
+		await cut.Find("#setup-staff-sharpmush").ChangeAsync(true);
+		await cut.Find("button.setup-save-staff").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!cut.Markup.Contains("AdmSetupHandlersTitle"))
+				throw new InvalidOperationException("handlers step not rendered yet");
+		});
+		await Assert.That(handler.StaffChoices).IsEquivalentTo(["{\"set\":\"sharpmush\"}"]);
+	}
+
+	/// <summary>
 	/// An administrator who closed the tab after the claim comes back to the wizard, not the home page —
 	/// and the database import page's way back lands them on the handlers step.
 	/// </summary>
 	[TUnit.Core.Test]
 	[TUnit.Core.Arguments("/setup", "AdmSetupImportTitle")]
+	[TUnit.Core.Arguments("/setup?step=staff", "AdmSetupStaffTitle")]
 	[TUnit.Core.Arguments("/setup?step=handlers", "AdmSetupHandlersTitle")]
 	[TUnit.Core.Arguments("/setup?step=packages", "AdmSetupPackagesTitle")]
 	public async Task Setup_ClaimedWithTheWizardPending_ResumesIt(string address, string heading)

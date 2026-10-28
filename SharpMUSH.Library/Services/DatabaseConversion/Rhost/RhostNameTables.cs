@@ -1,7 +1,6 @@
 using System.Collections.Frozen;
 using SharpMUSH.Configuration;
 using SharpMUSH.Library.Authorization;
-using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 
@@ -17,7 +16,7 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 /// <param name="Custom">The flag of its own it becomes, created by the import; none when null.</param>
 /// <param name="StaffOnly">Whether that custom flag is wizard-set, rather than anyone's.</param>
 /// <param name="Skip">Why it is not imported, when nothing else is given.</param>
-/// <param name="Role">The staff-level role it gives, one of <see cref="RhostNameTables.LevelRoles"/>; none when null.</param>
+/// <param name="Role">The staff-level role it gives, one of <see cref="BuiltInRoles.RhostLevels"/>; none when null.</param>
 public sealed record RhostBitMapping(
 	int Word,
 	uint Bit,
@@ -58,27 +57,6 @@ public static class RhostNameTables
 		=> new(word, bit, name, [], [], Skip: reason);
 
 	private const string ServerState = "server state RhostMUSH keeps for itself";
-
-	/// <summary>
-	/// RhostMUSH's staff levels that SharpMUSH has no role for, as the roles an import makes for them, lined up by
-	/// priority among the built-in ones: guildmaster above player, architect above builder, councilor above royalty,
-	/// immortal above wizard. Each has the permissions of the built-in role at its level, and immortal the server's
-	/// administration too. RhostMUSH's royalty, its wizards, is the wizard role.
-	/// </summary>
-	public static readonly IReadOnlyList<SharpRole> LevelRoles =
-	[
-		Level("guildmaster", "Guildmaster", 13, BuiltInRoles.PlayerSlug, PortalPermission.PlayersView, PortalPermission.QueueInspect),
-		Level("architect", "Architect", 16, BuiltInRoles.BuilderSlug),
-		Level("councilor", "Councilor", 22, BuiltInRoles.RoyaltySlug),
-		Level("immortal", "Immortal", 35, BuiltInRoles.WizardSlug, PortalPermission.ServerAdmin)
-	];
-
-	private static SharpRole Level(string slug, string name, int priority, string standin, params string[] more)
-	{
-		var permissions = new Dictionary<string, PermissionState>(BuiltInRoles.All.First(role => role.Slug == standin).Permissions);
-		foreach (var scope in more) permissions[scope] = PermissionState.Allow;
-		return new SharpRole { Slug = slug, Name = name, Category = Categories.Staff, Priority = priority, Permissions = permissions };
-	}
 
 	/// <summary>Every flag and toggle bit RhostMUSH defines, and its fate.</summary>
 	public static readonly IReadOnlyList<RhostBitMapping> Bits =

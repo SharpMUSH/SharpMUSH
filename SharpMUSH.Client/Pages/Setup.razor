@@ -57,7 +57,7 @@
 
         case Step.Import:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 5]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 2, 6]</div>
                 @if (_completedUsername.Length > 0)
                 {
                     <p class="setup-claimed" role="status">
@@ -75,7 +75,7 @@
 
         case Step.Identity:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 5]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 3, 6]</div>
                 <h2 class="setup-title">@Loc["GuideSetupIdentity"]</h2>
                 <p class="setup-lead">@Loc["GuideSetupIdentityLead"]</p>
                 <SharpMUSH.Client.Components.Onboarding.GameIdentityForm SaveLabel="@Loc["GuideSetupIdentitySave"].Value" OnSaved="ContinueFromIdentity" />
@@ -83,9 +83,47 @@
             </div>
             break;
 
+        case Step.Staff:
+            <div class="setup-card">
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 6]</div>
+                <h2 class="setup-title">@Loc["AdmSetupStaffTitle"]</h2>
+                <p class="setup-lead">@Loc["AdmSetupStaffLead"]</p>
+
+                @if (_error is not null)
+                {
+                    <div class="setup-error" role="alert">@_error</div>
+                }
+
+                <div class="setup-staff-choices" role="radiogroup" aria-label="@Loc["AdmSetupStaffTitle"]">
+                    <label class="setup-choice setup-staff-choice">
+                        <input id="setup-staff-sharpmush" type="radio" name="staff-levels" value="@StaffLevelSets.SharpMUSH"
+                               checked="@(_staffSet == StaffLevelSets.SharpMUSH)" disabled="@_busy"
+                               @onchange="() => _staffSet = StaffLevelSets.SharpMUSH" />
+                        <span><strong>@Loc["AdmSetupStaffSharp"]</strong> @Loc["AdmSetupStaffSharpDesc"]</span>
+                    </label>
+                    <label class="setup-choice setup-staff-choice">
+                        <input id="setup-staff-rhostmush" type="radio" name="staff-levels" value="@StaffLevelSets.RhostMUSH"
+                               checked="@(_staffSet == StaffLevelSets.RhostMUSH)" disabled="@_busy"
+                               @onchange="() => _staffSet = StaffLevelSets.RhostMUSH" />
+                        <span><strong>@Loc["AdmSetupStaffRhost"]</strong> @Loc["AdmSetupStaffRhostDesc"]</span>
+                    </label>
+                </div>
+
+                @if (_staffKept.Count > 0)
+                {
+                    <p class="setup-handler-warn" role="note">@Loc["AdmSetupStaffKept", string.Join(", ", _staffKept)]</p>
+                }
+
+                <button class="setup-submit setup-save-staff" type="button" disabled="@_busy" @onclick="SaveStaffAsync">
+                    @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupContinueStep"])
+                </button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Identity">@Loc["AdmSetupBack"]</button>
+            </div>
+            break;
+
         case Step.Handlers:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 4, 5]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 5, 6]</div>
                 <h2 class="setup-title">@Loc["AdmSetupHandlersTitle"]</h2>
                 <p class="setup-lead">@Loc["AdmSetupHandlersLead"]</p>
 
@@ -187,13 +225,13 @@
                 <button class="setup-submit setup-save-handlers" type="button" disabled="@_busy" @onclick="SaveHandlersAsync">
                     @(_busy ? Loc["AdmSetupSaving"] : Loc["AdmSetupContinueStep"])
                 </button>
-                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Import">@Loc["AdmSetupBack"]</button>
+                <button class="setup-secondary" type="button" disabled="@_busy" @onclick="() => _step = Step.Staff">@Loc["AdmSetupBack"]</button>
             </div>
             break;
 
         case Step.Packages:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 5, 5]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 6, 6]</div>
                 <h2 class="setup-title">@Loc["AdmSetupPackagesTitle"]</h2>
                 <p class="setup-lead">@Loc["AdmSetupPackagesLead"]</p>
 
@@ -315,7 +353,7 @@
 
         case Step.Claim:
             <div class="setup-card">
-                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 5]</div>
+                <div class="setup-kicker">@Loc["AdmSetupStepOf", 1, 6]</div>
                 <h2 class="setup-title">@Loc["AuthClaimAdminTitle"]</h2>
                 <p class="setup-lead">@Loc["AuthClaimAdminLead"]</p>
 
@@ -353,7 +391,7 @@
 </div>
 
 @code {
-    private enum Step { Resolving, Claim, SignIn, Import, Identity, Handlers, Packages, Done }
+    private enum Step { Resolving, Claim, SignIn, Import, Identity, Staff, Handlers, Packages, Done }
 
     /// <summary>The handler choice that changes nothing.</summary>
     private const string Keep = "keep";
@@ -388,6 +426,11 @@
     private IReadOnlyList<HandlerState> _handlers = [];
     private readonly Dictionary<string, HandlerChoice> _handlerChoices = new(StringComparer.Ordinal);
     private IReadOnlyList<BundledPackageState> _packages = [];
+
+    /// <summary>The staff roles chosen on the staff step (<see cref="StaffLevelSets"/>), and the other set's roles
+    /// the game keeps because someone holds them.</summary>
+    private string _staffSet = StaffLevelSets.SharpMUSH;
+    private IReadOnlyList<string> _staffKept = [];
 
     /// <summary>The packages the administrator ticked; what gets installed adds what they depend on.</summary>
     private readonly HashSet<string> _chosen = new(StringComparer.OrdinalIgnoreCase);
@@ -475,6 +518,7 @@
         _step = StepParameter?.ToLowerInvariant() switch
         {
             "identity" => Step.Identity,
+            "staff" => Step.Staff,
             "handlers" => Step.Handlers,
             "packages" => Step.Packages,
             _ => Step.Import
@@ -501,6 +545,9 @@
         var installed = wizard.Packages.Where(p => p.Installed).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         _bridgesOff.Clear();
         _bridgesOff.UnionWith(wizard.Packages.Where(p => p is { Bridge: true, Installed: false } && p.DependsOn.All(installed.Contains)).Select(p => p.Id));
+
+        _staffSet = wizard.StaffLevels?.Set ?? StaffLevelSets.SharpMUSH;
+        _staffKept = wizard.StaffLevels?.Kept ?? [];
 
         _starterWikiApplied = wizard.StarterWikiApplied;
         _starterWorldApplied = wizard.StarterWorldApplied;
@@ -571,8 +618,32 @@
 
     private void ContinueFromIdentity()
     {
-        _step = Step.Handlers;
-        Nav.NavigateTo("/setup?step=handlers", replace: true);
+        _step = Step.Staff;
+        Nav.NavigateTo("/setup?step=staff", replace: true);
+    }
+
+    /// <summary>Makes the chosen staff roles and removes the other set's unheld ones, then moves on to the handlers.</summary>
+    private async Task SaveStaffAsync()
+    {
+        _error = null;
+        _busy = true;
+        if (await Wizard.SetStaffLevelsAsync(_staffSet) is ApiFailure failure)
+        {
+            _error = Loc["AdmSetupStaffFailed", failure.Message];
+        }
+
+        // Some roles may have changed before one failed: show what the game has now either way.
+        if (await Wizard.GetAsync() is SetupWizardResponse current)
+        {
+            Load(current);
+        }
+
+        _busy = false;
+        if (_error is null)
+        {
+            _step = Step.Handlers;
+            Nav.NavigateTo("/setup?step=handlers", replace: true);
+        }
     }
 
     // A different choice is a different object, so whatever was checked and accepted no longer applies.

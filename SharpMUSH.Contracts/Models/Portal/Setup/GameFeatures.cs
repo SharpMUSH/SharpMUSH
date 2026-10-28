@@ -104,8 +104,19 @@ public record BundledPackageState(string Id, string Title, string Description, b
 /// Whether the starter world (a described arrival room with an exit to a second room, and a Newbie channel) has been
 /// made. It is offered once, and leaves out what the game already has.
 /// </param>
+/// <param name="StaffLevels">The staff roles the game uses, SharpMUSH's or RhostMUSH's.</param>
 public record SetupWizardResponse(bool Pending, IReadOnlyList<HandlerState> Handlers,
-	IReadOnlyList<BundledPackageState> Packages, bool StarterWikiApplied = false, bool StarterWorldApplied = false);
+	IReadOnlyList<BundledPackageState> Packages, bool StarterWikiApplied = false, bool StarterWorldApplied = false,
+	StaffLevelsState? StaffLevels = null);
+
+/// <summary>
+/// Which staff roles the game uses (<see cref="Authorization.StaffLevelSets"/>), and the roles of the other set it
+/// still has because someone holds them.
+/// </summary>
+public record StaffLevelsState(string Set, IReadOnlyList<string> Kept);
+
+/// <summary>The staff roles the administrator chose (<see cref="Authorization.StaffLevelSets"/>).</summary>
+public record SetStaffLevelsRequest(string Set);
 
 /// <summary>The bundled packages the administrator wants installed; every other bundled package is removed.</summary>
 public record SetupPackagesRequest(IReadOnlyList<string> Installed);

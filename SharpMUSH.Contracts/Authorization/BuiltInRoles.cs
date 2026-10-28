@@ -143,6 +143,25 @@ public static class BuiltInRoles
 	];
 
 	/// <summary>
+	/// RhostMUSH's staff levels that have no system role, as roles lined up by priority among the system ones:
+	/// guildmaster above player, architect above builder, councilor above royalty, immortal above wizard. Each has
+	/// the permissions of the system role at its level, and immortal the server's administration too. RhostMUSH's
+	/// royalty, its wizards, is the wizard role. A game takes these in place of <see cref="Starters"/> when it
+	/// chooses RhostMUSH's levels (<see cref="StaffLevelSets"/>), and a RhostMUSH import brings them.
+	/// </summary>
+	public static readonly IReadOnlyList<SharpRole> RhostLevels =
+	[
+		Level("guildmaster", "Guildmaster", 13, PlayerSlug, PortalPermission.PlayersView, PortalPermission.QueueInspect),
+		Level("architect", "Architect", 16, BuilderSlug),
+		Level("councilor", "Councilor", 22, RoyaltySlug),
+		Level("immortal", "Immortal", 35, WizardSlug, PortalPermission.ServerAdmin)
+	];
+
+	/// <summary>The staff roles a <see cref="StaffLevelSets"/> value stands for.</summary>
+	public static IReadOnlyList<SharpRole> StaffRolesOf(string set)
+		=> set == StaffLevelSets.RhostMUSH ? RhostLevels : Starters;
+
+	/// <summary>
 	/// The roles to write so a world has its defaults, given the roles it already has: every missing
 	/// system role; the starter roles too when the world has no roles at all, so a deleted starter stays
 	/// deleted; and, on a system role that already exists, each in-game scope its defaults allow and the
@@ -209,6 +228,13 @@ public static class BuiltInRoles
 		roles.Add(Template(ApprovedSlug, "Approved", ApprovedPriority, "#8bc34a", true, ApprovedScopes));
 
 		return roles;
+	}
+
+	private static SharpRole Level(string slug, string name, int priority, string standin, params string[] more)
+	{
+		var permissions = new Dictionary<string, PermissionState>(All.First(role => role.Slug == standin).Permissions);
+		foreach (var scope in more) permissions[scope] = PermissionState.Allow;
+		return new SharpRole { Slug = slug, Name = name, Category = Categories.Staff, Priority = priority, Permissions = permissions };
 	}
 
 	private static SharpRole Template(string slug, string name, int priority, string color, bool system, string[] scopes,

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +38,7 @@ public class SetupController(
 	HandlerSetupService handlers,
 	StarterWikiService starterWiki,
 	StarterWorldService starterWorld,
+	StaffLevelService staffLevels,
 	IConfigOptionWriter config,
 	ILogger<SetupController> logger) : ControllerBase
 {
@@ -120,6 +122,26 @@ public class SetupController(
 		};
 
 	/// <summary>
+	/// Sets the staff roles the game uses: SharpMUSH's or RhostMUSH's (<see cref="StaffLevelSets"/>). The chosen set's
+	/// missing roles are made and the other set's unheld ones deleted. 409 naming the roles that could not be changed;
+	/// the others still were.
+	/// </summary>
+	[HttpPut("wizard/staff-levels")]
+	[Authorize(Policy = PortalPermission.ServerAdmin)]
+	public async Task<IActionResult> SetStaffLevels([FromBody] SetStaffLevelsRequest request, CancellationToken cancellationToken)
+	{
+		if (User.FindFirstValue(ClaimTypes.NameIdentifier) is not { } accountId) return Forbid();
+		if (!StaffLevelSets.IsKnown(request.Set)) return BadRequest($"No such set of staff roles: {request.Set}.");
+
+		// Not the request's token, as with the packages: a closed tab must not leave half the roles made.
+		return await staffLevels.ApplyAsync(new CapabilityActor(accountId), request.Set, CancellationToken.None) switch
+		{
+			Success => Ok(await WizardAsync(cancellationToken)),
+			Error<string> error => Conflict(error.Value),
+		};
+	}
+
+	/// <summary>
 	/// Writes the starter wiki pages the game does not have yet: Getting Started, Theme, Setting, Policies and the
 	/// categories that file them. Pages the game already has are left as they are. 409 naming the pages that could
 	/// not be written; the others still were.
@@ -160,7 +182,8 @@ public class SetupController(
 
 	private async Task<SetupWizardResponse> WizardAsync(CancellationToken cancellationToken)
 		=> new(await features.WizardPendingAsync(), await handlers.HandlersAsync(cancellationToken),
-			await features.PackagesAsync(), await starterWiki.AppliedAsync(), await starterWorld.AppliedAsync());
+			await features.PackagesAsync(), await starterWiki.AppliedAsync(), await starterWorld.AppliedAsync(),
+			await staffLevels.StateAsync(cancellationToken));
 
 	/// <summary>
 	/// Sign the claimer in as the administrator they just became.

@@ -78,7 +78,7 @@ public class RhostDatabaseTranslatorTests
 		await Assert.That(database.ImportNotes.Texts().Any(n => n.StartsWith("Flag COUNCILOR: imported as the councilor role and a flag of its own"))).IsTrue();
 	}
 
-	/// <summary>Only the levels the game uses get a role, each above the built-in role whose permissions it has.</summary>
+	/// <summary>Every level gets a role, each above the built-in role whose permissions it has.</summary>
 	[Test]
 	public async Task LevelRolesLineUpWithTheBuiltInRoles()
 	{
