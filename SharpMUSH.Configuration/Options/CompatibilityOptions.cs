@@ -140,8 +140,8 @@ public record CompatibilityOptions(
 	[property: SharpConfig(
 		Name = "dialect",
 		Category = "Compatibility",
-		Description = "Another server's names for functions and commands that typed input and attributes without a dialect flag also read, after SharpMUSH's own: rhost reads RhostMUSH's (wildmatch(), @sudo ...). Empty reads none. A RhostMUSH database import sets it",
-		ValidationPattern = @"^(rhost)?$",
+		Description = "Another server's names for functions and commands that typed input and attributes without a dialect flag also read, after SharpMUSH's own: rhost reads RhostMUSH's (wildmatch(), @sudo ...), mux reads TinyMUX's (strtrunc(), @qmail ...). Empty reads none. A RhostMUSH or TinyMUX database import sets it",
+		ValidationPattern = @"^(rhost|mux)?$",
 		Group = "Dialects",
 		Order = 1)]
 	string? Dialect,

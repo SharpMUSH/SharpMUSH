@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 
@@ -38,7 +39,8 @@ public static partial class TinyMuxDatabaseReader
 	/// <summary>
 	/// The options TinyMUX softcode needs. MUX tests and/or/xor numerically, cuts justified text, collates,
 	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
-	/// non-numbers as 0, and runs trigger() and verb(); it allows 500 levels of recursion and 32 KB values.
+	/// non-numbers as 0, and runs trigger() and verb(); it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
+	/// functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
 	{
@@ -52,7 +54,8 @@ public static partial class TinyMuxDatabaseReader
 		["tiny_math"] = true,
 		["null_eq_zero"] = true,
 		["mux_queue_functions"] = true,
-		["function_recursion_limit"] = 500u
+		["function_recursion_limit"] = 500u,
+		["dialect"] = SoftcodeDialects.Mux.Key
 	};
 
 	/// <summary>Where the read model's <see cref="PennMUSHDatabase.Configuration"/> records the flatfile version.</summary>
@@ -515,7 +518,8 @@ public static partial class TinyMuxDatabaseReader
 
 		private List<string> AttributeFlagNames(int flags, string name, int dbref)
 		{
-			var names = new List<string>();
+			// The mux flag marks the attribute as written in TinyMUX's dialect.
+			var names = new List<string> { SoftcodeDialects.Mux.Key };
 			foreach (var (bit, mapping) in TinyMuxNames.AttributeFlags)
 			{
 				if ((flags & bit) == 0) continue;
@@ -752,6 +756,9 @@ public static partial class TinyMuxDatabaseReader
 				"Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
 				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero and mux_queue_functions, and raises function_recursion_limit to 500, " +
 				"as TinyMUX softcode expects."));
+			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
+				"The import sets dialect to mux and gives every attribute it brings in the mux attribute flag, so that code " +
+				"reads TinyMUX's names for functions and commands SharpMUSH has under its own, such as strtrunc() and @qmail."));
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"TinyMUX compresses runs of spaces in evaluated text and SharpMUSH keeps them; there is no option for it yet, " +
 				"so output that relied on it may show extra spaces."));

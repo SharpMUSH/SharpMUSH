@@ -32,7 +32,7 @@ public partial class PackageManifestService
 	{
 		"no_command", "no_inherit", "no_clone", "mortal_dark", "wizard", "veiled", "nearby", "locked", "safe",
 		"visual", "public", "debug", "no_debug", "regexp", "case", "nospace", "noname", "aahear", "amhear", "quiet",
-		"prefixmatch", "cmdsyntax", "funsyntax", "internal", "nodump", "rhost"
+		"prefixmatch", "cmdsyntax", "funsyntax", "internal", "nodump", "rhost", "mux"
 	};
 
 	[GeneratedRegex("^" + HelperFunctions.AttributeNameCharacters + "+$")]

@@ -130,11 +130,81 @@ public static class SoftcodeDialects
 			["wh"] = "whisper"
 		});
 
+	/// <summary>
+	/// TinyMUX. The function names are its 2.12 renames and its <c>alias.conf</c> function aliases; the command names
+	/// are its <c>alias.conf</c> entries that SharpMUSH has no command for or reads as another command's abbreviation.
+	/// The same rule as <see cref="Rhost"/>: an entry takes the same arguments and gives the same result.
+	/// </summary>
+	public static readonly SoftcodeDialect Mux = new("mux",
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["ansiname"] = "moniker",
+			["connsecs"] = "conn",
+			["cpad"] = "center",
+			["helptext"] = "textfile",
+			["iabs"] = "abs",
+			["iadd"] = "add",
+			["idiv"] = "div",
+			["imul"] = "mul",
+			["isign"] = "sign",
+			["isub"] = "sub",
+			["lastmod"] = "mtime",
+			["lpad"] = "ljust",
+			["mailsubj"] = "mailsubject",
+			["modifytime"] = "mtime",
+			["nonzero"] = "ifelse",
+			["rpad"] = "rjust",
+			["secs2time"] = "convsecs",
+			["strtrunc"] = "left",
+			["time2secs"] = "convtime",
+			["who"] = "lwho"
+		},
+		new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["@ansiname"] = "@moniker",
+			["@ch"] = "@chown",
+			["@cho"] = "@chown",
+			["@chow"] = "@chown",
+			["@cl"] = "@clone",
+			["@clo"] = "@clone",
+			["@extansi"] = "@moniker",
+			["@fi"] = "@find",
+			["@file"] = "@mail/file",
+			["@li"] = "@link",
+			["@lis"] = "@list",
+			["@lo"] = "@lock",
+			["@loc"] = "@lock",
+			["@nameaccent"] = "@moniker",
+			["@nfy"] = "@notify",
+			["@pe"] = "@pemit",
+			["@q"] = "@quota",
+			["@qmail"] = "@mail/quick",
+			["@qu"] = "@quota",
+			["@send"] = "@mail/send",
+			["@st"] = "@stats",
+			["b"] = "examine/brief",
+			["d"] = "drop",
+			["e"] = "examine",
+			["h"] = "help",
+			["m"] = "goto",
+			["npose"] = "pose/noeval",
+			["nsay"] = "say/noeval",
+			["r"] = "look",
+			["re"] = "look",
+			["rea"] = "look",
+			["read"] = "look",
+			["thr"] = "drop",
+			["thro"] = "drop",
+			["throw"] = "drop",
+			["u"] = "use"
+		});
+
 	/// <summary>Every dialect, by key.</summary>
 	public static readonly IReadOnlyDictionary<string, SoftcodeDialect> All =
 		new Dictionary<string, SoftcodeDialect>(StringComparer.OrdinalIgnoreCase)
 		{
-			[Rhost.Key] = Rhost
+			[Rhost.Key] = Rhost,
+			[Mux.Key] = Mux
 		};
 
 	/// <summary>The dialect <paramref name="attribute"/> is written in, by its flag, or <c>null</c> for none.</summary>

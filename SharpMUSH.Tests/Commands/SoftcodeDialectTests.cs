@@ -1,4 +1,6 @@
+using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Softcode;
 
 namespace SharpMUSH.Tests.Commands;
 
@@ -108,5 +110,60 @@ public class SoftcodeDialectTests : ServerTestBase
 		{
 			await ConnectionService.Disconnect(actor.Handle);
 		}
+	}
+
+	[Test]
+	public async Task FlaggedAttributeCallsTinyMuxFunctionNames()
+	{
+		var thing = DBRef.Parse(await Cmd($"@create {TestIsolationHelpers.GenerateUniqueName("DialectMux")}"));
+		await Cmd($"&FLAGGED {thing}=[strtrunc(abcdef,3)] [iadd(1,2,3)] [rpad(ab,4,.)]");
+		await Cmd($"@set {thing}/FLAGGED=mux");
+
+		await Assert.That(await Eval($"u({thing}/FLAGGED)")).IsEqualTo("abc 6 ..ab");
+		await Assert.That(await Eval("[strtrunc(abcdef,3)]")).StartsWith("#-1 FUNCTION (STRTRUNC) NOT FOUND");
+	}
+
+	[Test]
+	public async Task GameDialectReadsTinyMuxCommandNames()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DialectMuxCmd");
+		var token = TestIsolationHelpers.GenerateUniqueName("dialectmux");
+		try
+		{
+			using var dialect = TestOptionsOverride.Scope(options => options with
+			{
+				Compatibility = options.Compatibility with { Dialect = "mux" }
+			});
+			await CmdAs(actor.DbRef, actor.Handle, $"@pe me={token}");
+			await CmdAs(actor.DbRef, actor.Handle, $"nsay {token}-[add(1,1)]");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(Notifications.For(actor.DbRef).Where(message => message.StartsWith(token, StringComparison.Ordinal)))
+				.IsEquivalentTo([token]);
+			await Assert.That(Notifications.For(actor.DbRef).Any(message => message.Contains($"{token}-[add(1,1)]", StringComparison.Ordinal)))
+				.IsTrue();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
+
+	/// <summary>An alias that names nothing would read as a missing function or <c>Huh?</c>, as if it were not there.</summary>
+	[Test]
+	public async Task EveryDialectAliasNamesSomethingSharpMushHas()
+	{
+		var commands = CommandTrie.For(Parser.CommandLibrary);
+		var missing = SoftcodeDialects.All.Values
+			.SelectMany(dialect => dialect.FunctionAliases
+					.Where(alias => !Parser.FunctionLibrary.ContainsKey(alias.Value))
+					.Select(alias => $"{dialect.Key} {alias.Key}()")
+				.Concat(dialect.CommandAliases
+					.Where(alias => commands.FindExact(alias.Value.Split('/')[0]) is null)
+					.Select(alias => $"{dialect.Key} {alias.Key}")))
+			.ToList();
+
+		await Assert.That(missing).IsEmpty();
 	}
 }
