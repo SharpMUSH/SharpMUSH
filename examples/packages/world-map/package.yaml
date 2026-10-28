@@ -74,6 +74,8 @@ objects:
         A graph map can be drawn on a picture. See `+help map pictures`.
 
         Choosing a room shows the way there from where you stand. See `+help map routes`.
+
+        Someone who controls a map can change it in the portal. See `+help map building`.
       HELP`MAP`REGIONS: |-
         A map zoned to another map is a region inside it. Regions nest as deep as you like: Sol System, Earth, United States, New York, Brooklyn.
 
@@ -158,3 +160,35 @@ objects:
         `walk` takes exits separated by spaces, so an exit whose name has a space is written by its first alias without one. Give such exits a one-word alias: `@name Coast road=Coast road;road`. A route through an exit with no such name is still shown, with no line to paste.
 
         See `help walk`.
+      HELP`MAP`BUILDING: |-
+        If you control a map, the World map shows **Edit map**. While you edit, nothing reaches the game; the map shows what it will look like once your changes run.
+
+        - Choose a room you control to set its place or size, dig a room above or below it, or take it off the map.
+        - Choose an empty cell next to a room (a spot on a picture map) to dig a room there, joined to that room by an exit and, if you like, an exit back. The exit names follow the direction: `East;e` there and `West;w` back.
+        - Add a room that this map's exits lead to and that is on no map, or a room by its dbref.
+
+        **Review and apply** lists each change as the commands it runs. **Apply** runs them as you, with your permissions, one by one, and checks each. The first that fails stops the rest, and the list says which changes ran.
+
+        On the Isle, a picture map, digging a Tar shed at a spot joined to the Ford runs:
+
+        ```
+        @dig Tar shed
+        @chzone #115=Isle
+        &MAP`POS`X #115=380
+        &MAP`POS`Y #115=520
+        @open Tar lane;tar=#115,Ford path;fp,#73
+        ```
+
+        Output:
+        ```
+        Tar shed created with room number 115.
+        Zone changed.
+        Tar shed/MAP`POS`X - Set.
+        Tar shed/MAP`POS`Y - Set.
+        Opened exit #116
+        Trying to link...
+        Linked exit #116 to #115
+        Opened exit #117
+        Trying to link...
+        Linked exit #117 to #73
+        ```
