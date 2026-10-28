@@ -289,6 +289,7 @@ public static class TinyMuxNames
 	public const int EnterLockAttribute = 59;
 	public const int UseLockAttribute = 62;
 	public const int PrivilegesAttribute = 83;
+	public const int RealityAttribute = 250;
 	public const int CreatedAttribute = 218;
 	public const int ModifiedAttribute = 219;
 	public const int ListAttribute = 253;
@@ -314,7 +315,6 @@ public static class TinyMuxNames
 		[210] = "@prog state",
 		[213] = "the creation count TinyMUX keeps for itself",
 		[224] = "the connection times TinyMUX keeps for itself",
-		[250] = "reality levels, which SharpMUSH does not have",
 		[252] = "an internal attribute list",
 		[ListAttribute] = "the legacy packed attribute list",
 		[254] = "an internal structure definition",

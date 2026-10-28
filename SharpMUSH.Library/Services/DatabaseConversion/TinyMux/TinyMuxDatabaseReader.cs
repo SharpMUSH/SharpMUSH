@@ -383,6 +383,7 @@ public static partial class TinyMuxDatabaseReader
 			string? password = null;
 			List<string> aliases = [];
 			long created = 0, modified = 0;
+			PennMUSHReality? reality = null;
 			var auditorium = (raw.Flags2 & 0x100) != 0;
 
 			if (raw.HeaderLock is { } headerLock)
@@ -406,6 +407,11 @@ public static partial class TinyMuxDatabaseReader
 						continue;
 					case TinyMuxNames.ModifiedAttribute:
 						modified = Timestamp(value, raw.DBRef);
+						continue;
+					case TinyMuxNames.RealityAttribute:
+						reality = PennMUSHReality.Parse(value);
+						if (reality is null)
+							Tally(ImportWarningKind.Objects, "Reality levels that TinyMUX itself would not read, left off", raw.DBRef);
 						continue;
 				}
 
@@ -483,7 +489,8 @@ public static partial class TinyMuxDatabaseReader
 				Attributes = attributes,
 				Locks = locks,
 				Password = password,
-				Aliases = aliases
+				Aliases = aliases,
+				Reality = reality
 			};
 		}
 
