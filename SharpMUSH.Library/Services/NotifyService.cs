@@ -209,9 +209,10 @@ public class NotifyService(
 		}
 
 		// A piped command's output (`look ;| say %|`) goes to the next command, not to anyone's screen.
-		if (!prompt && pipeOutputCapture?.Captures(who.Number) == true)
+		// An @pipe/tee copy is taken and still delivered.
+		if (!prompt && pipeOutputCapture?.Captures(who.Number) == true
+			&& pipeOutputCapture.TryCapture(who.Number, context is not null ? MString.Concat(context.Prefix, AsMarkup(what)) : AsMarkup(what)))
 		{
-			pipeOutputCapture.TryCapture(who.Number, context is not null ? MString.Concat(context.Prefix, AsMarkup(what)) : AsMarkup(what));
 			return false;
 		}
 
@@ -504,9 +505,9 @@ public class NotifyService(
 	public async ValueTask NotifyLocalizedMarkup(DBRef who, string key, AnySharpObject? sender, params MString[] args)
 	{
 		if (!await CanReceive(who, sender)) return;
-		if (pipeOutputCapture?.Captures(who.Number) == true)
+		if (pipeOutputCapture?.Captures(who.Number) == true
+			&& pipeOutputCapture.TryCapture(who.Number, MarkupTemplateFormatter.Format(localizationService.Get(key, null), args)))
 		{
-			pipeOutputCapture.TryCapture(who.Number, MarkupTemplateFormatter.Format(localizationService.Get(key, null), args));
 			return;
 		}
 

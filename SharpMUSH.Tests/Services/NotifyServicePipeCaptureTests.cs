@@ -84,4 +84,24 @@ public class NotifyServicePipeCaptureTests
 		await Assert.That(buffer.Text.ToPlainText()).IsEqualTo("first");
 		await Assert.That(buffer.Truncated).IsTrue();
 	}
+
+	[Test]
+	public async Task TheMessageThatOverflowsAnAttributePipe_IsDelivered()
+	{
+		var capture = new PipeOutputCapture();
+		var connections = Substitute.For<IConnectionService>();
+		connections.Get(Arg.Any<DBRef>()).Returns(AsyncEnumerable.Empty<IConnectionService.ConnectionData>());
+		var service = new NotifyService(Substitute.For<IMessageBus>(), connections, Substitute.For<ILocalizationService>(),
+			DisabledRealityPolicy.Instance, pipeOutputCapture: capture);
+		var executor = new DBRef(44, null);
+		var pipe = new AttributePipe("PIPED", false, new PipeBuffer(10));
+		capture.StartAttributePipe(44, pipe);
+
+		await service.Notify(executor, "12345", sender: null);
+		connections.DidNotReceive().Get(executor);
+
+		await service.Notify(executor, "123456", sender: null);
+		connections.Received(1).Get(executor);
+		await Assert.That(pipe.Buffer.Text.ToPlainText()).IsEqualTo("12345");
+	}
 }

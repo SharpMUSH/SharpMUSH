@@ -122,6 +122,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IPortalPresence PortalPresence { get; }
 
+	private IPipeOutputCapture PipeOutputCapture { get; }
+
 	private LibraryService<string, CommandDefinition> CommandLibrary { get; }
 	private ILibraryProvider<FunctionDefinition> Functions { get; }
 	private LibraryService<string, FunctionDefinition> FunctionLibrary { get; }
@@ -194,7 +196,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IPortalPresence portalPresence,
 		ILibraryProvider<FunctionDefinition> functions,
 		NativeLoginService nativeLogins,
-		ILoginFailureTracker loginFailures)
+		ILoginFailureTracker loginFailures,
+		IPipeOutputCapture pipeOutputCapture)
 	{
 		Mediator = mediator;
 		RelationshipCycles = relationshipCycles;
@@ -258,6 +261,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		Secrets = secrets;
 		WebPush = webPush;
 		PortalPresence = portalPresence;
+		PipeOutputCapture = pipeOutputCapture;
 		Functions = functions;
 		FunctionLibrary = functions.Get();
 

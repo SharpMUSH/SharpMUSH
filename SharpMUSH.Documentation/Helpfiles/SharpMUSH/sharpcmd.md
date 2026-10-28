@@ -58,7 +58,8 @@ These '@' commands are general utility and programming commands:
 | [@scan]      | [@search]    | [@select]    | [@sockset]   | [@stats]     |
 | [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
 | [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
-| [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  |              |
+| [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  | [@eval]      |
+| [@pipe]      |              |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:

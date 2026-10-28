@@ -82,6 +82,28 @@ public sealed class ObjectGrants
 			: new ObjectGrants(this, OAuth.DelegatedScopes.Cap(Granted, scopes, _customCategories),
 				OAuth.DelegatedScopes.Cap(_shown, scopes, _customCategories));
 
+	/// <summary>
+	/// These grants under a privilege ceiling at <paramref name="priority"/>: only what is granted both now and by the
+	/// roles at or below that priority, with the overrides that allow dropped and not the owner. A ceiling at or above
+	/// every role held changes nothing but the owner's blanket grant and the allowing overrides.
+	/// </summary>
+	public ObjectGrants AtMost(int priority)
+	{
+		var context = Context with
+		{
+			IsOwner = false,
+			Roles = Context.Roles.Where(role => BuiltInRoles.IsEveryone(role) || role.Priority <= priority).ToArray(),
+			Overrides = Denials(Context.Overrides),
+			ObjectOverrides = Denials(Context.ObjectOverrides)
+		};
+		var lowered = new ObjectGrants(Roles.Where(held => context.Roles.Contains(held.Role)).ToArray(), context, _customCategories);
+		return new ObjectGrants(lowered, Granted.Where(lowered.Granted.Contains).ToHashSet(StringComparer.Ordinal),
+			_shown.Where(lowered._shown.Contains).ToHashSet(StringComparer.Ordinal));
+	}
+
+	private static Dictionary<string, PermissionState> Denials(IReadOnlyDictionary<string, PermissionState> overrides)
+		=> overrides.Where(entry => entry.Value == PermissionState.Deny).ToDictionary(StringComparer.OrdinalIgnoreCase);
+
 	/// <summary>Grants nothing: an object whose grants could not be read.</summary>
 	public static readonly ObjectGrants None = new([], PermissionContext.None);
 

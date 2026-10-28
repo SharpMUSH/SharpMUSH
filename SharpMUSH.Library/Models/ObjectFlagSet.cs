@@ -70,8 +70,9 @@ public sealed class ObjectFlagSet
 	public bool HasOrLetter(string nameOrLetter)
 		=> Has(nameOrLetter) || (nameOrLetter.Length == 1 && Symbols.Contains(nameOrLetter));
 
-	/// <summary>PennMUSH <c>God(x)</c>.</summary>
+	/// <summary>PennMUSH <c>God(x)</c>, unless an app or a privilege ceiling lowers it.</summary>
 	public bool IsGod => Object.Number == 1
+		&& Authorization.PrivilegeCeiling.Over(1) is null
 		&& (OAuth.DelegatedApp.ActingAs(Object) is not { } app || OAuth.DelegatedScopes.HasEveryGroup(app.Scopes));
 
 	/// <summary>PennMUSH <c>Wizard(x)</c>: God, or granted <see cref="PortalPermission.GameWizard"/>.</summary>

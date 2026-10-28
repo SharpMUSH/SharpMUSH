@@ -1,3 +1,4 @@
+using System.Text;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
@@ -525,6 +526,39 @@ public partial class Functions
 		var wantsRegister = ArgHelpers.ParseInteger(mode) != 0;
 		RegisterLabels.TryGetLabel(frame, register, out var label);
 		return ValueTask.FromResult(new CallState(wantsRegister && isLabel ? register : label));
+	}
+
+	/// <summary>
+	/// RhostMUSH's nameqm(): nameq()'s two-argument form for each register and label pair in turn. A pair
+	/// with either half empty is <c>#-1 ARGUMENTS EXPECTED</c>; nothing is cleared.
+	/// </summary>
+	[SharpFunction(Name = "nameqm", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi | FunctionFlags.EvenArgsOnly,
+		ParameterNames = ["register", "label", "..."])]
+	public ValueTask<CallState> NameQM(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (!parser.CurrentState.Registers.TryPeek(out var frame))
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.BadRegName));
+
+		var result = new StringBuilder();
+		for (var i = 0; i + 1 < args.Count; i += 2)
+		{
+			var name = args[i.ToString()].Message.ToPlainText();
+			var label = args[(i + 1).ToString()].Message.ToPlainText();
+			if (name.Length == 0 || label.Length == 0)
+			{
+				result.Append(ErrorMessages.Returns.ArgumentsExpected);
+				continue;
+			}
+
+			var upper = name.ToUpper();
+			var register = RegisterLabels.Resolve(frame, upper);
+			result.Append(register == upper && !IsRegisterName(register)
+				? ErrorMessages.Returns.BadRegName
+				: RenameRegister(frame, register, label));
+		}
+
+		return ValueTask.FromResult(new CallState(result.ToString()));
 	}
 
 	private static bool IsRegisterName(string name)

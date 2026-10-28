@@ -3201,4 +3201,35 @@ PLAYERS:</value>
   <data name="TooFewCommandArgumentsFormat" xml:space="preserve">
     <value>{0}: too few arguments (needs {1}, got {2}). Type: help {0}</value>
   </data>
+  <!-- @pipe (RhostMUSH) -->
+  <data name="PipeOnFormat" xml:space="preserve">
+    <value>@pipe: what you are told now goes to {0}.</value>
+  </data>
+  <data name="PipeTeeFormat" xml:space="preserve">
+    <value>@pipe: what you are told is now also copied to {0}.</value>
+  </data>
+  <data name="PipeOffFormat" xml:space="preserve">
+    <value>@pipe: written to {0}.</value>
+  </data>
+  <data name="PipeFullFormat" xml:space="preserve">
+    <value>@pipe: {0} filled up, so the rest was shown to you instead.</value>
+  </data>
+  <data name="PipeStatusOnFormat" xml:space="preserve">
+    <value>@pipe: piping to {0}.</value>
+  </data>
+  <data name="PipeStatusTeeFormat" xml:space="preserve">
+    <value>@pipe: copying to {0}.</value>
+  </data>
+  <data name="PipeAlreadyFormat" xml:space="preserve">
+    <value>@pipe: you are already piping to {0}.</value>
+  </data>
+  <data name="PipeNotRunning" xml:space="preserve">
+    <value>@pipe: you are not piping to an attribute.</value>
+  </data>
+  <data name="PipeNeedsAttribute" xml:space="preserve">
+    <value>@pipe: name the attribute to pipe to.</value>
+  </data>
+  <data name="PipeNeedsSwitch" xml:space="preserve">
+    <value>@pipe: use /on, /tee, /off or /status.</value>
+  </data>
 </root>
