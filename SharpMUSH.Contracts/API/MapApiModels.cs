@@ -67,6 +67,12 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 	/// control, which they may add to it. Empty for anyone else.
 	/// </summary>
 	public IReadOnlyList<MapRoomDto> Nearby { get; init; } = [];
+
+	/// <summary>
+	/// For a viewer who <see cref="CanEdit"/>: how many more objects their quota lets them build, each room and each exit
+	/// one; null when no quota limits them.
+	/// </summary>
+	public int? BuildsLeft { get; init; }
 }
 
 /// <param name="Id">The room's dbref.</param>
@@ -107,6 +113,9 @@ public sealed record MapExitDto(string Id, string Name, IReadOnlyList<string> Al
 {
 	/// <summary>The name of the room it leads to, whenever <see cref="Destination"/> is set, whether or not that room is on a map.</summary>
 	public string? DestinationName { get; init; }
+
+	/// <summary>The viewer controls both the map and this exit, so may rename it or destroy it.</summary>
+	public bool Editable { get; init; }
 }
 
 /// <summary>Where the viewer stands, for a map list that opens on the map they are on.</summary>

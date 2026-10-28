@@ -144,12 +144,17 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 				}
 				var target = new AnySharpObject(exit);
 				if (!await VisibleAsync(viewer, target, ct)) continue;
+				// An exit already destroyed waits only to be purged.
+				if (await exit.Object.IsGoingAsync()) continue;
 				// A stale list entry must not draw an exit moved out of the room.
 				if ((await exit.Location.WithCancellation(ct)).Object().DBRef != room.Object().DBRef) continue;
 				var (destination, destinationName, destinationMap) = await DestinationAsync(viewer, publisher, exit, map, onMap, otherMaps, ct);
 				exits.Add(new($"#{exit.Object.DBRef.Number}", exit.Object.Name, [.. target.Aliases ?? []], dto.Id, destination,
 					destinationMap)
-				{ DestinationName = destinationName });
+				{
+					DestinationName = destinationName,
+					Editable = canEdit && await permissions.Controls(viewer, target),
+				});
 			}
 		}
 

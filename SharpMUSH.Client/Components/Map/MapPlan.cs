@@ -14,7 +14,11 @@ public sealed record MapStep(string Command, string Check, string? Expect);
 /// <summary>A change a builder has planned: what it does, to which room, and the commands that make it, in order.</summary>
 /// <param name="Room">The room it changes, or the key of the room it digs (<c>new:1</c>).</param>
 /// <param name="Name">That room's name.</param>
-public sealed record MapChange(string Key, MapChangeKind Kind, string Room, string Name, IReadOnlyList<MapStep> Steps);
+public sealed record MapChange(string Key, MapChangeKind Kind, string Room, string Name, IReadOnlyList<MapStep> Steps)
+{
+	/// <summary>What the review names besides: a new name, the room a way leads to, a level's number.</summary>
+	public string? Other { get; init; }
+}
 
 public enum MapChangeKind
 {
@@ -23,6 +27,12 @@ public enum MapChangeKind
 	Add,
 	Remove,
 	Dig,
+	Describe,
+	Rename,
+	Join,
+	RenameExit,
+	RemoveExit,
+	NameLevel,
 }
 
 /// <summary>
@@ -36,6 +46,8 @@ public sealed partial class MapPlan(MapDto map)
 	private readonly Dictionary<string, MapRoomDto> _dug = new();
 	private readonly Dictionary<string, (string From, string To, string? Back)> _dugExits = new();
 	private readonly Dictionary<string, MapRoomDto> _added = new();
+	private readonly Dictionary<string, string> _dugDescriptions = new();
+	private readonly Dictionary<string, (string From, string To, string Names, string? Back)> _joins = new();
 	private int _next;
 
 	public MapDto Map { get; } = map;
@@ -84,6 +96,85 @@ public sealed partial class MapPlan(MapDto map)
 		]));
 	}
 
+	/// <summary>
+	/// Sets <paramref name="room"/>'s description: each line break written as <c>%r</c>, as a client would type it.
+	/// Blank clears it.
+	/// </summary>
+	public void Describe(string room, string text)
+	{
+		var value = Description(text);
+		if (_dug.ContainsKey(room))
+		{
+			if (value.Length == 0) _dugDescriptions.Remove(room);
+			else _dugDescriptions[room] = value;
+			Upsert(DigChange(room));
+			return;
+		}
+		Upsert(new($"describe:{room}", MapChangeKind.Describe, room, Name(room), [Set(room, "DESCRIBE", value)]));
+	}
+
+	/// <summary>The description planned for <paramref name="room"/>, as it will be stored; null when the plan sets none.</summary>
+	public string? PlannedDescription(string room) =>
+		_dugDescriptions.GetValueOrDefault(room)
+		?? _changes.FirstOrDefault(change => change.Key == $"describe:{room}")?.Steps[0].Expect;
+
+	/// <summary>Renames <paramref name="room"/>, or a room the plan digs.</summary>
+	public void Rename(string room, string name)
+	{
+		name = name.Trim();
+		if (_dug.TryGetValue(room, out var dug))
+		{
+			Redig(room, dug with { Name = name });
+			return;
+		}
+		var previous = Name(room);
+		Upsert(new($"rename:{room}", MapChangeKind.Rename, room, previous, [new($"@name {room}={name}", $"name({room})", name)]) { Other = name });
+	}
+
+	/// <summary>
+	/// Opens an exit <paramref name="names"/> from <paramref name="from"/> to <paramref name="to"/>, two rooms on the map
+	/// (either may be one the plan digs), and, when given, <paramref name="back"/> the other way.
+	/// </summary>
+	public string Join(string from, string to, string names, string? back)
+	{
+		var key = $"join:{++_next}";
+		_joins[key] = (from, to, names.Trim(), string.IsNullOrWhiteSpace(back) ? null : back.Trim());
+		Upsert(JoinChange(key));
+		return key;
+	}
+
+	/// <summary>Gives the exit <paramref name="exit"/> new names: its name, then its aliases after <c>;</c>.</summary>
+	public void RenameExit(string exit, string names)
+	{
+		var current = Map.Exits.FirstOrDefault(candidate => candidate.Id == exit);
+		_changes.RemoveAll(change => change.Key == $"remove-exit:{exit}");
+		Upsert(new($"rename-exit:{exit}", MapChangeKind.RenameExit, exit, current?.Name ?? exit,
+			[new($"@name {exit}={names.Trim()}", $"name({exit})", First(names))])
+		{ Other = First(names) });
+	}
+
+	/// <summary>Destroys the exit <paramref name="exit"/>.</summary>
+	public void RemoveExit(string exit)
+	{
+		var current = Map.Exits.FirstOrDefault(candidate => candidate.Id == exit);
+		_changes.RemoveAll(change => change.Key == $"rename-exit:{exit}");
+		Upsert(new($"remove-exit:{exit}", MapChangeKind.RemoveExit, exit, current?.Name ?? exit,
+			[new($"@destroy {exit}", $"or(not(valid({exit})),hasflag({exit},GOING))", "1")]));
+	}
+
+	/// <summary>Names level <paramref name="level"/> of the map; blank leaves it numbered.</summary>
+	public void NameLevel(int level, string name)
+	{
+		var number = level.ToString(CultureInfo.InvariantCulture);
+		Upsert(new($"level:{number}", MapChangeKind.NameLevel, number, name.Trim(),
+			[Set(Map.Map.Id, $"MAP`LEVEL`{number}", name.Trim())])
+		{ Other = number });
+	}
+
+	/// <summary>How many objects the plan makes, each counted against the builder's quota: a room per dig, an exit per way.</summary>
+	public int Builds =>
+		_dugExits.Values.Sum(exit => exit.Back is null ? 2 : 3) + _joins.Values.Sum(join => join.Back is null ? 1 : 2);
+
 	/// <summary>Zones <paramref name="room"/> to this map.</summary>
 	public void Add(MapRoomDto room)
 	{
@@ -99,6 +190,13 @@ public sealed partial class MapPlan(MapDto map)
 		if (_dug.Remove(room))
 		{
 			_dugExits.Remove(room);
+			_dugDescriptions.Remove(room);
+			// A way to or from it would have nowhere to go.
+			foreach (var (key, _) in _joins.Where(join => join.Value.From == room || join.Value.To == room).ToList())
+			{
+				_joins.Remove(key);
+				_changes.RemoveAll(change => change.Key == key);
+			}
 			_changes.RemoveAll(change => change.Room == room);
 			// A room dug from this one would have no room to be joined from.
 			foreach (var (key, _) in _dugExits.Where(exit => exit.Value.From == room).ToList()) Remove(key);
@@ -134,6 +232,7 @@ public sealed partial class MapPlan(MapDto map)
 			return;
 		}
 		_changes.Remove(change);
+		if (change.Kind == MapChangeKind.Join) _joins.Remove(change.Key);
 		if (change.Kind == MapChangeKind.Add) _added.Remove(change.Room);
 	}
 
@@ -142,13 +241,30 @@ public sealed partial class MapPlan(MapDto map)
 	{
 		var removed = _changes.Where(change => change.Kind == MapChangeKind.Remove).Select(change => change.Room).ToHashSet();
 		var rooms = Map.Rooms.Concat(_added.Values).Where(room => !removed.Contains(room.Id)).Select(Planned).Concat(_dug.Values).ToList();
-		var exits = Map.Exits.Where(exit => !removed.Contains(exit.Source)).ToList();
+		var gone = _changes.Where(change => change.Kind == MapChangeKind.RemoveExit).Select(change => change.Room).ToHashSet();
+		var renamed = _changes.Where(change => change.Kind == MapChangeKind.RenameExit)
+			.ToDictionary(change => change.Room, change => change.Steps[0].Command[(change.Steps[0].Command.IndexOf('=') + 1)..]);
+		var exits = Map.Exits.Where(exit => !removed.Contains(exit.Source) && !gone.Contains(exit.Id))
+			.Select(exit => renamed.TryGetValue(exit.Id, out var names) ? exit with { Name = First(names), Aliases = Rest(names) } : exit)
+			.ToList();
 		foreach (var (key, (from, to, back)) in _dugExits)
 		{
 			exits.Add(new($"{key}:to", First(to), Rest(to), from, key, null));
 			if (back is not null) exits.Add(new($"{key}:back", First(back), Rest(back), key, from, null));
 		}
-		return Map with { Rooms = rooms, Exits = exits };
+		foreach (var (key, (from, to, names, back)) in _joins)
+		{
+			exits.Add(new($"{key}:to", First(names), Rest(names), from, to, null));
+			if (back is not null) exits.Add(new($"{key}:back", First(back), Rest(back), to, from, null));
+		}
+		var levels = new Dictionary<int, string>(Map.LevelNames);
+		foreach (var change in _changes.Where(change => change.Kind == MapChangeKind.NameLevel))
+		{
+			var level = int.Parse(change.Room, CultureInfo.InvariantCulture);
+			if (change.Name.Length == 0) levels.Remove(level);
+			else levels[level] = change.Name;
+		}
+		return Map with { Rooms = rooms, Exits = exits, LevelNames = levels };
 	}
 
 	/// <summary>
@@ -274,7 +390,25 @@ public sealed partial class MapPlan(MapDto map)
 		var linked = $"strmatch(num(loc(%>)),num({self}))";
 		var check = string.IsNullOrEmpty(back) ? linked : $"and({linked},strmatch(num(loc(lexits({self}))),num({source})))";
 		steps.Add(new($"@open {to}={self},{back ?? ""},{source}", check, "1"));
+		if (_dugDescriptions.TryGetValue(key, out var description)) steps.Add(Set(self, "DESCRIBE", description));
 		return new(key, MapChangeKind.Dig, key, room.Name, steps);
+	}
+
+	/// <summary>
+	/// A join's <c>@open</c>, checked as a dig's is: the exit it made leads to the room, and when there is a way back, the
+	/// newest exit in that room leads back.
+	/// </summary>
+	private MapChange JoinChange(string key)
+	{
+		var (from, to, names, back) = _joins[key];
+		var source = _dug.ContainsKey(from) ? Token(from) : from;
+		var destination = _dug.ContainsKey(to) ? Token(to) : to;
+		var linked = $"strmatch(num(loc(%>)),num({destination}))";
+		var check = back is null ? linked : $"and({linked},strmatch(num(loc(first(lexits({destination})))),num({source})))";
+		return new(key, MapChangeKind.Join, from, Name(from), [new($"@open {names}={destination},{back ?? ""},{source}", check, "1")])
+		{
+			Other = Name(to),
+		};
 	}
 
 	private void Redig(string key, MapRoomDto room)
@@ -297,6 +431,7 @@ public sealed partial class MapPlan(MapDto map)
 		{
 			room = change.Kind switch
 			{
+				MapChangeKind.Rename => room with { Name = change.Steps[0].Expect! },
 				MapChangeKind.Place => room with { Position = Values(change, IsGraph ? ["MAP`POS`X", "MAP`POS`Y"] : ["MAP`COORDS`X", "MAP`COORDS`Y", "MAP`COORDS`Z"]) },
 				MapChangeKind.Size => room with { Size = Values(change, ["MAP`SIZE`W", "MAP`SIZE`H"]) is [> 0, > 0, ..] size ? size : null },
 				_ => room,
@@ -329,6 +464,10 @@ public sealed partial class MapPlan(MapDto map)
 	private static IReadOnlyList<string> Rest(string names) => [.. names.Split(';', StringSplitOptions.TrimEntries).Skip(1)];
 
 	private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+
+	/// <summary>A description as one command line takes it: trimmed, each line break as <c>%r</c>.</summary>
+	private static string Description(string text) =>
+		string.Join("%r", text.Replace("\r\n", "\n").Replace('\r', '\n').Trim().Split('\n').Select(line => line.TrimEnd()));
 }
 
 /// <summary>How one change of an applied plan went.</summary>

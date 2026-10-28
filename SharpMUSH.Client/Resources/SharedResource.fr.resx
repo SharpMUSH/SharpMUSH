@@ -6016,12 +6016,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nom</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Enregistrer la position</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Enregistrer la taille</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Retirer de cette carte</value>
   </data>
@@ -6081,5 +6075,92 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} ici en ce moment</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Définir la position</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Définir la taille</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Définir le nom</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Définir la description</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Noms de la sortie</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>vers {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Renommer</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Détruire</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Ouvrir un passage</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Vers la pièce</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Nom du niveau</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Ce plan construit {0} objets ; votre quota en permet encore {1}.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Ce plan construit {0} objets, mais votre quota n'en permet plus que {1}. Retirez d'abord quelques changements.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Décrire {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Renommer {0} en {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Ouvrir un passage de {0} vers {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Renommer la sortie {0} en {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Détruire la sortie {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Nommer le niveau {1} {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Effacer le nom du niveau {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Nouvelle carte</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Nom de la carte</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Disposition</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>La carte est un objet que vous portez. Les pièces la rejoignent quand elles sont rattachées à sa zone.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>Le jeu n'a pas créé la carte.</value>
+  </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>La pièce a déjà une sortie portant l'un de ces noms.</value>
   </data>
 </root>

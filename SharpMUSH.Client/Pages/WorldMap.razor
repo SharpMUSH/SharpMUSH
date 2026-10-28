@@ -67,6 +67,7 @@
                 {
                     @Tree(null)
                 }
+                @NewMap()
             </nav>
 
             <div class="map-main">
@@ -229,11 +230,12 @@
     /// <summary>The plan ran, all of it or up to a failed step: read the map again and keep editing it from there.</summary>
     private async Task AppliedAsync(IReadOnlyList<MapApplied> applied)
     {
-        var level = _level;
+        var (level, selected) = (_level, _selected);
         await LoadMapAsync();
         _applied = applied;
         if (_layout is null) return;
         if (_layout.Levels.Contains(level)) _level = level;
+        if (selected is not null && _layout.Rooms.ContainsKey(selected)) _selected = selected;
         StartEditing();
         _applied = applied;
     }
@@ -461,6 +463,85 @@
         await Task.Yield();
         if (_canvas is not null) await _canvas.FocusAsync(id);
         await LoadRouteAsync(id);
+    }
+
+    private bool _creating;
+    private bool _making;
+    private string _newName = "";
+    private string _newKind = MapKinds.Compass;
+    private string? _newError;
+
+    /// <summary>
+    /// Makes a map as the character's own commands: <c>@create</c> an object, which stays in their inventory, and give it
+    /// <c>MAP`KIND</c>. The new map opens in builder mode's reach once the list has it.
+    /// </summary>
+    private RenderFragment NewMap() => __builder =>
+    {
+        if (!_creating)
+        {
+            <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Add" Class="map-new" OnClick="() => (_creating, _newError) = (true, null)">
+                @Loc["NavMapNewMap"]
+            </MudButton>
+            return;
+        }
+        var problem = MapPlan.RoomNameProblem(_newName);
+        <section class="map-new-form" aria-labelledby="map-new-title">
+            <h3 id="map-new-title" class="map-new-title">@Loc["NavMapNewMap"]</h3>
+            <MudTextField T="string" @bind-Value="_newName" Label="@Loc["NavMapNewName"]" Variant="Variant.Outlined" Immediate="true" />
+            <MudSelect T="string" @bind-Value="_newKind" Label="@Loc["NavMapNewKind"]" Variant="Variant.Outlined">
+                @foreach (var kind in MapKinds.All)
+                {
+                    <MudSelectItem Value="@kind">@KindLabel(kind)</MudSelectItem>
+                }
+            </MudSelect>
+            <p class="map-note">@Loc["NavMapNewNote"]</p>
+            @if (_newError is not null)
+            {
+                <p class="map-new-error" role="alert">@_newError</p>
+            }
+            <div class="map-new-actions">
+                <MudButton Variant="Variant.Text" Disabled="_making" OnClick="() => _creating = false">@Loc["NavMapCancel"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_making || problem is not null)" OnClick="CreateMapAsync">
+                    @Loc["NavMapCreate"]
+                </MudButton>
+            </div>
+        </section>
+    };
+
+    private async Task CreateMapAsync()
+    {
+        if (MapPlan.RoomNameProblem(_newName) is not null) return;
+        _making = true;
+        try
+        {
+            var made = await Commands.RunAsync($"@create {_newName.Trim()}", "%>", CharacterId) switch
+            {
+                PortalCommandResponse { Result: { } dbref } when MapPlan.IsDbref(dbref) => dbref.Trim().Split(':')[0],
+                PortalCommandResponse answer => Fail(answer.Output.LastOrDefault()),
+                ApiFailure failure => Fail(failure.Message),
+            };
+            if (made is null) return;
+            var kind = await Commands.RunAsync($"&MAP`KIND {made}={_newKind}", $"get({made}/MAP`KIND)", CharacterId) switch
+            {
+                PortalCommandResponse { Result: { } value } when value.Trim() == _newKind => made,
+                PortalCommandResponse answer => Fail(answer.Output.LastOrDefault()),
+                ApiFailure failure => Fail(failure.Message),
+            };
+            if (kind is null) return;
+            (_creating, _newName) = (false, "");
+            await LoadListAsync();
+            Nav.NavigateTo($"/map/{made[1..]}");
+        }
+        finally
+        {
+            _making = false;
+        }
+    }
+
+    private string? Fail(string? error)
+    {
+        _newError = error ?? Loc["NavMapNewFailed"].Value;
+        return null;
     }
 
     private string KindLabel(string kind) => kind switch

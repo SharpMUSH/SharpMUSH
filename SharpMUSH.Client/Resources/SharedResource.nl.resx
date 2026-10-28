@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Naam</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Plaats opslaan</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Grootte opslaan</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Van deze kaart halen</value>
   </data>
@@ -6772,5 +6766,92 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} nu hier</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Positie instellen</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Grootte instellen</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Naam instellen</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Beschrijving instellen</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Beschrijving</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Namen van de uitgang</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Annuleren</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>naar {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Hernoemen</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Vernietigen</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Een doorgang openen</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Naar kamer</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Naam van het niveau</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Dit plan bouwt {0} objecten; je quotum staat er nog {1} toe.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Dit plan bouwt {0} objecten, maar je quotum staat er nog maar {1} toe. Laat eerst enkele wijzigingen vallen.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>{0} beschrijven</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>{0} hernoemen naar {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Doorgang openen van {0} naar {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Uitgang {0} hernoemen naar {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Uitgang {0} vernietigen</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Niveau {1} {0} noemen</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Naam van niveau {0} wissen</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Nieuwe kaart</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Naam van de kaart</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Indeling</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>De kaart is een object dat je draagt. Kamers horen erbij zodra ze aan de zone ervan zijn toegewezen.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Aanmaken</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>Het spel heeft de kaart niet gemaakt.</value>
+  </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>De kamer heeft al een uitgang met een van deze namen.</value>
   </data>
 </root>

@@ -564,7 +564,7 @@ packages:
   - path: world-map/
     name: World map
     package: world-map
-    version: 1.1.0
+    version: 1.2.0
     description: The portal's World map — maps marked with MAP`KIND, each drawn from the rooms zoned to it, as a coordinate grid, by compass exits, or as a free graph
   - path: world-map-help/
     name: World map help

@@ -88,3 +88,18 @@
 	white-space: pre-wrap;
 	overflow-wrap: anywhere;
 }
+
+.map-builder-row ::deep .mud-input-control {
+	flex: 1 1 10rem;
+}
+
+.map-builder-stack {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 1;
+}
+
+.map-builder-leads {
+	margin-inline-start: 0.5em;
+}

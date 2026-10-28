@@ -10142,12 +10142,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Save place</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Save size</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Take off this map</value>
   </data>
@@ -10207,5 +10201,92 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} here now</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Set place</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Set size</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Set name</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Set description</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Exit names</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>to {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Rename</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Destroy</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Open a way</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>To room</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Level name</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>This plan builds {0} objects; your quota allows {1} more.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>This plan builds {0} objects, but your quota allows only {1} more. Drop some changes first.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Describe {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Rename {0} to {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Open a way from {0} to {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Rename the exit {0} to {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Destroy the exit {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Name level {1} {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Clear the name of level {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>New map</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Map name</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Layout</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>The map is an object you carry. Rooms join it when they are zoned to it.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>The game did not make the map.</value>
+  </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>The room already has an exit by one of these names.</value>
   </data>
 </root>

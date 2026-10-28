@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
@@ -62,6 +62,8 @@ objects:
         ```
 
         Do the same in each room of the harbour. A room without coordinates is drawn in a row below the grid.
+
+        **New map**, under the portal's map list, runs the first two commands for you. The map stays in your inventory; keep it there, or anywhere you like, but destroying it takes the map away.
 
         ## Several maps
 
@@ -190,11 +192,13 @@ objects:
       HELP`MAP`BUILDING: |-
         If you control a map, the World map shows **Edit map**. While you edit, nothing reaches the game; the map shows what it will look like once your changes run.
 
-        - Choose a room you control to set its place or size, dig a room above or below it, or take it off the map.
-        - Choose an empty cell next to a room (a spot on a picture map) to dig a room there, joined to that room by an exit and, if you like, an exit back. The exit names follow the direction: `East;e` there and `West;w` back.
+        - Choose a room you control to rename or describe it, set its place or size, dig a room above or below it, or take it off the map.
+        - Its exits are listed with it: rename or destroy one you control, or open a way to another room on the map.
+        - Choose an empty cell next to a room (a spot on a picture map) to dig a room there, joined to the room straight beside it by an exit and, if you like, an exit back. The exit names follow the direction: `East;e` there and `West;w` back.
         - Add a room that this map's exits lead to and that is on no map, or a room by its dbref.
+        - On a grid, name the level on show (``MAP`LEVEL`<n>``).
 
-        **Review and apply** lists each change as the commands it runs. **Apply** runs them as you, with your permissions, one by one, and checks each. The first that fails stops the rest, and the list says which changes ran.
+        **Review and apply** lists each change as the commands it runs, and counts the rooms and exits it builds against your quota. **Apply** runs them as you, with your permissions, one by one, and checks each. The first that fails stops the rest, and the list says which changes ran.
 
         On the Isle, a picture map, digging a Tar shed at a spot joined to the Ford runs:
 

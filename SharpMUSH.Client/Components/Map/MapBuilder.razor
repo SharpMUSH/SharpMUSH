@@ -26,6 +26,7 @@
             <p class="map-note">@Loc[Layout.IsGraph ? "NavMapNoChangesPicture" : "NavMapNoChanges"]</p>
         }
         @Tray()
+        @LevelEditor()
         @Checks()
         <div class="map-builder-footer">
             <span>@Loc["NavMapChangesWaiting", Plan.Changes.Count]</span>
@@ -65,13 +66,30 @@
     private (double X, double Y)? _formFor;
     private int _vertical;
     private string _addId = "";
+    private string _description = "";
+    private string _roomName = "";
+    private string _roomDescription = "";
+    private int _descriptionAsked;
+    private string? _exitEditing;
+    private string _exitNames = "";
+    private string? _joinTo;
+    private string _joinNames = "";
+    private string _joinBack = "";
+    private bool _joinWayBack = true;
+    private int? _levelFor;
+    private string _levelName = "";
     private double _x, _y, _width = 1, _height = 1;
     private int _z;
     private string? _editing;
     private MapPlacement? _shown;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
+        if (Level != _levelFor)
+        {
+            _levelFor = Level;
+            _levelName = Layout.Map.LevelNames.GetValueOrDefault(Level) ?? "";
+        }
         if (Cell != _formFor)
         {
             _formFor = Cell;
@@ -81,8 +99,10 @@
         // The fields follow the room as the plan moves it, not only when another room is chosen.
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
-            if (id != _editing) _vertical = 0;
+            var chosen = id != _editing;
+            if (chosen) (_vertical, _exitEditing, _joinTo, _joinNames, _joinBack, _joinWayBack) = (0, null, null, "", "", true);
             (_editing, _shown) = (id, room);
+            _roomName = room.Room.Name;
             (_x, _y, _z) = room.Room.Position switch
             {
                 [var x, var y, var z, ..] => (x, y, (int)z),
@@ -91,10 +111,34 @@
                 _ => Layout.Spot(room),
             };
             (_width, _height) = room.Room.Size is [var w, var h, ..] ? (w, h) : (1, 1);
+            if (chosen) await LoadDescriptionAsync(id, room);
         }
     }
 
-    private void ResetDig() => (_name, _wayBack) = ("", true);
+    /// <summary>
+    /// The description the editor starts from: the one the plan sets, else the room's own as stored, each <c>%r</c> a line
+    /// break. A reply that comes back after another room was chosen is dropped.
+    /// </summary>
+    private async Task LoadDescriptionAsync(string id, MapPlacement room)
+    {
+        var asked = ++_descriptionAsked;
+        _roomDescription = "";
+        if (Plan.PlannedDescription(id) is { } planned)
+        {
+            _roomDescription = Lines(planned);
+            return;
+        }
+        if (!room.Room.Editable || !MapPlan.IsDbref(id)) return;
+        var result = await Commands.EvaluateAsync($"get({id}/DESCRIBE)", character: Character);
+        if (asked != _descriptionAsked) return;
+        _roomDescription = result is PortalCommandResponse { Result: { } text } && !text.StartsWith("#-1", StringComparison.Ordinal)
+            ? Lines(text)
+            : "";
+    }
+
+    private static string Lines(string stored) => stored.Replace("%r", "\n", StringComparison.OrdinalIgnoreCase);
+
+    private void ResetDig() => (_name, _description, _wayBack) = ("", "", true);
 
     /// <summary>
     /// Where a room dug at (x, y) is joined from: the chosen room when it is beside the cell (or any chosen room on a
@@ -108,9 +152,11 @@
             return (from, "", "");
         }
         var beside = Neighbours(x, y).ToList();
-        var pick = beside.FirstOrDefault(n => n.Id == Selected);
-        if (pick.Id is null && beside.Count > 0) pick = beside[0];
-        return pick.Id is null ? (null, "", "") : JoinFrom(pick, x, y);
+        if (beside.Count == 0) return (null, "", "");
+        // The chosen room only when it is as near as any: a room straight beside the cell wins over one at a corner.
+        var nearest = Distance(beside[0], x, y);
+        var pick = beside.FirstOrDefault(n => n.Id == Selected && Distance(n, x, y) == nearest);
+        return JoinFrom(pick.Id is null ? beside[0] : pick, x, y);
     }
 
     private (string? From, string To, string Back) JoinFrom((string Id, double X, double Y) room, double x, double y)
@@ -129,7 +175,9 @@
     /// west of it first.
     /// </summary>
     private IEnumerable<(string Id, double X, double Y)> Neighbours(double x, double y) =>
-        Beside(x, y).OrderBy(room => Math.Abs(room.X - x) + Math.Abs(room.Y - y));
+        Beside(x, y).OrderBy(room => Distance(room, x, y));
+
+    private static double Distance((string Id, double X, double Y) room, double x, double y) => Math.Abs(room.X - x) + Math.Abs(room.Y - y);
 
     private IEnumerable<(string Id, double X, double Y)> Beside(double x, double y)
     {
@@ -152,20 +200,14 @@
             case "character": return Loc["NavMapNameCharacter"];
         }
         if (_from is null) return Loc["NavMapNoNeighbour"];
-        var problem = MapPlan.ExitNameProblem(_exitTo) ?? (_wayBack ? MapPlan.ExitNameProblem(_exitBack) : null);
-        return problem switch
-        {
-            "empty" => Loc["NavMapExitEmpty"].Value,
-            "in" => Loc["NavMapExitIn"].Value,
-            "character" => Loc["NavMapExitCharacter"].Value,
-            _ => null,
-        };
+        return ExitProblem(_exitTo, _from) ?? (_wayBack ? ExitProblem(_exitBack) : null);
     }
 
     private async Task DigAsync(double x, double y, int z)
     {
         if (DigProblem() is not null || _from is null) return;
         var key = Plan.Dig(_name.Trim(), x, y, z, _from, _exitTo.Trim(), _wayBack ? _exitBack.Trim() : null);
+        if (!string.IsNullOrWhiteSpace(_description)) Plan.Describe(key, _description);
         ResetDig();
         _vertical = 0;
         await OnChanged.InvokeAsync(key);
@@ -188,6 +230,7 @@
             }
             <h4 class="map-builder-subtitle">@Loc["NavMapDigHere"]</h4>
             <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
+            @DescriptionField()
             @if (Layout.IsGraph)
             {
                 <MudSelect T="string" @bind-Value="_from" Label="@Loc["NavMapDigFrom"]" Variant="Variant.Outlined">
@@ -221,6 +264,12 @@
         </section>
     };
 
+    private RenderFragment DescriptionField() => __builder =>
+    {
+        <MudTextField T="string" @bind-Value="_description" Label="@Loc["NavMapRoomDescription"]" Variant="Variant.Outlined" Lines="3"
+                      Sizing="InputSizing.Auto" />
+    };
+
     private RenderFragment ExitFields() => __builder =>
     {
         <MudTextField T="string" @bind-Value="_exitTo" Label="@Loc["NavMapExitTo"]" Variant="Variant.Outlined" Immediate="true"
@@ -242,20 +291,33 @@
             }
             else
             {
+                var nameProblem = MapPlan.RoomNameProblem(_roomName);
+                <div class="map-builder-row">
+                    <MudTextField T="string" @bind-Value="_roomName" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
+                    <MudButton Variant="Variant.Outlined" Disabled="@(nameProblem is not null || _roomName.Trim() == room.Room.Name)"
+                               OnClick="RenameAsync">@Loc["NavMapSetName"]</MudButton>
+                </div>
+                @if (nameProblem == "character")
+                {
+                    <p class="map-note">@Loc["NavMapNameCharacter"]</p>
+                }
+                <MudTextField T="string" @bind-Value="_roomDescription" Label="@Loc["NavMapRoomDescription"]" Variant="Variant.Outlined"
+                              Lines="3" Sizing="InputSizing.Auto" />
+                <MudButton Variant="Variant.Outlined" OnClick="DescribeAsync">@Loc["NavMapSetDescription"]</MudButton>
                 <div class="map-builder-fields">
-                    <MudNumericField T="double" @bind-Value="_x" Label="X" Variant="Variant.Outlined" />
+                    <MudNumericField T="double" @bind-Value="_x" Label="X" Variant="Variant.Outlined" Class="map-builder-x" />
                     <MudNumericField T="double" @bind-Value="_y" Label="Y" Variant="Variant.Outlined" />
                     @if (!Layout.IsGraph)
                     {
                         <MudNumericField T="int" @bind-Value="_z" Label="@Loc["NavMapLevelField"]" Variant="Variant.Outlined" />
                     }
                 </div>
-                <MudButton Variant="Variant.Outlined" OnClick="SavePlaceAsync">@Loc["NavMapSavePlace"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="SavePlaceAsync">@Loc["NavMapSetPlace"]</MudButton>
                 <div class="map-builder-fields">
                     <MudNumericField T="double" @bind-Value="_width" Min="1" Label="@Loc["NavMapWidth"]" Variant="Variant.Outlined" />
                     <MudNumericField T="double" @bind-Value="_height" Min="1" Label="@Loc["NavMapHeight"]" Variant="Variant.Outlined" />
                 </div>
-                <MudButton Variant="Variant.Outlined" OnClick="SaveSizeAsync">@Loc["NavMapSaveSize"]</MudButton>
+                <MudButton Variant="Variant.Outlined" OnClick="SaveSizeAsync">@Loc["NavMapSetSize"]</MudButton>
                 @if (!Layout.IsGraph && room.Placed)
                 {
                     <div class="map-builder-row">
@@ -266,6 +328,7 @@
                     {
                         var problem = DigProblem();
                         <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
+                        @DescriptionField()
                         @ExitFields()
                         @if (problem is not null)
                         {
@@ -275,10 +338,184 @@
                                    OnClick="() => DigAsync(_x, _y, _z + _vertical)">@Loc["NavMapAddToPlan"]</MudButton>
                     }
                 }
+                @Exits(room)
+                @Join(room)
                 <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RemoveAsync(room.Room.Id)">@Loc["NavMapTakeOff"]</MudButton>
             }
         </section>
     };
+
+    private async Task RenameAsync()
+    {
+        if (_editing is null || MapPlan.RoomNameProblem(_roomName) is not null) return;
+        Plan.Rename(_editing, _roomName);
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    private async Task DescribeAsync()
+    {
+        if (_editing is null) return;
+        Plan.Describe(_editing, _roomDescription);
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    /// <summary>The ways out of <paramref name="room"/>, each the builder controls renamed or destroyed in the plan.</summary>
+    private RenderFragment Exits(MapPlacement room) => __builder =>
+    {
+        var exits = Layout.Map.Exits.Where(exit => exit.Source == room.Room.Id).OrderBy(exit => exit.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        if (exits.Count == 0) return;
+        <h4 class="map-builder-subtitle">@Loc["NavMapExits"]</h4>
+        <ul class="map-builder-list">
+            @foreach (var exit in exits)
+            {
+                <li>
+                    @if (_exitEditing == exit.Id)
+                    {
+                        var problem = ExitProblem(_exitNames);
+                        <div class="map-builder-stack">
+                            <MudTextField T="string" @bind-Value="_exitNames" Label="@Loc["NavMapExitNames"]" Variant="Variant.Outlined" Immediate="true"
+                                          HelperText="@(problem ?? Loc["NavMapExitHelp"].Value)" Error="@(problem is not null)" />
+                            <div class="map-builder-row">
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _exitEditing = null">@Loc["NavMapCancel"]</MudButton>
+                                <MudButton Variant="Variant.Outlined" Size="Size.Small" Disabled="@(problem is not null)"
+                                           OnClick="() => RenameExitAsync(exit.Id)">@Loc["NavMapSetName"]</MudButton>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <span>
+                            @string.Join(";", [exit.Name, .. exit.Aliases])
+                            @if ((exit.Destination is { } to && Layout.Rooms.TryGetValue(to, out var there) ? there.Room.Name : exit.DestinationName) is { } leads)
+                            {
+                                <span class="map-builder-dim map-builder-leads">@Loc["NavMapLeadsTo", leads]</span>
+                            }
+                        </span>
+                        @if (exit.Editable)
+                        {
+                            <span class="map-builder-row">
+                                <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => StartRenameExit(exit)">@Loc["NavMapRename"]</MudButton>
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" OnClick="() => RemoveExitAsync(exit.Id)">@Loc["NavMapRemoveExit"]</MudButton>
+                            </span>
+                        }
+                    }
+                </li>
+            }
+        </ul>
+    };
+
+    /// <summary>
+    /// Why <paramref name="names"/> cannot name an exit, or, given the room it leaves <paramref name="from"/>, why not
+    /// there: another exit of that room already answers to one of them, and typing it would be ambiguous.
+    /// </summary>
+    private string? ExitProblem(string names, string? from = null) => MapPlan.ExitNameProblem(names) switch
+    {
+        "empty" => Loc["NavMapExitEmpty"].Value,
+        "in" => Loc["NavMapExitIn"].Value,
+        "character" => Loc["NavMapExitCharacter"].Value,
+        _ when from is not null && Taken(names, from) => Loc["NavMapExitTaken"].Value,
+        _ => null,
+    };
+
+    private bool Taken(string names, string from)
+    {
+        var wanted = names.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Layout.Map.Exits.Where(exit => exit.Source == from).Any(exit => wanted.Contains(exit.Name) || exit.Aliases.Any(wanted.Contains));
+    }
+
+    private string? JoinProblem(string from) => _joinTo is not { } to
+        ? null
+        : ExitProblem(_joinNames, from) ?? (_joinWayBack ? ExitProblem(_joinBack, to) : null);
+
+    private void StartRenameExit(MapExitDto exit) => (_exitEditing, _exitNames) = (exit.Id, string.Join(";", [exit.Name, .. exit.Aliases]));
+
+    private async Task RenameExitAsync(string exit)
+    {
+        if (ExitProblem(_exitNames) is not null) return;
+        Plan.RenameExit(exit, _exitNames);
+        _exitEditing = null;
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    private async Task RemoveExitAsync(string exit)
+    {
+        Plan.RemoveExit(exit);
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    /// <summary>Opens a way from <paramref name="room"/> to another room on the map, and back when asked.</summary>
+    private RenderFragment Join(MapPlacement room) => __builder =>
+    {
+        var others = Layout.Rooms.Values.Where(other => !other.Region && other.Room.Id != room.Room.Id)
+            .OrderBy(other => other.Room.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        if (others.Count == 0) return;
+        var problem = JoinProblem(room.Room.Id);
+        <h4 class="map-builder-subtitle">@Loc["NavMapJoin"]</h4>
+        <MudSelect T="string" Value="_joinTo" ValueChanged="to => ChooseJoin(room, to)" Label="@Loc["NavMapJoinTo"]" Variant="Variant.Outlined"
+                   Class="map-builder-join">
+            @foreach (var other in others)
+            {
+                <MudSelectItem Value="@other.Room.Id">@other.Room.Name</MudSelectItem>
+            }
+        </MudSelect>
+        @if (_joinTo is not null)
+        {
+            <MudTextField T="string" @bind-Value="_joinNames" Label="@Loc["NavMapExitTo"]" Variant="Variant.Outlined" Immediate="true"
+                          HelperText="@Loc["NavMapExitHelp"]" />
+            <MudCheckBox T="bool" @bind-Value="_joinWayBack" Label="@Loc["NavMapMakeWayBack"]" />
+            @if (_joinWayBack)
+            {
+                <MudTextField T="string" @bind-Value="_joinBack" Label="@Loc["NavMapExitBack"]" Variant="Variant.Outlined" Immediate="true" />
+            }
+            @if (problem is not null)
+            {
+                <p class="map-note">@problem</p>
+            }
+            <MudButton Variant="Variant.Outlined" Disabled="@(problem is not null)" OnClick="() => JoinAsync(room.Room.Id)">@Loc["NavMapAddToPlan"]</MudButton>
+        }
+    };
+
+    /// <summary>Chooses the room a way leads to; on a grid, its names start from the direction between the two.</summary>
+    private void ChooseJoin(MapPlacement room, string? to)
+    {
+        _joinTo = to;
+        (_joinNames, _joinBack) = ("", "");
+        if (Layout.IsGraph || to is null || !Layout.Rooms.TryGetValue(to, out var other) || !room.Placed || !other.Placed) return;
+        var (fx, fy, fz) = Layout.Spot(room);
+        var (tx, ty, tz) = Layout.Spot(other);
+        if (MapPlan.DirectionNames((int)Math.Round(tx - fx), (int)Math.Round(ty - fy), tz - fz) is { To: var names, Back: var back })
+        {
+            (_joinNames, _joinBack) = (names, back);
+        }
+    }
+
+    private async Task JoinAsync(string from)
+    {
+        if (_joinTo is not { } to || JoinProblem(from) is not null) return;
+        Plan.Join(from, to, _joinNames, _joinWayBack ? _joinBack : null);
+        (_joinTo, _joinNames, _joinBack, _joinWayBack) = (null, "", "", true);
+        await OnChanged.InvokeAsync(from);
+    }
+
+    /// <summary>The name of the level on show, for a grid map: <c>MAP`LEVEL`n</c> on the map object.</summary>
+    private RenderFragment LevelEditor() => __builder =>
+    {
+        if (Layout.IsGraph) return;
+        var current = Layout.Map.LevelNames.GetValueOrDefault(Level) ?? "";
+        <section class="map-builder-section" aria-labelledby="map-level-title">
+            <h3 id="map-level-title" class="map-builder-title">@Loc["NavMapLevel", Level]</h3>
+            <div class="map-builder-row">
+                <MudTextField T="string" @bind-Value="_levelName" Label="@Loc["NavMapLevelName"]" Variant="Variant.Outlined" Immediate="true" />
+                <MudButton Variant="Variant.Outlined" Disabled="@(_levelName.Trim() == current)" OnClick="NameLevelAsync">@Loc["NavMapSetName"]</MudButton>
+            </div>
+        </section>
+    };
+
+    private async Task NameLevelAsync()
+    {
+        Plan.NameLevel(Level, _levelName);
+        await OnChanged.InvokeAsync(null);
+    }
 
     private void StartVertical(int by, MapPlacement room)
     {
@@ -363,13 +600,21 @@
         </section>
     };
 
-    private string Title(MapChange change) => Loc[$"NavMapPlan{change.Kind}", change.Name];
+    private string Title(MapChange change) => change switch
+    {
+        { Kind: MapChangeKind.NameLevel, Name.Length: 0 } => Loc["NavMapPlanClearLevel", change.Other ?? ""],
+        _ => Loc[$"NavMapPlan{change.Kind}", change.Name, change.Other ?? ""],
+    };
 
     private RenderFragment Review() => __builder =>
     {
         <section class="map-builder-section" aria-labelledby="map-review-title">
             <h3 id="map-review-title" class="map-builder-title">@Loc["NavMapReviewTitle", Plan.Map.Map.Name]</h3>
             <p class="map-note">@Loc["NavMapApplyNote"]</p>
+            @if (Plan.Builds > 0 && Plan.Map.BuildsLeft is { } left)
+            {
+                <p class="@(Plan.Builds > left ? "map-builder-warning" : "map-note")">@Loc[Plan.Builds > left ? "NavMapQuotaShort" : "NavMapQuota", Plan.Builds, left]</p>
+            }
             @foreach (var check in Plan.NoWayIn())
             {
                 <p class="map-builder-warning">@Loc["NavMapNoWayIn", check.Name]</p>
@@ -388,12 +633,15 @@
             </ol>
             <div class="map-builder-row">
                 <MudButton Variant="Variant.Text" Disabled="_applying" OnClick="() => _reviewing = false">@Loc["NavMapBackToMap"]</MudButton>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_applying || Plan.Changes.Count == 0)" OnClick="ApplyAsync">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_applying || Plan.Changes.Count == 0 || OverQuota)" OnClick="ApplyAsync">
                     @Loc["NavMapApply", Plan.Changes.Count]
                 </MudButton>
             </div>
         </section>
     };
+
+    /// <summary>The plan builds more than the builder's quota allows: the game would refuse it part way.</summary>
+    private bool OverQuota => Plan.Map.BuildsLeft is { } left && Plan.Builds > left;
 
     private async Task DropAsync(string key)
     {

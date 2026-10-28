@@ -423,6 +423,31 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
+	public async Task ABuilderMayChangeTheExitsTheyControlAndADestroyedExitIsNotDrawn()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var quay = Room(10, "Quay", harbour);
+		var shed = Room(11, "Shed", harbour);
+		Exit(100, "East", ["e"], quay, shed);
+		Exit(101, "Their door", [], quay, shed);
+		Exit(102, "Old door", [], quay, shed);
+		_exits[10][2].Object.Flags = new(() => new[]
+		{
+			new SharpObjectFlag
+			{
+				Name = "GOING", Symbol = "G", SetPermissions = [], UnsetPermissions = [], System = true, TypeRestrictions = []
+			}
+		}.ToAsyncEnumerable());
+		_permissions.Controls(_builder, Arg.Any<AnySharpObject>()).Returns(call =>
+			call.ArgAt<AnySharpObject>(1).Object().DBRef.Number is 50 or 10 or 11 or 100 or 102);
+
+		var map = (await Reader.ReadAsync(_builder, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Exits.Select(exit => (exit.Name, exit.Editable))).IsEquivalentTo([("East", true), ("Their door", false)])
+			.Because("@destroy leaves an exit GOING until it is purged");
+	}
+
+	[Test]
 	public async Task AViewerWhoDoesNotControlTheMapIsOfferedNothing()
 	{
 		var harbour = Map(50, "Harbour", MapKinds.Coordinates);

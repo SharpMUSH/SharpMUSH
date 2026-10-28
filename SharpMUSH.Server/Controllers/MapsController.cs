@@ -1,6 +1,8 @@
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Reality;
@@ -33,7 +35,8 @@ public class MapsController(
 	IAttributeService attributes,
 	IVisibleWorldProjection projection,
 	IConnectionService connections,
-	ILookService look) : ControllerBase
+	ILookService look,
+	IOptionsWrapper<SharpMUSHOptions> configuration) : ControllerBase
 {
 	private WorldMapReader Reader => new(mediator, permissions, reality, attributes, connections);
 
@@ -52,6 +55,7 @@ public class MapsController(
 		Response.Headers.CacheControl = "no-store";
 		return await Reader.ReadAsync(viewer, dbref, ct) switch
 		{
+			MapDto { CanEdit: true } map => Ok(map with { BuildsLeft = await BuildingHelpers.BuildsLeftAsync(mediator, configuration, viewer) }),
 			MapDto map => Ok(map),
 			SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound(new ApiErrorDto($"#{dbref} is not a map you may see."))
 		};

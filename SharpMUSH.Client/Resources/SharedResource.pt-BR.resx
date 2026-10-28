@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nome</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Salvar posição</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Salvar tamanho</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Tirar deste mapa</value>
   </data>
@@ -6772,5 +6766,92 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} aqui agora</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Definir posição</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Definir tamanho</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Definir nome</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Definir descrição</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Descrição</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Nomes da saída</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Cancelar</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>para {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Renomear</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Destruir</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Abrir um caminho</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Para a sala</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Nome do nível</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Este plano constrói {0} objetos; sua cota permite mais {1}.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Este plano constrói {0} objetos, mas sua cota permite apenas mais {1}. Remova algumas mudanças antes.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Descrever {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Renomear {0} para {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Abrir um caminho de {0} para {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Renomear a saída {0} para {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Destruir a saída {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Chamar o nível {1} de {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Remover o nome do nível {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Novo mapa</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Nome do mapa</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Disposição</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>O mapa é um objeto que você carrega. As salas entram nele quando são zoneadas para ele.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Criar</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>O jogo não criou o mapa.</value>
+  </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>A sala já tem uma saída com um destes nomes.</value>
   </data>
 </root>

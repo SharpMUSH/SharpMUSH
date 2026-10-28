@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Nume</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Salvează poziția</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Salvează dimensiunea</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Scoate de pe această hartă</value>
   </data>
@@ -6772,5 +6766,92 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} aici acum</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Setează poziția</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Setează dimensiunea</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Setează numele</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Setează descrierea</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Descriere</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Numele ieșirii</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Anulează</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>spre {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Redenumește</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Distruge</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Deschide o cale</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Spre camera</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Numele nivelului</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Acest plan construiește {0} obiecte; cota ta mai permite {1}.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Acest plan construiește {0} obiecte, dar cota ta mai permite doar {1}. Renunță mai întâi la câteva modificări.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Descrie {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Redenumește {0} în {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Deschide o cale de la {0} spre {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Redenumește ieșirea {0} în {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Distruge ieșirea {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Numește nivelul {1} {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Șterge numele nivelului {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Hartă nouă</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Numele hărții</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Așezare</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>Harta este un obiect pe care îl porți. Camerele i se alătură când sunt zonate la ea.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Creează</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>Jocul nu a creat harta.</value>
+  </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>Camera are deja o ieșire cu unul dintre aceste nume.</value>
   </data>
 </root>
