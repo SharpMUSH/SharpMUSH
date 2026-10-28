@@ -152,6 +152,14 @@ public class GameFeatureService(
 			await SetDeclinedAsync(bridge.PackageId, declined: true);
 		}
 
+		// A suggested package unticked before it was ever installed is not in plan.Remove; without this a reloaded
+		// wizard offers it ticked again.
+		foreach (var suggested in BundledPackages.All.Where(p => p.SuggestAtSetup && !kept.Contains(p.PackageId)
+			&& !installed.Contains(p.PackageId)))
+		{
+			await SetDeclinedAsync(suggested.PackageId, declined: true);
+		}
+
 		foreach (var id in plan.Install)
 		{
 			await SetDeclinedAsync(id, declined: false);

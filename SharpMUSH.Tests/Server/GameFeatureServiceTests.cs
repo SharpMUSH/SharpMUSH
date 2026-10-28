@@ -240,6 +240,17 @@ public class GameFeatureServiceTests
 	}
 
 	[Test]
+	public async Task ASuggestedPackage_UntickedBeforeInstall_IsNotOfferedAgain()
+	{
+		var game = new Game();
+
+		await game.Features().ApplyPackagesAsync([], CancellationToken.None);
+
+		await Assert.That((await game.Features().PackagesAsync()).Single(p => p.Id == "world-map").Recommended).IsFalse()
+			.Because("a wizard reloaded after a failed later step must not tick it again");
+	}
+
+	[Test]
 	public async Task Asking_ForAPackage_InstallsWhatItDependsOnFirst()
 	{
 		var game = new Game();
@@ -290,11 +301,11 @@ public class GameFeatureServiceTests
 
 		await features.ApplyPackagesAsync(["plus-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEquivalentTo(["scene"]);
+			.IsEquivalentTo(["scene", "world-map"]);
 
 		await features.ApplyPackagesAsync(["plus-help", "scene", "scene-help"], CancellationToken.None);
 		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
-			.IsEmpty();
+			.IsEquivalentTo(["world-map"]);
 	}
 
 	/// <summary>The wiki reader never installs at first boot, so there is nothing to remember about it.</summary>
@@ -305,7 +316,8 @@ public class GameFeatureServiceTests
 
 		await game.Features().ApplyPackagesAsync(["plus-help"], CancellationToken.None);
 
-		await Assert.That(await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>()).IsNull();
+		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
+			.IsEquivalentTo(["world-map"]);
 	}
 
 	[Test]
@@ -329,7 +341,8 @@ public class GameFeatureServiceTests
 		var result = await game.Features().ApplyPackagesAsync([], CancellationToken.None);
 
 		await Assert.That(result is Error<string>).IsTrue();
-		await Assert.That(await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>()).IsNull();
+		await Assert.That((await game.ServerData.GetExpandedServerDataAsync<DeclinedBundledPackages>())!.PackageIds)
+			.IsEquivalentTo(["world-map"]);
 	}
 
 	[Test]
