@@ -12,7 +12,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 
 public static class ChannelMogrifier
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? obj = null)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService ObjectPermissions, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? obj = null)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (await executor.IsGuest())
@@ -24,14 +24,14 @@ public static class ChannelMogrifier
 		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true) switch
 		{
-			SharpChannel channel => await SetMogrifierAsync(parser, LocateService, PermissionService, Mediator,
+			SharpChannel channel => await SetMogrifierAsync(parser, LocateService, ObjectPermissions, PermissionService, Mediator,
 				NotifyService, executor, channel, obj),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	private static async ValueTask<CallState> SetMogrifierAsync(IMUSHCodeParser parser, ILocateService LocateService,
-		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
+		IPermissionService ObjectPermissions, IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService, AnySharpObject executor,
 		SharpChannel channel, MString? obj)
 	{
 		if (!await PermissionService.ChannelCanModifyAsync(executor, channel))
@@ -52,6 +52,15 @@ public static class ChannelMogrifier
 			LocateFlags.All,
 			async locate =>
 			{
+				// The mogrifier's attributes run as the mogrifier for every speaker and member, so only an object
+				// the setter controls may be made one.
+				if (!await ObjectPermissions.Controls(executor, locate))
+				{
+					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ChatMustControlMogrifier),
+						executor);
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				}
+
 				await Mediator.Send(new UpdateChannelCommand(channel,
 					null,
 					null,

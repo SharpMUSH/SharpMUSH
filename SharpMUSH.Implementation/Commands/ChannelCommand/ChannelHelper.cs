@@ -748,4 +748,39 @@ public static class ChannelHelper
 			.Where(x => !x.SeeAllOnly || x.Sender.Number == viewerNumber)
 			.ToList();
 	}
+
+	/// <summary>The channel's mogrifier object, or <see cref="None"/> when it has none or it is gone.</summary>
+	public static async ValueTask<AnyOptionalSharpObject> Mogrifier(IMediator mediator, SharpChannel channel)
+		=> HelperFunctions.ParseDbRef(channel.Mogrifier) is DBRef dbref
+			? await mediator.Send(new GetObjectNodeQuery(dbref))
+			: new None();
+
+	/// <summary>
+	/// TinyMUX's channel-object messages (<c>COMJOIN</c>, <c>COMLEAVE</c>, <c>COMON</c>, <c>COMOFF</c>): the
+	/// attribute on the channel's mogrifier is evaluated as the mogrifier with <paramref name="member"/> as
+	/// enactor, and what it yields is told to the member. Like the <c>MOGRIFY`</c> attributes, it is read
+	/// without permission checks.
+	/// </summary>
+	public static async ValueTask NotifyMemberHookAsync(IMUSHCodeParser parser, IMediator mediator,
+		IAttributeService attributes, INotifyService notifyService, SharpChannel channel, AnySharpObject member,
+		string attribute)
+	{
+		if (await Mogrifier(mediator, channel) is not AnySharpObject mogrifier)
+		{
+			return;
+		}
+
+		var hookParser = parser.FromState(ParserState.RootFor(member.Object().DBRef) with
+		{
+			ExecutionBudget = ExecutionBudget.Current
+		});
+
+		var message = await attributes.EvaluateAttributeFunctionAsync(hookParser, member, mogrifier, attribute,
+			[], evalParent: true, ignorePermissions: true);
+
+		if (message.Length > 0)
+		{
+			await notifyService.Notify(member, message, mogrifier);
+		}
+	}
 }

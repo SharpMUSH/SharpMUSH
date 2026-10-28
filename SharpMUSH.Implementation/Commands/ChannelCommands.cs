@@ -180,12 +180,12 @@ public partial class Commands
 		return await ChannelHelper.GetVisibleChannelOrError(ChannelPermissions, Mediator,
 			NotifyService, executor, channelName, true) switch
 		{
-			SharpChannel channel => await AddComAsync(executor, alias, channel),
+			SharpChannel channel => await AddComAsync(parser, executor, alias, channel),
 			Error<CallState> error => error.Value
 		};
 	}
 
-	private async ValueTask<Option<CallState>> AddComAsync(AnySharpObject executor, string alias, SharpChannel channel)
+	private async ValueTask<Option<CallState>> AddComAsync(IMUSHCodeParser parser, AnySharpObject executor, string alias, SharpChannel channel)
 	{
 		var isMember = await ChannelHelper.IsMemberOfChannel(Mediator, executor, channel);
 		if (!isMember)
@@ -210,6 +210,7 @@ public partial class Commands
 			}
 
 			await Mediator.Send(new AddUserToChannelCommand(channel, executor));
+			await ChannelHelper.NotifyMemberHookAsync(parser, Mediator, AttributeService, NotifyService, channel, executor, "COMJOIN");
 		}
 
 		var attributeName = $"CHANALIAS`{alias.ToUpperInvariant()}";
@@ -253,7 +254,7 @@ public partial class Commands
 		var attributeName = $"CHANALIAS`{alias.ToUpperInvariant()}";
 		return await AttributeService.GetAttributeAsync(executor, executor, attributeName, IAttributeService.AttributeMode.Read) switch
 		{
-			SharpAttribute[] aliasAttribute => await DeleteChannelAliasAsync(executor, alias, attributeName,
+			SharpAttribute[] aliasAttribute => await DeleteChannelAliasAsync(parser, executor, alias, attributeName,
 				aliasAttribute.Last().Value),
 			None => await ChannelAliasNotFoundAsync(executor, alias),
 			Error<string> error => await ChannelAliasUnreadableAsync(executor, error.Value)
@@ -261,7 +262,7 @@ public partial class Commands
 	}
 
 	/// <summary>Removes the alias, and takes the executor off its channel when no other alias names it.</summary>
-	private async ValueTask<Option<CallState>> DeleteChannelAliasAsync(AnySharpObject executor, string alias,
+	private async ValueTask<Option<CallState>> DeleteChannelAliasAsync(IMUSHCodeParser parser, AnySharpObject executor, string alias,
 		string attributeName, MString channelName)
 	{
 		var clearResult = await AttributeService.ClearAttributeAsync(executor, executor, attributeName, IAttributeService.AttributePatternMode.Exact);
@@ -290,6 +291,8 @@ public partial class Commands
 				if (await ChannelHelper.GetChannelOrError(Mediator, channelName) is SharpChannel channel)
 				{
 					await Mediator.Send(new RemoveUserFromChannelCommand(channel, executor));
+					await ChannelHelper.NotifyMemberHookAsync(parser, Mediator, AttributeService, NotifyService, channel, executor,
+						"COMLEAVE");
 				}
 			}
 		}
@@ -488,27 +491,27 @@ public partial class Commands
 			["WHO"] when arg0 is not null => await ChannelWho.Handle(parser, LocateService, ChannelPermissions, Mediator,
 				NotifyService, ConnectionService, arg0),
 			(["ON"] or ["JOIN"]) when arg0 is not null => await ChannelOn.Handle(parser, LocateService, PermissionService,
-				ChannelPermissions, Mediator, NotifyService, arg0, arg1),
+				ChannelPermissions, Mediator, NotifyService, AttributeService, arg0, arg1),
 			(["OFF"] or ["LEAVE"]) when arg0 is not null => await ChannelOff.Handle(parser, LocateService,
-				PermissionService, ChannelPermissions, Mediator, NotifyService, arg0, arg1),
+				PermissionService, ChannelPermissions, Mediator, NotifyService, AttributeService, arg0, arg1),
 			// The eight per-member switches are one operation in PennMUSH (do_chan_user_flags,
 			// src/extchat.c:1900), and the un-forms are it with "n" for an answer (cmd_channel, :3628-3640).
 			// The channel is OPTIONAL in every one of them: omitted, they act on every channel you are on.
-			["GAG"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["GAG"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: false),
-			["UNGAG"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["UNGAG"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Gag, forceOff: true),
-			["MUTE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["MUTE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: false),
-			["UNMUTE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["UNMUTE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Quiet, forceOff: true),
-			["HIDE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["HIDE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: false),
-			["UNHIDE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["UNHIDE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Hide, forceOff: true),
-			["COMBINE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["COMBINE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: false),
-			["UNCOMBINE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService,
+			["UNCOMBINE"] => await ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService,
 				arg0, arg1, ChannelUserFlags.UserFlag.Combine, forceOff: true),
 			// arg1 is null when no `=` was typed at all, which is the QUERY form — distinct from an `=` with
 			// nothing after it, which clears the title (do_chan_title's rhs_present, src/extchat.c:3145).
@@ -538,7 +541,7 @@ public partial class Commands
 				NotifyService, arg0, emptyIfMissing1),
 			["DELETE"] when arg0 is not null => await ChannelDelete.Handle(parser, LocateService, ChannelPermissions,
 				Mediator, NotifyService, arg0, emptyIfMissing1),
-			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService, ChannelPermissions,
+			["MOGRIFIER"] when arg0 is not null => await ChannelMogrifier.Handle(parser, LocateService, PermissionService, ChannelPermissions,
 				Mediator, NotifyService, arg0, arg1),
 			_ => await NotifyAndReturnChannelUsage(executor)
 		};
@@ -563,8 +566,12 @@ public partial class Commands
 		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message.ToPlainText() : string.Empty;
 
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
-		lockType = lockType.ToUpper();
+		return await ChannelLockAsync(executor, channelName, lockType.ToUpper(), lockKey);
+	}
 
+	private async ValueTask<CallState> ChannelLockAsync(AnySharpObject executor, MString channelName, string lockType,
+		string lockKey)
+	{
 		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
 		// channel that does not exist, or @clock reports which names are taken. notify: true because the
 		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
@@ -577,7 +584,7 @@ public partial class Commands
 		};
 	}
 
-	private async ValueTask<Option<CallState>> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
+	private async ValueTask<CallState> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
 		string lockType, string lockKey)
 	{
 		// An absent modify lock grants no additional rights beyond the owner and wizard gates.

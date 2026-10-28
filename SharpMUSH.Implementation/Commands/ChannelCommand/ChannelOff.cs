@@ -16,7 +16,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// </summary>
 public static class ChannelOff
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, IAttributeService AttributeService, MString channelName, MString? arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
@@ -53,14 +53,14 @@ public static class ChannelOff
 
 		return maybeChannel switch
 		{
-			SharpChannel channel => await LeaveAsync(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, target, channel),
+			SharpChannel channel => await LeaveAsync(parser, PermissionService, ChannelPermissions, Mediator, NotifyService, AttributeService, executor, target, channel),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	/// <summary>Takes <paramref name="target"/> off the channel, if the executor may and it is on it.</summary>
-	private static async ValueTask<CallState> LeaveAsync(IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
-		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
+	private static async ValueTask<CallState> LeaveAsync(IMUSHCodeParser parser, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
+		INotifyService NotifyService, IAttributeService AttributeService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
 	{
 		var channelLabel = channel.Name.ToPlainText();
 
@@ -84,6 +84,7 @@ public static class ChannelOff
 
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new RemoveUserFromChannelCommand(channel, target));
+		await ChannelHelper.NotifyMemberHookAsync(parser, Mediator, AttributeService, NotifyService, channel, target, "COMLEAVE");
 
 		if (target.Id() == executor.Id())
 		{

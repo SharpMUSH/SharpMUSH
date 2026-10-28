@@ -7,19 +7,21 @@
   "sections": [
     {"id": "deciding", "heading": "Deciding what happens", "lookup": "mogrifier deciding"},
     {"id": "parts", "heading": "Rewriting the parts", "lookup": "mogrifier parts"},
-    {"id": "format", "heading": "Formatting the whole line", "lookup": "mogrifier format"}
+    {"id": "format", "heading": "Formatting the whole line", "lookup": "mogrifier format"},
+    {"id": "members", "heading": "Members joining and leaving", "lookup": "mogrifier members"}
   ]
 }
 -->
 # mogrifier
 
-A channel's mogrifier is an object whose MOGRIFY\`* attributes rewrite each line said on the channel. `@channel/mogrifier <channel>=<object>` sets it. A speaker who fails the object's `@lock/use` is not mogrified. Every attribute is optional, and one that is absent or evaluates to nothing leaves its part of the line as it was. They run on the mogrifier, with the speaker as %#.
+A channel's mogrifier is an object whose MOGRIFY\`* attributes rewrite each line said on the channel. `@channel/mogrifier <channel>=<object>` sets it, to an object you control. A speaker who fails the object's `@lock/use` is not mogrified. Every attribute is optional, and one that is absent or evaluates to nothing leaves its part of the line as it was. They run on the mogrifier, with the speaker as %#.
 
 Each attribute gets its values by position and by the name shown (see [named arguments]), so `%<message>` reads the message whatever position it has in that attribute.
 
 - [mogrifier deciding]: blocking a line, and skipping formats and the buffer
 - [mogrifier parts]: rewriting each part of the line
 - [mogrifier format]: replacing the whole line, with an example
+- [mogrifier members]: messages for a member who joins, leaves, gags or ungags
 
 ## Deciding what happens
 
@@ -41,6 +43,21 @@ MOGRIFY\`FORMAT, when it returns something, is the whole line every member is se
 &MOGRIFY`FORMAT #123=%<channel> %<name>: %<message>
 ```
 Output: when Walker says hello on Public, whose mogrifier is #123, every member sees `<Public> Walker: HELLO`.
+
+## Members joining and leaving
+
+Four attributes on the mogrifier speak to one member, the way TinyMUX's channel object does. Each runs on the mogrifier with the member as %#, and the member is told what it returns:
+- COMJOIN: when the member joins, by `@channel/on` or `addcom`.
+- COMLEAVE: when the member leaves, by `@channel/off`, `@cboot` or the last `delcom` for the channel.
+- COMOFF: when the member gags the channel, by `@channel/gag` or `allcom off`.
+- COMON: when the member ungags it, by `@channel/ungag` or `allcom on`.
+
+A TinyMUX import makes each channel object the channel's mogrifier, so these come with it.
+
+```sharp
+&COMJOIN #123=Welcome to the channel, %n. Be kind.
+```
+Output: when Walker joins Public, whose mogrifier is #123, Walker sees `Welcome to the channel, Walker. Be kind.`
 
 ::: seealso
 - [@CHANNEL ADMIN]

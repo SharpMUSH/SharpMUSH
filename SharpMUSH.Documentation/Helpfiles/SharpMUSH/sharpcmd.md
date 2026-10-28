@@ -59,7 +59,7 @@ These '@' commands are general utility and programming commands:
 | [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
 | [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
 | [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  | [@eval]      |
-| [@pipe]      |              |              |              |              |
+| [@pipe]      | [@cset]      |              |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:

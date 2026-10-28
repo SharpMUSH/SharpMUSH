@@ -154,6 +154,8 @@ which reads `(None)` when nothing matched.
 # delcom
 # comlist
 # comtitle
+# allcom
+# clearcom
 
 `addcom <alias>=<channel>`<br>
 `delcom <alias>`<br>
@@ -171,6 +173,7 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 - `<alias> on` > `@channel/ungag <channel>`
 - `<alias> off` > `@channel/gag <channel>`
 - `<alias> who` > `@channel/who <channel>`
+- `allcom on|off|who` does that on every channel your aliases name, and `clearcom` is `delcom` for every alias
 - `@clist` > `@channel/list`; the `/full` switch is accepted and changes nothing
 
 Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive a disconnect. These commands and aliases work only while the `use_muxcomm` option is on; otherwise they answer `Command disabled.` Where a command takes a channel name rather than an alias you must give enough of the name to identify it uniquely.
@@ -179,4 +182,71 @@ Aliases are stored on you as `` CHANALIAS`<alias> `` attributes, so they survive
 - [@channel]
 - [@chat]
 - [CHAN_USEFIRSTMATCH]
+- [MUX Channel Admin]
+:::
+
+# MUX Channel Admin
+# @ccreate
+# @cdestroy
+# @cboot
+# @cwho
+# @cchown
+# @coflags
+# @cpflags
+
+`@ccreate <channel>`<br>
+`@cdestroy <channel>`<br>
+`@cboot[/quiet] <channel>=<object>`<br>
+`@cwho <channel>[/all]`<br>
+`@cchown <channel>=<player>`<br>
+`@coflags <channel>=[!]join`<br>
+`@cpflags <channel>=[!]join`
+
+TinyMUX's channel commands. Each runs the `@channel` command it stands for, as you:
+
+- `@ccreate` > `@channel/add <channel>=player object`, a channel players and objects may join
+- `@cdestroy` > `@channel/delete`
+- `@cboot` > `@channel/off <channel>=<object>`; `/quiet` is accepted and changes nothing
+- `@cwho` > `@channel/who`, which lists every member, so `/all` changes nothing
+- `@cchown` > `@channel/chown`
+- `@coflags` and `@cpflags` add or remove the `object` or `player` privilege: whether objects or players may join. TinyMUX's `transmit` and `receive` flags have no equivalent; `@clock/speak` chooses who may speak.
+
+Like `addcom`, they work only while `use_muxcomm` is on. `@cset` changes a channel's other settings.
+
+::: seealso
+- [@cset]
+- [MUX Comsys]
+- [@CHANNEL ADMIN]
+:::
+
+# @cset
+
+`@cset/<option> <channel>[=<value>]`
+
+TinyMUX's `@cset` changes one channel setting. Each option is a `@channel` or `@clock` change, made as you:
+
+- `/public`: removes the see lock (`@clock/see <channel>=`), so everyone finds the channel in `@channel/list`
+- `/private`: sets the see lock to `#FALSE`, so only its members and those with See_All find it
+- `/loud`: removes the `quiet` privilege, so connects and disconnects are announced
+- `/mute` or `/quiet`: adds the `quiet` privilege
+- `/spoof` or `/anon`: adds the `nonames` privilege, so a message shows the title without the speaker's name
+- `/nospoof`: removes the `nonames` privilege
+- `/log`: `@channel/buffer <channel>=<value>`, how many messages the channel keeps
+- `/object`: `@channel/mogrifier <channel>=<value>`, the object that stands in for TinyMUX's channel object (see [mogrifier members])
+
+`/header` and `/timestamp_logs` have no SharpMUSH equivalent, and say so.
+
+Example:
+
+```
+> @cset/mute Public
+> think clflags(Public)
+```
+
+Output: `Player Object Quiet`
+
+::: seealso
+- [MUX Channel Admin]
+- [@channel/buffer]
+- [@CHANNEL CLOCK]
 :::

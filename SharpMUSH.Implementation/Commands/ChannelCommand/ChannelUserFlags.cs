@@ -41,8 +41,8 @@ public static class ChannelUserFlags
 	}
 
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, IChannelPermissionService PermissionService,
-		IMediator Mediator, INotifyService NotifyService, MString? channelName, MString? yesNo, UserFlag flag,
-		bool forceOff)
+		IMediator Mediator, INotifyService NotifyService, IAttributeService AttributeService, MString? channelName,
+		MString? yesNo, UserFlag flag, bool forceOff)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
@@ -96,8 +96,8 @@ public static class ChannelUserFlags
 			}
 
 			await NotifyService.Notify(executor, BulkSummary(flag, setting), executor);
-			return await SetFlagAsync(PermissionService, Mediator, NotifyService, executor, channels, flag, setting,
-				silent: true);
+			return await SetFlagAsync(parser, PermissionService, Mediator, NotifyService, AttributeService, executor, channels,
+				flag, setting, silent: true);
 		}
 
 		// extchat.c:1938 — test_channel_on: these all act on a channel you are ON, so the name resolves
@@ -106,8 +106,8 @@ public static class ChannelUserFlags
 			NotifyService, executor, channelName, notify: true,
 			scope: ChannelHelper.ChannelMatchScope.Member) switch
 		{
-			SharpChannel channel => await SetFlagAsync(PermissionService, Mediator, NotifyService, executor, [channel],
-				flag, setting, silent: false),
+			SharpChannel channel => await SetFlagAsync(parser, PermissionService, Mediator, NotifyService, AttributeService,
+				executor, [channel], flag, setting, silent: false),
 			Error<CallState> error => error.Value
 		};
 	}
@@ -116,8 +116,8 @@ public static class ChannelUserFlags
 	/// Sets or clears <paramref name="flag"/> on each channel the executor is on; <paramref name="silent"/> is
 	/// the bulk form, which has already said what it did.
 	/// </summary>
-	private static async ValueTask<CallState> SetFlagAsync(IChannelPermissionService PermissionService, IMediator Mediator,
-		INotifyService NotifyService, AnySharpObject executor, SharpChannel[] channels, UserFlag flag, bool setting,
+	private static async ValueTask<CallState> SetFlagAsync(IMUSHCodeParser parser, IChannelPermissionService PermissionService,
+		IMediator Mediator, INotifyService NotifyService, IAttributeService AttributeService, AnySharpObject executor, SharpChannel[] channels, UserFlag flag, bool setting,
 		bool silent)
 	{
 		var changed = 0;
@@ -166,6 +166,14 @@ public static class ChannelUserFlags
 			{
 				await NotifyService.Notify(executor,
 					string.Format(PerChannelMessage(flag, setting), channel.Name.ToPlainText()), executor);
+			}
+
+			// TinyMUX's COMOFF and COMON: turning a channel off is gagging it, so the hook fires only when the
+			// gag actually changes.
+			if (flag == UserFlag.Gag && (membership.Status.Gagged ?? false) != setting)
+			{
+				await ChannelHelper.NotifyMemberHookAsync(parser, Mediator, AttributeService, NotifyService, channel,
+					executor, setting ? "COMOFF" : "COMON");
 			}
 		}
 

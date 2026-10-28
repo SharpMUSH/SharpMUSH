@@ -1151,6 +1151,24 @@
   <data name="YouHaveNoChannelAliases" xml:space="preserve">
     <value>You have no channel aliases.</value>
   </data>
+  <data name="UsageFormat" xml:space="preserve">
+    <value>Usage: {0}</value>
+  </data>
+  <data name="CsetNoHeader" xml:space="preserve">
+    <value>@cset: SharpMUSH has no channel header. A message always starts with the channel's name.</value>
+  </data>
+  <data name="ChatMustControlMogrifier" xml:space="preserve">
+    <value>You must control the mogrifier.</value>
+  </data>
+  <data name="CsetNoTimestampLogs" xml:space="preserve">
+    <value>@cset: SharpMUSH has no timestamp_logs. @channel/recall shows what the channel keeps.</value>
+  </data>
+  <data name="CflagsNoEquivalentFormat" xml:space="preserve">
+    <value>{0}: SharpMUSH has no {1} flag. Use @clock/speak &lt;channel&gt;=&lt;lock&gt; to choose who may speak.</value>
+  </data>
+  <data name="CflagsUnknownFormat" xml:space="preserve">
+    <value>{0}: {1} is not a flag. The flags are join, transmit and receive.</value>
+  </data>
 
   <!-- News / Help system -->
   <data name="NewsSystemNotInitialized" xml:space="preserve">
