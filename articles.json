@@ -1854,6 +1854,12 @@
         "lookup": "@config cosmetic pictures",
         "heading": "Pictures and the portal",
         "aliases": []
+      },
+      {
+        "id": "layouts",
+        "lookup": "@config cosmetic layouts",
+        "heading": "Layouts",
+        "aliases": []
       }
     ],
     "file": "config-cosmetic-command.md"
