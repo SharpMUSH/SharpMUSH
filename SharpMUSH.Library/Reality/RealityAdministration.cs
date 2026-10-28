@@ -37,13 +37,68 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 		}
 	}
 
+	/// <summary>
+	/// Adds layers to what an object receives (<paramref name="receive"/>) or transmits, and takes away those written
+	/// <c>!layer</c>, as RhostMUSH's <c>@rxlevel</c> and <c>@txlevel</c> do; <paramref name="reset"/> starts from none.
+	/// </summary>
+	public async Task<Result<string>> AdjustAsync(CapabilityActor actor, DBRef target, bool receive, string changes, bool reset,
+		CancellationToken ct = default)
+	{
+		await writes.WaitAsync(ct);
+		try
+		{
+			var config = await policy.ConfigurationAsync(ct);
+			return await ControlledTargetAsync(actor, target, ct) switch
+			{
+				AnySharpObject obj => await policy.ReadObjectAsync(obj.Object().DBRef, ct) switch
+				{
+					{ } profile => Adjusted(config, receive ? profile.Receive : profile.Transmit, changes, reset) switch
+					{
+						string[] layers => await SaveProfileAsync(actor, obj,
+							receive ? profile with { Receive = layers } : profile with { Transmit = layers }, ct),
+						Error<string> error => error
+					},
+					null => new Error<string>("The object no longer exists.")
+				},
+				Error<string> error => error
+			};
+		}
+		finally
+		{
+			writes.Release();
+		}
+	}
+
+	private union LayersOrError(string[], Error<string>);
+
+	private static LayersOrError Adjusted(RealityConfiguration config, string[] current, string changes, bool reset)
+	{
+		var layers = reset ? new List<string>() : [.. current];
+		foreach (var word in changes.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+		{
+			var clear = word.StartsWith('!');
+			if (config.Layer(clear ? word[1..] : word) is not { } layer)
+			{
+				return new Error<string>("Use only configured layer names.");
+			}
+
+			layers.Remove(layer);
+			if (!clear) layers.Add(layer);
+		}
+
+		return layers.ToArray();
+	}
+
 	private async Task<Result<string>> RunAsync(CapabilityActor actor, string operation, string target, string value,
 		CancellationToken ct)
 	{
 		var config = await policy.ConfigurationAsync(ct);
 		return operation switch
 		{
-			"list" or "" => $"Reality is {(config.Enabled ? "enabled" : "disabled")}. Layers: {string.Join(' ', config.Layers)}",
+			"list" or "" => $"Reality is {(config.Enabled ? "enabled" : "disabled")}. Layers: {string.Join(' ', config.Layers)}"
+				+ (config.Aliases is { Count: > 0 } aliases
+					? $". Aliases: {string.Join(' ', aliases.OrderBy(alias => alias.Key).Select(alias => $"{alias.Key}={alias.Value}"))}"
+					: ""),
 			"enable" or "disable" => await SaveConfigurationAsync(actor, config with { Enabled = operation == "enable" }, ct),
 			"add" => AddLayer(config, target) switch
 			{
@@ -55,8 +110,8 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 				RealityConfiguration removed => await SaveConfigurationAsync(actor, removed, ct),
 				Error<string> error => error
 			},
-			"rx" or "tx" or "describe" or "inspect" => await ObjectOperationAsync(actor, config, operation, target, value, ct),
-			_ => new Error<string>("Use list, enable, disable, add, remove, rx, tx, describe or inspect.")
+			"rx" or "tx" or "describe" or "inspect" or "reset" => await ObjectOperationAsync(actor, config, operation, target, value, ct),
+			_ => new Error<string>("Use list, enable, disable, add, remove, rx, tx, describe, reset or inspect.")
 		};
 	}
 
@@ -125,9 +180,12 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 			return await AuthorizeAsync(actor, ct) is Error<string> refused ? refused : Describe(profile);
 		}
 
-		var change = operation is "rx" or "tx"
-			? WithLayers(config, profile, operation, value)
-			: await WithDescriptionAsync(config, profile, obj, value);
+		Result<ObjectReality> change = operation switch
+		{
+			"rx" or "tx" => WithLayers(config, profile, operation, value),
+			"reset" => ObjectReality.Default(profile.Object),
+			_ => await WithDescriptionAsync(config, profile, obj, value)
+		};
 
 		return change switch
 		{
@@ -144,17 +202,15 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 	private static Result<ObjectReality> WithLayers(RealityConfiguration config, ObjectReality profile, string operation,
 		string value)
 	{
-		var names = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-			.Select(name => name.ToLowerInvariant())
-			.Distinct(StringComparer.Ordinal)
-			.ToArray();
-
-		if (names.Length > MaxLayers || names.Any(name => !config.Layers.Contains(name)))
+		var given = value.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+		var names = given.Select(config.Layer).ToArray();
+		if (given.Length > MaxLayers || names.Any(name => name is null))
 		{
 			return new Error<string>("Use only configured layer names.");
 		}
 
-		return operation == "rx" ? profile with { Receive = names } : profile with { Transmit = names };
+		string[] layers = [.. names.OfType<string>().Distinct(StringComparer.Ordinal)];
+		return operation == "rx" ? profile with { Receive = layers } : profile with { Transmit = layers };
 	}
 
 	/// <summary>
@@ -164,8 +220,7 @@ public sealed class RealityAdministration(RealityPolicy policy, IAdministrativeC
 		AnySharpObject obj, string value)
 	{
 		var parts = value.Split('/', 2, StringSplitOptions.TrimEntries);
-		var layer = parts[0].ToLowerInvariant();
-		if (!config.Layers.Contains(layer))
+		if (config.Layer(parts[0]) is not { } layer)
 		{
 			return new Error<string>("Use a configured layer name.");
 		}

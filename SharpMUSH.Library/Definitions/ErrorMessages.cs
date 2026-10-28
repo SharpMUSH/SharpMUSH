@@ -391,6 +391,7 @@ public static partial class ErrorMessages
 		public const string NoPidSpecified = "#-1 NO PID SPECIFIED";
 		public const string NoPlayerSpecified = "#-1 NO PLAYER SPECIFIED";
 		public const string NoRoomNameSpecified = "#-1 NO ROOM NAME SPECIFIED";
+		public const string NoSuchLevel = "#-1 NO SUCH LEVEL";
 		public const string NoTargetSpecified = "#-1 NO TARGET SPECIFIED";
 		public const string NoTestString = "#-1 NO TEST STRING";
 		public const string NoWaitingTask = "#-1 NO WAITING TASK";

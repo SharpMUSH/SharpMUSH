@@ -168,6 +168,8 @@ public class RhostImportTests
 		var config = await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync();
 		await Assert.That(config.Enabled).IsTrue();
 		await Assert.That(config.Layers).IsEquivalentTo(["normal", "umbra", "spirit_world"]);
+		await Assert.That(config.Aliases?.Count).IsEqualTo(1);
+		await Assert.That(config.Layer("Real")).IsEqualTo("normal");
 
 		var alice = await LayersAsync(world, "Alice");
 		await Assert.That(alice.Receive).IsEquivalentTo(["normal", "umbra"]);

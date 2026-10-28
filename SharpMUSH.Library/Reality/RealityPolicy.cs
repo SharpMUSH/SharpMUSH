@@ -66,7 +66,11 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		{
 			configuration ??= Validate(await store.GetExpandedServerData<RealityConfiguration>(ConfigurationKey, ct)
 				?? RealityConfiguration.Default);
-			return configuration with { Layers = [.. configuration.Layers] };
+			return configuration with
+			{
+				Layers = [.. configuration.Layers],
+				Aliases = configuration.Aliases is null ? null : new(configuration.Aliases)
+			};
 		}
 		finally { configurationGate.Release(); }
 	}
@@ -78,7 +82,11 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 		try
 		{
 			await store.SetExpandedServerData(ConfigurationKey, value, ct);
-			configuration = value with { Layers = [.. value.Layers] };
+			configuration = value with
+			{
+				Layers = [.. value.Layers],
+				Aliases = value.Aliases is null ? null : new(value.Aliases)
+			};
 		}
 		finally { configurationGate.Release(); }
 	}
@@ -123,7 +131,16 @@ public sealed class RealityPolicy(IExpandedDataStore store, IObjectStore objects
 			|| value.Layers.Any(layer => !ValidLayerName(layer))
 			|| value.Layers.Distinct(StringComparer.OrdinalIgnoreCase).Count() != value.Layers.Length)
 			throw new InvalidDataException("Invalid reality configuration.");
-		return value with { Layers = value.Layers.Select(layer => layer.ToLowerInvariant()).ToArray() };
+		var layers = value.Layers.Select(layer => layer.ToLowerInvariant()).ToArray();
+		return value with
+		{
+			Layers = layers,
+			Aliases = value.Aliases?
+				.Select(alias => (Name: alias.Key.ToLowerInvariant(), Layer: alias.Value.ToLowerInvariant()))
+				.Where(alias => ValidLayerName(alias.Name) && layers.Contains(alias.Layer) && !layers.Contains(alias.Name))
+				.DistinctBy(alias => alias.Name)
+				.ToDictionary(alias => alias.Name, alias => alias.Layer)
+		};
 	}
 
 	public static bool ValidLayerName(string? name) => name is { Length: > 0 and <= 32 }

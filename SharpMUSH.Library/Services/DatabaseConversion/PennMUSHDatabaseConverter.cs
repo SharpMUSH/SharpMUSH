@@ -2447,8 +2447,23 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		var inUse = written > 0;
-		await _reality.SaveConfigurationAsync(config with { Layers = [.. config.Layers, .. added], Enabled = config.Enabled || inUse },
-			cancellationToken);
+		// Softcode names a level as the source did: Real for the normal layer, say.
+		var aliases = new Dictionary<string, string>(config.Aliases ?? []);
+		foreach (var level in levels.Where(level => layers.ContainsKey(level.Value)))
+		{
+			var name = level.Name.ToLowerInvariant();
+			if (name != layers[level.Value] && RealityPolicy.ValidLayerName(name))
+			{
+				aliases.TryAdd(name, layers[level.Value]);
+			}
+		}
+
+		await _reality.SaveConfigurationAsync(config with
+		{
+			Layers = [.. config.Layers, .. added],
+			Enabled = config.Enabled || inUse,
+			Aliases = aliases
+		}, cancellationToken);
 		context.Notes.Add($"Reality: {layers.Count} reality level bit(s) imported as layers ({string.Join(", ", layers.Values)}); " +
 			$"{written} object(s) given layers of their own{(inUse ? ", and reality turned on" : "")}");
 
