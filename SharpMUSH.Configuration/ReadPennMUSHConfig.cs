@@ -139,7 +139,8 @@ public static partial class ReadPennMushConfig
 				Boolean(Get(nameof(CompatibilityOptions.RhostMapArgs)), d.Compatibility.RhostMapArgs),
 				Boolean(Get(nameof(CompatibilityOptions.SidefxFlag)), d.Compatibility.SidefxFlag),
 				Boolean(Get(nameof(CompatibilityOptions.RhostList)), d.Compatibility.RhostList),
-				String(Get(nameof(CompatibilityOptions.Dialect)), d.Compatibility.Dialect)?.Trim().ToLowerInvariant()
+				String(Get(nameof(CompatibilityOptions.Dialect)), d.Compatibility.Dialect)?.Trim().ToLowerInvariant(),
+				Boolean(Get(nameof(CompatibilityOptions.MuxQueueFunctions)), d.Compatibility.MuxQueueFunctions)
 			),
 			Cosmetic = new CosmeticOptions(
 				RequiredString(Get(nameof(CosmeticOptions.MoneySingular)), d.Cosmetic.MoneySingular).Trim(),

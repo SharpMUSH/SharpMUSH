@@ -28,11 +28,11 @@ public class TextFunctionUnitTests
 	/// (<c>src/help.c:1170</c>): the pattern is required and filters the entry names, and the
 	/// separator is the third argument. SharpMUSH declared it 1..2 and read argument 2 as the
 	/// separator, so it listed every entry and a caller's pattern became the separator. The entry
-	/// names come from the shipped help corpus; <c>strip*</c> names exactly two of them.
+	/// names come from the shipped help corpus; <c>strip*</c> names exactly three of them.
 	/// </summary>
 	[Test]
-	[Arguments("textentries(help,strip*)", "stripaccents() stripansi()")]
-	[Arguments("textentries(help,strip*,|)", "stripaccents()|stripansi()")]
+	[Arguments("textentries(help,strip*)", "strip() stripaccents() stripansi()")]
+	[Arguments("textentries(help,strip*,|)", "strip()|stripaccents()|stripansi()")]
 	[Arguments("textentries(help,strallof*)", "strfirstof()")]
 	[Arguments("textentries(help,zzznosuchtopic*)", "")]
 	public async Task TextentriesFiltersByPattern(string expression, string expected)

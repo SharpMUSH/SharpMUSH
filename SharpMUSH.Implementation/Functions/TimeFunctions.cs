@@ -112,13 +112,50 @@ public partial class Functions
 				: new CallState(ErrorMessages.Returns.PermissionDenied));
 	}
 
-	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+	/// <remarks>
+	/// TinyMUX's form is <c>secs([utc|local][, &lt;digits&gt;])</c>: a zone first, then how many decimal places.
+	/// A first argument of <c>utc</c> or <c>local</c> is read that way; anything else is SharpMUSH's precision.
+	/// </remarks>
+	[SharpFunction(Name = "secs", MinArgs = 0, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["precision"])]
 	public ValueTask<CallState> Secs(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult<CallState>(
-			TryPrecision(parser.CurrentState.Arguments, "0", out var precision)
-				? TimePrecisions.Format(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), precision)
-				: ErrorMessages.Returns.InvalidPrecision);
+	{
+		var args = parser.CurrentState.Arguments;
+		var now = DateTimeOffset.UtcNow;
+		var zone = args.TryGetValue("0", out var zoneArg) ? zoneArg.Message.ToPlainText().Trim() : string.Empty;
+		var isZone = zone.Equals("utc", StringComparison.OrdinalIgnoreCase) || zone.Equals("local", StringComparison.OrdinalIgnoreCase);
+		if (!isZone)
+		{
+			return ValueTask.FromResult<CallState>(args.Count > 1
+				? ErrorMessages.Returns.ArgumentCount("SECS", 0, 1, args.Count)
+				: TryPrecision(args, "0", out var precision)
+					? TimePrecisions.Format(now.ToUnixTimeMilliseconds(), precision)
+					: ErrorMessages.Returns.InvalidPrecision);
+		}
+
+		var milliseconds = now.ToUnixTimeMilliseconds()
+			+ (zone.Equals("local", StringComparison.OrdinalIgnoreCase)
+				? (long)TimeZoneInfo.Local.GetUtcOffset(now).TotalMilliseconds
+				: 0L);
+		return ValueTask.FromResult<CallState>(args.TryGetValue("1", out var digitsArg)
+			? MuxSeconds(milliseconds, digitsArg.Message.ToPlainText())
+			: TimePrecisions.Format(milliseconds, TimePrecision.Seconds));
+	}
+
+	/// <summary>Milliseconds as seconds with TinyMUX's count of decimal places, 0 to 7; places past the third are 0.</summary>
+	private static CallState MuxSeconds(long milliseconds, string digitsText)
+	{
+		if (!int.TryParse(digitsText.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var digits)
+			|| digits is < 0 or > 7)
+		{
+			return ErrorMessages.Returns.InvalidPrecision;
+		}
+
+		// Cut to the places asked for rather than round, so secs(utc,0) is the whole second secs(utc) gives.
+		var scale = Math.Min(digits, 3) switch { 0 => 1000L, 1 => 100L, 2 => 10L, _ => 1L };
+		var seconds = Math.Floor((decimal)milliseconds / scale) * scale / 1000m;
+		return seconds.ToString("F" + digits, CultureInfo.InvariantCulture);
+	}
 
 	[SharpFunction(Name = "secscalc", MinArgs = 1, MaxArgs = int.MaxValue,
 		Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["timestring"])]

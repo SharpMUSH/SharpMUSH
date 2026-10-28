@@ -123,7 +123,7 @@ public class InputSessionCommandTests
 	[Arguments("include-multiple", true)]
 	[Arguments("include-invalid", true)]
 	[Arguments("trigger", true)]
-	[Arguments("verb", true)]
+	[Arguments("verb", false)]
 	[Arguments("ifelse-literal", false)]
 	[Arguments("ifelse-skipped", false)]
 	public async Task ParsedCallbackFailureRetiresCapture(string mode, bool failed)
@@ -203,8 +203,9 @@ public class InputSessionCommandTests
 			await Assert.That(result).IsNotNull();
 			// The callback is an action list, so a $-command it matches is queued as its own entry (#1132):
 			// the body, and whatever fails in it, is not part of the callback.
-			if (mode.StartsWith("nested-", StringComparison.Ordinal)) await Assert.That(invocations).IsEqualTo(0);
-			if (mode is "ifelse-true" or "ifelse-false" or "skip" or "switch" or "select" or "force" or "break" or "assert" or "teach" or "teach-list" or "trigger" or "verb" or "include-invalid") await Assert.That(invocations).IsEqualTo(1);
+			// @verb queues its <awhat> the same way, as PennMUSH's do_verb does.
+			if (mode.StartsWith("nested-", StringComparison.Ordinal) || mode == "verb") await Assert.That(invocations).IsEqualTo(0);
+			if (mode is "ifelse-true" or "ifelse-false" or "skip" or "switch" or "select" or "force" or "break" or "assert" or "teach" or "teach-list" or "trigger" or "include-invalid") await Assert.That(invocations).IsEqualTo(1);
 			if (mode is "dolist-multiple" or "map-multiple" or "include-multiple") await Assert.That(invocations).IsEqualTo(2);
 			await Assert.That(Sessions.GetCapturing(player.Handle) is null).IsEqualTo(failed);
 			if (failed) await Assert.That(result!.HadErrors).IsTrue();

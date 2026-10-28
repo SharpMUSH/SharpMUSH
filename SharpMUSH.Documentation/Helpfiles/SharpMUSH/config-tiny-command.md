@@ -33,6 +33,7 @@ Options that make SharpMUSH behave like TinyMUSH, TinyMUX or RhostMUSH, for code
 - `mux_logic=<boolean>`: Do and(), or(), xor(), cand() and cor() test each argument by its leading signed integer, as TinyMUX does, and does xor() answer 1 for an odd number of true arguments? See [compatibility config].
 - `mux_justify=<boolean>`: Do ljust(), rjust() and center() cut text longer than the width, as TinyMUX does?
 - `mux_collation=<boolean>`: Do comp() with no type and sort() with no sort type order text as TinyMUX does, `a A b B`?
+- `mux_queue_functions=<boolean>`: Do trigger() and verb() queue an attribute's actions, as TinyMUX's do? When off they return `#-1 FUNCTION DISABLED`. Importing a TinyMUX database turns it on.
 - `innermost_tokens=<boolean>`: Do `##` and `#@` name the innermost iter() or @dolist, and `#$` the innermost switch, as in TinyMUX? When off, they name the outermost one they are written in, as in PennMUSH.
 
 ## RhostMUSH options

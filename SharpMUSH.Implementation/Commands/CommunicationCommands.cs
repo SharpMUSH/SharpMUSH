@@ -6,6 +6,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Requests;
 using SharpMUSH.Library.Services.Interfaces;
 using System.Collections.Immutable;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -261,27 +262,46 @@ public partial class Commands
 			INotifyService.NotificationType.Emit,
 			excludeObjects: [actor]);
 
-		CallState? nestedResult = null;
-		if (!string.IsNullOrWhiteSpace(awhat))
+		if (string.IsNullOrWhiteSpace(awhat)
+			|| await AttributeService.GetAttributeAsync(
+				executor, victim, awhat, IAttributeService.AttributeMode.Execute) is not SharpAttribute[] awhatChain)
 		{
-			if (await AttributeService.GetAttributeAsync(
-					executor, victim, awhat, IAttributeService.AttributeMode.Execute) is SharpAttribute[] awhatChain)
-			{
-				var attribute = awhatChain.Last();
-				nestedResult = await parser.With(
-					state => state with
-					{
-						Executor = victim.Object().DBRef,
-						Enactor = actor.Object().DBRef,
-						Caller = state.Executor,
-						Arguments = stackArgs
-					},
-					newParser => newParser.WithAttributeDebug(attribute,
-						p => p.CommandListParse(attribute.Value)));
-			}
+			return CallState.Empty;
 		}
 
-		return CallState.Empty with { HadErrors = nestedResult?.HadErrors == true };
+		// do_verb hands <awhat> to real_did_it, which queues it (queue_attribute_base) rather than running it
+		// inside the command, with a pe_info of its own: fresh q-registers, loop, switch and regexp frames and
+		// recursion counters, as IDidItService gives an action attribute. The entry runs on the scheduler's
+		// thread, possibly before this command finishes, so it must share nothing with the caller's state.
+		var attribute = awhatChain.Last();
+		var invocation = parser.CurrentState.ForAttributeArguments(stackArgs);
+		var admission = await Mediator.Send(new AdmitCommandListRequest(attribute.Value,
+			invocation with
+			{
+				Executor = victim.Object().DBRef,
+				Enactor = actor.Object().DBRef,
+				Caller = actor.Object().DBRef,
+				Arguments = stackArgs,
+				CommandHistory = null,
+				BreakPropagation = null,
+				Context = invocation.Context with
+				{
+					EnvironmentRegisters = stackArgs,
+					Registers = new([[]]),
+					IterationRegisters = [],
+					RegexRegisters = [],
+					SwitchStack = [],
+					ExecutionStack = [],
+					CallDepth = new InvocationCounter(),
+					FunctionRecursionDepths = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase),
+					TotalInvocations = new InvocationCounter(),
+					LimitExceeded = new LimitExceededFlag(),
+					MoveDepth = new InvocationCounter(),
+					HttpResponse = null
+				}
+			},
+			new DbRefAttribute(victim.Object().DBRef, attribute.LongName.Split('`')), -1), ExecutionBudget.CurrentToken);
+		return admission.Accepted ? CallState.Empty : new CallState(admission.Error) { HadErrors = true };
 	}
 
 	private async ValueTask<MString> GetAttributeOrDefault(

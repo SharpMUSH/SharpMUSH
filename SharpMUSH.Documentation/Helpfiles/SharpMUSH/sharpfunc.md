@@ -15,7 +15,7 @@
 | [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
 | [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
 | [XATTR()]             | [XGET()]              | [ZFUN()]              | [HASARG()]            |
-| [UEVAL()]             | [STREVAL()]           |                       |                       |
+| [UEVAL()]             | [STREVAL()]           | [LATTRCMDS()]         | [LCMDS()]             |
 
 ::: seealso
 - [attributes]
@@ -89,14 +89,14 @@
 | [CHILDREN()]  | [CON()]       | [ENTRANCES()] | [EXIT()]      |
 | [EXITMAP()]   | [FOLLOWERS()] | [FOLLOWING()] | [HOME()]      |
 | [LCON()]      | [LEXITS()]    | [LOC()]       | [LOCATE()]    |
-| [LPARENT()]   | [LPLAYERS()]  | [LSEARCH()]   | [LTHINGS()]   |
-| [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] | [LVTHINGS()]  |
-| [NAMELIST()]  | [NCON()]      | [NEXITS()]    | [NEXT()]      |
-| [NEXTDBREF()] | [NPLAYERS()]  | [NTHINGS()]   | [NUM()]       |
-| [OWNER()]     | [PARENT()]    | [PMATCH()]    | [RLOC()]      |
-| [RNUM()]      | [ROOM()]      | [WHERE()]     | [XCON()]      |
-| [XEXITS()]    | [XPLAYERS()]  | [XTHINGS()]   | [ZFIND()]     |
-| [ZONE()]      |               |               |               |
+| [LPARENT()]   | [LPLAYERS()]  | [LROOMS()]    | [LSEARCH()]   |
+| [LTHINGS()]   | [LVCON()]     | [LVEXITS()]   | [LVPLAYERS()] |
+| [LVTHINGS()]  | [NAMELIST()]  | [NCON()]      | [NEXITS()]    |
+| [NEXT()]      | [NEXTDBREF()] | [NPLAYERS()]  | [NTHINGS()]   |
+| [NUM()]       | [OWNER()]     | [PARENT()]    | [PMATCH()]    |
+| [RLOC()]      | [RNUM()]      | [ROOM()]      | [WHERE()]     |
+| [XCON()]      | [XEXITS()]    | [XPLAYERS()]  | [XTHINGS()]   |
+| [ZFIND()]     | [ZONE()]      |               |               |
 
 ::: seealso
 - [database]
@@ -109,23 +109,23 @@
 |------------------|------------------|------------------|------------------|
 | [ACCNAME()]      | [ACCOUNT()]      | [ACCOUNTCHARS()] | [ACTIVITY()]     |
 | [ALIAS()]        | [ANDFLAGS()]     | [ANDLFLAGS()]    | [ANDLPOWERS()]   |
-| [CANSEE()]       | [CHKREALITY()]   | [CONFIG()]       | [CONTEXT()]      |
-| [CONTROLS()]     | [CSECS()]        | [CTIME()]        | [DOWNMOTD()]     |
-| [ELOCK()]        | [ERROR()]        | [FINDABLE()]     | [FLAGS()]        |
-| [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     | [GETPIDS()]      |
-| [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     | [HASFLAG()]      |
-| [HASPOWER()]     | [HASROLE()]      | [HASRXLEVEL()]   | [HASTXLEVEL()]   |
-| [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   | [LFLAGS()]       |
-| [LISTRLEVELS()]  | [LLOCKFLAGS()]   | [LOCK()]         | [LOCKFLAGS()]    |
-| [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        | [LSTATS()]       |
-| [MONEY()]        | [MONIKER()]      | [MOTD()]         | [MSECS()]        |
-| [MTIME()]        | [MUDNAME()]      | [MUDURL()]       | [NAME()]         |
-| [NATTR()]        | [NEARBY()]       | [OBJID()]        | [OBJMEM()]       |
-| [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   |
-| [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         | [POWERS()]       |
-| [QUOTA()]        | [RESTARTS()]     | [ROLES()]        | [RXLEVEL()]      |
-| [TXLEVEL()]      | [TYPE()]         | [VERSION()]      | [VISIBLE()]      |
-| [WIZMOTD()]      |                  |                  |                  |
+| [BITTYPE()]      | [CANSEE()]       | [CHKREALITY()]   | [CONFIG()]       |
+| [CONTEXT()]      | [CONTROLS()]     | [CSECS()]        | [CTIME()]        |
+| [DOWNMOTD()]     | [ELOCK()]        | [ERROR()]        | [FINDABLE()]     |
+| [FLAGS()]        | [FULLALIAS()]    | [FULLMOTD()]     | [FULLNAME()]     |
+| [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
+| [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      | [HASRXLEVEL()]   |
+| [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
+| [LFLAGS()]       | [LISTRLEVELS()]  | [LLOCKFLAGS()]   | [LOCK()]         |
+| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
+| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MOTD()]         |
+| [MSECS()]        | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       |
+| [NAME()]         | [NATTR()]        | [NEARBY()]       | [OBJID()]        |
+| [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    |
+| [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         |
+| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
+| [RXLEVEL()]      | [TXLEVEL()]      | [TYPE()]         | [VERSION()]      |
+| [VISIBLE()]      | [WIZMOTD()]      |                  |                  |
 
 ::: seealso
 - [Dbref functions]
@@ -136,22 +136,22 @@
 
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
-| [CHAIN()]       | [CITER()]       | [ELEMENTS()]    | [EVERY()]       |
-| [EXTRACT()]     | [FILTER()]      | [FILTERBOOL()]  | [FILTERQ()]     |
-| [FIRST()]       | [FOLD()]        | [GRAB()]        | [GRABALL()]     |
-| [INDEX()]       | [INF()]         | [ITEMIZE()]     | [ITEMS()]       |
-| [ITER()]        | [JITER()]       | [LAST()]        | [LDELETE()]     |
+| [CHAIN()]       | [CHOOSE()]      | [CITER()]       | [ELEMENTS()]    |
+| [EVERY()]       | [EXTRACT()]     | [FILTER()]      | [FILTERBOOL()]  |
+| [FILTERQ()]     | [FIRST()]       | [FOLD()]        | [GRAB()]        |
+| [GRABALL()]     | [INDEX()]       | [INF()]         | [ITEMIZE()]     |
+| [ITEMS()]       | [ITER()]        | [JITER()]       | [KEEPFLAGS()]   |
+| [KEEPTYPE()]    | [LAST()]        | [LDELETE()]     | [LEDIT()]       |
 | [LINSERT()]     | [LISTDIFF()]    | [LISTINTER()]   | [LISTSET()]     |
 | [LISTUNION()]   | [LOCKFILTER()]  | [LREPLACE()]    | [MAP()]         |
 | [MATCH()]       | [MATCHALL()]    | [MEMBER()]      | [MIX()]         |
 | [MUNGE()]       | [NAMEGRAB()]    | [NAMEGRABALL()] | [NSITER()]      |
-| [RANDEXTRACT()] | [RANDWORD()]    | [REMOVE()]      | [REST()]        |
-| [REVWORDS()]    | [SETDIFF()]     | [SETINTER()]    | [SETSYMDIFF()]  |
-| [SETUNION()]    | [SHUFFLE()]     | [SOME()]        | [SORT()]        |
-| [SORTBY()]      | [SORTKEY()]     | [SPLICE()]      | [STEP()]        |
-| [STEPARGS()]    | [TABLE()]       | [UNIQUE()]      | [WHILE()]       |
-| [WORDPOS()]     | [WORDS()]       | [KEEPFLAGS()]   | [KEEPTYPE()]    |
-| [REMFLAGS()]    | [REMTYPE()]     |                 |                 |
+| [RANDEXTRACT()] | [RANDWORD()]    | [REMFLAGS()]    | [REMOVE()]      |
+| [REMTYPE()]     | [REST()]        | [REVWORDS()]    | [SETDIFF()]     |
+| [SETINTER()]    | [SETSYMDIFF()]  | [SETUNION()]    | [SHUFFLE()]     |
+| [SOME()]        | [SORT()]        | [SORTBY()]      | [SORTKEY()]     |
+| [SPLICE()]      | [STEP()]        | [STEPARGS()]    | [TABLE()]       |
+| [UNIQUE()]      | [WHILE()]       | [WORDPOS()]     | [WORDS()]       |
 
 ::: seealso
 - [LISTS]
@@ -160,21 +160,22 @@
 # Math Functions
   Math functions take one or more floating point numbers and return a numeric value.
 
-|              |              |              |              |
-|--------------|--------------|--------------|--------------|
-| [ABS()]      | [ACOS()]     | [ADD()]      | [ASIN()]     |
-| [ATAN()]     | [ATAN2()]    | [BOUND()]    | [CEIL()]     |
-| [COS()]      | [CTU()]      | [DIST2D()]   | [DIST3D()]   |
-| [E()]        | [EXP()]      | [FDIV()]     | [FLOOR()]    |
-| [FMOD()]     | [FRACTION()] | [LADD()]     | [LAVG()]     |
-| [LDIV()]     | [LMATH()]    | [LMAX()]     | [LMIN()]     |
-| [LMUL()]     | [LN()]       | [LOG()]      | [LSUB()]     |
-| [MAX()]      | [MEAN()]     | [MEDIAN()]   | [MIN()]      |
-| [MUL()]      | [PI()]       | [POWER()]    | [ROOT()]     |
-| [ROUND()]    | [SIGN()]     | [SIN()]      | [SQRT()]     |
-| [STDDEV()]   | [SUB()]      | [TAN()]      | [TRUNC()]    |
-| [VAL()]      | [COSH()]     | [FBETWEEN()] | [SINH()]     |
-| [TANH()]     |              |              |              |
+|                |                |                |                |
+|----------------|----------------|----------------|----------------|
+| [ABS()]        | [ACOS()]       | [ADD()]        | [ASIN()]       |
+| [ATAN()]       | [ATAN2()]      | [BETWEEN()]    | [BOUND()]      |
+| [CEIL()]       | [COS()]        | [COSH()]       | [CTU()]        |
+| [DIST2D()]     | [DIST3D()]     | [DISTRIBUTE()] | [E()]          |
+| [EXP()]        | [FBETWEEN()]   | [FDIV()]       | [FLOOR()]      |
+| [FMOD()]       | [FRACTION()]   | [LADD()]       | [LAVG()]       |
+| [LDIV()]       | [LMATH()]      | [LMAX()]       | [LMIN()]       |
+| [LMUL()]       | [LN()]         | [LOG()]        | [LRAND()]      |
+| [LSUB()]       | [MAX()]        | [MEAN()]       | [MEDIAN()]     |
+| [MIN()]        | [MUL()]        | [PI()]         | [POWER()]      |
+| [ROMAN()]      | [ROOT()]       | [ROUND()]      | [SIGN()]       |
+| [SIN()]        | [SINH()]       | [SQRT()]       | [STDDEV()]     |
+| [SUB()]        | [TAN()]        | [TANH()]       | [TRUNC()]      |
+| [VAL()]        |                |                |                |
 
   These functions operate only on integers (if passed floating point numbers, they will return an error or misbehave):
 
@@ -239,23 +240,24 @@
 | [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
 | [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
 | [CENTER()]               | [CHR()]                  | [COLUMNS()]              | [COMP()]                 |
-| [COND()]                 | [CONDALL()]              | [DECODE64()]             | [DECOMPOSE()]            |
-| [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               | [DISPLAYWIDTH()]         |
-| [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             | [ENCRYPT()]              |
-| [ESCAPE()]               | [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           |
-| [FORMQ()]                | [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 |
-| [IF()]                   | [IFELSE()]               | [LCSTR()]                | [LEFT()]                 |
-| [LIT()]                  | [LJUST()]                | [LPOS()]                 | [MERGE()]                |
-| [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
-| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
-| [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
-| [RJUST()]                | [SCRAMBLE()]             | [SECURE()]               | [SHA0()]                 |
-| [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               | [STANDIN()]              |
-| [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            | [STRDISTANCE()]          |
-| [STRFIRSTOF()]           | [STRINSERT()]            | [STRIPACCENTS()]         | [STRIPANSI()]            |
-| [STRLEN()]               | [STRMATCH()]             | [STRREPLACE()]           | [SWITCH()]               |
+| [COND()]                 | [CONDALL()]              | [CRC32()]                | [DECODE64()]             |
+| [DECOMPOSE()]            | [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               |
+| [DISPLAYWIDTH()]         | [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             |
+| [ENCRYPT()]              | [ESCAPE()]               | [ESCAPEX()]              | [FLIP()]                 |
+| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
+| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
+| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
+| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
+| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
+| [REGMATCH()]             | [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] |
+| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             |
+| [SECURE()]               | [SHA0()]                 | [SPACE()]                | [SPELLNUM()]             |
+| [SQUISH()]               | [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               |
+| [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            |
+| [STRIP()]                | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
+| [STRMATCH()]             | [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               |
 | [TR()]                   | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 | [ESCAPEX()]              |
+| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -273,6 +275,7 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [MTIME()]       | [RESTARTTIME()] | [SECS()]        | [STARTTIME()]   |
 | [STRINGSECS()]  | [TIME()]        | [TIMECALC()]    | [TIMEFMT()]     |
 | [TIMESTRING()]  | [UPTIME()]      | [UTCTIME()]     | [DATEPARSE()]   |
+| [MOON()]        |                 |                 |                 |
 
 ::: seealso
 - [timezones]
@@ -284,23 +287,24 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 |--------------------|--------------------|--------------------|--------------------|
 | [@@()]             | [ALLOF()]          | [ANSI()]           | [ATRLOCK()]        |
 | [BEEP()]           | [BENCHMARK()]      | [CHECKPASS()]      | [CLONE()]          |
-| [CMDLINK()]        | [COLORS()]         | [CREATE()]         | [DIE()]            |
-| [DIG()]            | [ENDTAG()]         | [FIRSTOF()]        | [FN()]             |
-| [FUNCTIONS()]      | [HTML()]           | [IBREAK()]         | [ILEV()]           |
-| [INUM()]           | [ISDBREF()]        | [ISINT()]          | [ISNUM()]          |
-| [ISOBJID()]        | [ISREGEXP()]       | [ISWORD()]         | [ITEXT()]          |
-| [LETQ()]           | [LINK()]           | [LIST()]           | [LISTQ()]          |
-| [LNUM()]           | [LOCALIZE()]       | [LSET()]           | [NAMEQ()]          |
-| [NULL()]           | [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       |
-| [OPEN()]           | [PCREATE()]        | [PRIVATIZE()]      | [R()]              |
-| [RAND()]           | [REGISTERS()]      | [RESTRICTEDEXPR()] | [ROLL()]           |
-| [ROLLINFO()]       | [S()]              | [SCAN()]           | [SET()]            |
-| [SETQ()]           | [SETQM()]          | [SETR()]           | [SETRM()]          |
-| [SLEV()]           | [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          |
-| [STEXT()]          | [STOPEVENT()]      | [SUGGEST()]        | [TAG()]            |
+| [CMDLINK()]        | [COLORS()]         | [CREATE()]         | [DESTROY()]        |
+| [DIE()]            | [DIG()]            | [ENDTAG()]         | [FIRSTOF()]        |
+| [FN()]             | [FUNCTIONS()]      | [HTML()]           | [IBREAK()]         |
+| [ILEV()]           | [INUM()]           | [ISDBREF()]        | [ISINT()]          |
+| [ISNUM()]          | [ISOBJID()]        | [ISREGEXP()]       | [ISWORD()]         |
+| [ITEXT()]          | [LETQ()]           | [LINK()]           | [LIST()]           |
+| [LISTQ()]          | [LNUM()]           | [LOCALIZE()]       | [LSET()]           |
+| [MOVE()]           | [NAMEQ()]          | [NAMEQM()]         | [NULL()]           |
+| [NUMVERSION()]     | [OBJEVAL()]        | [OBJEVALS()]       | [OPEN()]           |
+| [PCREATE()]        | [PRIVATIZE()]      | [R()]              | [RAND()]           |
+| [REGISTERS()]      | [RESTRICTEDEXPR()] | [ROLL()]           | [ROLLINFO()]       |
+| [S()]              | [SCAN()]           | [SET()]            | [SETQ()]           |
+| [SETQM()]          | [SETR()]           | [SETRM()]          | [SLEV()]           |
+| [SOUNDEX()]        | [SOUNDSLIKE()]     | [SPEAK()]          | [STEXT()]          |
+| [STOPEVENT()]      | [STRFUNC()]        | [SUGGEST()]        | [TAG()]            |
 | [TAGWRAP()]        | [TEL()]            | [TESTLOCK()]       | [TEXTENTRIES()]    |
-| [TEXTFILE()]       | [UNSETQ()]         | [UPTIME()]         | [VALID()]          |
-| [WIPE()]           | [MOVE()]           | [NAMEQM()]         | [STRFUNC()]        |
+| [TEXTFILE()]       | [TRIGGER()]        | [UNSETQ()]         | [UPTIME()]         |
+| [VALID()]          | [VERB()]           | [WIPE()]           |                    |
 
 # Wiki Functions
   Wiki functions read the shared wiki: the same pages the web portal serves.
@@ -718,6 +722,51 @@ think benchmark(iter(lnum(1,100), %i0), 200)
 think benchmark(add(1,2), 10, me)
 ```
   Output: the first prints the timings, such as "Average: 110.27   Min: 106   Max: 281". The second prints 3, and you are sent a line of timings in the same form.
+# between()
+`between(<low>, <high>, <value>[, <inclusive>])`
+
+  Returns 1 if `<value>` lies between `<low>` and `<high>`, and 0 if it does not. The numbers may have decimals. Both ends are left out of the range unless `<inclusive>` is true.
+
+  Examples:
+```sharp
+think between(1, 10, 5)
+1
+think between(1, 10, 10)
+0
+think between(1, 10, 10, 1)
+1
+```
+
+::: seealso
+- [BOUND()]
+- [GT()]
+- [LT()]
+:::
+# bittype()
+`bittype([<object>])`
+
+  Returns how privileged the owner of `<object>` is, as a number on the scale TinyMUX and RhostMUSH use. With no argument, `<object>` is you.
+
+    7  God<br>
+    5  wizard<br>
+    4  royalty<br>
+    3  the STAFF flag or the Builder power<br>
+    2  the HEAD flag or the Immortal power<br>
+    1  anyone else<br>
+    0  a guest, or a player with the UNINSPECTED flag
+
+  There is no 6: RhostMUSH uses it for a level above wizard. A player with more than one of these gets the highest.
+
+  Example:
+```sharp
+think bittype(#1)
+7
+```
+
+::: seealso
+- [HASFLAG()]
+- [HASPOWER()]
+:::
 # brackets()
 `brackets(<string>)`
 
@@ -820,6 +869,26 @@ You say, "foo barbaz blech"
 ::: seealso
 - [@password]
 - [@newpassword]
+:::
+# choose()
+`choose(<items>, <weights>[, <delimiter>])`
+
+  Picks one element of `<items>` at random. Each element's chance is its weight over the total of all weights. `<weights>` is a space-separated list of whole numbers, one for each element; a negative weight counts as 0. `<delimiter>` separates `<items>` and defaults to a space.
+
+  If every weight is 0 the result is empty. If the two lists have different lengths the result is `#-1 LISTS MUST BE OF EQUAL SIZE`.
+
+  Examples:
+```sharp
+think choose(red blue green, 0 1 0)
+blue
+think choose(red|blue|green, 5 1 0, |)
+red
+```
+
+::: seealso
+- [PICKRAND()]
+- [RAND()]
+- [DISTRIBUTE()]
 :::
 # chr()
 # ord()
@@ -1063,6 +1132,22 @@ You say, "0"
 - [SIN()]
 - [TAN()]
 :::
+# crc32()
+`crc32([<string1>[, ... <stringN>]])`
+
+  Returns the CRC-32 checksum of the strings as one unsigned number. The strings are checked one after another, so crc32(ab, c) is the same as crc32(abc). Markup is left out, and the text is read as UTF-8.
+
+  Examples:
+```sharp
+think crc32(MUX)
+629126998
+think crc32(M, UX)
+629126998
+```
+
+::: seealso
+- [DIGEST()]
+:::
 # pcreate()
 `pcreate(<name>, <password>[, <dbref>])`
 
@@ -1252,6 +1337,15 @@ You say, "apple orange banana"
 - [UDEFAULT()]
 - [STRFIRSTOF()]
 :::
+# destroy()
+`destroy(<object>)`
+
+  Does what `@destroy <object>` does, and returns nothing. @destroy's messages are sent to you. The function is refused when you may not use @destroy, and when side-effect functions are turned off.
+
+::: seealso
+- [@destroy]
+- [CREATE()]
+:::
 # strdelete()
 # delete()
 `strdelete(<string>, <first>, <len>)`
@@ -1365,6 +1459,26 @@ SHA256(foo) => 2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae
 ::: seealso
 - [DIST2D()]
 - [LMATH()]
+:::
+# distribute()
+`distribute(<points>, <bins>[, <osep>])`
+
+  Shares `<points>` out at random among `<bins>` bins, each point going to any bin with the same chance, and returns how many points each bin got. `<points>` may be 0 to 1,000,000 and `<bins>` 1 to 2,000. `<osep>` separates the counts and defaults to a space.
+
+  Examples:
+```sharp
+think distribute(10, 1)
+10
+think distribute(0, 3, |)
+0|0|0
+think distribute(100, 4)
+27 22 26 25
+```
+
+::: seealso
+- [CHOOSE()]
+- [DIE()]
+- [LRAND()]
 :::
 # div()
 # floordiv()
@@ -1691,7 +1805,7 @@ test
 - [NEXT()]
 :::
 # extract()
-`extract(<list>[, <first>[, <length>[, <delimiter>]]])`
+`extract(<list>[, <first>[, <length>[, <delimiter>[, <osep>]]]])`
 
   This function returns `<length>` elements of `<list>`, counting from the `<first>`th element. If `<length>` is not specified, the default is 1, so extract(`<list>`,3) acts like elements(`<list>`,3). If `<first>` is not specified, the default is the 1, so extract(`<list>`) acts like first(`<list>`).
 
@@ -1699,17 +1813,19 @@ test
 
   If `<length>` is negative, extract() will return up to and including the `<length>`th element from the right, so -1 will extract up to the last element, -2 up to the element before last, and so on.
 
+  `<osep>`, as in TinyMUX, separates the elements returned; it defaults to `<delimiter>`.
+
   Examples:
 ```sharp
 think extract(This is a test string,3,2)
 a test
+think extract(Skip the first and last elements, 2, -2)
+the first and last
+think extract(Get just the last three elements,-3, 3)
+last three elements
+think extract(a|b|c|d,2,2,|,-)
+b-c
 ```
-
-    > think extract(Skip the first and last elements, 2, -2)<br>
-    the first and last
-
-    > think extract(Get just the last three elements,-3, 3)<br>
-    last three elements
 
 
 ::: seealso
@@ -2377,13 +2493,13 @@ You say, "Mug of Beer"
 :::
 # insert()
 # linsert()
-`linsert(<list>, <position>, <new item>[, <delim>])`
+`linsert(<list>, <position>, <new item>[, <delim>[, <osep>]])`
 
   If `<position>` is a positive integer, this inserts `<new item>` BEFORE the item at `<position>` from the left in `<list>`. That means that `<new item>` then becomes the `<position>`th element of `<list>`.
 
   If `<position>` is a negative integer, this inserts `<new item>` AFTER the item at the absolute value of `<position>` from the RIGHT in `<list>`. This is the same as reversing the list before inserting `<new item>`, and then reversing it again into correct order. For example, when `<position>` is -1, `<new item>` will be the last in the list; when `<position>` is -2, `<new item>` will be the second item from the right, and so on.
 
-  If a `<delim>` is not given, a space is assumed. Null items are counted when determining position, as in 'items()'.
+  If a `<delim>` is not given, a space is assumed. Null items are counted when determining position, as in 'items()'. `<osep>`, as in TinyMUX, separates the elements of the result; it defaults to `<delim>`.
 
   Examples:
 ```sharp
@@ -2393,6 +2509,8 @@ say linsert(one|three|four,2,two,|)
 You say, "one|two|three|four"
 say linsert(meep bleep gleep,-3,GOOP)
 You say, "meep GOOP bleep gleep"
+say insert(a|c,2,b,|,-)
+You say, "a-b-c"
 ```
 
   insert() is an alias for linsert(), for backwards compatability.
@@ -2577,6 +2695,44 @@ You say, "One|PLAYER"
 - [BEFORE()]
 - [AFTER()]
 :::
+# lattrcmds()
+`lattrcmds(<object>[/<pattern>])`
+
+  Returns the names of the attributes on `<object>` that hold a $-command. `<pattern>` limits which attributes are looked at, as in lattr(). Only attributes you can read are listed.
+
+  Example:
+```sharp
+&CMD.HELLO me=$hello:think Hello!
+&NOTE me=Just text.
+think lattrcmds(me/CMD.*)
+CMD.HELLO
+```
+
+::: seealso
+- [LCMDS()]
+- [LATTR()]
+- [user-defined commands]
+:::
+# lcmds()
+`lcmds(<object>[/<pattern>][, <osep>[, <type>]])`
+
+  Returns the patterns of the $-commands on `<object>`, in lower case. With `<type>` `^`, it returns the patterns of the ^-listens instead; `$` is the default. `<osep>` separates the patterns and defaults to a space. `<pattern>` limits which attributes are looked at, as in lattr(), and only attributes you can read count.
+
+  Examples:
+```sharp
+&CMD.HELLO me=$Hello *:think Hello, %0!
+&LISTEN.WAVE me=^* waves:think Someone waved.
+think lcmds(me)
+hello *
+think lcmds(me, |, ^)
+* waves
+```
+
+::: seealso
+- [LATTRCMDS()]
+- [LATTR()]
+- [user-defined commands]
+:::
 # nattr()
 # nattrp()
 # attrcnt()
@@ -2672,6 +2828,28 @@ You say, "foo ~ bar ~ boing"
 - [STRDELETE()]
 - [REMOVE()]
 - [INSERT()]
+:::
+# ledit()
+`ledit(<list>, <find>, <replace>[, <delimiter>[, <osep>]])`
+
+  Replaces each element of `<list>` that matches an element of `<find>` with the element in the same position in `<replace>`. A match is exact, and case matters. An element of `<find>` with no element in that position of `<replace>` is replaced with nothing. Elements that match nothing are left as they are.
+
+  All three lists are separated by `<delimiter>`, which defaults to a space. `<osep>` separates the result and defaults to `<delimiter>`.
+
+  Examples:
+```sharp
+think ledit(apple banana lime plum, banana plum, yellow purple)
+apple yellow lime purple
+think ledit(a|b|c, b, , |, -)
+a--c
+think ledit(a b c, d, x)
+a b c
+```
+
+::: seealso
+- [EDIT()]
+- [LREPLACE()]
+- [LDELETE()]
 :::
 # left()
 `left(<string>, <length>)`
@@ -3065,6 +3243,24 @@ You say, "1 4 8"
 - [MEMBER()]
 - [element()]
 - [WORDPOS()]
+:::
+# lrand()
+`lrand(<low>, <high>, <count>[, <osep>])`
+
+  Returns `<count>` random whole numbers from `<low>` to `<high>`, both included, separated by `<osep>` (a space by default). At most 8,000 numbers are returned. The result is empty when `<count>` is less than 1 or `<low>` is greater than `<high>`.
+
+  Examples:
+```sharp
+think lrand(1, 6, 3)
+4 1 6
+think lrand(5, 5, 3, |)
+5|5|5
+```
+
+::: seealso
+- [DIE()]
+- [RAND()]
+- [DISTRIBUTE()]
 :::
 # lstats()
 # stats()
@@ -3481,6 +3677,38 @@ You say, "$;No;Nol;Noli;Nolt"
 - [MONIKER()]
 - [INAME()]
 - [ACCNAME()]
+:::
+# moon()
+`moon([<seconds>[, <numeric>]])`
+
+  Describes the phase of the moon at `<seconds>` (a time as secs() gives it), or now. The answer is one of these, with the percentage of the moon that is lit:
+
+    The Moon is New<br>
+    The Moon is Waxing Crescent (12% of Full)<br>
+    The Moon is Waxing Half (50% of Full)<br>
+    The Moon is Waxing Gibbous (80% of Full)<br>
+    The Moon is Full<br>
+    The Moon is Waning Gibbous (80% of Full), and so on back to New.
+
+  With `<numeric>` true, it returns just the percentage, positive while the moon is waxing and negative while it is waning.
+
+  The phase is worked out from the new moon of 6 January 2000 and the average length of a lunar month, 29.53059 days, so it can be up to a day off.
+
+  Examples:
+```sharp
+think moon(947182440)
+The Moon is New
+think moon(948458160)
+The Moon is Full
+think moon(949000000)
+The Moon is Waning Gibbous (62% of Full)
+think moon(948000000, 1)
+71
+```
+
+::: seealso
+- [SECS()]
+- [TIME()]
 :::
 # namelist()
 `namelist(<player-list>[, [<object>/]<attribute>])`
@@ -4304,11 +4532,19 @@ You say, "this Trash is the Brash string"
 - [NSLEMIT()]
 :::
 # remove()
-`remove(<list>, <words>[, <delimiter>])`
+`remove(<list>, <words>[, <delimiter>[, <osep>]])`
 
   This function removes the first occurrence of every word in the list `<words>` from `<list>`, and returns the resulting `<list>`. It is case sensitive.
 
-  Elements of `<list>` and `<words>` are both separated by `<delimiter>`, which defaults to a space.
+  Elements of `<list>` and `<words>` are both separated by `<delimiter>`, which defaults to a space. `<osep>`, as in TinyMUX, separates the elements of the result; it defaults to `<delimiter>`.
+
+  Examples:
+```sharp
+think remove(this is a test, is)
+this a test
+think remove(a|b|c, b, |, -)
+a-c
+```
 
 
 ::: seealso
@@ -4389,6 +4625,25 @@ You say, "Turn south at the junction"
 - [SETDIFF()]
 - [SPLICE()]
 - [STRREPLACE()]
+:::
+# lrooms()
+`lrooms(<room>[, <depth>[, <all>]])`
+
+  Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too.
+
+  If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order.
+
+  Example:
+```sharp
+@dig/teleport Hub=North;n,South;s
+@dig North Room=North;n,South;s
+think lrooms(here)
+#123
+```
+
+::: seealso
+- [LEXITS()]
+- [EXITMAP()]
 :::
 # rest()
 `rest(<list>[, <delimiter>])`
@@ -4505,6 +4760,18 @@ moderator player everyone
 - [PERMISSION()]
 - [@role]
 :::
+# roman()
+`roman(<number>)`
+
+  Writes `<number>`, a whole number from 1 to 3999, in Roman numerals.
+
+  Examples:
+```sharp
+think roman(1999)
+MCMXCIX
+think roman(4)
+IV
+```
 # room()
 `room(<object>)`
 
@@ -4625,9 +4892,20 @@ You say, "cfaedb"
 - [SHUFFLE()]
 :::
 # secs()
-`secs([<precision>])`
+`secs([<precision>])`<br>
+`secs(<zone>[, <digits>])`
 
   This function returns the number of elapsed seconds since midnight, January 1, 1970 UTC. UTC is the base time zone, formerly GMT. This is a good way of synchronizing things that must run at a certain time.
+
+  The second form is TinyMUX's. `<zone>` is `utc`, the same count, or `local`, which adds the server's offset from UTC so that convsecs(..., utc) shows the server's local time. `<digits>`, 0 to 7, is how many decimal places to show; the clock is read to the millisecond, so places past the third are 0. Without `<digits>` the count is in whole seconds.
+
+  Examples:
+```sharp
+think secs()
+1761609600
+think secs(utc, 3)
+1761609600.125
+```
 
 
 ::: seealso
@@ -5261,6 +5539,24 @@ My name
 - [INSERT()]
 - [STRREPLACE()]
 :::
+# strip()
+`strip(<string>[, <characters>])`
+
+  Removes every one of `<characters>` from `<string>`, wherever it appears. Case matters. Without `<characters>`, it returns `<string>` without its markup, as stripansi() does. Either way the result has no markup.
+
+  Examples:
+```sharp
+think strip(This is a test, is)
+Th  a tet
+think strip(abcdefgABCDEFG, azGy!7$B)
+bcdefgACDEF
+```
+
+::: seealso
+- [STRIPANSI()]
+- [EDIT()]
+- [TR()]
+:::
 # stripaccents()
 `stripaccents(<string>[, <smart>])`
 
@@ -5385,6 +5681,22 @@ You say, "1"
 - [setq()]
 - [R()]
 - [WILDCARDS]
+:::
+# strmem()
+`strmem(<string>)`
+
+  Returns how many bytes `<string>` takes in UTF-8, without markup. For plain ASCII text it is the same as strlen(); a character outside ASCII takes 2 to 4 bytes.
+
+  Examples:
+```sharp
+think strmem(This is a test)
+14
+think strmem(chr(233))
+2
+```
+
+::: seealso
+- [STRLEN()]
 :::
 # strreplace()
 `strreplace(<string>, <start>, <length>, <text>)`
@@ -5762,6 +6074,25 @@ You say, "hello"
 - [MERGE()]
 - [SPLICE()]
 :::
+# trigger()
+`trigger(<object>/<attribute>[, <arg0>[, ... <argN>]])`
+
+  Does what `@trigger/quiet <object>/<attribute>=<arg0>,...` does, and returns nothing.
+
+  trigger() is off unless the `mux_queue_functions` @config option is on; while it is off, trigger() returns `#-1 FUNCTION DISABLED`. A function that queues actions does work while it is only meant to work out a value, so SharpMUSH keeps queueing in commands. Importing a TinyMUX database turns the option on. trigger() is also refused when you may not use @trigger, and when side-effect functions are turned off.
+
+  Example, with `mux_queue_functions` on:
+```sharp
+&GREET me=think Hello, %0!
+think trigger(me/GREET, world)
+Hello, world!
+```
+
+::: seealso
+- [@trigger]
+- [VERB()]
+- [compatibility config]
+:::
 # trunc()
 # val()
 `trunc(<string>)`
@@ -6001,6 +6332,26 @@ think words(unmark(a%*<|>b), %*<|>)
 
 ::: seealso
 - [Vector functions]
+:::
+# verb()
+`verb(<victim>[, <actor>[, <what>, <whatd>, <owhat>, <owhatd>, <awhat>[, <arg0>, ... <argN>]]])`
+
+  Does what `@verb <victim>=<actor>,<what>,...` does, with the same arguments in the same order, and returns nothing. `<actor>` defaults to the enactor.
+
+  Like trigger(), verb() is off unless the `mux_queue_functions` @config option is on, and returns `#-1 FUNCTION DISABLED` while it is off, because `<awhat>` is queued. It is also refused when you may not use @verb, and when side-effect functions are turned off.
+
+  Example, with `mux_queue_functions` on:
+```sharp
+&XTEST obj=You test the object.
+&OXTEST obj=tests the object.
+think verb(obj, me, XTEST, Default, OXTEST, odefault)
+You test the object.
+```
+
+::: seealso
+- [@verb]
+- [TRIGGER()]
+- [compatibility config]
 :::
 # vmin()
 `vmin(<vector1>, <vector2>[, <delimiter>[, <osep>]])`

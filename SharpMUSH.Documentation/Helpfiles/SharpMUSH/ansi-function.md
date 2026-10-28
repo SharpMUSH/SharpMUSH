@@ -24,7 +24,8 @@
 -->
 # ansi()
 
-`ansi(<codes>[ ... <codesN>], <string>)`
+`ansi(<codes>[ ... <codesN>], <string>)`<br>
+`ansi(<codes>, <string>, <codes2>, <string2>[, ...])`
 
 This allows you to mark up a string using ANSI terminal effects, 16-color codes, and 256 XTERM colors (specified as color names or hex values).
 
@@ -37,6 +38,8 @@ Each block of space-separated `<codes>` can be one or more old-style ANSI codes,
     * a number from 0-255; this is the same as using "+xterm`<number>`", for Rhost compatability.
 
 For example, "ansi(+orange/#0000ff,Test)" would color "Test" in orange, on a blue background. In the event that your client does not support those colors, SharpMUSH will downgrade the color to the closest fit that your client can understand.
+
+The second form is TinyMUX's: each `<string>` is marked up with the `<codes>` before it, and the pieces are joined in order, so ansi(r,Red,g,Green) is "Red" in red then "Green" in green. An odd number of arguments is an error.
 
 ::: seealso
 - [ANSI]

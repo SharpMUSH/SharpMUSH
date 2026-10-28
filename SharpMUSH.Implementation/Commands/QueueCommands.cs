@@ -1240,7 +1240,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
-		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH"],
+		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1337,7 +1337,8 @@ public partial class Commands
 		// attribute, the triggerer hears "<name> - Triggered." unless AreQuiet - even if the attribute is
 		// empty or /match finds nothing, since queue_attribute_useatr still returns 1. Penn queues the body,
 		// so the notice comes before anything the attribute does.
-		if (!await targetObject.Object().AreQuietAsync(executor))
+		// /quiet (TinyMUX's TRIG_QUIET) leaves the notice out as QUIET does.
+		if (!switches.Contains("QUIET") && !await targetObject.Object().AreQuietAsync(executor))
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.TriggerTriggeredFormat), executor,
 				targetObject.Object().Name);

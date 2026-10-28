@@ -52,12 +52,17 @@ public class FunctionArityParityTests : ServerTestBase
 		["vmul"] = "trailing <osep> argument, defaulting to <delimiter>",
 		["vsub"] = "trailing <osep> argument, defaulting to <delimiter>",
 
+		// TinyMUX's forms: an output separator after the delimiter, and further code/string pairs.
+		["extract"] = "TinyMUX's trailing <osep> argument, defaulting to <delimiter>",
+		["linsert"] = "TinyMUX's trailing <osep> argument, defaulting to <delimiter>",
+		["remove"] = "TinyMUX's trailing <osep> argument, defaulting to <delimiter>",
+		["ansi"] = "TinyMUX's further <codes>, <string> pairs",
+
 		// PennMUSH spells "the last argument swallows the rest" as a negative maxargs, which this table
 		// records as its absolute value. lit() reaches the same end through FunctionFlags.Literal, but
 		// the too-many check counts the comma-split pieces (SharpMUSHParserVisitor.cs:876) before the
 		// Literal branch collapses them into one raw argument (:926), so the declared maximum has to
-		// admit as many commas as the text contains and is not the comparable number. ansi() has no
-		// such flag and takes PennMUSH's 2 as the number it can honour.
+		// admit as many commas as the text contains and is not the comparable number.
 		["lit"] = "PennMUSH's -1: FunctionFlags.Literal collapses the split back after the count is taken",
 
 		// Arguments past PennMUSH's fourth are bound as prepared-statement parameters instead of being
@@ -244,13 +249,13 @@ public class FunctionArityParityTests : ServerTestBase
 	/// <summary>
 	/// <c>{"ANSI", fun_ansi, 2, -2, …}</c> (function.c:365). PennMUSH's negative maximum means the
 	/// last argument is not comma-split, so <c>ansi(h,a,b)</c> colours the text <c>a,b</c>. SharpMUSH
-	/// splits every call and colours the second argument, which is a two-argument contract — so a
-	/// third argument is refused by name, not evaluated and discarded.
+	/// splits every call and takes TinyMUX's code/string pairs, so a third argument is refused by name,
+	/// not evaluated and discarded.
 	/// </summary>
 	[Test]
 	public async Task AnsiRefusesAThirdArgumentRatherThanDroppingIt()
 		=> await Assert.That(await Eval("ansi(h,a,b)"))
-			.IsEqualTo("#-1 FUNCTION (ANSI) EXPECTS 2 ARGUMENTS BUT GOT 3");
+			.IsEqualTo("#-1 FUNCTION (ANSI) EXPECTS AN EVEN NUMBER OF ARGUMENTS BUT GOT 3");
 
 	/// <summary>
 	/// <c>@function &lt;name&gt;=&lt;obj&gt;,&lt;attr&gt;</c> with no bounds gets PennMUSH's
