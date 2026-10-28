@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Sobre este jogo</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Referência de comandos</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Sua conta é seu acesso privado. Um personagem é quem você interpreta no mundo compartilhado. Uma conta pode ter vários personagens; confira com qual está jogando antes de agir.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Foco nesta cena</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Último foco informado: esta cena</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Visualizando esta cena</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Diretório público de personagens</value></data>
 </root>

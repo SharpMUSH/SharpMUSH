@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Over dit spel</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Opdrachtenreferentie</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Je account is je privé-aanmelding. Een personage is wie je speelt in de gedeelde wereld. Eén account kan meerdere personages bezitten; controleer met welk personage je speelt voordat je handelt.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Gericht op deze scène</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Laatst gemelde focus: deze scène</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Deze scène bekijken</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Openbare personagegids</value></data>
 </root>

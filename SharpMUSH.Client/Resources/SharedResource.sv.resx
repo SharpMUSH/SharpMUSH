@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Om det här spelet</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreferens</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Ditt konto är din privata inloggning. En karaktär är den du spelar i den gemensamma världen. Ett konto kan äga flera karaktärer; kontrollera vilken du spelar innan du agerar.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Fokus på den här scenen</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Senast rapporterat fokus: den här scenen</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Visar den här scenen</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karaktärskatalog</value></data>
 </root>

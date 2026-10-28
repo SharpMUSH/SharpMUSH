@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>За тази игра</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Справочник за командите</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Акаунтът е вашият личен достъп. Героят е този, когото играете в споделения свят. Един акаунт може да притежава няколко героя; проверявайте с кой герой играете, преди да действате.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Фокус върху тази сцена</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Последен докладван фокус: тази сцена</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Преглед на тази сцена</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Публичен указател на героите</value></data>
 </root>

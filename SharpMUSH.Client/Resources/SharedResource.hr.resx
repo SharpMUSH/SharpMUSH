@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>O ovoj igri</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Pregled naredbi</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Račun je vaša privatna prijava. Lik je onaj kojeg igrate u zajedničkom svijetu. Jedan račun može imati više likova; prije radnje provjerite kojim likom igrate.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Fokus na ovoj sceni</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Posljednji prijavljeni fokus: ova scena</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Pregled ove scene</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Javni imenik likova</value></data>
 </root>

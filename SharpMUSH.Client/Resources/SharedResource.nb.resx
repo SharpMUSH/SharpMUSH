@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Om dette spillet</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreferanse</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Kontoen din er din private innlogging. En karakter er den du spiller i den delte verdenen. Én konto kan eie flere karakterer; sjekk hvilken du spiller før du handler.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Fokus på denne scenen</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Sist rapporterte fokus: denne scenen</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Viser denne scenen</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karakteroversikt</value></data>
 </root>

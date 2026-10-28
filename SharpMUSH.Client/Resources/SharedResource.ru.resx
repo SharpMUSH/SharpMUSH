@@ -6858,7 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Об этой игре</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Справочник команд</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Учётная запись — ваш личный вход. Персонаж — тот, кого вы играете в общем мире. Одной учётной записи могут принадлежать несколько персонажей; прежде чем действовать, проверьте, каким персонажем вы играете.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Фокус на этой сцене</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Последний сообщённый фокус: эта сцена</value></data>
   <data name="NavJourneySceneViewing" xml:space="preserve"><value>Просмотр этой сцены</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Общедоступный каталог персонажей</value></data>
 </root>
