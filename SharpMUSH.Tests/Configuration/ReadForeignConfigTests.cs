@@ -96,6 +96,24 @@ public class ReadForeignConfigTests
 		await Assert.That(penn.Reality.Levels).IsEmpty();
 	}
 
+	/// <summary>TinyMUX's netmux.conf names its reality levels and default masks with the same directives.</summary>
+	[Test]
+	public async Task TinyMuxRealityLevelsAreRead()
+	{
+		var import = await ImportAsync(ConfigurationDialect.TinyMUX,
+			"reality_level Real 1",
+			"reality_level Ghost 2 GHOSTDESC",
+			"def_exit_rx 3");
+
+		await Assert.That(import.Reality.Levels).IsEquivalentTo(new[]
+		{
+			new RealityLevelDirective("Real", 1, "DESC"),
+			new RealityLevelDirective("Ghost", 2, "GHOSTDESC")
+		}, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+		await Assert.That(import.Reality.Default("exit", "rx")).IsEqualTo(3u);
+		await Assert.That(import.Reality.Default("room", "tx")).IsEqualTo(uint.MaxValue);
+	}
+
 	private static async Task<PennMushConfigImport> ImportAsync(ConfigurationDialect dialect, params string[] more)
 	{
 		var path = Path.Join(Path.GetTempPath(), $"sharpmush-conf-{Guid.NewGuid():N}.conf");

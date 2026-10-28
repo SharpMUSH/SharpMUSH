@@ -1,9 +1,11 @@
 using System.Globalization;
+using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
+using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.TinyMux;
 using SharpMUSH.Library.Services.Interfaces;
@@ -162,6 +164,32 @@ public class TinyMuxImportTests
 		await Assert.That(result.Errors).IsEmpty();
 		await Assert.That(result.ChannelsConverted).IsEqualTo(2);
 		await Assert.That(result.MailMessagesConverted).IsEqualTo(2);
+	}
+
+	/// <summary>
+	/// With the reality levels its netmux.conf names, an object's Rlevel attribute (Rx then Tx, in hex) puts it on
+	/// those layers, and an object without one takes TinyMUX's defaults for its type: a room transmits on every level.
+	/// </summary>
+	[Test]
+	public async Task RealityLevelsArriveAsLayers()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await TinyMuxDatabaseReader.ReadFileAsync(FlatfilePath);
+		await Assert.That(database.Objects.First(o => o.DBRef == 4).Reality).IsEqualTo(new PennMUSHReality(3, 2));
+		database.Reality = new RealityDirectives(
+			[new RealityLevelDirective("Real", 1, "DESC"), new RealityLevelDirective("Umbra", 2, "UMBRADESC")],
+			new Dictionary<string, uint>());
+
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		var policy = world.Services.GetRequiredService<RealityPolicy>();
+		await Assert.That((await policy.ConfigurationAsync()).Layers).IsEquivalentTo(["normal", "umbra"]);
+		var builder = await policy.ReadObjectAsync(new DBRef(4)) ?? throw new InvalidOperationException("#4 has no reality profile");
+		await Assert.That(builder.Receive).IsEquivalentTo(["normal", "umbra"]);
+		await Assert.That(builder.Transmit).IsEquivalentTo(["umbra"]);
+		var limbo = await policy.ReadObjectAsync(new DBRef(0)) ?? throw new InvalidOperationException("#0 has no reality profile");
+		await Assert.That(limbo.Transmit).IsEquivalentTo(["normal", "umbra"]);
 	}
 
 	private static async Task<AnySharpObject> NodeAsync(IsolatedImportWorld world, int dbref)
