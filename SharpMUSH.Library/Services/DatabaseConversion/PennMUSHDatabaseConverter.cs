@@ -2449,12 +2449,12 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var inUse = written > 0;
 		// Softcode names a level as the source did: Real for the normal layer, say.
 		var aliases = new Dictionary<string, string>(config.Aliases ?? []);
-		foreach (var level in levels.Where(level => layers.ContainsKey(level.Value)))
+		foreach (var level in levels)
 		{
 			var name = level.Name.ToLowerInvariant();
-			if (name != layers[level.Value] && RealityPolicy.ValidLayerName(name))
+			if (layers.TryGetValue(level.Value, out var layer) && name != layer && RealityPolicy.ValidLayerName(name))
 			{
-				aliases.TryAdd(name, layers[level.Value]);
+				aliases.TryAdd(name, layer);
 			}
 		}
 
