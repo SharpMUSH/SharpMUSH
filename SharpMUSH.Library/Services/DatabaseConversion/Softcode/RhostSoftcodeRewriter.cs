@@ -11,8 +11,8 @@ public sealed record SoftcodeRewriteResult(string Text, IReadOnlyList<string> No
 
 /// <summary>
 /// The softcode rewrites a RhostMUSH import makes besides colour (<see cref="ColourSubstitutionRewriter"/>):
-/// <c>%&lt;nnn&gt;</c> character codes into the character, and <c>timefmt()</c> formats written as literals
-/// into SharpMUSH's codes.
+/// <c>%&lt;nnn&gt;</c> character codes into the character, <c>timefmt()</c> formats written as literals
+/// into SharpMUSH's codes, and calls of RhostMUSH functions into SharpMUSH's (<see cref="RhostFunctionCallRewriter"/>).
 /// </summary>
 /// <remarks>
 /// <para>RhostMUSH reads <c>%&lt;065&gt;</c> (three decimal digits) and <c>%&lt;u0041&gt;</c> (four hex
@@ -33,6 +33,7 @@ public static class RhostSoftcodeRewriter
 	{
 		var notes = new List<string>();
 		var text = RewriteTimeFormats(softcode, notes);
+		text = RhostFunctionCallRewriter.Rewrite(text, notes);
 		text = RewriteCharacterCodes(text, notes);
 		return new SoftcodeRewriteResult(text, notes) { Changed = text != softcode };
 	}
