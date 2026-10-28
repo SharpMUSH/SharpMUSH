@@ -283,11 +283,8 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// <summary>A reader's theme: its colours, for <c>tone()</c>, and the layout theme it makes.</summary>
 	private sealed record ReaderLook(ThemePalette Palette, LayoutTheme Look)
 	{
-		/// <summary>
-		/// Its colour for each theme colour a gradient stop names. A standard colour alone cannot be blended,
-		/// so the stop keeps the colour it was written with.
-		/// </summary>
-		public Func<ThemeRole, IColorMarkup?> Tones { get; } = role => Palette[role] is { Rgb: not null } color ? AnsiTheme.Paint(color) : null;
+		/// <summary>Its colour for each theme colour a gradient stop names; a stop keeps its own where the theme has none.</summary>
+		public Func<ThemeRole, IColorMarkup?> Tones { get; } = role => Palette[role] is { } color ? AnsiTheme.Paint(color) : null;
 	}
 
 	/// <summary>Each theme a player has set, as the look it makes, or null for one that no longer reads.</summary>
