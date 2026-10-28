@@ -1,5 +1,6 @@
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -26,9 +27,13 @@ public class RoleGuardControlTests : ServerTestBase
 		if (role is not null) await Cmd($"@role/assign #{player.DbRef.Number}={role}");
 		var created = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName(prefix + "Thing"), player.Handle);
-		DBRef.TryParse(created.Message.ToPlainText()!.Trim(), out var thing);
-		return (player.DbRef, thing!.Value);
+		return (player.DbRef, Created(created));
 	}
+
+	private static DBRef Created(CallState created)
+		=> DBRef.TryParse(created.Message.ToPlainText()!.Trim(), out var made) && made is { } dbref
+			? dbref
+			: throw new InvalidOperationException($"Creating an object answered {created.Message}.");
 
 	private async Task<bool> ControlsAsync(DBRef who, DBRef what)
 		=> await Eval($"controls(#{who.Number},#{what.Number})") == "1";
@@ -108,12 +113,12 @@ public class RoleGuardControlTests : ServerTestBase
 			TestIsolationHelpers.GenerateUniqueName("GuardMistrustA"), player.Handle);
 		var second = await TestIsolationHelpers.CreateObjectCommandAsync(CommandParser, ConnectionService,
 			TestIsolationHelpers.GenerateUniqueName("GuardMistrustB"), player.Handle);
-		DBRef.TryParse(first.Message.ToPlainText()!.Trim(), out var a);
-		DBRef.TryParse(second.Message.ToPlainText()!.Trim(), out var b);
+		var a = Created(first);
+		var b = Created(second);
 
-		await Assert.That(await ControlsAsync(a!.Value, b!.Value)).IsTrue();
-		await Cmd($"@set #{a.Value.Number}=MISTRUST");
-		await Assert.That(await ControlsAsync(a.Value, b.Value)).IsFalse();
+		await Assert.That(await ControlsAsync(a, b)).IsTrue();
+		await Cmd($"@set #{a.Number}=MISTRUST");
+		await Assert.That(await ControlsAsync(a, b)).IsFalse();
 	}
 
 	/// <summary>
