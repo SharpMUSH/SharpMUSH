@@ -9995,4 +9995,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Level down</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Getting there</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} to {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>on {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>No exits on this map lead there from where you are.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>An exit on this route has no name without a space, so the route can't be typed as one line.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Copy the command</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Command copied</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Walk there</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>You stopped on the way.</value>
+  </data>
 </root>

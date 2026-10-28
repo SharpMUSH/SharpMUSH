@@ -128,3 +128,52 @@
 	gap: 8px;
 	align-items: center;
 }
+
+.map-route {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--border-soft);
+}
+
+.map-route-title {
+	margin: 0;
+	font: 600 13px/1.2 var(--font-ui);
+	color: var(--text-dim);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.map-route-steps {
+	margin: 0;
+	padding-left: 1.5em;
+}
+
+.map-route-command {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+}
+
+.map-route-command code {
+	flex: 1;
+	min-width: 0;
+	padding: 8px 12px;
+	border-radius: var(--radius);
+	background: var(--code-bg);
+	color: var(--code-text);
+	font-family: var(--font-mono);
+	overflow-wrap: anywhere;
+}
+
+.map-route-error {
+	margin: 0;
+	color: var(--danger);
+}
+
+
+.map-route-map {
+	color: var(--accent);
+}

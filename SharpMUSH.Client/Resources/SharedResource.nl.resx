@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Niveau omlaag</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Hoe kom je er</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} naar {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>op {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Geen uitgang op deze kaart leidt daarheen vanaf waar je bent.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>Een uitgang op deze route heeft geen naam zonder spatie, dus de route kan niet als één regel worden getypt.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Opdracht kopiëren</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Opdracht gekopieerd</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Ga erheen</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Je bent onderweg gestopt.</value>
+  </data>
 </root>

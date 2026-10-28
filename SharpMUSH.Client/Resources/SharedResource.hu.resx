@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Egy szinttel lejjebb</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Odajutás</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} – {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>itt: {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>A térkép egyik kijárata sem vezet oda onnan, ahol vagy.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>Az útvonal egyik kijáratának nincs szóköz nélküli neve, ezért az útvonal nem írható be egy sorban.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Parancs másolása</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Parancs másolva</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Menj oda</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Útközben megálltál.</value>
+  </data>
 </root>

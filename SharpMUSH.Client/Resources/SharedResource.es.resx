@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Bajar de nivel</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Cómo llegar</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} hasta {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>en {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Ninguna salida de este mapa lleva allí desde donde estás.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>Una salida de esta ruta no tiene un nombre sin espacios, así que la ruta no se puede escribir en una línea.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Copiar el comando</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Comando copiado</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Ir allí</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Te detuviste por el camino.</value>
+  </data>
 </root>

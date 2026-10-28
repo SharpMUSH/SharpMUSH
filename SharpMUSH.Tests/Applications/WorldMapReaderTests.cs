@@ -257,4 +257,83 @@ public class WorldMapReaderTests
 		await Assert.That(map.Level).IsEqualTo(-1);
 		await Assert.That(map.LevelNames).IsEquivalentTo(new Dictionary<int, string> { [-1] = "Sewers", [0] = "Streets" });
 	}
+
+	[Test]
+	public async Task AMapSendsItsBackdropAsStored()
+	{
+		Map(50, "Isle", MapKinds.Graph);
+		_values[(50, WorldMapReader.BackdropAttribute)] = "/api/wiki-assets/7/isle.webp";
+		Map(51, "Plain", MapKinds.Graph);
+
+		var isle = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+		var plain = (await Reader.ReadAsync(_viewer, 51, default)).Expect<MapDto>();
+
+		await Assert.That(isle.Backdrop).IsEqualTo("/api/wiki-assets/7/isle.webp");
+		await Assert.That(plain.Backdrop).IsNull();
+	}
+
+	private readonly Dictionary<int, List<SharpExit>> _exits = new();
+
+	/// <summary>An exit from <paramref name="from"/> to <paramref name="to"/>, owned by the builder, listed in its room.</summary>
+	private void Exit(int number, string name, string[] aliases, SharpRoom from, SharpRoom to)
+	{
+		if (_objects.CreateExit(number, name, aliases, from, to) is not SharpExit exit || _builder is not SharpPlayer builder)
+			throw new InvalidOperationException("The factory made no exit.");
+		exit.Object.Owner = new(async _ =>
+		{
+			await ValueTask.CompletedTask;
+			return builder;
+		});
+		_exits.TryAdd(from.Object.DBRef.Number, []);
+		_exits[from.Object.DBRef.Number].Add(exit);
+		_mediator.CreateStream(Arg.Any<GetExitsQuery>(), Arg.Any<CancellationToken>()).Returns(call =>
+			(call.Arg<GetExitsQuery>().DBRef is DBRef room ? _exits.GetValueOrDefault(room.Number) ?? [] : []).ToAsyncEnumerable());
+	}
+
+	[Test]
+	public async Task ARouteCrossesMapsAndWalksAsOneLine()
+	{
+		var town = Map(50, "Town", MapKinds.Compass);
+		var coast = Map(60, "Coast", MapKinds.Graph);
+		var gate = Room(10, "Gate", town);
+		var square = Room(11, "Square", town);
+		var beach = Room(20, "Beach", coast);
+		Exit(100, "Gate", ["g"], _start, gate);
+		Exit(101, "North", ["n"], gate, square);
+		Exit(102, "Coast road", ["road"], square, beach);
+		// A longer way round is not taken.
+		Exit(103, "Lane", [], gate, _objects.CreateRoom(12, "Lane"));
+		Exit(104, "On", [], _objects.CreateRoom(12, "Lane"), square);
+
+		var route = (await Reader.RouteAsync(_viewer, 20, default)).Expect<MapRouteDto>();
+
+		await Assert.That(route.Steps.Select(step => (step.Exit, step.Destination, step.Map?.Id ?? "none")))
+			.IsEquivalentTo([("#100", "#10", "#50"), ("#101", "#11", "#50"), ("#102", "#20", "#60")]);
+		await Assert.That(route.Command).IsEqualTo("walk Gate North road");
+	}
+
+	[Test]
+	public async Task AnExitWithNoNameWithoutASpaceLeavesNoLine()
+	{
+		var town = Map(50, "Town", MapKinds.Compass);
+		var gate = Room(10, "Gate", town);
+		Exit(100, "Old gate", ["The arch"], _start, gate);
+
+		var route = (await Reader.RouteAsync(_viewer, 10, default)).Expect<MapRouteDto>();
+
+		await Assert.That(route.Steps).Count().IsEqualTo(1);
+		await Assert.That(route.Command).IsNull();
+	}
+
+	[Test]
+	public async Task NoRouteToARoomNoExitReaches()
+	{
+		var town = Map(50, "Town", MapKinds.Compass);
+		Room(10, "Gate", town);
+		Room(11, "Island", town);
+		Exit(100, "Gate", [], _start, _objects.CreateRoom(10, "Gate"));
+
+		await Assert.That(await Reader.RouteAsync(_viewer, 11, default) is NotFound).IsTrue();
+		await Assert.That((await Reader.RouteAsync(_viewer, 1, default)).Expect<MapRouteDto>().Steps).IsEmpty();
+	}
 }

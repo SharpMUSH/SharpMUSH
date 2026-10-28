@@ -24,9 +24,13 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const string WidthAttribute = "MAP`SIZE`W";
 	public const string HeightAttribute = "MAP`SIZE`H";
 	public const string LevelAttribute = "MAP`LEVEL";
+	public const string BackdropAttribute = "MAP`BACKDROP";
 	public const int MaxMaps = 500;
 	public const int MaxRooms = 2000;
 	public const int MaxExits = 8000;
+
+	/// <summary>How many rooms a route search reaches before it gives up.</summary>
+	public const int MaxRouteRooms = 5000;
 
 	/// <summary>How many zones up from the viewer's room a region is looked for.</summary>
 	public const int MaxDepth = 32;
@@ -132,8 +136,79 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			Level = int.TryParse(await OwnValueAsync(map, map, LevelAttribute), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture,
 				out var level) ? level : null,
 			LevelNames = await LevelNamesAsync(map),
+			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
 		};
 	}
+
+	/// <summary>
+	/// The fewest exits from where <paramref name="viewer"/> stands to room <paramref name="number"/>, over exits and rooms
+	/// they may see, on any map or none; among equal routes, the one through lower-numbered exits. Locks are not
+	/// tried: <c>walk</c> stops at one that refuses. NotFound when the room is not one they may see, or no route
+	/// within <see cref="MaxRouteRooms"/> rooms reaches it.
+	/// </summary>
+	public async Task<Found<MapRouteDto>> RouteAsync(AnySharpObject viewer, int number, CancellationToken ct)
+	{
+		if (number < 0 || await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), ct) is not AnySharpObject target
+			|| !target.IsRoom || !await VisibleAsync(viewer, target, ct)) return new NotFound();
+		var start = (await viewer.Where()).Object().DBRef;
+		if (start.Number == number) return new MapRouteDto([], null);
+
+		var came = new Dictionary<int, (SharpExit Exit, AnySharpObject Room, int From)>();
+		var queue = new Queue<DBRef>([start]);
+		while (queue.Count > 0 && came.Count < MaxRouteRooms)
+		{
+			var at = queue.Dequeue();
+			var exits = new List<SharpExit>();
+			await foreach (var exit in mediator.CreateStream(new GetExitsQuery(at), ct)) exits.Add(exit);
+			foreach (var exit in exits.OrderBy(exit => exit.Object.DBRef.Number))
+			{
+				if (!await VisibleAsync(viewer, new AnySharpObject(exit), ct)) continue;
+				// A stale list entry must not route through an exit moved out of the room.
+				if ((await exit.Location.WithCancellation(ct)).Object().DBRef.Number != at.Number) continue;
+				var reader = new AnySharpObject(await exit.Object.Owner.WithCancellation(ct));
+				if (await LinkedRoomAsync(reader, exit, ct) is not { } room || !await VisibleAsync(viewer, room, ct)) continue;
+				var next = room.Object().DBRef;
+				if (next.Number == start.Number || !came.TryAdd(next.Number, (exit, room, at.Number))) continue;
+				if (next.Number == number) return await StepsAsync(viewer, came, start.Number, number, ct);
+				queue.Enqueue(next);
+			}
+		}
+		return new NotFound();
+	}
+
+	private async Task<MapRouteDto> StepsAsync(AnySharpObject viewer,
+		Dictionary<int, (SharpExit Exit, AnySharpObject Room, int From)> came, int start, int end, CancellationToken ct)
+	{
+		var path = new List<(SharpExit Exit, AnySharpObject Room, int From)>();
+		for (var at = end; at != start; at = came[at].From) path.Insert(0, came[at]);
+
+		var maps = new Dictionary<int, MapSummaryDto?>();
+		var steps = new List<MapStepDto>(path.Count);
+		var words = new List<string?>(path.Count);
+		foreach (var (exit, room, from) in path)
+		{
+			MapSummaryDto? map = null;
+			if (await room.Object().Zone.WithCancellation(ct) is AnySharpObject zone)
+			{
+				var zoneNumber = zone.Object().DBRef.Number;
+				if (!maps.TryGetValue(zoneNumber, out map))
+				{
+					map = await MapAsync(viewer, zoneNumber, ct) is { } found ? await SummaryAsync(viewer, found, ct) : null;
+					maps[zoneNumber] = map;
+				}
+			}
+			steps.Add(new($"#{exit.Object.DBRef.Number}", exit.Object.Name, $"#{from}", $"#{room.Object().DBRef.Number}",
+				room.Object().Name, map));
+			words.Add(Word(exit.Object.Name, new AnySharpObject(exit).Aliases ?? []));
+		}
+		return new MapRouteDto(steps, words.Contains(null) ? null : "walk " + string.Join(' ', words));
+	}
+
+	/// <summary>What to type to take an exit: its name, or its first alias with no space (<c>walk</c> splits on spaces); null when none.</summary>
+	public static string? Word(string name, IEnumerable<string> aliases) =>
+		new[] { name }.Concat(aliases)
+			.Select(word => word.Trim())
+			.FirstOrDefault(word => word.Length > 0 && !word.Any(char.IsWhiteSpace));
 
 	/// <summary>
 	/// The region of <paramref name="regions"/> that <paramref name="where"/> is inside: up its zone, and that zone's zone,
@@ -195,14 +270,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	private async Task<(string? Room, MapSummaryDto? Map)> DestinationAsync(AnySharpObject viewer, AnySharpObject publisher,
 		SharpExit exit, AnySharpObject map, HashSet<int> onMap, Dictionary<int, MapSummaryDto?> otherMaps, CancellationToken ct)
 	{
-		var marker = await attributes.GetAttributeAsync(publisher, new AnySharpObject(exit), "_LINKTYPE",
-			IAttributeService.AttributeMode.Read, parent: false);
-		if (marker is Error<string>) return (null, null);
-		if (marker is SharpAttribute[] { Length: > 0 } chain
-			&& chain[^1].Value.ToPlainText().Trim().ToLowerInvariant() is "variable" or "home") return (null, null);
-		if (await exit.Home.WithCancellation(ct) is not AnySharpContainer destination) return (null, null);
-		var room = destination.WithExitOption();
-		if (!room.IsRoom) return (null, null);
+		if (await LinkedRoomAsync(publisher, exit, ct) is not { } room) return (null, null);
 		var number = room.Object().DBRef.Number;
 		if (onMap.Contains(number)) return ($"#{number}", null);
 		if (!await VisibleAsync(viewer, room, ct)) return (null, null);
@@ -215,6 +283,23 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			otherMaps[zoneNumber] = other;
 		}
 		return ($"#{number}", other);
+	}
+
+	/// <summary>
+	/// The room <paramref name="exit"/> is linked to, as <paramref name="reader"/> may know it; null for a variable or HOME
+	/// link, one the reader cannot read, or a link to something other than a room. The destination relation is never
+	/// resolved for a variable or HOME link.
+	/// </summary>
+	private async Task<AnySharpObject?> LinkedRoomAsync(AnySharpObject reader, SharpExit exit, CancellationToken ct)
+	{
+		var marker = await attributes.GetAttributeAsync(reader, new AnySharpObject(exit), "_LINKTYPE",
+			IAttributeService.AttributeMode.Read, parent: false);
+		if (marker is Error<string>) return null;
+		if (marker is SharpAttribute[] { Length: > 0 } chain
+			&& chain[^1].Value.ToPlainText().Trim().ToLowerInvariant() is "variable" or "home") return null;
+		if (await exit.Home.WithCancellation(ct) is not AnySharpContainer destination) return null;
+		var room = destination.WithExitOption();
+		return room.IsRoom ? room : null;
 	}
 
 	/// <summary>Whether <paramref name="viewer"/> perceives <paramref name="target"/>, and it is not DARK or they may examine it.</summary>

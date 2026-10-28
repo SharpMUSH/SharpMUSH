@@ -46,6 +46,12 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 
 	/// <summary>Level names by level: <c>MAP`LEVEL`-1</c> set to <c>Sewers</c> names level -1.</summary>
 	public IReadOnlyDictionary<int, string> LevelNames { get; init; } = new Dictionary<int, string>();
+
+	/// <summary>
+	/// The picture a graph map is drawn on: its <c>MAP`BACKDROP</c>, an image URL, as stored. The portal shows only a site
+	/// path or an https URL; null when unset.
+	/// </summary>
+	public string? Backdrop { get; init; }
 }
 
 /// <param name="Id">The room's dbref.</param>
@@ -63,3 +69,20 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 /// <param name="DestinationMap">The map that room is on, when that is not this one and the viewer may see it.</param>
 public sealed record MapExitDto(string Id, string Name, IReadOnlyList<string> Aliases, string Source, string? Destination,
 	MapSummaryDto? DestinationMap);
+
+/// <summary>The way from where the viewer stands to a room, over exits they may see, crossing maps where it must.</summary>
+/// <param name="Steps">Each exit in turn; empty when the viewer is already there.</param>
+/// <param name="Command">
+/// <c>walk north up</c>: one line that takes the route, each exit by its name or, when that has a space, by an alias
+/// without one. Null when an exit has no such name, or there are no steps.
+/// </param>
+public sealed record MapRouteDto(IReadOnlyList<MapStepDto> Steps, string? Command);
+
+/// <param name="Exit">The exit's dbref.</param>
+/// <param name="Name">The exit's name.</param>
+/// <param name="Source">The room it leaves from.</param>
+/// <param name="Destination">The room it leads to.</param>
+/// <param name="DestinationName">That room's name.</param>
+/// <param name="Map">The map that room is on, when that is a map the viewer may see; null otherwise.</param>
+public sealed record MapStepDto(string Exit, string Name, string Source, string Destination, string DestinationName,
+	MapSummaryDto? Map);

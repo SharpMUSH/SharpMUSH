@@ -110,3 +110,54 @@
 	overflow: hidden;
 	overflow-wrap: break-word;
 }
+
+.map-edge--route {
+	stroke: var(--hue-orange);
+	stroke-width: 6;
+}
+
+.map-box--route {
+	stroke: var(--hue-orange);
+	stroke-width: 3;
+}
+
+.map-box--pin {
+	fill: var(--surface);
+	stroke: var(--text);
+	stroke-width: 3;
+}
+
+/* A pin's name sits under its point, on a label of its own so it reads over any picture. */
+.map-room--pin {
+	overflow: visible;
+	align-items: flex-start;
+	padding: 0;
+}
+
+.map-room--pin .map-room-name {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 160px;
+	width: max-content;
+	padding: 2px 8px;
+	border-radius: 8px;
+	background: var(--surface);
+	box-shadow: var(--shadow);
+	font-weight: 600;
+	-webkit-line-clamp: 2;
+}
+
+.map-box--pin.map-box--route {
+	stroke: var(--hue-orange);
+}
+
+.map-box--pin.map-box--here {
+	stroke: var(--accent);
+	stroke-width: 5;
+}
+
+.map-box--pin.map-box--selected {
+	fill: var(--text);
+}

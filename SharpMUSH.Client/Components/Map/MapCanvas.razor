@@ -2,10 +2,10 @@
 @using SharpMUSH.Library.API
 @inject IStringLocalizer<SharedResource> Loc
 
-@* One level of a map: each room a box at its place, each region (a map inside this one) a dashed box that opens it, each exit between two rooms on the level a line (with an arrow
+@* One level of a map: each room a box at its place (on a picture, a pin unless it has a size), each region (a map inside this one) a dashed box that opens it, each exit between two rooms on the level a line (with an arrow
    when it runs one way only), and the rooms the map does not place in a dashed strip below. The drawing is a
    picture only; the rooms are buttons over it, so they take focus, read in order and scroll into view. The figure
-   is drawn at Zoom pixels per drawing unit inside a scrolling frame, so panning is the browser's own scrolling,
+   is drawn at Zoom pixels per drawing unit, over the map's backdrop when it has one, inside a scrolling frame, so panning is the browser's own scrolling,
    by wheel, trackpad or finger. *@
 <div class="map-frame" tabindex="-1">
     <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom);">
@@ -15,6 +15,11 @@
                     <path d="M0,0 L10,5 L0,10 z" class="map-arrow" />
                 </marker>
             </defs>
+            @if (_backdrop is not null)
+            {
+                <image class="map-backdrop" href="@_backdrop" x="0" y="0" width="@Num(Layout.Map.Size![0])" height="@Num(Layout.Map.Size[1])"
+                       preserveAspectRatio="none" />
+            }
             @if (!Layout.IsGraph)
             {
                 @foreach (var line in GridLines())
@@ -24,11 +29,17 @@
             }
             @foreach (var edge in _edges)
             {
-                <line class="map-edge" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
+                <line class="map-edge @(edge.Route ? "map-edge--route" : null)" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
                       marker-end="@(edge.OneWay ? $"url(#{ArrowId})" : null)" />
             }
             @foreach (var room in _rooms)
             {
+                @if (Pin(room))
+                {
+                    var (cx, cy) = Centre(room);
+                    <circle class="@RoomClass(room) map-box--pin" cx="@Num(cx)" cy="@Num(cy)" r="9" />
+                    continue;
+                }
                 <rect class="@RoomClass(room)" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
                       width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
                 @if (_vertical.TryGetValue(room.Room.Id, out var vertical))
@@ -54,7 +65,7 @@
             @foreach (var room in _rooms.Where(room => !room.Region))
             {
                 var here = room.Room.Id == Layout.Map.Here;
-                <button type="button" class="map-room @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
+                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
                         style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
                         aria-label="@(here ? $"{room.Room.Name}, {Loc["NavMapYouAreHere"]}" : room.Room.Name)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
@@ -76,6 +87,9 @@
     [Parameter] public string? Selected { get; set; }
     [Parameter] public EventCallback<string> OnSelect { get; set; }
 
+    /// <summary>The steps of the route on show, drawn over the lines they take on this map; null when there is none.</summary>
+    [Parameter] public IReadOnlyList<MapStepDto>? Route { get; set; }
+
     private const double Inset = 6;
     private const double Margin = 24;
 
@@ -88,12 +102,17 @@
     private readonly Dictionary<string, (bool Up, bool Down)> _vertical = new();
     private readonly HashSet<string> _doors = [];
     private double _left, _top, _width, _height;
+    private string? _backdrop;
 
-    private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay);
+    private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay, bool Route);
 
     protected override void OnParametersSet()
     {
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
+        _backdrop = Layout.IsGraph && Layout.Map.Size is [> 0, > 0, ..] && ImageUrlPolicy.IsRenderable(Layout.Map.Backdrop)
+            ? ApiUrl.Resolve(Layout.Map.Backdrop!)
+            : null;
+        var route = (Route ?? []).Select(step => Pair(step.Source, step.Destination)).ToHashSet();
         var bounds = Layout.Bounds(Level);
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
         (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
@@ -118,16 +137,23 @@
                 continue;
             }
             if (!shown.TryGetValue(to, out var end) || to == exit.Source) continue;
-            var pair = string.CompareOrdinal(exit.Source, to) < 0 ? (exit.Source, to) : (to, exit.Source);
+            var pair = Pair(exit.Source, to);
             if (!drawn.Add(pair)) continue;
             var oneWay = !links.Contains((to, exit.Source));
             var (x1, y1) = Centre(from);
             var (x2, y2) = Centre(end);
             // A one-way line stops at the edge of the room it points to, so the arrow shows.
             if (oneWay) (x2, y2) = Toward(x1, y1, end);
-            _edges.Add(new(x1, y1, x2, y2, oneWay));
+            _edges.Add(new(x1, y1, x2, y2, oneWay, route.Contains(pair)));
         }
+        // The route is drawn last, so no other line crosses it.
+        _edges = [.. _edges.OrderBy(edge => edge.Route)];
     }
+
+    private static (string, string) Pair(string a, string b) => string.CompareOrdinal(a, b) < 0 ? (a, b) : (b, a);
+
+    /// <summary>A room on a picture with no size of its own is a pin at its point, so the picture shows around it.</summary>
+    private bool Pin(MapPlacement room) => _backdrop is not null && room.Placed && !room.Region && room.Room.Size is null;
 
     /// <summary>Moves focus to <paramref name="id"/>'s room, which scrolls it into view.</summary>
     public async Task FocusAsync(string id)
@@ -166,6 +192,7 @@
         room.Region ? "map-box--region" : null,
         room.Room.Id == Layout.Map.Here || room.Room.Id == Layout.Map.HereRegion ? "map-box--here" : null,
         room.Room.Id == Selected ? "map-box--selected" : null,
+        Route?.Any(step => step.Destination == room.Room.Id) == true ? "map-box--route" : null,
     }.Where(c => c is not null));
 
     private static (double X, double Y) Centre(MapPlacement room) => (room.X + room.Width / 2, room.Y + room.Height / 2);

@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>下一层</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>如何到达</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} 到 {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>在 {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>从你所在的位置，这张地图上没有出口通往那里。</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>这条路线上有个出口没有不含空格的名称，所以路线无法输入成一行。</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>复制命令</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>命令已复制</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>走过去</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>你在途中停下了。</value>
+  </data>
 </root>

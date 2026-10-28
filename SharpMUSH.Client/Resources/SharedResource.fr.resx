@@ -5869,4 +5869,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Niveau inférieur</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Comment s'y rendre</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} jusqu'à {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>sur {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Aucune sortie de cette carte n'y mène depuis l'endroit où vous êtes.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>Une sortie de cet itinéraire n'a aucun nom sans espace : l'itinéraire ne peut pas être tapé en une ligne.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Copier la commande</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Commande copiée</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>S'y rendre</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Vous vous êtes arrêté en chemin.</value>
+  </data>
 </root>

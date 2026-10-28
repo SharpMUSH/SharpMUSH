@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Уровнем ниже</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Как добраться</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} до {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>на карте {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Ни один выход на этой карте не ведёт туда оттуда, где вы находитесь.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>У выхода на этом маршруте нет имени без пробела, поэтому маршрут нельзя набрать одной строкой.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Копировать команду</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Команда скопирована</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Идти туда</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Вы остановились по пути.</value>
+  </data>
 </root>

@@ -70,6 +70,10 @@ objects:
         A map zoned to another map is a region inside it. See `+help map regions`.
 
         A grid shows one level at a time. See `+help map levels`.
+
+        A graph map can be drawn on a picture. See `+help map pictures`.
+
+        Choosing a room shows the way there from where you stand. See `+help map routes`.
       HELP`MAP`REGIONS: |-
         A map zoned to another map is a region inside it. Regions nest as deep as you like: Sol System, Earth, United States, New York, Brooklyn.
 
@@ -110,3 +114,47 @@ objects:
         Harbour/MAP`LEVEL`-1 - Set.
         Harbour/MAP`LEVEL - Set.
         ```
+      HELP`MAP`PICTURES: |-
+        A `graph` map can be drawn on a picture. ``MAP`BACKDROP`` holds the picture's address: a path on the game's own site, such as the link of an image in the wiki's image library, or an `https` address. Any other address is not shown. ``MAP`SIZE`W`` and ``MAP`SIZE`H`` are the picture's size in pixels.
+
+        Each room's ``MAP`POS`X`` and ``MAP`POS`Y`` are then a point on the picture, in pixels from its top left corner. A room is drawn as a pin with its name under it, unless it has a ``MAP`SIZE`` of its own: then it is an area of that many pixels around its point.
+
+        Holding the Isle map:
+
+        ```
+        &MAP`BACKDROP Isle=/api/wiki-assets/fd8b00b0889f4bee97f0eb7f7a8849f7/isle.png
+        &MAP`SIZE`W Isle=900
+        &MAP`SIZE`H Isle=640
+        ```
+
+        Output:
+        ```
+        Isle/MAP`BACKDROP - Set.
+        Isle/MAP`SIZE`W - Set.
+        Isle/MAP`SIZE`H - Set.
+        ```
+
+        In the Ford:
+
+        ```
+        &MAP`POS`X here=470
+        &MAP`POS`Y here=390
+        ```
+
+        Output:
+        ```
+        Ford/MAP`POS`X - Set.
+        Ford/MAP`POS`Y - Set.
+        ```
+      HELP`MAP`ROUTES: |-
+        Choosing a room on the World map shows the way there from where you stand: the exits to take in turn, over the exits you can see, on this map or across others. The way is drawn on the map, and under it is one line you can paste into any client, such as:
+
+        ```
+        walk North Up
+        ```
+
+        **Walk there** runs that line as your character. `walk` stops at the first exit that refuses you, such as a locked door, and the map then shows where you are.
+
+        `walk` takes exits separated by spaces, so an exit whose name has a space is written by its first alias without one. Give such exits a one-word alias: `@name Coast road=Coast road;road`. A route through an exit with no such name is still shown, with no line to paste.
+
+        See `help walk`.

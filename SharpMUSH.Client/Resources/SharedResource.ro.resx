@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Un nivel mai jos</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Cum ajungi</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} până la {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>pe {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Nicio ieșire de pe această hartă nu duce acolo de unde ești.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>O ieșire de pe acest traseu nu are un nume fără spațiu, așa că traseul nu poate fi scris pe un singur rând.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Copiază comanda</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Comandă copiată</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Mergi acolo</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Te-ai oprit pe drum.</value>
+  </data>
 </root>

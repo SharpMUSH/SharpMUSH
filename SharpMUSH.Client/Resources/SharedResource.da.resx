@@ -6560,4 +6560,31 @@
   <data name="NavMapLevelDown" xml:space="preserve">
     <value>Et niveau ned</value>
   </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Sådan kommer du dertil</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} til {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>på {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Ingen udgange på dette kort fører dertil fra, hvor du er.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>En udgang på ruten har intet navn uden mellemrum, så ruten kan ikke skrives på én linje.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Kopiér kommandoen</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Kommandoen er kopieret</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Gå derhen</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Du stoppede undervejs.</value>
+  </data>
 </root>

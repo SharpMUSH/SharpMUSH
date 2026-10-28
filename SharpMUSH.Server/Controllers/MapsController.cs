@@ -16,6 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET api/maps          — every map the character may see
 ///   GET api/maps/{dbref}  — one map's rooms and exits
+///   GET api/maps/route/{dbref} — the way from where the character stands to a room, across maps
 ///
 /// An app the player allowed (<c>api/oauth</c>) may read them with its access token when it holds the <c>commands</c>
 /// scope: a map shows only what the character could find by walking the rooms.
@@ -49,6 +50,18 @@ public class MapsController(
 		{
 			MapDto map => Ok(map),
 			SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound(new ApiErrorDto($"#{dbref} is not a map you may see."))
+		};
+	}
+
+	[HttpGet("route/{dbref:int}")]
+	public async Task<IActionResult> GetRoute(int dbref, CancellationToken ct)
+	{
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } viewer) return Unauthorized();
+		Response.Headers.CacheControl = "no-store";
+		return await Reader.RouteAsync(viewer, dbref, ct) switch
+		{
+			MapRouteDto route => Ok(route),
+			SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound(new ApiErrorDto($"No route you may see leads to #{dbref}."))
 		};
 	}
 }

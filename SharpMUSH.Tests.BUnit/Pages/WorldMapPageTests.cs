@@ -9,13 +9,14 @@ using SharpMUSH.Client.Components.Map;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Pages;
 
 /// <summary>The slice of <c>api/maps</c> the /map page reads: a harbour with a door to the city.</summary>
-file sealed class WorldMapApiHandler : HttpMessageHandler
+internal sealed class WorldMapApiHandler : HttpMessageHandler
 {
 	public static readonly MapSummaryDto City = new("#51", "City", MapKinds.Graph, null);
 	public static readonly MapSummaryDto Harbour = new("#50", "Harbour", MapKinds.Coordinates, "#51");
@@ -54,24 +55,55 @@ file sealed class WorldMapApiHandler : HttpMessageHandler
 		LevelNames = new Dictionary<int, string> { [-1] = "Sewers" },
 	};
 
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken) =>
-		Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') switch
+	/// <summary>An island drawn on a picture: one pin, one room with a size of its own.</summary>
+	public static readonly MapDto IsleMap = new(new("#53", "Isle", MapKinds.Graph, null), [900, 640],
+		[new("#60", "Ford", [470, 390], null), new("#61", "Saltpans", [600, 520], [120, 80])], [], null, Truncated: false)
+	{
+		Backdrop = "/api/wiki-assets/7/isle.webp",
+	};
+
+	/// <summary>The same island with a picture from an http address, which the portal never loads.</summary>
+	public static readonly MapDto PlainIsleMap = IsleMap with { Map = new("#54", "Plain isle", MapKinds.Graph, null), Backdrop = "http://example.com/isle.png" };
+
+	/// <summary>The way up to the lighthouse: one step, from the quay.</summary>
+	public static readonly MapRouteDto ToLighthouse = new([new("#30", "North", "#10", "#11", "Lighthouse", Harbour)], "walk North");
+
+	/// <summary>The lines run through <c>POST api/commands</c>, in order.</summary>
+	public List<string> Commands { get; } = [];
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+	{
+		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
+		if (path == "api/commands" && request.Content is not null)
+		{
+			var sent = await request.Content.ReadFromJsonAsync<PortalCommandRequest>(cancellationToken);
+			Commands.Add(sent!.Command);
+			return Json(new PortalCommandResponse([], "#11", false));
+		}
+		return path switch
 		{
 			"api/maps" => Json(new[] { City, Harbour, Caves }),
 			"api/maps/50" => Json(HarbourMap),
 			"api/maps/51" => Json(CityMap),
 			"api/maps/52" => Json(CavesMap),
+			"api/maps/53" => Json(IsleMap),
+			"api/maps/54" => Json(PlainIsleMap),
+			"api/maps/route/11" => Json(ToLighthouse),
+			"api/maps/route/10" => Json(new MapRouteDto([], null)),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
-		});
+		};
+	}
 
 	private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 }
 
 public class WorldMapPageTests : TrackingBunitContext
 {
+	private readonly WorldMapApiHandler _api = new();
+
 	private void Arrange(bool acting = true)
 	{
-		var api = Track(new HttpClient(new WorldMapApiHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var api = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(api);
 		var auth = Substitute.For<IAccountAuthState>();
@@ -84,7 +116,8 @@ public class WorldMapPageTests : TrackingBunitContext
 			.AddSingleton(auth)
 			.AddSingleton<ServerInfoService>(serverInfo)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
-			.AddSingleton(sp => new WorldMapService(sp.GetRequiredService<IHttpClientFactory>(), serverInfo));
+			.AddSingleton(sp => new WorldMapService(sp.GetRequiredService<IHttpClientFactory>(), serverInfo))
+			.AddSingleton(sp => new GameCommandService(sp.GetRequiredService<IHttpClientFactory>()));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -194,6 +227,60 @@ public class WorldMapPageTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".map-note"));
 		await Assert.That(cut.Markup).Contains("NavMapNeedsCharacter");
 		await Assert.That(cut.FindAll(".map-tree")).IsEmpty();
+	}
+
+	[Test]
+	public async Task ChoosingARoomShowsTheWayThereAsOneWalkLine()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find("button.map-exit-to"));
+
+		await cut.Find("button.map-exit-to").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".map-route-command code"));
+		await Assert.That(cut.Find(".map-route-command code").TextContent).IsEqualTo("walk North");
+		await Assert.That(cut.Find(".map-route-steps").TextContent).Contains("NavMapRouteStep(North, Lighthouse)");
+		await Assert.That(cut.FindAll(".map-edge--route")).Count().IsEqualTo(1);
+	}
+
+	[Test]
+	public async Task WalkThereRunsTheLineAsTheCharacter()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find("button.map-exit-to"));
+		await cut.Find("button.map-exit-to").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-route button.mud-button-filled"));
+
+		await cut.Find(".map-route button.mud-button-filled").ClickAsync();
+
+		cut.WaitForState(() => _api.Commands.Count > 0);
+		await Assert.That(_api.Commands).IsEquivalentTo(["walk North"]);
+		await Assert.That(cut.FindAll(".map-route-error")).IsEmpty();
+	}
+
+	[Test]
+	public async Task APictureMapDrawsItsBackdropUnderPins()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 53));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+
+		await Assert.That(cut.Find("image.map-backdrop").GetAttribute("href")).IsEqualTo("/api/wiki-assets/7/isle.webp");
+		await Assert.That(cut.FindAll(".map-room--pin").Select(room => room.TextContent.Trim())).IsEquivalentTo(["Ford"])
+			.Because("Saltpans has a size of its own, so it is drawn as an area");
+	}
+
+	[Test]
+	public async Task APictureFromAnHttpAddressIsNotLoaded()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 54));
+		cut.WaitForAssertion(() => cut.Find(".map-room"));
+
+		await Assert.That(cut.FindAll("image.map-backdrop")).IsEmpty();
+		await Assert.That(cut.FindAll(".map-room--pin")).IsEmpty();
 	}
 }
 

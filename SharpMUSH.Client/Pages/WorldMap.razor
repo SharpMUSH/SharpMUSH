@@ -6,13 +6,17 @@
 @inject IAccountAuthState AccountAuth
 @inject NavigationManager Nav
 @inject IStringLocalizer<SharedResource> Loc
+@inject GameCommandService Commands
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
 @implements IDisposable
 
 <PageTitle>@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value) — <GameName /></PageTitle>
 
 @* The World map (the world-map package): the game's maps beside the one on show, a level at a time. A map is an
    object with MAP`KIND, and its rooms are the rooms zoned to it; the server sends only what the acting character
-   may see. Choosing a room lists its exits; an exit to another map opens that map. *@
+   may see. Choosing a room lists its exits; an exit to another map opens that map. Choosing a room on the map you are
+   on also shows the way there, as one walk line to paste into any client or to walk from here. *@
 <FeatureGate Feature="@GameFeatures.WorldMap">
 <ChildContent>
 <div class="map-page">
@@ -107,7 +111,7 @@
                     }
                     else
                     {
-                        <MapCanvas @ref="_canvas" Layout="_layout" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select" />
+                        <MapCanvas @ref="_canvas" Layout="_layout" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select" Route="@(_route?.Steps is { Count: > 0 } steps ? steps : null)" />
                         @RoomPanel()
                     }
                 }
@@ -139,6 +143,10 @@
     private string? _selected;
     private int? _shown;
     private MapCanvas? _canvas;
+    private MapRouteDto? _route;
+    private bool _noRoute;
+    private bool _walking;
+    private string? _walkError;
 
     protected override async Task OnInitializedAsync()
     {
@@ -234,7 +242,71 @@
 
     private void ZoomBy(double factor) => _zoom = Math.Clamp(_zoom * factor, MinZoom, MaxZoom);
 
-    private void Select(string id) => _selected = id;
+    private async Task Select(string id)
+    {
+        _selected = id;
+        await LoadRouteAsync(id);
+    }
+
+    /// <summary>
+    /// Asks the server the way from where the character stands to room <paramref name="id"/>: it sees every map, so a
+    /// route may start or pass through another one. A reply for a room no longer chosen is dropped.
+    /// </summary>
+    private async Task LoadRouteAsync(string id)
+    {
+        (_route, _noRoute, _walkError) = (null, false, null);
+        if (_layout?.Rooms.TryGetValue(id, out var room) != true || room!.Region) return;
+        var result = await Maps.RouteAsync(id);
+        if (_selected != id) return;
+        (_route, _noRoute) = result switch
+        {
+            MapRouteDto route => (route, false),
+            ApiFailure failure => (null, failure.Status == System.Net.HttpStatusCode.NotFound),
+        };
+    }
+
+    private async Task CopyAsync(string command)
+    {
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", command);
+            Snackbar.Add(Loc["NavMapRouteCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Walks the route as the acting character, then reads the map again: they stand somewhere new, at the end of the
+    /// route or at the exit that refused them. What a refusal said is shown under the route.
+    /// </summary>
+    private async Task WalkAsync(string command, string to)
+    {
+        if (AccountAuth.ActiveCharacter is not { } acting || Id is null) return;
+        (_walking, _walkError) = (true, null);
+        try
+        {
+            var outcome = await Commands.RunAsync(command, "loc(%#)", $"#{acting.DbrefNumber}:{acting.CreationTime}");
+            var error = outcome switch
+            {
+                PortalCommandResponse { Result: { } arrived } when arrived == to => null,
+                PortalCommandResponse refused => refused.Output.LastOrDefault() ?? Loc["NavMapWalkStopped"].Value,
+                ApiFailure failure => failure.Message,
+            };
+            var chosen = _selected;
+            await LoadMapAsync();
+            _selected = chosen;
+            if (chosen is not null) await LoadRouteAsync(chosen);
+            _walkError = error;
+        }
+        finally
+        {
+            _walking = false;
+        }
+    }
 
     /// <summary>Selects a room on this map, changing to its level, and moves focus to it.</summary>
     private async Task GoToRoomAsync(string id)
@@ -244,6 +316,7 @@
         StateHasChanged();
         await Task.Yield();
         if (_canvas is not null) await _canvas.FocusAsync(id);
+        await LoadRouteAsync(id);
     }
 
     private string KindLabel(string kind) => kind switch
@@ -304,8 +377,58 @@
                         }
                     </ul>
                 }
+                @GettingThere()
             </div>
         </KitCard>
+    };
+
+    private RenderFragment GettingThere() => __builder =>
+    {
+        if (_layout is null || _selected is not { } to || (!_noRoute && _route?.Steps is not { Count: > 0 })) return;
+        <section class="map-route" aria-labelledby="map-route-title">
+            <h3 id="map-route-title" class="map-route-title">@Loc["NavMapGettingThere"]</h3>
+            @if (_route is null)
+            {
+                <p class="map-note">@Loc["NavMapNoRoute"]</p>
+            }
+            else
+            {
+                <ol class="map-route-steps">
+                    @for (var i = 0; i < _route.Steps.Count; i++)
+                    {
+                        var step = _route.Steps[i];
+                        // A step onto another map than the one before it names that map, which opens it.
+                        var entered = step.Map is { } map && map.Id != (i == 0 ? null : _route.Steps[i - 1].Map?.Id) ? map : null;
+                        <li>
+                            @Loc["NavMapRouteStep", step.Name, step.DestinationName]
+                            @if (entered is not null && (i > 0 || entered.Id != _layout.Map.Map.Id))
+                            {
+                                @(" ")
+                                <a class="map-route-map" href="@($"/map/{entered.Id[1..]}")">@Loc["NavMapRouteOnMap", entered.Name]</a>
+                            }
+                        </li>
+                    }
+                </ol>
+                @if (_route.Command is { } command)
+                {
+                    <div class="map-route-command">
+                        <code>@command</code>
+                        <CapsuleButton Icon="@Icons.Material.Outlined.ContentCopy" AriaLabel="@Loc["NavMapCopyRoute"]" OnClick="() => CopyAsync(command)" />
+                    </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_walking" OnClick="() => WalkAsync(command, to)">
+                        @Loc["NavMapWalkThere"]
+                    </MudButton>
+                }
+                else
+                {
+                    <p class="map-note">@Loc["NavMapRouteNoCommand"]</p>
+                }
+            }
+            @if (_walkError is not null)
+            {
+                <p class="map-route-error" role="alert">@_walkError</p>
+            }
+        </section>
     };
 
     public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnActingChanged;
