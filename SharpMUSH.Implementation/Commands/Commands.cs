@@ -319,8 +319,9 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		}
 
 		var switches = parts[1..].Select(s => s.ToUpperInvariant()).ToArray();
+		// "*" takes any switch, as @lock's lock types do.
 		var known = command.LibraryInformation.Attribute.Switches ?? [];
-		if (switches.FirstOrDefault(s => !known.Contains(s, StringComparer.OrdinalIgnoreCase)) is { } unknown)
+		if (!known.Contains("*") && switches.FirstOrDefault(s => !known.Contains(s, StringComparer.OrdinalIgnoreCase)) is { } unknown)
 		{
 			Logger.LogWarning("Command alias target {Target} names switch {Switch}, which {Command} does not have", target, unknown, parts[0]);
 			return null;
