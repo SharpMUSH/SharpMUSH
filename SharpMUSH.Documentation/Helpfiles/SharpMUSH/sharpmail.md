@@ -77,6 +77,7 @@ The following switches are available:
 * `/silent` - no notification to sender that mail was sent
 * `/nosig` - no mail signature
 * `/noeval` - `<player-list>`, `<subject>` and `<msg>` are not evaluated
+* `/quick` - TinyMUX's form, `@mail/quick <player-list>/<subject>=<msg>`: the subject sits on the left
 
 If you have an [@mailsignature] attribute set on yourself, its contents will be evaluated and appended to the message unless the /nosig switch is given.
 

@@ -917,7 +917,7 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "@FORCE", Output = CommandOutput.Runs, Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK"],
+	[SharpCommand(Name = "@FORCE", Output = CommandOutput.Runs, Switches = ["NOEVAL", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK", "NOW"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged | CB.RSBrace, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "command"])]
 	public async ValueTask<Option<CallState>> Force(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1240,7 +1240,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TRIGGER", Output = CommandOutput.Runs,
-		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET"],
+		Switches = ["ARGS", "CLEARREGS", "SPOOF", "INLINE", "NOBREAK", "LOCALIZE", "INPLACE", "MATCH", "QUIET", "NOW"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 1, MaxArgs = int.MaxValue, ParameterNames = ["object/attribute", "arguments..."])]
 	public async ValueTask<Option<CallState>> Trigger(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1389,7 +1389,7 @@ public partial class Commands
 		parser.CurrentState.Registers.TryPeek(out var currentRegs);
 		var clearsRegisters = switches.Contains("CLEARREGS");
 		var isInplace = switches.Contains("INPLACE");
-		var isInline = switches.Contains("INLINE") || isInplace;
+		var isInline = switches.Contains("INLINE") || switches.Contains("NOW") || isInplace;
 		if (isInline && !isInplace && !switches.Contains("LOCALIZE") && currentRegs is not null)
 		{
 			if (clearsRegisters) currentRegs.Clear();

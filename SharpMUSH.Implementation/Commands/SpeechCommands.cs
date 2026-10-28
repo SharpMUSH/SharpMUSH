@@ -891,18 +891,39 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
+	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT", "ADMIN", "WIZARD"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "PERM^chat.admin|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> WallCore(parser, _2, WallAudience.Everyone, Configuration.CurrentValue.Cosmetic.WallPrefix);
+	{
+		// TinyMUX's /wizard and /admin narrow the audience as @wizwall and @rwall do, behind their locks.
+		var switches = parser.CurrentState.Switches;
+		var cosmetic = Configuration.CurrentValue.Cosmetic;
+		return switches.Contains("WIZARD") ? NarrowedWall(parser, _2, WizardWallLock, WallAudience.Wizards, cosmetic.WizardWallPrefix)
+			: switches.Contains("ADMIN") ? NarrowedWall(parser, _2, RoyaltyWallLock, WallAudience.RoyaltyAndWizards, cosmetic.RoyaltyWallPrefix)
+			: WallCore(parser, _2, WallAudience.Everyone, cosmetic.WallPrefix);
+	}
+
+	private const string RoyaltyWallLock = "PERM^chat.admin|FLAG^ROYALTY";
+	private const string WizardWallLock = "PERM^chat.admin";
+
+	private async ValueTask<Option<CallState>> NarrowedWall(IMUSHCodeParser parser, SharpCommandAttribute attribute,
+		string commandLock, WallAudience audience, string prefix)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		if (await LockService.Evaluate(commandLock, executor, executor))
+			return await WallCore(parser, attribute, audience, prefix);
+
+		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
+		return new CallState(ErrorMessages.Returns.PermissionDenied);
+	}
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
-		CommandLock = "PERM^chat.admin|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]
+		CommandLock = RoyaltyWallLock, MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> RoyaltyWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> WallCore(parser, _2, WallAudience.RoyaltyAndWizards, Configuration.CurrentValue.Cosmetic.RoyaltyWallPrefix);
 
 	[SharpCommand(Name = "@WIZWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
-		CommandLock = "PERM^chat.admin", MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
+		CommandLock = WizardWallLock, MinArgs = 1, MaxArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> WizardWall(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> WallCore(parser, _2, WallAudience.Wizards, Configuration.CurrentValue.Cosmetic.WizardWallPrefix);
 }

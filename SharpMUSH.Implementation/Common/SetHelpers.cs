@@ -41,7 +41,8 @@ public static class SetHelpers
 		IPermissionService permissionService,
 		AnySharpObject executor,
 		MString objectAndOptionalAttribute,
-		MString flagOrAttributeValue)
+		MString flagOrAttributeValue,
+		bool quiet = false)
 	{
 		if (HelperFunctions.SplitDbRefAndOptionalAttr(objectAndOptionalAttribute.ToPlainText()) is not { Object: var name, Attribute: var maybeAttribute })
 		{
@@ -62,7 +63,8 @@ public static class SetHelpers
 			// PennMUSH gates every confirmation this routine emits on AreQuiet(player, thing)
 			// (hdrs/dbdefs.h:198): the player is QUIET, or the thing is QUIET and the player owns it.
 			// set_flag (src/flags.c:1855,1914) and do_set_atr (src/attrib.c:2446) both test it.
-			var areQuiet = await target.Object().AreQuietAsync(executor);
+			// TinyMUX's @set/quiet silences them all, the QUIET flag's own line included.
+			var areQuiet = quiet || await target.Object().AreQuietAsync(executor);
 
 			if (!string.IsNullOrEmpty(maybeAttribute))
 			{
@@ -168,7 +170,7 @@ public static class SetHelpers
 				// QUIET flag itself always reports, so you can see what you just made quiet.
 				var togglesQuiet = flagName.TrimStart('!').Equals("QUIET", StringComparison.OrdinalIgnoreCase);
 				var result = await flagAndPowerService.SetOrUnsetFlag(executor, found, flagName,
-					togglesQuiet || !areQuiet);
+					(togglesQuiet && !quiet) || !areQuiet);
 
 				if (failure is null && result.Message.ToPlainText().StartsWith("#-1", StringComparison.Ordinal) == true)
 				{

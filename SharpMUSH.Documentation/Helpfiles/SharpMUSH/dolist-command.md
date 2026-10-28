@@ -50,7 +50,7 @@ For backwards compatibility, "##" also stands for the current element of the lis
 
 If the `/notify` switch is given, the command "@notify me" is queued after all copies of `<action list>` have been queued. This is useful for object synchronization with semaphores. With `/pid`, the first word of `<list>` is taken out of it and names the object to notify instead of you; `/notify` wins over `/pid`, and `/delimit` turns it off.
 
-If the `/inline` switch is given, @dolist will run the new action lists instantly, instead of queueing them to be run later.
+If the `/inline` switch (or TinyMUX's `/now`) is given, @dolist will run the new action lists instantly, instead of queueing them to be run later.
 
 When using `@dolist/inline`, an @break in an `<action list>` will stop the calling action list (and any further `<action list>`s) from running. Each `<action list>` will also be able to see/alter the q-registers for the calling action list. The following switches can be used with `/inline` to alter this behaviour:
 - /nobreak: @breaks in `<action list>` do not effect to the calling action list

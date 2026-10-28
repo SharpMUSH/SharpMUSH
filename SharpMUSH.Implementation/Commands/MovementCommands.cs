@@ -311,7 +311,19 @@ public partial class Commands
 		}
 	}
 
-	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
+	/// <summary>
+	/// <c>/quiet</c> leaves out @move and @omove but still runs @amove. MoveService's <c>noMoveMsgs</c> is
+	/// PennMUSH's and skips all three, so a quiet move runs the action here once the mover has arrived.
+	/// </summary>
+	private async ValueTask QuietMoveAction(IMUSHCodeParser parser, AnySharpObject mover, AnySharpContainer arrived, DBRef from)
+	{
+		if (!IsQuiet(parser)) return;
+		await DidItService.DidIt(parser, new DidItRequest(
+			Place: MonikerPlace.Movement, Player: mover, Thing: mover, AWhat: "AMOVE",
+			Loc: arrived, Env0: arrived.Object().DBRef.ToString(), Env1: from.ToString()));
+	}
+
+	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
@@ -394,24 +406,24 @@ public partial class Commands
 		// did_it_with(..., NOTHING, Location(player), NOTHING, …) (move.c:480-482): the success triad
 		// runs with the room being LEFT in %0. did_it's loc of NOTHING resolves to the mover's
 		// location, which is still that room (predicat.c:230).
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
-			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString()));
+			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString())));
 
 		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
 		// is var_dest, not the room being left (move.c:483).
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "DROP", OWhat: "ODROP", AWhat: "ADROP",
-			Loc: destination));
+			Loc: destination)));
 
 		// A room destination goes through enter_room, anything else through safe_tel (move.c:486-508).
 		var result = destination.WithExitOption().IsRoom
 			? await MoveService.EnterRoom(parser, mover, destination,
-				noMoveMsgs: false, executor.Object().DBRef, "move")
+				noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "move")
 			: await MoveService.SafeTel(parser, mover, destination,
-				noMoveMsgs: false, executor.Object().DBRef, "move");
+				noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "move");
 
 		if (result is Error<string> error)
 		{
@@ -421,6 +433,7 @@ public partial class Commands
 
 		// Followers trail the leader only if the leader actually went somewhere (move.c:493).
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -476,7 +489,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@TELEPORT", Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 1, MaxArgs = 2,
-		Switches = ["LIST", "INSIDE", "SILENT"], ParameterNames = ["object", "destination"])]
+		Switches = ["LIST", "INSIDE", "SILENT", "QUIET"], ParameterNames = ["object", "destination"])]
 	public async ValueTask<Option<CallState>> Teleport(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -496,14 +509,14 @@ public partial class Commands
 			new TeleportOptions(
 				List: switches.Contains("LIST"),
 				Inside: switches.Contains("INSIDE"),
-				Silent: switches.Contains("SILENT"))) switch
+				Silent: switches.Contains("SILENT") || switches.Contains("QUIET"))) switch
 		{
 			AnySharpObject destination => new CallState(destination.Object().DBRef.ToString()),
 			NotFound => CallState.Empty
 		};
 	}
 
-	[SharpCommand(Name = "ENTER", Output = CommandOutput.Value, Switches = [], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "ENTER", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Enter(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -585,8 +598,9 @@ public partial class Commands
 
 		// move.c:962: do_enter teleports rather than plain enter_room, so a container owned by
 		// someone else strips the STICKY possessions the mover does not control.
+		var enteredFrom = (await executor.Where()).Object().DBRef;
 		var moveResult = await MoveService.SafeTel(parser, mover, containerToEnter,
-			noMoveMsgs: false, executor.Object().DBRef, "enter");
+			noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "enter");
 
 		if (moveResult is Error<string> error)
 		{
@@ -596,6 +610,7 @@ public partial class Commands
 
 		// move.c:964-965: followers trail the leader only if the leader actually went somewhere.
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, enteredFrom);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -605,7 +620,7 @@ public partial class Commands
 		return new CallState(newLocation.Object().DBRef.ToString());
 	}
 
-	[SharpCommand(Name = "LEAVE", Output = CommandOutput.Value, Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "LEAVE", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
 	public async ValueTask<Option<CallState>> Leave(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
@@ -639,7 +654,7 @@ public partial class Commands
 
 		// move.c:986. EnterRoom carries the automatic look, so the command adds none of its own.
 		var moveResult = await MoveService.EnterRoom(parser, leaver, destinationLocation,
-			noMoveMsgs: false, executor.Object().DBRef, "leave");
+			noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "leave");
 
 		if (moveResult is Error<string> error)
 		{
@@ -649,6 +664,7 @@ public partial class Commands
 
 		// move.c:987-988.
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{

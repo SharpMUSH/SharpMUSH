@@ -24,10 +24,12 @@
 -->
 # @destroy
 
-`@destroy[/override] <object>` or `@recycle[/override] <object>`<br>
+`@destroy[/override][/instant] <object>` or `@recycle[/override] <object>`<br>
 `@nuke <object>`
 
 The @destroy command marks `<object>` for destruction, or destroys `<object>` instantly if it was already marked for destruction. You must either control `<object>`, control its source or destination room (for exits), or it must be set DESTROY_OK and you must pass its @lock/destroy.
+
+`@destroy/instant` destroys `<object>` at once, as a second @destroy would, without marking it first.
 
 To destroy objects set SAFE, you must use `@destroy/override` or @nuke. If the really_safe @config option is on, even @nuke can't destroy SAFE objects, and you must clear the SAFE flag first.
 

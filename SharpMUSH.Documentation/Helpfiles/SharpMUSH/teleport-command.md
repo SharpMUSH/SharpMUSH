@@ -27,6 +27,8 @@ If the `/list` switch is given, each object specified in `<object-list>` will be
 
 Admin and those with the tport_anything power can teleport an object even if they don't control it. Those with tport_anywhere can teleport objects to any destination. You can also teleport an exit to any room if you have the Open_Anywhere power.
 
+`/silent` leaves out the @tport and @otport messages. `/quiet` is the same switch, as TinyMUX spells it.
+
 Privileged players who teleport a player to another player send them to the location of the target, unless the `/inside` switch is used, in which case they are sent to the inventory of the target.
 
 ## Exits and destination behavior

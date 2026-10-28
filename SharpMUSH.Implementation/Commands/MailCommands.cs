@@ -18,7 +18,7 @@ public partial class Commands
 		[
 			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "FOLDER", "UNFOLDER",
 			"LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD",
-			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT"
+			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT", "QUICK"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -28,7 +28,7 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var caller = await parser.CurrentState.KnownCallerObject(Mediator);
-		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
+		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL", "QUICK"];
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
@@ -45,6 +45,13 @@ public partial class Commands
 		{
 			arg0 = arg0CallState?.Message;
 			arg1 = arg1CallState?.Message;
+		}
+
+		MString? quickSubject = null;
+		if (switches.Contains("QUICK"))
+		{
+			switches = [.. switches.Where(name => name != "QUICK")];
+			(arg0, quickSubject) = QuickMailArguments(arg0);
 		}
 
 		var response = switches.AsSpan() switch
@@ -91,7 +98,7 @@ public partial class Commands
 			[.., "SEND"] or [.., "URGENT"] or [.., "SILENT"] or [.., "NOSIG"] or []
 				when (arg0?.Length ?? 0) != 0 && (arg1?.Length ?? 0) != 0
 				=> await SendMail.Handle(parser, LocateService, Mediator, NotifyService, MailDeliveryServices, arg0!, arg1!,
-					switches),
+					switches, quickSubject),
 			[.., "READ"] when executor.IsPlayer && (arg1?.Length ?? 0) == 0
 				=> await ReadMail.Handle(parser, ObjectDataService, Mediator, NotifyService, arg0, switches),
 			[] when executor.IsPlayer && (arg1?.Length ?? 0) == 0 && ReadsMessages(arg0)
@@ -110,6 +117,19 @@ public partial class Commands
 	/// </summary>
 	private static bool ReadsMessages(MString? arg0)
 		=> arg0?.ToPlainText() is [>= '0' and <= '9', ..] list && !list.Contains('-') && !list.EndsWith(':');
+
+	/// <summary>
+	/// TinyMUX's <c>@mail/quick &lt;players&gt;/&lt;subject&gt;=&lt;message&gt;</c>: the players, and the subject
+	/// after the first slash (empty without one). The subject goes to delivery apart from the message.
+	/// </summary>
+	private static (MString? Recipients, MString Subject) QuickMailArguments(MString? recipientsAndSubject)
+	{
+		var text = recipientsAndSubject?.ToPlainText() ?? string.Empty;
+		var slash = text.IndexOf('/');
+		return recipientsAndSubject is null || slash < 0
+			? (recipientsAndSubject, MarkupText.Empty)
+			: (recipientsAndSubject.Substring(0, slash), recipientsAndSubject.Substring(slash + 1, text.Length - slash - 1));
+	}
 
 	private MailDelivery.Services MailDeliveryServices
 		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,
