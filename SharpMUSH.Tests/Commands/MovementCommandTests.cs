@@ -209,7 +209,7 @@ public class MovementCommandTests
 	{
 		var route = await RouteAsync("WalkRoute");
 
-		await Players.RunAsync(route.Walker, $"walk {route.First}, {route.Second}");
+		await Players.RunAsync(route.Walker, $"walk {route.First} {route.Second}");
 
 		await Assert.That(await WhereIsAsync(route.Walker.DbRef)).IsEqualTo(route.End.Number);
 	}
@@ -219,7 +219,7 @@ public class MovementCommandTests
 	{
 		var route = await RouteAsync("WalkStop");
 
-		var heard = await Players.HeardRunning(route.Walker, $"walk {route.First}, nowhere, {route.Second}");
+		var heard = await Players.HeardRunning(route.Walker, $"walk {route.First} nowhere {route.Second}");
 
 		await Assert.That(await WhereIsAsync(route.Walker.DbRef)).IsEqualTo(route.Middle.Number);
 		await Assert.That(heard).Contains(ErrorMessages.Notifications.CantGoThatWay);

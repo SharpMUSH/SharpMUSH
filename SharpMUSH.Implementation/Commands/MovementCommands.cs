@@ -431,14 +431,14 @@ public partial class Commands
 	}
 
 	/// <summary>
-	/// <c>walk north, up</c>: <c>GOTO</c> through each exit in turn, stopping at the first that fails. Not in
+	/// <c>walk north up</c>: <c>GOTO</c> through each exit in turn, stopping at the first that fails. Not in
 	/// PennMUSH; a route the World map copies is one line in any client.
 	/// </summary>
 	[SharpCommand(Name = "WALK", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["exits"])]
 	public async ValueTask<Option<CallState>> Walk(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var steps = parser.CurrentState.Arguments["0"].Message.ToPlainText()
-			.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var reached = CallState.Empty;
 		foreach (var step in steps)
 		{
