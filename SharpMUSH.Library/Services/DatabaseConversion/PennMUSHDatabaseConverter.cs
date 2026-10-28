@@ -2431,11 +2431,11 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			var receive = LayersOf(pennObj.Reality?.Receive ?? pennDatabase.Reality.Default(type, "rx"));
 			var transmit = LayersOf(pennObj.Reality?.Transmit ?? pennDatabase.Reality.Default(type, "tx"));
 			var descriptions = levels
-				.Where(level => layers.ContainsKey(level.Value) && level.DescriptionAttribute != "DESC"
-					&& transmit.Contains(layers[level.Value])
-					&& pennObj.Attributes.Any(attribute => attribute.Name.Equals(level.DescriptionAttribute, StringComparison.OrdinalIgnoreCase)))
-				.DistinctBy(level => layers[level.Value])
-				.ToDictionary(level => layers[level.Value], level => level.DescriptionAttribute, StringComparer.OrdinalIgnoreCase);
+				.Select(level => layers.TryGetValue(level.Value, out var layer) ? (Layer: layer, Attribute: level.DescriptionAttribute) : default)
+				.Where(level => level.Layer is not null && level.Attribute != "DESC" && transmit.Contains(level.Layer)
+					&& pennObj.Attributes.Any(attribute => attribute.Name.Equals(level.Attribute, StringComparison.OrdinalIgnoreCase)))
+				.DistinctBy(level => level.Layer)
+				.ToDictionary(level => level.Layer, level => level.Attribute, StringComparer.OrdinalIgnoreCase);
 
 			inUse |= receive.Concat(transmit).Any(layer => layer != NormalLayer);
 			if (receive is [NormalLayer] && transmit is [NormalLayer] && descriptions.Count == 0)
