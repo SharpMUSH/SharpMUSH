@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace SharpMUSH.Configuration.Generated;
 
@@ -83,10 +84,14 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 		var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
 		if (attr is null) return null;
 
-		var pattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
+		var pattern = PatternFor(attr);
 		if (string.IsNullOrEmpty(pattern)) return null;
 
 		var regexFieldName = regexFieldNames[pattern!];
+		var choices = ChoicesOf(attr);
+		var failure = choices.Length == 0
+			? "is invalid."
+			: "is invalid. It takes one of: " + Emit.Escape(string.Join(", ", choices)).Replace("{", "{{").Replace("}", "}}") + ".";
 
 		// Check if the property type is nullable (reference type or Nullable<T>)
 		var isNullable = prop.Type.NullableAnnotation == NullableAnnotation.Annotated
@@ -101,7 +106,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 				      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
 				      if ({{prop.Name}}Value is not null && !{{regexFieldName}}.IsMatch({{prop.Name}}Value.ToString() ?? ""))
 				      {
-				        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
+				        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' {{failure}}");
 				      }
 				  """;
 		}
@@ -111,7 +116,7 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 			      var {{prop.Name}}Value = {{category.Name}}Value.{{prop.Name}};
 			      if (!{{regexFieldName}}.IsMatch($"{{{prop.Name}}Value}"))
 			      {
-			        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' is invalid.");
+			        return ValidateOptionsResult.Fail($"Configuration option ({{category.Name}}) {{prop.Name}} with value '{{{prop.Name}}Value}' {{failure}}");
 			      }
 			  """;
 	}
@@ -122,16 +127,36 @@ public class SharpMUSHOptionsValidationGenerator : IIncrementalGenerator
 			.Select(prop =>
 			{
 				var attr = prop.GetAttributes().FirstOrDefault(a => a.AttributeClass?.Name == SHARPATTRIBUTE);
-				var pattern = attr?.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
-				return pattern;
+				return attr is null ? null : PatternFor(attr);
 			})
 			.Where(pattern => !string.IsNullOrEmpty(pattern))
 			.Distinct()
 			.Select((pattern, idx) => (
-				Field: $"private static readonly Regex _regex{idx} = new Regex(@\"{pattern!}\", RegexOptions.Compiled);",
+				Field: $"private static readonly Regex _regex{idx} = new Regex(@\"{pattern!.Replace("\"", "\"\"")}\", RegexOptions.Compiled);",
 				Pattern: pattern!,
 				FieldName: $"_regex{idx}"
 			));
+
+	/// <summary>
+	/// The pattern a value must match: the declared <c>ValidationPattern</c>, or for an option declaring
+	/// <c>Choices</c>, one that matches exactly one of them.
+	/// </summary>
+	private static string? PatternFor(AttributeData attr)
+	{
+		var pattern = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "ValidationPattern").Value.Value as string;
+		var choices = ChoicesOf(attr);
+		return !string.IsNullOrEmpty(pattern) || choices.Length == 0
+			? pattern
+			: "^(" + string.Join("|", choices.Select(Regex.Escape)) + ")$";
+	}
+
+	private static string[] ChoicesOf(AttributeData attr)
+	{
+		var choices = attr.NamedArguments.FirstOrDefault(kv => kv.Key == "Choices").Value;
+		return choices.Kind == TypedConstantKind.Array
+			? choices.Values.Select(choice => choice.Value as string).OfType<string>().ToArray()
+			: [];
+	}
 
 	private static IEnumerable<IPropertySymbol> SelectCategoryProperties(INamedTypeSymbol optionsSymbol)
 		=> optionsSymbol.GetMembers().OfType<IPropertySymbol>().Where(x => x.Name is not "EqualityContract");

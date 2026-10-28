@@ -13,6 +13,13 @@ public class SharpConfigAttribute : Attribute
 	public string? ValidationPattern { get; set; }
 
 	/// <summary>
+	/// The only values the option takes, in the order <c>@config</c> and the configuration page list
+	/// them. Validation accepts exactly these, so an option that sets this declares no
+	/// <see cref="ValidationPattern"/>.
+	/// </summary>
+	public string[]? Choices { get; set; }
+
+	/// <summary>
 	/// UI group name within the category (e.g., "Connection Settings", "Connection Limits")
 	/// If null, property appears in a default/ungrouped section
 	/// </summary>

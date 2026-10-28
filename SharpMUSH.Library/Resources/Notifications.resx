@@ -1888,6 +1888,9 @@
   <data name="ConfigOptionValueFormat" xml:space="preserve">
     <value> {0,-40} {1}</value>
   </data>
+  <data name="ConfigOptionChoicesFormat" xml:space="preserve">
+    <value>   One of: {0}</value>
+  </data>
   <data name="ConfigNoCategoryOrOptionFormat" xml:space="preserve">
     <value>No configuration category or option named '{0}'.</value>
   </data>

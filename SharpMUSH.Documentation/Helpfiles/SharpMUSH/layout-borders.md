@@ -45,10 +45,10 @@ box() and rule() draw with a border style. The game's default is the `layout_bor
 +==================+  +------------------+
 ```
 
-The other styles are drawn with Unicode box-drawing lines:
+`mush` and `ascii` are plain ASCII. The other styles are drawn with Unicode box-drawing lines:
 
-- `single` - light lines
 - `double` - double lines
+- `single` - light lines
 - `heavy` - thick lines
 - `rounded` - light lines with rounded corners
 

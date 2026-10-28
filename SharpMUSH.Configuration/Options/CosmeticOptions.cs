@@ -152,11 +152,11 @@ public record CosmeticOptions(
 		Name = "layout_border",
 		Category = "Cosmetic",
 		Description = "Border style for box() and rule() when they name none",
-		ValidationPattern = @"^(none|ascii|mush|single|double|heavy|rounded)$",
+		Choices = ["double", "single", "heavy", "rounded", "mush", "ascii", "none"],
 		Group = "Layout",
 		Order = 1,
-		Tooltip = "One of none, ascii, mush, single, double, heavy or rounded. A client that cannot show "
-			+ "box-drawing characters is sent the ascii pieces instead.")]
+		Tooltip = "A client that cannot show box-drawing characters is sent the ascii pieces instead. "
+			+ "See help LAYOUT BORDERS.")]
 	string LayoutBorder,
 
 	[property: SharpConfig(
@@ -174,7 +174,7 @@ public record CosmeticOptions(
 		Name = "image_hosts",
 		Category = "Cosmetic",
 		Description = "Which pictures image() and figure() may show: any, allow, block or off",
-		ValidationPattern = @"^(any|allow|block|off)$",
+		Choices = ["any", "allow", "block", "off"],
 		Group = "Layout",
 		Order = 3,
 		Tooltip = "any shows pictures from every host; allow only those on image_host_list; block all but "
