@@ -28,11 +28,15 @@ public static class RoleHierarchy
 	/// <summary>
 	/// Whether a manager holding <paramref name="granted"/> may allow <paramref name="scope"/>: they hold it,
 	/// or it is an in-game scope or a custom permission and they are a wizard (in PennMUSH a wizard grants
-	/// every power without holding any). Callers check that a custom scope exists first.
+	/// every power without holding any). Passing a role's guard (<see cref="PortalPermission.ControlRole"/>) is the
+	/// exception: only a holder grants it, so a wizard cannot hand itself the pass of a role guarded against it.
+	/// Callers check that a custom scope exists first.
 	/// </summary>
 	public static bool CanGrant(IReadOnlySet<string> granted, string scope)
 		=> granted.Contains(scope)
-			|| ((PortalPermission.IsGameScope(scope) || !PortalPermission.IsKnown(scope)) && granted.Contains(PortalPermission.GameWizard));
+			|| (!PortalPermission.IsControlRole(scope)
+				&& (PortalPermission.IsGameScope(scope) || !PortalPermission.IsKnown(scope))
+				&& granted.Contains(PortalPermission.GameWizard));
 
 	/// <summary>The roles in <paramref name="roles"/> that are not <c>everyone</c>, highest priority first.</summary>
 	public static IEnumerable<SharpRole> Ranked(IEnumerable<SharpRole> roles)
