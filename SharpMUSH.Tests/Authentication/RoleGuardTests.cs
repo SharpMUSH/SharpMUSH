@@ -31,7 +31,8 @@ public class RoleGuardTests
 		await Assert.That(Holding(1).GuardedRoles).Contains(BuiltInRoles.GodSlug);
 		await Assert.That(Holding(42, BuiltInRoles.WizardSlug, BuiltInRoles.RoyaltySlug).GuardedRoles)
 			.IsEquivalentTo([BuiltInRoles.WizardSlug, BuiltInRoles.RoyaltySlug]);
-		await Assert.That(Holding(42, BuiltInRoles.BuilderSlug, "guildmaster", "architect").GuardedRoles).IsEmpty();
+		await Assert.That(Holding(42, BuiltInRoles.BuilderSlug, "guildmaster").GuardedRoles).IsEmpty();
+		await Assert.That(Holding(42, BuiltInRoles.ArchitectSlug).GuardedRoles).IsEquivalentTo([BuiltInRoles.ArchitectSlug]);
 	}
 
 	[Test]
@@ -44,6 +45,27 @@ public class RoleGuardTests
 		await Assert.That(wizard.PassesGuardsOf(Holding(43, BuiltInRoles.CouncilorSlug))).IsTrue();
 		await Assert.That(wizard.PassesGuardsOf(Holding(43, BuiltInRoles.ImmortalSlug))).IsFalse();
 		await Assert.That(Holding(43, BuiltInRoles.ImmortalSlug).PassesGuardsOf(wizard)).IsTrue();
+	}
+
+	/// <summary>
+	/// RhostMUSH's levels each control what is held below them: architect and councilor allow control.all, and the
+	/// guards keep them from the levels above. A councilor passes an architect's guard, not the other way round.
+	/// </summary>
+	[Test]
+	public async Task ArchitectAndCouncilorReachEverythingBelowThem()
+	{
+		var architect = Holding(42, BuiltInRoles.ArchitectSlug);
+		var councilor = Holding(43, BuiltInRoles.CouncilorSlug);
+
+		await Assert.That(architect.Has(PortalPermission.ControlAll)).IsTrue();
+		await Assert.That(councilor.Has(PortalPermission.ControlAll)).IsTrue();
+		await Assert.That(architect.PassesGuardsOf(Holding(44, "guildmaster"))).IsTrue();
+		await Assert.That(architect.PassesGuardsOf(Holding(44, BuiltInRoles.ArchitectSlug))).IsTrue();
+		await Assert.That(architect.PassesGuardsOf(councilor)).IsFalse();
+		await Assert.That(councilor.PassesGuardsOf(architect)).IsTrue();
+		await Assert.That(councilor.PassesGuardsOf(Holding(44, BuiltInRoles.WizardSlug))).IsFalse();
+		await Assert.That(Holding(44, "guildmaster").PassesGuardsOf(architect)).IsFalse();
+		await Assert.That(Holding(44, BuiltInRoles.WizardSlug).PassesGuardsOf(architect)).IsTrue();
 	}
 
 	[Test]

@@ -95,7 +95,7 @@ To take a permission away from one object, use an override (`@permission/deny`).
 | Priority | Role | Allows |
 |---|---|---|
 | 40 | god | `administrator`, `protect.role` |
-| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `notify.push`, `softcode.sidefx`, `server.operate`, `control.all`, `protect.role`, `control.role.wizard`, `control.role.royalty`, `control.role.councilor` |
+| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `notify.push`, `softcode.sidefx`, `server.operate`, `control.all`, `protect.role`, `control.role.wizard`, `control.role.royalty`, `control.role.councilor`, `control.role.architect` |
 | 25 | moderator | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `queue.control`, `roles.admin` |
 | 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.role`, `control.role.royalty` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
@@ -122,11 +122,11 @@ Setup can give a game RhostMUSH's staff levels in place of `helper` and `moderat
 | Priority | Role | Allows |
 |---|---|---|
 | 35 | immortal | what wizard allows, plus `server.admin`, `control.role.immortal` |
-| 22 | councilor | what royalty allows, plus `control.role.councilor` |
-| 16 | architect | what builder allows |
+| 22 | councilor | what royalty allows, plus `control.all`, `control.role.councilor`, `control.role.architect` |
+| 16 | architect | what builder allows, plus `control.all`, `protect.role`, `control.role.architect` |
 | 13 | guildmaster | what player allows, plus `players.view`, `queue.inspect` |
 
-RhostMUSH's royalty is the `wizard` role. Immortal and councilor are guarded as wizard and royalty are (see [roles guards]), so a wizard controls a councilor but not an immortal. The setup step removes the roles of the set not chosen, except any role someone holds.
+RhostMUSH's royalty is the `wizard` role. As in RhostMUSH, each level controls what is held below it: an architect controls players and their things, a councilor architects too. Immortal, councilor and architect are guarded (see [roles guards]), which keeps each below the levels above it, and a wizard controls a councilor or an architect but not an immortal. The setup step removes the roles of the set not chosen, except any role someone holds.
 
 ## Roles, flags and powers
 
@@ -147,6 +147,7 @@ A role that allows `protect.role` is guarded. Whoever holds it, a player or an o
 | wizard | wizard, immortal, god |
 | councilor | councilor, wizard, immortal, god |
 | royalty | royalty, councilor, wizard, immortal, god |
+| architect | architect, councilor, wizard, immortal, god |
 
 So a wizard controls another wizard's things, as in PennMUSH, while royalty controls only what it owns. `control.role.god` is #1's alone: no role, override or `administrator` gives it.
 
