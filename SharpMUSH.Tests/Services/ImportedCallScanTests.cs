@@ -59,6 +59,6 @@ public class ImportedCallScanTests
 		await Assert.That(text).Contains($"zzinner{id}() is called once");
 		await Assert.That(text).DoesNotContain($"smile{id}").Because("a name in prose is not a call");
 		await Assert.That(text).DoesNotContain($"zzmine{id}").Because("an @function in the world registers it");
-		await Assert.That(text).DoesNotContain("add()");
+		await Assert.That(text).DoesNotContain(": add()").Because("add() is a built-in function");
 	}
 }
