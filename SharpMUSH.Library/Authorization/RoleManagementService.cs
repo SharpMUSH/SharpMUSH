@@ -331,7 +331,7 @@ public sealed partial class RoleManagementService(
 	private Task<RoleOutcome<Success>> ChangeAssignmentAsync(RoleActor actor, string accountId, string slug, bool assign, CancellationToken ct)
 		=> Gated(async () =>
 		{
-			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
+			if (await FindRoleAsync(slug, ct) is not SharpRole role)
 				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
 			if (BuiltInRoles.IsImplicit(role.Slug))
 				return ImplicitRole(role);
@@ -345,6 +345,18 @@ public sealed partial class RoleManagementService(
 			await invalidator.InvalidateAsync(target, ct);
 			return new Success();
 		}, ct);
+
+	/// <summary>The role an assignment names: its short name or its display name, in any case.</summary>
+	private async Task<Found<SharpRole>> FindRoleAsync(string name, CancellationToken ct)
+	{
+		var trimmed = name.Trim();
+		if (await registry.GetRoleAsync(trimmed.ToLowerInvariant(), ct) is SharpRole bySlug) return bySlug;
+		return (await registry.GetRolesAsync(ct)).Where(role => role.Name.Equals(trimmed, StringComparison.OrdinalIgnoreCase)).ToList() switch
+		{
+			[var byName] => byName,
+			_ => new NotFound()
+		};
+	}
 
 	private static RoleOutcome<Success> ImplicitRole(SharpRole role)
 		=> Refuse<Success>(RoleRefusalKind.Invalid, role.Slug switch
@@ -363,7 +375,7 @@ public sealed partial class RoleManagementService(
 	private Task<RoleOutcome<Success>> ChangeObjectAssignmentAsync(RoleActor actor, AnySharpObject target, string slug, bool assign, CancellationToken ct)
 		=> Gated(async () =>
 		{
-			if (await registry.GetRoleAsync(slug, ct) is not SharpRole role)
+			if (await FindRoleAsync(slug, ct) is not SharpRole role)
 				return Refuse<Success>(RoleRefusalKind.NotFound, $"No role named '{slug}'.");
 			if (BuiltInRoles.IsImplicit(role.Slug))
 				return ImplicitRole(role);

@@ -120,6 +120,23 @@ public class RoleManagementServiceTests
 		await Accepted(world.Service.AssignAsync(A("owner"), "owner", "helper"));
 	}
 
+	/// <summary>An assignment names the role by its short name or display name, in any case.</summary>
+	[Test]
+	public async Task AssignmentsMatchTheRoleInAnyCase()
+	{
+		var world = Build();
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), new RoleDraft("st", "Story Teller", "Staff", null, 1, new Dictionary<string, PermissionState>())));
+		await Accepted(world.Service.AssignAsync(A("mod"), "pl", "HELPER"));
+		await Assert.That(world.Registry.AssignedTo("pl")).Contains("helper");
+		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "story teller"));
+		await Assert.That(world.Registry.AssignedTo("pl")).Contains("st");
+		await Accepted(world.Service.UnassignAsync(A("owner"), "pl", "ST"));
+		await Assert.That(world.Registry.AssignedTo("pl")).DoesNotContain("st");
+		var thing = AdministrativeCapabilityTests.Player(4);
+		await Accepted(world.Service.AssignToObjectAsync(A("owner"), thing, "Story TELLER"));
+		await Assert.That(await world.Registry.GetObjectRolesAsync(4)).Contains("st");
+	}
+
 	/// <summary>A wizard changes its own account's roles below its highest one, but not wizard itself or god.</summary>
 	[Test]
 	public async Task AWizardChangesItsOwnRolesBelowItsHighest()
