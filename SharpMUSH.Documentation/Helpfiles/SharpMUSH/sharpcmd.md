@@ -2657,6 +2657,7 @@ Moving outputs the dbref of the room you arrive in.
 
 
 ::: seealso
+- [walk]
 - [HOMES]
 - [@link]
 - [@ealias]
@@ -2895,6 +2896,29 @@ If you pass the lock, you will see `<object>`'s USE attribute, and others in you
 - [@charges]
 - [LOCKING]
 - [@aufail]
+:::
+# walk
+`walk <exit>[, <exit>...]`
+
+Goes through each exit in turn, as if you typed each one. Separate the exits with commas. If one of them fails, you stop in the room you reached and the rest are not tried. The portal's World map copies a route as one `walk` line, so it can be pasted into any client.
+
+`walk` outputs the dbref of the last room you reached. `walk` is a SharpMUSH addition.
+
+```sharp
+> walk north, up
+```
+Output: the Lighthouse, then the Lamp room, as you would see them walking each exit.
+
+```sharp
+> walk north, sideways, up
+```
+Output: the Lighthouse, then "You can't go that way." You stay in the Lighthouse.
+
+
+::: seealso
+- [go]
+- [EXITS]
+- [movement]
 :::
 # WARN_ON_MISSING
 This internal command is run when someone attempts to run a command which starts with a function, for example:

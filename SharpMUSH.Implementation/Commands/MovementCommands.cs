@@ -431,6 +431,31 @@ public partial class Commands
 	}
 
 	/// <summary>
+	/// <c>walk north, up</c>: <c>GOTO</c> through each exit in turn, stopping at the first that fails. Not in
+	/// PennMUSH; a route the World map copies is one line in any client.
+	/// </summary>
+	[SharpCommand(Name = "WALK", Output = CommandOutput.Value, Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["exits"])]
+	public async ValueTask<Option<CallState>> Walk(IMUSHCodeParser parser, SharpCommandAttribute _2)
+	{
+		var steps = parser.CurrentState.Arguments["0"].Message.ToPlainText()
+			.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+		var reached = CallState.Empty;
+		foreach (var step in steps)
+		{
+			var walker = parser.Push(parser.CurrentState with
+			{
+				Command = "GOTO",
+				Arguments = new Dictionary<string, CallState> { { "0", new CallState(step, 0) } },
+				Function = null
+			});
+			// GOTO answers a move with the room it reached, and a refusal with nothing.
+			if (await GoTo(walker, _2) is not CallState { Message.Length: > 0 } arrived) break;
+			reached = arrived;
+		}
+		return reached;
+	}
+
+	/// <summary>
 	/// PennMUSH <c>fail_lock(player, exit, Basic_Lock, "You can't go that way.", NOTHING)</c>
 	/// (<c>src/move.c:516</c>).
 	/// </summary>
