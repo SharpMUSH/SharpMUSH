@@ -6585,7 +6585,7 @@
     <value>Sist brukt</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Bruk {0} endringer</value>
+    <value>Bruk ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Hver kommando kjører som deg, med dine rettigheter, i rekkefølgen som vises. Et trinn som feiler, stopper resten.</value>
@@ -6600,7 +6600,7 @@
     <value>Tom rute, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} endringer venter</value>
+    <value>Ventende endringer: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Kontroller</value>

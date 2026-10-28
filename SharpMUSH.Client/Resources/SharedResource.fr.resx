@@ -5894,7 +5894,7 @@
     <value>Dernière application</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Appliquer {0} changements</value>
+    <value>Appliquer ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Chaque commande s'exécute en votre nom, avec vos droits, dans l'ordre affiché. Une étape qui échoue arrête la suite.</value>
@@ -5909,7 +5909,7 @@
     <value>Case vide, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} changements en attente</value>
+    <value>Changements en attente : {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Vérifications</value>

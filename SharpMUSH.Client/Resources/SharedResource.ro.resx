@@ -6585,7 +6585,7 @@
     <value>Ultima aplicare</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Aplică {0} modificări</value>
+    <value>Aplică ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Fiecare comandă rulează ca tine, cu permisiunile tale, în ordinea afișată. Un pas care eșuează oprește restul.</value>
@@ -6600,7 +6600,7 @@
     <value>Celulă goală, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} modificări în așteptare</value>
+    <value>Modificări în așteptare: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Verificări</value>

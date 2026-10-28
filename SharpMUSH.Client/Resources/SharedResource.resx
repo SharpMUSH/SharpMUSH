@@ -10020,7 +10020,7 @@
     <value>Last apply</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Apply {0} changes</value>
+    <value>Apply ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Each command runs as you, with your permissions, in the order shown. A step that fails stops the rest.</value>
@@ -10035,7 +10035,7 @@
     <value>Empty cell, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} changes waiting</value>
+    <value>Changes waiting: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Checks</value>

@@ -6585,7 +6585,7 @@
     <value>Legutóbbi alkalmazás</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>{0} módosítás alkalmazása</value>
+    <value>Alkalmazás ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Minden parancs a te nevedben, a te jogaiddal fut, a látható sorrendben. Egy sikertelen lépés megállítja a többit.</value>
@@ -6600,7 +6600,7 @@
     <value>Üres mező, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} módosítás vár</value>
+    <value>Várakozó módosítások: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Ellenőrzések</value>

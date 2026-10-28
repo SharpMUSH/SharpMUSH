@@ -373,4 +373,20 @@ public class WorldMapReaderTests
 		await Assert.That(map.Rooms.Single().Editable).IsFalse().Because("a room is changed through its map");
 		await Assert.That(map.Nearby).IsEmpty();
 	}
+
+	[Test]
+	public async Task ARoomsPlaceIsReadAsTheRoomNotTheMapsOwner()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		Room(10, "Quay", harbour);
+		_values[(10, "MAP`COORDS`X")] = "2";
+		// The map's owner may not read the attributes of a room a wizard dug into the map.
+		_attributes.GetAttributeAsync(Arg.Is<AnySharpObject>(reader => reader.Object().DBRef.Number != 10),
+				Arg.Is<AnySharpObject>(target => target.Object().DBRef.Number == 10), Arg.Any<string>(), IAttributeService.AttributeMode.Read, false)
+			.Returns(ValueTask.FromResult<OptionalSharpAttributeOrError>(new None()));
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Rooms.Single().Position).IsEquivalentTo([2.0, 0.0, 0.0]);
+	}
 }

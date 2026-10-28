@@ -6585,7 +6585,7 @@
     <value>Sidst anvendt</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Anvend {0} ændringer</value>
+    <value>Anvend ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Hver kommando kører som dig, med dine rettigheder, i den viste rækkefølge. Et trin, der fejler, stopper resten.</value>
@@ -6600,7 +6600,7 @@
     <value>Tomt felt, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} ændringer venter</value>
+    <value>Ventende ændringer: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Kontroller</value>

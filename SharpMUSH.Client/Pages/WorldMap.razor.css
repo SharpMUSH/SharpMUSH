@@ -188,7 +188,7 @@
 
 .map-applied-list {
 	margin: 0;
-	padding-left: 1.5em;
+	padding: 12px 16px 12px calc(16px + 1.5em);
 }
 
 .map-applied--failed {

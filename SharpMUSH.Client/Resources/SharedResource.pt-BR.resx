@@ -6585,7 +6585,7 @@
     <value>Última aplicação</value>
   </data>
   <data name="NavMapApply" xml:space="preserve">
-    <value>Aplicar {0} mudanças</value>
+    <value>Aplicar ({0})</value>
   </data>
   <data name="NavMapApplyNote" xml:space="preserve">
     <value>Cada comando roda como você, com suas permissões, na ordem mostrada. Um passo que falha interrompe o resto.</value>
@@ -6600,7 +6600,7 @@
     <value>Célula vazia, X {0}, Y {1}</value>
   </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
-    <value>{0} mudanças pendentes</value>
+    <value>Mudanças pendentes: {0}</value>
   </data>
   <data name="NavMapChecks" xml:space="preserve">
     <value>Verificações</value>

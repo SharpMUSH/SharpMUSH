@@ -104,8 +104,9 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			}
 			if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is not AnySharpObject room || !room.IsRoom) continue;
 			if (!await VisibleAsync(viewer, room, ct)) continue;
-			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, await NumbersAsync(publisher, room, position, ct),
-				Positive(await NumbersAsync(publisher, room, Size, ct)))
+			// A room's place is read as the room, as a region's is: a builder may dig a room into a map someone else owns.
+			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, await NumbersAsync(room, room, position, ct),
+				Positive(await NumbersAsync(room, room, Size, ct)))
 			{
 				Editable = canEdit && await permissions.Controls(viewer, room)
 			}));
