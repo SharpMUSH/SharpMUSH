@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>游戏未能创建该地图。</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>该房间已有使用其中某个名称的出口。</value>
+  </data>
 </root>

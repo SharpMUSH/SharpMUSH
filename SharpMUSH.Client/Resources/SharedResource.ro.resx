@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>Jocul nu a creat harta.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>Camera are deja o ieșire cu unul dintre aceste nume.</value>
+  </data>
 </root>

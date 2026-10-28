@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>Игра не создала карту.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>В комнате уже есть выход с одним из этих имён.</value>
+  </data>
 </root>

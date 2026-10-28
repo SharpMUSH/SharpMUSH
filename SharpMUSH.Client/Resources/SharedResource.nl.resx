@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>Het spel heeft de kaart niet gemaakt.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>De kamer heeft al een uitgang met een van deze namen.</value>
+  </data>
 </root>

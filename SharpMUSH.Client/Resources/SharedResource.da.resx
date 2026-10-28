@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>Spillet lavede ikke kortet.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>Rummet har allerede en udgang med et af disse navne.</value>
+  </data>
 </root>

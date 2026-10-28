@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>El juego no creó el mapa.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>La sala ya tiene una salida con uno de estos nombres.</value>
+  </data>
 </root>

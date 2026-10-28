@@ -200,14 +200,7 @@
             case "character": return Loc["NavMapNameCharacter"];
         }
         if (_from is null) return Loc["NavMapNoNeighbour"];
-        var problem = MapPlan.ExitNameProblem(_exitTo) ?? (_wayBack ? MapPlan.ExitNameProblem(_exitBack) : null);
-        return problem switch
-        {
-            "empty" => Loc["NavMapExitEmpty"].Value,
-            "in" => Loc["NavMapExitIn"].Value,
-            "character" => Loc["NavMapExitCharacter"].Value,
-            _ => null,
-        };
+        return ExitProblem(_exitTo, _from) ?? (_wayBack ? ExitProblem(_exitBack) : null);
     }
 
     private async Task DigAsync(double x, double y, int z)
@@ -392,14 +385,10 @@
                     else
                     {
                         <span>
-                            @exit.Name
-                            @if (exit.Aliases.Count > 0)
-                            {
-                                <span class="map-builder-dim">@string.Join(";", exit.Aliases)</span>
-                            }
+                            @string.Join(";", [exit.Name, .. exit.Aliases])
                             @if ((exit.Destination is { } to && Layout.Rooms.TryGetValue(to, out var there) ? there.Room.Name : exit.DestinationName) is { } leads)
                             {
-                                <span class="map-builder-dim">@Loc["NavMapLeadsTo", leads]</span>
+                                <span class="map-builder-dim map-builder-leads">@Loc["NavMapLeadsTo", leads]</span>
                             }
                         </span>
                         @if (exit.Editable)
@@ -415,13 +404,28 @@
         </ul>
     };
 
-    private string? ExitProblem(string names) => MapPlan.ExitNameProblem(names) switch
+    /// <summary>
+    /// Why <paramref name="names"/> cannot name an exit, or, given the room it leaves <paramref name="from"/>, why not
+    /// there: another exit of that room already answers to one of them, and typing it would be ambiguous.
+    /// </summary>
+    private string? ExitProblem(string names, string? from = null) => MapPlan.ExitNameProblem(names) switch
     {
         "empty" => Loc["NavMapExitEmpty"].Value,
         "in" => Loc["NavMapExitIn"].Value,
         "character" => Loc["NavMapExitCharacter"].Value,
+        _ when from is not null && Taken(names, from) => Loc["NavMapExitTaken"].Value,
         _ => null,
     };
+
+    private bool Taken(string names, string from)
+    {
+        var wanted = names.Split(';', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return Layout.Map.Exits.Where(exit => exit.Source == from).Any(exit => wanted.Contains(exit.Name) || exit.Aliases.Any(wanted.Contains));
+    }
+
+    private string? JoinProblem(string from) => _joinTo is not { } to
+        ? null
+        : ExitProblem(_joinNames, from) ?? (_joinWayBack ? ExitProblem(_joinBack, to) : null);
 
     private void StartRenameExit(MapExitDto exit) => (_exitEditing, _exitNames) = (exit.Id, string.Join(";", [exit.Name, .. exit.Aliases]));
 
@@ -445,7 +449,7 @@
         var others = Layout.Rooms.Values.Where(other => !other.Region && other.Room.Id != room.Room.Id)
             .OrderBy(other => other.Room.Name, StringComparer.OrdinalIgnoreCase).ToList();
         if (others.Count == 0) return;
-        var problem = _joinTo is null ? null : ExitProblem(_joinNames) ?? (_joinWayBack ? ExitProblem(_joinBack) : null);
+        var problem = JoinProblem(room.Room.Id);
         <h4 class="map-builder-subtitle">@Loc["NavMapJoin"]</h4>
         <MudSelect T="string" Value="_joinTo" ValueChanged="to => ChooseJoin(room, to)" Label="@Loc["NavMapJoinTo"]" Variant="Variant.Outlined"
                    Class="map-builder-join">
@@ -487,7 +491,7 @@
 
     private async Task JoinAsync(string from)
     {
-        if (_joinTo is not { } to || ExitProblem(_joinNames) is not null || (_joinWayBack && ExitProblem(_joinBack) is not null)) return;
+        if (_joinTo is not { } to || JoinProblem(from) is not null) return;
         Plan.Join(from, to, _joinNames, _joinWayBack ? _joinBack : null);
         (_joinTo, _joinNames, _joinBack, _joinWayBack) = (null, "", "", true);
         await OnChanged.InvokeAsync(from);

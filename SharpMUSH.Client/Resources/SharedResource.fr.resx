@@ -6160,4 +6160,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>Le jeu n'a pas créé la carte.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>La pièce a déjà une sortie portant l'un de ces noms.</value>
+  </data>
 </root>

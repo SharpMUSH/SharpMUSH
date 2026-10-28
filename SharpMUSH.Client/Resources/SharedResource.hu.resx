@@ -6851,4 +6851,7 @@
   <data name="NavMapNewFailed" xml:space="preserve">
     <value>A játék nem hozta létre a térképet.</value>
   </data>
+  <data name="NavMapExitTaken" xml:space="preserve">
+    <value>A szobának már van kijárata ezen nevek egyikével.</value>
+  </data>
 </root>
