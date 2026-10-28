@@ -7,7 +7,7 @@ think ok
 ::case argc.forms  one count, two counts, no upper bound, a range
 think abs(1,1)
 think and()
-think extract(a,1,1,|,x)
+think rest(a,|,x)
 think mid(a)
 think lattr(me,|,x)
 
