@@ -51,12 +51,16 @@ public class ConfigOptionEffectTests
 	private static string ShortName(string prefix) => prefix + Guid.NewGuid().ToString("N")[..10];
 
 	[Test]
-	public async Task UseMuxCommOff_DisablesTheComsysCommands()
+	[Arguments("addcom {0}=Public")]
+	[Arguments("@ccreate {0}")]
+	[Arguments("@cset/mute {0}")]
+	[Arguments("clearcom")]
+	public async Task UseMuxCommOff_DisablesTheComsysCommands(string command)
 	{
 		var options = Baseline with { Chat = Baseline.Chat with { UseMuxComm = false } };
 		var (player, parser) = await PlayerWith(options, "MuxOff");
 
-		var result = await parser.CommandParse(player.Handle, Connections, MarkupText.Plain($"addcom {ShortName("a")}=Public"));
+		var result = await parser.CommandParse(player.Handle, Connections, MarkupText.Plain(string.Format(command, ShortName("a"))));
 
 		await Assert.That(result.Message!.ToPlainText()).IsEqualTo(ErrorMessages.Returns.CommandDisabled);
 		await Assert.That(Factory.Notifications.For(player.DbRef)).Contains(ErrorMessages.Notifications.CommandDisabled);

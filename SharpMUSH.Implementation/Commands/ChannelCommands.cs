@@ -563,8 +563,12 @@ public partial class Commands
 		var lockKey = args.TryGetValue("1", out var arg1) ? arg1.Message.ToPlainText() : string.Empty;
 
 		var lockType = switches.FirstOrDefault() ?? "JOIN";
-		lockType = lockType.ToUpper();
+		return await ChannelLockAsync(executor, channelName, lockType.ToUpper(), lockKey);
+	}
 
+	private async ValueTask<CallState> ChannelLockAsync(AnySharpObject executor, MString channelName, string lockType,
+		string lockKey)
+	{
 		// Setting a lock on a channel you cannot see must be refused the same way as setting one on a
 		// channel that does not exist, or @clock reports which names are taken. notify: true because the
 		// gate emits ONE refusal for both cases: suppressing it does not make the two cases more alike, it
@@ -577,7 +581,7 @@ public partial class Commands
 		};
 	}
 
-	private async ValueTask<Option<CallState>> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
+	private async ValueTask<CallState> SetChannelLockAsync(AnySharpObject executor, SharpChannel channel,
 		string lockType, string lockKey)
 	{
 		// An absent modify lock grants no additional rights beyond the owner and wizard gates.

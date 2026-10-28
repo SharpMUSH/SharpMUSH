@@ -84,6 +84,15 @@
       "aliases": []
     },
     {
+      "id": "comalias",
+      "heading": "comalias()",
+      "lookup": "comalias()",
+      "aliases": [
+        "comtitle()",
+        "chanobj()"
+      ]
+    },
+    {
       "id": "examples",
       "heading": "Examples",
       "lookup": "channel functions examples"
@@ -175,6 +184,20 @@ Functions inspect membership, privileges, history, and channel metadata. For cha
 
 - **clock()**: The key of one of *\<channel\>*'s locks. The lock type is a suffix on the channel argument, one of `JOIN` (the default), `SPEAK`, `MOD`, `SEE` or `HIDE`; anything else answers `#-1 NO SUCH LOCK TYPE`. You must be able to decompile the channel. See [@CHANNEL CLOCK].
 
+## comalias()
+
+`comalias(<object>,<channel>)`<br>
+`comtitle(<object>,<channel>)`<br>
+`chanobj(<channel>)`
+
+TinyMUX's comsys functions (see [muxcomsys]).
+
+- **comalias()**: the first `addcom` alias *\<object\>* holds for *\<channel\>*, in lower case, or nothing when it has none.
+- **comtitle()**: *\<object\>*'s title on *\<channel\>*, as ctitle() gives it.
+- **chanobj()**: always `#-1`. SharpMUSH channels have no channel object.
+
+comalias() and comtitle() answer only for objects you control; for anything else they answer `#-1 PERMISSION DENIED`.
+
 ## Examples
 
 ```sharp
@@ -192,6 +215,9 @@ C
 ON COMBINE
 > think clock(Public/SPEAK)
 !FLAG^GAGGED
+> addcom pub=Public
+> think comalias(me,Public)
+pub
 ```
 
 ::: seealso

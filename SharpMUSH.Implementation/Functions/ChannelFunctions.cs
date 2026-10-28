@@ -445,6 +445,55 @@ public partial class Functions
 	}
 
 	/// <summary>
+	/// TinyMUX's <c>comalias(&lt;object&gt;,&lt;channel&gt;)</c>: the first comsys alias <c>&lt;object&gt;</c> holds
+	/// for the channel, in lower case, or nothing. Only for objects the caller controls.
+	/// </summary>
+	[SharpFunction(Name = "comalias", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "channel"])]
+	public async ValueTask<CallState> ComsysAlias(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var channelName = parser.CurrentState.Arguments["1"].Message.ToPlainText();
+		return await WithControlledObject(parser, async target => new CallState(await FirstAliasFor(target, channelName)));
+	}
+
+	/// <summary>The first <c>CHANALIAS`</c> alias <paramref name="target"/> holds for the channel, lower-cased, or nothing.</summary>
+	private async ValueTask<string> FirstAliasFor(AnySharpObject target, string channelName)
+	{
+		var aliases = await AttributeService.GetAttributePatternAsync(target, target, "CHANALIAS`*", false,
+			IAttributeService.AttributePatternMode.Wildcard) is SharpAttribute[] found ? found : [];
+		return aliases
+			.Where(alias => alias.Value.ToPlainText().Equals(channelName, StringComparison.OrdinalIgnoreCase))
+			.Select(alias => alias.LongName["CHANALIAS`".Length..].ToLowerInvariant())
+			.FirstOrDefault(string.Empty);
+	}
+
+	/// <summary>
+	/// TinyMUX's <c>comtitle(&lt;object&gt;,&lt;channel&gt;)</c>: what <c>ctitle()</c> answers, for objects the
+	/// caller controls.
+	/// </summary>
+	[SharpFunction(Name = "comtitle", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "channel"])]
+	public async ValueTask<CallState> ComsysTitle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> await WithControlledObject(parser, _ => ChannelTitle(parser, _2));
+
+	/// <summary>TinyMUX's <c>chanobj(&lt;channel&gt;)</c>. SharpMUSH channels have no channel object.</summary>
+	[SharpFunction(Name = "chanobj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["channel"])]
+	public ValueTask<CallState> ChannelObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> ValueTask.FromResult(new CallState(ErrorMessages.Returns.Nothing));
+
+	/// <summary>The object the first argument names, handed to <paramref name="answer"/> when the caller controls it.</summary>
+	private async ValueTask<CallState> WithControlledObject(IMUSHCodeParser parser, Func<AnySharpObject, ValueTask<CallState>> answer)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
+			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
+			async target => await PermissionService.Controls(executor, target)
+				? await answer(target)
+				: new CallState(ErrorMessages.Returns.PermissionDenied));
+	}
+
+	/// <summary>
 	/// PennMUSH <c>fun_cwho</c> (<c>src/extchat.c:3004-3079</c>):
 	/// <c>cwho(&lt;channel&gt;[,&lt;on|off|all&gt;[,&lt;skip gagged?&gt;]])</c>, returning space-separated
 	/// dbrefs.

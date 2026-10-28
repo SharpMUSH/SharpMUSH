@@ -1176,6 +1176,15 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string ErrorReadingAliasesFormat = "Error reading aliases: {0}";
 		public const string YouHaveNoChannelAliases = "You have no channel aliases.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string UsageFormat = "Usage: {0}";
+		public const string CsetNoHeader = "@cset: SharpMUSH has no channel header. A message always starts with the channel's name.";
+		public const string CsetNoObject = "@cset: SharpMUSH has no channel object. Use @channel/describe for its description and @clock/join for who may join.";
+		public const string CsetNoTimestampLogs = "@cset: SharpMUSH has no timestamp_logs. @channel/recall shows what the channel keeps.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CflagsNoEquivalentFormat = "{0}: SharpMUSH has no {1} flag. Use @clock/speak <channel>=<lock> to choose who may speak.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string CflagsUnknownFormat = "{0}: {1} is not a flag. The flags are join, transmit and receive.";
 
 		public const string NewsSystemNotInitialized = "News system not initialized.";
 		public const string NewsNoTopicAvailable = "No news available. Type 'news <topic>' for news on a specific topic.";
