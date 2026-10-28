@@ -73,7 +73,7 @@
             }
             @foreach (var (x, y) in _empty)
             {
-                var chosen = Cell is var (cx, cy) && cx == x && cy == y;
+                var chosen = Cell == (x, y);
                 <button type="button" class="map-cell @(chosen ? "map-cell--selected" : null)" style="@CellBox(x, y)"
                         aria-pressed="@(chosen ? "true" : "false")" aria-label="@Loc["NavMapCell", x, y]"
                         @onclick="() => OnCell.InvokeAsync((x, y))"></button>

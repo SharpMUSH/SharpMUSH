@@ -73,10 +73,10 @@ public sealed partial class MapPlan(MapDto map)
 	{
 		if (_dug.TryGetValue(room, out var dug))
 		{
-			Redig(room, dug with { Size = width == 1 && height == 1 ? null : [width, height] });
+			Redig(room, dug with { Size = width <= 1 && height <= 1 ? null : [width, height] });
 			return;
 		}
-		var clear = width == 1 && height == 1;
+		var clear = width <= 1 && height <= 1;
 		Upsert(new($"size:{room}", MapChangeKind.Size, room, Name(room),
 		[
 			Set(room, "MAP`SIZE`W", clear ? "" : Num(width)),
@@ -219,7 +219,7 @@ public sealed partial class MapPlan(MapDto map)
 		{
 			null => IsDbref(value),
 			"#-1" => value.StartsWith("#-1", StringComparison.Ordinal),
-			var expect => (IsDbref(value) ? value.Split(':')[0] : value) == expect,
+			{ } expect => (IsDbref(value) ? value.Split(':')[0] : value) == expect,
 		};
 	}
 
@@ -263,7 +263,7 @@ public sealed partial class MapPlan(MapDto map)
 		{
 			steps.Add(Set(self, "MAP`COORDS`X", Num(position[0])));
 			steps.Add(Set(self, "MAP`COORDS`Y", Num(position[1])));
-			if (position[2] != 0) steps.Add(Set(self, "MAP`COORDS`Z", Num(position[2])));
+			if ((int)position[2] is not 0) steps.Add(Set(self, "MAP`COORDS`Z", Num(position[2])));
 		}
 		if (room.Size is [var width, var height, ..])
 		{
@@ -310,7 +310,7 @@ public sealed partial class MapPlan(MapDto map)
 			.Select(command => command?[(command.IndexOf('=') + 1)..])
 			.Select(value => double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number) ? number : 0)
 			.ToArray();
-		return values.All(value => value == 0) && set.All(command => command.EndsWith('=')) ? null : values;
+		return set.All(command => command.EndsWith('=')) ? null : values;
 	}
 
 	private MapRoomDto? Room(string id) =>
