@@ -311,6 +311,18 @@ public partial class Commands
 		}
 	}
 
+	/// <summary>
+	/// <c>/quiet</c> leaves out @move and @omove but still runs @amove. MoveService's <c>noMoveMsgs</c> is
+	/// PennMUSH's and skips all three, so a quiet move runs the action here once the mover has arrived.
+	/// </summary>
+	private async ValueTask QuietMoveAction(IMUSHCodeParser parser, AnySharpObject mover, AnySharpContainer arrived, DBRef from)
+	{
+		if (!IsQuiet(parser)) return;
+		await DidItService.DidIt(parser, new DidItRequest(
+			Place: MonikerPlace.Movement, Player: mover, Thing: mover, AWhat: "AMOVE",
+			Loc: arrived, Env0: arrived.Object().DBRef.ToString(), Env1: from.ToString()));
+	}
+
 	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -421,6 +433,7 @@ public partial class Commands
 
 		// Followers trail the leader only if the leader actually went somewhere (move.c:493).
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -579,6 +592,7 @@ public partial class Commands
 
 		// move.c:962: do_enter teleports rather than plain enter_room, so a container owned by
 		// someone else strips the STICKY possessions the mover does not control.
+		var enteredFrom = (await executor.Where()).Object().DBRef;
 		var moveResult = await MoveService.SafeTel(parser, mover, containerToEnter,
 			noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "enter");
 
@@ -590,6 +604,7 @@ public partial class Commands
 
 		// move.c:964-965: followers trail the leader only if the leader actually went somewhere.
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, enteredFrom);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -643,6 +658,7 @@ public partial class Commands
 
 		// move.c:987-988.
 		var newLocation = await executor.Where();
+		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{

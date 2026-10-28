@@ -108,6 +108,61 @@ public class MuxCommandTests : ServerTestBase
 	}
 
 	[Test]
+	public async Task MailQuickKeepsAMessageThatStartsWithASlash()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxMailSlash");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService,
+			MarkupText.Plain($"@mail/quick #{player.DbRef.Number}/Topic=/path"));
+
+		await Assert.That(await EvalAs(player.DbRef, "mailsubject(1)")).IsEqualTo("Topic");
+		await Assert.That(await EvalAs(player.DbRef, "mail(1)")).IsEqualTo("/path");
+	}
+
+	[Test]
+	[Arguments("wizard")]
+	[Arguments("admin")]
+	public async Task WallAudienceSwitchesNeedTheirOwnCommandsLock(string audience)
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxWall");
+		var marker = TestIsolationHelpers.GenerateUniqueName("MuxWallMsg");
+		// ANNOUNCE passes @wall's lock and neither @wizwall's nor @rwall's.
+		await Cmd($"@power #{player.DbRef.Number}=Announce");
+		var before = Notifications.CountFor(player.DbRef);
+
+		await CmdAs(player.DbRef, player.Handle, $"@wall/{audience} {marker}");
+		await WebAppFactoryArg.QueueBarrierAsync();
+
+		var heard = Notifications.For(player.DbRef).Skip(before).ToArray();
+		await Assert.That(heard).Contains(line => line.Contains("Permission denied"));
+		await Assert.That(Notifications.For(God).Any(line => line.Contains(marker))).IsFalse();
+	}
+
+	[Test]
+	public async Task EnterQuietStillRunsTheMoveAction()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxEnter");
+		var box = TestIsolationHelpers.GenerateUniqueName("MuxBox");
+		var message = TestIsolationHelpers.GenerateUniqueName("MuxMoveMsg");
+		var action = TestIsolationHelpers.GenerateUniqueName("MuxMoveAct");
+		await CmdAs(player.DbRef, player.Handle, $"@create {box}");
+		await CmdAs(player.DbRef, player.Handle, $"drop {box}");
+		await CmdAs(player.DbRef, player.Handle, $"&MOVE me={message}");
+		await CmdAs(player.DbRef, player.Handle, $"&AMOVE me=@pemit me={action}");
+		var before = Notifications.CountFor(player.DbRef);
+
+		await CmdAs(player.DbRef, player.Handle, $"enter/quiet {box}");
+
+		await Notifications.WaitForAsync(player.DbRef, action, startIndex: before);
+		await Assert.That(await EvalAs(player.DbRef, "name(loc(me))")).IsEqualTo(box);
+		await Assert.That(Notifications.For(player.DbRef).Skip(before).Any(line => line.Contains(message))).IsFalse();
+	}
+
+	[Test]
 	[Arguments("@pemit/object me=")]
 	[Arguments("@force/now me=think ")]
 	public async Task TinyMuxSwitchesReachTheTarget(string command)

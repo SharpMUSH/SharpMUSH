@@ -70,7 +70,7 @@ public static class SendMail
 
 	public static async ValueTask<MString> Handle(IMUSHCodeParser parser, ILocateService locateService,
 		IMediator mediator, INotifyService notifyService, MailDelivery.Services delivery,
-		MString nameList, MString subjectAndMessage, string[] switches)
+		MString nameList, MString subjectAndMessage, string[] switches, MString? subject = null)
 	{
 		var urgent = switches.Contains("URGENT");
 		var silent = switches.Contains("SILENT");
@@ -102,9 +102,12 @@ public static class SendMail
 				sender, name);
 		}
 
-		var (subject, message) = SplitSubject(subjectAndMessage);
+		// A subject handed over apart (TinyMUX's @mail/quick) is not split out of the message again.
+		var (mailSubject, message) = subject is null
+			? SplitSubject(subjectAndMessage)
+			: (subject.Length > SubjectLength ? subject.Substring(0, SubjectLength) : subject, subjectAndMessage);
 
-		var letter = new MailDelivery.Letter(subject, message, Signed: !noSignature, urgent, Forwarded: false);
+		var letter = new MailDelivery.Letter(mailSubject, message, Signed: !noSignature, urgent, Forwarded: false);
 
 		var delivered = new List<SharpPlayer>();
 		foreach (var (player, quiet) in knownPlayerList)
