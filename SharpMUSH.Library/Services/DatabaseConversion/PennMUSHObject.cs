@@ -149,7 +149,13 @@ public class PennMUSHObject
 	/// a flag of each totem the object holds.
 	/// </summary>
 	public IReadOnlyList<uint> Totems { get; init; } = [];
+
+	/// <summary>The RhostMUSH tags that name the object: the world's, and those personal to an owner.</summary>
+	public IReadOnlyList<PennMUSHTag> Tags { get; init; } = [];
 }
+
+/// <summary>A tag that names an object: the world's when <paramref name="Owner"/> is null, else that owner's own.</summary>
+public sealed record PennMUSHTag(string Name, int? Owner);
 
 /// <summary>An object's reality masks: the levels it perceives on, and those it is perceived on.</summary>
 public sealed record PennMUSHReality(uint Receive, uint Transmit)

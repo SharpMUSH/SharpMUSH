@@ -116,15 +116,16 @@
 | [GETPIDS()]      | [GLOBALROOM()]   | [HASATTR()]      | [HASATTRP()]     |
 | [HASFLAG()]      | [HASPOWER()]     | [HASROLE()]      | [HASRXLEVEL()]   |
 | [HASTXLEVEL()]   | [HASTYPE()]      | [INAME()]        | [ISAPPROVED()]   |
-| [LFLAGS()]       | [LISTRLEVELS()]  | [LLOCKFLAGS()]   | [LOCK()]         |
-| [LOCKFLAGS()]    | [LOCKOWNER()]    | [LOCKS()]        | [LPIDS()]        |
-| [LSTATS()]       | [MONEY()]        | [MONIKER()]      | [MOTD()]         |
-| [MSECS()]        | [MTIME()]        | [MUDNAME()]      | [MUDURL()]       |
-| [NAME()]         | [NATTR()]        | [NEARBY()]       | [OBJID()]        |
-| [OBJMEM()]       | [ORFLAGS()]      | [ORLFLAGS()]     | [ORLPOWERS()]    |
-| [PERMISSION()]   | [PIDINFO()]      | [PLAYERMEM()]    | [POLL()]         |
-| [POWERS()]       | [QUOTA()]        | [RESTARTS()]     | [ROLES()]        |
-| [RXLEVEL()]      | [TXLEVEL()]      | [TYPE()]         | [VERSION()]      |
+| [ISTAG()]        | [LFLAGS()]       | [LISTRLEVELS()]  | [LISTTAGS()]     |
+| [LLOCKFLAGS()]   | [LOCK()]         | [LOCKFLAGS()]    | [LOCKOWNER()]    |
+| [LOCKS()]        | [LPIDS()]        | [LSTATS()]       | [MONEY()]        |
+| [MONIKER()]      | [MOTD()]         | [MSECS()]        | [MTIME()]        |
+| [MUDNAME()]      | [MUDURL()]       | [NAME()]         | [NATTR()]        |
+| [NEARBY()]       | [OBJID()]        | [OBJMEM()]       | [ORFLAGS()]      |
+| [ORLFLAGS()]     | [ORLPOWERS()]    | [PERMISSION()]   | [PIDINFO()]      |
+| [PLAYERMEM()]    | [POLL()]         | [POWERS()]       | [QUOTA()]        |
+| [RESTARTS()]     | [ROLES()]        | [RXLEVEL()]      | [TAGMATCH()]     |
+| [TAGREF()]       | [TXLEVEL()]      | [TYPE()]         | [VERSION()]      |
 | [VISIBLE()]      | [WIZMOTD()]      |                  |                  |
 
 ::: seealso

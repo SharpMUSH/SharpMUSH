@@ -59,7 +59,7 @@ These '@' commands are general utility and programming commands:
 | [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
 | [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
 | [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  | [@eval]      |
-| [@pipe]      | [@cset]      |              |              |              |
+| [@pipe]      | [@cset]      | [@ltag]      |              |              |
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
@@ -76,8 +76,8 @@ These '@' commands are only usable by wizards or privileged players:
 | [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      | [@role]         |
 | [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     | [@slave]        |
 | [@snapshot]     | [@sql]          | [@squota]       | [@storage]      | [@suggest]      |
-| [@txlevel]      | [@uptime]       | [@wall]         | [@wizmotd]      | [@wizwall]      |
-| [cd]            | [ch]            | [cv]            |                 |                 |
+| [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         | [@wizmotd]      |
+| [@wizwall]      | [cd]            | [ch]            | [cv]            |                 |
 
 # }
 "}" is a special prefix which can be used before any command. It causes the MUSH to show debug information when evaluating that command (the same as if you had the DEBUG flag set), and for any $-commands which are triggered by the command.

@@ -273,7 +273,7 @@ Widget
 1
 0
 134217760
-0
+33554432
 0
 0
 0
@@ -314,6 +314,8 @@ first line
 second line
 >244
 00000001 00000005
+>251
+weather __1_mytool
 <
 !10
 Gadget

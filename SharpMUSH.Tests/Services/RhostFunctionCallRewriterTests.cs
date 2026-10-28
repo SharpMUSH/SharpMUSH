@@ -48,6 +48,18 @@ public class RhostFunctionCallRewriterTests
 	}
 
 	[Test]
+	public async Task OneArgumentTagIsATagLookup()
+	{
+		var result = RhostSoftcodeRewriter.Rewrite("@trigger [tag(weather)]/update; think [tag(b,i)]");
+
+		await Assert.That(result.Text).IsEqualTo("@trigger [tagref(weather)]/update; think [tag(b,i)]");
+		await Assert.That(result.Notes).IsEquivalentTo([
+			"tag() written as tagref()",
+			"tag() with 2 argument(s) left as written: SharpMUSH's tag() is another function"
+		]);
+	}
+
+	[Test]
 	public async Task NestedCallsAreRewrittenInsideOut()
 	{
 		var result = RhostSoftcodeRewriter.Rewrite("think [streq(ljc(%0,3),abc)]");
