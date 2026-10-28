@@ -167,4 +167,113 @@ public class MapPlanTests
 		await Assert.That(MapPlan.DirectionNames(0, 0, -1)).IsEqualTo(("Down;d", "Up;u"));
 		await Assert.That(MapPlan.DirectionNames(0, 0, 0)).IsNull();
 	}
+
+	[Test]
+	public async Task ADescriptionIsOneLineWithEachBreakAsPercentR()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])));
+
+		plan.Describe("#10", "Tarred planks.  \r\nGulls overhead.\n");
+
+		var step = plan.Changes.Single().Steps.Single();
+		await Assert.That(step.Command).IsEqualTo("&DESCRIBE #10=Tarred planks.%rGulls overhead.");
+		await Assert.That(step.Check).IsEqualTo("get(#10/DESCRIBE)").Because("& stores the value as typed, so get() reads back the %r");
+		await Assert.That(plan.PlannedDescription("#10")).IsEqualTo("Tarred planks.%rGulls overhead.");
+	}
+
+	[Test]
+	public async Task ARoomThePlanDigsIsDescribedAndRenamedInItsDig()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])));
+		var key = plan.Dig("Shed", 1, 0, 0, "#10", "East;e", null);
+
+		plan.Describe(key, "Nets.");
+		plan.Rename(key, "Net shed");
+
+		var dig = plan.Changes.Single();
+		await Assert.That(Commands(dig).First()).IsEqualTo("@dig Net shed");
+		await Assert.That(Commands(dig).Last()).IsEqualTo($"&DESCRIBE {{{key}}}=Nets.");
+	}
+
+	[Test]
+	public async Task RenamingARoomChecksItsNameAndShowsIt()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])));
+
+		plan.Rename("#10", " Old quay ");
+
+		var change = plan.Changes.Single();
+		await Assert.That(change.Steps.Single()).IsEqualTo(new MapStep("@name #10=Old quay", "name(#10)", "Old quay"));
+		await Assert.That((change.Name, change.Other)).IsEqualTo(("Quay", "Old quay"));
+		await Assert.That(plan.Preview().Rooms.Single().Name).IsEqualTo("Old quay");
+	}
+
+	[Test]
+	public async Task AWayBetweenTwoRoomsOnTheMapIsOneOpenCheckedBothWays()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Shed", [1, 0, 0])));
+
+		plan.Join("#10", "#11", "East;e", "West;w");
+
+		var step = plan.Changes.Single().Steps.Single();
+		await Assert.That(step.Command).IsEqualTo("@open East;e=#11,West;w,#10");
+		await Assert.That(step.Check)
+			.IsEqualTo("and(strmatch(num(loc(%>)),num(#11)),strmatch(num(loc(last(lexits(#11)))),num(#10)))")
+			.Because("the shed has exits of its own already: the way back is the newest of them");
+		await Assert.That(plan.Builds).IsEqualTo(2);
+		await Assert.That(plan.Preview().Exits.Select(exit => (exit.Name, exit.Source, exit.Destination)))
+			.IsEquivalentTo([("East", "#10", "#11"), ("West", "#11", "#10")]);
+		await Assert.That(plan.NoWayIn()).IsEmpty();
+	}
+
+	[Test]
+	public async Task AnExitIsRenamedOrDestroyedButNotBoth()
+	{
+		var map = Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Shed", [1, 0, 0])) with
+		{
+			Exits = [new MapExitDto("#30", "East", ["e"], "#10", "#11", null) { Editable = true }],
+		};
+		var plan = new MapPlan(map);
+
+		plan.RenameExit("#30", "Shed door;door");
+
+		await Assert.That(plan.Changes.Single().Steps.Single()).IsEqualTo(new MapStep("@name #30=Shed door;door", "name(#30)", "Shed door"));
+		await Assert.That(plan.Preview().Exits.Single().Aliases).IsEquivalentTo(["door"]);
+
+		plan.RemoveExit("#30");
+
+		var change = plan.Changes.Single();
+		await Assert.That(change.Kind).IsEqualTo(MapChangeKind.RemoveExit);
+		await Assert.That(change.Steps.Single()).IsEqualTo(new MapStep("@destroy #30", "or(not(valid(#30)),hasflag(#30,GOING))", "1"));
+		await Assert.That(plan.Preview().Exits).IsEmpty();
+	}
+
+	[Test]
+	public async Task ALevelIsNamedOnTheMapObject()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])) with { LevelNames = new Dictionary<int, string> { [1] = "Loft" } });
+
+		plan.NameLevel(-1, "Sewers");
+		plan.NameLevel(1, "");
+
+		await Assert.That(plan.Changes.Select(change => change.Steps.Single().Command))
+			.IsEquivalentTo(["&MAP`LEVEL`-1 #50=Sewers", "&MAP`LEVEL`1 #50="]);
+		await Assert.That(plan.Preview().LevelNames).IsEquivalentTo(new Dictionary<int, string> { [-1] = "Sewers" });
+	}
+
+	[Test]
+	public async Task BuildsCountsEachRoomAndExitThePlanMakes()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Shed", [1, 0, 0])));
+
+		var loft = plan.Dig("Loft", 0, 0, 1, "#10", "Up;u", "Down;d");
+		plan.Dig("Cellar", 0, 0, -1, "#10", "Down;d", null);
+		plan.Join("#11", loft, "Ladder", null);
+
+		await Assert.That(plan.Builds).IsEqualTo(3 + 2 + 1);
+
+		plan.Drop(plan.Changes[0].Key);
+
+		await Assert.That(plan.Builds).IsEqualTo(2).Because("a way to a room no longer dug goes with it");
+	}
 }

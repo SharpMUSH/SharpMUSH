@@ -194,7 +194,8 @@
 
 .map-cell {
 	position: absolute;
-	border: 1px dashed transparent;
+	/* Faint until pointed at, so a builder sees where a room may go without the grid drowning the rooms. */
+	border: 1px dashed color-mix(in srgb, var(--border) 60%, transparent);
 	border-radius: 8px;
 	background: transparent;
 	cursor: pointer;

@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Имя</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Сохранить место</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Сохранить размер</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Убрать с этой карты</value>
   </data>
@@ -6772,5 +6766,89 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} сейчас здесь</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Задать место</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Задать размер</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Задать имя</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Задать описание</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Описание</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Имена выхода</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Отмена</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>в {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Переименовать</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Уничтожить</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Открыть путь</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>В комнату</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Название уровня</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Этот план создаёт объектов: {0}; ваша квота позволяет ещё {1}.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Этот план создаёт объектов: {0}, но квота позволяет ещё только {1}. Сначала уберите часть изменений.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Описать {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Переименовать {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Открыть путь из {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Переименовать выход {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Уничтожить выход {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Назвать уровень {1}: {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Убрать название уровня {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Новая карта</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Название карты</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Раскладка</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>Карта — это предмет, который вы носите. Комнаты входят в неё, когда отнесены к её зоне.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Создать</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>Игра не создала карту.</value>
   </data>
 </root>

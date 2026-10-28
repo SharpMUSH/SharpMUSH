@@ -70,6 +70,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	{
 		Map = new("#55", "Harbour works", MapKinds.Coordinates, null),
 		Rooms = [.. HarbourMap.Rooms.Select(room => room with { Editable = true })],
+		Exits = [.. HarbourMap.Exits.Select(exit => exit with { Editable = exit.Id != "#32" })],
 		CanEdit = true,
 	};
 
@@ -109,6 +110,9 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		[new("#83", "Pier head", [0, 0, 0], null) { People = ["Ada", "Bram"] }],
 		[new("#34", "Ladder", [], "#83", "#84", null) { DestinationName = "Boat" }], null, Truncated: false);
 
+	/// <summary>How many more objects the builder of the harbour works may build; null for no quota.</summary>
+	public int? BuildsLeft { get; set; }
+
 	/// <summary>What an <c>@open</c>'s check reads: 1 when both exits were opened and linked.</summary>
 	public string OpenReads { get; set; } = "1";
 
@@ -118,7 +122,12 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		if (path == "api/commands/eval" && request.Content is not null)
 		{
 			var asked = await request.Content.ReadFromJsonAsync<PortalEvalRequest>(cancellationToken);
-			return Json(new PortalCommandResponse([], asked!.Expression == "u(#83/SPIRIT`DESC)" ? "Planks, tar\nand gulls." : "", false));
+			return Json(new PortalCommandResponse([], asked!.Expression switch
+			{
+				"u(#83/SPIRIT`DESC)" => "Planks, tar\nand gulls.",
+				"get(#11/DESCRIBE)" => "Whitewashed.%rA lamp above.",
+				_ => "",
+			}, false));
 		}
 		if (path == "api/commands" && request.Content is not null)
 		{
@@ -134,7 +143,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/52" => Json(CavesMap),
 			"api/maps/53" => Json(IsleMap),
 			"api/maps/54" => Json(PlainIsleMap),
-			"api/maps/55" => Json(WorksMap),
+			"api/maps/55" => Json(WorksMap with { BuildsLeft = BuildsLeft }),
 			"api/maps/56" => Json(FarMap),
 			"api/maps/57" => Json(ShoreMap),
 			"api/maps/58" => Json(PierMap),
@@ -479,6 +488,125 @@ public class WorldMapPageTests : TrackingBunitContext
 			.Because("@open names the exit it made even when the way back could not be opened");
 	}
 
+	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		return cut;
+	}
+
+	private static Task Click(IRenderedComponent<SharpMUSH.Client.Pages.WorldMap> cut, string label) =>
+		cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == label).ClickAsync();
+
+	[Test]
+	public async Task ABuilderRenamesAndDescribesARoomFromItsOwnDescription()
+	{
+		var cut = await EditWorksAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
+
+		cut.WaitForState(() => cut.Find(".map-builder textarea").GetAttribute("value") == "Whitewashed.\nA lamp above.");
+		await cut.Find(".map-builder input").InputAsync("Old light");
+		await Click(cut, "NavMapSetName");
+		await cut.Find(".map-builder textarea").ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = "Whitewashed.\nThe lamp is out." });
+		await Click(cut, "NavMapSetDescription");
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent)).IsEquivalentTo(
+			["@name #11=Old light", "&DESCRIBE #11=Whitewashed.%rThe lamp is out."]);
+		await Assert.That(cut.Find(".map-review").TextContent).Contains("NavMapPlanRename(Lighthouse, Old light)");
+		await Assert.That(_api.Commands).IsEmpty();
+	}
+
+	[Test]
+	public async Task ABuilderRenamesAnExitDestroysAnotherAndOpensAWayToARoomOnTheMap()
+	{
+		var cut = await EditWorksAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
+
+		await Assert.That(cut.FindAll(".map-builder-list li").Count(item => item.TextContent.Contains("NavMapRename"))).IsEqualTo(1)
+			.Because("the builder does not control the way up");
+		await Click(cut, "NavMapRename");
+		await cut.FindAll(".map-builder-list input").Single().InputAsync("Seaward;sea");
+		await cut.FindAll(".map-builder-list button").First(button => button.TextContent.Trim() == "NavMapSetName").ClickAsync();
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("Seaward");
+
+		// No select is open in a test, so the room goes in through the select's own field.
+		await cut.InvokeAsync(() => cut.FindComponents<MudBlazor.MudSelect<string>>()
+			.Single(select => select.Instance.Class?.Contains("map-builder-join") == true)
+			.Instance.ValueChanged.InvokeAsync("#10"));
+		await Assert.That(cut.FindAll(".map-builder input").Select(input => input.GetAttribute("value"))).Contains("South;s")
+			.Because("the quay is south of the lighthouse, and the old South is Seaward now");
+		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapExitTaken").Because("the quay has a North already");
+		await cut.FindAll(".map-builder input").Single(input => input.GetAttribute("value") == "North;n").InputAsync("Lighthouse steps;steps");
+		await Click(cut, "NavMapAddToPlan");
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent)).IsEquivalentTo(
+			["@name #31=Seaward;sea", "@open South;s=#10,Lighthouse steps;steps,#11"]);
+	}
+
+	[Test]
+	public async Task AnEmptyCellIsJoinedToTheRoomStraightBesideItNotTheOneChosen()
+	{
+		var cut = await EditWorksAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Quay").ClickAsync();
+
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 1)']").ClickAsync();
+		await cut.Find(".map-builder input").InputAsync("Boathouse");
+		await Click(cut, "NavMapAddToPlan");
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.Find(".map-review-commands").TextContent).Contains("@open East;e=<Boathouse>,West;w,#11")
+			.Because("the quay is only at the cell's corner; the lighthouse is beside it");
+	}
+
+	[Test]
+	public async Task APlanLargerThanTheQuotaLeftCannotBeApplied()
+	{
+		_api.BuildsLeft = 2;
+		var cut = await EditWorksAsync();
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 0)']").ClickAsync();
+		await cut.Find(".map-builder input").InputAsync("Boathouse");
+		await Click(cut, "NavMapAddToPlan");
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.Find(".map-builder-warning").TextContent).IsEqualTo("NavMapQuotaShort(3, 2)");
+		await Assert.That(cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapApply(1)").HasAttribute("disabled"))
+			.IsTrue();
+	}
+
+	[Test]
+	public async Task ApplyingKeepsTheChosenRoomAndItsLevel()
+	{
+		var cut = await EditWorksAsync();
+		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
+		await Click(cut, "NavMapSetPlace");
+		await Click(cut, "NavMapReview");
+		await Click(cut, "NavMapApply(1)");
+
+		cut.WaitForAssertion(() => cut.Find(".map-applied"));
+		await Assert.That(cut.Find(".map-builder-title").TextContent).IsEqualTo("Lighthouse");
+	}
+
+	[Test]
+	public async Task NewMapCreatesTheObjectGivesItAKindAndOpensIt()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>();
+		cut.WaitForAssertion(() => cut.Find(".map-tree"));
+
+		await cut.FindAll(".map-list button").First(button => button.TextContent.Trim() == "NavMapNewMap").ClickAsync();
+		await cut.Find(".map-new-form input").InputAsync("Docks");
+		await cut.FindAll(".map-new-form button").First(button => button.TextContent.Trim() == "NavMapCreate").ClickAsync();
+
+		cut.WaitForState(() => _api.Commands.Count == 2);
+		await Assert.That(_api.Commands).IsEquivalentTo(["@create Docks", "&MAP`KIND #91=compass"]);
+		var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
+		cut.WaitForState(() => navigation.Uri.EndsWith("/map/91", StringComparison.Ordinal));
+	}
+
 	[Test]
 	public async Task EditingASparseMapOffersOnlyTheCellsBesideItsRooms()
 	{
@@ -500,12 +628,12 @@ public class WorldMapPageTests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
 		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
 		await cut.FindAll("button.map-room").First(room => room.TextContent.Trim() == "Lighthouse").ClickAsync();
-		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("0");
+		await Assert.That(cut.Find(".map-builder-x input").GetAttribute("value")).IsEqualTo("0");
 
 		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 1)']").ClickAsync();
 		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapMoveHere(Lighthouse)").ClickAsync();
 
-		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("1").Because("the fields follow the room");
+		await Assert.That(cut.Find(".map-builder-x input").GetAttribute("value")).IsEqualTo("1").Because("the fields follow the room");
 		await Assert.That(cut.Find(".map-builder").TextContent).Contains("NavMapChangesWaiting(1)");
 		await Assert.That(_api.Commands).IsEmpty();
 	}

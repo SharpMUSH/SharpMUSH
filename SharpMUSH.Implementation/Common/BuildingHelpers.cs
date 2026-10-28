@@ -810,6 +810,21 @@ public static class BuildingHelpers
 	}
 
 	/// <summary>
+	/// How many more objects <paramref name="executor"/> may build before <see cref="WithBuildingQuotaAsync{T}"/> refuses
+	/// one, by the same test; null when nothing limits it.
+	/// </summary>
+	public static async ValueTask<int?> BuildsLeftAsync(IMediator mediator, IOptionsWrapper<SharpMUSHOptions> configuration,
+		AnySharpObject executor)
+	{
+		if (await executor.IsGuest()) return 0;
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		var cost = (int)configuration.CurrentValue.Cost.QuotaCost;
+		if (!configuration.CurrentValue.Limit.UseQuota || cost <= 0 || await NoQuotaAsync(executor, owner)) return null;
+		var left = owner.Quota - await mediator.Send(new GetOwnedObjectCountQuery(owner));
+		return Math.Max(0, left / cost);
+	}
+
+	/// <summary>
 	/// <c>NoQuota(x)</c> (<c>hdrs/mushdb.h:44-47</c>): privileged, or owned by someone privileged, or
 	/// holding No_Quota, or — unless MISTRUSTed, which is what stops an object borrowing its owner's
 	/// exemption — owned by a holder of it.

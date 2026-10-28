@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -73,6 +74,26 @@ public class BuildingQuotaTests
 
 	private async Task<string[]> Named(string name)
 		=> (await AsGod($"think lsearch(all,name,{name})")).Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
+	/// <summary>
+	/// What the World map's builder is told is left, by the same test a build is admitted by: none of it for someone the
+	/// quota does not bind.
+	/// </summary>
+	[Test]
+	public async ValueTask BuildsLeftCountsTheSlotsABuildIsAdmittedBy()
+	{
+		var mortal = await MortalWithSlotsAsync("BqtLeft", 2);
+		var options = WebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>();
+		async Task<int?> LeftAsync(DBRef who) =>
+			await BuildingHelpers.BuildsLeftAsync(Mediator, options, (await Mediator.Send(new GetObjectNodeQuery(who))).Expect<AnySharpObject>());
+
+		await Assert.That(await LeftAsync(mortal.DbRef)).IsEqualTo(2);
+
+		await Run(mortal.Handle, $"@create BqtLeft{Guid.NewGuid():N}");
+
+		await Assert.That(await LeftAsync(mortal.DbRef)).IsEqualTo(1);
+		await Assert.That(await LeftAsync(new DBRef(1))).IsNull().Because("God builds without a quota");
+	}
 
 	/// <summary>
 	/// A player is never counted against their own quota (<c>src/wiz.c:186</c>, <c>owned = -1</c>).

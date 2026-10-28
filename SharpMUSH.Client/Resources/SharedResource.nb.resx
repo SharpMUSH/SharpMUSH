@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Navn</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Lagre plassering</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Lagre størrelse</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Ta av dette kartet</value>
   </data>
@@ -6772,5 +6766,89 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} her nå</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Angi plassering</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Angi størrelse</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Angi navn</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Angi beskrivelse</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Beskrivelse</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>Utgangens navn</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Avbryt</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>til {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Gi nytt navn</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Ødelegg</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Åpne en vei</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Til rom</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>Nivåets navn</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Denne planen bygger {0} objekter; kvoten din tillater {1} til.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Denne planen bygger {0} objekter, men kvoten din tillater bare {1} til. Fjern noen endringer først.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>Beskriv {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>Gi {0} nytt navn: {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Åpne en vei fra {0} til {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>Gi utgangen {0} nytt navn: {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>Ødelegg utgangen {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>Kall nivå {1} {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>Fjern navnet på nivå {0}</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Nytt kart</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>Kartets navn</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Oppsett</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>Kartet er et objekt du bærer. Rom blir med når de soneres til det.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Opprett</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>Spillet laget ikke kartet.</value>
   </data>
 </root>

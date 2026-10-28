@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>名称</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>保存位置</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>保存大小</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>从这张地图移除</value>
   </data>
@@ -6772,5 +6766,89 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>此刻有 {0} 人在这里</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>设置位置</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>设置大小</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>设置名称</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>设置描述</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>描述</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>出口名称</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>取消</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>通往 {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>摧毁</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>开辟通路</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>通往房间</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>层名称</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>此计划将建造 {0} 个对象；你的配额还允许 {1} 个。</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>此计划将建造 {0} 个对象，但你的配额只允许再建 {1} 个。请先去掉一些更改。</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>描述 {0}</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>将 {0} 重命名为 {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>开辟从 {0} 到 {1} 的通路</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>将出口 {0} 重命名为 {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>摧毁出口 {0}</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>将第 {1} 层命名为 {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>清除第 {0} 层的名称</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>新地图</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>地图名称</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>布局</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>地图是你携带的一个对象。房间被划入它的区域后即归入此地图。</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>创建</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>游戏未能创建该地图。</value>
   </data>
 </root>

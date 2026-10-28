@@ -6707,12 +6707,6 @@
   <data name="NavMapRoomName" xml:space="preserve">
     <value>Név</value>
   </data>
-  <data name="NavMapSavePlace" xml:space="preserve">
-    <value>Hely mentése</value>
-  </data>
-  <data name="NavMapSaveSize" xml:space="preserve">
-    <value>Méret mentése</value>
-  </data>
   <data name="NavMapTakeOff" xml:space="preserve">
     <value>Levétel erről a térképről</value>
   </data>
@@ -6772,5 +6766,89 @@
   </data>
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} most itt</value>
+  </data>
+  <data name="NavMapSetPlace" xml:space="preserve">
+    <value>Hely beállítása</value>
+  </data>
+  <data name="NavMapSetSize" xml:space="preserve">
+    <value>Méret beállítása</value>
+  </data>
+  <data name="NavMapSetName" xml:space="preserve">
+    <value>Név beállítása</value>
+  </data>
+  <data name="NavMapSetDescription" xml:space="preserve">
+    <value>Leírás beállítása</value>
+  </data>
+  <data name="NavMapRoomDescription" xml:space="preserve">
+    <value>Leírás</value>
+  </data>
+  <data name="NavMapExitNames" xml:space="preserve">
+    <value>A kijárat nevei</value>
+  </data>
+  <data name="NavMapCancel" xml:space="preserve">
+    <value>Mégse</value>
+  </data>
+  <data name="NavMapLeadsTo" xml:space="preserve">
+    <value>ide: {0}</value>
+  </data>
+  <data name="NavMapRename" xml:space="preserve">
+    <value>Átnevezés</value>
+  </data>
+  <data name="NavMapRemoveExit" xml:space="preserve">
+    <value>Megsemmisítés</value>
+  </data>
+  <data name="NavMapJoin" xml:space="preserve">
+    <value>Átjáró nyitása</value>
+  </data>
+  <data name="NavMapJoinTo" xml:space="preserve">
+    <value>Szobába</value>
+  </data>
+  <data name="NavMapLevelName" xml:space="preserve">
+    <value>A szint neve</value>
+  </data>
+  <data name="NavMapQuota" xml:space="preserve">
+    <value>Ez a terv {0} objektumot épít; a kvótád még {1} darabot enged.</value>
+  </data>
+  <data name="NavMapQuotaShort" xml:space="preserve">
+    <value>Ez a terv {0} objektumot épít, de a kvótád már csak {1} darabot enged. Előbb vegyél ki néhány változtatást.</value>
+  </data>
+  <data name="NavMapPlanDescribe" xml:space="preserve">
+    <value>{0} leírása</value>
+  </data>
+  <data name="NavMapPlanRename" xml:space="preserve">
+    <value>{0} átnevezése erre: {1}</value>
+  </data>
+  <data name="NavMapPlanJoin" xml:space="preserve">
+    <value>Átjáró nyitása innen: {0}, ide: {1}</value>
+  </data>
+  <data name="NavMapPlanRenameExit" xml:space="preserve">
+    <value>A(z) {0} kijárat átnevezése erre: {1}</value>
+  </data>
+  <data name="NavMapPlanRemoveExit" xml:space="preserve">
+    <value>A(z) {0} kijárat megsemmisítése</value>
+  </data>
+  <data name="NavMapPlanNameLevel" xml:space="preserve">
+    <value>A(z) {1}. szint neve: {0}</value>
+  </data>
+  <data name="NavMapPlanClearLevel" xml:space="preserve">
+    <value>A(z) {0}. szint nevének törlése</value>
+  </data>
+  <data name="NavMapNewMap" xml:space="preserve">
+    <value>Új térkép</value>
+  </data>
+  <data name="NavMapNewName" xml:space="preserve">
+    <value>A térkép neve</value>
+  </data>
+  <data name="NavMapNewKind" xml:space="preserve">
+    <value>Elrendezés</value>
+  </data>
+  <data name="NavMapNewNote" xml:space="preserve">
+    <value>A térkép egy nálad lévő objektum. A szobák akkor tartoznak hozzá, ha a zónájába kerülnek.</value>
+  </data>
+  <data name="NavMapCreate" xml:space="preserve">
+    <value>Létrehozás</value>
+  </data>
+  <data name="NavMapNewFailed" xml:space="preserve">
+    <value>A játék nem hozta létre a térképet.</value>
   </data>
 </root>
