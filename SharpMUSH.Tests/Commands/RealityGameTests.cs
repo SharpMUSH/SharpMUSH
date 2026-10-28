@@ -342,6 +342,9 @@ public class RealityGameTests
 				await Factory.CommandParser.FromState(ParserState.RootFor(viewerRef)).CommandListParse(MarkupText.Plain("look"));
 			await Assert.That(response.Body.ToString()).Contains(executable ? "custom-description-3" : "ordinary-description");
 			await Assert.That(response.Body.ToString()).DoesNotContain(executable ? "ordinary-description" : "custom-description");
+			// The World map describes the room from the same attribute.
+			await Assert.That(await Get<ILookService>().RoomDescriptionAttributeAsync(viewer, room))
+				.IsEqualTo(executable ? "LAYERDESC" : "DESCRIBE");
 		}
 		finally { await policy.SaveConfigurationAsync(original, default); }
 	}

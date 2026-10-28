@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models.Portal.Setup;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// The World map's reads (<c>GET api/maps</c>, <c>GET api/maps/{dbref}</c>, <c>GET api/maps/route/{dbref}</c>, <c>GET api/maps/here</c>), as the acting character. Nothing is kept:
+/// The World map's reads (<c>GET api/maps</c>, <c>GET api/maps/{dbref}</c>, <c>GET api/maps/route/{dbref}</c>, <c>GET api/maps/here</c>, <c>GET api/maps/description/{dbref}</c>), as the acting character. Nothing is kept:
 /// a builder's change shows on the next read.
 /// </summary>
 public class WorldMapService(IHttpClientFactory httpClientFactory, ServerInfoService? serverInfo = null)
@@ -28,4 +28,8 @@ public class WorldMapService(IHttpClientFactory httpClientFactory, ServerInfoSer
 	public Task<ApiResult<MapRouteDto>> RouteAsync(string room)
 		=> Client.GetFeatureApiAsync<MapRouteDto>(serverInfo, GameFeatures.WorldMap, $"api/maps/route/{room.TrimStart('#')}",
 			"The server returned no route.");
+
+	public Task<ApiResult<MapDescriptionDto>> DescriptionAsync(string room)
+		=> Client.GetFeatureApiAsync<MapDescriptionDto>(serverInfo, GameFeatures.WorldMap,
+			$"api/maps/description/{room.TrimStart('#')}", "The server returned no description.");
 }

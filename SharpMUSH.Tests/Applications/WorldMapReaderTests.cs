@@ -382,6 +382,13 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
+	[Arguments("Port\"side", new[] { "port" }, "port")]
+	[Arguments("Port\"side", new string[0], null)]
+	[Arguments("Old \"gate\"", new string[0], null)]
+	public async Task AWordNeverCarriesAQuoteWalkWouldSplitOn(string name, string[] aliases, string? word)
+		=> await Assert.That(WorldMapReader.Word(name, aliases)).IsEqualTo(word);
+
+	[Test]
 	public async Task NoRouteToARoomNoExitReaches()
 	{
 		var town = Map(50, "Town", MapKinds.Compass);

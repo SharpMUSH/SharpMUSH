@@ -368,12 +368,14 @@
     }
 
     /// <summary>
-    /// The room's description, as its DESCRIBE evaluates for the character the way <c>look</c> would; null while asked,
-    /// when it has none, or when the character may not read it. Asked with the route, so a stale reply is dropped too.
+    /// The room's description, evaluated for the character from the attribute <c>look</c> would show them (a reality
+    /// layer's own, or DESCRIBE); null while asked, when it has none, or when the character may not read it. Asked with
+    /// the route, so a stale reply is dropped too.
     /// </summary>
     private async Task LoadDescriptionAsync(string id, int asked)
     {
-        var result = await Commands.EvaluateAsync($"u({id}/DESCRIBE)");
+        if (await Maps.DescriptionAsync(id) is not MapDescriptionDto described || asked != _routeAsked) return;
+        var result = await Commands.EvaluateAsync($"u({id}/{described.Attribute})");
         if (asked != _routeAsked) return;
         _description = result is PortalCommandResponse { Result: { Length: > 0 } text } && !text.StartsWith("#-1", StringComparison.Ordinal)
             ? text

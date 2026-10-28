@@ -56,4 +56,10 @@ public interface ILookService
 		AnyOptionalSharpObject viewing,
 		LookKey key,
 		bool lookOutside = false);
+
+	/// <summary>
+	/// The attribute <see cref="LookRoom"/> shows as <paramref name="room"/>'s description to <paramref name="looker"/>
+	/// standing outside it: the description of a reality layer they share, when they may run it, else <c>DESCRIBE</c>.
+	/// </summary>
+	ValueTask<string> RoomDescriptionAttributeAsync(AnySharpObject looker, AnySharpObject room);
 }

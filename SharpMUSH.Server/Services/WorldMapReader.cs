@@ -241,8 +241,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	/// </summary>
 	public async Task<Found<MapRouteDto>> RouteAsync(AnySharpObject viewer, int number, CancellationToken ct)
 	{
-		if (number < 0 || await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), ct) is not AnySharpObject target
-			|| !target.IsRoom || !await VisibleAsync(viewer, target, ct)) return new NotFound();
+		if (await RoomAsync(viewer, number, ct) is not AnySharpObject) return new NotFound();
 		var start = (await viewer.Where()).Object().DBRef;
 		if (start.Number == number) return new MapRouteDto([], null);
 
@@ -268,6 +267,13 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		}
 		return new NotFound();
 	}
+
+	/// <summary>Room <paramref name="number"/>, when it is a room <paramref name="viewer"/> may see.</summary>
+	public async Task<Found<AnySharpObject>> RoomAsync(AnySharpObject viewer, int number, CancellationToken ct) =>
+		number >= 0 && await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), ct) is AnySharpObject { IsRoom: true } room
+			&& await VisibleAsync(viewer, room, ct)
+			? room
+			: new NotFound();
 
 	private async Task<MapRouteDto> StepsAsync(AnySharpObject viewer,
 		Dictionary<int, (SharpExit Exit, AnySharpObject Room, int From)> came, int start, int end, CancellationToken ct)
@@ -298,13 +304,13 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	}
 
 	/// <summary>
-	/// What to type to take an exit in a <c>walk</c> line: its name, or its first alias with no space, or else its name
-	/// in double quotes; null when it has no name <c>walk</c> can take.
+	/// What to type to take an exit in a <c>walk</c> line: its name, or its first alias with no space or double quote,
+	/// or else its name in double quotes; null when it has no name <c>walk</c> can take.
 	/// </summary>
 	public static string? Word(string name, IEnumerable<string> aliases) =>
 		new[] { name }.Concat(aliases)
 			.Select(word => word.Trim())
-			.FirstOrDefault(word => word.Length > 0 && !word.Any(char.IsWhiteSpace))
+			.FirstOrDefault(word => word.Length > 0 && !word.Any(letter => char.IsWhiteSpace(letter) || letter == '"'))
 		?? (name.Trim() is { Length: > 0 } spaced && !spaced.Contains('"') ? $"\"{spaced}\"" : null);
 
 	/// <summary>

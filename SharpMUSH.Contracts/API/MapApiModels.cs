@@ -123,6 +123,10 @@ public sealed record MapHereDto(string Room, string Name, MapSummaryDto? Map);
 /// </param>
 public sealed record MapRouteDto(IReadOnlyList<MapStepDto> Steps, string? Command);
 
+/// <summary>Which attribute a look shows as a room's description to the viewer: a reality layer's own, or <c>DESCRIBE</c>.</summary>
+/// <param name="Attribute">The attribute's name.</param>
+public sealed record MapDescriptionDto(string Attribute);
+
 /// <param name="Exit">The exit's dbref.</param>
 /// <param name="Name">The exit's name.</param>
 /// <param name="Source">The room it leaves from.</param>

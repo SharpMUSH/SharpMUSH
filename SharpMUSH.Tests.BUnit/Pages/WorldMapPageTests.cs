@@ -118,7 +118,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		if (path == "api/commands/eval" && request.Content is not null)
 		{
 			var asked = await request.Content.ReadFromJsonAsync<PortalEvalRequest>(cancellationToken);
-			return Json(new PortalCommandResponse([], asked!.Expression == "u(#83/DESCRIBE)" ? "Planks, tar\nand gulls." : "", false));
+			return Json(new PortalCommandResponse([], asked!.Expression == "u(#83/SPIRIT`DESC)" ? "Planks, tar\nand gulls." : "", false));
 		}
 		if (path == "api/commands" && request.Content is not null)
 		{
@@ -141,6 +141,8 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
+			// The pier's sailors see it as the spirit layer describes it.
+			"api/maps/description/83" => Json(new MapDescriptionDto("SPIRIT`DESC")),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
 		};
 	}
