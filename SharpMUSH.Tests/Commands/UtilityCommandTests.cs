@@ -73,9 +73,10 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookBasic");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look"));
 
-		// Not the whole name: the HALT flag ('h') gets set on Room Zero by other tests in the shared session.
-		// The Ancestor Room's NAMEFORMAT sets the name into a rule, so the line does not start with it.
-		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Room Zero(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		// The Ancestor Room's NAMEFORMAT sets the name into a rule, so the line does not start with it. A mortal who
+		// may not examine or link to Room Zero is not shown its dbref (unparse.c:118-119).
+		await Assert.That(Heard(testPlayer.DbRef, message => message.Contains("Room Zero", StringComparison.Ordinal)
+			&& !message.Contains("(#0", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]
@@ -95,7 +96,7 @@ public class UtilityCommandTests
 		// The room name must be sent as an MString that, when rendered as ANSI, contains escape codes
 		// because name.Hilight() makes it bold.
 		await Assert.That(WebAppFactoryArg.Notifications.RawFor(testPlayer.DbRef).Skip(before)
-				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, $"{roomName}(#") && RendersAnsiEscapes(msg)))
+				.Where(msg => TestHelpers.MessagePlainTextStartsWith(msg, roomName) && RendersAnsiEscapes(msg)))
 			.Count().IsEqualTo(1);
 	}
 
@@ -106,7 +107,9 @@ public class UtilityCommandTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "LookAtObj");
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("look #1"));
 
-		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("God(#1", StringComparison.Ordinal))).Count().IsEqualTo(1);
+		// A mortal may not examine God, so is shown the name alone (unparse.c:118-119).
+		await Assert.That(Heard(testPlayer.DbRef, message => message.StartsWith("God", StringComparison.Ordinal)
+			&& !message.Contains("(#1", StringComparison.Ordinal))).Count().IsEqualTo(1);
 	}
 
 	[Test]

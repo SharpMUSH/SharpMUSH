@@ -237,12 +237,12 @@ public class LookService(
 			return MarkupText.Empty;
 		}
 
-		// unparse_room (src/unparse.c:71) obeys MYOPIC.
+		// unparse_room (src/unparse.c:71) obeys MYOPIC, and shows the dbref only to a looker real_unparse
+		// lets see it.
 		var defaultFormattedName = await look.Looker.IsMyopic()
 			? await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look)
-			: await MessageFormatting.FormatObjectWithDbrefMString(look.ViewingObject,
-				await FlagView.ForAsync(look.Looker, connectionService),
-				name: await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
+			: await MessageFormatting.UnparseObjectMStringAsync(permissionService, look.Looker, look.Viewing,
+				connectionService, await Names.UnparseNameAsync(look.Viewing, MonikerPlace.Look));
 
 		if (!look.Viewing.IsRoom || !look.ViewingFromInside)
 		{
