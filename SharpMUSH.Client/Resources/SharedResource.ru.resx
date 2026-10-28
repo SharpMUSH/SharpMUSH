@@ -6741,10 +6741,10 @@
     <value>Вырыть {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Ни один выход на этой карте не ведёт туда оттуда, где вы находитесь.</value>
+    <value>Ни один видимый тебе путь не ведёт туда отсюда.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>У выхода на этом маршруте нет имени без пробела, поэтому маршрут нельзя набрать одной строкой.</value>
+    <value>У выхода на этом пути имя, которое walk не принимает, поэтому путь нельзя ввести одной строкой.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Копировать команду</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Легенда</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Ты в {0}, которой нет ни на одной карте.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, ни на одной карте</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Сейчас здесь: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} сейчас здесь</value>
   </data>
 </root>

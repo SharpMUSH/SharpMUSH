@@ -85,6 +85,9 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 	/// mapper, in lower case; null when unset. The map's <see cref="MapDto.Legend"/> says how a kind is drawn.
 	/// </summary>
 	public string? Environment { get; init; }
+
+	/// <summary>The connected players the viewer may know are in the room, by name: as <c>loc()</c> would find them, and not DARK or hidden.</summary>
+	public IReadOnlyList<string> People { get; init; } = [];
 }
 
 /// <summary>How a map draws the rooms of one kind.</summary>
@@ -100,15 +103,29 @@ public sealed record MapLegendDto(string Type, string Label, string? Tone, strin
 /// <param name="Destination">The room it leads to, when that is a room the viewer may see; null otherwise.</param>
 /// <param name="DestinationMap">The map that room is on, when that is not this one and the viewer may see it.</param>
 public sealed record MapExitDto(string Id, string Name, IReadOnlyList<string> Aliases, string Source, string? Destination,
-	MapSummaryDto? DestinationMap);
+	MapSummaryDto? DestinationMap)
+{
+	/// <summary>The name of the room it leads to, whenever <see cref="Destination"/> is set, whether or not that room is on a map.</summary>
+	public string? DestinationName { get; init; }
+}
+
+/// <summary>Where the viewer stands, for a map list that opens on the map they are on.</summary>
+/// <param name="Room">The viewer's room.</param>
+/// <param name="Name">That room's name.</param>
+/// <param name="Map">The map the room is on, when it is on one the viewer may see.</param>
+public sealed record MapHereDto(string Room, string Name, MapSummaryDto? Map);
 
 /// <summary>The way from where the viewer stands to a room, over exits they may see, crossing maps where it must.</summary>
 /// <param name="Steps">Each exit in turn; empty when the viewer is already there.</param>
 /// <param name="Command">
 /// <c>walk north up</c>: one line that takes the route, each exit by its name or, when that has a space, by an alias
-/// without one. Null when an exit has no such name, or there are no steps.
+/// without one, or else by its name in double quotes. Null when an exit has no such name, or there are no steps.
 /// </param>
 public sealed record MapRouteDto(IReadOnlyList<MapStepDto> Steps, string? Command);
+
+/// <summary>Which attribute a look shows as a room's description to the viewer: a reality layer's own, or <c>DESCRIBE</c>.</summary>
+/// <param name="Attribute">The attribute's name.</param>
+public sealed record MapDescriptionDto(string Attribute);
 
 /// <param name="Exit">The exit's dbref.</param>
 /// <param name="Name">The exit's name.</param>

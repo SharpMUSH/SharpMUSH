@@ -108,6 +108,12 @@
                         }
                     }
                     <span class="map-room-name">@room.Room.Name</span>
+                    @if (room.Room.People.Count > 0)
+                    {
+                        <span class="map-room-count" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" />@room.Room.People.Count
+                        </span>
+                    }
                 </button>
             }
         </div>
@@ -295,6 +301,7 @@
     {
         room.Room.Name,
         Kind(room)?.Label,
+        room.Room.People.Count > 0 ? Loc["NavMapPeopleCount", room.Room.People.Count].Value : null,
         here ? Loc["NavMapYouAreHere"].Value : null,
     }.Where(part => part is not null));
 

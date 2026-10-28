@@ -226,6 +226,25 @@ public class MovementCommandTests
 	}
 
 	[Test]
+	public async ValueTask WalkTakesAnExitWithASpaceInDoubleQuotes()
+	{
+		var start = await Players.DigRoomAsync("WalkQuotedStart");
+		var middle = await Players.DigRoomAsync("WalkQuotedMiddle");
+		var end = await Players.DigRoomAsync("WalkQuotedEnd");
+		var walker = await Players.WizardAsync("WalkQuoted", start);
+		var road = $"{TestIsolationHelpers.GenerateUniqueName("Harbour")} road";
+		var second = TestIsolationHelpers.GenerateUniqueName("WalkQuotedOn");
+		await Players.RunAsync(walker, $"@open {road}={middle}");
+		await Players.RunAsync(walker, $"@tel me={middle}");
+		await Players.RunAsync(walker, $"@open {second}={end}");
+		await Players.RunAsync(walker, $"@tel me={start}");
+
+		await Players.RunAsync(walker, $"walk \"{road}\" {second}");
+
+		await Assert.That(await WhereIsAsync(walker.DbRef)).IsEqualTo(end.Number);
+	}
+
+	[Test]
 	public async ValueTask TeleportPreventsLoops()
 	{
 		var boxName = TestIsolationHelpers.GenerateUniqueName("TelBox");

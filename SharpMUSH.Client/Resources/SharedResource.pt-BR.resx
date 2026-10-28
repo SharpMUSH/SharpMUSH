@@ -6741,10 +6741,10 @@
     <value>Cavar {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Nenhuma saída deste mapa leva até lá de onde você está.</value>
+    <value>Nenhum caminho que você vê leva até lá de onde você está.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Uma saída desta rota não tem nome sem espaço, então a rota não pode ser digitada em uma linha.</value>
+    <value>Uma saída desta rota tem um nome que walk não aceita, então a rota não cabe em uma linha.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Copiar o comando</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legenda</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Você está em {0}, que não está em nenhum mapa.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, em nenhum mapa</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Aqui agora: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} aqui agora</value>
   </data>
 </root>

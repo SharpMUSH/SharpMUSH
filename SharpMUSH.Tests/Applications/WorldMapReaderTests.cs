@@ -35,6 +35,7 @@ public class WorldMapReaderTests
 			(_zones.GetValueOrDefault(call.Arg<GetObjectsByZoneQuery>().Zone is DBRef zone ? zone.Number : -1) ?? []).ToAsyncEnumerable());
 		_mediator.CreateStream(Arg.Any<GetExitsQuery>(), Arg.Any<CancellationToken>()).Returns(AsyncEnumerable.Empty<SharpExit>());
 		_reality.CanPerceiveAsync(Arg.Any<DBRef>(), Arg.Any<DBRef>(), Arg.Any<CancellationToken>()).Returns(true);
+		_connections.GetAll().Returns(_ => _connected.ToAsyncEnumerable());
 		_permissions.CanExamine(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>()).Returns(false);
 		_attributes.GetAttributeAsync(Arg.Any<AnySharpObject>(), Arg.Any<AnySharpObject>(), Arg.Any<string>(),
 			IAttributeService.AttributeMode.Read, false).Returns(call =>
@@ -46,7 +47,10 @@ public class WorldMapReaderTests
 		});
 	}
 
-	private WorldMapReader Reader => new(_mediator, _permissions, _reality, _attributes);
+	private readonly IConnectionService _connections = Substitute.For<IConnectionService>();
+	private readonly List<IConnectionService.ConnectionData> _connected = [];
+
+	private WorldMapReader Reader => new(_mediator, _permissions, _reality, _attributes, _connections);
 
 	private AnySharpObject? Find(int number) =>
 		_objects.GetAllRooms().Select(room => new AnySharpObject(room)).Concat(_objects.GetAllObjects())
@@ -290,6 +294,27 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
+	public async Task ARoomListsTheConnectedPlayersTheViewerMayLocateThere()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var quay = Room(10, "Quay", harbour);
+		var sailor = _objects.CreatePlayer(4, "Sailor", quay);
+		var spy = _objects.CreatePlayer(5, "Spy", quay);
+		_objects.CreatePlayer(6, "Ashore", _start);
+		_objects.CreatePlayer(7, "Asleep", quay);
+		foreach (var (number, handle) in new[] { (4, 1L), (4, 2L), (5, 3L), (6, 4L) })
+			_connected.Add(new(handle, new DBRef(number), IConnectionService.ConnectionState.LoggedIn, _ => ValueTask.CompletedTask,
+				_ => ValueTask.CompletedTask, () => System.Text.Encoding.UTF8, new()));
+		_permissions.CanLocate(_viewer, Arg.Any<AnySharpObject>()).Returns(call => call.ArgAt<AnySharpObject>(1).Object().Name != "Spy");
+		_permissions.CanSee(_viewer, Arg.Any<AnySharpObject>()).Returns(true);
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.Rooms.Single().People).IsEquivalentTo(["Sailor"])
+			.Because("the spy is unfindable to the viewer, Asleep is not connected, and Ashore is on no room of this map");
+	}
+
+	[Test]
 	public async Task AMapSendsItsBackdropAsStored()
 	{
 		Map(50, "Isle", MapKinds.Graph);
@@ -344,7 +369,7 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
-	public async Task AnExitWithNoNameWithoutASpaceLeavesNoLine()
+	public async Task AnExitWithNoNameWithoutASpaceIsWalkedByItsNameInQuotes()
 	{
 		var town = Map(50, "Town", MapKinds.Compass);
 		var gate = Room(10, "Gate", town);
@@ -353,8 +378,15 @@ public class WorldMapReaderTests
 		var route = (await Reader.RouteAsync(_viewer, 10, default)).Expect<MapRouteDto>();
 
 		await Assert.That(route.Steps).Count().IsEqualTo(1);
-		await Assert.That(route.Command).IsNull();
+		await Assert.That(route.Command).IsEqualTo("walk \"Old gate\"");
 	}
+
+	[Test]
+	[Arguments("Port\"side", new[] { "port" }, "port")]
+	[Arguments("Port\"side", new string[0], null)]
+	[Arguments("Old \"gate\"", new string[0], null)]
+	public async Task AWordNeverCarriesAQuoteWalkWouldSplitOn(string name, string[] aliases, string? word)
+		=> await Assert.That(WorldMapReader.Word(name, aliases)).IsEqualTo(word);
 
 	[Test]
 	public async Task NoRouteToARoomNoExitReaches()

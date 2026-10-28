@@ -6741,10 +6741,10 @@
     <value>{0} graben</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Kein Ausgang auf dieser Karte führt von deinem Standort dorthin.</value>
+    <value>Kein Weg, den du sehen kannst, führt von hier dorthin.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Ein Ausgang auf dieser Route hat keinen Namen ohne Leerzeichen, daher lässt sich die Route nicht als eine Zeile eingeben.</value>
+    <value>Ein Ausgang auf diesem Weg hat einen Namen, den walk nicht annimmt, daher passt der Weg nicht in eine Zeile.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Befehl kopieren</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Legende</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Du bist in {0}, das auf keiner Karte ist.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, auf keiner Karte</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Gerade hier: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} gerade hier</value>
   </data>
 </root>

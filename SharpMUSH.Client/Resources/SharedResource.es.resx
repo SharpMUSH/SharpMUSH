@@ -6741,10 +6741,10 @@
     <value>Excavar {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Ninguna salida de este mapa lleva allí desde donde estás.</value>
+    <value>Ningún camino que puedas ver lleva allí desde donde estás.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>Una salida de esta ruta no tiene un nombre sin espacios, así que la ruta no se puede escribir en una línea.</value>
+    <value>Una salida de esta ruta tiene un nombre que walk no acepta, así que la ruta no se puede escribir en una línea.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Copiar el comando</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Leyenda</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Estás en {0}, que no está en ningún mapa.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, en ningún mapa</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Aquí ahora: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} aquí ahora</value>
   </data>
 </root>

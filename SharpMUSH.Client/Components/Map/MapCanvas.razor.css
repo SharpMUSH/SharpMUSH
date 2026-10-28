@@ -112,6 +112,17 @@
 	font-weight: 600;
 }
 
+/* Who is here: a count in the room's corner, so the name keeps the middle. */
+.map-room-count {
+	position: absolute;
+	right: 4px;
+	bottom: 2px;
+	display: inline-flex;
+	align-items: center;
+	color: var(--accent);
+	font: 600 12px/1 var(--font-ui);
+}
+
 .map-room-name {
 	font-weight: 600;
 }

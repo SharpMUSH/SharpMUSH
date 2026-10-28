@@ -188,22 +188,28 @@ public class LookService(
 	/// takes precedence over @idescribe and @describe alike. Unlike those it is read as the
 	/// looker, so the attribute's own permissions still apply.
 	/// </summary>
-	private async ValueTask<string?> LayerDescriptionAttributeAsync(Look look)
+	private ValueTask<string?> LayerDescriptionAttributeAsync(Look look) =>
+		LayerDescriptionAttributeAsync(look.Looker, look.Viewing);
+
+	private async ValueTask<string?> LayerDescriptionAttributeAsync(AnySharpObject looker, AnySharpObject viewing)
 	{
-		var layerDescription = await reality.DescriptionAttributeAsync(look.Looker.Object().DBRef, look.ViewingObject.DBRef);
+		var layerDescription = await reality.DescriptionAttributeAsync(looker.Object().DBRef, viewing.Object().DBRef);
 		if (layerDescription is null)
 		{
 			return null;
 		}
 
-		var layerAttribute = await attributeService.GetAttributeAsync(look.Looker, look.Viewing, layerDescription,
+		var layerAttribute = await attributeService.GetAttributeAsync(looker, viewing, layerDescription,
 			IAttributeService.AttributeMode.Read, true);
 
 		return layerAttribute is SharpAttribute[] layerChain
-			&& await permissionService.CanExecuteAttribute(look.Looker, look.Viewing, layerChain)
+			&& await permissionService.CanExecuteAttribute(looker, viewing, layerChain)
 				? layerDescription
 				: null;
 	}
+
+	public async ValueTask<string> RoomDescriptionAttributeAsync(AnySharpObject looker, AnySharpObject room) =>
+		await LayerDescriptionAttributeAsync(looker, room) ?? "DESCRIBE";
 
 	/// <summary>
 	/// @idescribe from inside a player or thing when it has one, else @describe, else the fallback text. A room,

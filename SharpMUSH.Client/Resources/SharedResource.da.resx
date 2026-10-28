@@ -6741,10 +6741,10 @@
     <value>Grav {0}</value>
   </data>
   <data name="NavMapNoRoute" xml:space="preserve">
-    <value>Ingen udgange på dette kort fører dertil fra, hvor du er.</value>
+    <value>Ingen vej, du kan se, fører derhen herfra.</value>
   </data>
   <data name="NavMapRouteNoCommand" xml:space="preserve">
-    <value>En udgang på ruten har intet navn uden mellemrum, så ruten kan ikke skrives på én linje.</value>
+    <value>En udgang på denne rute har et navn, walk ikke kan tage, så ruten kan ikke skrives på én linje.</value>
   </data>
   <data name="NavMapCopyRoute" xml:space="preserve">
     <value>Kopiér kommandoen</value>
@@ -6760,5 +6760,17 @@
   </data>
   <data name="NavMapLegend" xml:space="preserve">
     <value>Signaturforklaring</value>
+  </data>
+  <data name="NavMapHereOffMap" xml:space="preserve">
+    <value>Du er i {0}, som ikke er på noget kort.</value>
+  </data>
+  <data name="NavMapOffMap" xml:space="preserve">
+    <value>{0}, på intet kort</value>
+  </data>
+  <data name="NavMapPeopleHere" xml:space="preserve">
+    <value>Her nu: {0}</value>
+  </data>
+  <data name="NavMapPeopleCount" xml:space="preserve">
+    <value>{0} her nu</value>
   </data>
 </root>
