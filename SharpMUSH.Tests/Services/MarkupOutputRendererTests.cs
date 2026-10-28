@@ -734,6 +734,27 @@ public partial class MarkupOutputRendererTests
 			.Contains(red.TrimEnd('\r', '\n'));
 	}
 
+	/// <summary>
+	/// gradient()'s tone stops are written in the game's colours (here pink and cyan); a reader with a theme of
+	/// their own gets that theme's colours for them instead, and one without keeps the game's.
+	/// </summary>
+	[Test]
+	public async Task AGradientsToneStops_AreDrawnInTheReadersTheme()
+	{
+		IColorMarkup Rgb(byte r, byte g, byte b) => AnsiMarkup.Create(foreground: new AnsiColor.Rgb(r, g, b));
+		var gradient = new ColorGradient([Rgb(0xff, 0x2b, 0xd6), Rgb(0x05, 0xd9, 0xe8)]) { Roles = [ThemeRole.Primary, ThemeRole.Secondary] };
+		var shaded = new Shaded(new TextBlock(MarkupText.Plain("Room Zero")).Bordered(), gradient) { Flow = GradientFlow.Diagonal, Target = GradientTarget.Borders };
+		var box = BlockLayout.Build(shaded, 20);
+		if (!ThemePalette.TryParse("nord", out var nord, out _)) throw new InvalidOperationException("nord does not read");
+		var primary = nord![ThemeRole.Primary]!.Value.Resolved;
+
+		var themed = Render(box, new ProtocolCapabilities(SupportsAnsi: true), AllColour with { Theme = "nord" });
+		var unthemed = Render(box, new ProtocolCapabilities(SupportsAnsi: true), AllColour);
+
+		await Assert.That(themed).Contains($"38;2;{primary.R};{primary.G};{primary.B}m").And.DoesNotContain("38;2;255;43;214m");
+		await Assert.That(unthemed).Contains("38;2;255;43;214m");
+	}
+
 	[Test]
 	[Arguments(OutputFormat.Ansi)]
 	[Arguments(OutputFormat.Pueblo)]

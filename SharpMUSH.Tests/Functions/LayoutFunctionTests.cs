@@ -288,6 +288,17 @@ public class LayoutFunctionTests
 		await Assert.That(ansi).Contains("\u001b[38;2;0;0;255mb");
 	}
 
+	/// <summary>A tone stop names its theme colour, so each reader's theme can colour it; an ansi() stop does not.</summary>
+	[Test]
+	public async Task Gradient_ToneStops_FollowTheReadersTheme()
+	{
+		var html = (await Eval("gradient(box(x),primary|#0000ff,{{\"target\":\"borders\"}})")).Render(MarkupFormat.Html);
+		var gauge = (await Eval("gauge(6,12,,{{\"bar\":4,\"gradient\":\"#ff0000|secondary\"}})")).Render(MarkupFormat.Html);
+
+		await Assert.That(html).Contains("var(--ms-tone-primary, #").And.Contains(", #0000ff)");
+		await Assert.That(gauge).Contains("#ff0000, var(--ms-tone-secondary, #");
+	}
+
 	[Test]
 	public async Task Gauge_Gradient_IsDrawnInTheSameSpaceOnTheWeb()
 	{

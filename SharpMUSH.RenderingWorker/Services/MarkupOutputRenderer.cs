@@ -148,7 +148,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		// Tones are coloured after the layout: a block laid out again is drawn from its own copy of the text, which
 		// still holds the tone's span.
 		var ms = ToneMarkup.ForTelnet(Relayout(NoticeMarkup.ForTelnet(deserialized, connection.Capabilities.ReadsAloud),
-			connection.Capabilities, reader?.Look, cells, fold), reader?.Palette);
+			connection.Capabilities, reader, cells, fold), reader?.Palette);
 		// The blocks were folded as they were laid out; this is the text around them.
 		if (fold is not null) ms = fold.Fold(ms);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
@@ -208,20 +208,22 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	/// for this client: an automatic-width block at the width it reported, box drawing as ASCII and its text
 	/// folded (<paramref name="fold"/>) for a client without UTF-8, the content alone in reading order for a
 	/// screen reader, and under the player's <c>@theme</c>, which sits over the game's look and under a
-	/// layout's own theme. The browser lays blocks out itself, so this is for every other connection.
+	/// layout's own theme, and colours a gradient stop that names one of its colours. The browser lays blocks
+	/// out itself, so this is for every other connection.
 	/// </summary>
-	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, LayoutTheme? look,
+	private static MarkupText Relayout(MarkupText text, ProtocolCapabilities capabilities, ReaderLook? reader,
 		Func<ImageMarkup, int, PictureCells?>? pictures, AsciiFold? fold)
 	{
 		if (text.Runs.IsDefaultOrEmpty) return text;
 
-		var context = fold is not null || capabilities.ReadsAloud || look is not null || pictures is not null
+		var context = fold is not null || capabilities.ReadsAloud || reader is not null || pictures is not null
 			? new LayoutContext
 			{
 				AsciiOnly = fold is not null,
 				Fold = fold,
 				Linear = capabilities.ReadsAloud,
-				Theme = look ?? LayoutTheme.Default,
+				Theme = reader?.Look ?? LayoutTheme.Default,
+				Tones = reader?.Tones,
 				Pictures = pictures
 			}
 			: LayoutContext.Default;
@@ -279,7 +281,14 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 	private static readonly ConcurrentDictionary<(AnsiColorDepth Depth, TerminalFeatures Features), MarkupRegistry> AnsiWires = new();
 
 	/// <summary>A reader's theme: its colours, for <c>tone()</c>, and the layout theme it makes.</summary>
-	private sealed record ReaderLook(ThemePalette Palette, LayoutTheme Look);
+	private sealed record ReaderLook(ThemePalette Palette, LayoutTheme Look)
+	{
+		/// <summary>
+		/// Its colour for each theme colour a gradient stop names. A standard colour alone cannot be blended,
+		/// so the stop keeps the colour it was written with.
+		/// </summary>
+		public Func<ThemeRole, IColorMarkup?> Tones { get; } = role => Palette[role] is { Rgb: not null } color ? AnsiTheme.Paint(color) : null;
+	}
 
 	/// <summary>Each theme a player has set, as the look it makes, or null for one that no longer reads.</summary>
 	private static readonly ConcurrentDictionary<string, ReaderLook?> ReaderThemes = new(StringComparer.Ordinal);

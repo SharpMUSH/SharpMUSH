@@ -581,7 +581,7 @@ public static class LayoutOptionGroups
 		Func<T, ColorGradient?> get, Func<T, ColorGradient, T> set) where T : class =>
 		schema
 			.Custom("gradient", (settings, value) => Stops(value, color) is { } stops
-				? set(settings, (get(settings) ?? new ColorGradient([])) with { Stops = stops })
+				? set(settings, (get(settings) ?? new ColorGradient([])) with { Stops = stops, Roles = Roles(value) })
 				: new Error<string>("#-1 UNKNOWN COLOR"))
 			.GradientShape(get, set);
 
@@ -598,13 +598,24 @@ public static class LayoutOptionGroups
 	/// <summary>Colour stops, ansi() codes split by <c>|</c>; null when one sets no foreground colour or there are none.</summary>
 	public static ImmutableArray<IColorMarkup>? Stops(MString list, Func<string, IColorMarkup?> color)
 	{
-		var stops = MushText.SplitList(MarkupText.Plain("|"), list)
-			.Select(codes => codes.ToPlainText().Trim())
-			.Where(text => text.Length > 0)
-			.Select(color)
-			.ToArray();
+		var stops = StopTexts(list).Select(color).ToArray();
 		return stops.Length == 0 || stops.Any(stop => stop is not { Foreground: not null }) ? null : [.. stops.OfType<IColorMarkup>()];
 	}
+
+	/// <summary>
+	/// The theme colour each stop names, by position: a tone() name's, so a reader's theme can recolour it, or
+	/// null for ansi() codes. Empty when none names one.
+	/// </summary>
+	public static ImmutableArray<ThemeRole?> Roles(MString list)
+	{
+		ThemeRole?[] roles = [.. StopTexts(list).Select(text => ToneMarkup.TryParse(text, out var tone) ? tone.Role : (ThemeRole?)null)];
+		return roles.Any(role => role is not null) ? [.. roles] : [];
+	}
+
+	private static IEnumerable<string> StopTexts(MString list) =>
+		MushText.SplitList(MarkupText.Plain("|"), list)
+			.Select(codes => codes.ToPlainText().Trim())
+			.Where(text => text.Length > 0);
 
 	/// <summary>
 	/// A flex item's width: <c>auto</c>, cells (<c>35</c>) or a percentage (<c>40%</c>), optionally after
