@@ -218,7 +218,7 @@ public sealed class SoftcodeSyntaxAnalyzer(
 		return names;
 	}
 
-	private static void CollectCalls(Antlr4.Runtime.Tree.IParseTree tree, bool evaluated, List<string> names)
+	private void CollectCalls(Antlr4.Runtime.Tree.IParseTree tree, bool evaluated, List<string> names)
 	{
 		switch (tree)
 		{
@@ -227,7 +227,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 				break;
 			case SharpMUSHParser.IFunctionContext function when evaluated || function.Start.StartIndex == 0:
 				evaluated = true;
-				names.Add(Bang.FunctionName(function.FUNCHAR().GetText().TrimEnd('(', ' ', '\t', '\r', '\n', '\f')));
+				var name = Bang.FunctionName(function.FUNCHAR().GetText().TrimEnd('(', ' ', '\t', '\r', '\n', '\f'));
+				names.Add(name);
+				// lit() and the like hand their arguments over as text, so nothing inside them is called.
+				if (IsLiteral(name)) return;
 				break;
 		}
 
@@ -237,6 +240,10 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			CollectCalls(tree.GetChild(i), evaluated, names);
 		}
 	}
+
+	private bool IsLiteral(string name)
+		=> (functionLibrary.TryGetValue(name, out var definition) || functionLibrary.TryGetValue(name.ToLowerInvariant(), out definition))
+			&& definition.LibraryInformation.Attribute.Flags.HasFlag(FunctionFlags.Literal);
 
 	/// <summary>
 	/// Performs semantic analysis on the input text and returns semantic tokens.

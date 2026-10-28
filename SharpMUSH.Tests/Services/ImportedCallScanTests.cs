@@ -28,6 +28,7 @@ public class ImportedCallScanTests
 	[Arguments("$go *:@pemit %#=[ucstr(%0)]", "ucstr")]
 	[Arguments("think strtrunc(x,3)", "")]
 	[Arguments("No calls here.", "")]
+	[Arguments("[lit(missing())] [lit([other()])]", "lit lit")]
 	public async Task CallsAreTheBracketedOnesAndALeadingOne(string text, string expected)
 		=> await Assert.That(string.Join(' ', Analyzer.CalledFunctions(MarkupText.Plain(text)))).IsEqualTo(expected);
 
