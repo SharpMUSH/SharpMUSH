@@ -10,6 +10,8 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 /// A call is rewritten only in a shape whose result is the same; any other shape (an argument count the rule
 /// does not cover, an unclosed call) is left as written, and the note says so. Arguments are rewritten first, so
 /// calls nest. A name is a call only when <c>(</c> follows it and no letter, digit or <c>_</c> comes before it.
+/// A rule that repeats an argument is applied only when that argument holds no call, so nothing is evaluated
+/// twice; <c>lit()</c>'s argument is never evaluated, so nothing in it is rewritten.
 /// </remarks>
 public static class RhostFunctionCallRewriter
 {
@@ -46,8 +48,8 @@ public static class RhostFunctionCallRewriter
 		},
 		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : null,
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
-		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{string.Join(' ', args[1..])})" : null,
-		["orflag"] = args => args.Length >= 2 ? $"orlflags({args[0]},{string.Join(' ', args[1..])})" : null,
+		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
+		["orflag"] = args => args.Length >= 2 ? $"orlflags({args[0]},{FlagList(args[1..])})" : null,
 		// Plural for 0 and for anything past -1 to 1; singular for none given or empty.
 		["moneyname"] = args => args switch
 		{
@@ -55,6 +57,14 @@ public static class RhostFunctionCallRewriter
 			[var value] => $"if(and(strlen({value}),or(eq({value},0),gt(abs({value}),1))),config(money_plural),config(money_singular))",
 			_ => null
 		}
+	};
+
+	/// <summary>The arguments each rule writes more than once, by position.</summary>
+	private static readonly Dictionary<string, int[]> Repeated = new(StringComparer.OrdinalIgnoreCase)
+	{
+		["ljc"] = [1],
+		["rjc"] = [1],
+		["moneyname"] = [0]
 	};
 
 	/// <summary>Every call a rule covers, rewritten, with one note per function rewritten or left.</summary>
@@ -85,6 +95,14 @@ public static class RhostFunctionCallRewriter
 			var end = i;
 			while (end < text.Length && IsNameCharacter(text[end])) end++;
 			var name = text[i..end];
+			if (end < text.Length && text[end] == '(' && name.Equals("lit", StringComparison.OrdinalIgnoreCase)
+				&& Arguments(text, end + 1) is ({ }, var literalClose))
+			{
+				output.Append(text, i, literalClose + 1 - i);
+				i = literalClose + 1;
+				continue;
+			}
+
 			if (end >= text.Length || text[end] != '(' || !Rules.TryGetValue(name, out var rule)
 					|| Arguments(text, end + 1) is not ({ } arguments, var close))
 			{
@@ -95,7 +113,13 @@ public static class RhostFunctionCallRewriter
 
 			var rewritten = arguments.Select(argument => RewriteSpan(argument, notes, said)).ToArray();
 			var lower = name.ToLowerInvariant();
-			if (rule(rewritten) is { } replacement)
+			if (Repeated.TryGetValue(name, out var repeated)
+				&& repeated.FirstOrDefault(index => index < rewritten.Length && HoldsCall(rewritten[index]), -1) is var computed and >= 0)
+			{
+				output.Append(name).Append('(').Append(string.Join(',', rewritten)).Append(')');
+				Say(notes, said, $"{lower}() with a call in argument {computed + 1} left as written: its rewrite would evaluate that argument more than once");
+			}
+			else if (rule(rewritten) is { } replacement)
 			{
 				output.Append(replacement);
 				Say(notes, said, $"{lower}() written as {replacement[..replacement.IndexOf('(')]}()");
@@ -116,6 +140,15 @@ public static class RhostFunctionCallRewriter
 	{
 		if (said.Add(note)) notes.Add(note);
 	}
+
+	private static bool HoldsCall(string argument) => argument.AsSpan().IndexOfAny('(', '[') >= 0;
+
+	/// <summary>
+	/// Arguments joined as one space-separated list. An argument holding a call goes in brackets: only a call that
+	/// starts an argument is evaluated without them.
+	/// </summary>
+	private static string FlagList(string[] arguments)
+		=> string.Join(' ', arguments.Select(argument => HoldsCall(argument) ? $"[{argument}]" : argument));
 
 	private static bool IsNameCharacter(char ch) => char.IsAsciiLetterOrDigit(ch) || ch == '_';
 

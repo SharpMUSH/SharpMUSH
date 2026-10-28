@@ -80,4 +80,25 @@ public class RhostFunctionCallRewriterTests
 			"xnor() with 3 argument(s) left as written: SharpMUSH has no xnor()"
 		]);
 	}
+
+	[Test]
+	[Arguments("think [ljc(abcdef,setr(0,add(%q0,1)))]", "ljc() with a call in argument 2 left as written: its rewrite would evaluate that argument more than once")]
+	[Arguments("think [rjc(abc,[v(width)],.)]", "rjc() with a call in argument 2 left as written: its rewrite would evaluate that argument more than once")]
+	[Arguments("think [moneyname(get(me/coins))]", "moneyname() with a call in argument 1 left as written: its rewrite would evaluate that argument more than once")]
+	public async Task LeavesACallWhoseRewriteWouldEvaluateAnArgumentTwice(string body, string note)
+	{
+		var result = RhostSoftcodeRewriter.Rewrite(body);
+
+		await Assert.That(result.Text).IsEqualTo(body);
+		await Assert.That(result.Notes).IsEquivalentTo([note]);
+	}
+
+	[Test]
+	public async Task LeavesWhatLitHoldsAsWritten()
+	{
+		var result = RhostSoftcodeRewriter.Rewrite("think [lit(streq(a,b))] [streq(a,b)]");
+
+		await Assert.That(result.Text).IsEqualTo("think [lit(streq(a,b))] [not(comp(a,b,I))]");
+		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("[lit(streq(a,b))]"))).ToPlainText()).IsEqualTo("streq(a,b)");
+	}
 }
