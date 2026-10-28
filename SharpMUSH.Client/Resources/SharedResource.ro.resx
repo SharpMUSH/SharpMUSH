@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Alege o cameră ca s-o schimbi, sau o celulă goală ca să sapi una.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Alege o cameră ca s-o schimbi, sau un loc pe imagine ca să sapi una.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Alege un loc lângă o cameră, ca noua cameră să aibă o intrare.</value>
   </data>

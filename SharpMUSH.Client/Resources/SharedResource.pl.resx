@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Wybierz pokój, aby go zmienić, albo puste pole, aby wykopać nowy.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Wybierz pokój, aby go zmienić, albo miejsce na obrazie, aby wykopać nowy.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Wybierz miejsce obok pokoju, aby nowy pokój miał wejście.</value>
   </data>

@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>选择一个房间来更改，或选择一个空格子来挖新房间。</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>选择一个房间来更改，或在图片上选择一个位置来挖新房间。</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>选择一个房间旁边的位置，让新房间有入口。</value>
   </data>

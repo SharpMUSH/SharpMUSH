@@ -10118,6 +10118,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Choose a room to change it, or an empty cell to dig one.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Choose a room to change it, or a spot on the picture to dig one.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Choose a spot next to a room, so the new room has a way in.</value>
   </data>

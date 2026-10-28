@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Odaberi sobu da je promijeniš ili prazno polje da iskopaš novu.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Odaberi sobu da je promijeniš ili mjesto na slici da iskopaš novu.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Odaberi mjesto uz sobu, da nova soba ima ulaz.</value>
   </data>

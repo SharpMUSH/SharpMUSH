@@ -5992,6 +5992,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Choisissez une salle pour la modifier, ou une case vide pour en creuser une.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Choisissez une salle pour la modifier, ou un point de l'image pour en creuser une.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Choisissez un endroit à côté d'une salle, pour que la nouvelle ait une entrée.</value>
   </data>

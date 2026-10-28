@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Изберете стая, за да я промените, или празна клетка, за да изкопаете нова.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Изберете стая, за да я промените, или място на картината, за да изкопаете нова.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Изберете място до стая, за да има новата вход.</value>
   </data>

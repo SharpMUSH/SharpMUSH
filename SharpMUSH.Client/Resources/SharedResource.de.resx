@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Wähle einen Raum, um ihn zu ändern, oder ein leeres Feld, um einen zu graben.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Wähle einen Raum, um ihn zu ändern, oder eine Stelle auf dem Bild, um einen zu graben.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Wähle eine Stelle neben einem Raum, damit der neue Raum einen Zugang hat.</value>
   </data>

@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Velg et rom for å endre det, eller en tom rute for å grave et.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Velg et rom for å endre det, eller et sted på bildet for å grave et.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Velg et sted ved siden av et rom, så det nye rommet har en inngang.</value>
   </data>

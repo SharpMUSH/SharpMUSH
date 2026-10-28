@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Kies een kamer om te wijzigen, of een leeg vak om er een te graven.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Kies een kamer om te wijzigen, of een plek op de afbeelding om er een te graven.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Kies een plek naast een kamer, zodat de nieuwe kamer een ingang heeft.</value>
   </data>

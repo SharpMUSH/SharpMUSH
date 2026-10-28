@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Выберите комнату, чтобы изменить её, или пустую клетку, чтобы вырыть новую.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Выберите комнату, чтобы изменить её, или место на картинке, чтобы вырыть новую.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Выберите место рядом с комнатой, чтобы в новую был вход.</value>
   </data>

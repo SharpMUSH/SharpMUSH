@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Válassz egy szobát a módosításhoz, vagy egy üres mezőt az ásáshoz.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Válassz egy szobát a módosításhoz, vagy egy pontot a képen az ásáshoz.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Válassz egy helyet egy szoba mellett, hogy az új szobába legyen bejárat.</value>
   </data>

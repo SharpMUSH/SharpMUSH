@@ -6683,6 +6683,9 @@
   <data name="NavMapNoChanges" xml:space="preserve">
     <value>Elige una sala para cambiarla, o una celda vacía para excavar una.</value>
   </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Elige una sala para cambiarla, o un punto de la imagen para excavar una.</value>
+  </data>
   <data name="NavMapNoNeighbour" xml:space="preserve">
     <value>Elige un lugar junto a una sala, para que la nueva tenga entrada.</value>
   </data>
