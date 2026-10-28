@@ -403,6 +403,7 @@ public static class RhostNameTables
 	public const int CreatedAttribute = 228;
 	public const int RealityAttribute = 244;
 	public const int TotemsAttribute = 83;
+	public const int TagsAttribute = 251;
 
 	/// <summary>
 	/// The totems RhostMUSH defines itself, all in the tenth totem word, and whether only wizards set each. API_LUA,
@@ -441,7 +442,7 @@ public static class RhostNameTables
 		[232] = ServerState + " (traffic counts)", [233] = ServerState + " (traffic counts)", [237] = ServerState,
 		[238] = ServerState, [239] = ServerState, [241] = ServerState, [242] = ServerState, [243] = ServerState,
 		[RealityAttribute] = "the reality levels, imported as the object's reality layers", [247] = ServerState, [249] = ServerState,
-		[251] = ServerState + " (object tags)",
+		[TagsAttribute] = "the tags that name the object, imported as tags",
 		[InlineStart] = ServerState + " (connection counts)", [InlineStart + 1] = ServerState + " (connection record)",
 		[InlineStart + 3] = ServerState, [InlineStart + 4] = ServerState, [InlineStart + 6] = ServerState,
 	}.ToFrozenDictionary();

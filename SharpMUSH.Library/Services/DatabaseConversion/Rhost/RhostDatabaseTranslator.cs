@@ -184,6 +184,7 @@ public static partial class RhostDatabaseTranslator
 		var password = default(string);
 		var reality = default(PennMUSHReality);
 		var totems = Array.Empty<uint>();
+		var tags = new List<PennMUSHTag>();
 		var aliases = new List<string>();
 		long created = 0;
 		long modified = 0;
@@ -210,6 +211,9 @@ public static partial class RhostDatabaseTranslator
 					continue;
 				case RhostNameTables.RealityAttribute:
 					reality = Reality(attribute.Value, source.DBRef, report);
+					continue;
+				case RhostNameTables.TagsAttribute:
+					tags.AddRange(attribute.Value.Split([' ', '\t'], StringSplitOptions.RemoveEmptyEntries).Select(Tag));
 					continue;
 				case RhostNameTables.AliasAttribute:
 					aliases.AddRange(attribute.Value.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
@@ -263,6 +267,7 @@ public static partial class RhostDatabaseTranslator
 			Roles = roles,
 			Reality = reality,
 			Totems = totems,
+			Tags = tags,
 			CreationTime = created,
 			ModificationTime = modified,
 			Attributes = attributes,
@@ -271,6 +276,19 @@ public static partial class RhostDatabaseTranslator
 			Aliases = aliases
 		};
 	}
+
+	/// <summary>
+	/// A tag as RhostMUSH lists it on the object it names: <c>__&lt;owner&gt;_&lt;name&gt;</c> for an owner's own. An owner
+	/// number too large for a dbref leaves the name a world tag, which the import then takes or refuses like any other.
+	/// </summary>
+	private static PennMUSHTag Tag(string listed)
+		=> PersonalTag().Match(listed) is { Success: true } personal
+			&& int.TryParse(personal.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var owner)
+				? new PennMUSHTag(personal.Groups[2].Value, owner)
+				: new PennMUSHTag(listed, null);
+
+	[GeneratedRegex(@"^__(\d+)_(.+)$")]
+	private static partial Regex PersonalTag();
 
 	/// <summary>
 	/// Where the object is and what it links to, sorted out of RhostMUSH's overloaded fields: an exit's

@@ -46,6 +46,8 @@ public static class RhostFunctionCallRewriter
 			2 => $"trim({args[0]},%r,{args[1]})",
 			_ => null
 		},
+		// RhostMUSH's tag() looks a tag up; SharpMUSH's tag() writes an HTML tag.
+		["tag"] = args => args.Length == 1 ? $"tagref({args[0]})" : null,
 		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : null,
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
@@ -66,6 +68,9 @@ public static class RhostFunctionCallRewriter
 		["rjc"] = [1],
 		["moneyname"] = [0]
 	};
+
+	/// <summary>Rewritten functions whose name SharpMUSH also has, for something else.</summary>
+	private static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase) { "tag" };
 
 	/// <summary>Every call a rule covers, rewritten, with one note per function rewritten or left.</summary>
 	public static string Rewrite(string softcode, List<string> notes)
@@ -127,7 +132,8 @@ public static class RhostFunctionCallRewriter
 			else
 			{
 				output.Append(name).Append('(').Append(string.Join(',', rewritten)).Append(')');
-				Say(notes, said, $"{lower}() with {rewritten.Length} argument(s) left as written: SharpMUSH has no {lower}()");
+				Say(notes, said, $"{lower}() with {rewritten.Length} argument(s) left as written" +
+					(SharedNames.Contains(lower) ? $": SharpMUSH's {lower}() is another function" : $": SharpMUSH has no {lower}()"));
 			}
 
 			i = close + 1;

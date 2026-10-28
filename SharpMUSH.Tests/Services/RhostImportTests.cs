@@ -10,6 +10,7 @@ using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Reality;
 using SharpMUSH.Library.Services.DatabaseConversion;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
+using SharpMUSH.Library.Tags;
 
 namespace SharpMUSH.Tests.Services;
 
@@ -229,6 +230,22 @@ public class RhostImportTests
 
 		await Assert.That((await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync()).Enabled).IsTrue();
 		await Assert.That((await LayersAsync(world, "Alice")).Transmit).IsEmpty();
+	}
+
+	/// <summary>A tag RhostMUSH listed on an object names that object here: the world's, and an owner's own.</summary>
+	[Test]
+	public async Task TagsArriveAsTags()
+	{
+		await using var world = await ImportAsync();
+		var tags = world.Services.GetRequiredService<ObjectTagRegistry>();
+		var widget = (await FindAsync(world, "Widget")).Object().DBRef;
+		var wizard = (await FindAsync(world, "Wizard")).Object().DBRef;
+
+		await Assert.That((await tags.ResolveAsync("weather", null)).Expect<DBRef>()).IsEqualTo(widget);
+		await Assert.That(await tags.ResolveAsync("mytool", null) is NotFound).IsTrue();
+		await Assert.That((await tags.ResolveAsync("mytool", wizard)).Expect<DBRef>()).IsEqualTo(widget);
+		await Assert.That((await tags.ResolveAsync("__99999999999_far", null)).Expect<DBRef>()).IsEqualTo(widget)
+			.Because("an owner number no dbref can hold leaves the listed name a world tag");
 	}
 
 	/// <summary>Without the configuration that names them, the levels cannot be layers, and the report says so.</summary>

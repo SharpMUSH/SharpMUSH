@@ -14,6 +14,7 @@ using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 using SharpMUSH.Library.Reality;
+using SharpMUSH.Library.Tags;
 using SharpMUSH.Library.Services.Interfaces;
 using DotNext.Threading;
 using System.Diagnostics;
@@ -40,6 +41,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private readonly Lazy<IRuntimeRegistrationService>? _registrations;
 	private readonly Lazy<IRoleRegistryService>? _roleRegistry;
 	private readonly RealityPolicy? _reality;
+	private readonly ObjectTagRegistry? _tags;
 
 	public PennMUSHDatabaseConverter(
 		PennMUSHDatabaseParser parser,
@@ -52,7 +54,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		IBundledPackageBootstrap? bundledPackages = null,
 		Lazy<IRuntimeRegistrationService>? registrations = null,
 		Lazy<IRoleRegistryService>? roleRegistry = null,
-		RealityPolicy? reality = null)
+		RealityPolicy? reality = null,
+		ObjectTagRegistry? tags = null)
 	{
 		_parser = parser;
 		_mediator = mediator;
@@ -65,6 +68,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		_registrations = registrations;
 		_roleRegistry = roleRegistry;
 		_reality = reality;
+		_tags = tags;
 	}
 
 	public async Task<ConversionResult> ConvertDatabaseAsync(string databaseFilePath, CancellationToken cancellationToken = default)
@@ -264,6 +268,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			await EstablishRelationshipsAsync(pennDatabase, context, cancellationToken);
 			await GrantPermissionsAsync(pennDatabase, context, cancellationToken);
 			await ImportRealityAsync(pennDatabase, context, cancellationToken);
+			await ImportTagsAsync(pennDatabase, context, cancellationToken);
 			context.ReportUnconverted();
 			ReportProgress("Relationships established", 0.50);
 
@@ -2472,6 +2477,66 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	}
 
 	private const int RealityLayerLimit = 32;
+
+	/// <summary>
+	/// The tags that name each object, as the world's tags or their owners' own. A tag whose object or owner was not
+	/// imported, or that the registry refuses (a name it does not take, one too many on an object), is reported.
+	/// </summary>
+	private async Task ImportTagsAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var tagged = pennDatabase.Objects.Where(o => o.Tags.Count > 0).ToList();
+		if (tagged.Count == 0)
+		{
+			return;
+		}
+
+		if (_tags is null)
+		{
+			context.Warn(ImportWarningKind.Objects, $"Tags on {tagged.Count} object(s) not imported: they need the tag registry this import runs without");
+			return;
+		}
+
+		var imported = 0;
+		foreach (var pennObj in tagged)
+		{
+			cancellationToken.ThrowIfCancellationRequested();
+			if (!context.DbrefMapping.TryGetValue(pennObj.DBRef, out var target))
+			{
+				context.Warn(ImportWarningKind.Objects, $"Tags {string.Join(", ", pennObj.Tags.Select(tag => tag.Name))} on #{pennObj.DBRef} not imported: the object was not");
+				continue;
+			}
+
+			// Personal tags first: one is taken only while the object has few tags, which a dump's globals could
+			// already fill.
+			foreach (var tag in pennObj.Tags.OrderBy(tag => tag.Owner is null))
+			{
+				DBRef? owner = null;
+				if (tag.Owner is { } sourceOwner)
+				{
+					if (!context.DbrefMapping.TryGetValue(sourceOwner, out var mappedOwner))
+					{
+						context.Warn(ImportWarningKind.Objects, $"Tag {tag.Name} on #{pennObj.DBRef} not imported: its owner #{sourceOwner} was not");
+						continue;
+					}
+
+					owner = mappedOwner;
+				}
+
+				switch (await _tags.AddAsync(tag.Name, target, owner, cancellationToken))
+				{
+					case Error<string> refused:
+						context.Warn(ImportWarningKind.Objects, $"Tag {tag.Name} on #{pennObj.DBRef} not imported: {refused.Value}");
+						break;
+					default:
+						imported++;
+						break;
+				}
+			}
+		}
+
+		context.Notes.Add($"Tags: {imported} tag(s) imported");
+	}
 
 	private const string NormalLayer = "normal";
 

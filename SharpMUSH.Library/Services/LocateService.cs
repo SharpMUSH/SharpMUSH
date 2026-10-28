@@ -16,7 +16,8 @@ public class LocateService(
 	INotifyService notifyService,
 	IPermissionService permissionService,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
-	IConnectionService? connectionService = null) : ILocateService
+	IConnectionService? connectionService = null,
+	Tags.ObjectTagRegistry? tags = null) : ILocateService
 {
 	/// <summary>
 	/// What PennMUSH's <c>match_result_internal</c> keeps in locals and its macros mutate in place.
@@ -189,6 +190,12 @@ public class LocateService(
 		// of those was re-running the same GeneratedRegex over the same string.
 		var absolute = HelperFunctions.ParseDbRef(name);
 
+		// RhostMUSH's #tag is a dbref by another name, wherever a dbref would match.
+		if (absolute.IsNone() && await TaggedAsync(executor, name) is DBRef tagged)
+		{
+			absolute = tagged;
+		}
+
 		// And that is the whole of it. match_result_internal asks exactly one permission question of a
 		// candidate — can_interact(match, who, INTERACT_MATCH), which MatchList does per candidate — and
 		// there is no Can_Examine, DarkLegal or INTERACT_SEE anywhere in match.c. That block belongs to
@@ -196,6 +203,17 @@ public class LocateService(
 		// Having it here put fun_locate's filter on every caller, so commands rejected objects PennMUSH
 		// resolves and reported them as "I can't see that here" rather than as a suppressed match.
 		return await LocateMatch(executor, looker, flags, name, absolute);
+	}
+
+	private async ValueTask<Found<DBRef>> TaggedAsync(AnySharpObject executor, string name)
+	{
+		if (tags is null || name.Length < 2 || name[0] != '#' || !Tags.ObjectTagRegistry.ValidName(name[1..]))
+		{
+			return new NotFound();
+		}
+
+		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
+		return await tags.ResolveAsync(name[1..], owner.Object.DBRef);
 	}
 
 	// PennMUSH's match_result_internal has one object; SharpMUSH splits it. `executor` is match.c's
