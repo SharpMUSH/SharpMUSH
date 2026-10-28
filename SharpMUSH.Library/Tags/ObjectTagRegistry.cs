@@ -42,12 +42,14 @@ public sealed class ObjectTagRegistry(IMediator mediator)
 	public const int MaxPersonalPerObject = 5;
 
 	private readonly SemaphoreSlim gate = new(1, 1);
+	private readonly SemaphoreSlim loadGate = new(1, 1);
 	private ObjectTags? tags;
 
+	/// <summary>Letters, digits, <c>_</c> and <c>-</c>, and not a dbref's number (<c>12</c>, <c>-1</c>), which <c>#</c> would read first.</summary>
 	public static bool ValidName(string name)
 		=> name.Length is > 0 and <= MaxNameLength
 			&& name.All(ch => char.IsLetterOrDigit(ch) || ch is '_' or '-')
-			&& !name.All(char.IsAsciiDigit);
+			&& !(name[0] == '-' ? name[1..] : name).All(char.IsAsciiDigit);
 
 	/// <summary>
 	/// The live object <paramref name="name"/> names: the global tag of that name, else <paramref name="owner"/>'s
@@ -224,10 +226,25 @@ public sealed class ObjectTagRegistry(IMediator mediator)
 		return current with { Global = global, Personal = personal };
 	}
 
+	/// <summary>
+	/// The tags, loaded once. The load holds a gate of its own, so a reader's load cannot finish after a write and
+	/// put back what the write replaced.
+	/// </summary>
 	private async ValueTask<ObjectTags> ReadAsync(CancellationToken ct)
-		=> tags ??= await mediator.Send(new ExpandedServerDataQuery(Key), ct) is { } stored
-			? JsonSerializer.Deserialize<ObjectTags>(JsonSerializer.Serialize(stored)) ?? ObjectTags.Empty
-			: ObjectTags.Empty;
+	{
+		if (tags is { } loaded) return loaded;
+		await loadGate.WaitAsync(ct);
+		try
+		{
+			return tags ??= await mediator.Send(new ExpandedServerDataQuery(Key), ct) is { } stored
+				? JsonSerializer.Deserialize<ObjectTags>(JsonSerializer.Serialize(stored)) ?? ObjectTags.Empty
+				: ObjectTags.Empty;
+		}
+		finally
+		{
+			loadGate.Release();
+		}
+	}
 
 	private async ValueTask SaveAsync(ObjectTags value, CancellationToken ct)
 	{

@@ -99,6 +99,7 @@ public class TagTests
 
 	[Test]
 	[Arguments("12345")]
+	[Arguments("-1")]
 	[Arguments("has space")]
 	[Arguments("a#b")]
 	[Arguments("abcdefghijklmnopqrstuvwxyz0123456")]

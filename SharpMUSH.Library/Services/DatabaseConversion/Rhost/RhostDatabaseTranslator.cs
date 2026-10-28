@@ -277,11 +277,15 @@ public static partial class RhostDatabaseTranslator
 		};
 	}
 
-	/// <summary>A tag as RhostMUSH lists it on the object it names: <c>__&lt;owner&gt;_&lt;name&gt;</c> for an owner's own.</summary>
+	/// <summary>
+	/// A tag as RhostMUSH lists it on the object it names: <c>__&lt;owner&gt;_&lt;name&gt;</c> for an owner's own. An owner
+	/// number too large for a dbref leaves the name a world tag, which the import then takes or refuses like any other.
+	/// </summary>
 	private static PennMUSHTag Tag(string listed)
 		=> PersonalTag().Match(listed) is { Success: true } personal
-			? new PennMUSHTag(personal.Groups[2].Value, int.Parse(personal.Groups[1].ValueSpan, CultureInfo.InvariantCulture))
-			: new PennMUSHTag(listed, null);
+			&& int.TryParse(personal.Groups[1].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var owner)
+				? new PennMUSHTag(personal.Groups[2].Value, owner)
+				: new PennMUSHTag(listed, null);
 
 	[GeneratedRegex(@"^__(\d+)_(.+)$")]
 	private static partial Regex PersonalTag();

@@ -244,6 +244,8 @@ public class RhostImportTests
 		await Assert.That((await tags.ResolveAsync("weather", null)).Expect<DBRef>()).IsEqualTo(widget);
 		await Assert.That(await tags.ResolveAsync("mytool", null) is NotFound).IsTrue();
 		await Assert.That((await tags.ResolveAsync("mytool", wizard)).Expect<DBRef>()).IsEqualTo(widget);
+		await Assert.That((await tags.ResolveAsync("__99999999999_far", null)).Expect<DBRef>()).IsEqualTo(widget)
+			.Because("an owner number no dbref can hold leaves the listed name a world tag");
 	}
 
 	/// <summary>Without the configuration that names them, the levels cannot be layers, and the report says so.</summary>
