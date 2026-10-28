@@ -186,6 +186,49 @@ public class RhostImportTests
 		await Assert.That(bob.Transmit).IsEquivalentTo(["normal"]);
 	}
 
+	/// <summary>
+	/// Two bits never become one layer: a level named like another bit's layer gets its bit's number, and a bit only
+	/// a level of several bits names is a layer of its own.
+	/// </summary>
+	[Test]
+	public async Task EachBitIsALayerOfItsOwn()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		database.Reality = new RealityDirectives(
+			[new RealityLevelDirective("Real", 1, "DESC"), new RealityLevelDirective("Normal", 2, "DESC"), new RealityLevelDirective("Spirit", 12, "DESC")],
+			new Dictionary<string, uint>());
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		var config = await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync();
+		await Assert.That(config.Layers).IsEquivalentTo(["normal", "normal-1", "spirit", "spirit-3"]);
+
+		var alice = await LayersAsync(world, "Alice");
+		await Assert.That(alice.Receive).IsEquivalentTo(["normal", "normal-1"]);
+		await Assert.That(alice.Transmit).IsEquivalentTo(["normal-1"]);
+
+		var widget = await LayersAsync(world, "Widget");
+		await Assert.That(widget.Transmit).IsEquivalentTo(["normal", "spirit"]);
+	}
+
+	/// <summary>
+	/// A world that uses only the normal layer still turns reality on when an object keeps settings of its own:
+	/// Alice transmits only on a bit no level names, so no one sees her.
+	/// </summary>
+	[Test]
+	public async Task SettingsOnTheNormalLayerAloneTurnRealityOn()
+	{
+		await using var world = await IsolatedImportWorld.CreateAsync();
+		var database = await RhostDatabaseTranslator.ReadAsync(RhostFlatfileReaderTests.FlatfilePath, null, null);
+		database.Reality = new RealityDirectives([new RealityLevelDirective("Real", 1, "DESC")], new Dictionary<string, uint>());
+		var result = await world.Converter.ConvertDatabaseAsync(database);
+		await Assert.That(result.Errors).IsEmpty();
+
+		await Assert.That((await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync()).Enabled).IsTrue();
+		await Assert.That((await LayersAsync(world, "Alice")).Transmit).IsEmpty();
+	}
+
 	/// <summary>Without the configuration that names them, the levels cannot be layers, and the report says so.</summary>
 	[Test]
 	public async Task RealityLevelsWithoutTheirNamesAreReported()

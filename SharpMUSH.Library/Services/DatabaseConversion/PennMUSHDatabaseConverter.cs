@@ -2382,7 +2382,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	/// the other's transmitting mask, so each bit a level names is a layer. The first bit, where both put
 	/// everything by default, is the <c>normal</c> layer every object here starts on, so what is created later
 	/// shares it. A level of several bits is the layers of its bits. An object whose layers come to <c>normal</c>
-	/// both ways keeps no settings of its own. Reality is turned on when any other layer is in use.
+	/// both ways, with no description of its own, keeps no settings of its own. Reality is turned on when any
+	/// object keeps settings of its own.
 	/// </summary>
 	private async Task ImportRealityAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
 		CancellationToken cancellationToken)
@@ -2415,7 +2416,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			return;
 		}
 
-		var inUse = false;
 		var written = 0;
 		foreach (var pennObj in pennDatabase.Objects)
 		{
@@ -2437,7 +2437,6 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				.DistinctBy(level => level.Layer)
 				.ToDictionary(level => level.Layer, level => level.Attribute, StringComparer.OrdinalIgnoreCase);
 
-			inUse |= receive.Concat(transmit).Any(layer => layer != NormalLayer);
 			if (receive is [NormalLayer] && transmit is [NormalLayer] && descriptions.Count == 0)
 			{
 				continue;
@@ -2447,6 +2446,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			written++;
 		}
 
+		var inUse = written > 0;
 		await _reality.SaveConfigurationAsync(config with { Layers = [.. config.Layers, .. added], Enabled = config.Enabled || inUse },
 			cancellationToken);
 		context.Notes.Add($"Reality: {layers.Count} reality level bit(s) imported as layers ({string.Join(", ", layers.Values)}); " +
@@ -2462,8 +2462,10 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 
 	/// <summary>
 	/// The layer for each bit a level names: the first bit is <c>normal</c>, and any other the name of the level on
-	/// that bit alone, in lower case, with each character a layer name may not hold made a <c>_</c>. A level of
-	/// several bits is noted as the layers of its bits.
+	/// that bit alone, in lower case, with each character a layer name may not hold made a <c>_</c>. A bit only a
+	/// level of several bits names takes that level's name. A name another bit already has gets the bit's number
+	/// after a <c>-</c>, so two bits never become one layer. A level of several bits is noted as the layers of its
+	/// bits.
 	/// </summary>
 	private static Dictionary<uint, string> RealityLayers(IReadOnlyList<RealityLevelDirective> levels,
 		PennMUSHConversionContext context)
@@ -2471,24 +2473,39 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		var layers = new Dictionary<uint, string> { [1] = NormalLayer };
 		foreach (var level in levels.Where(level => BitOperations.IsPow2(level.Value)))
 		{
-			var name = level.Value == 1
-				? NormalLayer
-				: new string([.. level.Name.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' ? c : '_')]);
-			if (!layers.TryAdd(level.Value, name) && level.Value != 1)
+			if (level.Value != 1 && !layers.TryAdd(level.Value, UniqueLayerName(level.Name, level.Value, layers)))
 			{
 				continue;
 			}
 
-			context.Notes.Add($"Reality level {level.Name}: imported as the layer {name}");
+			context.Notes.Add($"Reality level {level.Name}: imported as the layer {layers[level.Value]}");
 		}
 
 		foreach (var level in levels.Where(level => !BitOperations.IsPow2(level.Value)))
 		{
+			for (var bit = 1u; bit != 0; bit <<= 1)
+			{
+				if ((level.Value & bit) != 0 && !layers.ContainsKey(bit))
+				{
+					layers[bit] = UniqueLayerName(level.Name, bit, layers);
+					context.Notes.Add($"Reality level {level.Name}: bit {BitOperations.Log2(bit)} has no level of its own, imported as the layer {layers[bit]}");
+				}
+			}
+
 			var bits = layers.Where(layer => (level.Value & layer.Key) != 0).Select(layer => layer.Value).ToArray();
 			context.Notes.Add($"Reality level {level.Name}: spans several bits, so an object on it is on the layers of those bits ({string.Join(", ", bits)})");
 		}
 
 		return layers;
+	}
+
+	/// <summary>A layer name for <paramref name="bit"/> from a level's name, unlike any layer already named.</summary>
+	private static string UniqueLayerName(string levelName, uint bit, Dictionary<uint, string> layers)
+	{
+		var name = new string([.. levelName.ToLowerInvariant().Select(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-' ? c : '_')]);
+		var suffix = $"-{BitOperations.Log2(bit)}";
+		name = name.Length == 0 ? $"level{suffix}" : name[..Math.Min(name.Length, 32 - suffix.Length)];
+		return layers.ContainsValue(name) ? name + suffix : name;
 	}
 
 	/// <summary>Gives the object the roles the source's staff levels became; the object's grants are then reread.</summary>
