@@ -1,0 +1,34 @@
+format: "1.16"
+package: world-map-help
+title: "World map: +help topics"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the World map topics into +help: registers the world-map package's help with the +help librarian."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [world-map, help, bridge]
+category: Building
+requires_server: ">=0.1"
+
+# A bridge: world-map keeps its topic on its own Map Guide, and plus-help reads any object registered with its
+# librarian. This package is only that registration.
+depends:
+  - package: world-map
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/world-map/
+      branch: main
+  - package: plus-help
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-help/
+      branch: main
+
+objects:
+  - ref: help_registration
+    target: "{{plus-help/librarian}}"
+    attributes:
+      SRC`WORLD-MAP: |-
+        {{world-map/world_map}}

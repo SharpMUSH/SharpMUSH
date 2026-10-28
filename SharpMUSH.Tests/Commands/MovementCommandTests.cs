@@ -183,6 +183,48 @@ public class MovementCommandTests
 		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
 	}
 
+	/// <summary>
+	/// A route of exits, each opened by the walker where it stands: <c>A</c> to <c>B</c> to <c>C</c>.
+	/// </summary>
+	private async Task<(TestIsolationHelpers.TestPlayer Walker, DBRef Start, DBRef Middle, DBRef End, string First, string Second)> RouteAsync(string prefix)
+	{
+		var start = await Players.DigRoomAsync($"{prefix}Start");
+		var middle = await Players.DigRoomAsync($"{prefix}Middle");
+		var end = await Players.DigRoomAsync($"{prefix}End");
+		var walker = await Players.WizardAsync(prefix, start);
+		var first = TestIsolationHelpers.GenerateUniqueName($"{prefix}One");
+		var second = TestIsolationHelpers.GenerateUniqueName($"{prefix}Two");
+		await Players.RunAsync(walker, $"@open {first}={middle}");
+		await Players.RunAsync(walker, $"@tel me={middle}");
+		await Players.RunAsync(walker, $"@open {second}={end}");
+		await Players.RunAsync(walker, $"@tel me={start}");
+		return (walker, start, middle, end, first, second);
+	}
+
+	private async Task<int> WhereIsAsync(DBRef thing)
+		=> (await Mediator.Send(new GetLocationQuery(thing))).WithExitOption().Expect<AnySharpObject>().Object().DBRef.Number;
+
+	[Test]
+	public async ValueTask WalkGoesThroughEachExitInTurn()
+	{
+		var route = await RouteAsync("WalkRoute");
+
+		await Players.RunAsync(route.Walker, $"walk {route.First} {route.Second}");
+
+		await Assert.That(await WhereIsAsync(route.Walker.DbRef)).IsEqualTo(route.End.Number);
+	}
+
+	[Test]
+	public async ValueTask WalkStopsAtTheFirstExitThatFails()
+	{
+		var route = await RouteAsync("WalkStop");
+
+		var heard = await Players.HeardRunning(route.Walker, $"walk {route.First} nowhere {route.Second}");
+
+		await Assert.That(await WhereIsAsync(route.Walker.DbRef)).IsEqualTo(route.Middle.Number);
+		await Assert.That(heard).Contains(ErrorMessages.Notifications.CantGoThatWay);
+	}
+
 	[Test]
 	public async ValueTask TeleportPreventsLoops()
 	{

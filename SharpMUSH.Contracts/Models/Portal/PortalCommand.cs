@@ -11,6 +11,8 @@ namespace SharpMUSH.Library.Models.Portal;
 /// Optional. An expression evaluated as the character right after the command, in the same queue
 /// entry, so nothing else in the game runs between the two. Its value is the structured answer, for
 /// a caller that needs to learn what the command made — <c>scenefocus(me)</c> after <c>+scene/create</c>.
+/// <c>%&gt;</c> in it is the command's output, as for the next command of a list: <c>%&gt;</c> after <c>@dig</c>
+/// is the new room.
 /// </param>
 /// <param name="Character">
 /// Optional. The objid (<c>#N:creation</c>) of the character the caller means to act as. The command

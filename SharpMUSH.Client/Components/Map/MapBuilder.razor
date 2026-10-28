@@ -1,0 +1,462 @@
+@using System.Globalization
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Models.Portal
+@inject GameCommandService Commands
+@inject IStringLocalizer<SharedResource> Loc
+
+@* Builder mode's side of the World map: the room or empty cell chosen on the map, the rooms a builder may add, the
+   checks, and the plan, reviewed and applied as the builder's own commands. Nothing reaches the game until Apply. *@
+<div class="map-builder">
+    @if (_reviewing)
+    {
+        @Review()
+    }
+    else
+    {
+        @if (Cell is var (cellX, cellY))
+        {
+            @Spot(cellX, cellY)
+        }
+        else if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && !room.Region)
+        {
+            @RoomEditor(room)
+        }
+        else
+        {
+            <p class="map-note">@Loc[Layout.IsGraph ? "NavMapNoChangesPicture" : "NavMapNoChanges"]</p>
+        }
+        @Tray()
+        @Checks()
+        <div class="map-builder-footer">
+            <span>@Loc["NavMapChangesWaiting", Plan.Changes.Count]</span>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(Plan.Changes.Count == 0)" OnClick="() => _reviewing = true">
+                @Loc["NavMapReview"]
+            </MudButton>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public MapPlan Plan { get; set; } = default!;
+
+    /// <summary>The map as the plan will leave it.</summary>
+    [Parameter, EditorRequired] public MapLayout Layout { get; set; } = default!;
+
+    [Parameter] public int Level { get; set; }
+    [Parameter] public string? Selected { get; set; }
+    [Parameter] public (double X, double Y)? Cell { get; set; }
+
+    /// <summary>The objid of the character the commands run as.</summary>
+    [Parameter] public string? Character { get; set; }
+
+    /// <summary>The plan changed: the page draws the map again, and chooses <c>string</c> when given (a room just dug).</summary>
+    [Parameter] public EventCallback<string?> OnChanged { get; set; }
+
+    /// <summary>The plan was applied, all of it or up to the step that failed: the page reads the map again.</summary>
+    [Parameter] public EventCallback<IReadOnlyList<MapApplied>> OnApplied { get; set; }
+
+    private bool _reviewing;
+    private bool _applying;
+    private string _name = "";
+    private string? _from;
+    private string _exitTo = "";
+    private string _exitBack = "";
+    private bool _wayBack = true;
+    private (double X, double Y)? _formFor;
+    private int _vertical;
+    private string _addId = "";
+    private double _x, _y, _width = 1, _height = 1;
+    private int _z;
+    private string? _editing;
+    private MapPlacement? _shown;
+
+    protected override void OnParametersSet()
+    {
+        if (Cell != _formFor)
+        {
+            _formFor = Cell;
+            ResetDig();
+            if (Cell is var (x, y)) (_from, _exitTo, _exitBack) = DefaultExits(x, y);
+        }
+        // The fields follow the room as the plan moves it, not only when another room is chosen.
+        if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
+        {
+            if (id != _editing) _vertical = 0;
+            (_editing, _shown) = (id, room);
+            (_x, _y, _z) = room.Room.Position switch
+            {
+                [var x, var y, var z, ..] => (x, y, (int)z),
+                [var x, var y] => (x, y, 0),
+                // A compass map places most rooms by their exits: start from where it drew them.
+                _ => Layout.Spot(room),
+            };
+            (_width, _height) = room.Room.Size is [var w, var h, ..] ? (w, h) : (1, 1);
+        }
+    }
+
+    private void ResetDig() => (_name, _wayBack) = ("", true);
+
+    /// <summary>
+    /// Where a room dug at (x, y) is joined from: the chosen room when it is beside the cell (or any chosen room on a
+    /// picture), else the first room beside it, with exit names from the direction between them.
+    /// </summary>
+    private (string? From, string To, string Back) DefaultExits(double x, double y)
+    {
+        if (Layout.IsGraph)
+        {
+            var from = Selected is { } chosen && Layout.Rooms.TryGetValue(chosen, out var room) && !room.Region ? chosen : null;
+            return (from, "", "");
+        }
+        var beside = Neighbours(x, y).ToList();
+        var pick = beside.FirstOrDefault(n => n.Id == Selected);
+        if (pick.Id is null && beside.Count > 0) pick = beside[0];
+        return pick.Id is null ? (null, "", "") : JoinFrom(pick, x, y);
+    }
+
+    private (string? From, string To, string Back) JoinFrom((string Id, double X, double Y) room, double x, double y)
+    {
+        var names = MapPlan.DirectionNames((int)(x - room.X), (int)(y - room.Y), 0);
+        return (room.Id, names?.To ?? "", names?.Back ?? "");
+    }
+
+    private void ChooseFrom(string? room, double x, double y)
+    {
+        if (Neighbours(x, y).FirstOrDefault(n => n.Id == room) is { Id: not null } beside) (_from, _exitTo, _exitBack) = JoinFrom(beside, x, y);
+    }
+
+    /// <summary>
+    /// The rooms on this level in the eight cells around (x, y), with the cell each is in: those north, south, east or
+    /// west of it first.
+    /// </summary>
+    private IEnumerable<(string Id, double X, double Y)> Neighbours(double x, double y) =>
+        Beside(x, y).OrderBy(room => Math.Abs(room.X - x) + Math.Abs(room.Y - y));
+
+    private IEnumerable<(string Id, double X, double Y)> Beside(double x, double y)
+    {
+        foreach (var room in Layout.On(Level).Where(room => !room.Region))
+        {
+            var (left, top) = (room.X / MapLayout.Cell, -room.Y / MapLayout.Cell - 1);
+            var (width, height) = (room.Width / MapLayout.Cell, room.Height / MapLayout.Cell);
+            // The cell of the room nearest (x, y): a room may cover several.
+            var nx = Math.Clamp(x, left, left + width - 1);
+            var ny = Math.Clamp(y, top - height + 1, top);
+            if (Math.Abs(nx - x) <= 1 && Math.Abs(ny - y) <= 1 && (nx, ny) != (x, y)) yield return (room.Room.Id, nx, ny);
+        }
+    }
+
+    private string? DigProblem()
+    {
+        switch (MapPlan.RoomNameProblem(_name))
+        {
+            case "empty": return Loc["NavMapNameMissing"];
+            case "character": return Loc["NavMapNameCharacter"];
+        }
+        if (_from is null) return Loc["NavMapNoNeighbour"];
+        var problem = MapPlan.ExitNameProblem(_exitTo) ?? (_wayBack ? MapPlan.ExitNameProblem(_exitBack) : null);
+        return problem switch
+        {
+            "empty" => Loc["NavMapExitEmpty"].Value,
+            "in" => Loc["NavMapExitIn"].Value,
+            "character" => Loc["NavMapExitCharacter"].Value,
+            _ => null,
+        };
+    }
+
+    private async Task DigAsync(double x, double y, int z)
+    {
+        if (DigProblem() is not null || _from is null) return;
+        var key = Plan.Dig(_name.Trim(), x, y, z, _from, _exitTo.Trim(), _wayBack ? _exitBack.Trim() : null);
+        ResetDig();
+        _vertical = 0;
+        await OnChanged.InvokeAsync(key);
+    }
+
+    private async Task MoveHereAsync(string room, double x, double y)
+    {
+        Plan.Place(room, x, y, Level);
+        await OnChanged.InvokeAsync(room);
+    }
+
+    private RenderFragment Spot(double x, double y) => __builder =>
+    {
+        var problem = DigProblem();
+        <section class="map-builder-section" aria-labelledby="map-spot-title">
+            <h3 id="map-spot-title" class="map-builder-title">@(Layout.IsGraph ? Loc["NavMapPoint", Num(x), Num(y)] : Loc["NavMapCell", Num(x), Num(y)])</h3>
+            @if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var chosen) && chosen.Room.Editable && !chosen.Region)
+            {
+                <MudButton Variant="Variant.Outlined" OnClick="() => MoveHereAsync(id, x, y)">@Loc["NavMapMoveHere", chosen.Room.Name]</MudButton>
+            }
+            <h4 class="map-builder-subtitle">@Loc["NavMapDigHere"]</h4>
+            <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
+            @if (Layout.IsGraph)
+            {
+                <MudSelect T="string" @bind-Value="_from" Label="@Loc["NavMapDigFrom"]" Variant="Variant.Outlined">
+                    @foreach (var room in Layout.Rooms.Values.Where(r => !r.Region).OrderBy(r => r.Room.Name, StringComparer.OrdinalIgnoreCase))
+                    {
+                        <MudSelectItem Value="@room.Room.Id">@room.Room.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (Neighbours(x, y).ToList() is { Count: > 1 } beside)
+            {
+                <MudSelect T="string" Value="_from" ValueChanged="room => ChooseFrom(room, x, y)" Label="@Loc["NavMapDigFrom"]" Variant="Variant.Outlined">
+                    @foreach (var room in beside)
+                    {
+                        <MudSelectItem Value="@room.Id">@Layout.Rooms[room.Id].Room.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+            else if (_from is { } from && Layout.Rooms.TryGetValue(from, out var source))
+            {
+                <p class="map-note">@Loc["NavMapDigFromRoom", source.Room.Name]</p>
+            }
+            @ExitFields()
+            @if (problem is not null)
+            {
+                <p class="map-note">@problem</p>
+            }
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(problem is not null)" OnClick="() => DigAsync(x, y, Level)">
+                @Loc["NavMapAddToPlan"]
+            </MudButton>
+        </section>
+    };
+
+    private RenderFragment ExitFields() => __builder =>
+    {
+        <MudTextField T="string" @bind-Value="_exitTo" Label="@Loc["NavMapExitTo"]" Variant="Variant.Outlined" Immediate="true"
+                      HelperText="@Loc["NavMapExitHelp"]" />
+        <MudCheckBox T="bool" @bind-Value="_wayBack" Label="@Loc["NavMapMakeWayBack"]" />
+        @if (_wayBack)
+        {
+            <MudTextField T="string" @bind-Value="_exitBack" Label="@Loc["NavMapExitBack"]" Variant="Variant.Outlined" Immediate="true" />
+        }
+    };
+
+    private RenderFragment RoomEditor(MapPlacement room) => __builder =>
+    {
+        <section class="map-builder-section" aria-labelledby="map-edit-title">
+            <h3 id="map-edit-title" class="map-builder-title">@room.Room.Name</h3>
+            @if (!room.Room.Editable)
+            {
+                <p class="map-note">@Loc["NavMapLocked"]</p>
+            }
+            else
+            {
+                <div class="map-builder-fields">
+                    <MudNumericField T="double" @bind-Value="_x" Label="X" Variant="Variant.Outlined" />
+                    <MudNumericField T="double" @bind-Value="_y" Label="Y" Variant="Variant.Outlined" />
+                    @if (!Layout.IsGraph)
+                    {
+                        <MudNumericField T="int" @bind-Value="_z" Label="@Loc["NavMapLevelField"]" Variant="Variant.Outlined" />
+                    }
+                </div>
+                <MudButton Variant="Variant.Outlined" OnClick="SavePlaceAsync">@Loc["NavMapSavePlace"]</MudButton>
+                <div class="map-builder-fields">
+                    <MudNumericField T="double" @bind-Value="_width" Min="1" Label="@Loc["NavMapWidth"]" Variant="Variant.Outlined" />
+                    <MudNumericField T="double" @bind-Value="_height" Min="1" Label="@Loc["NavMapHeight"]" Variant="Variant.Outlined" />
+                </div>
+                <MudButton Variant="Variant.Outlined" OnClick="SaveSizeAsync">@Loc["NavMapSaveSize"]</MudButton>
+                @if (!Layout.IsGraph && room.Placed)
+                {
+                    <div class="map-builder-row">
+                        <MudButton Variant="Variant.Text" OnClick="() => StartVertical(1, room)">@Loc["NavMapDigAbove"]</MudButton>
+                        <MudButton Variant="Variant.Text" OnClick="() => StartVertical(-1, room)">@Loc["NavMapDigBelow"]</MudButton>
+                    </div>
+                    @if (_vertical != 0)
+                    {
+                        var problem = DigProblem();
+                        <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
+                        @ExitFields()
+                        @if (problem is not null)
+                        {
+                            <p class="map-note">@problem</p>
+                        }
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(problem is not null)"
+                                   OnClick="() => DigAsync(_x, _y, _z + _vertical)">@Loc["NavMapAddToPlan"]</MudButton>
+                    }
+                }
+                <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RemoveAsync(room.Room.Id)">@Loc["NavMapTakeOff"]</MudButton>
+            }
+        </section>
+    };
+
+    private void StartVertical(int by, MapPlacement room)
+    {
+        _vertical = by;
+        ResetDig();
+        _from = room.Room.Id;
+        var names = MapPlan.DirectionNames(0, 0, by)!.Value;
+        (_exitTo, _exitBack) = (names.To, names.Back);
+    }
+
+    private async Task SavePlaceAsync()
+    {
+        if (_editing is null) return;
+        Plan.Place(_editing, _x, _y, _z);
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    private async Task SaveSizeAsync()
+    {
+        if (_editing is null) return;
+        Plan.Size(_editing, Math.Max(1, _width), Math.Max(1, _height));
+        await OnChanged.InvokeAsync(_editing);
+    }
+
+    private async Task RemoveAsync(string room)
+    {
+        Plan.Remove(room);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task AddAsync(MapRoomDto room)
+    {
+        Plan.Add(room);
+        await OnChanged.InvokeAsync(room.Id);
+    }
+
+    private async Task AddByIdAsync()
+    {
+        var id = _addId.Trim();
+        if (!MapPlan.IsDbref(id) || Layout.Rooms.ContainsKey(id)) return;
+        _addId = "";
+        await AddAsync(new MapRoomDto(id, id, null, null) { Editable = true });
+    }
+
+    private RenderFragment Tray() => __builder =>
+    {
+        var offered = Plan.Map.Nearby.Where(room => !Layout.Rooms.ContainsKey(room.Id)).ToList();
+        <section class="map-builder-section" aria-labelledby="map-tray-title">
+            <h3 id="map-tray-title" class="map-builder-title">@Loc["NavMapTray"]</h3>
+            @if (offered.Count > 0)
+            {
+                <p class="map-note">@Loc["NavMapTrayNote"]</p>
+                <ul class="map-builder-list">
+                    @foreach (var room in offered)
+                    {
+                        <li>
+                            <span>@room.Name <span class="map-builder-dim">@room.Id</span></span>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => AddAsync(room)">@Loc["NavMapAdd"]</MudButton>
+                        </li>
+                    }
+                </ul>
+            }
+            <div class="map-builder-row">
+                <MudTextField T="string" @bind-Value="_addId" Label="@Loc["NavMapAddByDbref"]" Variant="Variant.Outlined" Immediate="true" />
+                <MudButton Variant="Variant.Outlined" Disabled="@(!MapPlan.IsDbref(_addId))" OnClick="AddByIdAsync">@Loc["NavMapAdd"]</MudButton>
+            </div>
+        </section>
+    };
+
+    private RenderFragment Checks() => __builder =>
+    {
+        var stranded = Plan.NoWayIn();
+        if (stranded.Count == 0) return;
+        <section class="map-builder-section" aria-labelledby="map-checks-title">
+            <h3 id="map-checks-title" class="map-builder-title">@Loc["NavMapChecks"]</h3>
+            <ul class="map-builder-list">
+                @foreach (var room in stranded)
+                {
+                    <li>@Loc["NavMapNoWayIn", room.Name]</li>
+                }
+            </ul>
+        </section>
+    };
+
+    private string Title(MapChange change) => Loc[$"NavMapPlan{change.Kind}", change.Name];
+
+    private RenderFragment Review() => __builder =>
+    {
+        <section class="map-builder-section" aria-labelledby="map-review-title">
+            <h3 id="map-review-title" class="map-builder-title">@Loc["NavMapReviewTitle", Plan.Map.Map.Name]</h3>
+            <p class="map-note">@Loc["NavMapApplyNote"]</p>
+            @foreach (var check in Plan.NoWayIn())
+            {
+                <p class="map-builder-warning">@Loc["NavMapNoWayIn", check.Name]</p>
+            }
+            <ol class="map-review">
+                @foreach (var change in Plan.Changes)
+                {
+                    <li>
+                        <div class="map-builder-row">
+                            <strong>@Title(change)</strong>
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Disabled="_applying" OnClick="() => DropAsync(change.Key)">@Loc["NavMapDrop"]</MudButton>
+                        </div>
+                        <pre class="map-review-commands">@string.Join("\n", change.Steps.Select(step => Plan.Show(step.Command)))</pre>
+                    </li>
+                }
+            </ol>
+            <div class="map-builder-row">
+                <MudButton Variant="Variant.Text" Disabled="_applying" OnClick="() => _reviewing = false">@Loc["NavMapBackToMap"]</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_applying || Plan.Changes.Count == 0)" OnClick="ApplyAsync">
+                    @Loc["NavMapApply", Plan.Changes.Count]
+                </MudButton>
+            </div>
+        </section>
+    };
+
+    private async Task DropAsync(string key)
+    {
+        Plan.Drop(key);
+        if (Plan.Changes.Count == 0) _reviewing = false;
+        await OnChanged.InvokeAsync(null);
+    }
+
+    /// <summary>
+    /// Runs the plan, change by change and command by command, as the character. Each command's check is read right
+    /// after it; the first that does not give what it should stops the rest.
+    /// </summary>
+    private async Task ApplyAsync()
+    {
+        _applying = true;
+        var applied = new List<MapApplied>();
+        try
+        {
+            var failed = false;
+            var made = new Dictionary<string, string>();
+            foreach (var change in Plan.Changes)
+            {
+                if (failed)
+                {
+                    applied.Add(new(Title(change), MapAppliedState.NotRun, null));
+                    continue;
+                }
+                var error = await RunAsync(change, made);
+                failed = error is not null;
+                applied.Add(new(Title(change), failed ? MapAppliedState.Failed : MapAppliedState.Done, error));
+            }
+        }
+        finally
+        {
+            _applying = false;
+            _reviewing = false;
+        }
+        await OnApplied.InvokeAsync(applied);
+    }
+
+    /// <summary>
+    /// Runs one change; null when every step worked, else what the game said when one did not. A dig's first step
+    /// gives the room it made, recorded in <paramref name="made"/> for the steps and changes after it.
+    /// </summary>
+    private async Task<string?> RunAsync(MapChange change, Dictionary<string, string> made)
+    {
+        foreach (var step in change.Steps)
+        {
+            var command = MapPlan.Resolve(step.Command, made);
+            var check = MapPlan.Resolve(step.Check, made);
+            switch (await Commands.RunAsync(command, check, Character))
+            {
+                case PortalCommandResponse answer when MapPlan.Worked(step, answer.Result):
+                    if (change.Kind == MapChangeKind.Dig) made.TryAdd(change.Room, answer.Result!.Trim());
+                    break;
+                case PortalCommandResponse answer:
+                    return answer.Output.LastOrDefault() ?? command;
+                case ApiFailure failure:
+                    return failure.Message;
+            }
+        }
+        return null;
+    }
+
+    private static string Num(double value) => value.ToString("0.##", CultureInfo.InvariantCulture);
+}

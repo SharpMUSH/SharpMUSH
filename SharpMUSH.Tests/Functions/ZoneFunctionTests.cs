@@ -129,6 +129,21 @@ public class ZoneFunctionTests
 	}
 
 	[Test]
+	public async Task ZfindFollowsChzone()
+	{
+		var zone = DBRef.Parse((await CreateFixtureAsync("ZfindZone")).Message.ToPlainText());
+		var first = DBRef.Parse((await CreateFixtureAsync("ZfindFirst")).Message.ToPlainText());
+		var second = DBRef.Parse((await CreateFixtureAsync("ZfindSecond")).Message.ToPlainText());
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {first}={zone}"));
+		await Assert.That((await FunctionParser.EvaluateAsync(MarkupText.Plain($"zfind({zone})"))).ToPlainText()).IsEqualTo($"#{first.Number}");
+
+		await CommandParser.CommandParse(Actor.Handle, ConnectionService, MarkupText.Plain($"@chzone {second}={zone}"));
+
+		await Assert.That((await FunctionParser.EvaluateAsync(MarkupText.Plain($"zfind({zone})"))).ToPlainText())
+			.IsEqualTo($"#{first.Number} #{second.Number}");
+	}
+
+	[Test]
 	public async Task ZoneClearWithFunction()
 	{
 		var zoneResult = await CreateFixtureAsync("ZoneFuncClearMaster");

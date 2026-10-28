@@ -257,12 +257,15 @@
             if (!IsCurrent(opening)) return;
             var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
             if (!IsCurrent(opening)) return;
+            var map = await ServerInfo.HasFeatureAsync(GameFeatures.WorldMap);
+            if (!IsCurrent(opening)) return;
             _destinations =
             [
                 PaletteRow.Go("/", Icons.Material.Outlined.Home, Loc["Home"]),
                 PaletteRow.Go("/play", Icons.Material.Outlined.SportsEsports, Loc["Play"]),
                 .. (PaletteRow[])(scenes ? [PaletteRow.Go("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"])] : []),
                 PaletteRow.Go("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"]),
+                .. (PaletteRow[])(map ? [PaletteRow.Go("/map", Icons.Material.Outlined.Map, Loc["NavWorldMap"])] : []),
                 PaletteRow.Go("/characters", Icons.Material.Outlined.Groups, Loc["Characters"]),
                 PaletteRow.Go("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"]),
                 PaletteRow.Go("/settings", Icons.Material.Outlined.Settings, Loc["Settings"]),

@@ -201,16 +201,22 @@ public sealed class PortalCommandService(
 		using var sender = DelegatedApp.Begin(app);
 		try
 		{
+			CallState ran;
 			using (outputCapture.BeginCapture(actor.Number, transcript))
 			{
-				await parser.CommandParse(actor, MarkupText.Plain(request.Command));
+				ran = await parser.CommandParse(actor, MarkupText.Plain(request.Command));
 			}
 
 			if (!string.IsNullOrWhiteSpace(request.Result) && !BudgetExpired())
 			{
 				// The command ran under the character's own output ceiling (a guest's is guest_output_limit);
-				// the expression read after it is the character's code too, and gets the same one.
-				var value = await parser.Push(ParserState.RootFor(actor) with { OutputLimit = await OutputLimitAsync(actor) })
+				// the expression read after it is the character's code too, and gets the same one. Its %> is the
+				// command's output, as it would be for the next command of a list: @dig's new room.
+				var value = await parser.Push(ParserState.RootFor(actor) with
+				{
+					OutputLimit = await OutputLimitAsync(actor),
+					QueuedOutput = ran.Message
+				})
 					.FunctionParse(MarkupText.Plain(request.Result));
 				result = value?.Message.ToPlainText() ?? string.Empty;
 			}

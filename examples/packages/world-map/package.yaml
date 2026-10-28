@@ -1,0 +1,194 @@
+format: "1.16"
+package: world-map
+title: "World map"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [map, world, grid, building, portal]
+category: Building
+requires_server: ">=0.1"
+
+# The portal reads the maps through api/maps, which lists them from this index: an object is a map when it holds
+# its own MAP`KIND. The package owns no code; the Map Guide only carries the +help topic.
+attributes:
+  MAP`KIND:
+    index: type:thing
+
+objects:
+  - ref: world_map
+    type: thing
+    name: Map Guide
+    flags: [no_command]
+    attributes:
+      HELP: |-
+        The World map in the portal, and how to make a map of your rooms.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`MAP: |-
+        zones|gmcp room
+      HELP`MAP: |-
+        The portal's **World map** draws each map of the game from its rooms and the exits between them. Everyone can look at a map; the room you are in is marked.
+
+        A map is a thing whose ``MAP`KIND`` attribute says how it is drawn. A room is on the map that is its zone.
+
+        - `coordinates`: a grid. Each room sits in the cell its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` name, one level (z) at a time, north up.
+        - `compass`: placed by its exits. A room north of another is drawn above it; `up` and `down` change the level.
+        - `graph`: each room at the point its ``MAP`POS`X`` and ``MAP`POS`Y`` name, with no grid.
+
+        A room covers one cell unless its ``MAP`SIZE`W`` and ``MAP`SIZE`H`` say more.
+
+        ## Making a map
+
+        In a room called Boathouse:
+
+        ```
+        @create Harbour
+        &MAP`KIND Harbour=coordinates
+        @chzone here=Harbour
+        &MAP`COORDS`X here=3
+        &MAP`COORDS`Y here=-1
+        ```
+
+        Output:
+        ```
+        Created: Object #32.
+        Harbour/MAP`KIND - Set.
+        Unlocked zone Harbour(#32Tn) - automatically zone-locking to itself
+        Zone changed.
+        Boathouse/MAP`COORDS`X - Set.
+        Boathouse/MAP`COORDS`Y - Set.
+        ```
+
+        Do the same in each room of the harbour. A room without coordinates is drawn in a row below the grid.
+
+        ## Several maps
+
+        A game may have as many maps as it likes, each of its own kind. An exit from a room on one map to a room on another is drawn as a door; choosing it opens the other map.
+
+        A map zoned to another map is a region inside it. See `+help map regions`.
+
+        A grid shows one level at a time. See `+help map levels`.
+
+        A graph map can be drawn on a picture. See `+help map pictures`.
+
+        Choosing a room shows the way there from where you stand. See `+help map routes`.
+
+        Someone who controls a map can change it in the portal. See `+help map building`.
+      HELP`MAP`REGIONS: |-
+        A map zoned to another map is a region inside it. Regions nest as deep as you like: Sol System, Earth, United States, New York, Brooklyn.
+
+        The portal lists a region under its map and names the maps it is inside above it. On its map, a region is a box that opens it, placed by its own ``MAP`COORDS`` (``MAP`POS`` on a graph map) and ``MAP`SIZE``, as a room is. Without them it is drawn in the row below. While you stand anywhere inside a region, its box is marked.
+
+        Holding the Harbour map:
+
+        ```
+        @create Fish Market
+        &MAP`KIND Fish Market=graph
+        @chzone Fish Market=Harbour
+        &MAP`COORDS`X Fish Market=4
+        &MAP`COORDS`Y Fish Market=0
+        &MAP`SIZE`W Fish Market=2
+        ```
+
+        Output:
+        ```
+        Created: Object #71.
+        Fish Market/MAP`KIND - Set.
+        Zone changed.
+        Fish Market/MAP`COORDS`X - Set.
+        Fish Market/MAP`COORDS`Y - Set.
+        Fish Market/MAP`SIZE`W - Set.
+        ```
+      HELP`MAP`LEVELS: |-
+        A `coordinates` or `compass` map shows one level at a time. The arrows beside the level names step up and down, and choosing a room's up or down exit goes to its level.
+
+        ``MAP`LEVEL`<level>`` names a level; a level without a name is numbered. ``MAP`LEVEL`` is the level a visitor sees first. Someone standing on the map starts on their own level.
+
+        ```
+        &MAP`LEVEL`-1 Harbour=Sewers
+        &MAP`LEVEL Harbour=-1
+        ```
+
+        Output:
+        ```
+        Harbour/MAP`LEVEL`-1 - Set.
+        Harbour/MAP`LEVEL - Set.
+        ```
+      HELP`MAP`PICTURES: |-
+        A `graph` map can be drawn on a picture. ``MAP`BACKDROP`` holds the picture's address: a path on the game's own site, such as the link of an image in the wiki's image library, or an `https` address. Any other address is not shown. ``MAP`SIZE`W`` and ``MAP`SIZE`H`` are the picture's size in pixels.
+
+        Each room's ``MAP`POS`X`` and ``MAP`POS`Y`` are then a point on the picture, in pixels from its top left corner. A room is drawn as a pin with its name under it, unless it has a ``MAP`SIZE`` of its own: then it is an area of that many pixels around its point.
+
+        Holding the Isle map:
+
+        ```
+        &MAP`BACKDROP Isle=/api/wiki-assets/fd8b00b0889f4bee97f0eb7f7a8849f7/isle.png
+        &MAP`SIZE`W Isle=900
+        &MAP`SIZE`H Isle=640
+        ```
+
+        Output:
+        ```
+        Isle/MAP`BACKDROP - Set.
+        Isle/MAP`SIZE`W - Set.
+        Isle/MAP`SIZE`H - Set.
+        ```
+
+        In the Ford:
+
+        ```
+        &MAP`POS`X here=470
+        &MAP`POS`Y here=390
+        ```
+
+        Output:
+        ```
+        Ford/MAP`POS`X - Set.
+        Ford/MAP`POS`Y - Set.
+        ```
+      HELP`MAP`ROUTES: |-
+        Choosing a room on the World map shows the way there from where you stand: the exits to take in turn, over the exits you can see, on this map or across others. The way is drawn on the map, and under it is one line you can paste into any client, such as:
+
+        ```
+        walk North Up
+        ```
+
+        **Walk there** runs that line as your character. `walk` stops at the first exit that refuses you, such as a locked door, and the map then shows where you are.
+
+        `walk` takes exits separated by spaces, so an exit whose name has a space is written by its first alias without one. Give such exits a one-word alias: `@name Coast road=Coast road;road`. A route through an exit with no such name is still shown, with no line to paste.
+
+        See `help walk`.
+      HELP`MAP`BUILDING: |-
+        If you control a map, the World map shows **Edit map**. While you edit, nothing reaches the game; the map shows what it will look like once your changes run.
+
+        - Choose a room you control to set its place or size, dig a room above or below it, or take it off the map.
+        - Choose an empty cell next to a room (a spot on a picture map) to dig a room there, joined to that room by an exit and, if you like, an exit back. The exit names follow the direction: `East;e` there and `West;w` back.
+        - Add a room that this map's exits lead to and that is on no map, or a room by its dbref.
+
+        **Review and apply** lists each change as the commands it runs. **Apply** runs them as you, with your permissions, one by one, and checks each. The first that fails stops the rest, and the list says which changes ran.
+
+        On the Isle, a picture map, digging a Tar shed at a spot joined to the Ford runs:
+
+        ```
+        @dig Tar shed
+        @chzone #115=Isle
+        &MAP`POS`X #115=380
+        &MAP`POS`Y #115=520
+        @open Tar lane;tar=#115,Ford path;fp,#73
+        ```
+
+        Output:
+        ```
+        Tar shed created with room number 115.
+        Zone changed.
+        Tar shed/MAP`POS`X - Set.
+        Tar shed/MAP`POS`Y - Set.
+        Opened exit #116
+        Trying to link...
+        Linked exit #116 to #115
+        Opened exit #117
+        Trying to link...
+        Linked exit #117 to #73
+        ```

@@ -40,7 +40,7 @@ room as the player standing in it.
 |---|---|---|
 | `area` | `AREA` | The room attribute naming its area; a room without it is in its zone's area |
 | `environment` | `ENVIRONMENT` | The room attribute holding its terrain |
-| `coordinates` | `X Y Z` | The room attributes holding x, y and z |
+| `coordinates` | ``MAP`COORDS`X MAP`COORDS`Y MAP`COORDS`Z`` | The room attributes holding x, y and z, the ones the World map reads |
 | `fullname` | `FULLNAME` | The player attribute holding the name shown in full |
 
 The values are on the **GMCP Room** object, which also carries the `+help gmcp room` topic.

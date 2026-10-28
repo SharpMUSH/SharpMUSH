@@ -19,6 +19,9 @@ public static class GameFeatures
 	/// <summary>The Discord link: linked channels, and members linking their accounts. The <c>discord</c> package over the Discord plugin.</summary>
 	public const string Discord = "discord";
 
+	/// <summary>The World map: the game's maps, drawn from the rooms zoned to each. The <c>world-map</c> package.</summary>
+	public const string WorldMap = "world-map";
+
 	/// <summary>
 	/// What a new game has before anyone chooses — the applications the server installs at first boot.
 	/// Also what the portal assumes when it cannot ask the server.

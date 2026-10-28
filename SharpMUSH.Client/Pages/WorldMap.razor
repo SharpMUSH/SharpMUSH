@@ -1,0 +1,539 @@
+@page "/map"
+@page "/map/{Id:int}"
+@using SharpMUSH.Client.Components.Map
+@using SharpMUSH.Library.API
+@inject WorldMapService Maps
+@inject IAccountAuthState AccountAuth
+@inject NavigationManager Nav
+@inject IStringLocalizer<SharedResource> Loc
+@inject GameCommandService Commands
+@inject IJSRuntime JS
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+<PageTitle>@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value) — <GameName /></PageTitle>
+
+@* The World map (the world-map package): the game's maps beside the one on show, a level at a time. A map is an
+   object with MAP`KIND, and its rooms are the rooms zoned to it; the server sends only what the acting character
+   may see. Choosing a room lists its exits; an exit to another map opens that map. Choosing a room on the map you are
+   on also shows the way there, as one walk line to paste into any client or to walk from here. *@
+<FeatureGate Feature="@GameFeatures.WorldMap">
+<ChildContent>
+<div class="map-page">
+    <PlainPageHeader Title="@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value)" Kicker="@(_layout is null ? null : Loc["NavWorldMap"].Value)"
+                     Description="@(_layout is null ? null : KindLabel(_layout.Map.Map.Kind))">
+        <Actions>
+            @if (_layout is not null)
+            {
+                <CapsuleButton Icon="@Icons.Material.Outlined.ZoomOut" AriaLabel="@Loc["NavMapZoomOut"]" Disabled="@(_zoom <= MinZoom)"
+                               OnClick="() => ZoomBy(1 / ZoomStep)" />
+                <CapsuleButton Icon="@Icons.Material.Outlined.ZoomIn" AriaLabel="@Loc["NavMapZoomIn"]" Disabled="@(_zoom >= MaxZoom)"
+                               OnClick="() => ZoomBy(ZoomStep)" />
+                @if (_layout.Map.CanEdit && !_editing)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Edit" OnClick="StartEditing">@Loc["NavMapEdit"]</CapsuleButton>
+                }
+                else if (_editing)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopEditing">
+                        @(_plan?.Changes.Count > 0 ? Loc["NavMapDiscard"] : Loc["NavMapLeaveEdit"])
+                    </CapsuleButton>
+                }
+                @if (_layout.Map.Here is { } here && !_editing)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.MyLocation" OnClick="() => GoToRoomAsync(here)">@Loc["NavMapYouAreHere"]</CapsuleButton>
+                }
+            }
+        </Actions>
+    </PlainPageHeader>
+
+    @if (AccountAuth.ActiveCharacter is null)
+    {
+        <EmptyState Class="map-note">@Loc["NavMapNeedsCharacter"]</EmptyState>
+    }
+    else
+    {
+        <div class="map-panes">
+            <nav class="map-list" aria-label="@Loc["NavMapMaps"]">
+                @if (_maps is null)
+                {
+                    @for (var i = 0; i < 3; i++) { <MudSkeleton Height="32px" Class="mb-1" /> }
+                }
+                else if (_maps.Count == 0)
+                {
+                    <p class="map-note">@(_listFailed ? Loc["WidUnavailable"] : Loc["NavMapNone"])</p>
+                }
+                else
+                {
+                    @Tree(null)
+                }
+            </nav>
+
+            <div class="map-main">
+                @if (Id is null)
+                {
+                    @if (_maps is { Count: > 0 })
+                    {
+                        <p class="map-note">@Loc["NavMapPick"]</p>
+                    }
+                }
+                else if (_loading)
+                {
+                    <MudSkeleton Height="320px" />
+                }
+                else if (_layout is null)
+                {
+                    <EmptyState Class="map-note">@(_missing ? Loc["NavMapMissing"] : Loc["WidUnavailable"])</EmptyState>
+                }
+                else
+                {
+                    @if (Trail() is { Count: > 0 } trail)
+                    {
+                        <nav class="map-trail" aria-label="@Loc["NavMapTrail"]">
+                            <ol>
+                                @foreach (var map in trail)
+                                {
+                                    <li><a href="@($"/map/{map.Id[1..]}")">@map.Name</a></li>
+                                }
+                                <li aria-current="page">@_layout.Map.Map.Name</li>
+                            </ol>
+                        </nav>
+                    }
+                    @if (_editing)
+                    {
+                        <p class="map-editing" role="status">@Loc["NavMapEditing", _layout.Map.Map.Name] @Loc["NavMapEditNote"]</p>
+                    }
+                    @if (_applied is { } applied)
+                    {
+                        <KitCard Class="map-applied" Title="@Loc["NavMapAppliedTitle"]">
+                            <ol class="map-applied-list">
+                                @foreach (var change in applied)
+                                {
+                                    <li class="map-applied--@change.State.ToString().ToLowerInvariant()">
+                                        @change.Title:
+                                        @(change.State switch
+                                        {
+                                            MapAppliedState.Done => Loc["NavMapApplied"],
+                                            MapAppliedState.Failed => Loc["NavMapFailed", change.Error ?? ""],
+                                            _ => Loc["NavMapNotRun"],
+                                        })
+                                    </li>
+                                }
+                            </ol>
+                        </KitCard>
+                    }
+                    @if (Shown.Levels.Count > 1)
+                    {
+                        var at = Shown.Levels.ToList().IndexOf(_level);
+                        <div class="map-levels">
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ArrowDownward" AriaLabel="@Loc["NavMapLevelDown"]"
+                                           Disabled="@(at <= 0)" OnClick="() => StepLevel(-1)" />
+                            <CapsuleButton Icon="@Icons.Material.Outlined.ArrowUpward" AriaLabel="@Loc["NavMapLevelUp"]"
+                                           Disabled="@(at >= Shown.Levels.Count - 1)" OnClick="() => StepLevel(1)" />
+                            <TypeChips Items="@LevelChips" Selected="@_level.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                                       SelectedChanged="SelectLevel" AriaLabel="@Loc["NavMapLevels"]" />
+                        </div>
+                    }
+                    @if (_layout.Map.Truncated)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="map-truncated">@Loc["NavMapTruncated"]</MudAlert>
+                    }
+                    @if (Shown.Rooms.Count == 0 && !_editing)
+                    {
+                        <EmptyState Class="map-note">@Loc["NavMapEmpty"]</EmptyState>
+                    }
+                    else
+                    {
+                        <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
+                                   Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
+                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" />
+                        @if (_editing && _plan is not null)
+                        {
+                            <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
+                                <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell"
+                                            Character="@CharacterId" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
+                            </KitCard>
+                        }
+                        else
+                        {
+                            @RoomPanel()
+                        }
+                    }
+                }
+            </div>
+        </div>
+    }
+</div>
+</ChildContent>
+<Otherwise>
+    <div class="map-page"><EmptyState>@Loc["NavMapNotEnabled"]</EmptyState></div>
+</Otherwise>
+</FeatureGate>
+
+@code {
+    [Parameter] public int? Id { get; set; }
+
+    private const double ZoomStep = 1.25;
+    private const double MinZoom = 0.25;
+    private const double MaxZoom = 3;
+
+    private IReadOnlyList<MapSummaryDto>? _maps;
+    private IReadOnlyDictionary<string, string?> _parents = new Dictionary<string, string?>();
+    private bool _listFailed;
+    private MapLayout? _layout;
+    private bool _editing;
+    private MapPlan? _plan;
+    private MapLayout? _preview;
+    private (double X, double Y)? _cell;
+    private IReadOnlyList<MapApplied>? _applied;
+
+    /// <summary>The map on show: as the plan will leave it while editing, else as it is.</summary>
+    private MapLayout Shown => _editing && _preview is not null ? _preview : _layout!;
+
+    private string? CharacterId => AccountAuth.ActiveCharacter is { } acting ? $"#{acting.DbrefNumber}:{acting.CreationTime}" : null;
+
+    private void StartEditing()
+    {
+        if (_layout is null) return;
+        (_editing, _plan, _cell, _applied) = (true, new MapPlan(_layout.Map), null, null);
+        ForgetRoute();
+        _preview = new MapLayout(_plan.Preview());
+    }
+
+    private void StopEditing() => (_editing, _plan, _preview, _cell) = (false, null, null, null);
+
+    private void SelectCell((double X, double Y) cell) => _cell = cell;
+
+    /// <summary>The plan changed: draw the map as it now will be, and choose the room it names, on its level.</summary>
+    private Task PlanChangedAsync(string? room)
+    {
+        if (_plan is null) return Task.CompletedTask;
+        _preview = new MapLayout(_plan.Preview());
+        _cell = null;
+        if (room is not null && _preview.Rooms.TryGetValue(room, out var placed))
+        {
+            (_selected, _level) = (room, placed.Placed ? placed.Level : _level);
+        }
+        if (!_preview.Levels.Contains(_level) && _preview.Rooms.Count > 0) _level = _preview.Levels[0];
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The plan ran, all of it or up to a failed step: read the map again and keep editing it from there.</summary>
+    private async Task AppliedAsync(IReadOnlyList<MapApplied> applied)
+    {
+        var level = _level;
+        await LoadMapAsync();
+        _applied = applied;
+        if (_layout is null) return;
+        if (_layout.Levels.Contains(level)) _level = level;
+        StartEditing();
+        _applied = applied;
+    }
+    private bool _loading;
+    private bool _missing;
+    private int _level;
+    private double _zoom = 1;
+    private string? _selected;
+    private int? _shown;
+    private MapCanvas? _canvas;
+    private MapRouteDto? _route;
+    private bool _noRoute;
+    private bool _walking;
+    private string? _walkError;
+    private int _routeAsked;
+
+    protected override async Task OnInitializedAsync()
+    {
+        AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        await LoadListAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id == _shown) return;
+        _shown = Id;
+        await LoadMapAsync();
+    }
+
+    private async Task LoadListAsync()
+    {
+        if (AccountAuth.ActiveCharacter is null) return;
+        var result = await Maps.ListAsync();
+        (_maps, _listFailed) = result switch
+        {
+            IReadOnlyList<MapSummaryDto> maps => (maps, false),
+            _ => ((IReadOnlyList<MapSummaryDto>)[], true),
+        };
+        _parents = MapTree.Parents(_maps);
+    }
+
+    private async Task LoadMapAsync()
+    {
+        (_layout, _selected, _missing, _applied) = (null, null, false, null);
+        ForgetRoute();
+        StopEditing();
+        if (Id is not { } id || AccountAuth.ActiveCharacter is null) return;
+        _loading = true;
+        var result = await Maps.GetAsync(id);
+        _loading = false;
+        switch (result)
+        {
+            case MapDto map:
+                _layout = new MapLayout(map);
+                _selected = map.Here;
+                _level = map.Here is { } here && _layout.Rooms.TryGetValue(here, out var room)
+                    ? room.Level
+                    : map.Level is { } level && _layout.Levels.Contains(level) ? level
+                    : _layout.Levels.Contains(0) ? 0 : _layout.Levels[0];
+                break;
+            case ApiFailure failure:
+                _missing = failure.Status == System.Net.HttpStatusCode.NotFound;
+                break;
+        }
+    }
+
+    private void OnActingChanged() => _ = InvokeAsync(async () =>
+    {
+        _shown = null;
+        _maps = null;
+        StateHasChanged();
+        await LoadListAsync();
+        _shown = Id;
+        await LoadMapAsync();
+        StateHasChanged();
+    });
+
+    private IReadOnlyList<(string Key, string Label)> LevelChips =>
+        _layout is null ? [] : Shown.Levels.Select(level => (level.ToString(System.Globalization.CultureInfo.InvariantCulture), LevelName(level))).ToList();
+
+    private string LevelName(int level) =>
+        _layout?.Map.LevelNames.TryGetValue(level, out var name) == true ? name : Loc["NavMapLevel", level].Value;
+
+    /// <summary>The level <paramref name="by"/> places above (or below) the one on show, among the levels that have rooms.</summary>
+    private void StepLevel(int by)
+    {
+        if (_layout is null) return;
+        var at = Shown.Levels.ToList().IndexOf(_level) + by;
+        if (at >= 0 && at < Shown.Levels.Count) _level = Shown.Levels[at];
+    }
+
+    /// <summary>The regions this map is inside, outermost first.</summary>
+    private List<MapSummaryDto> Trail()
+    {
+        var trail = new List<MapSummaryDto>();
+        if (_maps is null || _layout is null) return trail;
+        var byId = _maps.ToDictionary(map => map.Id);
+        for (var at = _parents.GetValueOrDefault(_layout.Map.Map.Id); at is not null && byId.TryGetValue(at, out var map);
+             at = _parents.GetValueOrDefault(at))
+        {
+            trail.Insert(0, map);
+        }
+        return trail;
+    }
+
+    private void SelectLevel(string key)
+    {
+        if (int.TryParse(key, System.Globalization.CultureInfo.InvariantCulture, out var level)) _level = level;
+    }
+
+    private void ZoomBy(double factor) => _zoom = Math.Clamp(_zoom * factor, MinZoom, MaxZoom);
+
+    private async Task Select(string id)
+    {
+        (_selected, _cell) = (id, null);
+        if (!_editing) await LoadRouteAsync(id);
+    }
+
+    /// <summary>
+    /// Asks the server the way from where the character stands to room <paramref name="id"/>: it sees every map, so a
+    /// route may start or pass through another one. A reply asked before another room, map or character was chosen is
+    /// dropped.
+    /// </summary>
+    private async Task LoadRouteAsync(string id)
+    {
+        var asked = ForgetRoute();
+        if (_layout?.Rooms.TryGetValue(id, out var room) != true || room!.Region) return;
+        var result = await Maps.RouteAsync(id);
+        if (asked != _routeAsked) return;
+        (_route, _noRoute) = result switch
+        {
+            MapRouteDto route => (route, false),
+            ApiFailure failure => (null, failure.Status == System.Net.HttpStatusCode.NotFound),
+        };
+    }
+
+    /// <summary>Clears the route on show, and makes any reply still on its way stale.</summary>
+    private int ForgetRoute()
+    {
+        (_route, _noRoute, _walkError) = (null, false, null);
+        return ++_routeAsked;
+    }
+
+    private async Task CopyAsync(string command)
+    {
+        try
+        {
+            // Rejected outside a secure context, or when the browser withholds clipboard permission.
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", command);
+            Snackbar.Add(Loc["NavMapRouteCopied"], Severity.Info);
+        }
+        catch (JSException)
+        {
+            Snackbar.Add(Loc["WkCopyFailed"], Severity.Error);
+        }
+    }
+
+    /// <summary>
+    /// Walks the route as the acting character, then reads the map again: they stand somewhere new, at the end of the
+    /// route or at the exit that refused them. What a refusal said is shown under the route.
+    /// </summary>
+    private async Task WalkAsync(string command, string to)
+    {
+        if (AccountAuth.ActiveCharacter is not { } acting || Id is null) return;
+        (_walking, _walkError) = (true, null);
+        try
+        {
+            var outcome = await Commands.RunAsync(command, "loc(%#)", $"#{acting.DbrefNumber}:{acting.CreationTime}");
+            var error = outcome switch
+            {
+                PortalCommandResponse { Result: { } arrived } when arrived == to => null,
+                PortalCommandResponse refused => refused.Output.LastOrDefault() ?? Loc["NavMapWalkStopped"].Value,
+                ApiFailure failure => failure.Message,
+            };
+            var chosen = _selected;
+            await LoadMapAsync();
+            _selected = chosen;
+            if (chosen is not null) await LoadRouteAsync(chosen);
+            _walkError = error;
+        }
+        finally
+        {
+            _walking = false;
+        }
+    }
+
+    /// <summary>Selects a room on this map, changing to its level, and moves focus to it.</summary>
+    private async Task GoToRoomAsync(string id)
+    {
+        if (_layout?.Rooms.TryGetValue(id, out var room) != true) return;
+        (_selected, _level) = (id, room!.Level);
+        StateHasChanged();
+        await Task.Yield();
+        if (_canvas is not null) await _canvas.FocusAsync(id);
+        await LoadRouteAsync(id);
+    }
+
+    private string KindLabel(string kind) => kind switch
+    {
+        MapKinds.Coordinates => Loc["NavMapKindCoordinates"],
+        MapKinds.Compass => Loc["NavMapKindCompass"],
+        _ => Loc["NavMapKindGraph"],
+    };
+
+    private RenderFragment Tree(string? parent) => __builder =>
+    {
+        var level = _maps!.Where(m => _parents[m.Id] == parent).ToList();
+        if (level.Count == 0) return;
+        <ul class="map-tree">
+            @foreach (var map in level)
+            {
+                var current = Id is { } id && map.Id == $"#{id}";
+                <li>
+                    <a class="map-tree-link @(current ? "map-tree-link--on" : null)" href="@($"/map/{map.Id[1..]}")"
+                       aria-current="@(current ? "page" : null)">@map.Name</a>
+                    @Tree(map.Id)
+                </li>
+            }
+        </ul>
+    };
+
+    private RenderFragment RoomPanel() => __builder =>
+    {
+        if (_selected is null || _layout?.Rooms.TryGetValue(_selected, out var room) != true) return;
+        var exits = _layout.Map.Exits.Where(e => e.Source == _selected).OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        <KitCard Class="map-room-panel" Title="@room!.Room.Name"
+                 Sub="@(_selected == _layout.Map.Here ? Loc["NavMapYouAreHere"].Value : room.Placed ? null : Loc["NavMapUnplaced"].Value)">
+            <div class="map-room-body">
+                @if (exits.Count == 0)
+                {
+                    <p class="map-note">@Loc["NavMapNoExits"]</p>
+                }
+                else
+                {
+                    <ul class="map-exits" aria-label="@Loc["NavMapExits"]">
+                        @foreach (var exit in exits)
+                        {
+                            <li>
+                                <span class="map-exit-name">@exit.Name</span>
+                                @if (exit.DestinationMap is { } other)
+                                {
+                                    <a class="map-exit-to" href="@($"/map/{other.Id[1..]}")">@Loc["NavMapToMap", other.Name]</a>
+                                }
+                                else if (exit.Destination is { } to && _layout.Rooms.TryGetValue(to, out var target))
+                                {
+                                    <button type="button" class="map-exit-to" @onclick="() => GoToRoomAsync(to)">@target.Room.Name</button>
+                                }
+                                else
+                                {
+                                    <span class="map-exit-to map-exit-to--unknown">@Loc["NavMapUnknown"]</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                @GettingThere()
+            </div>
+        </KitCard>
+    };
+
+    private RenderFragment GettingThere() => __builder =>
+    {
+        if (_layout is null || _selected is not { } to || (!_noRoute && _route?.Steps is not { Count: > 0 })) return;
+        <section class="map-route" aria-labelledby="map-route-title">
+            <h3 id="map-route-title" class="map-route-title">@Loc["NavMapGettingThere"]</h3>
+            @if (_route is null)
+            {
+                <p class="map-note">@Loc["NavMapNoRoute"]</p>
+            }
+            else
+            {
+                <ol class="map-route-steps">
+                    @for (var i = 0; i < _route.Steps.Count; i++)
+                    {
+                        var step = _route.Steps[i];
+                        // A step onto another map than the one before it names that map, which opens it.
+                        var entered = step.Map is { } map && map.Id != (i == 0 ? null : _route.Steps[i - 1].Map?.Id) ? map : null;
+                        <li>
+                            @Loc["NavMapRouteStep", step.Name, step.DestinationName]
+                            @if (entered is not null && (i > 0 || entered.Id != _layout.Map.Map.Id))
+                            {
+                                @(" ")
+                                <a class="map-route-map" href="@($"/map/{entered.Id[1..]}")">@Loc["NavMapRouteOnMap", entered.Name]</a>
+                            }
+                        </li>
+                    }
+                </ol>
+                @if (_route.Command is { } command)
+                {
+                    <div class="map-route-command">
+                        <code>@command</code>
+                        <CapsuleButton Icon="@Icons.Material.Outlined.ContentCopy" AriaLabel="@Loc["NavMapCopyRoute"]" OnClick="() => CopyAsync(command)" />
+                    </div>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="_walking" OnClick="() => WalkAsync(command, to)">
+                        @Loc["NavMapWalkThere"]
+                    </MudButton>
+                }
+                else
+                {
+                    <p class="map-note">@Loc["NavMapRouteNoCommand"]</p>
+                }
+            }
+            @if (_walkError is not null)
+            {
+                <p class="map-route-error" role="alert">@_walkError</p>
+            }
+        </section>
+    };
+
+    public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+}

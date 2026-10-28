@@ -6482,4 +6482,280 @@
     <value>查看全部 {0} 项</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>世界地图</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>地图</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>请选择一张地图。</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>本游戏还没有地图。</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>请选择一个角色来查看地图。</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>本游戏没有世界地图。</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>这里没有地图，或者你无权查看。</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>这张地图上没有你能看到的房间。</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>第 {0} 层</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>楼层</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>放大</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>缩小</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>你在这里</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>出口</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>没有你能看到的出口。</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>未放置在地图上</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>前往地图 {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>你看不到的地方</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>这张地图太大，无法一次全部显示，部分房间已省略。</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>网格</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>罗盘</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>此地图所在位置</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>区域 {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>上一层</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>下一层</value>
+  </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>如何到达</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} 到 {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>在 {0}</value>
+  </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>房间的 dbref</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>加入计划</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>已应用</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>上次应用</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>应用 {0} 项更改</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>每条命令都以你的身份、按你的权限、按显示的顺序运行。某一步失败会停止其余步骤。</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>返回地图</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>空格子，X {0}，Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} 项更改待应用</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>检查</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>在上方挖一个房间</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>在下方挖一个房间</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>出口起点</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>从 {0} 连接。</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>在这里挖一个房间</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>放弃更改</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>编辑地图</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>在你应用之前，玩家什么也看不到。</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>正在编辑 {0}。</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>返回出口</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>出口名称不能包含 , = [ ] % 或 \。</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>给每个出口起名。</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>名称和别名，用 ; 分隔</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>不能用 in 和 i 作为出口名称：i 是物品栏。</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>通往那里的出口</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>失败：{0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>高度</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>退出编辑模式</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>层</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>你不控制这个房间，所以不能更改它。</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>建立返回的路</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>把 {0} 移到这里</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>给房间起名。</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>房间名称不能包含 = [ ] % 或 \。</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>选择一个房间来更改，或选择一个空格子来挖新房间。</value>
+  </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>选择一个房间来更改，或在图片上选择一个位置来挖新房间。</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>选择一个房间旁边的位置，让新房间有入口。</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} 没有入口。</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>未运行</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>点 x {0}，y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>检查并应用</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>检查对 {0} 的更改</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>名称</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>保存位置</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>保存大小</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>从这张地图移除</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>向这张地图添加房间</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>这张地图的出口通往、但不在任何地图上的房间。</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>宽度</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>放置 {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>{0} 的大小</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>添加 {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>把 {0} 从地图移除</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>挖 {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>从你所在的位置，这张地图上没有出口通往那里。</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>这条路线上有个出口没有不含空格的名称，所以路线无法输入成一行。</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>复制命令</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>命令已复制</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>走过去</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>你在途中停下了。</value>
+  </data>
 </root>

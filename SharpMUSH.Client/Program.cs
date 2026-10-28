@@ -94,6 +94,7 @@ builder.Services.AddSingleton<RemoteBackupsService>();
 builder.Services.AddTerminalServices();
 builder.Services.AddSingleton<MushQueryService>();
 builder.Services.AddSingleton<ObjectApiService>();
+builder.Services.AddSingleton<WorldMapService>();
 builder.Services.AddHttpClient("help", c =>
 {
 	c.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress);

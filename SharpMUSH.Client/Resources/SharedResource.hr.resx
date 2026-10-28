@@ -6482,4 +6482,280 @@
     <value>Prikaži sve {0}</value>
     <comment>MT</comment>
   </data>
+  <data name="NavWorldMap" xml:space="preserve">
+    <value>Karta svijeta</value>
+  </data>
+  <data name="NavMapMaps" xml:space="preserve">
+    <value>Karte</value>
+  </data>
+  <data name="NavMapPick" xml:space="preserve">
+    <value>Odaberite kartu.</value>
+  </data>
+  <data name="NavMapNone" xml:space="preserve">
+    <value>Ova igra još nema karata.</value>
+  </data>
+  <data name="NavMapNeedsCharacter" xml:space="preserve">
+    <value>Odaberite lik da biste vidjeli kartu.</value>
+  </data>
+  <data name="NavMapNotEnabled" xml:space="preserve">
+    <value>Ova igra nema kartu svijeta.</value>
+  </data>
+  <data name="NavMapMissing" xml:space="preserve">
+    <value>Ovdje nema karte ili je ne smijete vidjeti.</value>
+  </data>
+  <data name="NavMapEmpty" xml:space="preserve">
+    <value>Na ovoj karti nema prostorije koju možete vidjeti.</value>
+  </data>
+  <data name="NavMapLevel" xml:space="preserve">
+    <value>Razina {0}</value>
+  </data>
+  <data name="NavMapLevels" xml:space="preserve">
+    <value>Razine</value>
+  </data>
+  <data name="NavMapZoomIn" xml:space="preserve">
+    <value>Povećaj</value>
+  </data>
+  <data name="NavMapZoomOut" xml:space="preserve">
+    <value>Smanji</value>
+  </data>
+  <data name="NavMapYouAreHere" xml:space="preserve">
+    <value>Vi ste ovdje</value>
+  </data>
+  <data name="NavMapExits" xml:space="preserve">
+    <value>Izlazi</value>
+  </data>
+  <data name="NavMapNoExits" xml:space="preserve">
+    <value>Nema izlaza koje možete vidjeti.</value>
+  </data>
+  <data name="NavMapUnplaced" xml:space="preserve">
+    <value>Nije smještena na karti</value>
+  </data>
+  <data name="NavMapToMap" xml:space="preserve">
+    <value>Na kartu {0}</value>
+  </data>
+  <data name="NavMapUnknown" xml:space="preserve">
+    <value>negdje što ne možete vidjeti</value>
+  </data>
+  <data name="NavMapTruncated" xml:space="preserve">
+    <value>Ova je karta prevelika da bi se prikazala odjednom pa su neke prostorije izostavljene.</value>
+  </data>
+  <data name="NavMapKindCoordinates" xml:space="preserve">
+    <value>Mreža</value>
+  </data>
+  <data name="NavMapKindCompass" xml:space="preserve">
+    <value>Kompas</value>
+  </data>
+  <data name="NavMapKindGraph" xml:space="preserve">
+    <value>Slika</value>
+  </data>
+  <data name="NavMapTrail" xml:space="preserve">
+    <value>Gdje je ova karta</value>
+  </data>
+  <data name="NavMapRegion" xml:space="preserve">
+    <value>Regija {0}</value>
+  </data>
+  <data name="NavMapLevelUp" xml:space="preserve">
+    <value>Razinu više</value>
+  </data>
+  <data name="NavMapLevelDown" xml:space="preserve">
+    <value>Razinu niže</value>
+  </data>
+  <data name="NavMapGettingThere" xml:space="preserve">
+    <value>Kako doći</value>
+  </data>
+  <data name="NavMapRouteStep" xml:space="preserve">
+    <value>{0} do {1}</value>
+  </data>
+  <data name="NavMapRouteOnMap" xml:space="preserve">
+    <value>na karti {0}</value>
+  </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Dodaj</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Dbref sobe</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Dodaj u plan</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>primijenjeno</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Zadnja primjena</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Primijeni promjene ({0})</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Svaka naredba radi kao ti, s tvojim ovlastima, redom kako je prikazano. Korak koji ne uspije zaustavlja ostatak.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Natrag na kartu</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Uređivanje</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Prazno polje, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>Promjene na čekanju: {0}</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Provjere</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Iskopaj sobu iznad</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Iskopaj sobu ispod</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Izlaz iz</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Povezana iz {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Iskopaj sobu ovdje</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Odbaci promjene</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Ukloni</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Uredi kartu</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Igrači ne vide ništa dok ne primijeniš.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Uređuješ {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Izlaz natrag</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Naziv izlaza ne smije sadržavati , = [ ] % ni \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Daj ime svakom izlazu.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Ime i nadimci, odvojeni s ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in i i nisu dopušteni kao imena izlaza: i je inventar.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Izlaz onamo</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>nije uspjelo: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Visina</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Izađi iz uređivanja</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Razina</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Ne upravljaš ovom sobom pa je ne možeš mijenjati.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Napravi put natrag</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Premjesti {0} ovamo</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Daj sobi ime.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Naziv sobe ne smije sadržavati = [ ] % ni \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Odaberi sobu da je promijeniš ili prazno polje da iskopaš novu.</value>
+  </data>
+  <data name="NavMapNoChangesPicture" xml:space="preserve">
+    <value>Odaberi sobu da je promijeniš ili mjesto na slici da iskopaš novu.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Odaberi mjesto uz sobu, da nova soba ima ulaz.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} nema ulaz.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>nije pokrenuto</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Točka x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Pregledaj i primijeni</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Pregled promjena na {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Ime</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Spremi položaj</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Spremi veličinu</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Makni s ove karte</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Dodaj sobe na ovu kartu</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Sobe do kojih vode izlazi ove karte, a nisu ni na jednoj karti.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Širina</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Postavi {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Veličina {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Dodaj {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Makni {0} s karte</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Iskopaj {0}</value>
+  </data>
+  <data name="NavMapNoRoute" xml:space="preserve">
+    <value>Nijedan izlaz na ovoj karti ne vodi onamo odakle ste.</value>
+  </data>
+  <data name="NavMapRouteNoCommand" xml:space="preserve">
+    <value>Izlaz na ovoj ruti nema ime bez razmaka, pa se ruta ne može upisati u jednom retku.</value>
+  </data>
+  <data name="NavMapCopyRoute" xml:space="preserve">
+    <value>Kopiraj naredbu</value>
+  </data>
+  <data name="NavMapRouteCopied" xml:space="preserve">
+    <value>Naredba je kopirana</value>
+  </data>
+  <data name="NavMapWalkThere" xml:space="preserve">
+    <value>Idi onamo</value>
+  </data>
+  <data name="NavMapWalkStopped" xml:space="preserve">
+    <value>Zaustavili ste se usput.</value>
+  </data>
 </root>

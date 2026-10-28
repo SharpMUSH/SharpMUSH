@@ -1,0 +1,200 @@
+.map-frame {
+	overflow: auto;
+	max-width: 100%;
+	max-height: 70vh;
+	border: 1px solid var(--border-soft);
+	border-radius: var(--radius);
+	background: var(--surface);
+	overscroll-behavior: contain;
+}
+
+.map-figure {
+	position: relative;
+	margin: 0 auto;
+}
+
+.map-svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+}
+
+.map-grid {
+	stroke: var(--border-soft);
+	stroke-width: 1;
+}
+
+.map-edge {
+	stroke: var(--text-dim);
+	stroke-width: 3;
+	stroke-linecap: round;
+}
+
+.map-arrow {
+	fill: var(--text-dim);
+}
+
+.map-box {
+	fill: var(--surface);
+	stroke: var(--border);
+	stroke-width: 2;
+}
+
+.map-box--unplaced {
+	stroke-dasharray: 6 4;
+}
+
+.map-box--region {
+	fill: var(--surface-2);
+	stroke-dasharray: 10 5;
+}
+
+.map-box--here {
+	stroke: var(--accent);
+	stroke-width: 4;
+}
+
+.map-box--selected {
+	fill: var(--surface-3);
+	stroke: var(--text);
+}
+
+.map-vertical path {
+	fill: var(--text-dim);
+}
+
+.map-door {
+	fill: var(--accent);
+}
+
+.map-rooms {
+	position: absolute;
+	inset: 0;
+}
+
+.map-room {
+	position: absolute;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 4px 6px;
+	border: 0;
+	border-radius: 8px;
+	background: transparent;
+	color: var(--text);
+	font: 13px/1.2 var(--font-ui);
+	text-align: center;
+	overflow: hidden;
+	cursor: pointer;
+}
+
+.map-room--region {
+	text-decoration: none;
+	font-weight: 600;
+}
+
+.map-room:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 2px;
+}
+
+.map-room--here .map-room-name {
+	font-weight: 600;
+}
+
+.map-room-name {
+	display: -webkit-box;
+	-webkit-line-clamp: 3;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	overflow-wrap: break-word;
+}
+
+.map-edge--route {
+	stroke: var(--hue-orange);
+	stroke-width: 6;
+}
+
+.map-box--route {
+	stroke: var(--hue-orange);
+	stroke-width: 3;
+}
+
+.map-box--pin {
+	fill: var(--surface);
+	stroke: var(--text);
+	stroke-width: 3;
+}
+
+/* A pin's name sits under its point, on a label of its own so it reads over any picture. */
+.map-room--pin {
+	overflow: visible;
+	align-items: flex-start;
+	padding: 0;
+}
+
+.map-room--pin .map-room-name {
+	position: absolute;
+	top: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	max-width: 160px;
+	width: max-content;
+	padding: 2px 8px;
+	border-radius: 8px;
+	background: var(--surface);
+	box-shadow: var(--shadow);
+	font-weight: 600;
+	-webkit-line-clamp: 2;
+}
+
+.map-box--pin.map-box--route {
+	stroke: var(--hue-orange);
+}
+
+.map-box--pin.map-box--here {
+	stroke: var(--accent);
+	stroke-width: 5;
+}
+
+.map-box--pin.map-box--selected {
+	fill: var(--text);
+}
+
+.map-cell {
+	position: absolute;
+	border: 1px dashed transparent;
+	border-radius: 8px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.map-cell:hover,
+.map-cell:focus-visible {
+	border-color: var(--accent);
+	background: var(--surface-2);
+	outline: none;
+}
+
+.map-cell--selected {
+	border: 2px solid var(--accent);
+}
+
+.map-spot {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 3;
+	stroke-dasharray: 6 4;
+}
+
+.map-pick {
+	position: absolute;
+	inset: 0;
+	cursor: crosshair;
+}
+
+.map-room--locked {
+	color: var(--text-faint);
+	cursor: default;
+}

@@ -23,8 +23,8 @@ Help is available for the following MUSH commands:
 | [go]        | [help]      | [home]      | [inventory] | [leave]     |
 | [LOGOUT]    | [look]      | [move]      | [news]      | [page]      |
 | [pose]      | [QUIT]      | [read]      | [say]       | [score]     |
-| [teach]     | [think]     | [unfollow]  | [use]       | [whisper]   |
-| [WHO]       | [with]      |             |             |             |
+| [teach]     | [think]     | [unfollow]  | [use]       | [walk]      |
+| [whisper]   | [WHO]       | [with]      |             |             |
 | ["]         | [:]         | [;]         | [+]         | [&]         |
 | [~]         | [}]         |             |             |             |
 

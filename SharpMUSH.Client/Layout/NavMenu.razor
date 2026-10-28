@@ -55,6 +55,7 @@
         <div class="nav-group">
             <div class="nav-group-label">@Loc["NavSectionWorld"]</div>
             @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
+            <FeatureGate Feature="@GameFeatures.WorldMap">@NavItem("/map", Icons.Material.Filled.Map, Loc["NavWorldMap"])</FeatureGate>
             @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
             @* Help sits with Wiki, not under Manage: it is reference reading for players, and it was
                the ONLY ungated entry under Manage — which made "Manage" a one-item section holding
