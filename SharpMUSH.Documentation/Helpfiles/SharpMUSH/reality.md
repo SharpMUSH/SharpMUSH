@@ -61,19 +61,20 @@ Reality layers let objects share a room while being present to some viewers and 
 
 Each object has a receiving set (RX) and a transmitting set (TX). A viewer or listener perceives another object when its RX and that object's TX share a layer. The two directions are independent: a ghost may hear a living player who cannot hear the ghost. An object always perceives itself, even with empty sets.
 
-The world starts with one layer, `normal`, and an object with no settings receives and transmits `normal`.
+The world starts with one layer, `normal`, and an object with no settings receives and transmits `normal`. A layer can also be named by an alias: importing a RhostMUSH or TinyMUX game records each reality level's own name, such as `Real` for `normal`.
 
 Settings belong to the object's full identity, including its creation time, so a recycled dbref does not inherit them. Removing a layer takes it out of every object's sets; nothing else takes its place.
 
 ## Administration
 
-- `@reality` or `@reality/list` - whether reality is on, and the configured layers
+- `@reality` or `@reality/list` - whether reality is on, the configured layers, and their aliases
 - `@reality/enable` and `@reality/disable` - turn the feature on or off; disabling keeps the configuration
 - `@reality/add <layer>` and `@reality/remove <layer>` - define or delete a layer
 - `@reality/rx <object>=<layers>` - set what the object receives
 - `@reality/tx <object>=<layers>` - set what the object transmits
 - `@reality/describe <object>=<layer>/<attribute>` - describe the object with `<attribute>` to viewers on `<layer>`
 - `@reality/describe <object>=<layer>` - remove that layer's description
+- `@reality/reset <object>` - clear the object's settings, so it receives and transmits `normal` again
 - `@reality/inspect <object>` - show the object's RX, TX and descriptions
 
 `<layers>` is a space-separated list; an empty value sets an empty set. `<object>` must be a dbref, so you can repair an object you cannot currently perceive.

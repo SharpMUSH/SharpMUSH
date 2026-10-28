@@ -308,6 +308,58 @@ public class RealityGameTests
 	}
 
 	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
+	public async Task RealityLevelsSetAndReadLayersByNameOrAlias()
+	{
+		var policy = Get<RealityPolicy>();
+		var original = await policy.ConfigurationAsync();
+		var objects = Get<IObjectStore>();
+		var mediator = Get<IMediator>();
+		var player = (await objects.GetObjectNodeAsync(new DBRef(1))).Expect<SharpPlayer>();
+		var home = await player.Location.WithCancellation(default);
+		var thing = (await objects.GetObjectNodeAsync(await mediator.Send(new CreateThingCommand("reality level thing", home, player, home)))).Expect<SharpThing>();
+		var target = thing.Object.DBRef.ToString();
+		var parser = Factory.CommandParser.FromState(ParserState.RootFor(player.Object.DBRef));
+		async Task<string> Eval(string code) => (await parser.EvaluateAsync(MarkupText.Plain(code))).ToPlainText();
+		try
+		{
+			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost"], new() { ["spirit"] = "ghost" }), default);
+			await Assert.That((await parser.CommandListParse(MarkupText.Plain("@reality/list")))!.Message.ToPlainText()).EndsWith("Aliases: spirit=ghost");
+
+			await parser.CommandListParse(MarkupText.Plain($"@rxlevel {target}=spirit"));
+			await parser.CommandListParse(MarkupText.Plain($"@txlevel {target}=!normal ghost"));
+			await Assert.That(await Eval($"rxlevel({target})")).IsEqualTo("normal ghost");
+			await Assert.That(await Eval($"txlevel({target})")).IsEqualTo("ghost");
+			await Assert.That(await Eval($"hasrxlevel({target},Spirit)")).IsEqualTo("1");
+			await Assert.That(await Eval($"hastxlevel({target},normal)")).IsEqualTo("0");
+			await Assert.That(await Eval($"hasrxlevel({target},nowhere)")).IsEqualTo("#-1 NO SUCH LEVEL");
+			await Assert.That(await Eval("listrlevels()")).IsEqualTo("normal ghost");
+			await Assert.That(await Eval($"cansee(%#,{target})")).IsEqualTo("0");
+			await Assert.That(await Eval($"cansee({target},%#)")).IsEqualTo("1");
+
+			await Assert.That(await Eval($"rxlevel({target},!ghost)")).IsEqualTo("");
+			await Assert.That(await Eval($"rxlevel({target})")).IsEqualTo("normal");
+			await parser.CommandListParse(MarkupText.Plain($"@rxlevel/reset {target}=ghost"));
+			await Assert.That(await Eval($"rxlevel({target})")).IsEqualTo("ghost");
+			await Assert.That(await Eval($"txlevel({target},nowhere)")).StartsWith("#-1");
+
+			// A layer taken out of the configuration no longer lets anything see anything.
+			var other = (await mediator.Send(new CreateThingCommand("reality level other", home, player, home))).ToString();
+			await parser.CommandListParse(MarkupText.Plain($"@txlevel {other}=ghost"));
+			await Assert.That(await Eval($"cansee({target},{other})")).IsEqualTo("1");
+			await policy.SaveConfigurationAsync(new(1, false, ["normal"], []), default);
+			await Assert.That(await Eval($"cansee({target},{other})")).IsEqualTo("0");
+			await policy.SaveConfigurationAsync(new(1, false, ["normal", "ghost"], new() { ["spirit"] = "ghost" }), default);
+
+			await policy.SaveConfigurationAsync(new(1, true, ["normal", "ghost"], new() { ["spirit"] = "ghost" }), default);
+			await Assert.That(await Eval($"chkreality(%#,{target})")).IsEqualTo("0");
+			await parser.CommandListParse(MarkupText.Plain($"@leveldefault {target}"));
+			await Assert.That(await Eval($"txlevel({target})")).IsEqualTo("normal");
+			await Assert.That(await Eval($"chkreality(%#,{target})")).IsEqualTo("1");
+		}
+		finally { await policy.SaveConfigurationAsync(original, default); }
+	}
+
+	[Test, NotInParallel(RealityGameServerFactory.WorldKey)]
 	[Arguments(false)]
 	[Arguments(true)]
 	public async Task LayerDescriptionFallsBackUnlessItCanExecute(bool executable)

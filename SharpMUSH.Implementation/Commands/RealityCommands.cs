@@ -39,7 +39,7 @@ public partial class Commands
 	private static ValueTask<bool> CanMoveInReality(IMUSHCodeParser parser, DBRef mover, DBRef destination)
 		=> parser.ServiceProvider.GetRequiredService<IRealityPolicy>().CanPerceiveAsync(mover, destination);
 
-	[SharpCommand(Name = "@REALITY", Switches = ["LIST", "ENABLE", "DISABLE", "ADD", "REMOVE", "RX", "TX", "DESCRIBE", "INSPECT"],
+	[SharpCommand(Name = "@REALITY", Switches = ["LIST", "ENABLE", "DISABLE", "ADD", "REMOVE", "RX", "TX", "DESCRIBE", "RESET", "INSPECT"],
 		Behavior = CB.Default | CB.EqSplit | CB.Switches | CB.NoGagged, MinArgs = 0, MaxArgs = 2,
 		ParameterNames = ["layer or object", "layers or layer/attribute"])]
 	public async ValueTask<Option<CallState>> Reality(IMUSHCodeParser parser, SharpCommandAttribute command)
