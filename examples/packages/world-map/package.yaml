@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
@@ -71,6 +71,8 @@ objects:
 
         A grid shows one level at a time. See `+help map levels`.
 
+        Rooms can be coloured by the kind of place they are. See `+help map legend`.
+
         A graph map can be drawn on a picture. See `+help map pictures`.
 
         Choosing a room shows the way there from where you stand. See `+help map routes`.
@@ -116,6 +118,31 @@ objects:
         Harbour/MAP`LEVEL`-1 - Set.
         Harbour/MAP`LEVEL - Set.
         ```
+      HELP`MAP`LEGEND: |-
+        A room's ``ENVIRONMENT`` says what kind of place it is: `street`, `water`, `ooc`. The map's legend says how each kind is drawn, with one attribute for each part:
+
+        - ``MAP`LEGEND`<kind>`LABEL``: the name the legend shows. Without one, the kind itself.
+        - ``MAP`LEGEND`<kind>`TONE``: the room's colour, one of the colours `tone()` takes (`muted`, `info`, `green`). Each reader sees it in their own theme.
+        - ``MAP`LEGEND`<kind>`ICON``: a picture beside the name, so the kind reads without its colour. One of `water`, `forest`, `park`, `mountain`, `road`, `home`, `shop`, `food`, `drink`, `bed`, `temple`, `castle`, `shield`, `anchor`, `star`, `chat`, `book`, `mask`, `lock` or `flag`, or a character or two of your own.
+
+        ```
+        &MAP`LEGEND`WATER`LABEL Harbour=Open water
+        &MAP`LEGEND`WATER`TONE Harbour=blue
+        &MAP`LEGEND`WATER`ICON Harbour=water
+        &ENVIRONMENT here=water
+        ```
+
+        Output:
+        ```
+        Harbour/MAP`LEGEND`WATER`LABEL - Set.
+        Harbour/MAP`LEGEND`WATER`TONE - Set.
+        Harbour/MAP`LEGEND`WATER`ICON - Set.
+        Boathouse/ENVIRONMENT - Set.
+        ```
+
+        A region uses the legend of the map it is inside for any kind it does not name itself, so one legend on the outermost map covers them all.
+
+        ``ENVIRONMENT`` is the attribute the gmcp-room package sends a MUD client's mapper, so Mudlet colours the same rooms.
       HELP`MAP`PICTURES: |-
         A `graph` map can be drawn on a picture. ``MAP`BACKDROP`` holds the picture's address: a path on the game's own site, such as the link of an image in the wiki's image library, or an `https` address. Any other address is not shown. ``MAP`SIZE`W`` and ``MAP`SIZE`H`` are the picture's size in pixels.
 

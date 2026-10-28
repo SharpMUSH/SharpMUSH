@@ -81,6 +81,20 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		CanEdit = true,
 	};
 
+	/// <summary>A shore whose legend draws water blue with an icon and sand with a glyph, and names a kind no room is.</summary>
+	public static readonly MapDto ShoreMap = new(new("#57", "Shore", MapKinds.Coordinates, null), null,
+		[
+			new("#80", "Shallows", [0, 0, 0], null) { Environment = "water" },
+			new("#81", "Beach", [1, 0, 0], null) { Environment = "sand" },
+			new("#82", "Hut", [2, 0, 0], null),
+		], [], null, Truncated: false)
+	{
+		Legend =
+		[
+			new("sand", "Sand", null, "∴"), new("water", "Open water", "blue", "water"), new("forest", "Forest", "green", "forest"),
+		],
+	};
+
 	/// <summary>The way up to the lighthouse: one step, from the quay.</summary>
 	public static readonly MapRouteDto ToLighthouse = new([new("#30", "North", "#10", "#11", "Lighthouse", Harbour)], "walk North");
 
@@ -109,6 +123,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/54" => Json(PlainIsleMap),
 			"api/maps/55" => Json(WorksMap),
 			"api/maps/56" => Json(FarMap),
+			"api/maps/57" => Json(ShoreMap),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
@@ -153,6 +168,26 @@ public class WorldMapPageTests : TrackingBunitContext
 			.AddSingleton(sp => new WorldMapService(sp.GetRequiredService<IHttpClientFactory>(), serverInfo))
 			.AddSingleton(sp => new GameCommandService(sp.GetRequiredService<IHttpClientFactory>()));
 		JSInterop.Mode = JSRuntimeMode.Loose;
+	}
+
+	[Test]
+	public async Task ARoomIsDrawnInItsKindsToneWithItsIconAndTheLegendNamesTheKindsOnShow()
+	{
+		Arrange();
+
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 57));
+		cut.WaitForAssertion(() => cut.Find(".map-legend"));
+
+		await Assert.That(cut.FindAll("rect.map-box--toned").Select(box => box.GetAttribute("style")))
+			.IsEquivalentTo(["--room-tone: var(--hue-blue);"]).Because("sand has no tone and the hut has no kind");
+		var shallows = cut.FindAll(".map-room").Single(room => room.TextContent.Contains("Shallows"));
+		await Assert.That(shallows.QuerySelector(".map-room-icon")).IsNotNull();
+		await Assert.That(shallows.GetAttribute("aria-label")).IsEqualTo("Shallows, Open water");
+		await Assert.That(cut.FindAll(".map-room").Single(room => room.TextContent.Contains("Beach")).TextContent).Contains("∴");
+		var kinds = cut.FindAll(".map-legend li").Select(kind => kind.TextContent).ToList();
+		await Assert.That(kinds).Count().IsEqualTo(2).Because("no room on the shore is forest");
+		await Assert.That(kinds[0]).Contains("Sand");
+		await Assert.That(kinds[1]).Contains("Open water");
 	}
 
 	[Test]

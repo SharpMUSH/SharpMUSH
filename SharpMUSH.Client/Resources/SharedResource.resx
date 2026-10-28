@@ -4998,7 +4998,7 @@
     <value>Starter world</value>
   </data>
   <data name="AdmSetupStarterWorldDesc" xml:space="preserve">
-    <value>Describes the room new players arrive in, digs a Tutorial room from it that shows the basics, with Out leading back, and adds a Newbie channel for questions. Anything the game already has is left alone.</value>
+    <value>Describes the room new players arrive in, digs a Tutorial room from it that shows the basics, with Out leading back, and adds a Newbie channel for questions. OOC and IC zones split the world: In Character leads from the arrival room to the Commons, the first in-character room, for approved characters and staff. Anything the game already has is left alone.</value>
   </data>
   <data name="AdmSetupStarterWorldApplied" xml:space="preserve">
     <value>Already added.</value>
@@ -10192,5 +10192,8 @@
   </data>
   <data name="NavMapWalkStopped" xml:space="preserve">
     <value>You stopped on the way.</value>
+  </data>
+  <data name="NavMapLegend" xml:space="preserve">
+    <value>Legend</value>
   </data>
 </root>

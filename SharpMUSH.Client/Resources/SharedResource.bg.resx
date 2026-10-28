@@ -6758,4 +6758,7 @@
   <data name="NavMapWalkStopped" xml:space="preserve">
     <value>Спряхте по пътя.</value>
   </data>
+  <data name="NavMapLegend" xml:space="preserve">
+    <value>Легенда</value>
+  </data>
 </root>

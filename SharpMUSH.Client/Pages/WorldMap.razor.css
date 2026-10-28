@@ -198,3 +198,37 @@
 .map-applied--notrun {
 	color: var(--text-faint);
 }
+
+.map-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 16px;
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+	color: var(--text-dim);
+	font: 13px/1.2 var(--font-ui);
+}
+
+.map-legend li {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.map-legend-swatch {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border: 2px solid var(--border);
+	border-radius: 6px;
+	background: var(--surface);
+	font-weight: 600;
+}
+
+.map-legend-swatch--toned {
+	border-color: var(--room-tone);
+	background: color-mix(in srgb, var(--room-tone) 22%, var(--surface));
+}

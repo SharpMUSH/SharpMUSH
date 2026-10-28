@@ -53,6 +53,12 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 	/// </summary>
 	public string? Backdrop { get; init; }
 
+	/// <summary>
+	/// The kinds of place this map's rooms may be, from <c>MAP`LEGEND`&lt;type&gt;`TONE</c>, <c>`ICON</c> and <c>`LABEL</c> on
+	/// the map and on the maps it is inside; the nearest map that names a type decides it.
+	/// </summary>
+	public IReadOnlyList<MapLegendDto> Legend { get; init; } = [];
+
 	/// <summary>The viewer controls the map, so may plan changes to it: its builder mode.</summary>
 	public bool CanEdit { get; init; }
 
@@ -73,7 +79,20 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 {
 	/// <summary>The viewer controls both the map and this room, so may move it, size it or take it off the map.</summary>
 	public bool Editable { get; init; }
+
+	/// <summary>
+	/// The kind of place the room is: its <c>ENVIRONMENT</c>, the attribute the gmcp-room package sends a MUD client's
+	/// mapper, in lower case; null when unset. The map's <see cref="MapDto.Legend"/> says how a kind is drawn.
+	/// </summary>
+	public string? Environment { get; init; }
 }
+
+/// <summary>How a map draws the rooms of one kind.</summary>
+/// <param name="Type">The kind, as a room's <c>ENVIRONMENT</c> names it, in lower case.</param>
+/// <param name="Label">What the legend calls it: its <c>LABEL</c>, or the kind itself when unset.</param>
+/// <param name="Tone">A <c>tone()</c> colour's name (<c>info</c>, <c>green</c>); null when unset.</param>
+/// <param name="Icon">An icon's name, or a character or two drawn as text; null when unset.</param>
+public sealed record MapLegendDto(string Type, string Label, string? Tone, string? Icon);
 
 /// <param name="Id">The exit's dbref.</param>
 /// <param name="Aliases">The exit's other names, as <c>@name</c> takes them after <c>;</c>.</param>

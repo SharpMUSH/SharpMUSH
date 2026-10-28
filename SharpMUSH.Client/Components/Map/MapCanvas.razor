@@ -49,10 +49,10 @@
                 @if (Pin(room))
                 {
                     var (cx, cy) = Centre(room);
-                    <circle class="@RoomClass(room) map-box--pin" cx="@Num(cx)" cy="@Num(cy)" r="9" />
+                    <circle class="@RoomClass(room) map-box--pin" style="@MapLegendStyle.Style(Kind(room))" cx="@Num(cx)" cy="@Num(cy)" r="9" />
                     continue;
                 }
-                <rect class="@RoomClass(room)" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
+                <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"
                       width="@Num(room.Width - 2 * Inset)" height="@Num(room.Height - 2 * Inset)" rx="8" />
                 @if (_vertical.TryGetValue(room.Room.Id, out var vertical))
                 {
@@ -92,9 +92,21 @@
                 var here = room.Room.Id == Layout.Map.Here;
                 <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
                         style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
-                        aria-label="@(here ? $"{room.Room.Name}, {Loc["NavMapYouAreHere"]}" : room.Room.Name)"
+                        aria-label="@Label(room, here)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
                         @ref="_buttons[room.Room.Id]">
+                    @if (Kind(room) is { } kind)
+                    {
+                        @* The icon says the kind without its colour, for a reader who cannot tell the colours apart. *@
+                        @if (MapLegendStyle.Svg(kind.Icon) is { } svg)
+                        {
+                            <MudIcon Icon="@svg" Class="map-room-icon" Size="Size.Small" aria-hidden="true" />
+                        }
+                        else if (MapLegendStyle.Glyph(kind.Icon) is { } glyph)
+                        {
+                            <span class="map-room-icon" aria-hidden="true">@glyph</span>
+                        }
+                    }
                     <span class="map-room-name">@room.Room.Name</span>
                 </button>
             }
@@ -137,12 +149,14 @@
     private double _left, _top, _width, _height;
     private string? _backdrop;
     private List<(double X, double Y)> _empty = [];
+    private Dictionary<string, MapLegendDto> _legend = [];
 
     private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay, bool Route);
 
     protected override void OnParametersSet()
     {
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
+        _legend = Layout.Map.Legend.ToDictionary(entry => entry.Type);
         _backdrop = Layout.IsGraph && Layout.Map.Size is [> 0, > 0, ..] && ImageUrlPolicy.IsRenderable(Layout.Map.Backdrop)
             ? ApiUrl.Resolve(Layout.Map.Backdrop!)
             : null;
@@ -272,6 +286,18 @@
         for (var y = bounds.Top; y <= bounds.Bottom + 0.5; y += MapLayout.Cell) yield return (bounds.Left, y, bounds.Right, y);
     }
 
+    /// <summary>The legend entry for <paramref name="room"/>'s kind, when it has one and the legend names it.</summary>
+    private MapLegendDto? Kind(MapPlacement room) =>
+        room.Room.Environment is { } environment && _legend.TryGetValue(environment, out var entry) ? entry : null;
+
+    /// <summary>The room's name, then its kind and whether the reader is in it, as a screen reader hears it.</summary>
+    private string Label(MapPlacement room, bool here) => string.Join(", ", new[]
+    {
+        room.Room.Name,
+        Kind(room)?.Label,
+        here ? Loc["NavMapYouAreHere"].Value : null,
+    }.Where(part => part is not null));
+
     private string RoomClass(MapPlacement room) => string.Join(' ', new[]
     {
         "map-box",
@@ -280,6 +306,7 @@
         room.Room.Id == Layout.Map.Here || room.Room.Id == Layout.Map.HereRegion ? "map-box--here" : null,
         room.Room.Id == Selected ? "map-box--selected" : null,
         Route?.Any(step => step.Destination == room.Room.Id) == true ? "map-box--route" : null,
+        MapLegendStyle.Style(Kind(room)) is not null ? "map-box--toned" : null,
     }.Where(c => c is not null));
 
     private static (double X, double Y) Centre(MapPlacement room) => (room.X + room.Width / 2, room.Y + room.Height / 2);

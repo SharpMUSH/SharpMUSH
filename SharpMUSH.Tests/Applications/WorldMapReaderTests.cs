@@ -259,6 +259,37 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
+	public async Task ARoomsEnvironmentIsDrawnByTheNearestMapThatNamesIt()
+	{
+		var town = Map(50, "Town", MapKinds.Compass);
+		var harbour = Map(51, "Harbour", MapKinds.Coordinates);
+		Zone(harbour, town);
+		Room(10, "Quay", harbour);
+		_values[(10, WorldMapReader.EnvironmentAttribute)] = "Water";
+		Room(11, "Lane", harbour);
+		_attributes.GetAttributePatternAsync(harbour, harbour, "MAP`LEGEND`*`*", false, IAttributeService.AttributePatternMode.Wildcard)
+			.Returns(new SharpAttributesOrError(new[]
+			{
+				Attribute("MAP`LEGEND`WATER`TONE", "Blue"), Attribute("MAP`LEGEND`WATER`ICON", "≈"),
+				Attribute("MAP`LEGEND`DOCK`LABEL", " "),
+			}));
+		_attributes.GetAttributePatternAsync(town, town, "MAP`LEGEND`*`*", false, IAttributeService.AttributePatternMode.Wildcard)
+			.Returns(new SharpAttributesOrError(new[]
+			{
+				Attribute("MAP`LEGEND`WATER`LABEL", "Sea"), Attribute("MAP`LEGEND`STREET`LABEL", "Street"),
+				Attribute("MAP`LEGEND`STREET`TONE", "muted"),
+			}));
+
+		var map = (await Reader.ReadAsync(_viewer, 51, default)).Expect<MapDto>();
+
+		await Assert.That(map.Rooms.Select(room => (room.Id, room.Environment))).IsEquivalentTo([("#10", (string?)"water"), ("#11", null)]);
+		await Assert.That(map.Legend).IsEquivalentTo([
+			new MapLegendDto("street", "Street", "muted", null),
+			new MapLegendDto("water", "water", "blue", "≈"),
+		]).Because("Harbour names water itself, so Town's label for it is not used; a blank value names nothing");
+	}
+
+	[Test]
 	public async Task AMapSendsItsBackdropAsStored()
 	{
 		Map(50, "Isle", MapKinds.Graph);

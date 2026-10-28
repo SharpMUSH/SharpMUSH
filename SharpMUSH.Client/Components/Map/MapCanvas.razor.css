@@ -41,6 +41,12 @@
 	stroke-width: 2;
 }
 
+/* A room of a kind the legend colours: a wash of the tone inside, the tone itself on the edge. */
+.map-box--toned {
+	fill: color-mix(in srgb, var(--room-tone) 22%, var(--surface));
+	stroke: var(--room-tone);
+}
+
 .map-box--unplaced {
 	stroke-dasharray: 6 4;
 }
@@ -99,7 +105,14 @@
 	outline-offset: 2px;
 }
 
-.map-room--here .map-room-name {
+.map-room--here .map-room-icon {
+	flex: none;
+	margin-right: 4px;
+	color: var(--text-dim);
+	font-weight: 600;
+}
+
+.map-room-name {
 	font-weight: 600;
 }
 

@@ -147,6 +147,7 @@
                         <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
                                    Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
                                    Editing="_editing" Cell="_cell" OnCell="SelectCell" />
+                        @Legend()
                         @if (_editing && _plan is not null)
                         {
                             <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
@@ -484,6 +485,32 @@
                 @GettingThere()
             </div>
         </KitCard>
+    };
+
+    /// <summary>The kinds of place on this map that its legend names, each with its colour and icon.</summary>
+    private RenderFragment Legend() => __builder =>
+    {
+        var used = Shown.Map.Rooms.Select(room => room.Environment).ToHashSet();
+        var kinds = Shown.Map.Legend.Where(entry => used.Contains(entry.Type)).ToList();
+        if (kinds.Count == 0) return;
+        <ul class="map-legend" aria-label="@Loc["NavMapLegend"]">
+            @foreach (var kind in kinds)
+            {
+                <li style="@MapLegendStyle.Style(kind)">
+                    <span class="map-legend-swatch @(MapLegendStyle.Style(kind) is null ? null : "map-legend-swatch--toned")" aria-hidden="true">
+                        @if (MapLegendStyle.Svg(kind.Icon) is { } svg)
+                        {
+                            <MudIcon Icon="@svg" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            @MapLegendStyle.Glyph(kind.Icon)
+                        }
+                    </span>
+                    @kind.Label
+                </li>
+            }
+        </ul>
     };
 
     private RenderFragment GettingThere() => __builder =>

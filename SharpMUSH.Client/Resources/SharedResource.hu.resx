@@ -6758,4 +6758,7 @@
   <data name="NavMapWalkStopped" xml:space="preserve">
     <value>Útközben megálltál.</value>
   </data>
+  <data name="NavMapLegend" xml:space="preserve">
+    <value>Jelmagyarázat</value>
+  </data>
 </root>
