@@ -162,6 +162,12 @@
 	-webkit-line-clamp: 2;
 }
 
+/* A pin keeps its kind's colours; a route, here or selected still draws over them. */
+.map-box--pin.map-box--toned {
+	fill: color-mix(in srgb, var(--room-tone) 22%, var(--surface));
+	stroke: var(--room-tone);
+}
+
 .map-box--pin.map-box--route {
 	stroke: var(--hue-orange);
 }
