@@ -46,6 +46,11 @@
       "lookup": "compatibility config innermost loop tokens"
     },
     {
+      "id": "tinymux-queue-functions-mux-queue-functions",
+      "heading": "TinyMUX queue functions: `mux_queue_functions`",
+      "lookup": "compatibility config tinymux queue functions mux queue functions"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -74,6 +79,11 @@
       "id": "rhostmush-side-effect-flag-sidefx-flag",
       "heading": "RhostMUSH side-effect flag: `sidefx_flag`",
       "lookup": "compatibility config rhostmush side effect flag sidefx flag"
+    },
+    {
+      "id": "other-servers-names-dialect",
+      "heading": "Other servers' names: `dialect`",
+      "lookup": "compatibility config other servers names dialect"
     }
   ]
 }
@@ -217,6 +227,23 @@ x y x y
 b
 ```
 
+## TinyMUX queue functions: `mux_queue_functions`
+
+Off by default; importing a TinyMUX database turns it on. trigger() and verb() queue an attribute's actions from inside a function, as `@trigger` and `@verb` do. SharpMUSH keeps queueing in commands, so with the option off both return `#-1 FUNCTION DISABLED`. With it on they work as in TinyMUX: trigger() runs `@trigger/quiet`, verb() runs `@verb`, and each returns nothing.
+
+```sharp
+> think trigger(me/MUXDOC_NONE)
+#-1 FUNCTION DISABLED
+```
+
+With the option on, trigger() queues the attribute and returns nothing:
+
+```sharp mux_queue_functions
+> &MUXDOC_TRIGGER me=think Triggered.
+> think X[trigger(me/MUXDOC_TRIGGER)]Y
+XY
+```
+
 ## RhostMUSH edit() modes: `rhost_edit`
 
 Off by default; meant for a game moved from RhostMUSH.
@@ -319,4 +346,18 @@ With `sidefx_flag` off, side-effect functions (pemit(), set(), attrib_set(), cre
 0 1
 > think [attrib_set(me/RHOSTDOC_SIDEFX,ok)][get(me/RHOSTDOC_SIDEFX)]
 ok
+```
+
+## Other servers' names: `dialect`
+
+Empty by default. With `dialect` set to `rhost`, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has, in typed input and in any attribute without a dialect flag of its own: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`, `@pe` runs `@pemit`. Set to `mux`, the names are TinyMUX's: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`. SharpMUSH's names, including the abbreviations it accepts, and the game's `@function`s always come first. Importing a RhostMUSH or TinyMUX database sets it, and sets the `rhost` or `mux` attribute flag on every attribute it brings in, so imported code keeps reading its server's names if the option is later emptied. See [attribute flags dialect].
+
+```sharp dialect=rhost
+> think wildmatch(a b c,b)
+2
+```
+
+```sharp dialect=mux
+> think strtrunc(abcdef,3)
+abc
 ```

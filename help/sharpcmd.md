@@ -58,26 +58,28 @@ These '@' commands are general utility and programming commands:
 | [@scan]      | [@search]    | [@select]    | [@sockset]   | [@stats]     |
 | [@sweep]     | [@switch]    | [@teleport]  | [@theme]     | [@trigger]   |
 | [@verb]      | [@version]   | [@wait]      | [@warnings]  | [@wcheck]    |
-| [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  |              |
+| [@whereis]   | [@wiki]      | [@zemit]     | [@appdraft]  | [@eval]      |
+| [@pipe]      | [@cset]      | [@ltag]      |              |              |
 
 From plugins: [@discord]
 
 # @-wizard
 These '@' commands are only usable by wizards or privileged players:
 
-|                |                |                |                |                |
-|----------------|----------------|----------------|----------------|----------------|
-| [@account]     | [@allhalt]     | [@allquota]    | [@ascii]       | [@backup]      |
-| [@boot]        | [@chownall]    | [@chzoneall]   | [@comment]     | [@dbck]        |
-| [@disable]     | [@dump]        | [@enable]      | [@feed]        | [@flag]        |
-| [@hide]        | [@hook]        | [@http]        | [@kick]        | [@log]         |
-| [@logwipe]     | [@mapsql]      | [@motd]        | [@newpassword] | [@package]     |
-| [@pcreate]     | [@permission]  | [@plugin]      | [@poll]        | [@poor]        |
-| [@power]       | [@purge]       | [@push]        | [@quota]       | [@readcache]   |
-| [@reality]     | [@rejectmotd]  | [@respond]     | [@role]        | [@secret]      |
-| [@shutdown]    | [@sitelock]    | [@slave]       | [@snapshot]    | [@sql]         |
-| [@squota]      | [@storage]     | [@suggest]     | [@uptime]      | [@wall]        |
-| [@wizmotd]     | [@wizwall]     | [cd]           | [ch]           | [cv]           |
+|                 |                 |                 |                 |                 |
+|-----------------|-----------------|-----------------|-----------------|-----------------|
+| [@account]      | [@allhalt]      | [@allquota]     | [@ascii]        | [@backup]       |
+| [@boot]         | [@chownall]     | [@chzoneall]    | [@comment]      | [@dbck]         |
+| [@disable]      | [@dump]         | [@enable]       | [@feed]         | [@flag]         |
+| [@hide]         | [@hook]         | [@http]         | [@kick]         | [@leveldefault] |
+| [@log]          | [@logwipe]      | [@mapsql]       | [@motd]         | [@newpassword]  |
+| [@package]      | [@pcreate]      | [@permission]   | [@plugin]       | [@poll]         |
+| [@poor]         | [@power]        | [@purge]        | [@push]         | [@quota]        |
+| [@readcache]    | [@reality]      | [@rejectmotd]   | [@respond]      | [@role]         |
+| [@rxlevel]      | [@secret]       | [@shutdown]     | [@sitelock]     | [@slave]        |
+| [@snapshot]     | [@sql]          | [@squota]       | [@storage]      | [@suggest]      |
+| [@tag]          | [@txlevel]      | [@uptime]       | [@wall]         | [@wizmotd]      |
+| [@wizwall]      | [cd]            | [ch]            | [cv]            |                 |
 
 From plugins: [@scene]
 
@@ -1043,7 +1045,7 @@ This sends `<message>` to everyone in your location. Nothing is added to the mes
 
 The `/noeval` switch prevents the MUSH from evaluating `<message>`. The `/spoof` switch causes nospoof notifications to show the enactor's dbref instead of the executor's dbref, and requires control over the enactor or the Can_spoof power.
 
-The `/room` switch sends `<message>` to your outermost container instead, as @lemit does, and with it `/silent` and `/noisy` work as they do for @lemit. Without `/room` they change nothing.
+The `/room` switch sends `<message>` to your outermost container instead, as @lemit does, and with it `/silent` and `/noisy` work as they do for @lemit. Without `/room` they change nothing. `/here`, from TinyMUX, is the default and changes nothing.
 
 @emit can be abbreviated as `\`, and `emit` is another name for it.
 
@@ -2297,7 +2299,7 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 # @wall
 # @rwall
 # @wizwall
-`@wall[/emit][/noeval] <message>`<br>
+`@wall[/emit][/noeval][/admin|/wizard] <message>`<br>
 `@rwall[/emit][/noeval] <message>`<br>
 `@wizwall[/emit][/noeval] <message>`
 
@@ -2306,6 +2308,8 @@ Tells the player the name of the MUSH, which version of the code is currently ru
 `<message>` can be prefixed with : or ; to pose or semi-pose it, respectively, or the `/emit` switch can be given to emit the message. If `<message>` begins with a " and the chat_strip_quote option is on, the " will be stripped.
 
 The message is prefixed with the value of the wall_prefix, rwall_prefix or wizwall_prefix options, depending on the command used.
+
+TinyMUX's `@wall/admin` is @rwall, and `@wall/wizard` is @wizwall.
 
 
 ::: seealso
@@ -2465,6 +2469,8 @@ Drops `<object>`, if you are presently carrying it. If the room the object is dr
 
 In order to drop an object, you must pass it's Drop lock and your location's DropIn lock.
 
+`drop/quiet` leaves out the drop message and @odrop; @adrop still runs.
+
 
 ::: seealso
 - [empty]
@@ -2478,6 +2484,8 @@ In order to drop an object, you must pass it's Drop lock and your location's Dro
 Used to enter a thing or player. You can only enter an object if you own it or if it is set ENTER_OK. You must also pass the enter-lock, if it is set. Entering an object triggers is @enter/@oenter/@oxenter messages and its @aenter actions. If you fail the enter-lock, the object's @efail/@oefail/@aefail messages and actions are triggered.
 
 `enter` outputs the dbref of the object you enter.
+
+`enter/quiet` leaves out your @move and @omove messages.
 
 Insides of objects are best used for vehicles, or storage spaces when you don't have a home. You can describe the interior of an object differently from its exterior by using @idescribe.
 
@@ -2573,6 +2581,8 @@ To get an object from someone else's inventory, the possessive_get @config optio
 
 'take' is usually an alias for the 'get' command.
 
+`get/quiet` leaves out the success message and @osuccess; @asuccess still runs.
+
 
 ::: seealso
 - [LOCKING]
@@ -2632,6 +2642,8 @@ SharpMUSH does not track money, so buy only says so, as [money()] does: "The buy
 
 SharpMUSH has no money: `give <recipient>=<number>` only answers "Money transfer will not be implemented.", and the `/silent` switch has no effect.
 
+`give/quiet` leaves out your GIVE/OGIVE messages and the object's SUCCESS/OSUCCESS; the action attributes and the recipient's RECEIVE messages still run.
+
 This command gives an `<object>` from your inventory to `<recipient>`. The recipient must be set ENTER_OK or controlled by you, and you must pass his @lock/from. You must also pass `<object>`'s @lock/give, and `<object>` must pass `<recipient>`'s @lock/receive. When you give an object successfully, your GIVE/OGIVE/AGIVE attributes, `<recipient>`'s RECEIVE/ORECEIVE/ARECEIVE attributes, and `<object>`'s SUCCESS/ASUCCESS/OSUCCESS attributes are all triggered.
 
 
@@ -2658,6 +2670,8 @@ Goes in the specified direction. `<Direction>` can be the name or alias of an ex
 Moving outputs the dbref of the room you arrive in.
 
 'go home' is a special command that returns you to your home room/object.
+
+`goto/quiet` leaves out the exit's success and drop messages and your @move and @omove; the action attributes still run.
 
 
 ::: seealso
@@ -2702,6 +2716,8 @@ Note that on some MUSHes it is possible to take things that are in someone else'
 The command leave allows you to exit an object you have enter'ed into. When you leave an object, its @leave/@oleave/@oxleave messages are triggered, and its @aleave actions are triggered.
 
 `leave` outputs the dbref of the room you arrive in.
+
+`leave/quiet` leaves out your @move and @omove messages.
 
 The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cannot be left. @lock/leave may also be enabled on some MUSHes, which allows you to set who can leave the object. If you fail to leave, the object's @lfail/@olfail/@alfail messages/actions will be triggered.
 

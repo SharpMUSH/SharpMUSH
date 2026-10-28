@@ -70,6 +70,8 @@ Otherwise, this command defines a global function with the name `<function name>
 - /restrict, to change the restriction flags on an existing function.
 - /builtin or /restore, to remove the @function of that name and turn the built-in back on. `@function/restore *` removes every @function not marked with /preserve.
 - /preserve, to mark a @function so `@function/restore *` keeps it.
+- /list, to list the @functions, as `@function` alone does.
+- /privileged, accepted for TinyMUX code. It changes nothing: a @function always runs as the object that holds it.
 
 `@function/alias` creates an alias for the @function `<function name>` so that it can also be called as `<alias>`; it cannot alias a built-in or another alias. `@function/clone` creates a new copy of `<function name>`, a built-in or a @function, named `<clone>`, which works the same initially but can be restricted separately.
 

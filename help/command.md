@@ -52,7 +52,7 @@ With no switches, @command shows all sorts of interesting information about how 
 `@command/alias <command>=<alias>`<br>
 `@command/clone <command>=<clone>`
 
-The `/alias` switch creates an alias for `<command>`, allowing players to type `<alias>` to run `<command>`. The `/clone` switch creates a separate copy of `<command>`, which works the same initially but can be restricted, @hooked, etc, separately.
+The `/alias` switch creates an alias for `<command>`, allowing players to type `<alias>` to run `<command>`. A `<command>` with switches gives an alias that carries them: after `@command/alias @pemit/noeval=@np`, `@np me=[add(1,1)]` sends `[add(1,1)]`, and `@np/list` adds `/list` to them. The `/clone` switch creates a separate copy of `<command>`, which works the same initially but can be restricted, @hooked, etc, separately.
 
 Switches include:
 - /add : Add a new command that does nothing, but can be @hook'd.

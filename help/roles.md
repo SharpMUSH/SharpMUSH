@@ -26,9 +26,19 @@
       "lookup": "roles approved"
     },
     {
+      "id": "roles-rhost",
+      "heading": "RhostMUSH's staff levels",
+      "lookup": "roles rhost"
+    },
+    {
       "id": "roles-flags",
       "heading": "Roles, flags and powers",
       "lookup": "roles flags"
+    },
+    {
+      "id": "roles-guards",
+      "heading": "Guarded roles",
+      "lookup": "roles guards"
     },
     {
       "id": "roles-wizard-split",
@@ -84,10 +94,10 @@ To take a permission away from one object, use an override (`@permission/deny`).
 
 | Priority | Role | Allows |
 |---|---|---|
-| 40 | god | administrator |
-| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `notify.push`, `softcode.sidefx`, `server.operate`, `control.all`, `protect.wizard`, `protect.admin` |
+| 40 | god | `administrator`, `protect.role` |
+| 30 | wizard | every portal permission except `server.admin` and `administrator`, plus `game.wizard`, `chat.admin`, `feed.admin`, `notify.push`, `softcode.sidefx`, `server.operate`, `control.all`, `protect.role`, `control.role.wizard`, `control.role.royalty`, `control.role.councilor` |
 | 25 | moderator | `players.moderate`, `wiki.admin`, `media.admin`, `queue.inspect`, `queue.control`, `roles.admin` |
-| 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.admin` |
+| 20 | royalty | `players.view`, `wiki.admin`, `media.admin`, `queue.inspect`, `game.royalty`, `protect.role`, `control.role.royalty` |
 | 15 | builder | `diagnostics.profile`, `game.builder` |
 | 12 | helper | `players.view`, `queue.inspect` |
 | 11 | approved | `wiki.create`, `wiki.edit`, `game.send_image`; [isapproved()] reads it |
@@ -101,7 +111,22 @@ To take a permission away from one object, use an override (`@permission/deny`).
 
 `helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 
+Setup can give a game RhostMUSH's staff levels in their place: see [roles rhost].
+
 Permissions that act on objects still check ownership and locks. For example, `snapshots.restore` lets a player restore only objects they control.
+
+## RhostMUSH's staff levels
+
+Setup can give a game RhostMUSH's staff levels in place of `helper` and `moderator`, and a RhostMUSH import does. Each level is an ordinary role, ranked just above the built-in role whose permissions it copies:
+
+| Priority | Role | Allows |
+|---|---|---|
+| 35 | immortal | what wizard allows, plus `server.admin`, `control.role.immortal` |
+| 22 | councilor | what royalty allows, plus `control.role.councilor` |
+| 16 | architect | what builder allows |
+| 13 | guildmaster | what player allows, plus `players.view`, `queue.inspect` |
+
+RhostMUSH's royalty is the `wizard` role. Immortal and councilor are guarded as wizard and royalty are (see [roles guards]), so a wizard controls a councilor but not an immortal. The setup step removes the roles of the set not chosen, except any role someone holds.
 
 ## Roles, flags and powers
 
@@ -109,7 +134,28 @@ The privilege flags and the PennMUSH powers are roles and permissions:
 
 - The WIZARD flag is the `wizard` role, and ROYALTY the `royalty` role. `@set` assigns and removes them; `hasflag()`, `flags()` and `FLAG^` locks answer from them.
 - Each power is a `game.` permission: See_All is `game.see_all`. `@power` sets an Allow override on the object, and `haspower()`, `powers()` and `POWER^` locks answer from what the object holds, so a role that allows `game.see_all` gives every holder See_All. The Builder and Guest powers are the `builder` and `guest` roles.
-- Control reads permissions too. `control.all` controls everything except #1 and holders of `protect.wizard`; a holder of `protect.admin` is controlled only by another holder of it. Ownership, zones and locks still decide control as in PennMUSH.
+- Control reads permissions too, never role order: see [roles guards].
+
+## Guarded roles
+
+A role that allows `protect.role` is guarded. Whoever holds it, a player or an object, is controlled only by something that holds `control.role.<role>` for that role. With several guarded roles, it must pass every one. Passing a guard gives no control by itself: `control.all`, ownership, zones and control locks decide from there, with TRUST and MISTRUST as in PennMUSH.
+
+| Guarded role | Who passes its guard |
+|---|---|
+| god | nobody; #1 is itself |
+| immortal | immortal, god |
+| wizard | wizard, immortal, god |
+| councilor | councilor, wizard, immortal, god |
+| royalty | royalty, councilor, wizard, immortal, god |
+
+So a wizard controls another wizard's things, as in PennMUSH, while royalty controls only what it owns. `control.role.god` is #1's alone: no role, override or `administrator` gives it.
+
+Only #1 can guard a role, take a guard off or delete a guarded role; a pass can be granted only by something that holds it, and a guarded role can be given only by something that passes its guard, so nobody can shield themselves from those above them. As #1, to guard a role and let wizards past it:
+
+```
+@role/allow curator=protect.role
+@role/allow wizard=control.role.curator
+```
 
 ## What a wizard's work is split into
 

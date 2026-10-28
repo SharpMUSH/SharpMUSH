@@ -94,7 +94,7 @@ One is registered and does nothing yet: `websocket_html()` checks its arguments 
 
 ## Functions from TinyMUX and RhostMUSH
 
-PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostMUSH; the rest come from RhostMUSH: `citer()`, `columns()`, `elementpos()`, `error()`, `inf()`, `ladd()` and the other list arithmetic, `land()` and the other list logic, `listdiff()`, `listinter()`, `listunion()`, `nameq()`, `nsiter()`, `privatize()`, `setqm()`, `setrm()`, `u2()`, `u2local()`, `u2default()`, `u2ldefault()` and `while()`. Each one's help says where it differs from the original.
+PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostMUSH; `between()`, `bittype()`, `chanobj()`, `choose()`, `comalias()`, `comtitle()`, `crc32()`, `destroy()`, `distribute()`, `lattrcmds()`, `lcmds()`, `ledit()`, `lrand()`, `lrooms()`, `moon()`, `roman()`, `strip()`, `strmem()`, `trigger()` and `verb()` come from TinyMUX, and RhostMUSH has many of them too; the rest come from RhostMUSH: `citer()`, `columns()`, `cosh()`, `sinh()` and `tanh()`, `elementpos()`, `error()`, `escapex()`, `fbetween()`, `globalroom()`, `inf()`, `isalpha()` and the other character tests, `keepflags()`, `keeptype()`, `ladd()` and the other list arithmetic, `land()` and the other list logic, `listdiff()`, `listinter()`, `listunion()`, `move()`, `nameq()`, `nameqm()`, `nsiter()`, `privatize()`, `remflags()`, `remtype()`, `setqm()`, `setrm()`, `streval()`, `strfunc()`, `u2()`, `u2local()`, `u2default()`, `u2ldefault()`, `ueval()` and `while()`. So do the commands `@eval` and `@pipe`. Each one's help says where it differs from the original.
 
 ## SharpMUSH-only commands
 
@@ -105,7 +105,7 @@ PennMUSH has none of these. `pack()` and `unpack()` come from TinyMUX and RhostM
   `register`, `login`, `play`, `claim`: the account layer at the login screen. `create` keeps PennMUSH's name, but makes the character on the account you logged in to.<br>
   `version`: `@version` before you have connected. PennMUSH has no bare `version`; it is accepted here because crawlers and players from MUX-family servers type it, and it publishes nothing `INFO` does not.<br>
   `~<command>`: run one command under strict parsing.<br>
-  `addcom`, `delcom`, `comlist`, `comtitle`, `@clist`: TinyMUX's channel commands, while the `use_muxcomm` option is on (see [muxcomsys]).
+  `addcom`, `delcom`, `comlist`, `comtitle`, `@clist`, `allcom`, `clearcom`, `@ccreate`, `@cdestroy`, `@cboot`, `@cwho`, `@cchown`, `@cset`, `@coflags`, `@cpflags`: TinyMUX's channel commands, while the `use_muxcomm` option is on (see [muxcomsys] and [mux channel admin]).
 
 ## SharpMUSH-only flags and powers
 
