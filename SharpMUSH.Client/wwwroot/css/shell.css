@@ -821,6 +821,29 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 .tone-blue { color: var(--hue-blue); }
 .tone-purple { color: var(--hue-purple); }
 .tone-pink { color: var(--hue-pink); }
+/* A gradient stop that is a tone() name (MarkupString writes var(--ms-tone-<role>, <colour>)): the same colours. */
+:is(.ms-shaded, .ms-gauge-bar) {
+    --ms-tone-foreground: var(--text);
+    --ms-tone-primary: var(--accent);
+    --ms-tone-secondary: var(--special);
+    --ms-tone-tertiary: var(--tone-tertiary);
+    --ms-tone-muted: var(--text-dim);
+    --ms-tone-subtle: var(--text-faint);
+    --ms-tone-link: var(--accent);
+    --ms-tone-highlight: var(--highlight);
+    --ms-tone-success: var(--success);
+    --ms-tone-warning: var(--warn);
+    --ms-tone-error: var(--danger);
+    --ms-tone-info: var(--info);
+    --ms-tone-red: var(--hue-red);
+    --ms-tone-orange: var(--hue-orange);
+    --ms-tone-yellow: var(--hue-yellow);
+    --ms-tone-green: var(--hue-green);
+    --ms-tone-cyan: var(--hue-cyan);
+    --ms-tone-blue: var(--hue-blue);
+    --ms-tone-purple: var(--hue-purple);
+    --ms-tone-pink: var(--hue-pink);
+}
 
 /* ── Softcode Editor ── */
 .mush-editor-fill {

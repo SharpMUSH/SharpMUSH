@@ -333,7 +333,8 @@ public partial class Functions
 		var args = parser.CurrentState.ArgumentsOrdered;
 		if (LayoutOptionGroups.Stops(Arg(args, 1), GradientStop) is not { } stops) return ValueTask.FromResult(new CallState("#-1 UNKNOWN COLOR"));
 
-		return ValueTask.FromResult(GradientSchema.Apply(Arg(args, 2), new Shading(new ColorGradient(stops), GradientFlow.Characters)) switch
+		var gradient = new ColorGradient(stops) { Roles = LayoutOptionGroups.Roles(Arg(args, 1)) };
+		return ValueTask.FromResult(GradientSchema.Apply(Arg(args, 2), new Shading(gradient, GradientFlow.Characters)) switch
 		{
 			Shading shading => new CallState(Shade(Arg(args, 0), shading)),
 			Error<string> error => new CallState(error.Value),
@@ -343,7 +344,8 @@ public partial class Functions
 	/// <summary>
 	/// A gradient's stop: a tone() name for the colour it stands for in the game's layout_theme, or the
 	/// standard colour a reader without a theme is sent for it (white for <c>foreground</c> and
-	/// <c>strong</c>, whose standard is the client's own colour, which a gradient cannot blend);
+	/// <c>strong</c>, whose standard is the client's own colour, which a gradient cannot blend), and in
+	/// their own theme's colour for a reader with one (<see cref="LayoutOptionGroups.Roles"/>);
 	/// ansi() codes otherwise.
 	/// </summary>
 	private IColorMarkup? GradientStop(string codes) =>

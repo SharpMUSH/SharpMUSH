@@ -291,10 +291,15 @@ public static partial class SoftcodeDecomposer
 		return Call("gradient", Child(shaded.Content, width, theme), Escape(stops), options.Write());
 	}
 
-	/// <summary>A gradient's colours as ansi() codes split by <c>|</c>; null when one is not a terminal colour.</summary>
+	/// <summary>
+	/// A gradient's colours split by <c>|</c>: the tone a stop names, else its ansi() codes; null when one is
+	/// neither.
+	/// </summary>
 	private static string? Stops(ColorGradient gradient)
 	{
-		var codes = gradient.Stops.Select(stop => stop is AnsiMarkup ansi ? AnsiCodeWriter.Write(ansi.Style) : string.Empty).ToArray();
+		var codes = gradient.Stops.Select((stop, i) => i < gradient.Roles.Length && gradient.Roles[i] is { } role
+			? ToneMarkup.Of(role).Name
+			: stop is AnsiMarkup ansi ? AnsiCodeWriter.Write(ansi.Style) : string.Empty).ToArray();
 		return codes.Length == 0 || codes.Any(code => code.Length == 0) ? null : string.Join("|", codes);
 	}
 

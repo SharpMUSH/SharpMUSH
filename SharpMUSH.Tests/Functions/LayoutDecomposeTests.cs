@@ -37,6 +37,8 @@ public class LayoutDecomposeTests
 	[Arguments("datacolumns(,Name|Ann|Bob,Score|10|7)", "[datatable(,Name|Score,Ann|10,Bob|7)]")]
 	[Arguments("gradient(box(Hi,T,12),#ff0000|#0000ff,{{\"flow\":\"diagonal\"}})", "[gradient([box(Hi,T,12)],#ff0000|#0000ff,{{\"flow\":\"diagonal\"}})]")]
 	[Arguments("gradient(box(Hi,T,12),#ff0000|#0000ff,{{\"target\":\"borders\"}})", "[gradient([box(Hi,T,12)],#ff0000|#0000ff,{{\"target\":\"borders\"}})]")]
+	[Arguments("gradient(box(Hi,T,12),primary|secondary)", "[gradient([box(Hi,T,12)],primary|secondary)]")]
+	[Arguments("gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})", "[gauge(6,12,HP,{{\"gradient\":\"#ff0000|secondary\"}})]")]
 	[Arguments("box(a%r[rule()]%rb,,9)", "[box(a%r[rule()]%rb,,9)]")]
 	[Arguments("box(fields(,Sex,Male)%r[rule(Quote)]%rHooo,Name)", "[box([fields(,Sex,Male)]%r[rule(Quote)]%rHooo,Name)]")]
 	[Arguments("figure(,A cat,=^.^=,left,The cat sits.,30)", "[figure(,A cat,=\\^.\\^=,left,The cat sits.,30)]")]
