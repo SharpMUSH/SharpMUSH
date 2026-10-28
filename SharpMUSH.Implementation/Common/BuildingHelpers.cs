@@ -943,7 +943,18 @@ public static class BuildingHelpers
 			throw new InvalidOperationException("The clone just created must exist.");
 		}
 
+		// create.c:777-788: an exit cloned under a name with aliases keeps those, not the original's.
+		var cloneAliases = clonedObj.IsExit
+			? (await mediator.CreateStream(new GetAttributeQuery(cloneDbRef, [Library.Services.PlayerAliases.AttributeName]))
+				.LastOrDefaultAsync())?.Value
+			: null;
+
 		await CopyAttributesAsync(mediator, attributeService, logger, executor, target, clonedObj, owner);
+
+		if (cloneAliases is not null)
+		{
+			await attributeService.SetAttributeAsync(executor, clonedObj, Library.Services.PlayerAliases.AttributeName, cloneAliases);
+		}
 
 		var clonedLocks = target.Object().Locks
 			.Where(entry => !entry.Value.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone));
