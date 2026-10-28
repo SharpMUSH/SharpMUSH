@@ -2869,6 +2869,18 @@
     <value>Добавить роль</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Защищённые роли</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Игра · Обход защиты роли {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Позволяет этой роли управлять любым обладателем {0} там, где это разрешили бы владение, зоны или «Управление всем». Сама по себе управления не даёт.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Защиту God обходит только игрок #1. Её не может дать ни одна роль или исключение.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Разрешить</value>
     <comment>MT — permission tri-state with RolDeny/RolInherit.</comment>

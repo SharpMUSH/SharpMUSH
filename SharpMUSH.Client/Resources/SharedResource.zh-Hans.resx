@@ -2869,6 +2869,18 @@
     <value>添加权限组</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>受保护的权限组</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>游戏 · 通过 {0} 的保护</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>允许此权限组在所有权、区域或“控制一切”允许的情况下控制持有 {0} 的对象。它本身不授予控制权。</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>只有玩家 #1 能通过 God 的保护。任何权限组或例外都无法授予它。</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>允许</value>
     <comment>MT</comment>

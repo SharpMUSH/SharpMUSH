@@ -250,6 +250,69 @@ public class RoleManagementServiceTests
 		await Assert.That(await world.Registry.GetRoleAsync("helper") is NotFound).IsTrue();
 	}
 
+	/// <summary>A wizard grants game powers it does not hold, but not the pass of a guard it does not pass itself.</summary>
+	[Test]
+	public async Task AWizardGrantsOnlyTheGuardPassesItHolds()
+	{
+		var world = Build();
+		await Refused(world.Service.SaveRoleAsync(A("wiz"), Draft("bypass", 20, PortalPermission.ControlRole(BuiltInRoles.ImmortalSlug))),
+			RoleRefusalKind.Forbidden);
+		await Refused(world.Service.SaveRoleAsync(A("wiz"), Draft("bypass", 20, PortalPermission.ControlRole(BuiltInRoles.GodSlug))),
+			RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SaveRoleAsync(A("wiz"), Draft("keepers", 20, PortalPermission.ControlRole(BuiltInRoles.RoyaltySlug))));
+	}
+
+	/// <summary>Only the owner guards a role, so a wizard cannot shield itself from other wizards and immortals.</summary>
+	[Test]
+	public async Task OnlyTheOwnerGuardsARole()
+	{
+		var world = Build();
+		await Refused(world.Service.SaveRoleAsync(A("wiz"), Draft("shield", 20, PortalPermission.ProtectRole)), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("shield", 20, PortalPermission.ProtectRole)));
+
+		await Refused(world.Service.EditRoleAsync(A("wiz"), "shield",
+			role => new RoleDraft(role.Slug, role.Name, role.Category, role.Color, role.Priority, new Dictionary<string, PermissionState>())), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.DeleteRoleAsync(A("wiz"), "shield"), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.DeleteRoleAsync(A("owner"), "shield"));
+	}
+
+	/// <summary>A guarded role goes only to someone the giver could still control: a wizard gives royalty, whose guard
+	/// it passes, but not a role of #1's that no wizard passes, to itself or anyone else.</summary>
+	[Test]
+	public async Task AGuardedRoleIsGivenOnlyByOneWhoPassesItsGuard()
+	{
+		var world = Build();
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("shield", 20, PortalPermission.ProtectRole)));
+
+		await Refused(world.Service.AssignAsync(A("wiz"), "wiz", "shield"), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.AssignAsync(A("wiz"), "pl", "shield"), RoleRefusalKind.Forbidden);
+		await Assert.That(world.Registry.AssignedTo("wiz")).DoesNotContain("shield");
+		await Accepted(world.Service.AssignAsync(A("wiz"), "pl", BuiltInRoles.RoyaltySlug));
+		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "shield"));
+	}
+
+	/// <summary>A permission a role still holds after it stopped existing is dropped on the next save, not refused.</summary>
+	[Test]
+	public async Task ARoleHoldingARetiredPermissionStaysEditable()
+	{
+		var world = Build();
+		world.Registry.Add(new SharpRole
+		{
+			Slug = "veteran", Name = "Veteran", Category = "Staff", Priority = 10,
+			Permissions = new Dictionary<string, PermissionState> { ["protect.wizard"] = PermissionState.Allow, [PortalPermission.WikiRead] = PermissionState.Allow }
+		});
+
+		await Accepted(world.Service.EditRoleAsync(A("owner"), "veteran",
+			role => new RoleDraft(role.Slug, "Old guard", role.Category, role.Color, role.Priority, role.Permissions)));
+
+		var saved = (await world.Registry.GetRoleAsync("veteran")).Expect<SharpRole>();
+		await Assert.That(saved.Name).IsEqualTo("Old guard");
+		await Assert.That(saved.Permissions.Keys).IsEquivalentTo([PortalPermission.WikiRead]);
+		await Refused(world.Service.EditRoleAsync(A("owner"), "veteran",
+			role => new RoleDraft(role.Slug, role.Name, role.Category, role.Color, role.Priority,
+				new Dictionary<string, PermissionState>(role.Permissions) { ["protect.admin"] = PermissionState.Allow })), RoleRefusalKind.Invalid);
+	}
+
 	[Test]
 	public async Task MalformedRolesAreRefused()
 	{

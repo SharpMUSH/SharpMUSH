@@ -164,6 +164,9 @@ public sealed partial class RoleManagementService(
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
+			if (PermissionResolver.StateOf(role.Permissions, PortalPermission.ProtectRole) == PermissionState.Allow
+				&& !RoleHierarchy.CanGrant(HeldAmong(me, []), PortalPermission.ProtectRole))
+				return Refuse<Success>(RoleRefusalKind.Forbidden, $"{role.Name} is guarded; only #1 can delete it.");
 
 			var holders = await registry.GetAccountIdsForRoleAsync(role.Slug);
 			foreach (var holder in holders)
@@ -338,6 +341,7 @@ public sealed partial class RoleManagementService(
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
+			if (assign && BeyondReach(me, role) is { } shield) return shield;
 			if ((await WizardsOwnAccountAsync(actor, me, accountId, ct) ?? await TargetAsync(actor, me, accountId, ct)) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
@@ -386,6 +390,7 @@ public sealed partial class RoleManagementService(
 				if (!RoleHierarchy.Outranks(me.Context, role.Priority)) return NotBelow<Success>(role, me.Context);
 				if (!IsWizardActingOnItself(actor, me.Context, target) && await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
 			}
+			if (assign && BeyondReach(me.Context, role) is { } shield) return shield;
 
 			var number = target.Object().Key;
 			if (assign) await registry.AssignRoleToObjectAsync(number, role.Slug);
@@ -522,11 +527,37 @@ public sealed partial class RoleManagementService(
 			: Refuse<Success>(RoleRefusalKind.Invalid, "administrator comes only from a role; it cannot be set as an override.");
 	}
 
+	/// <summary>
+	/// What <paramref name="me"/> holds, with the guard passes among <paramref name="scopes"/> resolved too: a pass is
+	/// held only when resolved for its role, and the role may not exist yet (a role created with its own pass). God's
+	/// pass is resolved always: holding it is how <see cref="RoleHierarchy.CanGrant"/> knows the owner.
+	/// </summary>
+	private IReadOnlySet<string> HeldAmong(PermissionContext me, IEnumerable<string> scopes)
+		=> resolver.Resolve(me with
+		{
+			ControlScopes = me.ControlScopes.Concat(scopes.Where(PortalPermission.IsControlRole))
+				.Append(PortalPermission.ControlRole(BuiltInRoles.GodSlug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
+		});
+
+	/// <summary>
+	/// The refusal for giving a guarded role whose guard the actor does not pass, or null: its holder would be out of
+	/// the actor's reach, so a wizard could shield itself or anyone else from its peers with a role only #1 made.
+	/// </summary>
+	private RoleOutcome<Success>? BeyondReach(PermissionContext me, SharpRole role)
+	{
+		if (PermissionResolver.StateOf(role.Permissions, PortalPermission.ProtectRole) != PermissionState.Allow) return null;
+		var pass = PortalPermission.ControlRole(role.Slug);
+		return RoleHierarchy.CanGrant(HeldAmong(me, [pass]), pass)
+			? null
+			: Refuse<Success>(RoleRefusalKind.Forbidden, $"{role.Name} guards its holders and you do not pass its guard, so you cannot give it.");
+	}
+
 	/// <summary>The refusal for allowing scopes the actor may not grant, or null when it may grant them all.</summary>
 	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes)
 	{
-		var held = resolver.Resolve(me);
-		var unheld = scopes.Where(scope => !RoleHierarchy.CanGrant(held, scope)).ToArray();
+		var asked = scopes.ToArray();
+		var held = HeldAmong(me, asked);
+		var unheld = asked.Where(scope => !RoleHierarchy.CanGrant(held, scope)).ToArray();
 		return unheld.Length > 0
 			? Refuse<Success>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.")
 			: null;
@@ -544,12 +575,17 @@ public sealed partial class RoleManagementService(
 		var color = string.IsNullOrWhiteSpace(draft.Color) ? null : draft.Color.Trim();
 		if (color is not null && !ColorPattern().IsMatch(color))
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, "A role colour is a hex colour such as #5aa9ff.");
+		var existing = await registry.GetRoleAsync(slug, ct) is SharpRole found ? found : null;
 		var permissions = new Dictionary<string, PermissionState>();
 		var custom = await CustomScopesAsync(ct);
 		foreach (var (scope, state) in draft.Permissions)
 		{
+			// A permission the role already held that no longer exists is dropped, so the role stays editable.
 			if (Canonical(scope, custom) is not { } canonical)
+			{
+				if (existing?.Permissions.ContainsKey(scope) == true) continue;
 				return Refuse<SharpRole>(RoleRefusalKind.Invalid, $"Unknown permission '{scope}'.");
+			}
 			if (!Enum.IsDefined(state))
 				return Refuse<SharpRole>(RoleRefusalKind.Invalid, "Unknown permission state.");
 			if (state != PermissionState.Inherit) permissions[canonical] = state;
@@ -557,14 +593,14 @@ public sealed partial class RoleManagementService(
 
 		var me = (await ActorGrantsAsync(actor, ct)).Context;
 		if (Unauthorized(me) is { } refusal) return refusal;
-		var existing = await registry.GetRoleAsync(slug, ct) is SharpRole found ? found : null;
 		if (existing is { IsSystem: true } && existing.Priority != draft.Priority)
 			return Refuse<SharpRole>(RoleRefusalKind.Invalid, $"{existing.Name} is a system role and keeps priority {existing.Priority}.");
 		if (existing is not null && !RoleHierarchy.Outranks(me, existing.Priority)) return NotBelow<SharpRole>(existing, me);
 		if (!RoleHierarchy.Outranks(me, draft.Priority))
 			return Refuse<SharpRole>(RoleRefusalKind.Forbidden,
 				$"Priority {draft.Priority} is not below your highest role ({me.TopPriority}).");
-		var unheld = RoleHierarchy.UnheldGrants(existing?.Permissions ?? new Dictionary<string, PermissionState>(), permissions, resolver.Resolve(me));
+		var unheld = RoleHierarchy.UnheldGrants(existing?.Permissions ?? new Dictionary<string, PermissionState>(), permissions,
+			HeldAmong(me, permissions.Keys));
 		if (unheld.Count > 0)
 			return Refuse<SharpRole>(RoleRefusalKind.Forbidden, $"You cannot grant what you do not hold: {string.Join(", ", unheld)}.");
 

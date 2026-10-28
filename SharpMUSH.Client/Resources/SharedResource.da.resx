@@ -2869,6 +2869,18 @@
     <value>Tilføj rolle</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Beskyttede roller</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Spil · Kom forbi beskyttelsen af {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Lader denne rolle kontrollere den, der har {0}, hvor ejerskab, zoner eller Kontrol over alt ville gøre det. Den giver ingen kontrol i sig selv.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Kun spiller #1 kommer forbi Gods beskyttelse. Ingen rolle eller undtagelse kan give den.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Tillad</value>
     <comment>MT</comment>

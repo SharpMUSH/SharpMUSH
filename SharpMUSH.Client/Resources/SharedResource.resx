@@ -5342,17 +5342,23 @@
   <data name="EnumPermControlAllDesc" xml:space="preserve">
     <value>Controls every object but player #1's, whoever owns it.</value>
   </data>
-  <data name="EnumPermProtectWizard" xml:space="preserve">
-    <value>Game · Wizard protection</value>
+  <data name="EnumPermProtectRole" xml:space="preserve">
+    <value>Game · Guarded</value>
   </data>
-  <data name="EnumPermProtectWizardDesc" xml:space="preserve">
-    <value>Only holders of Control everything can control this character or object.</value>
+  <data name="EnumPermProtectRoleDesc" xml:space="preserve">
+    <value>Whoever holds this role can be controlled only by roles that pass its guard, below. Set it on the role itself; Control everything does not get past it.</value>
   </data>
-  <data name="EnumPermProtectAdmin" xml:space="preserve">
-    <value>Game · Admin protection</value>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Guarded roles</value>
   </data>
-  <data name="EnumPermProtectAdminDesc" xml:space="preserve">
-    <value>Nobody without Admin protection can control this character or object.</value>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Game · Pass {0}'s guard</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Lets this role control whoever holds {0}, where ownership, zones or Control everything would. It gives no control by itself.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Only player #1 passes God's guard. No role or override can give it.</value>
   </data>
   <data name="EnumPermPowerAnnounce" xml:space="preserve">
     <value>Power · Announce</value>

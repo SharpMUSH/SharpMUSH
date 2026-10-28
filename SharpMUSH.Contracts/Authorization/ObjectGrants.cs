@@ -123,6 +123,22 @@ public sealed class ObjectGrants
 	public bool Has(string scope) => Granted.Contains(scope);
 
 	/// <summary>
+	/// The slugs of the held roles that guard their holders (<see cref="PortalPermission.ProtectRole"/>), each read on
+	/// the role itself: an override on the object or the account neither adds a guard nor lifts one.
+	/// </summary>
+	public IEnumerable<string> GuardedRoles => Roles
+		.Where(held => PermissionResolver.StateOf(held.Role.Permissions, PortalPermission.ProtectRole) == PermissionState.Allow)
+		.Select(held => held.Role.Slug)
+		.Distinct(StringComparer.OrdinalIgnoreCase);
+
+	/// <summary>
+	/// Whether these grants pass every guard <paramref name="target"/>'s roles set: a
+	/// <see cref="PortalPermission.ControlRole"/> for each of its <see cref="GuardedRoles"/>.
+	/// </summary>
+	public bool PassesGuardsOf(ObjectGrants target)
+		=> target.GuardedRoles.All(slug => Has(PortalPermission.ControlRole(slug)));
+
+	/// <summary>
 	/// The spelling <see cref="Has"/> expects for <paramref name="scope"/>, matched without regard to case:
 	/// the catalog's for a built-in permission, lowercase for a custom one, null for neither.
 	/// </summary>
@@ -184,7 +200,8 @@ public sealed class ObjectGrants
 			owner)
 		{
 			ObjectOverrides = objectOverrides,
-			CustomScopes = defined.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase)
+			CustomScopes = defined.Select(p => p.Scope).ToHashSet(StringComparer.OrdinalIgnoreCase),
+			ControlScopes = roles.Select(r => PortalPermission.ControlRole(r.Slug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		};
 		return new ObjectGrants(held, context,
 			defined.ToDictionary(p => p.Scope, p => p.Category, StringComparer.OrdinalIgnoreCase));

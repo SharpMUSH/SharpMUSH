@@ -87,11 +87,11 @@ public sealed class ObjectFlagSet
 	/// <summary>Controls every object but #1 (the wizard half of PennMUSH <c>controls()</c>).</summary>
 	public bool ControlsAll => IsGod || Grants.Has(PortalPermission.ControlAll);
 
-	/// <summary>Controlled only by holders of <see cref="PortalPermission.ControlAll"/>.</summary>
-	public bool IsWizardProtected => Grants.Has(PortalPermission.ProtectWizard);
-
-	/// <summary>Not controlled by anyone without <see cref="PortalPermission.ProtectAdmin"/>.</summary>
-	public bool IsAdminProtected => Grants.Has(PortalPermission.ProtectAdmin);
+	/// <summary>
+	/// Whether this object gets past every guard <paramref name="target"/>'s roles set (<see cref="ObjectGrants.PassesGuardsOf"/>):
+	/// PennMUSH's <c>God(what)</c>, <c>Wizard(what)</c> and <c>Hasprivs(what) &amp;&amp; !Hasprivs(who)</c> refusals, as roles.
+	/// </summary>
+	public bool PassesGuardsOf(ObjectFlagSet target) => Grants.PassesGuardsOf(target.Grants);
 
 	public bool IsMistrust => Names.Contains("MISTRUST");
 

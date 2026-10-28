@@ -674,7 +674,7 @@ Royalty can:
 * Build without quota limits
 * Set the flags reserved for royalty
 
-Only another holder of `protect.admin` controls an object of royalty.
+The `royalty` role is guarded: only royalty and the roles above it that pass its guard control an object of royalty. See [roles guards].
 
 
 ::: seealso

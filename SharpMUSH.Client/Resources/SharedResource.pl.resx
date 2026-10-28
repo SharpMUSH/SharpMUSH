@@ -2869,6 +2869,18 @@
     <value>Dodaj rolę</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Chronione role</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Gra · Przejście ochrony roli {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Pozwala tej roli kontrolować każdego, kto ma {0}, tam gdzie pozwoliłaby na to własność, strefy lub Kontrola nad wszystkim. Sama nie daje kontroli.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Tylko gracz #1 przechodzi ochronę roli God. Żadna rola ani wyjątek nie może dać tego przejścia.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Zezwól</value>
     <comment>MT — permission tri-state (Allow / Deny / Inherit)</comment>

@@ -373,23 +373,18 @@ public class PermissionService(
 		if (who.Id() == target.Id())
 			return true;
 
-		if (who.IsGod())
-			return true;
-
-		if (target.IsGod())
+		// Each object's flags and grants are read once and asked every question below. Privilege here is
+		// scopes, never role order. First the target's guards: each role it holds that allows protect.role
+		// refuses a who without control.role.<that role>. They are PennMUSH's God(what) (only #1 passes god's),
+		// Wizard(what) and Hasprivs(what) && !Hasprivs(who). Then control.all on who, PennMUSH's Wizard(who),
+		// which #1 holds as the owner.
+		var whoFlags = await who.ReadFlagsAsync(token);
+		var targetFlags = await target.ReadFlagsAsync(token);
+		if (!whoFlags.PassesGuardsOf(targetFlags))
 			return false;
 
-		// Each object's flags and grants are read once and asked every question below. Privilege here
-		// is two scopes read on both sides, never role order: control.all on who (PennMUSH's Wizard(who)),
-		// and on the target protect.wizard (Wizard(what)) or protect.admin against a who without it
-		// (Hasprivs(what) && !Hasprivs(who)).
-		var whoFlags = await who.ReadFlagsAsync(token);
 		if (whoFlags.ControlsAll)
 			return true;
-
-		var targetFlags = await target.ReadFlagsAsync(token);
-		if (targetFlags.IsWizardProtected || (targetFlags.IsAdminProtected && !whoFlags.IsAdminProtected))
-			return false;
 
 		if (whoFlags.IsMistrust)
 			return false;

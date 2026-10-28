@@ -1959,6 +1959,18 @@
   <data name="RolInherit" xml:space="preserve">
     <value>Hériter</value>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Rôles protégés</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Jeu · Franchir la protection de {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Permet à ce rôle de contrôler quiconque détient {0}, là où la possession, les zones ou Tout contrôler le permettraient. Il ne donne aucun contrôle à lui seul.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Seul le joueur #1 franchit la protection de God. Aucun rôle ni aucune exception ne peut la donner.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Autoriser</value>
   </data>

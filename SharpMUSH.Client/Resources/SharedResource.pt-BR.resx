@@ -2869,6 +2869,18 @@
     <value>Adicionar função</value>
     <comment>MT — "role" rendered as "função" consistently across the roles surface</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Funções protegidas</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Jogo · Contornar a proteção da função {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Permite que esta função controle quem tiver {0}, onde a posse, as zonas ou Controlar tudo permitiriam. Sozinha, não dá controle.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Só o jogador #1 contorna a proteção de God. Nenhuma função ou exceção pode conceder essa capacidade.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Permitir</value>
     <comment>MT</comment>

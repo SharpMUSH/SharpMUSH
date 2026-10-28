@@ -58,6 +58,21 @@ public class PermissionResolverTests
 		await Assert.That(explanation.Roles).IsEquivalentTo(["admin"]);
 	}
 
+	/// <summary>A guard pass for a role the context does not name is held by no one, so Explain must not say the owner holds it.</summary>
+	[Test]
+	public async ValueTask Explain_AgreesWithResolve_OnAGuardPassOutsideTheContext()
+	{
+		var pass = PortalPermission.ControlRole("curator");
+		var owner = new PermissionContext([], new Dictionary<string, PermissionState>(), IsOwner: true);
+		var admin = Context(Role("admin", 1, Allow(PortalPermission.Administrator)));
+		await Assert.That(Resolver.Resolve(owner).Contains(pass)).IsFalse();
+		await Assert.That(Resolver.Explain(owner, pass).Allowed).IsFalse();
+		await Assert.That(Resolver.Explain(admin, pass).Allowed).IsFalse();
+		var named = owner with { ControlScopes = new HashSet<string>([pass]) };
+		await Assert.That(Resolver.Resolve(named).Contains(pass)).IsTrue();
+		await Assert.That(Resolver.Explain(named, pass).Reason).IsEqualTo("owner");
+	}
+
 	[Test]
 	[Arguments(1, 50)]
 	[Arguments(50, 1)]

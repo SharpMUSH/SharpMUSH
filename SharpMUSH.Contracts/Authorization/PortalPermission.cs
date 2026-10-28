@@ -97,17 +97,30 @@ public static class PortalPermission
 	/// <summary>Controls every object except the owner's, whoever owns it (the wizard half of PennMUSH <c>controls()</c>).</summary>
 	public const string ControlAll = "control.all";
 
-	/// <summary>An object holding this is controlled only by holders of <see cref="ControlAll"/>.</summary>
-	public const string ProtectWizard = "protect.wizard";
+	/// <summary>
+	/// Guards a role: what holds a role that allows this is controlled only by holders of that role's
+	/// <see cref="ControlRole"/>. Read on each role the target holds, never pooled, so one guarded role is enough.
+	/// </summary>
+	public const string ProtectRole = "protect.role";
 
-	/// <summary>An object holding this is not controlled by anyone who lacks it.</summary>
-	public const string ProtectAdmin = "protect.admin";
+	/// <summary>What <see cref="ControlRole"/> puts before the role's slug.</summary>
+	public const string ControlRolePrefix = "control.role.";
+
+	/// <summary>
+	/// Lets its holders past the guard of the role <paramref name="slug"/> (<see cref="ProtectRole"/>). Passing a guard
+	/// grants no control by itself; ownership, zones and <see cref="ControlAll"/> still decide.
+	/// </summary>
+	public static string ControlRole(string slug) => ControlRolePrefix + slug.ToLowerInvariant();
+
+	/// <summary>True for a <see cref="ControlRole"/> scope, whatever role it names.</summary>
+	public static bool IsControlRole(string scope)
+		=> scope.Length > ControlRolePrefix.Length && scope.StartsWith(ControlRolePrefix, StringComparison.OrdinalIgnoreCase);
 
 	/// <summary>The scope backing a PennMUSH power, e.g. <c>game.see_all</c> for See_All.</summary>
 	public static string GamePower(string power) => "game." + power.ToLowerInvariant();
 
-	/// <summary>True for the in-game scopes: <c>game.*</c>, <see cref="ControlAll"/> and the protections.</summary>
-	public static bool IsGameScope(string scope) => GameScopes.Contains(scope);
+	/// <summary>True for the in-game scopes: <c>game.*</c>, <see cref="ControlAll"/>, <see cref="ProtectRole"/> and each <see cref="ControlRole"/>.</summary>
+	public static bool IsGameScope(string scope) => GameScopes.Contains(scope) || IsControlRole(scope);
 
 	/// <summary>
 	/// Display metadata for one scope, used by the role-editor permission matrix. Everything but
@@ -164,8 +177,7 @@ public static class PortalPermission
 		new(SideFx, "EnumPermSideFx", GroupGame, "EnumPermSideFxDesc"),
 		new(ServerOperate, "EnumPermServerOperate", GroupGame, "EnumPermServerOperateDesc"),
 		new(ControlAll, "EnumPermControlAll", GroupGame, "EnumPermControlAllDesc"),
-		new(ProtectWizard, "EnumPermProtectWizard", GroupGame, "EnumPermProtectWizardDesc"),
-		new(ProtectAdmin, "EnumPermProtectAdmin", GroupGame, "EnumPermProtectAdminDesc"),
+		new(ProtectRole, "EnumPermProtectRole", GroupGame, "EnumPermProtectRoleDesc"),
 		.. GamePowers.All.Select(power => new Definition(power.Scope, power.ResourceKey, GroupGame, power.ResourceKey + "Desc")),
 	];
 
@@ -202,7 +214,9 @@ public static class PortalPermission
 
 	/// <summary>The catalog spelling of <paramref name="scope"/>, or null when it is not a known scope.</summary>
 	public static string? Canonical(string scope) =>
-		AllScopes.FirstOrDefault(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase));
+		IsControlRole(scope)
+			? scope.ToLowerInvariant()
+			: AllScopes.FirstOrDefault(known => string.Equals(known, scope, StringComparison.OrdinalIgnoreCase));
 
 	/// <summary>Scopes directly implied by an umbrella grant.</summary>
 	public static IReadOnlyList<string> ImpliedScopes(string scope) =>
@@ -214,15 +228,15 @@ public static class PortalPermission
 	private static readonly IReadOnlySet<string> AllScopesSet =
 		AllScopes.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-	/// <summary>True when <paramref name="scope"/> is a known permission scope. Case-insensitive,
-	/// matching <see cref="Expand"/> and <see cref="Implications"/>.</summary>
-	public static bool IsKnown(string scope) => AllScopesSet.Contains(scope);
+	/// <summary>True when <paramref name="scope"/> is a known permission scope, a <see cref="ControlRole"/> for any
+	/// role included. Case-insensitive, matching <see cref="Expand"/> and <see cref="Implications"/>.</summary>
+	public static bool IsKnown(string scope) => AllScopesSet.Contains(scope) || IsControlRole(scope);
 
 	private static readonly IReadOnlyDictionary<string, string> GroupsByScope =
 		All.ToDictionary(d => d.Scope, d => d.GroupKey, StringComparer.OrdinalIgnoreCase);
 
 	/// <summary>The group a built-in scope is listed under in the role editor, or null when it is not one.</summary>
-	public static string? GroupOf(string scope) => GroupsByScope.GetValueOrDefault(scope);
+	public static string? GroupOf(string scope) => IsControlRole(scope) ? GroupGame : GroupsByScope.GetValueOrDefault(scope);
 
 	/// <summary>
 	/// Expands a granted scope set to include every scope implied by a coarser one (e.g.

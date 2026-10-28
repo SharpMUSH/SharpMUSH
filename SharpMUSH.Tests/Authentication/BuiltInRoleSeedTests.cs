@@ -97,9 +97,12 @@ public class BuiltInRoleSeedTests
 	public async Task DefaultsGrantEachHolderWhatItShould()
 	{
 		var resolver = new PermissionResolver();
+		var guards = BuiltInRoles.All.Concat(BuiltInRoles.RhostLevels)
+			.Select(role => PortalPermission.ControlRole(role.Slug)).ToHashSet(StringComparer.OrdinalIgnoreCase);
 		IReadOnlySet<string> Holding(params string[] slugs) => resolver.Resolve(new PermissionContext(
 			slugs.Append(BuiltInRoles.EveryoneSlug).Select(slug => BuiltInRoles.All.Single(r => r.Slug == slug)).ToArray(),
-			new Dictionary<string, PermissionState>(), false));
+			new Dictionary<string, PermissionState>(), false)
+		{ ControlScopes = guards });
 
 		var guest = Holding(BuiltInRoles.GuestSlug);
 		var player = Holding(BuiltInRoles.PlayerSlug);
@@ -128,13 +131,18 @@ public class BuiltInRoleSeedTests
 		await Assert.That(builder).Contains(PortalPermission.GamePower("Builder"));
 		await Assert.That(royalty).Contains(PortalPermission.WikiDelete);
 		await Assert.That(royalty).Contains(PortalPermission.GameRoyalty);
-		await Assert.That(royalty).Contains(PortalPermission.ProtectAdmin);
+		await Assert.That(royalty).Contains(PortalPermission.ProtectRole);
+		await Assert.That(royalty).Contains(PortalPermission.ControlRole(BuiltInRoles.RoyaltySlug));
+		await Assert.That(royalty).DoesNotContain(PortalPermission.ControlRole(BuiltInRoles.WizardSlug));
 		await Assert.That(royalty).DoesNotContain(PortalPermission.ControlAll);
 		await Assert.That(royalty).DoesNotContain(PortalPermission.RolesAdmin);
 		await Assert.That(wizard).Contains(PortalPermission.RolesAdmin);
 		await Assert.That(wizard).Contains(PortalPermission.GameWizard);
 		await Assert.That(wizard).Contains(PortalPermission.ControlAll);
-		await Assert.That(wizard).Contains(PortalPermission.ProtectWizard);
+		await Assert.That(wizard).Contains(PortalPermission.ProtectRole);
+		await Assert.That(wizard).Contains(PortalPermission.ControlRole(BuiltInRoles.WizardSlug));
+		await Assert.That(wizard).Contains(PortalPermission.ControlRole(BuiltInRoles.RoyaltySlug));
+		await Assert.That(wizard).DoesNotContain(PortalPermission.ControlRole(BuiltInRoles.ImmortalSlug));
 		await Assert.That(wizard).DoesNotContain(PortalPermission.ServerAdmin);
 		// A wizard's powers come from game.wizard, as PennMUSH's do from the flag; haspower() stays 0.
 		await Assert.That(wizard).DoesNotContain(PortalPermission.GamePower("See_All"));
