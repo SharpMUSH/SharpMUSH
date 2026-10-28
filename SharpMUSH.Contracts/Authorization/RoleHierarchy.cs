@@ -30,10 +30,14 @@ public static class RoleHierarchy
 	/// or it is an in-game scope or a custom permission and they are a wizard (in PennMUSH a wizard grants
 	/// every power without holding any). Passing a role's guard (<see cref="PortalPermission.ControlRole"/>) is the
 	/// exception: only a holder grants it, so a wizard cannot hand itself the pass of a role guarded against it.
+	/// Guarding a role (<see cref="PortalPermission.ProtectRole"/>) is the owner's alone, told by the pass only the
+	/// owner holds (god's), so no one can guard a role of their own against those above them.
 	/// Callers check that a custom scope exists first.
 	/// </summary>
 	public static bool CanGrant(IReadOnlySet<string> granted, string scope)
-		=> granted.Contains(scope)
+		=> scope == PortalPermission.ProtectRole
+			? granted.Contains(PortalPermission.ControlRole(BuiltInRoles.GodSlug))
+			: granted.Contains(scope)
 			|| (!PortalPermission.IsControlRole(scope)
 				&& (PortalPermission.IsGameScope(scope) || !PortalPermission.IsKnown(scope))
 				&& granted.Contains(PortalPermission.GameWizard));

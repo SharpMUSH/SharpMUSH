@@ -245,6 +245,15 @@ public class RoleManagementServiceTests
 		await Accepted(world.Service.SaveRoleAsync(A("wiz"), Draft("keepers", 20, PortalPermission.ControlRole(BuiltInRoles.RoyaltySlug))));
 	}
 
+	/// <summary>Only the owner guards a role, so a wizard cannot shield itself from other wizards and immortals.</summary>
+	[Test]
+	public async Task OnlyTheOwnerGuardsARole()
+	{
+		var world = Build();
+		await Refused(world.Service.SaveRoleAsync(A("wiz"), Draft("shield", 20, PortalPermission.ProtectRole)), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("shield", 20, PortalPermission.ProtectRole)));
+	}
+
 	/// <summary>A permission a role still holds after it stopped existing is dropped on the next save, not refused.</summary>
 	[Test]
 	public async Task ARoleHoldingARetiredPermissionStaysEditable()

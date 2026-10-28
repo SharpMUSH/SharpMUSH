@@ -512,12 +512,14 @@ public sealed partial class RoleManagementService(
 
 	/// <summary>
 	/// What <paramref name="me"/> holds, with the guard passes among <paramref name="scopes"/> resolved too: a pass is
-	/// held only when resolved for its role, and the role may not exist yet (a role created with its own pass).
+	/// held only when resolved for its role, and the role may not exist yet (a role created with its own pass). God's
+	/// pass is resolved always: holding it is how <see cref="RoleHierarchy.CanGrant"/> knows the owner.
 	/// </summary>
 	private IReadOnlySet<string> HeldAmong(PermissionContext me, IEnumerable<string> scopes)
 		=> resolver.Resolve(me with
 		{
-			ControlScopes = me.ControlScopes.Concat(scopes.Where(PortalPermission.IsControlRole)).ToHashSet(StringComparer.OrdinalIgnoreCase)
+			ControlScopes = me.ControlScopes.Concat(scopes.Where(PortalPermission.IsControlRole))
+				.Append(PortalPermission.ControlRole(BuiltInRoles.GodSlug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		});
 
 	/// <summary>The refusal for allowing scopes the actor may not grant, or null when it may grant them all.</summary>
