@@ -2527,14 +2527,22 @@ public partial class Functions
 	}
 
 	// PennMUSH registers ANSI as 2, -2 (function.c:365): the negative maximum means the text is not
-	// comma-split, so ansi(h,a,b) colours "a,b". SharpMUSH splits every call and colours the second
-	// argument, which is two arguments' worth of contract, so the second is where it stops: a third
-	// argument is refused by name rather than evaluated and discarded.
-	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string"])]
+	// comma-split, so ansi(h,a,b) colours "a,b". SharpMUSH splits every call, so an odd third argument
+	// is refused by name rather than evaluated and discarded. TinyMUX and RhostMUSH take further
+	// code/string pairs and join the pieces, each in its own colour.
+	[SharpFunction(Name = "ansi", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["codes", "string", "..."])]
 	public ValueTask<CallState> ANSI(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var args = parser.CurrentState.Arguments;
-		return ValueTask.FromResult(new CallState(MarkupText.Wrap(AnsiCodes(args["0"].Message.ToPlainText()), args["1"].Message)));
+		var args = parser.CurrentState.ArgumentsOrdered;
+		if (args.Count % 2 != 0)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.EvenArgumentCount("ANSI", args.Count)));
+		}
+
+		var pieces = Enumerable.Range(0, args.Count / 2)
+			.Select(pair => MarkupText.Wrap(AnsiCodes(args[(pair * 2).ToString()].Message.ToPlainText()),
+				args[(pair * 2 + 1).ToString()].Message));
+		return ValueTask.FromResult(new CallState(MarkupText.Concat(pieces)));
 	}
 
 	/// <summary>

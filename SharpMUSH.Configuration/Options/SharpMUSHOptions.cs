@@ -114,7 +114,8 @@ public record SharpMUSHOptions
 			RhostMapArgs: false,
 			SidefxFlag: false,
 			RhostList: false,
-			Dialect: null
+			Dialect: null,
+			MuxQueueFunctions: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

@@ -167,7 +167,7 @@ a
 
 ## `ansi()` and `lit()`
 
-PennMUSH spells "the last argument swallows the rest, commas and all" as a negative maximum in its function table. SharpMUSH reaches the same result with a literal flag on the function instead, so the declared maximum is not a comparable number. Behaviour matches; only the declaration differs.
+PennMUSH spells "the last argument swallows the rest, commas and all" as a negative maximum in its function table. For `lit()`, SharpMUSH reaches the same result with a literal flag on the function instead, so the declared maximum is not a comparable number; behaviour matches. `ansi()` takes TinyMUX's further code and string pairs instead, so a comma in its text has to be escaped as `\,`; see [tinymux forms].
 
 ## TinyMUX's forms of shared functions
 

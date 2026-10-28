@@ -46,6 +46,11 @@
       "lookup": "compatibility config innermost loop tokens"
     },
     {
+      "id": "tinymux-queue-functions-mux-queue-functions",
+      "heading": "TinyMUX queue functions: `mux_queue_functions`",
+      "lookup": "compatibility config tinymux queue functions mux queue functions"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -220,6 +225,23 @@ With the option on, the same lines read the inner loop and the inner switch:
 x y x y
 > think switch(a,*,switch(b,*,#$))
 b
+```
+
+## TinyMUX queue functions: `mux_queue_functions`
+
+Off by default; importing a TinyMUX database turns it on. trigger() and verb() queue an attribute's actions from inside a function, as `@trigger` and `@verb` do. SharpMUSH keeps queueing in commands, so with the option off both return `#-1 FUNCTION DISABLED`. With it on they work as in TinyMUX: trigger() runs `@trigger/quiet`, verb() runs `@verb`, and each returns nothing.
+
+```sharp
+> think trigger(me/MUXDOC_NONE)
+#-1 FUNCTION DISABLED
+```
+
+With the option on, trigger() queues the attribute and returns nothing:
+
+```sharp mux_queue_functions
+> &MUXDOC_TRIGGER me=think Triggered.
+> think X[trigger(me/MUXDOC_TRIGGER)]Y
+XY
 ```
 
 ## RhostMUSH edit() modes: `rhost_edit`

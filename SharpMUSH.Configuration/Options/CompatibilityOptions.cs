@@ -144,5 +144,13 @@ public record CompatibilityOptions(
 		ValidationPattern = @"^(rhost)?$",
 		Group = "Dialects",
 		Order = 1)]
-	string? Dialect
+	string? Dialect,
+
+	[property: SharpConfig(
+		Name = "mux_queue_functions",
+		Category = "Compatibility",
+		Description = "Turn on trigger() and verb(), which queue an attribute's actions from inside a function, as TinyMUX does. Off, they answer the disabled-function error. Importing a TinyMUX database turns it on",
+		Group = "TinyMUX Compatibility",
+		Order = 5)]
+	bool MuxQueueFunctions
 );

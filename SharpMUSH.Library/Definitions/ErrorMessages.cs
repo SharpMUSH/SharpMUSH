@@ -170,6 +170,9 @@ public static partial class ErrorMessages
 		public static string ArgumentCount(string name, int minimum, int maximum, int got) =>
 			$"#-1 FUNCTION ({name}) EXPECTS {ExpectedArguments(minimum, maximum)} ARGUMENTS BUT GOT {got}";
 
+		public static string EvenArgumentCount(string name, int got) =>
+			$"#-1 FUNCTION ({name}) EXPECTS AN EVEN NUMBER OF ARGUMENTS BUT GOT {got}";
+
 		private static string ExpectedArguments(int minimum, int maximum) => maximum switch
 		{
 			_ when maximum == minimum => $"{minimum}",
@@ -313,6 +316,7 @@ public static partial class ErrorMessages
 		public const string SingleCharArgument = "#-1 ARGUMENT MUST BE A SINGLE CHARACTER";
 		public const string SqlNotEnabled = "#-1 SQL IS NOT ENABLED";
 		public const string StringLengthsMustBeEqual = "#-1 STRING LENGTHS MUST BE EQUAL";
+		public const string ListsMustBeEqualSize = "#-1 LISTS MUST BE OF EQUAL SIZE";
 		public const string ThisIsARoom = "#-1 THIS IS A ROOM";
 		public const string TooManyColumnsForAlign = "#-1 TOO MANY COLUMNS FOR ALIGN";
 		public const string TooManyWords = "#-1 TOO MANY WORDS";

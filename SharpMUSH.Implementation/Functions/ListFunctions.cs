@@ -103,7 +103,8 @@ public partial class Functions
 			MarkupText.Join(MarkupText.Concat(punctuation, outSeparator), splitList));
 	}
 
-	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "start", "length", "delimiter"])]
+	/// <remarks>A fifth argument is TinyMUX's output separator, which defaults to the delimiter.</remarks>
+	[SharpFunction(Name = "extract", MinArgs = 1, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "start", "length", "delimiter", "osep"])]
 	public async ValueTask<CallState> Extract(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -125,7 +126,11 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integers);
 		}
 
-		return new CallState(MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber));
+		var extracted = MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber);
+		return args.Count > 4
+			? new CallState(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter),
+				MushText.SplitList(delimiter, extracted)))
+			: new CallState(extracted);
 	}
 
 	[SharpFunction(Name = "filter", MinArgs = 2, MaxArgs = 35, Flags = FunctionFlags.Regular, ParameterNames = ["attribute", "list", "delimiter"])]
@@ -940,7 +945,8 @@ public partial class Functions
 			MushText.SplitList(delimiter, list).RandomSubset(1).FirstOrDefault() ?? MarkupText.Empty);
 	}
 
-	[SharpFunction(Name = "remove", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular, ParameterNames = ["list", "words", "delimiter"])]
+	/// <remarks>A fourth argument is TinyMUX's output separator, which defaults to the delimiter.</remarks>
+	[SharpFunction(Name = "remove", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "words", "delimiter", "osep"])]
 	public ValueTask<CallState> Remove(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var orderedArgs = parser.CurrentState.ArgumentsOrdered;
@@ -961,7 +967,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MarkupText.Join(delimiter, splitList));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter), splitList));
 	}
 
 	[SharpFunction(Name = "lreplace", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "positions", "new-item", "delimiter", "osep"])]
@@ -1548,8 +1554,9 @@ public partial class Functions
 	}
 
 	/// <summary><c>linsert()</c>, and PennMUSH's <c>insert()</c>, an alias of it.</summary>
-	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
-	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim"])]
+	/// <remarks>A fifth argument is TinyMUX's output separator, which defaults to the delimiter.</remarks>
+	[SharpFunction(Name = "linsert", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim", "osep"])]
+	[SharpFunction(Name = "INSERT", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "position", "new-item", "delim", "osep"])]
 	public async ValueTask<CallState> ListInsert(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		await Task.CompletedTask;
@@ -1624,7 +1631,7 @@ public partial class Functions
 		}
 
 		listItems.Insert(insertIndex, newItemArg ?? MarkupText.Empty);
-		return new CallState(MarkupText.Join(delimiter, listItems));
+		return new CallState(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter), listItems));
 	}
 
 	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
