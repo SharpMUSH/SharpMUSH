@@ -608,7 +608,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 		var parts = target.Split('/');
 		return trie.FindExact(parts[0]) is { } definition
-			? new BuiltInLookup(parts[0].ToUpperInvariant(), [.. definition.ImpliedSwitches, .. parts[1..], .. switches], definition)
+			? new BuiltInLookup(rootCommand, [.. definition.ImpliedSwitches, .. parts[1..], .. switches], definition)
 			: null;
 	}
 

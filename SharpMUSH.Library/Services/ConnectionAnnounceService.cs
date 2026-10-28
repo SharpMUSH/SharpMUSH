@@ -1,6 +1,7 @@
 using System.Globalization;
 using Mediator;
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Configuration;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -358,7 +359,7 @@ public class ConnectionAnnounceService(
 				Arguments = argsDict,
 				EnvironmentRegisters = new(argsDict),
 				SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(argsDict),
-				CurrentEvaluation = new DBAttribute(ownerRef, attrName)
+				CurrentEvaluation = new DBAttribute(ownerRef, attrName) { Dialect = SoftcodeDialects.Of(hook.Last()) }
 			};
 
 			var admission = await QueueHold.AdmitAsync(scheduler.Value, MarkupText.Plain(hook.Last().Value.ToPlainText()), state);

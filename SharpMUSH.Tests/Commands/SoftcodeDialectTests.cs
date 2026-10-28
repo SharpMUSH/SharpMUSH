@@ -83,4 +83,30 @@ public class SoftcodeDialectTests : ServerTestBase
 			await ConnectionService.Disconnect(actor.Handle);
 		}
 	}
+
+	/// <summary>A dialect name typed alone runs its command with no argument, not with the name as one.</summary>
+	[Test]
+	public async Task BareDialectCommandTakesNoArgument()
+	{
+		var actor = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "DialectBare");
+		try
+		{
+			await Cmd($"@set {actor.DbRef}=WIZARD");
+			using var dialect = TestOptionsOverride.Scope(options => options with
+			{
+				Compatibility = options.Compatibility with { Dialect = "rhost" }
+			});
+			await CmdAs(actor.DbRef, actor.Handle, "wizhelp");
+			await WebAppFactoryArg.QueueBarrierAsync();
+
+			await Assert.That(Notifications.For(actor.DbRef)).IsNotEmpty();
+			await Assert.That(Notifications.For(actor.DbRef).Any(message => message.Contains("wizhelp", StringComparison.OrdinalIgnoreCase)))
+				.IsFalse();
+		}
+		finally
+		{
+			await ConnectionService.Disconnect(actor.Handle);
+		}
+	}
 }

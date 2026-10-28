@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Softcode;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -194,7 +195,7 @@ public sealed class RecurringJobService(
 				// softcode, which may itself disable or delete this job through normal commands.
 				evaluation = parser.FromState(ParserState.RootFor(active) with
 				{
-					CurrentEvaluation = new DBAttribute(target, job.Attribute),
+					CurrentEvaluation = new DBAttribute(target, job.Attribute) { Dialect = SoftcodeDialects.Of(attribute) },
 					SuppliedArgumentKeys = System.Collections.Immutable.ImmutableHashSet<string>.Empty.WithComparer(StringComparer.OrdinalIgnoreCase),
 					ExecutionBudget = ExecutionBudget.Current
 				}).WithAttributeDebug(attribute, child => child.CommandListParse(attribute.Value));
