@@ -218,7 +218,7 @@ public class MapPlanTests
 		var step = plan.Changes.Single().Steps.Single();
 		await Assert.That(step.Command).IsEqualTo("@open East;e=#11,West;w,#10");
 		await Assert.That(step.Check)
-			.IsEqualTo("and(strmatch(num(loc(%>)),num(#11)),strmatch(num(loc(last(lexits(#11)))),num(#10)))")
+			.IsEqualTo("and(strmatch(num(loc(%>)),num(#11)),strmatch(num(loc(first(lexits(#11)))),num(#10)))")
 			.Because("the shed has exits of its own already: the way back is the newest of them");
 		await Assert.That(plan.Builds).IsEqualTo(2);
 		await Assert.That(plan.Preview().Exits.Select(exit => (exit.Name, exit.Source, exit.Destination)))

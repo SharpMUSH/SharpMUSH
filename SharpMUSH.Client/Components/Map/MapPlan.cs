@@ -404,7 +404,7 @@ public sealed partial class MapPlan(MapDto map)
 		var source = _dug.ContainsKey(from) ? Token(from) : from;
 		var destination = _dug.ContainsKey(to) ? Token(to) : to;
 		var linked = $"strmatch(num(loc(%>)),num({destination}))";
-		var check = back is null ? linked : $"and({linked},strmatch(num(loc(last(lexits({destination})))),num({source})))";
+		var check = back is null ? linked : $"and({linked},strmatch(num(loc(first(lexits({destination})))),num({source})))";
 		return new(key, MapChangeKind.Join, from, Name(from), [new($"@open {names}={destination},{back ?? ""},{source}", check, "1")])
 		{
 			Other = Name(to),

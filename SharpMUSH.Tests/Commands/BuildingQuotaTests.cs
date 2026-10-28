@@ -95,6 +95,14 @@ public class BuildingQuotaTests
 		await Assert.That(await LeftAsync(new DBRef(1))).IsNull().Because("God builds without a quota");
 	}
 
+	[Test]
+	[Arguments(2, 1, 2)]
+	[Arguments(4, 2, 3)]
+	[Arguments(1, 2, 0)]
+	[Arguments(0, 1, 0)]
+	public async ValueTask EachBuildNeedsTheCostFreeButTakesOneSlot(int left, int cost, int builds)
+		=> await Assert.That(BuildingHelpers.BuildsAdmitted(left, cost)).IsEqualTo(builds);
+
 	/// <summary>
 	/// A player is never counted against their own quota (<c>src/wiz.c:186</c>, <c>owned = -1</c>).
 	/// The owner edge a player has to itself was being counted, so every limit was one short.

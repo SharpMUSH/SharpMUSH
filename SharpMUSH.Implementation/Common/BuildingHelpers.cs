@@ -820,9 +820,14 @@ public static class BuildingHelpers
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
 		var cost = (int)configuration.CurrentValue.Cost.QuotaCost;
 		if (!configuration.CurrentValue.Limit.UseQuota || cost <= 0 || await NoQuotaAsync(executor, owner)) return null;
-		var left = owner.Quota - await mediator.Send(new GetOwnedObjectCountQuery(owner));
-		return Math.Max(0, left / cost);
+		return BuildsAdmitted(owner.Quota - await mediator.Send(new GetOwnedObjectCountQuery(owner)), cost);
 	}
+
+	/// <summary>
+	/// How many builds in a row <see cref="AdmitsBuildAsync"/> lets through with <paramref name="left"/> slots free: each
+	/// needs <paramref name="cost"/> free, and takes one.
+	/// </summary>
+	public static int BuildsAdmitted(int left, int cost) => Math.Max(0, left - cost + 1);
 
 	/// <summary>
 	/// <c>NoQuota(x)</c> (<c>hdrs/mushdb.h:44-47</c>): privileged, or owned by someone privileged, or
