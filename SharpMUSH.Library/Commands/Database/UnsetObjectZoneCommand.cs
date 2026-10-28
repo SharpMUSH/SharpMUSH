@@ -8,5 +8,5 @@ namespace SharpMUSH.Library.Commands.Database;
 public record UnsetObjectZoneCommand(AnySharpObject Target) : ICommand, ICacheInvalidating
 {
 	public string[] CacheKeys => [Definitions.CacheKeys.Object(Target.Object().DBRef)];
-	public string[] CacheTags => [];
+	public string[] CacheTags => [Definitions.CacheTags.ZoneObjects];
 }
