@@ -52,6 +52,15 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 	/// path or an https URL; null when unset.
 	/// </summary>
 	public string? Backdrop { get; init; }
+
+	/// <summary>The viewer controls the map, so may plan changes to it: its builder mode.</summary>
+	public bool CanEdit { get; init; }
+
+	/// <summary>
+	/// For a viewer who <see cref="CanEdit"/>: the rooms this map's exits lead to that are on no map and that they
+	/// control, which they may add to it. Empty for anyone else.
+	/// </summary>
+	public IReadOnlyList<MapRoomDto> Nearby { get; init; } = [];
 }
 
 /// <param name="Id">The room's dbref.</param>
@@ -60,7 +69,11 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 /// y from <c>MAP`POS</c> on a graph map. A missing axis is 0; null when the room has none, or one is not a number.
 /// </param>
 /// <param name="Size">The room's <c>MAP`SIZE`W</c> and <c>MAP`SIZE`H</c>, each at least 1 when set; null when unset (1 by 1).</param>
-public sealed record MapRoomDto(string Id, string Name, double[]? Position, double[]? Size);
+public sealed record MapRoomDto(string Id, string Name, double[]? Position, double[]? Size)
+{
+	/// <summary>The viewer controls both the map and this room, so may move it, size it or take it off the map.</summary>
+	public bool Editable { get; init; }
+}
 
 /// <param name="Id">The exit's dbref.</param>
 /// <param name="Aliases">The exit's other names, as <c>@name</c> takes them after <c>;</c>.</param>

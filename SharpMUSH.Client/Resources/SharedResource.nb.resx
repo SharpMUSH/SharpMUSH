@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>på {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Legg til</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Rommets dbref</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Legg til i planen</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>brukt</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Sist brukt</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Bruk {0} endringer</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Hver kommando kjører som deg, med dine rettigheter, i rekkefølgen som vises. Et trinn som feiler, stopper resten.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Tilbake til kartet</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Rediger</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Tom rute, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} endringer venter</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Kontroller</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Grav et rom over</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Grav et rom under</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Utgang fra</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Koblet fra {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Grav et rom her</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Forkast endringer</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Fjern</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Rediger kart</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Spillere ser ingenting før du bruker endringene.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Redigerer {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Utgang tilbake</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Et utgangsnavn kan ikke inneholde , = [ ] % eller \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Gi hver utgang et navn.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Navn og alias, skilt med ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in og i avvises som utgangsnavn: i er inventaret.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Utgang dit</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>feilet: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Høyde</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Avslutt redigering</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Nivå</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Du kontrollerer ikke dette rommet, så du kan ikke endre det.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Lag veien tilbake</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Flytt {0} hit</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Gi rommet et navn.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Et romnavn kan ikke inneholde = [ ] % eller \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Velg et rom for å endre det, eller en tom rute for å grave et.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Velg et sted ved siden av et rom, så det nye rommet har en inngang.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} har ingen inngang.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>ikke kjørt</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Punkt x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Se over og bruk</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Se over endringer i {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Navn</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Lagre plassering</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Lagre størrelse</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Ta av dette kartet</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Legg til rom på dette kartet</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Rom som utgangene på dette kartet fører til, og som ikke er på noe kart.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Bredde</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Plasser {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Størrelse på {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Legg til {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Ta {0} av kartet</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Grav {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Ingen utganger på dette kartet fører dit fra der du er.</value>
   </data>

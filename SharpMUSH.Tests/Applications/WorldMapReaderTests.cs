@@ -336,4 +336,41 @@ public class WorldMapReaderTests
 		await Assert.That(await Reader.RouteAsync(_viewer, 11, default) is NotFound).IsTrue();
 		await Assert.That((await Reader.RouteAsync(_viewer, 1, default)).Expect<MapRouteDto>().Steps).IsEmpty();
 	}
+
+	[Test]
+	public async Task ABuilderWhoControlsTheMapMayEditItAndAddTheRoomsItsExitsReach()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var caves = Map(51, "Caves", MapKinds.Compass);
+		var quay = Room(10, "Quay", harbour);
+		Room(11, "Theirs", harbour);
+		Exit(100, "Shed", [], quay, _objects.CreateRoom(20, "Shed"));
+		Exit(101, "Cellar", [], quay, _objects.CreateRoom(21, "Cellar"));
+		Exit(102, "Grotto", [], quay, Room(22, "Grotto", caves));
+		Exit(103, "Shed door", [], quay, _objects.CreateRoom(20, "Shed"));
+		_permissions.Controls(_builder, Arg.Any<AnySharpObject>()).Returns(call =>
+			call.ArgAt<AnySharpObject>(1).Object().DBRef.Number is 50 or 10 or 20 or 22);
+
+		var map = (await Reader.ReadAsync(_builder, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.CanEdit).IsTrue();
+		await Assert.That(map.Rooms.Select(room => (room.Name, room.Editable))).IsEquivalentTo([("Quay", true), ("Theirs", false)]);
+		await Assert.That(map.Nearby.Select(room => room.Id)).IsEquivalentTo(["#20"])
+			.Because("the cellar is not the builder's, and the grotto is on the caves map already");
+	}
+
+	[Test]
+	public async Task AViewerWhoDoesNotControlTheMapIsOfferedNothing()
+	{
+		var harbour = Map(50, "Harbour", MapKinds.Coordinates);
+		var quay = Room(10, "Quay", harbour);
+		Exit(100, "Shed", [], quay, _objects.CreateRoom(20, "Shed"));
+		_permissions.Controls(_viewer, Arg.Any<AnySharpObject>()).Returns(call => call.ArgAt<AnySharpObject>(1).Object().DBRef.Number is 10 or 20);
+
+		var map = (await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>();
+
+		await Assert.That(map.CanEdit).IsFalse();
+		await Assert.That(map.Rooms.Single().Editable).IsFalse().Because("a room is changed through its map");
+		await Assert.That(map.Nearby).IsEmpty();
+	}
 }

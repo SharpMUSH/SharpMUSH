@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>itt: {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Hozzáadás</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>A szoba dbref-je</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Hozzáadás a tervhez</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>alkalmazva</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Legutóbbi alkalmazás</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>{0} módosítás alkalmazása</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Minden parancs a te nevedben, a te jogaiddal fut, a látható sorrendben. Egy sikertelen lépés megállítja a többit.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Vissza a térképhez</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Szerkesztés</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Üres mező, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} módosítás vár</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Ellenőrzések</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Szoba ásása fölé</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Szoba ásása alá</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Kijárat innen</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Innen kötve: {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Ássz ide egy szobát</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Módosítások elvetése</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Elvetés</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Térkép szerkesztése</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>A játékosok semmit sem látnak, amíg nem alkalmazod.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>{0} szerkesztése.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Kijárat vissza</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>A kijárat neve nem tartalmazhat , = [ ] % vagy \ jelet.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Adj nevet minden kijáratnak.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Név és álnevek ;-vel elválasztva</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>Az in és az i nem lehet kijárat neve: az i a leltár.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Kijárat oda</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>sikertelen: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Magasság</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Kilépés a szerkesztésből</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Szint</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Nem irányítod ezt a szobát, ezért nem módosíthatod.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Visszaút létrehozása</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>{0} áthelyezése ide</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Adj nevet a szobának.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>A szoba neve nem tartalmazhat = [ ] % vagy \ jelet.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Válassz egy szobát a módosításhoz, vagy egy üres mezőt az ásáshoz.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Válassz egy helyet egy szoba mellett, hogy az új szobába legyen bejárat.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} szobába nincs bejárat.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>nem futott</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Pont x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Áttekintés és alkalmazás</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>{0} módosításainak áttekintése</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Név</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Hely mentése</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Méret mentése</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Levétel erről a térképről</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Szobák hozzáadása ehhez a térképhez</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Szobák, ahová a térkép kijáratai vezetnek, és egyik térképen sincsenek.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Szélesség</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>{0} elhelyezése</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>{0} mérete</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>{0} hozzáadása</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>{0} levétele a térképről</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>{0} ásása</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>A térkép egyik kijárata sem vezet oda onnan, ahol vagy.</value>
   </data>

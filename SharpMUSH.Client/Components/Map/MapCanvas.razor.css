@@ -161,3 +161,40 @@
 .map-box--pin.map-box--selected {
 	fill: var(--text);
 }
+
+.map-cell {
+	position: absolute;
+	border: 1px dashed transparent;
+	border-radius: 8px;
+	background: transparent;
+	cursor: pointer;
+}
+
+.map-cell:hover,
+.map-cell:focus-visible {
+	border-color: var(--accent);
+	background: var(--surface-2);
+	outline: none;
+}
+
+.map-cell--selected {
+	border: 2px solid var(--accent);
+}
+
+.map-spot {
+	fill: none;
+	stroke: var(--accent);
+	stroke-width: 3;
+	stroke-dasharray: 6 4;
+}
+
+.map-pick {
+	position: absolute;
+	inset: 0;
+	cursor: crosshair;
+}
+
+.map-room--locked {
+	color: var(--text-faint);
+	cursor: default;
+}

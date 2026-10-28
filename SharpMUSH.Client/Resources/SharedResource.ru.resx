@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>на карте {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Добавить</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Dbref комнаты</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Добавить в план</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>применено</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Последнее применение</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Применить изменения ({0})</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Каждая команда выполняется от вашего имени, с вашими правами, в показанном порядке. Неудачный шаг останавливает остальные.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Назад к карте</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Правка</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Пустая клетка, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>Ожидают изменения: {0}</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Проверки</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Вырыть комнату выше</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Вырыть комнату ниже</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Выход из</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Связана с {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Вырыть здесь комнату</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Отменить изменения</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Убрать</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Править карту</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Игроки ничего не увидят, пока вы не примените изменения.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Правка: {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Выход обратно</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Имя выхода не может содержать , = [ ] % или \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Дайте каждому выходу имя.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Имя и псевдонимы через ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in и i нельзя использовать как имена выходов: i — это инвентарь.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Выход туда</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>ошибка: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Высота</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Выйти из режима правки</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Уровень</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Вы не управляете этой комнатой, поэтому не можете её изменить.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Сделать путь обратно</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Переместить {0} сюда</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Дайте комнате имя.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Имя комнаты не может содержать = [ ] % или \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Выберите комнату, чтобы изменить её, или пустую клетку, чтобы вырыть новую.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Выберите место рядом с комнатой, чтобы в новую был вход.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>В {0} нет входа.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>не выполнено</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Точка x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Проверить и применить</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Проверить изменения карты {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Имя</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Сохранить место</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Сохранить размер</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Убрать с этой карты</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Добавить комнаты на эту карту</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Комнаты, куда ведут выходы этой карты и которые не лежат ни на одной карте.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Ширина</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Разместить {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Размер {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Добавить {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Убрать {0} с карты</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Вырыть {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Ни один выход на этой карте не ведёт туда оттуда, где вы находитесь.</value>
   </data>

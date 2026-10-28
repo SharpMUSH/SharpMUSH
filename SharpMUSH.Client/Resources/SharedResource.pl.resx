@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>na mapie {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Dodaj</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Dbref pokoju</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Dodaj do planu</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>zastosowano</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Ostatnio zastosowano</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Zastosuj zmiany ({0})</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Każde polecenie działa jako ty, z twoimi uprawnieniami, w pokazanej kolejności. Krok, który się nie powiedzie, zatrzymuje resztę.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Wróć do mapy</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Edycja</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Puste pole, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>Oczekujące zmiany: {0}</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Sprawdzenia</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Wykop pokój powyżej</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Wykop pokój poniżej</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Wyjście z</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Połączony z {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Wykop tu pokój</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Odrzuć zmiany</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Usuń</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Edytuj mapę</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Gracze nic nie zobaczą, dopóki nie zastosujesz.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Edytujesz {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Wyjście z powrotem</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Nazwa wyjścia nie może zawierać , = [ ] % ani \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Nadaj nazwę każdemu wyjściu.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Nazwa i aliasy, oddzielone ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in oraz i są odrzucane jako nazwy wyjść: i to ekwipunek.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Wyjście tam</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>nie powiodło się: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Wysokość</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Zakończ edycję</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Poziom</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Nie kontrolujesz tego pokoju, więc nie możesz go zmienić.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Utwórz drogę powrotną</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Przenieś {0} tutaj</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Nadaj pokojowi nazwę.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Nazwa pokoju nie może zawierać = [ ] % ani \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Wybierz pokój, aby go zmienić, albo puste pole, aby wykopać nowy.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Wybierz miejsce obok pokoju, aby nowy pokój miał wejście.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} nie ma wejścia.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>nie uruchomiono</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Punkt x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Przejrzyj i zastosuj</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Przejrzyj zmiany w {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Nazwa</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Zapisz położenie</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Zapisz rozmiar</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Zdejmij z tej mapy</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Dodaj pokoje do tej mapy</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Pokoje, do których prowadzą wyjścia tej mapy i które nie są na żadnej mapie.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Szerokość</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Umieść {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Rozmiar {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Dodaj {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Zdejmij {0} z mapy</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Wykop {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Żadne wyjście na tej mapie nie prowadzi tam z miejsca, w którym jesteś.</value>
   </data>

@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>pe {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Adaugă</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Dbref-ul camerei</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Adaugă în plan</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>aplicat</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Ultima aplicare</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Aplică {0} modificări</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Fiecare comandă rulează ca tine, cu permisiunile tale, în ordinea afișată. Un pas care eșuează oprește restul.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Înapoi la hartă</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Editare</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Celulă goală, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} modificări în așteptare</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Verificări</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Sapă o cameră deasupra</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Sapă o cameră dedesubt</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Ieșire din</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Legată din {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Sapă o cameră aici</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Renunță la modificări</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Elimină</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Editează harta</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Jucătorii nu văd nimic până nu aplici.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Editezi {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Ieșire înapoi</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Un nume de ieșire nu poate conține , = [ ] % sau \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Dă un nume fiecărei ieșiri.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Nume și aliasuri, separate prin ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in și i nu sunt acceptate ca nume de ieșire: i este inventarul.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Ieșire într-acolo</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>a eșuat: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Înălțime</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Ieși din modul de editare</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Nivel</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Nu controlezi această cameră, deci nu o poți schimba.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Fă drumul înapoi</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Mută {0} aici</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Dă un nume camerei.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Un nume de cameră nu poate conține = [ ] % sau \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Alege o cameră ca s-o schimbi, sau o celulă goală ca să sapi una.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Alege un loc lângă o cameră, ca noua cameră să aibă o intrare.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} nu are intrare.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>nerulat</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Punct x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Verifică și aplică</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Verifică modificările la {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Nume</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Salvează poziția</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Salvează dimensiunea</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Scoate de pe această hartă</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Adaugă camere pe această hartă</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Camere spre care duc ieșirile acestei hărți și care nu sunt pe nicio hartă.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Lățime</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Plasează {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Dimensiunea {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Adaugă {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Scoate {0} de pe hartă</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Sapă {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Nicio ieșire de pe această hartă nu duce acolo de unde ești.</value>
   </data>

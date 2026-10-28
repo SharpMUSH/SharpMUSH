@@ -29,7 +29,17 @@
                                OnClick="() => ZoomBy(1 / ZoomStep)" />
                 <CapsuleButton Icon="@Icons.Material.Outlined.ZoomIn" AriaLabel="@Loc["NavMapZoomIn"]" Disabled="@(_zoom >= MaxZoom)"
                                OnClick="() => ZoomBy(ZoomStep)" />
-                @if (_layout.Map.Here is { } here)
+                @if (_layout.Map.CanEdit && !_editing)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Edit" OnClick="StartEditing">@Loc["NavMapEdit"]</CapsuleButton>
+                }
+                else if (_editing)
+                {
+                    <CapsuleButton Icon="@Icons.Material.Outlined.Close" OnClick="StopEditing">
+                        @(_plan?.Changes.Count > 0 ? Loc["NavMapDiscard"] : Loc["NavMapLeaveEdit"])
+                    </CapsuleButton>
+                }
+                @if (_layout.Map.Here is { } here && !_editing)
                 {
                     <CapsuleButton Icon="@Icons.Material.Outlined.MyLocation" OnClick="() => GoToRoomAsync(here)">@Loc["NavMapYouAreHere"]</CapsuleButton>
                 }
@@ -89,14 +99,37 @@
                             </ol>
                         </nav>
                     }
-                    @if (_layout.Levels.Count > 1)
+                    @if (_editing)
                     {
-                        var at = _layout.Levels.ToList().IndexOf(_level);
+                        <p class="map-editing" role="status">@Loc["NavMapEditing", _layout.Map.Map.Name] @Loc["NavMapEditNote"]</p>
+                    }
+                    @if (_applied is { } applied)
+                    {
+                        <KitCard Class="map-applied" Title="@Loc["NavMapAppliedTitle"]">
+                            <ol class="map-applied-list">
+                                @foreach (var change in applied)
+                                {
+                                    <li class="map-applied--@change.State.ToString().ToLowerInvariant()">
+                                        @change.Title:
+                                        @(change.State switch
+                                        {
+                                            MapAppliedState.Done => Loc["NavMapApplied"],
+                                            MapAppliedState.Failed => Loc["NavMapFailed", change.Error ?? ""],
+                                            _ => Loc["NavMapNotRun"],
+                                        })
+                                    </li>
+                                }
+                            </ol>
+                        </KitCard>
+                    }
+                    @if (Shown.Levels.Count > 1)
+                    {
+                        var at = Shown.Levels.ToList().IndexOf(_level);
                         <div class="map-levels">
                             <CapsuleButton Icon="@Icons.Material.Outlined.ArrowDownward" AriaLabel="@Loc["NavMapLevelDown"]"
                                            Disabled="@(at <= 0)" OnClick="() => StepLevel(-1)" />
                             <CapsuleButton Icon="@Icons.Material.Outlined.ArrowUpward" AriaLabel="@Loc["NavMapLevelUp"]"
-                                           Disabled="@(at >= _layout.Levels.Count - 1)" OnClick="() => StepLevel(1)" />
+                                           Disabled="@(at >= Shown.Levels.Count - 1)" OnClick="() => StepLevel(1)" />
                             <TypeChips Items="@LevelChips" Selected="@_level.ToString(System.Globalization.CultureInfo.InvariantCulture)"
                                        SelectedChanged="SelectLevel" AriaLabel="@Loc["NavMapLevels"]" />
                         </div>
@@ -105,14 +138,26 @@
                     {
                         <MudAlert Severity="Severity.Info" Dense="true" Class="map-truncated">@Loc["NavMapTruncated"]</MudAlert>
                     }
-                    @if (_layout.Rooms.Count == 0)
+                    @if (Shown.Rooms.Count == 0 && !_editing)
                     {
                         <EmptyState Class="map-note">@Loc["NavMapEmpty"]</EmptyState>
                     }
                     else
                     {
-                        <MapCanvas @ref="_canvas" Layout="_layout" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select" Route="@(_route?.Steps is { Count: > 0 } steps ? steps : null)" />
-                        @RoomPanel()
+                        <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
+                                   Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
+                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" />
+                        @if (_editing && _plan is not null)
+                        {
+                            <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
+                                <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell"
+                                            Character="@CharacterId" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
+                            </KitCard>
+                        }
+                        else
+                        {
+                            @RoomPanel()
+                        }
                     }
                 }
             </div>
@@ -136,6 +181,53 @@
     private IReadOnlyDictionary<string, string?> _parents = new Dictionary<string, string?>();
     private bool _listFailed;
     private MapLayout? _layout;
+    private bool _editing;
+    private MapPlan? _plan;
+    private MapLayout? _preview;
+    private (double X, double Y)? _cell;
+    private IReadOnlyList<MapApplied>? _applied;
+
+    /// <summary>The map on show: as the plan will leave it while editing, else as it is.</summary>
+    private MapLayout Shown => _editing && _preview is not null ? _preview : _layout!;
+
+    private string? CharacterId => AccountAuth.ActiveCharacter is { } acting ? $"#{acting.DbrefNumber}:{acting.CreationTime}" : null;
+
+    private void StartEditing()
+    {
+        if (_layout is null) return;
+        (_editing, _plan, _cell, _route, _applied) = (true, new MapPlan(_layout.Map), null, null, null);
+        _preview = new MapLayout(_plan.Preview());
+    }
+
+    private void StopEditing() => (_editing, _plan, _preview, _cell) = (false, null, null, null);
+
+    private void SelectCell((double X, double Y) cell) => _cell = cell;
+
+    /// <summary>The plan changed: draw the map as it now will be, and choose the room it names, on its level.</summary>
+    private Task PlanChangedAsync(string? room)
+    {
+        if (_plan is null) return Task.CompletedTask;
+        _preview = new MapLayout(_plan.Preview());
+        _cell = null;
+        if (room is not null && _preview.Rooms.TryGetValue(room, out var placed))
+        {
+            (_selected, _level) = (room, placed.Placed ? placed.Level : _level);
+        }
+        if (!_preview.Levels.Contains(_level) && _preview.Rooms.Count > 0) _level = _preview.Levels[0];
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The plan ran, all of it or up to a failed step: read the map again and keep editing it from there.</summary>
+    private async Task AppliedAsync(IReadOnlyList<MapApplied> applied)
+    {
+        var level = _level;
+        await LoadMapAsync();
+        _applied = applied;
+        if (_layout is null) return;
+        if (_layout.Levels.Contains(level)) _level = level;
+        StartEditing();
+        _applied = applied;
+    }
     private bool _loading;
     private bool _missing;
     private int _level;
@@ -175,7 +267,8 @@
 
     private async Task LoadMapAsync()
     {
-        (_layout, _selected, _missing) = (null, null, false);
+        (_layout, _selected, _missing, _applied) = (null, null, false, null);
+        StopEditing();
         if (Id is not { } id || AccountAuth.ActiveCharacter is null) return;
         _loading = true;
         var result = await Maps.GetAsync(id);
@@ -208,7 +301,7 @@
     });
 
     private IReadOnlyList<(string Key, string Label)> LevelChips =>
-        _layout?.Levels.Select(level => (level.ToString(System.Globalization.CultureInfo.InvariantCulture), LevelName(level))).ToList() ?? [];
+        _layout is null ? [] : Shown.Levels.Select(level => (level.ToString(System.Globalization.CultureInfo.InvariantCulture), LevelName(level))).ToList();
 
     private string LevelName(int level) =>
         _layout?.Map.LevelNames.TryGetValue(level, out var name) == true ? name : Loc["NavMapLevel", level].Value;
@@ -217,8 +310,8 @@
     private void StepLevel(int by)
     {
         if (_layout is null) return;
-        var at = _layout.Levels.ToList().IndexOf(_level) + by;
-        if (at >= 0 && at < _layout.Levels.Count) _level = _layout.Levels[at];
+        var at = Shown.Levels.ToList().IndexOf(_level) + by;
+        if (at >= 0 && at < Shown.Levels.Count) _level = Shown.Levels[at];
     }
 
     /// <summary>The regions this map is inside, outermost first.</summary>
@@ -244,8 +337,8 @@
 
     private async Task Select(string id)
     {
-        _selected = id;
-        await LoadRouteAsync(id);
+        (_selected, _cell) = (id, null);
+        if (!_editing) await LoadRouteAsync(id);
     }
 
     /// <summary>

@@ -177,3 +177,24 @@
 .map-route-map {
 	color: var(--accent);
 }
+
+.map-editing {
+	margin: 0;
+	padding: 8px 12px;
+	border-radius: var(--radius);
+	background: var(--warn-tint);
+	color: var(--text);
+}
+
+.map-applied-list {
+	margin: 0;
+	padding-left: 1.5em;
+}
+
+.map-applied--failed {
+	color: var(--danger);
+}
+
+.map-applied--notrun {
+	color: var(--text-faint);
+}

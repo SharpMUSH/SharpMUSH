@@ -65,6 +65,14 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	/// <summary>The same island with a picture from an http address, which the portal never loads.</summary>
 	public static readonly MapDto PlainIsleMap = IsleMap with { Map = new("#54", "Plain isle", MapKinds.Graph, null), Backdrop = "http://example.com/isle.png" };
 
+	/// <summary>The harbour as a builder who controls it and its rooms sees it.</summary>
+	public static readonly MapDto WorksMap = HarbourMap with
+	{
+		Map = new("#55", "Harbour works", MapKinds.Coordinates, null),
+		Rooms = [.. HarbourMap.Rooms.Select(room => room with { Editable = true })],
+		CanEdit = true,
+	};
+
 	/// <summary>The way up to the lighthouse: one step, from the quay.</summary>
 	public static readonly MapRouteDto ToLighthouse = new([new("#30", "North", "#10", "#11", "Lighthouse", Harbour)], "walk North");
 
@@ -78,7 +86,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		{
 			var sent = await request.Content.ReadFromJsonAsync<PortalCommandRequest>(cancellationToken);
 			Commands.Add(sent!.Command);
-			return Json(new PortalCommandResponse([], "#11", false));
+			return Json(new PortalCommandResponse([], Read(sent), false));
 		}
 		return path switch
 		{
@@ -88,11 +96,22 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/52" => Json(CavesMap),
 			"api/maps/53" => Json(IsleMap),
 			"api/maps/54" => Json(PlainIsleMap),
+			"api/maps/55" => Json(WorksMap),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
 		};
 	}
+
+	/// <summary>What a command's check reads in a game where every command works: <c>@dig</c> makes #90.</summary>
+	private static string Read(PortalCommandRequest sent) => sent.Result switch
+	{
+		"%>" when sent.Command.StartsWith("@dig", StringComparison.Ordinal) => "#90:1793148715366",
+		"%>" => "#91:1793148715367",
+		{ } check when check.StartsWith("zone(", StringComparison.Ordinal) => "#55:1793148715000",
+		{ } check when check.StartsWith("get(", StringComparison.Ordinal) => sent.Command[(sent.Command.IndexOf('=') + 1)..],
+		_ => "#11",
+	};
 
 	private static HttpResponseMessage Json<T>(T value) => new(HttpStatusCode.OK) { Content = JsonContent.Create(value) };
 }
@@ -270,6 +289,49 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(cut.Find("image.map-backdrop").GetAttribute("href")).IsEqualTo("/api/wiki-assets/7/isle.webp");
 		await Assert.That(cut.FindAll(".map-room--pin").Select(room => room.TextContent.Trim())).IsEquivalentTo(["Ford"])
 			.Because("Saltpans has a size of its own, so it is drawn as an area");
+	}
+
+	[Test]
+	public async Task OnlyABuilderWhoControlsTheMapMayEditIt()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		await Assert.That(cut.Markup).DoesNotContain("NavMapEdit");
+		await Assert.That(cut.FindAll(".map-cell")).IsEmpty();
+	}
+
+	[Test]
+	public async Task DiggingAnEmptyCellRunsTheBuildersCommandsOnApply()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 0)']").ClickAsync();
+		await cut.Find(".map-builder input").InputAsync("Boathouse");
+		await Assert.That(_api.Commands).IsEmpty().Because("nothing reaches the game before Apply");
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapAddToPlan").ClickAsync();
+
+		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).Contains("Boathouse")
+			.Because("the map shows the plan before it is applied");
+
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapReview").ClickAsync();
+		await Assert.That(cut.Find(".map-review-commands").TextContent).Contains("@open East;e=<Boathouse>,West;w,#10");
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapApply(1)").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".map-applied"));
+		await Assert.That(_api.Commands).IsEquivalentTo(
+		[
+			"@dig Boathouse",
+			"@chzone #90:1793148715366=#55",
+			"&MAP`COORDS`X #90:1793148715366=1",
+			"&MAP`COORDS`Y #90:1793148715366=0",
+			"@open East;e=#90:1793148715366,West;w,#10",
+		]);
+		await Assert.That(cut.Find(".map-applied-list li").ClassList).Contains("map-applied--done");
 	}
 
 	[Test]

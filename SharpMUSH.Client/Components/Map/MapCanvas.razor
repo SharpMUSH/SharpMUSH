@@ -32,6 +32,18 @@
                 <line class="map-edge @(edge.Route ? "map-edge--route" : null)" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
                       marker-end="@(edge.OneWay ? $"url(#{ArrowId})" : null)" />
             }
+            @if (Cell is var (cellX, cellY) && Editing)
+            {
+                @if (Layout.IsGraph)
+                {
+                    <circle class="map-spot" cx="@Num(cellX)" cy="@Num(cellY)" r="10" />
+                }
+                else
+                {
+                    <rect class="map-spot" x="@Num(cellX * MapLayout.Cell + Inset)" y="@Num(-(cellY + 1) * MapLayout.Cell + Inset)"
+                          width="@Num(MapLayout.Cell - 2 * Inset)" height="@Num(MapLayout.Cell - 2 * Inset)" rx="8" />
+                }
+            }
             @foreach (var room in _rooms)
             {
                 @if (Pin(room))
@@ -53,6 +65,19 @@
             }
         </svg>
         <div class="map-rooms">
+            @if (Editing && Layout.IsGraph)
+            {
+                @* A picture has no cells: choosing a spot is a click on it. The panel beside the map takes the same
+                   point as numbers, for a keyboard. *@
+                <div class="map-pick" @onclick="PickAsync"></div>
+            }
+            @foreach (var (x, y) in _empty)
+            {
+                var chosen = Cell is var (cx, cy) && cx == x && cy == y;
+                <button type="button" class="map-cell @(chosen ? "map-cell--selected" : null)" style="@CellBox(x, y)"
+                        aria-pressed="@(chosen ? "true" : "false")" aria-label="@Loc["NavMapCell", x, y]"
+                        @onclick="() => OnCell.InvokeAsync((x, y))"></button>
+            }
             @foreach (var room in _rooms.Where(room => room.Region))
             {
                 var here = room.Room.Id == Layout.Map.HereRegion;
@@ -65,7 +90,7 @@
             @foreach (var room in _rooms.Where(room => !room.Region))
             {
                 var here = room.Room.Id == Layout.Map.Here;
-                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
+                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
                         style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
                         aria-label="@(here ? $"{room.Room.Name}, {Loc["NavMapYouAreHere"]}" : room.Room.Name)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
@@ -87,6 +112,14 @@
     [Parameter] public string? Selected { get; set; }
     [Parameter] public EventCallback<string> OnSelect { get; set; }
 
+    /// <summary>Builder mode: empty cells are buttons, and a click on a picture chooses a spot.</summary>
+    [Parameter] public bool Editing { get; set; }
+
+    /// <summary>The empty cell (or, on a picture, the point) chosen in builder mode.</summary>
+    [Parameter] public (double X, double Y)? Cell { get; set; }
+
+    [Parameter] public EventCallback<(double X, double Y)> OnCell { get; set; }
+
     /// <summary>The steps of the route on show, drawn over the lines they take on this map; null when there is none.</summary>
     [Parameter] public IReadOnlyList<MapStepDto>? Route { get; set; }
 
@@ -103,6 +136,7 @@
     private readonly HashSet<string> _doors = [];
     private double _left, _top, _width, _height;
     private string? _backdrop;
+    private List<(double X, double Y)> _empty = [];
 
     private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay, bool Route);
 
@@ -114,6 +148,12 @@
             : null;
         var route = (Route ?? []).Select(step => Pair(step.Source, step.Destination)).ToHashSet();
         var bounds = Layout.Bounds(Level);
+        _empty = Editing && !Layout.IsGraph ? EmptyCells() : [];
+        if (_empty.Count > 0)
+        {
+            bounds = (Math.Min(bounds.Left, _empty.Min(c => c.X) * MapLayout.Cell), Math.Min(bounds.Top, _empty.Min(c => -(c.Y + 1)) * MapLayout.Cell),
+                Math.Max(bounds.Right, (_empty.Max(c => c.X) + 1) * MapLayout.Cell), Math.Max(bounds.Bottom, -_empty.Min(c => c.Y) * MapLayout.Cell));
+        }
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
         (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
 
@@ -149,6 +189,40 @@
         // The route is drawn last, so no other line crosses it.
         _edges = [.. _edges.OrderBy(edge => edge.Route)];
     }
+
+    /// <summary>The cells of this level no room covers, within one cell of its rooms (around 0, 0 when it has none).</summary>
+    private List<(double X, double Y)> EmptyCells()
+    {
+        var placed = Layout.On(Level).ToList();
+        var taken = new HashSet<(int, int)>();
+        foreach (var room in placed)
+        {
+            var (column, row) = ((int)Math.Round(room.X / MapLayout.Cell), (int)Math.Round(room.Y / MapLayout.Cell));
+            for (var dx = 0; dx < Math.Max(1, (int)Math.Round(room.Width / MapLayout.Cell)); dx++)
+            for (var dy = 0; dy < Math.Max(1, (int)Math.Round(room.Height / MapLayout.Cell)); dy++)
+                taken.Add((column + dx, row + dy));
+        }
+        var (left, top, right, bottom) = placed.Count == 0
+            ? (0, -1, 1, 0)
+            : ((int)Math.Round(placed.Min(r => r.X) / MapLayout.Cell), (int)Math.Round(placed.Min(r => r.Y) / MapLayout.Cell),
+                (int)Math.Round(placed.Max(r => r.X + r.Width) / MapLayout.Cell), (int)Math.Round(placed.Max(r => r.Y + r.Height) / MapLayout.Cell));
+        var empty = new List<(double X, double Y)>();
+        // Rows top to bottom and cells left to right, so the buttons read in the order the eye does.
+        for (var row = top - 1; row <= bottom; row++)
+        for (var column = left - 1; column <= right; column++)
+        {
+            if (!taken.Contains((column, row))) empty.Add((column, -row - 1));
+        }
+        return empty;
+    }
+
+    private string CellBox(double x, double y) =>
+        $"left: {Percent(x * MapLayout.Cell + Inset - _left, _width)}%; top: {Percent(-(y + 1) * MapLayout.Cell + Inset - _top, _height)}%; " +
+        $"width: {Percent(MapLayout.Cell - 2 * Inset, _width)}%; height: {Percent(MapLayout.Cell - 2 * Inset, _height)}%;";
+
+    /// <summary>A click on the picture, in its own pixels.</summary>
+    private Task PickAsync(MouseEventArgs click) =>
+        OnCell.InvokeAsync((Math.Round(_left + click.OffsetX / Zoom), Math.Round(_top + click.OffsetY / Zoom)));
 
     private static (string, string) Pair(string a, string b) => string.CompareOrdinal(a, b) < 0 ? (a, b) : (b, a);
 

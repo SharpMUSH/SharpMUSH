@@ -10004,6 +10004,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>on {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Room's dbref</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Add to plan</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>applied</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Last apply</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Apply {0} changes</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Each command runs as you, with your permissions, in the order shown. A step that fails stops the rest.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Back to the map</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Empty cell, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} changes waiting</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Checks</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Dig a room above</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Dig a room below</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Exit from</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Joined from {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Dig a room here</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Discard changes</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Drop</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Edit map</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Players see nothing until you apply.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Editing {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Exit back</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>An exit name can't hold , = [ ] % or \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Give each exit a name.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Name and aliases, separated by ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in and i are refused as exit names: i is inventory.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Exit there</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>failed: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Height</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Leave edit mode</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Level</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>You don't control this room, so you can't change it.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Make the way back</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Move {0} here</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Give the room a name.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>A room name can't hold = [ ] % or \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Choose a room to change it, or an empty cell to dig one.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Choose a spot next to a room, so the new room has a way in.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} has no way in.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>not run</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Point x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Review and apply</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Review changes to {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Save place</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Save size</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Take off this map</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Add rooms to this map</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Rooms this map's exits lead to that are on no map.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Width</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Place {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Size {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Add {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Take {0} off the map</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Dig {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>No exits on this map lead there from where you are.</value>
   </data>

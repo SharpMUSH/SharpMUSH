@@ -32,6 +32,9 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	/// <summary>How many rooms a route search reaches before it gives up.</summary>
 	public const int MaxRouteRooms = 5000;
 
+	/// <summary>How many rooms on no map a builder is offered to add.</summary>
+	public const int MaxNearby = 50;
+
 	/// <summary>How many zones up from the viewer's room a region is looked for.</summary>
 	public const int MaxDepth = 32;
 
@@ -77,6 +80,8 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		var summary = await SummaryAsync(viewer, map, ct);
 		var position = summary.Kind == MapKinds.Graph ? ImagePosition : Coordinates;
 		var truncated = false;
+		// Only someone who controls the map may plan changes to it; they may change only the rooms they control.
+		var canEdit = await permissions.Controls(viewer, map);
 
 		var rooms = new List<(AnySharpObject Room, MapRoomDto Dto)>();
 		var regions = new List<MapRoomDto>();
@@ -100,7 +105,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is not AnySharpObject room || !room.IsRoom) continue;
 			if (!await VisibleAsync(viewer, room, ct)) continue;
 			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, await NumbersAsync(publisher, room, position, ct),
-				Positive(await NumbersAsync(publisher, room, Size, ct)))));
+				Positive(await NumbersAsync(publisher, room, Size, ct)))
+			{
+				Editable = canEdit && await permissions.Controls(viewer, room)
+			}));
 		}
 
 		var onMap = rooms.Select(entry => entry.Room.Object().DBRef.Number).ToHashSet();
@@ -128,16 +136,46 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 
 		var where = (await viewer.Where()).Object();
 		var here = where.DBRef.Number;
+		var nearby = canEdit ? await NearbyAsync(viewer, exits, onMap, ct) : [];
 		return new MapDto(summary, Positive(await NumbersAsync(map, map, Size, ct)), [.. rooms.Select(entry => entry.Dto)], exits,
 			onMap.Contains(here) ? $"#{here}" : null, truncated)
 		{
 			Regions = regions,
+			CanEdit = canEdit,
+			Nearby = nearby,
 			HereRegion = await HereRegionAsync(where, map, regions, ct),
 			Level = int.TryParse(await OwnValueAsync(map, map, LevelAttribute), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture,
 				out var level) ? level : null,
 			LevelNames = await LevelNamesAsync(map),
 			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
 		};
+	}
+
+	/// <summary>
+	/// The rooms this map's exits lead to that are on no map, and that <paramref name="viewer"/> controls: the rooms a
+	/// builder may add to it. At most <see cref="MaxNearby"/>, lowest-numbered first.
+	/// </summary>
+	private async Task<List<MapRoomDto>> NearbyAsync(AnySharpObject viewer, List<MapExitDto> exits, HashSet<int> onMap,
+		CancellationToken ct)
+	{
+		var nearby = new List<MapRoomDto>();
+		var candidates = exits
+			.Where(exit => exit.Destination is not null && exit.DestinationMap is null)
+			.Select(exit => Number(exit.Destination!))
+			.Where(number => !onMap.Contains(number))
+			.Distinct()
+			.Order();
+		foreach (var number in candidates)
+		{
+			if (nearby.Count == MaxNearby) break;
+			if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)), ct) is not AnySharpObject room || !room.IsRoom) continue;
+			// A room zoned to a map is on that map already, whether or not the viewer may see the map.
+			if (await room.Object().Zone.WithCancellation(ct) is AnySharpObject zone
+				&& MapKinds.Parse(await OwnValueAsync(zone, zone, KindAttribute)) is not null) continue;
+			if (!await permissions.Controls(viewer, room)) continue;
+			nearby.Add(new($"#{number}", room.Object().Name, null, null) { Editable = true });
+		}
+		return nearby;
 	}
 
 	/// <summary>

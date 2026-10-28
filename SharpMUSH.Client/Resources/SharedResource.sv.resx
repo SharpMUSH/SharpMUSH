@@ -6569,6 +6569,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>på {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Lägg till</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Rummets dbref</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Lägg till i planen</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>tillämpad</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Senast tillämpat</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Tillämpa {0} ändringar</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Varje kommando körs som du, med dina rättigheter, i den ordning som visas. Ett steg som misslyckas stoppar resten.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Tillbaka till kartan</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Redigera</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Tom ruta, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} ändringar väntar</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Kontroller</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Gräv ett rum ovanför</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Gräv ett rum nedanför</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Utgång från</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Ansluten från {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Gräv ett rum här</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Kasta ändringar</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Ta bort</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Redigera karta</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Spelare ser inget förrän du tillämpar.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Redigerar {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Utgång tillbaka</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Ett utgångsnamn får inte innehålla , = [ ] % eller \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Ge varje utgång ett namn.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Namn och alias, åtskilda med ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in och i nekas som utgångsnamn: i är inventariet.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Utgång dit</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>misslyckades: {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Höjd</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Lämna redigeringsläget</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Nivå</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Du kontrollerar inte det här rummet, så du kan inte ändra det.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Skapa vägen tillbaka</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Flytta {0} hit</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Ge rummet ett namn.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Ett rumsnamn får inte innehålla = [ ] % eller \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Välj ett rum för att ändra det, eller en tom ruta för att gräva ett.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Välj en plats bredvid ett rum, så att det nya rummet har en ingång.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} har ingen ingång.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>inte kört</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Punkt x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Granska och tillämpa</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Granska ändringar i {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Namn</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Spara plats</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Spara storlek</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Ta bort från kartan</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Lägg till rum på kartan</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Rum som kartans utgångar leder till och som inte finns på någon karta.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Bredd</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Placera {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Storlek på {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Lägg till {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Ta bort {0} från kartan</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Gräv {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Inga utgångar på den här kartan leder dit från där du är.</value>
   </data>

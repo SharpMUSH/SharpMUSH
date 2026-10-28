@@ -5878,6 +5878,174 @@
   <data name="NavMapRouteOnMap" xml:space="preserve">
     <value>sur {0}</value>
   </data>
+  <data name="NavMapAdd" xml:space="preserve">
+    <value>Ajouter</value>
+  </data>
+  <data name="NavMapAddByDbref" xml:space="preserve">
+    <value>Dbref de la salle</value>
+  </data>
+  <data name="NavMapAddToPlan" xml:space="preserve">
+    <value>Ajouter au plan</value>
+  </data>
+  <data name="NavMapApplied" xml:space="preserve">
+    <value>appliqué</value>
+  </data>
+  <data name="NavMapAppliedTitle" xml:space="preserve">
+    <value>Dernière application</value>
+  </data>
+  <data name="NavMapApply" xml:space="preserve">
+    <value>Appliquer {0} changements</value>
+  </data>
+  <data name="NavMapApplyNote" xml:space="preserve">
+    <value>Chaque commande s'exécute en votre nom, avec vos droits, dans l'ordre affiché. Une étape qui échoue arrête la suite.</value>
+  </data>
+  <data name="NavMapBackToMap" xml:space="preserve">
+    <value>Retour à la carte</value>
+  </data>
+  <data name="NavMapBuilder" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="NavMapCell" xml:space="preserve">
+    <value>Case vide, X {0}, Y {1}</value>
+  </data>
+  <data name="NavMapChangesWaiting" xml:space="preserve">
+    <value>{0} changements en attente</value>
+  </data>
+  <data name="NavMapChecks" xml:space="preserve">
+    <value>Vérifications</value>
+  </data>
+  <data name="NavMapDigAbove" xml:space="preserve">
+    <value>Creuser une salle au-dessus</value>
+  </data>
+  <data name="NavMapDigBelow" xml:space="preserve">
+    <value>Creuser une salle en dessous</value>
+  </data>
+  <data name="NavMapDigFrom" xml:space="preserve">
+    <value>Sortie depuis</value>
+  </data>
+  <data name="NavMapDigFromRoom" xml:space="preserve">
+    <value>Reliée depuis {0}.</value>
+  </data>
+  <data name="NavMapDigHere" xml:space="preserve">
+    <value>Creuser une salle ici</value>
+  </data>
+  <data name="NavMapDiscard" xml:space="preserve">
+    <value>Abandonner les changements</value>
+  </data>
+  <data name="NavMapDrop" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="NavMapEdit" xml:space="preserve">
+    <value>Modifier la carte</value>
+  </data>
+  <data name="NavMapEditNote" xml:space="preserve">
+    <value>Les joueurs ne voient rien avant que vous appliquiez.</value>
+  </data>
+  <data name="NavMapEditing" xml:space="preserve">
+    <value>Modification de {0}.</value>
+  </data>
+  <data name="NavMapExitBack" xml:space="preserve">
+    <value>Sortie de retour</value>
+  </data>
+  <data name="NavMapExitCharacter" xml:space="preserve">
+    <value>Un nom de sortie ne peut pas contenir , = [ ] % ou \.</value>
+  </data>
+  <data name="NavMapExitEmpty" xml:space="preserve">
+    <value>Donnez un nom à chaque sortie.</value>
+  </data>
+  <data name="NavMapExitHelp" xml:space="preserve">
+    <value>Nom et alias, séparés par ;</value>
+  </data>
+  <data name="NavMapExitIn" xml:space="preserve">
+    <value>in et i sont refusés comme noms de sortie : i est l'inventaire.</value>
+  </data>
+  <data name="NavMapExitTo" xml:space="preserve">
+    <value>Sortie vers là</value>
+  </data>
+  <data name="NavMapFailed" xml:space="preserve">
+    <value>échec : {0}</value>
+  </data>
+  <data name="NavMapHeight" xml:space="preserve">
+    <value>Hauteur</value>
+  </data>
+  <data name="NavMapLeaveEdit" xml:space="preserve">
+    <value>Quitter le mode édition</value>
+  </data>
+  <data name="NavMapLevelField" xml:space="preserve">
+    <value>Niveau</value>
+  </data>
+  <data name="NavMapLocked" xml:space="preserve">
+    <value>Vous ne contrôlez pas cette salle, vous ne pouvez donc pas la modifier.</value>
+  </data>
+  <data name="NavMapMakeWayBack" xml:space="preserve">
+    <value>Créer le chemin du retour</value>
+  </data>
+  <data name="NavMapMoveHere" xml:space="preserve">
+    <value>Déplacer {0} ici</value>
+  </data>
+  <data name="NavMapNameMissing" xml:space="preserve">
+    <value>Donnez un nom à la salle.</value>
+  </data>
+  <data name="NavMapNameCharacter" xml:space="preserve">
+    <value>Un nom de salle ne peut pas contenir = [ ] % ou \.</value>
+  </data>
+  <data name="NavMapNoChanges" xml:space="preserve">
+    <value>Choisissez une salle pour la modifier, ou une case vide pour en creuser une.</value>
+  </data>
+  <data name="NavMapNoNeighbour" xml:space="preserve">
+    <value>Choisissez un endroit à côté d'une salle, pour que la nouvelle ait une entrée.</value>
+  </data>
+  <data name="NavMapNoWayIn" xml:space="preserve">
+    <value>{0} n'a aucune entrée.</value>
+  </data>
+  <data name="NavMapNotRun" xml:space="preserve">
+    <value>non exécuté</value>
+  </data>
+  <data name="NavMapPoint" xml:space="preserve">
+    <value>Point x {0}, y {1}</value>
+  </data>
+  <data name="NavMapReview" xml:space="preserve">
+    <value>Vérifier et appliquer</value>
+  </data>
+  <data name="NavMapReviewTitle" xml:space="preserve">
+    <value>Vérifier les changements de {0}</value>
+  </data>
+  <data name="NavMapRoomName" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="NavMapSavePlace" xml:space="preserve">
+    <value>Enregistrer la position</value>
+  </data>
+  <data name="NavMapSaveSize" xml:space="preserve">
+    <value>Enregistrer la taille</value>
+  </data>
+  <data name="NavMapTakeOff" xml:space="preserve">
+    <value>Retirer de cette carte</value>
+  </data>
+  <data name="NavMapTray" xml:space="preserve">
+    <value>Ajouter des salles à cette carte</value>
+  </data>
+  <data name="NavMapTrayNote" xml:space="preserve">
+    <value>Salles où mènent les sorties de cette carte et qui ne sont sur aucune carte.</value>
+  </data>
+  <data name="NavMapWidth" xml:space="preserve">
+    <value>Largeur</value>
+  </data>
+  <data name="NavMapPlanPlace" xml:space="preserve">
+    <value>Placer {0}</value>
+  </data>
+  <data name="NavMapPlanSize" xml:space="preserve">
+    <value>Taille de {0}</value>
+  </data>
+  <data name="NavMapPlanAdd" xml:space="preserve">
+    <value>Ajouter {0}</value>
+  </data>
+  <data name="NavMapPlanRemove" xml:space="preserve">
+    <value>Retirer {0} de la carte</value>
+  </data>
+  <data name="NavMapPlanDig" xml:space="preserve">
+    <value>Creuser {0}</value>
+  </data>
   <data name="NavMapNoRoute" xml:space="preserve">
     <value>Aucune sortie de cette carte n'y mène depuis l'endroit où vous êtes.</value>
   </data>
