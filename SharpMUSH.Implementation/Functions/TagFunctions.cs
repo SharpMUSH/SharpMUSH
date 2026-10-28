@@ -23,9 +23,11 @@ public partial class Functions
 	[SharpFunction(Name = "tagref", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["tag"])]
 	public async ValueTask<CallState> TagRef(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> await ResolveTagAsync(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('#')) is { } target
-			? new CallState(new DBRef(target.Number).ToString())
-			: new CallState(ErrorMessages.Returns.Nothing);
+		=> await ResolveTagAsync(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim().TrimStart('#')) switch
+		{
+			DBRef target => new CallState(new DBRef(target.Number).ToString()),
+			NotFound => new CallState(ErrorMessages.Returns.Nothing)
+		};
 
 	/// <summary>istag(): 1 when the argument is <c>#</c> and a tag that names an object.</summary>
 	[SharpFunction(Name = "istag", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -33,7 +35,7 @@ public partial class Functions
 	public async ValueTask<CallState> IsTag(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var given = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
-		return given.StartsWith('#') && await ResolveTagAsync(parser, given[1..]) is not null;
+		return given.StartsWith('#') && await ResolveTagAsync(parser, given[1..]) is DBRef;
 	}
 
 	/// <summary>
@@ -86,7 +88,7 @@ public partial class Functions
 			.Where(name => MushText.IsWildcardMatch(MarkupText.Plain(name), pattern))));
 	}
 
-	private async ValueTask<DBRef?> ResolveTagAsync(IMUSHCodeParser parser, string name)
+	private async ValueTask<Found<DBRef>> ResolveTagAsync(IMUSHCodeParser parser, string name)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await Tags(parser).ResolveAsync(name, await OwnerOfAsync(executor), ExecutionBudget.CurrentToken);

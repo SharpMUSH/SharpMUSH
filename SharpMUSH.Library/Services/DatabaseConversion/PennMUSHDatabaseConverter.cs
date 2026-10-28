@@ -2507,8 +2507,9 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				continue;
 			}
 
-			// Global tags first: RhostMUSH resolves them first, and a personal one only adds to what they leave.
-			foreach (var tag in pennObj.Tags.OrderBy(tag => tag.Owner.HasValue))
+			// Personal tags first: one is taken only while the object has few tags, which a dump's globals could
+			// already fill.
+			foreach (var tag in pennObj.Tags.OrderBy(tag => tag.Owner is null))
 			{
 				DBRef? owner = null;
 				if (tag.Owner is { } sourceOwner)

@@ -191,7 +191,7 @@ public class LocateService(
 		var absolute = HelperFunctions.ParseDbRef(name);
 
 		// RhostMUSH's #tag is a dbref by another name, wherever a dbref would match.
-		if (absolute.IsNone() && await TaggedAsync(executor, name) is { } tagged)
+		if (absolute.IsNone() && await TaggedAsync(executor, name) is DBRef tagged)
 		{
 			absolute = tagged;
 		}
@@ -205,11 +205,11 @@ public class LocateService(
 		return await LocateMatch(executor, looker, flags, name, absolute);
 	}
 
-	private async ValueTask<DBRef?> TaggedAsync(AnySharpObject executor, string name)
+	private async ValueTask<Found<DBRef>> TaggedAsync(AnySharpObject executor, string name)
 	{
 		if (tags is null || name.Length < 2 || name[0] != '#' || !Tags.ObjectTagRegistry.ValidName(name[1..]))
 		{
-			return null;
+			return new NotFound();
 		}
 
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);

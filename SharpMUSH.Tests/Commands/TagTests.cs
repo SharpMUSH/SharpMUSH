@@ -82,6 +82,22 @@ public class TagTests
 	}
 
 	[Test]
+	public async Task APersonalTagMayShareAGlobalTagsName()
+	{
+		var (_, mine) = await CreateThingAsync();
+		var (_, theirs) = await CreateThingAsync();
+		var tag = UniqueTag();
+
+		await Output($"@tag/add {tag}={theirs}", tag);
+		await Assert.That(await Output($"@ltag/add {tag}={mine}", tag)).Contains(line => line.StartsWith($"Tag {tag} added"));
+		await Assert.That(await Read($"tagref({tag})")).IsEqualTo(theirs);
+
+		await Output($"@tag/remove {tag}", tag);
+		await Assert.That(await Read($"tagref({tag})")).IsEqualTo(mine);
+		await Output($"@ltag/remove {tag}", tag);
+	}
+
+	[Test]
 	[Arguments("12345")]
 	[Arguments("has space")]
 	[Arguments("a#b")]

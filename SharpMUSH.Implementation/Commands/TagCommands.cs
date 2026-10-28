@@ -64,9 +64,11 @@ public partial class Commands
 			"LIST" => await TagListAsync(parser, tags, owner, name),
 			"ADD" => await TagAddAsync(parser, tags, executor, owner, name, PlainArgument(parser, "1").Trim()),
 			"REMOVE" => Said(await tags.RemoveAsync(name, owner, ExecutionBudget.CurrentToken)),
-			_ => MarkupText.Plain(await tags.ResolveAsync(name, owner, ExecutionBudget.CurrentToken) is { } target
-				? new DBRef(target.Number).ToString()
-				: "#-1")
+			_ => MarkupText.Plain(await tags.ResolveAsync(name, owner, ExecutionBudget.CurrentToken) switch
+			{
+				DBRef target => new DBRef(target.Number).ToString(),
+				NotFound => "#-1"
+			})
 		};
 
 		await NotifyService.Notify(executor, output);

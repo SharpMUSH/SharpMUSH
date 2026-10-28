@@ -1,5 +1,9 @@
+using System.Text.Json;
+using Mediator;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 
 namespace SharpMUSH.Library.Tags;
 
@@ -21,9 +25,10 @@ public sealed record ObjectTag(string Name, DBRef? Owner, DBRef Target);
 /// <summary>
 /// Keeps <see cref="ObjectTags"/> in the world's server data. A tag names an object for the object's lifetime: its
 /// objid is kept, so once the object is destroyed the tag names nothing, even when the dbref is used again, and
-/// it is dropped at the next change.
+/// it is dropped at the next change. A personal tag may share a global tag's name; the global one hides it until
+/// it is removed.
 /// </summary>
-public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore objects)
+public sealed class ObjectTagRegistry(IMediator mediator)
 {
 	public const string Key = "sharpmush.tags.v1";
 
@@ -46,9 +51,9 @@ public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore obj
 
 	/// <summary>
 	/// The live object <paramref name="name"/> names: the global tag of that name, else <paramref name="owner"/>'s
-	/// personal one; null when neither names an object that still exists.
+	/// personal one; <see cref="NotFound"/> when neither names an object that still exists.
 	/// </summary>
-	public async ValueTask<DBRef?> ResolveAsync(string name, DBRef? owner, CancellationToken ct = default)
+	public async ValueTask<Found<DBRef>> ResolveAsync(string name, DBRef? owner, CancellationToken ct = default)
 	{
 		var current = await ReadAsync(ct);
 		var key = name.ToLowerInvariant();
@@ -58,8 +63,9 @@ public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore obj
 		}
 
 		return owner is { } holder && PersonalOf(current, holder) is { } personal && personal.Tags.TryGetValue(key, out var mine)
-			? await LiveAsync(mine, ct)
-			: null;
+			&& await LiveAsync(mine, ct) is { } personalTarget
+				? personalTarget
+				: new NotFound();
 	}
 
 	/// <summary>Every tag that names a live object: the global ones, then <paramref name="owner"/>'s, by name.</summary>
@@ -112,7 +118,7 @@ public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore obj
 		{
 			var current = await PrunedAsync(ct);
 			var personal = owner is { } holder ? PersonalOf(current, holder) : null;
-			if (current.Global.ContainsKey(key) || personal?.Tags.ContainsKey(key) == true)
+			if (owner is null ? current.Global.ContainsKey(key) : personal?.Tags.ContainsKey(key) == true)
 			{
 				return new Error<string>($"The tag {key} already exists.");
 			}
@@ -188,8 +194,7 @@ public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore obj
 	/// <summary>The object <paramref name="stored"/> names, when it still exists with the same creation time.</summary>
 	private async ValueTask<DBRef?> LiveAsync(string stored, CancellationToken ct)
 		=> DBRef.TryParse(stored, out var parsed) && parsed is { } reference
-			&& await objects.GetObjectNodeAsync(reference, ct) is AnySharpObject found
-			&& found.Object().DBRef.Matches(reference)
+			&& await mediator.Send(new GetObjectNodeQuery(reference), ct) is AnySharpObject found
 				? found.Object().DBRef
 				: null;
 
@@ -220,11 +225,13 @@ public sealed class ObjectTagRegistry(IExpandedDataStore store, IObjectStore obj
 	}
 
 	private async ValueTask<ObjectTags> ReadAsync(CancellationToken ct)
-		=> tags ??= await store.GetExpandedServerData<ObjectTags>(Key, ct) ?? ObjectTags.Empty;
+		=> tags ??= await mediator.Send(new ExpandedServerDataQuery(Key), ct) is { } stored
+			? JsonSerializer.Deserialize<ObjectTags>(JsonSerializer.Serialize(stored)) ?? ObjectTags.Empty
+			: ObjectTags.Empty;
 
 	private async ValueTask SaveAsync(ObjectTags value, CancellationToken ct)
 	{
-		await store.SetExpandedServerData(Key, value, ct);
+		await mediator.Send(new SetExpandedServerDataCommand(Key, value), ct);
 		tags = value;
 	}
 }

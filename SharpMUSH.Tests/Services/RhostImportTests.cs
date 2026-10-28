@@ -241,9 +241,9 @@ public class RhostImportTests
 		var widget = (await FindAsync(world, "Widget")).Object().DBRef;
 		var wizard = (await FindAsync(world, "Wizard")).Object().DBRef;
 
-		await Assert.That(await tags.ResolveAsync("weather", null)).IsEqualTo(widget);
-		await Assert.That(await tags.ResolveAsync("mytool", null)).IsNull();
-		await Assert.That(await tags.ResolveAsync("mytool", wizard)).IsEqualTo(widget);
+		await Assert.That((await tags.ResolveAsync("weather", null)).Expect<DBRef>()).IsEqualTo(widget);
+		await Assert.That(await tags.ResolveAsync("mytool", null) is NotFound).IsTrue();
+		await Assert.That((await tags.ResolveAsync("mytool", wizard)).Expect<DBRef>()).IsEqualTo(widget);
 	}
 
 	/// <summary>Without the configuration that names them, the levels cannot be layers, and the report says so.</summary>
