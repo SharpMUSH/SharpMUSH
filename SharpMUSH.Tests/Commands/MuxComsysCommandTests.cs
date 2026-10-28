@@ -85,6 +85,45 @@ public class MuxComsysCommandTests
 	}
 
 	[Test]
+	public async Task TheChannelObjectTellsAMemberWhoJoinsLeavesOrGags()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			Factory.Services, Factory.Services.GetRequiredService<IMediator>(), Connections, "MuxComsysHooks");
+		try
+		{
+			await Parser.CommandParse(1, Connections, MarkupText.Plain($"@set *{player.Name}=WIZARD"));
+			await Scheduler.SettleForTestsAsync();
+			var channel = $"Mux{TestIsolationHelpers.GenerateUniqueName("H")[^6..]}";
+			var tag = TestIsolationHelpers.GenerateUniqueName("Hook");
+
+			await Run(player, $"@ccreate {channel}");
+			var created = await Think(player, "MC-OBJ [create(Channel Object)]");
+			var thing = created["MC-OBJ ".Length..];
+			await Run(player, $"&COMJOIN {thing}={tag} join %n");
+			await Run(player, $"&COMLEAVE {thing}={tag} leave %n");
+			await Run(player, $"&COMON {thing}={tag} on %n");
+			await Run(player, $"&COMOFF {thing}={tag} off %n");
+			await Run(player, $"@cset/object {channel}={thing}");
+			await Assert.That(await Think(player, $"MC-CHANOBJ [chanobj({channel})]")).StartsWith($"MC-CHANOBJ {thing}");
+
+			// @ccreate puts its creator on the channel.
+			await Assert.That(await Run(player, $"@channel/off {channel}")).Contains($"{tag} leave {player.Name}");
+			await Assert.That(await Run(player, $"addcom mh={channel}")).Contains($"{tag} join {player.Name}");
+			await Assert.That(await Run(player, "allcom off")).Contains($"{tag} off {player.Name}");
+			await Assert.That(await Run(player, "allcom off")).DoesNotContain(line => line.StartsWith(tag));
+			await Assert.That(await Run(player, "allcom on")).Contains($"{tag} on {player.Name}");
+			await Assert.That(await Run(player, "delcom mh")).Contains($"{tag} leave {player.Name}");
+			await Assert.That(await Run(player, $"@channel/on {channel}")).Contains($"{tag} join {player.Name}");
+
+			await Run(player, $"@cdestroy {channel}");
+		}
+		finally
+		{
+			await Connections.Disconnect(player.Handle);
+		}
+	}
+
+	[Test]
 	public async Task AMortalMayDoOnlyWhatChannelLetsThem()
 	{
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(

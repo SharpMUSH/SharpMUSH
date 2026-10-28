@@ -476,11 +476,18 @@ public partial class Functions
 	public async ValueTask<CallState> ComsysTitle(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await WithControlledObject(parser, _ => ChannelTitle(parser, _2));
 
-	/// <summary>TinyMUX's <c>chanobj(&lt;channel&gt;)</c>. SharpMUSH channels have no channel object.</summary>
+	/// <summary>TinyMUX's <c>chanobj(&lt;channel&gt;)</c>: the channel's mogrifier, which stands in for its channel object.</summary>
 	[SharpFunction(Name = "chanobj", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["channel"])]
-	public ValueTask<CallState> ChannelObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ValueTask.FromResult(new CallState(ErrorMessages.Returns.Nothing));
+	public async ValueTask<CallState> ChannelObject(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+
+		return await WithVisibleChannel(executor, parser.CurrentState.Arguments["0"].Message, async channel =>
+			await ChannelHelper.Mogrifier(Mediator, channel) is AnySharpObject mogrifier
+				? new CallState(mogrifier.Object().DBRef.ToString())
+				: new CallState(ErrorMessages.Returns.Nothing));
+	}
 
 	/// <summary>The object the first argument names, handed to <paramref name="answer"/> when the caller controls it.</summary>
 	private async ValueTask<CallState> WithControlledObject(IMUSHCodeParser parser, Func<AnySharpObject, ValueTask<CallState>> answer)

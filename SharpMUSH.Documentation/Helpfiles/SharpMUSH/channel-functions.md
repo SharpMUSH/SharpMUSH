@@ -194,7 +194,7 @@ TinyMUX's comsys functions (see [muxcomsys]).
 
 - **comalias()**: the first `addcom` alias *\<object\>* holds for *\<channel\>*, in lower case, or nothing when it has none.
 - **comtitle()**: *\<object\>*'s title on *\<channel\>*, as ctitle() gives it.
-- **chanobj()**: always `#-1`. SharpMUSH channels have no channel object.
+- **chanobj()**: *\<channel\>*'s mogrifier, which stands in for TinyMUX's channel object, or `#-1` when it has none (see [mogrifier members]).
 
 comalias() and comtitle() answer only for objects you control; for anything else they answer `#-1 PERMISSION DENIED`.
 

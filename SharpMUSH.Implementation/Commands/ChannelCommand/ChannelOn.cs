@@ -19,7 +19,7 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 /// </summary>
 public static class ChannelOn
 {
-	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, MString channelName, MString? arg1)
+	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator, INotifyService NotifyService, IAttributeService AttributeService, MString channelName, MString? arg1)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var target = executor;
@@ -58,14 +58,14 @@ public static class ChannelOn
 
 		return maybeChannel switch
 		{
-			SharpChannel channel => await JoinAsync(PermissionService, ChannelPermissions, Mediator, NotifyService, executor, target, channel),
+			SharpChannel channel => await JoinAsync(parser, PermissionService, ChannelPermissions, Mediator, NotifyService, AttributeService, executor, target, channel),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	/// <summary>Puts <paramref name="target"/> on the channel, if the executor may and it passes the channel's gates.</summary>
-	private static async ValueTask<CallState> JoinAsync(IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
-		INotifyService NotifyService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
+	private static async ValueTask<CallState> JoinAsync(IMUSHCodeParser parser, IPermissionService PermissionService, IChannelPermissionService ChannelPermissions, IMediator Mediator,
+		INotifyService NotifyService, IAttributeService AttributeService, AnySharpObject executor, AnySharpObject target, SharpChannel channel)
 	{
 		var channelLabel = channel.Name.ToPlainText();
 
@@ -98,6 +98,7 @@ public static class ChannelOn
 
 		// Channel join/leave announcements are handled by the channel system
 		await Mediator.Send(new AddUserToChannelCommand(channel, target));
+		await ChannelHelper.NotifyMemberHookAsync(parser, Mediator, AttributeService, NotifyService, channel, target, "COMJOIN");
 
 		// extchat.c:1272 / :1367 — the confirmation names the CHANNEL, not the abbreviation that was
 		// typed, so a player who joins with `@channel/on pub` is told which channel they landed on.

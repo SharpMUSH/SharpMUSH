@@ -1179,7 +1179,6 @@ public static partial class ErrorMessages
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string UsageFormat = "Usage: {0}";
 		public const string CsetNoHeader = "@cset: SharpMUSH has no channel header. A message always starts with the channel's name.";
-		public const string CsetNoObject = "@cset: SharpMUSH has no channel object. Use @channel/describe for its description and @clock/join for who may join.";
 		public const string CsetNoTimestampLogs = "@cset: SharpMUSH has no timestamp_logs. @channel/recall shows what the channel keeps.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string CflagsNoEquivalentFormat = "{0}: SharpMUSH has no {1} flag. Use @clock/speak <channel>=<lock> to choose who may speak.";

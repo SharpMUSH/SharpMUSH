@@ -232,8 +232,9 @@ TinyMUX's `@cset` changes one channel setting. Each option is a `@channel` or `@
 - `/spoof` or `/anon`: adds the `nonames` privilege, so a message shows the title without the speaker's name
 - `/nospoof`: removes the `nonames` privilege
 - `/log`: `@channel/buffer <channel>=<value>`, how many messages the channel keeps
+- `/object`: `@channel/mogrifier <channel>=<value>`, the object that stands in for TinyMUX's channel object (see [mogrifier members])
 
-`/header`, `/object` and `/timestamp_logs` have no SharpMUSH equivalent, and say so.
+`/header` and `/timestamp_logs` have no SharpMUSH equivalent, and say so.
 
 Example:
 

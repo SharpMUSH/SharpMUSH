@@ -1157,9 +1157,6 @@
   <data name="CsetNoHeader" xml:space="preserve">
     <value>@cset: SharpMUSH has no channel header. A message always starts with the channel's name.</value>
   </data>
-  <data name="CsetNoObject" xml:space="preserve">
-    <value>@cset: SharpMUSH has no channel object. Use @channel/describe for its description and @clock/join for who may join.</value>
-  </data>
   <data name="CsetNoTimestampLogs" xml:space="preserve">
     <value>@cset: SharpMUSH has no timestamp_logs. @channel/recall shows what the channel keeps.</value>
   </data>

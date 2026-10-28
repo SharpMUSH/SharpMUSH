@@ -59,7 +59,7 @@ public partial class Commands
 		return await MuxChannelPair(parser, "@cboot[/quiet] <channel>=<object>") switch
 		{
 			MuxPair pair => await ChannelOff.Handle(parser, LocateService, PermissionService, ChannelPermissions,
-				Mediator, NotifyService, pair.Channel, pair.Other),
+				Mediator, NotifyService, AttributeService, pair.Channel, pair.Other),
 			CallState usage => usage
 		};
 	}
@@ -102,7 +102,8 @@ public partial class Commands
 	/// <c>@cset/&lt;option&gt; &lt;channel&gt;[=&lt;value&gt;]</c>. <c>public</c> and <c>private</c> are the see
 	/// lock, which decides who finds the channel in <c>@channel/list</c>; <c>loud</c>, <c>mute</c> and
 	/// <c>quiet</c> the <c>quiet</c> privilege; <c>spoof</c>, <c>anon</c> and <c>nospoof</c> the
-	/// <c>nonames</c> privilege; <c>log</c> the channel's buffer. The last three have no equivalent.
+	/// <c>nonames</c> privilege; <c>log</c> the channel's buffer; <c>object</c> the channel's mogrifier.
+	/// <c>header</c> and <c>timestamp_logs</c> have no equivalent.
 	/// </summary>
 	[SharpCommand(Name = "@CSET",
 		Switches = ["PUBLIC", "PRIVATE", "LOUD", "MUTE", "QUIET", "SPOOF", "ANON", "NOSPOOF", "LOG", "HEADER", "OBJECT",
@@ -138,7 +139,8 @@ public partial class Commands
 			"LOG" => await ChannelBuffer.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
 				Configuration, channel, value),
 			"HEADER" => await MuxNoEquivalentAsync(parser, nameof(ErrorMessages.Notifications.CsetNoHeader)),
-			"OBJECT" => await MuxNoEquivalentAsync(parser, nameof(ErrorMessages.Notifications.CsetNoObject)),
+			"OBJECT" => await ChannelMogrifier.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
+				channel, value),
 			_ => await MuxNoEquivalentAsync(parser, nameof(ErrorMessages.Notifications.CsetNoTimestampLogs))
 		};
 	}
@@ -216,9 +218,9 @@ public partial class Commands
 		{
 			await (mode switch
 			{
-				"on" => ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, channel, null,
+				"on" => ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService, channel, null,
 					ChannelUserFlags.UserFlag.Gag, forceOff: true),
-				"off" => ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, channel, null,
+				"off" => ChannelUserFlags.Handle(parser, ChannelPermissions, Mediator, NotifyService, AttributeService, channel, null,
 					ChannelUserFlags.UserFlag.Gag, forceOff: false),
 				_ => ChannelWho.Handle(parser, LocateService, ChannelPermissions, Mediator, NotifyService,
 					ConnectionService, channel)
@@ -240,7 +242,7 @@ public partial class Commands
 
 		foreach (var alias in aliases)
 		{
-			await DeleteChannelAliasAsync(executor, alias.LongName["CHANALIAS`".Length..].ToLowerInvariant(),
+			await DeleteChannelAliasAsync(parser, executor, alias.LongName["CHANALIAS`".Length..].ToLowerInvariant(),
 				alias.LongName, alias.Value);
 		}
 
