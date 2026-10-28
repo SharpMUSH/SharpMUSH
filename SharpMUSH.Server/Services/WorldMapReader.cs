@@ -197,13 +197,13 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		while (queue.Count > 0 && came.Count < MaxRouteRooms)
 		{
 			var at = queue.Dequeue();
-			var exits = new List<SharpExit>();
-			await foreach (var exit in mediator.CreateStream(new GetExitsQuery(at), ct)) exits.Add(exit);
-			foreach (var exit in exits.OrderBy(exit => exit.Object.DBRef.Number))
+			var exits = mediator.CreateStream(new GetExitsQuery(at), ct)
+				.OrderBy(exit => exit.Object.DBRef.Number)
+				.Where(async (exit, token) => await VisibleAsync(viewer, new AnySharpObject(exit), token)
+					// A stale list entry must not route through an exit moved out of the room.
+					&& (await exit.Location.WithCancellation(token)).Object().DBRef.Number == at.Number);
+			await foreach (var exit in exits.WithCancellation(ct))
 			{
-				if (!await VisibleAsync(viewer, new AnySharpObject(exit), ct)) continue;
-				// A stale list entry must not route through an exit moved out of the room.
-				if ((await exit.Location.WithCancellation(ct)).Object().DBRef.Number != at.Number) continue;
 				var reader = new AnySharpObject(await exit.Object.Owner.WithCancellation(ct));
 				if (await LinkedRoomAsync(reader, exit, ct) is not { } room || !await VisibleAsync(viewer, room, ct)) continue;
 				var next = room.Object().DBRef;

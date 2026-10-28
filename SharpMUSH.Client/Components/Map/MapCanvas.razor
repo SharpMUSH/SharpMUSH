@@ -193,27 +193,40 @@
     /// <summary>The cells of this level no room covers, within one cell of its rooms (around 0, 0 when it has none).</summary>
     private List<(double X, double Y)> EmptyCells()
     {
-        var placed = Layout.On(Level).ToList();
-        var taken = new HashSet<(int, int)>();
-        foreach (var room in placed)
-        {
-            var (column, row) = ((int)Math.Round(room.X / MapLayout.Cell), (int)Math.Round(room.Y / MapLayout.Cell));
-            for (var dx = 0; dx < Math.Max(1, (int)Math.Round(room.Width / MapLayout.Cell)); dx++)
-            for (var dy = 0; dy < Math.Max(1, (int)Math.Round(room.Height / MapLayout.Cell)); dy++)
-                taken.Add((column + dx, row + dy));
-        }
-        var (left, top, right, bottom) = placed.Count == 0
-            ? (0, -1, 1, 0)
-            : ((int)Math.Round(placed.Min(r => r.X) / MapLayout.Cell), (int)Math.Round(placed.Min(r => r.Y) / MapLayout.Cell),
-                (int)Math.Round(placed.Max(r => r.X + r.Width) / MapLayout.Cell), (int)Math.Round(placed.Max(r => r.Y + r.Height) / MapLayout.Cell));
-        var empty = new List<(double X, double Y)>();
+        var boxes = Layout.On(Level).Select(Box).ToList();
+        var ring = boxes.Count == 0 ? Ring((0, -1, 1, 1)).Prepend((Column: 0, Row: -1)) : boxes.SelectMany(Ring);
         // Rows top to bottom and cells left to right, so the buttons read in the order the eye does.
-        for (var row = top - 1; row <= bottom; row++)
-        for (var column = left - 1; column <= right; column++)
+        return
+        [
+            .. ring.Distinct()
+                .Where(cell => !boxes.Any(box => Covers(box, cell)))
+                .OrderBy(cell => cell.Row).ThenBy(cell => cell.Column)
+                .Select(cell => ((double)cell.Column, (double)(-cell.Row - 1))),
+        ];
+
+        // The cells a room covers, as its top-left cell and its width and height in cells.
+        static (int Column, int Row, int Columns, int Rows) Box(MapPlacement room) =>
+            ((int)Math.Round(room.X / MapLayout.Cell), (int)Math.Round(room.Y / MapLayout.Cell),
+                Math.Max(1, (int)Math.Round(room.Width / MapLayout.Cell)), Math.Max(1, (int)Math.Round(room.Height / MapLayout.Cell)));
+
+        static bool Covers((int Column, int Row, int Columns, int Rows) box, (int Column, int Row) cell) =>
+            cell.Column >= box.Column && cell.Column < box.Column + box.Columns && cell.Row >= box.Row && cell.Row < box.Row + box.Rows;
+
+        // The cells around a box, one deep, so a map of distant rooms asks for no more than its rooms' edges.
+        static IEnumerable<(int Column, int Row)> Ring((int Column, int Row, int Columns, int Rows) box)
         {
-            if (!taken.Contains((column, row))) empty.Add((column, -row - 1));
+            var (left, top, right, bottom) = (box.Column - 1, box.Row - 1, box.Column + box.Columns, box.Row + box.Rows);
+            for (var column = left; column <= right; column++)
+            {
+                yield return (column, top);
+                yield return (column, bottom);
+            }
+            for (var row = top + 1; row < bottom; row++)
+            {
+                yield return (left, row);
+                yield return (right, row);
+            }
         }
-        return empty;
     }
 
     private string CellBox(double x, double y) =>

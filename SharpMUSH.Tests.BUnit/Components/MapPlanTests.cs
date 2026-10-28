@@ -64,6 +64,10 @@ public class MapPlanTests
 			$"@open East;e={{{key}}},West;w,#10",
 		]);
 		await Assert.That(plan.Show(dig.Steps[^1].Command)).IsEqualTo("@open East;e=<Boathouse>,West;w,#10");
+		await Assert.That(dig.Steps[^1].Check)
+			.IsEqualTo($"and(strmatch(num(loc(%>)),num({{{key}}})),strmatch(num(loc(lexits({{{key}}}))),num(#10)))")
+			.Because("@open names the exit it made even when linking it or opening the way back failed");
+		await Assert.That(dig.Steps[^1].Expect).IsEqualTo("1");
 		var preview = plan.Preview();
 		await Assert.That(preview.Rooms.Select(room => room.Name)).IsEquivalentTo(["Quay", "Boathouse"]);
 		await Assert.That(preview.Exits.Select(exit => (exit.Name, exit.Source, exit.Destination)))

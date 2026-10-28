@@ -92,6 +92,17 @@ public sealed class MapLayout
 	/// <summary>The rooms placed on <paramref name="level"/>.</summary>
 	public IEnumerable<MapPlacement> On(int level) => Rooms.Values.Where(room => room.Placed && room.Level == level);
 
+	/// <summary>
+	/// Where <paramref name="room"/> is in the map's own units: its south-west cell and level on a coordinate or compass
+	/// map, its centre on a graph map. A room the map does not place is at (0, 0) on its level.
+	/// </summary>
+	public (double X, double Y, int Z) Spot(MapPlacement room) => room switch
+	{
+		{ Placed: false } => (0, 0, room.Level),
+		_ when IsGraph => (room.X + room.Width / 2, room.Y + room.Height / 2, room.Level),
+		_ => (Math.Round(room.X / Cell), Math.Round(-(room.Y + room.Height) / Cell), room.Level),
+	};
+
 	/// <summary>The rooms the map does not place on <paramref name="level"/>, in dbref order, laid out in a strip below its rooms.</summary>
 	public IReadOnlyList<MapPlacement> Unplaced(int level)
 	{
@@ -124,30 +135,17 @@ public sealed class MapLayout
 	private double Side(MapRoomDto room, int axis) =>
 		(room.Size is { Length: > 1 } size ? size[axis] : 1) * (IsGraph ? (room.Size is null ? GraphRoom : 1) : Cell);
 
-	private Dictionary<string, MapPlacement> Graph(IEnumerable<MapRoomDto> rooms)
-	{
-		var placed = new Dictionary<string, MapPlacement>();
-		foreach (var room in rooms)
+	private Dictionary<string, MapPlacement> Graph(IEnumerable<MapRoomDto> rooms) =>
+		rooms.Where(room => room.Position is [_, _, ..]).DistinctBy(room => room.Id).ToDictionary(room => room.Id, room =>
 		{
-			if (room.Position is not [var x, var y, ..]) continue;
 			var (width, height) = (Side(room, 0), Side(room, 1));
 			// A graph room's position is its centre on the picture.
-			placed[room.Id] = new(room, x - width / 2, y - height / 2, width, height, 0, Placed: true);
-		}
-		return placed;
-	}
+			return new MapPlacement(room, room.Position![0] - width / 2, room.Position[1] - height / 2, width, height, 0, Placed: true);
+		});
 
-	private Dictionary<string, MapPlacement> Grid(IEnumerable<MapRoomDto> rooms)
-	{
-		var placed = new Dictionary<string, MapPlacement>();
-		foreach (var room in rooms)
-		{
-			if (room.Position is not [var x, var y, ..] position) continue;
-			var z = position.Length > 2 ? (int)Math.Round(position[2]) : 0;
-			placed[room.Id] = Cellular(room, x, y, z);
-		}
-		return placed;
-	}
+	private Dictionary<string, MapPlacement> Grid(IEnumerable<MapRoomDto> rooms) =>
+		rooms.Where(room => room.Position is [_, _, ..]).DistinctBy(room => room.Id).ToDictionary(room => room.Id, room =>
+			Cellular(room, room.Position![0], room.Position[1], room.Position.Length > 2 ? (int)Math.Round(room.Position[2]) : 0));
 
 	/// <summary>A room whose south-west cell is (x, y): its top-left corner is the north-west of the area it covers.</summary>
 	private MapPlacement Cellular(MapRoomDto room, double x, double y, int z)
@@ -161,28 +159,33 @@ public sealed class MapLayout
 		var placed = Grid(map.Rooms);
 		var cells = new Dictionary<(int X, int Y, int Z), string>();
 		var cellOf = new Dictionary<string, (int X, int Y, int Z)>();
-		foreach (var p in placed.Values.OrderBy(p => Number(p.Room.Id)))
+		// Two stored rooms in one cell: the lower dbref keeps it.
+		foreach (var p in placed.Values.OrderBy(p => Number(p.Room.Id)).Where(p => cells.TryAdd(CellOf(p), p.Room.Id)))
 		{
-			if (cells.TryAdd(CellOf(p), p.Room.Id)) cellOf[p.Room.Id] = CellOf(p);
+			cellOf[p.Room.Id] = CellOf(p);
 		}
 		var byId = map.Rooms.ToDictionary(room => room.Id);
 		// Each compass exit is a step both ways: north from A to B puts B north of A, and A south of B.
 		var steps = new Dictionary<string, List<(string To, (int X, int Y, int Z) Step)>>();
-		foreach (var exit in map.Exits.OrderBy(exit => Number(exit.Id)))
+		var compass = map.Exits.OrderBy(exit => Number(exit.Id))
+			.Select(exit => (From: exit.Source, To: exit.Destination ?? "", Step: Direction(exit)))
+			.Where(exit => exit.Step is not null && byId.ContainsKey(exit.From) && byId.ContainsKey(exit.To));
+		foreach (var (from, to, direction) in compass)
 		{
-			if (exit.Destination is not { } to || !byId.ContainsKey(to) || !byId.ContainsKey(exit.Source)
-				|| Direction(exit) is not { } step) continue;
-			Steps(exit.Source).Add((to, step));
-			Steps(to).Add((exit.Source, (-step.X, -step.Y, -step.Z)));
+			var step = direction.GetValueOrDefault();
+			Steps(from).Add((to, step));
+			Steps(to).Add((from, (-step.X, -step.Y, -step.Z)));
 		}
 
 		var walk = new Queue<string>(cellOf.Keys.OrderBy(Number));
 		Walk();
 		// A room no walk reached starts one of its own, east of everything drawn so far, so two wings never overlap.
 		// The viewer's room goes first, so the part of the map they stand in keeps its shape.
-		foreach (var room in map.Rooms.OrderBy(room => room.Id == map.Here ? 0 : 1).ThenBy(room => Number(room.Id)))
+		// Lazily filtered: each walk places more rooms, which the next test must see.
+		var unreached = map.Rooms.OrderBy(room => room.Id == map.Here ? 0 : 1).ThenBy(room => Number(room.Id))
+			.Where(room => !cellOf.ContainsKey(room.Id));
+		foreach (var room in unreached)
 		{
-			if (cellOf.ContainsKey(room.Id)) continue;
 			var cell = (X: cellOf.Count == 0 ? 0 : cellOf.Values.Max(c => c.X) + 2, Y: 0, Z: 0);
 			while (cells.ContainsKey(cell)) cell.X++;
 			cells[cell] = room.Id;

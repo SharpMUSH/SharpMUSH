@@ -87,7 +87,8 @@
             {
                 [var x, var y, var z, ..] => (x, y, (int)z),
                 [var x, var y] => (x, y, 0),
-                _ => (0, 0, Level),
+                // A compass map places most rooms by their exits: start from where it drew them.
+                _ => Layout.Spot(room),
             };
             (_width, _height) = room.Room.Size is [var w, var h, ..] ? (w, h) : (1, 1);
         }

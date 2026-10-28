@@ -73,11 +73,22 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		CanEdit = true,
 	};
 
+	/// <summary>Two rooms a long way apart, which a builder controls: edit mode offers only the cells beside each.</summary>
+	public static readonly MapDto FarMap = new(new("#56", "Far reaches", MapKinds.Coordinates, null), null,
+		[new("#70", "Near", [0, 0, 0], null) { Editable = true }, new("#71", "Far", [10000, 10000, 0], null) { Editable = true }], [], "#70",
+		Truncated: false)
+	{
+		CanEdit = true,
+	};
+
 	/// <summary>The way up to the lighthouse: one step, from the quay.</summary>
 	public static readonly MapRouteDto ToLighthouse = new([new("#30", "North", "#10", "#11", "Lighthouse", Harbour)], "walk North");
 
 	/// <summary>The lines run through <c>POST api/commands</c>, in order.</summary>
 	public List<string> Commands { get; } = [];
+
+	/// <summary>What an <c>@open</c>'s check reads: 1 when both exits were opened and linked.</summary>
+	public string OpenReads { get; set; } = "1";
 
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
@@ -97,6 +108,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/53" => Json(IsleMap),
 			"api/maps/54" => Json(PlainIsleMap),
 			"api/maps/55" => Json(WorksMap),
+			"api/maps/56" => Json(FarMap),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
 			_ => new HttpResponseMessage(HttpStatusCode.NotFound),
@@ -104,10 +116,11 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	}
 
 	/// <summary>What a command's check reads in a game where every command works: <c>@dig</c> makes #90.</summary>
-	private static string Read(PortalCommandRequest sent) => sent.Result switch
+	private string Read(PortalCommandRequest sent) => sent.Result switch
 	{
 		"%>" when sent.Command.StartsWith("@dig", StringComparison.Ordinal) => "#90:1793148715366",
 		"%>" => "#91:1793148715367",
+		_ when sent.Command.StartsWith("@open", StringComparison.Ordinal) => OpenReads,
 		{ } check when check.StartsWith("zone(", StringComparison.Ordinal) => "#55:1793148715000",
 		{ } check when check.StartsWith("get(", StringComparison.Ordinal) => sent.Command[(sent.Command.IndexOf('=') + 1)..],
 		_ => "#11",
@@ -120,12 +133,14 @@ public class WorldMapPageTests : TrackingBunitContext
 {
 	private readonly WorldMapApiHandler _api = new();
 
+	private readonly IAccountAuthState _auth = Substitute.For<IAccountAuthState>();
+
 	private void Arrange(bool acting = true)
 	{
 		var api = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(api);
-		var auth = Substitute.For<IAccountAuthState>();
+		var auth = _auth;
 		auth.ActiveCharacter.Returns(acting ? new AccountAuthService.CharacterSummary(5, 100, "Sailor", "") : null);
 		var serverInfo = new StubServerInfoService(false, features: [GameFeatures.WorldMap]);
 
@@ -280,6 +295,23 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AnotherCharacterDoesNotSeeTheLastOnesRoute()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find("button.map-exit-to"));
+		await cut.Find("button.map-exit-to").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-route-command code"));
+
+		_auth.ActiveCharacter.Returns(new AccountAuthService.CharacterSummary(6, 200, "Diver", ""));
+		_auth.ActiveCharacterChanged += Raise.Event<Action>();
+
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await Assert.That(cut.FindAll(".map-route-command")).IsEmpty()
+			.Because("the way there was the last character's, from where they stood");
+	}
+
+	[Test]
 	public async Task APictureMapDrawsItsBackdropUnderPins()
 	{
 		Arrange();
@@ -332,6 +364,39 @@ public class WorldMapPageTests : TrackingBunitContext
 			"@open East;e=#90:1793148715366,West;w,#10",
 		]);
 		await Assert.That(cut.Find(".map-applied-list li").ClassList).Contains("map-applied--done");
+	}
+
+	[Test]
+	public async Task ADigWhoseWayBackWasNotOpenedFails()
+	{
+		Arrange();
+		_api.OpenReads = "0";
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find("button.map-cell[aria-label='NavMapCell(1, 0)']").ClickAsync();
+		await cut.Find(".map-builder input").InputAsync("Boathouse");
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapAddToPlan").ClickAsync();
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapReview").ClickAsync();
+
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapApply(1)").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".map-applied"));
+		await Assert.That(cut.Find(".map-applied-list li").ClassList).Contains("map-applied--failed")
+			.Because("@open names the exit it made even when the way back could not be opened");
+	}
+
+	[Test]
+	public async Task EditingASparseMapOffersOnlyTheCellsBesideItsRooms()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 56));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+
+		await Assert.That(cut.FindAll("button.map-cell")).Count().IsEqualTo(16)
+			.Because("the eight cells around each room, not the hundred million in the square between them");
 	}
 
 	[Test]
@@ -446,6 +511,21 @@ public class MapLayoutTests
 		await Assert.That(layout.Unplaced(1).Select(room => room.Room.Id)).IsEquivalentTo(["#3"]);
 		await Assert.That(layout.Unplaced(0).Select(room => room.Room.Id)).IsEquivalentTo(["#4"])
 			.Because("a room no exit joins to the map is drawn on the ground level");
+	}
+
+	[Test]
+	public async Task ASpotIsWhereTheMapDrewTheRoom()
+	{
+		var compass = new MapLayout(Map(MapKinds.Compass,
+			[new("#1", "Gate", [5, 5, 0], null), new("#2", "Road", null, null), new("#3", "Loft", null, null)],
+			[Exit(10, "n", "#1", "#2"), Exit(11, "up", "#2", "#3")]));
+		var hall = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Hall", [2, 3, 0], [2, 3])], []));
+		var square = new MapLayout(Map(MapKinds.Graph, [new("#1", "Square", [200, 100], null)], []));
+
+		await Assert.That(compass.Spot(compass.Rooms["#2"])).IsEqualTo((5.0, 6.0, 0)).Because("Road has no cell stored; its exit puts it there");
+		await Assert.That(compass.Spot(compass.Rooms["#3"])).IsEqualTo((5.0, 6.0, 1));
+		await Assert.That(hall.Spot(hall.Rooms["#1"])).IsEqualTo((2.0, 3.0, 0)).Because("a room's spot is its south-west cell");
+		await Assert.That(square.Spot(square.Rooms["#1"])).IsEqualTo((200.0, 100.0, 0));
 	}
 
 	[Test]

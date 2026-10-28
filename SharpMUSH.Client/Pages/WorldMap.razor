@@ -195,7 +195,8 @@
     private void StartEditing()
     {
         if (_layout is null) return;
-        (_editing, _plan, _cell, _route, _applied) = (true, new MapPlan(_layout.Map), null, null, null);
+        (_editing, _plan, _cell, _applied) = (true, new MapPlan(_layout.Map), null, null);
+        ForgetRoute();
         _preview = new MapLayout(_plan.Preview());
     }
 
@@ -239,6 +240,7 @@
     private bool _noRoute;
     private bool _walking;
     private string? _walkError;
+    private int _routeAsked;
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,6 +270,7 @@
     private async Task LoadMapAsync()
     {
         (_layout, _selected, _missing, _applied) = (null, null, false, null);
+        ForgetRoute();
         StopEditing();
         if (Id is not { } id || AccountAuth.ActiveCharacter is null) return;
         _loading = true;
@@ -343,19 +346,27 @@
 
     /// <summary>
     /// Asks the server the way from where the character stands to room <paramref name="id"/>: it sees every map, so a
-    /// route may start or pass through another one. A reply for a room no longer chosen is dropped.
+    /// route may start or pass through another one. A reply asked before another room, map or character was chosen is
+    /// dropped.
     /// </summary>
     private async Task LoadRouteAsync(string id)
     {
-        (_route, _noRoute, _walkError) = (null, false, null);
+        var asked = ForgetRoute();
         if (_layout?.Rooms.TryGetValue(id, out var room) != true || room!.Region) return;
         var result = await Maps.RouteAsync(id);
-        if (_selected != id) return;
+        if (asked != _routeAsked) return;
         (_route, _noRoute) = result switch
         {
             MapRouteDto route => (route, false),
             ApiFailure failure => (null, failure.Status == System.Net.HttpStatusCode.NotFound),
         };
+    }
+
+    /// <summary>Clears the route on show, and makes any reply still on its way stale.</summary>
+    private int ForgetRoute()
+    {
+        (_route, _noRoute, _walkError) = (null, false, null);
+        return ++_routeAsked;
     }
 
     private async Task CopyAsync(string command)

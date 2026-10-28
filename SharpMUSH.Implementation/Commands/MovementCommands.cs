@@ -440,14 +440,15 @@ public partial class Commands
 		var steps = parser.CurrentState.Arguments["0"].Message.ToPlainText()
 			.Split(' ', StringSplitOptions.RemoveEmptyEntries);
 		var reached = CallState.Empty;
-		foreach (var step in steps)
+		// Lazily mapped: each step is pushed only once the one before it arrived.
+		var walkers = steps.Select(step => parser.Push(parser.CurrentState with
 		{
-			var walker = parser.Push(parser.CurrentState with
-			{
-				Command = "GOTO",
-				Arguments = new Dictionary<string, CallState> { { "0", new CallState(step, 0) } },
-				Function = null
-			});
+			Command = "GOTO",
+			Arguments = new Dictionary<string, CallState> { { "0", new CallState(step, 0) } },
+			Function = null
+		}));
+		foreach (var walker in walkers)
+		{
 			// GOTO answers a move with the room it reached, and a refusal with nothing.
 			if (await GoTo(walker, _2) is not CallState { Message.Length: > 0 } arrived) break;
 			reached = arrived;

@@ -270,7 +270,10 @@ public sealed partial class MapPlan(MapDto map)
 			steps.Add(Set(self, "MAP`SIZE`W", Num(width)));
 			steps.Add(Set(self, "MAP`SIZE`H", Num(height)));
 		}
-		steps.Add(new($"@open {to}={self},{back ?? ""},{source}", "%>", null));
+		// @open gives the exit it made even when linking it, or opening the way back, failed: ask for both.
+		var linked = $"strmatch(num(loc(%>)),num({self}))";
+		var check = string.IsNullOrEmpty(back) ? linked : $"and({linked},strmatch(num(loc(lexits({self}))),num({source})))";
+		steps.Add(new($"@open {to}={self},{back ?? ""},{source}", check, "1"));
 		return new(key, MapChangeKind.Dig, key, room.Name, steps);
 	}
 
