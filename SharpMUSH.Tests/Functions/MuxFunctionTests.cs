@@ -174,4 +174,21 @@ public class MuxFunctionTests : ServerTestBase
 
 		await Notifications.WaitForAsync(god, marker, startIndex: before);
 	}
+
+	/// <summary>The awhat runs after the expression that called verb() has finished, so it sees what came after the call.</summary>
+	[Test]
+	public async Task VerbQueuesTheActions()
+	{
+		using var _ = QueueFunctions(true);
+		var thing = TestIsolationHelpers.GenerateUniqueName("MuxVerbQueue");
+		var marker = TestIsolationHelpers.GenerateUniqueName("MuxVerbQueued");
+		var god = WebAppFactoryArg.ExecutorDBRef;
+		var before = Notifications.CountFor(god);
+
+		await Assert.That(await Eval(
+				$"[setq(0,create({thing}))][attrib_set(%q0/ACT,lit(@pemit %#={marker} [v(LATER)]))][verb(%q0,me,,,,,ACT)][attrib_set(%q0/LATER,after)]"))
+			.IsEqualTo(string.Empty);
+
+		await Notifications.WaitForAsync(god, $"{marker} after", startIndex: before);
+	}
 }
