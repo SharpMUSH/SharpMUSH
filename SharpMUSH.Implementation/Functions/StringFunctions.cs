@@ -2539,9 +2539,13 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.EvenArgumentCount("ANSI", args.Count)));
 		}
 
-		var pieces = Enumerable.Range(0, args.Count / 2)
-			.Select(pair => MarkupText.Wrap(AnsiCodes(args[(pair * 2).ToString()].Message.ToPlainText()),
-				args[(pair * 2 + 1).ToString()].Message));
+		var texts = Enumerable.Range(0, args.Count / 2).Select(pair => args[(pair * 2 + 1).ToString()].Message).ToList();
+		if (FunctionLimits.ExceedsCombinedOutput(parser.CurrentState, texts))
+		{
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
+		}
+
+		var pieces = texts.Select((text, pair) => MarkupText.Wrap(AnsiCodes(args[(pair * 2).ToString()].Message.ToPlainText()), text));
 		return ValueTask.FromResult(new CallState(MarkupText.Concat(pieces)));
 	}
 

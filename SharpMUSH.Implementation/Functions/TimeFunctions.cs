@@ -151,7 +151,9 @@ public partial class Functions
 			return ErrorMessages.Returns.InvalidPrecision;
 		}
 
-		var seconds = milliseconds / 1000m;
+		// Cut to the places asked for rather than round, so secs(utc,0) is the whole second secs(utc) gives.
+		var scale = Math.Min(digits, 3) switch { 0 => 1000L, 1 => 100L, 2 => 10L, _ => 1L };
+		var seconds = Math.Floor((decimal)milliseconds / scale) * scale / 1000m;
 		return seconds.ToString("F" + digits, CultureInfo.InvariantCulture);
 	}
 

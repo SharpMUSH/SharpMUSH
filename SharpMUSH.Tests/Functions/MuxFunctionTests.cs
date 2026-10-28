@@ -57,6 +57,10 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("extract(a|b|c|d,2,2,|,)", "bc")]
 	[Arguments("insert(a|c,2,b,|,-)", "a-b-c")]
 	[Arguments("remove(a|b|c,b,|,-)", "a-c")]
+	[Arguments("extract(a|b|c|d,2,2,|,@@)", "bc")]
+	[Arguments("remove(a|b|c,b,|,@@)", "ac")]
+	[Arguments("insert(a|b,3,x,|,-)", "a-b-x")]
+	[Arguments("insert(a|b,3,x,|)", "a|b")]
 	[Arguments("secs(utc,8)", ErrorMessages.Returns.InvalidPrecision)]
 	public async Task TinyMuxArgumentForms(string expression, string expected)
 		=> await Assert.That(await Eval(expression)).IsEqualTo(expected);
@@ -175,7 +179,7 @@ public class MuxFunctionTests : ServerTestBase
 		await Notifications.WaitForAsync(god, marker, startIndex: before);
 	}
 
-	/// <summary>The awhat runs after the expression that called verb() has finished, so it sees what came after the call.</summary>
+	/// <summary>The awhat is queued with registers of its own, so what it sets never reaches the expression that called verb().</summary>
 	[Test]
 	public async Task VerbQueuesTheActions()
 	{
@@ -186,9 +190,9 @@ public class MuxFunctionTests : ServerTestBase
 		var before = Notifications.CountFor(god);
 
 		await Assert.That(await Eval(
-				$"[setq(0,create({thing}))][attrib_set(%q0/ACT,lit(@pemit %#={marker} [v(LATER)]))][verb(%q0,me,,,,,ACT)][attrib_set(%q0/LATER,after)]"))
+				$"[setq(0,create({thing}))][attrib_set(%q0/ACT,lit(think [setq(z,leaked)]; @pemit %#={marker}))][verb(%q0,me,,,,,ACT)][r(z)]"))
 			.IsEqualTo(string.Empty);
 
-		await Notifications.WaitForAsync(god, $"{marker} after", startIndex: before);
+		await Notifications.WaitForAsync(god, marker, startIndex: before);
 	}
 }

@@ -128,7 +128,7 @@ public partial class Functions
 
 		var extracted = MushList.Extract(delimiter, listArg ?? MarkupText.Empty, firstNumber, lengthNumber);
 		return args.Count > 4
-			? new CallState(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter),
+			? new CallState(MarkupText.Join(MuxOutputSeparator(args, 4, delimiter),
 				MushText.SplitList(delimiter, extracted)))
 			: new CallState(extracted);
 	}
@@ -967,7 +967,7 @@ public partial class Functions
 			}
 		}
 
-		return ValueTask.FromResult<CallState>(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(orderedArgs, 3, delimiter), splitList));
+		return ValueTask.FromResult<CallState>(MarkupText.Join(MuxOutputSeparator(orderedArgs, 3, delimiter), splitList));
 	}
 
 	[SharpFunction(Name = "lreplace", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list", "positions", "new-item", "delimiter", "osep"])]
@@ -1607,10 +1607,10 @@ public partial class Functions
 		{
 			if (position > count)
 			{
-				// Special case: inserting into an empty list
-				if (count == 0 && position == 1)
+				// Special case: inserting into an empty list. TinyMUX's five-argument form also appends at count + 1.
+				if ((count == 0 && position == 1) || (args.Count > 4 && position == count + 1))
 				{
-					insertIndex = 0;
+					insertIndex = count;
 				}
 				else
 				{
@@ -1631,8 +1631,17 @@ public partial class Functions
 		}
 
 		listItems.Insert(insertIndex, newItemArg ?? MarkupText.Empty);
-		return new CallState(MarkupText.Join(ArgHelpers.NoParseDefaultNoParseArgument(args, 4, delimiter), listItems));
+		return new CallState(MarkupText.Join(MuxOutputSeparator(args, 4, delimiter), listItems));
 	}
+
+	/// <summary>
+	/// The output separator TinyMUX's extra argument gives extract(), insert() and remove(): the delimiter when it
+	/// is left out, and nothing for TinyMUX's null separator <c>@@</c>.
+	/// </summary>
+	private static MString MuxOutputSeparator(OrderedArguments args, int index, MString delimiter)
+		=> ArgHelpers.NoParseDefaultNoParseArgument(args, index, delimiter) is var separator && separator.ToPlainText() == "@@"
+			? MarkupText.Empty
+			: separator;
 
 	[SharpFunction(Name = "setunion", MinArgs = 2, MaxArgs = 5, Flags = FunctionFlags.Regular, ParameterNames = ["list1", "list2", "delimiter", "sort-type", "osep"])]
 	public ValueTask<CallState> SetUnion(IMUSHCodeParser parser, SharpFunctionAttribute _2)
