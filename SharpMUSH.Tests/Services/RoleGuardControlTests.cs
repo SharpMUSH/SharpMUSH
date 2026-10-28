@@ -146,4 +146,23 @@ public class RoleGuardControlTests : ServerTestBase
 		await Cmd($"@role/delete {keeper}");
 		await Cmd($"@role/delete {guarded}");
 	}
+
+	/// <summary>A wizard cannot put itself beyond its peers by giving itself a guarded role no wizard passes.</summary>
+	[Test]
+	public async Task AWizardCannotShieldItselfWithAGuardedRole()
+	{
+		var guarded = "g" + Guid.NewGuid().ToString("N")[..12];
+		await Cmd($"@role/create {guarded}=Staff");
+		await Cmd($"@role/allow {guarded}=protect.role");
+
+		var shielded = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator,
+			ConnectionService, "GuardSelfWizard");
+		await Cmd($"@role/assign #{shielded.DbRef.Number}={BuiltInRoles.WizardSlug}");
+		var peer = await PlayerAsync("GuardSelfPeer", BuiltInRoles.WizardSlug);
+
+		await CommandParser.CommandParse(shielded.Handle, ConnectionService, MarkupText.Plain($"@role/assign me={guarded}"));
+		await Assert.That(await ControlsAsync(peer, shielded.DbRef)).IsTrue();
+
+		await Cmd($"@role/delete {guarded}");
+	}
 }

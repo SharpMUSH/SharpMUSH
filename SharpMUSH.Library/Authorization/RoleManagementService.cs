@@ -341,6 +341,7 @@ public sealed partial class RoleManagementService(
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
+			if (assign && BeyondReach(me, role) is { } shield) return shield;
 			if ((await WizardsOwnAccountAsync(actor, me, accountId, ct) ?? await TargetAsync(actor, me, accountId, ct)) is not string target)
 				return await TargetRefusalAsync(actor, me, accountId, ct);
 			if (assign) await registry.AssignRoleToAccountAsync(target, role.Slug);
@@ -377,6 +378,7 @@ public sealed partial class RoleManagementService(
 				if (!RoleHierarchy.Outranks(me.Context, role.Priority)) return NotBelow<Success>(role, me.Context);
 				if (!IsWizardActingOnItself(actor, me.Context, target) && await ObjectTargetRefusalAsync(actor, me.Context, target, ct) is { } targetRefusal) return targetRefusal;
 			}
+			if (assign && BeyondReach(me.Context, role) is { } shield) return shield;
 
 			var number = target.Object().Key;
 			if (assign) await registry.AssignRoleToObjectAsync(number, role.Slug);
@@ -524,6 +526,19 @@ public sealed partial class RoleManagementService(
 			ControlScopes = me.ControlScopes.Concat(scopes.Where(PortalPermission.IsControlRole))
 				.Append(PortalPermission.ControlRole(BuiltInRoles.GodSlug)).ToHashSet(StringComparer.OrdinalIgnoreCase)
 		});
+
+	/// <summary>
+	/// The refusal for giving a guarded role whose guard the actor does not pass, or null: its holder would be out of
+	/// the actor's reach, so a wizard could shield itself or anyone else from its peers with a role only #1 made.
+	/// </summary>
+	private RoleOutcome<Success>? BeyondReach(PermissionContext me, SharpRole role)
+	{
+		if (PermissionResolver.StateOf(role.Permissions, PortalPermission.ProtectRole) != PermissionState.Allow) return null;
+		var pass = PortalPermission.ControlRole(role.Slug);
+		return RoleHierarchy.CanGrant(HeldAmong(me, [pass]), pass)
+			? null
+			: Refuse<Success>(RoleRefusalKind.Forbidden, $"{role.Name} guards its holders and you do not pass its guard, so you cannot give it.");
+	}
 
 	/// <summary>The refusal for allowing scopes the actor may not grant, or null when it may grant them all.</summary>
 	private RoleOutcome<Success>? Unheld(PermissionContext me, IEnumerable<string> scopes)

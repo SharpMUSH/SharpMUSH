@@ -259,6 +259,21 @@ public class RoleManagementServiceTests
 		await Accepted(world.Service.DeleteRoleAsync(A("owner"), "shield"));
 	}
 
+	/// <summary>A guarded role goes only to someone the giver could still control: a wizard gives royalty, whose guard
+	/// it passes, but not a role of #1's that no wizard passes, to itself or anyone else.</summary>
+	[Test]
+	public async Task AGuardedRoleIsGivenOnlyByOneWhoPassesItsGuard()
+	{
+		var world = Build();
+		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("shield", 20, PortalPermission.ProtectRole)));
+
+		await Refused(world.Service.AssignAsync(A("wiz"), "wiz", "shield"), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.AssignAsync(A("wiz"), "pl", "shield"), RoleRefusalKind.Forbidden);
+		await Assert.That(world.Registry.AssignedTo("wiz")).DoesNotContain("shield");
+		await Accepted(world.Service.AssignAsync(A("wiz"), "pl", BuiltInRoles.RoyaltySlug));
+		await Accepted(world.Service.AssignAsync(A("owner"), "pl", "shield"));
+	}
+
 	/// <summary>A permission a role still holds after it stopped existing is dropped on the next save, not refused.</summary>
 	[Test]
 	public async Task ARoleHoldingARetiredPermissionStaysEditable()

@@ -2879,7 +2879,7 @@
     <value>Lar denne rollen kontrollere den som har {0}, der eierskap, soner eller Kontroll over alt ville gjort det. Den gir ingen kontroll alene.</value>
   </data>
   <data name="RolGuardGodDesc" xml:space="preserve">
-    <value>Bare spiller #1 kommer forbi beskyttelsen til God. Ingen rolle eller unntak kan gi den.</value>
+    <value>Bare spiller #1 kommer forbi beskyttelsen til God. Ingen rolle eller unntak kan gi den retten.</value>
   </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Tillat</value>
