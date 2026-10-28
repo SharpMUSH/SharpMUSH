@@ -891,10 +891,17 @@ public partial class Commands
 		};
 	}
 
-	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
+	[SharpCommand(Name = "@WALL", Switches = ["NOEVAL", "EMIT", "ADMIN", "WIZARD"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "PERM^chat.admin|FLAG^ROYALTY|POWER^ANNOUNCE", MinArgs = 1, ParameterNames = ["message"])]
 	public ValueTask<Option<CallState>> Wall(IMUSHCodeParser parser, SharpCommandAttribute _2)
-		=> WallCore(parser, _2, WallAudience.Everyone, Configuration.CurrentValue.Cosmetic.WallPrefix);
+	{
+		// TinyMUX's /wizard and /admin narrow the audience as @wizwall and @rwall do.
+		var switches = parser.CurrentState.Switches;
+		var cosmetic = Configuration.CurrentValue.Cosmetic;
+		return switches.Contains("WIZARD") ? WallCore(parser, _2, WallAudience.Wizards, cosmetic.WizardWallPrefix)
+			: switches.Contains("ADMIN") ? WallCore(parser, _2, WallAudience.RoyaltyAndWizards, cosmetic.RoyaltyWallPrefix)
+			: WallCore(parser, _2, WallAudience.Everyone, cosmetic.WallPrefix);
+	}
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,
 		CommandLock = "PERM^chat.admin|FLAG^ROYALTY", MinArgs = 1, ParameterNames = ["message"])]

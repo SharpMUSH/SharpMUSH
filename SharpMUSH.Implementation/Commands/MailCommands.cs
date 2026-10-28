@@ -18,7 +18,7 @@ public partial class Commands
 		[
 			"NOEVAL", "NOSIG", "STATS", "CSTATS", "DSTATS", "FSTATS", "DEBUG", "NUKE", "FOLDERS", "FOLDER", "UNFOLDER",
 			"LIST", "READ", "UNREAD", "CLEAR", "UNCLEAR", "STATUS", "PURGE", "FILE", "TAG", "UNTAG", "FWD", "FORWARD",
-			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT"
+			"SEND", "SILENT", "URGENT", "REVIEW", "RETRACT", "QUICK"
 		], Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["player", "subject"])]
 	public async ValueTask<Option<CallState>> Mail(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -28,7 +28,7 @@ public partial class Commands
 		var switches = parser.CurrentState.Switches.ToArray();
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var caller = await parser.CurrentState.KnownCallerObject(Mediator);
-		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL"];
+		string[] sendSwitches = ["SEND", "URGENT", "NOSIG", "SILENT", "NOEVAL", "QUICK"];
 
 		if (switches.Except(sendSwitches).Any() && switches.Length > 1)
 		{
@@ -45,6 +45,12 @@ public partial class Commands
 		{
 			arg0 = arg0CallState?.Message;
 			arg1 = arg1CallState?.Message;
+		}
+
+		if (switches.Contains("QUICK"))
+		{
+			switches = [.. switches.Where(name => name != "QUICK")];
+			(arg0, arg1) = QuickMailArguments(arg0, arg1);
 		}
 
 		var response = switches.AsSpan() switch
@@ -110,6 +116,25 @@ public partial class Commands
 	/// </summary>
 	private static bool ReadsMessages(MString? arg0)
 		=> arg0?.ToPlainText() is [>= '0' and <= '9', ..] list && !list.Contains('-') && !list.EndsWith(':');
+
+	/// <summary>
+	/// TinyMUX's <c>@mail/quick &lt;players&gt;/&lt;subject&gt;=&lt;message&gt;</c>, rewritten as
+	/// <c>@mail &lt;players&gt;=&lt;subject&gt;/&lt;message&gt;</c>. A slash in the subject is doubled so it
+	/// stays part of the subject.
+	/// </summary>
+	private static (MString? Recipients, MString? SubjectAndMessage) QuickMailArguments(MString? recipientsAndSubject,
+		MString? message)
+	{
+		var text = recipientsAndSubject?.ToPlainText() ?? string.Empty;
+		var slash = text.IndexOf('/');
+		if (recipientsAndSubject is null || message is null || slash < 0)
+		{
+			return (recipientsAndSubject, message is null ? null : MarkupText.Concat(MarkupText.Plain("/"), message));
+		}
+
+		var subject = text[(slash + 1)..].Replace("/", "//");
+		return (recipientsAndSubject.Substring(0, slash), MarkupText.Concat(MarkupText.Plain(subject + "/"), message));
+	}
 
 	private MailDelivery.Services MailDeliveryServices
 		=> new(PermissionService, Mediator, NotifyService, DidItService, AttributeService, ObjectDataService,

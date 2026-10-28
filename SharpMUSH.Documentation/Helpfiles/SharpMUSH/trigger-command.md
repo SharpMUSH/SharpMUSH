@@ -55,7 +55,7 @@ If `/inline` is given, the following switches can be used:
 - /nobreak: If the @triggered attribute has @break or @assert, it won't propagate up.
 - /localize: Don't let the @triggered attribute override your Q-registers.
 
-`/inplace` is an alias for `/inline/localize/nobreak`.
+`/inplace` is an alias for `/inline/localize/nobreak`. `/now`, TinyMUX's spelling, is `/inline`.
 
 The `/match` switch is explained in [@trigger enactor and register behavior]
 

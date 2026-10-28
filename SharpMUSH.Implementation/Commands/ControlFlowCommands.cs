@@ -208,7 +208,7 @@ public partial class Commands
 	}
 
 	[SharpCommand(Name = "@DOLIST", Output = CommandOutput.Runs, Behavior = CB.EqSplit | CB.RSNoParse, MinArgs = 1, MaxArgs = 2,
-		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID", "SPACE"], ParameterNames = ["list", "command"])]
+		Switches = ["CLEARREG", "CLEARREGS", "DELIMIT", "INLINE", "INPLACE", "LOCALIZE", "NOBREAK", "NOTIFY", "PID", "SPACE", "NOW"], ParameterNames = ["list", "command"])]
 	public async ValueTask<Option<CallState>> DoList(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
@@ -253,7 +253,8 @@ public partial class Commands
 		var list = MushText.Split(delimiter, listText);
 		var command = parser.CurrentState.Arguments["1"].Message;
 
-		var isInline = switches.Contains("INLINE") || switches.Contains("INPLACE");
+		// TinyMUX's /now is /inline.
+		var isInline = switches.Contains("INLINE") || switches.Contains("NOW") || switches.Contains("INPLACE");
 
 		if (isInline)
 		{
@@ -368,7 +369,7 @@ public partial class Commands
 
 	[SharpCommand(Name = "@SWITCH", Output = CommandOutput.Runs,
 		Switches = ["NOTIFY", "FIRST", "ALL", "REGEXP", "INPLACE", "INLINE", "LOCALIZE", "CLEARREGS", "NOBREAK",
-			"REGALL", "REGFIRST", "CLEARREG"],
+			"REGALL", "REGFIRST", "CLEARREG", "NOW"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.RSNoParse | CB.NoGagged, MinArgs = 3, MaxArgs = int.MaxValue, ParameterNames = ["expression", "cases..."])]
 	public async ValueTask<Option<CallState>> Switch(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -402,7 +403,7 @@ public partial class Commands
 		// So /inplace is /inline/nobreak/localize ('help @switch2'), and with neither switch the
 		// actions become NEW queue entries -- 'help @switch4' contrasts the two orderings directly.
 		var isInplace = switches.Contains("INPLACE");
-		var isInline = switches.Contains("INLINE") || isInplace;
+		var isInline = switches.Contains("INLINE") || switches.Contains("NOW") || isInplace;
 		var noBreak = switches.Contains("NOBREAK") || isInplace;
 
 		// /LOCALIZE and /CLEARREGS are register switches on the INLINE action, not on the @switch:

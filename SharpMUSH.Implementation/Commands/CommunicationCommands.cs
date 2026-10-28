@@ -60,7 +60,7 @@ public partial class Commands
 		return returnsMessage && outcome.Admitted ? new CallState(message) : outcome.Result;
 	}
 
-	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged | CB.Pose,
+	[SharpCommand(Name = "@EMIT", Switches = ["NOEVAL", "SPOOF", "ROOM", "SILENT", "NOISY", "HERE"], Behavior = CB.Default | CB.RSNoParse | CB.NoGagged | CB.Pose,
 		MinArgs = 0,
 		MaxArgs = 0, ParameterNames = ["message"])]
 	public async ValueTask<Option<CallState>> Emit(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -118,7 +118,7 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> OmitEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Omit, false);
 
-	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
+	[SharpCommand(Name = "@PEMIT", Switches = ["LIST", "PORT", "CONTENTS", "SPOOF", "SILENT", "NOISY", "NOEVAL", "OBJECT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged,
 		MinArgs = 1, MaxArgs = 2, ParameterNames = ["target", "message"])]
 	public async ValueTask<Option<CallState>> PrivateEmit(IMUSHCodeParser parser, SharpCommandAttribute _2)
 		=> await RunEmitCommand(parser, _2, EmitScope.Private, false);

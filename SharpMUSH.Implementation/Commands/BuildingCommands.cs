@@ -135,7 +135,7 @@ public partial class Commands
 		);
 	}
 
-	[SharpCommand(Name = "@SET", Behavior = CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
+	[SharpCommand(Name = "@SET", Switches = ["QUIET"], Behavior = CB.EqSplit | CB.NoGagged, MinArgs = 2, MaxArgs = 2, ParameterNames = ["object", "attribute", "value"])]
 	public async ValueTask<Option<CallState>> SetCommand(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -144,10 +144,11 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await SetHelpers.DoSet(parser, LocateService, AttributeService, FlagAndPowerService,
-			NotifyService, PermissionService, executor, args["0"].Message, args["1"].Message);
+			NotifyService, PermissionService, executor, args["0"].Message, args["1"].Message,
+			quiet: parser.CurrentState.Switches.Contains("QUIET"));
 	}
 
-	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	[SharpCommand(Name = "@DESTROY", Switches = ["OVERRIDE", "INSTANT"], Behavior = CB.Default, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Destroy(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -155,10 +156,11 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var targetName = args["0"].Message.ToPlainText();
 		var override_ = parser.CurrentState.Switches.Contains("OVERRIDE");
+		var instant = parser.CurrentState.Switches.Contains("INSTANT");
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, targetName, LocateFlags.All,
-			async obj => await DestroyObjectAsync(parser, executor, obj, override_)
+			async obj => await DestroyObjectAsync(parser, executor, obj, override_, instant)
 		);
 	}
 
@@ -171,7 +173,8 @@ public partial class Commands
 		IMUSHCodeParser parser,
 		AnySharpObject executor,
 		AnySharpObject obj,
-		bool override_)
+		bool override_,
+		bool instant = false)
 	{
 		// --- Edge-case guards (PennMUSH src/destroy.c what_to_destroy) ---
 
@@ -310,8 +313,9 @@ public partial class Commands
 
 		// "@destroying an object while it is set GOING destroys it immediately" — PennMUSH
 		// src/destroy.c do_destroy(), which calls free_object() right here. GOING_TWICE is the purge
-		// cycle's own second-pass marker, not a state @destroy stops at.
-		if (await obj.HasFlag("GOING"))
+		// cycle's own second-pass marker, not a state @destroy stops at. TinyMUX's @destroy/instant
+		// skips the wait the same way.
+		if (instant || await obj.HasFlag("GOING"))
 		{
 			// Phase 2b: object-lifecycle destroy seam. Fired while the object is still in the DB so a
 			// plugin hook can still read it; after FreeObjectAsync there is nothing left to read.

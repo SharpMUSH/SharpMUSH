@@ -19,7 +19,7 @@
 `@set <object>=<attribute>:<value>`<br>
 `@set <object>/<attribute pattern>=[!]<attrflag> [[!]<attrflag> ...]`
 
-Sets flags on an object, sets its attributes, or sets attribute flags, one form for each.
+Sets flags on an object, sets its attributes, or sets attribute flags, one form for each. `@set/quiet` leaves out every "Set." line, the QUIET flag's own included; errors still show.
 
 - [@set flags]: the first form, setting and clearing flags
 - [@set attributes]: the second and third forms, and how they differ from `&`

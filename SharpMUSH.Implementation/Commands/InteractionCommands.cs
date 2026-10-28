@@ -52,7 +52,19 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	[SharpCommand(Name = "DROP", Switches = [], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
+	/// <summary>TinyMUX's <c>/quiet</c> on the getting, dropping, giving and moving commands.</summary>
+	private static bool IsQuiet(IMUSHCodeParser parser) => parser.CurrentState.Switches.Contains("QUIET");
+
+	/// <summary>
+	/// A triad under <c>/quiet</c>: its message and o-message are left out, defaults included, and only
+	/// the action attribute runs.
+	/// </summary>
+	private static DidItRequest Hushed(IMUSHCodeParser parser, DidItRequest request)
+		=> IsQuiet(parser)
+			? request with { What = null, Def = null, OWhat = null, ODef = null, DefaultNotification = null }
+			: request;
+
+	[SharpCommand(Name = "DROP", Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Drop(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -118,14 +130,14 @@ public partial class Commands
 		// the room, the drop-to, home, or the drop-in refusal that moves it nowhere — so it sits
 		// after the drop-to handling rather than inside it, and it is the dropper's only success
 		// message.
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Player: executor, Thing: objectToDrop,
 			What: AttrDrop,
 			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouDrop, objectToDrop.Object().Name)),
 			OWhat: AttrODrop,
 			ODef: string.Format(ErrorMessages.Notifications.Drops, objectToDrop.Object().Name),
 			AWhat: AttrADrop,
-			Loc: currentRoom));
+			Loc: currentRoom)));
 
 		return CallState.Empty;
 	}
@@ -427,7 +439,7 @@ public partial class Commands
 		| LocateFlags.MatchWildCardForPlayerName | LocateFlags.AbsoluteMatch
 		| LocateFlags.OnlyMatchObjectsInLookerInventory | LocateFlags.EnglishStyleMatching;
 
-	[SharpCommand(Name = "GET", Switches = [], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 0, ParameterNames = ["object"])]
+	[SharpCommand(Name = "GET", Switches = ["QUIET"], Behavior = CB.Player | CB.Thing | CB.NoGagged, MinArgs = 1, MaxArgs = 0, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Get(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		if (await RejectIfTooFewArguments(parser, _2) is { } tooFewArguments) return tooFewArguments;
@@ -713,7 +725,7 @@ public partial class Commands
 		// to Location(player) (predicat.c:230), so the o-message audience is the taker's own room; the
 		// source container rides in %0. The final `flags` is 0 on both get paths, so this o-message
 		// consults no interaction lock — unlike the RECEIVE triad below, which Penn gives NA_INTER_HEAR.
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Player: executor, Thing: thing,
 			What: AttrSuccess,
 			Def: MarkupText.Plain(possessive
@@ -725,7 +737,7 @@ public partial class Commands
 				: string.Format(ErrorMessages.Notifications.Takes, takenName),
 			AWhat: AttrASuccess,
 			Env0: source.Object().DBRef.ToString(),
-			Interact: IPermissionService.InteractType.None));
+			Interact: IPermissionService.InteractType.None)));
 
 		// did_it_with(player, player, "RECEIVE", NULL, "ORECEIVE", NULL, "ARECEIVE", NOTHING, thing,
 		// NOTHING, NA_INTER_HEAR, AN_MOVE): the taker's own receive triad. `loc` is NOTHING — the room
@@ -762,7 +774,7 @@ public partial class Commands
 		LocateFlags.OnlyMatchObjectsInLookerLocation | LocateFlags.EnglishStyleMatching |
 		LocateFlags.PlayersPreference;
 
-	[SharpCommand(Name = "GIVE", Switches = ["SILENT"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
+	[SharpCommand(Name = "GIVE", Switches = ["SILENT", "QUIET"], Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 2,
 		MaxArgs = 0, ParameterNames = ["player", "amount"])]
 	public async ValueTask<Option<CallState>> Give(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -905,7 +917,7 @@ public partial class Commands
 
 		// rob.c:357-358. GIVE/OGIVE/AGIVE live on the GIVER, not on the gift: did_it_with's `thing`
 		// argument here is `player`. %0 is the gift and %1 the recipient.
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Player: executor, Thing: executor,
 			What: AttrGive,
 			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouGaveTo, giftName, recipientDisplayName)),
@@ -913,16 +925,16 @@ public partial class Commands
 			AWhat: AttrAGive,
 			Env0: objectToGive.Object().DBRef.ToString(),
 			Env1: recipient.Object().DBRef.ToString(),
-			Interact: IPermissionService.InteractType.See));
+			Interact: IPermissionService.InteractType.See)));
 
 		// rob.c:361 — the gift is told what happened to it.
 		await NotifyService.Notify(objectToGive,
 			string.Format(ErrorMessages.Notifications.GaveYouTo, giverName, recipientDisplayName));
 
 		// rob.c:364-365: the GIFT's success triad, fired with the RECIPIENT as the enactor.
-		await DidItService.DidIt(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
 			Player: recipient, Thing: objectToGive,
-			What: AttrSuccess, OWhat: AttrOSuccess, AWhat: AttrASuccess));
+			What: AttrSuccess, OWhat: AttrOSuccess, AWhat: AttrASuccess)));
 
 		// rob.c:369-370: RECEIVE/ORECEIVE/ARECEIVE live on the RECIPIENT and run with the recipient
 		// as the enactor, so a recipient who cannot see the giver still gets their own message.

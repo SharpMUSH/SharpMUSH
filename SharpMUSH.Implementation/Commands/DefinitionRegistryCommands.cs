@@ -1094,7 +1094,8 @@ public partial class Commands : ICommandRestrictionApplier
 	}
 
 	[SharpCommand(Name = "@FUNCTION",
-		Switches = ["ALIAS", "ARGS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL"],
+		Switches = ["ALIAS", "ARGS", "BUILTIN", "CLONE", "DELETE", "ENABLE", "DISABLE", "PRESERVE", "RESTORE", "RESTRICT", "LOCAL",
+			"LIST", "PRIVILEGED"],
 		Behavior = CB.Default | CB.EqSplit | CB.RSArgs | CB.NoGagged, MinArgs = 0, MaxArgs = 6, ParameterNames = ["name", "object/attribute"])]
 	public async ValueTask<Option<CallState>> Function(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -1104,7 +1105,9 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (switches.Contains("LOCAL")) return await LocalFunctionCommand(parser, executor, switches);
 
-		if (args.Count == 0)
+		// TinyMUX's /list is the bare form. Its /privileged changes nothing: a global function always
+		// runs as the object that holds it.
+		if (args.Count == 0 || switches.Contains("LIST"))
 		{
 			return await SummarizeFunctionsAsync(parser, executor);
 		}
