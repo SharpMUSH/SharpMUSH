@@ -2,6 +2,7 @@
 @using SharpMUSH.Library.Models.Portal.Onboarding
 @inject IServiceProvider Services
 @inject IStringLocalizer<SharedResource> Loc
+@implements IDisposable
 
 @* Learning and reference use the existing game-origin routes. About consists only of the
    server's visibility-filtered configured links, with their authored titles and destinations. *@
@@ -21,12 +22,46 @@
 
 @code {
     private IReadOnlyList<GuideLink> _about = [];
+    private ServerInfoService? _info;
+    private long _generation;
+    private bool _disposed;
 
     protected override async Task OnInitializedAsync()
     {
-        if (Services.GetService<ServerInfoService>() is not { } info) return;
-        if (await info.OnboardingAsync() is not { } presentation) return;
-        _about = new[] { presentation.Welcome, presentation.Rules, presentation.CharacterGuide }
-            .OfType<GuideLink>().ToArray();
+        _info = Services.GetService<ServerInfoService>();
+        if (_info is null) return;
+        _info.Changed += OnServerInfoChanged;
+        await ReloadAsync(Interlocked.Increment(ref _generation));
+    }
+
+    private void OnServerInfoChanged()
+    {
+        if (_disposed) return;
+        // Invalidate immediately, even when dispatch to the renderer has not happened yet.
+        var generation = Interlocked.Increment(ref _generation);
+        _ = InvokeAsync(() => ReloadAsync(generation));
+    }
+
+    private bool Current(long generation) => !_disposed && generation == Volatile.Read(ref _generation);
+
+    private async Task ReloadAsync(long generation)
+    {
+        if (!Current(generation) || _info is not { } info) return;
+        _about = [];
+        StateHasChanged();
+        var presentation = await info.OnboardingAsync();
+        if (!Current(generation)) return;
+        _about = presentation is null ? []
+            : new[] { presentation.Welcome, presentation.Rules, presentation.CharacterGuide }
+                .OfType<GuideLink>().ToArray();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        _disposed = true;
+        Interlocked.Increment(ref _generation);
+        if (_info is not null) _info.Changed -= OnServerInfoChanged;
+        _info = null;
     }
 }
