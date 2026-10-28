@@ -164,6 +164,9 @@ public sealed partial class RoleManagementService(
 			var me = (await ActorGrantsAsync(actor, ct)).Context;
 			if (Unauthorized(me) is { } refusal) return refusal;
 			if (!RoleHierarchy.Outranks(me, role.Priority)) return NotBelow<Success>(role, me);
+			if (PermissionResolver.StateOf(role.Permissions, PortalPermission.ProtectRole) == PermissionState.Allow
+				&& !RoleHierarchy.CanGrant(HeldAmong(me, []), PortalPermission.ProtectRole))
+				return Refuse<Success>(RoleRefusalKind.Forbidden, $"{role.Name} is guarded; only #1 can delete it.");
 
 			var holders = await registry.GetAccountIdsForRoleAsync(role.Slug);
 			foreach (var holder in holders)

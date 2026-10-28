@@ -140,7 +140,7 @@ public sealed class PermissionResolver : IPermissionResolver
 
 	public PermissionExplanation Explain(PermissionContext context, string scope)
 	{
-		if (!context.Knows(scope))
+		if (!context.Knows(scope) || (PortalPermission.IsControlRole(scope) && !context.ControlScopes.Contains(scope)))
 			return new(false, null, [], "unknown-scope");
 		if (context.IsOwner)
 			return new(true, null, [], "owner");

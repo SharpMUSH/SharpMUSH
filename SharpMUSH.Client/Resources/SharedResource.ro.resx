@@ -2873,13 +2873,13 @@
     <value>Roluri protejate</value>
   </data>
   <data name="RolGuardPass" xml:space="preserve">
-    <value>Joc · Trecerea de protecția lui {0}</value>
+    <value>Joc · Ocolirea protecției rolului {0}</value>
   </data>
   <data name="RolGuardPassDesc" xml:space="preserve">
     <value>Permite acestui rol să controleze pe oricine are {0}, acolo unde ar permite-o proprietatea, zonele sau Controlul asupra tuturor. Singur nu dă control.</value>
   </data>
   <data name="RolGuardGodDesc" xml:space="preserve">
-    <value>Doar jucătorul #1 trece de protecția lui God. Niciun rol și nicio excepție nu o pot da.</value>
+    <value>Doar jucătorul #1 trece de protecția lui God. Niciun rol și nicio excepție nu pot da această trecere.</value>
   </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Permis</value>

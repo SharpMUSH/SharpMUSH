@@ -2879,7 +2879,7 @@
     <value>Pozwala tej roli kontrolować każdego, kto ma {0}, tam gdzie pozwoliłaby na to własność, strefy lub Kontrola nad wszystkim. Sama nie daje kontroli.</value>
   </data>
   <data name="RolGuardGodDesc" xml:space="preserve">
-    <value>Tylko gracz #1 przechodzi ochronę roli God. Żadna rola ani wyjątek nie może jej dać.</value>
+    <value>Tylko gracz #1 przechodzi ochronę roli God. Żadna rola ani wyjątek nie może dać tego przejścia.</value>
   </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Zezwól</value>

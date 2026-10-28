@@ -14,16 +14,23 @@ public static class RoleHierarchy
 	/// <summary>
 	/// The scopes <paramref name="proposed"/> newly allows (compared with <paramref name="current"/>)
 	/// that <paramref name="granted"/> lacks. A manager cannot hand out a scope they do not hold.
+	/// Taking <see cref="PortalPermission.ProtectRole"/> off a role counts too, since only the owner guards a role.
 	/// </summary>
 	public static IReadOnlyList<string> UnheldGrants(
 		IReadOnlyDictionary<string, PermissionState> current,
 		IReadOnlyDictionary<string, PermissionState> proposed,
 		IReadOnlySet<string> granted)
 		=> PortalPermission.AllScopes.Concat(proposed.Keys).Distinct(StringComparer.OrdinalIgnoreCase)
-			.Where(scope => PermissionResolver.StateOf(proposed, scope) == PermissionState.Allow
-				&& PermissionResolver.StateOf(current, scope) != PermissionState.Allow
-				&& !CanGrant(granted, scope))
+			.Where(scope => ChangesGrant(current, proposed, scope) && !CanGrant(granted, scope))
 			.ToArray();
+
+	private static bool ChangesGrant(
+		IReadOnlyDictionary<string, PermissionState> current,
+		IReadOnlyDictionary<string, PermissionState> proposed,
+		string scope)
+		=> (PermissionResolver.StateOf(proposed, scope) == PermissionState.Allow)
+			!= (PermissionResolver.StateOf(current, scope) == PermissionState.Allow)
+			&& (PermissionResolver.StateOf(proposed, scope) == PermissionState.Allow || scope == PortalPermission.ProtectRole);
 
 	/// <summary>
 	/// Whether a manager holding <paramref name="granted"/> may allow <paramref name="scope"/>: they hold it,

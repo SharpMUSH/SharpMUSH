@@ -150,7 +150,7 @@ A role that allows `protect.role` is guarded. Whoever holds it, a player or an o
 
 So a wizard controls another wizard's things, as in PennMUSH, while royalty controls only what it owns. `control.role.god` is #1's alone: no role, override or `administrator` gives it.
 
-Only #1 can guard a role, and a pass can be granted only by something that holds it, so nobody can shield themselves from those above them. As #1, to guard a role and let wizards past it:
+Only #1 can guard a role, take a guard off or delete a guarded role, and a pass can be granted only by something that holds it, so nobody can shield themselves from those above them. As #1, to guard a role and let wizards past it:
 
 ```
 @role/allow curator=protect.role

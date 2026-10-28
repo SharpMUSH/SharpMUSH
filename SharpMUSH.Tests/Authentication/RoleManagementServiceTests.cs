@@ -252,6 +252,11 @@ public class RoleManagementServiceTests
 		var world = Build();
 		await Refused(world.Service.SaveRoleAsync(A("wiz"), Draft("shield", 20, PortalPermission.ProtectRole)), RoleRefusalKind.Forbidden);
 		await Accepted(world.Service.SaveRoleAsync(A("owner"), Draft("shield", 20, PortalPermission.ProtectRole)));
+
+		await Refused(world.Service.EditRoleAsync(A("wiz"), "shield",
+			role => new RoleDraft(role.Slug, role.Name, role.Category, role.Color, role.Priority, new Dictionary<string, PermissionState>())), RoleRefusalKind.Forbidden);
+		await Refused(world.Service.DeleteRoleAsync(A("wiz"), "shield"), RoleRefusalKind.Forbidden);
+		await Accepted(world.Service.DeleteRoleAsync(A("owner"), "shield"));
 	}
 
 	/// <summary>A permission a role still holds after it stopped existing is dropped on the next save, not refused.</summary>
