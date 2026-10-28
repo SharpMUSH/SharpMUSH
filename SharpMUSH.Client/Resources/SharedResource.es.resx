@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Sin conexión al juego — conéctese para publicar y recibir poses en vivo.</value>
+    <value>La conexión al juego está desconectada. Conéctate para enviar comandos; las actualizaciones de la escena usan una conexión independiente.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Las poses en vivo no están llegando: reconectando. Lo que publiques se registra igualmente.</value>
+    <value>Se está restableciendo la conexión de las actualizaciones de la escena. Esto no confirma si se registró una publicación.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Tus poses van a otra escena. Únete a esta para posar aquí.</value>
+    <value>Estás centrado en otra escena. Únete a esta para centrarte aquí.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Vista</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Escena · se registra en el archivo de escenas</value>
+    <value>Leer las intervenciones de la escena</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Salida completa · con canales y mensajes</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Acerca de este juego</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Referencia de comandos</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Tu cuenta es tu acceso privado. Un personaje es quien interpretas en el mundo compartido. Una cuenta puede tener varios personajes; comprueba con qué personaje juegas antes de actuar.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Centrado en esta escena</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Viendo esta escena</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Directorio público de personajes</value></data>
 </root>

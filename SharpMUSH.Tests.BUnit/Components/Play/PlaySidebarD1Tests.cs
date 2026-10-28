@@ -41,6 +41,27 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key)));
 
 	[Test]
+	[Arguments(-1, "", "A scene is running here")]
+	[Arguments(-1, null, "Viewing this scene")]
+	[Arguments(0, null, "Viewing this scene")]
+	[Arguments(1, null, "Focused on this scene")]
+	[Arguments(1, "", "Focused on this scene")]
+	public async Task SceneLabelUsesFocusOrViewWithoutInventingParticipation(int focus, string? current, string expected)
+	{
+		bool? focused = focus < 0 ? null : focus == 1;
+		var cut = RenderSidebar(Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "observer", focused) }, current: current);
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo(expected);
+		await Assert.That(cut.Find(".play-side-scene").TextContent).DoesNotContain("Joined");
+	}
+
+	[Test]
+	public async Task ADisconnectedSnapshotDoesNotAssertCurrentSceneFocus()
+	{
+		var cut = RenderSidebar(Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true) }, connected: false, current: "");
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("Scenes");
+	}
+
+	[Test]
 	public async Task Head_SaysWhoIsConnected()
 	{
 		var cut = RenderSidebar();

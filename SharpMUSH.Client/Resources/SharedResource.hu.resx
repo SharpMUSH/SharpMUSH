@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Nincs kapcsolat a játékkal — csatlakozzon a pózok küldéséhez és élő fogadásához.</value>
+    <value>Megszakadt a kapcsolat a játékkal. Csatlakozz a parancsküldéshez; a jelenet élő frissítései külön kapcsolatot használnak.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Az élő pózok nem érkeznek meg – újracsatlakozás folyamatban. Amit beküldesz, azt akkor is rögzítjük.</value>
+    <value>A jelenet élő frissítéseinek kapcsolata újraépül. Ez nem igazolja, hogy egy bejegyzés rögzítve lett.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>A pózaid egy másik jelenetbe kerülnek. Csatlakozz ehhez, hogy itt pózolhass.</value>
+    <value>Másik jelenet van fókuszban. Csatlakozz ehhez, hogy ide helyezd a fókuszt.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Nézet</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Jelenet · a jelenetarchívumba kerül</value>
+    <value>A jelenet bejegyzéseinek olvasása</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Teljes kimenet · csatornákkal és üzenetekkel</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>A játékról</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Parancsok kézikönyve</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>A fiókod a privát bejelentkezésed. A karakter az, akit a közös világban játszol. Egy fiókhoz több karakter tartozhat; cselekvés előtt ellenőrizd, melyik karakterrel játszol.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Ez a jelenet van fókuszban</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Ezt a jelenetet nézed</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Nyilvános karakterjegyzék</value></data>
 </root>

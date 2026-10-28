@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Niet verbonden met het spel — maak verbinding om te posten en live poses te ontvangen.</value>
+    <value>De spelverbinding is verbroken. Maak verbinding om opdrachten te sturen; live scène-updates gebruiken een aparte verbinding.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Live-poses komen niet binnen — opnieuw verbinden. Wat je plaatst, wordt wel vastgelegd.</value>
+    <value>De live scène-updates maken opnieuw verbinding. Dit bevestigt niet of een bericht is vastgelegd.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Je poses gaan naar een andere scène. Doe mee met deze om hier te posen.</value>
+    <value>Je bent gericht op een andere scène. Neem aan deze deel om je hierop te richten.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Weergave</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scène · vastgelegd in het scènearchief</value>
+    <value>Scènebijdragen lezen</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Volledige uitvoer · inclusief kanalen en berichten</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Over dit spel</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Opdrachtenreferentie</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Je account is je privé-aanmelding. Een personage is wie je speelt in de gedeelde wereld. Eén account kan meerdere personages bezitten; controleer met welk personage je speelt voordat je handelt.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Gericht op deze scène</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Deze scène bekijken</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Openbare personagegids</value></data>
 </root>

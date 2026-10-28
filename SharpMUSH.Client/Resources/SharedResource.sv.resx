@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Inte uppkopplad mot spelet — koppla upp dig för att posta och ta emot poser i realtid.</value>
+    <value>Spelanslutningen är frånkopplad. Anslut för att skicka kommandon; scenens liveuppdateringar använder en separat anslutning.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Live-poserna kommer inte fram — återansluter. Det du skickar sparas ändå.</value>
+    <value>Scenens liveuppdateringar återansluter. Detta bekräftar inte om ett inlägg har registrerats.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Dina poser hamnar i en annan scen. Gå med i den här för att posera här.</value>
+    <value>Du har fokus på en annan scen. Gå med i den här för att flytta fokus hit.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Vy</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scen · loggas i scenarkivet</value>
+    <value>Läs scenens inlägg</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Full utdata · kanaler och meddelanden ingår</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Om det här spelet</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreferens</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Ditt konto är din privata inloggning. En karaktär är den du spelar i den gemensamma världen. Ett konto kan äga flera karaktärer; kontrollera vilken du spelar innan du agerar.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Fokus på den här scenen</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Visar den här scenen</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karaktärskatalog</value></data>
 </root>

@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Brak połączenia z grą — należy się połączyć, aby publikować i odbierać pozy na żywo.</value>
+    <value>Połączenie z grą jest rozłączone. Połącz się, aby wysyłać polecenia; aktualizacje sceny na żywo korzystają z oddzielnego połączenia.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Pozy na żywo nie docierają — trwa ponowne łączenie. To, co wyślesz, i tak zostanie zapisane.</value>
+    <value>Trwa ponowne łączenie aktualizacji sceny na żywo. Nie potwierdza to, czy wpis został zapisany.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Twoje pozy trafiają do innej sceny. Dołącz do tej, aby tu pozować.</value>
+    <value>Masz wybraną inną scenę. Dołącz do tej, aby przenieść tu skupienie.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Widok</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scena · zapisywana w archiwum scen</value>
+    <value>Czytaj wpisy sceny</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Pełne wyjście · z kanałami i wiadomościami</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>O tej grze</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Spis poleceń</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Konto służy do prywatnego logowania. Postać to osoba, którą odgrywasz we wspólnym świecie. Jedno konto może mieć kilka postaci; przed działaniem sprawdź, którą postacią grasz.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Skupienie na tej scenie</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Przeglądanie tej sceny</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Publiczny katalog postaci</value></data>
 </root>

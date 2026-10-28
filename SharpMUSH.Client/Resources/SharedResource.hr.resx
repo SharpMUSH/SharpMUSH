@@ -2985,7 +2985,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Niste povezani s igrom — povežite se da biste objavljivali i primali poze uživo.</value>
+    <value>Veza s igrom je prekinuta. Povežite se za slanje naredbi; ažuriranja scene koriste zasebnu vezu.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3221,7 +3221,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Poze uživo ne stižu — ponovno povezivanje. Sve što objavite i dalje se bilježi.</value>
+    <value>Veza za ažuriranja scene ponovno se uspostavlja. To ne potvrđuje je li objava zabilježena.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5112,7 +5112,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Vaše poze idu u drugu scenu. Pridružite se ovoj da biste ovdje pozirali.</value>
+    <value>Fokusirani ste na drugu scenu. Pridružite se ovoj kako biste fokus prebacili ovamo.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5206,7 +5206,7 @@
     <value>Prikaz</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scena · bilježi se u arhivu scena</value>
+    <value>Čitajte objave u sceni</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Potpuni ispis · s kanalima i porukama</value>
@@ -6858,5 +6858,7 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>O ovoj igri</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Pregled naredbi</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Račun je vaša privatna prijava. Lik je onaj kojeg igrate u zajedničkom svijetu. Jedan račun može imati više likova; prije radnje provjerite kojim likom igrate.</value></data>
+  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Fokus na ovoj sceni</value></data>
+  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Pregled ove scene</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Javni imenik likova</value></data>
 </root>

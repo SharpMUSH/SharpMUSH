@@ -87,7 +87,7 @@ public class PlaySceneCardTests : BunitContext
 		await Assert.That(radios[0].TextContent.Trim()).IsEmpty();
 		await Assert.That(radios[0].QuerySelector("svg")).IsNotNull();
 		await Assert.That(radios[0].GetAttribute("aria-label")).IsEqualTo("Story");
-		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Story: Scene · logged to the scene archive");
+		await Assert.That(radios[0].GetAttribute("title")).IsEqualTo("Story: Read scene poses");
 		await Assert.That(radios[1].GetAttribute("aria-label")).IsEqualTo("Terminal");
 		await Assert.That(radios[1].GetAttribute("title")).IsEqualTo("Terminal: Full output · channels and pages included");
 	}
