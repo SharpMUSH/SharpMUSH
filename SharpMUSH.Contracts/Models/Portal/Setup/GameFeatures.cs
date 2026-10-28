@@ -83,8 +83,9 @@ public record SetHandlerRequest(string Mode, int? Dbref = null);
 /// </param>
 /// <param name="DependsOn">The bundled packages it needs installed first.</param>
 /// <param name="Recommended">
-/// Whether a new game has it: one installed at first boot that the administrator has not turned off. A game
-/// without it — after a PennMUSH import, which removes the handlers it was built on — is offered it ticked.
+/// Whether the wizard offers it ticked: one installed at first boot, or suggested at setup, that the administrator has
+/// not turned off. A game without it — after a PennMUSH import, which removes the handlers it was built on — is offered
+/// it ticked.
 /// </param>
 /// <param name="Category">The manifest's <c>category:</c>, which the wizard groups packages by, or null for none.</param>
 /// <param name="Bridge">
