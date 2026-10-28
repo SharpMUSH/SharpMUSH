@@ -27,6 +27,14 @@ public class SetupWizardService(IHttpClientFactory httpClientFactory, ServerInfo
 	}
 
 	/// <summary>
+	/// Sets the staff roles the game uses (<see cref="SharpMUSH.Library.Authorization.StaffLevelSets"/>): the chosen
+	/// set's roles are made and the other set's unheld ones removed.
+	/// </summary>
+	public virtual Task<ApiResult<SetupWizardResponse>> SetStaffLevelsAsync(string set)
+		=> Http.PutApiAsync<SetStaffLevelsRequest, SetupWizardResponse>(
+			"api/setup/wizard/staff-levels", new SetStaffLevelsRequest(set), "The server returned no setup state.");
+
+	/// <summary>
 	/// Installs <paramref name="installed"/> and removes every other bundled package. Whatever the answer, the
 	/// portal asks the server again what the game has, so its navigation follows what actually changed.
 	/// </summary>

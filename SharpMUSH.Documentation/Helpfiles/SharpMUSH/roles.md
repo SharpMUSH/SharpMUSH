@@ -26,6 +26,11 @@
       "lookup": "roles approved"
     },
     {
+      "id": "roles-rhost",
+      "heading": "RhostMUSH's staff levels",
+      "lookup": "roles rhost"
+    },
+    {
       "id": "roles-flags",
       "heading": "Roles, flags and powers",
       "lookup": "roles flags"
@@ -101,7 +106,22 @@ To take a permission away from one object, use an override (`@permission/deny`).
 
 `helper` and `moderator` are ordinary roles: assign them with `@role/assign`, and edit or delete them as you like. They are created only in a new game.
 
+Setup can give a game RhostMUSH's staff levels in their place: see [roles rhost].
+
 Permissions that act on objects still check ownership and locks. For example, `snapshots.restore` lets a player restore only objects they control.
+
+## RhostMUSH's staff levels
+
+Setup can give a game RhostMUSH's staff levels in place of `helper` and `moderator`, and a RhostMUSH import does. Each level is an ordinary role, ranked just above the built-in role whose permissions it copies:
+
+| Priority | Role | Allows |
+|---|---|---|
+| 35 | immortal | what wizard allows, plus `server.admin` |
+| 22 | councilor | what royalty allows |
+| 16 | architect | what builder allows |
+| 13 | guildmaster | what player allows, plus `players.view`, `queue.inspect` |
+
+RhostMUSH's royalty is the `wizard` role. The setup step removes the roles of the set not chosen, except any role someone holds.
 
 ## Roles, flags and powers
 

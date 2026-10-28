@@ -1,5 +1,6 @@
 using System.Globalization;
 using SharpMUSH.Configuration;
+using SharpMUSH.Library.Authorization;
 using System.Text.RegularExpressions;
 using SharpMUSH.Library.Services.DatabaseConversion.Softcode;
 using SharpMUSH.Library.Softcode;
@@ -14,7 +15,7 @@ namespace SharpMUSH.Library.Services.DatabaseConversion.Rhost;
 /// <para>Flags, toggles and powers go through <see cref="RhostNameTables"/>: to SharpMUSH's own where one
 /// fits (RhostMUSH's royalty, its wizards, to the WIZARD role), else to a flag or power of their own that the
 /// import defines, else they are dropped. Its other staff levels become roles of their own
-/// (<see cref="RhostNameTables.LevelRoles"/>). Every decision is a note, with the objects it touched.</para>
+/// (<see cref="BuiltInRoles.RhostLevels"/>). Every decision is a note, with the objects it touched.</para>
 /// <para>Each object's reality levels are carried as its masks; the game's <c>netrhost.conf</c> names them, and
 /// the import turns them into reality layers.</para>
 /// <para>Attribute values are rewritten for SharpMUSH where RhostMUSH reads them differently: colour
@@ -119,7 +120,7 @@ public static partial class RhostDatabaseTranslator
 			Objects = objects,
 			FlagDefinitions = definitions.Flags,
 			PowerDefinitions = definitions.Powers,
-			Roles = [.. RhostNameTables.LevelRoles.Where(role => objects.Any(o => o.Roles.Contains(role.Slug)))],
+			Roles = [.. BuiltInRoles.RhostLevels],
 			GodPlayer = 1
 		};
 
