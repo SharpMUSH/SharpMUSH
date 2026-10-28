@@ -62,6 +62,35 @@ public class LookServiceTests
 	}
 
 	/// <summary>
+	/// <c>unparse_room</c> through <c>real_unparse</c> (<c>src/unparse.c:118-119</c>): a room's heading
+	/// carries its dbref only for a looker who may examine or link to it, or when it is JUMP_OK,
+	/// CHOWN_OK or DESTROY_OK.
+	/// </summary>
+	[Test]
+	public async ValueTask AMortalSeesARoomHeadingWithoutItsDbrefUnlessTheRoomInvitesIt()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "HeadingLooker");
+		var roomName = TestIsolationHelpers.GenerateUniqueName("HeadingRoom");
+		var dig = await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@dig {roomName}"));
+		var roomRef = dig.Message.ToPlainText().Trim();
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@teleport/silent {player.DbRef}={roomRef}"));
+
+		var roomDbRef = DBRef.Parse(roomRef);
+		var shownRef = $"{roomName}(#{roomDbRef.Number}";
+		var room = await Mediator.Send(new GetObjectNodeQuery(roomDbRef));
+		var looker = (await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>();
+		async Task<string> Heading() => (await MessagesWhile(player.DbRef, async () =>
+			await LookService.LookRoom(GodParser, looker, room, LookKey.Normal))).First(m => m.Contains(roomName));
+
+		await Assert.That(await Heading()).DoesNotContain(shownRef);
+
+		await GodParser.CommandParse(1, ConnectionService, MarkupText.Plain($"@set {roomRef}=JUMP_OK"));
+
+		await Assert.That(await Heading()).Contains(shownRef);
+	}
+
+	/// <summary>
 	/// TERSE is its own flag, not an alias of CLOUDY (#1404): PennMUSH has both on the letter <c>x</c>,
 	/// TERSE on players and things and CLOUDY on exits, and setting one does not set the other.
 	/// </summary>

@@ -21,10 +21,6 @@
    "command": "think [loc(%#)]"
   },
   {
-   "key": "00-login/login.player#3",
-   "command": "look"
-  },
-  {
    "key": "00-login/login.unknown#0",
    "command": "Nobody whatever"
   },
@@ -49,28 +45,12 @@
    "command": "look Gadget"
   },
   {
-   "key": "10-player-commands/obj.give#1",
-   "command": "look"
-  },
-  {
    "key": "10-player-commands/obj.inventory#0",
    "command": "inventory"
   },
   {
-   "key": "10-player-commands/obj.inventory#1",
-   "command": "look Widget"
-  },
-  {
    "key": "10-player-commands/perm.ufun#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "10-player-commands/room.dig#2",
-   "command": "look"
-  },
-  {
-   "key": "10-player-commands/room.dig#4",
-   "command": "look"
   },
   {
    "key": "10-player-commands/setup.sessions#0",
