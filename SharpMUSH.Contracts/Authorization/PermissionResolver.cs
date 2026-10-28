@@ -31,6 +31,12 @@ public sealed record PermissionContext(
 	/// </summary>
 	public IReadOnlySet<string> CustomScopes { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
+	/// <summary>
+	/// A <see cref="PortalPermission.ControlRole"/> for each role in the world, resolved with the built-in scopes. A
+	/// context with none (an account's, in the portal) resolves no guard passes.
+	/// </summary>
+	public IReadOnlySet<string> ControlScopes { get; init; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
 	/// <summary>Whether <paramref name="scope"/> is a built-in permission or one of <see cref="CustomScopes"/>.</summary>
 	public bool Knows(string scope) => PortalPermission.IsKnown(scope) || CustomScopes.Contains(scope);
 
@@ -54,7 +60,8 @@ public interface IPermissionResolver
 /// Discord's permission computation, with one scope at a time standing in for one permission bit:
 /// <list type="number">
 /// <item>The owner holds every scope.</item>
-/// <item>A held role that allows <see cref="PortalPermission.Administrator"/> grants every scope, and
+/// <item>A held role that allows <see cref="PortalPermission.Administrator"/> grants every scope but the pass
+/// through God's guard (<see cref="PortalPermission.ControlRole"/> of <c>god</c>), which is the owner's alone, and
 /// per-account overrides do not apply.</item>
 /// <item>An override on the object decides the scope when it says Allow or Deny, then one on the
 /// account (Discord's member overwrite). PennMUSH's powers are object overrides.</item>
@@ -82,8 +89,16 @@ public sealed class PermissionResolver : IPermissionResolver
 			if (holdsEverything || Allows(context, scope)) granted.Add(scope);
 		foreach (var scope in context.CustomScopes)
 			if (holdsEverything || Allows(context, scope)) granted.Add(scope);
+		foreach (var scope in context.ControlScopes)
+			if (context.IsOwner || (!OwnerOnly(scope) && (holdsEverything || Allows(context, scope))))
+				granted.Add(scope);
 		return granted;
 	}
+
+	private static readonly string GodGuard = PortalPermission.ControlRole(BuiltInRoles.GodSlug);
+
+	/// <summary>The pass through God's guard: no role or override grants it, so nothing but #1 controls #1.</summary>
+	private static bool OwnerOnly(string scope) => string.Equals(scope, GodGuard, StringComparison.OrdinalIgnoreCase);
 
 	private static bool HoldsAdministrator(IReadOnlyCollection<SharpRole> roles)
 	{
@@ -129,6 +144,9 @@ public sealed class PermissionResolver : IPermissionResolver
 			return new(false, null, [], "unknown-scope");
 		if (context.IsOwner)
 			return new(true, null, [], "owner");
+
+		if (OwnerOnly(scope))
+			return new(false, null, [], "owner-only");
 
 		var administrators = context.Roles
 			.Where(r => StateOf(r.Permissions, PortalPermission.Administrator) == PermissionState.Allow).ToArray();
@@ -199,6 +217,6 @@ public sealed class PermissionResolver : IPermissionResolver
 /// deciding <paramref name="Roles"/>, null when no role decided. <paramref name="Reason"/> is one of
 /// <c>owner</c>, <c>administrator</c>, <c>object-allow</c>, <c>object-deny</c>, <c>account-allow</c>,
 /// <c>account-deny</c>, <c>role-allow</c>,
-/// <c>role-deny</c>, <c>everyone-allow</c>, <c>default-deny</c> or <c>unknown-scope</c>.
+/// <c>role-deny</c>, <c>everyone-allow</c>, <c>default-deny</c>, <c>owner-only</c> or <c>unknown-scope</c>.
 /// </summary>
 public sealed record PermissionExplanation(bool Allowed, int? Priority, string[] Roles, string Reason);

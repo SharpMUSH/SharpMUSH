@@ -2869,6 +2869,18 @@
     <value>Добави роля</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Защитени роли</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Игра · Преминаване през защитата на {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Позволява на тази роля да контролира всеки, който има {0}, там където биха го позволили собствеността, зоните или „Контрол над всичко“. Сама по себе си не дава контрол.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Само играч #1 преминава през защитата на God. Никоя роля или изключение не може да я даде.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Разреши</value>
     <comment>MT — permission tri-state value</comment>

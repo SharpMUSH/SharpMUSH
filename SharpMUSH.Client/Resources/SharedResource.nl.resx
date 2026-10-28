@@ -2869,6 +2869,18 @@
     <value>Rol toevoegen</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Beschermde rollen</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Spel · Langs de bescherming van {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Laat deze rol iedereen met {0} beheren, waar eigendom, zones of Alles beheren dat zouden toestaan. Op zichzelf geeft het geen beheer.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Alleen speler #1 komt langs de bescherming van God. Geen rol of uitzondering kan die geven.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Toestaan</value>
     <comment>MT</comment>

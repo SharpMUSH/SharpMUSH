@@ -2869,6 +2869,18 @@
     <value>Adăugare rol</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Roluri protejate</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Joc · Trecerea de protecția lui {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Permite acestui rol să controleze pe oricine are {0}, acolo unde ar permite-o proprietatea, zonele sau Controlul asupra tuturor. Singur nu dă control.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Doar jucătorul #1 trece de protecția lui God. Niciun rol și nicio excepție nu o pot da.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Permis</value>
     <comment>MT — assumed Allow/Deny/Inherit is a tri-state permission value, so rendered as adjectives (Permis/Refuzat/Moștenit) rather than verbs</comment>

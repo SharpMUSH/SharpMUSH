@@ -2869,6 +2869,18 @@
     <value>Dodaj ulogu</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Zaštićene uloge</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Igra · Proći zaštitu uloge {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Dopušta ovoj ulozi kontrolu nad svakim tko ima {0}, gdje bi to dopustili vlasništvo, zone ili Kontrola nad svime. Sama po sebi ne daje kontrolu.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Samo igrač #1 prolazi zaštitu uloge God. Nijedna uloga ni iznimka ne može je dati.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Dopusti</value>
     <comment>MT</comment>

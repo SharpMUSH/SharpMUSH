@@ -2869,6 +2869,18 @@
     <value>Lägg till roll</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Skyddade roller</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Spel · Passera skyddet för {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Låter den här rollen kontrollera den som har {0}, där ägarskap, zoner eller Kontrollera allt skulle göra det. Den ger ingen kontroll i sig.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Bara spelare #1 passerar skyddet för God. Ingen roll eller dispens kan ge det.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Tillåt</value>
     <comment>MT</comment>

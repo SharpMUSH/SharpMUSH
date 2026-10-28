@@ -2869,6 +2869,18 @@
     <value>Añadir rol</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Roles protegidos</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Juego · Superar la protección de {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Permite a este rol controlar a quien tenga {0}, donde lo permitirían la propiedad, las zonas o Controlar todo. Por sí solo no da control.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Solo el jugador #1 supera la protección de God. Ningún rol ni excepción puede darla.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Permitir</value>
     <comment>MT</comment>

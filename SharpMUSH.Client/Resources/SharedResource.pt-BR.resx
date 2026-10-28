@@ -2869,6 +2869,18 @@
     <value>Adicionar função</value>
     <comment>MT — "role" rendered as "função" consistently across the roles surface</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Papéis protegidos</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Jogo · Passar a proteção de {0}</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Permite que este papel controle quem tiver {0}, onde a posse, as zonas ou Controlar tudo permitiriam. Sozinho, não dá controle.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Só o jogador #1 passa a proteção de God. Nenhum papel ou exceção pode dá-la.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Permitir</value>
     <comment>MT</comment>

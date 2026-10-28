@@ -152,8 +152,9 @@ PennMUSH privilege is roles and scopes (`RoleFlags`, `GamePowers`): the WIZARD
 and ROYALTY flags are the `wizard` and `royalty` roles; each built-in power is
 a `game.<power>` scope, set by `@power` as an object override, with Builder and
 Guest the `builder` and `guest` roles. `Wizard()`, `haspower()`, `hasflag()` and
-the `FLAG^`/`POWER^` lock keys read grants, and `Controls()` reads `control.all`
-on the actor and `protect.wizard`/`protect.admin` on the target. The provider
+the `FLAG^`/`POWER^` lock keys read grants, and `Controls()` reads the target's
+guarded roles (`protect.role`, passed with `control.role.<slug>`) and then
+`control.all` on the actor. The provider
 writes a role-backed flag or power as a role or override, so the PennMUSH
 importer and every seed land there, and its migration moves stored WIZARD,
 ROYALTY and power edges once. The flag and power definitions stay for

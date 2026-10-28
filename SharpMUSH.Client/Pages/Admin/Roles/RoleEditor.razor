@@ -65,6 +65,22 @@
         </div>
     </div>
 }
+@if (GuardedRoles.Count > 0)
+{
+    <div class="ra-section">
+        <div class="ra-section-label">@Loc["RolGuardSection"]</div>
+        <div class="ra-perm-card">
+            @foreach (var guarded in GuardedRoles)
+            {
+                var scope = PortalPermission.ControlRole(guarded.Slug);
+                <RolePermissionRow Scope="@scope" Label="@Loc["RolGuardPass", guarded.Name]"
+                                   Description="@(guarded.Slug == BuiltInRoles.GodSlug ? Loc["RolGuardGodDesc"] : Loc["RolGuardPassDesc", guarded.Name])"
+                                   Effective="Effective" Roles="Roles"
+                                   State="@Draft.StateFor(scope)" StateChanged="@(state => Draft.SetState(scope, state))" />
+            }
+        </div>
+    </div>
+}
 @foreach (var category in CustomCategories)
 {
     <div class="ra-section">
@@ -114,6 +130,17 @@
 
     [Parameter] public EventCallback OnSave { get; set; }
     [Parameter] public EventCallback OnDelete { get; set; }
+
+    /// <summary>
+    /// The roles that guard their holders (<see cref="PortalPermission.ProtectRole"/>), highest first, each with a row
+    /// for passing its guard. The role being edited counts as it is drafted.
+    /// </summary>
+    private IReadOnlyList<PortalRoleModel> GuardedRoles => Roles
+        .Where(role => role.Slug == Role.Slug
+            ? Draft.StateFor(PortalPermission.ProtectRole) == "Allow"
+            : role.Permissions.Any(p => string.Equals(p.Key, PortalPermission.ProtectRole, StringComparison.OrdinalIgnoreCase) && p.Value == "Allow"))
+        .OrderByDescending(role => role.Priority)
+        .ToList();
 
     /// <summary>The global resolution the viewer holds, when one decides every scope; null otherwise.</summary>
     private string? EveryPermissionReason =>

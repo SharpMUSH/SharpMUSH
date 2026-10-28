@@ -2869,6 +2869,18 @@
     <value>Szerepkör hozzáadása</value>
     <comment>MT</comment>
   </data>
+  <data name="RolGuardSection" xml:space="preserve">
+    <value>Védett szerepkörök</value>
+  </data>
+  <data name="RolGuardPass" xml:space="preserve">
+    <value>Játék · {0} védelmének átlépése</value>
+  </data>
+  <data name="RolGuardPassDesc" xml:space="preserve">
+    <value>Ez a szerepkör irányíthatja azt, aki {0} szerepkörrel rendelkezik, ahol a tulajdonjog, a zónák vagy a Minden irányítása lehetővé tenné. Önmagában nem ad irányítást.</value>
+  </data>
+  <data name="RolGuardGodDesc" xml:space="preserve">
+    <value>Csak a #1 játékos lépheti át God védelmét. Ezt semmilyen szerepkör vagy kivétel nem adhatja meg.</value>
+  </data>
   <data name="RolAllow" xml:space="preserve">
     <value>Engedélyezés</value>
     <comment>MT</comment>
