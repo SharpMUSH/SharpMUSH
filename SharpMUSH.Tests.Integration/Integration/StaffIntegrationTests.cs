@@ -111,9 +111,9 @@ public class StaffIntegrationTests
 
 			// Duties come from the +config table: a holder without a role is listed, a duty nobody holds is open.
 			var key = TestIsolationHelpers.GenerateUniqueName("d").Replace("_", "");
-			// Short enough to stay on one line beside a long test player's name; the table is the package's own.
+			// Titles short enough to stay on one line beside a long test player's name; the table is the package's own.
 			const string title = "Director";
-			var open = TestIsolationHelpers.GenerateUniqueName("Story");
+			const string open = "Story";
 			await Assert.That(await As(manager, $"+config/add staff/duties/{key}a={title}")).Contains($"Added staff/duties/{key}a");
 			await Assert.That(await As(manager, $"+config staff/duties/{key}a/holder=#{director.DbRef.Number}")).Contains("holder is now");
 			await As(manager, $"+config staff/duties/{key}a/order=0");
