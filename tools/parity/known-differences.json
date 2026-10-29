@@ -138,7 +138,7 @@
       "tracking": "#962",
       "profile": "A failing function says why",
       "command": "think [attrib_set(*Alice/FFSECRET,x)]|[mailstats(*Alice)]|[attrib_set(*Alice/FFMISSING)]",
-      "sharp": "#-1 NO PERMISSION TO SET ATTRIBUTE|#-1 PERMISSION DENIED|#-1 NO PERMISSION TO SET ATTRIBUTE",
+      "sharp": "#-1 NO PERMISSION TO SET ATTRIBUTE|#-1 PERMISSION DENIED: NOT CONTROLLED|#-1 NO PERMISSION TO SET ATTRIBUTE",
       "penn": "The post office protects privacy!\n||"
     },
     {
