@@ -10294,4 +10294,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Command reference</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Your account is your private sign-in. A character is who you play in the shared world. One account can own several characters; check which character you are playing before acting.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Public character directory</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guides and reference</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Choose the help you need.</value></data>
 </root>

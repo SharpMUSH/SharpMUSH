@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Parancsok kézikönyve</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>A fiókod a privát bejelentkezésed. A karakter az, akit a közös világban játszol. Egy fiókhoz több karakter tartozhat; cselekvés előtt ellenőrizd, melyik karakterrel játszol.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Nyilvános karakterjegyzék</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Útmutatók és kézikönyv</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Válaszd a szükséges segítséget.</value></data>
 </root>

@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Befehlsreferenz</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Dein Konto ist dein privater Zugang. Ein Charakter ist die Figur, die du in der gemeinsamen Welt spielst. Ein Konto kann mehrere Charaktere besitzen; prüfe vor einer Aktion, welchen Charakter du spielst.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Öffentliches Charakterverzeichnis</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Anleitungen und Referenz</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Wähle die Hilfe, die du brauchst.</value></data>
 </root>

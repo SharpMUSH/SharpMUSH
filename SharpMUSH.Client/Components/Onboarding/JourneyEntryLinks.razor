@@ -7,7 +7,7 @@
 @* Learning and reference use the existing game-origin routes. About consists only of the
    server's visibility-filtered configured links, with their authored titles and destinations. *@
 <nav class="journey-links" aria-label="@Loc["Help"]">
-    <a href="/welcome">@Loc["NavJourneyLearn"]</a>
+    <a href="/welcome" title="@($"{Loc["GuideHelpIndexEntry"]} {Loc["GuideHelpIndexDescription"]}")">@Loc["NavJourneyLearn"]</a>
     @if (_about.Count > 0)
     {
         <span class="journey-about">@Loc["NavJourneyAbout"]:

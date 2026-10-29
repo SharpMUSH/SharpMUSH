@@ -20,6 +20,13 @@ public static class SeededWikiPages
 	public static string Home { get; } = Read("home.md");
 
 	/// <summary>
+	/// Exact pre-journey boot Home from dc9822e5233e0a181b16963aa893c957d3bd41ee.
+	/// Frozen compatibility text, read with the same loader as Home. Recognized only by explicit
+	/// starter application; never seeded at startup. Do not edit this historical resource.
+	/// </summary>
+	public static string PreJourneyHome { get; } = Read("home-pre-journey.md");
+
+	/// <summary>
 	/// <c>Help:Markdown Guide</c> — the CommonMark subset and SharpMUSH extensions the wiki
 	/// pipeline supports. Lives at <c>/wiki/help/markdown_guide</c>.
 	/// </summary>

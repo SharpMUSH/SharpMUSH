@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreferens</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Ditt konto är din privata inloggning. En karaktär är den du spelar i den gemensamma världen. Ett konto kan äga flera karaktärer; kontrollera vilken du spelar innan du agerar.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karaktärskatalog</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guider och referens</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Välj den hjälp du behöver.</value></data>
 </root>

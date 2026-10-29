@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>命令参考</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>账号是你的私人登录身份。角色是你在共享世界中扮演的人物。一个账号可以拥有多个角色；行动前请确认当前正在使用哪个角色。</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>公开角色名录</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>指南与参考</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>选择你需要的帮助。</value></data>
 </root>

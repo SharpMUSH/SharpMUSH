@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Opdrachtenreferentie</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Je account is je privé-aanmelding. Een personage is wie je speelt in de gedeelde wereld. Eén account kan meerdere personages bezitten; controleer met welk personage je speelt voordat je handelt.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Openbare personagegids</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Gidsen en naslag</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Kies de hulp die je nodig hebt.</value></data>
 </root>

@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Справочник за командите</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Акаунтът е вашият личен достъп. Героят е този, когото играете в споделения свят. Един акаунт може да притежава няколко героя; проверявайте с кой герой играете, преди да действате.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Публичен указател на героите</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Ръководства и справочник</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Изберете нужната помощ.</value></data>
 </root>

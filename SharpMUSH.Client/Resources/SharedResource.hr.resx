@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Pregled naredbi</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Račun je vaša privatna prijava. Lik je onaj kojeg igrate u zajedničkom svijetu. Jedan račun može imati više likova; prije radnje provjerite kojim likom igrate.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Javni imenik likova</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Vodiči i pregled naredbi</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Odaberite pomoć koja vam treba.</value></data>
 </root>

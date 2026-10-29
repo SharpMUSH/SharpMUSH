@@ -2,6 +2,10 @@ using Bunit;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using SharpMUSH.Client.Resources;
+using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Onboarding;
 using SharpMUSH.Client.Pages;
 using SharpMUSH.Tests.BUnit.Resources;
 
@@ -13,7 +17,7 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	private void Arrange(string uri)
 	{
 		HelpApi.Install(this, true, HelpPageTests.Corpora);
-		Services.AddEchoLocalizer();
+		Services.AddSingleton<IStringLocalizer<SharedResource>>(PortalLocalizer.Create());
 		this.AddAuthorization().SetAuthorized("staff").SetRoles("Wizard");
 		Services.GetRequiredService<NavigationManager>().NavigateTo(uri);
 	}
@@ -34,12 +38,23 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	[Arguments("/help?q=mail-s#topics")]
 	public async Task GuidanceIsACompactCardOnTheActualIndexIncludingItsFilterQuery(string uri)
 	{
+		using var culture = CultureScope.For("en");
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, onboarding:
+			new OnboardingPresentation("game", "", "", "", "", "", null,
+				new GuideLink("Our rules", "/wiki/policy/rules"), null)));
 		Arrange(uri);
 		var cut = RenderRoute();
 		cut.WaitForAssertion(() => cut.Find(".help-guidance .kit-card"));
 		await Assert.That(cut.FindComponents<Help>().Count).IsEqualTo(1);
 		await Assert.That(cut.FindAll("h1").Count).IsEqualTo(1);
-		await Assert.That(cut.Find(".help-guidance .kit-card-title").TextContent).IsEqualTo("GuideHelpIndexEntry");
+		await Assert.That(cut.Find(".help-guidance .kit-card-title").TextContent).IsEqualTo("Guides and reference");
+		await Assert.That(cut.Find(".help-guidance .kit-card-sub").TextContent).IsEqualTo("Choose the help you need.");
+		await Assert.That(cut.Find(".help-guidance").GetAttribute("aria-label")).IsEqualTo("Guides and reference");
+		cut.WaitForAssertion(() => cut.Find(".help-guidance a[href='/wiki/policy/rules']"));
+		await Assert.That(cut.Find(".help-guidance a[href='/wiki/policy/rules']").TextContent).IsEqualTo("Our rules");
+		await Assert.That(cut.Find(".help-guidance a[href='/welcome']").GetAttribute("title"))
+			.IsEqualTo("Getting started with Sharpie — an optional guide to joining and playing.");
+		await Assert.That(cut.Find(".help-guidance a[href='/help']").GetAttribute("title")).IsNull();
 		await Assert.That(cut.Find(".help-guidance a[href='/welcome']")).IsNotNull();
 		await Assert.That(cut.Find(".help-guidance a[href='/help']")).IsNotNull();
 		await Assert.That(cut.FindAll(".help-guidance .kit-banner")).IsEmpty();
@@ -52,6 +67,7 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	[Arguments("/help/getting%20started?q=mail", "getting started")]
 	public async Task DeepCommandAndTopicRoutesNeverRenderTheIndexGuidance(string uri, string topic)
 	{
+		using var culture = CultureScope.For("en");
 		Arrange(uri);
 		var cut = RenderRoute();
 		cut.WaitForAssertion(() => cut.FindComponent<HelpTopic>());
@@ -63,6 +79,7 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	[Test]
 	public async Task AdminTopicHasNoIndexGuidance()
 	{
+		using var culture = CultureScope.For("en");
 		Arrange("/help/admin/Security");
 		var cut = RenderRoute();
 		cut.WaitForAssertion(() => cut.FindComponent<HelpAdminTopic>());
@@ -73,6 +90,7 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	[Test]
 	public async Task UnmatchedDeeperPathIsNotAnIndexCatchAll()
 	{
+		using var culture = CultureScope.For("en");
 		Arrange("/help/one/two");
 		var cut = RenderRoute();
 		await Assert.That(cut.FindComponents<Help>()).IsEmpty();
@@ -85,6 +103,7 @@ public class HelpGuidancePlacementTests : TrackingBunitContext
 	[Test]
 	public async Task MountedIndexDropsGuidanceIfItsLocationMovesToADeepPath()
 	{
+		using var culture = CultureScope.For("en");
 		Arrange("/help");
 		// The product router normally disposes this component. Exercise the explicit guard as well.
 		var cut = Render<Help>();

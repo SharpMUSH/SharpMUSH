@@ -142,13 +142,14 @@ public class StarterWikiService(
 			: "";
 
 	/// <summary>
-	/// Home is seeded at every boot, so it always exists. The starter Home replaces it only while nobody has
-	/// changed the seeded text: an administrator's own Home stays. It opens with the introduction saved in setup.
+	/// Explicit starter application recognizes only the exact current and frozen pre-journey boot defaults.
+	/// Startup remains create-only; an administrator's customized Home stays. The replacement opens with
+	/// the introduction saved in setup.
 	/// </summary>
 	private async Task ReplaceDefaultHomeAsync(List<string> failures)
 	{
 		if (await wiki.GetBySlugAsync(WikiHelpers.Slugify("Home"), WikiNamespace.Main) is not WikiPage home
-			|| home.MarkdownSource != SeededWikiPages.Home)
+			|| (home.MarkdownSource != SeededWikiPages.Home && home.MarkdownSource != SeededWikiPages.PreJourneyHome))
 		{
 			return;
 		}

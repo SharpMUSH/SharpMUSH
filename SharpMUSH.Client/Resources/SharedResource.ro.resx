@@ -6859,4 +6859,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Referință pentru comenzi</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Contul este accesul tău privat. Un personaj este cel pe care îl joci în lumea comună. Un cont poate deține mai multe personaje; verifică pe care îl joci înainte de a acționa.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Catalog public de personaje</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Ghiduri și referințe</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Alege ajutorul de care ai nevoie.</value></data>
 </root>

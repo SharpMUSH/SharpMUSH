@@ -6168,4 +6168,6 @@
   <data name="NavJourneyReference" xml:space="preserve"><value>Référence des commandes</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Votre compte est votre accès privé. Un personnage est celui que vous incarnez dans le monde partagé. Un compte peut posséder plusieurs personnages ; vérifiez lequel vous incarnez avant d’agir.</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Annuaire public des personnages</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guides et références</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Choisissez l’aide dont vous avez besoin.</value></data>
 </root>
