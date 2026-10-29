@@ -1,0 +1,666 @@
+format: "1.16"
+package: census
+title: "Census"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+census: counts and lists the game's characters by what staff choose to count, such as theme, gender, role or how long since they were last on, with filters and breakdowns that combine."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [census, demographics, characters, theme, statistics]
+category: Community
+requires_server: ">=0.1"
+
+
+# One permission, for staff: see the dimensions only staff see, and count every character with /all. Wizards and
+# royalty hold it. A game that takes it back with @role/clear wizard=softcode.census.staff keeps it that way
+# through updates.
+categories:
+  permissions:
+    - name: Census
+      description: Counting the game's characters.
+permissions:
+  - name: softcode.census.staff
+    category: Census
+    description: See the census dimensions only staff see, and count every character with +census/all.
+grants:
+  wizard: [softcode.census.staff]
+  royalty: [softcode.census.staff]
+
+objects:
+  # The command object, in the master room. WIZARD because it finds every character with lsearch() and reads
+  # the attributes, roles and account each dimension counts by, which a mortal object answers only for what it
+  # can examine.
+  #
+  # A dimension is something the census counts by: an entry of the dimensions table on the Census Store, with
+  # its label, its kind (how a character's value is read), a path (what the kind reads, such as APP`THEME),
+  # how values compare, who sees it and its order. Each kind is KIND`<NAME> here; a package adds a kind by
+  # attaching KIND`<NAME> to this object.
+  #
+  # A census is worked out in parts, as +who is: the command reads the query and finds every character, then
+  # @dolist runs each part (FUN`PART`SIZE characters) as its own queue entry, with its own
+  # function_invocation_limit, writing what it found to RUN`<key>`<n> on the store. The last step reads them
+  # back, draws the screen and deletes them.
+  #
+  # Trees: CMD` the command, INC` its steps, FUN`COMMAND` the switches, FUN`QUERY` reading terms,
+  # FUN`DIMENSION` the table, FUN`RUN` and FUN`PART` the parts, FUN`TERM` and FUN`FILTER` filters, FUN`GROUP`
+  # breakdowns, FUN`DISPLAY` the screens, FUN`CONFIG` the setting checks, KIND` the kinds. DATA`CONFIG` the
+  # settings +config census shows.
+  - ref: census
+    type: thing
+    name: Census
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- Settings: +config census ----------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code
+      # reads the value with v(); see plus-config's README.
+      DATA`CONFIG:
+        value: |-
+          What +census counts and who it counts.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Census
+      DATA`CONFIG`SCOPE: |-
+
+      DATA`CONFIG`SCOPE`TYPE: |-
+        text
+      DATA`CONFIG`SCOPE`DEFAULT: |-
+
+      DATA`CONFIG`SCOPE`MAX: |-
+        400
+      DATA`CONFIG`SCOPE`CHECK: |-
+        FUN`CONFIG`CHECK`SCOPE
+      DATA`CONFIG`SCOPE`LABEL: |-
+        Who is counted
+      DATA`CONFIG`SCOPE`DESCRIPTION: |-
+        Filters every census starts from, written as +census takes them, such as role=approved/offline<90d. Empty counts every character.
+      DATA`CONFIG`SCOPE`EXAMPLE: |-
+        role=approved
+      # The dimensions, a +config table: entries on the store under DIM`, each holding its label, with KIND,
+      # PATH, COMPARE, ACCESS and ORDER beneath.
+      DATA`CONFIG`DIMENSIONS`TYPE: |-
+        table
+      DATA`CONFIG`DIMENSIONS`LABEL: |-
+        Dimensions
+      DATA`CONFIG`DIMENSIONS`DESCRIPTION: |-
+        What +census counts by: each one's label, the kind of value it reads, and who sees it.
+      DATA`CONFIG`DIMENSIONS`STORE: |-
+        {{store}}
+      DATA`CONFIG`DIMENSIONS`PATH: |-
+        DIM
+      DATA`CONFIG`DIMENSIONS`ENTRY: |-
+        label
+      DATA`CONFIG`DIMENSIONS`FIELDS: |-
+        label kind path compare access order
+      DATA`CONFIG`DIMENSIONS`KEYPATTERN: |-
+        ^[A-Za-z][A-Za-z0-9_]{0,19}$
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`TYPE: |-
+        text
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`MIN: |-
+        1
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`MAX: |-
+        30
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`LABEL: |-
+        Label
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`DESCRIPTION: |-
+        The column heading +census shows for it.
+      DATA`CONFIG`DIMENSIONS`FIELD`LABEL`EXAMPLE: |-
+        Theme
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`TYPE: |-
+        text
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`DEFAULT: |-
+        attribute
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`CHECK: |-
+        FUN`CONFIG`CHECK`KIND
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`LABEL: |-
+        Kind
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`DESCRIPTION: |-
+        How a character's value is read: attribute, role, offline, created or alts, or a kind another package adds.
+      DATA`CONFIG`DIMENSIONS`FIELD`KIND`EXAMPLE: |-
+        attribute
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`TYPE: |-
+        text
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`DEFAULT: |-
+
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`MAX: |-
+        200
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`CHECK: |-
+        FUN`CONFIG`CHECK`PATH
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`LABEL: |-
+        Reads
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`DESCRIPTION: |-
+        For attribute, the attribute on each character. For role, the roles that count, any role when empty.
+      DATA`CONFIG`DIMENSIONS`FIELD`PATH`EXAMPLE: |-
+        APP`THEME
+      DATA`CONFIG`DIMENSIONS`FIELD`COMPARE`TYPE: |-
+        choice
+      DATA`CONFIG`DIMENSIONS`FIELD`COMPARE`CHOICES: |-
+        text number duration
+      DATA`CONFIG`DIMENSIONS`FIELD`COMPARE`DEFAULT: |-
+        text
+      DATA`CONFIG`DIMENSIONS`FIELD`COMPARE`LABEL: |-
+        Compares as
+      DATA`CONFIG`DIMENSIONS`FIELD`COMPARE`DESCRIPTION: |-
+        text takes = and !=; number and duration also take < and >, and are counted in order.
+      DATA`CONFIG`DIMENSIONS`FIELD`ACCESS`TYPE: |-
+        choice
+      DATA`CONFIG`DIMENSIONS`FIELD`ACCESS`CHOICES: |-
+        everyone staff
+      DATA`CONFIG`DIMENSIONS`FIELD`ACCESS`DEFAULT: |-
+        staff
+      DATA`CONFIG`DIMENSIONS`FIELD`ACCESS`LABEL: |-
+        Seen by
+      DATA`CONFIG`DIMENSIONS`FIELD`ACCESS`DESCRIPTION: |-
+        everyone, or only staff with the softcode.census.staff permission. A new one is staff until changed.
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`DIMENSIONS`FIELD`ORDER`DESCRIPTION: |-
+        Where +census lists it, lowest first.
+      # %0 a scope as typed: why it cannot be read, or nothing.
+      FUN`CONFIG`CHECK`SCOPE: |-
+        setqm(census_error,,
+        query_filters,,
+        query_groups,,
+        viewer_staff,1)[if(strlen(%0),u(%!/FUN`QUERY`READ,%0,1))]%q<census_error>
+      # %0 a kind: why it is not one, or nothing.
+      FUN`CONFIG`CHECK`KIND: |-
+        if(not(u(%!/FUN`KIND`KNOWN,%0)),There is no kind called '%0'. The kinds are [itemize(u(%!/FUN`KIND`ALL))].)
+      # %0 a path, %2 the dimension: for an attribute, why it is not an attribute name, or nothing.
+      FUN`CONFIG`CHECK`PATH: |-
+        if(cand(strlen(%0),not(comp(lcstr(get({{store}}/DIM`%2`KIND)),attribute)),not(regmatch(%0,^%[A-Za-z0-9_`.~-%]+$))),'%0' is not an attribute name.)
+
+      # ---- commands ---------------------------------------------------------------
+      # +census[/<switches>] [<query>]: %1 the switches and %2 the query, exactly as typed, kept in registers so
+      # nothing a player wrote is evaluated.
+      CMD`CENSUS:
+        value: |-
+          $(?is)^\+census(/\S*)?(?\: +(.*))?$:think setqm(cmd_switch_text,%1,cmd_query,%2); @include %!/INC`COMMAND`RUN
+        flags: [regexp, cmdsyntax]
+      # Reads the switches and the query, finds the characters, then runs each part and, after the last, the screen.
+      INC`COMMAND`RUN:
+        value: |-
+          @assert hastype(%#,player)=@pemit %#=notice(CENSUS,Only players use +census.,warn); think u(%!/FUN`COMMAND`PREPARE); @assert not(strlen(%q<census_error>))=@pemit %#=notice(CENSUS,%q<census_error>,warn); @dolist/delimit | %q<census_parts>|-=@pemit %#=u(%!/FUN`RUN`STEP,##)
+        flags: [cmdsyntax]
+      # Command palette entry: useful anywhere, so a staple.
+      PALETTE`CENSUS: |-
+        {"label":"Census","line":"+census","always":true,"icon":"Groups","keywords":"census demographics count characters themes"}
+
+      # ---- switches -----------------------------------------------------------------
+      # Sets the registers every step reads: the switches, who is asking, the query and the characters to count,
+      # or census_error.
+      FUN`COMMAND`PREPARE: |-
+        setqm(cmd_switch_list,lcstr(trim(edit(%q<cmd_switch_text>,/,%b))),
+        cmd_query,trim(%q<cmd_query>),
+        viewer_staff,permission(%#,softcode.census.staff),
+        viewer_sees_all,permission(%#,game.see_all),
+        census_error,,
+        query_filters,,
+        query_groups,,
+        census_scope,,
+        census_online,mwho())[u(%!/FUN`COMMAND`SWITCHES)][if(strlen(%q<census_error>),,u(%!/FUN`QUERY`READ,%q<cmd_query>,0))][if(strlen(%q<census_error>),,u(%!/FUN`QUERY`SCOPE))][if(strlen(%q<census_error>),,u(%!/FUN`RUN`BEGIN))]
+      # The page is the last switch, a number; /all is the only other. Sets cmd_page and cmd_all.
+      FUN`COMMAND`SWITCHES: |-
+        setqm(cmd_page,if(isint(last(%q<cmd_switch_list>)),last(%q<cmd_switch_list>),1),
+        cmd_named,if(isint(last(%q<cmd_switch_list>)),ldelete(%q<cmd_switch_list>,words(%q<cmd_switch_list>)),%q<cmd_switch_list>))[setqm(cmd_all,t(member(%q<cmd_named>,all)),
+        cmd_unknown,first(setdiff(%q<cmd_named>,all)))][setq(census_error,if(strlen(%q<cmd_unknown>),+census has no /%q<cmd_unknown> switch. +census/all counts every character and a number is a page%, such as +census/2 theme.,if(cand(%q<cmd_all>,not(%q<viewer_staff>)),Only staff count every character with +census/all.,if(lt(%q<cmd_page>,1),There is no page %q<cmd_page>.))))]
+
+      # ---- reading a query ------------------------------------------------------------
+      # %0 terms split by /, %1 1 for the scope setting: each term added to query_filters or query_groups, or
+      # census_error set. query_own counts the filters the reader typed.
+      FUN`QUERY`READ: |-
+        null(iter(%0,if(cand(not(strlen(%q<census_error>)),strlen(trim(%i0))),u(%!/FUN`QUERY`TERM,trim(%i0),%1)),/))[setq(census_error,if(strlen(%q<census_error>),%q<census_error>,if(gt(words(%q<query_groups>),2),+census counts by two dimensions at most%, such as theme/gender.,if(gt(words(%q<query_filters>,|),8),+census takes eight filters at most.))))][if(not(%1),setq(query_own,words(%q<query_filters>,|)))]
+      # The scope setting, read as filters before the reader's, unless /all asks for every character.
+      FUN`QUERY`SCOPE: |-
+        if(cand(not(%q<cmd_all>),strlen(setr(census_scope,trim(v(DATA`CONFIG`SCOPE))))),[u(%!/FUN`QUERY`READ,%q<census_scope>,1)][if(strlen(%q<census_error>),setq(census_error,The census's scope cannot be read: %q<census_error>))],setq(census_scope,))
+      # %0 a term, %1 1 for the scope: a filter, such as theme=Marvel, or a dimension to count by, such as gender.
+      FUN`QUERY`TERM: |-
+        if(regmatchi(%0,^%(%[A-Za-z0-9_%]+%) *%(!=|>=|<=|=|>|<%) *%(.*%)$,-1 term_dim term_op term_operand),u(%!/FUN`QUERY`FILTER,%1),if(regmatch(%0,^%[A-Za-z0-9_%]+$),u(%!/FUN`QUERY`GROUP,%0,%1),setq(census_error,'%0' is not a census term. A term is a dimension%, such as gender%, or a dimension%, a comparison and a value%, such as gender=female or offline>30d.)))
+      # %1 1 for the scope; term_dim, term_op and term_operand as typed: the filter added to query_filters as
+      # dimension, comparison, value to compare with, kind, path, how it compares and the value as typed, split by tabs.
+      FUN`QUERY`FILTER: |-
+        setqm(term_dim,lcstr(%q<term_dim>),
+        term_operand,trim(%q<term_operand>),
+        term_typed,trim(%q<term_operand>))[if(not(u(%!/FUN`DIMENSION`KNOWN,%q<term_dim>,%0)),setq(census_error,u(%!/FUN`DISPLAY`UNKNOWN,%q<term_dim>)),if(strlen(setr(census_error,u(%!/FUN`DIMENSION`PROBLEM,%q<term_dim>))),,[setq(term_spec,u(%!/FUN`DIMENSION`SPEC,%q<term_dim>))][setq(census_error,u(%!/FUN`QUERY`OPERAND,last(%q<term_spec>,%t)))][if(not(strlen(%q<census_error>)),setq(query_filters,if(strlen(%q<query_filters>),%q<query_filters>|)%q<term_dim>%t%q<term_op>%t%q<term_operand>%t%q<term_spec>%t%q<term_typed>))]))]
+      # %0 how the dimension compares: why the comparison or value will not do, or nothing, with term_operand
+      # made ready to compare: a duration in seconds, a number alone counted as days.
+      FUN`QUERY`OPERAND: |-
+        if(regmatch(%q<term_operand>,%[|%t%]),A census value cannot hold |.,if(cand(not(strlen(%q<term_operand>)),not(member(= !=,%q<term_op>))),%q<term_dim>%q<term_op> needs a value to compare with.,case(%0,TEXT,if(not(member(= !=,%q<term_op>)),%q<term_dim> counts words%, so it takes only = or !=.),NUMBER,if(cand(strlen(%q<term_operand>),not(isnum(%q<term_operand>))),%q<term_dim> counts numbers%, such as %q<term_dim>>=2.),DURATION,if(strlen(%q<term_operand>),if(isnum(%q<term_operand>),setq(term_operand,mul(%q<term_operand>,86400)),if(isnum(setr(term_seconds,stringsecs(%q<term_operand>))),setq(term_operand,%q<term_seconds>),%q<term_dim> counts time%, such as %q<term_dim>>30d or %q<term_dim><2w.))))))
+      # %0 a dimension's key, %1 1 for the scope: added to query_groups.
+      FUN`QUERY`GROUP: |-
+        if(%1,setq(census_error,The scope can only hold filters%, such as role=approved.),if(not(u(%!/FUN`DIMENSION`KNOWN,lcstr(%0),%1)),setq(census_error,u(%!/FUN`DISPLAY`UNKNOWN,%0)),if(strlen(setr(census_error,u(%!/FUN`DIMENSION`PROBLEM,lcstr(%0)))),,if(member(%q<query_groups>,lcstr(%0)),,setq(query_groups,trim(%q<query_groups> [lcstr(%0)]))))))
+
+      # ---- the dimensions ---------------------------------------------------------------
+      # %0 a key, %1 1 when staff-only ones count: 1 when it is a dimension the reader may use.
+      FUN`DIMENSION`KNOWN: |-
+        cand(hasattr({{store}},DIM`%0),cor(%1,%q<viewer_staff>,not(comp(lcstr(get({{store}}/DIM`%0`ACCESS)),everyone))))
+      # %0 a key: why it cannot be counted, or nothing.
+      FUN`DIMENSION`PROBLEM: |-
+        if(not(u(%!/FUN`KIND`KNOWN,u(%!/FUN`DIMENSION`KIND,%0))),The %0 dimension reads a kind called '[lcstr(u(%!/FUN`DIMENSION`KIND,%0))]'%, which nothing provides.)
+      # %0 a key: its kind, ATTRIBUTE when it has none.
+      FUN`DIMENSION`KIND: |-
+        ucstr(firstof(trim(get({{store}}/DIM`%0`KIND)),attribute))
+      # %0 a key: its kind, path and how it compares, split by tabs.
+      FUN`DIMENSION`SPEC: |-
+        u(%!/FUN`DIMENSION`KIND,%0)%t[trim(get({{store}}/DIM`%0`PATH))]%t[ucstr(firstof(trim(get({{store}}/DIM`%0`COMPARE)),text))]
+      # The dimensions the reader may use, as DIM` attributes, in order.
+      FUN`DIMENSION`ALL: |-
+        sortkey(%!/FUN`DIMENSION`SORTKEY,filterbool(%!/FUN`DIMENSION`VISIBLE,lattr({{store}}/DIM`*)))
+      # %0 a DIM` attribute: 1 when the reader may use it.
+      FUN`DIMENSION`VISIBLE: |-
+        u(%!/FUN`DIMENSION`KNOWN,lcstr(after(%0,`)),0)
+      # %0 a DIM` attribute: its order, then its key.
+      FUN`DIMENSION`SORTKEY: |-
+        rjust(firstof(get({{store}}/%0`ORDER),50),3,0)[lcstr(%0)]
+      # %0 a key: its label.
+      FUN`DIMENSION`LABEL: |-
+        firstof(get({{store}}/DIM`%0),%0)
+
+      # ---- kinds -----------------------------------------------------------------------
+      # %0 a kind: 1 when this object has it.
+      FUN`KIND`KNOWN: |-
+        cand(regmatch(%0,^%[A-Za-z0-9_%]+$),hasattr(%!,KIND`%0))
+      # Every kind, in lower case.
+      FUN`KIND`ALL: |-
+        lcstr(iter(lattr(%!/KIND`*),after(%i0,`)))
+      # A kind is KIND`<NAME>: %0 characters, %1 the dimension's path, and %# the reader; returns each
+      # character's value as the reader may see it, plain text or nothing, one line each in the same order, so a
+      # value never holds a new line. KIND`<NAME>`TEST, when there is one, decides a filter itself: %0 the
+      # characters, %1 the path, %2 the comparison and %3 the value, returning the characters it keeps.
+      # KIND`<NAME>`FIND, when there is one, may return the only characters a filter can match, from an index: %0
+      # the path, %1 the comparison and %2 the value, or #-1 to look at everyone.
+      #
+      # attribute: the attribute the path names, as the census reads it. One flagged mortal_dark is read only
+      # for a reader who sees everything.
+      KIND`ATTRIBUTE: |-
+        if(not(strlen(%1)),iter(%0,,,%r),if(%q<viewer_sees_all>,iter(%0,edit(stripansi(get(%i0/%1)),%r,%b),,%r),iter(%0,if(hasflag(%i0/%1,mortal_dark),,edit(stripansi(get(%i0/%1)),%r,%b)),,%r)))
+      # An = filter with no wildcard, on an attribute with an index (@attribute/index), finds its characters there.
+      KIND`ATTRIBUTE`FIND: |-
+        if(cand(strlen(%0),not(comp(%1,=)),strlen(%2),not(regmatch(%2,%[*?%]))),indexed(%0,=,%2),#-1)
+      # role: the highest of the roles the path names that the character holds, or of all their roles but
+      # player and everyone when the path is empty.
+      KIND`ROLE: |-
+        iter(%0,first(if(strlen(%1),iter(roles(%i0),if(member(lcstr(%1),%i0),%i0)),remove(remove(roles(%i0),everyone),player))),,%r)
+      # A role filter asks whether the character holds the role at all: role=approved counts an approved wizard.
+      KIND`ROLE`TEST: |-
+        squish(iter(%0,if(xor(not(comp(%2,!=)),if(strlen(%3),t(match(roles(%i0),%3)),not(strlen(u(%!/KIND`ROLE,%i0,%1))))),%i0)))
+      # offline: seconds since the character was last on, 0 while a mortal sees them on the who list.
+      KIND`OFFLINE: |-
+        setq(kind_now,secs())[iter(%0,if(member(%q<census_online>,%i0),0,max(0,sub(%q<kind_now>,firstof(convtime(get(%i0/LASTLOGOUT)),convtime(get(%i0/LAST)),csecs(%i0))))),,%r)]
+      # created: seconds since the character was made.
+      KIND`CREATED: |-
+        setq(kind_now,secs())[iter(%0,max(0,sub(%q<kind_now>,csecs(%i0))),,%r)]
+      # alts: how many characters share the character's account, 1 when it is on none.
+      KIND`ALTS: |-
+        iter(%0,max(1,words(accountchars(%i0))),,%r)
+
+      # ---- parts ---------------------------------------------------------------------
+      # Picks the screen, finds every character the census may count (no guests, God or the package manager),
+      # narrows them through any index a filter can use, and splits them into parts.
+      FUN`RUN`BEGIN: |-
+        setqm(query_mode,if(words(%q<query_groups>),group,if(%q<query_own>,list,overview)),
+        census_key,after(%#,#)_[rand(1000000000)],
+        census_candidates,setdiff(lsearch(all,type,player,elock,!power^guest),#1 [num(config(package_manager))]))[null(iter(%q<query_filters>,u(%!/FUN`RUN`NARROW,%i0),|))][null(iter(%q<query_groups>,setq(group_spec_[inum(0)],u(%!/FUN`DIMENSION`SPEC,%i0))))][setq(census_parts,u(%!/FUN`PART`SPLIT,%q<census_candidates>,u(%!/FUN`PART`SIZE)))]
+      # %0 a filter: the candidates narrowed to what its kind's FIND returns, when it returns anything but #-1.
+      FUN`RUN`NARROW: |-
+        u(%!/FUN`TERM`LOAD,%0)[if(hasattr(%!,KIND`%q<term_kind>`FIND),if(not(strmatch(setr(term_found,u(%!/KIND`%q<term_kind>`FIND,%q<term_path>,%q<term_op>,%q<term_operand>)),#-*)),setq(census_candidates,setinter(%q<census_candidates>,%q<term_found>))))]
+      # %0 a part, or - after the last: a part is counted and kept; - draws the screen.
+      FUN`RUN`STEP: |-
+        if(strmatch(%0,-),u(%!/FUN`DISPLAY`SCREEN,u(%!/FUN`RUN`COLLECT)),null(u(%!/FUN`RUN`PART,%0)))
+      # %0 a part's characters: those every filter keeps, written as RUN`<key>`<n> on the store. A census by
+      # dimension keeps a line per character, its values; a list keeps its name and dbref; the overview the dbrefs.
+      FUN`RUN`PART: |-
+        setq(run_matches,%0)[null(iter(%q<query_filters>,[u(%!/FUN`TERM`LOAD,%i0)][setq(run_matches,u(%!/FUN`FILTER`%q<term_filter>,%q<run_matches>))],|))][if(words(%q<run_matches>),attrib_set({{store}}/RUN`%q<census_key>`[after(first(%0),#)],case(%q<query_mode>,group,u(%!/FUN`GROUP`LINES,%q<run_matches>),list,iter(%q<run_matches>,lcstr(name(%i0))%t%i0,,%r),%q<run_matches>)))]
+      # What every part kept, joined, then deleted from the store.
+      FUN`RUN`COLLECT: |-
+        iter(setr(run_attributes,lattr({{store}}/RUN`%q<census_key>`*)),xget({{store}},%i0),,if(strmatch(%q<query_mode>,overview),%b,%r))[null(iter(%q<run_attributes>,attrib_set({{store}}/%i0)))][null(attrib_set({{store}}/RUN`%q<census_key>))]
+      # %0 a list, %1 how many to a part: the parts, split by |.
+      FUN`PART`SPLIT: |-
+        if(words(%0),iter(lnum(0,dec(ceil(fdiv(words(%0),%1)))),extract(%0,inc(mul(%i0,%1)),%1),,|))
+      # How many characters a part counts: as many as DATA`PART`BUDGET function calls cover, at DATA`PART`COST
+      # for each filter and dimension and one more, from 1 to 1000. Each part runs as its own queue entry, with
+      # its own function_invocation_limit.
+      FUN`PART`SIZE: |-
+        max(1,min(1000,div(v(DATA`PART`BUDGET),mul(v(DATA`PART`COST),add(1,words(%q<query_filters>,|),words(%q<query_groups>))))))
+      DATA`PART`BUDGET: |-
+        15000
+      DATA`PART`COST: |-
+        20
+
+      # ---- filters ------------------------------------------------------------------
+      # Each filter runs over a whole part at once, reading every character's value with one u() of its kind.
+      # %0 a filter from query_filters: its parts in term_ registers, and term_filter, the FUN`FILTER` to run.
+      FUN`TERM`LOAD: |-
+        setqm(term_dim,extract(%0,1,1,%t),
+        term_op,extract(%0,2,1,%t),
+        term_operand,extract(%0,3,1,%t),
+        term_kind,extract(%0,4,1,%t),
+        term_path,extract(%0,5,1,%t),
+        term_compare,extract(%0,6,1,%t))[setqm(term_negate,not(comp(%q<term_op>,!=)),
+        term_test,if(hasattr(%!,KIND`%q<term_kind>`TEST),KIND`%q<term_kind>`TEST))][setq(term_filter,if(strlen(%q<term_test>),TEST,%q<term_compare>))]
+      # %0 characters: those the loaded filter keeps. TEST asks the kind's own KIND`<NAME>`TEST.
+      FUN`FILTER`TEST: |-
+        u(%!/%q<term_test>,%0,%q<term_path>,%q<term_op>,%q<term_operand>)
+      # Words compare without case, and * and ? match anything. With no value to compare with, = keeps those
+      # with no value and != those with one.
+      FUN`FILTER`TEXT: |-
+        squish(iter(u(%!/KIND`%q<term_kind>,%0,%q<term_path>),if(xor(%q<term_negate>,if(strlen(%q<term_operand>),strmatch(%i0,%q<term_operand>),not(strlen(%i0)))),extract(%0,inum(0),1)),%r,%b))
+      # Compared as numbers; a value that is not a number matches only !=. With no value to compare with, =
+      # keeps those with no number and != those with one.
+      FUN`FILTER`NUMBER: |-
+        squish(iter(u(%!/KIND`%q<term_kind>,%0,%q<term_path>),if(if(strlen(%q<term_operand>),if(%q<term_negate>,not(cand(isnum(%i0),eq(%i0,%q<term_operand>))),cand(isnum(%i0),case(%q<term_op>,=,eq(%i0,%q<term_operand>),>,gt(%i0,%q<term_operand>),>=,gte(%i0,%q<term_operand>),<,lt(%i0,%q<term_operand>),<=,lte(%i0,%q<term_operand>)))),xor(%q<term_negate>,not(isnum(%i0)))),extract(%0,inum(0),1)),%r,%b))
+      # Seconds, compared as numbers.
+      FUN`FILTER`DURATION: |-
+        u(%!/FUN`FILTER`NUMBER,%0)
+
+      # ---- counting by dimension ----------------------------------------------------------
+      # %0 characters: a line each, their values for the dimensions counted by, split by |, in lower case, a tab,
+      # then as written. A value not set is ~, so it sorts last.
+      FUN`GROUP`LINES: |-
+        setq(group_values_1,u(%!/FUN`GROUP`VALUES,%0,1))[if(strlen(%q<group_spec_2>),setq(group_values_2,u(%!/FUN`GROUP`VALUES,%0,2)))][iter(%q<group_values_1>,lcstr(setr(group_line,%i0[if(strlen(%q<group_spec_2>),|[extract(%q<group_values_2>,inum(0),1,%r)])]))%t%q<group_line>,%r,%r)]
+      # %0 characters, %1 which dimension, 1 or 2: each one's value as a census counts it, split by new lines.
+      FUN`GROUP`VALUES: |-
+        setqm(group_kind,extract(r(group_spec_%1),1,1,%t),
+        group_path,extract(r(group_spec_%1),2,1,%t),
+        group_spans,v(DATA`SPAN`FROM))[u(%!/FUN`GROUP`[extract(r(group_spec_%1),3,1,%t)],%0)]
+      # Up to 40 characters of each value, without | or tabs.
+      FUN`GROUP`TEXT: |-
+        iter(u(%!/KIND`%q<group_kind>,%0,%q<group_path>),if(strlen(setr(group_text,trim(left(squish(edit(%i0,%t,%b,|,/)),40)))),%q<group_text>,~),%r,%r)
+      FUN`GROUP`NUMBER: |-
+        iter(u(%!/KIND`%q<group_kind>,%0,%q<group_path>),if(isnum(%i0),%i0,~),%r,%r)
+      # Which span of DATA`SPAN`FROM each falls in, 00 for the first.
+      FUN`GROUP`DURATION: |-
+        iter(u(%!/KIND`%q<group_kind>,%0,%q<group_path>),if(isnum(%i0),rjust(dec(words(iter(%q<group_spans>,if(gte(%i1,%i0),x)))),2,0),~),%r,%r)
+      # A duration is counted in spans: each starts at a number of seconds, with its name below.
+      DATA`SPAN`FROM: |-
+        0 1 86400 604800 2592000 7776000 31536000
+      DATA`SPAN`NAME: |-
+        now|under a day|1 to 7 days|1 to 4 weeks|1 to 3 months|3 to 12 months|a year or more
+      # How many different values a census shows before it asks for a narrower one.
+      DATA`LIMIT`VALUES: |-
+        400
+
+      # ---- display ---------------------------------------------------------------------
+      # %0 what the parts kept: the screen the query asked for.
+      FUN`DISPLAY`SCREEN: |-
+        u(%!/FUN`DISPLAY`[ucstr(%q<query_mode>)],%0)
+      # %0 a key: there is no such dimension.
+      FUN`DISPLAY`UNKNOWN: |-
+        There is no census dimension called '%0'. +census lists them.
+      # Rows on a page, from the reader's screen height.
+      FUN`DISPLAY`PAGESIZE: |-
+        max(5,sub(height(%#,24),9))
+      # %0 seconds: a short time ago, or now.
+      FUN`DISPLAY`AGO: |-
+        if(isnum(%0),if(lt(%0,1),now,trim(etime(%0,3)) ago))
+      # %0 a key, %1 a character: their value, as a list shows it.
+      FUN`DISPLAY`CELL: |-
+        setq(cell_spec,u(%!/FUN`DIMENSION`SPEC,%0))[setq(cell_value,u(%!/KIND`[extract(%q<cell_spec>,1,1,%t)],%1,extract(%q<cell_spec>,2,1,%t)))][case(last(%q<cell_spec>,%t),DURATION,u(%!/FUN`DISPLAY`AGO,%q<cell_value>),left(squish(edit(%q<cell_value>,%t,%b)),40))]
+      # The footer's lines about who was counted: the reader's filters, and the scope or /all.
+      FUN`DISPLAY`COUNTED: |-
+        [if(%q<query_own>,%rFiltered by [u(%!/FUN`DISPLAY`FILTERS)].)][if(strlen(%q<census_scope>),%rCounting only %q<census_scope>.,if(%q<cmd_all>,%rCounting every character.))]
+      # The reader's filters, as typed.
+      FUN`DISPLAY`FILTERS: |-
+        itemize(iter(extract(%q<query_filters>,1,%q<query_own>,|),u(%!/FUN`DISPLAY`FILTER,%i0),|,|),|)
+      # %0 a filter: dimension, comparison and value, the value as typed.
+      FUN`DISPLAY`FILTER: |-
+        extract(%0,1,1,%t)[extract(%0,2,1,%t)][extract(%0,7,1,%t)]
+      # %0 the page's line count, %1 how many lines there are: the last line of a page, the command for the
+      # next page, or nothing on the last.
+      FUN`DISPLAY`NEXT: |-
+        if(gt(%1,mul(%q<cmd_page>,%0)),%r+census/[if(%q<cmd_all>,all/)][inc(%q<cmd_page>)] %q<cmd_query> shows the next page.)
+      # %0 how many lines there are, %1 a page's: a notice when the page is past the end, or nothing.
+      FUN`DISPLAY`PASTEND: |-
+        if(gt(%q<cmd_page>,max(1,ceil(fdiv(%0,%1)))),notice(CENSUS,There [if(eq(ceil(fdiv(%0,%1)),1),is one page,are [ceil(fdiv(%0,%1))] pages)].,warn))
+
+      # The overview: how many characters are counted and the dimensions the reader may use.
+      FUN`DISPLAY`OVERVIEW: |-
+        box(if(words(setr(display_dims,u(%!/FUN`DIMENSION`ALL))),ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3),grow,json(string,%r1%r)),tone(strong,Dimension)%r[tone(strong,Shows)]%r[tone(strong,Compares)],iter(%q<display_dims>,u(%!/FUN`DISPLAY`DIMENSION,%i0),,%*<|>),%*<|>),tone(muted,There are no census dimensions yet.))%r[rule()]%r[tone(muted,[words(%0)] characters counted%, [words(setinter(%0,%q<census_online>))] connected now.[u(%!/FUN`DISPLAY`COUNTED)]%r+census <dimension> counts them by it%, +census <dimension>=<value> lists who matches%, and / joins terms%, such as +census theme=Marvel/gender.)],Census)
+      # %0 a DIM` attribute: its row in the overview.
+      FUN`DISPLAY`DIMENSION: |-
+        lcstr(after(%0,`))%r[unmark(get({{store}}/%0))][if(not(comp(lcstr(get({{store}}/%0`ACCESS)),everyone)),,%b[tone(muted,\(staff\))])]%r[case(lcstr(firstof(get({{store}}/%0`COMPARE),text)),number,numbers,duration,time,words)]
+
+      # %0 the lines the parts kept, each a character's name and dbref: a page of them, by name.
+      FUN`DISPLAY`LIST: |-
+        setqm(display_dbrefs,regeditall(sort(%0,a,%r),.*%t,),
+        display_total,words(%0,%r),
+        display_size,u(%!/FUN`DISPLAY`PAGESIZE),
+        display_dims,u(%!/FUN`DISPLAY`LISTDIMS))[u(%!/FUN`DISPLAY`PASTEND,%q<display_total>,%q<display_size>)][if(lte(%q<cmd_page>,max(1,ceil(fdiv(%q<display_total>,%q<display_size>)))),box(if(%q<display_total>,u(%!/FUN`DISPLAY`LISTTABLE,extract(%q<display_dbrefs>,inc(mul(dec(%q<cmd_page>),%q<display_size>)),%q<display_size>,%r)),tone(muted,Nobody matches.))%r[rule()]%r[tone(muted,%q<display_total> [if(eq(%q<display_total>,1),character,characters)][u(%!/FUN`DISPLAY`PAGEOF,%q<display_total>,%q<display_size>)].[u(%!/FUN`DISPLAY`COUNTED)][u(%!/FUN`DISPLAY`NEXT,%q<display_size>,%q<display_total>)])],Census))]
+      # The dimensions the reader filtered by, each once, in the order typed: a list's columns.
+      FUN`DISPLAY`LISTDIMS: |-
+        setq(list_dims,)[null(iter(extract(%q<query_filters>,1,%q<query_own>,|),if(member(%q<list_dims>,first(%i0,%t)),,setq(list_dims,trim(%q<list_dims> [first(%i0,%t)]))),|))]%q<list_dims>
+      # %0 characters split by new lines: the table, the name then a column per dimension filtered by.
+      FUN`DISPLAY`LISTTABLE: |-
+        ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1),grow,json(string,%r[iter(%q<display_dims>,1,,%r)])),tone(strong,Name)[iter(%q<display_dims>,%r[tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0))],,)],iter(%0,unmark(name(%i0))[iter(%q<display_dims>,%r[u(%!/FUN`DISPLAY`CELL,%i0,%i1)],,)],%r,%*<|>),%*<|>)
+      # %0 how many lines, %1 a page's: , page n of m, when there is more than one page.
+      FUN`DISPLAY`PAGEOF: |-
+        if(gt(%0,%1),%, page %q<cmd_page> of [ceil(fdiv(%0,%1))])
+
+      # %0 the lines the parts kept, each a character's values: how many characters hold each value, most first,
+      # or in order when one number or time dimension is counted.
+      FUN`DISPLAY`GROUP: |-
+        setqm(display_sorted,sort(%0,a,%r),
+        display_total,words(%0,%r))[setqm(display_keys,regeditall(%q<display_sorted>,%t.*,),
+        display_size,u(%!/FUN`DISPLAY`PAGESIZE))][setq(display_values,unique(%q<display_keys>,a,%r))][if(gt(words(%q<display_values>,%r),v(DATA`LIMIT`VALUES)),notice(CENSUS,There are [words(%q<display_values>,%r)] different values to count. Add a filter to narrow them%, such as [first(%q<query_groups>)]=a*.,warn),u(%!/FUN`DISPLAY`GROUPPAGE,u(%!/FUN`DISPLAY`GROUPROWS)))]
+      # The values, each as sort key, count and value as written, split by tabs; lines split by new lines, in order.
+      FUN`DISPLAY`GROUPROWS: |-
+        setq(display_count,words(%q<display_values>,%r))[setq(display_rows,iter(%q<display_values>,u(%!/FUN`DISPLAY`GROUPROW,%i0,inum(0)),%r,%r))][if(cand(eq(words(%q<query_groups>),1),member(NUMBER DURATION,extract(%q<group_spec_1>,3,1,%t))),sortkey(%!/FUN`DISPLAY`VALUEKEY,%q<display_rows>,f,%r,%r),sort(%q<display_rows>,a,%r,%r))]
+      # %0 a value in lower case, %1 its place among them: sort key (most first, with no value set last), count
+      # and the value as written.
+      FUN`DISPLAY`GROUPROW: |-
+        setq(group_at,member(%q<display_keys>,%0,%r))[setq(group_held,sub(if(lt(%1,%q<display_count>),member(%q<display_keys>,extract(%q<display_values>,inc(%1),1,%r),%r),inc(%q<display_total>)),%q<group_at>))][if(regmatch(%0,^%[~|%]+$),1,0)][rjust(sub(9999999,%q<group_held>),7,0)%0]%t%q<group_held>%t[after(extract(%q<display_sorted>,%q<group_at>,1,%r),%t)]
+      # %0 a row: the number it sorts by, its value, or past every value when it is not set.
+      FUN`DISPLAY`VALUEKEY: |-
+        if(isnum(setr(row_value,last(%0,%t))),%q<row_value>,999999999999)
+      # %0 the rows: a page of them in a table, with the footer.
+      FUN`DISPLAY`GROUPPAGE: |-
+        setq(display_rowcount,words(%0,%r))[u(%!/FUN`DISPLAY`PASTEND,%q<display_rowcount>,%q<display_size>)][if(lte(%q<cmd_page>,max(1,ceil(fdiv(%q<display_rowcount>,%q<display_size>)))),box(if(%q<display_total>,ldatatable(json(object,delim,json(string,%r),nowrap,json(string,u(%!/FUN`DISPLAY`GROUPNOWRAP)),grow,json(string,u(%!/FUN`DISPLAY`GROUPGROW))),iter(%q<query_groups>,tone(strong,u(%!/FUN`DIMENSION`LABEL,%i0)),,%r)%r>[tone(strong,Characters)]%r>[tone(strong,Share)],iter(extract(%0,inc(mul(dec(%q<cmd_page>),%q<display_size>)),%q<display_size>,%r),u(%!/FUN`DISPLAY`GROUPCELLS,%i0),%r,%*<|>),%*<|>),tone(muted,Nobody matches.))%r[rule()]%r[tone(muted,%q<display_total> [if(eq(%q<display_total>,1),character,characters)] in [%q<display_rowcount>] [if(eq(%q<display_rowcount>,1),group,groups)][u(%!/FUN`DISPLAY`PAGEOF,%q<display_rowcount>,%q<display_size>)].[u(%!/FUN`DISPLAY`COUNTED)][u(%!/FUN`DISPLAY`NEXT,%q<display_size>,%q<display_rowcount>)])],Census))]
+      # The group table's columns that never wrap (counts and shares) and those that share the spare width.
+      FUN`DISPLAY`GROUPNOWRAP: |-
+        add(words(%q<query_groups>),1)%r[add(words(%q<query_groups>),2)]
+      FUN`DISPLAY`GROUPGROW: |-
+        iter(%q<query_groups>,1,,%r)%r%r
+      # %0 a row: its cells, each value shown as its dimension shows it, then the count and share.
+      FUN`DISPLAY`GROUPCELLS: |-
+        iter(extract(%0,3,1,%t),u(%!/FUN`DISPLAY`GROUPVALUE,%i0,inum(0)),|,%r)%r[extract(%0,2,1,%t)]%r[if(lt(setr(display_share,round(fdiv(mul(extract(%0,2,1,%t),100),%q<display_total>),0)),1),<1,%q<display_share>)]%%
+      # %0 a value as counted, %1 its dimension's place: a span's name for a time, (not set) for ~.
+      FUN`DISPLAY`GROUPVALUE: |-
+        if(not(comp(%0,~)),tone(muted,\(not set\)),if(strmatch(extract(r(group_spec_%1),3,1,%t),DURATION),extract(v(DATA`SPAN`NAME),inc(%0),1,|),%0))
+
+  # The dimensions, one branch each, named as staff typed it, and the parts of a census while it is worked out.
+  # Inside the Census, so no player can reach it, and no_command, so nothing kept on it is ever matched as a
+  # command.
+  #
+  # A dimension is DIM`<NAME>, its value its label, with KIND, PATH, COMPARE, ACCESS and ORDER beneath. Staff
+  # change them with +config census/dimensions. RUN`<key>`<n> holds a part of a census being worked out and is
+  # deleted when it is drawn.
+  - ref: store
+    type: thing
+    name: Census Store
+    location: "{{census}}"
+    flags: [no_command]
+    attributes:
+      DIM: |-
+        What +census counts by, one branch each, named as staff typed it.
+      DIM`GENDER: |-
+        Gender
+      DIM`GENDER`KIND: |-
+        attribute
+      DIM`GENDER`PATH: |-
+        SEX
+      DIM`GENDER`COMPARE: |-
+        text
+      DIM`GENDER`ACCESS: |-
+        everyone
+      DIM`GENDER`ORDER: |-
+        10
+      DIM`ROLE: |-
+        Role
+      DIM`ROLE`KIND: |-
+        role
+      DIM`ROLE`PATH: |-
+        immortal wizard moderator councilor royalty architect guildmaster helper builder approved
+      DIM`ROLE`COMPARE: |-
+        text
+      DIM`ROLE`ACCESS: |-
+        everyone
+      DIM`ROLE`ORDER: |-
+        20
+      DIM`OFFLINE: |-
+        Last on
+      DIM`OFFLINE`KIND: |-
+        offline
+      DIM`OFFLINE`PATH: |-
+
+      DIM`OFFLINE`COMPARE: |-
+        duration
+      DIM`OFFLINE`ACCESS: |-
+        everyone
+      DIM`OFFLINE`ORDER: |-
+        30
+      DIM`CREATED: |-
+        Created
+      DIM`CREATED`KIND: |-
+        created
+      DIM`CREATED`PATH: |-
+
+      DIM`CREATED`COMPARE: |-
+        duration
+      DIM`CREATED`ACCESS: |-
+        everyone
+      DIM`CREATED`ORDER: |-
+        40
+      DIM`ALTS: |-
+        On the account
+      DIM`ALTS`KIND: |-
+        alts
+      DIM`ALTS`PATH: |-
+
+      DIM`ALTS`COMPARE: |-
+        number
+      DIM`ALTS`ACCESS: |-
+        staff
+      DIM`ALTS`ORDER: |-
+        50
+      RUN: |-
+        Parts of a census being worked out, deleted as each is drawn.
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: census_help
+    type: thing
+    name: Census Help
+    location: "{{census}}"
+    attributes:
+      HELP: |-
+        Counting the game's characters.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`CENSUS: |-
+        finger staff
+      HELP`CENSUS: |-
+        `+census` counts the game's characters by what staff choose, such as gender, role or theme. Each of
+        those is a **dimension**. Guests, God and the package manager are never counted.
+
+        - `+census` lists the dimensions and how many characters are counted.
+        - `+census <dimension>` counts the characters holding each value, such as `+census gender`.
+        - `+census <dimension>=<value>` lists the characters who match, such as `+census role=approved`.
+        - Terms join with `/`, and every filter must match: `+census theme=Marvel/gender` counts the Marvel
+          characters by gender. See [census queries].
+        - A long answer comes in pages. The page is the last switch: `+census/2 theme=Marvel`.
+
+        Example:
+
+        `+census gender`
+
+        Output: a box titled `Census` with a row per value, such as `Female | 12 | 48%%`, most first, then how
+        many characters were counted.
+
+        Staff change the dimensions with `+config census/dimensions`, see [census dimensions], and who is
+        counted with `+config census/scope`, see [census scope].
+      HELP`CENSUS`QUERIES: |-
+        A query is one or more **terms**, joined with `/`. A term is a dimension, which counts by it, or a
+        dimension, a comparison and a value, which keeps only the characters who match.
+
+        - `=` and `!=`: equal, or not. Case does not matter, and `*` and `?` match anything: `theme=star*`.
+          With nothing after it, `=` matches characters with no value and `!=` those with one: `theme!=`.
+        - `<`, `<=`, `>` and `>=`: for numbers and times only.
+        - A time is a number and a unit: `s`, `m` \(minutes\), `h`, `d`, `w` or `y`, such as `30d` or `1y 6w`.
+          A number alone is days. `offline>30d` is someone last on more than 30 days ago.
+        - Filters only: a list of who matches, by name, with a column for each dimension filtered by.
+        - With a dimension or two: how many characters hold each value \(or pair of values\) among those
+          who match. Times are counted in spans, such as `1 to 4 weeks`.
+
+        Example:
+
+        ```
+        > +census theme=Marvel/offline>30d
+        > +census role=approved/gender
+        > +census theme/gender
+        ```
+
+        Output: the first lists the Marvel characters not on for a month. The second counts the approved
+        characters by gender, and the third counts every pair of theme and gender.
+      LOCK`CENSUS`DIMENSIONS: |-
+        perm^config.admin
+      HELP`CENSUS`DIMENSIONS: |-
+        Staff set what `+census` counts by in `+config census/dimensions`, a table. Each dimension has a
+        name players type, a `label`, a `kind` that says how a character's value is read, a `path` the kind
+        reads, how values `compare`, who sees it \(`access`\) and an `order`.
+
+        - `attribute`: the attribute the path names, such as `` APP`THEME ``.
+        - `role`: the highest role they hold among those the path names, any role when it is empty.
+        - `offline`, `created`: how long since they were last on, or were made. Compare as `duration`.
+        - `alts`: how many characters are on their account. Compare as `number`.
+
+        A new dimension is seen only by staff \(the softcode.census.staff permission\) until its access is
+        `everyone`. Everyone then sees its values, as the census reads them, unless an attribute is mortal_dark.
+
+        Example:
+
+        ```
+        > +config/add census/dimensions/theme=Theme
+        > +config census/dimensions/theme/path=APP`THEME
+        > +config census/dimensions/theme/access=everyone
+        ```
+
+        Output: one line from `+config` for each change, then `+census theme` counts by theme.
+
+        On a big game, `@attribute/index APP`THEME` makes a filter such as `theme=Marvel` read the index.
+      LOCK`CENSUS`SCOPE: |-
+        perm^config.admin
+      HELP`CENSUS`SCOPE: |-
+        `+config census/scope` holds filters every census starts from, written as `+census` takes them.
+        Empty, the default, counts every character but guests, God and the package manager.
+
+        Staff with the softcode.census.staff permission count every character anyway with `+census/all`.
+
+        Example:
+
+        ```
+        > +config census/scope=role=approved/offline<90d
+        ```
+
+        Output: a line from `+config`. From then on `+census` counts only approved characters who were on in
+        the last 90 days, and its footer says so.
+      LOCK`CENSUS`KINDS: |-
+        perm^packages.admin
+      HELP`CENSUS`KINDS: |-
+        A package adds a kind of dimension by putting an attribute named `` KIND`<NAME> `` on the Census. It
+        gets a list of characters as `%%0` and the dimension's path as `%%1`, with the reader as `%%#`, and
+        returns each one's value as the reader may see it, one line each, in the same order.
+
+        Two more attributes are optional. `` KIND`<NAME>`TEST `` decides a filter itself: it gets the
+        characters, the path, the comparison and the value, and returns the characters it keeps.
+        `` KIND`<NAME>`FIND `` gets the path, the comparison and the value, and returns the only characters
+        that can match, such as an index lists them, or `#-1` to look at everyone.
+
+        The `census-finger` package is one: its `finger` kind reads a `+finger` field as `+finger` shows it to
+        the reader, and it adds species, age and timezone dimensions.
