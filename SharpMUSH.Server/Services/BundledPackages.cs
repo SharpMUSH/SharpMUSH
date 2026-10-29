@@ -172,6 +172,12 @@ public static class BundledPackages
 		new("staff-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		// Available, not installed: joins staff and status, so +staff shows each staff member's +status.
 		new("staff-status", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		// Available, not installed: +census is a name a game may already use for its own code.
+		new("census", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("census-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("census-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: joins census and finger, so +census counts by +finger fields.
+		new("census-finger", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("time-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),

@@ -1,0 +1,79 @@
+format: "1.16"
+package: census-finger
+title: "Census: +finger fields"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Lets +census count by +finger fields, such as species, age and timezone, reading each one as +finger shows it to whoever asks."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [census, finger, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. census reads a character's value through
+# a KIND`<NAME> on the Census, and finger keeps each field as PROFILE`<KEY> on the player, with its own rules for
+# who may read it. This package is the finger kind and three dimensions that use it; uninstalling it takes them
+# out of +census, and neither package changes.
+depends:
+  - package: census
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/census/
+      branch: main
+  - package: finger
+    version: ">=1.5"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/finger/
+      branch: main
+
+objects:
+  # The finger kind: %0 characters, %1 the field's key, %# the reader. Each one's field as +finger shows it to
+  # the reader, one line each, so a field the player hid is counted only for them and staff who edit profiles.
+  - ref: census_finger_kind
+    target: "{{census/census}}"
+    attributes:
+      KIND`FINGER: |-
+        iter(%0,if(strlen(%1),edit(stripansi(uargs({{finger/finger}}/FUN`FIELD`VALUE,target,%i0,viewer,%#,key,ucstr(%1))),%r,%b)),,%r)
+  # Three fields a census is often asked for. Staff change or remove them with +config census/dimensions like
+  # any other.
+  - ref: census_finger_dimensions
+    target: "{{census/store}}"
+    attributes:
+      DIM`SPECIES: |-
+        Species
+      DIM`SPECIES`KIND: |-
+        finger
+      DIM`SPECIES`PATH: |-
+        SPECIES
+      DIM`SPECIES`COMPARE: |-
+        text
+      DIM`SPECIES`ACCESS: |-
+        everyone
+      DIM`SPECIES`ORDER: |-
+        15
+      DIM`AGE: |-
+        Age
+      DIM`AGE`KIND: |-
+        finger
+      DIM`AGE`PATH: |-
+        AGE
+      DIM`AGE`COMPARE: |-
+        number
+      DIM`AGE`ACCESS: |-
+        everyone
+      DIM`AGE`ORDER: |-
+        16
+      DIM`TIMEZONE: |-
+        Timezone
+      DIM`TIMEZONE`KIND: |-
+        finger
+      DIM`TIMEZONE`PATH: |-
+        TIMEZONE
+      DIM`TIMEZONE`COMPARE: |-
+        text
+      DIM`TIMEZONE`ACCESS: |-
+        everyone
+      DIM`TIMEZONE`ORDER: |-
+        17

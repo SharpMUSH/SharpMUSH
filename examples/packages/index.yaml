@@ -279,6 +279,26 @@ packages:
     package: staff-status
     version: 1.0.0
     description: Shows a staff member's +status beside whether they are on duty in +staff (requires staff and status)
+  - path: census/
+    name: Census
+    package: census
+    version: 1.0.0
+    description: +census — counts and lists the characters by dimensions staff set in a +config table (attributes, roles, last on, created, account size), with filters and breakdowns that combine
+  - path: census-help/
+    name: Census help
+    package: census-help
+    version: 1.0.0
+    description: Registers the census topics with +help (requires census and plus-help)
+  - path: census-config/
+    name: Census settings
+    package: census-config
+    version: 1.0.0
+    description: Registers the census settings and dimensions with +config (requires census and plus-config)
+  - path: census-finger/
+    name: Census +finger fields
+    package: census-finger
+    version: 1.0.0
+    description: Lets +census count by +finger fields, read as +finger shows them (requires census and finger)
   - path: time/
     name: Time
     package: time
