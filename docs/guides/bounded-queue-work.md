@@ -31,10 +31,10 @@ An oversized row cannot be made safe merely by paging. A function/depth/output l
 
 The second actor sees exactly 80 pending row entries for ordinary dolist, zero for inline, and one pending continuation for paging. Inline can have the highest throughput while imposing a long second-actor delay; paging trades some delay for bounded pending work. The test checks all 80 result values and completion count, then verifies no remaining worker entries. Separate tests halt or refuse the next page after eight completed rows and verify that no completion is claimed.
 
-Wall-clock samples depend on the machine, storage, build and other work. Peak admission is sampled every millisecond and includes running entries; the pending count at the second actor's turn is exact. These observations establish a bounded-work pattern and its tradeoff, not a latency guarantee or a claim that paging is always faster. The [queue acceptance record](../superpowers/plans/2026-10-16-queue-contracts.md) contains the tested settings and final sample values.
+Wall-clock samples depend on the machine, storage, build and other work. Peak admission is sampled every millisecond and includes running entries; the pending count at the second actor's turn is exact. These observations establish a bounded-work pattern and its tradeoff, not a latency guarantee or a claim that paging is always faster.
 
-## Compatibility notes
+## Queue semantics
 
-Code that relied on ordinary `@trigger` finishing before the next statement must opt into inline execution or use an explicit queued continuation. `/inplace` is the inline/localize/nobreak alias. Ordinary triggered attributes begin without the caller's old loop/switch/regexp frames; their explicit arguments and q-registers are copied. Generic queued text such as `@wait` and queued switch actions retains the detached contexts its deferred text needs.
+An ordinary `@trigger` queues its attribute; code that needs it finished before the next statement uses inline execution or an explicit queued continuation. `/inplace` is the inline/localize/nobreak alias. Ordinary triggered attributes begin without the caller's loop/switch/regexp frames; their explicit arguments and q-registers are copied. Generic queued text such as `@wait` and queued switch actions retains the detached contexts its deferred text needs.
 
 HTTP and SQL callbacks capture caller state when admitted. Later caller register mutations do not change their input, and HTTP response q-registers never write into a completed caller's frame. Named/numbered aliases and `hasarg(...,supplied)` retain the argument-contract rules.

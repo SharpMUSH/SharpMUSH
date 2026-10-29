@@ -1191,8 +1191,8 @@ with `OwningPackage` for provenance); uninstalling reclaims it. This collapses
 the former two-step setup (install softcode, then hand-register in
 `/admin/applications`) into a single installable, versioned, uninstallable
 unit, while a manual registration stays available for one-offs (its
-`OwningPackage` is null). The manifest format minor bumps to **1.1** for the
-new `kind`/`application` keys. Decision: confirmed 2026-06-13.
+`OwningPackage` is null). The `kind`/`application` keys need manifest
+format **1.1**.
 
 ---
 

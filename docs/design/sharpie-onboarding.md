@@ -169,12 +169,9 @@ candidate art into the shipped catalog.
 
 No image generation occurs during a user's visit.
 
-Inventory check (2026-10-19): all 504 PNGs decode, with exactly 42 images for each
-of the 12 styles. The set occupies 64,609,741 bytes. Native widths are 218–355 px
-and heights 208–333 px; none is a high-resolution hero asset. This reinforces the
-decision to generate new assets rather than reuse the cuts. New assets must have
+Assets must have
 sufficient native resolution for their intended display size and device density,
-with `object-fit: contain` and uncropped bounds. Do not include the whole atlas in initial download
+with `object-fit: contain` and uncropped bounds. Do not include the whole inventory in the initial download
 or a service-worker precache. File integrity is not anatomy or visual approval;
 the production selection still needs per-image review.
 
