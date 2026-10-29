@@ -6550,6 +6550,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Smanji</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Prilagodi kartu</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Vi ste ovdje</value>
   </data>

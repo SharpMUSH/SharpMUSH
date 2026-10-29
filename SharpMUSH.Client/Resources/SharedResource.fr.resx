@@ -5859,6 +5859,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom arrière</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Ajuster la carte</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Vous êtes ici</value>
   </data>

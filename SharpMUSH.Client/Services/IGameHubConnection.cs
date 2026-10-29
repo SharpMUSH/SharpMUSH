@@ -40,6 +40,12 @@ public interface IGameHubConnection : IAsyncDisposable
 	IDisposable On(string methodName, Action<SceneEventMessage> handler);
 
 	/// <summary>
+	/// Registers a handler for a strongly-typed hub client method that carries a
+	/// <see cref="CharacterMovedMessage"/> payload.
+	/// </summary>
+	IDisposable On(string methodName, Action<CharacterMovedMessage> handler);
+
+	/// <summary>
 	/// Registers a handler for a payload-free hub client method (e.g. <c>ReceivePluginsChanged</c>).
 	/// </summary>
 	IDisposable On(string methodName, Action handler);

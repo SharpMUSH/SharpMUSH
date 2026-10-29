@@ -24,6 +24,9 @@ public interface IConnectionStateService
 	/// <summary>Raised when the hub pushes a <see cref="RoomEventMessage"/> to this client.</summary>
 	event Action<RoomEventMessage>? OnRoomEventReceived;
 
+	/// <summary>Raised when the hub says the acting character moved.</summary>
+	event Action<CharacterMovedMessage>? OnCharacterMoved;
+
 	/// <summary>
 	/// Raised when the server signals that its loaded-plugin set changed (a plugin DLL was unloaded or
 	/// reloaded). The portal reacts by forcing a hard browser refresh, which fully tears down and rebuilds

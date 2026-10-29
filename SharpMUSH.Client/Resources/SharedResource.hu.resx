@@ -6550,6 +6550,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Kicsinyítés</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Térkép igazítása</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Itt vagy</value>
   </data>

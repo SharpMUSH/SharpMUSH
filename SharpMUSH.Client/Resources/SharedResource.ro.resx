@@ -6550,6 +6550,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Micșorează</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Încadrează harta</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Ești aici</value>
   </data>

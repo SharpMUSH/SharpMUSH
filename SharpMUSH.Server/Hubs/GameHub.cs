@@ -22,6 +22,9 @@ public interface IGameHubClient
 	/// <summary>Broadcasts a room event (arrive, depart, say, pose) to room observers.</summary>
 	Task ReceiveRoomEvent(RoomEventMessage msg);
 
+	/// <summary>Tells the character's own tabs where it moved to.</summary>
+	Task ReceiveCharacterMoved(CharacterMovedMessage msg);
+
 	/// <summary>
 	/// Generic signal that the server's loaded-plugin set changed (a plugin DLL was unloaded or reloaded).
 	/// Carries no plugin-specific payload by design: the client reacts by forcing a hard browser refresh,
