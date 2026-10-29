@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Den här scenen pågår inte, så den tar inte emot poser.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>Du kan titta på den här scenen, men din karaktär är inte godkänd för att delta i scener, så du kan inte posta här.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>Spelet registrerade inte din pose.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>

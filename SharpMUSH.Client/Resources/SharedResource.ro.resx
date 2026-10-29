@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>Poți urmări această scenă, dar personajul tău nu este aprobat să participe la scene, așa că nu poți posta aici.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>Jocul nu ți-a înregistrat poza.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>

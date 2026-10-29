@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>此场景未在进行，因此不接受动作。</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>你可以观看此场景，但你的角色尚未获准参与场景，因此无法在此发言。</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>游戏没有记录你的发言。</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>

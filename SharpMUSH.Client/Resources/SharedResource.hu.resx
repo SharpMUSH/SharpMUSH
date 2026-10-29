@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ez a jelenet nem fut, ezért nem fogad pózokat.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>Ezt a jelenetet nézheted, de a karaktered nincs jóváhagyva a jelenetekben való részvételre, ezért itt nem posztolhatsz.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>A játék nem rögzítette a posztodat.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
