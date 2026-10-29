@@ -295,11 +295,14 @@ objects:
         royalty architect guildmaster helper`. A role the game does not have lists nobody. The Role
         column shows the first of them each character holds.
 
+        `+config/add` adds a role to the list and `+config/remove` takes one off. Setting it with `=`
+        replaces the whole list.
+
         Example:
 
         ```
-        > +config staff/roles=wizard royalty builder
-        \[CONFIG\] Done: staff/roles is now wizard, royalty, builder, was immortal, wizard, moderator, councilor, royalty, architect, guildmaster, helper.
+        > +config/add staff/roles=builder
+        \[CONFIG\] Done: staff/roles is now immortal, wizard, moderator, councilor, royalty, architect, guildmaster, helper, builder, was immortal, wizard, moderator, councilor, royalty, architect, guildmaster, helper.
         ```
 
         Output: one line saying what the setting is now and what it was.
