@@ -72,7 +72,7 @@ public class DiscordLinkStoreTests
 		var stored = (await _db.GetFeedMessageAsync(777)).Expect<SharpMUSH.Library.Models.SharpFeedMessage>();
 		await Assert.That(stored.ExternalIdentity).IsEqualTo(identity);
 		await Assert.That(stored.Speaker.Number).IsEqualTo(-1);
-		await Assert.That(stored.SpeakerName).IsEqualTo("[Discord] Original Name (1234)");
+		await Assert.That(stored.SpeakerName).IsEqualTo("[D] Original Name");
 	}
 
 	[Test]

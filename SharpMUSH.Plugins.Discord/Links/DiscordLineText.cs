@@ -16,11 +16,13 @@ public static partial class DiscordLineText
 
 	/// <summary>
 	/// A pose reads as the game shows it, in italics: <c>*Alice waves.*</c>. A line the system formatted once for
-	/// everyone (a channel line after its mogrifier) goes out as delivered.
+	/// everyone (a channel line after its mogrifier) goes out as delivered. A Discord member speaking without a
+	/// character goes out under their own name, as Discord showed it, not the game's tagged one.
 	/// </summary>
 	public static OutboundLine From(SharpFeedMessage message)
 	{
-		var name = string.IsNullOrWhiteSpace(message.DisplayName) ? message.SpeakerName : message.DisplayName;
+		var name = message.ExternalIdentity is { } external ? external.Name
+			: string.IsNullOrWhiteSpace(message.DisplayName) ? message.SpeakerName : message.DisplayName;
 		var text = message.Line is { } line
 			? Markdown(line)
 			: message.Style switch

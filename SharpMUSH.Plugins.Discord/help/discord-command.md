@@ -131,7 +131,7 @@ Anything that sends a line on the feed posts it in Discord, such as `@feed/send 
 
 To restrict a channel, the bot notes the channel's Send Messages and Send Messages in Threads settings for `@everyone` and the Linked role, then denies both to `@everyone` and allows both to Linked. Unlinking or unrestricting puts the noted settings back, but only where a setting still holds what the bot wrote: one someone has changed since is left alone, and so is every other permission. A channel linked before the bot noted settings has nothing to put back, so the bot clears its own values and those settings fall back to the category's or the server's.
 
-An unrestricted channel still follows the Discord server's own permissions. In the game, a member without a game account speaks as a guest, under the feed's usual permissions. A send lock on the feed, or on its kind, refuses those guests, since there is no game object to test it against; clear the lock only where anyone on Discord should be able to speak. A member whose game account is disabled or banned cannot speak there either.
+An unrestricted channel still follows the Discord server's own permissions. In the game, a member without a game account speaks under their Discord name behind `[D]`, such as `[D] Mercutio`, and in Discord their message is replaced by the game's line under that name. `feedmsg(<id>,external_id)` gives their Discord id. A send lock on the feed, or on its kind, refuses those guests, since there is no game object to test it against; clear the lock only where anyone on Discord should be able to speak. A member whose game account is disabled or banned cannot speak there either.
 
 ## Linking members
 

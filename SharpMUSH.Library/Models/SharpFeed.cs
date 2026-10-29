@@ -191,7 +191,11 @@ public static class FeedStyles
 }
 
 /// <summary>A remote speaker, never a game object. Stable identity and the name at sending survive recall/restart.</summary>
+/// <remarks>
+/// The game shows the name behind a short tag for where it came from, <c>[D] Ann</c>, so it never passes for a
+/// character's; the subject stays out of the line and is read with <c>feedmsg(the subject stays out of the line and is read with <c>feedmsg()</c>.lt;idthe subject stays out of the line and is read with <c>feedmsg()</c>.gt;,external_id)</c>.
+/// </remarks>
 public sealed record ExternalFeedIdentity(string Provider, string Subject, string Name)
 {
-	public string DisplayName => $"[{(Provider == "discord" ? "Discord" : Provider)}] {Name} ({Subject})";
+	public string DisplayName => $"[{(Provider == "discord" ? "D" : Provider)}] {Name}";
 }
