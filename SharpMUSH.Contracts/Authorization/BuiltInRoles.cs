@@ -29,6 +29,9 @@ public static class BuiltInRoles
 	public const string WizardSlug = "wizard";
 	public const string GodSlug = "god";
 
+	/// <summary>RhostMUSH's architect level (<see cref="RhostLevels"/>).</summary>
+	public const string ArchitectSlug = "architect";
+
 	/// <summary>RhostMUSH's councilor level (<see cref="RhostLevels"/>).</summary>
 	public const string CouncilorSlug = "councilor";
 
@@ -114,8 +117,9 @@ public static class BuiltInRoles
 		PortalPermission.ProtectRole,
 		PortalPermission.ControlRole(WizardSlug),
 		PortalPermission.ControlRole(RoyaltySlug),
-		// RhostMUSH's councilor level sits between royalty and wizard; a wizard controls one as RhostMUSH's royalty does.
+		// RhostMUSH's councilor and architect levels sit below wizard; a wizard controls them as RhostMUSH's royalty does.
 		PortalPermission.ControlRole(CouncilorSlug),
+		PortalPermission.ControlRole(ArchitectSlug),
 	];
 
 	/// <summary>
@@ -155,16 +159,20 @@ public static class BuiltInRoles
 	/// <summary>
 	/// RhostMUSH's staff levels that have no system role, as roles lined up by priority among the system ones:
 	/// guildmaster above player, architect above builder, councilor above royalty, immortal above wizard. Each has
-	/// the permissions of the system role at its level, and immortal the server's administration too. Councilor and
-	/// immortal pass their own guard, so each controls its peers as the role it copies does, and only immortal passes
-	/// immortal's: a wizard does not control an immortal. RhostMUSH's royalty, its wizards, is the wizard role. A game takes these in place of <see cref="Starters"/> when it
+	/// the permissions of the system role at its level, and immortal the server's administration too. As in RhostMUSH,
+	/// each staff level controls whatever is held below it: architect and councilor allow control.all, and the guards
+	/// keep them below the levels above (architect is guarded, and councilor passes it). Each passes its own guard, so
+	/// it controls its peers, and only immortal passes immortal's: a wizard does not control an immortal. RhostMUSH's
+	/// royalty, its wizards, is the wizard role. A game takes these in place of <see cref="Starters"/> when it
 	/// chooses RhostMUSH's levels (<see cref="StaffLevelSets"/>), and a RhostMUSH import brings them.
 	/// </summary>
 	public static readonly IReadOnlyList<SharpRole> RhostLevels =
 	[
 		Level("guildmaster", "Guildmaster", 13, PlayerSlug, PortalPermission.PlayersView, PortalPermission.QueueInspect),
-		Level("architect", "Architect", 16, BuilderSlug),
-		Level(CouncilorSlug, "Councilor", 22, RoyaltySlug, PortalPermission.ControlRole(CouncilorSlug)),
+		Level(ArchitectSlug, "Architect", 16, BuilderSlug, PortalPermission.ControlAll, PortalPermission.ProtectRole,
+			PortalPermission.ControlRole(ArchitectSlug)),
+		Level(CouncilorSlug, "Councilor", 22, RoyaltySlug, PortalPermission.ControlAll, PortalPermission.ControlRole(CouncilorSlug),
+			PortalPermission.ControlRole(ArchitectSlug)),
 		Level(ImmortalSlug, "Immortal", 35, WizardSlug, PortalPermission.ServerAdmin, PortalPermission.ControlRole(ImmortalSlug))
 	];
 
