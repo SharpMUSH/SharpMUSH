@@ -68,6 +68,9 @@ public partial class Play
 	/// <summary>The player opened the full banner on a larger screen; remembered (play.banner = open).</summary>
 	private bool _bannerOpen;
 
+	/// <summary>The player collapsed the aside to its strip, giving the terminal its width; remembered (play.aside = collapsed).</summary>
+	private bool _asideCollapsed;
+
 	private DotNetObjectReference<Play>? _self;
 	private string? _sheetName;
 	private RoomOccupant? _sheetOccupant;
@@ -120,6 +123,7 @@ public partial class Play
 	private const int MinCols = 78;
 	private const int MaxCols = 240;
 	private const string BannerKey = "play.banner";
+	private const string AsideKey = "play.aside";
 	private int _targetCols = MinCols;
 
 	/// <summary>
@@ -280,7 +284,7 @@ public partial class Play
 		if (changed) StateHasChanged();
 	}
 
-	/// <summary>The width and the banner's state as this browser kept them; true when either changed.</summary>
+	/// <summary>The width, the banner's and the aside's state as this browser kept them; true when any changed.</summary>
 	private async Task<bool> LoadStoredChoicesAsync()
 	{
 		var changed = false;
@@ -296,6 +300,11 @@ public partial class Play
 		{
 			changed |= !_bannerOpen;
 			_bannerOpen = true;
+		}
+		if (await JS.GetItemAsync(BrowserStore.Local, AsideKey) == "collapsed")
+		{
+			changed |= !_asideCollapsed;
+			_asideCollapsed = true;
 		}
 		return changed;
 	}
@@ -369,6 +378,18 @@ public partial class Play
 
 	/// <summary>The open banner's minimise folds it back into the card header.</summary>
 	private Task OnBannerMinimisedAsync(bool minimised) => SetBannerOpenAsync(!minimised);
+
+	private string AsideToggleLabel => string.Format(Loc[_asideCollapsed ? "NavSidebarExpand" : "NavSidebarCollapse"], Loc["NavPlayTabRoom"]);
+
+	/// <summary>
+	/// Collapses the aside to its strip or opens it again. The terminal's resize observer sees the new width
+	/// once the column settles and refits its columns (terminalMetrics.js).
+	/// </summary>
+	private async Task ToggleAsideAsync()
+	{
+		_asideCollapsed = !_asideCollapsed;
+		await JS.SetItemAsync(BrowserStore.Local, AsideKey, _asideCollapsed ? "collapsed" : "open");
+	}
 
 	/// <summary>Focus from the banner's row: the details sheet it sits in closes first, so focus mode is not under it.</summary>
 	private async Task EnterFocusAsync()

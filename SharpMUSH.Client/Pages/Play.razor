@@ -49,7 +49,7 @@ else
        its top), and below the narrow tier its people button opens the Room panel (the aside) from the right. The terminal stays mounted in both views, so
        switching never drops its output or its connection. *@
     <SectionShell Key="play" NavLabel="@Loc["Play"]" PadBody="false" Hidden="@_focus" Nav="SidebarNav">
-        <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room")">
+        <div class="play full-height @(_focus ? "play--focus" : null) @(_shortScreen ? "play--short" : null) @(Room.Info is null ? null : "play--room") @(_asideCollapsed ? "play--aside-collapsed" : null)">
             <div class="play-main" tabindex="-1" data-guide-anchor="play">
                 @* The open banner's room name is the page's h1; otherwise this one, for the reader alone, so the page
                    has a heading to land on (FocusOnNavigate) and to jump back to. *@
@@ -148,25 +148,32 @@ else
                     </PlaySceneCard>
                 </div>
             </div>
-            @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. *@
+            @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. Collapsed, the aside
+               is a strip holding only its toggle, and the panels stay mounted under it for the same reason. *@
             <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
-                @* README §7.4: the aside is the "play" layout scope (Here, then Exits, by default), then the game's
-                   panels registered for the Play scope that the layout does not already place. The same entries
-                   as the Room sheet, so the role and zone rules hold in both. *@
-                <CascadingValue Value="_pageContext" IsFixed="true">
-                    @foreach (var entry in _asideEntries.Where(e => e.Placed))
-                    {
-                        <WidgetErrorBoundary WidgetName="@entry.Name">
-                            <DynamicComponent Type="@entry.Widget.ComponentType" Parameters="@EntryParameters(entry)" />
-                        </WidgetErrorBoundary>
-                    }
-                    @foreach (var app in _scopePanels)
-                    {
-                        <KitCard Aside="true" Title="@app.DisplayName" Class="play-panel">
-                            <SchemaWidget WidgetName="@app.Slug" Zone="@nameof(WidgetZone.RightSidebar)" />
-                        </KitCard>
-                    }
-                </CascadingValue>
+                <button type="button" class="play-aside-toggle" aria-expanded="@(_asideCollapsed ? "false" : "true")" aria-controls="play-aside-panels"
+                        aria-label="@AsideToggleLabel" title="@AsideToggleLabel" @onclick="ToggleAsideAsync">
+                    <MudIcon Icon="@(_asideCollapsed ? Icons.Material.Outlined.KeyboardDoubleArrowLeft : Icons.Material.Outlined.KeyboardDoubleArrowRight)" Size="Size.Small" />
+                </button>
+                <div id="play-aside-panels" class="play-aside-panels" hidden="@_asideCollapsed">
+                    @* README §7.4: the aside is the "play" layout scope (Here, then Exits, by default), then the game's
+                       panels registered for the Play scope that the layout does not already place. The same entries
+                       as the Room sheet, so the role and zone rules hold in both. *@
+                    <CascadingValue Value="_pageContext" IsFixed="true">
+                        @foreach (var entry in _asideEntries.Where(e => e.Placed))
+                        {
+                            <WidgetErrorBoundary WidgetName="@entry.Name">
+                                <DynamicComponent Type="@entry.Widget.ComponentType" Parameters="@EntryParameters(entry)" />
+                            </WidgetErrorBoundary>
+                        }
+                        @foreach (var app in _scopePanels)
+                        {
+                            <KitCard Aside="true" Title="@app.DisplayName" Class="play-panel">
+                                <SchemaWidget WidgetName="@app.Slug" Zone="@nameof(WidgetZone.RightSidebar)" />
+                            </KitCard>
+                        }
+                    </CascadingValue>
+                </div>
             </aside>
         </div>
     </SectionShell>
