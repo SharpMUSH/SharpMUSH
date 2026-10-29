@@ -12,6 +12,8 @@
 - **[[Theme]]**: what this game is about and the stories it tells.
 - **[[Setting]]**: the world, its places, history and factions.
 - **[[Policies]]**: how we play together.
+- **[Learn to Play](/welcome)**: the optional interface and play guide.
+- **[Command Reference](/help)**: the server's command and function reference.
 
 ## Connect
 - On the web: use the terminal on this site.

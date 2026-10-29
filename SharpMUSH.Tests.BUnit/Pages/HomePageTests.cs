@@ -35,7 +35,7 @@ public class HomePageTests : BunitContext
 	}
 
 	[Test]
-	public async Task JourneyEntriesAreSeparateFromAuthoredHomeContentAndKeepConfiguredWelcome()
+	public async Task HomeKeepsAuthoredHeroContentWithoutInjectingJourneyChrome()
 	{
 		Arrange(new LayoutConfiguration(new Dictionary<WidgetZone, List<WidgetPlacement>>
 		{
@@ -45,9 +45,10 @@ public class HomePageTests : BunitContext
 			new SharpMUSH.Library.Models.Portal.Onboarding.OnboardingPresentation("game", "", "", "", "", "",
 				new SharpMUSH.Library.Models.Portal.Onboarding.GuideLink("Our setting", "/wiki/main/our_setting"), null, null)));
 		var cut = Render<SharpMUSH.Client.Pages.Home>();
-		cut.WaitForAssertion(() => cut.Find("a[href='/wiki/main/our_setting']"));
-		await Assert.That(cut.Find("a[href='/wiki/main/our_setting']").TextContent).IsEqualTo("Our setting");
-		await Assert.That(cut.FindAll("a[href='/welcome'], a[href='/help']").Count).IsEqualTo(2);
+		cut.WaitForAssertion(() => cut.Find(".welcome-text-widget"));
+		await Assert.That(cut.FindAll(".journey-links")).IsEmpty();
+		await Assert.That(cut.FindAll("a[href='/welcome'], a[href='/help'], a[href='/wiki/main/our_setting']")).IsEmpty();
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("HomeWhatsHappening");
 		await Assert.That(cut.Find(".welcome-text-widget").TextContent).Contains("An intentional administrator placeholder");
 	}
 

@@ -77,6 +77,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		HelpApi.Install(this, isStaff, Corpora);
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 	}
 
 	[TUnit.Core.Test]

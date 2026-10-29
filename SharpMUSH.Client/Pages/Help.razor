@@ -16,7 +16,16 @@
 
 <div class="help-page">
     <PlainPageHeader Title="@Loc["Help"]" Description="@Loc["AdmHelpSubtitle"]" />
-    <SharpMUSH.Client.Components.Onboarding.JourneyEntryLinks />
+    @if (IsDefaultIndex)
+    {
+        <section class="help-guidance" aria-label="@Loc["GuideHelpIndexEntry"]">
+            <KitCard Title="@Loc["GuideHelpIndexEntry"]" Sub="@Loc["GuideHelpIndexDescription"]">
+                <div class="help-guidance-links">
+                    <SharpMUSH.Client.Components.Onboarding.JourneyEntryLinks />
+                </div>
+            </KitCard>
+        </section>
+    }
 
     @if (_loading)
     {
@@ -89,6 +98,19 @@
 </div>
 
 @code {
+    // /help?q= filters this index; topics and admin topics have their own routes/components.
+    // Compare the base-relative path, not a prefix: no guidance on deeper or catch-all paths.
+    private bool IsDefaultIndex
+    {
+        get
+        {
+            var path = Nav.ToBaseRelativePath(Nav.Uri);
+            var end = path.IndexOfAny(['?', '#']);
+            if (end >= 0) path = path[..end];
+            return path.TrimEnd('/').Equals("help", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     private GameHelpIndex? _index;
     private GameHelpIndex? _adminIndex;
     private string? _error;

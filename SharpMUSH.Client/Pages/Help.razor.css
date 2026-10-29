@@ -150,3 +150,34 @@
 		padding: 12px 14px;
 	}
 }
+
+/* Index-only guidance: the existing card, not another hero or shared Help-layout chrome. */
+.help-guidance {
+	border-inline-start: 3px solid var(--accent);
+	border-radius: var(--radius-card);
+}
+
+.help-guidance-links {
+	padding: 16px;
+}
+
+.help-guidance-links ::deep .journey-links > a {
+	display: inline-flex;
+	align-items: center;
+	min-height: 44px;
+	padding: 8px 12px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-row);
+	background: var(--surface-2);
+	color: var(--text);
+	font-weight: 600;
+}
+
+.help-guidance-links ::deep a {
+	overflow-wrap: anywhere;
+}
+
+.help-guidance-links ::deep a:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
+}
