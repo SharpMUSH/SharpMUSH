@@ -2997,7 +2997,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Нет соединения с игрой — подключитесь, чтобы отправлять позы и получать их в реальном времени.</value>
+    <value>Соединение с игрой разорвано. Подключитесь для отправки команд; обновления сцены используют отдельное соединение.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Живые позы не приходят — переподключение. Всё, что вы отправите, всё равно записывается.</value>
+    <value>Переподключение обновлений сцены. Это не подтверждает, что сообщение было записано.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5133,7 +5133,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Ваши позы уходят в другую сцену. Присоединитесь к этой, чтобы позировать здесь.</value>
+    <value>Вы сосредоточены на другой сцене. Присоединитесь к этой, чтобы перенести фокус сюда.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5227,7 +5227,7 @@
     <value>Вид</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Сцена · записывается в архив сцен</value>
+    <value>Читать сообщения сцены</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Полный вывод · включая каналы и личные сообщения</value>

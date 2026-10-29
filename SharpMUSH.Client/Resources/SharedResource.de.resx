@@ -2997,7 +2997,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Nicht mit dem Spiel verbunden — verbinden Sie sich, um Posen zu senden und live zu empfangen.</value>
+    <value>Die Spielverbindung ist getrennt. Verbinde dich, um Befehle zu senden; Live-Aktualisierungen der Szene verwenden eine separate Verbindung.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Live-Posen kommen nicht an — es wird neu verbunden. Was du sendest, wird trotzdem aufgezeichnet.</value>
+    <value>Die Live-Aktualisierungen der Szene werden neu verbunden. Das bestätigt nicht, ob ein Beitrag aufgezeichnet wurde.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5133,7 +5133,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Deine Posen gehen an eine andere Szene. Tritt dieser bei, um hier zu posen.</value>
+    <value>Du bist auf eine andere Szene fokussiert. Tritt dieser bei, um den Fokus hierher zu verlegen.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5227,7 +5227,7 @@
     <value>Ansicht</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Szene · wird im Szenenarchiv protokolliert</value>
+    <value>Szenenbeiträge lesen</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Vollständige Ausgabe · mit Kanälen und Pages</value>

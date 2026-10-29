@@ -2089,7 +2089,7 @@
     <value>Voir l'archive</value>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Non connecté au jeu — connectez-vous pour publier et recevoir les poses en direct.</value>
+    <value>La connexion au jeu est coupée. Connectez-vous pour envoyer des commandes ; les mises à jour de la scène utilisent une connexion distincte.</value>
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Ouvert à tous les spectateurs</value>
@@ -2104,7 +2104,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Les poses en direct n'arrivent pas — reconnexion en cours. Ce que vous publiez est tout de même enregistré.</value>
+    <value>Reconnexion des mises à jour de la scène. Cela ne confirme pas si une contribution a été enregistrée.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -4442,7 +4442,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Vos poses vont dans une autre scène. Rejoignez celle-ci pour poser ici.</value>
+    <value>Vous avez ciblé une autre scène. Rejoignez celle-ci pour la cibler.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -4536,7 +4536,7 @@
     <value>Vue</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scène · consignée dans les archives des scènes</value>
+    <value>Lire les contributions de la scène</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Sortie complète · canaux et messages inclus</value>

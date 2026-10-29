@@ -2997,7 +2997,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Ikke forbundet til spillet — opret forbindelse for at skrive og modtage poser live.</value>
+    <value>Spilforbindelsen er afbrudt. Opret forbindelse for at sende kommandoer; liveopdateringer af scenen bruger en separat forbindelse.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Live-poser når ikke frem — der forbindes igen. Det, du sender, bliver stadig gemt.</value>
+    <value>Liveopdateringer af scenen genopretter forbindelsen. Det bekræfter ikke, om et indlæg blev gemt.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5133,7 +5133,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Dine poses går til en anden scene. Deltag i denne for at posere her.</value>
+    <value>Du har fokus på en anden scene. Deltag i denne for at flytte fokus hertil.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5227,7 +5227,7 @@
     <value>Visning</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scene · logges i scenearkivet</value>
+    <value>Læs scenens poseringer</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Fuldt output · kanaler og beskeder medtaget</value>

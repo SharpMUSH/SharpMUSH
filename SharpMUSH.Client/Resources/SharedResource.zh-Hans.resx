@@ -2997,7 +2997,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>未连接到游戏 — 连接后即可发布并实时接收姿态。</value>
+    <value>游戏连接已断开。请连接后发送命令；场景实时更新使用单独的连接。</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>实时姿态未能送达 — 正在重新连接。你发布的内容仍会被记录。</value>
+    <value>场景实时更新正在重新连接。这不能确认发言是否已记录。</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5133,7 +5133,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>你的姿态会发往另一个场景。加入此场景即可在此发表姿态。</value>
+    <value>你当前聚焦的是其他场景。加入此场景可将焦点移到这里。</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5227,7 +5227,7 @@
     <value>视图</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>场景 · 记录到场景存档</value>
+    <value>阅读场景发言</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>完整输出 · 包括频道和私信</value>

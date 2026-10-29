@@ -3238,7 +3238,7 @@
     <value>View archive</value>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Not connected to the game — connect to post and receive live poses.</value>
+    <value>Game connection is disconnected. Connect to send commands; live scene updates use a separate connection.</value>
   </data>
   <data name="RolSceneLetAnyoneWatch" xml:space="preserve">
     <value>Let anyone watch</value>
@@ -3250,7 +3250,7 @@
     <value>Scene title</value>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Live poses are not arriving — reconnecting. Anything you post is still recorded.</value>
+    <value>Live scene updates are reconnecting. This does not confirm whether a post was recorded.</value>
   </data>
   <data name="RolSceneNoticeOnlyYou" xml:space="preserve">
     <value>Only you see this.</value>
@@ -4686,7 +4686,7 @@
     <value>You haven't joined this scene yet. Join it to pose here.</value>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Your poses go to another scene. Join this one to pose here.</value>
+    <value>You are focused on another scene. Join this one to focus here.</value>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
     <value>A scene is running here</value>
@@ -4773,7 +4773,7 @@
     <value>View</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Scene · logged to the scene archive</value>
+    <value>Read scene poses</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Full output · channels and pages included</value>

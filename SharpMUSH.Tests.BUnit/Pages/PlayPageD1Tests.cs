@@ -138,6 +138,26 @@ public class PlayPageD1Tests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task ViewingAnUnfocusedSceneKeepsGameAndLiveUpdateFailuresSeparate()
+	{
+		var cut = RenderPlay();
+		PushRoom(focus: false);
+		await OpenStory(cut);
+		await cut.InvokeAsync(() => _hub.SetSceneLive(false));
+		cut.WaitForState(() => cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("Live scene updates are reconnecting")));
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
+		await Assert.That(cut.FindAll(".play-join")).IsNotEmpty();
+		await Assert.That(cut.Find(".play-join-btn").HasAttribute("disabled")).IsFalse();
+		await Assert.That(cut.Markup).DoesNotContain("Anything you post is still recorded");
+		_play.IsConnected.Returns(false);
+		await cut.InvokeAsync(() => { _play.ConnectionStateChanged += Raise.Event<Action<bool>>(false); });
+		cut.WaitForState(() => cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("Game connection is disconnected")));
+		await Assert.That(cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("Live scene updates are reconnecting"))).IsTrue();
+		await Assert.That(cut.Find(".play-join-btn").HasAttribute("disabled")).IsTrue();
+		await _play.DidNotReceive().SendAsync(Arg.Any<string>());
+	}
+
+	[Test]
 	public async Task TheSidebar_GoesIntoTheShellsSlot()
 	{
 		var cut = RenderPlay();
@@ -258,7 +278,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	/// </summary>
 	[Test]
 	[Arguments(false, "You haven't joined this scene yet. Join it to pose here.")]
-	[Arguments(true, "Your poses go to another scene. Join this one to pose here.")]
+	[Arguments(true, "You are focused on another scene. Join this one to focus here.")]
 	public async Task TheJoinBar_SaysWhetherTheViewerIsInAnotherScene(bool elsewhere, string text)
 	{
 		var cut = RenderPlay();

@@ -2997,7 +2997,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolNotConnected" xml:space="preserve">
-    <value>Няма връзка с играта — свържете се, за да публикувате и получавате пози на живо.</value>
+    <value>Връзката с играта е прекъсната. Свържете се, за да изпращате команди; актуализациите на сцената използват отделна връзка.</value>
     <comment>MT</comment>
   </data>
   <data name="RolPageTitle" xml:space="preserve">
@@ -3233,7 +3233,7 @@
     <comment>MT</comment>
   </data>
   <data name="RolSceneLiveFeedDown" xml:space="preserve">
-    <value>Поточните пози не пристигат — свързваме се отново. Всичко, което публикувате, пак се записва.</value>
+    <value>Актуализациите на сцената се свързват отново. Това не потвърждава дали публикацията е записана.</value>
     <comment>MT</comment>
   </data>
   <data name="RolWaitingForActivity" xml:space="preserve">
@@ -5133,7 +5133,7 @@
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneFocusedElsewhere" xml:space="preserve">
-    <value>Позите ви отиват в друга сцена. Присъединете се към тази, за да позирате тук.</value>
+    <value>Фокусирани сте върху друга сцена. Присъединете се към тази, за да насочите фокуса си тук.</value>
     <comment>MT</comment>
   </data>
   <data name="NavPlaySceneHere" xml:space="preserve">
@@ -5227,7 +5227,7 @@
     <value>Изглед</value>
   </data>
   <data name="NavPlayStorySub" xml:space="preserve">
-    <value>Сцена · записва се в архива на сцените</value>
+    <value>Четете позите в сцената</value>
   </data>
   <data name="NavPlayTerminalSub" xml:space="preserve">
     <value>Пълен изход · с каналите и съобщенията</value>
