@@ -9,13 +9,15 @@ namespace SharpMUSH.Client.Services.Navigation;
 /// <param name="OutlineIcon">The rail button's icon in section and flyout modes: the group's own, else its first destination's.</param>
 /// <param name="FillIcon">The same, filled.</param>
 /// <param name="Items">The destinations, in order.</param>
+/// <param name="OwnIcon">Staff gave the group an icon of its own; otherwise a pop-out's button shows its destinations' icons.</param>
 public sealed record ResolvedNavGroup(
 	string Id,
 	string Label,
 	string Mode,
 	string OutlineIcon,
 	string FillIcon,
-	IReadOnlyList<NavDestination> Items)
+	IReadOnlyList<NavDestination> Items,
+	bool OwnIcon = false)
 {
 	/// <summary>Whether the page at <paramref name="path"/> belongs to this group.</summary>
 	public bool IsCurrent(string path) => Items.Any(item => item.IsCurrent(path));
@@ -24,11 +26,11 @@ public sealed record ResolvedNavGroup(
 /// <summary>The navigation one viewer sees, for the rail, the drawer, the tab bar and the command palette alike.</summary>
 /// <param name="Groups">The groups, top to bottom.</param>
 /// <param name="Hidden">What staff hid that the viewer may open: the command palette still finds these.</param>
-/// <param name="Tabs">The phone tab bar's destinations between Home and Menu.</param>
+/// <param name="Tabs">The phone tab bar's tabs between Home and Menu.</param>
 public sealed record ResolvedNav(
 	IReadOnlyList<ResolvedNavGroup> Groups,
 	IReadOnlyList<NavDestination> Hidden,
-	IReadOnlyList<NavDestination> Tabs)
+	IReadOnlyList<NavTab> Tabs)
 {
 	public static readonly ResolvedNav Empty = new([], [], []);
 
@@ -38,6 +40,9 @@ public sealed record ResolvedNav(
 	/// <summary>The group holding the page at <paramref name="path"/>, if any.</summary>
 	public ResolvedNavGroup? GroupAt(string path) => Groups.FirstOrDefault(group => group.IsCurrent(path));
 }
+
+/// <summary>A phone tab: one destination, or a group whose list opens in a sheet.</summary>
+public union NavTab(NavDestination, ResolvedNavGroup);
 
 /// <summary>
 /// Puts the destinations where the game's layout says, for one viewer. A destination no group names goes to the
@@ -120,7 +125,7 @@ public static class NavResolver
 		return new ResolvedNav(
 			groups,
 			Visible(layout.Hidden, destinations, viewer).Where(destination => !shown.Contains(destination.Key)).ToList(),
-			Visible(layout.MobileTabs, destinations, viewer).Take(NavLayout.MaxMobileTabs).ToList());
+			Tabs(layout.MobileTabs, groups, destinations, viewer).Take(NavLayout.MaxMobileTabs).ToList());
 	}
 
 	/// <summary>Every destination by key: the catalog's, and the links staff added to <paramref name="layout"/>.</summary>
@@ -179,8 +184,36 @@ public static class NavResolver
 		if (items.Count == 0) return null;
 
 		var mode = group.Mode == NavGroupModes.Flyout && items.Count == 1 ? NavGroupModes.Inline : group.Mode;
+		var outline = AppIcons.Outline(group.Icon, items[0].OutlineIcon);
 		return new ResolvedNavGroup(group.Id, Label(group.Id, group.Label, localize), mode,
-			AppIcons.Outline(group.Icon, items[0].OutlineIcon), AppIcons.Fill(group.Icon, items[0].FillIcon), items);
+			outline, AppIcons.Fill(group.Icon, items[0].FillIcon), items, outline != items[0].OutlineIcon);
+	}
+
+	/// <summary>
+	/// The tabs the viewer may use. A group tab is the group as the viewer sees it, or its one destination when only
+	/// one is left.
+	/// </summary>
+	private static IEnumerable<NavTab> Tabs(IEnumerable<string> keys, IReadOnlyList<ResolvedNavGroup> groups,
+		IReadOnlyDictionary<string, NavDestination> destinations, NavViewer viewer)
+	{
+		foreach (var key in keys.Distinct(Keys))
+		{
+			if (!NavKeys.IsGroup(key))
+			{
+				if (destinations.GetValueOrDefault(key) is { } destination && destination.Admits(viewer)) yield return destination;
+				continue;
+			}
+			var id = key[NavKeys.GroupPrefix.Length..];
+			switch (groups.FirstOrDefault(group => Keys.Equals(group.Id, id)))
+			{
+				case { Items.Count: 1 } single:
+					yield return single.Items[0];
+					break;
+				case { } group:
+					yield return group;
+					break;
+			}
+		}
 	}
 
 	private static IEnumerable<NavDestination> Visible(IEnumerable<string> keys, IReadOnlyDictionary<string, NavDestination> destinations, NavViewer viewer) =>

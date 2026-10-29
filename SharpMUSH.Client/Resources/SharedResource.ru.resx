@@ -1965,6 +1965,14 @@
     <value>в сети</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>Ещё</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, содержит эту страницу</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Игровая сессия активна</value>
     <comment>MT</comment>

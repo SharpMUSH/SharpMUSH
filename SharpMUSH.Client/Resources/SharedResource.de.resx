@@ -1965,6 +1965,14 @@
     <value>online</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>Mehr</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, enthält diese Seite</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Spielsitzung aktiv</value>
     <comment>MT</comment>

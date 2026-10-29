@@ -3666,6 +3666,12 @@
   <data name="NavPlayUnreadActivity" xml:space="preserve">
     <value>Unread play activity</value>
   </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, holds this page</value>
+  </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>More</value>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Play session active</value>
   </data>
@@ -10428,10 +10434,13 @@
     <value>Phone tab bar</value>
   </data>
   <data name="AdmNavTabsHelp" xml:space="preserve">
-    <value>Home and Menu are always there. Choose up to three items for between them.</value>
+    <value>Home and Menu are always there. Choose up to three items for between them. A group opens its list from the bottom of the screen.</value>
   </data>
   <data name="AdmNavTabSlot" xml:space="preserve">
     <value>Tab {0}</value>
+  </data>
+  <data name="AdmNavTabGroup" xml:space="preserve">
+    <value>Group: {0}</value>
   </data>
   <data name="AdmNavTabNone" xml:space="preserve">
     <value>None</value>

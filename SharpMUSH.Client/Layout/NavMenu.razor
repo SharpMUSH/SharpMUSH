@@ -11,6 +11,7 @@
 @inject ApplicationCatalog Applications
 @inject ServerInfoService ServerInfo
 @inject PortalNavigation Navigation
+@inject IJSRuntime JS
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -29,16 +30,37 @@
     <nav class="phosphor-nav" aria-label="@Loc["NavMenuLabel"]">
 
         @* The game's navigation groups (PortalNavigation), in the rail's order. A section group lists all its
-           destinations here: the drawer has room for their names. *@
+           destinations here: the drawer has room for their names. A pop-out group is a disclosure: open while it
+           holds the page shown, otherwise as the reader last left it in this browser. *@
         @foreach (var group in _nav.Groups)
         {
-            <div class="nav-group" @key="group.Id">
-                <div class="nav-group-label">@group.Label</div>
-                @foreach (var item in group.Items)
-                {
-                    @Destination(item)
-                }
-            </div>
+            @if (group.Mode == NavGroupModes.Flyout && !IsCollapsed)
+            {
+                var open = IsOpen(group);
+                <div class="nav-group nav-group--disclosure" @key="group.Id">
+                    <button type="button" class="nav-group-toggle" aria-expanded="@(open ? "true" : "false")"
+                            aria-controls="@($"drawer-group-{group.Id}")" @onclick="() => ToggleAsync(group)">
+                        <span class="nav-group-label">@group.Label</span>
+                        <MudIcon Icon="@Icons.Material.Filled.ExpandMore" Class="nav-group-chevron" aria-hidden="true" />
+                    </button>
+                    <div id="@($"drawer-group-{group.Id}")" hidden="@(!open)">
+                        @foreach (var item in group.Items)
+                        {
+                            @Destination(item)
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="nav-group" @key="group.Id">
+                    <div class="nav-group-label">@group.Label</div>
+                    @foreach (var item in group.Items)
+                    {
+                        @Destination(item)
+                    }
+                </div>
+            }
         }
 
         @* Build & manage, grouped as its sidebar and overview group it (BuildNavCatalog). A group with
@@ -128,6 +150,33 @@
     // The game's navigation for this viewer: the same groups, in the same order, as the rail.
     private ResolvedNav _nav = ResolvedNav.Empty;
 
+    // Pop-out groups as the reader left them in this browser, and as toggled since the page last changed.
+    private const string OpenKeyPrefix = "sharpmush.navgroup.";
+    private readonly Dictionary<string, bool> _remembered = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, bool> _toggled = new(StringComparer.OrdinalIgnoreCase);
+
+    private bool IsOpen(ResolvedNavGroup group) =>
+        _toggled.TryGetValue(group.Id, out var toggled) ? toggled
+        : group.IsCurrent(CurrentPath) || _remembered.GetValueOrDefault(group.Id);
+
+    private string CurrentPath => new Uri(Nav.Uri).AbsolutePath.TrimEnd('/') is { Length: > 0 } path ? path : "/";
+
+    private async Task ToggleAsync(ResolvedNavGroup group)
+    {
+        var open = !IsOpen(group);
+        _toggled[group.Id] = _remembered[group.Id] = open;
+        await JS.SetItemAsync(BrowserStore.Local, OpenKeyPrefix + group.Id, open ? "1" : "0");
+    }
+
+    /// <summary>Reads what this browser remembers of the pop-out groups not read yet.</summary>
+    private async Task RecallAsync()
+    {
+        foreach (var group in _nav.Groups.Where(g => g.Mode == NavGroupModes.Flyout && !_remembered.ContainsKey(g.Id)))
+        {
+            _remembered[group.Id] = await JS.GetItemAsync(BrowserStore.Local, OpenKeyPrefix + group.Id) == "1";
+        }
+    }
+
     private static readonly string PlayKey = NavKeys.Core("play");
 
     // The configured game name shown as the sidebar brand. Defaults to the config default until the
@@ -196,6 +245,7 @@
         var user = AuthState is null ? null : (await AuthState).User;
 
         _nav = await Navigation.ResolveAsync(user);
+        await RecallAsync();
         // The startup catalog, not a second GET api/applications of our own: the list is the same
         // for every viewer (the caller filters by role), and the catalog is already fetching it.
         await Applications.Loaded;
@@ -213,6 +263,7 @@
     private async Task ResolveAsync()
     {
         _nav = await Navigation.ResolveAsync(AuthState is null ? null : (await AuthState).User);
+        await RecallAsync();
         StateHasChanged();
     }
 
@@ -241,11 +292,10 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
         => InvokeAsync(() =>
         {
-            if (IsOnPlay() && _playUnread)
-            {
-                _playUnread = false;
-                StateHasChanged();
-            }
+            // A new page opens the group that holds it again, whatever was toggled on the last one.
+            _toggled.Clear();
+            if (IsOnPlay()) _playUnread = false;
+            StateHasChanged();
         });
 
     private bool IsOnPlay()

@@ -1965,6 +1965,14 @@
     <value>online</value>
     <comment>MT — standard in Polish UI usage</comment>
   </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>Więcej</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, zawiera tę stronę</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Sesja gry jest aktywna</value>
     <comment>MT</comment>

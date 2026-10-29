@@ -234,6 +234,55 @@ window.sharpmushLayout = {
 		});
 	},
 
+	// The rail's navigation groups: how many fit, top down, leaving room for More when not all of them do.
+	// heights are the groups' own in px, gap the list's row gap, more the More entry's height.
+	railFit: function (heights, available, more, gap) {
+		const all = heights.reduce((sum, height, i) => sum + height + (i > 0 ? gap : 0), 0);
+		if (all <= available) return heights.length;
+		let used = more;
+		for (let i = 0; i < heights.length; i++) {
+			used += heights[i] + gap;
+			if (used > available) return i;
+		}
+		return heights.length;
+	},
+
+	// Reports to dotnetRef's OnRailFit how many of the rail's groups fit the list (the rail's room between its
+	// logo and its tools), whenever that room changes, and on measure(), after the rail drew a new set of groups
+	// (measure(true) forgets the old heights). A group moved into More is not drawn, so its last height stands.
+	// Returns { measure, dispose }.
+	watchRailFit: function (list, dotnetRef) {
+		const heights = new Map();
+		const moreKey = '\u0000more';
+		let last = -1;
+		const measure = reset => {
+			if (reset) {
+				heights.clear();
+				last = -1;
+			}
+			const groups = Array.from(list.children).filter(item => item.dataset.group !== undefined);
+			for (const item of groups) {
+				if (item.offsetHeight > 0) heights.set(item.dataset.group, item.offsetHeight);
+			}
+			const more = Array.from(list.children).find(item => item.dataset.more !== undefined);
+			if (more && more.offsetHeight > 0) heights.set(moreKey, more.offsetHeight);
+			const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
+			const fit = this.railFit(groups.map(item => heights.get(item.dataset.group) || 0), list.clientHeight,
+				heights.get(moreKey) || 51, gap);
+			if (fit === last) return;
+			last = fit;
+			const pending = dotnetRef.invokeMethodAsync('OnRailFit', fit);
+			if (pending && typeof pending.catch === 'function') pending.catch(() => { });
+		};
+		const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measure(false)) : null;
+		if (observer) observer.observe(list);
+		measure(false);
+		return {
+			measure: reset => measure(reset),
+			dispose: () => { if (observer) observer.disconnect(); }
+		};
+	},
+
 	// Moves focus to the first control of a popover, as when it switches to another level.
 	focusFirst: function (container) {
 		const items = this._arrowItems(container);

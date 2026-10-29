@@ -13,6 +13,7 @@ function boot() {
     const context = vm.createContext({
         window: { matchMedia: () => ({ matches: false }) },
         document: { addEventListener: (name, handler) => listeners.set(name, handler) },
+        getComputedStyle: () => ({ rowGap: '6px' }),
         HTMLElement: class {}
     });
     vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
@@ -743,4 +744,31 @@ test('terminal guide insertion refuses composition and a draft not yet delivered
     assert.equal(layout.terminalInputBusy(field), true);
     field.value = '';
     assert.equal(layout.terminalInputBusy(field), false);
+});
+
+// The rail's groups (watchRailFit): as many as fit top down, with room kept for More when not all of them do.
+test('the rail keeps every group that fits, and leaves room for More when one does not', () => {
+    const { layout } = boot();
+    assert.equal(layout.railFit([100, 50, 50], 212, 51, 6), 3);
+    assert.equal(layout.railFit([100, 50, 50], 211, 51, 6), 1);
+    assert.equal(layout.railFit([100, 50, 50], 157, 51, 6), 1);
+    assert.equal(layout.railFit([100, 50, 50], 156, 51, 6), 0);
+    assert.equal(layout.railFit([], 0, 51, 6), 0);
+});
+
+test('the rail reports a new fit only when it changes, and again after measure(true)', () => {
+    const { layout } = boot();
+    const fits = [];
+    const group = (id, height) => ({ dataset: { group: id }, offsetHeight: height });
+    const list = { children: [group('a', 100), group('b', 50)], clientHeight: 400 };
+    const context = { invokeMethodAsync: (name, fit) => { fits.push(fit); return Promise.resolve(); } };
+    const watch = layout.watchRailFit(list, context);
+    watch.measure(false);
+    assert.deepEqual(fits, [2]);
+    list.clientHeight = 120;
+    watch.measure(false);
+    assert.deepEqual(fits, [2, 0]);
+    watch.measure(true);
+    assert.deepEqual(fits, [2, 0, 0]);
+    watch.dispose();
 });

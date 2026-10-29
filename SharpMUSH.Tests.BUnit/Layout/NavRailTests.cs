@@ -10,8 +10,10 @@ using NSubstitute;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Library.Models.Portal.Navigation;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Tests.BUnit.Components;
 using SharpMUSH.Tests.BUnit.Resources;
 
 namespace SharpMUSH.Tests.BUnit.Layout;
@@ -23,15 +25,56 @@ namespace SharpMUSH.Tests.BUnit.Layout;
 /// </summary>
 public class NavRailTests : TrackingBunitContext
 {
-	/// <summary>Answers <c>api/applications</c> with <see cref="Apps"/> (none unless a test adds some).</summary>
+	/// <summary>
+	/// Answers <c>api/applications</c> with <see cref="Apps"/> (none unless a test adds some) and <c>api/navigation</c>
+	/// with <see cref="Layout"/> (none stored unless a test sets one).
+	/// </summary>
 	private sealed class AppsHandler : HttpMessageHandler
 	{
 		public object[] Apps { get; set; } = [];
 
+		public NavLayout? Layout { get; set; }
+
 		protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-			=> Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') == "api/applications"
-				? new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Apps) }
-				: new HttpResponseMessage(HttpStatusCode.NotFound));
+			=> Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') switch
+			{
+				"api/applications" => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Apps) },
+				"api/navigation" when Layout is not null => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Layout) },
+				"api/navigation" => new HttpResponseMessage(HttpStatusCode.NoContent),
+				_ => new HttpResponseMessage(HttpStatusCode.NotFound),
+			});
+	}
+
+	private static object App(string slug, string placement) => new
+	{
+		slug,
+		displayName = $"App {slug}",
+		icon = (string?)null,
+		kind = "Page",
+		schemaUrl = $"http/{slug}/schema",
+		minimumRole = "Guest",
+		navPlacement = placement,
+		zones = Array.Empty<string>(),
+		order = 0,
+	};
+
+	/// <summary>Play inline, then the boards and highlights applications as a pop-out named Community, then World.</summary>
+	private void StoreCommunityPopOut(string? icon = null)
+	{
+		_apps.Apps = [App("boards", "Community"), App("highlights", "Community")];
+		_apps.Layout = new NavLayout(NavLayout.CurrentFormat, 1,
+		[
+			new("play", null, NavGroupModes.Inline, null, [new("core:play"), new("core:scenes")]),
+			new("community", "Community", NavGroupModes.Flyout, icon, [new("app:boards"), new("app:highlights")]),
+			new("world", null, NavGroupModes.Inline, null, [new("core:wiki"), new("core:characters"), new("core:help")]),
+		], [], []);
+	}
+
+	/// <summary>The rail under a popover provider, so a pop-out's list can be drawn.</summary>
+	private IRenderedComponent<MudHarness> RenderWithPopoversAt(string path)
+	{
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo(path);
+		return Render<MudHarness>(p => p.AddChildContent<NavRail>());
 	}
 
 	private readonly AppsHandler _apps = new();
@@ -277,5 +320,79 @@ public class NavRailTests : TrackingBunitContext
 		var card = cut.Find(".phosphor-rail .phosphor-profile-wrap--compact button.phosphor-profile-card");
 		await Assert.That(card.GetAttribute("aria-label")).IsNotNull();
 		await Assert.That(cut.FindAll(".phosphor-rail .phosphor-profile-name").Count).IsEqualTo(0);
+	}
+
+	/// <summary>
+	/// A pop-out group is one button, named for the group and saying when it holds the page shown. Its links are drawn
+	/// only once it is opened, and Escape closes it.
+	/// </summary>
+	[Test]
+	public async Task APopOut_IsOneButton_WhoseLinksOpenBesideTheRail()
+	{
+		StoreCommunityPopOut();
+		var cut = RenderWithPopoversAt("/apps/boards");
+
+		var button = cut.WaitForElement("button.phosphor-rail-flyout-btn", TimeSpan.FromSeconds(5));
+		await Assert.That(button.GetAttribute("aria-label")).IsEqualTo("NavFlyoutHoldsCurrent(Community)");
+		await Assert.That(button.GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(button.ClassList).Contains("phosphor-rail-item--on");
+		await Assert.That(cut.FindAll("a[href='/apps/boards']")).IsEmpty();
+		await Assert.That(cut.FindAll(".phosphor-rail-flyout-grid svg").Count).IsEqualTo(2).Because("it has no icon of its own");
+
+		await button.ClickAsync();
+
+		var boards = cut.WaitForElement("ul[aria-label='Community'] a[href='/apps/boards']");
+		await Assert.That(boards.GetAttribute("aria-current")).IsEqualTo("page");
+		await Assert.That(cut.FindAll("ul[aria-label='Community'] a[href='/apps/highlights']").Count).IsEqualTo(1);
+		button = cut.Find("button.phosphor-rail-flyout-btn");
+		await Assert.That(button.GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(button.GetAttribute("aria-controls")).IsEqualTo("rail-flyout-community");
+		await Assert.That(cut.FindAll("#rail-flyout-community").Count).IsEqualTo(1);
+
+		await button.KeyDownAsync(new Microsoft.AspNetCore.Components.Web.KeyboardEventArgs { Key = "Escape" });
+
+		await Assert.That(cut.Find("button.phosphor-rail-flyout-btn").GetAttribute("aria-expanded")).IsEqualTo("false");
+	}
+
+	/// <summary>Following a link, or any other change of page, closes the pop-out.</summary>
+	[Test]
+	public async Task APopOut_ClosesWhenThePageChanges()
+	{
+		StoreCommunityPopOut(icon: "forum");
+		var cut = RenderWithPopoversAt("/");
+		await cut.WaitForElement("button.phosphor-rail-flyout-btn", TimeSpan.FromSeconds(5)).ClickAsync();
+		cut.WaitForElement("ul[aria-label='Community']");
+
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/apps/highlights");
+
+		cut.WaitForState(() => cut.Find("button.phosphor-rail-flyout-btn").GetAttribute("aria-expanded") == "false");
+		await Assert.That(cut.Find("button.phosphor-rail-flyout-btn").GetAttribute("aria-label")).IsEqualTo("NavFlyoutHoldsCurrent(Community)");
+		await Assert.That(cut.FindAll(".phosphor-rail-flyout-grid")).IsEmpty().Because("staff gave it an icon");
+	}
+
+	/// <summary>
+	/// The groups the rail has no room for go into More, a pop-out of their own that lists each under its name; the
+	/// ones that fit stay where they were.
+	/// </summary>
+	[Test]
+	public async Task TheGroupsThatDoNotFit_GoIntoMore()
+	{
+		StoreCommunityPopOut();
+		var cut = RenderWithPopoversAt("/wiki");
+		cut.WaitForElement("button.phosphor-rail-flyout-btn", TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("[data-more]")).IsEmpty().Because("everything fits until measured otherwise");
+
+		var rail = cut.FindComponent<NavRail>();
+		await rail.InvokeAsync(() => rail.Instance.OnRailFit(1));
+
+		await Assert.That(cut.FindAll("li.phosphor-rail-group:not(.phosphor-rail-group--overflow)[data-group]").Select(li => li.GetAttribute("data-group")))
+			.IsEquivalentTo(["play"]);
+		var more = cut.Find("[data-more] button.phosphor-rail-flyout-btn");
+		await Assert.That(more.GetAttribute("aria-label")).IsEqualTo("NavFlyoutHoldsCurrent(NavMore)").Because("the wiki is in a group inside it");
+
+		await more.ClickAsync();
+
+		cut.WaitForElement("#rail-flyout-overflow\\.more ul[aria-label='NavSectionWorld'] a[href='/wiki']");
+		await Assert.That(cut.FindAll("#rail-flyout-overflow\\.more ul[aria-label='Community'] a").Count).IsEqualTo(2);
 	}
 }

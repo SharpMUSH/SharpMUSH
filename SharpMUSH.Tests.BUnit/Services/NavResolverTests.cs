@@ -39,6 +39,12 @@ public class NavResolverTests
 
 	private static string Join(IEnumerable<string> values) => string.Join(",", values);
 
+	private static string TabKey(NavTab tab) => tab switch
+	{
+		NavDestination destination => destination.Key,
+		ResolvedNavGroup group => NavKeys.Group(group.Id),
+	};
+
 	private static NavLayout Stored(IReadOnlyList<NavLayoutGroup> groups, string[]? hidden = null, string[]? tabs = null,
 		string newEntries = NavNewEntries.Show) =>
 		new(NavLayout.CurrentFormat, 1, groups, hidden ?? [], tabs ?? [], newEntries);
@@ -53,7 +59,7 @@ public class NavResolverTests
 		await Assert.That(Join(Keys(nav.Groups[1]))).IsEqualTo("core:wiki,core:map,core:characters,core:help");
 		await Assert.That(nav.Groups[0].Label).IsEqualTo("Play");
 		await Assert.That(nav.Groups[1].Label).IsEqualTo("NavSectionWorld");
-		await Assert.That(Join(nav.Tabs.Select(t => t.Key))).IsEqualTo("core:play,core:wiki,core:characters");
+		await Assert.That(Join(nav.Tabs.Select(TabKey))).IsEqualTo("core:play,core:wiki,core:characters");
 	}
 
 	/// <summary>A visitor while guest logins are off, with no character and no optional applications.</summary>
@@ -64,7 +70,7 @@ public class NavResolverTests
 
 		await Assert.That(Join(nav.Groups.Select(g => g.Id))).IsEqualTo("world");
 		await Assert.That(Join(Keys(nav.Groups[0]))).IsEqualTo("core:wiki,core:characters,core:help");
-		await Assert.That(Join(nav.Tabs.Select(t => t.Key))).IsEqualTo("core:wiki,core:characters");
+		await Assert.That(Join(nav.Tabs.Select(TabKey))).IsEqualTo("core:wiki,core:characters");
 	}
 
 	[Test]
@@ -220,6 +226,54 @@ public class NavResolverTests
 
 		var nav = Resolve(stored, [App("boards", "Community")], Viewer(character: false));
 
-		await Assert.That(Join(nav.Tabs.Select(t => t.Key))).IsEqualTo("core:play,core:wiki,app:boards");
+		await Assert.That(Join(nav.Tabs.Select(TabKey))).IsEqualTo("core:play,core:wiki,app:boards");
+	}
+
+	/// <summary>
+	/// A phone tab can be a whole group, as the viewer sees it. A group left with one destination for them is that
+	/// destination's tab, and a group they see nothing of is no tab.
+	/// </summary>
+	[Test]
+	public async Task AGroupTab_IsTheGroupAsTheViewerSeesIt()
+	{
+		var stored = Stored(
+		[
+			new("play", null, NavGroupModes.Inline, null, [new("core:play"), new("core:mail")]),
+			new("community", "Community", NavGroupModes.Flyout, null, [new("app:boards"), new("app:staffnotes")]),
+			new("world", null, NavGroupModes.Inline, null, [new("core:wiki"), new("core:help")]),
+		], tabs: ["group:community", "group:play", "group:world"]);
+		var apps = new[] { App("boards", "Community"), App("staffnotes", "Community", role: PortalRole.Wizard) };
+
+		var staff = Resolve(stored, apps, Viewer(PortalRole.Wizard));
+		var player = Resolve(stored, apps, Viewer(character: false, features: []));
+
+		await Assert.That(Join(staff.Tabs.Select(TabKey))).IsEqualTo("group:community,group:play,group:world");
+		await Assert.That(staff.Tabs[0] is ResolvedNavGroup { Items.Count: 2 }).IsTrue();
+		await Assert.That(Join(player.Tabs.Select(TabKey))).IsEqualTo("app:boards,core:play,group:world")
+			.Because("the player sees one of Community's two, and Play holds no Mail without a character and no Scenes without the feature");
+	}
+
+	/// <summary>A layout's phone tab names a destination or one of the layout's own groups.</summary>
+	[Test]
+	public async Task AGroupTab_MustNameAGroupOfTheLayout()
+	{
+		var groups = new NavLayoutGroup[] { new("play", null, NavGroupModes.Inline, null, [new("core:play")]) };
+
+		await Assert.That(NavLayoutRules.Problem(Stored(groups, tabs: ["group:play"]))).IsNull();
+		await Assert.That(NavLayoutRules.Problem(Stored(groups, tabs: ["group:world"]))).IsNotNull();
+	}
+
+	/// <summary>A pop-out's button shows its destinations' icons unless staff gave the group an icon of its own.</summary>
+	[Test]
+	public async Task AGroup_KnowsWhetherItHasAnIconOfItsOwn()
+	{
+		var nav = Resolve(Stored(
+		[
+			new("plain", "Plain", NavGroupModes.Flyout, null, [new("core:play"), new("core:scenes")]),
+			new("forum", "Forum", NavGroupModes.Flyout, "forum", [new("core:wiki"), new("core:help")]),
+		]), []);
+
+		await Assert.That(nav.Groups.Single(g => g.Id == "plain").OwnIcon).IsFalse();
+		await Assert.That(nav.Groups.Single(g => g.Id == "forum").OwnIcon).IsTrue();
 	}
 }

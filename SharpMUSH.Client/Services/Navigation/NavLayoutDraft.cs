@@ -155,6 +155,7 @@ public sealed class NavLayoutDraft
 	{
 		if (Groups.FirstOrDefault(g => Keys.Equals(g.Id, id)) is not { } group) return;
 		Groups.Remove(group);
+		Tabs.RemoveAll(t => Keys.Equals(t, NavKeys.Group(group.Id)));
 		foreach (var item in group.Items)
 		{
 			if (Groups.Count > 0) Groups[0].Items.Add(item);

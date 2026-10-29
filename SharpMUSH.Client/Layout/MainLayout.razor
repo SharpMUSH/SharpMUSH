@@ -30,12 +30,43 @@
     <a class="skip-link skip-link--input" href="#main-content" data-skip="input">@Loc["NavSkipToTextBox"]</a>
 </div>
 
-<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
+<div class="phosphor-shell @(_mobileNavOpen ? "phosphor-shell--nav-open" : "") @(_pagebarOpen ? "phosphor-shell--pagebar-open" : "") @(_sheetOpen ? "phosphor-shell--sheet-open" : "") @(_isPlayRoute ? "" : "phosphor-shell--bottomnav")">
 
     <ThemeTexture />
 
     @* Touch chrome only: tapping the dimmed backdrop closes the off-canvas drawer or section panel. *@
     <div class="phosphor-nav-backdrop" @onclick="CloseMobilePanels"></div>
+
+    @* A phone tab staff gave a whole group: its destinations in a sheet over the tab bar. It stays mounted with
+       the last group it showed, so it slides out the way it slid in. *@
+    @if (_sheet is { } sheet)
+    {
+        <div class="phosphor-tabsheet" id="nav-tabsheet" role="dialog" aria-modal="true" aria-labelledby="nav-tabsheet-title">
+            <h2 id="nav-tabsheet-title" class="phosphor-tabsheet-title">@sheet.Label</h2>
+            <ul class="phosphor-tabsheet-items">
+                @foreach (var item in sheet.Items)
+                {
+                    var current = item.IsCurrent(CurrentPath);
+                    <li @key="item.Key">
+                        @if (item.External)
+                        {
+                            <a href="@item.Href" class="phosphor-tabsheet-item" target="_blank" rel="noopener" @onclick="CloseMobilePanels">
+                                <MudIcon Icon="@item.FillIcon" Class="phosphor-tabsheet-icon" />
+                                <span>@item.Label</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@item.Href" class="phosphor-tabsheet-item @(current ? "phosphor-tabsheet-item--on" : null)" aria-current="@(current ? "page" : null)">
+                                <MudIcon Icon="@item.FillIcon" Class="phosphor-tabsheet-icon" />
+                                <span>@item.Label</span>
+                            </a>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    }
 
     @* D1 §3: the rail on a desktop; the grouped drawer (NavMenu) on touch chrome. shell.css shows one. *@
     <NavRail TerminalOpen="_terminalOpen" OnToggleTerminal="ToggleTerminal" OnSearch="OpenPalette" />
@@ -133,7 +164,7 @@
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
                 @foreach (var tab in _tabs)
                 {
-                    @BottomTab(tab.Href, tab.FillIcon, tab.Label)
+                    @Tab(tab)
                 }
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
@@ -165,7 +196,11 @@
 
     // The tab bar's destinations between Home and Menu, from the game's navigation for this viewer: a tab they
     // may not open (Play for a visitor while guest logins are off) is not there.
-    private IReadOnlyList<NavDestination> _tabs = [];
+    private IReadOnlyList<NavTab> _tabs = [];
+
+    // The group whose sheet is showing, or last showed; whether it is open.
+    private ResolvedNavGroup? _sheet;
+    private bool _sheetOpen;
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string? _pendingHintStrip;
@@ -211,7 +246,7 @@
     /// </summary>
     private async Task SyncMobilePanelAsync()
     {
-        var shown = _mobileNavOpen ? ".phosphor-sidebar" : _pagebarOpen ? ".phosphor-pagebar" : null;
+        var shown = _mobileNavOpen ? ".phosphor-sidebar" : _pagebarOpen ? ".phosphor-pagebar" : _sheetOpen ? ".phosphor-tabsheet" : null;
         if (shown == _panelShown) return;
         _panelShown = shown;
         var restore = !_panelFocusMovesOn;
@@ -326,6 +361,12 @@
         var user = (await AuthStateProvider.GetAuthenticationStateAsync()).User;
 #pragma warning restore BL0013
         _tabs = (await Navigation.ResolveAsync(user)).Tabs;
+        // The open sheet follows the group it shows, and closes when that group is no longer a tab.
+        if (_sheet is { } sheet)
+        {
+            _sheet = _tabs.Select(tab => tab is ResolvedNavGroup group ? group : null).FirstOrDefault(group => group?.Id == sheet.Id);
+            _sheetOpen &= _sheet is not null;
+        }
         StateHasChanged();
     }
 
@@ -394,9 +435,10 @@
     {
         _ = InvokeAsync(async () =>
         {
-            _panelFocusMovesOn = _mobileNavOpen || _pagebarOpen;
+            _panelFocusMovesOn = _mobileNavOpen || _pagebarOpen || _sheetOpen;
             _mobileNavOpen = false;
             _pagebarOpen = false;
+            _sheetOpen = false;
             UpdateConfigRouteState();
             await EnsureAccountRoutingAsync();
             // A page change is when an aged-out server answer is asked again (a fresh one costs nothing), so
@@ -420,12 +462,33 @@
             <span class="phosphor-bottomtab-label">@label</span>
         </a>;
 
+    private RenderFragment Tab(NavTab tab) => tab switch
+    {
+        NavDestination destination => BottomTab(destination.Href, destination.FillIcon, destination.Label),
+        ResolvedNavGroup group => GroupTab(group),
+    };
+
+    // A group's tab opens its sheet; it is lit while the sheet is open or the page is one of the group's.
+    private RenderFragment GroupTab(ResolvedNavGroup group)
+    {
+        var open = _sheetOpen && _sheet?.Id == group.Id;
+        return @<button type="button" class="phosphor-bottomtab @(open || group.IsCurrent(CurrentPath) ? "phosphor-bottomtab--on" : "")"
+                        aria-expanded="@(open ? "true" : "false")" aria-controls="@(open ? "nav-tabsheet" : null)"
+                        @onclick="() => ToggleSheet(group)">
+            <MudIcon Icon="@group.FillIcon" Class="phosphor-bottomtab-icon" />
+            <span class="phosphor-bottomtab-label">@group.Label</span>
+        </button>;
+    }
+
+    private string CurrentPath => new Uri(NavigationManager.Uri).AbsolutePath.TrimEnd('/') is { Length: > 0 } path ? path : "/";
+
     private bool IsNavActive(string href, bool exact) => ShellRouting.IsNavActive(NavigationManager.Uri, href, exact);
 
     private void ToggleMobileNav()
     {
         _mobileNavOpen = !_mobileNavOpen;
         _pagebarOpen = false;
+        _sheetOpen = false;
     }
 
     private void OnCharacterConnectionChanged(bool connected) => _ = InvokeAsync(LoadTabsAsync);
@@ -468,12 +531,22 @@
     {
         _mobileNavOpen = false;
         _pagebarOpen = false;
+        _sheetOpen = false;
     }
 
     private void TogglePagebar()
     {
         _pagebarOpen = !_pagebarOpen;
         _mobileNavOpen = false;
+        _sheetOpen = false;
+    }
+
+    private void ToggleSheet(ResolvedNavGroup group)
+    {
+        _sheetOpen = !(_sheetOpen && _sheet?.Id == group.Id);
+        _sheet = group;
+        _mobileNavOpen = false;
+        _pagebarOpen = false;
     }
 
     private void OpenPalette() => _paletteOpen = true;

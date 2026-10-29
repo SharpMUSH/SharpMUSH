@@ -90,11 +90,16 @@ public static class NavKeys
 	public const string AppPrefix = "app:";
 	public const string LinkPrefix = "link:";
 
+	/// <summary>A phone tab that opens a group's list rather than one destination.</summary>
+	public const string GroupPrefix = "group:";
+
 	public static string Core(string name) => CorePrefix + name;
 	public static string App(string slug) => AppPrefix + slug;
 	public static string Link(string id) => LinkPrefix + id;
+	public static string Group(string id) => GroupPrefix + id;
 
 	public static bool IsLink(string key) => key.StartsWith(LinkPrefix, StringComparison.OrdinalIgnoreCase);
+	public static bool IsGroup(string key) => key.StartsWith(GroupPrefix, StringComparison.OrdinalIgnoreCase);
 }
 
 /// <summary>Another save landed first: the layout is at <see cref="CurrentVersion"/> now.</summary>
@@ -147,7 +152,8 @@ public static class NavLayoutRules
 		}
 		if (keys.Count > MaxItems) return $"A layout holds at most {MaxItems} destinations.";
 		if (layout.Hidden.Count > MaxItems || layout.Hidden.Any(key => !IsKey(key))) return "A hidden entry is not a destination key.";
-		if (layout.MobileTabs.Any(key => !IsKey(key))) return "A phone tab is not a destination key.";
+		if (layout.MobileTabs.Any(key => NavKeys.IsGroup(key) ? !ids.Contains(key[NavKeys.GroupPrefix.Length..]) : !IsKey(key)))
+			return "A phone tab is a destination key or a group of this layout.";
 		return null;
 	}
 

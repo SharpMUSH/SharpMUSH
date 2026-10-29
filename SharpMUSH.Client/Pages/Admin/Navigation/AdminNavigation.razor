@@ -152,9 +152,9 @@
                                        Label="@string.Format(Loc["AdmNavTabSlot"], slot + 1)" id="@($"nav-tab-{slot}")"
                                        Variant="Variant.Outlined" Margin="Margin.Dense">
                                 <MudSelectItem Value="@string.Empty">@Loc["AdmNavTabNone"]</MudSelectItem>
-                                @foreach (var destination in TabChoices)
+                                @foreach (var choice in TabChoices)
                                 {
-                                    <MudSelectItem Value="@destination.Key">@destination.Label</MudSelectItem>
+                                    <MudSelectItem Value="@choice.Key">@choice.Label</MudSelectItem>
                                 }
                             </MudSelect>
                         }
@@ -196,7 +196,12 @@
                                 <span>@Loc["Home"]</span>
                                 @foreach (var tab in preview.Tabs)
                                 {
-                                    <span @key="tab.Key">@tab.Label</span>
+                                    var (key, label) = tab switch
+                                    {
+                                        NavDestination destination => (destination.Key, destination.Label),
+                                        ResolvedNavGroup group => (NavKeys.Group(group.Id), group.Label),
+                                    };
+                                    <span @key="key">@label</span>
                                 }
                                 <span>@Loc["NavMenuLabel"]</span>
                             </div>
@@ -292,9 +297,12 @@
     // A select's value cannot be the empty string the draft uses for Hidden, which is the "Move to" prompt's.
     private const string HiddenChoice = "#hidden";
 
-    private IEnumerable<NavDestination> TabChoices =>
-        _draft is null ? [] : _draft.Groups.SelectMany(g => g.Items).Select(i => _destinations.GetValueOrDefault(i.Key)).OfType<NavDestination>()
-            .Where(d => !d.External);
+    // A tab is a group (its list opens in a sheet) or one destination in the portal.
+    private IEnumerable<(string Key, string Label)> TabChoices =>
+        _draft is null ? [] : _draft.Groups
+            .Select(g => (NavKeys.Group(g.Id), Loc["AdmNavTabGroup", Navigation.GroupLabel(g.Id, g.Label)].Value))
+            .Concat(_draft.Groups.SelectMany(g => g.Items).Select(i => _destinations.GetValueOrDefault(i.Key)).OfType<NavDestination>()
+                .Where(d => !d.External).Select(d => (d.Key, d.Label)));
 
     private string ModeLabel(string mode) => mode switch
     {
