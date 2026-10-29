@@ -281,8 +281,7 @@ public class AttributeValueRestrictionTests
 		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/limit {attr}=^x$"));
 		await CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@attribute/enum {attr}=x"));
 
-		var permissionDenied = new LocalizationService().Format(nameof(ErrorMessages.Notifications.PermissionDenied), null);
-		await Assert.That(Told(mortal.DbRef, permissionDenied)).IsTrue();
+		await Assert.That(Told(mortal.DbRef, "Permission denied. You need the config.admin permission.")).IsTrue();
 		await Assert.That(await FunctionAsync($"valid(attrvalue,anything,{attr})")).IsEqualTo("1");
 	}
 

@@ -203,11 +203,8 @@ public partial class Commands
 
 		if (!await MayDestroyAsync(executor, obj, destroyOk))
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDenied(executor,
+				destroyOk ? PermissionRefusal.Lock(obj, "Destroy") : PermissionRefusal.NotControlled(obj));
 		}
 
 		// Protect special configuration objects (player_start, master_room, base_room, default_home,
@@ -687,11 +684,7 @@ public partial class Commands
 			{
 				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDeniedNotControlled(executor, obj);
 				}
 
 				if (!await UndestroyAsync(parser, obj.Object().DBRef, []))
@@ -896,11 +889,7 @@ public partial class Commands
 			{
 				if (!await PermissionService.Controls(executor, obj))
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDeniedNotControlled(executor, obj);
 				}
 
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message.ToPlainText()))
@@ -931,11 +920,7 @@ public partial class Commands
 			{
 				if (!await PermissionService.Controls(executor, target))
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDeniedNotControlled(executor, target);
 				}
 
 				switch (args)

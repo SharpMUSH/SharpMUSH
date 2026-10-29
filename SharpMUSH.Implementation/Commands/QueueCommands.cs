@@ -63,8 +63,7 @@ public partial class Commands
 			.GetGameActorAsync(executor.Object().DBRef, ct);
 		if (actor is null)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedNeedsAccount));
 		}
 		var service = parser.ServiceProvider.GetRequiredService<IQueueControlService>();
 		var queueReader = parser.ServiceProvider.GetRequiredService<ITaskQueueReader>();
@@ -228,8 +227,7 @@ public partial class Commands
 		var controls = await PermissionService.Controls(executor, target);
 		if (!controls && !await HaltsAnything(executor))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GamePower("Halt"));
 		}
 
 		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
@@ -300,6 +298,19 @@ public partial class Commands
 	}
 
 	/// <summary>PennMUSH <c>HaltAny</c> (<c>hdrs/mushdb.h:38</c>): a wizard, or the HALT power.</summary>
+	/// <summary>
+	/// <see cref="IQueueControlService.CanAccessLegacyAsync"/> said no: the executor does not control what
+	/// queued <paramref name="pid"/>, nor holds what reaches any task (to change one, or to see one).
+	/// </summary>
+	private async ValueTask<CallState> QueueEntryRefused(AnySharpObject executor, long pid, bool mutate)
+	{
+		string[] scopes = mutate
+			? [PortalPermission.GameWizard, PortalPermission.GamePower("Halt")]
+			: [PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue")];
+		return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedQueueEntry), pid,
+			string.Join(", ", scopes));
+	}
+
 	private static async ValueTask<bool> HaltsAnything(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("HALT");
 
@@ -400,8 +411,7 @@ public partial class Commands
 		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
 			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await QueueEntryRefused(executor, pid, mutate: true);
 		}
 
 		if (!await Mediator.Send(new HaltByPidRequest(pid), ExecutionBudget.CurrentToken))
@@ -469,8 +479,7 @@ public partial class Commands
 		if (!await PermissionService.Controls(executor, objectToNotify) &&
 			!await objectToNotify.HasFlag("LINK_OK"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlledNorFlag(executor, objectToNotify, "LINK_OK");
 		}
 
 		var attribute = string.IsNullOrEmpty(maybeAttributeString) ? DefaultSemaphoreAttribute : maybeAttributeString;
@@ -620,8 +629,7 @@ public partial class Commands
 				{
 					if (!await PermissionService.Controls(executor, located))
 					{
-						await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-						return new CallState(ErrorMessages.Returns.PermissionDenied);
+						return await NotifyService.PermissionDeniedNotControlled(executor, located);
 					}
 
 					await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
@@ -770,8 +778,7 @@ public partial class Commands
 		if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
 			.CanAccessLegacyAsync(executor, pid, mutate: true, ExecutionBudget.CurrentToken))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await QueueEntryRefused(executor, pid, mutate: true);
 		}
 
 		if (!long.TryParse(arg1, System.Globalization.NumberStyles.Integer,
@@ -841,8 +848,7 @@ public partial class Commands
 		if (!await PermissionService.Controls(executor, objectToDrain) &&
 			!await objectToDrain.HasFlag("LINK_OK"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlledNorFlag(executor, objectToDrain, "LINK_OK");
 		}
 		var attribute = maybeAttribute?.Split("`") ?? DefaultSemaphoreAttributeArray;
 		var hasAll = switches.Contains("ALL");
@@ -983,7 +989,7 @@ public partial class Commands
 		// forcer can see but not control; do_force then says "Sorry." (src/wiz.c:636-638).
 		if (!await PermissionService.Controls(executor, found))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNotControlled(executor, found);
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.ForceSorry), executor);
 			return new CallState(ErrorMessages.Returns.PermissionDenied);
 		}
@@ -1065,8 +1071,7 @@ public partial class Commands
 			if (!await parser.ServiceProvider.GetRequiredService<IQueueControlService>()
 				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return await QueueEntryRefused(executor, pid, mutate: false);
 			}
 
 			var task = await Mediator.CreateStream(new ScheduleSemaphoreQuery(pid), ExecutionBudget.CurrentToken).FirstOrDefaultAsync(ExecutionBudget.CurrentToken);
@@ -1113,8 +1118,7 @@ public partial class Commands
 
 		if (!await PermissionService.Controls(executor, target) && !await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue"));
 		}
 
 		var targetDbRef = target.Object().DBRef;
@@ -1123,8 +1127,7 @@ public partial class Commands
 		{
 			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue"));
 			}
 
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();

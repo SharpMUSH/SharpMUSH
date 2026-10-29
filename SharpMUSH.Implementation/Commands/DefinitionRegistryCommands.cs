@@ -84,8 +84,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (!CommandLibrary.TryGetValue(commandName, out var command))
@@ -135,8 +134,7 @@ public partial class Commands : ICommandRestrictionApplier
 		}
 		else if (switches.Any(IsCommandStateSwitch))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (switches.Contains("QUIET"))
@@ -334,8 +332,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (FindCommand(name) is { } taken)
@@ -382,8 +379,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (!await ValidCommandName(alias))
@@ -424,8 +420,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (!CommandLibrary.TryGetValue(original, out var source))
@@ -480,8 +475,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (!executor.IsGod())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedGodOnly(executor);
 		}
 
 		// command_find_exact still finds a disabled command, so /delete reaches one too.
@@ -1532,8 +1526,7 @@ public partial class Commands : ICommandRestrictionApplier
 			{
 				if (!await PermissionService.Controls(executor, targetObject))
 				{
-					await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 				}
 
 				return await DefineUserFunctionOnAsync(executor, userFunctionService, functionName, targetObject, attribSpec, minArgs, maxArgs,
@@ -2116,12 +2109,12 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<CallState?> RejectUnlessGlobalFuncs(AnySharpObject executor)
 	{
-		if (await executor.HasPower("FUNCTIONS"))
+		if (await executor.HasPower("FUNCTIONS") || await executor.Can(PortalPermission.ConfigAdmin))
 		{
 			return null;
 		}
 
-		return await RejectUnlessConfigAdmin(executor);
+		return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin, PortalPermission.GamePower("FUNCTIONS"));
 	}
 
 	/// <summary>The refusal a caller without the <c>ConfigAdmin</c> permission gets, or null when they have it.</summary>
@@ -2132,8 +2125,7 @@ public partial class Commands : ICommandRestrictionApplier
 			return null;
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
+		return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 	}
 
 	/// <summary>
@@ -2556,7 +2548,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (operation == DefinitionOperation.Debug && !await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			return await Say(nameof(ErrorMessages.Notifications.PermissionDenied));
+			return await Say(nameof(ErrorMessages.Notifications.PermissionDeniedNeedsPermission), PortalPermission.ConfigAdmin);
 		}
 
 		if (operation == DefinitionOperation.Add)
@@ -2813,11 +2805,7 @@ public partial class Commands : ICommandRestrictionApplier
 
 		if (!await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (args.Count == 0)
@@ -3102,8 +3090,7 @@ public partial class Commands : ICommandRestrictionApplier
 	{
 		if (!await executor.IsWizard())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 		}
 
 		var output = new System.Text.StringBuilder();

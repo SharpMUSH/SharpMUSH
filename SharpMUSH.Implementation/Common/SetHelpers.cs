@@ -88,8 +88,7 @@ public static class SetHelpers
 			// not control it learns nothing about its attributes.
 			if (!await permissionService.Controls(executor, found))
 			{
-				await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return await notifyService.PermissionDeniedNotControlled(executor, found);
 			}
 
 			var flagTokens = MushText.SplitList(MarkupText.Space, flagOrAttributeValue)

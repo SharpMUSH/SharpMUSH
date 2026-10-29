@@ -66,7 +66,8 @@ public class ChownPermissionTests
 		var taker = await PlayerAsync("NoChownOkTaker");
 		var room = await RoomOwnedBy(owner, "NoChownOkRoom");
 
-		await Assert.That(await RunAs(taker, $"@chown {room}=me")).Contains("Permission denied.");
+		await Assert.That(await RunAs(taker, $"@chown {room}=me"))
+			.Contains($"Permission denied. You do not control {await Eval($"name({room})")}, and it is not CHOWN_OK.");
 		await Assert.That(await Eval($"owner({room})")).IsEqualTo($"#{owner.DbRef.Number}");
 	}
 
@@ -81,7 +82,8 @@ public class ChownPermissionTests
 		await RunAs(owner, $"@set {room}=CHOWN_OK");
 		await RunAs(owner, $"@lock/chown {room}=#{chosen.DbRef.Number}");
 
-		await Assert.That(await RunAs(other, $"@chown {room}=me")).Contains("Permission denied.");
+		await Assert.That(await RunAs(other, $"@chown {room}=me"))
+			.Contains($"Permission denied. You do not pass the ChOwn lock on {await Eval($"name({room})")}.");
 		await Assert.That(await RunAs(chosen, $"@chown {room}=me")).Contains("Owner changed.");
 	}
 
@@ -95,7 +97,8 @@ public class ChownPermissionTests
 		await AsGod($"@chown {thing}={owner.DbRef}");
 		await AsGod($"@set {thing}=CHOWN_OK");
 
-		await Assert.That(await RunAs(taker, $"@chown {thing}=me")).Contains("Permission denied.");
+		await Assert.That(await RunAs(taker, $"@chown {thing}=me"))
+			.Contains($"Permission denied. You must carry {await Eval($"name({thing})")} to @chown it.");
 
 		await AsGod($"@teleport {thing}={taker.DbRef}");
 		await Assert.That(await RunAs(taker, $"@chown {thing}=me")).Contains("Owner changed.");
@@ -115,13 +118,14 @@ public class ChownPermissionTests
 		await AsGod($"@lock/zone {zoneMaster.DbRef}=#{builder.DbRef.Number}");
 		var room = await RoomOwnedBy(builder, "ZmpRoom");
 
-		await Assert.That(await RunAs(builder, $"@chown {room}={stranger.Name}")).Contains("Permission denied.");
+		await Assert.That(await RunAs(builder, $"@chown {room}={stranger.Name}"))
+			.Contains($"Permission denied. You do not control {stranger.Name}.");
 		await Assert.That(await RunAs(builder, $"@chown {room}={zoneMaster.Name}")).Contains("Owner changed.");
 		await Assert.That(await Eval($"owner({room})")).IsEqualTo($"#{zoneMaster.DbRef.Number}");
 
 		var strangersRoom = await RoomOwnedBy(stranger, "ZmpStrangerRoom");
 		await Assert.That(await RunAs(stranger, $"@chown {strangersRoom}={zoneMaster.Name}"))
-			.Contains("Permission denied.");
+			.Contains($"Permission denied. You do not control {zoneMaster.Name}.");
 	}
 
 	[Test]

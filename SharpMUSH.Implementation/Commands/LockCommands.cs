@@ -121,8 +121,7 @@ public partial class Commands
 	{
 		if (!await PermissionService.Controls(executor, targetObject))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
 		// do_atrlock reads only the object's own attribute (attrib.c:2512, atr_get_noparent). A wildcard

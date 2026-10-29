@@ -570,6 +570,72 @@ public static partial class ErrorMessages
 		public const string NotMarkedForDestruction = "That object is not marked for destruction.";
 
 		public const string PermissionDenied = "Permission denied.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNeedsPermission = "Permission denied. You need the {0} permission.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNeedsAnyPermission = "Permission denied. You need one of these permissions: {0}.";
+		public const string PermissionDeniedGodOnly = "Permission denied. Only God can do that.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotControlled = "Permission denied. You do not control {0}.";
+		public const string PermissionDeniedNotControlledMatch = "Permission denied. You do not control that.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCommandApp = "Permission denied. An application cannot use {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCommandGuest = "Permission denied. Guests cannot use {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCommandGagged = "Permission denied. You cannot use {0} while gagged.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCommandLock = "Permission denied. You do not pass the lock on {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotControlledNeeds = "Permission denied. You do not control {0}, and you need the {1} permission.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotControlledNeedsAny = "Permission denied. You do not control {0}, and you need one of these permissions: {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotControlledNorFlag = "Permission denied. You do not control {0}, and it is not {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedLock = "Permission denied. You do not pass the {1} lock on {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotOwnerNeeds = "Permission denied. {0} is not yours, and you need the {1} permission.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotOwnerNeedsAny = "Permission denied. {0} is not yours, and you need one of these permissions: {1}.";
+		public const string PermissionDeniedGuest = "Permission denied. Guests cannot do that.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedAttribute = "Permission denied. You cannot change the {0} attribute on {1}.";
+		public const string PermissionDeniedNeedsAccount = "Permission denied. That needs a character on an active account.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedProtectedWizard = "Permission denied. Only a wizard can do that to {0}.";
+		public const string PermissionDeniedEnterRoom = "Permission denied. A room cannot be entered; use an exit.";
+		public const string PermissionDeniedCannotHold = "Permission denied. An exit cannot carry anything.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedQueueEntry = "Permission denied. You do not control what queued task {0}, and you need one of these permissions: {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedChannelModify = "Permission denied. You may not change channel {0}.";
+		public const string PermissionDeniedLockNotControlled = "Permission denied. You do not control that object.";
+		public const string PermissionDeniedLockOfGod = "Permission denied. Only God can change God's locks.";
+		public const string PermissionDeniedLockWizard = "Permission denied. That lock is set wizard-only.";
+		public const string PermissionDeniedLockOwner = "Permission denied. That lock is set owner-only, and you do not own the object.";
+		public const string PermissionDeniedLockLocked = "Permission denied. That lock is locked, and you did not set it.";
+		public const string PermissionDeniedLockSetWizard = "Permission denied. Making a lock wizard-only needs one of these permissions: game.wizard, game.royalty, game.see_all.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedNotARoom = "Permission denied. {0} is not a room.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedTeleportDestination = "Permission denied. You do not control {0}, and it is not a JUMP_OK room that lets {1} in.";
+		public const string PermissionDeniedTeleportFixed = "Permission denied. FIXED stops that teleport.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedChownCarry = "Permission denied. You must carry {0} to @chown it.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedBecause = "Permission denied. {0}";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedFlagType = "Permission denied. The {0} flag cannot be set on a {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedFlagLocked = "Permission denied. The {0} flag cannot be changed.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedFlagRestricted = "Permission denied. The {0} flag is restricted to: {1}.";
+		public const string PermissionDeniedGagWizard = "Permission denied. A wizard cannot be gagged.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedLinkedExit = "Permission denied. You do not control {0}, and it already leads somewhere.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedAliasMembers = "Permission denied. {0} does not show its members to you.";
 		public const string NoPermission = "You don't have permission to do that.";
 		public const string YouDoNotControlThatObject = "You do not control that object.";
 

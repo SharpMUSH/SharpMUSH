@@ -41,7 +41,7 @@ public partial class Commands
 			var listed = await SecretsManagedBy(executor);
 			if (listed.Count == 0 && !await executor.Can(PortalPermission.ConfigAdmin))
 			{
-				return await SecretPermissionDenied(executor);
+				return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 			}
 
 			await NotifyService.Notify(executor, SecretListing(listed), executor);
@@ -58,7 +58,7 @@ public partial class Commands
 
 			return await MayManageSecret(executor, name)
 				? await SetSecretHosts(executor, name, args["1"].Message.ToPlainText())
-				: await SecretPermissionDenied(executor);
+				: await SecretPermissionDenied(executor, name);
 		}
 
 		if (name.Length == 0 || switches.Contains("CLEAR") == hasValue)
@@ -69,7 +69,7 @@ public partial class Commands
 
 		if (!await MayManageSecret(executor, name))
 		{
-			return await SecretPermissionDenied(executor);
+			return await SecretPermissionDenied(executor, name);
 		}
 
 		return switches.Contains("CLEAR")
@@ -143,11 +143,12 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	private async ValueTask<Option<CallState>> SecretPermissionDenied(AnySharpObject executor)
-	{
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
-	}
+	/// <summary>Refused <paramref name="name"/>: names config.admin, and the secret's <c>ManagedBy</c> permission when it has one.</summary>
+	private async ValueTask<Option<CallState>> SecretPermissionDenied(AnySharpObject executor, string name)
+		=> await NotifyService.PermissionDeniedNeeds(executor,
+			Secrets.Definitions.FirstOrDefault(definition => definition.Name == name)?.ManagedBy is { } scope
+				? [PortalPermission.ConfigAdmin, scope]
+				: [PortalPermission.ConfigAdmin]);
 
 	/// <summary><c>config.admin</c> manages every secret; a declaration's <c>ManagedBy</c> permission manages that one.</summary>
 	private async ValueTask<bool> MayManageSecret(AnySharpObject executor, string name)

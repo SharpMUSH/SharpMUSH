@@ -1414,8 +1414,9 @@ public class BuildingCommandTests
 		await Assert.That(refusal.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
 
 		await Assert.That(await HomeOf(item)).IsEqualTo(before);
-		await Assert.That(recorder.For(linker.DbRef).Skip(seen).Any(m => m == ErrorMessages.Notifications.PermissionDenied))
-			.IsTrue();
+		var strangerName = (await Mediator.Send(new GetObjectNodeQuery(stranger.DbRef))).Expect<AnySharpObject>().Object().Name;
+		await Assert.That(recorder.For(linker.DbRef).Skip(seen))
+			.Contains($"Permission denied. You do not control {strangerName}, and it is not ABODE.");
 
 		// ABODE without control is enough.
 		await Parser.CommandParse(linker.Handle, ConnectionService,

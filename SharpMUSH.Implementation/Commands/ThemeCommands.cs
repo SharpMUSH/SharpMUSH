@@ -61,11 +61,7 @@ public partial class Commands
 			{
 				if (!await PermissionService.Controls(executor, target))
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDeniedNotControlled(executor, target);
 				}
 
 				if (spec.Length == 0)
@@ -126,11 +122,7 @@ public partial class Commands
 	{
 		if (!await executor.Can(PortalPermission.LayoutAdmin))
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.LayoutAdmin);
 		}
 
 		if (name.Length == 0 || (change == "ADD" && definition.Length == 0))
@@ -195,11 +187,7 @@ public partial class Commands
 				}
 				if (!await PermissionService.Controls(executor, target))
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDeniedNotControlled(executor, target);
 				}
 
 				var theme = await RefreshThemeAsync(parser, target);

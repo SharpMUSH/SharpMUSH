@@ -551,7 +551,7 @@ public partial class Commands
 		// exit is handed to do_move with the same text, so "enter <exit>" walks it exactly as GOTO would.
 		if (objectToEnter.IsRoom)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedEnterRoom));
 			return CallState.Empty;
 		}
 
@@ -576,15 +576,17 @@ public partial class Commands
 
 		// move.c:952-955: one condition, one failure. The container must be ENTER_OK or controlled
 		// AND pass its enter lock; anything else is the same fail_lock, defaulting to
-		// "Permission denied.".
-		var mayEnter =
-			(await objectToEnter.HasFlag("ENTER_OK") || await PermissionService.Controls(executor, objectToEnter))
-			&& await PermissionService.PassesLock(executor, objectToEnter, LockType.Enter);
+		// "Permission denied." and which of the two failed.
+		var refusal = !(await objectToEnter.HasFlag("ENTER_OK") || await PermissionService.Controls(executor, objectToEnter))
+			? PermissionRefusal.NotControlledNorFlag(objectToEnter, "ENTER_OK")
+			: !await PermissionService.PassesLock(executor, objectToEnter, LockType.Enter)
+				? PermissionRefusal.Lock(objectToEnter, "Enter")
+				: null;
 
-		if (!mayEnter)
+		if (refusal is not null)
 		{
 			await DidItService.FailLock(parser, executor, objectToEnter, LockType.Enter,
-				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied));
+				MarkupText.Plain(refusal.Text));
 			return CallState.Empty;
 		}
 

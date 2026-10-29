@@ -132,18 +132,25 @@ public partial class LockService
 	}
 
 	public async ValueTask<bool> CanWriteAsync(AnySharpObject executor, AnySharpObject target, SharpLockData data)
+		=> await AuthorizeWriteAsync(executor, target, data) is Success;
+
+	public async ValueTask<Result<Success>> AuthorizeWriteAsync(AnySharpObject executor, AnySharpObject target, SharpLockData data)
 	{
-		if (!await permissions.Value.Controls(executor, target)) return false;
-		if (executor.IsGod()) return true;
-		if (target.IsGod()) return false;
-		if (await executor.IsWizard()) return true;
-		if (data.Flags.HasFlag(LockFlags.Wizard)) return false;
+		if (!await permissions.Value.Controls(executor, target)) return Refused(ErrorMessages.Notifications.PermissionDeniedLockNotControlled);
+		if (executor.IsGod()) return new Success();
+		if (target.IsGod()) return Refused(ErrorMessages.Notifications.PermissionDeniedLockOfGod);
+		if (await executor.IsWizard()) return new Success();
+		if (data.Flags.HasFlag(LockFlags.Wizard)) return Refused(ErrorMessages.Notifications.PermissionDeniedLockWizard);
 		var owner = await target.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-		if (data.Flags.HasFlag(LockFlags.Owner) && executor.Object().DBRef != owner.Object.DBRef) return false;
-		if (!data.Flags.HasFlag(LockFlags.Locked)) return true;
-		if (data.Creator is not { } creator) return false;
+		if (data.Flags.HasFlag(LockFlags.Owner) && executor.Object().DBRef != owner.Object.DBRef)
+			return Refused(ErrorMessages.Notifications.PermissionDeniedLockOwner);
+		if (!data.Flags.HasFlag(LockFlags.Locked)) return new Success();
 		var executorOwner = await executor.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken);
-		return executor.Object().DBRef.Matches(creator) || executorOwner.Object.DBRef.Matches(creator);
+		return data.Creator is { } creator && (executor.Object().DBRef.Matches(creator) || executorOwner.Object.DBRef.Matches(creator))
+			? new Success()
+			: Refused(ErrorMessages.Notifications.PermissionDeniedLockLocked);
+
+		static Result<Success> Refused(string reason) => new Error<string>(reason);
 	}
 
 	public async ValueTask<Found<ResolvedLock>> LookupAsync(AnySharpObject target, string name, CancellationToken cancellationToken = default)

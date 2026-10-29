@@ -61,12 +61,12 @@ public class HideTargetTests
 
 		var heard = await MessagesWhile(hider.DbRef, () => RunAs(hider, $"@hide/on {target.Name}"));
 
-		await Assert.That(heard).Contains("Permission denied.");
+		await Assert.That(heard).Contains("Permission denied. You need the game.wizard permission.");
 		await Assert.That(ConnectionService.Get(target.Handle)?.IsHidden).IsFalse();
 
 		heard = await MessagesWhile(hider.DbRef, () => RunAs(hider, $"@hide/on {target.Handle}"));
 
-		await Assert.That(heard).Contains("Permission denied.");
+		await Assert.That(heard).Contains("Permission denied. You need one of these permissions: game.wizard, game.royalty, game.see_all.");
 		await Assert.That(ConnectionService.Get(target.Handle)?.IsHidden).IsFalse();
 	}
 

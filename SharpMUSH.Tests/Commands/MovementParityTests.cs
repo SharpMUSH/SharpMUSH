@@ -1674,7 +1674,7 @@ public class MovementParityTests
 		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
 			await Teleport(owner.Handle, via, box.ToString(), destination));
 
-		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(ownerSaw.Any(m => m.StartsWith("Permission denied. You do not control "))).IsTrue();
 		await Assert.That(await LocationOf(box.ToString())).IsEqualTo(BareDbref(room))
 			.Because("HEAVY is exactly the case location ownership does not cover");
 	}
@@ -1728,7 +1728,7 @@ public class MovementParityTests
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
 			await Teleport(mover.Handle, via, "me", destination));
 
-		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDeniedTeleportFixed)).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@set {mover.DbRef}=!FIXED");
@@ -1981,7 +1981,7 @@ public class MovementParityTests
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
 			await Teleport(mover.Handle, via, "me", destination));
 
-		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(moverSaw.Any(m => m.StartsWith("Permission denied. You do not control ") && m.Contains("JUMP_OK room"))).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 
 		await God($"@set {destination}=JUMP_OK");
@@ -2238,7 +2238,7 @@ public class MovementParityTests
 		var moverSaw = await MessagesWhile(mover.DbRef, async () =>
 			await Teleport(mover.Handle, via, "me", $"#{box.Number}"));
 
-		await Assert.That(moverSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(moverSaw.Any(m => m.StartsWith("Permission denied. You do not control ") && m.Contains("JUMP_OK room"))).IsTrue();
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room))
 			.Because("ENTER_OK is what `enter` reads, and this is not `enter`");
 	}
@@ -2537,7 +2537,7 @@ public class MovementParityTests
 		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
 			await Teleport(owner.Handle, via, exit, destination));
 
-		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(ownerSaw.Any(m => m.StartsWith("Permission denied. You do not control ") && m.EndsWith(", and it is not OPEN_OK."))).IsTrue();
 		await Assert.That(await ExitEnds(exit)).IsEqualTo((BareDbref(source), BareDbref(leadsTo)))
 			.Because("can_open_from refuses a room that is neither theirs nor OPEN_OK");
 
@@ -2566,7 +2566,7 @@ public class MovementParityTests
 		var ownerSaw = await MessagesWhile(owner.DbRef, async () =>
 			await Teleport(owner.Handle, via, exit, destination));
 
-		await Assert.That(ownerSaw.Any(m => m == ErrorMessages.Notifications.PermissionDenied)).IsTrue();
+		await Assert.That(ownerSaw.Any(m => m.StartsWith("Permission denied. You do not control "))).IsTrue();
 		await Assert.That(await ExitEnds(exit)).IsEqualTo(before)
 			.Because("owning where the exit is going is not authority to take it from where it is");
 	}
@@ -2684,7 +2684,7 @@ public class MovementParityTests
 		var entererSaw = await MessagesWhile(enterer.DbRef, async () =>
 			await As(enterer.Handle, $"enter {room}"));
 
-		await Assert.That(entererSaw).Contains(ErrorMessages.Notifications.PermissionDenied);
+		await Assert.That(entererSaw).Contains(ErrorMessages.Notifications.PermissionDeniedEnterRoom);
 		await Assert.That(entererSaw).DoesNotContain("You can't enter that.");
 		await Assert.That(await LocationOf(enterer.DbRef.ToString())).IsNotEqualTo(BareDbref(room));
 	}

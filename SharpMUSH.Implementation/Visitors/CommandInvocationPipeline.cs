@@ -135,9 +135,10 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			return run.PreserveHookErrors(switchRefusal);
 
 		// 4. Check the behaviour restrictions and CommandLock before executing
-		if (run.Executor is AnySharpObject lockedExecutor && !await PermitsAsync(run.Definition.Attribute, lockedExecutor))
+		if (run.Executor is AnySharpObject lockedExecutor
+				&& await RefusalAsync(run.Definition.Attribute, lockedExecutor) is var refusal and not CommandRestrictions.Refusal.None)
 		{
-			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor);
+			await NotifyRestrictedAsync(run.Definition.Attribute, lockedExecutor, refusal);
 			return run.PreserveHookErrors(new CallState(ErrorMessages.Returns.PermissionDenied));
 		}
 
@@ -475,26 +476,53 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 			? []
 			: switches.Where(s => !allowedSwitches.Contains(s, StringComparer.OrdinalIgnoreCase)).ToArray();
 
-	/// <summary>Whether <paramref name="executor"/> passes the command's behaviour restrictions and its CommandLock.</summary>
-	private async ValueTask<bool> PermitsAsync(SharpCommandAttribute attribute, AnySharpObject executor)
-		=> await SharpMUSH.Library.Services.CommandRestrictions.PermitsAsync(attribute, executor)
-			&& (string.IsNullOrEmpty(attribute.CommandLock) || await services.LockService.Evaluate(attribute.CommandLock, executor, executor));
+	/// <summary>
+	/// Why <paramref name="executor"/> may not run the command: one of its behaviour restrictions, or its
+	/// CommandLock; <see cref="CommandRestrictions.Refusal.None"/> when it may.
+	/// </summary>
+	private async ValueTask<CommandRestrictions.Refusal> RefusalAsync(SharpCommandAttribute attribute, AnySharpObject executor)
+	{
+		var refusal = await CommandRestrictions.RefusalAsync(attribute, executor);
+		if (refusal != CommandRestrictions.Refusal.None || string.IsNullOrEmpty(attribute.CommandLock)) return refusal;
+		return await services.LockService.Evaluate(attribute.CommandLock, executor, executor)
+			? CommandRestrictions.Refusal.None
+			: CommandRestrictions.Refusal.Lock;
+	}
 
 	/// <summary>
 	/// command_check_with sends the command's restrict_message in place of "Permission
-	/// denied." when it has one (command.c:2337-2341).
+	/// denied." when it has one (command.c:2337-2341). Without one, the refusal says which
+	/// restriction turned the executor away.
 	/// </summary>
-	private async ValueTask NotifyRestrictedAsync(SharpCommandAttribute attribute, AnySharpObject executor)
+	private async ValueTask NotifyRestrictedAsync(SharpCommandAttribute attribute, AnySharpObject executor, CommandRestrictions.Refusal refusal)
 	{
 		var restrictMessage = attribute.RestrictMessage;
-		if (string.IsNullOrEmpty(restrictMessage))
-		{
-			await services.NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
-		}
-		else
+		if (!string.IsNullOrEmpty(restrictMessage))
 		{
 			await services.NotifyService.Notify(executor, restrictMessage, executor);
+			return;
 		}
+
+		if (refusal == CommandRestrictions.Refusal.God)
+		{
+			await services.NotifyService.PermissionDeniedGodOnly(executor);
+			return;
+		}
+
+		if (refusal == CommandRestrictions.Refusal.Lock && CommandRestrictions.PermissionsOf(attribute.CommandLock) is [_, ..] scopes)
+		{
+			await services.NotifyService.PermissionDeniedNeeds(executor, scopes);
+			return;
+		}
+
+		var key = refusal switch
+		{
+			CommandRestrictions.Refusal.App => nameof(ErrorMessages.Notifications.PermissionDeniedCommandApp),
+			CommandRestrictions.Refusal.Guest => nameof(ErrorMessages.Notifications.PermissionDeniedCommandGuest),
+			CommandRestrictions.Refusal.Gagged => nameof(ErrorMessages.Notifications.PermissionDeniedCommandGagged),
+			_ => nameof(ErrorMessages.Notifications.PermissionDeniedCommandLock)
+		};
+		await services.NotifyService.NotifyLocalized(executor, key, executor, attribute.Name);
 	}
 
 	/// <summary>

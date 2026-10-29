@@ -39,7 +39,7 @@ public partial class Commands
 		{
 			if (!await executor.Can(PortalPermission.ChatAdmin))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ChatAdmin);
 				return CallState.Empty;
 			}
 
@@ -102,7 +102,7 @@ public partial class Commands
 		}
 		else if (!await executor.Can(PortalPermission.ChatAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ChatAdmin);
 			return CallState.Empty;
 		}
 
@@ -142,11 +142,7 @@ public partial class Commands
 		{
 			if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 			{
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-					shouldNotify: true);
+				return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GamePower("Poll"));
 			}
 
 			var newPollData = pollData with { Message = null };
@@ -170,11 +166,7 @@ public partial class Commands
 
 		if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GamePower("Poll"));
 		}
 
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();

@@ -383,8 +383,7 @@ public partial class Commands
 		if (targets.Any(connection => connection.Ref is not { } owner || owner.Number != executorRef.Number)
 			&& !await executor.Can(PortalPermission.PlayersModerate) && !await executor.HasPower("Boot"))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.PlayersModerate, PortalPermission.GamePower("Boot"));
 		}
 
 		foreach (var handle in targetHandles)
@@ -784,8 +783,7 @@ public partial class Commands
 
 		if (!await PermissionService.Controls(executor, target) && !await HaltsAnything(executor))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GamePower("Halt"));
 		}
 
 		var targetObject = target.Object();
@@ -1232,8 +1230,7 @@ public partial class Commands
 
 		if (!executor.IsGod())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedGodOnly(executor);
 		}
 
 		// logtype_from_switch(sw, LT_ERR) and the policy switches, each with Penn's default.

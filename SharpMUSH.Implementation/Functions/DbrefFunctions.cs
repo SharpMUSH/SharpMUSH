@@ -892,7 +892,7 @@ public partial class Functions
 
 			if (!await PermissionService.Controls(executor, target))
 			{
-				await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied);
+				await NotifyService.PermissionDeniedNotControlled(executor, target);
 				return;
 			}
 

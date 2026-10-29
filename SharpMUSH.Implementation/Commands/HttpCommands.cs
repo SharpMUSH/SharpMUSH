@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -33,11 +34,7 @@ public partial class Commands
 
 		if (!await executor.IsWizard() && !await executor.HasPower("CAN_HTTP"))
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GamePower("CAN_HTTP"));
 		}
 
 		if (objAttrArg is null)

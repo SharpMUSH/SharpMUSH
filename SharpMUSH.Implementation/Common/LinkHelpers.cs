@@ -1,4 +1,5 @@
 using Mediator;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Commands.Database;
@@ -176,7 +177,7 @@ public static class LinkHelpers
 		if (!await permissionService.Controls(executor, target))
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				ErrorMessages.Notifications.PermissionDenied);
+				PermissionRefusal.NotControlled(target).Text);
 		}
 
 		switch (target)
@@ -346,7 +347,7 @@ public static class LinkHelpers
 			if (!await LeadsNowhereAsync(attributeService, executor, target, exit))
 			{
 				return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-					ErrorMessages.Notifications.PermissionDenied);
+					string.Format(ErrorMessages.Notifications.PermissionDeniedLinkedExit, target.Object().Name));
 			}
 
 			if (!await lockService.Evaluate(LockType.Link, target, executor))
@@ -360,7 +361,7 @@ public static class LinkHelpers
 		if (preserve && !await executor.IsWizard())
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				ErrorMessages.Notifications.PermissionDenied);
+				PermissionRefusal.Needs(PortalPermission.GameWizard).Text);
 		}
 
 		// create.c:367-378: an exit linked by its controller keeps its owner, and /preserve keeps it
@@ -474,14 +475,14 @@ public static class LinkHelpers
 		if (!await permissionService.Controls(executor, destination) && !await destination.HasFlag("ABODE"))
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				ErrorMessages.Notifications.PermissionDenied);
+				PermissionRefusal.NotControlledNorFlag(destination, "ABODE").Text);
 		}
 
 		// create.c:408.
 		if (!await permissionService.Controls(executor, target))
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				ErrorMessages.Notifications.PermissionDenied);
+				PermissionRefusal.NotControlled(target).Text);
 		}
 
 		await mediator.Send(new SetObjectHomeCommand(homed, home));
@@ -538,7 +539,7 @@ public static class LinkHelpers
 		if (!await permissionService.Controls(executor, target))
 		{
 			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				ErrorMessages.Notifications.PermissionDenied);
+				PermissionRefusal.NotControlled(target).Text);
 		}
 
 		await mediator.Send(new LinkRoomCommand(room, destinationRoom));

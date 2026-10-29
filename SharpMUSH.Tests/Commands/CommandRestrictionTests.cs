@@ -62,9 +62,9 @@ public class CommandRestrictionTests
 	}
 
 	[Test]
-	[Arguments("@power {0}=Guest")]
-	[Arguments("@set {0}=GAGGED")]
-	public async Task RestrictedPlayer_CannotRename(string grant)
+	[Arguments("@power {0}=Guest", "Permission denied. Guests cannot use @NAME.")]
+	[Arguments("@set {0}=GAGGED", "Permission denied. You cannot use @NAME while gagged.")]
+	public async Task RestrictedPlayer_CannotRename(string grant, string refusal)
 	{
 		var player = await PlayerAsync("CmdRestricted", grant);
 		var original = await NameOf(player.DbRef);
@@ -72,22 +72,22 @@ public class CommandRestrictionTests
 		var said = await Run(player, $"@name me={$"Ren{Guid.NewGuid():N}"[..12]}");
 
 		await Assert.That(await NameOf(player.DbRef)).IsEqualTo(original);
-		await Assert.That(said.Select(delivery => delivery.Message)).Contains("Permission denied.");
+		await Assert.That(said.Select(delivery => delivery.Message)).Contains(refusal);
 	}
 
 	[Test]
-	[Arguments("think hi")]
-	[Arguments("@create GagThing")]
-	[Arguments("@set me=GAGATTR:1")]
-	[Arguments("@pemit me=hello")]
-	[Arguments("@teleport me=here")]
-	public async Task GaggedPlayer_CannotRunANoGaggedCommand(string command)
+	[Arguments("think hi", "THINK")]
+	[Arguments("@create GagThing", "@CREATE")]
+	[Arguments("@set me=GAGATTR:1", "@SET")]
+	[Arguments("@pemit me=hello", "@PEMIT")]
+	[Arguments("@teleport me=here", "@TELEPORT")]
+	public async Task GaggedPlayer_CannotRunANoGaggedCommand(string command, string commandName)
 	{
 		var player = await PlayerAsync("CmdGagged", "@set {0}=GAGGED");
 
 		var said = await Run(player, command);
 
-		await Assert.That(said.Select(delivery => delivery.Message)).Contains("Permission denied.");
+		await Assert.That(said.Select(delivery => delivery.Message)).Contains($"Permission denied. You cannot use {commandName} while gagged.");
 	}
 
 	[Test]

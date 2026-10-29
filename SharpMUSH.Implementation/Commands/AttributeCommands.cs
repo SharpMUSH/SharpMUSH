@@ -385,8 +385,7 @@ public partial class Commands
 	{
 		if (!await PermissionService.CanSet(executor, targetObject))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
 		// Mortals can only chown to their own owner; wizards can chown to anyone.
@@ -467,8 +466,7 @@ public partial class Commands
 		var canModify = await PermissionService.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
 		var isSafe = await targetObject.HasFlag("SAFE");
@@ -530,8 +528,7 @@ public partial class Commands
 		var canModify = await PermissionService.Controls(executor, targetObject);
 		if (!canModify)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
 		// With RSArgs, the arguments after = are split by comma

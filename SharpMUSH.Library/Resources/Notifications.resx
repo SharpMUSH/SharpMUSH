@@ -102,11 +102,131 @@
   <data name="PermissionDenied" xml:space="preserve">
     <value>Permission denied.</value>
   </data>
+  <data name="PermissionDeniedNeedsPermission" xml:space="preserve">
+    <value>Permission denied. You need the {0} permission.</value>
+  </data>
+  <data name="PermissionDeniedNeedsAnyPermission" xml:space="preserve">
+    <value>Permission denied. You need one of these permissions: {0}.</value>
+  </data>
+  <data name="PermissionDeniedGodOnly" xml:space="preserve">
+    <value>Permission denied. Only God can do that.</value>
+  </data>
+  <data name="PermissionDeniedNotControlled" xml:space="preserve">
+    <value>Permission denied. You do not control {0}.</value>
+  </data>
+  <data name="PermissionDeniedNotControlledMatch" xml:space="preserve">
+    <value>Permission denied. You do not control that.</value>
+  </data>
+  <data name="PermissionDeniedCommandApp" xml:space="preserve">
+    <value>Permission denied. An application cannot use {0}.</value>
+  </data>
+  <data name="PermissionDeniedCommandGuest" xml:space="preserve">
+    <value>Permission denied. Guests cannot use {0}.</value>
+  </data>
+  <data name="PermissionDeniedCommandGagged" xml:space="preserve">
+    <value>Permission denied. You cannot use {0} while gagged.</value>
+  </data>
+  <data name="PermissionDeniedCommandLock" xml:space="preserve">
+    <value>Permission denied. You do not pass the lock on {0}.</value>
+  </data>
   <data name="NoPermission" xml:space="preserve">
     <value>You don't have permission to do that.</value>
   </data>
   <data name="YouDoNotControlThatObject" xml:space="preserve">
     <value>You do not control that object.</value>
+  </data>
+  <data name="PermissionDeniedNotControlledNeeds" xml:space="preserve">
+    <value>Permission denied. You do not control {0}, and you need the {1} permission.</value>
+  </data>
+  <data name="PermissionDeniedNotControlledNeedsAny" xml:space="preserve">
+    <value>Permission denied. You do not control {0}, and you need one of these permissions: {1}.</value>
+  </data>
+  <data name="PermissionDeniedNotControlledNorFlag" xml:space="preserve">
+    <value>Permission denied. You do not control {0}, and it is not {1}.</value>
+  </data>
+  <data name="PermissionDeniedLock" xml:space="preserve">
+    <value>Permission denied. You do not pass the {1} lock on {0}.</value>
+  </data>
+  <data name="PermissionDeniedNotOwnerNeeds" xml:space="preserve">
+    <value>Permission denied. {0} is not yours, and you need the {1} permission.</value>
+  </data>
+  <data name="PermissionDeniedNotOwnerNeedsAny" xml:space="preserve">
+    <value>Permission denied. {0} is not yours, and you need one of these permissions: {1}.</value>
+  </data>
+  <data name="PermissionDeniedGuest" xml:space="preserve">
+    <value>Permission denied. Guests cannot do that.</value>
+  </data>
+  <data name="PermissionDeniedAttribute" xml:space="preserve">
+    <value>Permission denied. You cannot change the {0} attribute on {1}.</value>
+  </data>
+  <data name="PermissionDeniedNeedsAccount" xml:space="preserve">
+    <value>Permission denied. That needs a character on an active account.</value>
+  </data>
+  <data name="PermissionDeniedProtectedWizard" xml:space="preserve">
+    <value>Permission denied. Only a wizard can do that to {0}.</value>
+  </data>
+  <data name="PermissionDeniedEnterRoom" xml:space="preserve">
+    <value>Permission denied. A room cannot be entered; use an exit.</value>
+  </data>
+  <data name="PermissionDeniedCannotHold" xml:space="preserve">
+    <value>Permission denied. An exit cannot carry anything.</value>
+  </data>
+  <data name="PermissionDeniedQueueEntry" xml:space="preserve">
+    <value>Permission denied. You do not control what queued task {0}, and you need one of these permissions: {1}.</value>
+  </data>
+  <data name="PermissionDeniedChannelModify" xml:space="preserve">
+    <value>Permission denied. You may not change channel {0}.</value>
+  </data>
+  <data name="PermissionDeniedLockNotControlled" xml:space="preserve">
+    <value>Permission denied. You do not control that object.</value>
+  </data>
+  <data name="PermissionDeniedLockOfGod" xml:space="preserve">
+    <value>Permission denied. Only God can change God's locks.</value>
+  </data>
+  <data name="PermissionDeniedLockWizard" xml:space="preserve">
+    <value>Permission denied. That lock is set wizard-only.</value>
+  </data>
+  <data name="PermissionDeniedLockOwner" xml:space="preserve">
+    <value>Permission denied. That lock is set owner-only, and you do not own the object.</value>
+  </data>
+  <data name="PermissionDeniedLockLocked" xml:space="preserve">
+    <value>Permission denied. That lock is locked, and you did not set it.</value>
+  </data>
+  <data name="PermissionDeniedLockSetWizard" xml:space="preserve">
+    <value>Permission denied. Making a lock wizard-only needs one of these permissions: game.wizard, game.royalty, game.see_all.</value>
+  </data>
+  <data name="PermissionDeniedNotARoom" xml:space="preserve">
+    <value>Permission denied. {0} is not a room.</value>
+  </data>
+  <data name="PermissionDeniedTeleportDestination" xml:space="preserve">
+    <value>Permission denied. You do not control {0}, and it is not a JUMP_OK room that lets {1} in.</value>
+  </data>
+  <data name="PermissionDeniedTeleportFixed" xml:space="preserve">
+    <value>Permission denied. FIXED stops that teleport.</value>
+  </data>
+  <data name="PermissionDeniedChownCarry" xml:space="preserve">
+    <value>Permission denied. You must carry {0} to @chown it.</value>
+  </data>
+  <data name="PermissionDeniedBecause" xml:space="preserve">
+    <value>Permission denied. {0}</value>
+  </data>
+  <data name="PermissionDeniedFlagType" xml:space="preserve">
+    <value>Permission denied. The {0} flag cannot be set on a {1}.</value>
+  </data>
+  <data name="PermissionDeniedFlagLocked" xml:space="preserve">
+    <value>Permission denied. The {0} flag cannot be changed.</value>
+  </data>
+  <data name="PermissionDeniedFlagRestricted" xml:space="preserve">
+    <value>Permission denied. The {0} flag is restricted to: {1}.</value>
+  </data>
+  <data name="PermissionDeniedGagWizard" xml:space="preserve">
+    <value>Permission denied. A wizard cannot be gagged.</value>
+  </data>
+  <data name="PermissionDeniedLinkedExit" xml:space="preserve">
+    <value>Permission denied. You do not control {0}, and it already leads somewhere.</value>
+  </data>
+  <data name="PermissionDeniedAliasMembers" xml:space="preserve">
+    <value>Permission denied. {0} does not show its members to you.</value>
   </data>
 
   <!-- General -->

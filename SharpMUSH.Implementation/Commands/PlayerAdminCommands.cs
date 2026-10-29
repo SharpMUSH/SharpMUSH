@@ -133,10 +133,14 @@ public partial class Commands
 		// players.moderate is not a wizard's whole standing: only God resets God's password, and only a
 		// wizard resets a wizard's, or a moderator could take the account over.
 		AnySharpObject victim = asPlayer;
-		if (victim.IsGod() ? !executor.IsGod() : await victim.IsWizard() && !await executor.IsWizard())
+		if (victim.IsGod() && !executor.IsGod())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedGodOnly(executor);
+		}
+
+		if (await victim.IsWizard() && !await executor.IsWizard())
+		{
+			return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedProtectedWizard), victim.Object().Name);
 		}
 
 		if (isGenerate)
@@ -543,7 +547,7 @@ public partial class Commands
 
 		if (!await executor.CanHide())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("Hide"));
 			return CallState.Empty;
 		}
 
@@ -581,7 +585,7 @@ public partial class Commands
 	{
 		if (player.Object.DBRef != executor.Object().DBRef && !await executor.IsWizard())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 			return CallState.Empty;
 		}
 
@@ -594,15 +598,22 @@ public partial class Commands
 		var privWho = await executor.IsPriv() || await executor.IsSee_All();
 		if (connection is null || !privWho && connection.Ref != executor.Object().DBRef)
 		{
-			await NotifyService.NotifyLocalized(executor, privWho
-				? nameof(ErrorMessages.Notifications.HideDescriptorNotFound)
-				: nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			if (privWho)
+			{
+				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.HideDescriptorNotFound), executor);
+			}
+			else
+			{
+				await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty,
+					PortalPermission.GamePower("See_All"));
+			}
+
 			return CallState.Empty;
 		}
 
 		if (connection.Ref != executor.Object().DBRef && !await executor.IsWizard())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 			return CallState.Empty;
 		}
 
@@ -689,8 +700,7 @@ public partial class Commands
 
 		if ((switches.Contains("ADD") || switches.Contains("DELETE")) && !await executor.Can(PortalPermission.ConfigAdmin))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
 		}
 
 		if (switches.Contains("ADD"))
@@ -850,8 +860,7 @@ public partial class Commands
 
 		if (!await PermissionService.Controls(executor, target))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target);
 		}
 
 		var warningListString = warningListArg.Message.ToPlainText();
@@ -944,8 +953,7 @@ public partial class Commands
 
 		if (!(await executor.IsSee_All() || targetOwner.Object.DBRef.Equals(executor.Object().DBRef)))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedNotOwnerNeedsAny), targetObj.Name, string.Join(", ", PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All")));
 		}
 
 		await WarningService.CheckObjectAsync(executor, target);

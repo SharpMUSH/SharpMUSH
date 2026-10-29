@@ -85,8 +85,7 @@ public partial class Commands
 		{
 			if (!await PermissionService.CanSet(executor, executor, chain))
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedAttribute), name, executor.Object().Name);
 			}
 
 			buffer.Append(chain.Last().Value);

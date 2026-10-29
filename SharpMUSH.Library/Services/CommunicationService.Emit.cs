@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -121,7 +122,7 @@ public partial class CommunicationService
 					if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject zone) continue;
 					if (!await permissionService.Controls(executor, zone))
 					{
-						await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+						await notifyService.PermissionDeniedNotControlled(executor, zone);
 						continue;
 					}
 					var heardHere = false;
@@ -262,7 +263,7 @@ public partial class CommunicationService
 			{
 				if (!await executor.IsPriv())
 				{
-					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					await notifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty);
 					continue;
 				}
 				if (!long.TryParse(name, out var port))

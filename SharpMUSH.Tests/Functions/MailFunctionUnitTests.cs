@@ -243,7 +243,7 @@ public class MailFunctionUnitTests
 	/// player first and then require <c>controls(executor, player)</c>, so a mortal reads their own
 	/// mailbox under any name for themselves and is refused anyone else's (#1491). SharpMUSH used to
 	/// refuse every non-wizard before looking at who was named. A refused fetch answers as Penn's does:
-	/// "Permission denied" to the caller, and the function's usual not-found value.
+	/// "Permission denied" to the caller (with the reason, here), and the function's usual not-found value.
 	/// </summary>
 	[Test]
 	[Arguments("mail(me)", "0 1 0")]
@@ -276,6 +276,7 @@ public class MailFunctionUnitTests
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "MailFetchRefused");
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Object().Name;
 		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(mortal);
 
 		await WebAppFactoryArg.FunctionParserFor(mortal).FunctionParse(MarkupText.Plain(code));
@@ -285,7 +286,7 @@ public class MailFunctionUnitTests
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(mortal).Skip(before)
 				.Where(delivery => delivery.Sender is { } sender && sender.Number == mortal.Number)
 				.Select(delivery => delivery.Message))
-			.IsEquivalentTo(["Permission denied"]);
+			.IsEquivalentTo([$"Permission denied. You do not control {god}."]);
 	}
 
 	[Test]

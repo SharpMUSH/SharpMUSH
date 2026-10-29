@@ -73,8 +73,7 @@ public partial class Functions
 	{
 		if (shouldLock is not null && !await PermissionService.Controls(executor, target))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target);
 		}
 
 		// atr_get_noparent plus Can_Read_Attr: an attribute that is not there, and one the caller may

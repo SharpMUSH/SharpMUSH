@@ -1031,7 +1031,7 @@ public partial class Functions
 		// reading someone else's descriptors needs Priv_Who.
 		if (target.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All"));
 			return CallState.Empty;
 		}
 
