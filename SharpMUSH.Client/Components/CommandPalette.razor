@@ -40,7 +40,7 @@
                         }
                         var name = part.Text;
                         var index = slot++;
-                        <input class="kit-palette-slot" type="text" aria-label="@name" placeholder="@name"
+                        <input name="palette-slot" class="kit-palette-slot" type="text" aria-label="@name" placeholder="@name"
                                value="@_slotValues.GetValueOrDefault(name)" size="@Math.Max(name.Length, 4)"
                                @ref="_slotInputs[index]"
                                @oninput="@(e => _slotValues[name] = e.Value?.ToString() ?? string.Empty)" />
@@ -52,7 +52,7 @@
             {
                 <div class="kit-palette-field">
                     <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
-                    <input @ref="_input" type="text" role="combobox" aria-expanded="true" aria-controls="kit-palette-list"
+                    <input name="palette-search" @ref="_input" type="text" role="combobox" aria-expanded="true" aria-controls="kit-palette-list"
                            aria-activedescendant="@($"kit-palette-{_active}")" aria-label="@Loc["NavSearchOpen"]"
                            placeholder="@Loc["NavPalettePlaceholder"]" value="@_query"
                            @oninput="@(e => { _query = e.Value?.ToString() ?? string.Empty; _active = 0; _output = null; })" />

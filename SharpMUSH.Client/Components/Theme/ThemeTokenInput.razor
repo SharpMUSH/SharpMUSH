@@ -1,6 +1,6 @@
 @* One colour of a theme being edited: a colour picker and the same colour as hex, either of which sets it. *@
 <label class="adm-theme-token" data-token="@Token">
-    <input type="color" class="adm-theme-color" value="@Value" disabled="@Disabled"
+    <input name="colour" type="color" class="adm-theme-color" value="@Value" disabled="@Disabled"
            aria-label="@Label" @onchange="e => OnChange.InvokeAsync(e.Value?.ToString())" />
     <span class="adm-theme-token-text">
         <span class="adm-theme-token-name">@Label</span>

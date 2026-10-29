@@ -88,7 +88,7 @@
             </div>
         }
         <label class="welcome-imagery">@Loc["GuideArtwork"]
-            <select value="@Progress.Imagery" @onchange="ChangeImagery">
+            <select name="imagery" value="@Progress.Imagery" @onchange="ChangeImagery">
                 <option value="Full">@Loc["GuideArtworkFull"]</option><option value="Reduced">@Loc["GuideArtworkReduced"]</option><option value="None">@Loc["GuideArtworkNone"]</option>
             </select>
         </label>

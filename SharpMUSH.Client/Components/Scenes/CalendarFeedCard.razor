@@ -99,7 +99,7 @@
     private RenderFragment Address(string url, string cssClass) => __builder =>
     {
         <div class="calendar-feed-address @cssClass">
-            <input class="calendar-feed-url" type="text" readonly value="@url" aria-label="@Loc["RolCalendarAddress"]" onfocus="this.select()" />
+            <input name="calendar-feed-url" class="calendar-feed-url" type="text" readonly value="@url" aria-label="@Loc["RolCalendarAddress"]" onfocus="this.select()" />
             <CapsuleButton Icon="@Icons.Material.Outlined.ContentCopy" Class="calendar-feed-copy" OnClick="() => CopyAsync(url)">@Loc["RolCalendarCopy"]</CapsuleButton>
             <CapsuleButton Icon="@Icons.Material.Outlined.EventAvailable" Class="calendar-feed-subscribe" Href="@Webcal(url)">@Loc["RolCalendarSubscribe"]</CapsuleButton>
         </div>

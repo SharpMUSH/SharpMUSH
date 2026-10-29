@@ -22,7 +22,7 @@
 <div class="ra-fields">
     <div class="ra-field">
         <div class="ra-field-label">@Loc["RolNameLabel"]</div>
-        <input class="ra-input" type="text" value="@Draft.Name" aria-label="@Loc["RolNameLabel"]"
+        <input name="role-name" class="ra-input" type="text" value="@Draft.Name" aria-label="@Loc["RolNameLabel"]"
                @oninput="@(e => Draft.Name = e.Value?.ToString() ?? string.Empty)" />
     </div>
     <div class="ra-field">
@@ -31,12 +31,12 @@
     </div>
     <div class="ra-field ra-field--narrow">
         <div class="ra-field-label">@Loc["RolColorLabel"]</div>
-        <input class="ra-input" type="text" value="@Draft.Color" aria-label="@Loc["RolColorLabel"]"
+        <input name="role-colour" class="ra-input" type="text" value="@Draft.Color" aria-label="@Loc["RolColorLabel"]"
                @oninput="@(e => Draft.Color = e.Value?.ToString() ?? string.Empty)" />
     </div>
     <div class="ra-field ra-field--narrow">
         <div class="ra-field-label">@Loc["RolPriorityLabel"]</div>
-        <input class="ra-input" type="number" inputmode="numeric" value="@Draft.Priority" disabled="@Role.IsSystem" aria-label="@Loc["RolPriorityLabel"]"
+        <input name="role-priority" class="ra-input" type="number" inputmode="numeric" value="@Draft.Priority" disabled="@Role.IsSystem" aria-label="@Loc["RolPriorityLabel"]"
                title="@Loc["RolPriorityHelper"]"
                @onchange="@(e => OnPriorityChange(e.Value?.ToString()))" />
     </div>

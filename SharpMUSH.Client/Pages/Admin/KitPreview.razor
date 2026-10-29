@@ -72,7 +72,7 @@
         <BottomBar>
             <TypeChips Items="@_types" Selected="@_type" SelectedChanged="@(v => _type = v)" AriaLabel="@Loc["AdmKitTypeLabel"]" />
             <div class="kit-preview-compose">
-                <input class="kit-preview-input" type="text" placeholder="@Loc["AdmKitComposerPlaceholder"]" aria-label="@Loc["AdmKitMessageLabel"]" />
+                <input name="message" class="kit-preview-input" type="text" placeholder="@Loc["AdmKitComposerPlaceholder"]" aria-label="@Loc["AdmKitMessageLabel"]" />
                 <CapsuleButton Primary="true">Send</CapsuleButton>
             </div>
         </BottomBar>

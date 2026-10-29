@@ -55,9 +55,9 @@
 
                     <div class="le-panel-label" style="margin-top:1.125rem;">@Loc["LaySidebarsAndFooter"]</div>
                     <div class="le-settings">
-                        <label class="le-toggle"><input type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.LeftSidebar.ResourceKey()]</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.RightSidebar.ResourceKey()]</label>
-                        <label class="le-toggle"><input type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.Footer.ResourceKey()]</label>
+                        <label class="le-toggle"><input name="left-sidebar" type="checkbox" checked="@_leftOn" @onchange="@(e => { _leftOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.LeftSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input name="right-sidebar" type="checkbox" checked="@_rightOn" @onchange="@(e => { _rightOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.RightSidebar.ResourceKey()]</label>
+                        <label class="le-toggle"><input name="footer" type="checkbox" checked="@_footerOn" @onchange="@(e => { _footerOn = (bool)e.Value!; _dirty = true; InvalidatePreview(); })" /> @Loc[WidgetZone.Footer.ResourceKey()]</label>
                     </div>
                 </div>
 

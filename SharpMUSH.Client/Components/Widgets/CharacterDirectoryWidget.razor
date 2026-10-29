@@ -7,7 +7,7 @@
    category under a section label, and the characters as portrait tiles. *@
 <div class="char-dir-widget">
     <div class="char-dir-bar">
-        <input class="char-dir-search" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
+        <input name="character-search" class="char-dir-search" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
                value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
         @if (!_loading && !_failed)
         {

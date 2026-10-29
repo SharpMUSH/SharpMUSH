@@ -111,7 +111,7 @@
     <div class="comm-compose">
         <BottomBar>
             <div class="comm-compose-row">
-                <input @ref="_input" class="comm-input" type="text" data-primary-input="end" enterkeyhint="send" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
+                <input name="message" @ref="_input" class="comm-input" type="text" data-primary-input="end" enterkeyhint="send" placeholder="@Loc["NavPlayMessageTo", Target]" aria-label="@Loc["NavPlayMessageTo", Target]"
                        value="@_text" @oninput="e => _text = e.Value?.ToString() ?? string.Empty" @onkeydown="OnKeyAsync" />
                 <button type="button" class="comm-send" disabled="@string.IsNullOrWhiteSpace(_text)" @onclick="SendFromButtonAsync">@Loc["Send"]</button>
             </div>

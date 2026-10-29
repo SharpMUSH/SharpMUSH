@@ -15,20 +15,20 @@
             <div class="play-cfg-kicker">@Loc["Terminal"]</div>
             <label class="play-cfg-row" title="@Loc["NavTerminalWidthTooltip"]">
                 <span>@Loc["NavTerminalWidthCols"]</span>
-                <input class="play-cols-input" type="number" min="78" max="240" step="1"
+                <input name="columns" class="play-cols-input" type="number" min="78" max="240" step="1"
                        value="@Columns" @onchange="e => ColumnsChanged.InvokeAsync(e.Value?.ToString())" />
             </label>
             @* Per browser, and here rather than in Settings so a guest can turn it on too. *@
             <label class="play-cfg-row">
                 <span>@Loc["NavScreenReaderMode"]</span>
-                <input class="play-cfg-check" type="checkbox" checked="@ScreenReaderOn"
+                <input name="screen-reader" class="play-cfg-check" type="checkbox" checked="@ScreenReaderOn"
                        aria-describedby="@ReaderWhat" @onchange="e => ScreenReaderChanged.InvokeAsync(e.Value is true)" />
             </label>
             <div class="play-cfg-note" id="@ReaderWhat">@Loc["NavScreenReaderModeTooltip"]</div>
             @* Off until the player turns it on, with what it keeps and where said beside it (TerminalLog). *@
             <label class="play-cfg-row">
                 <span>@Loc["NavKeepLongerLogs"]</span>
-                <input class="play-cfg-check" type="checkbox" checked="@KeepLogsOn"
+                <input name="keep-logs" class="play-cfg-check" type="checkbox" checked="@KeepLogsOn"
                        aria-describedby="@LogsWhat" @onchange="e => KeepLogsChanged.InvokeAsync(e.Value is true)" />
             </label>
             <div class="play-cfg-note" id="@LogsWhat">@Loc["NavKeepLongerLogsTooltip", TerminalLog.MaxLines.ToString("N0"), (int)TerminalLog.MaxAge.TotalDays]</div>

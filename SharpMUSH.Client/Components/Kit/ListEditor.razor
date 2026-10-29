@@ -16,7 +16,7 @@
             </span>
         }
         @* form names no form, so Enter adds a value here rather than submitting a form the editor sits in. *@
-        <input class="list-editor-input @(Mono ? "list-editor-input--mono" : null)" type="text" form="@NoForm"
+        <input name="list-item" class="list-editor-input @(Mono ? "list-editor-input--mono" : null)" type="text" form="@NoForm"
                placeholder="@Placeholder" aria-label="@($"{Loc["Add"]}: {Label}")" disabled="@Disabled"
                value="@_draft" @oninput="OnInputAsync" @onchange="CommitAsync" @onkeydown="OnKeyDownAsync" />
         <button type="button" class="list-editor-add" aria-label="@($"{Loc["Add"]}: {Label}")" title="@Loc["Add"]"

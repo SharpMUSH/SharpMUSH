@@ -39,7 +39,7 @@
             </section>
         }
         <form class="wiki-collection-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
-            <input type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_draft" @oninput="e => _draft = e.Value?.ToString() ?? string.Empty" maxlength="200" />
+            <input name="wiki-search" type="search" aria-label="@Loc["NavWikiSearch"]" placeholder="@Loc["NavWikiSearch"]" value="@_draft" @oninput="e => _draft = e.Value?.ToString() ?? string.Empty" maxlength="200" />
             <button type="submit">@Loc["NavWikiSearch"]</button>
         </form>
         <nav class="wiki-collection-topics" aria-label="@Loc["NavWikiCategories"]">
@@ -54,7 +54,7 @@
         </nav>
         <details class="wiki-collection-directory">
             <summary>@Loc["WikiBrowseAllCategories"]</summary>
-            <input type="search" aria-label="@Loc["NavWikiCategories"]" placeholder="@Loc["NavWikiCategories"]" value="@_categorySearch" @oninput="e => _categorySearch = e.Value?.ToString() ?? string.Empty" />
+            <input name="category-search" type="search" aria-label="@Loc["NavWikiCategories"]" placeholder="@Loc["NavWikiCategories"]" value="@_categorySearch" @oninput="e => _categorySearch = e.Value?.ToString() ?? string.Empty" />
             <div class="wiki-collection-category-list">
                 @foreach (var category in navigation.Categories.Where(row => row.Name.Contains(_categorySearch, StringComparison.OrdinalIgnoreCase)))
                 {

@@ -45,7 +45,7 @@
             <Records>
                 <div class="aa-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="aa-ico aa-ico--faint" />
-                    <input value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
+                    <input name="application-search" value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)"
                            placeholder="@Loc["LayAppsSearchPlaceholder"]" aria-label="@Loc["LayAppsSearchPlaceholder"]" />
                 </div>
 

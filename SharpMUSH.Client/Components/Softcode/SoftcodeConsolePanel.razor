@@ -22,7 +22,7 @@
             var index = i;
             <label class="sc-console-arg">
                 <span class="sc-console-arg-name">%@index</span>
-                <input class="sc-console-arg-input" value="@Console.Arguments[index]" spellcheck="false"
+                <input name="argument" class="sc-console-arg-input" value="@Console.Arguments[index]" spellcheck="false"
                        @oninput="e => Console.SetArgument(index, e.Value?.ToString() ?? string.Empty)" />
             </label>
         }
@@ -84,7 +84,7 @@
     }
     <div class="sc-console-input">
         <span class="sc-console-prompt" aria-hidden="true">›</span>
-        <input class="sc-console-line" value="@Line.Text" spellcheck="false"
+        <input name="expression" class="sc-console-line" value="@Line.Text" spellcheck="false"
                @oninput="e => Line.Type(e.Value?.ToString() ?? string.Empty)" @onkeydown="OnKeyDown"
                placeholder="@Loc["TermConsoleInputPlaceholder"]"
                aria-label="@Loc["TermConsoleInputPlaceholder"]" />

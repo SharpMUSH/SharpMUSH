@@ -76,7 +76,7 @@
             else if (_newOpen)
             {
                 <form class="wiki-side-new-form" @onsubmit="CreatePage" @onsubmit:preventDefault>
-                    <input type="text" placeholder="@Loc["NavWikiNewPageTitle"]" aria-label="@Loc["NavWikiNewPageTitle"]" value="@_newTitle" @oninput="@(e => _newTitle = e.Value?.ToString() ?? string.Empty)" />
+                    <input name="new-page-title" type="text" placeholder="@Loc["NavWikiNewPageTitle"]" aria-label="@Loc["NavWikiNewPageTitle"]" value="@_newTitle" @oninput="@(e => _newTitle = e.Value?.ToString() ?? string.Empty)" />
                     <CapsuleButton Primary="true" Icon="@Icons.Material.Outlined.Add" AriaLabel="@Loc["NavWikiNewPage"]" OnClick="CreatePage" />
                 </form>
             }

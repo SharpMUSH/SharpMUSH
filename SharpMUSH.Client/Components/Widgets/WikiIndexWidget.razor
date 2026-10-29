@@ -25,7 +25,7 @@
                     <p class="wiki-hero-blurb">@Loc["NavWikiHeroBlurb"]</p>
                     <form class="wiki-hero-search" role="search" @onsubmit="ApplySearch" @onsubmit:preventDefault>
                         <MudIcon Icon="@Icons.Material.Outlined.Search" Size="Size.Small" />
-                        <input type="search" placeholder="@Loc["NavWikiSearch"]" aria-label="@Loc["NavWikiSearch"]" value="@_draft"
+                        <input name="wiki-search" type="search" placeholder="@Loc["NavWikiSearch"]" aria-label="@Loc["NavWikiSearch"]" value="@_draft"
                                @oninput="@(e => _draft = e.Value?.ToString() ?? string.Empty)" />
                     </form>
                 </div>

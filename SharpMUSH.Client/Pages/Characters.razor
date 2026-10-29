@@ -16,7 +16,7 @@
 <div class="char-page">
     <PlainPageHeader Title="@Loc["Characters"]" Description="@HeaderDescription">
         <Actions>
-            <input class="char-filter" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
+            <input name="character-search" class="char-filter" type="search" placeholder="@Loc["SearchCharacters"]" aria-label="@Loc["SearchCharacters"]"
                    value="@_search" @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
         </Actions>
     </PlainPageHeader>

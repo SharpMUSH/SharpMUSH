@@ -18,7 +18,7 @@
                 @switch (property?.Type)
                 {
                     case "keyword":
-                        <select value="@fact.Value" disabled="@Disabled" aria-label="@label"
+                        <select name="fact" value="@fact.Value" disabled="@Disabled" aria-label="@label"
                                 @onchange="@(e => SetValue(index, e.Value?.ToString()))">
                             @foreach (var keyword in KeywordsFor(property, fact.Value))
                             {
@@ -27,14 +27,14 @@
                         </select>
                         break;
                     case "boolean":
-                        <select value="@fact.Value" disabled="@Disabled" aria-label="@label"
+                        <select name="fact" value="@fact.Value" disabled="@Disabled" aria-label="@label"
                                 @onchange="@(e => SetValue(index, e.Value?.ToString()))">
                             <option value="true">true</option>
                             <option value="false">false</option>
                         </select>
                         break;
                     default:
-                        <input type="@InputType(property?.Type)" step="@(property?.Type == "decimal" ? "any" : null)"
+                        <input name="fact" type="@InputType(property?.Type)" step="@(property?.Type == "decimal" ? "any" : null)"
                                value="@(fact.PageTitle ?? fact.Value)" disabled="@Disabled" aria-label="@label"
                                @onchange="@(e => SetValue(index, e.Value?.ToString()))" />
                         break;
@@ -44,7 +44,7 @@
         }
         @if (Addable.Count > 0)
         {
-            <select value="@_adding" disabled="@Disabled" aria-label="@Loc["WkAddFact"]"
+            <select name="new-fact" value="@_adding" disabled="@Disabled" aria-label="@Loc["WkAddFact"]"
                     @onchange="@(e => _adding = e.Value?.ToString() ?? string.Empty)">
                 <option value="">@Loc["WkAddFact"]</option>
                 @foreach (var p in Addable)

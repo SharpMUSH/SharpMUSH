@@ -93,7 +93,7 @@
                                         style="@($"--dot:{hex}")" @onclick="() => SaveAsync(character, character.ThemeId, hex, character.Vision)"></button>
                             }
                             <label class="settings-theme-custom @(IsCustom(character) ? "is-on" : null)" title="@Loc["NavThemeAccentCustom"]">
-                                <input type="color" value="@(character.Accent ?? look.Accent)" aria-label="@Loc["NavThemeAccentCustom"]" disabled="@busy"
+                                <input name="accent" type="color" value="@(character.Accent ?? look.Accent)" aria-label="@Loc["NavThemeAccentCustom"]" disabled="@busy"
                                        @onchange="e => SaveAsync(character, character.ThemeId, e.Value?.ToString(), character.Vision)" />
                                 <span>@Loc["NavThemeAccentCustom"]</span>
                             </label>

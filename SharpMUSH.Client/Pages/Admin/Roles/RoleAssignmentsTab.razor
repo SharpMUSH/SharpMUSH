@@ -11,7 +11,7 @@
 <KitCard Class="roleadmin-assign">
     <div class="ra-search">
         <MudIcon Icon="@Icons.Material.Filled.Search" Class="ra-ico ra-ico--faint" />
-        <input value="@Lookup.Name" placeholder="@Loc["RolSearchByUsername"]" aria-label="@Loc["RolSearchByUsername"]"
+        <input name="username" value="@Lookup.Name" placeholder="@Loc["RolSearchByUsername"]" aria-label="@Loc["RolSearchByUsername"]"
                @oninput="@(e => Lookup.Name = e.Value?.ToString() ?? string.Empty)"
                @onkeydown="OnLookupKeyDown" />
         <button type="button" class="ra-btn ra-btn--primary" @onclick="LookUpAsync" disabled="@Lookup.Looking">
@@ -84,7 +84,7 @@
                     }
                 </div>
                 <div class="ra-override-add">
-                    <select class="ra-input" aria-label="@Loc["RolOverrideScope"]" value="@Lookup.OverrideScope"
+                    <select name="override-scope" class="ra-input" aria-label="@Loc["RolOverrideScope"]" value="@Lookup.OverrideScope"
                             @onchange="@(e => Lookup.OverrideScope = e.Value?.ToString() ?? string.Empty)">
                         @foreach (var scope in OverridableScopes)
                         {
