@@ -6,9 +6,10 @@
 
 @* The Help page sidebar (README §6.5, in the board-21 shape): "Help · N topics", a search that opens a
    topic by its exact name or lands on the index filtered to the term, Browse (the index and the
-   getting-started entries the corpus has), a slice of the topic list — the matches while searching,
-   otherwise the neighbours of the topic being read, never all ~1500 — and Admin help for Wizard and
-   God, who alone are asked the admin index. Collapsed keeps the browse icons. *@
+   getting-started entries the corpus has), a slice of the topic list — the matches while searching;
+   otherwise what the topic being read links to, what those link to, then its alphabetical neighbours;
+   never all ~1500 — and Admin help for Wizard and God, who alone are asked the admin index. Collapsed
+   keeps the browse icons. *@
 <SidebarPanel Class="help-side" Collapsed="@Collapsed">
     @if (!Collapsed)
     {
@@ -28,15 +29,17 @@
     @* A game with no help files has no topics to list, so no heading over nothing. *@
     @if (!Collapsed && _index is { Topics.Count: > 0 })
     {
-        var (label, topics) = TopicSlice();
-        <SectionLabel Class="help-side-topics-label">@label</SectionLabel>
-        <SidebarGroup Class="help-side-topics" Label="@Loc["NavHelpTopics"]">
-            @foreach (var topic in topics)
-            {
-                <SidebarRow Class="help-side-topic" Mono="true" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
-                            Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" />
-            }
-        </SidebarGroup>
+        @foreach (var (group, label, topics) in TopicGroups())
+        {
+            <SectionLabel Class="help-side-topics-label">@label</SectionLabel>
+            <SidebarGroup Class="@($"help-side-topics {group}")" Label="@label">
+                @foreach (var topic in topics)
+                {
+                    <SidebarRow Class="help-side-topic" Mono="true" Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Article" Label="@topic"
+                                Href="@TopicHref(topic)" IsCurrent="@IsTopic(topic)" />
+                }
+            </SidebarGroup>
+        }
     }
     <AuthorizeView Roles="Wizard,God">
         <Authorized>
@@ -86,6 +89,9 @@
     /// <summary>The admin topic being read, decoded from /help/admin/{topic}.</summary>
     private string? _adminTopic;
 
+    /// <summary>The server's last answer for the topics around a page; <see cref="Related"/> when it is this page's.</summary>
+    private GameHelpRelated? _related;
+
     /// <summary>The index's filter (/help?q=), which the sidebar's search sets.</summary>
     private string _query = string.Empty;
 
@@ -112,7 +118,9 @@
     {
         Nav.LocationChanged += OnLocationChanged;
         Locate();
+        var related = LoadRelatedAsync();
         _index = await HelpFiles.GetIndexAsync() is GameHelpIndex index ? index : null;
+        await related;
 
         // Only staff ask for the admin corpus, as on the index page: the server's 403 is the gate, and
         // a mortal's sidebar has no reason to spend a refused request on every page.
@@ -126,18 +134,32 @@
         }
     }
 
-    /// <summary>While searching the index, the first matches; otherwise the neighbours of the topic being read.</summary>
-    private (string Label, IReadOnlyList<string> Topics) TopicSlice()
+    /// <summary>
+    /// While searching the index, the first matches. Otherwise what the topic being read links to, then the
+    /// topics further out along those links, then its neighbours in the alphabetical list, each topic once.
+    /// </summary>
+    private IEnumerable<(string Group, string Label, IReadOnlyList<string> Topics)> TopicGroups()
     {
         var topics = _index?.Topics ?? [];
         if (_path == "/help" && _query.Length > 0)
         {
             var matches = topics.Where(t => t.Contains(_query, StringComparison.OrdinalIgnoreCase)).ToList();
-            return (Loc.Plural("NavHelpMatches", "count", matches.Count), matches.Take(TopicsShown).ToList());
+            yield return ("help-side-matches", Loc.Plural("NavHelpMatches", "count", matches.Count), matches.Take(TopicsShown).ToList());
+            yield break;
         }
-        // The getting-started entries are Browse rows already; listed here too, the one being read was
+
+        // The getting-started entries are Browse rows already; listed in the slice too, the one being read was
         // two rows for one destination, both marked current.
-        return (Loc["NavHelpTopics"], Slice(topics, _topic, _index?.Topic, [.. Starters().Select(s => s.Topic)]));
+        var listed = Starters().Select(s => s.Topic).ToList();
+        var related = Related;
+        if (related is { Linked.Count: > 0 }) yield return ("help-side-linked", Loc["NavHelpLinked"], related.Linked);
+        if (related is { Nearby.Count: > 0 }) yield return ("help-side-nearby", Loc["NavHelpNearby"], related.Nearby);
+        listed.AddRange(related?.Linked.Concat(related.Nearby) ?? []);
+        // Placed where the index lists the topic: @mail is listed as Mail.
+        var rest = Slice(topics, related?.Topic ?? _topic, _index?.Topic, listed);
+        if (rest.Count == 0) yield break;
+        var more = related is { Linked.Count: > 0 } or { Nearby.Count: > 0 };
+        yield return ("help-side-alphabetical", more ? Loc["NavHelpMoreTopics"] : Loc["NavHelpTopics"], rest);
     }
 
     /// <summary>
@@ -167,7 +189,13 @@
 
     private static string AdminHref(string topic) => $"/help/admin/{Uri.EscapeDataString(topic)}";
 
-    private bool IsTopic(string topic) => string.Equals(_topic, topic, StringComparison.OrdinalIgnoreCase);
+    /// <summary>Whether <paramref name="topic"/> is the page being read, by the name in the address or the index's.</summary>
+    private bool IsTopic(string topic) => string.Equals(_topic, topic, StringComparison.OrdinalIgnoreCase)
+        || string.Equals(Related?.Topic, topic, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>The topics around the one being read, when the server has answered for it.</summary>
+    private GameHelpRelated? Related =>
+        string.Equals(_related?.RequestedTopic, _topic, StringComparison.OrdinalIgnoreCase) ? _related : null;
 
     private bool IsAdminTopic(string topic) => string.Equals(_adminTopic, topic, StringComparison.OrdinalIgnoreCase);
 
@@ -187,7 +215,23 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
     {
         Locate();
-        _ = InvokeAsync(StateHasChanged);
+        _ = InvokeAsync(async () =>
+        {
+            StateHasChanged();
+            await LoadRelatedAsync();
+            StateHasChanged();
+        });
+    }
+
+    /// <summary>Asks for the topics around the one being read, unless they are already here.</summary>
+    private async Task LoadRelatedAsync()
+    {
+        if (_topic is not { } topic || Related is not null) return;
+        // Answered after the reader moved on, it is the old topic's and is dropped.
+        if (await HelpFiles.GetRelatedAsync(topic) is GameHelpRelated related && string.Equals(_topic, topic, StringComparison.OrdinalIgnoreCase))
+        {
+            _related = related;
+        }
     }
 
     private void Locate()

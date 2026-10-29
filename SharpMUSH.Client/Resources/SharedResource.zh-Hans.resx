@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {无匹配} other {# 个匹配}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>本页链接</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>相近主题</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>更多主题</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>管理员帮助</value>
   </data>

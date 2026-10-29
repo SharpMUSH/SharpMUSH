@@ -4,6 +4,13 @@ namespace SharpMUSH.Client.Services;
 public record GameHelpIndex(string Corpus, string? Topic, string? Html, IReadOnlyList<string> Topics);
 
 /// <summary>
+/// The topics around <see cref="RequestedTopic"/>, which the index names <see cref="Topic"/>: what its page links to,
+/// then what those link to.
+/// </summary>
+public record GameHelpRelated(string Corpus, string RequestedTopic, string? Topic, IReadOnlyList<string> Linked,
+	IReadOnlyList<string> Nearby);
+
+/// <summary>
 /// The result of asking for one topic. <see cref="Topic"/> is set when exactly one entry answered;
 /// <see cref="Candidates"/> is non-empty when several did; both are empty on a miss.
 /// </summary>
@@ -51,6 +58,11 @@ public sealed class GameHelpService(IHttpClientFactory httpClientFactory, ILogge
 
 	/// <summary>Resolves one topic in the general corpus.</summary>
 	public Task<ApiResult<GameHelpEntry>> GetEntryAsync(string topic) => GetEntryAsync("api/help/entry", topic);
+
+	/// <summary>The general-corpus topics around <paramref name="topic"/>, nearest first.</summary>
+	public Task<ApiResult<GameHelpRelated>> GetRelatedAsync(string topic) =>
+		Client.GetApiAsync<GameHelpRelated>(
+			$"api/help/related?topic={Uri.EscapeDataString(topic)}", "The server returned no related help topics.");
 
 	/// <summary>Resolves one topic in the administrator corpus.</summary>
 	public Task<ApiResult<GameHelpEntry>> GetAdminEntryAsync(string topic) => GetEntryAsync("api/help/admin/entry", topic);

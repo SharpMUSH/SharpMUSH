@@ -16,6 +16,7 @@ namespace SharpMUSH.Server.Controllers;
 /// <code>
 ///   GET /api/help                    — the general index entry plus every topic name
 ///   GET /api/help/entry?topic=@mail  — resolve one topic
+///   GET /api/help/related?topic=newbie — the topics around one, by the help's own links
 ///   GET /api/help/admin              — the ahelp index (Wizard/God only)
 ///   GET /api/help/admin/entry?topic= — resolve one admin topic (Wizard/God only)
 /// </code>
@@ -64,6 +65,19 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 		public string? CanonicalHref { get; init; }
 	}
 
+	/// <summary>
+	/// The topics around <paramref name="RequestedTopic"/>, which the index names <paramref name="Topic"/>: what its page
+	/// links to, then what those link to.
+	/// </summary>
+	public record HelpRelatedDto(string Corpus, string RequestedTopic, string? Topic, IReadOnlyList<string> Linked,
+		IReadOnlyList<string> Nearby);
+
+	/// <summary>How many linked topics the portal's sidebar is sent; an index-like page links hundreds.</summary>
+	public const int RelatedLinkedLimit = 20;
+
+	/// <summary>How many topics further out the portal's sidebar is sent.</summary>
+	public const int RelatedNearbyLimit = 12;
+
 	/// <summary>Portal URL for a topic in the general corpus.</summary>
 	public static string PublicTopicHref(string topic) => $"/help/{Uri.EscapeDataString(topic)}";
 
@@ -79,6 +93,19 @@ public sealed class HelpController(IHelpTopicResolver resolver) : ControllerBase
 	[AllowAnonymous]
 	public Task<ActionResult<HelpEntryDto>> Entry([FromQuery] string? topic) =>
 		BuildEntryAsync(HelpCorpora.Help, topic, PublicTopicHref);
+
+	[HttpGet("related")]
+	[AllowAnonymous]
+	public async Task<ActionResult<HelpRelatedDto>> Related([FromQuery] string? topic)
+	{
+		if (string.IsNullOrWhiteSpace(topic))
+		{
+			return BadRequest("A topic is required.");
+		}
+
+		var related = await resolver.RelatedAsync(HelpCorpora.Help, topic, RelatedLinkedLimit, RelatedNearbyLimit);
+		return Ok(new HelpRelatedDto(HelpCorpora.Help, topic, related.Topic, related.Linked, related.Nearby));
+	}
 
 	/// <summary>Shared article manifest for documentation exporters. No separate content source.</summary>
 	[HttpGet("articles")]
