@@ -251,6 +251,9 @@ public class ConnectionService(
 	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
 	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next, Func<Task<bool>>? authorize = null)
 	{
+		// What this queue entry already sent to the old binding (LOGOUT's goodbye) goes out under it;
+		// once the binding is retired, a deferred send to it is dropped.
+		await OutputBatch.FlushAsync();
 		await current.Binding.PublicationGate.WaitAsync();
 		try
 		{

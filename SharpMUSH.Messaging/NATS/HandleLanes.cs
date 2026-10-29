@@ -54,11 +54,13 @@ internal sealed class HandleLanes(int capacity) : IDisposable
 		}
 		finally
 		{
+			// The slot goes back before the tail leaves the map: once it has left, DrainAsync no longer waits
+			// for this item and the lanes may be disposed.
+			_slots.Release();
 			lock (_tails)
 			{
 				if (_tails.TryGetValue(handle, out var tail) && tail == done.Task) _tails.Remove(handle);
 			}
-			_slots.Release();
 			done.SetResult();
 		}
 	}

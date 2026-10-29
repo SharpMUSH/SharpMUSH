@@ -64,9 +64,13 @@ public static class TerminalFrameRenderer
 			{
 				case "markup":
 					{
-						var ms = root.TryGetProperty("data", out var markup) && markup.ValueKind == JsonValueKind.Object
-							? MarkupTextSerializer.Deserialize(JsonMarshal.GetRawUtf8Value(markup))
-							: MarkupText.Empty;
+						// A frame from a socket owner older than this portal carries the markup as a JSON string.
+						var ms = !root.TryGetProperty("data", out var markup) ? MarkupText.Empty : markup.ValueKind switch
+						{
+							JsonValueKind.Object => MarkupTextSerializer.Deserialize(JsonMarshal.GetRawUtf8Value(markup)),
+							JsonValueKind.String => MarkupTextSerializer.Deserialize(markup.GetString()!),
+							_ => MarkupText.Empty
+						};
 						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty,
 							IsTrue(root, "prompt"), GetStringProperty(root, "session"));
 					}

@@ -80,8 +80,9 @@ public static class ResumeFrameParser
 				"resumeToken" when root.TryGetProperty("token", out var token) && token.ValueKind == JsonValueKind.String
 					=> new ResumeTokenFrame(token.GetString()!),
 				"seq" when root.TryGetProperty("seq", out var seq) && seq.ValueKind == JsonValueKind.Number
+					&& seq.TryGetInt64(out var sequence)
 					&& root.TryGetProperty("data", out var data) && Payload(data) is { } payload
-					=> new SequencedFrame(seq.GetInt64(), payload),
+					=> new SequencedFrame(sequence, payload),
 				_ => new OtherFrame()
 			};
 		}

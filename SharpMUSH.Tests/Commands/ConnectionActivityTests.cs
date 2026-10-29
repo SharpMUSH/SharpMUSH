@@ -38,6 +38,22 @@ public class ConnectionActivityTests
 		await ConnectionService.Disconnect(player.Handle);
 	}
 
+	[Test]
+	public async Task ASpeechTokenCountsOnce()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "SayCount");
+		var parser = WebAppFactoryArg.CommandParserFor(player.DbRef, player.Handle);
+		var said = TestIsolationHelpers.GenerateUniqueName("Said");
+		var before = CommandCount(player.Handle);
+
+		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"\"{said}"));
+
+		await WebAppFactoryArg.Notifications.WaitForAsync(player.DbRef, said);
+		await Assert.That(CommandCount(player.Handle)).IsEqualTo(before + 1);
+		await ConnectionService.Disconnect(player.Handle);
+	}
+
 	private int CommandCount(long handle) =>
 		int.TryParse(ConnectionService.Get(handle)?.Metadata.GetValueOrDefault("CommandCount"), out var count) ? count : 0;
 }

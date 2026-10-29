@@ -21,6 +21,20 @@ public class TerminalFrameRendererTests
 	}
 
 	[Test]
+	public async Task MarkupSentAsAStringStillRenders()
+	{
+		var envelope = System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "markup",
+			data = MarkupString.MarkupTextSerializer.Serialize(MString.Plain("You see a quay."))
+		});
+		var frame = TerminalFrameRenderer.Parse(envelope);
+
+		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
+		await Assert.That(frame.Plain).IsEqualTo("You see a quay.");
+	}
+
+	[Test]
 	public async Task OobEnvelopeSurfacesPackageAndData()
 	{
 		var frame = TerminalFrameRenderer.Parse("{\"type\":\"oob\",\"package\":\"room.contents\",\"data\":{\"who\":[\"#5\"]}}");

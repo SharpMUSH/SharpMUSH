@@ -122,6 +122,13 @@ public class ResumeFrameParserTests
 	}
 
 	[Test]
+	public async Task A_seq_that_is_not_a_whole_number_is_not_a_sequenced_frame()
+	{
+		await Assert.That(ResumeFrameParser.TryReadSeq("{\"type\":\"seq\",\"seq\":1.5,\"data\":\"x\"}", out _, out _)).IsFalse();
+		await Assert.That(ResumeFrameParser.TryReadSeq("{\"type\":\"seq\",\"seq\":1e40,\"data\":\"x\"}", out _, out _)).IsFalse();
+	}
+
+	[Test]
 	public async Task Server_seq_envelope_carries_a_json_frame_in_place_and_text_as_a_string()
 	{
 		const string markup = """{"type":"markup","data":{"t":"═ jobs ═"}}""";

@@ -83,8 +83,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				return new None();
 
 			var commandText = CommandSlice(src, firstCommandMatch);
-			parser.CurrentState.CommandText?.Begin(commandText);
-			RecordConnectionActivity(parser, command);
+			// A rewrite (`"hi` run as SAY) was counted when the typed line began.
+			if (parser.CurrentState.CommandText?.Begin(commandText) is not true)
+				RecordConnectionActivity(parser, command);
 
 			if (await RefuseHaltedExecutor(parser)) return new None();
 
