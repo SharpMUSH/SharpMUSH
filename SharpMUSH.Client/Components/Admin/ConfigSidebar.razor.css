@@ -40,7 +40,7 @@
 	font-size: 14px;
 	cursor: pointer;
 	list-style: none;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 .config-side-summary::-webkit-details-marker {
@@ -83,7 +83,7 @@
 .config-side-chevron {
 	color: var(--text-dim);
 	display: inline-flex;
-	transition: transform var(--motion-pop);
+	transition: transform var(--motion-spring);
 }
 
 .config-side-group[open] > .config-side-summary .config-side-chevron {

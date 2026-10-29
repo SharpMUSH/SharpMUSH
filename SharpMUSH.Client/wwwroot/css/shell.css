@@ -59,7 +59,7 @@
 	border: none;
 	cursor: pointer;
 	color: var(--text-dim);
-	transition: background 0.14s, color 0.14s;
+	transition: background var(--motion-fade), color var(--motion-fade);
 	flex-shrink: 0;
 	padding: 0;
 }
@@ -171,7 +171,7 @@
 	color: var(--rail-ink);
 	cursor: pointer;
 	text-decoration: none;
-	transition: background var(--motion-pop), color var(--motion-pop);
+	transition: background var(--motion-fade), color var(--motion-fade);
 }
 
 .phosphor-rail-item:hover {
@@ -256,7 +256,7 @@
 	/* The page's texture (ThemeTexture) lies over this surface, so it runs on from the page without a seam. */
 	background: var(--surface-3);
 	border-right: 1px solid var(--border-soft);
-	transition: width var(--motion-slide);
+	transition: width var(--motion-move);
 }
 
 .phosphor-pagebar:not(:has(.kit-pagebar)) {
@@ -434,7 +434,7 @@
 	cursor: pointer;
 	position: relative;
 	white-space: nowrap;
-	transition: background 0.14s ease, color 0.14s ease;
+	transition: background var(--motion-fade), color var(--motion-fade);
 }
 
 /* Play-session status dot: present while the play terminal is active, brighter/pulsing when there is
@@ -520,7 +520,7 @@
 	border-radius: var(--radius);
 	cursor: pointer;
 	text-decoration: none;
-	transition: border-color 0.14s ease;
+	transition: border-color var(--motion-fade);
 }
 .phosphor-profile-card:hover {
 	border-color: rgba(var(--glow), 0.4);
@@ -582,7 +582,7 @@
 	font-size: 1rem;
 	flex-shrink: 0;
 	color: var(--text-faint);
-	transition: transform 0.14s ease, color 0.14s ease;
+	transition: transform var(--motion-spring), color var(--motion-fade);
 }
 .phosphor-profile-card[aria-expanded="true"] .phosphor-profile-chevron {
 	color: var(--accent);
@@ -714,7 +714,7 @@
     flex-shrink: 0;
     border-radius: var(--radius);
     cursor: pointer;
-    transition: background 0.14s;
+    transition: background var(--motion-fade);
 }
 
 .term-send {
@@ -950,7 +950,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
     color: var(--accent);
     text-decoration: none;
     border-bottom: 1px solid transparent;
-    transition: border-color 120ms ease, color 120ms ease;
+    transition: border-color var(--motion-fade), color var(--motion-fade);
 }
 
 .WikiContent .mud-card-content a:hover,
@@ -1279,7 +1279,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 	text-decoration: none;
 	color: var(--text-faint);
 	font-family: var(--font-ui);
-	transition: color 0.14s;
+	transition: color var(--motion-fade);
 }
 .phosphor-bottomtab-icon {
 	font-size: 1.375rem;
@@ -1365,13 +1365,13 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		/* Hidden once it has slid out, so a closed drawer's links are neither tabbed to nor read out
 		   off-screen; visibility switches after the slide closing and at once opening. */
 		visibility: hidden;
-		transition: transform 0.22s ease, visibility 0s linear 0.22s;
+		transition: transform var(--motion-exit), visibility 0s var(--duration-exit);
 		box-shadow: var(--shadow-pop);
 	}
 	.phosphor-shell--nav-open .phosphor-sidebar {
 		transform: translateX(0);
 		visibility: visible;
-		transition: transform 0.22s ease, visibility 0s;
+		transition: transform var(--motion-enter), visibility 0s;
 	}
 	/* Keep brand/labels/text visible even if the desktop rail was collapsed. */
 	.phosphor-sidebar--collapsed { width: 248px; }
@@ -1385,7 +1385,7 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		background: var(--overlay);
 		opacity: 0;
 		pointer-events: none;
-		transition: opacity 0.22s ease;
+		transition: opacity var(--motion-fade);
 	}
 	.phosphor-shell--nav-open .phosphor-nav-backdrop {
 		opacity: 1;
@@ -1402,14 +1402,14 @@ pre.ms-preformatted:has(> [style*="background-color"]) {
 		z-index: 1001;
 		transform: translateX(-100%);
 		visibility: hidden;
-		transition: transform 0.22s ease, visibility 0s linear 0.22s;
+		transition: transform var(--motion-exit), visibility 0s var(--duration-exit);
 		box-shadow: var(--shadow-pop);
 	}
 	.phosphor-pagebar:has(.kit-pagebar--collapsed) { width: min(280px, 86vw); }
 	.phosphor-shell--pagebar-open .phosphor-pagebar {
 		transform: translateX(0);
 		visibility: visible;
-		transition: transform 0.22s ease, visibility 0s;
+		transition: transform var(--motion-enter), visibility 0s;
 	}
 	.phosphor-shell--pagebar-open .phosphor-nav-backdrop {
 		opacity: 1;

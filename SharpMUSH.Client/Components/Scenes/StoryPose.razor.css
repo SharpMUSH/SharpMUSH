@@ -220,8 +220,8 @@
 
 /* A pose edited while on screen glows for a moment, so a reader who already read it notices. */
 .story-row--just-edited {
-	/* Ten slides long; zero under reduced motion, which zeroes the token (globals.css). */
-	animation: story-edited-flash calc(var(--motion-slide) * 10) ease-out;
+	/* A colour fading, not movement, so it stays under reduced motion. */
+	animation: story-edited-flash var(--duration-linger) var(--ease-standard);
 }
 
 @keyframes story-edited-flash {

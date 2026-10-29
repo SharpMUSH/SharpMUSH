@@ -22,7 +22,7 @@
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.12s;
+    transition: border-color var(--motion-fade), filter var(--motion-fade);
 }
 .roleadmin ::deep .ra-btn:hover { border-color: rgba(var(--glow), 0.4); }
 .roleadmin ::deep .ra-btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -69,7 +69,7 @@
     background: var(--surface);
     border-radius: var(--radius-card);
     border: 1px solid var(--border);
-    transition: border-color 0.12s, box-shadow 0.12s;
+    transition: border-color var(--motion-fade), box-shadow var(--motion-fade);
 }
 .roleadmin ::deep .ra-card:hover { border-color: rgba(var(--glow), 0.3); }
 .roleadmin ::deep .ra-card--on {
@@ -141,7 +141,7 @@
     font-family: var(--font-mono);
     font-size: 0.8125rem;
     outline: none;
-    transition: border-color 0.12s;
+    transition: border-color var(--motion-fade);
 }
 .roleadmin ::deep .ra-input:focus { border-color: var(--accent); }
 
@@ -239,7 +239,7 @@
     font-weight: 500;
     border-radius: calc(var(--radius) - 2px);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: color var(--motion-fade), background var(--motion-fade), box-shadow var(--motion-fade);
 }
 .roleadmin ::deep .ra-tri:hover { color: var(--text); }
 .roleadmin ::deep .ra-tri--inherit.ra-tri--on {
@@ -304,7 +304,7 @@
     color: var(--text-dim);
     border: 1px dashed var(--border);
     cursor: pointer;
-    transition: all 0.12s;
+    transition: border-color var(--motion-fade), color var(--motion-fade);
 }
 .roleadmin ::deep .ra-add-chip:hover { border-color: rgba(var(--glow), 0.4); color: var(--accent); }
 

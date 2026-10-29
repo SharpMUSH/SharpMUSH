@@ -28,7 +28,7 @@
 	border-radius: var(--radius-card);
 	color: var(--text);
 	text-decoration: none;
-	transition: border-color var(--motion-pop);
+	transition: border-color var(--motion-fade);
 }
 
 .config-cat-card:hover {

@@ -45,7 +45,7 @@
 	background: var(--surface);
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
-	transition: border-color var(--motion-pop) ease;
+	transition: border-color var(--motion-fade);
 }
 
 .schedule-row:hover,

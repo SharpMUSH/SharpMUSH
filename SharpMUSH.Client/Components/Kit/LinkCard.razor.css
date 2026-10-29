@@ -12,7 +12,7 @@
 	box-shadow: var(--card-shadow);
 	color: var(--text);
 	text-decoration: none;
-	transition: border-color var(--motion-pop);
+	transition: border-color var(--motion-fade);
 }
 
 .kit-link-card:hover {
@@ -52,7 +52,7 @@
 .kit-link-card ::deep .kit-link-card-arrow {
 	color: var(--text-faint);
 	flex-shrink: 0;
-	transition: color var(--motion-pop), transform var(--motion-pop);
+	transition: color var(--motion-fade), transform var(--motion-move);
 }
 
 .kit-link-card:hover ::deep .kit-link-card-arrow {

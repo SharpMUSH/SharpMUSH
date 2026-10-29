@@ -10,7 +10,7 @@
 	border: 1px solid var(--border);
 	border-radius: var(--radius-card);
 	container-type: inline-size;
-	transition: border-color var(--motion-pop);
+	transition: border-color var(--motion-fade);
 }
 
 .scene-card:hover,

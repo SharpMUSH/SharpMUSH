@@ -14,12 +14,39 @@
 
 /* A user preference, not a viewport size, so it belongs to neither the shell's breakpoints nor a
    page's tiers. Zeroing the tokens rather than declaring `animation: none`: this sheet is layered
-   and the scoped bundle is not, so a rule here could never win. */
+   and the scoped bundle is not, so a rule here could never win. Only movement goes: a colour fading
+   moves nothing on screen (WCAG 2.3.3), so --duration-effect and --duration-linger stand. The
+   --motion-* pairs are declared on :root too, so they pick these up. */
 @media (prefers-reduced-motion: reduce) {
 	:root {
-		--motion-pop: 0s;
-		--motion-slide: 0s;
+		--duration-enter: 0s;
+		--duration-exit: 0s;
+		--duration-spring: 0s;
 	}
+}
+
+/* MudBlazor's components move on Material 2's curves and their own durations, and ignore reduced
+   motion. These put them on the portal's tokens, which also stills them under reduced motion. */
+.mud-collapse-container,
+.mud-expand-panel,
+.mud-tab-slider,
+.mud-tabs-panels,
+.mud-drawer,
+.mud-main-content {
+	transition-duration: var(--duration-enter);
+	transition-timing-function: var(--ease-standard);
+}
+.mud-dialog {
+	animation-duration: var(--duration-exit);
+	animation-timing-function: var(--ease-enter);
+}
+/* The thumb's left and transform, then its background-color and box-shadow, in MudBlazor's order. */
+.mud-switch-base {
+	transition-duration: var(--duration-spring), var(--duration-spring), var(--duration-effect), var(--duration-effect);
+	transition-timing-function: var(--ease-spring), var(--ease-spring), var(--ease-standard), var(--ease-standard);
+}
+.mud-ripple-effect {
+	transition-duration: var(--duration-enter), var(--duration-effect);
 }
 
 /* FocusOnNavigate (App.razor) moves focus to the page's h1 so a screen reader announces the new page.

@@ -16,7 +16,7 @@
 	white-space: nowrap;
 	text-decoration: none;
 	cursor: pointer;
-	transition: filter var(--motion-pop);
+	transition: filter var(--motion-fade);
 }
 
 /* Glass only over a picture (D1 §4.3): a banner, the image viewer, the character sheet's portrait. On a

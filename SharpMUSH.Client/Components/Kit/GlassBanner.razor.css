@@ -4,7 +4,7 @@
 	border: 1px solid var(--border);
 	overflow: hidden;
 	background: var(--surface-2);
-	transition: height var(--motion-slide);
+	transition: height var(--motion-move);
 }
 
 .kit-banner-img {

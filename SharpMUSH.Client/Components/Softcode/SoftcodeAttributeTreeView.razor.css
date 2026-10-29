@@ -9,7 +9,7 @@
     border: none;
     background: transparent;
     margin-bottom: 1px;
-    transition: background 0.12s;
+    transition: background var(--motion-fade);
 }
 .sc-attr-item:hover {
     background: var(--surface-2);

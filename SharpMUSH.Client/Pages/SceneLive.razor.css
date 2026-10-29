@@ -97,7 +97,7 @@
     border: 1px solid var(--border);
     border-radius: 16px;
     background: var(--surface-2);
-    transition: border-color var(--motion-pop), background var(--motion-pop);
+    transition: border-color var(--motion-fade), background var(--motion-fade);
 }
 
 .scene-live-card:focus-within {

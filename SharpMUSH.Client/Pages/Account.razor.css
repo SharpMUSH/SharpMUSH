@@ -75,7 +75,7 @@
     border: 1px solid transparent;
     cursor: pointer;
     text-decoration: none;
-    transition: background var(--motion-pop), border-color var(--motion-pop), color var(--motion-pop);
+    transition: background var(--motion-fade), border-color var(--motion-fade), color var(--motion-fade);
     line-height: 1.2;
 }
 

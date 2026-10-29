@@ -239,7 +239,7 @@
 	background: var(--border);
 	position: relative;
 	cursor: pointer;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 /* an invisible 44px hit box around the 24px pill: README §9's touch target without a fatter switch */
@@ -271,7 +271,7 @@
 	height: 18px;
 	border-radius: 50%;
 	background: var(--switch-knob-off);
-	transition: left var(--motion-pop), background var(--motion-pop);
+	transition: left var(--motion-spring), background var(--motion-fade);
 }
 
 .cfg-switch--on .cfg-switch-knob {
@@ -356,7 +356,7 @@
 	font: inherit;
 	font-size: 13px;
 	cursor: pointer;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 .cfg-pill:focus-visible {
