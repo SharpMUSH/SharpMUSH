@@ -444,6 +444,42 @@
       "command": "think mailsubject(*Bob,1)",
       "sharp": "Permission denied. You do not control Bob.\n#-1",
       "penn": "Permission denied\n#-1"
+    },
+    {
+      "id": "KD-0040",
+      "scenario": "35-function-families",
+      "case": "ff.perms",
+      "step": 6,
+      "reason": "SharpMUSH says why after \"#-1 PERMISSION DENIED\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "think [hasattr(*Alice,FFSECRET)]|[hasattrp(*Alice,FFSECRET)]|[hasattrval(*Alice,FFSECRET)]|[hasattrpval(*Alice,FFSECRET)]",
+      "sharp": "#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE|#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE|#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE|#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE",
+      "penn": "#-1 PERMISSION DENIED|#-1 PERMISSION DENIED|#-1 PERMISSION DENIED|#-1 PERMISSION DENIED"
+    },
+    {
+      "id": "KD-0041",
+      "scenario": "35-function-families",
+      "case": "ff.perms",
+      "step": 11,
+      "reason": "SharpMUSH says why after \"#-1 PERMISSION DENIED\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "think [recv(*Alice)]|[sent(*Alice)]|[ssl(*Alice)]|[isnum(conn(*Alice))]",
+      "sharp": "-1|-1|#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL|1",
+      "penn": "-1|-1|#-1 PERMISSION DENIED|1"
+    },
+    {
+      "id": "KD-0042",
+      "scenario": "50-mail",
+      "case": "mail.functions-own-mailbox",
+      "step": 3,
+      "reason": "SharpMUSH says why after \"#-1 PERMISSION DENIED\"; `sharp` and `penn` pin the line so the reason is the only difference accepted.",
+      "tracking": "#2427",
+      "profile": "A refusal says why",
+      "command": "think mail(*Bob)",
+      "sharp": "#-1 PERMISSION DENIED: NOT CONTROLLED",
+      "penn": "#-1 PERMISSION DENIED"
     }
   ]
 }
