@@ -76,8 +76,15 @@ public partial class Functions
 				function with { Code = MarkupText.Plain(SubstitutionsOnly(function.Code.ToPlainText())) });
 		}
 
-		using var ceiling = (await CeilingAsync(parser, level, executor, function.Owner))?.Enter();
-		return await AttributeService.CallAttributeFunctionAsync(calling, function);
+		switch (await CeilingAsync(parser, level, executor, function.Owner))
+		{
+			case NotFound:
+				return new CallState(ErrorMessages.Returns.NoSuchRole);
+			case PrivilegeCeiling ceiling:
+				using (ceiling.Enter()) return await AttributeService.CallAttributeFunctionAsync(calling, function);
+			default:
+				return await AttributeService.CallAttributeFunctionAsync(calling, function);
+		}
 	}
 
 	/// <summary>
@@ -95,52 +102,79 @@ public partial class Functions
 			.ToDictionary();
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		using var ceiling = (await CeilingAsync(parser, level, executor))?.Enter();
-		return await parser.With(state => state with
+		switch (await CeilingAsync(parser, level, executor))
 		{
-			Arguments = arguments,
-			EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
-		}, evaluating => evaluating.FunctionParse(args["0"].Message)) ?? CallState.Empty;
-	}
-
-	/// <summary>
-	/// The ceiling <paramref name="level"/> names over <paramref name="objects"/> and their owners, or null when it
-	/// names no role or no ceiling at all (<c>god</c>). A ceiling above the caller's own roles takes nothing they
-	/// hold, so naming a higher one evaluates at their own level, as in RhostMUSH. The caller enters it: entered
-	/// inside an async method, it would end when the method returned.
-	/// </summary>
-	private async ValueTask<PrivilegeCeiling?> CeilingAsync(IMUSHCodeParser parser, string level, params AnySharpObject[] objects)
-	{
-		if (await CeilingPriorityAsync(parser, level) is not { } priority) return null;
-
-		var lowered = ImmutableHashSet.CreateBuilder<int>();
-		foreach (var obj in objects)
-		{
-			lowered.Add(obj.Object().DBRef.Number);
-			if (await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken) is { } owner)
-				lowered.Add(owner.Object.DBRef.Number);
+			case NotFound:
+				return new CallState(ErrorMessages.Returns.NoSuchRole);
+			case PrivilegeCeiling ceiling:
+				using (ceiling.Enter()) return await Evaluate();
+			default:
+				return await Evaluate();
 		}
 
-		return new PrivilegeCeiling(priority, lowered.ToImmutable());
+		async ValueTask<CallState> Evaluate()
+			=> await parser.With(state => state with
+			{
+				Arguments = arguments,
+				EnvironmentRegisters = new Dictionary<string, CallState>(arguments)
+			}, evaluating => evaluating.FunctionParse(args["0"].Message)) ?? CallState.Empty;
+	}
+
+	/// <summary>The ceiling a level names: a privilege ceiling, none at all (<c>god</c>), or no such role.</summary>
+	public union Ceiling(PrivilegeCeiling, None, NotFound);
+
+	/// <summary>A role priority to cap at, none at all (<c>god</c>), or no such role.</summary>
+	public union CeilingLevel(int, None, NotFound);
+
+	/// <summary>
+	/// The ceiling <paramref name="level"/> names over <paramref name="objects"/> and their owners: none at all for
+	/// <c>god</c>, and <see cref="NotFound"/> when it names no role. A ceiling above the caller's own roles takes nothing
+	/// they hold, so naming a higher one evaluates at their own level, as in RhostMUSH. The caller enters it: entered
+	/// inside an async method, it would end when the method returned.
+	/// </summary>
+	private async ValueTask<Ceiling> CeilingAsync(IMUSHCodeParser parser, string level, params AnySharpObject[] objects)
+	{
+		switch (await CeilingPriorityAsync(parser, level))
+		{
+			case int priority:
+				var lowered = ImmutableHashSet.CreateBuilder<int>();
+				foreach (var obj in objects)
+				{
+					lowered.Add(obj.Object().DBRef.Number);
+					if (await obj.Object().Owner.WithCancellation(ExecutionBudget.CurrentToken) is { } owner)
+						lowered.Add(owner.Object.DBRef.Number);
+				}
+
+				return new PrivilegeCeiling(priority, lowered.ToImmutable());
+			case None none:
+				return none;
+			default:
+				return new NotFound();
+		}
 	}
 
 	/// <summary>
 	/// The priority of the role <paramref name="level"/> names: a RhostMUSH level, which may be shortened, through the
 	/// role a game's import made for it or the built-in role standing in for it, or else any role by its slug.
 	/// </summary>
-	private static async ValueTask<int?> CeilingPriorityAsync(IMUSHCodeParser parser, string level)
+	private static async ValueTask<CeilingLevel> CeilingPriorityAsync(IMUSHCodeParser parser, string level)
 	{
-		if (level.Length == 0) return null;
+		if (level.Length == 0) return new NotFound();
 
 		var roles = parser.ServiceProvider.GetRequiredService<IRoleRegistryService>();
 		var rhost = RhostLevels.FirstOrDefault(entry => level.Length >= entry.Shortest
 			&& entry.Name.StartsWith(level, StringComparison.OrdinalIgnoreCase));
-		if (rhost.Name is null) return await RolePriorityAsync(roles, level.ToLowerInvariant());
-		if (rhost.Role == BuiltInRoles.GodSlug) return null;
+		if (rhost.Name is null)
+		{
+			return await RolePriorityAsync(roles, level.ToLowerInvariant()) is { } priority ? priority : new NotFound();
+		}
+
+		if (rhost.Role == BuiltInRoles.GodSlug) return new None();
 
 		// immortal with no role of its own: everything a role grants, but not the owner's blanket grant.
 		return await RolePriorityAsync(roles, rhost.Role)
-			?? (rhost.Standin is { } standin ? await RolePriorityAsync(roles, standin) : int.MaxValue);
+			?? (rhost.Standin is { } standin ? await RolePriorityAsync(roles, standin) : null)
+			?? int.MaxValue;
 	}
 
 	/// <summary>

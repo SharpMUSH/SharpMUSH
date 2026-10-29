@@ -747,17 +747,18 @@ think between(1, 10, 10, 1)
 # bittype()
 `bittype([<object>])`
 
-  Returns how privileged the owner of `<object>` is, as a number on the scale TinyMUX and RhostMUSH use. With no argument, `<object>` is you.
+  Returns how high the roles of `<object>`'s owner rank, as a step on the 0 to 7 scale RhostMUSH and TinyMUX code compares. With no argument, `<object>` is you. Each step is a role, and the owner reaches it by holding a role whose priority is at least that role's:
 
 - 7: God
-- 5: wizard
-- 4: royalty
-- 3: the STAFF flag or the Builder power
-- 2: the HEAD flag or the Immortal power
+- 6: `immortal`
+- 5: `wizard`
+- 4: `royalty`, or `councilor` if lower
+- 3: `builder`, or `architect` if lower
+- 2: `helper` or `guildmaster`, whichever the game has
 - 1: anyone else
-- 0: a guest, or a player with the UNINSPECTED flag
+- 0: a guest
 
-  There is no 6: RhostMUSH uses it for a level above wizard. A player with more than one of these gets the highest.
+  A game's own roles fall in by their priority: a `moderator` above royalty is 4. New code asks for a role by name instead: `hasrole(<object>, wizard, 1)` is bittype() at least 5. A RhostMUSH import writes gt(), gte(), lt() and lte() comparing bittype() with a number that way.
 
   Example:
 ```sharp
@@ -766,8 +767,8 @@ think bittype(#1)
 ```
 
 ::: seealso
-- [HASFLAG()]
-- [HASPOWER()]
+- [HASROLE()]
+- [ROLES()]
 :::
 # brackets()
 `brackets(<string>)`
@@ -2325,16 +2326,19 @@ think hasflag(me, wizard)
 - [HASFLAG()]
 :::
 # hasrole()
-`hasrole(<object>, <role>)`
+`hasrole(<object>, <role>[, <at least>])`
 
   Returns 1 if `<object>` holds the role named `<role>`, and 0 if not. `<role>` is the role's short name as @role/list shows it. An object holds `everyone`, the roles assigned to it, and, for a character linked to an account, the account's roles. A player that is not a guest also holds `player`, and #1 holds `god`.
 
-  Example:
+  With `<at least>` true, it returns 1 if `<object>` holds `<role>` or any role of a higher priority. `<role>` may then also be a staff role the game does not have (`helper`, `moderator`, `guildmaster`, `architect`, `councilor` or `immortal`), at its built-in priority; any other unknown role is `#-1 NO SUCH ROLE`.
+
+  Examples:
 ```sharp
 think hasrole(*Ariel, moderator)
 1
+think hasrole(*Ariel, royalty, 1)
+1
 ```
-
 
 ::: seealso
 - [ROLES()]

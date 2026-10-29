@@ -1,3 +1,5 @@
+using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Authorization;
@@ -25,14 +27,36 @@ public partial class Functions
 					.Concat(held.Where(BuiltInRoles.IsEveryone).Select(r => r.Slug))));
 			});
 
-	/// <summary><c>hasrole(&lt;object&gt;, &lt;role&gt;)</c>: 1 when the object holds the role, itself or through its account, else 0.</summary>
-	[SharpFunction(Name = "hasrole", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object", "role"])]
+	/// <summary>
+	/// <c>hasrole(&lt;object&gt;, &lt;role&gt;[, &lt;at least&gt;])</c>: 1 when the object holds the role, itself or through its
+	/// account, else 0. With <c>&lt;at least&gt;</c> true, 1 when it holds a role of that priority or higher, and
+	/// <c>#-1 NO SUCH ROLE</c> for a role neither the world nor the built-in roles define.
+	/// </summary>
+	[SharpFunction(Name = "hasrole", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["object", "role", "at-least"])]
 	public async ValueTask<CallState> HasRole(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
-		var slug = parser.CurrentState.Arguments["1"].Message.ToPlainText().Trim();
-		return await WithGrants(parser, parser.CurrentState.Arguments["0"].Message.ToPlainText(),
-			grants => new CallState(grants.HoldsRole(slug)));
+		var args = parser.CurrentState.Arguments;
+		var slug = args["1"].Message.ToPlainText().Trim();
+		if (!args.TryGetValue("2", out var atLeast) || !atLeast.Message.Truthy(parser))
+		{
+			return await WithGrants(parser, args["0"].Message.ToPlainText(), grants => new CallState(grants.HoldsRole(slug)));
+		}
+
+		if (await RolePriorityOrBuiltInAsync(parser, slug) is not { } priority) return new CallState(ErrorMessages.Returns.NoSuchRole);
+		return await WithGrants(parser, args["0"].Message.ToPlainText(),
+			grants => new CallState(grants.IsOwner || grants.Roles.Any(held => held.Role.Priority >= priority)));
 	}
+
+	/// <summary>
+	/// The priority of the role <paramref name="slug"/>: the world's role of that name, or the built-in one, a staff role
+	/// of either set included, when the world has none.
+	/// </summary>
+	private static async ValueTask<int?> RolePriorityOrBuiltInAsync(IMUSHCodeParser parser, string slug)
+		=> await parser.ServiceProvider.GetRequiredService<IRoleRegistryService>().GetRoleAsync(slug, ExecutionBudget.CurrentToken) is SharpRole role
+			? role.Priority
+			: BuiltInRoles.All.Concat(BuiltInRoles.Starters).Concat(BuiltInRoles.RhostLevels)
+				.FirstOrDefault(builtIn => string.Equals(builtIn.Slug, slug, StringComparison.OrdinalIgnoreCase))?.Priority;
 
 	/// <summary>
 	/// <c>permission(&lt;object&gt;, &lt;permission&gt;)</c>: 1 when the object holds the permission, else 0.

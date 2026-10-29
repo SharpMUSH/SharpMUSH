@@ -5,6 +5,7 @@ using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -196,23 +197,60 @@ public partial class Functions
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, name, LocateFlags.All,
-			async found => new CallState(await PrivilegeLevelAsync(
+			async found => new CallState(await PrivilegeLevelAsync(parser,
 				new AnySharpObject(await found.Object().Owner.WithCancellation(CancellationToken.None)))));
 	}
 
 	/// <summary>
-	/// The 0-7 privilege scale TinyMUX took from RhostMUSH, read from roles and from the flags and powers
-	/// a TinyMUX or RhostMUSH import brings in. There is no 6: that is RhostMUSH's Immortal, above Wizard.
+	/// RhostMUSH's privilege scale, one step for each of these roles, highest first. A step is reached by holding a
+	/// role whose priority is at least the lowest of its roles', so a game's own roles fall in by where they rank.
+	/// Below the lowest step is 1, and a guest is 0.
 	/// </summary>
-	private static async ValueTask<int> PrivilegeLevelAsync(AnySharpObject owner)
+	private static readonly (int Level, string[] Roles)[] BitTypeSteps =
+	[
+		(6, [BuiltInRoles.ImmortalSlug]),
+		(5, [BuiltInRoles.WizardSlug]),
+		(4, [BuiltInRoles.RoyaltySlug, BuiltInRoles.CouncilorSlug]),
+		(3, [BuiltInRoles.BuilderSlug, BuiltInRoles.ArchitectSlug]),
+		(2, ["helper", "guildmaster"])
+	];
+
+	/// <summary>
+	/// The step <paramref name="owner"/> reaches on <see cref="BitTypeSteps"/>, from the highest priority of the roles
+	/// it holds: 7 for God, 0 for a guest.
+	/// </summary>
+	private static async ValueTask<int> PrivilegeLevelAsync(IMUSHCodeParser parser, AnySharpObject owner)
 	{
 		if (owner.IsGod()) return 7;
-		if (await owner.IsWizard()) return 5;
-		if (await owner.IsRoyalty()) return 4;
-		if (await owner.HasFlag("STAFF") || await owner.HasPower("Builder")) return 3;
-		if (await owner.HasFlag("HEAD") || await owner.HasPower("Immortal")) return 2;
-		if (await owner.IsGuest() || await owner.HasFlag("UNINSPECTED")) return 0;
+		if (await owner.IsGuest()) return 0;
+
+		var held = (await owner.GrantsAsync(ExecutionBudget.CurrentToken)).Roles.Max(role => (int?)role.Role.Priority) ?? 0;
+		var roles = parser.ServiceProvider.GetRequiredService<IRoleRegistryService>();
+		foreach (var (level, slugs) in BitTypeSteps)
+		{
+			if (held >= await StepPriorityAsync(roles, slugs)) return level;
+		}
+
 		return 1;
+	}
+
+	/// <summary>
+	/// The lowest priority of the roles of <paramref name="slugs"/> the world defines or, when it defines none of them,
+	/// of the built-in ones.
+	/// </summary>
+	private static async ValueTask<int> StepPriorityAsync(IRoleRegistryService roles, string[] slugs)
+	{
+		var priorities = new List<int>();
+		foreach (var slug in slugs)
+		{
+			if (await roles.GetRoleAsync(slug, ExecutionBudget.CurrentToken) is SharpRole role) priorities.Add(role.Priority);
+		}
+
+		return priorities.Count > 0
+			? priorities.Min()
+			: BuiltInRoles.All.Concat(BuiltInRoles.Starters).Concat(BuiltInRoles.RhostLevels)
+				.Where(role => slugs.Contains(role.Slug, StringComparer.OrdinalIgnoreCase))
+				.Min(role => role.Priority);
 	}
 
 	[SharpFunction(Name = "between", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,

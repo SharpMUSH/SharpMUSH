@@ -39,6 +39,8 @@ public class RhostFunctionCallRewriterTests
 	[Arguments("[orflag(#1,going,wizard)] [orflag(#1,going,halt)]", "1 0")]
 	[Arguments("[strmatch(moneyname(),config(money_singular))] [strmatch(moneyname(1),config(money_singular))]", "1 1")]
 	[Arguments("[strmatch(moneyname(0),config(money_plural))] [strmatch(moneyname(50),config(money_plural))] [strmatch(moneyname(-5),config(money_plural))]", "1 1 1")]
+	[Arguments("[gte(bittype(#1),7)] [gt(bittype(#1),6)] [lt(bittype(#1),5)] [lte(bittype(#1),4)]", "1 1 0 0")]
+	[Arguments("[gte(5,bittype(#1))] [lt(3,[bittype(#1)])] [gte(bittype(),5)] [gte(bittype(#1),0)] [gt(bittype(#1),7)]", "0 1 1 1 0")]
 	public async Task RewrittenCallsGiveRhostMushAnswers(string rhost, string expected)
 	{
 		var rewritten = RhostSoftcodeRewriter.Rewrite(rhost);
@@ -112,5 +114,18 @@ public class RhostFunctionCallRewriterTests
 
 		await Assert.That(result.Text).IsEqualTo("think [lit(streq(a,b))] [not(comp(a,b,I))]");
 		await Assert.That((await Parser.EvaluateAsync(MarkupText.Plain("[lit(streq(a,b))]"))).ToPlainText()).IsEqualTo("streq(a,b)");
+	}
+
+	[Test]
+	public async Task ABitTypeComparisonAsksForARole()
+	{
+		var result = RhostSoftcodeRewriter.Rewrite("think [gte(bittype(%#),5)] [lt(2,bittype(*Bob))] [gte(bittype(%#),%0)] [gte(1,2)]");
+
+		await Assert.That(result.Text).IsEqualTo(
+			"think [hasrole(owner(%#),wizard,1)] [hasrole(owner(*Bob),builder,1)] [gte(bittype(%#),%0)] [gte(1,2)]");
+		await Assert.That(result.Notes).IsEquivalentTo([
+			"gte() comparing bittype() written with hasrole()",
+			"lt() comparing bittype() written with hasrole()"
+		]);
 	}
 }
