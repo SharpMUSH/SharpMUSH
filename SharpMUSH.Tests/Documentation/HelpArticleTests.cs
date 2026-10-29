@@ -59,10 +59,22 @@ public class HelpArticleTests
 		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + Uri.EscapeDataString(topic), article);
 		await Assert.That(html).Contains("id=\"examples\"");
 		await Assert.That(html).Contains("href=\"/help/sample%28%29#examples\"");
-		await Assert.That(html).Contains("aria-label=\"Article sections\"");
+		await Assert.That(html).Contains("<nav class=\"help-toc\" aria-label=\"Contents\">");
 		await Assert.That(html).Contains("Option details");
 		await Assert.That(html.Split("Example details").Length).IsEqualTo(2);
 		await Assert.That(html).DoesNotContain("help-article");
+	}
+
+	[Test]
+	public async Task TocFollowsTheArticleTitle()
+	{
+		var article = HelpArticleParser.Parse(Article, "help").Single().Article;
+		var html = HelpHtmlRenderer.RenderToHtml(article.Markdown, topic => "/help/" + Uri.EscapeDataString(topic), article);
+		await Assert.That(html).StartsWith("<h1");
+		await Assert.That(html.IndexOf("<nav class=\"help-toc\"", StringComparison.Ordinal))
+			.IsGreaterThan(html.IndexOf("</h1>", StringComparison.Ordinal));
+		await Assert.That(html.IndexOf("<nav class=\"help-toc\"", StringComparison.Ordinal))
+			.IsLessThan(html.IndexOf("<p>Overview.", StringComparison.Ordinal));
 	}
 
 	[Test]
