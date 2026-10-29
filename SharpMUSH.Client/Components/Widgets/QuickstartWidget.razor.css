@@ -39,3 +39,24 @@
 	gap: 2px 12px;
 	margin: 0 -4px;
 }
+
+/* the one offer: a way-in row like the others, filled with the accent */
+.quickstart-links ::deep .kit-row.quickstart-cta {
+	background: var(--accent);
+	color: var(--accent-on);
+	font-weight: 700;
+	transition: filter var(--motion-fade);
+}
+
+.quickstart-links ::deep .kit-row.quickstart-cta:hover {
+	filter: brightness(1.15);
+}
+
+.quickstart-links ::deep .kit-row.quickstart-cta:focus-visible {
+	outline-offset: 2px;
+}
+
+.quickstart-links ::deep .kit-row.quickstart-cta .kit-row-icon {
+	background: var(--accent-on);
+	color: var(--accent);
+}

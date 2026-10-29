@@ -120,7 +120,7 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		await Assert.That(cut.Markup).DoesNotContain("WidCreateYourCharacter");
 	}
 
-	/// <summary>D1 §6.5: an aside card whose ways in are sidebar rows and whose one offer is the primary capsule.</summary>
+	/// <summary>D1 §6.5: an aside card whose ways in are sidebar rows, the first of them the one offer.</summary>
 	[TUnit.Core.Test]
 	public async Task IsAnAsideCard_WithRowLinks_AndOnePrimaryOffer()
 	{
@@ -129,8 +129,8 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 
 		await Assert.That(cut.Find(".kit-card.kit-card--aside .kit-card-title").TextContent).IsEqualTo("WidNewHere");
 		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
-			.IsEquivalentTo(new[] { "/welcome", "/wiki", "/characters", "/scenes" });
-		await Assert.That(cut.FindAll("a.kit-capsule--primary").Select(a => a.GetAttribute("href")).ToList())
+			.IsEquivalentTo(new[] { "/login?tab=register", "/welcome", "/wiki", "/characters", "/scenes" });
+		await Assert.That(cut.FindAll("a.quickstart-cta").Select(a => a.GetAttribute("href")).ToList())
 			.IsEquivalentTo(new[] { "/login?tab=register" });
 	}
 
@@ -141,7 +141,7 @@ public class QuickstartWidgetTests : TrackingBunitContext, IAsyncDisposable
 		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(guestsEnabled: true, features: []));
 		var cut = RenderWidget(BuildAuth([]));
 
-		await Assert.That(cut.FindAll(".quickstart-links a.kit-row").Select(a => a.GetAttribute("href")).ToList())
+		await Assert.That(cut.FindAll(".quickstart-links a.kit-row:not(.quickstart-cta)").Select(a => a.GetAttribute("href")).ToList())
 			.IsEquivalentTo(new[] { "/welcome", "/wiki", "/characters" });
 		await Assert.That(cut.Find(".quickstart-text").TextContent).IsEqualTo("WidQuickstartIntroNoScenes");
 	}

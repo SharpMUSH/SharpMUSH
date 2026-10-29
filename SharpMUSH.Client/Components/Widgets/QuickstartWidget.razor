@@ -12,7 +12,6 @@
         {
             <div class="quickstart-lead">@Loc["WidNoCharacterYet"]</div>
             <p class="quickstart-text">@Loc["WidCreateFirstCharacter"]</p>
-            <CapsuleButton Primary="true" Class="quickstart-cta" Href="/characters/new" Icon="@Icons.Material.Outlined.PersonAdd">@Loc["WidCreateYourCharacter"]</CapsuleButton>
         }
         else if (ShowJoinHero)
         {
@@ -20,7 +19,6 @@
                first-time visitor was offered the wiki, the character list and the scene list — three
                ways to keep reading, and no way to join. *@
             @Intro
-            <CapsuleButton Primary="true" Class="quickstart-cta" Href="/login?tab=register" Icon="@Icons.Material.Outlined.PersonAdd">@Loc["AuthCreateAccount"]</CapsuleButton>
         }
         else
         {
@@ -28,6 +26,15 @@
         }
 
         <nav class="quickstart-links @(InMain ? "quickstart-links--main" : null)" aria-label="@Loc["WidNewHere"]">
+            @* The one offer is the first of the ways in, the same row filled with the accent. *@
+            @if (ShowCreateHero)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Class="quickstart-cta" Icon="@Icons.Material.Outlined.PersonAdd" Label="@Loc["WidCreateYourCharacter"]" Href="/characters/new" />
+            }
+            else if (ShowJoinHero)
+            {
+                <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Class="quickstart-cta" Icon="@Icons.Material.Outlined.PersonAdd" Label="@Loc["AuthCreateAccount"]" Href="/login?tab=register" />
+            }
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.School" Label="@Loc["GuideQuickstartEntry"]" Href="/welcome" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.MenuBook" Label="@Loc["WidReadTheWiki"]" Href="/wiki" />
             <SidebarRow Lead="SidebarRow.SidebarLead.Icon" Icon="@Icons.Material.Outlined.Groups" Label="@Loc["WidBrowseCharacters"]" Href="/characters" />
