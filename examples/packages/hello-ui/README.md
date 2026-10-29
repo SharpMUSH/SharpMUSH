@@ -1,6 +1,6 @@
 # hello-ui
 
-A worked **UI plugin shipped end-to-end as a plugin package** (Phase 4). It ties together three
+A worked **UI plugin shipped end-to-end as a plugin package**. It ties together three
 seams of the plugin system in a single assembly, then distributes that assembly through the package
 manager with SHA-256-verified install.
 
@@ -9,11 +9,11 @@ The plugin source lives at [`examples/plugins/hello-ui/`](../../plugins/hello-ui
 
 ## The three seams
 
-| Seam | Phase | What `HelloUiPlugin` does |
-|------|-------|---------------------------|
-| `IServiceRegistrar` | 9 | `services.AddControllers().AddApplicationPart(thisAssembly)` — exposes `HelloUiController` to the host's MVC pipeline so its attribute routes (`api/hello-ui/*`) are served across the plugin's AssemblyLoadContext. |
-| `IApplicationSource` | 11 | Returns one full-page Area-21 `RegisteredApplication` (`Slug: "hello-ui"`, `Kind: Page`, `NavPlacement: "Examples"`) whose `SchemaUrl`/`DataUrl` point back at its own controller. The registry overlay (`PluginApplicationRegistryDecorator`) unions it into `/api/applications` while the plugin is loaded. |
-| `kind: plugin` package | 4 | This `package.yaml` carries the `.dll` + `.deps.json` + `plugin.json` with their SHA-256 hashes. `PluginPackageInstaller` verifies each byte, checks that `plugin.json`'s id is `hello-ui`, then deposits them into `hello-ui/` in the installed-plugins folder once the administrator confirms the install. |
+| Seam | What `HelloUiPlugin` does |
+|------|---------------------------|
+| `IServiceRegistrar` | `services.AddControllers().AddApplicationPart(thisAssembly)` — exposes `HelloUiController` to the host's MVC pipeline so its attribute routes (`api/hello-ui/*`) are served across the plugin's AssemblyLoadContext. |
+| `IApplicationSource` | Returns one full-page `RegisteredApplication` (`Slug: "hello-ui"`, `Kind: Page`, `NavPlacement: "Examples"`) whose `SchemaUrl`/`DataUrl` point back at its own controller. The registry overlay (`PluginApplicationRegistryDecorator`) unions it into `/api/applications` while the plugin is loaded. |
+| `kind: plugin` package | This `package.yaml` carries the `.dll` + `.deps.json` + `plugin.json` with their SHA-256 hashes. `PluginPackageInstaller` verifies each byte, checks that `plugin.json`'s id is `hello-ui`, then deposits them into `hello-ui/` in the installed-plugins folder once the administrator confirms the install. |
 
 Because the plugin registers services and contributes UI, it is **load-once**: it is picked up at server
 boot, and a clean uninstall takes effect on the next restart. The browser loads **no** plugin code — the
@@ -63,7 +63,7 @@ overlay that is never persisted.
 
 ## The schema JSON the client renders
 
-`GET /api/hello-ui/schema` returns a read-only Area-21 **Portal Schema Document** (snake_case; `kind: "view"`):
+`GET /api/hello-ui/schema` returns a read-only **Portal Schema Document** (snake_case; `kind: "view"`):
 
 ```jsonc
 {

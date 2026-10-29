@@ -15,8 +15,7 @@ public class SeedDataTests
 	}
 
 	/// <summary>
-	/// The four standard image attributes the portal reads (docs/superpowers/specs/
-	/// 2026-09-29-image-attributes-and-oob-v2-design.md §1). <c>visual</c> and <c>public</c> do not
+	/// The four standard image attributes the portal reads (docs/design/image-attributes.md). <c>visual</c> and <c>public</c> do not
 	/// propagate down an attribute tree, so every leaf needs them itself for <c>get(obj/IMAGE`ALT)</c>
 	/// to answer a stranger; <c>no_command</c> keeps a URL from ever matching as a $-command.
 	/// </summary>

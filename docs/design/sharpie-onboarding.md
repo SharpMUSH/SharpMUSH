@@ -1,8 +1,6 @@
 # Sharpie guided journeys
 
-Status: onboarding design approved by the user, 2026-10-19. Player onboarding
-comes first; new-administrator onboarding is a separate, required companion
-journey. The six artwork styles are approved; candidate production and independent visual QA run in parallel.
+Player onboarding comes first; new-administrator onboarding is a separate companion journey.
 
 ## Outcome
 
@@ -15,22 +13,18 @@ Sharpie is a friendly guide to this game's interface. She is not a chatbot, a
 player character, or a replacement for the game's own identity. Guidance is
 authored, deterministic and sensitive to the features actually available.
 
-## Decisions from the user
+## Decisions
 
 - Offer paths for Discord users, PennMUSH/other MUSH players, people from other
   roleplay environments, and people who prefer to figure things out themselves.
 - Explain login, the client, sending commands and useful everyday commands.
-- Use the admin-selected game genre to specialize Sharpie's artwork; the atlas
-  includes anime, chibi, kemono, painterly and other representations.
+- Use the admin-selected game genre to specialize Sharpie's artwork.
 - Prioritize players joining a configured game. Also improve First Setup and
   provide a new-admin onboarding journey.
 - Keep Sharpie's guidance optional, resumable, accessible and unobtrusive.
-- Generate a new per-genre artwork inventory with native transparent backgrounds
-  and no baked-in text. Reduce the style count in collaboration with the user;
-  the old atlas is reference material, not the production inventory.
+- Artwork is a per-genre inventory with native transparent backgrounds and no
+  baked-in text.
 
-The journey below is approved. The six artwork styles and production across all 42 genre/subgenre themes are approved.
-Artwork is being generated in parallel and reviewed in batches.
 
 ## Refined delivery goal and acceptance gates
 
@@ -152,10 +146,9 @@ visible until explicitly replaced; unknown runtime metadata uses the neutral fal
 Genre does not determine art style. Admins choose one coherent style from the
 six approved styles: minimalist, chibi, anime (androgynous non-binary looks), kemono, pixel and comicbook; players can choose reduced imagery or no mascot.
 
-The old atlas has 42 themes and 12 styles, 504 individual images. Use it as visual
-reference while generating new, individually framed illustrations with native
-alpha, no baked-in text, complete anatomy and complete silhouettes. Do not remove
-the backgrounds from the rejected old cuts or upscale them for production. Record
+Illustrations are individually framed, with native alpha, no baked-in text,
+complete anatomy and complete silhouettes; never cut out or upscale a picture
+for production. Record
 provenance and dimensions; serve only selected assets. Review every new asset on
 white, near-black and representative theme colors at its actual display size.
 Reject halos, stray pixels, extra limbs, clipped ears/paws/tails and drifting mint.
@@ -166,8 +159,8 @@ The same guide keeps the same representation across steps. Genre art can head th
 journey and chapter cards; compact instructions do not need a new illustration each.
 Every selected style needs a neutral fallback. Until that style has an approved shipped asset, use the owner-approved neutral minimalist SVG rather than leaving Sharpie absent. The lesson-card host remains visible after the welcome header scrolls away, including in the player-opened Play guide sheet. Reduced imagery uses a smaller host; no-art mode omits both header and card illustrations. Loading errors never block guidance.
 Illustrations should explain the current activity through Sharpie's interaction
-with a genre-specific object, rather than repeat a labeled mascot badge. The first
-Fantasy pilot covers welcoming through an open portal, navigating with a map,
+with a genre-specific object, rather than repeat a labeled mascot badge. The
+Fantasy set covers welcoming through an open portal, navigating with a map,
 and observing with a magnifier or telescope for the `look` lesson. Keep the same
 character and chosen style across these scenes. The visible “With Sharpie” label
 is omitted from lesson headers; stop remains an icon control with a localized
@@ -275,44 +268,7 @@ the user has done. Display exact audiences before practice/live messaging.
 
 ## Evidence and validation
 
-Repository baseline inspected: `ede117ea6` (2026-10-19). Relevant sources:
-`Pages/Login.razor`, `CharacterCreate.razor`, `Play.razor`/`.razor.cs`,
-`Components/Play/PlayComposer.razor`, `PlayGate.razor`, `Pages/Setup.razor`,
-server `MsspController`/`SetupController`, and command attributes in
-`SpeechCommands`, `GeneralCommands`, `HelpCommand`, `InteractionCommands` and
-`SocketCommands`. Existing front-page design mentions an unimplemented welcome
-modal; this proposal replaces that automatic modal with an opt-in guide.
-
-Before claiming completion, demonstrate:
-
-- Fresh Discord, MUSH, other-RP and skip paths on desktop and mobile, light/dark.
-- Registration, returning login, configured external login, create, claim and
-  character switching; recoverable failures keep the user's place.
-- Browser reload, reconnect, logout, second account and guide-version changes.
-- Real Command-mode `look`/`help` behavior and correct Say/OOC/Emit explanation;
-  practice never produces a live message. No duplicated sends or lost drafts.
-- Packages enabled/disabled/removed, unknown genre/subgenre, missing art, hidden
-  controls and private wiki links. The guide neither leaks nor invents capabilities.
-- Keyboard-only journey, screen-reader semantics and focus, narrow layout, zoom,
-  reduced motion, no-art mode and zero forced onboarding when opted out.
-- New-admin setup, interrupted resume, imported-world preservation, existing-admin
-  entry, and ordinary-player verification after setup; unauthorized writes rejected.
-- Appropriate service/component/integration tests, real browser screenshots and a
-  requirement-to-evidence checklist. Automated checks do not substitute for manual
-  readability, artwork and usability review.
-
-Supporting docs must include player quickstart paths, a concise command reference,
-what is new for MUSH users, admin configuration, and authoring/curating guide art.
-Use the same verified command/capability catalog for UI and docs where practical.
-Deliver implementation PRs and screenshots; do not merge or deploy without approval.
-
-## Remaining artwork decisions
-
-Opt-in entry, a compact contextual guide plus `/welcome`, no mascot chat, no
-automatic execution of example commands, and player-first/admin-second scope are
-approved. The user approved six styles and authorized the whole genre inventory in parallel
-with implementation on 2026-10-19. Review new images as they arrive; do not hold
-implementation on completion of the inventory.
+## Package and artwork rules
 
 ### Bundled package provenance
 
@@ -328,8 +284,8 @@ a safe source path and a pinned commit URL. Unknown sources remain unadvertised.
 
 Artwork can declare `SharpieArtThemeKind.Genre` or `Subgenre`. The resolver checks
 that kind as well as theme, style and topic, because MSSP includes `None` in both
-category lists. Existing unambiguous entries without a kind remain compatible;
-new entries should specify their kind. Explicit administrator artwork overrides
+category lists. An unambiguous entry may leave the kind out; new entries should
+specify it. Explicit administrator artwork overrides
 continue to select their named asset within the requested style/topic.
 
 The two `None` inventories use distinct `sharpie-genre-none-...` and

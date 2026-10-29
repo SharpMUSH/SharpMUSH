@@ -1,13 +1,5 @@
 # Admin Guide: Dynamic Applications
 
-> **Status — implemented; screenshots pending a deployment.** The feature this guide
-> describes is built and tested (`docs/todo/area-21-applications.md`). The REST surface was
-> verified live against a bootstrapped server: registering a valid app returns
-> 200 and round-trips; a bogus schema URL is rejected ("Schema endpoint validation failed");
-> an unknown kind is rejected. The **[SCREENSHOT]** markers below are still placeholders —
-> capturing them needs a served WASM deployment and a browser, which the build environment
-> here lacks; capture them from a real instance using the steps in each section.
-
 ## What a Dynamic Application is
 
 A **Dynamic Application** is a portal page or widget whose entire interface is described by
@@ -40,8 +32,6 @@ object (the same object that already serves the character profile API). You can 
   …) in dependency order. See the softcode author guide for how these are written.
 - **Hand-author** the attributes on the HTTP handler object in-game.
 
-> **[SCREENSHOT] Admin → Packages, the `chargen` package on the browse screen with its
-> README and version dropdown.**
 
 ### Part B — register the application
 
@@ -63,22 +53,16 @@ On save, the portal **fetches the Schema URL and verifies it returns parseable J
 before accepting the record. A red error means the softcode isn't installed, the route is
 wrong, or the schema has a syntax error — fix Part A and retry.
 
-> **[SCREENSHOT] The `/admin/applications` registration form, filled in for a `chargen`
-> Page app, with the "schema endpoint validated ✓" indicator.**
 
 ## After registration
 
 - **Page apps** appear in the nav for users whose role is in *Allowed roles*, linking to
   `/apps/{slug}`.
 
-  > **[SCREENSHOT] A rendered multi-page form at `/apps/chargen` — page 1 (Race & Class),
-  > showing the Next control.**
 
 - **Widget apps** appear in the **Layout editor** palette (`/admin/layout`); drag them into
   a zone like any built-in widget. Each placement carries its own schema/data URLs.
 
-  > **[SCREENSHOT] The `/admin/layout` palette with a registered Widget app, and the same
-  > widget rendered in the Right Sidebar.**
 
 ## Permissions
 

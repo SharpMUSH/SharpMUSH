@@ -37,4 +37,4 @@ Wall-clock samples depend on the machine, storage, build and other work. Peak ad
 
 Code that relied on ordinary `@trigger` finishing before the next statement must opt into inline execution or use an explicit queued continuation. `/inplace` is the inline/localize/nobreak alias. Ordinary triggered attributes begin without the caller's old loop/switch/regexp frames; their explicit arguments and q-registers are copied. Generic queued text such as `@wait` and queued switch actions retains the detached contexts its deferred text needs.
 
-HTTP and SQL callbacks capture caller state when admitted. Later caller register mutations no longer change their input, and HTTP response q-registers no longer write into a completed caller's frame. Named/numbered aliases and `hasarg(...,supplied)` retain the argument-contract rules.
+HTTP and SQL callbacks capture caller state when admitted. Later caller register mutations do not change their input, and HTTP response q-registers never write into a completed caller's frame. Named/numbered aliases and `hasarg(...,supplied)` retain the argument-contract rules.

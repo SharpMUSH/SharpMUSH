@@ -2,7 +2,7 @@
 
 SharpMUSH can offer Discord, Google, Microsoft, Grapevine and GitHub sign-in alongside existing account passwords and passkeys. Every provider starts disabled. These registrations are independent of Discord bot linking, Grapevine chat and their secrets.
 
-Existing account-password login, direct character-password `connect`, character-password account login where retained, browser OTT, remembered sign-in and reconnect remain available. Migration retains existing character-password account access. New externally created accounts do not enable that fallback. Adding a provider never disables an existing method automatically.
+Account-password login, direct character-password `connect`, character-password account login where enabled, browser OTT, remembered sign-in and reconnect all work alongside external providers. An account created through an external provider does not enable character-password account login. Adding a provider never disables an existing method.
 
 ## Configure a provider
 

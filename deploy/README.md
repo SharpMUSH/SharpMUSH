@@ -422,11 +422,11 @@ includes its UTC creation time, human-readable size and exact bytes (payload plu
 trigger and initiating administrator/package operation when known, completion status, retention group,
 recovery path, and whether it is that group's `latest` pointer. The default `@storage` report links to
 this inventory without printing every copy. Setting `SHARPMUSH_BACKUP_PACKAGE_KEEP=0` disables
-new pre-package copies while leaving historical copies visible; listing neither prunes nor creates them.
+new pre-package copies while leaving existing ones visible; listing neither prunes nor creates them.
 
-New copies carry `backup.json` inside their directory, written before the complete copy is promoted.
-It survives restarts and moves with the copy through retention. Legacy copies without it remain listed
-with an unknown/legacy reason and unrecorded completion; their directory timestamp is the fallback time.
+Each copy carries `backup.json` inside its directory, written before the complete copy is promoted.
+It survives restarts and moves with the copy through retention. A copy without it is listed with an
+unknown reason and unrecorded completion; its directory timestamp is the fallback time.
 Malformed/incomplete metadata is identified as not recoverable. If it belongs to the newest copy,
 `@dbck` refuses explicitly and names that copy rather than silently checking an older one. Hidden
 `.incoming-*` staging directories are never listed as backups. Completion means the provider finished
@@ -768,8 +768,6 @@ one, upgrading as it starts; it refuses a world written by a newer server and na
 the log. Rolling an image back after an upgrade that moved the format therefore stops at startup. Run
 the newer image again, or restore a backup taken before the upgrade.
 
-Before deploying the category index format upgrade, follow the [wiki category upgrade guide](../docs/guides/wiki-category-upgrade.md). Preserve a verified pre-upgrade recovery point: this format change has no supported in-place downgrade.
-
 The Caddy `docker-compose.prod.yml` uses `:latest` image names, includes local build definitions and does not run Watchtower. From `deploy/`, a reviewed source update uses `docker compose -f docker-compose.prod.yml up -d --build`; schedule it because recreating the socket owner disconnects players. Labels alone do not install Watchtower. Include any analysis overlay in recreations. The Cloudflare behavior below applies only to `docker-compose.cloudflare.yml`.
 
 
@@ -818,8 +816,8 @@ Follow [Set up editor and AI analysis](analysis-tools.md) for the optional Compo
 
 The optional `docker-compose.remote-backups.yml` overlay replaces the cron entrypoint (`BACKUP_CRON`) on
 **the existing `backup` service** with a narrowly scoped SharpMUSH worker. Do not run a second
-cron container against the same configuration. The default stacks retain their existing
-`.env`/`BACKUP_CRON` behavior until you choose this overlay; they do not report remote results.
+cron container against the same configuration. Without this overlay, the stacks run `BACKUP_CRON`
+from `.env` and do not report remote results.
 
 1. Initialize the repository using the existing Restic instructions above and save the password
    separately. Managed jobs never initialize repositories, prune snapshots or restore data.
@@ -828,9 +826,8 @@ cron container against the same configuration. The default stacks retain their e
 3. Include `-f docker-compose.remote-backups.yml` after your base production compose file and any
    other overlays, with `--profile backup up -d --build`. This requires a deployment/restart.
 4. Open **Administration → Remote backups** (`/admin/backups`, `server.admin` permission).
-   Enter the repository, encryption password and storage account credentials from the old `.env`
-   configuration, choose the interval in hours (1–8760), and enable managed scheduling. Those
-   repository settings are now managed in the website; the worker ignores inherited
+   Enter the repository, encryption password and storage account credentials from `.env`, choose the interval in hours (1–8760), and enable managed scheduling. Those
+   repository settings are then managed in the website; the worker ignores inherited
    `RESTIC_*`, `B2_*` and cron settings. Its subprocess environment is explicitly constructed.
 
 Supported repositories are `b2:bucket:path`, `s3:https://host/bucket`, and

@@ -27,10 +27,10 @@ Command / function contribution
 - `ICommandSource` / `IFunctionSource`, `CommandDefinition` / `FunctionDefinition`
 - `IMUSHCodeParser`, `CallState`, `Option<…>` (the types command/function bodies use)
 
-Phase 2a contribution surfaces
+Contribution surfaces
 - `IServiceRegistrar`, `IMigrationSource`, `IFlagSource`, `IBridgeSubscriptionSource`, `PluginFlag`
 
-Phase 2b engine-extension hooks
+Engine-extension hooks
 - `ICommandInterceptor`, `IConnectionHook`, `IObjectLifecycleHook`
 
 ## Contract-version alignment

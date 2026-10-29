@@ -79,8 +79,8 @@ Four of those five are empty stub files — a locale created before anyone
 committed to it. Don't repeat that.
 
 Also note `it` (Italian) has **no** PennMUSH translation at all, which is weak
-evidence of demand. Add it only on request. (It used to be "free under the EFIGS
-shard"; the client loads full ICU now, so no locale is cheaper than any other.)
+evidence of demand. Add it only on request. The client loads full ICU, so no locale is cheaper
+than any other.
 
 ## The one thing that will bite you
 

@@ -105,10 +105,6 @@
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Content>
 		<!-- Documentation files required by MUSH code execution during integration tests -->
-		<Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpattr.md">
-			<Link>Documentation\Testfile\sharpattr.md</Link>
-			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</Content>
 		<Content Include="..\SharpMUSH.Documentation\Helpfiles\SharpMUSH\sharpchat.md">
 			<Link>Documentation\Testfile\sharpchat.md</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

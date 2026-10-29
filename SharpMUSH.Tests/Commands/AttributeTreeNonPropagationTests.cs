@@ -9,8 +9,7 @@ namespace SharpMUSH.Tests.Commands;
 /// <summary>
 /// Pins the attribute flags that deliberately do <b>not</b> propagate down attribute trees in
 /// SharpMUSH, even though PennMUSH's own help text says they do. Without these tests, a future
-/// contributor reading <c>help attribute flags</c> (or SharpMUSH's <c>sharpattr.md</c>, which
-/// documents the same discrepancy) would "fix" this into a bug.
+/// contributor reading <c>help attribute flags</c> would "fix" this into a bug.
 /// <para>
 /// Penn's help is self-contradictory here: the top "ATTRIBUTE FLAGS" list states that
 /// <c>no_clone</c>, <c>veiled</c>, and <c>wizard</c> "restrict access, and are inherited down

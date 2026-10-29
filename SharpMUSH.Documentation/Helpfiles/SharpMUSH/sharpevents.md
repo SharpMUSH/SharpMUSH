@@ -100,7 +100,7 @@ No arguments are passed to these events.
 
 If these attributes exist, then SharpMUSH will **NOT** perform what it usually does when it receives a signal. In effect, these override the default actions: USR1 restarts the server, as `@shutdown/reboot` does, and USR2 takes a backup, as `@dump` does. Players stay connected through a restart.
 
-To mimic old behaviour:
+To announce a restart to every connected player first, and dump on USR2:
 ```sharp
 &SIGNAL`USR1 #9=@nspemit/list lwho()=GAME: Reboot w/o disconnect from game account, please wait. ; @shutdown/reboot
 &SIGNAL`USR2 #9=@dump

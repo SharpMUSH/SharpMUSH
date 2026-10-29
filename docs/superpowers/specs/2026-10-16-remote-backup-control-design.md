@@ -1,7 +1,0 @@
-# Managed remote backups
-
-The administrator needs to configure a repository and schedule, request an immediate backup, and distinguish completed remote snapshots from local hot copies. SharpMUSH owns durable jobs through expanded server data (Mediator); a dedicated Restic worker claims narrowly scoped jobs using a deployment token. The portal never receives credentials. Stored credentials use the existing secret store and each queued job pins an encrypted configuration snapshot. Changing configuration affects future jobs only.
-
-Only B2, S3 HTTPS and REST HTTPS repositories are supported initially. Repository userinfo, query strings, shell commands and arbitrary flags are forbidden. The worker executes fixed argv without a shell and bounded generic receipts. A successful receipt requires exit zero and a hexadecimal snapshot ID; exit three is partial failure. Each job has an unguessable claim nonce and lease. Expiry becomes unknown, never success, and retains the local copy until the worker confirms process exit. Jobs are not automatically retried after uncertainty; Restic job tags permit reconciliation.
-
-A provider creates a fresh consistent hot copy in a job-specific root outside ordinary backup retention; live LMDB is never a source. Fixed auxiliary paths cover wiki assets, Data Protection keys and plugins. Website controls use server.admin. Existing environment-only cron deployments remain documented legacy mode until explicitly migrated. Configuration never initializes, prunes or restores repositories. Production deployment is separate.

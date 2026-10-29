@@ -177,7 +177,7 @@ shows (`docs/guides/help-authoring.md`). The export refuses a plugin file the ga
   **logged and skipped** — the existing definition wins.
 - To guarantee your plugin loads after another, list that plugin's `id` in your `dependencies`.
 
-## 7. Contributing beyond commands/functions (Phase 2a)
+## 7. Contributing beyond commands/functions
 
 Your `[SharpPlugin] IPlugin` may also implement any subset of four **contribution interfaces** (all in
 `SharpMUSH.Library.Plugins`). These extend the host beyond commands/functions — DI services, DB migrations,
@@ -247,11 +247,11 @@ public sealed class MyPlugin : PluginBase,
 - **Bridge subscriptions are long-lived.** `RunAsync` should loop until `ct` is cancelled, exactly like the
   built-in subscriptions. A faulting subscription is logged and isolated; it does not tear down the others.
 
-The worked Phase 2a fixture is the same `SamplePlugin` — it registers `SamplePluginService`
+The worked fixture is the same `SamplePlugin` — it registers `SamplePluginService`
 (`IServiceRegistrar`), seeds the `SAMPLE_PLUGIN` flag (`IFlagSource`), and runs a bridge subscription
 (`IBridgeSubscriptionSource`); the integration tests assert each end-to-end.
 
-## 8. Engine-extension hooks (Phase 2b) — the C# `@hook`
+## 8. Engine-extension hooks — the C# `@hook`
 
 Your `[SharpPlugin] IPlugin` may also implement any subset of three **engine-extension hooks** (all in
 `SharpMUSH.Library.Plugins`). They are the compiled-C# analog of softcode `@hook`: intercept command
@@ -310,11 +310,11 @@ public sealed class MyPlugin : PluginBase,
 - **No unification fuss.** The hook interfaces live in `SharpMUSH.Library`, which your plugin references with
   `<Private>false</Private>` — so they unify with the host automatically across the isolation boundary.
 
-The worked Phase 2b fixture is again `SamplePlugin`: it observes every command (and vetoes `+vetome`) via
+The worked hooks fixture is again `SamplePlugin`: it observes every command (and vetoes `+vetome`) via
 `ICommandInterceptor`, and records created objects via `IObjectLifecycleHook`; the integration tests assert
 the interceptor fires, the veto skips the command body, and the create hook is invoked.
 
-## 8.5. Contributing a web surface — controllers, hubs, endpoints (Phase 9)
+## 8.5. Contributing a web surface — controllers, hubs, endpoints
 
 A plugin can extend the ASP.NET host the same way an app would, across the two phases — both piped through
 the loader, so you `MapX`/`AddX` and the host wires the rest.
@@ -357,12 +357,12 @@ in a non-collectible assembly that can't reference your collectible plugin type.
 > A plugin that contributes endpoints/controllers captures load-once state, so it is **load-once** (restart
 > to reload), like the migration/flag/bridge seams. `SharpMUSH.Plugins.Scene` is the canonical end-to-end
 > example: REST `SceneController`, a `/hubs/scene` `SceneHub`, scene types kept internal to the plugin, and a
-> client that owns its own `SceneEventMessage` DTO. See `docs/design/plugin-system.md` (Phases 8–10).
+> client that owns its own `SceneEventMessage` DTO. See `docs/design/plugin-system.md` (plugin-owned storage, web surface, no shared contracts).
 
-## 8.6. Contributing portal UI + a NavBar section (Phase 11)
+## 8.6. Contributing portal UI + a NavBar section
 
 You can add pages and NavBar entries to the WASM client **without shipping a browser assembly** — by
-contributing a schema-driven Area-21 *Application* and serving its schema/data from your own controller
+contributing a schema-driven *Application* and serving its schema/data from your own controller
 (§8.5). Implement `IApplicationSource`:
 
 ```csharp
@@ -389,10 +389,10 @@ public sealed class Plugin : PluginBase, IServiceRegistrar, IEndpointContributor
 The host overlays your apps onto the registry **in memory while you're loaded** (nothing is persisted), so
 they appear in `/api/applications`, render at `/apps/myplugin` via the client's generic schema renderer, and
 show up in the NavBar — under `World` here, or as their own section if `NavPlacement` is a new name. Unload
-the plugin and they vanish. Access is filtered by `MinimumRole`. Custom compiled Blazor components are not
-supported (declarative/schema-driven only). See `docs/design/plugin-system.md` (Phase 11).
+the plugin and they vanish. Access is filtered by `MinimumRole`. Compiled Blazor components are a separate,
+off-by-default path; see `docs/design/plugin-wasm-components.md`.
 
-## 9. Publishing a plugin package (Phase 4 — package-manager DLL distribution)
+## 9. Publishing a plugin package (package-manager DLL distribution)
 
 Instead of asking administrators to hand-copy your DLL, you can ship it through the **package manager** as a
 `kind: plugin` package. Installing it verifies your binaries against SHA-256 hashes you publish and, once the

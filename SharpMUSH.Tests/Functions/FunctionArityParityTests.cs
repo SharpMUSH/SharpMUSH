@@ -23,7 +23,7 @@ public class FunctionArityParityTests : ServerTestBase
 	/// </summary>
 	private static readonly Dictionary<string, string> DeliberateDivergences = new(StringComparer.OrdinalIgnoreCase)
 	{
-		// docs/superpowers/specs/2026-09-08-millisecond-precision-design.md: every time function takes
+		// docs/guides/time-precision.md: every time function takes
 		// one more trailing argument than PennMUSH's, naming the unit it answers in. Omitting it keeps
 		// PennMUSH's unit, so the extra slot is additive.
 		["convtime"] = "trailing <precision> argument (millisecond-precision design)",

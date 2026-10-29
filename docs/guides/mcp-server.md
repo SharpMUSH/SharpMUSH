@@ -220,7 +220,7 @@ error.
 
 > All tools map the shared analysis engine (`SharpMUSH.CodeAnalysis`) that also backs the
 > Language Server, so results match across editors and agents. See
-> `docs/superpowers/specs/2026-07-08-mcp-lsp-server-design.md` for the design.
+> `docs/design/remote-analysis.md` for the design.
 
 ## Docker / remote access
 

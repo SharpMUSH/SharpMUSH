@@ -1,6 +1,6 @@
 # Stored markup compatibility
 
-The server currently uses MarkupString 2.21.0; this change introduces no new wire version and performs no automatic rewrite or upgrade of world data.
+SharpMUSH never rewrites or upgrades stored markup on its own.
 
 Attribute aggregates retain their original UTF-8 JSON serialization with the library's inspection status, display projection and `CanRewrite` decision. Ordinary display reads defer the expensive codec rewrite inspection until a safety decision requests it. Existing Mediator queries carry that provenance; writes use the attribute store and the normal invalidating command. Copy, move, clone, snapshot capture and unsafe snapshot restore preserve original serialization, including structurally valid Damaged values. Malformed/non-object JSON is excluded rather than repaired. Raw writes construct prepared bytes directly and never invoke the display value serializer, including when a codec can read but cannot write. Attribute permission, creator and value restrictions still apply. If a value restriction would normalize the text of a stored copy, the copy is refused rather than silently altering its serialization.
 

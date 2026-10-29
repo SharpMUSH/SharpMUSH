@@ -7,7 +7,7 @@ header injected from the game's HTTP handler. This gives profiles all wiki
 features (history, revisions, search, wiki-links, Markdown editing) while the
 game retains authority over structured data (demographics, stats, fields).
 
-> **Note (Area 21):** The profile schema below is the canonical `kind:"view"` instance of
+> **Note:** The profile schema below is the canonical `kind:"view"` instance of
 > the **Portal Schema Document** defined in `dynamic-applications.md`. The structured
 > header is one specialization of the general schema-driven renderer — a `view` of
 > `sections[] → keyvalue fields`. New profile field types and the eventual schema-aware
@@ -51,8 +51,8 @@ profile data. The portal is a consumer/renderer, not a data owner.
 
 ### Endpoints (served by the HTTP handler MUSHcode)
 
-Implemented today by the `profile-handler` package (read-only). Routes are under the live
-`/http/...` handler prefix (not the obsolete `/mush/...`):
+Implemented by the `profile-handler` package (read-only). Routes are under the `/http/...`
+handler prefix:
 
 ```
 GET /http/profile/schema

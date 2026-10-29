@@ -1,16 +1,11 @@
 # Scene System — Detailed Design
 
-> **Reconciled 2026-06-19** — This document supersedes all earlier scene-system
-> prose. It is a **graph-native** design (the engine ships wizard-only
-> primitives; capture / permission / formatting / room-orchestration policy
-> lives in softcode). Key shape: entities are vertices joined by edges (not
-> FK-by-property); references to game objects are **edges to the real object
-> vertices plus a `Name` snapshot** (so a deleted object still renders); pose
-> order is a `NEXT` linked list; pose content is versioned in `pose_edit`
-> vertices with a `current_edit` pointer; there is **no `ActRole`** (a pose
-> carries an opaque `ShowAsName`); there are **no `SCENE`*` attributes** on game
-> objects. It supersedes the engine-scene-logger and web-routing prose in
-> architectural-decisions.md §7.
+A **graph-native** design: the plugin ships wizard-only primitives; capture, permission, formatting and
+room-orchestration policy live in softcode. Entities are vertices joined by edges (not FK-by-property);
+references to game objects are **edges to the real object vertices plus a `Name` snapshot** (so a
+deleted object still renders); pose order is a `NEXT` linked list; pose content is versioned in
+`pose_edit` vertices with a `current_edit` pointer; there is **no `ActRole`** (a pose carries an opaque
+`ShowAsName`); there are **no `SCENE`*` attributes** on game objects.
 
 ## Overview
 
@@ -26,17 +21,12 @@ privileged `@SCENE` surface to wizards; and broadcasts one `SceneEventMessage`
 per mutation. POSE / SAY / SEMIPOSE in `MoreCommands.cs` are **never patched** —
 capture is a softcode `@hook/override` (see *Capture*).
 
-This subsystem is the **first reference plugin** for the Package Manager DLL
-framework, and it has now been **extracted into the standalone
-`SharpMUSH.Plugins.Scene` plugin** (Phase 5 of the plugin framework). Every seam
-— the `SCENE_ROOM` flag, `@SCENE`, the `scene…` functions, and the
-`game.scene.{id}` realtime leg — moved out of the engine into the plugin through
-the framework's contribution surfaces (`IFlagSource`,
-`ICommandSource`/`IFunctionSource`, `IBridgeSubscriptionSource`): a *move*, not a
-*rewrite*, with the unchanged scene test suite as the proof. The
-`ISceneService` **storage** ships in the plugin as well (`LightningSceneStorage`,
-over the host-shared `ILightningStorageAccessor`). See `docs/design/plugin-system.md` §"Phase 5 — Scene as the
-reference plugin".
+This subsystem ships as the standalone `SharpMUSH.Plugins.Scene` plugin, the reference plugin for the
+framework. The `SCENE_ROOM` flag, `@SCENE`, the `scene…` functions and the `game.scene.{id}` realtime leg
+come in through the framework's contribution surfaces (`IFlagSource`,
+`ICommandSource`/`IFunctionSource`, `IBridgeSubscriptionSource`), and the `ISceneService` **storage** is
+`LightningSceneStorage`, over the host-shared `ILightningStorageAccessor`. See
+`docs/design/plugin-system.md` §"Scene as the reference plugin".
 
 ## Graph Schema
 
@@ -155,8 +145,7 @@ graph LR
 
 ## Wizard-Only `@SCENE` Command Surface
 
-`SharpMUSH.Plugins.Scene/Commands/` (Phase-5 plugin; was
-`SharpMUSH.Implementation/Commands/SceneCommand/`), one `[SharpCommand(Name =
+`SharpMUSH.Plugins.Scene/Commands/`, one `[SharpCommand(Name =
 "@SCENE", CommandLock = "FLAG^WIZARD", …)]` with switch dispatch and an explicit
 `if (!await executor.IsWizard())` gate (the `@SQL`/`AdminMail` precedent). It is
 the **privileged primitive surface admin softcode drives** — players never call
@@ -199,8 +188,7 @@ to a scheduled scene is `@scene/set <id>/room=<roomDbref>`).
 
 ## Softcode Functions
 
-`SharpMUSH.Plugins.Scene/Functions/SceneFunctions.cs` (Phase-5 plugin; was
-`SharpMUSH.Implementation/Functions/SceneFunctions.cs`). Names follow the
+`SharpMUSH.Plugins.Scene/Functions/SceneFunctions.cs`. Names follow the
 existing convention — **no underscores**, `scene`-prefixed, side-effect writes
 use a **verb form** (cf. `mail`/`mailsend`, `wiki`/`wikilist`). Writes are
 `WizardOnly|HasSideFX` (guard `Configuration.CurrentValue.Function.FunctionSideEffects`),
@@ -449,7 +437,7 @@ struck-through `IsDeleted` (owner only), a tag-filter chip bar built from the
 bottom — `portal-no-game-policy`). `SceneLive` rides `JoinScene` +
 `OnSceneEventReceived`, patches by pose id, and its pose editor submits a normal
 captured `POSE`/`SAY`/`SEMIPOSE` on the play connection (no `ISceneService`
-write — the legacy `SceneLive.razor:148` `PostMessageAsync` call is **removed**).
+write).
 `Scenes`/`/active` get plot grouping + cohort/RSVP counts; `+schedule` drives a
 calendar/agenda surface. Client models use **`long` Unix-millis**
 (`portal-dto-timestamp-contract`).
@@ -460,7 +448,7 @@ Modeled on the Lightning wiki implementation and covered by the Lightning integr
 `InMemorySceneService` mirrors the semantics used by focused unit tests.
 
 - **Lightning** — embedded records and indexes maintained by `LightningSceneStorage`, which opens
-  its own tables; no migration step is involved.
+  its own tables.
 
 Object edges are **incarnation-safe** — they reference the specific object
 document/node; if it is destroyed the edge drops (or dangles per provider) and
@@ -472,93 +460,24 @@ matrix.
 | # | Seam | Contribution type | Notes |
 |---|---|---|---|
 | 1 | Scene schema | Schema | None contributed: `LightningSceneStorage` opens its own tables when constructed. |
-| 1b | `SCENE_ROOM` flag seed | Schema (flag) | *Resolved (Phase 5):* seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration. |
-| 2 | `@SCENE` command + handlers | Command | `[SharpCommand]` assembly-scanned; no temp-room/building dependency (temp is softcode) → cleanly extractable. |
+| 1b | `SCENE_ROOM` flag seed | Schema (flag) | Seeded by `ScenePlugin`'s `IFlagSource` (a `PluginFlag`), applied after migration. |
+| 2 | `@SCENE` command + handlers | Command | `[SharpCommand]` assembly-scanned; no temp-room/building dependency (temp is softcode). |
 | 3 | `scene…` functions | Function | `[SharpFunction]` assembly-scanned. |
 | 4 | *(no config)* | — | No `SceneOptions` by design — all knobs are softcode policy in the bootstrap; nothing to contribute. |
-| 5 | `ISceneService` tri-cast (`*.Scene.cs` partials) | Storage | Net-new provider files; no new `ISharpDatabase` methods. |
-| 6 | `SceneEventMessage` + bridge + hub + client | Realtime/UI | *Resolved (Phase 5):* the `game.scene.*` leg moved out of `NatsBridgeService.SubscribeSceneAsync` into `ScenePlugin`'s `IBridgeSubscriptionSource`; the host runs it alongside its built-in legs. |
+| 5 | `ISceneService` storage | Storage | `LightningSceneStorage` in the plugin; no `ISharpDatabase` methods. |
+| 6 | `SceneEventMessage` + bridge + hub + client | Realtime/UI | The `game.scene.*` leg is `ScenePlugin`'s `IBridgeSubscriptionSource`; the host runs it alongside its built-in legs. |
 | 7 | `ActiveSceneWidget` + pages | Widget/Zone | Registered via `IWidgetRegistry`. |
 | 8 | `#SCENELOGGER` bootstrap + hook recipe | Integration recipe | No engine edits — capture rides `@hook/override`. |
 
-Object edges couple the scene graph to `node_rooms`/`node_players`/`node_objects`;
-the named-graph edge definitions naming those core collections are the coupling
-point for extraction (alongside seam #6 and #1b) — flagged for the
-package-manager framework.
-
-## Phase 7 — Extraction (now realized as the Phase-5 plugin)
-
-> **Realized (plugin Phase 5).** The Scene System has been extracted into the
-> standalone `SharpMUSH.Plugins.Scene` plugin via the plugin framework's Phase-1/2a
-> seams; the `ISceneService` storage is supplied by `LightningSceneStorage`. The two blockers below
-> (`IBridgeSubscription` and `IFlagContribution`) were the gating work, and both
-> are solved by the generic Phase-2a contribution seams
-> (`IBridgeSubscriptionSource` and `IFlagSource`) — see
-> `docs/design/plugin-system.md §Phase 5 — Scene as the reference plugin`. The
-> command/function surface ships as `PluginBase`→`ICommandSource`/`IFunctionSource`
-> (generator analyzer); the `SCENE_ROOM` flag as `IFlagSource`;
-> the `game.scene.*` NATS→SignalR leg as `IBridgeSubscriptionSource`. The five
-> existing Scene test classes pass unchanged with Scene running as a plugin, which
-> is the proof the seams are complete. The notes below are kept for the design
-> rationale that drove the seam shapes.
-
-All eight seams above are shaped for a *move*, not a *rewrite*. Two of them
-originally required a core edit and were the gating work the plugin framework had
-to land **before** the Scene System could become a collectible
-`AssemblyLoadContext` DLL. Both are now provided by the generic Phase-2a seams.
-
-### Seam #6 blocker → `IBridgeSubscription`
-
-`NatsBridgeService` hard-codes its subscriptions in one `Task.WhenAll`
-(`outputTask`, `roomTask`, `sceneTask`). A plugin cannot add a leg without
-editing Server. Replace the fixed set with a registry the host enumerates:
-
-```csharp
-public interface IBridgeSubscription
-{
-    string SubjectPattern { get; }                 // e.g. "game.scene.*"
-    Task RunAsync(IHubContext<GameHub, IGameHubClient> hub,
-                  NatsConnection nats, CancellationToken ct);
-}
-// NatsBridgeService: await Task.WhenAll(subscriptions.Select(s => s.RunAsync(...)))
-// Scene plugin registers a SceneBridgeSubscription; the core room/output legs
-// become the same shape. SubscribeSceneAsync moves into the plugin unchanged.
-```
-
-### Seam #1b → `IFlagContribution`
-
-`SCENE_ROOM` (symbol `S`) is seeded alongside core flags in the migration. To
-ship it from a plugin without touching core flag seeding:
-
-```csharp
-public interface IFlagContribution
-{
-    SharpFlag Flag { get; }     // name, symbol, type-restrictions, perms
-}
-// Core flag-seeding enumerates IFlagContribution at bootstrap; the Scene plugin
-// contributes SCENE_ROOM. Until then it rides the Scene migration (seam #1).
-```
-
-### Frozen contracts (stabilize before extraction)
+### Wire contract
 
 - **`SceneEventMessage`** — `SceneId, EventType (pose|edit|delete|move),
   PoseId, ActorName, Content, Markup, Tags, Source, Location, Timestamp`.
-  This is the wire contract for `game.scene.{id}` and the portal; **frozen**.
-- **`ISceneService`** — the full method surface; providers implement it, no new
-  `ISharpDatabase` methods. Adding methods is a minor version bump, not a break.
-- **Storage coupling** — the named-graph edge definitions reference
-  `node_rooms`/`node_players`/`node_objects`; object refs resolve to `#<key>`
-  and timestamps are `long` UTC-millis. These are the documented coupling
-  points a future provider/extraction must honor.
+  This is the wire contract for `game.scene.{id}` and the portal.
+- **`ISceneService`** — the full method surface, internal to the plugin. Adding methods is a minor
+  version bump, not a break.
 
-### Contribution inventory
-
-The seam table above (#1–#8) **is** the contribution inventory: each row is one
-thing the plugin registers (migration, flag, command, functions, storage cast,
-realtime leg, widget, bootstrap recipe). Only #6 and #1b need the host changes
-sketched here; the rest are already register-and-go.
-
-## Open Issues (carried forward)
+## Open Issues
 
 - **`@scene/create/temp` building dependency** — temp rooms are softcode, so the
   bootstrap recipe owns occupant-safety/quota/zone. Confirm the building-command
@@ -570,7 +489,3 @@ sketched here; the rest are already register-and-go.
   player, never off a display name.
 - **Capture hot-path** — `scenewhere()` is a small graph lookup per pose; cache
   via a denormalized field later if it ever matters.
-- **`SceneEventMessage` contract freeze** — stabilize before plugin extraction.
-- ~~Realtime `IBridgeSubscription` + `IFlagContribution` seams (Phase 7).~~ *Done* —
-  realized as the plugin framework's `IBridgeSubscriptionSource` + `IFlagSource`,
-  consumed by `ScenePlugin` (Phase 5).

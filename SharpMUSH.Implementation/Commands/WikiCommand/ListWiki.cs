@@ -229,9 +229,9 @@ public static class ListWiki
 	/// </summary>
 	/// <remarks>
 	/// Entirely in-process, which is why adding locales needed no query-language work in any backend: the
-	/// translation stream is fetched in bulk exactly as the page stream is. The cost is that the scan now
+	/// translation stream is fetched in bulk exactly as the page stream is. The cost is that the scan
 	/// reads roughly twice the rows. At in-game wiki sizes (hundreds of pages, capped at 100 results) that
-	/// is not worth an index; see <c>docs/todo/area-05-wiki.md</c> before assuming it stays that way.
+	/// is not worth an index.
 	/// </remarks>
 	/// <param name="visibility">
 	/// The pages this caller may see (<see cref="WikiCommandHelper.VisibilityAsync"/>); its

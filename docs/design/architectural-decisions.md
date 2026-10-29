@@ -2,12 +2,8 @@
 
 Resolved design decisions for the SharpMUSH web portal. Each entry documents
 the chosen approach, rationale, and constraints. Reference these when
-implementing — they are binding unless explicitly superseded by a later decision.
-
-**IMPLEMENTATION GATE:** Before implementing ANY area, review its decisions with
-the project owner and confirm agreement. Designs will be refined iteratively —
-treat these as the current best understanding, not final specifications. Each
-area's TODO list includes a "Review & Confirm Decisions" step as item #1.
+implementing; they are binding. Before implementing an area, review its decisions with the
+project owner. A decision that changes is rewritten in place, not annotated.
 
 ---
 
@@ -30,51 +26,20 @@ An account holder can claim an unlinked character by proving its nonempty charac
 
 ### 1.2 Token Strategy: DB-backed AccountSession
 
-> **Amended & confirmed 2026-07-15 — reversed.** The DB-backed account-session
-> token is now the **single** web credential; it authenticates both REST and
-> SignalR via the `AccountSession` scheme. JWT issuance and the httpOnly
-> refresh-cookie flow described below are **retired** — `JwtService`,
-> `IRefreshTokenStore`, and the `jwt-refresh` / `jwt-switch-character`
-> endpoints are gone. Rationale:
-> 1. **Single-instance deployment.** The usual case for a stateless bearer
->    token — horizontal scaling without a shared session store — doesn't
->    apply; SharpMUSH runs as one server instance, so a DB-backed session
->    costs nothing a JWT would have saved.
-> 2. **Revocation-heavy domain.** Bans, forced logout, and admin-initiated
->    disable all need to kill a credential *immediately*. A signed JWT lives
->    until its own expiry unless backed by a revocation list (which just
->    reintroduces server-side state anyway); a DB-backed session row can be
->    deleted outright.
-> 3. **The JWT→SignalR path was never actually wired in production.**
->    Exploration for this reversal found `GameHub` requires a
->    `character_dbref` claim to bind the connection, but `JwtService` never
->    emitted that claim, and the hub had no `?access_token` query-string
->    reader (SignalR can't attach an `Authorization` header to its WebSocket
->    handshake). So a JWT could not have authenticated a live SignalR
->    connection as shipped — the "JWT for REST, cookie for hub" split was
->    aspirational, not real.
->
-> If a third-party API consumer ever needs a stateless, audience-scoped
-> credential, JWT can be reintroduced *for that audience specifically*,
-> issued alongside (not instead of) the account session — see the current
-> implementation note below. The original design is kept here, marked
-> superseded, for the historical rationale.
+**Decision:** the DB-backed account-session token is the single web credential. It
+authenticates both REST and SignalR through the `AccountSession` scheme; there is no JWT and
+no refresh cookie. Why:
+1. **Single-instance deployment.** The usual case for a stateless bearer token, horizontal
+   scaling without a shared session store, does not apply: SharpMUSH runs as one server
+   instance, so a DB-backed session costs nothing a JWT would save.
+2. **Revocation-heavy domain.** Bans, forced logout and admin-initiated disable all need to
+   kill a credential *immediately*. A signed JWT lives until its own expiry unless backed by a
+   revocation list (which is server-side state anyway); a session row can be deleted outright.
 
-**Decision (superseded):** Short-lived JWT (15 min) held in WASM memory (C# static service,
-not localStorage). httpOnly secure refresh cookie enables silent renewal.
+If a third-party API consumer needs a stateless, audience-scoped credential, a JWT can be
+issued for that audience alongside (not instead of) the account session.
 
-**Flow (superseded):**
-1. Account login → server returns JWT + sets httpOnly refresh cookie
-2. WASM stores JWT in `AccountAuthService` (memory-only, dies on tab close)
-3. On JWT expiry → silent refresh via cookie (no user interaction)
-4. Tab close → JWT gone, refresh cookie remains → next visit auto-refreshes
-
-**Existing implementation (superseded):**
-- `IAccountSessionStore` already manages session tokens with sliding TTL (15min)
-- `AccountAuthService` on client handles login/token storage
-- Needs: httpOnly cookie mechanism (currently uses in-memory session token)
-
-**Current implementation:** a single DB-backed account-session token (opaque,
+**Implementation:** a single DB-backed account-session token (opaque,
 server-generated, revocable) is issued at account login and is the sole web
 credential — no separate JWT, no refresh cookie. It authenticates REST calls
 via the `AccountSession` auth scheme and authenticates the SignalR `GameHub`
@@ -89,7 +54,7 @@ telnet, WebSocket, or SignalR connection tied to the account the instant
 immediate revocation a stateless JWT cannot provide without reintroducing a
 server-side blocklist.
 
-**Remember me (2026-10-06).** The tab session lives in sessionStorage, so it
+**Remember me.** The tab session lives in sessionStorage, so it
 ends with the tab, and the server ends it after 15 idle minutes. A sign-in
 with "Remember me" (on by default) also stores a *remembered login*: a session
 row flagged `Remembered`, sliding 90 days from its last use, handed to the
@@ -466,9 +431,7 @@ character first, as `u()` evaluates its arguments in its caller.
 needs, so the endpoint requires the character to control the object (403
 otherwise). Without an object the character's own permissions apply.
 
-**Rationale:** the old Eval button sent `u(#dbref/ATTR)` over the terminal
-WebSocket as typed input. It ran only the saved value, took no arguments and
-kept no history. Each console run now lands in the open tab's scrollback, and
+**History:** each console run lands in the open tab's scrollback, and
 the input line keeps its own Up/Down history. That history lives in memory for
 as long as the page is open and is never written to `localStorage`: an
 expression can carry a secret anywhere in it (`checkpass()`, `decrypt()`),
@@ -479,9 +442,7 @@ which the terminal's leading-verb rule cannot catch.
 `OBJECT`CREATE` event and plugin hooks all still fire. Names are never spliced
 into a command line: `ValidateService.NameRegex` does not forbid `;`.
 
-**No migration.** Attributes written by the old editor hold a literal `%r`, and
-nothing can distinguish one the author meant from one that was a mangled newline.
-They now display as `%r`, which is what is stored.
+A literal `%r` stored in an attribute displays as `%r`, which is what is stored.
 
 ---
 
@@ -595,22 +556,16 @@ server-side. Handler returns only fields the viewer is authorized to see.
 
 ## 7. Scene System
 
-> **Amended & confirmed 2026-06-19 (owner)** — The Scene System is a
-> **graph-native, mechanism/policy** subsystem: the engine ships wizard-only
-> primitives (`@SCENE` + `scene…` functions over `ISceneService`); capture,
-> permission, formatting, and temp-room orchestration are **softcode**. The
-> binding detail design is `docs/design/scene-system.md` (reconciled 2026-06-19).
-> Prose below describing an *engine scene-logger*, a *separate web→scene routing
-> path*, FK-by-property storage, an `ActRole` table, or `SCENE`*` object
-> attributes is **superseded**; the spirit of each decision (explicit opt-in,
-> graph storage, MString poses, granular privacy, simple discovery) holds.
+The Scene System is a **mechanism/policy** subsystem: wizard-only primitives (`@SCENE` and
+the `scene…` functions over `ISceneService`), with capture, permission, formatting and
+temp-room orchestration in **softcode**. The detail design is `docs/design/scene-system.md`.
 
 ### 7.1 Scene Tracking: Explicit (Opt-In)
 
-**Decision (retained):** scenes are explicitly created and ended; no passive
+**Decision:** scenes are explicitly created and ended; no passive
 room logging.
 
-**Amended:** "create/end" is the wizard-only `@SCENE` primitive driven by a
+"Create/end" is the wizard-only `@SCENE` primitive driven by a
 **softcode** policy layer (the shipped `#SCENELOGGER` object + `+scene/*` verbs).
 Capture is a softcode **`@hook/override`** on POSE/SAY/SEMIPOSE (verified: AFTER/
 BEFORE hooks get empty args and cannot see the pose text; OVERRIDE passes it).
@@ -620,17 +575,17 @@ the room's active scene for capture to fire, so only real participants are logge
 
 ### 7.2 Web Participation: Watch + Direct Pose (one path)
 
-**Decision (retained):** the web scene panel both reads the live stream and
+**Decision:** the web scene panel both reads the live stream and
 submits poses; temp rooms keep the "always in a room" invariant.
 
-**Superseded — "two pose paths / web targets a scene_id":** there is **one**
+There is **one**
 capture path. A web pose runs through the identical play connection →
 engine → room path as a telnet pose, so the same `@hook/override` fires —
 no double-capture, no echo loop (room emit and the `game.scene.{id}` broadcast
 are two renderings of one stored pose). The editor submits a normal POSE/SAY/
 SEMIPOSE; `@EMIT` is not hooked.
 
-**Superseded — temp rooms are an engine concern:** the **entire temp-room
+The **entire temp-room
 lifecycle is softcode** (`@dig`/`@tel`/`@destroy`, occupant-safe
 `lcon()`-evacuate-then-destroy). The only engine piece is the informational
 **`SCENE_ROOM`** object flag (symbol `S`). There is no `@scene/create/temp|join|
@@ -639,8 +594,8 @@ later).
 
 ### 7.3 Scene Storage: Graph, namespaced `sharp_sys_scene`
 
-**Decision (retained, amended to graph):** scene data lives in dedicated
-collections separate from the game-object DB — now a **named graph**
+**Decision:** scene data lives in dedicated
+collections separate from the game-object DB — a **named graph**
 `graph_sharp_sys_scene` (not FK-by-property). Vertices `node_sharp_sys_scene_*`
 (`scenes`, `poses`, `pose_edits`, `plots`); edges `edge_sharp_sys_scene_*`.
 
@@ -663,7 +618,7 @@ collections separate from the game-object DB — now a **named graph**
 
 ### 7.4 Pose Format: MString / ANSI Only
 
-**Decision (retained):** poses are raw MString (`Markup`) + plain `Content`
+**Decision:** poses are raw MString (`Markup`) + plain `Content`
 (ANSI-stripped, for search), stored on the **`pose_edit`** version. `RenderedHtml`
 is never stored or transmitted — the portal renders `Markup` client-side
 (`output-rendering-pipeline`). Display uses the `Name`/`ShowAsName` snapshots
@@ -671,7 +626,7 @@ is never stored or transmitted — the portal renders `Markup` client-side
 
 ### 7.5 Scene Privacy & Status: Granular, Free-String Status
 
-**Decision (retained, amended):** visibility is `IsPublic` + member cohorts;
+**Decision:** visibility is `IsPublic` + member cohorts;
 read functions return `#-1 PERMISSION` to non-members of private scenes. Lifecycle
 is a **free-string `Status`** (defaults `new` → `active` ⇄ `paused` →
 `finished`), set via `@scene/set status=…`. Owner-only stop/share and all
@@ -680,14 +635,14 @@ the engine only wizard-gates the `@SCENE` primitive and stores the owner edge.
 
 ### 7.6 Scene Discovery & Scheduling
 
-**Decision (retained, amended):** discovery is the `scene…` read functions
+**Decision:** discovery is the `scene…` read functions
 (`scenelist active|recent|scheduled|mine`, `scenewhere`) surfaced in the portal.
 **Scheduling:** `+scene/schedule` creates a **roomless** scene in `status=new`
 with `ScheduledFor` (UTC-ms); the owner **explicitly** `+scene/start`s it later,
 which binds the current room. RSVP is a player adding themselves to the
 **`attending`** `member` role (`+scene/tag`). `+schedule`/`+scenes` render the
 upcoming agenda. The live feed rides the new `game.scene.{id}` NATS → `GameHub`
-leg into the previously-unpopulated `scene:{id}` groups. A character is in one
+leg into the `scene:{id}` groups. A character is in one
 room at a time (no multi-scene participation).
 
 ---
@@ -1081,10 +1036,6 @@ picker, dbref resolution, export) all in Blazor.
 **Decision:** SharpMUSH official repo ships scene-system, bboard, events,
 who-where, finger, http-hooks. These are THE default softcode experience.
 The http-hooks package wires up the game→web bridge.
-
-> Decisions 20.11–20.20 were adopted 2026-06-12 from the format review
-> (`softcode-package-manager-format-review.md`), which carries the evidence
-> and prior-art citations for each.
 
 ### 20.11 Ref Syntax (format v2)
 

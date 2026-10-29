@@ -2,17 +2,17 @@
 
 SharpMUSH supports loading **compiled C# plugins** at boot, from the shipped `plugins/` folder beside the
 server binary and from the installed-plugins folder on the data volume. A plugin is an
-ordinary .NET assembly that contributes `[SharpCommand]`/`[SharpFunction]` definitions (and, in later
-phases, services, migrations, flags, bridge subscriptions, and extension hooks) into the live engine —
-without recompiling the server.
+ordinary .NET assembly that contributes `[SharpCommand]`/`[SharpFunction]` definitions, services,
+migrations, flags, bridge subscriptions, extension hooks, web endpoints and portal applications into the
+live engine — without recompiling the server.
 
-This document describes the **Phase 1** architecture (command/function contributions), the **Phase 2a**
-contribution seams (DI services, DB migrations, engine flags, NATS bridge subscriptions), the **Phase 2b**
-engine-extension hooks (command interception + connection/object lifecycle — the C# analog of softcode
-`@hook`), the **Phase 3** runtime **unload/reload** model, and the **Phase 4** **package-manager DLL
-distribution** (a `kind: plugin` package carries a hashed plugin DLL, verified, confirmed by the administrator
-and deposited into the installed-plugins folder), plugin administration (turning plugins on and off, upload,
-restart), and notes the seams reserved for later phases.
+This document covers command/function contributions, the contribution seams (DI services, DB migrations,
+engine flags, NATS bridge subscriptions), the engine-extension hooks (command interception and
+connection/object lifecycle — the C# analog of softcode `@hook`), runtime **unload/reload**,
+**package-manager DLL distribution** (a `kind: plugin` package carries a hashed plugin DLL, verified,
+confirmed by the administrator and deposited into the installed-plugins folder), plugin administration
+(turning plugins on and off, upload, restart), plugin-owned storage, web surface and portal UI, and Scene
+as the reference plugin.
 
 ## Why a plugin loader
 
@@ -30,17 +30,17 @@ plugin is loaded through its own `PluginLoader`:
 ```csharp
 var loader = PluginLoader.CreateFromAssemblyFile(
     dllPath,
-    isUnloadable: true,             // every plugin loads in a collectible ALC (Phase 3); see below
+    isUnloadable: true,             // every plugin loads in a collectible ALC; see below
     sharedTypes: SharedContractTypes);
 var assembly = loader.LoadDefaultAssembly();
 ```
 
-Since Phase 3, **every** plugin is loaded into a *collectible* `AssemblyLoadContext` (`isUnloadable: true`).
+**Every** plugin is loaded into a *collectible* `AssemblyLoadContext` (`isUnloadable: true`).
 A collectible context that is never unloaded costs nothing extra, but it is the only kind that *can* be
 unloaded — so load-once plugins are loaded collectibly too and simply never torn down, while command/function-
 only plugins can be unloaded at runtime. The `PluginLoader` handle is kept alive (never disposed at the end of
 the load pass) and recorded against the plugin instance so the manager can later dispose it; see
-**Phase 3 — runtime unload/reload** below.
+**Runtime unload/reload** below.
 
 **`sharedTypes`** is the host-declared set of contract types that must **unify** across the isolation
 boundary, so a `CommandDefinition` produced inside the plugin is the *same* type the host's library expects.
@@ -50,7 +50,7 @@ safety net, not the plugin's `<Private>false>` reference. The set
 
 `IPlugin`, `SharpPluginAttribute`, `ICommandSource`, `IFunctionSource`, `CommandDefinition`,
 `FunctionDefinition`, `SharpCommandAttribute`, `SharpFunctionAttribute`, `IMUSHCodeParser`, `CallState`,
-`PluginManifest`, `PluginBase`, `Option<CallState>` — plus the Phase 2a contribution surfaces
+`PluginManifest`, `PluginBase`, `Option<CallState>` — plus the contribution surfaces
 `IServiceRegistrar`, `IFlagSource`, `IMigrationSource`, `IBridgeSubscriptionSource`, and `PluginFlag` (so a
 plugin's loaded instance pattern-matches against the host's interface types across the isolation boundary).
 
@@ -127,12 +127,11 @@ existing definition wins.
    bad DLL never aborts boot**. The loader returns the instantiated plugins; it does **not** initialize them
    or apply any contribution — that is the catalog's / manager's job.
 
-## Two-phase boot — load plugins **once** (Phase 2a)
+## Two-phase boot — load plugins **once**
 
-Phase 1 registered commands/functions from an `IHostedService` (`PluginBootstrapService`) that runs
-**after** the container is built. But DI registration, `db.Migrate()` (run inside the `ISharpDatabase`
+DI registration, `db.Migrate()` (run inside the `ISharpDatabase`
 singleton factory in `Startup`), and flag seeding all happen **during** container construction — before any
-post-build hosted service can run. So plugins must be discovered in a **pre-build** pass.
+post-build hosted service can run, so plugins are discovered in a **pre-build** pass.
 
 `SharpMUSH.Implementation.Services.PluginCatalog` solves this by loading **once**:
 
@@ -144,14 +143,13 @@ post-build hosted service can run. So plugins must be discovered in a **pre-buil
 - The catalog is registered as a **singleton**. The DB factory reads `MigrationSources` + `AllFlags`,
   `NatsBridgeService` reads `BridgeSources`, and the post-build `PluginManager` reads `Plugins` — none of
   them re-loads a DLL.
-- **`PluginManager`** (still driven by `PluginBootstrapService`, an `IHostedService`) no longer loads
-  anything: it iterates `catalog.Plugins`, calls `Initialize(rootProvider)`, and registers each plugin's
-  `ICommandSource.GetCommands()` / `IFunctionSource.GetFunctions()` with `IsSystem = true`. This is still
+- **`PluginManager`** (driven by `PluginBootstrapService`, an `IHostedService`) loads nothing: it iterates `catalog.Plugins`, calls `Initialize(rootProvider)`, and registers each plugin's
+  `ICommandSource.GetCommands()` / `IFunctionSource.GetFunctions()` with `IsSystem = true`. This is
   post-build because command/function registration needs the live libraries and the root provider, and is
   ordered **before** the softcode package / `@STARTUP` bootstrap stages so plugin commands/functions are
   present when those run.
 
-## The four Phase 2a contribution seams
+## The four contribution seams
 
 A plugin's `[SharpPlugin] IPlugin` may implement any subset of these (all live in `SharpMUSH.Library.Plugins`):
 
@@ -168,7 +166,7 @@ concrete `NatsConnection` and `IHubContext<GameHub, IGameHubClient>` for the plu
 
 ### How the DB factory receives the migration/flag sources
 
-Each provider's primary constructor gained two **optional** trailing parameters —
+The provider's primary constructor takes two **optional** trailing parameters —
 `IReadOnlyList<IMigrationSource>? migrationSources = null` and `IReadOnlyList<PluginFlag>? pluginFlags = null`
 (null-coalesced to empty). The `Startup` `ISharpDatabase` factory threads `catalog.MigrationSources` and
 `catalog.AllFlags` into them. Staging databases (created from a live DB) pass nothing, so plugin
@@ -185,9 +183,9 @@ var notify = parser.ServiceProvider.GetRequiredService<INotifyService>();
 
 `IMUSHCodeParser.ServiceProvider` is part of the interface; there is no static-service-injection mechanism.
 
-## Phase 3 — runtime unload/reload
+## Runtime unload/reload
 
-A plugin that contributes **only** commands/functions (and, when Phase 2b lands, hooks) can be **unloaded or
+A plugin that contributes **only** commands/functions (and hooks) can be **unloaded or
 reloaded at runtime** without restarting the server. A plugin that also contributes any load-once state —
 DI services, migrations, flags, or a NATS bridge subscription — **cannot**: that state is already captured by
 the container, the database, or the bridge and cannot be reversed without a restart. The manager refuses to
@@ -202,7 +200,7 @@ unload/reload such a plugin with a clear message.
 
 | Contributes… | Captured by… | Unloadable? |
 |--------------|--------------|-------------|
-| only `ICommandSource` / `IFunctionSource` (+ Phase-2b hooks) | the command/function libraries the manager owns | **yes** |
+| only `ICommandSource` / `IFunctionSource` (+ hooks) | the command/function libraries the manager owns | **yes** |
 | `IServiceRegistrar` | the built `IServiceProvider` (singletons live for process lifetime) | no |
 | `IMigrationSource` | the database schema/seed | no |
 | `IFlagSource` | the database flag set | no |
@@ -244,9 +242,9 @@ loop and asserts the `WeakReference` is **dead** (the ALC genuinely unloaded) an
 longer resolves. The load/register step runs in a `[MethodImpl(NoInlining)]` helper that returns only the
 `WeakReference` and the id, so no stray local keeps the ALC rooted past unload.
 
-## Phase 2b — engine-extension hooks (the C# analog of softcode `@hook`)
+## Engine-extension hooks (the C# analog of softcode `@hook`)
 
-Phase 2b lets a plugin **intercept command execution** and **react to connection/object lifecycle** without
+A plugin can **intercept command execution** and **react to connection/object lifecycle** without
 recompiling the engine — the compiled-C# counterpart of softcode `@hook`. The three hook interfaces live in
 `SharpMUSH.Library.Plugins`; a plugin's `[SharpPlugin] IPlugin` implements any subset. Because they are
 declared in `SharpMUSH.Library` (which the plugin references with `<Private>false</Private>` +
@@ -265,51 +263,21 @@ a single service, **`IPluginHookDispatcher`** (interface in `SharpMUSH.Library.P
 the `CommandInterceptors` / `ObjectLifecycleHooks` buckets the `PluginCatalog` collected and fans each seam
 out in plugin load order, **isolating every plugin call in `try/catch`** so a misbehaving hook can never
 abort dispatch. The dispatcher exposes `HasCommandInterceptors`, and the command seam short-circuits all
-interceptor work when it is `false` — so **with no plugin registered, normal dispatch is byte-for-byte
-unchanged** (the softcode `@hook` flow is untouched in either case). A C# `before` veto returns
+interceptor work when it is `false` — so **with no plugin registered, dispatch does no interceptor work**
+(the softcode `@hook` flow is the same either way). A C# `before` veto returns
 `CallState.Empty` and still runs the after seams, mirroring a softcode `IGNORE` that returns false; a C#
 `override` returns its `Option<CallState>` after running both after seams, mirroring a softcode `OVERRIDE`.
 
 Connection hooks are deliberately **not** routed through the dispatcher: the `ListenState` callback is
 synchronous, so each transition dispatches the async hook fire-and-forget (isolated in `try/catch`),
-mirroring how `ConnectionService` already runs its sync handlers next to async publishes.
+mirroring how `ConnectionService` runs its sync handlers next to async publishes.
 
 The `PluginCatalog` collects these three buckets (`CommandInterceptors`, `ConnectionHooks`,
-`ObjectLifecycleHooks`) in the same pre-build classification pass it uses for the Phase 2a seams.
+`ObjectLifecycleHooks`) in the same pre-build classification pass it uses for the contribution seams.
 
-## Reserved seams (later phases)
+## Package-manager DLL distribution
 
-The architecture leaves these seams for the committed later phases:
-
-- **Phase 2a** — *implemented* — contribution interfaces (`IServiceRegistrar` pre-build DI, `IMigrationSource`,
-  `IFlagSource`, `IBridgeSubscriptionSource`) via the two-phase `PluginCatalog` boot (see above).
-- **Phase 2b** — *implemented* — engine-extension hooks: `ICommandInterceptor` (before/override/after),
-  `IConnectionHook` (connect/login/disconnect), `IObjectLifecycleHook` (created/destroying), consulted via
-  `IPluginHookDispatcher` and `IConnectionService.ListenState` (see above). Hook-only plugins stay unloadable.
-- **Phase 3** — *implemented* — hot-reload/unload of command/function-only (and hook-only) plugins via
-  collectible ALCs, with a `WeakReference`-dead gate (see above).
-- **Phase 4** — *implemented* — package-manager DLL distribution: a `kind: plugin` package carries a
-  hashed plugin DLL, verified, confirmed by the administrator and deposited into
-  `<installed plugins>/<id>/` on install (see below).
-- **Phase 5** — *implemented* — the Scene system is extracted into the standalone `SharpMUSH.Plugins.Scene`
-  plugin via the Phase-1/2a seams (see below).
-- **Phase 8** — *implemented* — plugin-owned **storage**: the `ISceneService` implementations moved out of
-  the core providers behind the supported provider storage seams,
-  registered ASP.NET-style via `AddSceneSystem(config)` (keyed storage + an `.AddBehavior<T>()` decorator chain).
-- **Phase 9** — *implemented* — plugin-owned **web surface**: a plugin contributes MVC controllers
-  (`AddControllers().AddApplicationPart(...)` from `IServiceRegistrar`) and maps its own hubs/endpoints via the
-  new `IEndpointContributor` seam. Scene's REST controller + realtime hub now live in the plugin (see below).
-- **Phase 10** — *implemented* — **no shared contracts**: `Scene.Contracts` deleted; `ISceneService` + scene
-  models + `SceneEventMessage` moved *inside* the plugin; `Library`/`Server`/`Client` reference zero scene types.
-  Host↔plugin is generic seams + serialization only — the boundary a third-party, hot-loaded plugin needs (see below).
-- **Phase 11** — *implemented* — plugin-contributed **portal UI**: the `IApplicationSource` seam lets a plugin
-  contribute schema-driven Area-21 `RegisteredApplication`(s) (page/widget) that overlay the app registry
-  in-memory while the plugin is loaded; the NavBar renders them per `NavPlacement` (slotting into the built-in
-  groups or forming new data-driven sections). No browser-loaded plugin assemblies (see below).
-
-## Phase 4 — package-manager DLL distribution
-
-A plugin reaches the server either by a manual drop into a plugins folder or through the Area-20 **package
+A plugin reaches the server either by a manual drop into a plugins folder or through the **package
 manager**: a package can declare `kind: plugin` and carry a plugin DLL (plus its `plugin.json` and any
 dependency assemblies) alongside its `package.yaml`. Installing it **verifies** the binaries against SHA-256
 hashes in the manifest, checks the carried `plugin.json`, and **deposits** them into
@@ -473,28 +441,22 @@ again (Docker `restart: unless-stopped`, which every shipped compose file sets; 
 connections stay open because the connection server holds them. Run by hand without a supervisor, the server
 simply stops.
 
-## Phase 5 — Scene as the reference plugin
+## Scene as the reference plugin
 
-`SharpMUSH.Plugins.Scene` is the first **real** plugin: the whole `@SCENE` command/`scene…` function/
-flag/bridge surface ships from a standalone DLL built into `plugins/scene/`. It proves every
-Phase-1/2a seam end-to-end against the existing Scene test suite, with no engine recompile to add the
-subsystem.
+`SharpMUSH.Plugins.Scene` is a full vertical shipped from a standalone DLL built into `plugins/scene/`:
+storage, the `@SCENE` command and `scene…` functions, the flag, the bridge, the REST controller and the
+realtime hub.
 
-> **Note (Phase 8/9):** the table below describes the Phase-5 extraction. The `ISceneService` *storage*
-> (then "stays in the providers") and the *web surface* (then "stayed in the engine") have since moved
-> into the plugin too — see **Phase 8** and **Phase 9** below. Scene is now a **full vertical**: storage,
-> commands/functions, REST controller, realtime hub, and contracts all ship from the plugin.
-
-| What | Seam used | Where it lives now |
+| What | Seam used | Where it lives |
 |------|-----------|--------------------|
 | `@SCENE` command (`SceneCommandModule` + the `Scene*Handlers`) | `PluginBase`→`ICommandSource` via the generator analyzer | `SharpMUSH.Plugins.Scene/Commands/` |
 | `scene…` functions (`SceneFunctions`) | `PluginBase`→`IFunctionSource` | `SharpMUSH.Plugins.Scene/Functions/` |
 | `game.scene.{id}` publish (`SceneBroadcast`) | called by the `@SCENE` arms | `SharpMUSH.Plugins.Scene/Commands/SceneBroadcast.cs` |
 | `SCENE_ROOM` object flag | `IFlagSource` (`PluginFlag`) | `ScenePlugin.Flags` |
-| `game.scene.*` NATS→SignalR leg (was `NatsBridgeService.SubscribeSceneAsync`) | `IBridgeSubscriptionSource` | `ScenePlugin.RunAsync` |
+| `game.scene.*` NATS→SignalR leg | `IBridgeSubscriptionSource` | `ScenePlugin.RunAsync` |
 
 Because it contributes load-once state (services + flag + bridge), `ScenePlugin` is a **non-unloadable**
-plugin (`PluginLoaderService.IsUnloadablePlugin` returns false), exactly as the Phase-3 table prescribes.
+plugin (`PluginLoaderService.IsUnloadablePlugin` returns false), as the unload table prescribes.
 
 **Authoring shape.** The plugin csproj mirrors the `SamplePlugin` fixture (`EnableDynamicLoading`, the
 `SharpMUSH.Library` reference `Private=false`+`ExcludeAssets=runtime`, the `SharpMUSH.Implementation.Generated`
@@ -504,12 +466,10 @@ host's copies load. The bridge leg forwards through the **non-generic** `IHubCon
 `SendAsync("ReceiveSceneMessage", …)` and builds the `scene:{id}` group key itself, so the plugin needs no
 reference to the Server's `GameHub`/`IGameHubClient`.
 
-**What stayed in the engine (as of Phase 10).** **Nothing.** `SharpMUSH.Library`, `SharpMUSH.Server`,
-and `SharpMUSH.Client` reference **zero** scene types — `ISceneService`, the models, and `SceneEventMessage`
-all moved *into* the plugin assembly; `NotificationType.Scene` and `IConnectionStateService.OnSceneEventReceived`
-were removed; the `SharpMUSH.Plugins.Scene.Contracts` assembly was **deleted**. The WASM client keeps its
-own scene pages/widgets and its **own** `SceneEventMessage` DTO (it deserializes the SignalR wire). See
-**Phase 10** below for why a shared contract assembly is incompatible with the dynamic third-party goal.
+**Nothing scene is in the engine.** `SharpMUSH.Library`, `SharpMUSH.Server` and `SharpMUSH.Client`
+reference **zero** scene types; `ISceneService`, the models and `SceneEventMessage` are inside the plugin
+assembly. The WASM client keeps its own scene pages/widgets and its **own** `SceneEventMessage` DTO (it
+deserializes the SignalR wire). See **No shared contracts** below.
 
 **Boot ordering.** The bundled `scene` softcode package (`examples/packages/scene`) drives `@scene`/`scene…`,
 so the plugin must register its commands/functions *before* the package installs and `@STARTUP` runs.
@@ -521,15 +481,11 @@ migration/flag/bridge contributions are applied even earlier — during containe
 **Build/wiring.** `SharpMUSH.Plugins.Scene` is in the solution but referenced by the host (`SharpMUSH.Server`)
 and the test host (`SharpMUSH.Tests.Integration`) with `ReferenceOutputAssembly="false"`; a `CopyScenePlugin`
 MSBuild target drops its DLL+`deps.json`+`plugin.json` into each output's `plugins/scene/` (mirroring how
-`SamplePlugin` is built+copied). The existing Scene suite —`SceneServiceIntegrationTests`,
-`SceneCommandFunctionIntegrationTests`, `SceneDbrefResolutionTests`, `SceneHttpControllerTests`,
-`ScenePackageTests`— passes unchanged with Scene running as a plugin, which is the proof the seams are complete.
+`SamplePlugin` is built+copied).
 
-## Phase 8 — plugin-owned storage (connection-accessor seam)
+## Plugin-owned storage (connection-accessor seam)
 
-The Phase-5 extraction left `ISceneService`'s *storage* in the core providers as `partial class
-<Provider>` files, because they share the provider's private connection and write provider-native
-queries. Phase 8 closes that seam:
+A plugin keeps its own data without code in the core provider:
 
 - **The storage accessor** (`ILightningStorageAccessor`) exposes just the
   environment + the primitive helpers a storage plugin needs. It is **generic** — no subsystem
@@ -547,7 +503,7 @@ queries. Phase 8 closes that seam:
   plugin that does need a host assembly lists it in its manifest's `sharedAssemblies`
   (`PluginManifest.SharedAssemblies`). The plugin stays collectible.
 
-## Phase 9 — plugin-owned web surface (`IEndpointContributor`)
+## Plugin-owned web surface (`IEndpointContributor`)
 
 A plugin configures the web app across **both ASP.NET phases**, piped through the loader:
 
@@ -560,46 +516,42 @@ A plugin configures the web app across **both ASP.NET phases**, piped through th
 sees `IServiceCollection`, never the `IEndpointRouteBuilder`. Collected by `PluginCatalog` and treated as
 a **load-once** seam (a plugin that maps endpoints is not hot-unloadable).
 
-**Scene as the reference:** the REST `SceneController` moved to `SharpMUSH.Plugins.Scene/Web/` and is
+**Scene as the reference:** the REST `SceneController` lives in `SharpMUSH.Plugins.Scene/Web/` and is
 discovered via `AddApplicationPart`; the realtime hub is a plugin-owned `SceneHub` mapped at
 `/hubs/scene` via `MapEndpoints`. The scene types (models, `SceneEventMessage`, `ISceneService`) live
-**inside the plugin assembly** — see Phase 10 for why they are *not* in a shared contract assembly.
+**inside the plugin assembly** — see **No shared contracts** for why they are *not* in a shared contract assembly.
 
 > **Hub gotcha (documented):** `SceneHub` is a plain `Hub` (not `Hub<TClient>`). SignalR's strongly-typed
 > client emits a proxy in a **non-collectible** dynamic assembly that would reference the **collectible**
 > plugin type — `NotSupportedException` at startup. A plain `Hub` + non-generic `IHubContext<SceneHub>` +
 > `SendAsync("ReceiveSceneMessage", …)` keeps the plugin collectible with the same wire contract.
 
-## Phase 10 — no shared contracts: the third-party / hot-load boundary
+## No shared contracts: the third-party / hot-load boundary
 
-Phases 8–9 left one residual coupling: a `SharpMUSH.Plugins.Scene.Contracts` assembly holding
-`ISceneService`, the scene models, and `SceneEventMessage`, **referenced by the host and Client** so their
-`Type` could unify with the ALC-loaded plugin. That pattern works only for **first-party** plugins compiled
-alongside the host. For the actual goal — **third-party plugins, hot-loaded from other repos without a
-server restart** — the host (and the separately-built WASM client) can reference **zero** plugin types:
-otherwise "add a plugin" means "recompile the host", which defeats dynamic loading.
-
-So Phase 10 deletes `Scene.Contracts`. The rule:
+A contract assembly the host and client reference only works for **first-party** plugins compiled
+alongside the host. For **third-party plugins, hot-loaded from other repos without a server restart**, the
+host (and the separately built WASM client) can reference **zero** plugin types: otherwise "add a plugin"
+means "recompile the host". The rule:
 
 > **A plugin's types live inside the plugin. The only boundaries the host/client may use are (a) the
 > generic seams — `IServiceRegistrar`, `IEndpointContributor`, the `I*Source` contributions — which name
 > no plugin type, and (b) serialization (HTTP / SignalR JSON), where the client defines its *own* DTO
 > matching the wire shape. A shared contract assembly the host references is a first-party-only shortcut.**
 
-Concretely for Scene: `ISceneService` + models are now plugin-internal; the host talks to scene only over
+Concretely for Scene: `ISceneService` + models are plugin-internal; the host talks to scene only over
 `/api/scenes` and `/hubs/scene`; the Client has its own `SceneEventMessage` record and deserializes the
 hub payload itself. `Library`/`Server`/`Client` name nothing scene.
 
-**Testing consequence.** Because the host can no longer name `ISceneService` type-compatibly with the
+**Testing consequence.** Because the host cannot name `ISceneService` type-compatibly with the
 ALC-loaded plugin, host-side scene coverage is **wire-based** (drive `@scene`/`scene…()` and read back via
 the public surface). A plugin's *internal* unit tests belong in a project that compile-references the
 plugin and loads it in the **default** context (no ALC). This is exactly how a third-party plugin author
 tests their own plugin while the host tests only the wire.
 
-## Phase 11 — plugin-contributed portal UI (`IApplicationSource`)
+## Plugin-contributed portal UI (`IApplicationSource`)
 
-A plugin contributes browser UI **without shipping a browser-loaded assembly** by reusing the Area-21
-"Dynamic Applications" pipeline (schema-driven views the WASM client renders generically) plus the Phase-9
+A plugin contributes browser UI **without shipping a browser-loaded assembly** by reusing the
+"Dynamic Applications" pipeline (schema-driven views the WASM client renders generically) plus the
 controller seam (the plugin serves its own schema/data endpoints):
 
 - **`IApplicationSource`** (`SharpMUSH.Library.Plugins`): `IEnumerable<RegisteredApplication> GetApplications()`.
@@ -616,8 +568,8 @@ controller seam (the plugin serves its own schema/data endpoints):
 
 So a UI plugin ships end-to-end inside its own assembly: the app descriptor (`IApplicationSource`), the
 schema/data endpoints (its controller via `AddApplicationPart`), and the NavBar placement — appearing and
-disappearing with load/unload. Custom compiled Blazor/WASM components remain a later phase; Phase 11 is
-declarative/schema-driven only.
+disappearing with load/unload. A plugin can also ship compiled Blazor components, behind
+`allow_browser_code`; see `plugin-wasm-components.md`.
 
 ## See also
 
