@@ -1,4 +1,3 @@
-using Markdig.Extensions.CustomContainers;
 using MarkupString.Ansi;
 using MarkupString.Html;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
@@ -10,8 +9,7 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 /// <summary>
 /// The renderer <c>@wiki</c> displays a page body with: identical to the shared
 /// <see cref="RecursiveMarkdownRenderer"/> in every respect except that a <c>[[Page Name]]</c> wiki
-/// link becomes a clickable command link running <c>@wiki &lt;page&gt;</c>, and a <c>::: facts</c> block shows the
-/// pages its query finds.
+/// link becomes a clickable command link running <c>@wiki &lt;page&gt;</c>.
 /// </summary>
 /// <remarks>
 /// The base renderer drops a wiki link's target because a help file or a <c>rendermarkdown()</c>
@@ -30,19 +28,6 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 public sealed class WikiCommandRenderer(int maxWidth = 78, IMUSHCodeParser? mushParser = null)
 	: RecursiveMarkdownRenderer(maxWidth, mushParser)
 {
-	/// <summary>
-	/// What each <c>::: facts &lt;conditions&gt;</c> block shows, by its conditions as written, answered before the
-	/// body is rendered. A block missing from it shows as the other live listings do.
-	/// </summary>
-	public IReadOnlyDictionary<string, MString> FactBlocks { get; init; } = new Dictionary<string, MString>();
-
-	/// <inheritdoc/>
-	protected override MString RenderCustomContainer(CustomContainer container)
-		=> Fence(container) is var (name, conditions) && name.Equals(FactsContainerName, StringComparison.OrdinalIgnoreCase)
-			&& FactBlocks.TryGetValue(conditions, out var shown)
-			? shown
-			: base.RenderCustomContainer(container);
-
 	/// <inheritdoc/>
 	protected override MString RenderWikiLink(WikiLinkInline wikiLink)
 	{

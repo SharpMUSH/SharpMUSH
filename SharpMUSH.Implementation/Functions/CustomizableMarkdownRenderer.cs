@@ -64,9 +64,13 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 	private string? _markdownSource;
 
 	public MString RenderMarkdown(string markdown)
+		=> RenderMarkdown(markdown, RecursiveMarkdownHelper.Parse(markdown));
+
+	/// <summary>Renders <paramref name="document"/>, parsed from <paramref name="markdown"/> by a caller that read it first.</summary>
+	public MString RenderMarkdown(string markdown, MarkdownDocument document)
 	{
 		_markdownSource = markdown;
-		return RecursiveMarkdownHelper.RenderMarkdown(markdown, this);
+		return Render(document);
 	}
 
 	/// <summary>
@@ -513,13 +517,9 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 	/// <summary>
 	/// <c>RENDERMARKUP`CONTAINER</c>: <c>%0</c> directive name, <c>%1</c> its arguments, <c>%2</c> the
-	/// container's rendered contents.
+	/// container's rendered contents, <c>%3</c> the pages a live listing block (<c>::: category lore</c>) lists, as
+	/// the built-in rendering shows them.
 	/// </summary>
-	/// <remarks>
-	/// This is the hook a game needs to make the wiki's live-listing directives (<c>::: category lore</c>)
-	/// mean something in-game — the built-in rendering can only say "see the web portal", but softcode
-	/// holding <c>%0</c> and <c>%1</c> can call <c>wikilist()</c> and print the listing for real.
-	/// </remarks>
 	protected override MString RenderCustomContainer(CustomContainer container)
 	{
 		// Same normalisation the base renderer performs: depending on trivia tracking Markdig puts the
@@ -531,7 +531,8 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 
 		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0));
 
-		return Template("CONTAINER", Args(("directive", Text(name)), ("options", Text(arguments)), ("text", contents)))
+		return Template("CONTAINER", Args(("directive", Text(name)), ("options", Text(arguments)), ("text", contents),
+				("listing", LiveBlock(name, arguments) ?? MarkupText.Empty)))
 			?? base.RenderCustomContainer(container);
 	}
 }

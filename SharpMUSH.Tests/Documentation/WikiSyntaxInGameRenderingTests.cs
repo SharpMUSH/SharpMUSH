@@ -215,11 +215,10 @@ public class WikiSyntaxInGameRenderingTests
 	}
 
 	[Test]
-	public async Task TagAndPagelistDirectives_RenderPlaceholders()
+	public async Task PagelistDirective_RendersPlaceholder()
 	{
-		var text = Render("::: tag magic\n:::\n\n::: pagelist help\n:::");
+		var text = Render("::: pagelist help\n:::");
 
-		await Assert.That(text).Contains("[live listing: tag magic");
 		await Assert.That(text).Contains("[live listing: pagelist help");
 	}
 

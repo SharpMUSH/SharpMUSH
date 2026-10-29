@@ -222,9 +222,9 @@ public partial class RecursiveMarkdownRenderer
 	private MString RenderThematicBreak()
 		=> Laid(new Rule().Colored(_dimStyle));
 
-	/// <summary>Wiki directive names that render live listings on the web portal.</summary>
+	/// <summary>Wiki directive names that render live listings.</summary>
 	private static readonly HashSet<string> WikiDirectiveNames =
-		new(StringComparer.OrdinalIgnoreCase) { "category", "tag", "pagelist", "recent", FactsContainerName };
+		new(StringComparer.OrdinalIgnoreCase) { "category", "pagelist", "recent", FactsContainerName };
 
 	/// <summary>The container that lists the pages a fact query finds: <c>::: facts &lt;conditions&gt;</c>.</summary>
 	public const string FactsContainerName = "facts";
@@ -233,9 +233,25 @@ public partial class RecursiveMarkdownRenderer
 	public const string CenterContainerName = "center";
 
 	/// <summary>
-	/// Renders a <c>::: name args</c> custom container. The wiki's directive blocks
-	/// (category/tag/pagelist/recent) are live web-portal listings that a terminal
-	/// cannot resolve, so they render as a dimmed placeholder describing the listing.
+	/// What each live listing block shows, answered before the body is rendered, by <see cref="LiveBlockKey"/>. A block
+	/// missing from it shows as a placeholder naming the listing.
+	/// </summary>
+	public IReadOnlyDictionary<string, MString> LiveBlocks { get; init; } = new Dictionary<string, MString>();
+
+	/// <summary>Whether <paramref name="name"/> is a live listing block's name.</summary>
+	public static bool IsLiveBlock(string name) => WikiDirectiveNames.Contains(name);
+
+	/// <summary>The <see cref="LiveBlocks"/> key of a <c>::: name arg</c> block.</summary>
+	public static string LiveBlockKey(string name, string arg) => $"{name.ToLowerInvariant()} {arg}";
+
+	/// <summary>What <see cref="LiveBlocks"/> answers for a block, or null when it is not a live listing or was not answered.</summary>
+	protected MString? LiveBlock(string name, string arg)
+		=> IsLiveBlock(name) && LiveBlocks.TryGetValue(LiveBlockKey(name, arg), out var shown) ? shown : null;
+
+	/// <summary>
+	/// Renders a <c>::: name args</c> custom container. The wiki's live listing blocks
+	/// (category/pagelist/recent/facts) show what <see cref="LiveBlocks"/> answers for them, and
+	/// otherwise a dimmed placeholder describing the listing.
 	/// <c>::: center</c> centres each line of its contents in the render width, as the
 	/// portal centres it in the page. Any other custom container renders its children
 	/// like a normal block.
@@ -244,7 +260,12 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var (name, arg) = Fence(container);
 
-		if (WikiDirectiveNames.Contains(name))
+		if (LiveBlock(name, arg) is { } shown)
+		{
+			return shown;
+		}
+
+		if (IsLiveBlock(name))
 		{
 			var label = string.IsNullOrEmpty(arg) ? name : $"{name} {arg}";
 			return MarkupText.Wrap(_dimStyle, $"[live listing: {label} — see the web portal]");
