@@ -5,17 +5,17 @@
 |-----------------------|-----------------------|-----------------------|-----------------------|
 | [APOSS()]             | [ATTRIB_SET#()]       | [ATTRIB_SET()]        | [ATTRWATCH()]         |
 | [DEFAULT()]           | [EDEFAULT()]          | [EVAL()]              | [FLAGS()]             |
-| [GET()]               | [GREP()]              | [GREPI()]             | [HASATTR()]           |
-| [HASATTRP()]          | [HASATTRVAL()]        | [HASFLAG()]           | [INDEXED()]           |
-| [LATTR()]             | [LFLAGS()]            | [NATTR()]             | [OBJ()]               |
-| [OWNER()]             | [PFUN()]              | [POSS()]              | [REGLATTR()]          |
-| [REGREP()]            | [REGREPI()]           | [REGXATTR()]          | [SET()]               |
+| [GET()]               | [GREP()]              | [GREPI()]             | [HASARG()]            |
+| [HASATTR()]           | [HASATTRP()]          | [HASATTRVAL()]        | [HASFLAG()]           |
+| [INDEXED()]           | [LATTR()]             | [LATTRCMDS()]         | [LCMDS()]             |
+| [LFLAGS()]            | [NATTR()]             | [OBJ()]               | [OWNER()]             |
+| [PFUN()]              | [POSS()]              | [REGLATTR()]          | [REGREP()]            |
+| [REGREPI()]           | [REGXATTR()]          | [SET()]               | [STREVAL()]           |
 | [SUBJ()]              | [SYNTAXDIAGNOSTICS()] | [U()]                 | [U2()]                |
 | [U2DEFAULT()]         | [U2LDEFAULT()]        | [U2LOCAL()]           | [UARGS()]             |
-| [UDEFAULT()]          | [UFUN()]              | [ULAMBDA()]           | [ULDEFAULT()]         |
-| [ULOCAL()]            | [V()]                 | [WILDGREP()]          | [WILDGREPI()]         |
-| [XATTR()]             | [XGET()]              | [ZFUN()]              | [HASARG()]            |
-| [UEVAL()]             | [STREVAL()]           | [LATTRCMDS()]         | [LCMDS()]             |
+| [UDEFAULT()]          | [UEVAL()]             | [UFUN()]              | [ULAMBDA()]           |
+| [ULDEFAULT()]         | [ULOCAL()]            | [V()]                 | [WILDGREP()]          |
+| [WILDGREPI()]         | [XATTR()]             | [XGET()]              | [ZFUN()]              |
 
 ::: seealso
 - [attributes]
@@ -37,14 +37,13 @@
 
   Your MUSH may be configured to use traditional SharpMUSH booleans, in which case non-zero numbers, non-negative db#'s, and strings are all considered "true" when passed to these functions. Alternatively, your MUSH may be using TinyMUSH 2.2 booleans, in which case only non-zero numbers are "true". Check @config tiny_booleans.
 
-|             |             |             |             |
-|-------------|-------------|-------------|-------------|
-| [AND()]     | [CAND()]    | [COR()]     | [EQ()]      |
-| [GT()]      | [GTE()]     | [LAND()]    | [LNOR()]    |
-| [LOR()]     | [LT()]      | [LTE()]     | [LXNOR()]   |
-| [LXOR()]    | [NAND()]    | [NEQ()]     | [NOR()]     |
-| [NOT()]     | [OR()]      | [T()]       | [XOR()]     |
-| [ISALPHA()] | [ISDIGIT()] | [ISLOWER()] | [ISUPPER()] |
+|           |           |           |           |
+|-----------|-----------|-----------|-----------|
+| [AND()]   | [CAND()]  | [COR()]   | [EQ()]    |
+| [GT()]    | [GTE()]   | [LAND()]  | [LNOR()]  |
+| [LOR()]   | [LT()]    | [LTE()]   | [LXNOR()] |
+| [LXOR()]  | [NAND()]  | [NEQ()]   | [NOR()]   |
+| [NOT()]   | [OR()]    | [T()]     | [XOR()]   |
 
 ::: seealso
 - [boolean values]
@@ -272,11 +271,11 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 |                 |                 |                 |                 |
 |-----------------|-----------------|-----------------|-----------------|
 | [CONVSECS()]    | [CONVTIME()]    | [CONVUTCSECS()] | [CONVUTCTIME()] |
-| [CTIME()]       | [ETIME()]       | [ETIMEFMT()]    | [ISDAYLIGHT()]  |
-| [MTIME()]       | [RESTARTTIME()] | [SECS()]        | [STARTTIME()]   |
-| [STRINGSECS()]  | [TIME()]        | [TIMECALC()]    | [TIMEFMT()]     |
-| [TIMESTRING()]  | [UPTIME()]      | [UTCTIME()]     | [DATEPARSE()]   |
-| [MOON()]        |                 |                 |                 |
+| [CTIME()]       | [DATEPARSE()]   | [ETIME()]       | [ETIMEFMT()]    |
+| [ISDAYLIGHT()]  | [MOON()]        | [MTIME()]       | [RESTARTTIME()] |
+| [SECS()]        | [STARTTIME()]   | [STRINGSECS()]  | [TIME()]        |
+| [TIMECALC()]    | [TIMEFMT()]     | [TIMESTRING()]  | [UPTIME()]      |
+| [UTCTIME()]     |                 |                 |                 |
 
 ::: seealso
 - [timezones]
@@ -291,8 +290,10 @@ Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists an
 | [CMDLINK()]        | [COLORS()]         | [CREATE()]         | [DESTROY()]        |
 | [DIE()]            | [DIG()]            | [ENDTAG()]         | [FIRSTOF()]        |
 | [FN()]             | [FUNCTIONS()]      | [HTML()]           | [IBREAK()]         |
-| [ILEV()]           | [INUM()]           | [ISDBREF()]        | [ISINT()]          |
-| [ISNUM()]          | [ISOBJID()]        | [ISREGEXP()]       | [ISWORD()]         |
+| [ILEV()]           | [INUM()]           | [ISALNUM()]        | [ISALPHA()]        |
+| [ISDBREF()]        | [ISDIGIT()]        | [ISINT()]          | [ISLOWER()]        |
+| [ISNUM()]          | [ISOBJID()]        | [ISPUNCT()]        | [ISREGEXP()]       |
+| [ISSPACE()]        | [ISUPPER()]        | [ISWORD()]         | [ISXDIGIT()]       |
 | [ITEXT()]          | [LETQ()]           | [LINK()]           | [LIST()]           |
 | [LISTQ()]          | [LNUM()]           | [LOCALIZE()]       | [LSET()]           |
 | [MOVE()]           | [NAMEQ()]          | [NAMEQM()]         | [NULL()]           |
@@ -748,13 +749,13 @@ think between(1, 10, 10, 1)
 
   Returns how privileged the owner of `<object>` is, as a number on the scale TinyMUX and RhostMUSH use. With no argument, `<object>` is you.
 
-    7  God<br>
-    5  wizard<br>
-    4  royalty<br>
-    3  the STAFF flag or the Builder power<br>
-    2  the HEAD flag or the Immortal power<br>
-    1  anyone else<br>
-    0  a guest, or a player with the UNINSPECTED flag
+- 7: God
+- 5: wizard
+- 4: royalty
+- 3: the STAFF flag or the Builder power
+- 2: the HEAD flag or the Immortal power
+- 1: anyone else
+- 0: a guest, or a player with the UNINSPECTED flag
 
   There is no 6: RhostMUSH uses it for a level above wizard. A player with more than one of these gets the highest.
 
@@ -3684,12 +3685,12 @@ You say, "$;No;Nol;Noli;Nolt"
 
   Describes the phase of the moon at `<seconds>` (a time as secs() gives it), or now. The answer is one of these, with the percentage of the moon that is lit:
 
-    The Moon is New<br>
-    The Moon is Waxing Crescent (12% of Full)<br>
-    The Moon is Waxing Half (50% of Full)<br>
-    The Moon is Waxing Gibbous (80% of Full)<br>
-    The Moon is Full<br>
-    The Moon is Waning Gibbous (80% of Full), and so on back to New.
+- `The Moon is New`
+- `The Moon is Waxing Crescent (12% of Full)`
+- `The Moon is Waxing Half (50% of Full)`
+- `The Moon is Waxing Gibbous (80% of Full)`
+- `The Moon is Full`
+- `The Moon is Waning Gibbous (80% of Full)`, and so on back to New.
 
   With `<numeric>` true, it returns just the percentage, positive while the moon is waxing and negative while it is waning.
 

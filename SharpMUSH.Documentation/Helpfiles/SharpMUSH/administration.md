@@ -26,6 +26,6 @@ These topics are for the people who run the game: wizards, royalty and anyone a 
 |           | [recurring jobs]              | [queue budgets]    |                  |
 | Other:    | [wiki administration]         | [@channel admin]   |                  |
 |           | [mail administration]         |                    |                  |
-|           | [@reality administration]     |                    |                  |
+|           | [@reality administration]     | [@tag]             |                  |
 
 Every command only staff can use is listed in [@-wizard]. Topics this game's staff wrote for themselves are in [ahelp].
