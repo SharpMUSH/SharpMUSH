@@ -97,8 +97,8 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer with the game settings that shape each connection's output:
-/// the <c>ascii_translations</c> table, the stand-in a client without Unicode is sent for each character, and
-/// <c>media_base_url</c>, sent to a GMCP client as <c>Client.Media.Default</c>. Published with the MSSP report, when
+/// the <c>ascii_translations</c> table, the stand-in a client without Unicode is sent for each character,
+/// <c>media_base_url</c>, sent to a GMCP client as <c>Client.Media.Default</c>, and <c>pueblo</c>. Published with the MSSP report, when
 /// it changes and when a connection server asks.
 /// </summary>
 /// <param name="MediaBaseUrl">Where a GMCP client fetches the game's sounds; null when unset, or from an older server.</param>
@@ -106,8 +106,12 @@ public record MSSPReportMessage(MSSPVariable[] Variables);
 /// <c>keepalive_timeout</c>: how long a KEEPALIVE player's telnet connection stays silent before it is sent
 /// <c>IAC NOP</c>; zero from an older server.
 /// </param>
+/// <param name="Pueblo">
+/// <c>pueblo</c>: whether a new telnet connection is sent the Pueblo hello, which is how a Pueblo client learns it may
+/// turn HTML mode on.
+/// </param>
 public record OutputSettingsMessage(IReadOnlyDictionary<string, string> AsciiTranslations, string? MediaBaseUrl = null,
-	uint KeepAliveSeconds = 0);
+	uint KeepAliveSeconds = 0, bool Pueblo = false);
 
 /// <summary>
 /// Message sent from MainProcess to ConnectionServer to update player output preferences for a connection

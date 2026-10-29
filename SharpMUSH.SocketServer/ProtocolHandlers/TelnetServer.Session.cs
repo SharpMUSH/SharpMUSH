@@ -125,9 +125,10 @@ public partial class TelnetServer
 
 		// The handshake itself — the hello, consuming PUEBLOCLIENT, and the start sequence that moves the
 		// client into HTML mode — is TelnetNegotiationCore's. What is left here is the part that is this
-		// server's: the render format for the connection, and telling the main process.
+		// server's: the render format for the connection, and telling the main process. The game's `pueblo` option
+		// decides whether the hello goes out.
 		private TelnetInterpreterBuilder AddPueblo(TelnetInterpreterBuilder builder) =>
-			!server._options.PuebloEnabled
+			server._settings?.Pueblo is not true
 				? builder
 				: builder.AddPlugin<PuebloProtocol>().OnPuebloEnabled(client => OnPuebloEnabledAsync(client.Version));
 

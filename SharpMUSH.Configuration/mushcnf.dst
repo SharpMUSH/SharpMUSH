@@ -690,7 +690,7 @@ mem_check no
 ###
 
 # Support the pueblo MUSH client and allow html to be sent to it
-pueblo no
+pueblo yes
 
 # allow non-wizard/royalty logins
 logins yes

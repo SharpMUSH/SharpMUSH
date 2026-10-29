@@ -15,6 +15,8 @@ public sealed class OutputSettingsHolder
 
 	private long _keepAliveTicks = DefaultKeepAlive.Ticks;
 
+	private volatile bool _pueblo;
+
 	private readonly TaskCompletionSource _received = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
 	/// <summary>The <c>ascii_translations</c> table; empty for none.</summary>
@@ -29,6 +31,9 @@ public sealed class OutputSettingsHolder
 	/// <summary><c>keepalive_timeout</c>: how long a KEEPALIVE player's telnet connection is silent before it is sent a NOP.</summary>
 	public TimeSpan KeepAlive => TimeSpan.FromTicks(Interlocked.Read(ref _keepAliveTicks));
 
+	/// <summary><c>pueblo</c>: whether a new telnet connection is sent the Pueblo hello; false until the main process says.</summary>
+	public bool Pueblo => _pueblo;
+
 	/// <summary>Completes when the first settings from the main process arrive.</summary>
 	public Task Received => _received.Task;
 
@@ -36,6 +41,7 @@ public sealed class OutputSettingsHolder
 	public bool Replace(OutputSettingsMessage message)
 	{
 		_asciiTranslations = message.AsciiTranslations ?? new Dictionary<string, string>();
+		_pueblo = message.Pueblo;
 		if (message.KeepAliveSeconds > 0)
 		{
 			Interlocked.Exchange(ref _keepAliveTicks, TimeSpan.FromSeconds(message.KeepAliveSeconds).Ticks);

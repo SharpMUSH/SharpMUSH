@@ -712,7 +712,7 @@ mem_check no
 ###
 
 # Support the pueblo MUSH client and allow html to be sent to it
-pueblo no
+pueblo yes
 
 # Support MXP (MUD eXtension Protocol) telnet option 91
 mxp no

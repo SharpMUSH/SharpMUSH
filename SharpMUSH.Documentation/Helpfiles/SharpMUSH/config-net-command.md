@@ -34,7 +34,7 @@ Networking and connection-related options.
 - `logins=<boolean>`: Are mortal logins enabled?
 - `player_creation=<boolean>`: Can `register` and `create` be used from the login screen?
 - `guests=<boolean>`: Are guest logins allowed?
-- `pueblo=<boolean>`: Is Pueblo support turned on?
+- `pueblo=<boolean>`: Does a new telnet connection get the Pueblo hello, so a Pueblo client turns on its links and pictures? A client without Pueblo shows the hello as one line of text at the top of the login screen.
 - `media_base_url=<string>`: The web address a GMCP client such as Mudlet fetches the game's sounds and music from, when [sound()] or [music()] names a file rather than a full address. It is sent as GMCP Client.Media.Default when a client agrees to GMCP, and to every such client when it changes; a `/` is added if it does not end in one. Empty sends nothing, and such a client then needs full addresses.
 
 ## SQL and SSL

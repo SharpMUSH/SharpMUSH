@@ -81,11 +81,12 @@ public sealed class MsspReportPublisher(
 			var translations = options.CurrentValue.AsciiTranslations.Translations;
 			var mediaBaseUrl = options.CurrentValue.Net.MediaBaseUrl;
 			var keepAlive = options.CurrentValue.Limit.KeepaliveTimeout;
-			var settings = AsciiTranslations.Fingerprint(translations) + '\n' + mediaBaseUrl + '\n' + keepAlive;
+			var pueblo = options.CurrentValue.Net.Pueblo;
+			var settings = AsciiTranslations.Fingerprint(translations) + '\n' + mediaBaseUrl + '\n' + keepAlive + '\n' + pueblo;
 			if (force || settings != _lastSettings)
 			{
 				await bus.Publish(new OutputSettingsMessage(new Dictionary<string, string>(translations, StringComparer.Ordinal),
-					mediaBaseUrl, keepAlive), ct);
+					mediaBaseUrl, keepAlive, pueblo), ct);
 				_lastSettings = settings;
 			}
 
