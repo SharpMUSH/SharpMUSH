@@ -77,7 +77,6 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		HelpApi.Install(this, isStaff, Corpora);
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
-		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 	}
 
 	[TUnit.Core.Test]
@@ -85,6 +84,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		AddHelpServices(isStaff: false);
 		this.AddAuthorization();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
@@ -101,6 +101,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		AddHelpServices(isStaff: false);
 		this.AddAuthorization();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
@@ -115,6 +116,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		AddHelpServices(isStaff: false);
 		this.AddAuthorization().SetAuthorized("mortal");
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
@@ -127,6 +129,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		AddHelpServices(isStaff: true);
 		this.AddAuthorization().SetAuthorized("headwiz").SetRoles("Wizard");
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "href=\"/help/admin/Security\"");
@@ -210,6 +213,7 @@ public class HelpPageTests : TrackingBunitContext
 	{
 		AddHelpServices(isStaff: false);
 		this.AddAuthorization();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		WaitForMarkup(cut, "This is the index to the MUSH online help files.");
@@ -234,6 +238,7 @@ public class HelpPageTests : TrackingBunitContext
 		HelpApi.Install(this, isStaff: false, new Dictionary<string, Dictionary<string, string>> { ["help"] = new(), ["ahelp"] = new() });
 		Services.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>();
 		this.AddAuthorization();
+		Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>().NavigateTo("/help");
 
 		var cut = Render<SharpMUSH.Client.Pages.Help>();
 		cut.WaitForAssertion(() => cut.Find(".help-empty"), TimeSpan.FromSeconds(5));
