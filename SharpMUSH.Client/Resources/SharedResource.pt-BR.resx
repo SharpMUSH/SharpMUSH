@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Esta cena não está em andamento, então não aceita poses.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>Você pode assistir a esta cena, mas seu personagem não está aprovado para participar de cenas, então não pode postar aqui.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>O jogo não registrou sua pose.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>

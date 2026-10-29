@@ -9,6 +9,7 @@
 @inject SceneService SceneService
 @inject IConnectionStateService Hub
 @inject ITerminalService Terminal
+@inject GameCommandService Commands
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -78,7 +79,7 @@ else
         else if (!Terminal.IsConnected)
         {
             @* Each banner is gated on the connection whose loss it actually describes. The two are
-               separate transports: posting goes over the terminal socket, live poses arrive on the hub.
+               separate transports: posting goes out as the terminal's character, live poses arrive on the hub.
                Gating both on one predicate — the tempting simplification — would disable a Send button
                that works whenever the live feed alone is down. What was wrong was the wording: this
                message says you cannot post, and it was shown for a hub outage, which does not stop
@@ -100,7 +101,13 @@ else
             </div>
         </div>
 
-        @if (scene.IsLive)
+        @if (scene.IsLive && _approved == false)
+        {
+            @* The scene package refuses every pose from a character that is not approved, and says so only to
+               that character's terminal: offering the composer here would take a pose and show nothing. *@
+            <div class="scene-live-closed" role="status">@Loc["RolComposeNotApproved"]</div>
+        }
+        else if (scene.IsLive)
         {
             <div class="scene-live-compose @(_mode == Ooc ? "scene-live-compose--ooc" : null)">
                 <div class="scene-live-card" data-input-region>
@@ -128,6 +135,10 @@ else
                                     Placeholder="@Placeholder" AriaLabel="@($"{Loc["RolComposeMode"]}: {Label(_mode)}")"
                                     Primary="end" Autofocus="true"
                                     OnKeyDown="OnKeyDownAsync" OnRawRequested="() => _draft.SetRaw(true)" />
+                    @if (_refusal is { } refusal)
+                    {
+                        <div class="scene-live-refusal" role="alert">@refusal</div>
+                    }
                     <div class="scene-live-foot">
                         <span class="scene-live-hint">@Loc["RolComposeSendHint"]</span>
                         <button type="button" class="scene-live-send" disabled="@(!CanSend)" @onclick="SendFromButtonAsync">
@@ -217,7 +228,15 @@ else
 
     private IReadOnlyList<(string Key, string Label)> _modes = [];
 
-    private bool CanSend => !_draft.IsEmpty && Terminal.IsConnected && !_liveUnavailable;
+    private bool CanSend => !_draft.IsEmpty && !_sending && Terminal.IsConnected && !_liveUnavailable;
+
+    /// <summary>Whether the acting character is approved to pose in scenes; null until the game says.</summary>
+    private bool? _approved;
+
+    /// <summary>Why the game did not record the last pose sent from here: what it said, or that it said nothing.</summary>
+    private string? _refusal;
+
+    private bool _sending;
 
     private string Label(string mode) => mode == Ooc ? Loc["NavPlayTypeOoc"] : Loc["RolModeIc"];
 
@@ -400,6 +419,7 @@ else
         _liveUnavailable = false;
         _error = null;
         _scene = null;
+        _refusal = null;
 
         // A scene that does not exist and one that exists but is not visible to this caller BOTH land here,
         // and both must render the one _notFound card. The REST route answers 404 to both for that reason,
@@ -408,6 +428,7 @@ else
         // sharing an answer.
         // Only a 404 is that answer. Any other failure is the server failing to answer at all, and the
         // not-found card would turn an outage into a claim that the scene is gone.
+        var approved = Commands.IsApprovedAsync();
         switch (await SceneService.GetSceneAsync(Id))
         {
             case SceneSummary scene:
@@ -421,6 +442,7 @@ else
                 break;
         }
 
+        _approved = await approved;
         _loading = false;
     }
 
@@ -463,14 +485,50 @@ else
         // a line's edges, and cut the pose short at the first semicolon. Styled text also has its colours
         // written as ansi() and every other special escaped, so it arrives as shown.
         var command = $"+scene/{_mode} {Id}={_draft.ToSoftcode()[0]}";
+        var (text, raw) = (_draft.Text, _draft.Raw);
 
         _draft.Clear();
         _ = SaveDraftAsync(now: true);
-
-        // Down the terminal websocket, already open as this character; the hub is for RECEIVING the
-        // pose back.
-        await Terminal.SendAsync(command);
+        _refusal = null;
+        _sending = true;
+        try
+        {
+            // Through api/commands, as the terminal's character, so what the game answered comes back here
+            // and not only to the terminal. The pose itself still shows only when the hub brings it back.
+            if (await PostAsync(command) is not { } refusal) return;
+            _refusal = refusal;
+            // The words are not lost to a refusal: back in the field, unless something was typed meanwhile.
+            if (_draft.IsEmpty) _draft.Load(text, raw);
+        }
+        finally
+        {
+            _sending = false;
+        }
     }
+
+    /// <summary>
+    /// The viewer's newest pose in this scene, read just before the command and again right after it in the
+    /// same queue entry: an unchanged answer means the pose was not recorded, and what the command printed is
+    /// why. Null when it was recorded.
+    /// </summary>
+    private async Task<string?> PostAsync(string command)
+    {
+        var newest = $"sceneposes({Id},%#,1)";
+        return await Commands.RunAsync("think", newest) switch
+        {
+            PortalCommandResponse before => await RecordAsync(command, newest, before.Result),
+            ApiFailure failure => failure.Message,
+        };
+    }
+
+    /// <summary>Runs the pose, and answers why it was not recorded, or null when it was.</summary>
+    private async Task<string?> RecordAsync(string command, string newest, string? before) =>
+        await Commands.RunAsync(command, newest) switch
+        {
+            PortalCommandResponse { Result: var after } when after != before => null,
+            PortalCommandResponse refused => refused.Output.Count > 0 ? string.Join(" ", refused.Output) : Loc["RolComposeRefused"],
+            ApiFailure failure => failure.Message,
+        };
 
     private string SceneTitle(SceneSummary s) =>
         s.Meta.TryGetValue("title", out var t) && !string.IsNullOrWhiteSpace(t)

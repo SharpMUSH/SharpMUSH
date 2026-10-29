@@ -5759,6 +5759,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Сцена не идёт, поэтому позы не принимаются.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>Вы можете смотреть эту сцену, но ваш персонаж не одобрен для участия в сценах, поэтому писать здесь нельзя.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>Игра не записала вашу позу.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>

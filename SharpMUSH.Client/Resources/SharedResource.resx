@@ -6500,6 +6500,12 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>This scene is not running, so it takes no poses.</value>
   </data>
+  <data name="RolComposeNotApproved" xml:space="preserve">
+    <value>You can watch this scene, but your character is not approved to take part in scenes, so you cannot pose here.</value>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>The game did not record your pose.</value>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
