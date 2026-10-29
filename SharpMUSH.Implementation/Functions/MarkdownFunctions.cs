@@ -91,14 +91,14 @@ public partial class Functions
 		}
 
 		var imageAllowed = await MarkdownImagePolicy(executor);
-		var document = RecursiveMarkdownHelper.Parse(markdown);
-		var liveBlocks = await MarkdownLiveBlocks(parser, executor, document, width);
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, templateObjRef, LocateFlags.All,
 			async templateObj =>
 			{
 				try
 				{
+					var document = RecursiveMarkdownHelper.Parse(markdown);
+					var liveBlocks = await MarkdownLiveBlocks(parser, executor, document, width);
 					var customRenderer = new CustomizableMarkdownRenderer(
 						parser, executor, templateObj, AttributeService, width)
 					{ ImageAllowed = imageAllowed, LiveBlocks = liveBlocks };

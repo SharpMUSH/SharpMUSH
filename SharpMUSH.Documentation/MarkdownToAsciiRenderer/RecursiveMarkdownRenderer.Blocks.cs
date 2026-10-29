@@ -238,15 +238,28 @@ public partial class RecursiveMarkdownRenderer
 	/// </summary>
 	public IReadOnlyDictionary<string, MString> LiveBlocks { get; init; } = new Dictionary<string, MString>();
 
+	/// <summary>The most live listing blocks one text shows; the rest show as a placeholder, a repeated block included.</summary>
+	public const int MaxLiveBlocks = 8;
+
+	private readonly HashSet<CustomContainer> _shownLiveBlocks = [];
+
 	/// <summary>Whether <paramref name="name"/> is a live listing block's name.</summary>
 	public static bool IsLiveBlock(string name) => WikiDirectiveNames.Contains(name);
 
 	/// <summary>The <see cref="LiveBlocks"/> key of a <c>::: name arg</c> block.</summary>
 	public static string LiveBlockKey(string name, string arg) => $"{name.ToLowerInvariant()} {arg}";
 
-	/// <summary>What <see cref="LiveBlocks"/> answers for a block, or null when it is not a live listing or was not answered.</summary>
-	protected MString? LiveBlock(string name, string arg)
-		=> IsLiveBlock(name) && LiveBlocks.TryGetValue(LiveBlockKey(name, arg), out var shown) ? shown : null;
+	/// <summary>
+	/// What <see cref="LiveBlocks"/> answers for <paramref name="container"/>, or null when it is not a live listing, was
+	/// not answered, or comes after the first <see cref="MaxLiveBlocks"/> shown.
+	/// </summary>
+	protected MString? LiveBlock(CustomContainer container, string name, string arg)
+	{
+		if (!IsLiveBlock(name) || !LiveBlocks.TryGetValue(LiveBlockKey(name, arg), out var shown)) return null;
+		if (!_shownLiveBlocks.Contains(container) && _shownLiveBlocks.Count >= MaxLiveBlocks) return null;
+		_shownLiveBlocks.Add(container);
+		return shown;
+	}
 
 	/// <summary>
 	/// Renders a <c>::: name args</c> custom container. The wiki's live listing blocks
@@ -260,7 +273,7 @@ public partial class RecursiveMarkdownRenderer
 	{
 		var (name, arg) = Fence(container);
 
-		if (LiveBlock(name, arg) is { } shown)
+		if (LiveBlock(container, name, arg) is { } shown)
 		{
 			return shown;
 		}

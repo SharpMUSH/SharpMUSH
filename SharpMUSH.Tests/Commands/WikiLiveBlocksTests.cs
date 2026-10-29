@@ -112,6 +112,37 @@ public class WikiLiveBlocksTests
 	}
 
 	[Test]
+	public async Task ARepeatedBlockCountsTowardTheLimit()
+	{
+		var player = await PlayerAsync("WikiLiveRepeat");
+		var category = TestIsolationHelpers.GenerateUniqueName("liverepeat");
+		var member = await PageAsync("LiveRepeatMember", "Body.", category);
+		var block = $"::: category {category}\n:::\n\n";
+		var listing = await PageAsync("LiveRepeatListing", string.Concat(Enumerable.Repeat(block, LiveBlocksWiki.MaxBlocks + 1)), null);
+
+		var text = (await ViewAsync(player, listing)).ToPlainText();
+		await Assert.That(text.Split(member.Title).Length - 1).IsEqualTo(LiveBlocksWiki.MaxBlocks);
+		await Assert.That(text).Contains($"[live listing: category {category}");
+	}
+
+	[Test]
+	public async Task ACategorysPageSourceLeavesOutItsMembers()
+	{
+		var player = await PlayerAsync("WikiLiveCategorySource");
+		var category = TestIsolationHelpers.GenerateUniqueName("livesource");
+		var categoryPage = (await WikiService.CreateAsync(category, "About these pages.", "#1", WikiNamespace.Category)).Expect<WikiPage>();
+		await WikiService.SetMetadataAsync(categoryPage.Id, [], true);
+		var member = await PageAsync("LiveSourceMember", "Body.", category);
+
+		await Parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain($"@wiki/md {categoryPage.Namespace}:{categoryPage.Slug}"));
+		var text = WebAppFactoryArg.Notifications.RawFor(player.DbRef)
+			.Select(message => message switch { MString markup => markup.ToPlainText(), string plain => plain })
+			.Last(message => message.Contains($"Wiki: {categoryPage.Title} [{categoryPage.Namespace}]", StringComparison.Ordinal));
+		await Assert.That(text).Contains("About these pages.");
+		await Assert.That(text).DoesNotContain(member.Slug);
+	}
+
+	[Test]
 	public async Task RenderMarkdownListsACategorysPublishedPages()
 	{
 		var category = TestIsolationHelpers.GenerateUniqueName("livefn");

@@ -112,8 +112,9 @@ Each block opens with `:::` plus a directive and closes with a bare `:::`:
 :::
 ```
 
-In-game, `@wiki` and `rendermarkdown()` list the same pages, up to 20 per block,
-with a link to the command that lists the rest.
+In-game, `@wiki` lists every page its reader may see, so an author sees their
+own drafts there, and `rendermarkdown()` lists only published pages. Each shows
+up to 20 pages per block, with a link to the command that lists the rest.
 
 For example, the five most recently edited pages right now:
 

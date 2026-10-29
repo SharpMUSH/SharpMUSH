@@ -532,7 +532,7 @@ public class CustomizableMarkdownRenderer : RecursiveMarkdownRenderer
 		var contents = MarkupText.Join(MarkupText.NewLine, container.Select(Render).Where(rendered => rendered.Length > 0));
 
 		return Template("CONTAINER", Args(("directive", Text(name)), ("options", Text(arguments)), ("text", contents),
-				("listing", LiveBlock(name, arguments) ?? MarkupText.Empty)))
+				("listing", LiveBlock(container, name, arguments) ?? MarkupText.Empty)))
 			?? base.RenderCustomContainer(container);
 	}
 }

@@ -24,7 +24,7 @@ namespace SharpMUSH.Implementation.Commands.WikiCommand;
 public static class LiveBlocksWiki
 {
 	/// <summary>The most blocks in one text that are answered; the rest show as a placeholder.</summary>
-	public const int MaxBlocks = 8;
+	public const int MaxBlocks = RecursiveMarkdownRenderer.MaxLiveBlocks;
 
 	/// <summary>The most pages one block lists; past them, a link runs the command listing the rest.</summary>
 	public const int MaxPages = 20;

@@ -165,7 +165,7 @@ public static class ViewWiki
 		// A draft's facts are withheld with its body; the pages naming it are other pages, shown either way.
 		var facts = await FactsAsync(parser.HouseLook(), wikiService, await WikiCommandHelper.VisibilityAsync(parser, executor), page, bodyShown);
 		// A category's page lists its members under its text, as the portal does; they are other pages, shown either way.
-		var members = page.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)
+		var members = !showRaw && page.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)
 			? await ListWiki.CategoryListingAsync(parser, executor, wikiService, localization, page.Slug, locale, forceSource)
 			: null;
 		var output = MarkupText.Join(MarkupText.NewLine, [
