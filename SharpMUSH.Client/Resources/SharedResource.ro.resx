@@ -6858,7 +6858,5 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>Despre acest joc</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Referință pentru comenzi</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Contul este accesul tău privat. Un personaj este cel pe care îl joci în lumea comună. Un cont poate deține mai multe personaje; verifică pe care îl joci înainte de a acționa.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Ultimul focus raportat: această scenă</value></data>
-  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Vizualizarea acestei scene</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Catalog public de personaje</value></data>
 </root>

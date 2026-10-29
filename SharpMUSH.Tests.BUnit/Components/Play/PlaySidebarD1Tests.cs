@@ -41,38 +41,43 @@ public class PlaySidebarD1Tests : TrackingBunitContext
 			.Add(x => x.OnOpen, key => onOpen?.Invoke(key)));
 
 	[Test]
-	[Arguments(-1, "", "A scene is running here")]
-	[Arguments(-1, null, "Viewing this scene")]
-	[Arguments(0, null, "Viewing this scene")]
-	[Arguments(1, null, "Last reported focus: this scene")]
-	[Arguments(1, "", "Last reported focus: this scene")]
-	public async Task SceneLabelUsesFocusOrViewWithoutInventingParticipation(int focus, string? current, string expected)
+	[Arguments(-1, "")]
+	[Arguments(-1, null)]
+	[Arguments(0, null)]
+	[Arguments(1, null)]
+	[Arguments(1, "")]
+	public async Task SceneCategoryDoesNotInferParticipationFromFocusOrView(int focus, string? current)
 	{
 		bool? focused = focus < 0 ? null : focus == 1;
-		var cut = RenderSidebar(Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "observer", focused) }, current: current);
-		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo(expected);
+		var room = Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "observer", focused) };
+		var cut = RenderSidebar(room, current: current);
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
+		await Assert.That(cut.FindAll(".kit-section-label").Any(e => e.TextContent == "In scene")).IsTrue();
 		await Assert.That(cut.Find(".play-side-scene").TextContent).DoesNotContain("Joined");
+		await Assert.That(ReferenceEquals(cut.Instance.Room, room)).IsTrue();
 	}
 
 	[Test]
-	public async Task ADisconnectedSnapshotDoesNotAssertCurrentSceneFocus()
+	public async Task DisconnectedSceneCategoryDoesNotClaimFreshFocus()
 	{
 		var cut = RenderSidebar(Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true) }, connected: false, current: "");
-		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("Scenes");
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
+		await Assert.That(cut.Markup).DoesNotContain("Last reported focus");
 	}
 
 	[Test]
-	public async Task SocketReopenWithoutRoomPayloadDoesNotAssertCurrentFocus()
+	public async Task SocketReopenWithoutRoomPayloadKeepsAStaticSceneCategory()
 	{
 		var snapshot = Docks with { Scene = new RoomScene("42", "Salt Market at Dusk", 5, "participant", true) };
 		var cut = RenderSidebar(snapshot, connected: true, current: "");
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
 		cut.Render(p => p.Add(c => c.Connected, false));
-		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("Scenes");
-		// Only the socket-state parameter changes: there is no login/resume verdict or new room payload.
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
 		cut.Render(p => p.Add(c => c.Connected, true));
 		await Assert.That(ReferenceEquals(cut.Instance.Room, snapshot)).IsTrue();
 		await Assert.That(ReferenceEquals(cut.Instance.Room!.Scene, snapshot.Scene)).IsTrue();
-		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("Last reported focus: this scene");
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
+		await Assert.That(cut.Markup).DoesNotContain("Last reported focus");
 		await Assert.That(cut.Markup).DoesNotContain("Focused on this scene");
 	}
 

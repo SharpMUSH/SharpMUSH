@@ -6858,7 +6858,5 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>A játékról</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Parancsok kézikönyve</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>A fiókod a privát bejelentkezésed. A karakter az, akit a közös világban játszol. Egy fiókhoz több karakter tartozhat; cselekvés előtt ellenőrizd, melyik karakterrel játszol.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Legutóbb jelzett fókusz: ez a jelenet</value></data>
-  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Ezt a jelenetet nézed</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Nyilvános karakterjegyzék</value></data>
 </root>

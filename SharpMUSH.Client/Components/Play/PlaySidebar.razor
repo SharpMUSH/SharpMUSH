@@ -29,9 +29,9 @@
     {
         @if (!Collapsed)
         {
-            <SectionLabel>@SceneContextLabel(scene)</SectionLabel>
+            <SectionLabel>@Loc["NavPlayInScene"]</SectionLabel>
         }
-        <nav class="play-side-scene" aria-label="@SceneContextLabel(scene)">
+        <nav class="play-side-scene" aria-label="@Loc["NavPlayInScene"]">
             <SidebarRow Lead="SidebarRow.SidebarLead.Image" ImageUrl="@Room.Image?.Url" Name="@SceneTitle(scene)"
                         Label="@SceneTitle(scene)" Count="@scene.Cast" IsCurrent="@(Current is null)"
                         Collapsed="@Collapsed" OnClick="OnOpenScene" />
@@ -134,11 +134,6 @@
 
     /// <summary>A channel's name or a conversation's key was chosen.</summary>
     [Parameter] public EventCallback<string> OnOpen { get; set; }
-
-    private string SceneContextLabel(RoomScene scene) => scene.Focus is true && Connected
-        ? Loc["NavJourneySceneFocused"].Value
-        : Current is null ? Loc["NavJourneySceneViewing"].Value
-        : Connected ? Loc["NavPlaySceneHere"].Value : Loc["NavPlayScenes"].Value;
 
     private IReadOnlyList<CharacterDirectoryService.CharacterSummary> _directory = [];
 

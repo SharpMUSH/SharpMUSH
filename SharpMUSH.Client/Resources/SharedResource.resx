@@ -10293,7 +10293,5 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>About this game</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Command reference</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Your account is your private sign-in. A character is who you play in the shared world. One account can own several characters; check which character you are playing before acting.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Last reported focus: this scene</value></data>
-  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Viewing this scene</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Public character directory</value></data>
 </root>

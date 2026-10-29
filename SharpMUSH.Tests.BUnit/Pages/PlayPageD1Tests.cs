@@ -145,7 +145,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await OpenStory(cut);
 		await cut.InvokeAsync(() => _hub.SetSceneLive(false));
 		cut.WaitForState(() => cut.FindAll(".play-story-unavailable").Any(e => e.TextContent.Contains("Live scene updates are reconnecting")));
-		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("Viewing this scene");
+		await Assert.That(cut.Find(".play-side-scene").GetAttribute("aria-label")).IsEqualTo("In scene");
 		await Assert.That(cut.FindAll(".play-join")).IsNotEmpty();
 		await Assert.That(cut.Find(".play-join-btn").HasAttribute("disabled")).IsFalse();
 		await Assert.That(cut.Markup).DoesNotContain("Anything you post is still recorded");

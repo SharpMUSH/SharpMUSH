@@ -6167,7 +6167,5 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>À propos de ce jeu</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Référence des commandes</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Votre compte est votre accès privé. Un personnage est celui que vous incarnez dans le monde partagé. Un compte peut posséder plusieurs personnages ; vérifiez lequel vous incarnez avant d’agir.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Dernier ciblage signalé : cette scène</value></data>
-  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Consultation de cette scène</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Annuaire public des personnages</value></data>
 </root>

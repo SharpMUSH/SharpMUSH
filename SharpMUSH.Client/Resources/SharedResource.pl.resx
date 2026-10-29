@@ -6858,7 +6858,5 @@
   <data name="NavJourneyAbout" xml:space="preserve"><value>O tej grze</value></data>
   <data name="NavJourneyReference" xml:space="preserve"><value>Spis poleceń</value></data>
   <data name="AuthJourneyIdentity" xml:space="preserve"><value>Konto służy do prywatnego logowania. Postać to osoba, którą odgrywasz we wspólnym świecie. Jedno konto może mieć kilka postaci; przed działaniem sprawdź, którą postacią grasz.</value></data>
-  <data name="NavJourneySceneFocused" xml:space="preserve"><value>Ostatnio zgłoszone skupienie: ta scena</value></data>
-  <data name="NavJourneySceneViewing" xml:space="preserve"><value>Przeglądanie tej sceny</value></data>
   <data name="NavJourneyDirectory" xml:space="preserve"><value>Publiczny katalog postaci</value></data>
 </root>
