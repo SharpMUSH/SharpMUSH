@@ -16087,6 +16087,15 @@
     "plugin": "discord"
   },
   {
+    "id": "discordlink",
+    "lookup": "discordlink()",
+    "title": "discordlink()",
+    "aliases": [],
+    "sections": [],
+    "file": "discord-functions.md",
+    "plugin": "discord"
+  },
+  {
     "id": "ooc-command",
     "lookup": "ooc",
     "title": "ooc",
