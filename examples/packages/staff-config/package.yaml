@@ -1,0 +1,35 @@
+format: "1.16"
+package: staff-config
+title: "Staff list: +config settings"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Puts the Staff list settings and duties into +config: registers them with the +config registry, so staff see and change them with +config staff."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [staff, config, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. staff declares its settings as
+# DATA`CONFIG`<NAME>, with their types and limits, and reads them with get() whether or not +config is installed.
+# This package is the one leaf that tells the +config registry where they are.
+depends:
+  - package: staff
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/staff/
+      branch: main
+  - package: plus-config
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/plus-config/
+      branch: main
+
+objects:
+  - ref: staff_config_registration
+    target: "{{plus-config/registry}}"
+    attributes:
+      SYSTEM`STAFF: |-
+        {{staff/staff}}

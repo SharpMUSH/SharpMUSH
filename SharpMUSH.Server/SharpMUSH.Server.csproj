@@ -263,6 +263,10 @@
       <Link>BundledPackages\summary.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.summary.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\staff\README.md">
+      <Link>BundledPackages\staff.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.staff.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\who-where\README.md">
       <Link>BundledPackages\who-where.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.README.md</LogicalName>
@@ -522,6 +526,22 @@
     <EmbeddedResource Include="..\examples\packages\summary-config\package.yaml">
       <Link>BundledPackages\summary-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.summary-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\staff\package.yaml">
+      <Link>BundledPackages\staff.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.staff.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\staff-help\package.yaml">
+      <Link>BundledPackages\staff-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.staff-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\staff-config\package.yaml">
+      <Link>BundledPackages\staff-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.staff-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\staff-status\package.yaml">
+      <Link>BundledPackages\staff-status.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.staff-status.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\time\package.yaml">
       <Link>BundledPackages\time.package.yaml</Link>

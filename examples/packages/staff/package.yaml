@@ -1,0 +1,311 @@
+format: "1.16"
+package: staff
+title: "Staff list"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "+staff and +stafflist: the game's staff and the duties each one holds, such as Head Director or Builder. Characters with a staff role are listed on their own; duties are a +config table."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [staff, stafflist, duties, roles]
+category: Community
+requires_server: ">=0.1"
+
+
+objects:
+  # The command object, in the master room. WIZARD because it finds every character holding a staff role with
+  # lsearch(), which a mortal object answers only for what it can examine.
+  #
+  # Who is listed: every character holding one of the roles the roles setting names, and everyone holding a
+  # duty. #1 and the package manager are listed only when they hold a duty. A duty is an entry of the duties
+  # table on the Staff Store, with its title, the character who holds it and its order; a duty nobody holds
+  # is shown as open.
+  #
+  # Trees: CMD` the commands, FUN`SCREEN the screen, FUN`DUTY` the duties table, FUN`MEMBER` who is listed,
+  # FUN`DISPLAY` the table and footer. DATA`CONFIG` the settings and the table +config staff shows.
+  - ref: staff
+    type: thing
+    name: Staff List
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      # ---- Settings: +config staff ---------------------------------------------
+      # Each DATA`CONFIG`<NAME> is the value; the leaves under it tell +config what it accepts. The code
+      # reads the value with v(); see plus-config's README.
+      DATA`CONFIG:
+        value: |-
+          Who +staff lists and the duties shown beside them.
+        flags: [no_command]
+      DATA`CONFIG`LABEL: |-
+        Staff list
+      DATA`CONFIG`ROLES: |-
+        immortal wizard moderator councilor royalty architect guildmaster helper
+      DATA`CONFIG`ROLES`TYPE: |-
+        list
+      DATA`CONFIG`ROLES`DEFAULT: |-
+        immortal wizard moderator councilor royalty architect guildmaster helper
+      DATA`CONFIG`ROLES`PATTERN: |-
+        ^[A-Za-z0-9_.-]+$
+      DATA`CONFIG`ROLES`LABEL: |-
+        Staff roles
+      DATA`CONFIG`ROLES`DESCRIPTION: |-
+        The roles that put a character on +staff, highest first. Each character's Role is the first of them they hold.
+      DATA`CONFIG`ROLES`EXAMPLE: |-
+        wizard royalty builder
+      # The duties, a +config table: entries on the store under DUTY`, each holding its title, with HOLDER (an
+      # objid, or nothing while it is open) and ORDER beneath.
+      DATA`CONFIG`DUTIES`TYPE: |-
+        table
+      DATA`CONFIG`DUTIES`LABEL: |-
+        Duties
+      DATA`CONFIG`DUTIES`DESCRIPTION: |-
+        The duties +staff shows, each with its title and the character who holds it.
+      DATA`CONFIG`DUTIES`STORE: |-
+        {{store}}
+      DATA`CONFIG`DUTIES`PATH: |-
+        DUTY
+      DATA`CONFIG`DUTIES`ENTRY: |-
+        title
+      DATA`CONFIG`DUTIES`FIELDS: |-
+        title holder order
+      DATA`CONFIG`DUTIES`KEYPATTERN: |-
+        ^[A-Za-z0-9_-]{1,30}$
+      DATA`CONFIG`DUTIES`FIELD`TITLE`TYPE: |-
+        text
+      DATA`CONFIG`DUTIES`FIELD`TITLE`MIN: |-
+        1
+      DATA`CONFIG`DUTIES`FIELD`TITLE`MAX: |-
+        60
+      DATA`CONFIG`DUTIES`FIELD`TITLE`LABEL: |-
+        Title
+      DATA`CONFIG`DUTIES`FIELD`TITLE`DESCRIPTION: |-
+        What +staff shows beside the holder's name.
+      DATA`CONFIG`DUTIES`FIELD`TITLE`EXAMPLE: |-
+        Head Director
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`TYPE: |-
+        object
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`OBJECTTYPE: |-
+        PLAYER
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`DEFAULT: |-
+
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`LABEL: |-
+        Held by
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`DESCRIPTION: |-
+        The character who holds it. Empty while it is open.
+      DATA`CONFIG`DUTIES`FIELD`HOLDER`EXAMPLE: |-
+        *John
+      DATA`CONFIG`DUTIES`FIELD`ORDER`TYPE: |-
+        integer
+      DATA`CONFIG`DUTIES`FIELD`ORDER`DEFAULT: |-
+        50
+      DATA`CONFIG`DUTIES`FIELD`ORDER`MIN: |-
+        0
+      DATA`CONFIG`DUTIES`FIELD`ORDER`MAX: |-
+        999
+      DATA`CONFIG`DUTIES`FIELD`ORDER`LABEL: |-
+        Order
+      DATA`CONFIG`DUTIES`FIELD`ORDER`DESCRIPTION: |-
+        Lower comes first. A character is listed at their lowest duty, before everyone holding none.
+      DATA`CONFIG`DUTIES`FIELD`ORDER`EXAMPLE: |-
+        10
+
+      # ---- commands -------------------------------------------------------------
+      CMD`STAFF: |-
+        $+staff:@pemit %#=u(%!/FUN`SCREEN)
+      CMD`STAFFLIST: |-
+        $+stafflist:@pemit %#=u(%!/FUN`SCREEN)
+      # +staff/on and +staff/off: a listed staff member says whether they are on duty. One pattern for every
+      # switch, so a switch never matches twice; the switch is checked before it names a routine.
+      CMD`STAFF`SWITCH: |-
+        $+staff/*:@assert member(on off,lcstr(%0))=@pemit %#=notice(STAFF,+staff has no /%0 switch. +staff/on and +staff/off say whether you are on duty.,warn); @assert u(%!/FUN`MEMBER`IS,%#)=@pemit %#=notice(STAFF,Only someone on the staff list can go on or off duty.,error); @include %!/INC`DUTY`[ucstr(%0)]
+      # On duty until they say otherwise: ONDUTY`<key> on the store holds when they went on.
+      INC`DUTY`ON: |-
+        &ONDUTY`[u(%!/FUN`MEMBER`KEY,%#)] {{store}}=secs(); @pemit %#=notice(STAFF,You are on duty.,ok)
+      INC`DUTY`OFF: |-
+        &ONDUTY`[u(%!/FUN`MEMBER`KEY,%#)] {{store}}; @pemit %#=notice(STAFF,You are off duty.,ok)
+      # Command palette entry (help palette entries): useful anywhere, so a staple.
+      PALETTE`STAFF: |-
+        {"label":"Staff list","line":"+staff","always":true,"icon":"SupportAgent","keywords":"staff wizards admins duties"}
+
+      # ---- screen ---------------------------------------------------------------
+      # Reads the duties once, then lists everyone: the box with the table, or a line saying nobody is listed.
+      FUN`SCREEN: |-
+        u(%!/FUN`DUTY`GATHER)[setqm(staff_roles,v(DATA`CONFIG`ROLES),
+        staff_online,mwho(),
+        staff_members,u(%!/FUN`MEMBER`ALL))][u(%!/FUN`DISPLAY`SCREEN,sortkey(%!/FUN`MEMBER`SORTKEY,%q<staff_members>,i))]
+
+      # ---- duties ---------------------------------------------------------------
+      # Every duty in order, filed by holder: staff_duty_<number> the titles a character holds and
+      # staff_order_<number> the order of the first, staff_holders the holders, and staff_open the duties
+      # nobody holds, split by a marked |.
+      FUN`DUTY`GATHER: |-
+        setqm(staff_holders,,
+        staff_open,)[null(iter(sortkey(%!/FUN`DUTY`SORTKEY,lattr({{store}}/DUTY`*),i),u(%!/FUN`DUTY`FILE,%i0,unmark(get({{store}}/%i0)))))]
+      # %0 a duty's attribute: its order, then its title, as one key.
+      FUN`DUTY`SORTKEY: |-
+        rjust(u(%!/FUN`DUTY`ORDER,%0),3,0)[lcstr(get({{store}}/%0))]
+      # %0 a duty's attribute: its order, 50 when it has none.
+      FUN`DUTY`ORDER: |-
+        if(isint(setr(duty_order,get({{store}}/%0`ORDER))),%q<duty_order>,50)
+      # %0 a duty's attribute: the character holding it, or nothing when it is open or its holder is gone.
+      FUN`DUTY`HOLDER: |-
+        if(cand(isdbref(setr(duty_holder,num(get({{store}}/%0`HOLDER)))),hastype(%q<duty_holder>,player)),%q<duty_holder>)
+      # %0 a duty's attribute, %1 its title: filed under its holder, or with the open duties.
+      FUN`DUTY`FILE: |-
+        if(isdbref(setr(duty_holder,u(%!/FUN`DUTY`HOLDER,%0))),u(%!/FUN`DUTY`GIVE,after(%q<duty_holder>,#),%1,%0),setq(staff_open,if(strlen(%q<staff_open>),%q<staff_open>%*<|>)%1))
+      # %0 a holder's number, %1 a title, %2 the duty's attribute: the title added to theirs.
+      FUN`DUTY`GIVE: |-
+        setq(staff_duty_%0,if(strlen(r(staff_duty_%0)),r(staff_duty_%0)%,%b)%1)[if(not(member(%q<staff_holders>,#%0)),setqm(staff_holders,trim(%q<staff_holders> #%0),
+        staff_order_%0,u(%!/FUN`DUTY`ORDER,%2)))]
+
+      # ---- who is listed --------------------------------------------------------
+      # Everyone holding a staff role, and everyone holding a duty. God (#1) and the package manager hold
+      # the wizard role to run the game, so they are left out unless they hold a duty. Each one's Role is
+      # kept in staff_role_<number>.
+      FUN`MEMBER`ALL: |-
+        setq(member_list,setunion(setdiff(u(%!/FUN`MEMBER`ROLEHOLDERS),#1 [num(config(package_manager))]),%q<staff_holders>))[null(iter(%q<member_list>,setq(staff_role_[after(%i0,#)],first(filterbool(%!/FUN`MEMBER`HOLDS,%q<staff_roles>,,,%i0)))))]%q<member_list>
+      # The characters holding any of the staff roles. A role the game does not have matches nobody.
+      FUN`MEMBER`ROLEHOLDERS: |-
+        if(words(%q<staff_roles>),lsearch(all,type,player,elock,iter(%q<staff_roles>,role^%i0,,|)))
+      # %0 a character: 1 when +staff lists them.
+      FUN`MEMBER`IS: |-
+        u(%!/FUN`DUTY`GATHER)[setq(staff_roles,v(DATA`CONFIG`ROLES))][member(u(%!/FUN`MEMBER`ALL),num(%0))]
+      # %0 a character: the key their records are filed under. An objid cannot be part of an attribute name,
+      # so #12:1790888816538 is filed as 12_1790888816538.
+      FUN`MEMBER`KEY: |-
+        edit(objid(%0),#,,:,_)
+      # %0 a role, %1 a character: 1 when they hold it.
+      FUN`MEMBER`HOLDS: |-
+        hasrole(%1,%0)
+      # %0 a character: their lowest duty's order (1000 with none), their Role's place among the staff roles,
+      # and their name, as one key.
+      FUN`MEMBER`SORTKEY: |-
+        rjust(if(strlen(r(staff_order_[after(%0,#)])),r(staff_order_[after(%0,#)]),1000),4,0)[rjust(firstof(match(%q<staff_roles>,r(staff_role_[after(%0,#)])),99),2,0)][lcstr(name(%0))]
+
+      # ---- display --------------------------------------------------------------
+      # %0 the characters, in order: the box with the table, how many are connected and the open duties.
+      # A character a mortal cannot see on the who list is shown Offline.
+      FUN`DISPLAY`SCREEN: |-
+        box(if(words(%0),u(%!/FUN`DISPLAY`TABLE,%0),tone(muted,Nobody is listed as staff yet.))%r[rule()]%r[tone(muted,u(%!/FUN`DISPLAY`COUNT,%0))][if(strlen(%q<staff_open>),%r[tone(muted,Open: [iter(%q<staff_open>,%i0,%*<|>,%,%b)])])],Staff)
+      # %0 the characters: the table. Name, Role, Status and Idle are shown whole; Duty wraps and grows into the
+      # spare width. On a narrow screen Idle goes first, then Role.
+      FUN`DISPLAY`TABLE: |-
+        setq(staff_filters,iter(lattr(%!/FILTER`STAFF`STATUS`*),%!/%i0))[ldatatable(json(object,delim,json(string,%r),nowrap,json(string,1%r3%r4%r5),priority,json(string,1%r1%r3%r1%r4),grow,json(string,%r1%r%r%r),min,json(string,%r12%r%r%r)),tone(strong,Name)%r[tone(strong,Duty)]%r[tone(strong,Role)]%r[tone(strong,Status)]%r>[tone(strong,Idle)],iter(%0,u(%!/FUN`DISPLAY`ROW,%i0,t(member(%q<staff_online>,%i0))),,%*<|>),%*<|>)]
+      # %0 a character, %1 1 when a mortal sees them connected: their row.
+      FUN`DISPLAY`ROW: |-
+        unmark(name(%0)%r[r(staff_duty_[after(%0,#)])]%r[capstr(r(staff_role_[after(%0,#)]))]%r[u(%!/FUN`DISPLAY`STATUS,%0,%1)]%r[if(%1,etime(idle(%0),3))])
+      # %0 a character, %1 1 when connected: On duty, Off duty or Offline, through every
+      # FILTER`STAFF`STATUS`<name> on this object in name order. Each gets the status so far as %0, the
+      # character as %1 and whether they are connected as %2, and returns the status to show.
+      FUN`DISPLAY`STATUS: |-
+        chain(%q<staff_filters>,if(%1,if(hasattr({{store}},ONDUTY`[u(%!/FUN`MEMBER`KEY,%0)]),badge(On duty,ok),tone(muted,Off duty)),tone(muted,Offline)),%0,%1)
+      # %0 the characters: how many are listed and how many of them are connected.
+      FUN`DISPLAY`COUNT: |-
+        words(%0) staff, [words(setinter(%0,%q<staff_online>))] connected
+
+  # The duties, one branch each, named as staff typed it. Inside the Staff List, so no player can reach it,
+  # and no_command, so nothing kept on it is ever matched as a command.
+  #
+  # A duty is DUTY`<NAME>, its value its title, with HOLDER (the holder's objid, empty while it is open) and
+  # ORDER (lower first) beneath. Staff change them with +config staff/duties. ONDUTY`<key> marks a staff
+  # member on duty, from +staff/on until +staff/off.
+  - ref: store
+    type: thing
+    name: Staff Store
+    location: "{{staff}}"
+    flags: [no_command]
+    attributes:
+      DUTY: |-
+        The duties +staff shows, one branch each, named as staff typed it.
+      ONDUTY: |-
+        Who is on duty: ONDUTY`<key> for each, holding when they went on.
+
+  # The +help topics, on a plain thing: the librarian cannot u() a privileged object's attributes. Bodies
+  # are evaluated, so brackets, parentheses and percent signs are escaped.
+  - ref: staff_help
+    type: thing
+    name: Staff List Help
+    location: "{{staff}}"
+    attributes:
+      HELP: |-
+        Who the staff are and what each of them does.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`STAFF: |-
+        who
+      HELP`STAFF: |-
+        `+staff` lists the game's staff: each one's duty, their staff role, whether they are on duty, and how
+        long they have been idle. `+stafflist` is the same list.
+
+        - Everyone holding a staff role is listed, such as a wizard or royalty. God \(#1\) is not, unless it holds a duty.
+        - A duty is what someone looks after, such as Head Director or Builder. Someone with several shows them all.
+        - Someone holding a duty is listed even without a staff role.
+        - Status is On duty or Off duty for someone connected, and Offline for someone who is not, or who is
+          hidden from the who list.
+        - Someone on the list goes on duty with `+staff/on` and off with `+staff/off`.
+        - The footer counts who is listed and connected, and names the duties nobody holds yet.
+
+        Example:
+
+        `+staff`
+
+        Output: a box titled `Staff` with a row per staff member, such as `John | Head Director | Wizard | On duty | 2m`,
+        then how many are listed and connected, and the open duties, such as `Open: Storyteller`.
+      LOCK`STAFF`DUTIES: |-
+        perm^config.admin
+      HELP`STAFF`DUTIES: |-
+        Staff set duties with `+config staff/duties`, a table. Each duty has a name to change it by, a
+        `title` that `+staff` shows, the `holder`, and an `order`, lower first. A character is listed at
+        their lowest duty, before everyone holding none.
+
+        - `+config/add staff/duties/<name>=<title>` adds a duty, open until someone holds it.
+        - `+config staff/duties/<name>/holder=*<player>` gives it to a player. An empty holder opens it again.
+        - `+config staff/duties/<name>/order=<number>` moves it, from 0 to 999. 50 when added.
+        - `+config/remove staff/duties/<name>` takes it away.
+
+        Example:
+
+        ```
+        > +config/add staff/duties/director=Head Director
+        \[CONFIG\] Done: Added staff/duties/director. +config staff/duties/director shows it.
+        > +config staff/duties/director/holder=*John
+        \[CONFIG\] Done: staff/duties/director/holder is now John \(#24\), was none.
+        ```
+
+        Output: one line from `+config` for each change.
+
+        For two builders, add two duties with the same title, such as `builder` and `builder2`.
+      LOCK`STAFF`FILTERS: |-
+        perm^packages.admin
+      HELP`STAFF`FILTERS: |-
+        A package can change the Status column of `+staff` without editing the staff package. It adds a
+        **filter** to the Staff List: an attribute named `` FILTER`STAFF`STATUS`<name> ``. For each row,
+        `+staff` runs every such filter in name order with `chain\(\)`. Each gets the status so far as `%%0`,
+        On duty, Off duty or Offline to begin with, the character as `%%1`, and `1` as `%%2` when they are
+        connected, and returns the status to show.
+
+        The `staff-status` package is one: it adds a connected staff member's `+status`, such as
+        `On duty · LFRP`.
+
+        A filter a package attaches goes away when the package is uninstalled.
+      LOCK`STAFF`ROLES: |-
+        perm^config.admin
+      HELP`STAFF`ROLES: |-
+        `+staff` lists everyone holding one of the roles in `+config staff/roles`, highest first. By
+        default these are SharpMUSH's and RhostMUSH's staff roles: `immortal wizard moderator councilor
+        royalty architect guildmaster helper`. A role the game does not have lists nobody. The Role
+        column shows the first of them each character holds.
+
+        `+config/add` adds a role to the list and `+config/remove` takes one off. Setting it with `=`
+        replaces the whole list.
+
+        Example:
+
+        ```
+        > +config/add staff/roles=builder
+        \[CONFIG\] Done: staff/roles is now immortal, wizard, moderator, councilor, royalty, architect, guildmaster, helper, builder, was immortal, wizard, moderator, councilor, royalty, architect, guildmaster, helper.
+        ```
+
+        Output: one line saying what the setting is now and what it was.
+
+        A role given to an account reaches every character on it, so each of them is listed. Give a staff
+        role to the staff character itself to list only that one.
