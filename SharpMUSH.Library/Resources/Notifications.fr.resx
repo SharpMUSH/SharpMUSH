@@ -134,6 +134,9 @@
   <data name="SocksetScreenReaderSetFormat" xml:space="preserve">
     <value>Lecteur d'écran défini sur « {0} »</value>
   </data>
+  <data name="SocksetAltTextSetFormat" xml:space="preserve">
+    <value>Texte alternatif défini sur « {0} »</value>
+  </data>
   <data name="SocksetUnknownLinkSetting" xml:space="preserve">
     <value>Réglage inconnu. Réglages valides : 'on', 'off', 'auto'.</value>
   </data>

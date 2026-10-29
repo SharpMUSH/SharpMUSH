@@ -151,6 +151,9 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 		// The blocks were folded as they were laid out; this is the text around them.
 		if (fold is not null) ms = fold.Fold(ms);
 		if (fetchesItself) ms = ClientFetchedPictures.Fetchable(ms, connection.Website);
+		// A terminal that draws no pictures is sent their addresses, unless its reader wants the descriptions.
+		else if (connection.Capabilities.Format == OutputFormat.Ansi && ansi.Pictures is null && !connection.Capabilities.ShowsAltText)
+			ms = PictureAddresses.Shown(ms, connection.Website);
 		var text = connection.Capabilities.Format switch
 		{
 			OutputFormat.Pueblo => ms.Render(MarkupFormat.Pueblo, WireFor(depth)),

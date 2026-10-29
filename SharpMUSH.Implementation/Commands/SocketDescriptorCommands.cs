@@ -730,6 +730,9 @@ public static class SocketOptions
 			features.HasFlag(TerminalFeatures.CommandLinks)));
 		Row("Screen Reader", PinnedOrAuto(TerminalFeatureReader.PinOf(connection.Metadata, TerminalCapabilityReader.ScreenReaderKey),
 			TerminalCapabilityReader.Read(connection.Metadata).ScreenReader));
+		var altText = TerminalFeatureReader.PinOf(connection.Metadata, TerminalFeatureReader.AltTextKey);
+		Row("Alt Text", PinnedOrAuto(altText, TerminalFeatureReader.PinOf(connection.Metadata, TerminalCapabilityReader.ScreenReaderKey)
+			?? TerminalCapabilityReader.Read(connection.Metadata).ScreenReader));
 		// Pictures are off until the player turns them on; "auto" says which method the terminal gets.
 		Row("Graphics", connection.Metadata.GetValueOrDefault(TerminalFeatureReader.GraphicsKey) switch
 		{
@@ -848,6 +851,10 @@ public static class SocketOptions
 			case "SCREENREADER":
 				return SetLinkPin(TerminalCapabilityReader.ScreenReaderKey, value,
 					nameof(ErrorMessages.Notifications.SocksetScreenReaderSetFormat));
+
+			case "ALTTEXT":
+				return SetLinkPin(TerminalFeatureReader.AltTextKey, value,
+					nameof(ErrorMessages.Notifications.SocksetAltTextSetFormat));
 
 			case "GRAPHICS":
 				return SetGraphics(value);

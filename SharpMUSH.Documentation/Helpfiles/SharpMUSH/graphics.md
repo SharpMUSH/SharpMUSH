@@ -34,6 +34,8 @@ Pictures in the game (such as those placed with figure()) are shown as their tex
 
 Kitty pictures and half blocks are only sent to a connection receiving UTF-8. A connection identified as a screen reader always receives the picture's description instead. SOCKSET shows the method in use, as "auto (<method>)" for auto, and terminfo() includes it.
 
+While pictures are off, a picture is written as its address, which you can open and which some clients show as a picture of their own. A figure with text art shows its art. A screen reader gets the picture's description instead; SOCKSET alttext=on asks for descriptions, and alttext=off for addresses, either way. The game's own pictures have an address only once mud_url is set.
+
 A picture appears in the space its text art takes, so whatever is laid out around it stays where it is. The first time a picture is shown it may appear as its text art while the game fetches it. A moving picture shows its first frame unless animation is on; see [ANIMATION].
 
 Example:

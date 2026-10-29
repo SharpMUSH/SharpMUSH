@@ -151,4 +151,11 @@ public record ProtocolCapabilities(
 	/// </summary>
 	[JsonIgnore]
 	public bool ReadsAloud => Pins?.ScreenReader ?? ScreenReader;
+
+	/// <summary>
+	/// Whether a picture this connection does not draw is sent as its description rather than its address: the
+	/// player's <c>SOCKSET alttext</c> pin, or else whether a screen reader reads it.
+	/// </summary>
+	[JsonIgnore]
+	public bool ShowsAltText => Pins?.AltText ?? ReadsAloud;
 }
