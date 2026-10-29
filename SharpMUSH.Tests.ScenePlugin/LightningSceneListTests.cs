@@ -158,7 +158,7 @@ public class LightningSceneListTests
 	public async Task ApiUpcomingStateIncludesAnAtomicallyScheduledScene()
 	{
 		var scene = await _scenes.CreateSceneAsync("", "#1", "Later", "A complete pitch", DateTimeOffset.UtcNow.AddDays(2).ToUnixTimeMilliseconds());
-		var controller = new SceneController(_scenes)
+		var controller = new SceneController(_scenes, new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
 		};
@@ -177,7 +177,7 @@ public class LightningSceneListTests
 		await _scenes.SetSceneMetaAsync(scene.Id, "public", "0");
 		await _scenes.SetSceneMetaAsync(scene.Id, "joinpolicy", "invite-only");
 		await _scenes.InvitePlayerAsync(scene.Id, guest);
-		var controller = new SceneController(_scenes)
+		var controller = new SceneController(_scenes, new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor(guest) } }
 		};
@@ -185,7 +185,7 @@ public class LightningSceneListTests
 		await Assert.That(await _scenes.GetMemberAsync(scene.Id, guest) is SharpMUSH.Library.DiscriminatedUnions.NotFound).IsTrue();
 		await Assert.That((await _scenes.GetMembersAsync(scene.Id)).Expect<IReadOnlyList<SharpMUSH.Plugins.Scene.Models.SceneMember>>().Count).IsEqualTo(1);
 		await Assert.That((await _scenes.ListScenesAsync("mine", guest)).Count).IsEqualTo(0);
-		var ownerController = new SceneController(_scenes)
+		var ownerController = new SceneController(_scenes, new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = SceneFixture.PrincipalFor("#1") } }
 		};

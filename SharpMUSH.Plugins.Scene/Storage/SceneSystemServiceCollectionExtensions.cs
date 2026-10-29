@@ -30,6 +30,9 @@ public static class SceneSystemServiceCollectionExtensions
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningSceneStorage>().EditHistory);
 		services.AddSingleton<IHistoryStore>(sp => sp.GetRequiredService<LightningSceneStorage>().DeletedPoseHistory);
 
+		// Whether a web reader holds scene.view, for the REST controllers and the live hub.
+		services.AddSingleton<Web.ISceneReadAccess, Web.SceneReadAccess>();
+
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
 

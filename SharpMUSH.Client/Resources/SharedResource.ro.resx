@@ -5768,8 +5768,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Poți urmări această scenă, dar personajul tău nu este aprobat să participe la scene, așa că nu poți posta aici.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Poți urmări această scenă, dar personajul tău nu poate posta în ea: sunt necesare permisiunile scene.join și scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5971,8 +5971,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programează o scenă</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Este necesară aprobarea</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Necesită scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

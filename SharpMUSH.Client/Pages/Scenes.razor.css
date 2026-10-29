@@ -11,7 +11,7 @@
 }
 
 /* Why Schedule and Start are closed to a character that is not approved. */
-.scene-approval-needed {
+.scene-create-needed {
 	align-self: center;
 	color: var(--text-faint);
 	font-size: 0.8125rem;

@@ -87,7 +87,7 @@ public class SceneDetailSortTests
 		((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id).ToList();
 
 	private static SceneController ControllerFor(TimelineService service) =>
-		new(service)
+		new(service, new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext
 			{

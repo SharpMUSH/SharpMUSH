@@ -18,21 +18,51 @@ plugins: [scene]
 # plus-help and plus-config read them; the bridges scene-help and scene-config register them with those packages,
 # so a game without +help or +config still runs scenes.
 
-# Staff finish a scene that is not theirs with the scene.close permission, and change any scene or pose with
-# scene.manage. The package defines both; a game hands one out by allowing it on a role
-# (@role/allow helper=scene.close) or a player (@permission/allow <player>=scene.manage). A wizard holds
-# control.all, which FUN`MANAGES counts as scene.manage, since a package cannot change the wizard role.
+# Who may do what with scenes is a set of permissions this package defines, so a game changes the bar with the
+# role tools instead of editing softcode:
+#   scene.view    read scenes you are not in: the lists, a scene's card and its log, in-game and in the portal
+#   scene.join    join a scene, RSVP to one, and mark poses
+#   scene.pose    have your poses recorded into a scene, pose from the portal, and fix your own poses
+#   scene.create  start and schedule scenes, and run your own
+# grants: below lets everyone read, and the approved role, royalty and wizards take part.
+# A game moves one with @role/allow and @role/deny, such as @role/allow player=scene.join to let every
+# character join, or @role/deny guest=scene.view to keep guests out of the logs. A scene you are in stays
+# readable to you whatever scene.view says.
+#
+# Staff finish a scene that is not theirs with scene.close, and change any scene or pose with scene.manage. A
+# game hands one out by allowing it on a role (@role/allow helper=scene.close) or a player
+# (@permission/allow <player>=scene.manage). A wizard holds control.all, which FUN`MANAGES counts as
+# scene.manage.
 categories:
   permissions:
+    - name: Scenes
+      description: Permissions for taking part in scenes.
     - name: Staff
       description: Permissions for the people who help run the game.
 permissions:
+  - name: scene.view
+    category: Scenes
+    description: Read scenes you are not in.
+  - name: scene.join
+    category: Scenes
+    description: Join scenes, RSVP to them and mark poses.
+  - name: scene.pose
+    category: Scenes
+    description: Have your poses recorded into scenes and fix your own poses.
+  - name: scene.create
+    category: Scenes
+    description: Start and schedule scenes, and run your own.
   - name: scene.close
     category: Staff
     description: Finish any scene, not only your own.
   - name: scene.manage
     category: Staff
     description: Change any scene or pose, not only your own, and cancel a scheduled scene that has poses in it.
+grants:
+  everyone: [scene.view]
+  approved: [scene.join, scene.pose, scene.create]
+  royalty: [scene.join, scene.pose, scene.create]
+  wizard: [scene.join, scene.pose, scene.create]
 
 # Create mode: a single owned WIZARD thing carries the capture hooks and the
 # +scene/* verbs. It MUST be WIZARD — it is the @hook/override target, runs the
@@ -130,29 +160,23 @@ objects:
       FUN`CAN`CLOSE: |-
         cor(u(%!/FUN`OWNS,%0,%1),permission(%0,scene.close))
 
-      # ---- approval guard -------------------------------------------------------
-      # The ONE place +scene asks "may this thing be ASSOCIATED with a scene?". Two halves:
-      #   • it must be a CHARACTER — a scene associates players, not things or rooms; and
-      #   • it must be APPROVED — isapproved() is the engine predicate, "royalty or above,
-      #     or holding the approved role", and it is false for a guest whatever else is set.
-      # The engine ships that rule and no policy for what earns the role; a game decides that
-      # and assigns it itself. A game that wants a DIFFERENT bar edits this one attribute —
-      # nothing else in the package tests the role, and the engine and the verbs cannot drift
-      # because both sides run the same isapproved() code.
+      # ---- participation guard -------------------------------------------------
+      # The ONE place +scene asks "may this character do this with scenes?": %0 must be a player, since a scene
+      # associates characters, not things or rooms, and must hold permission %1, one of the scene.* permissions
+      # declared above. Each gated verb names the permission it needs. Leaving is always allowed (CMD`LEAVE /
+      # UNTAG / DEACTIVATE).
       #
-      # Association is the line, not visibility: viewing a schedule or a scene's information is
-      # open to any character (see CMD`BROWSE / OLD / UPCOMING / SHOW / WHO / RECALL / POT, none
-      # of which include this guard), and leaving is always allowed (CMD`LEAVE / UNTAG /
-      # DEACTIVATE). Joining, owning, administering and posing into a scene all require approval.
+      # Reading is the Scene plugin's to decide: scene*() hides a scene from a reader who holds neither
+      # scene.view nor a place in it, so +scene, +scene/log and every package that reads scenes agree. The list
+      # verbs still refuse outright, so a reader without scene.view is told why rather than shown no scenes.
       #
-      # The guard is a bare @assert at the head of each gated verb, and DATA`DENY`APPROVAL keeps the refusal
-      # text in one place; get() reads it without evaluating it. An @assert inside a plain @include stops the
-      # caller too (help @include; only /nobreak fences it off), which is how the web verbs share
-      # INC`WEB`CHECK.
-      FUN`IS`APPROVED: |-
-        cand(hastype(%0,PLAYER),isapproved(%0))
-      DATA`DENY`APPROVAL: |-
-        You are not approved to take part in scenes. You can still browse the schedule with +scene and +scene/upcoming, and read any scene with +scene <id>.
+      # The guard is a bare @assert at the head of each gated verb, and FUN`DENY keeps the refusal text in one
+      # place. An @assert inside a plain @include stops the caller too (help @include; only /nobreak fences it
+      # off), which is how the web verbs share INC`WEB`CHECK.
+      FUN`MAY: |-
+        cand(hastype(%0,PLAYER),permission(%0,%1))
+      FUN`DENY: |-
+        Permission denied. You need the %0 permission.
 
       # ---- focus / ownership guards ---------------------------------------------
       # scenefocus() answers "#-1 NOT FOUND" for anyone who has not joined a scene, and that string is
@@ -162,7 +186,7 @@ objects:
       # while nothing was written. Everyone else failed a bare @assert carrying no message, so the verb
       # produced no output at all — indistinguishable from a command that does not exist.
       #
-      # Written as a bare @assert at each verb, as the approval guard is.
+      # Written as a bare @assert at each verb, as the participation guard is.
       DATA`DENY`NOFOCUS: |-
         You are not focused on a scene. Join one with +scene/join <id>, or see what is running with +scene.
       # The portal's compose box names its scene (+scene/pose <id>=…), so it is refused here rather than by
@@ -302,10 +326,10 @@ objects:
         {"label":"Recent poses","line":"+scene/recall","when":["scene_focus"],"icon":"History"}
       PALETTE`LEAVE: |-
         {"label":"Leave the scene","line":"+scene/leave","when":["scene_focus"],"icon":"Logout"}
-      # The JOIN entry's lock: 1 when the player (%#) may take part in scenes and is not already in the
+      # The JOIN entry's lock: 1 when the player (%#) may join scenes and is not already in the
       # one running where they stand.
       FUN`PALETTE`JOINABLE: |-
-        cand(u(%!/FUN`IS`APPROVED,%#),not(strmatch(scenefocus(%#),scenewhere(loc(%#)))))
+        cand(u(%!/FUN`MAY,%#,scene.join),not(strmatch(scenefocus(%#),scenewhere(loc(%#)))))
 
       CMD`TYPES:
         value: |-
@@ -435,7 +459,7 @@ objects:
       # the detail does not allow, and writes several values the one way.
       CMD`SET:
         value: |-
-          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); think setq(detail_key,lcstr(trim(%2))); @assert cor(member(scenedetail(),%q<detail_key>),get(%!/DATA`CONFIG`OPEN-DETAILS))=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert not(strmatch(setr(detail_value,scenedetail(%q<detail_key>,value,%3)),#-1*))=@pemit %#=notice(SCENE,after(%q<detail_value>,#-1%b),warn); @scene/set %q<scene_id>/%q<detail_key>=%q<detail_value>; @pemit %#=notice(SCENE,if(strlen(%q<detail_value>),Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] is now [u(%!/FUN`DETAIL`SHOW,%q<scene_id>,%q<detail_key>)].,Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] cleared.),ok)
+          $(?is)^\+scene/set +(?\:(\d+)/)?([^=]+)=(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); think setq(detail_key,lcstr(trim(%2))); @assert cor(member(scenedetail(),%q<detail_key>),get(%!/DATA`CONFIG`OPEN-DETAILS))=@pemit %#=notice(SCENE,No scene detail called %q<detail_key>. +scene/details lists them.,warn); @assert not(strmatch(setr(detail_value,scenedetail(%q<detail_key>,value,%3)),#-1*))=@pemit %#=notice(SCENE,after(%q<detail_value>,#-1%b),warn); @scene/set %q<scene_id>/%q<detail_key>=%q<detail_value>; @pemit %#=notice(SCENE,if(strlen(%q<detail_value>),Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] is now [u(%!/FUN`DETAIL`SHOW,%q<scene_id>,%q<detail_key>)].,Scene %q<scene_id>: [u(%!/FUN`DETAIL`LABEL,%q<detail_key>)] cleared.),ok)
         flags: [REGEXP]
 
       # ---- pose marks -------------------------------------------------------------
@@ -446,11 +470,11 @@ objects:
         cor(strmatch(scenepose(,%1,author),num(%0)),u(%!/FUN`OWNS,%0,scenepose(,%1,scene)))
       CMD`MARK:
         value: |-
-          $(?is)^\+scene/ma(?\:r(?\:k)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(strlen(setr(pose_id,trim(before(%1,chr(61))))),eq(words(setr(mark_word,lcstr(trim(after(%1,chr(61)))))),1))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`MARK),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`MARK,%#,%q<pose_id>)=@pemit %#=notice(SCENE,That pose is not yours to mark. Its author or the scene's owner can.,error); @assert not(member(scenepose(,%q<pose_id>,tags),%q<mark_word>))=@pemit %#=notice(SCENE,Pose %q<pose_id> is already marked %q<mark_word>.,warn); @scene/setpose %q<pose_id>/tags=setunion(scenepose(,%q<pose_id>,tags),%q<mark_word>); @pemit %#=notice(SCENE,Pose %q<pose_id> marked %q<mark_word>.,ok)
+          $(?is)^\+scene/ma(?\:r(?\:k)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert cand(strlen(setr(pose_id,trim(before(%1,chr(61))))),eq(words(setr(mark_word,lcstr(trim(after(%1,chr(61)))))),1))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`MARK),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`MARK,%#,%q<pose_id>)=@pemit %#=notice(SCENE,That pose is not yours to mark. Its author or the scene's owner can.,error); @assert not(member(scenepose(,%q<pose_id>,tags),%q<mark_word>))=@pemit %#=notice(SCENE,Pose %q<pose_id> is already marked %q<mark_word>.,warn); @scene/setpose %q<pose_id>/tags=setunion(scenepose(,%q<pose_id>,tags),%q<mark_word>); @pemit %#=notice(SCENE,Pose %q<pose_id> marked %q<mark_word>.,ok)
         flags: [REGEXP]
       CMD`UNMARK:
         value: |-
-          $(?is)^\+scene/unm(?\:a(?\:r(?\:k)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(strlen(setr(pose_id,trim(before(%1,chr(61))))),eq(words(setr(mark_word,lcstr(trim(after(%1,chr(61)))))),1))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`UNMARK),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`MARK,%#,%q<pose_id>)=@pemit %#=notice(SCENE,That pose is not yours to mark. Its author or the scene's owner can.,error); @assert member(scenepose(,%q<pose_id>,tags),%q<mark_word>)=@pemit %#=notice(SCENE,Pose %q<pose_id> is not marked %q<mark_word>.,warn); @scene/setpose %q<pose_id>/tags=setdiff(scenepose(,%q<pose_id>,tags),%q<mark_word>); @pemit %#=notice(SCENE,Pose %q<pose_id> is no longer marked %q<mark_word>.,ok)
+          $(?is)^\+scene/unm(?\:a(?\:r(?\:k)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert cand(strlen(setr(pose_id,trim(before(%1,chr(61))))),eq(words(setr(mark_word,lcstr(trim(after(%1,chr(61)))))),1))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`UNMARK),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`MARK,%#,%q<pose_id>)=@pemit %#=notice(SCENE,That pose is not yours to mark. Its author or the scene's owner can.,error); @assert member(scenepose(,%q<pose_id>,tags),%q<mark_word>)=@pemit %#=notice(SCENE,Pose %q<pose_id> is not marked %q<mark_word>.,warn); @scene/setpose %q<pose_id>/tags=setdiff(scenepose(,%q<pose_id>,tags),%q<mark_word>); @pemit %#=notice(SCENE,Pose %q<pose_id> is no longer marked %q<mark_word>.,ok)
         flags: [REGEXP]
 
       # ---- capture hooks --------------------------------------------------------
@@ -488,13 +512,13 @@ objects:
       # Flow per hook (one physical line, `;`-separated):
       #   0. %q<words> is what was said after the speaker's SPEECHMOD (FUN`SPEECHMOD), as the built-in reads it.
       #   1. @include INC`CAPTURE`DECIDE: %q<will_capture>, <room has an active scene I am focused on, and I am
-      #      approved> — computing %q<scene_id> and %q<room_id> along the way — and %q<poser_name>, the name the line goes
+      #      allowed to pose> — computing %q<scene_id> and %q<room_id> along the way — and %q<poser_name>, the name the line goes
       #      out under: the poser's persona in that scene (+scene/as) when it is captured, else their name. The check is
       #      `strmatch(scenefocus(%#),scenewhere(loc(%#))) AND not(strmatch(scenewhere,#-1*)) AND
-      #      FUN`IS`APPROVED(%#)` — a real, focused, in-room active scene (NOT just words(), which is
-      #      truthy on "#-1 NOT FOUND"), posed by a character still approved RIGHT NOW. The approval
-      #      term is what makes revocation take effect immediately: without it, a character approved
-      #      when they joined would keep writing poses into the scene after losing the flag, since
+      #      FUN`MAY(%#,scene.pose)` — a real, focused, in-room active scene (NOT just words(), which is
+      #      truthy on "#-1 NOT FOUND"), posed by a character holding scene.pose RIGHT NOW. That term
+      #      is what makes revocation take effect immediately: without it, a character allowed to pose
+      #      when they joined would keep writing poses into the scene after losing the permission, since
       #      their focus and membership survive the revocation.
       #   2. Captured ⇒ record with @scene/addpose as type ic, and @include/args INC`CAPTURE`LINE with the
       #      line's parts by name: the line drawn by the speaker's FORMAT`<VERB> or else the type's FORMAT,
@@ -516,7 +540,7 @@ objects:
       # missing from the archive, and only from the scene, never from the room.
 
       INC`CAPTURE`DECIDE: |-
-        think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`IS`APPROVED,%#)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]
+        think setq(scene_id,scenewhere(setr(room_id,loc(%#))))[setq(will_capture,cand(not(strmatch(%q<scene_id>,#-1*)),strmatch(scenefocus(%#),%q<scene_id>),u(%!/FUN`MAY,%#,scene.pose)))][setq(poser_name,if(%q<will_capture>,u(%!/FUN`POSER,%q<scene_id>,%#),name(%#)))][setq(hearers,if(hastype(%q<room_id>,ROOM),,%q<room_id>) [lcon(%q<room_id>)])]
 
       # A captured line as the room hears it, drawn once per hearer by FUN`POSE`DRAW: under a rule naming who
       # posed and the pose, over a rule naming the scene, or for a band, message or notice type as one line tagged
@@ -617,11 +641,11 @@ objects:
       # substitution is expanded AFTER the parser has finished eating the whitespace it eats. Nothing
       # in the verbs may put a Trim() back in front of the content, on either side of the wire.
       #
-      # Every web verb starts with INC`WEB`CHECK (approved, the scene exists and is running; its @asserts stop
+      # Every web verb starts with INC`WEB`CHECK (scene.join and scene.pose, the scene exists and is running; its @asserts stop
       # the verb) and INC`WEB`ENTER (cast, focus and context, then %q<scene_id>, %q<room_id> and %q<poser_name>),
       # each given the scene by name.
       INC`WEB`CHECK: |-
-        @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %<scene>,warn); @assert strmatch(scene(%<scene>,status),active)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTRUNNING),warn)
+        @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scene(%<scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %<scene>,warn); @assert strmatch(scene(%<scene>,status),active)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTRUNNING),warn)
       INC`WEB`ENTER: |-
         @assert not(strmatch(setr(join_result,scenejoin(%<scene>,%#)),#-1*))=@pemit %#=notice(SCENE,%q<join_result>,warn); @scene/focus %#=%<scene>; @context/push %#=scene_focus,[json(object,scene,%<scene>)]; think setq(scene_id,%<scene>)[setq(room_id,scene(%<scene>,room))][setq(poser_name,u(%!/FUN`POSER,%<scene>,%#))]
       CMD`WEB`EMIT:
@@ -670,7 +694,7 @@ objects:
       # body. The scene a player is in is scenefocus(); nothing is stored on the player.
       CMD`CREATE:
         value: |-
-          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert strlen(setr(create_title,trim(before(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`CREATE),warn); @assert not(strmatch(setr(scene_id,scenecreate(%L,%#,%q<create_title>,after(%1,chr(61)))),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
+          $(?is)^\+scene/cr(?\:e(?\:a(?\:t(?\:e)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert strlen(setr(create_title,trim(before(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`CREATE),warn); @assert not(strmatch(setr(scene_id,scenecreate(%L,%#,%q<create_title>,after(%1,chr(61)))),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @scene/focus %#=%q<scene_id>; @context/push %#=scene_focus,[json(object,scene,%q<scene_id>)]; @scene/set %q<scene_id>/status=get(%!/DATA`CONFIG`DEFAULT-STATUS); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> created and focused \(status: [get(%!/DATA`CONFIG`DEFAULT-STATUS)]\).,ok)
         flags: [REGEXP]
 
       # NOTE: verb bodies are written as ONE physical line with `;` separators. In a
@@ -682,13 +706,13 @@ objects:
       # +scene/schedule) is bound to the room the starter is in; one with a room keeps it.
       CMD`START:
         value: |-
-          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%q<scene_id>,%q<scene_status>),warn); @if not(strlen(scene(%q<scene_id>,room)))={@scene/set %q<scene_id>/room=%L}; @scene/set %q<scene_id>/status=active; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> is now active.,ok)
+          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%q<scene_id>,%q<scene_status>),warn); @if not(strlen(scene(%q<scene_id>,room)))={@scene/set %q<scene_id>/room=%L}; @scene/set %q<scene_id>/status=active; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Scene %q<scene_id> is now active.,ok)
         flags: [REGEXP]
 
       # +scene/start <id> is the same by id, without focusing the scene: how the portal resumes one.
       CMD`START`ID:
         value: |-
-          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%1,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%1,%q<scene_status>),warn); @if not(strlen(scene(%1,room)))={@scene/set %1/room=%L}; @scene/set %1/status=active; @trigger %!/HERE`SYNC=scene(%1,room); @pemit %#=notice(SCENE,Scene %1 is now active.,ok)
+          $(?is)^\+scene/st(?\:a(?\:r(?\:t)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(active finished cancelled,setr(scene_status,scene(%1,status))))=@pemit %#=notice(SCENE,u(%!/FUN`START`DENY,%1,%q<scene_status>),warn); @if not(strlen(scene(%1,room)))={@scene/set %1/room=%L}; @scene/set %1/status=active; @trigger %!/HERE`SYNC=scene(%1,room); @pemit %#=notice(SCENE,Scene %1 is now active.,ok)
         flags: [REGEXP]
       # Why scene %0, whose status is %1, can't be started, paused or finished.
       FUN`START`DENY: |-
@@ -705,19 +729,19 @@ objects:
       # would only report success twice.
       CMD`PAUSE:
         value: |-
-          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=; @pemit %#=notice(SCENE,Scene %q<scene_id> paused. It is on the schedule until +scene/start resumes it.,ok)
+          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=; @pemit %#=notice(SCENE,Scene %q<scene_id> paused. It is on the schedule until +scene/start resumes it.,ok)
         flags: [REGEXP]
 
       # +scene/pause <id>, +scene/pause <id>=<when> and +scene/pause =<when> (the focused scene). One
       # pattern for all three: $+scene/pause *=* would also match here, and both would run.
       CMD`PAUSE`ID:
         value: |-
-          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); think setq(pause_ref,secs(f),pause_when,trim(after(%1,chr(61))))[setq(pause_at,if(strlen(%q<pause_when>),u(%!/FUN`SCHEDULE`WHEN,%q<pause_when>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)))]; @assert cor(not(strlen(%q<pause_when>)),isint(%q<pause_at>))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<pause_at>,warn); @assert cor(not(strlen(%q<pause_when>)),gt(%q<pause_at>,mul(%q<pause_ref>,1000)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=%q<pause_at>; @pemit %#=notice(SCENE,Scene %q<scene_id> paused[if(strlen(%q<pause_at>),%b[chr(40)]rescheduled for [u(%!/FUN`SCHEDULE`DISPLAY,%q<pause_when>,%q<pause_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)][chr(41)])]. It is on the schedule until +scene/start %q<scene_id> resumes it.,ok)
+          $(?is)^\+scene/pa(?\:u(?\:s(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(trim(before(%1,chr(61))),scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(setr(scene_status,scene(%q<scene_id>,status)),active)=@pemit %#=notice(SCENE,u(%!/FUN`PAUSE`DENY,%q<scene_id>,%q<scene_status>),warn); think setq(pause_ref,secs(f),pause_when,trim(after(%1,chr(61))))[setq(pause_at,if(strlen(%q<pause_when>),u(%!/FUN`SCHEDULE`WHEN,%q<pause_when>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)))]; @assert cor(not(strlen(%q<pause_when>)),isint(%q<pause_at>))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<pause_at>,warn); @assert cor(not(strlen(%q<pause_when>)),gt(%q<pause_at>,mul(%q<pause_ref>,1000)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/status=paused; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/set %q<scene_id>/scheduledfor=%q<pause_at>; @pemit %#=notice(SCENE,Scene %q<scene_id> paused[if(strlen(%q<pause_at>),%b[chr(40)]rescheduled for [u(%!/FUN`SCHEDULE`DISPLAY,%q<pause_when>,%q<pause_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<pause_ref>)][chr(41)])]. It is on the schedule until +scene/start %q<scene_id> resumes it.,ok)
         flags: [REGEXP]
 
       CMD`FINISH:
         value: |-
-          $(?is)^\+scene/f(?\:i(?\:n(?\:i(?\:s(?\:h)?)?)?)?)?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`CAN`CLOSE,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTCLOSER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,u(%!/FUN`FINISH`DENY,%q<scene_id>,%q<scene_status>),warn); @scene/set %q<scene_id>/status=finished; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/focus %#=; @context/drop %#=scene_focus; @pemit %#=notice(SCENE,Scene %q<scene_id> finished.,ok)
+          $(?is)^\+scene/f(?\:i(?\:n(?\:i(?\:s(?\:h)?)?)?)?)?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`CAN`CLOSE,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTCLOSER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,u(%!/FUN`FINISH`DENY,%q<scene_id>,%q<scene_status>),warn); @scene/set %q<scene_id>/status=finished; @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @scene/focus %#=; @context/drop %#=scene_focus; @pemit %#=notice(SCENE,Scene %q<scene_id> finished.,ok)
         flags: [REGEXP]
 
       # +scene/finish <id> closes a scene by id, without joining it: how staff close one they are not in.
@@ -725,7 +749,7 @@ objects:
       # only a scene that does not exist stops them; to anyone else a hidden scene still reads as missing.
       CMD`FINISH`ID:
         value: |-
-          $(?is)^\+scene/f(?\:i(?\:n(?\:i(?\:s(?\:h)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cor(not(strmatch(scene(%1,status),#-1*)),permission(%#,scene.close))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(strmatch(scene(%1,status),#-1 NOT FOUND))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`CAN`CLOSE,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTCLOSER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%1,status))))=@pemit %#=notice(SCENE,u(%!/FUN`FINISH`DENY,%1,%q<scene_status>),warn); @scene/set %1/status=finished; @trigger %!/HERE`SYNC=scene(%1,room); @if strmatch(scenefocus(%#),%1)={@scene/focus %#=; @context/drop %#=scene_focus}; @pemit %#=notice(SCENE,Scene %1 finished.,ok)
+          $(?is)^\+scene/f(?\:i(?\:n(?\:i(?\:s(?\:h)?)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert cor(not(strmatch(scene(%1,status),#-1*)),permission(%#,scene.close))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(strmatch(scene(%1,status),#-1 NOT FOUND))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`CAN`CLOSE,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTCLOSER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%1,status))))=@pemit %#=notice(SCENE,u(%!/FUN`FINISH`DENY,%1,%q<scene_status>),warn); @scene/set %1/status=finished; @trigger %!/HERE`SYNC=scene(%1,room); @if strmatch(scenefocus(%#),%1)={@scene/focus %#=; @context/drop %#=scene_focus}; @pemit %#=notice(SCENE,Scene %1 finished.,ok)
         flags: [REGEXP]
 
       # ---- membership / RSVP / focus --------------------------------------------
@@ -737,20 +761,20 @@ objects:
         %[[firstof(scene(%0,joinpolicy),open)]%][if(gt(firstof(scene(%0,playercap),0),0),%b%[cap [scene(%0,playercap)]%])]
       CMD`POLICY:
         value: |-
-          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
+          $(?is)^\+scene/pol(?\:i(?\:c(?\:y)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert match(open invite-only limited,setr(policy,lcstr(trim(%2))))=@pemit %#=notice(SCENE,Use +scene/policy [<id>=]open|invite-only|limited.,warn); @assert cor(not(strmatch(%q<policy>,limited)),gt(firstof(scene(%q<scene_id>,playercap),0),0))=@pemit %#=notice(SCENE,Set a positive +scene/limit first.,warn); @assert not(strmatch(setr(policy_result,sceneset(%q<scene_id>,joinpolicy,%q<policy>)),#-1*))=@pemit %#=notice(SCENE,No such scene or invalid joining policy.,warn); @pemit %#=notice(SCENE,Joining policy set to %q<policy>.,ok)
         flags: [REGEXP]
       CMD`LIMIT:
         value: |-
-          $(?is)^\+scene/lim(?\:i(?\:t)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
+          $(?is)^\+scene/lim(?\:i(?\:t)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert cand(isint(%2),gte(%2,0),lte(%2,10000))=@pemit %#=notice(SCENE,Use +scene/limit [<id>=]0-10000. Zero clears the cap.,warn); @assert cor(gt(%2,0),not(strmatch(scene(%q<scene_id>,joinpolicy),limited)))=@pemit %#=notice(SCENE,Change limited policy before clearing its cap.,warn); @assert not(strmatch(setr(limit_result,sceneset(%q<scene_id>,playercap,%2)),#-1*))=@pemit %#=notice(SCENE,The cap cannot be below the number of participating players.,warn); @pemit %#=notice(SCENE,Player cap set to %2.,ok)
         flags: [REGEXP]
       CMD`INVITE:
         value: |-
-          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`IS`APPROVED,%q<invitee>)=@pemit %#=notice(SCENE,That player is not approved to participate in scenes.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%1,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,%q<invite_result>,warn); @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
+          $(?is)^\+scene/inv(?\:i(?\:t(?\:e)?)?)? (\d+)=(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert isdbref(setr(invitee,pmatch(%2)))=@pemit %#=notice(SCENE,No such player.,warn); @assert u(%!/FUN`MAY,%q<invitee>,scene.join)=@pemit %#=notice(SCENE,That player cannot join scenes: they do not hold the scene.join permission.,warn); @assert not(match(owner gm participant,scenemember(%1,%q<invitee>,role)))=@pemit %#=notice(SCENE,That player already participates.,warn); @assert not(strmatch(setr(invite_result,sceneinvite(%1,%q<invitee>)),#-1*))=@pemit %#=notice(SCENE,%q<invite_result>,warn); @pemit %#=notice(SCENE,Invitation saved for %2. They may +scene/join %1 if a seat is available.,ok)
         flags: [REGEXP]
 
       CMD`JOIN:
         value: |-
-          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
+          $(?is)^\+scene/j(?\:o(?\:i(?\:n)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=u(%!/FUN`FILTER,JOIN,notice(SCENE,Joined and focused on scene %1.,ok),%1,%#)
         flags: [REGEXP]
 
       # NOTE: one physical line (q-registers cross `;` but not newlines in a $-command body).
@@ -764,7 +788,7 @@ objects:
       # +scene/tag and its common name, +scene/rsvp.
       CMD`TAG:
         value: |-
-          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner gm participant invited,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1 or have an invitation. Use +scene/join %1.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
+          $(?is)^\+scene/(?\:ta(?\:g)?|rs(?\:v(?\:p)?)?) (.+)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert not(match(owner gm participant invited,scenemember(%1,%#,role)))=@pemit %#=notice(SCENE,You are already in scene %1 or have an invitation. Use +scene/join %1.,warn); @scene/member %1/attending=%#; @pemit %#=notice(SCENE,RSVP'd to scene %1.,ok)
         flags: [REGEXP]
 
       CMD`UNTAG:
@@ -776,7 +800,7 @@ objects:
       # back to it. A comma or an = would split the fields of @scene/addpose and @scene/showas.
       CMD`AS:
         value: |-
-          $(?is)^\+scene/as(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); think setq(pose_as,trim(%1)); @assert not(cor(pos(chr(61),%q<pose_as>),pos(chr(44),%q<pose_as>)))=@pemit %#=notice(SCENE,A name to pose under can't have a comma or an = in it.,warn); think setq(pose_as,if(strmatch(%q<pose_as>,name(%#)),,%q<pose_as>)); @scene/showas %q<scene_id>/%#=%q<pose_as>; @pemit %#=notice(SCENE,if(strlen(%q<pose_as>),Future poses show as: %q<pose_as>,Future poses show under your own name.),ok)
+          $(?is)^\+scene/as(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); think setq(pose_as,trim(%1)); @assert not(cor(pos(chr(61),%q<pose_as>),pos(chr(44),%q<pose_as>)))=@pemit %#=notice(SCENE,A name to pose under can't have a comma or an = in it.,warn); think setq(pose_as,if(strmatch(%q<pose_as>,name(%#)),,%q<pose_as>)); @scene/showas %q<scene_id>/%#=%q<pose_as>; @pemit %#=notice(SCENE,if(strlen(%q<pose_as>),Future poses show as: %q<pose_as>,Future poses show under your own name.),ok)
         flags: [REGEXP]
 
       # ---- edit your own poses --------------------------------------------------
@@ -792,7 +816,7 @@ objects:
         cor(strmatch(scenepose(,%1,author),num(%0)),u(%!/FUN`MANAGES,%0))
       CMD`EDIT:
         value: |-
-          $(?is)^\+scene/ed(?\:i(?\:t)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(pose_id,trim(before(%1,chr(61))))),pos(^^^,after(%1,chr(61))),strlen(setr(edit_old,before(after(%1,chr(61)),^^^))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`EDIT),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`EDIT,%#,%q<pose_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @assert pos(%q<edit_old>,scenepose(,%q<pose_id>,content))=@pemit %#=notice(SCENE,Pose %q<pose_id> has no "%q<edit_old>" in it.,warn); think setq(edit_new,edit(scenepose(,%q<pose_id>,content),%q<edit_old>,after(after(%1,chr(61)),^^^))); @assert not(u(%!/FUN`BARE,%q<pose_id>,%q<edit_new>))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`EMPTY),warn); @scene/editpose %q<pose_id>=%#,%q<edit_new>; @pemit %#=notice(SCENE,Pose %q<pose_id> edited.,ok)
+          $(?is)^\+scene/ed(?\:i(?\:t)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert cand(pos(chr(61),%1),strlen(setr(pose_id,trim(before(%1,chr(61))))),pos(^^^,after(%1,chr(61))),strlen(setr(edit_old,before(after(%1,chr(61)),^^^))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`EDIT),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`EDIT,%#,%q<pose_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @assert pos(%q<edit_old>,scenepose(,%q<pose_id>,content))=@pemit %#=notice(SCENE,Pose %q<pose_id> has no "%q<edit_old>" in it.,warn); think setq(edit_new,edit(scenepose(,%q<pose_id>,content),%q<edit_old>,after(after(%1,chr(61)),^^^))); @assert not(u(%!/FUN`BARE,%q<pose_id>,%q<edit_new>))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`EMPTY),warn); @scene/editpose %q<pose_id>=%#,%q<edit_new>; @pemit %#=notice(SCENE,Pose %q<pose_id> edited.,ok)
         flags: [REGEXP]
 
       # The whole text at once: the portal's Edit on a pose sends this. Its author or a scene manager, as for CMD`EDIT. The
@@ -803,38 +827,38 @@ objects:
       # is, commas and all (it splits off one field); a substitution is not parsed again.
       CMD`REWRITE:
         value: |-
-          $(?is)^\+scene/rew(?\:r(?\:i(?\:t(?\:e)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(pose_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`REWRITE),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`EDIT,%#,%q<pose_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @assert not(u(%!/FUN`BARE,%q<pose_id>,setr(edit_new,after(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`EMPTY),warn); @scene/editpose %q<pose_id>=%#,%q<edit_new>; @pemit %#=notice(SCENE,Pose %q<pose_id> rewritten.,ok)
+          $(?is)^\+scene/rew(?\:r(?\:i(?\:t(?\:e)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert cand(pos(chr(61),%1),strlen(setr(pose_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`REWRITE),warn); @assert not(strmatch(scenepose(,%q<pose_id>,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %q<pose_id>,warn); @assert u(%!/FUN`CAN`EDIT,%#,%q<pose_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @assert not(u(%!/FUN`BARE,%q<pose_id>,setr(edit_new,after(%1,chr(61)))))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`EMPTY),warn); @scene/editpose %q<pose_id>=%#,%q<edit_new>; @pemit %#=notice(SCENE,Pose %q<pose_id> rewritten.,ok)
         flags: [REGEXP]
 
       # Undo, redo and delete check the pose exists and is the player's (a scene manager may act on anyone's), then
       # call the function, whose answer is the pose id or why it could not: @scene/undo tells only the Logger.
       CMD`UNDO:
         value: |-
-          $(?is)^\+scene/und(?\:o)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneundo(%1))),notice(SCENE,Pose %1 undone.,ok),notice(SCENE,%q<pose_result>,warn))
+          $(?is)^\+scene/und(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneundo(%1))),notice(SCENE,Pose %1 undone.,ok),notice(SCENE,%q<pose_result>,warn))
         flags: [REGEXP]
 
       CMD`REDO:
         value: |-
-          $(?is)^\+scene/red(?\:o)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneredo(%1))),notice(SCENE,Pose %1 redone.,ok),notice(SCENE,%q<pose_result>,warn))
+          $(?is)^\+scene/red(?\:o)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,sceneredo(%1))),notice(SCENE,Pose %1 redone.,ok),notice(SCENE,%q<pose_result>,warn))
         flags: [REGEXP]
 
       CMD`DELETE:
         value: |-
-          $(?is)^\+scene/del(?\:e(?\:t(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,scenedelpose(%1))),notice(SCENE,Pose %1 deleted.,ok),notice(SCENE,%q<pose_result>,warn))
+          $(?is)^\+scene/del(?\:e(?\:t(?\:e)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.pose)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.pose),error); @assert not(strmatch(scenepose(,%1,author),#-1*))=@pemit %#=notice(SCENE,No such pose: %1,warn); @assert u(%!/FUN`CAN`EDIT,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTPOSER),error); @pemit %#=if(isint(setr(pose_result,scenedelpose(%1))),notice(SCENE,Pose %1 deleted.,ok),notice(SCENE,%q<pose_result>,warn))
         flags: [REGEXP]
 
       # The pose must be in the focused scene: a move reorders whichever scene the pose is in, which is
       # not necessarily the one the owner check was about.
       CMD`MOVE:
         value: |-
-          $(?is)^\+scene/mo(?\:v(?\:e)?)? (.*?)=(.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(scenepose(%q<scene_id>,%1,id),%1)=@pemit %#=notice(SCENE,No pose %1 in scene %q<scene_id>.,warn); @pemit %#=if(isint(setr(pose_result,scenemovepose(%1,%2))),notice(SCENE,Pose %1 moved.,ok),notice(SCENE,%q<pose_result>,warn))
+          $(?is)^\+scene/mo(?\:v(?\:e)?)? (.*?)=(.*?)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,scenefocus(%#)),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert strmatch(scenepose(%q<scene_id>,%1,id),%1)=@pemit %#=notice(SCENE,No pose %1 in scene %q<scene_id>.,warn); @pemit %#=if(isint(setr(pose_result,scenemovepose(%1,%2))),notice(SCENE,Pose %1 moved.,ok),notice(SCENE,%q<pose_result>,warn))
         flags: [REGEXP]
 
       # ---- visibility -----------------------------------------------------------
       # +scene/public [<id>] and +scene/private [<id>]: the focused scene, or the one named.
       CMD`PRIVACY:
         value: |-
-          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].,ok)
+          $(?is)^\+scene/(pu(?\:b(?\:l(?\:i(?\:c)?)?)?)?|pr(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)(?\: +(\d+))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%2,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/public=strmatch(%1,pu*); @pemit %#=notice(SCENE,Scene %q<scene_id> is now [if(strmatch(%1,pu*),public,private)].,ok)
         flags: [REGEXP]
 
       # ---- viewing --------------------------------------------------------------
@@ -972,15 +996,15 @@ objects:
       # +scene/old/2 canon=*Fate*. Bare +scene takes none, since +scene <id> is the scene's card.
       CMD`BROWSE:
         value: |-
-          $(?is)^\+scene(?\:/lis(?\:t)?)?(?\:/(\d+))?$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
+          $(?is)^\+scene(?\:/lis(?\:t)?)?(?\:/(\d+))?$: @assert permission(%#,scene.view)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.view),error); @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,,pattern,
         flags: [REGEXP]
       CMD`BROWSE`MATCH:
         value: |-
-          $(?is)^\+scene/lis(?\:t)?(?\:/(\d+))? +([^=]+)=(.*)$: @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
+          $(?is)^\+scene/lis(?\:t)?(?\:/(\d+))? +([^=]+)=(.*)$: @assert permission(%#,scene.view)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.view),error); @include/args %!/INC`LIST=filter,active,page,%1,switch,LIST,detail,%2,pattern,%3
         flags: [REGEXP]
       CMD`OLD:
         value: |-
-          $(?is)^\+scene/ol(?\:d)?(?\:/(\d+))?(?\: +([^=]+)=(.*))?$: @include/args %!/INC`LIST=filter,finished,page,%1,switch,OLD,detail,%2,pattern,%3
+          $(?is)^\+scene/ol(?\:d)?(?\:/(\d+))?(?\: +([^=]+)=(.*))?$: @assert permission(%#,scene.view)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.view),error); @include/args %!/INC`LIST=filter,finished,page,%1,switch,OLD,detail,%2,pattern,%3
         flags: [REGEXP]
       CMD`MINE:
         value: |-
@@ -1006,11 +1030,11 @@ objects:
         setq(split_problem,#-1 INVALID DATE: GIVE A DATE AND EXACT CLOCK TIME)[if(regmatch(%0,\\A\[0-9\]\[0-9\]?/\[0-9\]\[0-9\]?/),dateparse(extract(%0,1,2,/),%1,%2),firstof(first(iter(lnum(1,min(8,sub(words(%0,/),1))),if(isint(setr(split_try,u(%!/FUN`SCHEDULE`WHEN,extract(%0,1,%i0,/),%1,%2))),%i0,setq(split_problem,%q<split_try>)))),%q<split_problem>))]
       CMD`SCHEDULE:
         value: |-
-          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),pos(/,setr(schedule_head,before(%1,chr(61)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); think setq(schedule_ref,secs(f),schedule_zone,firstof(u(%!/FUN`ZONE,%#),UTC)); @assert isint(setr(schedule_cut,u(%!/FUN`SCHEDULE`SPLIT,%q<schedule_head>,%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_cut>,warn); @assert strlen(setr(schedule_title,trim(extract(%q<schedule_head>,add(%q<schedule_cut>,1),words(%q<schedule_head>,/),/))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`SCHEDULE`DISPLAY,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_at>,%q<schedule_zone>,%q<schedule_ref>)].,ok)
+          $(?is)^\+scene/sc(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert cand(pos(chr(61),%1),pos(/,setr(schedule_head,before(%1,chr(61)))),strlen(trim(setr(schedule_pitch,after(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); think setq(schedule_ref,secs(f),schedule_zone,firstof(u(%!/FUN`ZONE,%#),UTC)); @assert isint(setr(schedule_cut,u(%!/FUN`SCHEDULE`SPLIT,%q<schedule_head>,%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_cut>,warn); @assert strlen(setr(schedule_title,trim(extract(%q<schedule_head>,add(%q<schedule_cut>,1),words(%q<schedule_head>,/),/))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`SCHEDULE),warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_zone>,%q<schedule_ref>)))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @assert not(strmatch(setr(scene_id,scenecreate(,%#,%q<schedule_title>,%q<schedule_pitch>,%q<schedule_at>)),#-1*))=@pemit %#=notice(SCENE,%q<scene_id>,warn); @scene/member %q<scene_id>/owner=%#; @pemit %#=notice(SCENE,Scheduled scene %q<scene_id> "%q<schedule_title>" for [u(%!/FUN`SCHEDULE`DISPLAY,extract(%q<schedule_head>,1,%q<schedule_cut>,/),%q<schedule_at>,%q<schedule_zone>,%q<schedule_ref>)].,ok)
         flags: [REGEXP]
       CMD`RESCHEDULE:
         value: |-
-          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert cand(pos(chr(61),%1),strlen(setr(scene_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`RESCHEDULE),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,Scene %q<scene_id> is %q<scene_status>. Only a scene still to come can be rescheduled.,warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,after(%1,chr(61)),firstof(u(%!/FUN`ZONE,%#),UTC),setr(schedule_ref,secs(f)))))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/scheduledfor=%q<schedule_at>; @scene/set %q<scene_id>/status=switch(%q<scene_status>,active,paused,%q<scene_status>); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Rescheduled scene %q<scene_id> for [u(%!/FUN`SCHEDULE`DISPLAY,after(%1,chr(61)),%q<schedule_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<schedule_ref>)].[if(strmatch(%q<scene_status>,active),%bIt is paused until +scene/start %q<scene_id> resumes it.)],ok)
+          $(?is)^\+scene/res(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert cand(pos(chr(61),%1),strlen(setr(scene_id,trim(before(%1,chr(61))))))=@pemit %#=notice(SCENE,get(%!/DATA`USAGE`RESCHEDULE),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(match(finished cancelled,setr(scene_status,scene(%q<scene_id>,status))))=@pemit %#=notice(SCENE,Scene %q<scene_id> is %q<scene_status>. Only a scene still to come can be rescheduled.,warn); @assert isint(setr(schedule_at,u(%!/FUN`SCHEDULE`WHEN,after(%1,chr(61)),firstof(u(%!/FUN`ZONE,%#),UTC),setr(schedule_ref,secs(f)))))=@pemit %#=notice(SCENE,[get(%!/DATA`DENY`BADTIME)] %q<schedule_at>,warn); @assert gt(%q<schedule_at>,mul(%q<schedule_ref>,1000))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`PASTTIME),warn); @scene/set %q<scene_id>/scheduledfor=%q<schedule_at>; @scene/set %q<scene_id>/status=switch(%q<scene_status>,active,paused,%q<scene_status>); @trigger %!/HERE`SYNC=scene(%q<scene_id>,room); @pemit %#=notice(SCENE,Rescheduled scene %q<scene_id> for [u(%!/FUN`SCHEDULE`DISPLAY,after(%1,chr(61)),%q<schedule_at>,firstof(u(%!/FUN`ZONE,%#),UTC),%q<schedule_ref>)].[if(strmatch(%q<scene_status>,active),%bIt is paused until +scene/start %q<scene_id> resumes it.)],ok)
         flags: [REGEXP]
       # +scene/unschedule and +scene/cancel take a scene off the schedule for good: its time is cleared
       # and its status is `cancelled`, so it is in no list but the archive. (@scene/delete is the POSE
@@ -1019,7 +1043,7 @@ objects:
       # it already is.
       CMD`UNSCHEDULE:
         value: |-
-          $(?is)^\+scene/(?\:uns(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?|ca(?\:n(?\:c(?\:e(?\:l)?)?)?)?) (.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(strmatch(scene(%1,status),cancelled))=@pemit %#=notice(SCENE,Scene %1 is already cancelled.,warn); @assert cor(u(%!/FUN`MANAGES,%#),not(match(active finished,scene(%1,status))))=@pemit %#=notice(SCENE,Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.,warn); @assert cor(u(%!/FUN`MANAGES,%#),not(scene(%1,posecount)))=@pemit %#=notice(SCENE,Scene %1 has poses in it\, so only a wizard or someone holding the scene.manage permission can cancel it.,error); @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @trigger %!/HERE`SYNC=scene(%1,room); @pemit %#=notice(SCENE,Cancelled scene %1.,ok)
+          $(?is)^\+scene/(?\:uns(?\:c(?\:h(?\:e(?\:d(?\:u(?\:l(?\:e)?)?)?)?)?)?)?|ca(?\:n(?\:c(?\:e(?\:l)?)?)?)?) (.+)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(scene(%1,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %1,warn); @assert u(%!/FUN`OWNS,%#,%1)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @assert not(strmatch(scene(%1,status),cancelled))=@pemit %#=notice(SCENE,Scene %1 is already cancelled.,warn); @assert cor(u(%!/FUN`MANAGES,%#),not(match(active finished,scene(%1,status))))=@pemit %#=notice(SCENE,Scene %1 is [scene(%1,status)]. Only a scene that has not started can be cancelled.,warn); @assert cor(u(%!/FUN`MANAGES,%#),not(scene(%1,posecount)))=@pemit %#=notice(SCENE,Scene %1 has poses in it\, so only a wizard or someone holding the scene.manage permission can cancel it.,error); @scene/set %1/scheduledfor=; @scene/set %1/status=cancelled; @trigger %!/HERE`SYNC=scene(%1,room); @pemit %#=notice(SCENE,Cancelled scene %1.,ok)
         flags: [REGEXP]
       # The schedule reads like a calendar: scenes in time order, the day named on the first scene of
       # each day, the scenes with no time last. One table, so the columns line up from day to day. %1 is
@@ -1063,7 +1087,7 @@ objects:
       # +scenes/upcoming, +events/upcoming. One regexp pattern, so the aliases and the command cannot drift.
       CMD`UPCOMING:
         value: |-
-          $(?is)^\+(?\:scene/up(?\:c(?\:o(?\:m(?\:i(?\:n(?\:g)?)?)?)?)?)?|(?\:scenes|events)(?\:/upcoming)?)(?\: +(.+))?$: @assert cor(not(strlen(%1)),strmatch(%1,all),cand(isint(%1),gt(%1,0)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADDAYS),warn); @pemit %#=u(%!/FUN`SCHEDULE`RENDER,firstof(%1,get(%!/DATA`CONFIG`SCHEDULE-DAYS)),u(%!/FUN`ZONE,%#))
+          $(?is)^\+(?\:scene/up(?\:c(?\:o(?\:m(?\:i(?\:n(?\:g)?)?)?)?)?)?|(?\:scenes|events)(?\:/upcoming)?)(?\: +(.+))?$: @assert permission(%#,scene.view)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.view),error); @assert cor(not(strlen(%1)),strmatch(%1,all),cand(isint(%1),gt(%1,0)))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`BADDAYS),warn); @pemit %#=u(%!/FUN`SCHEDULE`RENDER,firstof(%1,get(%!/DATA`CONFIG`SCHEDULE-DAYS)),u(%!/FUN`ZONE,%#))
         flags: [REGEXP]
 
       # ---- participation (+scene/deactivate | /activate): pause/resume w/o leaving -
@@ -1076,7 +1100,7 @@ objects:
         flags: [REGEXP]
       CMD`ACTIVATE:
         value: |-
-          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
+          $(?is)^\+scene/ac(?\:t(?\:i(?\:v(?\:a(?\:t(?\:e)?)?)?)?)?)? (.*?)$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.join),error); @assert not(strmatch(setr(join_result,scenejoin(%1,%#)),#-1*))=@pemit %#=notice(SCENE,switch(%q<join_result>,#-1 NOT FOUND,No such scene: %1,%q<join_result>),warn); @scene/focus %#=%1; @context/push %#=scene_focus,[json(object,scene,%1)]; @pemit %#=notice(SCENE,Activated scene %1 - your poses are recorded again.,ok)
         flags: [REGEXP]
 
       # ---- summary + info card --------------------------------------------------
@@ -1140,11 +1164,11 @@ objects:
       # The id is digits, so a title or pitch that merely has an = in it is not taken for one.
       CMD`TITLE:
         value: |-
-          $(?is)^\+scene/ti(?\:t(?\:l(?\:e)?)?)? (?\:(\d+)=)?(.+)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/title=%2; @pemit %#=notice(SCENE,Scene %q<scene_id> is now titled: %2,ok)
+          $(?is)^\+scene/ti(?\:t(?\:l(?\:e)?)?)? (?\:(\d+)=)?(.+)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/title=%2; @pemit %#=notice(SCENE,Scene %q<scene_id> is now titled: %2,ok)
         flags: [REGEXP]
       CMD`PITCH:
         value: |-
-          $(?is)^\+scene/pi(?\:t(?\:c(?\:h)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`APPROVAL),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/summary=%2; @pemit %#=notice(SCENE,Pitch set for scene %q<scene_id>.,ok)
+          $(?is)^\+scene/pi(?\:t(?\:c(?\:h)?)?)? (?\:(\d+)=)?(.*)$: @assert u(%!/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u(%!/FUN`DENY,scene.create),error); @assert not(strmatch(setr(scene_id,firstof(%1,scenefocus(%#))),#-1*))=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<scene_id>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<scene_id>,warn); @assert u(%!/FUN`OWNS,%#,%q<scene_id>)=@pemit %#=notice(SCENE,get(%!/DATA`DENY`NOTOWNER),error); @scene/set %q<scene_id>/summary=%2; @pemit %#=notice(SCENE,Pitch set for scene %q<scene_id>.,ok)
         flags: [REGEXP]
       # Scene DETAILS card. `+scene <id>` and `+scene/info <id>` are the same question asked two
       # ways, so they run the same renderer: naming an id has always meant "tell me about this one".
@@ -1357,9 +1381,12 @@ objects:
         scene details|scene types
       SEE`POT: |-
         scene pose|scene join
+      SEE`SCENE`PERMISSIONS: |-
+        scene join|scene pose
       HELP`SCENE: |-
-        A **scene** is a shared, logged piece of roleplay. Any approved character in the room can be in
-        one; the log is readable afterwards, in-game and in the portal.
+        A **scene** is a shared, logged piece of roleplay. Characters in the room can be in one; the log
+        is readable afterwards, in-game and in the portal. What you may do depends on the scene
+        permissions you hold; see `+help scene permissions`.
 
         ## Getting in
 
@@ -1395,7 +1422,7 @@ objects:
       HELP`SCENE`POLICY: |-
         Who may join a scene is its **joining policy**, which its owner sets:
 
-        - `+scene/policy \[<id>=\]open` — anyone with an approved character may join. This is the default
+        - `+scene/policy \[<id>=\]open` — anyone holding `scene.join` may join. This is the default
         - `+scene/policy \[<id>=\]invite-only` — only players invited with `+scene/invite <id>=<player>`, by
           the owner or a scene manager
         - `+scene/policy \[<id>=\]limited` — anyone may join until the scene is full. Set a limit first
@@ -1422,7 +1449,7 @@ objects:
         - `+scene/leave` — leave the focused scene; if you never posed, you leave no trace
         - `+scene/deactivate` — stay a member but stop recording; `+scene/activate <id>` resumes
 
-        Joining needs an approved character.
+        Joining needs the `scene.join` permission.
       HELP`SCENE`POSE: |-
         With a scene focused, ordinary `pose`, `say`, `semipose` and `@emit` in its room are captured
         as you write them — nothing extra to type.
@@ -1643,6 +1670,32 @@ objects:
         `` &FILTER`DETAIL`SHOW`CAPS <logger>=if\(strmatch\(%%2,verse\),ucstr\(%%0\),%%0\) ``
 
         A filter a package attaches to the Scene Logger goes away when the package is uninstalled.
+      HELP`SCENE`PERMISSIONS: |-
+        Four permissions decide what a character may do with scenes. A game changes who holds them with
+        `@role/allow` and `@role/deny`, like any other permission.
+
+        - `scene.view` — read scenes you are not in: `+scene`, `+scene/old`, `+scene/upcoming`, a scene's
+          card and its log, here and in the portal. A scene you are in stays readable to you without it
+        - `scene.join` — `+scene/join`, `+scene/tag`, `+scene/activate`, `+scene/mark` and `+scene/unmark`
+        - `scene.pose` — have your poses recorded, pose from the portal, `+scene/as`, and fix your own
+          poses with `+scene/edit`, `/rewrite`, `/undo`, `/redo` and `/delete`
+        - `scene.create` — `+scene/create` and `+scene/schedule`, and running a scene you own: `/start`,
+          `/pause`, `/finish`, `/title`, `/pitch`, `/set`, `/policy`, `/limit`, `/invite`, `/public`,
+          `/private`, `/move`, `/reschedule` and `/cancel`
+
+        A new game gives `scene.view` to everyone, and the other three to the `approved` role, royalty
+        and wizards. `scene.close` and `scene.manage` are for staff; see `+help scene`.
+
+        Examples:
+
+        `@role/allow player=scene.join` — every character may join scenes, approved or not.
+
+        `@role/deny guest=scene.view` — guests cannot read scene logs.
+
+        `think permission(me,scene.pose)` — whether you may pose into scenes.
+
+        Output:
+        `1`
       HELP`POT: |-
         `+pot` — "pose tracker" — shows who is in your focused scene, how long since each of them
         last posed, so a table can tell whose turn it is.

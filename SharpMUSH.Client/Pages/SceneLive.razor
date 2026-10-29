@@ -102,11 +102,11 @@ else
             </div>
         </div>
 
-        @if (scene.IsLive && _approved == false)
+        @if (scene.IsLive && _mayPose == false)
         {
-            @* The scene package refuses every pose from a character that is not approved, and says so only to
-               that character's terminal: offering the composer here would take a pose and show nothing. *@
-            <div class="scene-live-closed" role="status">@Loc["RolComposeNotApproved"]</div>
+            @* The scene package refuses a pose from the portal without scene.join and scene.pose, and says so only
+               to that character's terminal: offering the composer here would take a pose and show nothing. *@
+            <div class="scene-live-closed" role="status">@Loc["RolComposeNoPermission"]</div>
         }
         else if (scene.IsLive)
         {
@@ -239,8 +239,8 @@ else
 
     private bool CanSend => !_draft.IsEmpty && !_sending && Terminal.IsConnected && !_liveUnavailable;
 
-    /// <summary>Whether the acting character is approved to pose in scenes; null until the game says.</summary>
-    private bool? _approved;
+    /// <summary>Whether the acting character holds scene.join and scene.pose; null until the game says.</summary>
+    private bool? _mayPose;
 
     /// <summary>Why the game did not record the last pose sent from here: what it said, or that it said nothing.</summary>
     private string? _refusal;
@@ -437,7 +437,8 @@ else
         // sharing an answer.
         // Only a 404 is that answer. Any other failure is the server failing to answer at all, and the
         // not-found card would turn an outage into a claim that the scene is gone.
-        var approved = Commands.IsApprovedAsync();
+        var join = Commands.HoldsPermissionAsync("scene.join");
+        var pose = Commands.HoldsPermissionAsync("scene.pose");
         switch (await SceneService.GetSceneAsync(Id))
         {
             case SceneSummary scene:
@@ -451,7 +452,12 @@ else
                 break;
         }
 
-        _approved = await approved;
+        _mayPose = (await join, await pose) switch
+        {
+            (false, _) or (_, false) => false,
+            (true, true) => true,
+            _ => null,
+        };
         _loading = false;
     }
 

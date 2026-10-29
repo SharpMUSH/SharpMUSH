@@ -5768,8 +5768,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Denne scenen pågår ikke, så den tar ikke imot poser.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Du kan se denne scenen, men karakteren din er ikke godkjent for å delta i scener, så du kan ikke poste her.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Du kan se denne scenen, men karakteren din kan ikke poste i den: det krever tillatelsene scene.join og scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5971,8 +5971,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planlegg en scene</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Krever godkjenning</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Krever scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

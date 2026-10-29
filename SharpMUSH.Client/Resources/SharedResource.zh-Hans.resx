@@ -5768,8 +5768,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>此场景未在进行，因此不接受动作。</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>你可以观看此场景，但你的角色尚未获准参与场景，因此无法在此发言。</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>你可以观看此场景，但你的角色无法在其中发言：这需要 scene.join 和 scene.pose 权限。</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5971,8 +5971,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>安排场景</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>需要审批</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>需要 scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

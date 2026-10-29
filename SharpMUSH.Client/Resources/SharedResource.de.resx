@@ -5768,8 +5768,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Diese Szene läuft nicht und nimmt daher keine Posen an.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Du kannst diese Szene ansehen, aber dein Charakter ist nicht für Szenen freigegeben, daher kannst du hier nicht posen.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Du kannst diese Szene ansehen, aber dein Charakter kann hier nicht posen: Dafür braucht er die Berechtigungen scene.join und scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5971,8 +5971,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Szene planen</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Freigabe erforderlich</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Braucht scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

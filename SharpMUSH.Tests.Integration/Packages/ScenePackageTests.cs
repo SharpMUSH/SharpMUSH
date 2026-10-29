@@ -52,8 +52,8 @@ public class ScenePackageTests(ServerWebAppFactory factory)
 		await Assert.That(attrs).Contains("CMD`CREATE");
 		await Assert.That(attrs).Contains("CMD`SHOW");
 		await Assert.That(attrs).Contains("FUN`OWNS");
-		await Assert.That(attrs).Contains("FUN`IS`APPROVED");
-		await Assert.That(attrs).Contains("DATA`DENY`APPROVAL");
+		await Assert.That(attrs).Contains("FUN`MAY");
+		await Assert.That(attrs).Contains("FUN`DENY");
 		await Assert.That(attrs).Contains("AINSTALL");
 		await Assert.That(attrs).Contains("STARTUP");
 
