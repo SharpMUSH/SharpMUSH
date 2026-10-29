@@ -338,11 +338,12 @@ source `ooc` and tags `[ooc]`, and broadcasts like any pose. The stored text is
 exactly the line the room heard **without** the `<OOC>` marker (the tag carries
 it), so it has the speech name, not the `showas` persona. Anywhere else it is
 only said.
-The speaker must also be approved, re-checked on every line as the capture hooks
-do, since focus and membership survive a revoked `approved` role. The command
-evaluates the package's own `` FUN`IS`APPROVED `` on the Scene Logger (as the
-logger), so a redefined rule applies to OOC too; without the package installed it
-falls back to the package default, a player that `isapproved()`.
+The speaker must also hold `scene.pose`, re-checked on every line as the capture
+hooks do, since focus and membership survive a revoked permission. The command
+evaluates the package's own `` FUN`MAY `` on the Scene Logger (as the logger) for
+`scene.pose`, so a redefined rule applies to OOC too; without the package installed
+it falls back to the package default, a player holding `scene.pose` (which nothing
+then declares, so it restricts nothing).
 
 **A game with its own `ooc`.** Built-in commands are matched before `$`-commands,
 so this `ooc` shadows a master-room `$ooc *` a game already has. To keep the

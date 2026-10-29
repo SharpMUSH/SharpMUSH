@@ -22,9 +22,12 @@ namespace SharpMUSH.Tests.ScenePlugin;
 /// </summary>
 public class SceneControllerVisibilityTests
 {
-	/// <summary>Builds the controller with <paramref name="claimValue"/> as the acting character (null = anonymous).</summary>
-	private static SceneController ControllerFor(ISceneService service, string? claimValue) =>
-		new(service)
+	/// <summary>
+	/// Builds the controller with <paramref name="claimValue"/> as the acting character (null = anonymous), holding
+	/// scene.view unless <paramref name="mayRead"/> says not.
+	/// </summary>
+	private static SceneController ControllerFor(ISceneService service, string? claimValue, bool mayRead = true) =>
+		new(service, new SceneReadAccessStub(mayRead))
 		{
 			ControllerContext = new ControllerContext
 			{
@@ -104,6 +107,32 @@ public class SceneControllerVisibilityTests
 		var result = await controller.GetScene("scene-1");
 
 		await Assert.That(result).IsTypeOf<OkObjectResult>();
+	}
+
+	[Test]
+	public async Task GetScene_PublicScene_IsHiddenFromAReaderWithoutSceneView()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var controller = ControllerFor(service, SceneFixture.StrangerObjid, mayRead: false);
+
+		var result = await controller.GetScene("scene-1");
+
+		await Assert.That(result).IsTypeOf<NotFoundResult>();
+	}
+
+	/// <summary>Without scene.view a character still reads the scenes it owns or is in, and only those.</summary>
+	[Test]
+	public async Task ListScenes_WithoutSceneView_ListsOnlyTheCallersOwnScenes()
+	{
+		var service = new FixedSceneService(
+			SceneFixture.SceneOwnedBy("#1", isPublic: true) with { Id = "mine" },
+			SceneFixture.SceneOwnedBy("#7", isPublic: true) with { Id = "public" });
+		var controller = ControllerFor(service, SceneFixture.GodObjid, mayRead: false);
+
+		var result = await controller.ListScenes();
+
+		var listed = ((IEnumerable<SceneController.SceneDto>)((OkObjectResult)result).Value!).Select(s => s.Id);
+		await Assert.That(listed).IsEquivalentTo(new[] { "mine" });
 	}
 
 	[Test]

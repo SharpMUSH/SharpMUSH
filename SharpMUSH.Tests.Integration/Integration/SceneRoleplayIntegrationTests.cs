@@ -180,9 +180,9 @@ public class SceneRoleplayIntegrationTests
 	/// Creates a non-God player, registers + binds a connection handle, returns its full objid.
 	///
 	/// <para>The player is given the approved role. Every character in this narrative is a full participant — they own,
-	/// join, administer and pose into scenes — and association with a scene requires approval since the
-	/// package's 1.6.0 guard. The refusal path is the subject of
-	/// <see cref="Scenes.SceneApprovalIntegrationTests"/>; here approval is fixture, not subject.</para>
+	/// join, administer and pose into scenes — and the package grants the approved role the scene permissions
+	/// that needs. The refusal path is the subject of
+	/// <see cref="Scenes.ScenePermissionIntegrationTests"/>; here the role is fixture, not subject.</para>
 	/// </summary>
 	private async Task<(string Dbref, long Handle)> CreatePlayerAsync(string name, string password)
 	{

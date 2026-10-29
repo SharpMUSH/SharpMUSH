@@ -20,7 +20,7 @@
 -->
 # Scene Functions
 
-These functions read the Scene System's records and change nothing. A public scene can be read by anyone. A scene that is not public can be read only by its members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
+These functions read the Scene System's records and change nothing. A public scene can be read by anyone holding the `scene.view` permission, which the scene package gives to everyone. Every scene can be read by its members and wizards; for anyone else a function about it returns `#-1 PERMISSION`. The reader is the enactor (`%#`), not the object running the code, so a scene package command shows each player what they may see. A missing scene, pose or member is `#-1 NOT FOUND`.
 
 - [scene()]: one field of a scene
 - [scenelist()]: scene ids by status, schedule or member

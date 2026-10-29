@@ -46,15 +46,13 @@ public sealed class WikiDirectiveExtension : IMarkdownExtension
 }
 
 /// <summary>
-/// Replaces the default <see cref="HtmlCustomContainerRenderer"/> so that
-/// containers whose info string is a known wiki directive emit a placeholder
-/// <c>div.wiki-directive</c> instead of the default container markup.
-/// All other custom containers delegate to the base (default) rendering.
+/// The live listing directives a wiki page's text may hold, and the arguments each accepts. The portal and the
+/// game read the same rules, so a block one of them shows is a block the other shows.
 /// </summary>
-internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContainerRenderer
+public static partial class WikiDirectives
 {
 	/// <summary>Maximum page count accepted by the <c>recent</c> directive.</summary>
-	private const int MaxRecentCount = 50;
+	public const int MaxRecentCount = 50;
 
 	/// <summary>Directive arguments: letters, digits, spaces, underscores, hyphens; max 64 chars.</summary>
 	[GeneratedRegex(@"^[a-zA-Z0-9 _-]{0,64}$")]
@@ -67,18 +65,51 @@ internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContain
 	/// <summary>The longest <c>facts</c> argument: four conditions and the settings a query takes fit well within it.</summary>
 	private const int MaxFactsLength = 1024;
 
+	/// <summary>Whether <paramref name="directive"/> names a live listing.</summary>
+	public static bool IsDirective(string directive)
+		=> directive.ToLowerInvariant() is "category" or "pagelist" or "recent" or "facts";
+
+	/// <summary>
+	/// <paramref name="arg"/> as <paramref name="directive"/> takes it (a <c>recent</c> count clamped to 1–50), or
+	/// null when it is not one the directive accepts.
+	/// </summary>
+	public static string? Argument(string directive, string arg)
+	{
+		if (directive.Equals("recent", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!RecentArgPattern().IsMatch(arg) || !int.TryParse(arg, out var count))
+				return null;
+			return Math.Clamp(count, 1, MaxRecentCount).ToString();
+		}
+
+		// A fact query is checked when it is answered, where its reason can be shown; here it only has to be one line.
+		if (directive.Equals("facts", StringComparison.OrdinalIgnoreCase))
+			return arg.Length is > 0 and <= MaxFactsLength && !arg.Any(char.IsControl) ? arg : null;
+
+		return ArgPattern().IsMatch(arg) ? arg : null;
+	}
+}
+
+/// <summary>
+/// Replaces the default <see cref="HtmlCustomContainerRenderer"/> so that
+/// containers whose info string is a known wiki directive emit a placeholder
+/// <c>div.wiki-directive</c> instead of the default container markup.
+/// All other custom containers delegate to the base (default) rendering.
+/// </summary>
+internal sealed class WikiDirectiveContainerRenderer : HtmlCustomContainerRenderer
+{
 	protected override void Write(HtmlRenderer renderer, CustomContainer container)
 	{
 		var directive = container.Info?.Trim().ToLowerInvariant();
 
-		if (directive is not ("category" or "pagelist" or "recent" or "facts"))
+		if (directive is null || !WikiDirectives.IsDirective(directive))
 		{
 			// Unknown info string — keep the default custom-container rendering.
 			base.Write(renderer, container);
 			return;
 		}
 
-		var arg = ValidateArg(directive, container.Arguments?.Trim() ?? string.Empty);
+		var arg = WikiDirectives.Argument(directive, container.Arguments?.Trim() ?? string.Empty);
 		if (arg is null)
 			return; // Invalid argument — render nothing for this container.
 
@@ -92,25 +123,5 @@ internal sealed partial class WikiDirectiveContainerRenderer : HtmlCustomContain
 			renderer.Write("\"></div>");
 		}
 		renderer.EnsureLine();
-	}
-
-	/// <summary>
-	/// Validates (and for <c>recent</c>, clamps) a directive argument.
-	/// Returns the normalised argument, or <c>null</c> when invalid.
-	/// </summary>
-	private static string? ValidateArg(string directive, string arg)
-	{
-		if (directive == "recent")
-		{
-			if (!RecentArgPattern().IsMatch(arg) || !int.TryParse(arg, out var count))
-				return null;
-			return Math.Clamp(count, 1, MaxRecentCount).ToString();
-		}
-
-		// A fact query is checked when it is answered, where its reason can be shown; here it only has to be one line.
-		if (directive == "facts")
-			return arg.Length is > 0 and <= MaxFactsLength && !arg.Any(char.IsControl) ? arg : null;
-
-		return ArgPattern().IsMatch(arg) ? arg : null;
 	}
 }

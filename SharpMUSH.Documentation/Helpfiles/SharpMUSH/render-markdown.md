@@ -129,6 +129,7 @@ Renders CommonMark/Markdown text into SharpMUSH MarkupString with ANSI formattin
 
 - **See Also footers**: a `::: seealso` block holding a list of `[topic]` or `` `code` `` names prints as one line, `See Also: @lock, @unlock`, wrapped under the first topic. If any item says more than its name, the list prints as a list under the label.
 - **Centred blocks**: everything between `::: center` and a closing `:::` is wrapped to `<width>` and each line centred in it. The wiki and the web portal centre the same block on the page.
+- **Wiki listings**: `::: category <name>`, `::: pagelist <namespace>`, `::: recent <count>` and `::: facts <conditions>` list the wiki pages they find, as `wikicategory()`, `wikilist()`, `wikirecent()` and `wikiquery()` would return them to you: published pages you may read, titled in your locale, each a link to the page where your client can click. Up to 8 blocks are listed, with up to 20 pages each.
 - **Layout**: a `:::: flex` block holding `::: item` blocks prints its items side by side as columns, each rendered at its own width.
   - Settings go in `{...}` after the name: `grow`, `basis`, `min`, `gap`, `align`, `justify`, `direction`, `wrap`. The wiki's Markdown Guide lists every setting.
   - A block holding others needs more colons than they have.

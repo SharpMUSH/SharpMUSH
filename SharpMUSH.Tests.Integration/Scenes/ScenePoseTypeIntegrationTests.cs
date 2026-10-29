@@ -81,6 +81,7 @@ public class ScenePoseTypeIntegrationTests
 		await Assert.That(types.Take(3)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
 		await Assert.That(await Eval("scenetype(ooc,presentation)")).IsEqualTo("band");
 		await Assert.That(await Eval("scenetype(ooc,tone)")).IsEqualTo("secondary");
+		await Assert.That(await Eval("scenetype(ooc,hidden)")).IsEqualTo("reading");
 		await Assert.That(await Eval("scenetype(narration)")).IsEqualTo("Narration");
 		await Assert.That(await Eval("scenetype(nosuchtype)")).IsEqualTo("#-1 NO SUCH POSE TYPE");
 		await Assert.That(await Eval("scenetype(ic,colour)")).IsEqualTo("#-1 UNKNOWN TYPE FIELD");
@@ -107,7 +108,7 @@ public class ScenePoseTypeIntegrationTests
 			await As(staff, $"+scene/type/set {key}/presentation=message");
 			await As(staff, $"+scene/type/set {key}/hidden=yes");
 			await Assert.That(await Eval($"scenetype({key},presentation)")).IsEqualTo("message");
-			await Assert.That(await Eval($"scenetype({key},hidden)")).IsEqualTo("1");
+			await Assert.That(await Eval($"scenetype({key},hidden)")).IsEqualTo("reading playing");
 
 			// The FORMAT is softcode on the WIZARD logger, so only someone who controls it writes one.
 			await God($"&TYPE`{key.ToUpperInvariant()}`FORMAT {logger}=MIND to [name(%1)]: %2");
@@ -120,13 +121,14 @@ public class ScenePoseTypeIntegrationTests
 			await Assert.That(hidden).DoesNotContain(said).Because("the type starts hidden");
 			await Assert.That(hidden).Contains($"1 line of {key} hidden.");
 
-			await Assert.That(await As(reader, $"+scene/show {key}")).Contains("Telepathy lines show in your recall and log.");
+			await Assert.That(await As(reader, $"+scene/show {key}")).Contains("Telepathy lines show while reading and playing.");
 			await Assert.That(await As(reader, "+scene/recall 1")).Contains($"MIND to {reader.Name}: {said}");
 			await Assert.That(await As(reader, "+scene/types")).Contains("Telepathy");
 
-			await As(reader, $"+scene/hide {key}");
-			await Assert.That(await Eval($"get(#{reader.DbRef.Number}/SCENE`HIDE)")).IsEqualTo(key);
-			await Assert.That(await As(reader, "+scene/hide")).Contains($"Hidden from your recall and log: {key}.");
+			await As(reader, $"+scene/hide {key}=playing");
+			await Assert.That(await Eval($"get(#{reader.DbRef.Number}/SCENE`HIDE`PLAYING)")).IsEqualTo(key);
+			await Assert.That(await Eval($"get(#{reader.DbRef.Number}/SCENE`HIDE`READING)")).IsEmpty();
+			await Assert.That(await As(reader, "+scene/hide")).Contains($"While playing: {key} hidden.");
 
 			await Assert.That(await As(staff, $"+scene/type/remove {key}")).Contains($"Removed pose type {key}.");
 			await Assert.That(await Eval($"hasattr({logger},TYPE`{key})")).IsEqualTo("0")
@@ -149,7 +151,36 @@ public class ScenePoseTypeIntegrationTests
 	{
 		await LoggerAsync();
 		await Assert.That(await God("+scene/hide ooc")).Contains("Your choice could not be saved on your character.");
-		await Assert.That(await Eval("get(#1/SCENE`HIDE)")).DoesNotContain("ooc");
+		await Assert.That(await Eval("get(#1/SCENE`HIDE`READING)")).DoesNotContain("ooc");
+	}
+
+	/// <summary>
+	/// Out of character is left out of the log, which is for reading a scene, and kept in the recall, which is for
+	/// playing in it. Each place keeps its own choice.
+	/// </summary>
+	[Test]
+	public async Task OOC_starts_hidden_while_reading_and_shown_while_playing_each_its_own_choice()
+	{
+		await LoggerAsync();
+		var room = await RoomAsync("OocRoom");
+		var player = await PlayerAsync("OocPlay", room);
+		var aside = TestIsolationHelpers.GenerateUniqueName("Brb");
+		await As(player, $"+scene/create {TestIsolationHelpers.GenerateUniqueName("OocScene")}");
+		var scene = await Eval($"scenefocus(#{player.DbRef.Number})");
+		await As(player, $"+scene/ooc {scene}={aside}");
+
+		await Assert.That(await As(player, "+scene/recall 1")).Contains(aside).Because("someone playing sees OOC");
+		var log = await As(player, $"+scene/log {scene}");
+		await Assert.That(log).DoesNotContain(aside).Because("someone reading does not, until they show it");
+		await Assert.That(log).Contains("1 line of ooc hidden. +scene/show <type>=reading shows them.");
+
+		await Assert.That(await As(player, "+scene/show ooc=reading")).Contains("Out of character lines show while reading.");
+		await Assert.That(await As(player, $"+scene/log {scene}")).Contains(aside);
+
+		await Assert.That(await As(player, "+scene/hide ooc=playing")).Contains("Out of character lines are hidden while playing.");
+		await Assert.That(await As(player, "+scene/recall 1")).DoesNotContain(aside);
+		await Assert.That(await As(player, $"+scene/log {scene}")).Contains(aside).Because("reading keeps its own choice");
+		await Assert.That(await As(player, "+scene/hide ooc=sideways")).Contains("Say where: =reading or =playing");
 	}
 
 	[Test]

@@ -97,7 +97,7 @@ public class FeedCommandTests : ServerTestBase
 			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"))).Expect<FeedDelivery>();
 		await Assert.That(delivered.Recipients.Select(recipient => recipient.Number)).IsEquivalentTo(new[] { _ann.DbRef.Number });
 		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
-		await Assert.That(Lines(_ann, text).Single()).Contains("External #-1 [Discord] Ann (1234)");
+		await Assert.That(Lines(_ann, text).Single()).Contains("External #-1 [D] Ann");
 	}
 
 	[Test]
@@ -133,9 +133,9 @@ public class FeedCommandTests : ServerTestBase
 			new(kind, SharpFeed.New(_kind, "newbies"), system, new("discord", "1234", "Ann"), FeedStyles.Say, MarkupText.Plain(text), "discord/99"));
 		var delivery = result.Expect<FeedDelivery>();
 		await WebAppFactoryArg.Notifications.WaitForAsync(_ann.DbRef, text);
-		await Assert.That(Lines(_ann, text).Single()).Contains("[Discord] Ann (1234)");
+		await Assert.That(Lines(_ann, text).Single()).Contains("[D] Ann");
 		await WebAppFactoryArg.Notifications.WaitForAsync(_bo.DbRef, text);
-		await Assert.That(Lines(_bo, text).Single()).Contains("External #-1: [Discord] Ann (1234)");
+		await Assert.That(Lines(_bo, text).Single()).Contains("External #-1: [D] Ann");
 		var stored = (await Mediator.Send(new SharpMUSH.Library.Queries.Database.GetFeedMessageQuery(delivery.Id))).Expect<SharpFeedMessage>();
 		await Assert.That(stored.Speaker.Number).IsEqualTo(-1);
 		await Assert.That(stored.ExternalIdentity?.Subject).IsEqualTo("1234");

@@ -138,6 +138,20 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// </summary>
 	public HashSet<string> Failing { get; } = [];
 
+	/// <summary>
+	/// What the scene package tells a character whose pose it refuses, as <c>+scene/emit</c> or <c>+scene/ooc</c>
+	/// answers; null records the pose. An empty string refuses without a word.
+	/// </summary>
+	public string? PoseRefusal { get; set; }
+
+	/// <summary>The acting character's newest pose in S1, as <c>sceneposes(S1,%#,1)</c> answers.</summary>
+	private string _newestPose = "P1";
+
+	private int _posesRecorded;
+
+	/// <summary>The permissions the acting character holds, as <c>permission(%#,%0)</c> answers; null fails the request.</summary>
+	public HashSet<string>? Permissions { get; set; }
+
 	/// <summary>Paths whose request never gets an answer: the transport throws, as a dropped connection does.</summary>
 	public HashSet<string> Unreachable { get; } = [];
 
@@ -163,6 +177,11 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			return RunCommandAsync(request, ct);
 		}
 
+		if (path == "/api/commands/eval" && request.Method == HttpMethod.Post && Permissions is { } held)
+		{
+			return HoldsAsync(request, held, ct);
+		}
+
 		string? body = path switch
 		{
 			"/api/scenes" => SceneList,
@@ -181,6 +200,13 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// focuses the new scene and says so, or says why not and leaves focus alone; the result expression
 	/// <c>scenefocus(me)</c> reads the focus after the command.
 	/// </summary>
+	private static async Task<HttpResponseMessage> HoldsAsync(HttpRequestMessage request, HashSet<string> held, CancellationToken ct)
+	{
+		var asked = (await request.Content!.ReadFromJsonAsync<PortalEvalRequest>(ct))!.Arguments?.FirstOrDefault() ?? "";
+		var answer = new PortalCommandResponse([], held.Contains(asked) ? "1" : "0", Truncated: false);
+		return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(answer) };
+	}
+
 	private async Task<HttpResponseMessage> RunCommandAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>(ct))!;
@@ -248,12 +274,19 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			if (PrivacyRefused) output = [PrivacyRefusal];
 			else FocusIsPublic = false;
 		}
+		else if (command.Command.StartsWith("+scene/emit S1=", StringComparison.Ordinal)
+			|| command.Command.StartsWith("+scene/ooc S1=", StringComparison.Ordinal))
+		{
+			if (PoseRefusal is null) _newestPose = $"P{100 + ++_posesRecorded}";
+			else if (PoseRefusal.Length > 0) output = [PoseRefusal];
+		}
 
 		var result = command.Result switch
 		{
 			"scenefocus(me)" => Focus,
 			"scene(scenefocus(me),public)" => FocusIsPublic ? "1" : "0",
 			"scenelist(mine)" => MemberScenes,
+			"sceneposes(S1,%#,1)" => _newestPose,
 			{ } diff when diff.StartsWith(NewlyScheduledPrefix, StringComparison.Ordinal) => string.Join(' ',
 				MemberScenes.Split(' ').Except(diff[NewlyScheduledPrefix.Length..diff.IndexOf(')', NewlyScheduledPrefix.Length)].Split(' '))),
 			{ } field when field.StartsWith($"scene({ScheduledId},", StringComparison.Ordinal) =>
@@ -437,11 +470,11 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await box.KeyDownAsync(new KeyboardEventArgs { Key = "Enter" });
 		await box.KeyDownAsync(new KeyboardEventArgs { Key = "Enter", ShiftKey = true });
 
-		await _terminal.DidNotReceive().SendAsync(Arg.Any<string>());
+		await Assert.That(_api.CommandsRun()).IsEmpty();
 
 		await cut.Find(".scene-live-compose textarea").KeyDownAsync(new KeyboardEventArgs { Key = "Enter", CtrlKey = true });
 
-		await _terminal.Received().SendAsync("+scene/emit S1=half a thought");
+		WaitForCommand("+scene/emit S1=half a thought");
 	}
 
 	/// <summary>
@@ -463,14 +496,14 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await cut.Find(".scene-live-compose textarea").InputAsync("brb, tea");
 		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
-		await _terminal.Received().SendAsync("+scene/ooc S1=brb\\, tea");
+		WaitForCommand("+scene/ooc S1=brb\\, tea");
 	}
 
 	/// <summary>
-	/// The send button issues a scene-targeted game command down the terminal websocket, defaulting to
+	/// The send button issues a scene-targeted game command through the command route, defaulting to
 	/// emit — the mode that renders the author's words verbatim with no name glued to the front, which
-	/// is what a compose box on a scene's own page is for. Newlines go out as %r: the channel is
-	/// line-delimited, and the engine expands it back before matching the verb's pattern.
+	/// is what a compose box on a scene's own page is for. Newlines go out as %r: a command is one
+	/// line, and the engine expands it back before matching the verb's pattern.
 	/// </summary>
 	[TUnit.Core.Test]
 	public async Task SceneLive_SendButton_SendsASceneEmitWithNewlinesAsPercentR()
@@ -482,7 +515,7 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await cut.Find(".scene-live-compose textarea").InputAsync("line one\nline two");
 		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
-		await _terminal.Received().SendAsync("+scene/emit S1=line one%rline two");
+		WaitForCommand("+scene/emit S1=line one%rline two");
 	}
 
 	/// <summary>
@@ -599,15 +632,15 @@ public class SceneSurfaceTests : TrackingBunitContext
 	/// scene service — still the contract. What changed is which command and down which channel: it
 	/// used to send a bare <c>:pose</c> on the game hub, whose SendCommand publishes onto a NATS
 	/// subject nothing subscribes to, so the pose never reached the engine at all. It now sends the
-	/// scene-targeted <c>+scene/emit</c> verb down the command terminal's websocket, which the engine
-	/// already consumes.
+	/// scene-targeted <c>+scene/emit</c> verb through <c>POST api/commands</c>, as the terminal's
+	/// character, which answers with what the game said.
 	///
 	/// <para>The old assertion "never @emit" is preserved in spirit: a raw <c>@emit</c> would be
 	/// recorded only if the poser happened to be focused on this scene in this room.
 	/// <c>+scene/emit</c> names the scene, so it records unconditionally.</para>
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task SceneLive_Editor_SendsASceneCommandOnTheTerminal_AndJoinsScene()
+	public async Task SceneLive_Editor_SendsASceneCommandThroughTheCommandRoute_AndJoinsScene()
 	{
 		_terminal.IsConnected.Returns(true);
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
@@ -624,10 +657,66 @@ public class SceneSurfaceTests : TrackingBunitContext
 		await cut.Find(".scene-live-compose textarea").InputAsync("waves hello");
 		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
 
-		await _terminal.Received().SendAsync("+scene/emit S1=waves hello");
+		WaitForCommand("+scene/emit S1=waves hello");
 
 		// No optimistic insert: the author's pose only appears after the round-trip event.
 		await Assert.That(cut.Markup).DoesNotContain("waves hello");
+	}
+
+	/// <summary>
+	/// A pose the scene package refuses (a character without scene.pose, a scene that stopped) is said only to the
+	/// character's terminal. The page repeats what the game said under the field and puts the words back, so
+	/// the viewer is not left with a pose that seemed to go and never appeared.
+	/// </summary>
+	[TUnit.Core.Test]
+	[Arguments("[SCENE] Error: Permission denied. You need the scene.pose permission.", "[SCENE] Error: Permission denied. You need the scene.pose permission.")]
+	[Arguments("", "RolComposeRefused")]
+	public async Task SceneLive_ARefusedPose_SaysWhyAndKeepsTheWords(string said, string shown)
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.PoseRefusal = said;
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".scene-live-compose textarea").InputAsync("waves hello");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find(".scene-live-refusal"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".scene-live-refusal").TextContent).IsEqualTo(shown);
+		await Assert.That(cut.Find(".scene-live-compose textarea").GetAttribute("value")).IsEqualTo("waves hello");
+	}
+
+	/// <summary>A pose the scene recorded leaves nothing to say: it shows when the hub brings it back.</summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_ARecordedPose_SaysNothing()
+	{
+		_terminal.IsConnected.Returns(true);
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-compose textarea"), TimeSpan.FromSeconds(5));
+
+		await cut.Find(".scene-live-compose textarea").InputAsync("waves hello");
+		await cut.Find(".scene-live-compose button.scene-live-send").ClickAsync();
+
+		// The click completes once the pose's answer is in, so what the page shows now is what it will show.
+		await Assert.That(_api.CommandsRun()).Contains("+scene/emit S1=waves hello");
+		await Assert.That(cut.FindAll(".scene-live-refusal")).IsEmpty();
+		await Assert.That(cut.Find(".scene-live-compose textarea").GetAttribute("value") ?? "").IsEmpty();
+	}
+
+	/// <summary>
+	/// A character without scene.pose may watch a live scene but not pose in it, so the page says so where the
+	/// composer would be rather than offering one whose every pose is refused. Joining alone is not enough.
+	/// </summary>
+	[TUnit.Core.Test]
+	public async Task SceneLive_ACharacterWithoutScenePose_IsToldInsteadOfOfferedTheComposer()
+	{
+		_terminal.IsConnected.Returns(true);
+		_api.Permissions = ["scene.join"];
+		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
+		cut.WaitForAssertion(() => cut.Find(".scene-live-closed"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.Find(".scene-live-closed").TextContent).IsEqualTo("RolComposeNoPermission");
+		await Assert.That(cut.FindAll(".scene-live-compose")).IsEmpty();
 	}
 
 	/// <summary>

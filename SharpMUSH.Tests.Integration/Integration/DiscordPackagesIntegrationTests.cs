@@ -164,7 +164,8 @@ public class DiscordPackagesIntegrationTests
 			var before = Posted($"discord/{discord}").Count;
 			await PostFromDiscordAsync($"discord/{discord}", fromDiscord);
 			await Notifications.WaitForAsync(_staff.DbRef, fromDiscord);
-			await Assert.That(Notifications.For(_staff.DbRef).Any(l => l.Contains(fromDiscord) && l.Contains("says"))).IsTrue();
+			await Assert.That(Notifications.For(_staff.DbRef).Any(l => l.Contains(fromDiscord) && l.Contains($"<{channel}> ") && l.Contains("says")))
+				.IsTrue().Because("the channel's own prefix comes first");
 			await Assert.That(Posted($"discord/{discord}").Count).IsEqualTo(before + 1).Because("only the Discord post itself");
 
 			await Assert.That(await AsStaff($"+discord/channel/remove {channel}")).Contains($"{channel} no longer goes to Discord channel {discord}.");
@@ -173,6 +174,66 @@ public class DiscordPackagesIntegrationTests
 		}
 		finally
 		{
+			await God($"@channel/delete {channel}");
+			await UninstallAsync("discord-channels", "discord");
+		}
+	}
+
+	/// <summary>
+	/// Joining a channel links its Discord channel for staff holding discord.admin, and +discord/channel/unrestricted
+	/// opens it. @discord and discordlink() are stand-ins: a hooked command that logs its calls, and a global function
+	/// answering what the test says the link is.
+	/// </summary>
+	[Test]
+	public async Task JoiningLinksTheDiscordChannelAndUnrestrictedOpensIt()
+	{
+		var hook = await TestIsolationHelpers.CreateTestThingAsync(Parser, ConnectionService, "DiscordLinkHook");
+		var channel = $"Du{Random.Shared.Next(100000, 999999)}";
+		var discord = DiscordChannelId();
+		try
+		{
+			await StaffAsync();
+			await ApplyAsync("discord");
+			await ApplyAsync("discord-channels");
+			await God($"&CALL {hook}=$^@discord(/\\S+)? (.*)$:&LOG {hook}=[v(LOG)]%r%1 %2");
+			await God($"@set {hook}/CALL=regexp");
+			await God($"@set {hook}=!no_command");
+			await God("@command/add @discord");
+			await God($"@hook/override @discord={hook},CALL");
+			await God($"&LINKSTATE {hook}=firstof(v(STATE),#-1 NO SUCH LINK)");
+			await God($"@function discordlink={hook},LINKSTATE");
+			await Assert.That(await AsStaff($"@channel/add {channel}=player")).Contains("Channel has been created.");
+
+			// Without discord.admin the Discord channel is left for staff to link.
+			await Assert.That(await AsStaff($"+discord/channel {channel}={discord}"))
+				.Contains($"The game has not linked Discord channel {discord} yet");
+			await Assert.That(await Think($"get({hook}/LOG)")).DoesNotContain("/link");
+			await Assert.That(await AsStaff($"+discord/channel/unrestricted {channel}"))
+				.Contains("Only staff with discord.admin change who may speak in a Discord channel.");
+			await AsStaff($"+discord/channel/remove {channel}");
+
+			await God($"@role/assign #{_staff.DbRef.Number}=discord-admin");
+			await Assert.That(await AsStaff($"+discord/channel {channel}={discord}"))
+				.Contains($"Linking Discord channel {discord} too.");
+			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/link {discord}");
+			await Assert.That(await AsStaff($"+discord/channel/unrestricted {channel}"))
+				.Contains($"The game has not linked Discord channel {discord} yet.");
+
+			await God($"&STATE {hook}=restricted");
+			await Assert.That(await AsStaff("+discord/channels")).Contains("linked members");
+			await God($"&LOG {hook}");
+			await Assert.That(await AsStaff($"+discord/channel/unrestricted {channel}")).Contains($"Opening {channel}'s Discord channel");
+			await SettleAsync();
+			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/unrestricted {discord}");
+			await Assert.That(await AsStaff($"+discord/channel/restrict {channel}")).Contains($"Closing {channel}'s Discord channel");
+			await SettleAsync();
+			await Assert.That(await Think($"get({hook}/LOG)")).Contains($"/restrict {discord}");
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.GetRequiredService<IHookService>().ClearHookAsync("@DISCORD", "OVERRIDE");
+			await God("@command/delete @discord");
+			await God("@function/delete discordlink");
 			await God($"@channel/delete {channel}");
 			await UninstallAsync("discord-channels", "discord");
 		}

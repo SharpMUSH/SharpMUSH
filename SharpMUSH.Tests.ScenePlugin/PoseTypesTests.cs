@@ -18,7 +18,21 @@ public class PoseTypesTests
 		var type = Expect<PoseType>(PoseTypes.Read("RADIO",
 			"""{"label":"Radio","presentation":"message","tone":"Info","icon":"radio","hidden":true,"order":40}"""));
 
-		await Assert.That(type).IsEqualTo(new PoseType("radio", "Radio", "message", "info", "radio", true, 40));
+		await Assert.That(type).IsEqualTo(new PoseType("radio", "Radio", "message", "info", "radio", true, true, 40));
+	}
+
+	[Test]
+	[Arguments("true", true, true)]
+	[Arguments("false", false, false)]
+	[Arguments("\"reading\"", true, false)]
+	[Arguments("\"playing\"", false, true)]
+	public async Task HiddenSaysWhereTheTypeStartsHidden(string hidden, bool reading, bool playing)
+	{
+		var type = Expect<PoseType>(PoseTypes.Read("ooc", $$"""{"hidden":{{hidden}}}"""));
+
+		await Assert.That((type.HiddenReading, type.HiddenPlaying)).IsEqualTo((reading, playing));
+		await Assert.That(type.HiddenIn(PoseTypes.Reading)).IsEqualTo(reading);
+		await Assert.That(type.HiddenIn(PoseTypes.Playing)).IsEqualTo(playing);
 	}
 
 	[Test]
@@ -28,14 +42,14 @@ public class PoseTypesTests
 	[Test]
 	public async Task AnEmptyObjectIsAnInCharacterLookNamedByItsKey()
 		=> await Assert.That(Expect<PoseType>(PoseTypes.Read("dice", "{}")))
-			.IsEqualTo(new PoseType("dice", "dice", "prose", "", "", false, 50));
+			.IsEqualTo(new PoseType("dice", "dice", "prose", "", "", false, false, 50));
 
 	[Test]
 	[Arguments("""{"presentation":"bubble"}""", "presentation must be one of prose, band, message, aside, notice")]
 	[Arguments("""{"tone":"mauve"}""", "tone must be one of")]
 	[Arguments("""{"tone":"highlight"}""", "tone must be one of")]
 	[Arguments("""{"icon":"skull"}""", "icon must be one of")]
-	[Arguments("""{"hidden":"yes"}""", "hidden must be true or false")]
+	[Arguments("""{"hidden":"yes"}""", "hidden must be true, false, \"reading\" or \"playing\"")]
 	[Arguments("""{"order":1.5}""", "order must be a whole number")]
 	[Arguments("""{"label":""}""", "label must be text")]
 	[Arguments("""{"colour":"red"}""", "'colour' is not a field")]

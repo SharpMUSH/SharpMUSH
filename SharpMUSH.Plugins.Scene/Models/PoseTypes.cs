@@ -16,9 +16,18 @@ namespace SharpMUSH.Plugins.Scene.Models;
 /// <param name="Presentation">The portal layout: one of <see cref="PoseTypes.Presentations"/>.</param>
 /// <param name="Tone">A tone's name (<see cref="ToneNames"/>), or empty for the theme's text colour.</param>
 /// <param name="Icon">One of <see cref="PoseTypes.Icons"/>, or empty for none.</param>
-/// <param name="Hidden">Whether a reader who has not chosen starts with this type hidden.</param>
+/// <param name="HiddenReading">Whether a reader who has not chosen starts with this type hidden while reading a scene.</param>
+/// <param name="HiddenPlaying">Whether a reader who has not chosen starts with this type hidden while playing in one.</param>
 /// <param name="Order">Its place in lists, lowest first.</param>
-public sealed record PoseType(string Key, string Label, string Presentation, string Tone, string Icon, bool Hidden, int Order);
+public sealed record PoseType(string Key, string Label, string Presentation, string Tone, string Icon, bool HiddenReading,
+	bool HiddenPlaying, int Order)
+{
+	/// <summary>Whether a reader who has not chosen starts with this type hidden in <paramref name="context"/>.</summary>
+	public bool HiddenIn(string context) => context == PoseTypes.Playing ? HiddenPlaying : HiddenReading;
+
+	/// <summary>The contexts this type starts hidden in, as <c>scenetype(&lt;key&gt;,hidden)</c> lists them.</summary>
+	public IEnumerable<string> HiddenContexts => PoseTypes.Contexts.Where(HiddenIn);
+}
 
 /// <summary>A <c>TYPE`</c> attribute the catalogue left out, and why.</summary>
 public sealed record PoseTypeProblem(string Key, string Reason);
@@ -41,6 +50,15 @@ public static partial class PoseTypes
 
 	/// <summary>The type the <c>ooc</c> command records.</summary>
 	public const string OutOfCharacter = "ooc";
+
+	/// <summary>Reading a scene: its page, its log, its highlights.</summary>
+	public const string Reading = "reading";
+
+	/// <summary>Playing in a scene: posing in it, catching up with its recall.</summary>
+	public const string Playing = "playing";
+
+	/// <summary>The two places a reader chooses what to hide, each on its own.</summary>
+	public static readonly IReadOnlyList<string> Contexts = [Reading, Playing];
 
 	public const string InvalidKey = "A pose type is 1 to 32 letters, digits, - and _, starting with a letter or digit.";
 
@@ -65,7 +83,7 @@ public static partial class PoseTypes
 	}
 
 	/// <summary>A type the catalogue does not list: drawn as in character, named by its key.</summary>
-	public static PoseType Unlisted(string key) => new(key, key, "prose", "", "", false, DefaultOrder);
+	public static PoseType Unlisted(string key) => new(key, key, "prose", "", "", false, false, DefaultOrder);
 
 	/// <summary>The type <paramref name="json"/> defines for <paramref name="key"/>, or why it does not read.</summary>
 	public static Result<PoseType> Read(string key, string json)
@@ -86,7 +104,7 @@ public static partial class PoseTypes
 		{
 			if (document.RootElement.ValueKind != JsonValueKind.Object) return new Error<string>("not a JSON object");
 
-			var type = new PoseType(normal, normal, "prose", "", "", false, DefaultOrder);
+			var type = new PoseType(normal, normal, "prose", "", "", false, false, DefaultOrder);
 			foreach (var property in document.RootElement.EnumerateObject())
 			{
 				var value = property.Value;
@@ -102,9 +120,13 @@ public static partial class PoseTypes
 					"icon" => Text(value) is { } icon && (icon.Length == 0 || Icons.Contains(icon))
 						? type with { Icon = icon }
 						: Bad($"icon must be one of {string.Join(", ", Icons)}"),
-					"hidden" => value.ValueKind is JsonValueKind.True or JsonValueKind.False
-						? type with { Hidden = value.GetBoolean() }
-						: Bad("hidden must be true or false"),
+					"hidden" => value.ValueKind switch
+					{
+						JsonValueKind.True or JsonValueKind.False => type with { HiddenReading = value.GetBoolean(), HiddenPlaying = value.GetBoolean() },
+						JsonValueKind.String when Text(value) == Reading => type with { HiddenReading = true, HiddenPlaying = false },
+						JsonValueKind.String when Text(value) == Playing => type with { HiddenReading = false, HiddenPlaying = true },
+						_ => Bad("hidden must be true, false, \"reading\" or \"playing\""),
+					},
 					"order" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var order)
 						? type with { Order = order }
 						: Bad("order must be a whole number"),

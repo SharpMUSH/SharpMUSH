@@ -1,8 +1,13 @@
+using Markdig.Syntax;
+using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Documentation.MarkdownToAsciiRenderer;
+using SharpMUSH.Implementation.Commands.WikiCommand;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -40,8 +45,13 @@ public partial class Functions
 
 		try
 		{
-			var renderer = new RecursiveMarkdownRenderer(width, parser) { ImageAllowed = await MarkdownImagePolicy(executor) };
-			return new CallState(RecursiveMarkdownHelper.RenderMarkdown(markdown, renderer));
+			var document = RecursiveMarkdownHelper.Parse(markdown);
+			var renderer = new RecursiveMarkdownRenderer(width, parser)
+			{
+				ImageAllowed = await MarkdownImagePolicy(executor),
+				LiveBlocks = await MarkdownLiveBlocks(parser, executor, document, width),
+			};
+			return new CallState(renderer.Render(document));
 		}
 		catch (Exception ex)
 		{
@@ -87,10 +97,12 @@ public partial class Functions
 			{
 				try
 				{
+					var document = RecursiveMarkdownHelper.Parse(markdown);
+					var liveBlocks = await MarkdownLiveBlocks(parser, executor, document, width);
 					var customRenderer = new CustomizableMarkdownRenderer(
 						parser, executor, templateObj, AttributeService, width)
-					{ ImageAllowed = imageAllowed };
-					var result = customRenderer.RenderMarkdown(markdown);
+					{ ImageAllowed = imageAllowed, LiveBlocks = liveBlocks };
+					var result = customRenderer.RenderMarkdown(markdown, document);
 					return new CallState(result);
 				}
 				catch (Exception ex)
@@ -105,6 +117,18 @@ public partial class Functions
 	/// <paramref name="executor"/>. Without Send_Image the markdown's images stay their placeholders, so
 	/// <c>rendermarkdown()</c> is no way around what <c>image()</c> asks.
 	/// </summary>
+	/// <summary>
+	/// What the wiki's live listing blocks in <paramref name="document"/> show <paramref name="executor"/>: the pages its
+	/// softcode may reach, as <c>wikicategory()</c>, <c>wikilist()</c>, <c>wikirecent()</c> and <c>wikiquery()</c> return
+	/// them, under their titles in its locale. The engine draws the listing; softcode never reads a page's text through it.
+	/// </summary>
+	private async ValueTask<IReadOnlyDictionary<string, MString>> MarkdownLiveBlocks(IMUSHCodeParser parser, AnySharpObject executor,
+		MarkdownDocument document, int width)
+		=> await LiveBlocksWiki.AnswerAsync(parser.HouseLook(), parser.ServiceProvider.GetRequiredService<IWikiService>(),
+			parser.ServiceProvider.GetRequiredService<IWikiLocalizationService>(), document,
+			await WikiCommandHelper.SoftcodeVisibilityAsync(parser, executor), width,
+			await WikiCommandHelper.ResolveExecutorLocaleAsync(parser, executor), forceSource: false);
+
 	private async ValueTask<Func<string, bool>?> MarkdownImagePolicy(AnySharpObject executor)
 		=> await CanSendImage(executor) ? ImageAllowed : null;
 }

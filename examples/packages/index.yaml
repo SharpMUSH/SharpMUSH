@@ -62,7 +62,7 @@ packages:
     description: Application package (Area 21) — registers chargen as a portal page at /apps/chargen (requires chargen)
   - path: scene/
     package: scene
-    version: 1.17.2
+    version: 1.18.0
     description: Scene Logger — pose/say/semipose capture + the +scene/* player verbs (bundled default)
   - path: plus-help/
     name: "+help"
@@ -167,7 +167,7 @@ packages:
   - path: highlights/
     name: Highlights
     package: highlights
-    version: 1.3.0
+    version: 1.3.1
     description: +scene/fav and +scene/highlights — players favourite poses, and the poses favourited most make a highlights list credited to their writers, with no counts (requires scene and http-handler)
   - path: highlights-config/
     name: Favourite poses and highlights settings
@@ -279,6 +279,26 @@ packages:
     package: staff-status
     version: 1.0.0
     description: Shows a staff member's +status beside whether they are on duty in +staff (requires staff and status)
+  - path: census/
+    name: Census
+    package: census
+    version: 1.0.0
+    description: +census — counts and lists the characters by dimensions staff set in a +config table (attributes, roles, last on, created, account size), with filters and breakdowns that combine
+  - path: census-help/
+    name: Census help
+    package: census-help
+    version: 1.0.0
+    description: Registers the census topics with +help (requires census and plus-help)
+  - path: census-config/
+    name: Census settings
+    package: census-config
+    version: 1.0.0
+    description: Registers the census settings and dimensions with +config (requires census and plus-config)
+  - path: census-finger/
+    name: Census +finger fields
+    package: census-finger
+    version: 1.0.0
+    description: Lets +census count by +finger fields, read as +finger shows them (requires census and finger)
   - path: time/
     name: Time
     package: time
@@ -382,8 +402,8 @@ packages:
   - path: discord-channels/
     name: Discord Channels
     package: discord-channels
-    version: 1.2.0
-    description: Joins a game channel to a linked Discord channel both ways (+discord/channel)
+    version: 1.3.0
+    description: Joins a game channel to a Discord channel both ways, linking it when needed (+discord/channel)
   - path: discord-channels-help/
     name: Discord channel bridge help
     package: discord-channels-help

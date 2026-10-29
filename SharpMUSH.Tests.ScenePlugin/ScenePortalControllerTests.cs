@@ -108,7 +108,7 @@ public class ScenePortalControllerTests
 		var context = new DefaultHttpContext { User = SceneFixture.PrincipalFor(claimValue) };
 		context.Request.Scheme = "https";
 		context.Request.Host = new HostString("game.example");
-		return new ScenePortalController(service, _store, options, new FrozenClock(Now), Mediator())
+		return new ScenePortalController(service, _store, options, new FrozenClock(Now), Mediator(), new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext { HttpContext = context }
 		};

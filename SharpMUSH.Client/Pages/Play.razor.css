@@ -9,6 +9,8 @@
     padding: 16px;
     height: 100%;
     overflow: hidden;
+    /* The aside's column narrowing to its strip and widening again. */
+    transition: grid-template-columns var(--motion-move);
 }
 
 /* Focus hides the shell's touch header too (shell.css), so on a touch device in any orientation the
@@ -36,7 +38,8 @@
 
 /* A scoped display rule outranks the user agent's [hidden]; say it again. */
 .play-card[hidden],
-.play-aside[hidden] {
+.play-aside[hidden],
+.play-aside-panels[hidden] {
     display: none;
 }
 
@@ -90,8 +93,58 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative;
     min-height: 0;
+    overflow-x: hidden;
     overflow-y: auto;
+}
+
+.play-aside-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* The aside's collapse button, in the top right corner of its first card's header (Here, by default), so it
+   pushes nothing down; that header keeps clear of it. Collapsed, it is all the strip holds. Same look as the
+   page sidebar's (SectionShell), at 32px to fit an aside card's header. */
+.play-aside-toggle {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: color var(--motion-fade), background var(--motion-fade);
+}
+
+.play-aside-toggle:hover,
+.play-aside-toggle:focus-visible {
+    color: var(--text);
+    background: var(--border);
+    outline: none;
+}
+
+.play-aside-toggle:focus-visible {
+    box-shadow: 0 0 0 2px var(--accent);
+}
+
+.play-aside-panels ::deep .kit-card:first-child > .kit-card-head {
+    padding-right: 28px;
+}
+
+.play--aside-collapsed .play-aside-toggle {
+    position: static;
+    align-self: center;
+    flex-shrink: 0;
 }
 
 /* The header's less frequent buttons (terminal settings, Disconnect): in the header's flex row as they are, and
@@ -184,6 +237,19 @@
     }
     .play-story-scroll {
         padding: 6px 10px;
+    }
+}
+
+/* Collapsed (the player's choice, remembered): the aside narrows to a strip as wide as its toggle and the
+   terminal takes the rest. After the tiers, which set the aside's width; the narrow tier has no aside and focus
+   mode hides it, so neither is touched. */
+.play--aside-collapsed:not(.play--focus) {
+    grid-template-columns: minmax(0, 1fr) 32px;
+}
+
+@container page (max-width: 48rem) {
+    .play--aside-collapsed:not(.play--focus) {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

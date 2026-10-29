@@ -215,10 +215,10 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".scene-card").Count).IsEqualTo(1);
 	}
 
-	/// <summary>Only an approved character takes part: one that is not is offered Watch, and the archive closes
-	/// Schedule and Start with the reason beside them.</summary>
+	/// <summary>A character without scene.join is offered Watch, and one without scene.create finds Schedule and Start
+	/// closed in the archive with the reason beside them.</summary>
 	[Test]
-	public async Task AnUnapprovedCharacter_IsOfferedWatch_AndTheArchiveSaysWhyItCannotStartAScene()
+	public async Task ACharacterWithoutScenePermissions_IsOfferedWatch_AndTheArchiveSaysWhyItCannotStartAScene()
 	{
 		_api.Extra["POST /api/commands/eval"] = """{"output":[],"result":"0","truncated":false}""";
 
@@ -228,16 +228,16 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 
 		Nav.NavigateTo("/scenes");
 		var archive = Render<SharpMUSH.Client.Pages.Scenes>();
-		archive.WaitForAssertion(() => archive.Find(".scene-approval-needed"), TimeSpan.FromSeconds(5));
-		await Assert.That(archive.Find(".scene-approval-needed").TextContent).IsEqualTo("Approval needed");
+		archive.WaitForAssertion(() => archive.Find(".scene-create-needed"), TimeSpan.FromSeconds(5));
+		await Assert.That(archive.Find(".scene-create-needed").TextContent).IsEqualTo("Needs scene.create");
 		var start = archive.Find(".scene-start button");
 		await Assert.That(start.HasAttribute("disabled")).IsTrue();
-		await Assert.That(start.GetAttribute("aria-describedby")).IsEqualTo("scene-approval-needed");
+		await Assert.That(start.GetAttribute("aria-describedby")).IsEqualTo("scene-create-needed");
 		await Assert.That(archive.Find("button.scene-schedule-open").HasAttribute("disabled")).IsTrue();
 	}
 
 	[Test]
-	public async Task AnApprovedCharacter_MayStartAScene()
+	public async Task ACharacterHoldingSceneCreate_MayStartAScene()
 	{
 		_api.Extra["POST /api/commands/eval"] = """{"output":[],"result":"1","truncated":false}""";
 
@@ -245,7 +245,7 @@ public class ScenesPagesD1Tests : TrackingBunitContext
 		cut.WaitForAssertion(() => cut.Find(".scene-start button"), TimeSpan.FromSeconds(5));
 
 		await Assert.That(cut.Find(".scene-start button").HasAttribute("disabled")).IsFalse();
-		await Assert.That(cut.FindAll(".scene-approval-needed").Count).IsEqualTo(0);
+		await Assert.That(cut.FindAll(".scene-create-needed").Count).IsEqualTo(0);
 	}
 
 	[Test]

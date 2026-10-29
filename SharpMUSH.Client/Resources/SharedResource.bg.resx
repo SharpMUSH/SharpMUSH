@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Няма съвпадения} one {# съвпадение} other {# съвпадения}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Препратки оттук</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>Наблизо</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Още теми</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Помощ за администратори</value>
   </data>
@@ -5759,6 +5768,14 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Тази сцена не е активна, затова не приема пози.</value>
   </data>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Можеш да гледаш тази сцена, но героят ти не може да пише в нея: за това са нужни правата scene.join и scene.pose.</value>
+    <comment>MT</comment>
+  </data>
+  <data name="RolComposeRefused" xml:space="preserve">
+    <value>Играта не записа позата ти.</value>
+    <comment>MT</comment>
+  </data>
   <data name="RolModeIc" xml:space="preserve">
     <value>IC</value>
   </data>
@@ -5954,8 +5971,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Насрочи сцена</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Нужно е одобрение</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Нужно е scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6012,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Покажи</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Типове пози за показване</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Типове пози за показване при четене</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Типове пози за показване при игра</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# скрит ред „{label}“} other {# скрити реда „{label}“}}</value>

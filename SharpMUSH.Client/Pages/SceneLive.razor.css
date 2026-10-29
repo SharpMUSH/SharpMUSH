@@ -199,6 +199,12 @@
     gap: 12px;
 }
 
+/* Why the game did not record the last pose: what it told the character, which otherwise reaches only the terminal. */
+.scene-live-refusal {
+    font-size: 13px;
+    color: var(--warn);
+}
+
 .scene-live-hint {
     font-size: 12px;
     color: var(--text-dim);
@@ -356,6 +362,9 @@
     }
     .scene-live-foot {
         display: contents;
+    }
+    .scene-live-refusal {
+        grid-column: 1 / -1;
     }
     .scene-live-send {
         grid-area: send;

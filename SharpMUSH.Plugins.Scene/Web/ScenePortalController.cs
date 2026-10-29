@@ -38,7 +38,8 @@ public class ScenePortalController(
 	IScenePortalStore store,
 	IOptionsWrapper<SharpMUSHOptions> options,
 	TimeProvider time,
-	IMediator mediator) : ControllerBase
+	IMediator mediator,
+	ISceneReadAccess readAccess) : ControllerBase
 {
 	/// <summary>A draft as the portal reads it. <c>UpdatedAt</c> is UTC Unix-millis.</summary>
 	public record SceneDraftDto(string Mode, string Text, string? Markup, long UpdatedAt);
@@ -100,8 +101,11 @@ public class ScenePortalController(
 	}
 
 	[HttpGet("calendar.ics")]
-	public async Task<IActionResult> PublicCalendar() =>
-		Calendar(await CalendarScenesAsync(scene => Task.FromResult(scene.IsPublic)), options.CurrentValue.Net.MudName);
+	public async Task<IActionResult> PublicCalendar()
+	{
+		var mayRead = await readAccess.MayReadAsync(null, HttpContext.RequestAborted);
+		return Calendar(await CalendarScenesAsync(scene => Task.FromResult(mayRead && scene.IsPublic)), options.CurrentValue.Net.MudName);
+	}
 
 	[HttpGet("calendar/{secret}.ics")]
 	public async Task<IActionResult> PersonalCalendar(string secret, [FromQuery] string? scope = null)
@@ -114,9 +118,10 @@ public class ScenePortalController(
 		if (character.CreationMilliseconds is null || await mediator.Send(new GetObjectNodeQuery(character)) is not AnySharpObject)
 			return NotFound();
 
+		var mayRead = await readAccess.MayReadAsync(character, HttpContext.RequestAborted);
 		var scenes = await CalendarScenesAsync(scene => mine
 			? RunsOrJoinedAsync(scene, character)
-			: SceneVisibility.CanSeeAsync(sceneService, scene, character));
+			: SceneVisibility.CanSeeAsync(sceneService, scene, character, mayRead));
 		return Calendar(scenes, options.CurrentValue.Net.MudName);
 	}
 
@@ -153,7 +158,7 @@ public class ScenePortalController(
 
 	private async Task<bool> CanSeeAsync(string id, DBRef caller) =>
 		await sceneService.GetSceneAsync(id) is Contracts.Scene scene
-		&& await SceneVisibility.CanSeeAsync(sceneService, scene, caller);
+		&& await SceneVisibility.CanSeeAsync(sceneService, scene, caller, await readAccess.MayReadAsync(caller, HttpContext.RequestAborted));
 
 	/// <summary>The character owns the scene or holds a membership on it (joined, or answered its RSVP).</summary>
 	private async Task<bool> RunsOrJoinedAsync(Contracts.Scene scene, DBRef character) =>

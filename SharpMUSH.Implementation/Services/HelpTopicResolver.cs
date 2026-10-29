@@ -62,6 +62,45 @@ public sealed class HelpTopicResolver(ITextFileService textFiles) : IHelpTopicRe
 		.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)
 		.ToList();
 
+	/// <inheritdoc />
+	public async ValueTask<HelpRelatedTopics> RelatedAsync(string corpus, string topic, int linkedLimit, int nearbyLimit)
+	{
+		if (await ResolveAsync(corpus, topic) is not HelpEntry entry)
+		{
+			return new HelpRelatedTopics(null, [], []);
+		}
+
+		// Two pages may spell one topic differently (say, "), so a topic is seen by the name the index gives it.
+		var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { corpus, entry.Topic };
+		if (entry.Article is { } article)
+		{
+			seen.UnionWith(article.Sections.Select(section => section.Lookup).Append(article.Lookup));
+		}
+		async ValueTask<List<string>> Unseen(string from)
+		{
+			var found = new List<string>();
+			foreach (var lookup in await textFiles.GetLinkedTopicsAsync(corpus, from))
+			{
+				if (seen.Add((await GetExactAsync(corpus, lookup))?.Topic ?? lookup)) found.Add(lookup);
+			}
+			return found;
+		}
+
+		var linked = await Unseen(entry.Topic);
+		var nearby = new List<string>();
+		var frontier = new Queue<string>(linked);
+		while (nearby.Count < nearbyLimit && frontier.TryDequeue(out var next))
+		{
+			foreach (var found in (await Unseen(next)).Take(nearbyLimit - nearby.Count))
+			{
+				nearby.Add(found);
+				frontier.Enqueue(found);
+			}
+		}
+
+		return new HelpRelatedTopics(entry.Topic, linked.Take(linkedLimit).ToList(), nearby);
+	}
+
 	private async ValueTask<IReadOnlyList<string>> SearchAsync(string corpus, string pattern) =>
 		(await textFiles.SearchEntriesAsync(corpus, pattern))
 		.OrderBy(x => x, StringComparer.OrdinalIgnoreCase)

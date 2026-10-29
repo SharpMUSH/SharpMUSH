@@ -108,6 +108,22 @@ public class AdminPoseTypesPageTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".adm-pose-error").Count).IsEqualTo(0);
 	}
 
+	/// <summary>Where a type starts hidden is one field, so turning on only the reading switch sends <c>hidden=reading</c>.</summary>
+	[Test]
+	public async Task HidingATypeOnlyFromReaders_SendsReading()
+	{
+		var cut = RenderPage();
+
+		await cut.FindAll(".adm-pose-type")[1].QuerySelector(".adm-pose-hidden-reading input")!.ChangeAsync(new Microsoft.AspNetCore.Components.ChangeEventArgs { Value = true });
+		await cut.FindAll(".adm-pose-type")[1].QuerySelector("button.adm-pose-save")!.ClickAsync();
+
+		cut.WaitForAssertion(() =>
+		{
+			if (_api.Commands.Count == 0) throw new InvalidOperationException("not sent yet");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(_api.Commands).IsEquivalentTo(new[] { "+scene/type/set ooc/hidden=reading" });
+	}
+
 	/// <summary>Serves api/scenes/types and the +scene/type commands the way the scene package answers them.</summary>
 	private sealed class CatalogueApi : HttpMessageHandler
 	{
@@ -141,11 +157,11 @@ public class AdminPoseTypesPageTests : TrackingBunitContext
 
 			if (path != "/api/scenes/types") return new HttpResponseMessage(HttpStatusCode.NotFound);
 			var body = $$"""
-			{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hidden":false,"order":10},
-			          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hidden":false,"order":20},
-			          {"key":"radio","label":"{{_radioLabel}}","presentation":"message","tone":"info","icon":"radio","hidden":false,"order":30}],
+			{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hiddenReading":false,"hiddenPlaying":false,"order":10},
+			          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hiddenReading":false,"hiddenPlaying":false,"order":20},
+			          {"key":"radio","label":"{{_radioLabel}}","presentation":"message","tone":"info","icon":"radio","hiddenReading":false,"hiddenPlaying":false,"order":30}],
 			 "problems":[{"key":"telepathy","reason":"presentation must be one of prose, band, message, aside, notice"}],
-			 "hidden":[]}
+			 "hiddenReading":[],"hiddenPlaying":[]}
 			""";
 			return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 		}

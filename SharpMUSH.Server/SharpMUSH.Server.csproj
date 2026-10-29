@@ -267,6 +267,10 @@
       <Link>BundledPackages\staff.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff.README.md</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\census\README.md">
+      <Link>BundledPackages\census.README.md</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.census.README.md</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\who-where\README.md">
       <Link>BundledPackages\who-where.README.md</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.who-where.README.md</LogicalName>
@@ -542,6 +546,22 @@
     <EmbeddedResource Include="..\examples\packages\staff-status\package.yaml">
       <Link>BundledPackages\staff-status.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.staff-status.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\census\package.yaml">
+      <Link>BundledPackages\census.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.census.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\census-help\package.yaml">
+      <Link>BundledPackages\census-help.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.census-help.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\census-config\package.yaml">
+      <Link>BundledPackages\census-config.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.census-config.package.yaml</LogicalName>
+    </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\census-finger\package.yaml">
+      <Link>BundledPackages\census-finger.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.census-finger.package.yaml</LogicalName>
     </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\time\package.yaml">
       <Link>BundledPackages\time.package.yaml</Link>
