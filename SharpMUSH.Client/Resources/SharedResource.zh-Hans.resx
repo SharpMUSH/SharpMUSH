@@ -6029,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>显示</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>要显示的姿态类型</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>阅读时要显示的姿态类型</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>游戏时要显示的姿态类型</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, other {已隐藏 # 条{label}内容}}</value>

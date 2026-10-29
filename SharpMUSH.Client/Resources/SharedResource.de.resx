@@ -6029,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Anzeigen</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Angezeigte Posentypen</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Angezeigte Posentypen beim Lesen</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Angezeigte Posentypen beim Spielen</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-Zeile ausgeblendet} other {# {label}-Zeilen ausgeblendet}}</value>

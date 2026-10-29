@@ -128,7 +128,7 @@ else
                                             <div class="play-story-unavailable" role="status">@Loc["RolSceneLiveFeedDown"]</div>
                                         }
                                         <div class="play-story-scroll">
-                                            <SceneStory SceneId="@scene.Id" Occupants="@Room.Occupants" ViewerName="@PlayTerminal.ConnectedPlayerName"
+                                            <SceneStory SceneId="@scene.Id" Occupants="@Room.Occupants" ViewerName="@PlayTerminal.ConnectedPlayerName" Context="StoryContext.Playing"
                                                         OnCharacter="OpenSheetByName" LiveUnavailableChanged="unavailable => OnLiveUnavailable(scene.Id, unavailable)"
                                                         LiveDownChanged="down => _storyLiveDown = down"
                                                         OnEditPose="EditPoseAsync" />

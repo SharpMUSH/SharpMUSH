@@ -32,13 +32,19 @@ A JSON object cannot be typed with braces, which are taken as grouping; build it
 
 With no key, the keys of the pose types, separated by spaces, lowest `order` first and then by key. An attribute that does not read as a type is left out; `@scene/types` says why.
 
-With a key, one field of that pose type; `label` when no field is given. The others are `presentation`, `tone`, `icon`, `hidden` (1 or 0) and `order`. A key the game does not define is `#-1 NO SUCH POSE TYPE`, and any other field is `#-1 UNKNOWN TYPE FIELD`.
+With a key, one field of that pose type; `label` when no field is given. The others are `presentation`, `tone`, `icon`, `hidden` and `order`. `hidden` lists where a reader who has not chosen starts with the type hidden: `reading`, `playing`, both (`reading playing`), or nothing. A key the game does not define is `#-1 NO SUCH POSE TYPE`, and any other field is `#-1 UNKNOWN TYPE FIELD`.
 
 ```sharp
 > think scenetype()
 ```
 
 Output: ic ooc narration
+
+```sharp
+> think scenetype(ooc, hidden)
+```
+
+Output: reading
 
 ## scenetype() check
 
@@ -50,7 +56,7 @@ Empty when `<json>` would read as the pose type `<key>`, otherwise `#-1` and the
 > think scenetype(radio, check, json(object,hidden,json(string,yes)))
 ```
 
-Output: #-1 hidden must be true or false
+Output: #-1 hidden must be true, false, "reading" or "playing"
 
 ## scenedetail()
 

@@ -7955,8 +7955,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Show</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Pose types to show</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Pose types to show while reading</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Pose types to show while playing</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label} line hidden} other {# {label} lines hidden}}</value>
@@ -8050,8 +8053,11 @@
   <data name="AdmPoseTypesOrder" xml:space="preserve">
     <value>Order</value>
   </data>
-  <data name="AdmPoseTypesHidden" xml:space="preserve">
-    <value>Hidden until a reader shows it</value>
+  <data name="AdmPoseTypesHiddenReading" xml:space="preserve">
+    <value>Hidden while reading</value>
+  </data>
+  <data name="AdmPoseTypesHiddenPlaying" xml:space="preserve">
+    <value>Hidden while playing</value>
   </data>
   <data name="AdmPoseTypesRemove" xml:space="preserve">
     <value>Remove</value>

@@ -564,7 +564,8 @@ public static class SceneFunctions
 	/// <summary>
 	/// scenetype([&lt;key&gt;[, &lt;field&gt;[, &lt;json&gt;]]])
 	/// With no key, the pose types the Scene Logger defines, in their order, as a space-separated list of keys.
-	/// Otherwise one field of a pose type: label (the default), presentation, tone, icon, hidden or order. The field
+	/// Otherwise one field of a pose type: label (the default), presentation, tone, icon, hidden (where a reader who has
+	/// not chosen starts with it hidden: <c>reading</c>, <c>playing</c>, both or empty) or order. The field
 	/// <c>check</c> is empty when &lt;json&gt; would read as pose type &lt;key&gt;, and otherwise <c>#-1</c> and the
 	/// reason, as <c>@scene/types</c> would give it: how the scene package refuses a bad edit before writing it.
 	/// </summary>
@@ -607,7 +608,7 @@ public static class SceneFunctions
 			"presentation" => type.Presentation,
 			"tone" => type.Tone,
 			"icon" => type.Icon,
-			"hidden" => type.Hidden ? "1" : "0",
+			"hidden" => string.Join(" ", type.HiddenContexts),
 			"order" => type.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
 			_ => NoSuchField,
 		});

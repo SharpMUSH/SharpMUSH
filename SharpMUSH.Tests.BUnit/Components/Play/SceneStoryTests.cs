@@ -47,10 +47,11 @@ public class SceneStoryTests : TrackingBunitContext
 		new ImageRef("/api/wiki-assets/a/alice.jpg", null, null, null, null), "active", 0, true, false, []);
 
 	private IRenderedComponent<SceneStory> RenderStory(IReadOnlyList<RoomOccupant>? occupants = null, Action<bool>? unavailable = null,
-		string id = "42")
+		string id = "42", StoryContext context = StoryContext.Playing)
 	{
 		var cut = Render<SceneStory>(p => p
 			.Add(x => x.SceneId, id)
+			.Add(x => x.Context, context)
 			.Add(x => x.Occupants, occupants ?? [])
 			.Add(x => x.ViewerName, "Ilsa Varn")
 			.Add(x => x.LiveUnavailableChanged, u => unavailable?.Invoke(u)));
@@ -264,12 +265,35 @@ public class SceneStoryTests : TrackingBunitContext
 		WaitForRows(cut, 2);
 		await Assert.That(cut.Find(".story-fold").TextContent.Trim()).IsEqualTo("1 OOC line hidden");
 		await Assert.That(cut.Find(".story-fold").GetAttribute("data-pose-type")).IsEqualTo("ooc");
-		await Assert.That(Services.GetRequiredService<PoseTypeService>().IsHidden("ooc")).IsTrue();
+		await Assert.That(Services.GetRequiredService<PoseTypeService>().IsHidden("ooc", StoryContext.Playing)).IsTrue();
 
 		await cut.Find(".story-fold").ClickAsync();
 		WaitForRows(cut, 3);
 		await Assert.That(cut.FindAll(".story-fold").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll(".story-row")[2].QuerySelector(".kit-ooc")).IsNotNull();
+	}
+
+	/// <summary>
+	/// A story only reading the scene keeps its own choice: hiding OOC while playing leaves the reader's story whole,
+	/// and its Show menu says which choice it changes.
+	/// </summary>
+	[Test]
+	public async Task AReadingStory_KeepsItsOwnChoice_ApartFromPlaying()
+	{
+		using var culture = CultureScope.For("en");
+		var cut = RenderStory(context: StoryContext.Reading);
+		WaitForRows(cut, 3);
+		cut.WaitForAssertion(() => cut.Find(".story-show-toggle"), TimeSpan.FromSeconds(5));
+		var types = Services.GetRequiredService<PoseTypeService>();
+
+		await cut.InvokeAsync(() => types.HideAsync("ooc", StoryContext.Playing));
+		await Assert.That(cut.FindAll(".story-row").Count).IsEqualTo(3).Because("the reader has not hidden OOC");
+
+		await cut.Find(".story-show-toggle").ClickAsync();
+		await Assert.That(cut.Find(".story-show-legend").TextContent.Trim()).IsEqualTo("Pose types to show while reading");
+		await cut.Find(".story-show-item[data-pose-type='ooc'] input").ChangeAsync(new ChangeEventArgs { Value = false });
+		WaitForRows(cut, 2);
+		await Assert.That(types.IsHidden("ooc", StoryContext.Reading)).IsTrue();
 	}
 
 	/// <summary>Hidden poses in a row fold together, counted; a live one of the same type joins the fold.</summary>
@@ -280,7 +304,7 @@ public class SceneStoryTests : TrackingBunitContext
 		var cut = RenderStory();
 		WaitForRows(cut, 3);
 		cut.WaitForAssertion(() => cut.Find(".story-show-toggle"), TimeSpan.FromSeconds(5));
-		await cut.InvokeAsync(() => Services.GetRequiredService<PoseTypeService>().HideAsync("ooc"));
+		await cut.InvokeAsync(() => Services.GetRequiredService<PoseTypeService>().HideAsync("ooc", StoryContext.Playing));
 		await cut.InvokeAsync(() => _hub.RaiseScene(new SceneEventMessage("42", "pose", "Wren Halloway", "P9", "back", "back", [], "ooc",
 			"Lower Docks", 1790000000000, "#314:1", "ooc")));
 		cut.WaitForAssertion(() =>
@@ -312,9 +336,9 @@ public class SceneStoryTests : TrackingBunitContext
 
 		/// <summary>The scene package's types: in character as prose, OOC as the band.</summary>
 		private const string Types = """
-		{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hidden":false,"order":10},
-		          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hidden":false,"order":20}],
-		 "problems":[],"hidden":[]}
+		{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hiddenReading":false,"hiddenPlaying":false,"order":10},
+		          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hiddenReading":false,"hiddenPlaying":false,"order":20}],
+		 "problems":[],"hiddenReading":[],"hiddenPlaying":[]}
 		""";
 
 		private const string Characters = """

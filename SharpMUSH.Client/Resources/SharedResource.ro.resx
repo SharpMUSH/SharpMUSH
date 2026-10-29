@@ -6029,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Afișează</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Tipuri de poze afișate</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Tipuri de poze afișate la citire</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Tipuri de poze afișate în joc</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# rând {label} ascuns} few {# rânduri {label} ascunse} other {# de rânduri {label} ascunse}}</value>

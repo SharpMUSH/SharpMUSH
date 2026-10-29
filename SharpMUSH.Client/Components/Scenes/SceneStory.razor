@@ -14,11 +14,12 @@
 @* D1 §5.4 the Story view of one scene: the REST backlog, then the scene hub's pose/edit/delete/move
    events, one StoryPose per pose. Shared by Play and /scenes/{id}/live. A portrait and a colour come
    from the room's occupant rows, else the directory, and only for the name the pose shows. Each pose draws as
-   its type says; the Show menu hides types, whose runs fold into one line that opens them here. *@
+   its type says; the Show menu hides types, whose runs fold into one line that opens them here. What is hidden is
+   the choice for the story's context: playing in the scene, or only reading it. *@
 <div class="story" @ref="_root">
     @* A pose that arrives live is read out; the backlog is not, it is the page the reader came to. *@
     <LiveAnnouncer @ref="_announcer" Label="@Loc["StoryNewPoses"]" />
-    <PoseTypeMenu Class="story-types" />
+    <PoseTypeMenu Class="story-types" Context="Context" />
     @if (_posesError is not null)
     {
         <MudAlert Severity="Severity.Error" Dense="true" Class="scene-poses-error">@_posesError</MudAlert>
@@ -27,7 +28,7 @@
     {
         <div class="story-empty">@Loc["RolWaitingForActivity"]</div>
     }
-    @foreach (var entry in StoryFolds.Fold(_poses, PoseTypes.For, PoseTypes.IsHidden, _revealed))
+    @foreach (var entry in StoryFolds.Fold(_poses, PoseTypes.For, key => PoseTypes.IsHidden(key, Context), _revealed))
     {
         switch (entry)
         {
@@ -46,6 +47,12 @@
 
 @code {
     [Parameter, EditorRequired] public string SceneId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether the viewer is playing in the scene or only reading it: each hides its own pose types, so
+    /// out-of-character lines can show to the players and not to someone reading along.
+    /// </summary>
+    [Parameter] public StoryContext Context { get; set; } = StoryContext.Playing;
 
     /// <summary>The room's <c>room.contents</c> rows: the first source of portraits, colours and mentions.</summary>
     [Parameter] public IReadOnlyList<RoomOccupant> Occupants { get; set; } = [];

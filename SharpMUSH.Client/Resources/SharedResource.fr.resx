@@ -5338,8 +5338,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Afficher</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Types de pose affichés</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Types de pose affichés en lecture</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Types de pose affichés en jeu</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# ligne {label} masquée} other {# lignes {label} masquées}}</value>

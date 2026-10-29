@@ -6029,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Покажи</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Типове пози за показване</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Типове пози за показване при четене</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Типове пози за показване при игра</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# скрит ред „{label}“} other {# скрити реда „{label}“}}</value>
