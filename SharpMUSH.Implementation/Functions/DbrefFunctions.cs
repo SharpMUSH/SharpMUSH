@@ -778,17 +778,8 @@ public partial class Functions
 
 	[SharpFunction(Name = "nextdbref", MinArgs = 0, MaxArgs = 0, Flags = FunctionFlags.Regular, ParameterNames = [])]
 	public async ValueTask<CallState> NextDbReference(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-	{
-		// One past the highest key, or #0 for an empty database.
-		var maxKey = await Mediator.Send(new GetHighestDbrefQuery()) switch
-		{
-			int highest => highest,
-			NotFound => -1
-		};
-
-		// The next dbref with timestamp 0 (set when created)
-		return new CallState($"#{maxKey + 1}:0");
-	}
+		// PennMUSH answers with the dbref the next creation takes (src/fundb.c:2506).
+		=> new CallState($"#{await Mediator.Send(new GetNextDbrefQuery())}");
 
 	[SharpFunction(Name = "nlsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]
 	[SharpFunction(Name = "nsearch", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["class=restriction..."])]

@@ -9,6 +9,12 @@ namespace SharpMUSH.Database.Lightning.Records;
 public sealed record MailRecord
 {
 	public long Sender { get; init; }
+	/// <summary>
+	/// The sender's creation time, so mail outlives a sender without being credited to whatever later holds
+	/// its number (PennMUSH's <c>from_ctime</c>). Absent when the sender was already gone when it was stamped,
+	/// and then the mail has no sender.
+	/// </summary>
+	public long? SenderCreationTime { get; init; }
 	public long Recipient { get; init; }
 	public long DateSent { get; init; }
 	public bool Fresh { get; init; }

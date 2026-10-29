@@ -7,6 +7,7 @@ namespace SharpMUSH.Database.Lightning.Records;
 public sealed record MailSummaryRecord
 {
 	public long Sender { get; init; }
+	public long? SenderCreationTime { get; init; }
 	public long DateSent { get; init; }
 	public bool Read { get; init; }
 	public bool Urgent { get; init; }

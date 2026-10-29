@@ -100,8 +100,11 @@ public interface IObjectStore
 	/// </summary>
 	ValueTask<ObjectTypeCounts> GetObjectTypeCountsAsync(DBRef? owner, CancellationToken cancellationToken = default);
 
-	/// <summary>The highest dbref number any object holds, or <see cref="NotFound"/> when there are no objects.</summary>
-	ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default);
+	/// <summary>
+	/// The dbref number the next creation takes. It is not one past the highest object: a number freed at the
+	/// top is not handed out again.
+	/// </summary>
+	ValueTask<int> GetNextDbrefAsync(CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Create a new room.

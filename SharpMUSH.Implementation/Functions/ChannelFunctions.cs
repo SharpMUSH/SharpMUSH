@@ -324,7 +324,7 @@ public partial class Functions
 				return PermissionRefusal.ChannelRead(channel.Name.ToPlainText()).Return;
 			}
 
-			return new CallState(readLock(channel) ?? string.Empty);
+			return new CallState(await BooleanExpressionParser.ReadbackAsync(readLock(channel) ?? string.Empty, executor, ExecutionBudget.CurrentToken));
 		});
 	}
 

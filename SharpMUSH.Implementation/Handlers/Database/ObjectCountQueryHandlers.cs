@@ -18,8 +18,8 @@ public class GetObjectTypeCountsQueryHandler(IObjectStore database) : IQueryHand
 		=> await database.GetObjectTypeCountsAsync(request.Owner, cancellationToken);
 }
 
-public class GetHighestDbrefQueryHandler(IObjectStore database) : IQueryHandler<GetHighestDbrefQuery, Found<int>>
+public class GetNextDbrefQueryHandler(IObjectStore database) : IQueryHandler<GetNextDbrefQuery, int>
 {
-	public async ValueTask<Found<int>> Handle(GetHighestDbrefQuery request, CancellationToken cancellationToken)
-		=> await database.GetHighestDbrefAsync(cancellationToken);
+	public async ValueTask<int> Handle(GetNextDbrefQuery request, CancellationToken cancellationToken)
+		=> await database.GetNextDbrefAsync(cancellationToken);
 }

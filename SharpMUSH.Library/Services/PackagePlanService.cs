@@ -549,7 +549,9 @@ public class PackagePlanService : IPackagePlanService
 
 				var baseValue = baseLocks.GetValueOrDefault(lockType);
 				var liveValue = liveLocks.GetValueOrDefault(lockType);
-				var (action, conflict) = ClassifyLock(baseValue, liveValue, newValue, requiresApply);
+				// The store keeps each object a lock names as its objid, so "=#1" reads back as "=#1:<ms>";
+				// the three sides are compared without those times.
+				var (action, conflict) = ClassifyLock(Unstamped(baseValue), Unstamped(liveValue), Unstamped(newValue), requiresApply);
 				changes.Add(new PackageStructureChange(
 					obj.Ref, objid, PackageStructureKind.Lock, lockType, action,
 					Attribute: null, Conflict: conflict,
@@ -616,6 +618,8 @@ public class PackagePlanService : IPackagePlanService
 			(false, false) => PackageStructureAction.RemoveBaseline
 		};
 	}
+
+	private static string? Unstamped(string? key) => key is null ? null : LockKeyReferences.WithoutCreationTimes(key);
 
 	/// <summary>Value-typed (lock) three-way table — the attribute truth table, mapped to structure actions.</summary>
 	private static (PackageStructureAction Action, PackageConflictKind? Conflict) ClassifyLock(

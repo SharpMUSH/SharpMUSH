@@ -95,6 +95,25 @@ public partial class LightningDatabase : IActivityStore
 	private static long ReadSubject(ReadOnlySpan<byte> key) => Keys.ReadDbref(key[8..16]);
 
 	/// <summary>
+	/// Drops a freed object's day rows and last pose, so they are not reported for whatever holds its number
+	/// next. Only a character or room that has posed has any, and every one that has has a last pose. A room's
+	/// list of who posed in it keeps the number; it only counts distinct posers.
+	/// </summary>
+	private static void DeleteActivitySubject(ITx tx, long subject)
+	{
+		if (!tx.TryGet(Tables.ActivityLast, Keys.Dbref(subject), out _)) return;
+		foreach (var table in (TableDef[])[Tables.ActivityPlayer, Tables.ActivityRoom])
+		{
+			foreach (var (key, _) in tx.Range(table, []).Where(row => ReadSubject(row.Key) == subject).ToList())
+			{
+				tx.Delete(table, key);
+			}
+		}
+
+		tx.Delete(Tables.ActivityLast, Keys.Dbref(subject));
+	}
+
+	/// <summary>
 	/// Retention over the two day tables: by age only, whole days at a time. A candidate's key is the
 	/// table's marker byte (0 characters, 1 rooms) followed by the row's key. Last poses are one row per
 	/// object and stay.

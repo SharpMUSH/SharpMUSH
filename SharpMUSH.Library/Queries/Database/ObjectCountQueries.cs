@@ -18,8 +18,6 @@ public record GetChildCountQuery(DBRef Parent) : IQuery<int>;
 public record GetObjectTypeCountsQuery(DBRef? Owner) : IQuery<ObjectTypeCounts>;
 
 /// <summary>
-/// The highest dbref number an object holds, or <see cref="NotFound"/> for an empty database —
-/// <c>nextdbref()</c>. One seek to the end of the object table. Uncached: every create and destroy can
-/// move it.
+/// The dbref number the next creation takes — <c>nextdbref()</c>. Uncached: every create can move it.
 /// </summary>
-public record GetHighestDbrefQuery : IQuery<Found<int>>;
+public record GetNextDbrefQuery : IQuery<int>;

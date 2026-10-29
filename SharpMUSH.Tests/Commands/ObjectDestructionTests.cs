@@ -525,6 +525,7 @@ public class ObjectDestructionTests
 			moves,
 			WebAppFactoryArg.Services.GetRequiredService<IEventService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
+			WebAppFactoryArg.Services.GetServices<IFreedObjectCleanup>(),
 			NullLogger<ObjectDestructionService>.Instance);
 
 	/// <summary>

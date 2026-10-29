@@ -344,12 +344,9 @@ public class DbrefFunctionUnitTests
 		var result = await Parser.EvaluateAsync(MarkupText.Plain("nextdbref()"));
 		var dbrefStr = result.ToPlainText();
 
+		// A plain dbref, as PennMUSH's: the object it names does not exist yet, so it has no creation time.
 		await Assert.That(dbrefStr).StartsWith("#");
-		await Assert.That(dbrefStr).Contains(":");
-
-		var parts = dbrefStr.TrimStart('#').Split(':');
-		await Assert.That(parts.Length).IsEqualTo(2);
-		await Assert.That(int.TryParse(parts[0], out _)).IsTrue();
+		await Assert.That(int.TryParse(dbrefStr[1..], out _)).IsTrue();
 	}
 
 	[Test]

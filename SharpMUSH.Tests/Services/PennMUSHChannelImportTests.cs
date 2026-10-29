@@ -228,8 +228,8 @@ public class PennMUSHChannelImportTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		var boxed = await ChannelAsync(world, "Boxed");
-		await Assert.That(boxed.JoinLock).IsEqualTo("=#11|+#11|#10|NUM:#2|@#11/Basic");
-		await Assert.That(boxed.SpeakLock).IsEqualTo("#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(boxed.JoinLock)).IsEqualTo("=#11|+#11|#10|NUM:#2|@#11/Basic");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(boxed.SpeakLock)).IsEqualTo("#1");
 		await Assert.That(result.Warnings.Texts()).Contains(w =>
 			w.StartsWith("Channel Boxed: join lock names objects imported under new numbers (#2 as #11, #2 as #11, #2 as #11)"));
 		await Assert.That(result.Warnings.Texts()).DoesNotContain(w => w.StartsWith("Channel Boxed: speak lock"));
@@ -324,7 +324,7 @@ public class PennMUSHChannelImportTests
 
 	/// <summary>join, speak, modify, see and hide, in the order the chatdb writes them.</summary>
 	private static string Locks(SharpChannel channel)
-		=> string.Join("|", channel.JoinLock, channel.SpeakLock, channel.ModLock, channel.SeeLock, channel.HideLock);
+		=> LockKeyReferences.WithoutCreationTimes(string.Join("|", channel.JoinLock, channel.SpeakLock, channel.ModLock, channel.SeeLock, channel.HideLock));
 
 	private static async Task<string> MembersAsync(SharpChannel channel)
 		=> string.Join(" ", (await channel.Members.Value.ToListAsync())

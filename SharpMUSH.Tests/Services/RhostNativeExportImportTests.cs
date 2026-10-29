@@ -256,7 +256,7 @@ public class RhostNativeExportImportTests
 		await Assert.That((await alice.Object().Grants.WithCancellation(CancellationToken.None)).HoldsRole("councilor")).IsTrue();
 		var widget = await FindAsync(world, "Widget");
 		var gadget = await FindAsync(world, "Gadget");
-		await Assert.That(widget.Object().Locks["Basic"].LockString).IsEqualTo("(#3)|(#1)");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Basic"].LockString)).IsEqualTo("(#3)|(#1)");
 		await Assert.That((await gadget.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>().Object().Key)
 			.IsEqualTo(widget.Object().Key);
 		var description = await world.Database.GetAttributeAsync(widget.Object().DBRef, ["DESCRIBE"]).ToListAsync();

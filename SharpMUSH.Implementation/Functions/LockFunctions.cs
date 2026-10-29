@@ -6,6 +6,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Implementation.Functions;
@@ -251,8 +252,17 @@ public partial class Functions
 
 	[SharpFunction(Name = "lockowner", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
 	public ValueTask<CallState> LockOwner(IMUSHCodeParser parser, SharpFunctionAttribute _2)
-		=> ReadLockAsync(parser, ErrorMessages.Returns.NoSuchLock, (_, _, resolved) => ValueTask.FromResult(new CallState(resolved is null
-			? ErrorMessages.Returns.NoSuchLock : resolved.Data.Creator is { } creator ? $"#{creator.Number}" : ErrorMessages.Returns.Nothing)));
+		=> ReadLockAsync(parser, ErrorMessages.Returns.NoSuchLock, async (_, _, resolved) => new CallState(resolved is null
+			? ErrorMessages.Returns.NoSuchLock : await LockCreatorAsync(resolved.Data)));
+
+	/// <summary>
+	/// The lock's creator as <c>#N</c>, or <c>#-1</c> once the object that set it is gone: the stored objid names
+	/// that object, not whatever holds its number later.
+	/// </summary>
+	private async ValueTask<string> LockCreatorAsync(SharpLockData data)
+		=> data.Creator is { } creator && await Mediator.Send(new GetObjectNodeQuery(creator)) is AnySharpObject found
+			? $"#{found.Object().DBRef.Number}"
+			: ErrorMessages.Returns.Nothing;
 }
 
 /// <summary>

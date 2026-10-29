@@ -232,7 +232,7 @@ public partial class Commands
 				("Owner", MarkupText.Plain(await DisplayAsync(kind.Owner))),
 				("Description", MarkupText.Plain(kind.Description.Length == 0 ? "none" : kind.Description)),
 				.. SettingRows(kind.Settings, FeedSettings.Defaults, "default"),
-				("Locks", MarkupText.Plain(LockList(kind.Locks))),
+				("Locks", MarkupText.Plain(await LockListAsync(kind.Locks, executor, ct))),
 				("Feeds", MarkupText.Plain(held.Feeds.ToString(CultureInfo.InvariantCulture))),
 				("Lines", MarkupText.Plain(LinesHeld(held.Messages, held.Bytes, held.StoredBytes))),
 				("Taps", MarkupText.Plain(taps.Count == 0 ? "none" : string.Join(", ", taps.Select(tap => $"{tap.Object}/{tap.Attribute}")))),
@@ -249,7 +249,7 @@ public partial class Commands
 			("Newest", MarkupText.Plain(feed.LastId == 0 ? "none" : feed.LastId.ToString(CultureInfo.InvariantCulture))),
 			("Members", MarkupText.Plain(members.ToString(CultureInfo.InvariantCulture))),
 			.. SettingRows(feed.Settings, effective, "kind"),
-			("Locks", MarkupText.Plain(LockList(feed.Locks))),
+			("Locks", MarkupText.Plain(await LockListAsync(feed.Locks, executor, ct))),
 		];
 		return ServerLayout.Build(ServerLayout.Section(MarkupText.Plain($"Feed {feed.Name}"), ServerLayout.KeyValues(fields)), 78, parser.HouseLook());
 	}
@@ -258,8 +258,14 @@ public partial class Commands
 	private static string LinesHeld(long lines, long textBytes, long storedBytes)
 		=> $"{lines.ToString(CultureInfo.InvariantCulture)}, {DescribeBytes(textBytes)} of text, {DescribeBytes(storedBytes)} stored";
 
-	private static string LockList(IReadOnlyDictionary<string, string> locks)
-		=> locks.Count == 0 ? "none" : string.Join("; ", locks.OrderBy(pair => pair.Key, StringComparer.Ordinal).Select(pair => $"{pair.Key}: {pair.Value}"));
+	private async ValueTask<string> LockListAsync(IReadOnlyDictionary<string, string> locks, AnySharpObject viewer, CancellationToken ct)
+	{
+		if (locks.Count == 0) return "none";
+		List<string> shown = [];
+		foreach (var (name, key) in locks.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+			shown.Add($"{name}: {await BooleanExpressionParser.ReadbackAsync(key, viewer, ct)}");
+		return string.Join("; ", shown);
+	}
 
 	/// <summary>One row per option: its value, and where it comes from when it is not set here.</summary>
 	private static IEnumerable<(string, MString)> SettingRows(FeedSettings set, FeedSettings fallback, string from)

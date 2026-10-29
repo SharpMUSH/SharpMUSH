@@ -73,8 +73,8 @@ public class ChannelUniquenessTests
 
 		var survivor = (await Mediator.Send(new GetChannelQuery(name)))!;
 		await Assert.That(survivor.Privs).Contains("Wizard");
-		await Assert.That(survivor.JoinLock).IsEqualTo("#1");
-		await Assert.That(survivor.SpeakLock).IsEqualTo("#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(survivor.JoinLock)).IsEqualTo("#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(survivor.SpeakLock)).IsEqualTo("#1");
 		await Assert.That(await CountNamed(name)).IsEqualTo(1);
 	}
 

@@ -118,9 +118,9 @@ public class TinyMuxImportTests
 
 		var widget = await NodeAsync(world, 5);
 		await Assert.That(widget.Object().Name).IsEqualTo("Widget");
-		await Assert.That(widget.Object().Locks["Basic"].LockString).IsEqualTo("#4|DESCRIBE:*widget*");
-		await Assert.That(widget.Object().Locks["Enter"].LockString).IsEqualTo("@#7");
-		await Assert.That((await NodeAsync(world, 7)).Object().Locks["Zone"].LockString).IsEqualTo("#4");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Basic"].LockString)).IsEqualTo("#4|DESCRIBE:*widget*");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Enter"].LockString)).IsEqualTo("@#7");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes((await NodeAsync(world, 7)).Object().Locks["Zone"].LockString)).IsEqualTo("#4");
 		await Assert.That(await AttributeAsync(world, 5, "CMD_HELLO")).IsEqualTo("$hello:@pemit %#=Hi");
 
 		foreach (var (dbref, password) in (IEnumerable<(int, string)>)[(1, "potrzebie"), (4, "hunter2"), (9, "U*U*U*U*"), (10, "pennpass")])
@@ -143,7 +143,7 @@ public class TinyMuxImportTests
 		await Assert.That(stored.Limit.FunctionRecursionLimit).IsGreaterThanOrEqualTo(500u);
 
 		var staff = await world.Mediator.Send(new GetChannelQuery("Staff")) ?? throw new InvalidOperationException("No Staff channel");
-		await Assert.That(staff.SpeakLock).IsEqualTo("#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(staff.SpeakLock)).IsEqualTo("#1");
 		await Assert.That(await AttributeAsync(world, 4, "CHANALIAS`ST")).IsEqualTo("Staff");
 
 		var builder = (await NodeAsync(world, 4)).Expect<SharpPlayer>();

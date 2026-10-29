@@ -269,14 +269,16 @@ public class BooleanExpressionParser(
 		{
 			cancellationToken.ThrowIfCancellationRequested();
 			var reference = DBRef.Parse(operand);
-			references[operand] = mode switch
+			var named = await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken);
+			references[operand] = (mode, named) switch
 			{
-				LockRenderMode.Decompile when viewer.Object().DBRef.Matches(reference) && reference.CreationMilliseconds is null => "me",
-				LockRenderMode.Examine => await mediator.Send(new GetObjectNodeQuery(reference), cancellationToken) switch
-				{
-					AnySharpObject obj => await services.FormatObjectAsync(viewer, obj).AsTask().WaitAsync(cancellationToken),
-					_ => "*NOTHING*"
-				},
+				(LockRenderMode.Examine, AnySharpObject obj) => await services.FormatObjectAsync(viewer, obj).AsTask().WaitAsync(cancellationToken),
+				(LockRenderMode.Examine, _) => "*NOTHING*",
+				(LockRenderMode.Decompile, AnySharpObject obj) when obj.Object().DBRef.Equals(viewer.Object().DBRef) => "me",
+				// The lock holds the objid it was stamped with; read back, a live object is the #N it was set
+				// with, so the text locks the same object when it is set again. One that is gone keeps its objid,
+				// which names nothing and fails.
+				(_, AnySharpObject obj) => $"#{obj.Object().DBRef.Number}",
 				_ => operand
 			};
 		}

@@ -337,7 +337,7 @@ public partial class LightningDatabase
 			// still hold. Writing the folded map back is what retires the old spelling on disk.
 			var locks = LockNames.Fold(found.Record.Locks);
 			locks[LockNames.Canonical(lockName)] =
-				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString(), Creator = lockData.Creator?.ToString() };
+				new LockRecord { LockString = StampLockKey(tx, lockData.LockString), Flags = lockData.Flags.ToString(), Creator = lockData.Creator?.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -434,12 +434,8 @@ public partial class LightningDatabase
 		return new ObjectTypeCounts(rooms, exits, things, players);
 	}
 
-	public ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => HighestKey(tx, Tables.Obj)) switch
-		{
-			< 0 => (Found<int>)new NotFound(),
-			var highest => (Found<int>)(int)highest
-		});
+	public ValueTask<int> GetNextDbrefAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult((int)Store.Read(ReadNextDbref));
 
 	private int CountEdges(TableDef table, byte[] key, string what) => Store.Read(tx => CountEdges(tx, table, key, what));
 
@@ -1020,6 +1016,9 @@ public partial class LightningDatabase
 
 			// Its feed memberships and the taps on its attributes; feeds it owns stay, ownerless, for feed.admin.
 			DeleteFeedMemberships(tx, n);
+
+			// Its pose counts.
+			DeleteActivitySubject(tx, n);
 
 			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
 			// mail row, its sent-index entry (found directly via the row's own Sender field rather than

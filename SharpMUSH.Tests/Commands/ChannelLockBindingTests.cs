@@ -28,7 +28,7 @@ public class ChannelLockBindingTests
 		var (player, name) = await CreateChannelAsync();
 		await RunAsync(player.Handle, $"@clock/{type} {name}=me");
 		var channel = (await Mediator.Send(new GetChannelQuery(name)))!;
-		await Assert.That(Expression(channel, type)).IsEqualTo($"#{player.DbRef.Number}");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(Expression(channel, type))).IsEqualTo($"#{player.DbRef.Number}");
 		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
 		await Mediator.Send(new UpdateChannelOwnerCommand(channel, god));
 		channel = (await Mediator.Send(new GetChannelQuery(name)))!;

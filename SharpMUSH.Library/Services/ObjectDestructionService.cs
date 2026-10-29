@@ -21,6 +21,7 @@ public class ObjectDestructionService(
 	IMoveService moveService,
 	IEventService eventService,
 	IOptionsMonitor<SharpMUSHOptions> configuration,
+	IEnumerable<IFreedObjectCleanup> cleanups,
 	ILogger<ObjectDestructionService> logger) : IObjectDestructionService
 {
 	private const int GodDbRefNumber = 1;
@@ -107,6 +108,11 @@ public class ObjectDestructionService(
 		if (!deleted)
 		{
 			return false;
+		}
+
+		foreach (var cleanup in cleanups)
+		{
+			await cleanup.ObjectsFreedAsync([dbref], cancellationToken);
 		}
 
 		// PennMUSH free_object() queues OBJECT`DESTROY with everything about the object it can still

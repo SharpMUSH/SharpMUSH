@@ -2104,29 +2104,16 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 	private static string RemappedLockKey(string key, string label, PennMUSHConversionContext context)
 	{
 		var moved = new List<string>();
-		var remapped = new StringBuilder(key.Length);
-		var at = 0;
-		while (at < key.Length)
+		var remapped = LockKeyReferences.Rewrite(key, source =>
 		{
-			// Between leaves: the operators and grouping parse_boolexp consumes before it reads an operand.
-			if (key[at] is '&' or '|' or '(' or ')' or '!' || char.IsWhiteSpace(key[at]))
+			if (!context.DbrefMapping.TryGetValue(source, out var imported) || imported.Number == source)
 			{
-				remapped.Append(key[at++]);
-				continue;
+				return null;
 			}
 
-			// A leaf runs to the next unescaped &, | or ), as parse_boolexp_L reads it.
-			var end = at;
-			var escaped = false;
-			while (end < key.Length && (escaped || key[end] is not ('&' or '|' or ')')))
-			{
-				escaped = !escaped && key[end] == '\\';
-				end++;
-			}
-
-			remapped.Append(RemappedLockLeaf(key[at..end], context, moved));
-			at = end;
-		}
+			moved.Add($"#{source} as #{imported.Number}");
+			return $"#{imported.Number}";
+		});
 
 		if (moved.Count > 0)
 		{
@@ -2134,38 +2121,8 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 				$"'{key}' became '{remapped}'");
 		}
 
-		return remapped.ToString();
+		return remapped;
 	}
-
-	/// <summary>
-	/// One operand of a lock key, with the object it names moved to its imported number. Only an operand that is
-	/// a bare <c>#N</c>, optionally after an is, carry, owner or indirect token, names an object; anything else,
-	/// such as the value of <c>TAG:foo #2</c>, is a literal and is kept as written.
-	/// </summary>
-	private static string RemappedLockLeaf(string leaf, PennMUSHConversionContext context, List<string> moved)
-	{
-		var match = LockObjectReference().Match(leaf);
-		if (!match.Success
-			|| (match.Groups["lock"].Success && match.Groups["token"].Value != "@")
-			|| !int.TryParse(match.Groups["number"].ValueSpan, NumberStyles.None, CultureInfo.InvariantCulture, out var source)
-			|| !context.DbrefMapping.TryGetValue(source, out var imported)
-			|| imported.Number == source)
-		{
-			return leaf;
-		}
-
-		moved.Add($"#{source} as #{imported.Number}");
-		var number = match.Groups["number"];
-		return $"{leaf[..(number.Index - 1)]}#{imported.Number}{leaf[(number.Index + number.Length)..]}";
-	}
-
-	/// <summary>
-	/// A lock operand that names an object as <c>unparse_boolexp</c> writes it with <c>UB_DBREF</c>: a <c>#N</c>
-	/// alone or after the <c>=</c>, <c>+</c>, <c>@</c> or <c>$</c> of an is, carry, indirect or owner lock,
-	/// and for an indirect lock the lock it names (<c>@#N/Basic</c>).
-	/// </summary>
-	[GeneratedRegex(@"^(?<token>[=+@$]?)\s*#(?<number>\d+)(?<lock>/\S+)?\s*$")]
-	private static partial Regex LockObjectReference();
 
 	/// <summary>The mogrifier as <c>@channel/mogrifier</c> stores it, or none when it was not imported.</summary>
 	private async Task<string> ChannelMogrifierAsync(PennMUSHChannel channel, string label,

@@ -44,6 +44,7 @@ public partial class LightningDatabase
 		new(1, ArrivalOrderMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateArrivalOrder, ct)),
 		new(1, AttributeCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeCounts, ct)),
 		new(1, WikiTitleMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiTitles, ct)),
+		new(1, ReferenceStampMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateReferenceStamps, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>
