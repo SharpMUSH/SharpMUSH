@@ -22,10 +22,16 @@ public class WebSocketServer(
 
 		// KeepAliveTimeout makes the server abort the socket when pongs stop arriving, so a half-open
 		// peer (abrupt drop) is detected in ~interval+timeout instead of lingering for minutes.
+		// permessage-deflate, when the browser offers it: game output is repetitive text and markup, and a
+		// help page shrinks to a fraction. Each message is compressed on its own (no server context
+		// takeover), so text another player put on this screen can never be compressed against the
+		// resume token sent on the same socket and reveal it through frame sizes.
 		using var webSocket = await context.WebSockets.AcceptWebSocketAsync(new WebSocketAcceptContext
 		{
 			KeepAliveInterval = keepAlive.WsInterval,
-			KeepAliveTimeout = keepAlive.WsTimeout
+			KeepAliveTimeout = keepAlive.WsTimeout,
+			DangerousEnableCompression = true,
+			DisableServerContextTakeover = true
 		});
 		var handle = await descriptorGenerator.GetNextWebSocketDescriptorAsync(context.RequestAborted);
 		// The player's address: behind a proxy listed in ForwardedHeaders:KnownProxies, UseForwardedHeaders

@@ -55,20 +55,24 @@ public class OrderedPromptTests
 		return (new MarkupOutputConsumer(connections, renderer, Substitute.For<IOutputTransformService>(), NullLogger<MarkupOutputConsumer>.Instance), written);
 	}
 
-	/// <summary>A WebSocket client is told a prompt is one, and which @input session it belongs to.</summary>
+	/// <summary>
+	/// A WebSocket client is told a prompt is one, and which @input session it belongs to. The markup is
+	/// written in place as an object, and a line goes out without a trip to the rendering worker.
+	/// </summary>
 	[Test]
 	public async Task WebSocketPromptFrameIsMarkedWithItsSession()
 	{
 		var (consumer, written) = WebSocketConsumer();
+		const string markup = """{"t":"ready?"}""";
 
-		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized") { Prompt = true, InputSession = "abc" });
-		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized") { Prompt = true });
-		await consumer.HandleAsync(new MarkupOutputMessage(1, "serialized"));
+		await consumer.HandleAsync(new MarkupOutputMessage(1, markup) { Prompt = true, InputSession = "abc" });
+		await consumer.HandleAsync(new MarkupOutputMessage(1, markup) { Prompt = true });
+		await consumer.HandleAsync(new MarkupOutputMessage(1, markup));
 
 		await Assert.That(written).IsEquivalentTo([
-			("prompt", """{"type":"markup","data":"serialized","prompt":true,"session":"abc"}"""),
-			("prompt", """{"type":"markup","data":"serialized","prompt":true}"""),
-			("output", "rendered")], TUnit.Assertions.Enums.CollectionOrdering.Matching);
+			("prompt", """{"type":"markup","data":{"t":"ready?"},"prompt":true,"session":"abc"}"""),
+			("prompt", """{"type":"markup","data":{"t":"ready?"},"prompt":true}"""),
+			("output", """{"type":"markup","data":{"t":"ready?"}}""")], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
 	[Test]

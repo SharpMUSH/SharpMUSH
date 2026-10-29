@@ -44,7 +44,7 @@ public class TerminalServiceOobTests
 		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws, System.Text.Json.JsonSerializer.Serialize(new
 		{
 			type = "markup",
-			data = MarkupTextSerializer.Serialize(sound)
+			data = System.Text.Json.Nodes.JsonNode.Parse(MarkupTextSerializer.Serialize(sound))
 		}));
 
 		await Assert.That(svc.Lines.Count(l => l.Html.Contains("ding.wav"))).IsEqualTo(1);
@@ -59,7 +59,7 @@ public class TerminalServiceOobTests
 		ws.MessageReceived += Raise.Event<EventHandler<string>>(ws, System.Text.Json.JsonSerializer.Serialize(new
 		{
 			type = "markup",
-			data = MarkupTextSerializer.Serialize(MString.Plain("\r\n"))
+			data = System.Text.Json.Nodes.JsonNode.Parse(MarkupTextSerializer.Serialize(MString.Plain("\r\n")))
 		}));
 
 		await Assert.That(svc.Lines.Any(l => l.Source == TerminalLineSource.Server)).IsFalse();

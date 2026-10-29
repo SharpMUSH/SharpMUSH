@@ -7,7 +7,7 @@ namespace SharpMUSH.Client.Services;
 /// Every frame shares one flat discriminated envelope <c>{"type":"&lt;kind&gt;",...}</c>. Builds the
 /// outbound first frame (<c>{"type":"hello"}</c> / <c>{"type":"resume","token","lastSeq"}</c>) and
 /// recognises the inbound <c>{"type":"reattached"}</c>, <c>{"type":"bye"}</c>,
-/// <c>{"type":"resumeToken","token"}</c>, and <c>{"type":"seq","seq","data"}</c> frames. Pure and
+/// <c>{"type":"resumeToken","token"}</c>, and <c>{"type":"seq","seq","data"}</c> frames (<see cref="Read"/>). Pure and
 /// side-effect-free for easy testing.
 /// </summary>
 public static class ResumeFrameParser
@@ -33,78 +33,70 @@ public static class ResumeFrameParser
 		=> JsonSerializer.Serialize(new ResumeFrame("resume", token, lastSeq, presenceClass, signIn ? true : null), Json);
 
 	/// <summary>True if the frame is the <c>{"type":"reattached"}</c> rebind acknowledgement.</summary>
-	public static bool IsReattached(string frame) => TypeEquals(frame, "reattached");
+	public static bool IsReattached(string frame) => Read(frame) is ReattachedFrame;
 
 	/// <summary>
 	/// True if the frame is the <c>{"type":"bye"}</c> engine-initiated-logout notice — the server sent it
 	/// just before closing an intentional disconnect (QUIT / ban / @boot), so the client must not
 	/// auto-reconnect. Absent on a raw socket drop, which stays resumable.
 	/// </summary>
-	public static bool IsBye(string frame) => TypeEquals(frame, "bye");
+	public static bool IsBye(string frame) => Read(frame) is ByeFrame;
 
 	/// <summary>True if the frame is a <c>{"type":"resumeToken","token":"..."}</c> control frame.</summary>
 	public static bool TryReadResumeToken(string frame, out string? token)
 	{
-		token = null;
-		if (!LooksLikeJson(frame)) return false;
-		try
-		{
-			using var doc = JsonDocument.Parse(frame);
-			var root = doc.RootElement;
-			if (!IsType(root, "resumeToken") || !root.TryGetProperty("token", out var el))
-				return false;
-			token = el.GetString();
-			return token is not null;
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
+		token = Read(frame) is ResumeTokenFrame resume ? resume.Token : null;
+		return token is not null;
 	}
 
-	/// <summary>True if the frame is a <c>{"type":"seq","seq":n,"data":"..."}</c> envelope; yields seq + inner payload.</summary>
+	/// <summary>True if the frame is a <c>{"type":"seq","seq":n,"data":...}</c> envelope; yields seq + inner payload.</summary>
 	public static bool TryReadSeq(string frame, out long seq, out string? data)
 	{
-		seq = 0;
-		data = null;
-		if (!LooksLikeJson(frame)) return false;
+		var read = Read(frame);
+		(seq, data) = read is SequencedFrame sequenced ? (sequenced.Seq, sequenced.Data) : (0, null);
+		return read is SequencedFrame;
+	}
+
+	/// <summary>
+	/// Reads what a frame from the server is, in one parse: a frame of output can be large, and every
+	/// control frame is checked for before it is shown. The payload of a sequence envelope is the frame it
+	/// carries, as text: a JSON object (markup, OOB) as written, or the plain text of a banner.
+	/// </summary>
+	public static ServerFrame Read(string frame)
+	{
+		if (!LooksLikeJson(frame)) return new OtherFrame();
 		try
 		{
 			using var doc = JsonDocument.Parse(frame);
 			var root = doc.RootElement;
-			if (!IsType(root, "seq")
-				|| !root.TryGetProperty("seq", out var seqEl)
-				|| !root.TryGetProperty("data", out var dataEl))
-				return false;
-			seq = seqEl.GetInt64();
-			data = dataEl.GetString();
-			return true;
+			if (root.ValueKind != JsonValueKind.Object
+				|| !root.TryGetProperty("type", out var type)
+				|| type.ValueKind != JsonValueKind.String)
+				return new OtherFrame();
+			return type.GetString() switch
+			{
+				"bye" => new ByeFrame(),
+				"reattached" => new ReattachedFrame(),
+				"resumeToken" when root.TryGetProperty("token", out var token) && token.ValueKind == JsonValueKind.String
+					=> new ResumeTokenFrame(token.GetString()!),
+				"seq" when root.TryGetProperty("seq", out var seq) && seq.ValueKind == JsonValueKind.Number
+					&& root.TryGetProperty("data", out var data) && Payload(data) is { } payload
+					=> new SequencedFrame(seq.GetInt64(), payload),
+				_ => new OtherFrame()
+			};
 		}
 		catch (JsonException)
 		{
-			return false;
+			return new OtherFrame();
 		}
 	}
 
-	private static bool TypeEquals(string frame, string kind)
+	private static string? Payload(JsonElement data) => data.ValueKind switch
 	{
-		if (!LooksLikeJson(frame)) return false;
-		try
-		{
-			using var doc = JsonDocument.Parse(frame);
-			return IsType(doc.RootElement, kind);
-		}
-		catch (JsonException)
-		{
-			return false;
-		}
-	}
-
-	private static bool IsType(JsonElement root, string kind) =>
-		root.ValueKind == JsonValueKind.Object
-		&& root.TryGetProperty("type", out var el)
-		&& el.ValueKind == JsonValueKind.String
-		&& el.GetString() == kind;
+		JsonValueKind.String => data.GetString(),
+		JsonValueKind.Object => data.GetRawText(),
+		_ => null
+	};
 
 	private static bool LooksLikeJson(string frame) => frame.Length > 0 && frame[0] == '{';
 
@@ -114,3 +106,21 @@ public static class ResumeFrameParser
 	private sealed record ResumeFrame(string Type, string Token, long LastSeq, string Class,
 		[property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] bool? SignIn);
 }
+
+/// <summary>A frame from the server, as <see cref="ResumeFrameParser.Read"/> found it.</summary>
+public union ServerFrame(ByeFrame, ReattachedFrame, ResumeTokenFrame, SequencedFrame, OtherFrame);
+
+/// <summary><c>{"type":"bye"}</c>: the server ended the session; do not reconnect.</summary>
+public readonly record struct ByeFrame;
+
+/// <summary><c>{"type":"reattached"}</c>: the resume was accepted.</summary>
+public readonly record struct ReattachedFrame;
+
+/// <summary><c>{"type":"resumeToken","token":"..."}</c>: the token a reconnect resumes with.</summary>
+public readonly record struct ResumeTokenFrame(string Token);
+
+/// <summary><c>{"type":"seq","seq":n,"data":...}</c>: a frame of output and its place in the session.</summary>
+public readonly record struct SequencedFrame(long Seq, string Data);
+
+/// <summary>Anything else: a frame that is not one of the above, shown as it is.</summary>
+public readonly record struct OtherFrame;

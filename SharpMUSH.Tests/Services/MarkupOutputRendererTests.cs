@@ -325,8 +325,10 @@ public partial class MarkupOutputRendererTests
 		var root = doc.RootElement;
 		await Assert.That(root.GetProperty("type").GetString()).IsEqualTo("markup");
 
-		var data = root.GetProperty("data").GetString()!;
-		await Assert.That(MarkupTextSerializer.Deserialize(data).ToPlainText()).IsEqualTo(Raw);
+		// The markup is the frame's own object, not a string holding it, so it is parsed once.
+		var data = root.GetProperty("data");
+		await Assert.That(data.ValueKind).IsEqualTo(JsonValueKind.Object);
+		await Assert.That(MarkupTextSerializer.Deserialize(data.GetRawText()).ToPlainText()).IsEqualTo(Raw);
 	}
 
 	/// <summary>

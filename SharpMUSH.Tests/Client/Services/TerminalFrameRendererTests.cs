@@ -11,7 +11,7 @@ public class TerminalFrameRendererTests
 		var envelope = System.Text.Json.JsonSerializer.Serialize(new
 		{
 			type = "markup",
-			data = MarkupString.MarkupTextSerializer.Serialize(link)
+			data = System.Text.Json.Nodes.JsonNode.Parse(MarkupString.MarkupTextSerializer.Serialize(link))
 		});
 		var frame = TerminalFrameRenderer.Parse(envelope);
 
@@ -43,7 +43,7 @@ public class TerminalFrameRendererTests
 		var envelope = new System.Text.Json.Nodes.JsonObject
 		{
 			["type"] = "markup",
-			["data"] = MarkupString.MarkupTextSerializer.Serialize(MString.Plain(text))
+			["data"] = System.Text.Json.Nodes.JsonNode.Parse(MarkupString.MarkupTextSerializer.Serialize(MString.Plain(text)))
 		};
 		if (prompt is { } p) envelope["prompt"] = p;
 		if (session is not null) envelope["session"] = session;

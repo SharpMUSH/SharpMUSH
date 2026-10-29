@@ -486,51 +486,47 @@ public class WebSocketClientService : IWebSocketClientService
 	/// </summary>
 	private async Task SurfaceMessageAsync(string message)
 	{
-		if (ResumeFrameParser.IsBye(message))
+		switch (ResumeFrameParser.Read(message))
 		{
-			// Engine-initiated logout: the session is over for good. Suppress auto-reconnect and drop the
-			// resume state so a later explicit reconnect starts fresh (a hello), not a resume-to-dead that
-			// would replay the old session's goodbye output, and so a reload does not try either.
-			_serverTerminated = true;
-			_resumeToken = null;
-			_lastSeq = 0;
-			_verdict?.TrySetResult(ResumeVerdict.Fresh);
-			if (_slot is { } ended) await ended.ClearAsync();
-			Terminated?.Invoke(this, EventArgs.Empty);
-			return;
-		}
+			case ByeFrame:
+				// Engine-initiated logout: the session is over for good. Suppress auto-reconnect and drop the
+				// resume state so a later explicit reconnect starts fresh (a hello), not a resume-to-dead that
+				// would replay the old session's goodbye output, and so a reload does not try either.
+				_serverTerminated = true;
+				_resumeToken = null;
+				_lastSeq = 0;
+				_verdict?.TrySetResult(ResumeVerdict.Fresh);
+				if (_slot is { } ended) await ended.ClearAsync();
+				Terminated?.Invoke(this, EventArgs.Empty);
+				return;
 
-		if (ResumeFrameParser.IsReattached(message))
-		{
-			// The session continues, still logged in: no re-login needed. The event goes first, so its
-			// handlers have run by the time the verdict lets ConnectAsync return.
-			Reattached?.Invoke(this, EventArgs.Empty);
-			_verdict?.TrySetResult(ResumeVerdict.Resumed);
-			return;
-		}
+			case ReattachedFrame:
+				// The session continues, still logged in: no re-login needed. The event goes first, so its
+				// handlers have run by the time the verdict lets ConnectAsync return.
+				Reattached?.Invoke(this, EventArgs.Empty);
+				_verdict?.TrySetResult(ResumeVerdict.Resumed);
+				return;
 
-		if (ResumeFrameParser.TryReadResumeToken(message, out var token) && token is not null)
-		{
-			await SettleAsFreshIfUnansweredAsync();
-			_resumeToken = token;
-			if (_slot is { } slot) await slot.SaveAsync(new TerminalResumePoint(token, _lastSeq));
-			return;
-		}
+			case ResumeTokenFrame resume:
+				await SettleAsFreshIfUnansweredAsync();
+				_resumeToken = resume.Token;
+				if (_slot is { } slot) await slot.SaveAsync(new TerminalResumePoint(resume.Token, _lastSeq));
+				return;
 
-		if (ResumeFrameParser.TryReadSeq(message, out var seq, out var data))
-		{
-			await SettleAsFreshIfUnansweredAsync();
-			// A frame this page already showed, sent again.
-			if (seq <= _lastSeq) return;
-			_lastSeq = seq;
-			if (_slot is { } slot && _resumeToken is { } current)
-				await slot.StageAsync(new TerminalResumePoint(current, seq));
-			if (data is not null)
-				MessageReceived?.Invoke(this, data);
-			return;
-		}
+			case SequencedFrame sequenced:
+				await SettleAsFreshIfUnansweredAsync();
+				// A frame this page already showed, sent again.
+				if (sequenced.Seq <= _lastSeq) return;
+				_lastSeq = sequenced.Seq;
+				if (_slot is { } staged && _resumeToken is { } current)
+					await staged.StageAsync(new TerminalResumePoint(current, sequenced.Seq));
+				MessageReceived?.Invoke(this, sequenced.Data);
+				return;
 
-		MessageReceived?.Invoke(this, message);
+			default:
+				MessageReceived?.Invoke(this, message);
+				return;
+		}
 	}
 
 	/// <summary>

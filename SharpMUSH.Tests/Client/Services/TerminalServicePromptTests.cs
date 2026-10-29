@@ -28,7 +28,7 @@ public class TerminalServicePromptTests
 		var envelope = new JsonObject
 		{
 			["type"] = "markup",
-			["data"] = MarkupTextSerializer.Serialize(MString.Plain(text)),
+			["data"] = JsonNode.Parse(MarkupTextSerializer.Serialize(MString.Plain(text))),
 			["prompt"] = true
 		};
 		if (session is not null) envelope["session"] = session;
@@ -42,7 +42,7 @@ public class TerminalServicePromptTests
 	private static string LineFrame(string text) => new JsonObject
 	{
 		["type"] = "markup",
-		["data"] = MarkupTextSerializer.Serialize(MString.Plain(text))
+		["data"] = JsonNode.Parse(MarkupTextSerializer.Serialize(MString.Plain(text)))
 	}.ToJsonString();
 
 	private static void Receive(IWebSocketClientService ws, string frame) =>
