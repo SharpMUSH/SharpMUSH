@@ -29,6 +29,7 @@ With no args, SOCKSET shows the current value of the socket options. With an `<o
 - colorstyle: See [COLORSTYLE]
 - hyperlinks, commandlinks: See [HYPERLINKS]
 - graphics: See [GRAPHICS]
+- alttext: on, off or auto. How a picture your client does not draw is written: on writes its description, off its address. Auto writes the description for a screen reader and the address for everyone else
 - animation: See [ANIMATION]
 - terminal: See [TERMINAL]
 - charset: See [CHARSET]
