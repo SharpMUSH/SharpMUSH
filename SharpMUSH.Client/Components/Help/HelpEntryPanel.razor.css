@@ -143,17 +143,15 @@
     outline-offset: -2px;
 }
 
-/* A long contents list (seven sections or more) takes the article's width in columns rather than a
-   screenful of rows, where there is room for them. */
-@container page (min-width: 48rem) {
-    .help-entry ::deep nav.help-toc:has(li:nth-child(7)) {
-        width: auto;
-    }
+/* A long contents list (seven sections or more) takes the article's width in up to three columns
+   rather than a screenful of rows. Each column is at least 14rem, so a narrow page keeps one. */
+.help-entry ::deep nav.help-toc:has(li:nth-child(7)) {
+    width: auto;
+}
 
-    .help-entry ::deep nav.help-toc ol:has(li:nth-child(7)) {
-        columns: 3 14rem;
-        column-gap: 1.5rem;
-    }
+.help-entry ::deep nav.help-toc ol:has(li:nth-child(7)) {
+    columns: 3 14rem;
+    column-gap: 1.5rem;
 }
 
 /* A ::: seealso block (SeeAlsoBlock, HtmlSeeAlsoRenderer): a labelled nav. A list of bare names wraps
