@@ -109,6 +109,8 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 
 	private IAuditLog Audit { get; }
 
+	private IRecoverListService RecoverList { get; }
+
 	private IMsspReportService MsspReport { get; }
 
 	private IConnectionTrafficService ConnectionTraffic { get; }
@@ -187,6 +189,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		IBooleanExpressionParser booleanExpressionParser,
 		IPageLogService pageLog,
 		IAuditLog audit,
+		IRecoverListService recoverList,
 		IMsspReportService msspReport,
 		IConnectionTrafficService connectionTraffic,
 		IGameMessageService gameMessages,
@@ -254,6 +257,7 @@ public partial class Commands : ILibraryProvider<CommandDefinition>
 		BooleanExpressionParser = booleanExpressionParser;
 		PageLog = pageLog;
 		Audit = audit;
+		RecoverList = recoverList;
 		MsspReport = msspReport;
 		ConnectionTraffic = connectionTraffic;
 		MessageService = gameMessages;

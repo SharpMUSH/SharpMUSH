@@ -27,6 +27,7 @@ public interface ISharpDatabase :
 	IPortalNavigationStore,
 	IPushSubscriptionStore,
 	IPageLogStore,
-	IFeedStore
+	IFeedStore,
+	IRecoverListStore
 {
 }

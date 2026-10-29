@@ -65,6 +65,7 @@ public partial class Commands
 		var reusableBytes = report.FileBytes < 0 || report.LiveBytes < 0 ? -1 : report.FreeBytes;
 		var feeds = await Mediator.Send(new GetFeedUsageQuery(), ExecutionBudget.CurrentToken);
 		var feedBytes = feeds.Sum(kind => kind.StoredBytes);
+		var recover = await Mediator.Send(new MeasureRecoverListQuery(), ExecutionBudget.CurrentToken);
 
 		var parts = new List<Block>
 		{
@@ -72,7 +73,9 @@ public partial class Commands
 				.. Meters(
 				("Map", report.FileBytes, report.MapSizeBytes,
 					$"{DescribeKnownBytes(report.FileBytes)} of {DescribeKnownBytes(report.MapSizeBytes)} limit"),
-				("Feeds", feedBytes, report.LiveBytes, $"{DescribeBytes(feedBytes)} of the live data")),
+				("Feeds", feedBytes, report.LiveBytes, $"{DescribeBytes(feedBytes)} of the live data"),
+				("Recover list", recover.Bytes, report.LiveBytes,
+					$"{DescribeBytes(recover.Bytes)} in {recover.Entries} destroyed objects, {DescribeBytes(recover.KeptBytes)} of it kept")),
 				.. Facts(
 				("File size", DescribeKnownBytes(report.FileBytes)),
 				("Inside file", $"{DescribeKnownBytes(report.LiveBytes)} live, {DescribeKnownBytes(reusableBytes)} reusable"),
@@ -264,7 +267,8 @@ public partial class Commands
 	private async ValueTask StorageHistoryAsync(AnySharpObject executor)
 	{
 		var usage = await HistoryRetention.MeasureAsync();
-		if (usage.Count == 0)
+		var recover = await Mediator.Send(new MeasureRecoverListQuery(), ExecutionBudget.CurrentToken);
+		if (usage.Count == 0 && recover.Entries == 0)
 		{
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.StorageHistoryNone), executor);
 			return;
@@ -285,6 +289,14 @@ public partial class Commands
 				DescribeKnownBytes(kind.Bytes),
 				kind.Holders.ToString(CultureInfo.InvariantCulture),
 				HistoryRetention.Options.RuleFor(kind.Kind).Describe(),
+			]).Append(
+			[
+				"recover",
+				recover.Entries.ToString(CultureInfo.InvariantCulture),
+				DescribeKnownBytes(recover.Bytes),
+				"-",
+				$"characters {RecoverKeepDescription("PLAYER")}, other objects {RecoverKeepDescription("THING")}; "
+					+ $"{recover.KeptEntries} kept ({DescribeKnownBytes(recover.KeptBytes)}) never expire",
 			]));
 		var archive = string.IsNullOrWhiteSpace(HistoryRetention.Options.ArchivePath)
 			? "No archive: a purged record survives only in older backups."
@@ -292,6 +304,10 @@ public partial class Commands
 		await NotifyService.Notify(executor, ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain("History"), table,
 			new Rule(), new TextBlock(MarkupText.Plain(archive))), 78, HouseLook.Look));
 	}
+
+	/// <summary>How long recover entries of a type stay, as recover_keep_players or recover_keep_objects sets it.</summary>
+	private string RecoverKeepDescription(string type)
+		=> RecoverList.RetentionFor(type) is { } keep ? $"{keep.TotalDays.ToString("0.##", CultureInfo.InvariantCulture)} days" : "forever";
 
 	private async ValueTask StoragePurgeAsync(AnySharpObject executor)
 	{

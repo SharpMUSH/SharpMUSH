@@ -182,7 +182,9 @@ public record SharpMUSHOptions
 			DumpMessage: "GAME: Saving database. Game may freeze for a few moments.",
 			DumpComplete: "GAME: Save complete.",
 			DumpWarning5Min: "GAME: Database save in 5 minutes.",
-			DumpWarning1Min: "GAME: Database save in 1 minute."
+			DumpWarning1Min: "GAME: Database save in 1 minute.",
+			RecoverKeepPlayers: RecoverRetention.Forever,
+			RecoverKeepObjects: "30d"
 		),
 		File = new FileOptions(
 			AccessFile: "access.cnf",

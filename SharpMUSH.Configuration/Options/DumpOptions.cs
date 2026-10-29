@@ -40,5 +40,25 @@ public record DumpOptions(
 		Description = "Shown to every connected player one minute before a scheduled backup. Empty shows nothing",
 		Group = "Database Maintenance",
 		Order = 5)]
-	string? DumpWarning1Min
+	string? DumpWarning1Min,
+
+	[property: SharpConfig(
+		Name = "recover_keep_players",
+		Category = "Dump",
+		Description = "How long a destroyed character stays on the recover list, where @recover can bring it back, before its number is freed: forever, or a time of at least one day",
+		Group = "Database Maintenance",
+		Order = 6,
+		ValidationPattern = RecoverRetention.Pattern,
+		Tooltip = "Format: forever, or a time value (e.g., '90d', '1d12h')")]
+	string RecoverKeepPlayers,
+
+	[property: SharpConfig(
+		Name = "recover_keep_objects",
+		Category = "Dump",
+		Description = "How long any other destroyed object stays on the recover list, where @recover can bring it back, before its number is freed: forever, or a time of at least one day",
+		Group = "Database Maintenance",
+		Order = 7,
+		ValidationPattern = RecoverRetention.Pattern,
+		Tooltip = "Format: forever, or a time value (e.g., '30d', '1d12h')")]
+	string RecoverKeepObjects
 );

@@ -7,6 +7,7 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Common;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -317,6 +318,7 @@ public partial class Commands
 			// Phase 2b: object-lifecycle destroy seam. Fired while the object is still in the DB so a
 			// plugin hook can still read it; after FreeObjectAsync there is nothing left to read.
 			await NotifyObjectDestroyingAsync(parser, obj.Object().DBRef);
+			await ObjectDataService.SetExpandedDataAsync(new DestroyedByData(executor.Object().DBRef.ToString()), obj.Object());
 
 			if (!await ObjectDestructionService.FreeObjectAsync(parser, obj))
 			{
@@ -327,10 +329,8 @@ public partial class Commands
 					shouldNotify: true);
 			}
 
-			if (obj.IsPlayer)
-			{
-				await Audit.RecordAsync(executor, AuditActions.PlayerDestroy, AuditTargets.Of(obj), "destroyed");
-			}
+			await Audit.RecordAsync(executor, obj.IsPlayer ? AuditActions.PlayerDestroy : AuditActions.ObjectDestroy,
+				AuditTargets.Of(obj), "destroyed");
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.Destroyed), executor);
 			return CallState.Empty;
@@ -357,10 +357,8 @@ public partial class Commands
 		await NotifyService.NotifyLocalized(executor, destroyKey, executor, destroyed);
 
 		await PreDestroyAsync(parser, executor, obj.Object().DBRef, []);
-		if (obj.IsPlayer)
-		{
-			await Audit.RecordAsync(executor, AuditActions.PlayerDestroy, AuditTargets.Of(obj), "scheduled");
-		}
+		await Audit.RecordAsync(executor, obj.IsPlayer ? AuditActions.PlayerDestroy : AuditActions.ObjectDestroy,
+			AuditTargets.Of(obj), "scheduled");
 
 		return CallState.Empty;
 	}
@@ -446,6 +444,7 @@ public partial class Commands
 
 		await SetFlagInternalAsync(thing, "GOING", true);
 		await SetFlagInternalAsync(thing, "GOING_TWICE", false);
+		await ObjectDataService.SetExpandedDataAsync(new DestroyedByData(executor.Object().DBRef.ToString()), thing.Object());
 
 		var dragged = thing switch
 		{

@@ -176,6 +176,21 @@ public static class AuditActions
 	/// <summary>The portal navigation put back to its default.</summary>
 	public const string NavigationReset = "navigation.reset";
 
+	/// <summary>An object other than a character scheduled for destruction, or freed at once.</summary>
+	public const string ObjectDestroy = "object.destroy";
+
+	/// <summary>An object brought back: spared while GOING, or put back from the recover list.</summary>
+	public const string ObjectRecover = "object.recover";
+
+	/// <summary>A recover entry marked kept, with the reason.</summary>
+	public const string RecoverKeep = "recover.keep";
+
+	/// <summary>The keep mark taken off a recover entry.</summary>
+	public const string RecoverUnkeep = "recover.unkeep";
+
+	/// <summary>A recover entry removed for good, by @purge or because it outlived its retention.</summary>
+	public const string RecoverPurge = "recover.purge";
+
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
 	[
@@ -185,6 +200,7 @@ public static class AuditActions
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
 		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
-		AppSave, AppDelete, FeedLineDelete, NavigationSave, NavigationReset
+		AppSave, AppDelete, FeedLineDelete, NavigationSave, NavigationReset, ObjectDestroy, ObjectRecover, RecoverKeep,
+		RecoverUnkeep, RecoverPurge
 	];
 }

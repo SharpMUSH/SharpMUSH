@@ -119,6 +119,7 @@ internal static class EngineRegistration
 		services.AddSingleton<IConnectionTrafficService, Implementation.Services.ConnectionTrafficService>();
 		services.AddSingleton<ILookService, LookService>();
 		services.AddSingleton<IObjectDestructionService, ObjectDestructionService>();
+		services.AddSingleton<IRecoverListService, RecoverListService>();
 		services.AddSingleton<IExpandedObjectDataService, ExpandedObjectDataService>();
 		services.AddSingleton<IAttributeService, AttributeService>();
 		services.AddSingleton<IAttributeIndexBuilder, AttributeIndexBuilder>();

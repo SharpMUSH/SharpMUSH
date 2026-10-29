@@ -15,6 +15,9 @@ public static class Tables
 	public static readonly TableDef ObjName = TableDef.Index("obj.name", duplicates: true, fixedDuplicates: true);
 	/// <summary>Object type + 0x00 → dbref, so enumerating one type (every player) reads only that type's rows.</summary>
 	public static readonly TableDef ObjType = TableDef.Index("obj.type", duplicates: true, fixedDuplicates: true);
+	/// <summary>The recover list: a destroyed object's number → its row and relations (<c>RecoverRecord</c>). Its attributes
+	/// and expanded data stay under the number in their own tables. See <c>LightningDatabase.RecoverList.cs</c>.</summary>
+	public static readonly TableDef Recover = TableDef.Node("recover");
 	public static readonly TableDef AttrMeta = TableDef.Node("attr.meta");
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");

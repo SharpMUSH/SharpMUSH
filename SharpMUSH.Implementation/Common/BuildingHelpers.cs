@@ -1479,8 +1479,18 @@ public static class BuildingHelpers
 
 			if (repeated || !await mediator.Send(new DbrefAvailableQuery(at)))
 			{
-				await notifyService.NotifyLocalized(executor,
-					nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				// A destroyed object on the recover list holds its number until it is recovered or purged.
+				if (!repeated && await mediator.Send(new GetRecoverEntryQuery(at.Number)) is RecoverEntry held)
+				{
+					await notifyService.Notify(executor,
+						$"#{at.Number} is held by {held.Name}, destroyed and on the recover list. @recover/detail #{at.Number} shows it; @purge #{at.Number} frees the number.");
+				}
+				else
+				{
+					await notifyService.NotifyLocalized(executor,
+						nameof(ErrorMessages.Notifications.CreateDbrefUnavailable), executor);
+				}
+
 				return new Error<string>(ErrorMessages.Returns.InvalidDbref);
 			}
 		}

@@ -140,10 +140,26 @@ public partial class ScheduledTaskManagementService(
 				.RepeatForever())
 			.Build();
 		await _scheduler.ScheduleJob(pageLogJob, pageLogTrigger, cancellationToken);
+
+		// Always scheduled, for the same reason: recover_keep_players and recover_keep_objects are read on every run.
+		var recoverJob = JobBuilder.Create<ExpireRecoverListJob>()
+			.WithIdentity("ExpireRecoverList", "ScheduledTaskManagement")
+			.Build();
+		var recoverTrigger = TriggerBuilder.Create()
+			.WithIdentity("ExpireRecoverListTrigger", "ScheduledTaskManagement")
+			.StartAt(DateTimeOffset.UtcNow.AddMinutes(2))
+			.WithSimpleSchedule(x => x
+				.WithInterval(RecoverListExpiryInterval)
+				.RepeatForever())
+			.Build();
+		await _scheduler.ScheduleJob(recoverJob, recoverTrigger, cancellationToken);
 	}
 
 	/// <summary>How often logged pages past <c>page_log_retention_days</c> are deleted.</summary>
 	public static readonly TimeSpan PageLogPurgeInterval = TimeSpan.FromHours(1);
+
+	/// <summary>How often recover entries past <c>recover_keep_players</c> or <c>recover_keep_objects</c> are purged.</summary>
+	public static readonly TimeSpan RecoverListExpiryInterval = TimeSpan.FromHours(1);
 
 	public async Task StopAsync(CancellationToken cancellationToken)
 	{
@@ -175,6 +191,24 @@ public partial class ScheduledTaskManagementService(
 			catch (Exception ex) when (ex is not OperationCanceledException)
 			{
 				logger.LogError(ex, "Error purging the page log");
+			}
+		}
+	}
+
+	/// <summary>
+	/// Quartz job that purges recover entries past their retention. See <see cref="IRecoverListService.ExpireAsync"/>.
+	/// </summary>
+	public class ExpireRecoverListJob(IRecoverListService recoverList, ILogger<ExpireRecoverListJob> logger) : IJob
+	{
+		public async Task Execute(IJobExecutionContext context)
+		{
+			try
+			{
+				await recoverList.ExpireAsync(DateTimeOffset.UtcNow, context.CancellationToken);
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				logger.LogError(ex, "Error expiring the recover list");
 			}
 		}
 	}

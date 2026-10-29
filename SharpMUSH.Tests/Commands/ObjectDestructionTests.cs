@@ -119,7 +119,7 @@ public class ObjectDestructionTests
 	}
 
 	[Test]
-	public async Task Destroy_Twice_TakesItsAttributesWithIt()
+	public async Task Purge_OfItsRecoverEntry_TakesItsAttributesWithIt()
 	{
 		var thing = await CreateThingAsync("DestroyAttrs");
 
@@ -131,6 +131,11 @@ public class ObjectDestructionTests
 
 		await RunAsync($"@destroy {thing}");
 		await RunAsync($"@destroy {thing}");
+
+		var held = await Database.GetAttributeAsync(thing, ["TESTATTR"]).ToListAsync();
+		await Assert.That(held).IsNotEmpty().Because("the recover list keeps them for @recover");
+
+		await RunAsync($"@purge #{thing.Number}");
 
 		var after = await Database.GetAttributeAsync(thing, ["TESTATTR"]).ToListAsync();
 		await Assert.That(after).IsEmpty();
@@ -525,7 +530,7 @@ public class ObjectDestructionTests
 			moves,
 			WebAppFactoryArg.Services.GetRequiredService<IEventService>(),
 			WebAppFactoryArg.Services.GetRequiredService<IOptionsMonitor<SharpMUSHOptions>>(),
-			WebAppFactoryArg.Services.GetServices<IFreedObjectCleanup>(),
+			WebAppFactoryArg.Services.GetRequiredService<IExpandedObjectDataService>(),
 			NullLogger<ObjectDestructionService>.Instance);
 
 	/// <summary>

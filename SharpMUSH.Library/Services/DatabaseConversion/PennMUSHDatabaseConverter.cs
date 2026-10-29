@@ -289,6 +289,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			(channelsConverted, channelMembersConverted) = await ImportChannelsAsync(pennDatabase, context, cancellationToken);
 			ReportProgress("Channels imported", 0.97);
 
+			await RetireRecoverListedAsync(pennDatabase, context, cancellationToken);
 			await ReinstallPackagesAsync(context);
 			await EnableSourceOptionsAsync(pennDatabase, context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
@@ -329,6 +330,44 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// RhostMUSH keeps a destroyed object whole, with RECOVER set, until a wizard purges it. Such an object goes onto
+	/// the recover list here rather than coming back to life, with the RECOVER flag taken off. One that something is
+	/// still inside is left as it is and reported, since retiring it would leave its contents nowhere.
+	/// </summary>
+	private async Task RetireRecoverListedAsync(PennMUSHDatabase pennDatabase, PennMUSHConversionContext context,
+		CancellationToken cancellationToken)
+	{
+		var recoverFlag = await _mediator.Send(new GetObjectFlagQuery("RECOVER"), cancellationToken);
+		var retired = 0;
+		foreach (var source in pennDatabase.Objects.Where(obj => obj.Flags.Contains("RECOVER", StringComparer.OrdinalIgnoreCase)))
+		{
+			if (!context.DbrefMapping.TryGetValue(source.DBRef, out var imported)
+				|| await _mediator.Send(new GetObjectNodeQuery(imported), cancellationToken) is not AnySharpObject obj)
+			{
+				continue;
+			}
+
+			if (obj.IsContainer && await _mediator.CreateStream(new GetContentsQuery(imported), cancellationToken).AnyAsync(cancellationToken))
+			{
+				context.Warnings.Add(new ImportWarning(ImportWarningKind.Objects,
+					$"#{source.DBRef} was on RhostMUSH's recover list but still holds objects, so it was imported as a live object.",
+					NeedsAction: true));
+				continue;
+			}
+
+			if (recoverFlag is not null) await _mediator.Send(new UnsetObjectFlagCommand(obj, recoverFlag), cancellationToken);
+			if (await _mediator.Send(new RetireObjectCommand(imported, null), cancellationToken)) retired++;
+		}
+
+		if (retired > 0)
+		{
+			context.Notes.Add(retired == 1
+				? "1 object on RhostMUSH's recover list was put on the recover list; @recover lists it."
+				: $"{retired} objects on RhostMUSH's recover list were put on the recover list; @recover lists them.");
+		}
 	}
 
 	/// <summary>The warning that heads the report when the import rewrote softcode, pointing at the full list.</summary>

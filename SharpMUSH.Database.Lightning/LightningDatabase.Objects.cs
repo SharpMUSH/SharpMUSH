@@ -974,7 +974,6 @@ public partial class LightningDatabase
 		return await WriteCredentialsAsync(tx =>
 		{
 			var n = (long)dbref.Number;
-			var key = Keys.Dbref(n);
 
 			var found = ReadObject(tx, n);
 			if (found is null)
@@ -987,103 +986,121 @@ public partial class LightningDatabase
 				return false;
 			}
 
-			var record = found.Value.Record;
-			if (tx.TryGet(Tables.AccountChar.Reverse, key, out var heldBy))
-				AdvanceAccountCredentialEpoch(tx, Keys.ReadStr(heldBy));
+			TearDownObject(tx, n, found.Value.Record, keepContent: false);
 
-			// obj.name: the object's own name and every alias.
-			tx.Delete(Tables.ObjName, Keys.Lower(record.Name), key);
-			foreach (var alias in record.Aliases)
-			{
-				tx.Delete(Tables.ObjName, Keys.Lower(alias), key);
-			}
-
-			// Attributes: metadata and values live under the same dbref-prefixed key range, and so do their index entries.
-			UnindexCopies(tx, n, Keys.AttrPrefix(n));
-			tx.DeletePrefix(Tables.AttrMeta, Keys.AttrPrefix(n));
-			tx.DeletePrefix(Tables.AttrVal, Keys.AttrPrefix(n));
-			tx.Delete(Tables.AttrCount, key);
-
-			// Expanded per-object data (dbref + 0x00 + type).
-			tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));
-
-			// Permission overrides set on it; its role assignments are an edge pair, cleared below.
-			tx.Delete(Tables.ObjPermission, key);
-
-			// A character's read markers (dbref + 0x00 + scope).
-			tx.DeletePrefix(Tables.ReadMarker, Keys.Composite(n, ""));
-
-			// Their copies of logged pages and their page conversations; the other participants keep theirs.
-			DeletePageLog(tx, n);
-
-			// Its feed memberships and the taps on its attributes; feeds it owns stay, ownerless, for feed.admin.
-			DeleteFeedMemberships(tx, n);
-
-			// Its pose counts.
-			DeleteActivitySubject(tx, n);
-
-			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
-			// mail row, its sent-index entry (found directly via the row's own Sender field rather than
-			// a full-table scan), and the box entry itself. Mail it sent to others survives with a
-			// dangling sender (MapRecordToMail resolves that to None), so only that mail's now-meaningless
-			// "sent by n" index rows are dropped, not the mail row or the recipient's box entry.
-			foreach (var (mailBoxKey, _) in tx.Range(Tables.MailBox, key).ToList())
-			{
-				var mailId = Keys.ReadDbref(mailBoxKey.AsSpan(mailBoxKey.Length - 8, 8));
-				var mailIdKey = Keys.Dbref(mailId);
-
-				if (tx.TryGet(Tables.Mail, mailIdKey, out var mailBytes))
-				{
-					var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
-					tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
-					tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
-				}
-
-				tx.Delete(Tables.Mail, mailIdKey);
-				tx.Delete(Tables.MailBox, mailBoxKey);
-			}
-
-			tx.DeletePrefix(Tables.MailSent, key);
-			tx.DeletePrefix(Tables.MailSentTo, key);
-			tx.DeletePrefix(Tables.MailFolder, key);
-			tx.DeletePrefix(Tables.MailCount, key);
-
-			// Channel membership.
-			foreach (var (_, chanNameBytes) in tx.Range(Tables.RevChanMember, key).ToList())
-			{
-				var chanName = Keys.ReadStr(chanNameBytes);
-				tx.Delete(Tables.ChanMember, Keys.Composite(chanName, n));
-				tx.Delete(Tables.RevChanMember, key, chanNameBytes);
-			}
-
-			// Every edge table, both directions: the object's own outbound edges (and their paired
-			// inbound counterpart on the other side), plus every inbound edge some other object still
-			// holds toward it (and that edge's paired outbound counterpart) — the graph-shaped
-			// equivalent of PennMUSH's free_object() db_top sweep that nulls out dangling
-			// Zone/Parent/Home/Location references.
-			// Location's values carry the arrival order as well as the dbref, so it has its own sweep.
-			DeleteLocationEdges(tx, n);
-			foreach (var (forward, reverse) in Tables.EdgePairs.Where(pair => pair != Tables.Location))
-			{
-				foreach (var to in tx.Dups(forward, key).ToList())
-				{
-					tx.Delete(reverse, to, key);
-				}
-				tx.DeletePrefix(forward, key);
-
-				foreach (var from in tx.Dups(reverse, key).ToList())
-				{
-					tx.Delete(forward, from, key);
-				}
-				tx.DeletePrefix(reverse, key);
-			}
-
-			tx.Delete(Tables.ObjType, ObjTypeKey(record.Type), key);
-			tx.Delete(Tables.Obj, key);
-
-			_logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", n, record.Name);
+			_logger.LogInformation("Deleted object #{DbRef} ({Name}) from the database", n, found.Value.Record.Name);
 			return true;
 		}, cancellationToken, character: dbref);
+	}
+
+	/// <summary>
+	/// Everything a destroy removes: the object's row, its name and type index entries, every edge to or from it, its
+	/// mail, page log, memberships and counts. With <paramref name="keepContent"/> its attributes and expanded data
+	/// stay under its number, for the recover list; they leave every index all the same.
+	/// </summary>
+	private void TearDownObject(ITx tx, long n, ObjectRecord record, bool keepContent)
+	{
+		var key = Keys.Dbref(n);
+		if (tx.TryGet(Tables.AccountChar.Reverse, key, out var heldBy))
+			AdvanceAccountCredentialEpoch(tx, Keys.ReadStr(heldBy));
+
+		// obj.name: the object's own name and every alias.
+		tx.Delete(Tables.ObjName, Keys.Lower(record.Name), key);
+		foreach (var alias in record.Aliases)
+		{
+			tx.Delete(Tables.ObjName, Keys.Lower(alias), key);
+		}
+
+		// Attributes: metadata and values live under the same dbref-prefixed key range, and so do their index entries.
+		// A retired object keeps its attributes and expanded data under its number, out of every index.
+		UnindexCopies(tx, n, Keys.AttrPrefix(n));
+		if (!keepContent)
+		{
+			DeleteObjectContent(tx, n);
+		}
+
+		// Permission overrides set on it; its role assignments are an edge pair, cleared below.
+		tx.Delete(Tables.ObjPermission, key);
+
+		// A character's read markers (dbref + 0x00 + scope).
+		tx.DeletePrefix(Tables.ReadMarker, Keys.Composite(n, ""));
+
+		// Their copies of logged pages and their page conversations; the other participants keep theirs.
+		DeletePageLog(tx, n);
+
+		// Its feed memberships and the taps on its attributes; feeds it owns stay, ownerless, for feed.admin.
+		DeleteFeedMemberships(tx, n);
+
+		// Its pose counts.
+		DeleteActivitySubject(tx, n);
+
+		// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
+		// mail row, its sent-index entry (found directly via the row's own Sender field rather than
+		// a full-table scan), and the box entry itself. Mail it sent to others survives with a
+		// dangling sender (MapRecordToMail resolves that to None), so only that mail's now-meaningless
+		// "sent by n" index rows are dropped, not the mail row or the recipient's box entry.
+		foreach (var (mailBoxKey, _) in tx.Range(Tables.MailBox, key).ToList())
+		{
+			var mailId = Keys.ReadDbref(mailBoxKey.AsSpan(mailBoxKey.Length - 8, 8));
+			var mailIdKey = Keys.Dbref(mailId);
+
+			if (tx.TryGet(Tables.Mail, mailIdKey, out var mailBytes))
+			{
+				var mailRecord = Codec.Deserialize<MailRecord>(mailBytes);
+				tx.Delete(Tables.MailSent, MailSentKey(mailRecord.Sender, mailId));
+				tx.Delete(Tables.MailSentTo, MailSentToKey(mailRecord.Sender, n, mailId));
+			}
+
+			tx.Delete(Tables.Mail, mailIdKey);
+			tx.Delete(Tables.MailBox, mailBoxKey);
+		}
+
+		tx.DeletePrefix(Tables.MailSent, key);
+		tx.DeletePrefix(Tables.MailSentTo, key);
+		tx.DeletePrefix(Tables.MailFolder, key);
+		tx.DeletePrefix(Tables.MailCount, key);
+
+		// Channel membership.
+		foreach (var (_, chanNameBytes) in tx.Range(Tables.RevChanMember, key).ToList())
+		{
+			var chanName = Keys.ReadStr(chanNameBytes);
+			tx.Delete(Tables.ChanMember, Keys.Composite(chanName, n));
+			tx.Delete(Tables.RevChanMember, key, chanNameBytes);
+		}
+
+		// Every edge table, both directions: the object's own outbound edges (and their paired
+		// inbound counterpart on the other side), plus every inbound edge some other object still
+		// holds toward it (and that edge's paired outbound counterpart) — the graph-shaped
+		// equivalent of PennMUSH's free_object() db_top sweep that nulls out dangling
+		// Zone/Parent/Home/Location references.
+		// Location's values carry the arrival order as well as the dbref, so it has its own sweep.
+		DeleteLocationEdges(tx, n);
+		foreach (var (forward, reverse) in Tables.EdgePairs.Where(pair => pair != Tables.Location))
+		{
+			foreach (var to in tx.Dups(forward, key).ToList())
+			{
+				tx.Delete(reverse, to, key);
+			}
+			tx.DeletePrefix(forward, key);
+
+			foreach (var from in tx.Dups(reverse, key).ToList())
+			{
+				tx.Delete(forward, from, key);
+			}
+			tx.DeletePrefix(reverse, key);
+		}
+
+		tx.Delete(Tables.ObjType, ObjTypeKey(record.Type), key);
+		tx.Delete(Tables.Obj, key);
+	}
+
+	/// <summary>An object's attributes, their count and its expanded data (dbref + 0x00 + type).</summary>
+	private static void DeleteObjectContent(ITx tx, long n)
+	{
+		tx.DeletePrefix(Tables.AttrMeta, Keys.AttrPrefix(n));
+		tx.DeletePrefix(Tables.AttrVal, Keys.AttrPrefix(n));
+		tx.Delete(Tables.AttrCount, Keys.Dbref(n));
+		tx.DeletePrefix(Tables.ExpandedObj, Keys.Composite(n, ""));
 	}
 
 	#endregion
