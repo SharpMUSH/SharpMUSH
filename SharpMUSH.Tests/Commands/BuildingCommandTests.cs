@@ -1411,11 +1411,12 @@ public class BuildingCommandTests
 		var seen = recorder.CountFor(linker.DbRef);
 		var refusal = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"@link #{item.Number}=#{stranger.DbRef.Number}"));
-		await Assert.That(refusal.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refusal.Message.ToPlainText().Trim()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED, NOT ABODE");
 
 		await Assert.That(await HomeOf(item)).IsEqualTo(before);
-		await Assert.That(recorder.For(linker.DbRef).Skip(seen).Any(m => m == ErrorMessages.Notifications.PermissionDenied))
-			.IsTrue();
+		var strangerName = (await Mediator.Send(new GetObjectNodeQuery(stranger.DbRef))).Expect<AnySharpObject>().Object().Name;
+		await Assert.That(recorder.For(linker.DbRef).Skip(seen))
+			.Contains($"Permission denied. You do not control {strangerName}, and it is not ABODE.");
 
 		// ABODE without control is enough.
 		await Parser.CommandParse(linker.Handle, ConnectionService,
@@ -1444,7 +1445,7 @@ public class BuildingCommandTests
 
 		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{item.Number}, #{stranger.DbRef.Number})"));
-		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED, NOT ABODE");
 		await Assert.That(await HomeOf(item)).IsEqualTo(before);
 
 		var allowed = await Parser.CommandParse(linker.Handle, ConnectionService,
@@ -1558,7 +1559,7 @@ public class BuildingCommandTests
 		var refused = await Parser.CommandParse(linker.Handle, ConnectionService,
 			MarkupText.Plain($"think link(#{exitDbRef.Number}, #{destination.Number}, 1)"));
 
-		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused.Message.ToPlainText().Trim()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NEEDS GAME.WIZARD");
 		await Assert.That(await DestinationOf(exitDbRef)).IsNull();
 		await Assert.That(await OwnerOf(exitDbRef)).IsEqualTo($"#{owner.DbRef.Number}");
 

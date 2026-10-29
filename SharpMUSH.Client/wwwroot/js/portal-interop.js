@@ -35,6 +35,163 @@
         if (el) el.scrollIntoView({ block: "start" });
     };
 
+    // The room a World map frame has for its drawing, as [width, height]: its width, and the tallest it may grow,
+    // less the space kept below the drawing for labels.
+    window.SharpMUSH.mapFrameSize = function (frame) {
+        var figure = frame && frame.firstElementChild;
+        if (!figure) return null;
+        var tallest = parseFloat(getComputedStyle(frame).maxHeight);
+        var below = parseFloat(getComputedStyle(figure).marginBottom) || 0;
+        return [frame.clientWidth, (isFinite(tallest) ? tallest : frame.clientHeight) - below];
+    };
+
+    // Keeps one point of a World map's view in place after its drawing grew (or shrank) by ratio: the point at
+    // (x, y) in the frame, its middle when none is given. A drawing narrower than its frame was centred in it, so the
+    // point is measured from where the drawing began.
+    window.SharpMUSH.mapRescale = function (frame, ratio, x, y) {
+        var figure = frame && frame.firstElementChild;
+        if (!figure || !(ratio > 0)) return;
+        var oldWidth = figure.offsetWidth / ratio;
+        var oldHeight = figure.offsetHeight / ratio;
+        var atX = typeof x === "number" ? x : frame.clientWidth / 2;
+        var atY = typeof y === "number" ? y : Math.min(frame.clientHeight, oldHeight) / 2;
+        var onX = frame.scrollLeft + atX - Math.max(0, (frame.clientWidth - oldWidth) / 2);
+        var onY = frame.scrollTop + atY;
+        frame.scrollLeft = onX * ratio - atX;
+        frame.scrollTop = onY * ratio - atY;
+    };
+
+    // Pans and zooms a World map's frame by hand. A mouse drags the view (a click after a drag chooses nothing);
+    // a pinch on a touch screen or trackpad, or the wheel with Ctrl, zooms about the point under it. One finger and
+    // the plain wheel scroll the frame as the browser does. Zooms go to the page as factors, at most one a frame:
+    // dotNet's ZoomAt(factor, x, y), with (x, y) the point in the frame to hold still.
+    window.SharpMUSH.mapGestures = function (frame, dotNet) {
+        if (!frame || !dotNet) return { dispose: function () { } };
+        var pending = 1, at = null, queued = false;
+
+        function zoom(factor, x, y) {
+            pending *= factor;
+            at = [x, y];
+            if (queued) return;
+            queued = true;
+            window.requestAnimationFrame(function () {
+                queued = false;
+                var factor = pending;
+                pending = 1;
+                if (Math.abs(factor - 1) > 0.001) dotNet.invokeMethodAsync("ZoomAt", factor, at[0], at[1]);
+            });
+        }
+
+        function local(clientX, clientY) {
+            var box = frame.getBoundingClientRect();
+            return [clientX - box.left - frame.clientLeft, clientY - box.top - frame.clientTop];
+        }
+
+        function onWheel(e) {
+            if (!e.ctrlKey) return;
+            e.preventDefault();
+            var p = local(e.clientX, e.clientY);
+            zoom(Math.exp(-e.deltaY * 0.002), p[0], p[1]);
+        }
+
+        // A mouse drag: past a few pixels it pans, and the click that ends it is swallowed.
+        var drag = null;
+        function onPointerDown(e) {
+            if (e.pointerType !== "mouse" || e.button !== 0) return;
+            drag = { x: e.clientX, y: e.clientY, left: frame.scrollLeft, top: frame.scrollTop, moved: false };
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+        }
+        function onPointerMove(e) {
+            if (!drag) return;
+            var dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+            if (!drag.moved && Math.abs(dx) + Math.abs(dy) < 5) return;
+            if (!drag.moved) frame.classList.add("map-frame--dragging");
+            drag.moved = true;
+            frame.scrollLeft = drag.left - dx;
+            frame.scrollTop = drag.top - dy;
+            e.preventDefault();
+        }
+        function onPointerUp() {
+            window.removeEventListener("pointermove", onPointerMove);
+            window.removeEventListener("pointerup", onPointerUp);
+            if (drag && drag.moved) {
+                frame.classList.remove("map-frame--dragging");
+                frame.addEventListener("click", swallow, { capture: true, once: true });
+                // A drag that ends off the frame has no click to swallow; the next real one must still count.
+                window.setTimeout(function () { frame.removeEventListener("click", swallow, { capture: true }); }, 0);
+            }
+            drag = null;
+        }
+        function swallow(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Two fingers: their spread zooms and their middle pans.
+        var pinch = null;
+        function measure(touches) {
+            var a = touches[0], b = touches[1];
+            return {
+                spread: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+                x: (a.clientX + b.clientX) / 2,
+                y: (a.clientY + b.clientY) / 2
+            };
+        }
+        function onTouchStart(e) {
+            pinch = e.touches.length === 2 ? measure(e.touches) : null;
+        }
+        function onTouchMove(e) {
+            if (!pinch || e.touches.length !== 2) return;
+            e.preventDefault();
+            var now = measure(e.touches);
+            frame.scrollLeft -= now.x - pinch.x;
+            frame.scrollTop -= now.y - pinch.y;
+            if (pinch.spread > 0 && now.spread > 0) {
+                var p = local(now.x, now.y);
+                zoom(now.spread / pinch.spread, p[0], p[1]);
+            }
+            pinch = now;
+        }
+        function onTouchEnd(e) {
+            if (e.touches.length < 2) pinch = null;
+        }
+
+        frame.addEventListener("wheel", onWheel, { passive: false });
+        frame.addEventListener("pointerdown", onPointerDown);
+        frame.addEventListener("touchstart", onTouchStart, { passive: true });
+        frame.addEventListener("touchmove", onTouchMove, { passive: false });
+        frame.addEventListener("touchend", onTouchEnd);
+        frame.addEventListener("touchcancel", onTouchEnd);
+        return {
+            dispose: function () {
+                frame.removeEventListener("wheel", onWheel);
+                frame.removeEventListener("pointerdown", onPointerDown);
+                frame.removeEventListener("touchstart", onTouchStart);
+                frame.removeEventListener("touchmove", onTouchMove);
+                frame.removeEventListener("touchend", onTouchEnd);
+                frame.removeEventListener("touchcancel", onTouchEnd);
+                onPointerUp();
+            }
+        };
+    };
+
+    // Scrolls a World map's frame so a room sits in the middle of its view, and the frame into the page's view,
+    // then gives the room focus when asked. Smooth unless the reader asked for less motion.
+    window.SharpMUSH.mapCentre = function (frame, room, focus) {
+        if (!frame || !room) return;
+        var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var view = frame.getBoundingClientRect();
+        var box = room.getBoundingClientRect();
+        frame.scrollTo({
+            left: frame.scrollLeft + (box.left + box.width / 2) - (view.left + frame.clientLeft + frame.clientWidth / 2),
+            top: frame.scrollTop + (box.top + box.height / 2) - (view.top + frame.clientTop + frame.clientHeight / 2),
+            behavior: still ? "auto" : "smooth"
+        });
+        frame.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+        if (focus) room.focus({ preventScroll: true });
+    };
+
     // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
     // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
     // terminal unmounted and kept its element, with its scrollback, alive.

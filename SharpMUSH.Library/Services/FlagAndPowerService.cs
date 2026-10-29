@@ -63,7 +63,8 @@ public class FlagAndPowerService(
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedFlagType),
+					realFlag.Name, obj.TypeString().ToLowerInvariant());
 			}
 
 			return ErrorMessages.Returns.InvalidFlag;
@@ -78,25 +79,25 @@ public class FlagAndPowerService(
 		var requiredPermissions = (unset ? realFlag.UnsetPermissions : realFlag.SetPermissions) ?? [];
 		if (realFlag.Disabled || !await HasAnyFlagPermission(executor, obj, requiredPermissions))
 		{
+			var refusal = FlagPermissionRefusal(realFlag, requiredPermissions);
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				await NotifyRefusal(executor, refusal);
 			}
 
-			return ErrorMessages.Returns.PermissionDenied;
+			return refusal.Return;
 		}
 
 		// Flag-specific permission checks, matching PennMUSH's can_set_flag().
 		// These additional restrictions apply on top of the generic permission check.
-		var flagSpecificDenied = await CheckFlagSpecificPermissions(executor, obj, realFlag, unset);
-		if (flagSpecificDenied)
+		if (await CheckFlagSpecificPermissions(executor, obj, realFlag, unset) is PermissionRefusal flagSpecificRefusal)
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				await NotifyRefusal(executor, flagSpecificRefusal);
 			}
 
-			return ErrorMessages.Returns.PermissionDenied;
+			return flagSpecificRefusal.Return;
 		}
 
 		switch (unset)
@@ -220,11 +221,12 @@ public class FlagAndPowerService(
 		var outcome = unset
 			? await roles.UnassignFromObjectAsync(executor, obj, roleFlag.Role)
 			: await roles.AssignToObjectAsync(executor, obj, roleFlag.Role);
-		if (outcome is RoleRefusal)
+		if (outcome is RoleRefusal refusal)
 		{
 			if (notify)
 			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				await notifyService.NotifyLocalized(executor, nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedBecause),
+					refusal.Message);
 			}
 
 			return ErrorMessages.Returns.PermissionDenied;
@@ -250,14 +252,16 @@ public class FlagAndPowerService(
 	/// other one sets or clears an Allow override on its scope. A refusal is PennMUSH's
 	/// "Permission denied."
 	/// </summary>
-	private async ValueTask<bool> ChangeGamePower(AnySharpObject executor, AnySharpObject obj, GamePowers.Power power, bool grant)
+	private async ValueTask<Result<Success>> ChangeGamePower(AnySharpObject executor, AnySharpObject obj, GamePowers.Power power, bool grant)
 	{
 		var outcome = power.Role is { } role
 			? grant
 				? await roles.AssignToObjectAsync(executor, obj, role)
 				: await roles.UnassignFromObjectAsync(executor, obj, role)
 			: await roles.SetObjectOverridesAsync(executor, obj, [power.Scope], grant ? PermissionState.Allow : PermissionState.Inherit);
-		return outcome is not RoleRefusal;
+		return outcome is RoleRefusal refusal
+			? new Error<string>(string.Format(Definitions.ErrorMessages.Notifications.PermissionDeniedBecause, refusal.Message))
+			: new Success();
 	}
 
 	/// <summary>
@@ -394,9 +398,9 @@ public class FlagAndPowerService(
 
 		if (GamePowers.Find(found.Name) is { } gamePower)
 		{
-			if (!await ChangeGamePower(executor, obj, gamePower, grant: true))
+			if (await ChangeGamePower(executor, obj, gamePower, grant: true) is Error<string> refused)
 			{
-				return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				return await PowerRefused(executor, notify, refused.Value);
 			}
 		}
 		else if (!await executor.IsWizard())
@@ -472,9 +476,9 @@ public class FlagAndPowerService(
 		var gamePower = GamePowers.Find(found.Name);
 		if (gamePower is not null)
 		{
-			if (!await ChangeGamePower(executor, obj, gamePower, grant: false))
+			if (await ChangeGamePower(executor, obj, gamePower, grant: false) is Error<string> refused)
 			{
-				return await PowerRefused(executor, notify, Definitions.ErrorMessages.Notifications.PermissionDenied);
+				return await PowerRefused(executor, notify, refused.Value);
 			}
 		}
 		else if (!await executor.IsWizard())
@@ -562,8 +566,7 @@ public class FlagAndPowerService(
 			return false;
 
 		var hasPrincipal = false;
-		var principals = permissions
-			.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"));
+		var principals = Principals(permissions);
 		foreach (var permission in principals)
 		{
 			hasPrincipal = true;
@@ -592,34 +595,52 @@ public class FlagAndPowerService(
 			_ => await executor.HasFlag(permission) || await executor.HasPower(permission)
 		};
 
+	/// <summary>Tells <paramref name="executor"/> why, from no one, as the flag refusals always have.</summary>
+	private ValueTask NotifyRefusal(AnySharpObject executor, PermissionRefusal refusal)
+		=> notifyService.NotifyLocalized(executor, refusal.Key, refusal.Args);
+
+	/// <summary>The permissions that name who may set a flag, leaving out the metadata (dark, log, event) that names no one.</summary>
+	private static IEnumerable<string> Principals(string[] permissions)
+		=> permissions.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"));
+
+	/// <summary>Why <see cref="HasAnyFlagPermission"/> refused the flag: it cannot be changed at all, or who may.</summary>
+	private static PermissionRefusal FlagPermissionRefusal(SharpObjectFlag flag, string[] permissions)
+	{
+		var principals = Principals(permissions).ToArray();
+		return flag.Disabled || principals.Any(permission => permission.ToLowerInvariant() is "internal" or "disabled")
+			? new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedFlagLocked),
+				Definitions.ErrorMessages.Notifications.PermissionDeniedFlagLocked, flag.Name)
+			: new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedFlagRestricted),
+				Definitions.ErrorMessages.Notifications.PermissionDeniedFlagRestricted, flag.Name, string.Join(", ", principals));
+	}
+
 	/// <summary>
 	/// Checks flag-specific permission restrictions beyond the generic permission check.
 	/// Matches PennMUSH's can_set_flag() logic from flags.c.
-	/// Returns true if the operation should be DENIED.
 	/// </summary>
-	private static async ValueTask<bool> CheckFlagSpecificPermissions(
+	private static async ValueTask<Permission> CheckFlagSpecificPermissions(
 		AnySharpObject executor, AnySharpObject obj, SharpObjectFlag flag, bool negate)
 	{
 		var flagName = flag.Name.ToUpperInvariant();
 
 		// God protection: non-God cannot modify God's flags at all (PennMUSH src/flags.c)
 		if (obj.IsGod() && !executor.IsGod())
-			return true; // deny
+			return PermissionRefusal.GodOnly();
 
 		// CHOWN_OK and DESTROY_OK: must own the target or be Wizard
 		if (flagName is "CHOWN_OK" or "DESTROY_OK")
 		{
-			return !(await executor.Owns(obj) || await executor.IsWizard());
+			return await executor.Owns(obj) || await executor.IsWizard()
+				? new Success()
+				: new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds),
+					Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds, obj.Object().Name, PortalPermission.GameWizard);
 		}
 
 		// Can't gag wizards/God, but can ungag them
-		if (flagName == "GAGGED" && await obj.IsWizard())
-			return !negate; // deny setting, allow unsetting
+		if (flagName == "GAGGED" && !negate && await obj.IsWizard())
+			return new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedGagWizard),
+				Definitions.ErrorMessages.Notifications.PermissionDeniedGagWizard);
 
-		// God can do (almost) anything after the generic check passes
-		if (executor.IsGod())
-			return false;
-
-		return false; // no additional restriction
+		return new Success();
 	}
 }

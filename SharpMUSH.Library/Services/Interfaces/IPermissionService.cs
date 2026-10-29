@@ -22,6 +22,13 @@ public interface IPermissionService
 		See = 0, Hear = 1, Match = 2, Presence = 3, Page = 4
 	}
 
+	/// <summary>
+	/// Whether <paramref name="who"/> meets <paramref name="requirement"/>: <see cref="Success"/> to continue, or the
+	/// refusal naming what is missing, to tell (<see cref="PermissionDeniedExtensions"/>) or return
+	/// (<see cref="PermissionRefusal.Return"/>).
+	/// </summary>
+	ValueTask<Permission> Check(AnySharpObject who, Requires requirement);
+
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString);
 
 	ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, LockType lockType);

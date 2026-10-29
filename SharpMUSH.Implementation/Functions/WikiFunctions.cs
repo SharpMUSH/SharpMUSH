@@ -291,7 +291,7 @@ public partial class Functions
 				return new CallState(ErrorMessages.Returns.NoSuchObject);
 			if (who.Object().Key != executor.Object().Key
 				&& !(await WikiCommandHelper.ReaderAsync(parser, executor)).Has(Library.Authorization.PortalPermission.WikiAdmin))
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.Needs(Library.Authorization.PortalPermission.WikiAdmin).Return;
 			subject = who;
 		}
 

@@ -1,7 +1,7 @@
 format: "1.16"
 package: softcode-editor
 title: "Softcode line editor"
-version: 1.1.2
+version: 1.1.3
 authors: [SharpMUSH]
 description: "@editor — an @input-driven line editor for function and command softcode."
 license: MIT
@@ -37,7 +37,7 @@ objects:
       CMD`EDITOR:
         value: |-
           $(?is)^@editor +(?<spec>[^=]+?)(?\:=(?<mode>function|command))? *$: @assert strmatch(%<spec>,*/*)=@pemit/port %j=notice(EDITOR,Usage: @editor <object>/<attribute>%[=function|command%],warn); think setqm(editor_object,locate(%#,trim(before(%<spec>,/)),*),
-          editor_attribute,ucstr(trim(after(%<spec>,/)))); @assert cand(isdbref(%q<editor_object>),valid(attrname,%q<editor_attribute>))=@pemit/port %j=notice(EDITOR,I cannot find that object or attribute name.,warn); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); think setq(mode,firstof(lcstr(%<mode>),u(%!/FUN`TARGET`MODE,%q<editor_object>/%q<editor_attribute>))); @assert member(function command,%q<mode>)=@pemit/port %j=notice(EDITOR,Use =function or =command for a new or unflagged attribute.,warn); @include %!/INC`SESSION`OPEN
+          editor_attribute,ucstr(trim(after(%<spec>,/)))); @assert cand(isdbref(%q<editor_object>),valid(attrname,%q<editor_attribute>))=@pemit/port %j=notice(EDITOR,I cannot find that object or attribute name.,warn); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied. You do not control [name(%q<editor_object>)].,error); think setq(mode,firstof(lcstr(%<mode>),u(%!/FUN`TARGET`MODE,%q<editor_object>/%q<editor_attribute>))); @assert member(function command,%q<mode>)=@pemit/port %j=notice(EDITOR,Use =function or =command for a new or unflagged attribute.,warn); @include %!/INC`SESSION`OPEN
         flags: [regexp, cmdsyntax]
       # The syntax an existing attribute %0 (<object>/<attribute>) is flagged with, or nothing.
       FUN`TARGET`MODE:
@@ -112,7 +112,7 @@ objects:
       INC`SAVE`DRAFT:
         value: |-
           think setq(diagnostics,u(%!/FUN`DRAFT`DIAGNOSE)); @assert not(json_query(%q<diagnostics>,size))=@pemit/port %j=u(%!/FUN`DISPLAY`ERRORS,%q<diagnostics>)%r[notice(EDITOR,Not saved.,warn)]; think setqm(editor_object,get(%!/DATA`%j`OBJECT),
-          editor_attribute,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied.,error); @assert u(%!/FUN`TARGET`UNCHANGED,%q<editor_object>,%q<editor_attribute>)=@pemit/port %j=notice(EDITOR,%q<editor_attribute> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`SAVE`STORE; @assert not(comp(get(%q<editor_object>/%q<editor_attribute>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<editor_attribute> could not be saved.,error); @include %!/INC`SESSION`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<editor_attribute> saved.,ok)
+          editor_attribute,get(%!/DATA`%j`ATTRIBUTE)); @assert controls(%#,%q<editor_object>)=@pemit/port %j=notice(EDITOR,Permission denied. You do not control [name(%q<editor_object>)].,error); @assert u(%!/FUN`TARGET`UNCHANGED,%q<editor_object>,%q<editor_attribute>)=@pemit/port %j=notice(EDITOR,%q<editor_attribute> or its syntax flag changed after the editor opened it. Not saved.,warn); @include %!/INC`SAVE`STORE; @assert not(comp(get(%q<editor_object>/%q<editor_attribute>),%q<draft>))=@pemit/port %j=notice(EDITOR,%q<editor_attribute> could not be saved.,error); @include %!/INC`SESSION`BASELINE; think setq(saved,1); @pemit/port %j=notice(EDITOR,%q<editor_attribute> saved.,ok)
         flags: [cmdsyntax]
       # Writes the draft and its syntax flag as the player, so the attribute is theirs and their own
       # permissions decide whether it may be set.

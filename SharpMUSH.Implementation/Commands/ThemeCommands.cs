@@ -59,13 +59,9 @@ public partial class Commands
 			executor, executor, left, LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService.Controls(executor, target))
+				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				if (spec.Length == 0)
@@ -124,13 +120,9 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> ThemeChangeAsync(IMUSHCodeParser parser, AnySharpObject executor,
 		string change, string name, string definition)
 	{
-		if (!await executor.Can(PortalPermission.LayoutAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.LayoutAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (name.Length == 0 || (change == "ADD" && definition.Length == 0))
@@ -193,13 +185,9 @@ public partial class Commands
 					await NotifyService.Notify(executor, ErrorMessages.Returns.NotAPlayer, executor);
 					return new CallState(ErrorMessages.Returns.NotAPlayer);
 				}
-				if (!await PermissionService.Controls(executor, target))
+				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 				{
-					return await NotifyService.NotifyAndReturn(
-						executor.Object().DBRef,
-						errorReturn: ErrorMessages.Returns.PermissionDenied,
-						notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-						shouldNotify: true);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				var theme = await RefreshThemeAsync(parser, target);

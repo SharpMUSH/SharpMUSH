@@ -4649,6 +4649,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {No matches} one {# match} other {# matches}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Linked from here</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>Nearby</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>More topics</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Admin help</value>
   </data>
@@ -6506,8 +6515,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>This scene is not running, so it takes no poses.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>You can watch this scene, but your character is not approved to take part in scenes, so you cannot pose here.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>You can watch this scene, but your character cannot pose in it: that needs the scene.join and scene.pose permissions.</value>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
     <value>The game did not record your pose.</value>
@@ -7286,8 +7295,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Schedule a scene</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Approval needed</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Needs scene.create</value>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>The scene has no room until it starts: it runs wherever its host is when they start it.</value>
@@ -7952,8 +7961,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Show</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Pose types to show</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Pose types to show while reading</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Pose types to show while playing</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label} line hidden} other {# {label} lines hidden}}</value>
@@ -8047,8 +8059,11 @@
   <data name="AdmPoseTypesOrder" xml:space="preserve">
     <value>Order</value>
   </data>
-  <data name="AdmPoseTypesHidden" xml:space="preserve">
-    <value>Hidden until a reader shows it</value>
+  <data name="AdmPoseTypesHiddenReading" xml:space="preserve">
+    <value>Hidden while reading</value>
+  </data>
+  <data name="AdmPoseTypesHiddenPlaying" xml:space="preserve">
+    <value>Hidden while playing</value>
   </data>
   <data name="AdmPoseTypesRemove" xml:space="preserve">
     <value>Remove</value>
@@ -9994,6 +10009,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom out</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Fit the map</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>You are here</value>

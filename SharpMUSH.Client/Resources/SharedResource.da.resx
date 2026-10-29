@@ -5097,6 +5097,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Ingen resultater} one {# resultat} other {# resultater}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Linket herfra</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>I nærheden</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Flere emner</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratorhjælp</value>
   </data>
@@ -5767,8 +5776,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Denne scene kører ikke, så den tager ikke imod poses.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Du kan se denne scene, men din karakter er ikke godkendt til at deltage i scener, så du kan ikke poste her.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Du kan se denne scene, men din karakter kan ikke poste i den: det kræver tilladelserne scene.join og scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5970,8 +5979,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planlæg en scene</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Kræver godkendelse</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Kræver scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6028,8 +6037,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Vis</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetyper, der vises</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetyper, der vises ved læsning</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetyper, der vises under spil</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-linje skjult} other {# {label}-linjer skjult}}</value>
@@ -6545,6 +6557,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom ud</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Tilpas kortet</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Du er her</value>

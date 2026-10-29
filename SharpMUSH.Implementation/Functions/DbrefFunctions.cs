@@ -37,7 +37,7 @@ public partial class Functions
 			Error<CallState> error => error.Value,
 			// fun_loc (src/fundb.c:1458) answers only for what the executor may locate.
 			AnySharpObject found when !await PermissionService.CanLocate(executor, found)
-				=> ErrorMessages.Returns.PermissionDenied,
+				=> PermissionRefusal.Locate(arg0).ReturnText,
 			AnySharpObject and SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef,
 			AnySharpObject and SharpRoom room => await DropToAsync(room),
 			AnySharpObject and SharpExit exit => await ExitLocation(exit),
@@ -154,7 +154,7 @@ public partial class Functions
 			&& !await PermissionService.Controls(executor, victim)
 			&& !await executor.IsSee_All())
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.NotControlled(victim, SeeAllScopes).Return;
 		}
 
 		if (attribute is null)
@@ -272,9 +272,9 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				if (!await PermissionService.Controls(executor, found))
+				if (await PermissionService.Check(executor, Requires.ControlOf(found)) is PermissionRefusal refused)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return refused.Return;
 				}
 
 				// PennMUSH's fun_followers reads the leader's own FOLLOWERS list, which add_follower and
@@ -328,7 +328,7 @@ public partial class Functions
 			Error<CallState> error => error.Value,
 			// fun_home (src/fundb.c:1670) answers only for what the executor may examine.
 			AnySharpObject found when !await PermissionService.CanExamine(executor, found)
-				=> ErrorMessages.Returns.PermissionDenied,
+				=> PermissionRefusal.Examine(found).ReturnText,
 			AnySharpObject and SharpPlayer player => (await player.Home.WithCancellation(CancellationToken.None)).Object().DBRef,
 			AnySharpObject and SharpRoom room => await DropToAsync(room),
 			// PennMUSH fun_home (fundb.c:1672) returns Source() for an exit — the room it sits in.
@@ -379,7 +379,7 @@ public partial class Functions
 			if (locateFlags.HasFlag(LocateFlags.OnlyMatchLookerControlledObjects)
 					&& !await PermissionService.Controls(executor, looker))
 			{
-				return ErrorMessages.Returns.PermissionDenied;
+				return PermissionRefusal.NotControlled(looker).ReturnText;
 			}
 
 			// fun_locate injects the default scope set *before* it gates, and the order is load-bearing: a
@@ -397,7 +397,7 @@ public partial class Functions
 					&& !await Library.Services.LocateService.Nearby(executor, looker)
 					&& !await PermissionService.Controls(executor, looker))
 			{
-				return ErrorMessages.Returns.PermissionDenied;
+				return PermissionRefusal.NotControlled(looker, SeeAllScopes).ReturnText;
 			}
 
 			// fun_locate passes `looker` as match_result's `who` as well as its `where`, so every
@@ -862,7 +862,7 @@ public partial class Functions
 			{
 				if (!await PermissionService.CanExamine(executor, found))
 				{
-					return ErrorMessages.Returns.PermissionDenied;
+					return PermissionRefusal.Examine(found).ReturnText;
 				}
 
 				var parent = await found.Object().Parent.WithCancellation(CancellationToken.None);
@@ -892,7 +892,7 @@ public partial class Functions
 
 			if (!await PermissionService.Controls(executor, target))
 			{
-				await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied);
+				await NotifyService.PermissionDeniedNotControlled(executor, target);
 				return;
 			}
 
@@ -936,7 +936,7 @@ public partial class Functions
 			{
 				if (!await PermissionService.CanLocate(executor, found))
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return PermissionRefusal.Locate(objArg).Return;
 				}
 
 				var current = found;
@@ -972,7 +972,7 @@ public partial class Functions
 				// fun_room (src/fundb.c:1550).
 				if (!await PermissionService.CanLocate(executor, x))
 				{
-					return ErrorMessages.Returns.PermissionDenied;
+					return PermissionRefusal.Locate(parser.CurrentState.Arguments["0"].Message.ToPlainText()).ReturnText;
 				}
 
 				var room = await LocateService.Room(x);
@@ -991,7 +991,7 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message.ToPlainText(),
 			LocateFlags.All,
 			// fun_where (src/fundb.c:1537).
-			async x => !await PermissionService.CanLocate(executor, x) ? ErrorMessages.Returns.PermissionDenied : x switch
+			async x => !await PermissionService.CanLocate(executor, x) ? PermissionRefusal.Locate(parser.CurrentState.Arguments["0"].Message.ToPlainText()).ReturnText : x switch
 			{
 				SharpPlayer player => (await player.Location.WithCancellation(CancellationToken.None)).Object().DBRef.ToString(),
 				SharpRoom => ErrorMessages.Returns.ThisIsARoom,
@@ -1018,7 +1018,7 @@ public partial class Functions
 			{
 				if (!await PermissionService.CanExamine(executor, target))
 				{
-					return ErrorMessages.Returns.PermissionDenied;
+					return PermissionRefusal.Examine(target).ReturnText;
 				}
 
 				return hasArg1
@@ -1044,9 +1044,9 @@ public partial class Functions
 	{
 		if (newZone.Equals("none", StringComparison.OrdinalIgnoreCase))
 		{
-			if (!await PermissionService.Controls(executor, target))
+			if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 			{
-				return ErrorMessages.Returns.PermissionDenied;
+				return notControlled.Return;
 			}
 
 			await Mediator.Send(new UnsetObjectZoneCommand(target));
@@ -1060,15 +1060,15 @@ public partial class Functions
 		}
 
 		// Check permissions - must control both object and zone, or pass ChZone lock
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return ErrorMessages.Returns.PermissionDenied;
+			return refused.Return;
 		}
 
 		bool canZone = await PermissionService.Controls(executor, zone);
 		if (!canZone && !await LockService.Evaluate(LockType.ChZone, zone, executor))
 		{
-			return ErrorMessages.Returns.PermissionDenied;
+			return PermissionRefusal.Lock(zone, "ChZone").ReturnText;
 		}
 
 		if (await RelationshipCycles.SafeToAddZoneAsync(target, zone) is not RelationshipSafety.Safe)
@@ -1405,7 +1405,7 @@ public partial class Functions
 		{
 			if (!await LockService.Evaluate(LockType.Zone, zone, executor))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.Lock(zone, "Zone").Return;
 			}
 		}
 

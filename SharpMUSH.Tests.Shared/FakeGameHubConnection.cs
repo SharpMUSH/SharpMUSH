@@ -40,6 +40,7 @@ public sealed class FakeGameHubConnection(Exception? onInvoke = null) : IGameHub
 	public IDisposable On(string methodName, Action<GameOutputMessage> handler) => NoopDisposable.Instance;
 	public IDisposable On(string methodName, Action<RoomEventMessage> handler) => NoopDisposable.Instance;
 	public IDisposable On(string methodName, Action<SceneEventMessage> handler) => NoopDisposable.Instance;
+	public IDisposable On(string methodName, Action<CharacterMovedMessage> handler) => NoopDisposable.Instance;
 	public IDisposable On(string methodName, Action handler) => NoopDisposable.Instance;
 	public event Func<Exception?, Task>? Closed { add { } remove { } }
 	public event Func<Exception?, Task>? Reconnecting { add { } remove { } }

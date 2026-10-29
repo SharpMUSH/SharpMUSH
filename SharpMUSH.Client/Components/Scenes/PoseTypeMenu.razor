@@ -4,9 +4,11 @@
 @inject PoseTypeService PoseTypes
 @implements IDisposable
 
-@* The story's Show menu: every pose type with a box, unticked for the ones the reader hides. Unticking hides that
-   type's poses here and in telnet recall (+scene/hide as the character); with nobody acting, the choice lasts
-   for the page. Nothing renders on a game whose scene package defines no types. *@
+@* The story's Show menu: every pose type with a box, unticked for the ones the reader hides in this story's context
+   (reading a scene, or playing in one, each its own choice). Unticking hides that type's poses in every story of
+   that context and in its telnet view, the log or the recall (+scene/hide <type>=reading|playing as the
+   character); with nobody acting, the choice lasts for the page. Nothing renders on a game whose scene package
+   defines no types. *@
 @if (PoseTypes.Types.Count > 0)
 {
     <div class="story-show @Class">
@@ -14,12 +16,12 @@
         @if (_open)
         {
             <fieldset class="story-show-menu">
-                <legend class="story-show-legend">@Loc["RolPoseTypesShowLegend"]</legend>
+                <legend class="story-show-legend">@(Context == StoryContext.Playing ? Loc["RolPoseTypesShowPlaying"] : Loc["RolPoseTypesShowReading"])</legend>
                 @foreach (var type in PoseTypes.Types)
                 {
                     var key = type.Key;
                     <label class="story-show-item" data-pose-type="@key">
-                        <input name="pose-type" type="checkbox" checked="@(!PoseTypes.IsHidden(key))" disabled="@_busy"
+                        <input name="pose-type" type="checkbox" checked="@(!PoseTypes.IsHidden(key, Context))" disabled="@_busy"
                                @onchange="e => SetShownAsync(key, e.Value is true)" />
                         @if (PoseTypeStyle.Icon(type.Icon) is { } icon)
                         {
@@ -39,6 +41,9 @@
 
 @code {
     [Parameter] public string? Class { get; set; }
+
+    /// <summary>Whose choice the boxes show and change: reading a scene, or playing in one.</summary>
+    [Parameter] public StoryContext Context { get; set; } = StoryContext.Reading;
 
     private bool _open;
     private bool _busy;
@@ -64,7 +69,7 @@
         _error = null;
         try
         {
-            _error = await (shown ? PoseTypes.ShowAsync(key) : PoseTypes.HideAsync(key)) switch
+            _error = await (shown ? PoseTypes.ShowAsync(key, Context) : PoseTypes.HideAsync(key, Context)) switch
             {
                 SharpMUSH.Library.DiscriminatedUnions.Success => null,
                 ApiFailure { Message.Length: > 0 } failure => failure.Message,

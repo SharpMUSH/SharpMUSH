@@ -5097,6 +5097,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Geen resultaten} one {# resultaat} other {# resultaten}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Hier gelinkt</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>In de buurt</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Meer onderwerpen</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Beheerdershulp</value>
   </data>
@@ -5767,8 +5776,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Deze scène loopt niet en neemt dus geen poses aan.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Je kunt deze scène bekijken, maar je personage is niet goedgekeurd om aan scènes deel te nemen, dus je kunt hier niet posten.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Je kunt deze scène bekijken, maar je personage kan er niet in posten: daarvoor zijn de rechten scene.join en scene.pose nodig.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5970,8 +5979,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Scène plannen</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Goedkeuring nodig</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Vereist scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6028,8 +6037,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Tonen</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetypes die je ziet</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetypes die je ziet bij het lezen</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetypes die je ziet tijdens het spelen</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-regel verborgen} other {# {label}-regels verborgen}}</value>
@@ -6545,6 +6557,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Uitzoomen</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Kaart passend maken</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Je bent hier</value>

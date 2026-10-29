@@ -376,7 +376,7 @@ public class GetCommandParityTests
 		var seen = await Get(taker, await NameOf(item));
 
 		await Assert.That(await LocationOf(item)).IsEqualTo($"#{cell.Number}");
-		await Assert.That(seen).Contains("Permission denied.");
+		await Assert.That(seen).Contains($"Permission denied. You do not control {await NameOf(cell)}, and it is not ENTER_OK.");
 		await AssertNoTriads(item, taker);
 	}
 

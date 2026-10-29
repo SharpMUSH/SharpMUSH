@@ -1,6 +1,8 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
+using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Plugins.Scene.Commands;
 
@@ -12,7 +14,7 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 public static class SceneCommandHelper
 {
 	/// <summary>The refusal a caller without the right to run a switch is told.</summary>
-	public static MString PermissionDeniedNotice => Notice("Permission denied.", NoticeKind.Error);
+	public static MString PermissionDeniedNotice => Notice(PermissionRefusal.Needs(PortalPermission.GameWizard).Text, NoticeKind.Error);
 	public const string PermissionDeniedReturn = "#-1 PERMISSION DENIED";
 	public const string BadArguments = "#-1 BAD ARGUMENTS TO SCENE COMMAND";
 	public const string NotFound = "#-1 NO SUCH SCENE OR POSE";

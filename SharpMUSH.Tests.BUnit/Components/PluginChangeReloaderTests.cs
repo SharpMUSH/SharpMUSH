@@ -20,6 +20,7 @@ file sealed class FakeConnectionStateService : IConnectionStateService
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
+	public event Action<CharacterMovedMessage>? OnCharacterMoved { add { } remove { } }
 	public event Action? OnPluginsChanged;
 
 	public Task ConnectAsync() => Task.CompletedTask;

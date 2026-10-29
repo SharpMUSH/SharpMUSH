@@ -149,8 +149,8 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 
 	private int _posesRecorded;
 
-	/// <summary>Whether the acting character is approved, as <c>isapproved(%#)</c> answers; null fails the request.</summary>
-	public bool? Approved { get; set; }
+	/// <summary>The permissions the acting character holds, as <c>permission(%#,%0)</c> answers; null fails the request.</summary>
+	public HashSet<string>? Permissions { get; set; }
 
 	/// <summary>Paths whose request never gets an answer: the transport throws, as a dropped connection does.</summary>
 	public HashSet<string> Unreachable { get; } = [];
@@ -177,10 +177,9 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 			return RunCommandAsync(request, ct);
 		}
 
-		if (path == "/api/commands/eval" && request.Method == HttpMethod.Post && Approved is { } approved)
+		if (path == "/api/commands/eval" && request.Method == HttpMethod.Post && Permissions is { } held)
 		{
-			var answer = new PortalCommandResponse([], approved ? "1" : "0", Truncated: false);
-			return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(answer) });
+			return HoldsAsync(request, held, ct);
 		}
 
 		string? body = path switch
@@ -201,6 +200,13 @@ internal sealed class SceneSurfaceApiHandler : HttpMessageHandler
 	/// focuses the new scene and says so, or says why not and leaves focus alone; the result expression
 	/// <c>scenefocus(me)</c> reads the focus after the command.
 	/// </summary>
+	private static async Task<HttpResponseMessage> HoldsAsync(HttpRequestMessage request, HashSet<string> held, CancellationToken ct)
+	{
+		var asked = (await request.Content!.ReadFromJsonAsync<PortalEvalRequest>(ct))!.Arguments?.FirstOrDefault() ?? "";
+		var answer = new PortalCommandResponse([], held.Contains(asked) ? "1" : "0", Truncated: false);
+		return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(answer) };
+	}
+
 	private async Task<HttpResponseMessage> RunCommandAsync(HttpRequestMessage request, CancellationToken ct)
 	{
 		var command = (await request.Content!.ReadFromJsonAsync<PortalCommandRequest>(ct))!;
@@ -336,6 +342,7 @@ internal sealed class FakeSceneHub : IConnectionStateService, ISceneHubControl
 	public event Action? OnConnectionStateChanged;
 	public event Action<GameOutputMessage>? OnOutputReceived;
 	public event Action<RoomEventMessage>? OnRoomEventReceived;
+	public event Action<CharacterMovedMessage>? OnCharacterMoved { add { } remove { } }
 	public event Action? OnPluginsChanged { add { } remove { } }
 	public event Action<SceneEventMessage>? OnSceneEventReceived;
 
@@ -658,12 +665,12 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// A pose the scene package refuses (a character not approved, a scene that stopped) is said only to the
+	/// A pose the scene package refuses (a character without scene.pose, a scene that stopped) is said only to the
 	/// character's terminal. The page repeats what the game said under the field and puts the words back, so
 	/// the viewer is not left with a pose that seemed to go and never appeared.
 	/// </summary>
 	[TUnit.Core.Test]
-	[Arguments("[SCENE] Error: You are not approved to take part in scenes.", "[SCENE] Error: You are not approved to take part in scenes.")]
+	[Arguments("[SCENE] Error: Permission denied. You need the scene.pose permission.", "[SCENE] Error: Permission denied. You need the scene.pose permission.")]
 	[Arguments("", "RolComposeRefused")]
 	public async Task SceneLive_ARefusedPose_SaysWhyAndKeepsTheWords(string said, string shown)
 	{
@@ -698,18 +705,18 @@ public class SceneSurfaceTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// A character that is not approved may watch a live scene but not pose in it, so the page says so where the
-	/// composer would be rather than offering one whose every pose is refused.
+	/// A character without scene.pose may watch a live scene but not pose in it, so the page says so where the
+	/// composer would be rather than offering one whose every pose is refused. Joining alone is not enough.
 	/// </summary>
 	[TUnit.Core.Test]
-	public async Task SceneLive_ACharacterNotApproved_IsToldInsteadOfOfferedTheComposer()
+	public async Task SceneLive_ACharacterWithoutScenePose_IsToldInsteadOfOfferedTheComposer()
 	{
 		_terminal.IsConnected.Returns(true);
-		_api.Approved = false;
+		_api.Permissions = ["scene.join"];
 		var cut = Render<SceneLiveHarness>(p => p.Add(c => c.Id, "S1"));
 		cut.WaitForAssertion(() => cut.Find(".scene-live-closed"), TimeSpan.FromSeconds(5));
 
-		await Assert.That(cut.Find(".scene-live-closed").TextContent).IsEqualTo("RolComposeNotApproved");
+		await Assert.That(cut.Find(".scene-live-closed").TextContent).IsEqualTo("RolComposeNoPermission");
 		await Assert.That(cut.FindAll(".scene-live-compose")).IsEmpty();
 	}
 

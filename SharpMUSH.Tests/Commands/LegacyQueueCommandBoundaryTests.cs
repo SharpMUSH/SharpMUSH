@@ -59,7 +59,7 @@ public class LegacyQueueCommandBoundaryTests
 	[Test]
 	[Arguments("unsupported", ErrorMessages.Returns.ErrorNotSupported)]
 	[Arguments("absent", ErrorMessages.Returns.InvalidPid)]
-	[Arguments("denied", ErrorMessages.Returns.PermissionDenied)]
+	[Arguments("denied", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
 	public async Task PidInfoPreservesLegacyInspectionBoundaries(string behavior, string expected)
 	{
 		var (_, parser, scheduler, mediator) = Create("PIDInfo", "SEMAPHORE");

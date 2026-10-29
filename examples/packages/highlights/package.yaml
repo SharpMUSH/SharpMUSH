@@ -1,7 +1,7 @@
 format: "1.16"
 package: highlights
 title: "Favourite poses and highlights"
-version: 1.3.0
+version: 1.4.0
 authors: [SharpMUSH]
 description: "Favourite poses and the highlights they make: +scene/fav marks a pose you liked, and +scene/highlights shows the poses players favourited most, each credited to the character who wrote it. There is no leaderboard and no counts."
 license: MIT
@@ -19,7 +19,7 @@ plugins: [scene]
 # the Highlights Store, which goes with it.
 depends:
   - package: scene
-    version: ">=1.13"
+    version: ">=1.18"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
@@ -106,7 +106,7 @@ objects:
         flags: [no_command]
 
   # The commands, on the Scene Logger beside the +scene verbs, so they run as it does: WIZARD, with %# the player.
-  # The scene package's own guard (FUN`IS`APPROVED) decides who may favourite, as it decides who may mark a pose.
+  # The scene package's own guard (FUN`MAY) decides who may favourite: scene.join, as for marking a pose.
   # Every scene*() call answers as %#, so a pose in a scene the player cannot see reads as missing in-game. The
   # portal's routes run as the HTTP handler, which sees every scene, so FUN`HIGHLIGHT`SEES asks the same question
   # for the viewer the route names.
@@ -121,13 +121,13 @@ objects:
         Which page? Give a whole number of 1 or more.
 
       # ---- reading the store --------------------------------------------------------
-      # 1 when %0 (a dbref or objid) may read scene %1: anyone holding control.all (every wizard), anyone for a
-      # public scene, a member for a private one. The Scene plugin's own rule, asked for a viewer who is not the
+      # 1 when %0 (a dbref or objid) may read scene %1: anyone holding control.all (every wizard), anyone holding
+      # scene.view for a public scene, a member for any. The Scene plugin's own rule, asked for a viewer who is not the
       # enactor.
       FUN`HIGHLIGHT`SEES: |-
-        cor(permission(%0,control.all),cand(not(strmatch(setr(scene_public,scene(%1,public)),#-1*)),%q<scene_public>),not(strmatch(scenemember(%1,%0,role),#-1*)))
+        cor(permission(%0,control.all),cand(permission(%0,scene.view),not(strmatch(setr(scene_public,scene(%1,public)),#-1*)),%q<scene_public>),not(strmatch(scenemember(%1,%0,role),#-1*)))
       # 1 when favourited pose %1 belongs in what %0 is shown: its scene is one they may read, it was not deleted,
-      # and its type is not one of %2, the types they hide (+scene/hide).
+      # and its type is not one of %2, the types they hide while reading (+scene/hide).
       FUN`HIGHLIGHT`SHOWS: |-
         cand(u(%!/FUN`HIGHLIGHT`SEES,%0,setr(highlight_scene,get({{store}}/POSE`%1`SCENE))),not(strmatch(setr(pose_deleted,scenepose(%q<highlight_scene>,%1,deleted)),#-1*)),not(%q<pose_deleted>),not(member(%2,firstof(scenepose(%q<highlight_scene>,%1,type),ic))))
       # The favourited poses written inside the time window (DATA`CONFIG`WINDOW; 0 for no limit).
@@ -146,7 +146,7 @@ objects:
       # than the page needs, so a long list costs only what it shows, and hands back highlight_more: 1 when a later page
       # has something.
       FUN`HIGHLIGHT`PAGE: |-
-        setq(hidden_types,u(%!/FUN`HIDDEN,%0))[setq(page_needed,mul(%2,setr(page_size,get({{store}}/DATA`CONFIG`PAGE-SIZE))))][setq(page_poses,)][null(iter(%1,if(u(%!/FUN`HIGHLIGHT`SHOWS,%0,%i0,%q<hidden_types>),setq(page_poses,%q<page_poses> %i0))[if(gt(words(%q<page_poses>),%q<page_needed>),ibreak())]))][setq(highlight_more,gt(words(%q<page_poses>),%q<page_needed>))][extract(%q<page_poses>,inc(mul(dec(%2),%q<page_size>)),%q<page_size>)]
+        setq(hidden_types,u(%!/FUN`HIDDEN,%0,reading))[setq(page_needed,mul(%2,setr(page_size,get({{store}}/DATA`CONFIG`PAGE-SIZE))))][setq(page_poses,)][null(iter(%1,if(u(%!/FUN`HIGHLIGHT`SHOWS,%0,%i0,%q<hidden_types>),setq(page_poses,%q<page_poses> %i0))[if(gt(words(%q<page_poses>),%q<page_needed>),ibreak())]))][setq(highlight_more,gt(words(%q<page_poses>),%q<page_needed>))][extract(%q<page_poses>,inc(mul(dec(%2),%q<page_size>)),%q<page_size>)]
       # How long the window is, in words.
       FUN`HIGHLIGHT`SPAN: |-
         cond(not(mod(%0,604800)),[div(%0,604800)] [if(eq(div(%0,604800),1),week,weeks)],not(mod(%0,86400)),[div(%0,86400)] [if(eq(div(%0,86400),1),day,days)],[max(1,div(%0,3600))] [if(lte(div(%0,3600),1),hour,hours)])
@@ -176,7 +176,7 @@ objects:
 
       CMD`FAVOURITE:
         value: |-
-          $(?is)^\+scene/fav(?\:o(?\:u?r(?\:i(?\:t(?\:e)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`IS`APPROVED,%#)=@pemit %#=notice(HIGHLIGHTS,get(%!/DATA`DENY`APPROVAL),error); @assert strlen(setr(pose_id,trim(%1)))=@pemit %#=notice(HIGHLIGHTS,get(%!/DATA`USAGE`FAVOURITE),warn); @assert not(strlen(setr(refusal,u(%!/FUN`FAVOURITE`REFUSAL,%:,%q<pose_id>))))=@pemit %#=notice(HIGHLIGHTS,%q<refusal>,warn); @include/args %!/INC`FAVOURITE`ADD=who,%:,pose,%q<pose_id>; @pemit %#=notice(HIGHLIGHTS,Pose %q<pose_id> by [u(%!/FUN`HIGHLIGHT`CREDIT,scenepose(,%q<pose_id>,scene),%q<pose_id>)] is one of your favourites now.,ok)
+          $(?is)^\+scene/fav(?\:o(?\:u?r(?\:i(?\:t(?\:e)?)?)?)?)?(?\: +(.*))?$: @assert u(%!/FUN`MAY,%#,scene.join)=@pemit %#=notice(HIGHLIGHTS,u(%!/FUN`DENY,scene.join),error); @assert strlen(setr(pose_id,trim(%1)))=@pemit %#=notice(HIGHLIGHTS,get(%!/DATA`USAGE`FAVOURITE),warn); @assert not(strlen(setr(refusal,u(%!/FUN`FAVOURITE`REFUSAL,%:,%q<pose_id>))))=@pemit %#=notice(HIGHLIGHTS,%q<refusal>,warn); @include/args %!/INC`FAVOURITE`ADD=who,%:,pose,%q<pose_id>; @pemit %#=notice(HIGHLIGHTS,Pose %q<pose_id> by [u(%!/FUN`HIGHLIGHT`CREDIT,scenepose(,%q<pose_id>,scene),%q<pose_id>)] is one of your favourites now.,ok)
         flags: [REGEXP]
       CMD`UNFAVOURITE:
         value: |-
@@ -240,7 +240,7 @@ objects:
       # The button under pose %1 for viewer %0 on page %2: favourite it, or take it back when %3 says it is theirs.
       # None for a visitor, a character who may not favourite, or the viewer's own pose.
       WEB`HIGHLIGHT`TOGGLE: |-
-        if(cor(not(u(%!/FUN`IS`APPROVED,%0)),cand(not(%3),strlen(u(%!/FUN`FAVOURITE`REFUSAL,%0,%1)))),json(array),json(array,json(object,action,json(string,favourite),label,json(string,if(%3,Take back,Favourite)),values,json(object,pose,json(string,%1),favourite,json(boolean,if(%3,false,true)),at,json(string,%2)))))
+        if(cor(not(u(%!/FUN`MAY,%0,scene.join)),cand(not(%3),strlen(u(%!/FUN`FAVOURITE`REFUSAL,%0,%1)))),json(array),json(array,json(object,action,json(string,favourite),label,json(string,if(%3,Take back,Favourite)),values,json(object,pose,json(string,%1),favourite,json(boolean,if(%3,false,true)),at,json(string,%2)))))
       # The view's data for viewer %0 at %1: the poses as timeline rows.
       WEB`HIGHLIGHT`DATA: |-
         json(object,fields,json(object,poses,json(object,value,if(words(setr(data_poses,u(%!/WEB`HIGHLIGHT`POSES,%0,%1))),json_array(iter(%q<data_poses>,u(%!/WEB`HIGHLIGHT`ROW,%0,%i0,%1),,%r),%r),json_array()),visible,json(boolean,true))))
@@ -255,7 +255,7 @@ objects:
       # so the "Set." lines go to the Scene Logger and not into the response. It leaves the answer in act_result: the page's
       # poses again, so the buttons and tags follow, or the refusal.
       WEB`ACT`HIGHLIGHTS: |-
-        think setq(pose_id,u(%!/WEB`HIGHLIGHT`FIELD,pose,%<body>))[setq(act_add,strmatch(json_query(%<body>,get,favourite),true))][setq(act_at,u(%!/WEB`HIGHLIGHT`FIELD,at,%<body>))][setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,Sign in with an approved character to favourite poses.))]; @assert u(%!/FUN`IS`APPROVED,%<viewer>); think setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,setr(refusal,u(%!/FUN`[if(%q<act_add>,FAVOURITE,UNFAVOURITE)]`REFUSAL,%<viewer>,%q<pose_id>)))); @assert not(strlen(%q<refusal>)); @include/args %!/INC`FAVOURITE`[if(%q<act_add>,ADD,REMOVE)]=who,%<viewer>,pose,%q<pose_id>; think setq(act_result,json(object,ok,json(boolean,true),message,json(string,if(%q<act_add>,Pose %q<pose_id> is one of your favourites now.,Pose %q<pose_id> is no longer one of your favourites.)),data,u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%q<act_at>)))
+        think setq(pose_id,u(%!/WEB`HIGHLIGHT`FIELD,pose,%<body>))[setq(act_add,strmatch(json_query(%<body>,get,favourite),true))][setq(act_at,u(%!/WEB`HIGHLIGHT`FIELD,at,%<body>))][setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,Sign in with a character holding scene.join to favourite poses.))]; @assert u(%!/FUN`MAY,%<viewer>,scene.join); think setq(act_result,u(%!/WEB`HIGHLIGHT`ERROR,setr(refusal,u(%!/FUN`[if(%q<act_add>,FAVOURITE,UNFAVOURITE)]`REFUSAL,%<viewer>,%q<pose_id>)))); @assert not(strlen(%q<refusal>)); @include/args %!/INC`FAVOURITE`[if(%q<act_add>,ADD,REMOVE)]=who,%<viewer>,pose,%q<pose_id>; think setq(act_result,json(object,ok,json(boolean,true),message,json(string,if(%q<act_add>,Pose %q<pose_id> is one of your favourites now.,Pose %q<pose_id> is no longer one of your favourites.)),data,u(%!/WEB`HIGHLIGHT`DATA,%<viewer>,%q<act_at>)))
 
   # The routes the portal page reads (the highlights-app package registers it). The handler must be WIZARD, as the
   # seeded one is, to @force the Scene Logger for a button press.

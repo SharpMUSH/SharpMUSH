@@ -5097,6 +5097,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Nincs találat} one {# találat} other {# találat}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Innen hivatkozott</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>Közeli</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>További témák</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Adminisztrátori súgó</value>
   </data>
@@ -5767,8 +5776,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ez a jelenet nem fut, ezért nem fogad pózokat.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Ezt a jelenetet nézheted, de a karaktered nincs jóváhagyva a jelenetekben való részvételre, ezért itt nem posztolhatsz.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Ezt a jelenetet nézheted, de a karaktered nem posztolhat benne: ehhez a scene.join és a scene.pose jogosultság kell.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5970,8 +5979,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Jelenet ütemezése</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Jóváhagyás szükséges</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>scene.create szükséges</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6028,8 +6037,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Megjelenítés</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Megjelenített póztípusok</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Olvasáskor megjelenített póztípusok</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Játék közben megjelenített póztípusok</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label} sor elrejtve} other {# {label} sor elrejtve}}</value>
@@ -6545,6 +6557,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Kicsinyítés</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Térkép igazítása</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Itt vagy</value>

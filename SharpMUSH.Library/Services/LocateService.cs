@@ -78,7 +78,7 @@ public class LocateService(
 		{
 			Error<string> { Value: var e } when e == ErrorMessages.Returns.AmbiguousMatch
 				=> ErrorMessages.Notifications.AmbiguousMatch,
-			_ when noControl => ErrorMessages.Notifications.PermissionDenied,
+			_ when noControl => ErrorMessages.Notifications.PermissionDeniedNotControlledMatch,
 			// Anything else that arrived as an error carries its own wording (the looker gate, say).
 			Error<string> { Value: var e } when e != ErrorMessages.Returns.CantSeeThat => e,
 			// match.c's remaining arm is "I can't see that here." for a plain miss as much as for a

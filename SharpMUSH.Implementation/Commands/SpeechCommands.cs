@@ -913,8 +913,7 @@ public partial class Commands
 		if (await LockService.Evaluate(commandLock, executor, executor))
 			return await WallCore(parser, attribute, audience, prefix);
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied));
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
+		return await NotifyService.PermissionDeniedNeeds(executor, Library.Services.CommandRestrictions.PermissionsOf(commandLock));
 	}
 
 	[SharpCommand(Name = "@RWALL", Switches = ["NOEVAL", "EMIT"], Behavior = CB.Default | CB.NoParse,

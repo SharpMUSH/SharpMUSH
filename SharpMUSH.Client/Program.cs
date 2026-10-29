@@ -65,7 +65,7 @@ builder.Services.AddSingleton<GameCommandService>();
 builder.Services.AddSingleton<PaletteClient>();
 builder.Services.AddSingleton<ConfigurationSearchClient>();
 builder.Services.AddSingleton<PaletteContext>();
-// The pose types (api/scenes/types), read once per acting character; hiding one runs +scene/hide.
+// The pose types (api/scenes/types), read once per acting character; hiding one runs +scene/hide <type>=reading|playing.
 builder.Services.AddSingleton<PoseTypeService>();
 // The scene details (api/scenes/details): the verse, canon and other fields a scene can carry, read once.
 builder.Services.AddSingleton<SceneDetailService>();

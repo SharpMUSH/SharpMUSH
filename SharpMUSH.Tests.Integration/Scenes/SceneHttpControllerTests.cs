@@ -107,8 +107,9 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		await Assert.That(dto.StartedAt).IsGreaterThan(0);
 	}
 
-	private record PoseTypeDto(string Key, string Label, string Presentation, string Tone, string Icon, bool Hidden, int Order);
-	private record PoseTypesDto(List<PoseTypeDto> Types, List<JsonElement> Problems, List<string> Hidden);
+	private record PoseTypeDto(string Key, string Label, string Presentation, string Tone, string Icon, bool HiddenReading, bool HiddenPlaying,
+		int Order);
+	private record PoseTypesDto(List<PoseTypeDto> Types, List<JsonElement> Problems, List<string> HiddenReading, List<string> HiddenPlaying);
 
 	[Test]
 	public async Task GetTypes_ReturnsTheSceneLoggersPoseTypesInOrder()
@@ -119,8 +120,9 @@ public class SceneHttpControllerTests(ServerWebAppFactory factory)
 		var dto = (await response.Content.ReadFromJsonAsync<PoseTypesDto>())!;
 		await Assert.That(dto.Types.Take(3).Select(t => t.Key)).IsEquivalentTo(new[] { "ic", "ooc", "narration" });
 		await Assert.That(dto.Types.Single(t => t.Key == "ooc"))
-			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "secondary", "", false, 20));
-		await Assert.That(dto.Hidden.All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
+			.IsEqualTo(new PoseTypeDto("ooc", "Out of character", "band", "secondary", "", true, false, 20))
+			.Because("out of character starts hidden from someone reading a scene and shown to someone playing in it");
+		await Assert.That(dto.HiddenReading.Concat(dto.HiddenPlaying).All(key => dto.Types.Any(t => t.Key == key))).IsTrue();
 	}
 
 	private record SceneDetailDto(string Key, string Label, string Hint, List<string> Choices, bool Many, bool Listed, string Tone, int Order);

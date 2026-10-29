@@ -4406,6 +4406,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Liés depuis cette page</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>À proximité</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Autres sujets</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Aide d'administration</value>
   </data>
@@ -5076,8 +5085,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Cette scène n'est pas en cours, elle n'accepte donc aucune pose.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Vous pouvez regarder cette scène, mais votre personnage n'est pas approuvé pour participer aux scènes, vous ne pouvez donc pas poster ici.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Vous pouvez regarder cette scène, mais votre personnage ne peut pas y poster : il lui faut les permissions scene.join et scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5279,8 +5288,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planifier une scène</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Approbation requise</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Nécessite scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -5337,8 +5346,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Afficher</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Types de pose affichés</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Types de pose affichés en lecture</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Types de pose affichés en jeu</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# ligne {label} masquée} other {# lignes {label} masquées}}</value>
@@ -5854,6 +5866,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom arrière</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Ajuster la carte</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Vous êtes ici</value>

@@ -5097,6 +5097,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Ingen treff} one {# treff} other {# treff}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Lenket herfra</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>I nærheten</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Flere emner</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratorhjelp</value>
   </data>
@@ -5767,8 +5776,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Denne scenen pågår ikke, så den tar ikke imot poser.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Du kan se denne scenen, men karakteren din er ikke godkjent for å delta i scener, så du kan ikke poste her.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Du kan se denne scenen, men karakteren din kan ikke poste i den: det krever tillatelsene scene.join og scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5970,8 +5979,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planlegg en scene</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Krever godkjenning</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Krever scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6028,8 +6037,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Vis</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetyper som vises</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetyper som vises ved lesing</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetyper som vises under spill</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-linje skjult} other {# {label}-linjer skjult}}</value>
@@ -6545,6 +6557,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom ut</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Tilpass kartet</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Du er her</value>

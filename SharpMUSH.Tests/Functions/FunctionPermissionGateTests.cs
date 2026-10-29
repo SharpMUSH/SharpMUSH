@@ -44,7 +44,7 @@ public class FunctionPermissionGateTests
 		var mortal = await Mortal($"Gate{function}");
 		var godsThing = await Thing($"Gate{function}Item");
 
-		await Assert.That(await As(mortal, $"{function}({godsThing})")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await As(mortal, $"{function}({godsThing})")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT EXAMINE");
 		await Assert.That(await AsGod($"{function}({godsThing})")).IsNotEqualTo("#-1 PERMISSION DENIED");
 	}
 
@@ -54,7 +54,7 @@ public class FunctionPermissionGateTests
 		var mortal = await Mortal("GateIname");
 		var godsThing = await Thing("GateInameItem");
 
-		await Assert.That(await As(mortal, $"iname({godsThing})")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await As(mortal, $"iname({godsThing})")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 
 		await God($"@teleport/silent {mortal.DbRef}={godsThing}");
 		await Assert.That(await As(mortal, $"iname({godsThing})")).StartsWith("GateInameItem");
@@ -87,7 +87,7 @@ public class FunctionPermissionGateTests
 		var first = await Thing("GateControlsA");
 		var second = await Thing("GateControlsB");
 
-		await Assert.That(await As(mortal, $"controls({first},{second})")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await As(mortal, $"controls({first},{second})")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 		await Assert.That(await As(mortal, $"controls({mortal.DbRef},{first})")).IsEqualTo("0");
 	}
 }

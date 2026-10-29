@@ -123,7 +123,7 @@ public class LocateSeamCharacterisationTests
 			LocateFlags.All | LocateFlags.OnlyMatchLookerControlledObjects);
 
 		await Assert.That(result.IsValid()).IsFalse();
-		await AssertNotified(ErrorMessages.Notifications.PermissionDenied);
+		await AssertNotified(ErrorMessages.Notifications.PermissionDeniedNotControlledMatch);
 	}
 
 	[Test]

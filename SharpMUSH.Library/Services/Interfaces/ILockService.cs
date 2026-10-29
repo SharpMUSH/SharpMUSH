@@ -27,6 +27,9 @@ public interface ILockService
 	ValueTask SetSystemAsync(AnySharpObject target, string name, string expression, CancellationToken cancellationToken = default);
 	ValueTask<Result<Success>> SetFlagsAsync(AnySharpObject executor, AnySharpObject target, string name, string flags, CancellationToken cancellationToken = default);
 	ValueTask<bool> CanWriteAsync(AnySharpObject executor, AnySharpObject target, SharpLockData data);
+
+	/// <summary>Whether <paramref name="executor"/> may write <paramref name="data"/> to <paramref name="target"/>; refused, the sentence that says why.</summary>
+	ValueTask<Result<Success>> AuthorizeWriteAsync(AnySharpObject executor, AnySharpObject target, SharpLockData data);
 	ValueTask<Result<string>> ResolveWriteNameAsync(AnySharpObject target, string name, CancellationToken cancellationToken = default);
 
 	ValueTask<Result<string>> BindAsync(string expression, AnySharpObject executor, CancellationToken cancellationToken = default);

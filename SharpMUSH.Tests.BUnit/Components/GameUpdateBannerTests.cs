@@ -27,6 +27,7 @@ public class GameUpdateBannerTests : BunitContext
 		public event Action? OnConnectionStateChanged;
 		public event Action<GameOutputMessage>? OnOutputReceived { add { } remove { } }
 		public event Action<RoomEventMessage>? OnRoomEventReceived { add { } remove { } }
+		public event Action<CharacterMovedMessage>? OnCharacterMoved { add { } remove { } }
 		public event Action? OnPluginsChanged { add { } remove { } }
 
 		public Task ConnectAsync() => Task.CompletedTask;

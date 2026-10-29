@@ -106,7 +106,7 @@ public class MudClientFunctionTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "GmcpOther");
 		ConnectionService.Update(other.Handle, GmcpSupports.MetadataKey, "Room 1");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"gmcpsupports({other.DbRef})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"gmcpsupports({other.DbRef})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
 		await Assert.That(await EvalAs(mortal.DbRef, $"gmcpsupports({other.Handle})"))
 			.IsEqualTo(ErrorMessages.Returns.NoSuchDescriptorOrPermissionDenied);
 

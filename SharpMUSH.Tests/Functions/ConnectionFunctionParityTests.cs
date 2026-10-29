@@ -115,12 +115,12 @@ public class ConnectionFunctionParityTests
 	/// whether they are connected. The integer functions keep PennMUSH's <c>-1</c>.
 	/// </summary>
 	[Test]
-	[Arguments("host", ErrorMessages.Returns.PermissionDenied)]
-	[Arguments("ipaddr", ErrorMessages.Returns.PermissionDenied)]
+	[Arguments("host", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL")]
+	[Arguments("ipaddr", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL")]
 	[Arguments("recv", "-1")]
 	[Arguments("sent", "-1")]
 	[Arguments("cmds", "-1")]
-	[Arguments("ssl", "#-1 PERMISSION DENIED")]
+	[Arguments("ssl", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL")]
 	[NotInParallel(nameof(ConnectionFunctionParityTests))]
 	public async Task WithoutSeeAll_AnotherPlayersConnectionIsRefusedInKind(string function, string expected)
 	{

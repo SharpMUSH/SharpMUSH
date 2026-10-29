@@ -128,6 +128,68 @@ public class HelpSidebarTests : TrackingBunitContext
 		await Assert.That(labels[^1]).IsEqualTo("alpha-199").Because("newbie sorts after every alpha-* entry, so its neighbours are the last of them");
 	}
 
+	/// <summary>
+	/// look links say and move; say links exits; exits links zone. The filler topics give the alphabetical slice
+	/// something of its own.
+	/// </summary>
+	private static Dictionary<string, Dictionary<string, string>> Linked() => new()
+	{
+		["help"] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			["help"] = "# help\n[look] [say] [move] [exits] [zone]",
+			["newbie"] = "# newbie\nStart with [look].",
+			["look"] = "# look\nThen [say] something, or [move], or back to the [help] index.",
+			["say"] = "# say\nLeave by the [exits].",
+			["move"] = "# move\nNo links.",
+			["exits"] = "# exits\nInto the next [zone].",
+			["zone"] = "# zone\nNo links.",
+		}.Concat(Enumerable.Range(0, 40).Select(i => KeyValuePair.Create($"filler-{i:00}", $"# filler-{i:00}\nNo links.")))
+			.ToDictionary(StringComparer.OrdinalIgnoreCase),
+	};
+
+	private static IReadOnlyList<string> Labels(IRenderedComponent<HelpSidebar> cut, string group) =>
+		cut.FindAll($".{group} a.kit-row").Select(r => r.TextContent.Trim()).ToList();
+
+	[Test]
+	public async Task OnATopic_WhatItLinksToComesFirst_ThenWhatThoseLinkTo_ThenTheRest()
+	{
+		Install(isStaff: false, Linked());
+		var cut = RenderAt("/help/look");
+		cut.WaitForAssertion(() => cut.Find(".help-side-linked"), TimeSpan.FromSeconds(5));
+
+		await Assert.That(cut.FindAll(".help-side-topics-label").Select(l => l.TextContent.Trim()))
+			.IsEquivalentTo(new[] { "Linked from here", "Nearby", "More topics" });
+		await Assert.That(string.Join(",", Labels(cut, "help-side-linked"))).IsEqualTo("say,move")
+			.Because("in the order the page links them, without the help index, which is the Help index row");
+		await Assert.That(string.Join(",", Labels(cut, "help-side-nearby"))).IsEqualTo("exits,zone");
+		var rest = Labels(cut, "help-side-alphabetical");
+		await Assert.That(rest).Contains("look").Because("the slice still places the topic being read");
+		await Assert.That(rest.Intersect(new[] { "say", "move", "exits", "zone", "newbie", "help" })).IsEmpty();
+	}
+
+	[Test]
+	public async Task MovingToAnotherTopic_ListsWhatThatOneLinksTo()
+	{
+		Install(isStaff: false, Linked());
+		var cut = RenderAt("/help/look");
+		cut.WaitForAssertion(() => cut.Find(".help-side-nearby"), TimeSpan.FromSeconds(5));
+
+		Nav.NavigateTo("/help/say");
+		cut.WaitForAssertion(() =>
+		{
+			if (string.Join(",", Labels(cut, "help-side-linked")) != "exits") throw new InvalidOperationException("still the old topic's links");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(string.Join(",", Labels(cut, "help-side-nearby"))).IsEqualTo("zone");
+
+		Nav.NavigateTo("/help/zone");
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".help-side-linked").Count > 0) throw new InvalidOperationException("still the old topic's links");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find(".help-side-topics-label").TextContent.Trim()).IsEqualTo("Topics")
+			.Because("a page that links nothing has only the alphabetical slice");
+	}
+
 	[Test]
 	public async Task OnTheIndex_TheSliceIsTheStartOfTheList()
 	{

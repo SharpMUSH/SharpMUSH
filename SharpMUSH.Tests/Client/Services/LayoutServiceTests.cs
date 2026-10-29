@@ -84,6 +84,18 @@ public class LayoutServiceTests : TrackingTestContext
 		await Assert.That(config.GetProperty("namespace").GetString()).IsEqualTo("main");
 	}
 
+	/// <summary>Live now and the recent wiki changes share a row under the home wiki page.</summary>
+	[Test]
+	public async Task GetDefaultLayout_Home_PutsLiveNowAndRecentChangesSideBySide()
+	{
+		var svc = Build(new ScriptedHandler(_ => NotFound()));
+		var main = svc.GetDefaultLayout(LayoutScopes.Home).Zones[WidgetZone.MainContent]
+			.OrderBy(p => p.Order).ToList();
+
+		await Assert.That(main.Skip(2).Select(p => (p.WidgetName, p.Span)).ToList())
+			.IsEquivalentTo([("ActiveScene", 6), ("RecentWikiActivity", 6)]);
+	}
+
 	/// <summary>Order is the sort key within a zone, so inserting a widget must renumber the rest.</summary>
 	[Test]
 	public async Task GetDefaultLayout_Home_NumbersEveryPlacementConsecutively()

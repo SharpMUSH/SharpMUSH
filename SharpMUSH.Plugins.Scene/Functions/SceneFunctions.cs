@@ -31,25 +31,20 @@ public static class SceneFunctions
 	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
-	/// Returns true when the viewer may see this scene. Public scenes are visible
-	/// to anyone; non-public scenes are visible only to their members. Mirrors the
-	/// wiki draft-visibility convention.
+	/// Returns true when the viewer may see this scene. Public scenes are visible to anyone holding
+	/// <c>scene.view</c>; every scene is visible to its members. Mirrors the wiki draft-visibility convention.
 	/// </summary>
 	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Contracts.Scene scene, IMUSHCodeParser parser)
 	{
-		if (scene.IsPublic)
-		{
-			return true;
-		}
-
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
 		// The viewer is the ENACTOR (%#, the player asking) — not the executor. Verbs run via the WIZARD
 		// Scene Logger $-commands, so keying on the executor would make every read see the logger's view;
 		// keying on the enactor gives each player their own visibility (a member sees their own scene).
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		// A wizard enactor still sees every scene.
-		if (await enactor.IsWizard())
+		// A public scene is read with scene.view; a wizard enactor still sees every scene.
+		if ((scene.IsPublic && await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken))
+			|| await enactor.IsWizard())
 		{
 			return true;
 		}
@@ -564,7 +559,8 @@ public static class SceneFunctions
 	/// <summary>
 	/// scenetype([&lt;key&gt;[, &lt;field&gt;[, &lt;json&gt;]]])
 	/// With no key, the pose types the Scene Logger defines, in their order, as a space-separated list of keys.
-	/// Otherwise one field of a pose type: label (the default), presentation, tone, icon, hidden or order. The field
+	/// Otherwise one field of a pose type: label (the default), presentation, tone, icon, hidden (where a reader who has
+	/// not chosen starts with it hidden: <c>reading</c>, <c>playing</c>, both or empty) or order. The field
 	/// <c>check</c> is empty when &lt;json&gt; would read as pose type &lt;key&gt;, and otherwise <c>#-1</c> and the
 	/// reason, as <c>@scene/types</c> would give it: how the scene package refuses a bad edit before writing it.
 	/// </summary>
@@ -607,7 +603,7 @@ public static class SceneFunctions
 			"presentation" => type.Presentation,
 			"tone" => type.Tone,
 			"icon" => type.Icon,
-			"hidden" => type.Hidden ? "1" : "0",
+			"hidden" => string.Join(" ", type.HiddenContexts),
 			"order" => type.Order.ToString(System.Globalization.CultureInfo.InvariantCulture),
 			_ => NoSuchField,
 		});

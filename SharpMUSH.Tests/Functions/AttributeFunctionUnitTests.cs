@@ -789,7 +789,7 @@ public class AttributeFunctionUnitTests
 		var oneArgument = await mortal.FunctionParse(MarkupText.Plain($"{function}(#{god}/HASATTRUNREADABLE)"));
 		var twoArguments = await mortal.EvaluateAsync(MarkupText.Plain($"{function}(#{god},HASATTRUNREADABLE)"));
 
-		await Assert.That(oneArgument!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(oneArgument!.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE")
 			.Because("an attribute that exists but cannot be read is a refusal, not an absence");
 		await Assert.That(twoArguments.ToPlainText()).IsEqualTo(oneArgument.Message.ToPlainText())
 			.Because("obj/attr in one argument and obj,attr in two are the same call");

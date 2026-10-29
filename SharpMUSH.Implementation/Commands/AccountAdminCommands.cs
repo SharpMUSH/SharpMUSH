@@ -44,10 +44,9 @@ public partial class Commands
 		}
 
 		// Everything but /claim administers other people's accounts.
-		if (!await executor.IsWizard())
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (switches.Contains("LIST"))
@@ -263,8 +262,9 @@ public partial class Commands
 	{
 		if (await OutranksAsync(player, executor))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return ((AnySharpObject)player).IsGod()
+				? await NotifyService.PermissionDeniedGodOnly(executor)
+				: await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedProtectedWizard), player.Object.Name);
 		}
 
 		return await AccountService.AttachCharacterAsync(account.Id!, player) switch

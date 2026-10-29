@@ -68,11 +68,11 @@ public class TextFunctionUnitTests
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "TextEntriesMortal");
 
 		await Assert.That(await EvalAs(mortal.DbRef, "textentries(ahelp,*)"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY");
 		await Assert.That(await EvalAs(mortal.DbRef, "textfile(ahelp,AHELP)"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY");
 		await Assert.That(await EvalAs(mortal.DbRef, "textsearch(ahelp,a)"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY");
 
 		await Assert.That(await Eval("textentries(ahelp,*)")).IsNotEmpty()
 			.Because("God must still be able to read it, or the refusal above proves nothing");

@@ -100,21 +100,23 @@ public static class SceneLogger
 	}
 
 	/// <summary>
-	/// The types <paramref name="reader"/> leaves out of their recall and log, as the scene package's
-	/// <c>FUN`HIDDEN</c> works it out: the ones in their <c>SCENE`HIDE</c>, and the ones the catalogue starts
-	/// hidden that are not in their <c>SCENE`SHOW</c>. A reader with no character gets the catalogue's.
+	/// The types <paramref name="reader"/> leaves out in <paramref name="context"/> (<see cref="PoseTypes.Reading"/> or
+	/// <see cref="PoseTypes.Playing"/>), as the scene package's <c>FUN`HIDDEN</c> works it out: the ones in their
+	/// <c>SCENE`HIDE`&lt;CONTEXT&gt;</c>, and the ones the catalogue starts hidden there that are not in their
+	/// <c>SCENE`SHOW`&lt;CONTEXT&gt;</c>. A reader with no character gets the catalogue's.
 	/// </summary>
 	public static async ValueTask<IReadOnlyList<string>> HiddenForAsync(IServiceProvider services, PoseTypeCatalogue catalogue,
-		DBRef? reader)
+		DBRef? reader, string context)
 	{
 		var mediator = services.GetRequiredService<IMediator>();
 		var character = reader is { } who && await mediator.Send(new GetObjectNodeQuery(who)) is AnySharpObject found ? found : null;
-		var hide = character is null ? [] : await WordsAsync(services, character, "SCENE`HIDE");
-		var show = character is null ? [] : await WordsAsync(services, character, "SCENE`SHOW");
+		var suffix = context.ToUpperInvariant();
+		var hide = character is null ? [] : await WordsAsync(services, character, $"SCENE`HIDE`{suffix}");
+		var show = character is null ? [] : await WordsAsync(services, character, $"SCENE`SHOW`{suffix}");
 		// A hidden key whose type was removed is left out, as FUN`HIDDEN leaves it out of recall: those poses draw
 		// as in character, and no Show menu lists the type to reveal them.
 		var listed = catalogue.Types.Select(t => t.Key).ToHashSet(StringComparer.OrdinalIgnoreCase);
-		return [.. hide.Where(listed.Contains).Union(catalogue.Types.Where(t => t.Hidden && !show.Contains(t.Key)).Select(t => t.Key)).Distinct()];
+		return [.. hide.Where(listed.Contains).Union(catalogue.Types.Where(t => t.HiddenIn(context) && !show.Contains(t.Key)).Select(t => t.Key)).Distinct()];
 	}
 
 	private static async ValueTask<string[]> WordsAsync(IServiceProvider services, AnySharpObject character, string attribute) =>

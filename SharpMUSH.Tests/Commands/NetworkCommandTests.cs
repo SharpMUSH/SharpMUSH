@@ -28,7 +28,7 @@ public class NetworkCommandTests
 		var mortal = await Players.PlayerAsync("HttpMortal");
 		var wizard = await Players.WizardAsync("HttpWizard");
 
-		await Assert.That(await Players.HeardRunning(mortal, "@http")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(mortal, "@http")).IsEquivalentTo(["Permission denied. You need one of these permissions: game.wizard, game.can_http."]);
 		await Assert.That(await Players.HeardRunning(wizard, "@http")).IsEquivalentTo(["What do you want to query?"]);
 	}
 
@@ -37,7 +37,7 @@ public class NetworkCommandTests
 	{
 		var mortal = await Players.PlayerAsync("SqlMortal");
 
-		await Assert.That(await Players.HeardRunning(mortal, "@sql SELECT 1")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(mortal, "@sql SELECT 1")).IsEquivalentTo(["Permission denied. You need one of these permissions: game.wizard, game.sql_ok."]);
 	}
 
 	/// <summary>@mapsql runs the attribute once per row, with the row number in %0 and the columns from %1.</summary>
@@ -86,6 +86,6 @@ public class NetworkCommandTests
 	{
 		var mortal = await Players.PlayerAsync("SlaveMortal");
 
-		await Assert.That(await Players.HeardRunning(mortal, "@slave")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(mortal, "@slave")).IsEquivalentTo(["Permission denied. You need the server.operate permission."]);
 	}
 }

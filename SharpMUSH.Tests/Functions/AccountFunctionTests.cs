@@ -57,14 +57,14 @@ public class AccountFunctionTests : ServerTestBase
 	public async Task ACharacterReadsItsOwnAccountIdButNotItsName()
 	{
 		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)})")).IsEqualTo(_account.Id);
-		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)},name)")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await EvalAs(_second.DbRef, $"account({Ref(_first)},name)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 	}
 
 	[Test]
 	public async Task SomeoneElseIsRefused()
 	{
-		await Assert.That(await EvalAs(_stranger.DbRef, $"account({Ref(_first)})")).IsEqualTo("#-1 PERMISSION DENIED");
-		await Assert.That(await EvalAs(_stranger.DbRef, $"accountchars({Ref(_first)})")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"account({Ref(_first)})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
+		await Assert.That(await EvalAs(_stranger.DbRef, $"accountchars({Ref(_first)})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS PLAYERS.VIEW");
 	}
 
 	[Test]

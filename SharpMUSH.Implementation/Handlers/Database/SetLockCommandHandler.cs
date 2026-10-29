@@ -24,8 +24,8 @@ public class SetLockCommandHandler(IObjectStore database, IBooleanExpressionPars
 		target.Object().Locks.TryGetValue(name, out var old);
 		var flags = request.Flags ?? old?.Flags ?? lockService.SystemLocks.GetValueOrDefault(name);
 		var data = new SharpLockData(request.LockString, flags, request.PreserveCreator ? request.Creator : executor.Object().DBRef);
-		if (!await lockService.CanWriteAsync(executor, target, old ?? data) || !await lockService.CanWriteAsync(executor, target, data))
-			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+		if (await lockService.AuthorizeWritesAsync(executor, target, old ?? data, data) is Error<string> refused)
+			return refused;
 		if (await booleanParser.BindAsync(request.LockString, executor, cancellationToken) is not string bound)
 			return new Error<string>(ErrorMessages.Notifications.DontUnderstandThatKey);
 		data = data with { LockString = bound };
@@ -49,7 +49,7 @@ public class UnsetLockCommandHandler(IObjectStore database, IBooleanExpressionPa
 		if (resolved is not string name)
 			return resolved is Error<string> unresolved ? unresolved : new Error<string>(ErrorMessages.Notifications.UnknownLockType);
 		target.Object().Locks.TryGetValue(name, out var old);
-		if (!await lockService.CanWriteAsync(executor, target, old ?? new SharpLockData())) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+		if (await lockService.AuthorizeWriteAsync(executor, target, old ?? new SharpLockData()) is Error<string> refused) return refused;
 		if (old is null) return new Success();
 		await database.UnsetLockAsync(target.Object(), name, cancellationToken);
 		booleanParser.InvalidateCache(old.LockString);
@@ -68,9 +68,9 @@ public class SetLockFlagsCommandHandler(IObjectStore database, ILockService lock
 			return new Error<string>("No such object.");
 		var name = LockNames.Canonical(request.LockName);
 		if (!target.Object().Locks.TryGetValue(name, out var data)) return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
-		if (!await lockService.CanWriteAsync(request.Executor, target, data)) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+		if (await lockService.AuthorizeWriteAsync(request.Executor, target, data) is Error<string> refused) return refused;
 		if (request.Flags.HasFlag(Library.Services.LockService.LockFlags.Wizard) && !await request.Executor.IsSee_All())
-			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+			return new Error<string>(ErrorMessages.Notifications.PermissionDeniedLockSetWizard);
 		data = data with { Flags = request.Clear ? data.Flags & ~request.Flags : data.Flags | request.Flags };
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
 		target.Object().WithLock(name, data);
@@ -87,14 +87,14 @@ public class CopyLockCommandHandler(IObjectStore database, ILockService lockServ
 		if (await database.GetObjectNodeAsync(request.Source.DBRef, cancellationToken) is not AnySharpObject source ||
 			await database.GetObjectNodeAsync(request.Target.DBRef, cancellationToken) is not AnySharpObject target)
 			return new Error<string>("No such object.");
-		if (!await permissions.Controls(request.Executor, source)) return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+		if (!await permissions.Controls(request.Executor, source)) return new Error<string>(ErrorMessages.Notifications.PermissionDeniedLockNotControlled);
 		var name = LockNames.Canonical(request.LockName);
 		if (!source.Object().Locks.TryGetValue(name, out var data)) return new Error<string>(ErrorMessages.Notifications.NoSuchLock);
 		if (data.Flags.HasFlag(Library.Services.LockService.LockFlags.NoClone)) return new Success();
 		data = data with { Creator = request.Executor.Object().DBRef };
 		target.Object().Locks.TryGetValue(name, out var old);
-		if (!await lockService.CanWriteAsync(request.Executor, target, old ?? data) || !await lockService.CanWriteAsync(request.Executor, target, data))
-			return new Error<string>(ErrorMessages.Notifications.PermissionDenied);
+		if (await lockService.AuthorizeWritesAsync(request.Executor, target, old ?? data, data) is Error<string> refused)
+			return refused;
 		// Persisted invalid expressions remain invalid and fail closed on the clone.
 		await database.SetLockAsync(target.Object(), name, data, cancellationToken);
 		if (old is not null) booleanParser.InvalidateCache(old.LockString);
@@ -102,4 +102,14 @@ public class CopyLockCommandHandler(IObjectStore database, ILockService lockServ
 		request.Target.WithLock(name, data);
 		return new Success();
 	}
+}
+
+internal static class LockWriteAuthorization
+{
+	/// <summary>Writing <paramref name="next"/> over <paramref name="current"/>: the first refusal of the two writes, or success.</summary>
+	public static async ValueTask<Result<Success>> AuthorizeWritesAsync(this ILockService lockService, AnySharpObject executor,
+		AnySharpObject target, SharpLockData current, SharpLockData next)
+		=> await lockService.AuthorizeWriteAsync(executor, target, current) is Error<string> refused
+			? refused
+			: await lockService.AuthorizeWriteAsync(executor, target, next);
 }

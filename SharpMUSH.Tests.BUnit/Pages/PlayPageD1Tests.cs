@@ -274,7 +274,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	/// repeats what the game said, and says the join failed when the game said nothing.
 	/// </summary>
 	[Test]
-	[Arguments("You are not approved to take part in scenes.", "You are not approved to take part in scenes.")]
+	[Arguments("Permission denied. You need the scene.pose permission.", "Permission denied. You need the scene.pose permission.")]
 	[Arguments(null, "The game did not let you join this scene.")]
 	public async Task ARefusedJoin_SaysWhyInTheJoinBar(string? said, string shown)
 	{
@@ -543,6 +543,40 @@ public class PlayPageD1Tests : TrackingBunitContext
 		await Assert.That(cut.FindComponents<GlobalTerminal>().Count).IsEqualTo(1);
 		await cut.Find("button.scene-card-focus").ClickAsync();
 		await Assert.That(cut.Find(".play-aside").HasAttribute("hidden")).IsFalse();
+	}
+
+	[Test]
+	public async Task CollapsingTheAside_KeepsItsPanelsMounted_AndIsRemembered()
+	{
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForAssertion(() => cut.Find(".play-aside .play-aside-toggle"), TimeSpan.FromSeconds(5));
+		var toggle = cut.Find("button.play-aside-toggle");
+		await Assert.That(toggle.GetAttribute("aria-expanded")).IsEqualTo("true");
+		await Assert.That(toggle.GetAttribute("aria-controls")).IsEqualTo("play-aside-panels");
+		await Assert.That(toggle.GetAttribute("aria-label")).IsEqualTo("Collapse the Room sidebar");
+		await toggle.ClickAsync();
+		await Assert.That(cut.Find(".play").ClassList.Contains("play--aside-collapsed")).IsTrue();
+		await Assert.That(cut.Find("#play-aside-panels").HasAttribute("hidden")).IsTrue();
+		await Assert.That(cut.Find("button.play-aside-toggle").GetAttribute("aria-expanded")).IsEqualTo("false");
+		await Assert.That(cut.Find("button.play-aside-toggle").GetAttribute("aria-label")).IsEqualTo("Expand the Room sidebar");
+		await Assert.That(cut.FindComponents<ExitsCard>().Count).IsEqualTo(1)
+			.Because("the panels stay mounted under the strip, so the exit keys keep working");
+		await cut.Find("button.play-aside-toggle").ClickAsync();
+		await Assert.That(cut.Find("#play-aside-panels").HasAttribute("hidden")).IsFalse();
+		var stored = await cut.InvokeAsync(() => JSInterop.Invocations.Where(i => i.Identifier == "localStorage.setItem")
+			.Select(i => i.Arguments).Where(a => (string?)a[0] == "play.aside").Select(a => (string?)a[1]).ToList());
+		await Assert.That(stored).IsEquivalentTo(new[] { "collapsed", "open" }, TUnit.Assertions.Enums.CollectionOrdering.Matching);
+	}
+
+	[Test]
+	public async Task ARememberedCollapsedAside_StartsCollapsed()
+	{
+		JSInterop.Setup<string?>("localStorage.getItem", "play.aside").SetResult("collapsed");
+		var cut = RenderPlay();
+		PushRoom();
+		cut.WaitForState(() => cut.Find(".play").ClassList.Contains("play--aside-collapsed"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.Find("#play-aside-panels").HasAttribute("hidden")).IsTrue();
 	}
 
 	[Test]

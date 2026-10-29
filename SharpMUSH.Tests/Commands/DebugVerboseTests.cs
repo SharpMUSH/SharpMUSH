@@ -335,13 +335,13 @@ public class DebugVerboseTests
 	[Test]
 	public async Task PuppetFlag_CannotBeSetOnPlayer()
 	{
-		// Pattern C: unique receiver isolates the generic "Permission denied." message in the shared session.
+		// Pattern C: unique receiver isolates the "Permission denied." message in the shared session.
 		var testPlayer = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "PuppetNoSet");
 
 		await Parser.CommandParse(testPlayer.Handle, ConnectionService, MarkupText.Plain("@set me=PUPPET"));
 
-		await ExpectHeard(testPlayer.DbRef, ["^Permission denied\\.$"], times: 1, fromObject: false);
+		await ExpectHeard(testPlayer.DbRef, ["^Permission denied\\. The PUPPET flag cannot be set on a player\\.$"], times: 1, fromObject: false);
 	}
 
 	[Test]

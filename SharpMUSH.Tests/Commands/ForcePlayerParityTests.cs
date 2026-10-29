@@ -99,7 +99,7 @@ public class ForcePlayerParityTests
 		await Assert.That(Factory.Notifications.For(wizard.DbRef)).DoesNotContain($"{target.Name} - Triggered.");
 	}
 
-	/// <summary>match_controlled says "Permission denied." for a player the forcer cannot control; do_force adds "Sorry.".</summary>
+	/// <summary>match_controlled says "Permission denied." (and why) for a player the forcer cannot control; do_force adds "Sorry.".</summary>
 	[Test]
 	public async Task ForcingAnUncontrolledPlayerIsDeniedThenSorry()
 	{
@@ -109,7 +109,7 @@ public class ForcePlayerParityTests
 		await Run(mortal.Handle, $"@force *{wizard.Name}=say hi");
 
 		var heard = Factory.Notifications.For(mortal.DbRef).ToList();
-		var denied = heard.IndexOf("Permission denied.");
+		var denied = heard.IndexOf($"Permission denied. You do not control {wizard.Name}.");
 		await Assert.That(denied).IsGreaterThanOrEqualTo(0);
 		await Assert.That(heard.IndexOf("Sorry.")).IsGreaterThan(denied);
 		await Assert.That(Factory.Notifications.For(wizard.DbRef)).DoesNotContain("You say, \"hi\"");

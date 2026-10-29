@@ -31,6 +31,8 @@ public class TextFileService : ITextFileService
 	private readonly Lazy<IPluginManager>? _pluginManager;
 
 	private readonly Dictionary<string, Dictionary<string, IndexEntry>> _categoryIndexes = new(StringComparer.OrdinalIgnoreCase);
+	/// <summary>Each category's link graph, built from its index when first asked for and replaced with it on a reindex.</summary>
+	private readonly Dictionary<string, Lazy<IReadOnlyDictionary<string, IReadOnlyList<string>>>> _categoryLinks = new(StringComparer.OrdinalIgnoreCase);
 	private readonly object _indexLock = new();
 	private readonly AsyncLazy<bool> _initializationTask;
 
@@ -294,6 +296,48 @@ public class TextFileService : ITextFileService
 		return results.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 	}
 
+	public async Task<IReadOnlyList<string>> GetLinkedTopicsAsync(string fileReference, string entryName)
+	{
+		await _initializationTask.WithCancellation(CancellationToken.None);
+
+		var category = ResolveEntryCategory(fileReference);
+		IndexEntry? entry = null;
+		Lazy<IReadOnlyDictionary<string, IReadOnlyList<string>>>? graph = null;
+		lock (_indexLock)
+		{
+			if (category is not null && _categoryIndexes.TryGetValue(category, out var index) && index.TryGetValue(entryName, out entry))
+			{
+				graph = _categoryLinks[category];
+			}
+		}
+
+		return entry is not null && graph is not null ? graph.Value.GetValueOrDefault(ArticleKey(entry), []) : [];
+	}
+
+	/// <summary>
+	/// What each article of <paramref name="index"/> links to, keyed by <see cref="ArticleKey"/>: every topic it links
+	/// once, spelled as its first link to it is, leaving out links that resolve to nothing and links to its own sections.
+	/// </summary>
+	private static IReadOnlyDictionary<string, IReadOnlyList<string>> BuildLinkGraph(Dictionary<string, IndexEntry> index)
+	{
+		var graph = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+		foreach (var entry in index.Values.Where(entry => !entry.Hidden))
+		{
+			var key = ArticleKey(entry);
+			if (graph.ContainsKey(key)) continue;
+			graph[key] = HelpLinks.Targets(entry.Help?.Article?.Markdown ?? entry.Help?.Markdown ?? string.Empty)
+				.Select(target => (Lookup: target, Entry: index.GetValueOrDefault(target)))
+				.Where(target => target.Entry is not null && ArticleKey(target.Entry) != key)
+				.DistinctBy(target => target.Entry!.EntryName, StringComparer.OrdinalIgnoreCase)
+				.Select(target => target.Lookup)
+				.ToList();
+		}
+		return graph;
+	}
+
+	/// <summary>The page an entry is shown on: its article, or the entry itself when it has none.</summary>
+	private static string ArticleKey(IndexEntry entry) => entry.Help?.Article?.Id ?? entry.EntryName;
+
 	/// <summary>
 	/// Rebuilds the whole entry index from disk.
 	/// </summary>
@@ -332,9 +376,11 @@ public class TextFileService : ITextFileService
 		lock (_indexLock)
 		{
 			_categoryIndexes.Clear();
+			_categoryLinks.Clear();
 			foreach (var (category, categoryIndex) in rebuilt)
 			{
 				_categoryIndexes[category] = categoryIndex;
+				_categoryLinks[category] = new(() => BuildLinkGraph(categoryIndex));
 			}
 		}
 

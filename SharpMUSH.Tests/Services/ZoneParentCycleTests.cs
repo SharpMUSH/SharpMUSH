@@ -60,7 +60,7 @@ public class ZoneParentCycleTests
 
 		var result = await RelationshipService.UnsetParent(outsider, target, false);
 
-		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 		await Assert.That(WebAppFactoryArg.Notifications.For(outsiderRef).Skip(heardBefore)).IsEmpty();
 	}
 

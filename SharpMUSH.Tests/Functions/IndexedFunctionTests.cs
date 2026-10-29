@@ -223,7 +223,7 @@ public class IndexedFunctionTests
 		var mortal = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService,
 			"IdxRefuseMortal");
 		var denied = await As(mortal, $"@attribute/index {name}");
-		await Assert.That(denied).Contains("Permission denied.");
+		await Assert.That(denied).Contains("Permission denied. You need the config.admin permission.");
 		await Assert.That((await Mediator.Send(new GetAttributeEntryQuery(name)))?.Index).IsNull();
 	}
 

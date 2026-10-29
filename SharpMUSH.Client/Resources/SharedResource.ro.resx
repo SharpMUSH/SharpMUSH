@@ -5097,6 +5097,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Niciun rezultat} one {# rezultat} few {# rezultate} other {# de rezultate}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Legate de aici</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>În apropiere</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Mai multe subiecte</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Ajutor pentru administratori</value>
   </data>
@@ -5767,8 +5776,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Această scenă nu este în desfășurare, deci nu primește poze.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Poți urmări această scenă, dar personajul tău nu este aprobat să participe la scene, așa că nu poți posta aici.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Poți urmări această scenă, dar personajul tău nu poate posta în ea: sunt necesare permisiunile scene.join și scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5970,8 +5979,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programează o scenă</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Este necesară aprobarea</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Necesită scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
@@ -6028,8 +6037,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Afișează</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Tipuri de poze afișate</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Tipuri de poze afișate la citire</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Tipuri de poze afișate în joc</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# rând {label} ascuns} few {# rânduri {label} ascunse} other {# de rânduri {label} ascunse}}</value>
@@ -6545,6 +6557,9 @@
   </data>
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Micșorează</value>
+  </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Încadrează harta</value>
   </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Ești aici</value>

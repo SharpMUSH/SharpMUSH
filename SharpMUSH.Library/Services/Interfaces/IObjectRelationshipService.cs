@@ -12,6 +12,9 @@ public interface IObjectRelationshipService
 	/// <summary>Whether <paramref name="executor"/> may give <paramref name="obj"/> to <paramref name="newOwner"/>: PennMUSH's <c>chown_ok</c>.</summary>
 	ValueTask<bool> CanChown(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner);
 
+	/// <summary><see cref="CanChown"/>, saying which part of <c>chown_ok</c> refused.</summary>
+	ValueTask<Permission> ChownPermission(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner);
+
 	ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent, bool notify);
 
 	ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify);

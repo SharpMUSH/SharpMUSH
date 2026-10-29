@@ -117,7 +117,7 @@ public class MarkupTagFunctionTests
 
 		var said = await ThinkAs(mortal, "tagwrap(script,alert(1))");
 
-		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(said.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: TAG NOT ALLOWED");
 	}
 
 	/// <summary>
@@ -229,7 +229,7 @@ public class MarkupTagFunctionTests
 
 		var said = await ThinkAs(mortal, "cmdlink(Click,@destroy me)");
 
-		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(said.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")
 			.Because("PennMUSH gives XCH_CMD only to Can_Send_OOB, and a command link is the same thing");
 	}
 
@@ -360,17 +360,17 @@ public class MarkupTagFunctionTests
 	/// screen. Laying text out does not, so <c>preformat()</c> is not gated.
 	/// </summary>
 	[Test]
-	[Arguments("sound(door.wav)")]
-	[Arguments("image(map.png,A map)")]
-	[Arguments("clearscreen()")]
-	[Arguments("prefetch(https://example.test/x.png)")]
-	public async Task AMortalIsRefusedWhatMakesAClientFetchOrPlay(string code)
+	[Arguments("sound(door.wav)", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")]
+	[Arguments("image(map.png,A map)", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB OR GAME.SEND_IMAGE")]
+	[Arguments("clearscreen()", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")]
+	[Arguments("prefetch(https://example.test/x.png)", "#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")]
+	public async Task AMortalIsRefusedWhatMakesAClientFetchOrPlay(string code, string refusal)
 	{
 		var mortal = await MortalAsync("VocabularyMortal");
 
 		var said = await ThinkAs(mortal, code);
 
-		await Assert.That(said.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(said.ToPlainText()).IsEqualTo(refusal);
 	}
 
 	/// <summary>
@@ -409,7 +409,7 @@ public class MarkupTagFunctionTests
 		await Assert.That(image.Render(MarkupFormat.Html)).Contains("src=\"map.png\"");
 		await Assert.That(figure.Render(MarkupFormat.Html)).Contains("src=\"https://example.com/cat.png\"");
 		await Assert.That(markdown.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
-		await Assert.That(sound.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(sound.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")
 			.Because("Send_Image allows pictures, not the rest of Send_OOB");
 	}
 

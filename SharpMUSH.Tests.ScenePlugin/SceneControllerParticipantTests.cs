@@ -64,7 +64,7 @@ public class SceneControllerParticipantTests
 	}
 
 	private static SceneController ControllerFor(MemberSceneService service, string? caller) =>
-		new(service)
+		new(service, new SceneReadAccessStub())
 		{
 			ControllerContext = new ControllerContext
 			{
