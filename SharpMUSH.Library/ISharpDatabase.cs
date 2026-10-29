@@ -24,6 +24,7 @@ public interface ISharpDatabase :
 	ISessionRecordStore,
 	IReadMarkerStore,
 	IOnboardingStore,
+	IPortalNavigationStore,
 	IPushSubscriptionStore,
 	IPageLogStore,
 	IFeedStore

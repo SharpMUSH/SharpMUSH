@@ -47,6 +47,18 @@ public class ControllerAuthorizationTests
 		await Assert.That(attr?.Policy).IsEqualTo(PortalPermission.PlayersModerate);
 	}
 
+	/// <summary>Anyone reads the navigation layout, as the rail is drawn for visitors too; saving and resetting take layout.admin.</summary>
+	[Test]
+	public async Task NavigationController_WritesAreGatedOnLayoutAdmin()
+	{
+		static AuthorizeAttribute? On(string method) =>
+			(AuthorizeAttribute?)Attribute.GetCustomAttribute(typeof(NavigationController).GetMethod(method)!, typeof(AuthorizeAttribute));
+
+		await Assert.That(Attribute.IsDefined(typeof(NavigationController).GetMethod(nameof(NavigationController.Get))!, typeof(AllowAnonymousAttribute))).IsTrue();
+		await Assert.That(On(nameof(NavigationController.Save))?.Policy).IsEqualTo(PortalPermission.LayoutAdmin);
+		await Assert.That(On(nameof(NavigationController.Reset))?.Policy).IsEqualTo(PortalPermission.LayoutAdmin);
+	}
+
 	/// <summary>
 	/// Every package operation takes packages.admin. The actions carried only a bare [Authorize], so any signed-in
 	/// account could add a remote and apply from it, and a softcode package can create WIZARD objects.

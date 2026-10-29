@@ -1,0 +1,409 @@
+@page "/admin/navigation"
+@attribute [Authorize(Policy = "layout.admin")]
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.DiscriminatedUnions
+@using SharpMUSH.Library.Models.Portal.Navigation
+@inject IStringLocalizer<SharedResource> Loc
+@inject PortalNavigation Navigation
+@inject NavLayoutClient Layouts
+@inject ISnackbar Snackbar
+
+@* The navigation editor: the game's groups and their destinations as players will get them, changed with buttons
+   (or by dragging a row), previewed as a visitor, a player or staff would see them, and saved for everyone at once.
+   A destination nobody placed yet shows where the game put it, marked New, until staff save. *@
+
+<AdminPageTitle Page="@Loc["AdmNavTitle"]" />
+
+<div class="page-stack page-stack--padded adm-nav">
+    <PlainPageHeader Kicker="@Loc["AdmGroupPortal"]" Title="@Loc["AdmNavTitle"]" Description="@Loc["AdmNavDescription"]">
+        <Actions>
+            @if (_dirty)
+            {
+                <span class="adm-nav-unsaved" role="status">@Loc["AdmNavUnsaved"]</span>
+            }
+            <MudButton Variant="Variant.Outlined" Disabled="@(_draft is null || _busy)" OnClick="AskReset" id="nav-reset">@Loc["AdmNavReset"]</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(_draft is null || _busy || _problem is not null)"
+                       OnClick="SaveAsync" id="nav-save">@Loc["Save"]</MudButton>
+        </Actions>
+    </PlainPageHeader>
+
+    @if (_confirmReset)
+    {
+        <div class="adm-nav-banner" role="alertdialog" aria-labelledby="nav-reset-q">
+            <span id="nav-reset-q">@Loc["AdmNavResetConfirm"]</span>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="ResetAsync" id="nav-reset-yes">@Loc["AdmNavReset"]</MudButton>
+            <MudButton Variant="Variant.Text" OnClick="() => _confirmReset = false">@Loc["Cancel"]</MudButton>
+        </div>
+    }
+    @if (_conflict)
+    {
+        <div class="adm-nav-banner adm-nav-banner--warn" role="alert">
+            <span>@Loc["AdmNavConflict"]</span>
+            <MudButton Variant="Variant.Outlined" OnClick="LoadAsync" id="nav-reload">@Loc["AdmNavReload"]</MudButton>
+        </div>
+    }
+    @if (_problem is not null)
+    {
+        <div class="adm-nav-banner adm-nav-banner--warn" role="alert">@_problem</div>
+    }
+
+    @if (_draft is null)
+    {
+        <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+    }
+    else
+    {
+        <div class="adm-nav-layout">
+            <div class="adm-nav-tree">
+                @foreach (var group in _draft.Groups)
+                {
+                    var id = group.Id;
+                    <KitCard Class="adm-nav-group" Title="@Navigation.GroupLabel(group.Id, group.Label)" HeadingLevel="2">
+                        <Controls>
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                                           title="@Loc["AdmNavMoveUp"]" OnClick="() => Change(() => _draft.NudgeGroup(id, -1))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                                           title="@Loc["AdmNavMoveDown"]" OnClick="() => Change(() => _draft.NudgeGroup(id, 1))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.DeleteOutline" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemoveGroup"]}: {Navigation.GroupLabel(group.Id, group.Label)}")"
+                                           title="@Loc["AdmNavRemoveGroup"]" OnClick="() => Change(() => _draft.RemoveGroup(id))" />
+                        </Controls>
+                        <ChildContent>
+                            <div class="adm-nav-group-fields">
+                                <MudTextField T="string" Value="group.Label" ValueChanged="v => Change(() => group.Label = v)" id="@($"nav-label-{id}")"
+                                              Label="@Loc["AdmNavGroupName"]" Placeholder="@Navigation.GroupLabel(group.Id, null)"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="NavLayoutRules.MaxLabelLength" />
+                                <MudSelect T="string" Value="group.Mode" ValueChanged="v => Change(() => group.Mode = v)" id="@($"nav-mode-{id}")"
+                                           Label="@Loc["AdmNavGroupMode"]" Variant="Variant.Outlined" Margin="Margin.Dense">
+                                    <MudSelectItem Value="NavGroupModes.Inline">@Loc["AdmNavModeInline"]</MudSelectItem>
+                                    <MudSelectItem Value="NavGroupModes.Section">@Loc["AdmNavModeSection"]</MudSelectItem>
+                                    <MudSelectItem Value="NavGroupModes.Flyout">@Loc["AdmNavModeFlyout"]</MudSelectItem>
+                                </MudSelect>
+                                <MudTextField T="string" Value="group.Icon" ValueChanged="v => Change(() => group.Icon = v)" id="@($"nav-icon-{id}")"
+                                              Label="@Loc["AdmNavGroupIcon"]" HelperText="@Loc["AdmNavGroupIconHelp"]"
+                                              Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="NavLayoutRules.MaxIconLength" />
+                            </div>
+                            <ul class="adm-nav-items" aria-label="@Navigation.GroupLabel(group.Id, group.Label)"
+                                @ondragover:preventDefault="true" @ondrop="() => DropAtEnd(id)">
+                                @foreach (var item in group.Items)
+                                {
+                                    @Row(item.Key, id)
+                                }
+                                @if (group.Items.Count == 0)
+                                {
+                                    <li class="adm-nav-empty">@Loc["AdmNavGroupEmpty"]</li>
+                                }
+                            </ul>
+                            @if (_linkFor == id)
+                            {
+                                <form class="adm-nav-link-form" @onsubmit="AddLink" @onsubmit:preventDefault="true">
+                                    <MudTextField T="string" @bind-Value="_linkLabel" Label="@Loc["AdmNavLinkName"]" id="nav-link-label"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="NavLayoutRules.MaxLabelLength" />
+                                    <MudTextField T="string" @bind-Value="_linkHref" Label="@Loc["AdmNavLinkAddress"]" id="nav-link-href"
+                                                  HelperText="@Loc["AdmNavLinkAddressHelp"]" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField T="string" @bind-Value="_linkIcon" Label="@Loc["AdmNavGroupIcon"]" id="nav-link-icon"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <MudTextField T="string" @bind-Value="_linkPermission" Label="@Loc["AdmNavLinkPermission"]" id="nav-link-permission"
+                                                  Variant="Variant.Outlined" Margin="Margin.Dense" />
+                                    <div class="adm-nav-link-actions">
+                                        <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary"
+                                                   Disabled="@(string.IsNullOrWhiteSpace(_linkLabel) || string.IsNullOrWhiteSpace(_linkHref))">@Loc["AdmNavAddLink"]</MudButton>
+                                        <MudButton Variant="Variant.Text" OnClick="() => _linkFor = null">@Loc["Cancel"]</MudButton>
+                                    </div>
+                                </form>
+                            }
+                            else
+                            {
+                                <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Filled.Link" OnClick="() => OpenLink(id)"
+                                           id="@($"nav-add-link-{id}")">@Loc["AdmNavAddLink"]</MudButton>
+                            }
+                        </ChildContent>
+                    </KitCard>
+                }
+
+                <form class="adm-nav-add-group" @onsubmit="AddGroup" @onsubmit:preventDefault="true">
+                    <MudTextField T="string" @bind-Value="_newGroup" Label="@Loc["AdmNavNewGroupName"]" id="nav-new-group"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" MaxLength="NavLayoutRules.MaxLabelLength" />
+                    <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Outlined" StartIcon="@Icons.Material.Filled.Add"
+                               Disabled="@string.IsNullOrWhiteSpace(_newGroup)">@Loc["AdmNavAddGroup"]</MudButton>
+                </form>
+
+                <KitCard Class="adm-nav-group" Title="@Loc["AdmNavHidden"]" Sub="@Loc["AdmNavHiddenHelp"]" HeadingLevel="2">
+                    <ul class="adm-nav-items" aria-label="@Loc["AdmNavHidden"]"
+                        @ondragover:preventDefault="true" @ondrop="() => DropAtEnd(NavLayoutDraft.HiddenId)">
+                        @foreach (var key in _draft.Hidden)
+                        {
+                            @Row(key, NavLayoutDraft.HiddenId)
+                        }
+                        @if (_draft.Hidden.Count == 0)
+                        {
+                            <li class="adm-nav-empty">@Loc["AdmNavHiddenEmpty"]</li>
+                        }
+                    </ul>
+                </KitCard>
+            </div>
+
+            <aside class="adm-nav-side">
+                <KitCard Title="@Loc["AdmNavTabs"]" Sub="@Loc["AdmNavTabsHelp"]" HeadingLevel="2">
+                    <div class="adm-nav-tabs">
+                        @for (var i = 0; i < NavLayout.MaxMobileTabs; i++)
+                        {
+                            var slot = i;
+                            <MudSelect T="string" Value="@(slot < _draft.Tabs.Count ? _draft.Tabs[slot] : string.Empty)" ValueChanged="v => SetTab(slot, v)"
+                                       Label="@string.Format(Loc["AdmNavTabSlot"], slot + 1)" id="@($"nav-tab-{slot}")"
+                                       Variant="Variant.Outlined" Margin="Margin.Dense">
+                                <MudSelectItem Value="@string.Empty">@Loc["AdmNavTabNone"]</MudSelectItem>
+                                @foreach (var destination in TabChoices)
+                                {
+                                    <MudSelectItem Value="@destination.Key">@destination.Label</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                    </div>
+                    <MudSwitch T="bool" Value="@(_draft.NewEntries == NavNewEntries.Show)" Color="Color.Primary" id="nav-new-entries"
+                               ValueChanged="v => Change(() => _draft.NewEntries = v ? NavNewEntries.Show : NavNewEntries.Hide)"
+                               Label="@Loc["AdmNavNewEntries"]" />
+                    <p class="adm-nav-help">@Loc["AdmNavNewEntriesHelp"]</p>
+                </KitCard>
+
+                <KitCard Title="@Loc["AdmNavPreview"]" HeadingLevel="2">
+                    <Controls>
+                        <MudSelect T="string" @bind-Value="_viewAs" Label="@Loc["AdmNavViewAs"]" id="nav-view-as"
+                                   Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("visitor")">@Loc["AdmNavViewVisitor"]</MudSelectItem>
+                            <MudSelectItem Value="@("player")">@Loc["AdmNavViewPlayer"]</MudSelectItem>
+                            <MudSelectItem Value="@("staff")">@Loc["AdmNavViewStaff"]</MudSelectItem>
+                        </MudSelect>
+                    </Controls>
+                    <ChildContent>
+                        @{ var preview = Navigation.Preview(_draft.ToLayout(), _catalog, Viewer(_viewAs)); }
+                        <div class="adm-nav-preview" data-view="@_viewAs">
+                            @foreach (var group in preview.Groups)
+                            {
+                                <div class="adm-nav-preview-group" @key="group.Id">
+                                    <div class="adm-nav-preview-head">
+                                        <span>@group.Label</span>
+                                        <span class="adm-nav-pill">@ModeLabel(group.Mode)</span>
+                                    </div>
+                                    <ul>
+                                        @foreach (var item in group.Items)
+                                        {
+                                            <li @key="item.Key"><MudIcon Icon="@item.OutlineIcon" Size="Size.Small" /> @item.Label</li>
+                                        }
+                                    </ul>
+                                </div>
+                            }
+                            <div class="adm-nav-preview-tabs" aria-label="@Loc["AdmNavTabs"]">
+                                <span>@Loc["Home"]</span>
+                                @foreach (var tab in preview.Tabs)
+                                {
+                                    <span @key="tab.Key">@tab.Label</span>
+                                }
+                                <span>@Loc["NavMenuLabel"]</span>
+                            </div>
+                        </div>
+                    </ChildContent>
+                </KitCard>
+            </aside>
+        </div>
+    }
+</div>
+
+@code {
+    private NavLayoutDraft? _draft;
+    private IReadOnlyList<NavDestination> _catalog = [];
+    private IReadOnlyDictionary<string, NavDestination> _destinations = new Dictionary<string, NavDestination>();
+    private bool _busy;
+    private bool _dirty;
+    private bool _conflict;
+    private bool _confirmReset;
+    private string? _problem;
+    private string _viewAs = "player";
+    private string? _dragging;
+    private string _newGroup = string.Empty;
+    private string? _linkFor;
+    private string? _linkLabel;
+    private string? _linkHref;
+    private string? _linkIcon;
+    private string? _linkPermission;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _busy = true;
+        var stored = Layouts.GetFreshAsync();
+        _catalog = await Navigation.CatalogAsync();
+        _draft = NavLayoutDraft.From(await stored is NavLayout layout ? layout : null, _catalog);
+        Recheck();
+        (_dirty, _conflict, _busy) = (false, false, false);
+    }
+
+    /// <summary>One destination's row: its name, where it is, and the buttons that move it.</summary>
+    private RenderFragment Row(string key, string groupId) => __builder =>
+    {
+        var destination = _destinations.GetValueOrDefault(key);
+        var name = destination?.Label ?? key;
+        <li class="adm-nav-item @(destination is null ? "adm-nav-item--gone" : null)" @key="key" draggable="true"
+            @ondragstart="() => _dragging = key" @ondragover:preventDefault="true" @ondrop="() => DropBefore(key)" @ondrop:stopPropagation="true">
+            <span class="adm-nav-grip" aria-hidden="true" title="@Loc["AdmNavDrag"]"><MudIcon Icon="@Icons.Material.Filled.DragIndicator" Size="Size.Small" /></span>
+            @if (destination is not null)
+            {
+                <MudIcon Icon="@destination.OutlineIcon" Size="Size.Small" />
+            }
+            <span class="adm-nav-item-name">@name</span>
+            <span class="adm-nav-item-key">@key</span>
+            @if (_draft!.Arrivals.Contains(key))
+            {
+                <span class="adm-nav-pill adm-nav-pill--new">@Loc["AdmNavNew"]</span>
+            }
+            @if (destination is null)
+            {
+                <span class="adm-nav-pill">@Loc["AdmNavNotInstalled"]</span>
+            }
+            <span class="adm-nav-item-actions">
+                @if (groupId != NavLayoutDraft.HiddenId)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveUp"]}: {name}")"
+                                   title="@Loc["AdmNavMoveUp"]" OnClick="() => Change(() => _draft.Nudge(key, -1))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowDownward" Size="Size.Small" aria-label="@($"{Loc["AdmNavMoveDown"]}: {name}")"
+                                   title="@Loc["AdmNavMoveDown"]" OnClick="() => Change(() => _draft.Nudge(key, 1))" />
+                }
+                <select class="adm-nav-move" id="@($"nav-move-{key}")" aria-label="@($"{Loc["AdmNavMoveTo"]}: {name}")" title="@Loc["AdmNavMoveTo"]"
+                        @onchange="e => MoveTo(key, e.Value as string)">
+                    <option value="" selected>@Loc["AdmNavMoveTo"]</option>
+                    @foreach (var target in _draft.Groups.Where(g => g.Id != groupId))
+                    {
+                        <option value="@target.Id">@Navigation.GroupLabel(target.Id, target.Label)</option>
+                    }
+                    @if (groupId != NavLayoutDraft.HiddenId && !NavKeys.IsLink(key))
+                    {
+                        <option value="@HiddenChoice">@Loc["AdmNavHidden"]</option>
+                    }
+                </select>
+                @if (destination is null || NavKeys.IsLink(key))
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" aria-label="@($"{Loc["AdmNavRemove"]}: {name}")"
+                                   title="@Loc["AdmNavRemove"]" OnClick="() => Change(() => _draft.Remove(key))" />
+                }
+            </span>
+        </li>
+    };
+
+    // A select's value cannot be the empty string the draft uses for Hidden, which is the "Move to" prompt's.
+    private const string HiddenChoice = "#hidden";
+
+    private IEnumerable<NavDestination> TabChoices =>
+        _draft is null ? [] : _draft.Groups.SelectMany(g => g.Items).Select(i => _destinations.GetValueOrDefault(i.Key)).OfType<NavDestination>()
+            .Where(d => !d.External);
+
+    private string ModeLabel(string mode) => mode switch
+    {
+        NavGroupModes.Section => Loc["AdmNavModeSection"],
+        NavGroupModes.Flyout => Loc["AdmNavModeFlyout"],
+        _ => Loc["AdmNavModeInline"],
+    };
+
+    /// <summary>
+    /// A visitor (guest logins on), a player with a character, or staff who may open everything. The preview shows the
+    /// optional sections as if the game had them on, so staff can see where they would go.
+    /// </summary>
+    private static NavViewer Viewer(string viewAs) => viewAs switch
+    {
+        "visitor" => new NavViewer(PortalRole.Guest, _ => false, false, true, false, _ => true),
+        "staff" => new NavViewer(PortalRole.God, _ => true, true, true, true, _ => true),
+        _ => new NavViewer(PortalRole.Player, _ => false, true, true, true, _ => true),
+    };
+
+    private void Change(Action change)
+    {
+        change();
+        _dirty = true;
+        Recheck();
+    }
+
+    private void Recheck()
+    {
+        if (_draft is null) return;
+        var layout = _draft.ToLayout();
+        _destinations = NavResolver.Destinations(layout, _catalog);
+        _problem = NavLayoutRules.Problem(layout);
+    }
+
+    private void MoveTo(string key, string? target)
+    {
+        if (string.IsNullOrEmpty(target)) return;
+        Change(() => _draft!.Move(key, target == HiddenChoice ? NavLayoutDraft.HiddenId : target));
+    }
+
+    private void DropBefore(string key)
+    {
+        if (_dragging is { } dragged) Change(() => _draft!.MoveBefore(dragged, key));
+        _dragging = null;
+    }
+
+    private void DropAtEnd(string groupId)
+    {
+        if (_dragging is { } dragged) Change(() => _draft!.Move(dragged, groupId));
+        _dragging = null;
+    }
+
+    private void SetTab(int slot, string? key) => Change(() =>
+    {
+        while (_draft!.Tabs.Count <= slot) _draft.Tabs.Add(string.Empty);
+        _draft.Tabs[slot] = key ?? string.Empty;
+    });
+
+    private void AddGroup()
+    {
+        if (string.IsNullOrWhiteSpace(_newGroup)) return;
+        Change(() => _draft!.AddGroup(_newGroup));
+        _newGroup = string.Empty;
+    }
+
+    private void OpenLink(string groupId) => (_linkFor, _linkLabel, _linkHref, _linkIcon, _linkPermission) = (groupId, null, null, null, null);
+
+    private void AddLink()
+    {
+        if (_linkFor is not { } groupId || string.IsNullOrWhiteSpace(_linkLabel) || string.IsNullOrWhiteSpace(_linkHref)) return;
+        Change(() => _draft!.AddLink(groupId, _linkLabel, _linkHref, _linkIcon, _linkPermission));
+        _linkFor = null;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_draft is null || _problem is not null) return;
+        _busy = true;
+        switch (await Layouts.SaveAsync(_draft.ToLayout(), _draft.Version))
+        {
+            case NavLayout saved:
+                _draft.Saved(saved);
+                (_dirty, _conflict) = (false, false);
+                Snackbar.Add(Loc["AdmNavSaved"], Severity.Success);
+                break;
+            case ApiFailure { Status: System.Net.HttpStatusCode.Conflict }:
+                _conflict = true;
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+        _busy = false;
+    }
+
+    private void AskReset() => _confirmReset = true;
+
+    private async Task ResetAsync()
+    {
+        _confirmReset = false;
+        switch (await Layouts.ResetAsync())
+        {
+            case Success:
+                Snackbar.Add(Loc["AdmNavResetDone"], Severity.Success);
+                await LoadAsync();
+                break;
+            case ApiFailure failure:
+                Snackbar.Add(failure.Message, Severity.Error);
+                break;
+        }
+    }
+}

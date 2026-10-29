@@ -10325,4 +10325,145 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>The room already has an exit by one of these names.</value>
   </data>
+  <data name="AdmNavTitle" xml:space="preserve">
+    <value>Navigation</value>
+  </data>
+  <data name="AdmCardNavigation" xml:space="preserve">
+    <value>Group, order and hide what the rail and the phone menu show</value>
+  </data>
+  <data name="AdmNavDescription" xml:space="preserve">
+    <value>Arrange the rail, the phone menu and the phone tab bar for everyone. Each destination still shows only to people who can open it.</value>
+  </data>
+  <data name="AdmNavUnsaved" xml:space="preserve">
+    <value>Unsaved changes</value>
+  </data>
+  <data name="AdmNavReset" xml:space="preserve">
+    <value>Reset to default</value>
+  </data>
+  <data name="AdmNavResetConfirm" xml:space="preserve">
+    <value>Put everyone's navigation back to the default? Your groups, order, hidden items and links are removed.</value>
+  </data>
+  <data name="AdmNavResetDone" xml:space="preserve">
+    <value>The navigation is back to the default.</value>
+  </data>
+  <data name="AdmNavSaved" xml:space="preserve">
+    <value>Navigation saved.</value>
+  </data>
+  <data name="AdmNavConflict" xml:space="preserve">
+    <value>Someone else saved the navigation while you were editing. Reload to see their version. Your changes here have not been saved.</value>
+  </data>
+  <data name="AdmNavReload" xml:space="preserve">
+    <value>Reload</value>
+  </data>
+  <data name="AdmNavMoveUp" xml:space="preserve">
+    <value>Move up</value>
+  </data>
+  <data name="AdmNavMoveDown" xml:space="preserve">
+    <value>Move down</value>
+  </data>
+  <data name="AdmNavMoveTo" xml:space="preserve">
+    <value>Move to</value>
+  </data>
+  <data name="AdmNavRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="AdmNavRemoveGroup" xml:space="preserve">
+    <value>Remove group</value>
+  </data>
+  <data name="AdmNavGroupName" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="AdmNavGroupMode" xml:space="preserve">
+    <value>Shown as</value>
+  </data>
+  <data name="AdmNavGroupIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="AdmNavGroupIconHelp" xml:space="preserve">
+    <value>A Material icon name, such as forum. Empty uses the first item's icon.</value>
+  </data>
+  <data name="AdmNavModeInline" xml:space="preserve">
+    <value>Each item on its own</value>
+  </data>
+  <data name="AdmNavModeSection" xml:space="preserve">
+    <value>One button, with a sidebar</value>
+  </data>
+  <data name="AdmNavModeFlyout" xml:space="preserve">
+    <value>One button that opens a list</value>
+  </data>
+  <data name="AdmNavGroupEmpty" xml:space="preserve">
+    <value>Nothing here yet. Move an item into this group, or drag one here.</value>
+  </data>
+  <data name="AdmNavAddLink" xml:space="preserve">
+    <value>Add link</value>
+  </data>
+  <data name="AdmNavLinkName" xml:space="preserve">
+    <value>Link name</value>
+  </data>
+  <data name="AdmNavLinkAddress" xml:space="preserve">
+    <value>Address</value>
+  </data>
+  <data name="AdmNavLinkAddressHelp" xml:space="preserve">
+    <value>A portal page starting with /, or an https address.</value>
+  </data>
+  <data name="AdmNavLinkPermission" xml:space="preserve">
+    <value>Only for people with this permission (optional)</value>
+  </data>
+  <data name="AdmNavNewGroupName" xml:space="preserve">
+    <value>New group name</value>
+  </data>
+  <data name="AdmNavAddGroup" xml:space="preserve">
+    <value>Add group</value>
+  </data>
+  <data name="AdmNavHidden" xml:space="preserve">
+    <value>Hidden</value>
+  </data>
+  <data name="AdmNavHiddenHelp" xml:space="preserve">
+    <value>Hidden items still open for whoever may use them, and the command palette still finds them.</value>
+  </data>
+  <data name="AdmNavHiddenEmpty" xml:space="preserve">
+    <value>Nothing is hidden.</value>
+  </data>
+  <data name="AdmNavTabs" xml:space="preserve">
+    <value>Phone tab bar</value>
+  </data>
+  <data name="AdmNavTabsHelp" xml:space="preserve">
+    <value>Home and Menu are always there. Choose up to three items for between them.</value>
+  </data>
+  <data name="AdmNavTabSlot" xml:space="preserve">
+    <value>Tab {0}</value>
+  </data>
+  <data name="AdmNavTabNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="AdmNavNewEntries" xml:space="preserve">
+    <value>Show newly installed applications straight away</value>
+  </data>
+  <data name="AdmNavNewEntriesHelp" xml:space="preserve">
+    <value>When this is off, a new application stays hidden until you place it.</value>
+  </data>
+  <data name="AdmNavPreview" xml:space="preserve">
+    <value>Preview</value>
+  </data>
+  <data name="AdmNavViewAs" xml:space="preserve">
+    <value>View as</value>
+  </data>
+  <data name="AdmNavViewVisitor" xml:space="preserve">
+    <value>Visitor</value>
+  </data>
+  <data name="AdmNavViewPlayer" xml:space="preserve">
+    <value>Player</value>
+  </data>
+  <data name="AdmNavViewStaff" xml:space="preserve">
+    <value>Staff who can open everything</value>
+  </data>
+  <data name="AdmNavNew" xml:space="preserve">
+    <value>New</value>
+  </data>
+  <data name="AdmNavNotInstalled" xml:space="preserve">
+    <value>Not installed</value>
+  </data>
+  <data name="AdmNavDrag" xml:space="preserve">
+    <value>Drag to move</value>
+  </data>
 </root>
