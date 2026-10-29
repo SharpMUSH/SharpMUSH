@@ -45,7 +45,7 @@ public class WelcomeTests : BunitContext
 			var illustrated = SharpieArtCatalog.Approved.Any(art => art.Topic == $"administrator-{step}");
 			var image = page.Find($"[data-art-topic='administrator-{step}'] img");
 			await Assert.That(image.GetAttribute("src")).Contains(illustrated
-				? $"sharpie-fantasy-minimalist-administrator-{step}.png" : "sharpie-fantasy-minimalist.png");
+				? $"sharpie-fantasy-minimalist-administrator-{step}.webp" : "sharpie-fantasy-minimalist.webp");
 			await Assert.That(image.GetAttribute("alt")).IsEqualTo("");
 			await Assert.That(page.Find($"[data-art-topic='administrator-{step}'] details").HasAttribute("open")).IsTrue();
 			await page.InvokeAsync(() => guide.CompleteStepAsync(step));
@@ -98,7 +98,7 @@ public class WelcomeTests : BunitContext
 		var guide = Services.GetRequiredService<OnboardingService>();
 		await guide.LoadAsync(GuideJourney.Player);
 		var panel = Render<GuideCompanion>(p => p.Add(x => x.Guide, guide));
-		await Assert.That(panel.Find("img").GetAttribute("src")).Contains("sharpie-fantasy-minimalist-shared-welcome.png");
+		await Assert.That(panel.Find("img").GetAttribute("src")).Contains("sharpie-fantasy-minimalist-shared-welcome.webp");
 		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.Reduced));
 		await Assert.That(panel.Find("img").GetAttribute("width")).IsEqualTo("40");
 		await panel.InvokeAsync(() => guide.SetImageryAsync(GuideImagery.None));
@@ -247,10 +247,10 @@ public class WelcomeTests : BunitContext
 	{
 		((Info)Services.GetRequiredService<ServerInfoService>()).Genre = genre;
 		var page = Render<Welcome>();
-		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-shared-welcome.png");
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-shared-welcome.webp");
 		await page.Find("[data-guide-path=mush]").ClickAsync();
 		await Assert.That(page.FindAll("img").Count).IsEqualTo(1);
-		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-player-place.png");
+		await Assert.That(page.Find("img").GetAttribute("src")).Contains($"sharpie-{filename}-minimalist-player-place.webp");
 		await page.Find(".welcome-imagery select").ChangeAsync("None");
 		await Assert.That(page.FindAll("img").Count).IsEqualTo(0);
 	}
