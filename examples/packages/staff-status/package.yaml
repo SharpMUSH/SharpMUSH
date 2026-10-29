@@ -1,0 +1,38 @@
+format: "1.16"
+package: staff-status
+title: "Staff list: +status"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Shows a staff member's +status in +staff, beside whether they are on duty: On duty · LFRP."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [staff, status, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. staff runs every FILTER`STAFF`STATUS`<name>
+# on the Staff List over each row's Status, and status keeps each player's status on the Status Store. This
+# package is that one filter; uninstalling it takes the statuses out of +staff, and neither package changes.
+depends:
+  - package: staff
+    version: ">=1.0"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/staff/
+      branch: main
+  - package: status
+    version: ">=1.1"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/status/
+      branch: main
+
+objects:
+  # %0 the status so far, %1 the character, %2 1 when they are connected: the status, with the character's
+  # +status tag after it while they are connected and their status has not run out. Runs as the Staff List,
+  # which reads the Status Store as status's own +who filter does.
+  - ref: staff_status_filter
+    target: "{{staff/staff}}"
+    attributes:
+      FILTER`STAFF`STATUS`STATUS: |-
+        setq(staff_status_key,PLAYER`[edit(objid(%1),#,,:,_)])[setq(staff_status_name,get({{status/store}}/%q<staff_status_key>`NAME))][setq(staff_status_until,get({{status/store}}/%q<staff_status_key>`UNTIL))][if(cand(%2,strlen(%q<staff_status_name>),hasattr({{status/store}},STATUS`%q<staff_status_name>),cor(not(strlen(%q<staff_status_until>)),gt(%q<staff_status_until>,secs()))),%0 · [firstof(get({{status/store}}/STATUS`%q<staff_status_name>`TAG),%q<staff_status_name>)],%0)]

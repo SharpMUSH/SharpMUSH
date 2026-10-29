@@ -259,6 +259,26 @@ packages:
     package: summary-config
     version: 1.0.0
     description: Registers the summary settings with +config (requires summary and plus-config)
+  - path: staff/
+    name: Staff list
+    package: staff
+    version: 1.0.0
+    description: +staff and +stafflist — the characters holding a staff role, the duties each one holds, set as a +config table, and who is on duty
+  - path: staff-help/
+    name: Staff list help
+    package: staff-help
+    version: 1.0.0
+    description: Registers the staff topics with +help (requires staff and plus-help)
+  - path: staff-config/
+    name: Staff list settings
+    package: staff-config
+    version: 1.0.0
+    description: Registers the staff settings and duties with +config (requires staff and plus-config)
+  - path: staff-status/
+    name: Staff list statuses
+    package: staff-status
+    version: 1.0.0
+    description: Shows a staff member's +status beside whether they are on duty in +staff (requires staff and status)
   - path: time/
     name: Time
     package: time

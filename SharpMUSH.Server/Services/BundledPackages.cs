@@ -166,6 +166,12 @@ public static class BundledPackages
 		new("summary", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		new("summary-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 		new("summary-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: +staff and +stafflist are names a game may already use for its own code.
+		new("staff", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("staff-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("staff-config", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: joins staff and status, so +staff shows each staff member's +status.
+		new("staff-status", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Available, not installed: +time is a name a game may already use for its own code.
 		new("time", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("time-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
