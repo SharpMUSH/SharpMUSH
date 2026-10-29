@@ -182,6 +182,7 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 	internal static long HandleOf(JsonElement data) =>
 		data.ValueKind == JsonValueKind.Object
 		&& data.TryGetProperty(nameof(Messages.IHandleMessage.Handle), out var handle)
+		&& handle.ValueKind == JsonValueKind.Number
 		&& handle.TryGetInt64(out var value)
 			? value
 			: 0;

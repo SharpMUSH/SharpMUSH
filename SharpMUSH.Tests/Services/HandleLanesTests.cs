@@ -77,5 +77,9 @@ public class HandleLanesTests
 		await Assert.That(NatsJetStreamConsumerService.HandleOf(document.RootElement)).IsEqualTo(42L);
 		using var none = System.Text.Json.JsonDocument.Parse("\"text\"");
 		await Assert.That(NatsJetStreamConsumerService.HandleOf(none.RootElement)).IsEqualTo(0L);
+		using var quoted = System.Text.Json.JsonDocument.Parse("""{"Handle":"42"}""");
+		await Assert.That(NatsJetStreamConsumerService.HandleOf(quoted.RootElement)).IsEqualTo(0L);
+		using var missing = System.Text.Json.JsonDocument.Parse("""{"Handle":null}""");
+		await Assert.That(NatsJetStreamConsumerService.HandleOf(missing.RootElement)).IsEqualTo(0L);
 	}
 }

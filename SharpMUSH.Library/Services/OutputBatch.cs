@@ -38,6 +38,22 @@ public sealed class OutputBatch : IAsyncDisposable
 		return ValueTask.CompletedTask;
 	}
 
+	/// <summary>
+	/// Waits for every publication the open batch has started so far, for a step that must follow them,
+	/// such as closing a connection. The batch stays open.
+	/// </summary>
+	public static Task FlushAsync()
+	{
+		if (Current.Value is not { } batch) return Task.CompletedTask;
+		Task[] pending;
+		lock (batch._pending)
+		{
+			pending = [.. batch._pending];
+			batch._pending.Clear();
+		}
+		return pending.Length == 0 ? Task.CompletedTask : Task.WhenAll(pending);
+	}
+
 	// Not async: the batch must stop being current in the caller's own context, which an async method's
 	// changes to an AsyncLocal never reach.
 	public ValueTask DisposeAsync()

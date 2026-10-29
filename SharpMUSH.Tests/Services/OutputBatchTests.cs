@@ -95,4 +95,23 @@ public class OutputBatchTests
 		publication.SetResult();
 		await late.Value;
 	}
+
+	[Test]
+	public async Task FlushWaitsForWhatTheBatchHasStartedAndKeepsItOpen()
+	{
+		var earlier = new TaskCompletionSource();
+		var later = new TaskCompletionSource();
+		var batch = OutputBatch.Begin();
+		_ = OutputBatch.Defer(earlier.Task);
+		var flushed = OutputBatch.FlushAsync();
+
+		await Assert.That(flushed.IsCompleted).IsFalse();
+		earlier.SetResult();
+		await flushed;
+		await Assert.That(OutputBatch.Defer(later.Task).IsCompleted).IsTrue();
+		var ending = batch.DisposeAsync();
+		await Assert.That(ending.IsCompleted).IsFalse();
+		later.SetResult();
+		await ending;
+	}
 }
