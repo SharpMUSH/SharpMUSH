@@ -310,6 +310,62 @@ public class TextFileServiceTests
 	}
 
 	/// <summary>
+	/// The portal's help sidebar lists what a topic's page links to, then breadth-first outward. A link keeps its
+	/// spelling but is one topic with its other names (l is look), a page's own sections and the index topic are left
+	/// out, and the graph follows a reindex.
+	/// </summary>
+	[Test]
+	public async Task RelatedTopics_FollowTheLinks_BreadthFirst()
+	{
+		var (service, root) = BuildServiceOverTempFiles(0, 0);
+		var help = Path.Join(root, "help");
+		Directory.CreateDirectory(help);
+		try
+		{
+			await File.WriteAllTextAsync(Path.Join(help, "help.md"), "# help\n[newbie] [look] [say] [move] [exits]");
+			await File.WriteAllTextAsync(Path.Join(help, "newbie.md"), """
+				<!-- help-article
+				{"corpus":"help","id":"newbie","lookup":"newbie","aliases":[],
+				 "sections":[{"id":"syntax","heading":"Syntax","lookup":"newbie syntax"}]}
+				-->
+				# Newbie
+				Try [look], read [newbie syntax], or go back to [help].
+				## Syntax
+				Then [SAY] something.
+				""");
+			await File.WriteAllTextAsync(Path.Join(help, "look.md"), "# look\n# l\nSee [say] and [move].");
+			await File.WriteAllTextAsync(Path.Join(help, "say.md"), "# say\nUse [l] to look, and [exits].");
+			await File.WriteAllTextAsync(Path.Join(help, "move.md"), "# move\nTake [exits], or read [newbie].");
+			await File.WriteAllTextAsync(Path.Join(help, "exits.md"), "# exits\nNo links.");
+			await service.ReindexAsync();
+			var resolver = new HelpTopicResolver(service);
+
+			await Assert.That(string.Join(",", await service.GetLinkedTopicsAsync("help", "l"))).IsEqualTo("say,move");
+			await Assert.That(string.Join(",", await service.GetLinkedTopicsAsync("help", "newbie"))).IsEqualTo("look,help,SAY").Because("its own section is the same page");
+			await Assert.That(string.Join(",", await service.GetLinkedTopicsAsync("help", "say"))).IsEqualTo("l,exits")
+				.Because("a link keeps its spelling");
+
+			var related = await resolver.RelatedAsync("help", "newbie", 20, 12);
+			await Assert.That(string.Join(",", related.Linked)).IsEqualTo("look,SAY").Because("the index topic links everything");
+			await Assert.That(string.Join(",", related.Nearby)).IsEqualTo("move,exits");
+			await Assert.That(string.Join(",", (await resolver.RelatedAsync("help", "newbie syntax", 20, 12)).Linked)).IsEqualTo("look,SAY").Because("a section is shown on its article's page");
+			await Assert.That((await resolver.RelatedAsync("help", "newbie", 1, 1)) is { Linked: ["look"], Nearby: ["move"] }).IsTrue();
+			await Assert.That((await resolver.RelatedAsync("help", "nothing like it", 20, 12)) is { Topic: null, Linked: [], Nearby: [] }).IsTrue();
+			await Assert.That((await resolver.RelatedAsync("help", "l", 20, 12)).Topic).IsEqualTo("look")
+				.Because("the sidebar places its alphabetical slice where the index lists the page");
+
+			await File.WriteAllTextAsync(Path.Join(help, "exits.md"), "# exits\nSee [zone].");
+			await File.WriteAllTextAsync(Path.Join(help, "zone.md"), "# zone\nAn area.");
+			await service.ReindexAsync();
+			await Assert.That(string.Join(",", (await resolver.RelatedAsync("help", "newbie", 20, 12)).Nearby)).IsEqualTo("move,exits,zone");
+		}
+		finally
+		{
+			Directory.Delete(root, recursive: true);
+		}
+	}
+
+	/// <summary>
 	/// A file reference is a category and a file name joined under the text-files directory. Neither may
 	/// climb out of it with <c>..</c>, nor replace it by being rooted: the file sits beside the directory,
 	/// readable to the process, and must stay unreachable.

@@ -10,6 +10,7 @@
 @inject IConnectionStateService Hub
 @inject ITerminalService Terminal
 @inject GameCommandService Commands
+@inject IAccountAuthState AccountAuth
 @inject IJSRuntime JS
 @implements IAsyncDisposable
 
@@ -96,7 +97,7 @@ else
         @* column-reverse keeps the story at its newest pose as poses arrive, as Play's does. *@
         <div class="scene-live-scroll" data-input-region>
             <div class="scene-live-story">
-                <SceneStory SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" LiveUnavailableChanged="OnLiveUnavailable"
+                <SceneStory SceneId="@Id" ViewerName="@Terminal.ConnectedPlayerName" Context="@StoryContextOf(scene)" LiveUnavailableChanged="OnLiveUnavailable"
                             OnEditPose="EditPoseAsync" OnPoseAdded="OnPoseAdded" />
             </div>
         </div>
@@ -162,6 +163,14 @@ else
     [Parameter] public required string Id { get; set; }
 
     private SceneSummary? _scene;
+
+    /// <summary>
+    /// Playing while the scene runs and the viewer acts as a character, so the composer is somewhere to pose (the
+    /// scene card's Join); otherwise only reading it (Watch live, or a scene that is not running). Each hides its own
+    /// pose types.
+    /// </summary>
+    private StoryContext StoryContextOf(SceneSummary scene) =>
+        scene.IsLive && AccountAuth.ActiveCharacter is not null ? StoryContext.Playing : StoryContext.Reading;
     private bool _loading = true;
     private bool _notFound;
 

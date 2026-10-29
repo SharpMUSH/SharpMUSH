@@ -21,11 +21,7 @@ public static class AdminMail
 
 		if (!await executor.Can(PortalPermission.ChatAdmin))
 		{
-			var errorResult = await notifyService!.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			var errorResult = await notifyService!.PermissionDeniedNeeds(executor, PortalPermission.ChatAdmin);
 			return errorResult.Message;
 		}
 

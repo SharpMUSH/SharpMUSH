@@ -185,7 +185,7 @@ public class ThemeCommandTests
 	{
 		var (heard, _) = await AsPlayer("@theme/disable nord");
 
-		await Assert.That(heard).Contains(ErrorMessages.Notifications.PermissionDenied);
+		await Assert.That(heard).Contains("Permission denied. You need the layout.admin permission.");
 	}
 
 	/// <summary>A THEME that notes each time it is worked out for its player, in THEME_SEEN.</summary>

@@ -31,7 +31,7 @@ public class StoryPoseTests : TrackingBunitContext
 			type);
 
 	/// <summary>The scene package's ooc type: a band in the muted tone.</summary>
-	private static readonly PoseTypeInfo Ooc = new("ooc", "OOC", "band", "muted", "", false, 20);
+	private static readonly PoseTypeInfo Ooc = new("ooc", "OOC", "band", "muted", "", false, false, 20);
 
 	private IRenderedComponent<StoryPose> RenderOoc(ScenePoseView pose, Action<ComponentParameterCollectionBuilder<StoryPose>>? more = null) =>
 		Render<StoryPose>(p =>
@@ -279,7 +279,7 @@ public class StoryPoseTests : TrackingBunitContext
 	[Arguments("notice", "story-row--notice", ".story-notice-name")]
 	public async Task EachPresentation_DrawsItsOwnLayout_AndCarriesTheType(string presentation, string rowClass, string part)
 	{
-		var type = new PoseTypeInfo("telepathy", "Telepathy", presentation, "", "", false, 30);
+		var type = new PoseTypeInfo("telepathy", "Telepathy", presentation, "", "", false, false, 30);
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "telepathy")).Add(x => x.PoseType, type));
 		var row = cut.Find(".story-row");
 		await Assert.That(row.GetAttribute("data-pose-type")).IsEqualTo("telepathy");
@@ -295,7 +295,7 @@ public class StoryPoseTests : TrackingBunitContext
 	public async Task AsidesNoticesAndMessages_HaveNoPortrait(string presentation)
 	{
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "x"))
-			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, 30)).Add(x => x.ImageUrl, "/t.jpg"));
+			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, false, 30)).Add(x => x.ImageUrl, "/t.jpg"));
 		await Assert.That(cut.FindAll(".story-portrait-btn").Count).IsEqualTo(0);
 		await Assert.That(cut.FindAll("img").Count).IsEqualTo(0);
 	}
@@ -308,7 +308,7 @@ public class StoryPoseTests : TrackingBunitContext
 	public async Task TheTone_IsACustomPropertyOnTheRow(string tone, string style)
 	{
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "radio"))
-			.Add(x => x.PoseType, new PoseTypeInfo("radio", "Radio", "message", tone, "radio", false, 30)));
+			.Add(x => x.PoseType, new PoseTypeInfo("radio", "Radio", "message", tone, "radio", false, false, 30)));
 		await Assert.That(cut.Find(".story-row").GetAttribute("style")).IsEqualTo(style);
 		await Assert.That(cut.FindAll(".story-type-icon").Count).IsEqualTo(1);
 	}
@@ -316,7 +316,7 @@ public class StoryPoseTests : TrackingBunitContext
 	[Test]
 	public async Task AnUntonedType_LeavesTheThemesColours()
 	{
-		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.PoseType, new PoseTypeInfo("ic", "In character", "prose", "", "", false, 0)));
+		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose()).Add(x => x.PoseType, new PoseTypeInfo("ic", "In character", "prose", "", "", false, false, 0)));
 		await Assert.That(cut.Find(".story-row").GetAttribute("style")).IsNull();
 	}
 
@@ -336,7 +336,7 @@ public class StoryPoseTests : TrackingBunitContext
 	public async Task ABandOfAnotherType_NamesItsTypeOnTheTile()
 	{
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", type: "meta", markup: "Wren Halloway: next week?"))
-			.Add(x => x.PoseType, new PoseTypeInfo("meta", "Meta", "band", "info", "", false, 30)));
+			.Add(x => x.PoseType, new PoseTypeInfo("meta", "Meta", "band", "info", "", false, false, 30)));
 		await Assert.That(cut.Find(".kit-ooc-tag").TextContent).IsEqualTo("Meta");
 		await Assert.That(cut.Find(".story-row").ClassList).DoesNotContain("story-row--ooc");
 		await Assert.That(cut.Find(".kit-ooc-text").TextContent).IsEqualTo("next week?");
@@ -346,7 +346,7 @@ public class StoryPoseTests : TrackingBunitContext
 	public async Task AMessage_IsHeadedByTheNameAndFrequency_AndTheReadersOwnSitsRight()
 	{
 		using var culture = CultureScope.For("en");
-		var radio = new PoseTypeInfo("radio", "Radio", "message", "info", "radio", false, 30);
+		var radio = new PoseTypeInfo("radio", "Radio", "message", "info", "radio", false, false, 30);
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(author: "Wren Halloway", type: "radio", markup: "Copy that.",
 				meta: new Dictionary<string, string> { ["frequency"] = "104.5" }))
 			.Add(x => x.PoseType, radio).Add(x => x.Mine, true));
@@ -368,7 +368,7 @@ public class StoryPoseTests : TrackingBunitContext
 	{
 		(string PoseId, string Text)? saved = null;
 		var cut = Render<StoryPose>(p => p.Add(x => x.Pose, Pose(type: "x", markup: "waves")).Add(x => x.CanEdit, true)
-			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, 30)).Add(x => x.OnEdit, e => saved = e));
+			.Add(x => x.PoseType, new PoseTypeInfo("x", "X", presentation, "", "", false, false, 30)).Add(x => x.OnEdit, e => saved = e));
 		await cut.Find("button.story-edit-btn").ClickAsync();
 		await Assert.That(cut.FindAll(".story-body").Count).IsEqualTo(0);
 		await cut.Find("textarea.story-editor-input").InputAsync("waves again");

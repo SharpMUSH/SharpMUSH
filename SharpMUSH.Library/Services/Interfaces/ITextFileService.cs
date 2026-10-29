@@ -79,6 +79,14 @@ public interface ITextFileService
 	Task<IEnumerable<string>> SearchContentAsync(string fileReference, string searchTerm);
 
 	/// <summary>
+	/// The topics the article holding <paramref name="entryName"/> links to, in reading order: each topic once, spelled
+	/// as the article's first link to it is (<c>say</c>, not the <c>"</c> it is an alias of). Links to the article's
+	/// own sections are left out: they are the same page.
+	/// </summary>
+	Task<IReadOnlyList<string>> GetLinkedTopicsAsync(string fileReference, string entryName) =>
+		Task.FromResult<IReadOnlyList<string>>([]);
+
+	/// <summary>
 	/// Re-indexes all text files (rebuilds all category indexes)
 	/// Called by @readcache command or on startup
 	/// </summary>

@@ -362,7 +362,7 @@ public class InformationFunctionUnitTests
 
 		await Assert.That((await mortal.EvaluateAsync(
 				MarkupText.Plain($"lstats(#{WebAppFactoryArg.ExecutorDBRef.Number})"))).ToPlainText())
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEARCH")
 			.Because("without Search_All, a player you do not control is refused");
 	}
 

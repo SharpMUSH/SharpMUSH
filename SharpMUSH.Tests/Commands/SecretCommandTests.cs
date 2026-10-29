@@ -132,8 +132,8 @@ public class SecretCommandTests
 		var set = await As(mortal, $"@secret {name}=value");
 		var list = await As(mortal, "@secret");
 
-		await Assert.That(set).Contains("Permission denied.");
-		await Assert.That(list).Contains("Permission denied.");
+		await Assert.That(set).Contains("Permission denied. You need the config.admin permission.");
+		await Assert.That(list).Contains("Permission denied. You need the config.admin permission.");
 		await Assert.That((await Secrets.GetAsync(name)).Value).IsTypeOf<NotFound>();
 	}
 

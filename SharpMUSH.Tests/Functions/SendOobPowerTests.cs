@@ -57,7 +57,7 @@ public class SendOobPowerTests
 
 		var said = await ThinkAs(mortal, $"oob({target.DbRef}, testpkg)");
 
-		await Assert.That(said).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(said).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB")
 			.Because("a mortal without the power may only oob() themselves");
 	}
 
@@ -107,7 +107,7 @@ public class SendOobPowerTests
 
 		var said = await ThinkAs(mortal, $"oob({target.Handle}, testpkg)");
 
-		await Assert.That(said).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(said).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SEND_OOB");
 	}
 
 	[Test]

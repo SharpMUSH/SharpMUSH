@@ -11,7 +11,8 @@ namespace SharpMUSH.Tests.BUnit.Services;
 
 /// <summary>
 /// The pose type catalogue the portal draws poses by: read once, an unlisted key drawn in character, and hiding a
-/// type as the character (<c>+scene/hide</c>, read back) or, with nobody acting, for the page.
+/// type as the character (<c>+scene/hide &lt;type&gt;=reading|playing</c>, read back) or, with nobody acting, for the
+/// page. Reading a scene and playing in one each keep their own choice.
 /// </summary>
 public class PoseTypeServiceTests : TrackingTestContext
 {
@@ -34,7 +35,7 @@ public class PoseTypeServiceTests : TrackingTestContext
 		await service.LoadAsync();
 
 		var unknown = service.For("telepathy");
-		await Assert.That(unknown).IsEqualTo(new PoseTypeInfo("telepathy", "telepathy", "prose", "", "", false, 50));
+		await Assert.That(unknown).IsEqualTo(new PoseTypeInfo("telepathy", "telepathy", "prose", "", "", false, false, 50));
 		await Assert.That(service.For("").Key).IsEqualTo("ic").Because("a pose stored before types is in character");
 		await Assert.That(service.For("OOC").Presentation).IsEqualTo("band").Because("keys are lower case however they arrive");
 	}
@@ -58,7 +59,9 @@ public class PoseTypeServiceTests : TrackingTestContext
 		await service.LoadAsync();
 
 		await Assert.That(_api.TypeReads).IsEqualTo(1);
-		await Assert.That(service.IsHidden("narration")).IsTrue().Because("the server says this character hides it");
+		await Assert.That(service.IsHidden("narration", StoryContext.Reading)).IsTrue().Because("the server says this character hides it");
+		await Assert.That(service.IsHidden("ooc", StoryContext.Reading)).IsTrue().Because("out of character starts hidden while reading");
+		await Assert.That(service.IsHidden("ooc", StoryContext.Playing)).IsFalse().Because("and shown while playing");
 		await Assert.That(service.Problems.Single().Key).IsEqualTo("broken");
 	}
 
@@ -68,11 +71,11 @@ public class PoseTypeServiceTests : TrackingTestContext
 		var service = Service();
 		await service.LoadAsync();
 
-		await Assert.That(await service.HideAsync("ooc") is Success).IsTrue();
-		await Assert.That(service.IsHidden("ooc")).IsTrue();
+		await Assert.That(await service.HideAsync("ooc", StoryContext.Playing) is Success).IsTrue();
+		await Assert.That(service.IsHidden("ooc", StoryContext.Playing)).IsTrue();
 		await Assert.That(_api.Commands).IsEmpty();
-		await service.ShowAsync("ooc");
-		await Assert.That(service.IsHidden("ooc")).IsFalse();
+		await service.ShowAsync("ooc", StoryContext.Playing);
+		await Assert.That(service.IsHidden("ooc", StoryContext.Playing)).IsFalse();
 	}
 
 	[Test]
@@ -81,10 +84,22 @@ public class PoseTypeServiceTests : TrackingTestContext
 		var service = Service(new AccountAuthService.CharacterSummary(12, 1, "Wren", ""));
 		await service.LoadAsync();
 
-		var result = await service.HideAsync("ooc");
+		var result = await service.HideAsync("ooc", StoryContext.Playing);
 		await Assert.That(result is Success).IsTrue();
-		await Assert.That(_api.Commands).IsEquivalentTo(new[] { "+scene/hide ooc" });
-		await Assert.That(service.IsHidden("ooc")).IsTrue();
+		await Assert.That(_api.Commands).IsEquivalentTo(new[] { "+scene/hide ooc=playing" });
+		await Assert.That(service.IsHidden("ooc", StoryContext.Playing)).IsTrue();
+	}
+
+	[Test]
+	public async Task ShowingWhileReading_LeavesPlayingAsItWas()
+	{
+		var service = Service(new AccountAuthService.CharacterSummary(12, 1, "Wren", ""));
+		await service.LoadAsync();
+
+		await Assert.That(await service.ShowAsync("narration", StoryContext.Reading) is Success).IsTrue();
+		await Assert.That(_api.Commands).IsEquivalentTo(new[] { "+scene/show narration=reading" });
+		await Assert.That(service.IsHidden("narration", StoryContext.Reading)).IsFalse();
+		await Assert.That(service.IsHidden("narration", StoryContext.Playing)).IsTrue();
 	}
 
 	[Test]
@@ -94,9 +109,9 @@ public class PoseTypeServiceTests : TrackingTestContext
 		var service = Service(new AccountAuthService.CharacterSummary(12, 1, "Wren", ""));
 		await service.LoadAsync();
 
-		var result = await service.HideAsync("ooc");
+		var result = await service.HideAsync("ooc", StoryContext.Playing);
 		await Assert.That(result is ApiFailure { Message: TypesApi.Refusal }).IsTrue();
-		await Assert.That(service.IsHidden("ooc")).IsFalse();
+		await Assert.That(service.IsHidden("ooc", StoryContext.Playing)).IsFalse();
 	}
 
 	/// <summary>A story stays mounted across a character switch, so the service reads the new character's set itself.</summary>
@@ -115,10 +130,10 @@ public class PoseTypeServiceTests : TrackingTestContext
 		auth.ActiveCharacterChanged += Raise.Event<Action>();
 
 		await Assert.That(() => _api.TypeReads).Eventually(reads => reads.IsEqualTo(2), TimeSpan.FromSeconds(5));
-		await Assert.That(service.IsHidden("narration")).IsTrue();
+		await Assert.That(service.IsHidden("narration", StoryContext.Playing)).IsTrue();
 	}
 
-	/// <summary>Serves api/scenes/types and the hide/show commands, keeping the hidden set the way the scene package does.</summary>
+	/// <summary>Serves api/scenes/types and the hide/show commands, keeping the hidden sets the way the scene package does.</summary>
 	private sealed class TypesApi : HttpMessageHandler
 	{
 		public const string Refusal = "SCENE: No pose type called ooc.";
@@ -127,7 +142,11 @@ public class PoseTypeServiceTests : TrackingTestContext
 		public bool RefuseHide { get; set; }
 		public int TypeReads { get; private set; }
 		public List<string> Commands { get; } = [];
-		private readonly HashSet<string> _hidden = ["narration"];
+		private readonly Dictionary<string, HashSet<string>> _hidden = new()
+		{
+			["reading"] = ["narration", "ooc"],
+			["playing"] = ["narration"],
+		};
 
 		protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 		{
@@ -138,23 +157,25 @@ public class PoseTypeServiceTests : TrackingTestContext
 				Commands.Add(command);
 				IReadOnlyList<string> output = [];
 				if (RefuseHide) output = [Refusal];
-				else if (command.StartsWith("+scene/hide ", StringComparison.Ordinal)) _hidden.Add(command["+scene/hide ".Length..]);
-				else if (command.StartsWith("+scene/show ", StringComparison.Ordinal)) _hidden.Remove(command["+scene/show ".Length..]);
+				else if (command.Split(' ', '=') is ["+scene/hide", var hide, var hideIn]) _hidden[hideIn].Add(hide);
+				else if (command.Split(' ', '=') is ["+scene/show", var show, var showIn]) _hidden[showIn].Remove(show);
 				return new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(new PortalCommandResponse(output, null, false)) };
 			}
 
 			if (path != "/api/scenes/types") return new HttpResponseMessage(HttpStatusCode.NotFound);
 			TypeReads++;
 			var body = NoPackage
-				? """{"types":[],"problems":[],"hidden":[]}"""
+				? """{"types":[],"problems":[],"hiddenReading":[],"hiddenPlaying":[]}"""
 				: $$"""
-				{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hidden":false,"order":10},
-				          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hidden":false,"order":20},
-				          {"key":"narration","label":"Narration","presentation":"aside","tone":"","icon":"book","hidden":false,"order":30}],
+				{"types":[{"key":"ic","label":"In character","presentation":"prose","tone":"","icon":"","hiddenReading":false,"hiddenPlaying":false,"order":10},
+				          {"key":"ooc","label":"OOC","presentation":"band","tone":"muted","icon":"","hiddenReading":true,"hiddenPlaying":false,"order":20},
+				          {"key":"narration","label":"Narration","presentation":"aside","tone":"","icon":"book","hiddenReading":false,"hiddenPlaying":false,"order":30}],
 				 "problems":[{"key":"broken","reason":"not JSON"}],
-				 "hidden":[{{string.Join(",", _hidden.Select(h => $"\"{h}\""))}}]}
+				 "hiddenReading":{{Keys("reading")}},"hiddenPlaying":{{Keys("playing")}}}
 				""";
 			return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 		}
+
+		private string Keys(string context) => System.Text.Json.JsonSerializer.Serialize(_hidden[context]);
 	}
 }

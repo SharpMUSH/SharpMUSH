@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Keine Treffer} one {# Treffer} other {# Treffer}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Von hier verlinkt</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>In der Nähe</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Weitere Themen</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Admin-Hilfe</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Anzeigen</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Angezeigte Posentypen</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Angezeigte Posentypen beim Lesen</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Angezeigte Posentypen beim Spielen</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-Zeile ausgeblendet} other {# {label}-Zeilen ausgeblendet}}</value>

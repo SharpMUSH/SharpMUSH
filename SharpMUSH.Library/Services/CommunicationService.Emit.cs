@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
@@ -119,9 +120,9 @@ public partial class CommunicationService
 				foreach (var name in request.Targets)
 				{
 					if (await locateService.LocateAndNotifyIfInvalid(parser, executor, executor, name, LocateFlags.All) is not AnySharpObject zone) continue;
-					if (!await permissionService.Controls(executor, zone))
+					if (await permissionService.Check(executor, Requires.ControlOf(zone)) is PermissionRefusal refused)
 					{
-						await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+						await notifyService.PermissionDenied(executor, refused);
 						continue;
 					}
 					var heardHere = false;
@@ -260,9 +261,10 @@ public partial class CommunicationService
 		{
 			if (request.Scope == EmitScope.Private && request.PortTargets)
 			{
-				if (!await executor.IsPriv())
+				if (await permissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GameRoyalty))
+					is PermissionRefusal refused)
 				{
-					await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+					await notifyService.PermissionDenied(executor, refused);
 					continue;
 				}
 				if (!long.TryParse(name, out var port))

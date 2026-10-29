@@ -634,8 +634,7 @@ public partial class Commands
 
 		if (!await PermissionService.CanExamine(executor, target))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All"));
 		}
 
 		var obj = target.Object();

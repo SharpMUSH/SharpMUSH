@@ -50,7 +50,7 @@ public class MailRetractAndStatsTests : ServerTestBase
 		var mortal = await Players.PlayerAsync("MailStatsMortal");
 		var wizard = await Players.WizardAsync("MailStatsWizard");
 
-		await Assert.That(await Players.HeardRunning(mortal, $"@mail/stats {wizard.Name}")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(mortal, $"@mail/stats {wizard.Name}")).IsEquivalentTo(["Permission denied. You need the chat.admin permission."]);
 		await Assert.That((await Players.HeardRunning(wizard, $"@mail/stats {mortal.Name}")).All(line => line.StartsWith(mortal.Name)))
 			.IsTrue();
 	}

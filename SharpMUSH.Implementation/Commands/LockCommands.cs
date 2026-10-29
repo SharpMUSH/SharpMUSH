@@ -119,10 +119,9 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> AttributeLockAsync(AnySharpObject executor, AnySharpObject targetObject,
 		Dictionary<string, CallState> args, string attrName)
 	{
-		if (!await PermissionService.Controls(executor, targetObject))
+		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		// do_atrlock reads only the object's own attribute (attrib.c:2512, atr_get_noparent). A wildcard

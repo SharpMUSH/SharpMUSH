@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Niciun rezultat} one {# rezultat} few {# rezultate} other {# de rezultate}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Legate de aici</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>În apropiere</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Mai multe subiecte</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Ajutor pentru administratori</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Afișează</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Tipuri de poze afișate</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Tipuri de poze afișate la citire</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Tipuri de poze afișate în joc</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# rând {label} ascuns} few {# rânduri {label} ascunse} other {# de rânduri {label} ascunse}}</value>

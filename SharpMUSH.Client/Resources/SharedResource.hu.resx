@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Nincs találat} one {# találat} other {# találat}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Innen hivatkozott</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>Közeli</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>További témák</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Adminisztrátori súgó</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Megjelenítés</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Megjelenített póztípusok</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Olvasáskor megjelenített póztípusok</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Játék közben megjelenített póztípusok</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label} sor elrejtve} other {# {label} sor elrejtve}}</value>

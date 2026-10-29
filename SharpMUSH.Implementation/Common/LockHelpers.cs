@@ -249,6 +249,12 @@ public static class LockHelpers
 	private static readonly Dictionary<string, string> RefusalKeys = new[]
 	{
 		(ErrorMessages.Notifications.PermissionDenied, nameof(ErrorMessages.Notifications.PermissionDenied)),
+		(ErrorMessages.Notifications.PermissionDeniedLockNotControlled, nameof(ErrorMessages.Notifications.PermissionDeniedLockNotControlled)),
+		(ErrorMessages.Notifications.PermissionDeniedLockOfGod, nameof(ErrorMessages.Notifications.PermissionDeniedLockOfGod)),
+		(ErrorMessages.Notifications.PermissionDeniedLockWizard, nameof(ErrorMessages.Notifications.PermissionDeniedLockWizard)),
+		(ErrorMessages.Notifications.PermissionDeniedLockOwner, nameof(ErrorMessages.Notifications.PermissionDeniedLockOwner)),
+		(ErrorMessages.Notifications.PermissionDeniedLockLocked, nameof(ErrorMessages.Notifications.PermissionDeniedLockLocked)),
+		(ErrorMessages.Notifications.PermissionDeniedLockSetWizard, nameof(ErrorMessages.Notifications.PermissionDeniedLockSetWizard)),
 		(ErrorMessages.Notifications.UnknownLockType, nameof(ErrorMessages.Notifications.UnknownLockType)),
 		(ErrorMessages.Notifications.InvalidLockName, nameof(ErrorMessages.Notifications.InvalidLockName)),
 		(ErrorMessages.Notifications.LockNameHasPipe, nameof(ErrorMessages.Notifications.LockNameHasPipe)),

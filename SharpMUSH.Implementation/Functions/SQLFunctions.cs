@@ -1,4 +1,5 @@
-﻿using SharpMUSH.Implementation.Commands;
+using SharpMUSH.Library.Authorization;
+using SharpMUSH.Implementation.Commands;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Implementation.Definitions;
 using SharpMUSH.Library;
@@ -31,7 +32,7 @@ public partial class Functions
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("SQL_OK")).Return;
 		}
 
 		if (SqlService is not { IsAvailable: true })
@@ -102,7 +103,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("SQL_OK")).Return;
 		}
 
 		var args = parser.CurrentState.Arguments;
@@ -139,7 +140,7 @@ public partial class Functions
 
 		if (!(await executor.IsWizard() || await executor.HasPower("SQL_OK")))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("SQL_OK")).Return;
 		}
 
 		if (SqlService is not { IsAvailable: true })

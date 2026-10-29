@@ -22,13 +22,9 @@ public class ObjectRelationshipService(
 {
 	public async ValueTask<CallState> SetOwner(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner, bool notify)
 	{
-		if (!await CanChown(executor, obj, newOwner))
+		if (await ChownPermission(executor, obj, newOwner) is PermissionRefusal refusal)
 		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			}
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refusal) : refusal.Return;
 		}
 
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
@@ -44,10 +40,13 @@ public class ObjectRelationshipService(
 	/// it is a thing, with a chown lock they pass.
 	/// </summary>
 	public async ValueTask<bool> CanChown(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner)
+		=> await ChownPermission(executor, obj, newOwner) is Success;
+
+	public async ValueTask<Permission> ChownPermission(AnySharpObject executor, AnySharpObject obj, SharpPlayer newOwner)
 	{
 		if (await executor.IsWizard())
 		{
-			return true;
+			return new Success();
 		}
 
 		var receiver = new AnySharpObject(newOwner);
@@ -55,25 +54,36 @@ public class ObjectRelationshipService(
 		if (!await permissionService.Controls(executor, receiver)
 			&& !(zoneMaster && await permissionService.PassesLock(executor, receiver, LockType.Zone)))
 		{
-			return false;
+			return PermissionRefusal.NotControlled(receiver);
 		}
 
 		if (await executor.Owns(obj))
 		{
-			return true;
+			return new Success();
 		}
 
 		var currentOwner = new AnySharpObject(await obj.Object().Owner.WithCancellation(CancellationToken.None));
 		if (zoneMaster && await permissionService.Controls(executor, currentOwner)
 			&& await permissionService.PassesLock(currentOwner, receiver, LockType.Zone))
 		{
-			return true;
+			return new Success();
 		}
 
-		return (obj is not SharpThing thing
-				|| (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef == executor.Object().DBRef)
-			&& await obj.HasFlag("CHOWN_OK")
-			&& await permissionService.PassesLock(executor, obj, LockType.ChOwn);
+		if (obj is SharpThing thing
+				&& (await thing.Location.WithCancellation(CancellationToken.None)).Object().DBRef != executor.Object().DBRef)
+		{
+			return new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry),
+				Definitions.ErrorMessages.Notifications.PermissionDeniedChownCarry, obj.Object().Name);
+		}
+
+		if (!await obj.HasFlag("CHOWN_OK"))
+		{
+			return PermissionRefusal.NotControlledNorFlag(obj, "CHOWN_OK");
+		}
+
+		return await permissionService.PassesLock(executor, obj, LockType.ChOwn)
+			? new Success()
+			: PermissionRefusal.Lock(obj, "ChOwn");
 	}
 
 	public async ValueTask<CallState> SetParent(AnySharpObject executor, AnySharpObject obj, AnySharpObject newParent,
@@ -81,18 +91,17 @@ public class ObjectRelationshipService(
 	{
 		// PennMUSH do_parent (src/set.c:1462-1467): the executor must control the new parent, or the
 		// new parent must be LINK_OK and the executor must pass its Parent lock.
-		var permitted = await permissionService.Controls(executor, newParent)
-			|| (await newParent.HasFlag("LINK_OK")
-				&& await permissionService.PassesLock(executor, newParent, LockType.Parent));
+		var refusal = await permissionService.Controls(executor, newParent)
+			? null
+			: !await newParent.HasFlag("LINK_OK")
+				? PermissionRefusal.NotControlledNorFlag(newParent, "LINK_OK")
+				: !await permissionService.PassesLock(executor, newParent, LockType.Parent)
+					? PermissionRefusal.Lock(newParent, "Parent")
+					: null;
 
-		if (!permitted)
+		if (refusal is not null)
 		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refusal) : refusal.Return;
 		}
 
 		var parentSafety = await cycleChecker.SafeToAddParentAsync(obj, newParent);
@@ -137,14 +146,9 @@ public class ObjectRelationshipService(
 
 	public async ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		await mediator.Send(new UnsetObjectParentCommand(obj));
@@ -162,14 +166,9 @@ public class ObjectRelationshipService(
 	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
 		bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		if (await cycleChecker.SafeToAddZoneAsync(obj, newZone) is not RelationshipSafety.Safe)
@@ -196,13 +195,9 @@ public class ObjectRelationshipService(
 
 	public async ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.Notify(executor, Definitions.ErrorMessages.Notifications.PermissionDenied);
-			}
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		await mediator.Send(new UnsetObjectZoneCommand(obj));

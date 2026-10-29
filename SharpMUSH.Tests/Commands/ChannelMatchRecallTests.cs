@@ -486,7 +486,7 @@ public class ChannelMatchRecallTests
 		var result = (await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
 			.EvaluateAsync(MarkupText.Plain($"cbufferadd({name},forged)"))).ToPlainText();
 
-		await Assert.That(result).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result).IsEqualTo("#-1 PERMISSION DENIED: CANNOT CHANGE CHANNEL");
 	}
 
 	// --- fun_clock --------------------------------------------------------------------------------

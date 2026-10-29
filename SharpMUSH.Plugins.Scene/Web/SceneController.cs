@@ -22,7 +22,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 ///   GET /api/scenes?participant=#N[&amp;count=] — the scenes that character is a member of, newest first
 ///   ...&amp;offset=N&amp;state=live|upcoming|finished&amp;search=text — narrow and page any list
 ///   ...&amp;detail=verse&amp;value=Marvel — only the scenes giving that detail that value
-///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones
+///   GET /api/scenes/types                 — the pose types, the ones that did not read, and the caller's hidden ones, reading and playing
 ///   GET /api/scenes/details               — the scene details the game defines, and the ones that did not read
 ///   GET /api/scenes/details/values        — the values the listed details have, and how many scenes give each
 ///   GET /api/scenes/partners?participant=#N[&amp;count=] — who shares the most of those scenes with them
@@ -243,19 +243,22 @@ public class SceneController(ISceneService sceneService, ISceneReadAccess readAc
 		bool Holds(string? value) => value?.Contains(text, StringComparison.OrdinalIgnoreCase) == true;
 	}
 
-	/// <summary>The pose types, the <c>TYPE`</c> attributes that did not read as one, and the types the caller hides.</summary>
-	public record PoseTypesDto(IReadOnlyList<PoseType> Types, IReadOnlyList<PoseTypeProblem> Problems, IReadOnlyList<string> Hidden);
+	/// <summary>The pose types, the <c>TYPE`</c> attributes that did not read as one, and the types the caller hides while reading and while playing.</summary>
+	public record PoseTypesDto(IReadOnlyList<PoseType> Types, IReadOnlyList<PoseTypeProblem> Problems,
+		IReadOnlyList<string> HiddenReading, IReadOnlyList<string> HiddenPlaying);
 
 	/// <summary>
 	/// The pose types the Scene Logger defines, in order, the <c>TYPE`</c> attributes that did not read as one,
-	/// and the types the caller's character hides (<c>+scene/hide</c>), or the ones that start hidden for a caller
-	/// with none. Empty lists when the scene package is not installed; the portal then draws every pose in character.
+	/// and the types the caller's character hides (<c>+scene/hide</c>) while reading a scene and while playing in one,
+	/// or the ones that start hidden there for a caller with none. Empty lists when the scene package is not installed; the portal then draws every pose in character.
 	/// </summary>
 	[HttpGet("types")]
 	public async Task<IActionResult> GetTypes([FromServices] IServiceProvider services)
 	{
 		var catalogue = await SceneLogger.CatalogueAsync(services);
-		return Ok(new PoseTypesDto(catalogue.Types, catalogue.Problems, await SceneLogger.HiddenForAsync(services, catalogue, CallerRef)));
+		return Ok(new PoseTypesDto(catalogue.Types, catalogue.Problems,
+			await SceneLogger.HiddenForAsync(services, catalogue, CallerRef, PoseTypes.Reading),
+			await SceneLogger.HiddenForAsync(services, catalogue, CallerRef, PoseTypes.Playing)));
 	}
 
 	/// <summary>The scene details the game defines, and the <c>DETAIL`</c> attributes that did not read as one.</summary>

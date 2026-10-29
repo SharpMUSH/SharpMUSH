@@ -88,7 +88,7 @@ public class HiddenWhoVisibilityTests
 		foreach (var call in (string[])["lwho(#1)", "lwhoid(#1)", "nwho(#1)", "xwho(#1,1,100000)", "xwhoid(#1,1,100000)"])
 		{
 			var result = await EvalAs(mortal.DbRef, call);
-			await Assert.That(result).IsEqualTo("#-1 PERMISSION DENIED")
+			await Assert.That(result).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL")
 				.Because($"{call} must not hand a mortal God's WHO list");
 			await Assert.That(Lists(result, hidden.DbRef)).IsFalse();
 		}
@@ -174,7 +174,7 @@ public class HiddenWhoVisibilityTests
 			.IsTrue().Because("the mortal viewer can still see itself in the zone");
 
 		await Assert.That(await EvalAs(mortal.DbRef, $"zwho({zoneRoom},#1)"))
-			.IsEqualTo("#-1 PERMISSION DENIED")
+			.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL")
 			.Because("only a See_All caller may name a viewer other than itself");
 	}
 

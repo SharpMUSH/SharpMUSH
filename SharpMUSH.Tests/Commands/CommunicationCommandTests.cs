@@ -995,7 +995,7 @@ public class CommunicationCommandTests
 
 		var said = await NotifiedWhile(player, "@zemit #1=Not mine");
 
-		await Assert.That(said).Contains("Permission denied.");
+		await Assert.That(said.Any(m => m.StartsWith("Permission denied. You do not control ") && m.EndsWith("."))).IsTrue();
 	}
 
 	/// <summary>

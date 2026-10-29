@@ -460,7 +460,7 @@ public partial class Commands
 				&& !await surroundings.HasFlag("ENTER_OK")
 				&& !await PermissionService.Controls(executor, surroundings))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNotControlledNorFlag(executor, surroundings, "ENTER_OK");
 			return CallState.Empty;
 		}
 
@@ -551,7 +551,7 @@ public partial class Commands
 			return holder;
 		}
 
-		await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+		await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedCannotHold));
 		return new None();
 	}
 
@@ -888,7 +888,7 @@ public partial class Commands
 
 		if (!await recipient.HasFlag("ENTER_OK") && !await PermissionService.Controls(executor, recipient))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDeniedNotControlledNorFlag(executor, recipient, "ENTER_OK");
 			return CallState.Empty;
 		}
 
@@ -1097,7 +1097,7 @@ public partial class Commands
 		if (!await LockService.Evaluate(LockType.Use, objectToUse, executor))
 		{
 			await DidItService.FailLock(parser, executor, objectToUse, LockType.Use,
-				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied));
+				MarkupText.Plain(PermissionRefusal.Lock(objectToUse, "Use").Text));
 			return CallState.Empty;
 		}
 

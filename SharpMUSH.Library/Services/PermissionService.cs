@@ -17,6 +17,35 @@ public class PermissionService(
 	IConnectionService connectionService,
 	Lazy<IAttributeService> attributeService) : IPermissionService, IChannelPermissionService
 {
+	public async ValueTask<Permission> Check(AnySharpObject who, Requires requirement)
+	{
+		if (requirement.GodOnly)
+		{
+			return who.IsGod() ? new Success() : requirement.Refusal;
+		}
+
+		if (requirement.Target is { } target && await Controls(who, target))
+		{
+			return new Success();
+		}
+
+		foreach (var scope in requirement.Scopes)
+		{
+			if (await Holds(who, scope))
+			{
+				return new Success();
+			}
+		}
+
+		return requirement.Refusal;
+	}
+
+	/// <summary>A scope read as the check it stands for: the ROYALTY flag, a built-in power, or a permission.</summary>
+	private static ValueTask<bool> Holds(AnySharpObject who, string scope)
+		=> scope == PortalPermission.GameRoyalty ? who.IsRoyalty()
+			: GamePowers.ForScope(scope) is { } power ? who.HasPower(power.Name)
+			: who.Can(scope);
+
 	public ValueTask<bool> PassesLock(AnySharpObject who, AnySharpObject target, string lockString)
 		=> lockService.Evaluate(lockString, target, who);
 

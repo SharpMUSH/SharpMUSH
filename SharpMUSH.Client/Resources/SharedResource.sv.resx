@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Inga träffar} one {# träff} other {# träffar}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Länkade härifrån</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>I närheten</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Fler ämnen</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Administratörshjälp</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Visa</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetyper som visas</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetyper som visas vid läsning</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetyper som visas under spel</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-rad dold} other {# {label}-rader dolda}}</value>

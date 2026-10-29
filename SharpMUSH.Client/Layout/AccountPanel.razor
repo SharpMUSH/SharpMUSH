@@ -80,7 +80,6 @@
                                                 @onclick="() => SelectCharacterAsync(character)" @onclick:stopPropagation="true">
                                             <span class="account-panel-character-check" aria-hidden="true">@(isActive ? "✓" : "")</span>
                                             <span class="account-panel-character-name">@character.Name</span>
-                                            <span class="account-panel-character-dbref">#@character.DbrefNumber</span>
                                         </button>
                                         <button type="button"
                                                 class="account-panel-newtab"

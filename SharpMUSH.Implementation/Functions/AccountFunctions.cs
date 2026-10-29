@@ -67,7 +67,7 @@ public partial class Functions
 		if (await executor.Can(PortalPermission.PlayersView)
 			|| (sameAccountMayAsk && await OnAccountAsync(executor, holder, player, token)))
 			return await answer(holder, player);
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
+		return PermissionRefusal.Needs(PortalPermission.PlayersView).Return;
 	}
 
 	/// <summary>True when the executor is the character itself, or a character on the account holding it.</summary>

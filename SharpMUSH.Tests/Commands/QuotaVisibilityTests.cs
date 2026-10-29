@@ -195,7 +195,7 @@ public class QuotaVisibilityTests
 		var result = await Factory.CommandParser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@quota/set {target.Name}=777"));
 
 		await Assert.That(result.Message.ToPlainText())
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+			.IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NEEDS PLAYERS.MODERATE")
 			.Because("wiz.c:175-178 restricts setting to wizards regardless of the QUOTAS power");
 	}
 

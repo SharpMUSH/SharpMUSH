@@ -1,5 +1,6 @@
 using Markdig;
 using Markdig.Extensions.Tables;
+using Markdig.Helpers;
 using Markdig.Renderers;
 using Markdig.Syntax;
 using Markdig.Syntax.Inlines;
@@ -43,6 +44,9 @@ public static class HelpHtmlRenderer
 
 	/// <summary>The class of the spaces that indent a line inside a paragraph, which the portal keeps as written.</summary>
 	public const string IndentClass = "help-indent";
+
+	/// <summary>The table of contents' visible label, which also names its landmark.</summary>
+	public const string ContentsLabel = "Contents";
 
 	/// <summary>A gap of three or more spaces inside a line: text lined up in columns.</summary>
 	private static readonly Regex WideGap = new(@"\S {3,}\S", RegexOptions.Compiled);
@@ -101,16 +105,33 @@ public static class HelpHtmlRenderer
 			link.Url = topicHref(topic) ?? string.Empty;
 		}
 
+		if (article is { Sections.Count: > 0 })
+		{
+			// Under the article's title, so a page that shows the title itself can still drop the repeat.
+			var at = document.FirstOrDefault() is HeadingBlock { Level: 1 } ? 1 : 0;
+			document.Insert(at, new HtmlBlock(null)
+			{
+				Type = HtmlBlockType.NonInterruptingBlock,
+				Lines = new StringLineGroup(Contents(article, topicHref, sectionLabels))
+			});
+		}
+
 		var writer = new StringWriter();
 		var renderer = new HtmlRenderer(writer);
 		Pipeline.Setup(renderer);
 		renderer.Render(document);
 		writer.Flush();
+		return writer.ToString();
+	}
 
-		var toc = article is null || article.Sections.Count == 0 ? string.Empty
-			: "<nav class=\"help-toc\" aria-label=\"Article sections\"><ul>" + string.Concat(article.Sections.Select(section =>
-				$"<li><a href=\"{WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty)}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>")) + "</ul></nav>";
-		return toc + writer;
+	/// <summary>The article's table of contents: a labelled nav linking each declared section.</summary>
+	private static string Contents(HelpArticle article, Func<string, string?> topicHref, Dictionary<string, string> sectionLabels)
+	{
+		var href = WebUtility.HtmlEncode(topicHref(article.Lookup) ?? string.Empty);
+		return $"<nav class=\"help-toc\" aria-label=\"{ContentsLabel}\"><span class=\"help-toc-label\">{ContentsLabel}</span><ol>"
+			+ string.Concat(article.Sections.Select(section =>
+				$"<li><a href=\"{href}#{WebUtility.HtmlEncode(section.Id)}\">{WebUtility.HtmlEncode(sectionLabels.GetValueOrDefault(section.Id, section.Heading))}</a></li>"))
+			+ "</ol></nav>";
 	}
 
 	/// <summary>

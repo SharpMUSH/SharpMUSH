@@ -30,7 +30,7 @@ public class LockFunctionUnitTests
 		{
 			attribute.CommandLock = "#FALSE";
 			var result = await Parser.EvaluateAsync(MarkupText.Plain(expression));
-			await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+			await Assert.That(result.ToPlainText()).IsEqualTo($"#-1 PERMISSION DENIED: CANNOT USE {command}");
 		}
 		finally
 		{
@@ -39,9 +39,9 @@ public class LockFunctionUnitTests
 	}
 
 	[Test]
-	[Arguments("lock(me,#FALSE)")]
-	[Arguments("lset(me/Basic,visual)")]
-	public async Task GaggedOwnerCannotMutateLocksThroughOwnedThing(string expression)
+	[Arguments("lock(me,#FALSE)", "@LOCK")]
+	[Arguments("lset(me/Basic,visual)", "@LSET")]
+	public async Task GaggedOwnerCannotMutateLocksThroughOwnedThing(string expression, string command)
 	{
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		var ownerRef = await mediator.Send(new CreatePlayerCommand($"GaggedLock{Guid.NewGuid():N}"[..20], "password", new DBRef(0), new DBRef(0), 100));
@@ -53,7 +53,7 @@ public class LockFunctionUnitTests
 		var connections = WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 		await WebAppFactoryArg.CommandParser.CommandParse(1, connections, MarkupText.Plain($"@set {ownerRef}=GAGGED"));
 		var result = await puppet.EvaluateAsync(MarkupText.Plain(expression));
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(result.ToPlainText()).IsEqualTo($"#-1 PERMISSION DENIED: CANNOT USE {command}");
 		await Assert.That((await puppet.EvaluateAsync(MarkupText.Plain("lock(me)"))).ToPlainText()).IsEqualTo("#TRUE");
 		await Assert.That((await puppet.EvaluateAsync(MarkupText.Plain("lockflags(me)"))).ToPlainText()).IsEqualTo("i");
 	}
@@ -67,7 +67,7 @@ public class LockFunctionUnitTests
 		var created = await Parser.EvaluateAsync(MarkupText.Plain("create(PrivateLock_" + Guid.NewGuid().ToString("N") + ")"));
 		var target = created.ToPlainText();
 		var absent = await mortal.EvaluateAsync(MarkupText.Plain($"lock({target})"));
-		await Assert.That(absent.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(absent.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: CANNOT READ BASIC LOCK");
 		await Parser.FunctionParse(MarkupText.Plain($"lock({target},#TRUE)"));
 		var creator = await mortal.EvaluateAsync(MarkupText.Plain($"lockowner({target})"));
 		var flags = await mortal.EvaluateAsync(MarkupText.Plain($"llockflags({target})"));
@@ -271,7 +271,7 @@ public class LockFunctionUnitTests
 		var refused = await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
 			.FunctionParse(MarkupText.Plain($"atrlock({thing}/PROBE,on)"));
 
-		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("0")
 			.Because("the refusal has to have left the flag alone");
 	}

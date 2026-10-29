@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Nema podudaranja} one {# podudaranje} few {# podudaranja} other {# podudaranja}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Povezano odavde</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>U blizini</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Još tema</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Pomoć za administratore</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Prikaži</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Vrste poza za prikaz</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Vrste poza za prikaz pri čitanju</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Vrste poza za prikaz pri igranju</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# skriven redak {label}} few {# skrivena retka {label}} other {# skrivenih redaka {label}}}</value>

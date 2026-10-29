@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Geen resultaten} one {# resultaat} other {# resultaten}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Hier gelinkt</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>In de buurt</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Meer onderwerpen</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Beheerdershulp</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Tonen</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetypes die je ziet</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetypes die je ziet bij het lezen</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetypes die je ziet tijdens het spelen</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-regel verborgen} other {# {label}-regels verborgen}}</value>

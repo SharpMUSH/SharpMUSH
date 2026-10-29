@@ -86,6 +86,6 @@ public class BenchmarkAndLwhoTests
 	{
 		var mortal = await Mortal("LwhoOfflineMortal");
 
-		await Assert.That(await As(mortal, "lwho(,offline)")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await As(mortal, "lwho(,offline)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 	}
 }

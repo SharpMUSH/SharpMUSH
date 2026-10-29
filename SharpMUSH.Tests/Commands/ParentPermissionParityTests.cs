@@ -12,7 +12,8 @@ namespace SharpMUSH.Tests.Commands;
 /// A mortal may give an object a new parent only if they control that parent, or the parent is
 /// LINK_OK and they pass its Parent lock (PennMUSH <c>do_parent</c>, <c>src/set.c:1462-1467</c>).
 /// <c>parent(obj,new)</c> runs the same check, notifies the same text and returns the object's
-/// parent as it stands afterwards (<c>fun_parent</c>, <c>src/fundb.c:1617-1640</c>).
+/// parent as it stands afterwards (<c>fun_parent</c>, <c>src/fundb.c:1617-1640</c>). SharpMUSH adds the reason after
+/// "Permission denied.".
 /// </summary>
 /// <remarks>
 /// Expected output observed on PennMUSH 80a1d5b (<c>pennmush/test/runtest.pl</c>, God-owned
@@ -77,6 +78,15 @@ public class ParentPermissionParityTests
 		return string.Join("\n", recorder.For(mortal.DbRef).Skip(before));
 	}
 
+	private async Task<string> NameOf(DBRef obj)
+		=> (await Mediator.Send(new GetObjectNodeQuery(obj))).Expect<AnySharpObject>().Object().Name;
+
+	private async Task<string> NotLinkOk(DBRef parent)
+		=> $"Permission denied. You do not control {await NameOf(parent)}, and it is not LINK_OK.";
+
+	private async Task<string> LockFails(DBRef parent)
+		=> $"Permission denied. You do not pass the Parent lock on {await NameOf(parent)}.";
+
 	private async Task<string> ParentOf(DBRef obj)
 	{
 		var node = (await Mediator.Send(new GetObjectNodeQuery(obj))).Expect<AnySharpObject>();
@@ -93,7 +103,7 @@ public class ParentPermissionParityTests
 
 		var seen = await AsMortal(mortal, $"@parent {kid}={parent}");
 
-		await Assert.That(seen).IsEqualTo("Permission denied.");
+		await Assert.That(seen).IsEqualTo(await NotLinkOk(parent));
 		await Assert.That(await ParentOf(kid)).IsEqualTo("#-1");
 	}
 
@@ -106,7 +116,7 @@ public class ParentPermissionParityTests
 
 		var seen = await AsMortal(mortal, $"@parent {kid}={parent}");
 
-		await Assert.That(seen).IsEqualTo("Permission denied.");
+		await Assert.That(seen).IsEqualTo(await LockFails(parent));
 		await Assert.That(await ParentOf(kid)).IsEqualTo("#-1");
 	}
 
@@ -132,7 +142,7 @@ public class ParentPermissionParityTests
 
 		var seen = await AsMortal(mortal, $"think parent({kid},{parent})");
 
-		await Assert.That(seen).IsEqualTo("Permission denied.\n#-1");
+		await Assert.That(seen).IsEqualTo($"{await NotLinkOk(parent)}\n#-1");
 		await Assert.That(await ParentOf(kid)).IsEqualTo("#-1");
 	}
 
@@ -145,7 +155,7 @@ public class ParentPermissionParityTests
 
 		var seen = await AsMortal(mortal, $"think parent({kid},{parent})");
 
-		await Assert.That(seen).IsEqualTo("Permission denied.\n#-1");
+		await Assert.That(seen).IsEqualTo($"{await LockFails(parent)}\n#-1");
 		await Assert.That(await ParentOf(kid)).IsEqualTo("#-1");
 	}
 
@@ -161,7 +171,7 @@ public class ParentPermissionParityTests
 		var refused = await AsMortal(mortal, $"think parent({kid},{unlocked})");
 
 		await Assert.That(accepted).IsEqualTo($"Parent changed.\n#{linkOk.Number}");
-		await Assert.That(refused).IsEqualTo($"Permission denied.\n#{linkOk.Number}")
+		await Assert.That(refused).IsEqualTo($"{await NotLinkOk(unlocked)}\n#{linkOk.Number}")
 			.Because("a refused change returns the parent the object still has");
 		await Assert.That(await ParentOf(kid)).IsEqualTo($"#{linkOk.Number}");
 	}

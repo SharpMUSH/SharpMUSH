@@ -390,7 +390,7 @@ public class MovementCommandTests
 		var room = await Players.DigRoomAsync("EnterRoomTarget");
 		var wizard = await Players.WizardAsync("EnterRoomWizard");
 
-		await Assert.That(await Players.HeardRunning(wizard, $"enter {room}")).IsEquivalentTo(["Permission denied."]);
+		await Assert.That(await Players.HeardRunning(wizard, $"enter {room}")).IsEquivalentTo(["Permission denied. A room cannot be entered; use an exit."]);
 	}
 
 	[Test]

@@ -49,9 +49,9 @@ public partial class Commands
 			return await Refused(nameof(ErrorMessages.Notifications.PlayersAlwaysOwnThemselves));
 		}
 
-		if (!await ObjectRelationshipService.CanChown(executor, obj, newOwner))
+		if (await ObjectRelationshipService.ChownPermission(executor, obj, newOwner) is PermissionRefusal refusal)
 		{
-			return await Refused(nameof(ErrorMessages.Notifications.PermissionDenied));
+			return await NotifyService.PermissionDenied(executor, refusal);
 		}
 
 		if (obj is SharpThing thing && !await executor.IsPriv()

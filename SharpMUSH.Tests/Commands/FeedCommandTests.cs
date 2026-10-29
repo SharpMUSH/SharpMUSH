@@ -227,7 +227,7 @@ public class FeedCommandTests : ServerTestBase
 	{
 		await Assert.That(await Heard(_ann, $"@feed/join {_kind}/1={Ref(_ann)}")).Contains("needs control of its owner");
 		await Assert.That(await Heard(_ann, $"@feed/send {_kind}/1=hello")).Contains("needs control of its owner");
-		await Assert.That(await EvalAs(_ann.DbRef, $"feedwho({_kind}/1)")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await EvalAs(_ann.DbRef, $"feedwho({_kind}/1)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS FEED.ADMIN");
 
 		// The owner runs its feeds, but changing the kind is feed.admin's.
 		await Assert.That(await Heard(_system, $"@feed/set {_kind}/max_messages=5")).Contains("needs the feed.admin permission");

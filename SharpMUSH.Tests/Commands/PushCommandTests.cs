@@ -95,6 +95,6 @@ public class PushCommandTests
 		var heard = await MessagesWhile(mortal.DbRef, async () =>
 			await Parser.CommandParse(mortal.Handle, ConnectionService, MarkupText.Plain($"@push/always #{target.DbRef.Number}=Hello")));
 
-		await Assert.That(heard).Contains("Permission denied.");
+		await Assert.That(heard).Contains("Permission denied. You need the notify.push permission.");
 	}
 }

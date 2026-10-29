@@ -289,7 +289,7 @@ public class CommandManagementTests
 
 		var messages = await As(mortal, $"@command/add {name}");
 
-		await Assert.That(messages).Contains("Permission denied.");
+		await Assert.That(messages).Contains("Permission denied. You need the config.admin permission.");
 		await Assert.That(await As(wizard, $"{name} x")).Contains(Huh);
 	}
 
@@ -511,7 +511,7 @@ public class CommandManagementTests
 
 		var messages = await As(wizard, $"@command/delete {name}");
 
-		await Assert.That(messages).Contains("Permission denied.");
+		await Assert.That(messages).Contains("Permission denied. Only God can do that.");
 		await Assert.That(await As(wizard, $"{name} x")).Contains("This command has not been implemented.");
 	}
 
@@ -593,7 +593,7 @@ public class CommandManagementTests
 		var cleared = await As(wizard, $"@command/restrict {clone}=wizard \"");
 
 		await Assert.That(cleared).DoesNotContain("Failure Msg: Not yours.");
-		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Permission denied.");
+		await Assert.That(await As(mortal, $"{clone} nope")).Contains("Permission denied. You need the game.wizard permission.");
 	}
 
 	/// <summary><c>clone_command</c> copies the failure message with the lock (<c>src/command.c:2032-2034</c>).</summary>
@@ -835,7 +835,7 @@ public class CommandManagementTests
 			[clone] = ["wizard"]
 		});
 
-		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied.");
+		await Assert.That(await As(mortal, $"{clone} mine")).Contains("Permission denied. You need the game.wizard permission.");
 	}
 
 	/// <summary>
@@ -899,7 +899,7 @@ public class CommandManagementTests
 
 		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [clone] = ["wizard"] });
 
-		await Assert.That(await As(mortal, $"{clone} third")).Contains("Permission denied.")
+		await Assert.That(await As(mortal, $"{clone} third")).Contains("Permission denied. You need the game.wizard permission.")
 			.Because("adding the entry back tightens the command at runtime too");
 	}
 
@@ -969,7 +969,7 @@ public class CommandManagementTests
 		await Restrictions.ApplyConfiguredRestrictionsAsync(new Dictionary<string, string[]> { [named] = ["wizard"] });
 
 		var configured = await As(mortal, $"{named} second");
-		await Assert.That(configured).Contains("Permission denied.")
+		await Assert.That(configured).Contains("Permission denied. You need the game.wizard permission.")
 			.Because("the configured restriction replaces the live one, message and all, rather than adding to it");
 		await Assert.That(configured).DoesNotContain("Live refusal.");
 		await Assert.That(await As(mortal, $"{untouched} second")).Contains("Live refusal.")
@@ -1066,7 +1066,7 @@ public class CommandManagementTests
 
 			await Assert.That(await As(wizard, $"@config/set restrict_command={clone} wizard")).Contains("Option set.");
 
-			await Assert.That(await As(mortal, $"{clone} second")).Contains("Permission denied.");
+			await Assert.That(await As(mortal, $"{clone} second")).Contains("Permission denied. You need the game.wizard permission.");
 		}
 		finally
 		{

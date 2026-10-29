@@ -385,8 +385,7 @@ public partial class Commands
 	{
 		if (!await PermissionService.CanSet(executor, targetObject))
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
 		}
 
 		// Mortals can only chown to their own owner; wizards can chown to anyone.
@@ -464,11 +463,9 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
 		string? maybeAttribute)
 	{
-		var canModify = await PermissionService.Controls(executor, targetObject);
-		if (!canModify)
+		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var isSafe = await targetObject.HasFlag("SAFE");
@@ -527,11 +524,9 @@ public partial class Commands
 		AnySharpObject targetObject, OrderedArguments args, IEnumerable<string> switches,
 		string attrPattern)
 	{
-		var canModify = await PermissionService.Controls(executor, targetObject);
-		if (!canModify)
+		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		// With RSArgs, the arguments after = are split by comma

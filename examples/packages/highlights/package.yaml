@@ -127,7 +127,7 @@ objects:
       FUN`HIGHLIGHT`SEES: |-
         cor(permission(%0,control.all),cand(permission(%0,scene.view),not(strmatch(setr(scene_public,scene(%1,public)),#-1*)),%q<scene_public>),not(strmatch(scenemember(%1,%0,role),#-1*)))
       # 1 when favourited pose %1 belongs in what %0 is shown: its scene is one they may read, it was not deleted,
-      # and its type is not one of %2, the types they hide (+scene/hide).
+      # and its type is not one of %2, the types they hide while reading (+scene/hide).
       FUN`HIGHLIGHT`SHOWS: |-
         cand(u(%!/FUN`HIGHLIGHT`SEES,%0,setr(highlight_scene,get({{store}}/POSE`%1`SCENE))),not(strmatch(setr(pose_deleted,scenepose(%q<highlight_scene>,%1,deleted)),#-1*)),not(%q<pose_deleted>),not(member(%2,firstof(scenepose(%q<highlight_scene>,%1,type),ic))))
       # The favourited poses written inside the time window (DATA`CONFIG`WINDOW; 0 for no limit).
@@ -146,7 +146,7 @@ objects:
       # than the page needs, so a long list costs only what it shows, and hands back highlight_more: 1 when a later page
       # has something.
       FUN`HIGHLIGHT`PAGE: |-
-        setq(hidden_types,u(%!/FUN`HIDDEN,%0))[setq(page_needed,mul(%2,setr(page_size,get({{store}}/DATA`CONFIG`PAGE-SIZE))))][setq(page_poses,)][null(iter(%1,if(u(%!/FUN`HIGHLIGHT`SHOWS,%0,%i0,%q<hidden_types>),setq(page_poses,%q<page_poses> %i0))[if(gt(words(%q<page_poses>),%q<page_needed>),ibreak())]))][setq(highlight_more,gt(words(%q<page_poses>),%q<page_needed>))][extract(%q<page_poses>,inc(mul(dec(%2),%q<page_size>)),%q<page_size>)]
+        setq(hidden_types,u(%!/FUN`HIDDEN,%0,reading))[setq(page_needed,mul(%2,setr(page_size,get({{store}}/DATA`CONFIG`PAGE-SIZE))))][setq(page_poses,)][null(iter(%1,if(u(%!/FUN`HIGHLIGHT`SHOWS,%0,%i0,%q<hidden_types>),setq(page_poses,%q<page_poses> %i0))[if(gt(words(%q<page_poses>),%q<page_needed>),ibreak())]))][setq(highlight_more,gt(words(%q<page_poses>),%q<page_needed>))][extract(%q<page_poses>,inc(mul(dec(%2),%q<page_size>)),%q<page_size>)]
       # How long the window is, in words.
       FUN`HIGHLIGHT`SPAN: |-
         cond(not(mod(%0,604800)),[div(%0,604800)] [if(eq(div(%0,604800),1),week,weeks)],not(mod(%0,86400)),[div(%0,86400)] [if(eq(div(%0,86400),1),day,days)],[max(1,div(%0,3600))] [if(lte(div(%0,3600),1),hour,hours)])

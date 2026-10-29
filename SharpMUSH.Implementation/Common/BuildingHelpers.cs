@@ -496,34 +496,48 @@ public static class BuildingHelpers
 	/// exit in <paramref name="room"/>? Control, wizardry, royalty and the <c>Open_Anywhere</c> power
 	/// each say yes outright; otherwise the room has to be OPEN_OK and its <c>@lock/open</c> has to
 	/// pass. A guest may source one nowhere, and neither may anybody in something that is not a room.
+	/// Refused, the answer says which of these failed.
 	/// </summary>
 	/// <remarks>
 	/// Building (<c>@open</c>, <c>open()</c>, <c>@dig</c>, <c>dig()</c>, <c>@clone</c>) and
 	/// <c>@teleport</c>'s exit relocation (<c>wiz.c:469</c>) all ask this one rule.
 	/// </remarks>
-	public static async ValueTask<bool> CanOpenFromAsync(
+	public static async ValueTask<Permission> OpenFromAsync(
 		IPermissionService permissionService,
 		ILockService lockService,
 		AnySharpObject player,
 		AnySharpContainer room)
 	{
-		if (!room.IsRoom || await player.IsGuest())
+		var roomObject = room.WithExitOption();
+
+		if (!room.IsRoom)
 		{
-			return false;
+			return new PermissionRefusal(nameof(ErrorMessages.Notifications.PermissionDeniedNotARoom),
+				ErrorMessages.Notifications.PermissionDeniedNotARoom, roomObject.Object().Name);
 		}
 
-		var roomObject = room.WithExitOption();
+		if (await player.IsGuest())
+		{
+			return new PermissionRefusal(nameof(ErrorMessages.Notifications.PermissionDeniedGuest),
+				ErrorMessages.Notifications.PermissionDeniedGuest);
+		}
 
 		if (await permissionService.Controls(player, roomObject)
 				|| await player.IsWizard()
 				|| await player.IsRoyalty()
 				|| await player.HasPower("Open_Anywhere"))
 		{
-			return true;
+			return new Success();
 		}
 
-		return await roomObject.HasFlag("OPEN_OK")
-			&& await lockService.Evaluate(LockType.Open, roomObject, player);
+		if (!await roomObject.HasFlag("OPEN_OK"))
+		{
+			return PermissionRefusal.NotControlledNorFlag(roomObject, "OPEN_OK");
+		}
+
+		return await lockService.Evaluate(LockType.Open, roomObject, player)
+			? new Success()
+			: PermissionRefusal.Lock(roomObject, "Open");
 	}
 
 	/// <summary>
@@ -565,10 +579,10 @@ public static class BuildingHelpers
 		}
 
 		// create.c:127 then :130 — who may open here is settled before a slot is charged for it.
-		if (!await CanOpenFromAsync(permissionService, lockService, executor, sourceRoom))
+		if (await OpenFromAsync(permissionService, lockService, executor, sourceRoom) is PermissionRefusal refusal)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			await notifyService.PermissionDenied(executor, refusal);
+			return new Error<string>(refusal.ReturnText);
 		}
 
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
@@ -882,10 +896,10 @@ public static class BuildingHelpers
 		bool preserve,
 		MString? requestedDbref = null)
 	{
-		if (!await permissionService.Controls(executor, target))
+		if (await permissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 		{
-			await notifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			await notifyService.PermissionDenied(executor, notControlled);
+			return new Error<string>(notControlled.ReturnText);
 		}
 
 		if (target.IsPlayer)
@@ -1344,9 +1358,9 @@ public static class BuildingHelpers
 	{
 		if (!await executor.IsWizard() && !await executor.Object().HasPower("Pick_DBRefs"))
 		{
-			await notifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			var refusal = PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("Pick_DBRefs"));
+			await notifyService.PermissionDenied(executor, refusal);
+			return new Error<string>(refusal.ReturnText);
 		}
 
 		if (ParseDbref(requested) is not { } wanted)

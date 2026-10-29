@@ -203,7 +203,7 @@
                     {
                         <TypeChips Items="@TagChips" Selected="@(_activeTag ?? AllTags)" SelectedChanged="SetTag" AriaLabel="@Loc["NavSceneTagFilter"]" />
                     }
-                    <PoseTypeMenu Class="scene-detail-types" />
+                    <PoseTypeMenu Class="scene-detail-types" Context="StoryContext.Reading" />
                 </div>
 
                 @if (_posesError is not null)
@@ -227,7 +227,7 @@
                     var viewer = AccountAuth.ActiveCharacter?.Name;
                     <KitCard>
                         <div class="scene-detail-log">
-                            @foreach (var entry in StoryFolds.Fold(visible, PoseTypes.For, PoseTypes.IsHidden, _revealed))
+                            @foreach (var entry in StoryFolds.Fold(visible, PoseTypes.For, key => PoseTypes.IsHidden(key, StoryContext.Reading), _revealed))
                             {
                                 switch (entry)
                                 {

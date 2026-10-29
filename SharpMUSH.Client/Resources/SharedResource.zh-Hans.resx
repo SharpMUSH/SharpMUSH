@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {无匹配} other {# 个匹配}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>本页链接</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>相近主题</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>更多主题</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>管理员帮助</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>显示</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>要显示的姿态类型</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>阅读时要显示的姿态类型</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>游戏时要显示的姿态类型</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, other {已隐藏 # 条{label}内容}}</value>

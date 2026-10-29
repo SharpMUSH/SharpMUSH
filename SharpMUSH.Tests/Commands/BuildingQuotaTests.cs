@@ -319,7 +319,7 @@ public class BuildingQuotaTests
 		await Assert.That(await Run(guest.Handle, throughTheFunction
 				? $"think clone({original},{name})"
 				: $"@clone {original}={name}"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 		await Assert.That((await Named(name)).Length).IsEqualTo(0);
 	}
 

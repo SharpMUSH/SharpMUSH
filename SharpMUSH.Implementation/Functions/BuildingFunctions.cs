@@ -272,9 +272,9 @@ public partial class Functions
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
+				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 				{
-					return ErrorMessages.Returns.PermissionDenied;
+					return refused.Return;
 				}
 
 				if (await obj.HasFlag("SAFE"))
@@ -327,7 +327,7 @@ public partial class Functions
 
 		if (!await CanInvokeLockCommandAsync(parser, executor, telCommand))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.CannotUse(telCommand).Return;
 		}
 
 		// fundb.c:2320-2323: argument 3 is TEL_SILENT and argument 4 is TEL_INSIDE, the /SILENT and

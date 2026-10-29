@@ -590,7 +590,7 @@ public partial class Functions
 
 				if (!mayReachOthers && connection.Ref?.Number != executorRef.Number)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return PermissionRefusal.Needs(OobScopes).Return;
 				}
 
 				sentCount += await SendOutOfBandAsync(connection, package, message, onlySupported) ? 1 : 0;
@@ -616,7 +616,7 @@ public partial class Functions
 
 			if (!mayReachOthers && executorRef != located.Object().DBRef)
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.Needs(OobScopes).Return;
 			}
 
 			await foreach (var connection in ConnectionService.Get(located.Object().DBRef))
@@ -717,7 +717,7 @@ public partial class Functions
 		// Refused before anything about the connection, so a refusal does not say whether they are connected.
 		if (!mayReachOthers && player.Object.DBRef.Number != executorRef.Number)
 		{
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			return new Error<string>(PermissionRefusal.Needs(OobScopes).ReturnText);
 		}
 
 		return await ArgHelpers.LeastIdleConnectionAsync(ConnectionService, player.Object.DBRef) switch

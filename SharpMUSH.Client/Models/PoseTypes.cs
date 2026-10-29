@@ -2,7 +2,7 @@ namespace SharpMUSH.Client.Models;
 
 /// <summary>
 /// One pose type as <c>GET api/scenes/types</c> sends it (the Scene plugin's <c>PoseType</c>): which layout the
-/// portal draws its poses in, the theme colour it takes, its icon, and whether a reader who has not chosen starts
+/// portal draws its poses in, the theme colour it takes, its icon, and where a reader who has not chosen starts
 /// with it hidden.
 /// </summary>
 /// <param name="Key">The type's key, lower case: what a pose records (<c>ic</c>, <c>ooc</c>, ...).</param>
@@ -10,9 +10,11 @@ namespace SharpMUSH.Client.Models;
 /// <param name="Presentation">One of <see cref="PoseTypeInfo.Presentations"/>.</param>
 /// <param name="Tone">A theme colour's name (<see cref="PoseTypeInfo.Tones"/>), or empty for the text colour.</param>
 /// <param name="Icon">One of <see cref="PoseTypeInfo.Icons"/>, or empty for none.</param>
-/// <param name="Hidden">Whether a reader who has not chosen starts with this type hidden.</param>
+/// <param name="HiddenReading">Whether a reader who has not chosen starts with this type hidden while reading a scene.</param>
+/// <param name="HiddenPlaying">Whether a reader who has not chosen starts with this type hidden while playing in one.</param>
 /// <param name="Order">Its place in lists, lowest first.</param>
-public sealed record PoseTypeInfo(string Key, string Label, string Presentation, string Tone, string Icon, bool Hidden, int Order)
+public sealed record PoseTypeInfo(string Key, string Label, string Presentation, string Tone, string Icon, bool HiddenReading,
+	bool HiddenPlaying, int Order)
 {
 	/// <summary>The type a pose has when none is given, and that a pose stored before types has.</summary>
 	public const string InCharacter = "ic";
@@ -38,7 +40,7 @@ public sealed record PoseTypeInfo(string Key, string Label, string Presentation,
 		["radio", "phone", "chat", "dice", "book", "scroll", "megaphone", "eye", "mask", "music", "star", "bolt"];
 
 	/// <summary>A type the catalogue does not list: drawn as in character, named by its key.</summary>
-	public static PoseTypeInfo Unlisted(string key) => new(key, key, Prose, "", "", false, 50);
+	public static PoseTypeInfo Unlisted(string key) => new(key, key, Prose, "", "", false, false, 50);
 
 	/// <summary>
 	/// The presentation the portal draws: what the catalogue said, or prose for a value this portal does not
@@ -52,9 +54,23 @@ public sealed record PoseTypeProblem(string Key, string Reason);
 
 /// <summary>
 /// <c>GET api/scenes/types</c>: the types in display order, the attributes that did not read as one, and the types
-/// the caller's character hides (or, for nobody, the ones that start hidden).
+/// the caller's character hides while reading and while playing (or, for nobody, the ones that start hidden there).
 /// </summary>
-public sealed record PoseTypeCatalogue(IReadOnlyList<PoseTypeInfo> Types, IReadOnlyList<PoseTypeProblem> Problems, IReadOnlyList<string> Hidden)
+public sealed record PoseTypeCatalogue(IReadOnlyList<PoseTypeInfo> Types, IReadOnlyList<PoseTypeProblem> Problems,
+	IReadOnlyList<string> HiddenReading, IReadOnlyList<string> HiddenPlaying)
 {
-	public static readonly PoseTypeCatalogue Empty = new([], [], []);
+	public static readonly PoseTypeCatalogue Empty = new([], [], [], []);
+}
+
+/// <summary>
+/// Where a story is read, which decides the types it hides: each place keeps its own choice, so out-of-character
+/// lines can be hidden from someone reading a scene and shown to someone playing in it.
+/// </summary>
+public enum StoryContext
+{
+	/// <summary>Reading a scene: its page, or watching one the viewer is not playing in.</summary>
+	Reading,
+
+	/// <summary>Playing in a scene: Play, or a live scene the viewer joined.</summary>
+	Playing,
 }

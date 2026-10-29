@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Нет совпадений} one {# совпадение} few {# совпадения} many {# совпадений} other {# совпадения}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Ссылки отсюда</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>Рядом</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Другие темы</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Справка администратора</value>
   </data>
@@ -6020,8 +6029,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Показать</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Показываемые типы поз</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Показываемые типы поз при чтении</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Показываемые типы поз во время игры</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# скрытая строка «{label}»} few {# скрытые строки «{label}»} many {# скрытых строк «{label}»} other {# скрытой строки «{label}»}}</value>

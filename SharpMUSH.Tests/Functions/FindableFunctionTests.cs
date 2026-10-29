@@ -89,7 +89,7 @@ public class FindableFunctionTests
 		await Room("FindableNosyRoom", asker.DbRef);
 		await Room("FindableOtherRoom", other.DbRef, item);
 
-		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await As(asker, $"[findable({other.DbRef},{item})]")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 	}
 
 	/// <summary>Controlling the victim alone is enough, as it is the second arm of the gate.</summary>

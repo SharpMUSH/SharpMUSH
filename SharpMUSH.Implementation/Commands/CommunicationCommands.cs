@@ -242,8 +242,7 @@ public partial class Commands
 
 		if (!hasPermission)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNotControlled(executor, executorControlsVictim ? actor : victim);
 		}
 
 		var actorMessage = await GetAttributeOrDefault(
