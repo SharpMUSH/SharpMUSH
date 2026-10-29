@@ -96,4 +96,33 @@ public class PackageLocalEditInstallTests
 
 		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
 	}
+
+	[Test]
+	public async Task APackageAttachingToAnotherDoesNotRunItsHook()
+	{
+		var id = "owner-" + Guid.NewGuid().ToString("N")[..8];
+		(await ApplyAsync(Manifest(id, "1.0.0", "one"))).Expect<PackageApplyResult>();
+		var dbref = DBRef.Parse((await Registry.GetPackageObjectsAsync(id)).Single().Objid);
+		var pm = (await Database.GetObjectNodeAsync(new DBRef(7))).Expect<SharpPlayer>();
+		await Database.SetAttributeAsync(dbref, ["AINSTALL"], MarkupText.Plain("think seed the boards"), pm);
+
+		var bridge = new PackageManifestService().ParseManifest($$$"""
+			package: {{{id}}}-bridge
+			version: "1.0.0"
+			depends:
+			  - package: {{{id}}}
+			objects:
+			  - ref: hints
+			    target: "{{{{{id}}}/notes}}"
+			    attributes:
+			      HINT`COMMANDS: "+help notes"
+			""").Expect<ParsedPackageManifest>().Manifest;
+		var plan = await Installer.PlanAsync(bridge);
+
+		await Assert.That(plan.LifecycleHook).IsEqualTo("AINSTALL");
+		await Assert.That(plan.Objects.Single().Action).IsEqualTo(PackageObjectAction.Attach);
+		await Assert.That(plan.LocalHooks!.Count).IsEqualTo(0);
+
+		await Assert.That((await Installer.UninstallAsync(id)).Value).IsTypeOf<Success>();
+	}
 }

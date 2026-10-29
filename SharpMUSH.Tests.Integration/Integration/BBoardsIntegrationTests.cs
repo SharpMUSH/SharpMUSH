@@ -177,6 +177,30 @@ public partial class BBoardsIntegrationTests
 		}
 	}
 
+	/// <summary>The first-install code run again, as a package attaching to the commands object once did, makes no second set of boards.</summary>
+	[Test]
+	public async Task TheStartingBoardsAreMadeOnce()
+	{
+		try
+		{
+			await InstallAsync();
+			var objects = await WebAppFactoryArg.Services.GetRequiredService<IPackageRegistryService>().GetPackageObjectsAsync("bboards");
+			var commands = objects.Single(o => o.Ref == "bboards").Objid;
+			var store = objects.Single(o => o.Ref == "store").Objid;
+			async Task<string> Boards() => (await WebAppFactoryArg.FunctionParser.EvaluateAsync(
+				MarkupText.Plain($"[words(get({store}/ORDER))] [words(get({store}/CATS))]"))).ToPlainText();
+			await Assert.That(await Boards()).IsEqualTo("6 2");
+
+			await God($"@trigger {commands}/AINSTALL");
+
+			await Assert.That(await Boards()).IsEqualTo("6 2");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
 	/// <summary>A removed comment without replies is gone: the comments after it move up one.</summary>
 	[Test]
 	public async Task ARemovedCommentIsGoneAndTheNextMovesUp()

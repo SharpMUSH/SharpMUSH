@@ -60,6 +60,32 @@ public class PackageLifecycleRuntimeTests
 		finally { await mediator.Send(new DeleteObjectCommand(target)); }
 	}
 	[Test]
+	[Arguments(PackageObjectAction.NoChange, "yes")]
+	[Arguments(PackageObjectAction.Attach, null)]
+	public async Task FirstInstallRunsTheHookOnlyOnThePackagesOwnObjects(PackageObjectAction action, string? expected)
+	{
+		var mediator = Factory.Services.GetRequiredService<IMediator>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<SharpPlayer>();
+		AnySharpContainer home = god;
+		var target = await mediator.Send(new CreateThingCommand("lifecycle-owner-" + Guid.NewGuid().ToString("N"), home, god, home));
+		try
+		{
+			// The object another package installed, seeding its data in AINSTALL; a bridge attaching to it is a first install too.
+			await mediator.Send(new SetAttributeCommand(target, ["AINSTALL"], MarkupText.Plain("&HOOK_DONE me=yes"), god));
+			var changeset = new PackageChangeset("lifecycle-bridge", null, "1.0.0", PackageRevisionKind.Install,
+				[new PackageObjectChange("hints", action, PackageObjectType.Thing, "Hints", target.ToString())],
+				[], [], [], [], []);
+
+			await Factory.Services.GetRequiredService<IPackageLifecycleRunner>()
+				.RunLifecycleAsync(changeset, new Dictionary<string, string>());
+
+			var marker = await mediator.CreateStream(new GetAttributeQuery(target, ["HOOK_DONE"])).LastOrDefaultAsync();
+			await Assert.That(marker?.Value.ToPlainText()).IsEqualTo(expected);
+		}
+		finally { await mediator.Send(new DeleteObjectCommand(target)); }
+	}
+
+	[Test]
 	[NotInParallel]
 	[Arguments(false)]
 	[Arguments(true)]
