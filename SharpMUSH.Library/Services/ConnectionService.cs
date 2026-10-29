@@ -50,6 +50,10 @@ public class ConnectionService(
 		var get = Get(handle);
 		if (get is null || (!string.IsNullOrEmpty(sessionId) && get.Metadata.GetValueOrDefault("SessionId") != sessionId)) return;
 
+		// What this queue entry already sent (QUIT's goodbye, @boot's notice) is on the bus before the
+		// socket owner can be told to close the connection.
+		await OutputBatch.FlushAsync();
+
 		// A character binding may change while a private send holds its gate. The close still
 		// belongs to this transport, so retry on its new binding rather than losing the close.
 		// A replacement socket (or a changed SessionId) must never be removed by that retry.
@@ -247,6 +251,9 @@ public class ConnectionService(
 	/// <summary>Swaps <paramref name="current"/> for <paramref name="next"/> if it is still the stored entry.</summary>
 	private async ValueTask<bool> ReplaceAsync(IConnectionService.ConnectionData current, IConnectionService.ConnectionData next, Func<Task<bool>>? authorize = null)
 	{
+		// What this queue entry already sent to the old binding (LOGOUT's goodbye) goes out under it;
+		// once the binding is retired, a deferred send to it is dropped.
+		await OutputBatch.FlushAsync();
 		await current.Binding.PublicationGate.WaitAsync();
 		try
 		{

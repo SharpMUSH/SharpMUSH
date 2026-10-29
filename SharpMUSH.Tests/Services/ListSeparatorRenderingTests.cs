@@ -47,7 +47,7 @@ public class ListSeparatorRenderingTests
 	public async Task ShowSeparators_MarksThemForThePortal()
 	{
 		var envelope = Encoding.UTF8.GetString(new MarkupOutputRenderer().Render(Markup, Connection(true, "websocket")).Data);
-		var sent = MarkupTextSerializer.Deserialize(JsonDocument.Parse(envelope).RootElement.GetProperty("data").GetString()!);
+		var sent = MarkupTextSerializer.Deserialize(JsonDocument.Parse(envelope).RootElement.GetProperty("data").GetRawText());
 
 		var inverted = sent.Runs.Where(run => run.Markups.OfType<AnsiMarkup>().Any(markup => markup.Style.Inverted)).ToList();
 		await Assert.That(inverted.Select(run => (run.Start, run.Length))).IsEquivalentTo([(3, 1)]);

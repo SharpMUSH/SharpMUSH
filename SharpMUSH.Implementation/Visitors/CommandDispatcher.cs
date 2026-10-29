@@ -83,8 +83,9 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 				return new None();
 
 			var commandText = CommandSlice(src, firstCommandMatch);
-			parser.CurrentState.CommandText?.Begin(commandText);
-			RecordConnectionActivity(parser, command);
+			// A rewrite (`"hi` run as SAY) was counted when the typed line began.
+			if (parser.CurrentState.CommandText?.Begin(commandText) is not true)
+				RecordConnectionActivity(parser, command);
 
 			if (await RefuseHaltedExecutor(parser)) return new None();
 
@@ -303,10 +304,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex NewPasswordCommand();
 
-	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
+	/// <summary>
+	/// Stamps the connection's last signal and command count for a line typed at it, as PennMUSH counts
+	/// <c>cmds</c>; the commands that line runs (a <c>$</c>-command's body) are not typed, and <c>IDLE</c>
+	/// counts as neither. Each stamp is a write to the shared connection state.
+	/// </summary>
 	private void RecordConnectionActivity(IMUSHCodeParser parser, string command)
 	{
-		if (parser.CurrentState.Handle is null || command == "IDLE")
+		if (parser.CurrentState.Handle is null || command == "IDLE"
+			|| !parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput))
 			return;
 
 		services.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",

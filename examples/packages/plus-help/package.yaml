@@ -1,7 +1,7 @@
 format: "1.16"
 package: plus-help
 title: "+help"
-version: 1.9.0
+version: 1.9.1
 authors: [SharpMUSH]
 description: "+help — the game's own help. Aggregates the topics installed packages carry and keeps the ones the game writes itself."
 license: MIT
@@ -114,6 +114,31 @@ objects:
         value: |-
           trim(squish(iter(u(%!/FUN`GET`SOURCES,%0),u(%!/FUN`SOURCE`RECORDS,%i0,%0),%b,%b)))
         flags: [funsyntax]
+      # A name with no wildcard that can only be one attribute path: words of letters, digits and
+      # _.- one space apart, optionally after <source>/. Written without a group, which the parser
+      # would read as a call. Such a name is looked up by its attribute
+      # (FUN`GET`NAMED) instead of by walking every record, which is most of what +help <topic> costs.
+      # %0 a topic name, lower case — whether it is one
+      FUN`IS`PLAINNAME:
+        value: |-
+          cand(cor(regmatch(%0,^\[a-z0-9_.-\]\[a-z0-9_. -\]*$),regmatch(%0,^\[a-z0-9_.-\]+/\[a-z0-9_.-\]\[a-z0-9_. -\]*$)),not(strmatch(%0,*%b)),not(strmatch(%0,*%b%b*)))
+        flags: [funsyntax]
+      # The same records FUN`GET`FOUND would find for a plain name among every record, without building
+      # them: "house rules" is HELP`HOUSE`RULES on each source's objects, checked under the same locks.
+      # Every registered source is asked, readable or not: a record only ever comes from an object the
+      # reader may read, which is what makes its source readable. The objects are kept for the command.
+      # %0 a plain name (FUN`IS`PLAINNAME), bare or qualified · %1 "all" for every topic, optional — its records
+      FUN`GET`NAMED:
+        value: |-
+          setqm(named_source,if(strmatch(%0,*/*),before(%0,/)),
+          named_path,HELP`[ucstr(edit(last(%0,/),%b,`))],
+          named_objects,strfirstof(%q<named_objects>,u(%!/FUN`GET`SOURCEOBJECTS)))[trim(squish(iter(%q<named_objects>,if(cand(cor(not(strlen(%q<named_source>)),strmatch(before(%i0,:),%q<named_source>)),t(hasattrval(after(%i0,:)/%q<named_path>)),cor(strmatch(%1,all),cand(u(%!/FUN`IS`OBJECTREADABLE,after(%i0,:)),not(u(%!/FUN`IS`UNDERPATHS,rest(%q<named_path>,`),u(%!/FUN`GET`FAILEDPATHS,after(%i0,:))))))),%i0:%q<named_path>),%b,%b)))]
+        flags: [funsyntax]
+      # no arguments — every registered source's objects that exist, as <source>:<dbref>, in source order
+      FUN`GET`SOURCEOBJECTS:
+        value: |-
+          trim(squish(iter(u(%!/FUN`GET`SOURCES,all),iter(u(%!/FUN`SOURCE`OBJECTS,%i0),if(isdbref(%i0),%i1:[num(%i0)]),%b,%b),%b,%b)))
+        flags: [funsyntax]
 
       # ── Locks ───────────────────────────────────────────────────────────────
       # A source declares who may read its help in a LOCK tree beside HELP, the way SEE sits beside
@@ -127,10 +152,11 @@ objects:
         value: |-
           cor(not(strlen(%0)),t(testlock(%0,%#)))
         flags: [funsyntax]
+      # A lock is tested once per object per command: one +help asks again for each name it resolves.
       # %0 an object — whether the reader passes its LOCK root
       FUN`IS`OBJECTREADABLE:
         value: |-
-          u(%!/FUN`IS`PASSED,u(%0/LOCK))
+          strfirstof(r(readable_[after(num(%0),#)]),setr(readable_[after(num(%0),#)],u(%!/FUN`IS`PASSED,u(%0/LOCK))))
         flags: [funsyntax]
       # A source hides from a reader when every object it names that exists is locked to them. One
       # whose objects are all gone stays, so +help/sources can still say they are missing.
@@ -139,10 +165,11 @@ objects:
         value: |-
           cor(not(words(setr(source_present,iter(u(%!/FUN`SOURCE`OBJECTS,%0),if(isdbref(%i0),%i0),%b,%b)))),t(words(iter(%q<source_present>,if(u(%!/FUN`IS`OBJECTREADABLE,%i0),x),%b,%b))))
         flags: [funsyntax]
+      # Kept for the command like FUN`IS`OBJECTREADABLE, behind a leading "-" so that none is remembered too.
       # %0 an object — the topic paths below its LOCK tree whose lock the reader fails
       FUN`GET`FAILEDPATHS:
         value: |-
-          trim(squish(iter(lattr(%0/LOCK`**),if(u(%!/FUN`IS`PASSED,u(%0/%i0)),,rest(%i0,`)),%b,%b)))
+          rest(strfirstof(r(failed_[after(num(%0),#)]),setr(failed_[after(num(%0),#)],- [trim(squish(iter(lattr(%0/LOCK`**),if(u(%!/FUN`IS`PASSED,u(%0/%i0)),,rest(%i0,`)),%b,%b)))])))
         flags: [funsyntax]
       # %0 a topic path, below HELP · %1 paths — whether it is one of them or below one
       FUN`IS`UNDERPATHS:
@@ -158,10 +185,10 @@ objects:
         flags: [funsyntax]
       # A see-also entry naming a topic the reader may not read is left out, so a locked topic's name
       # never reaches them that way either. One that names nothing at all is still shown.
-      # %0 records · %1 a topic name as written — whether it names only topics locked to the reader
+      # %0 a topic name as written — whether it names only topics locked to the reader
       FUN`IS`WITHHELD:
         value: |-
-          cand(not(words(u(%!/FUN`GET`FOUND,%0,lcstr(%1)))),words(u(%!/FUN`GET`FOUND,u(%!/FUN`GET`RECORDS,all),lcstr(%1))))
+          if(u(%!/FUN`IS`PLAINNAME,setr(withheld_name,lcstr(trim(%0)))),cand(not(words(u(%!/FUN`GET`NAMED,%q<withheld_name>))),words(u(%!/FUN`GET`NAMED,%q<withheld_name>,all))),[if(strlen(%q<withheld_records>),,setq(withheld_records,u(%!/FUN`GET`RECORDS))[setq(withheld_all,u(%!/FUN`GET`RECORDS,all))])][cand(not(words(u(%!/FUN`GET`FOUND,%q<withheld_records>,%q<withheld_name>))),words(u(%!/FUN`GET`FOUND,%q<withheld_all>,%q<withheld_name>)))])
         flags: [funsyntax]
 
       # %0 a record — its source
@@ -231,7 +258,7 @@ objects:
       # %0 records · %1 a record — the topics it points at that the reader may know of, "|"-separated
       FUN`GET`SEEALSO:
         value: |-
-          trim(squish(iter(u(%!/FUN`GET`SEE,%1),if(u(%!/FUN`IS`WITHHELD,%0,%i0),,%i0),|,|),|),|)
+          trim(squish(iter(u(%!/FUN`GET`SEE,%1),if(u(%!/FUN`IS`WITHHELD,%i0),,%i0),|,|),|),|)
         flags: [funsyntax]
 
       # ── Selection ───────────────────────────────────────────────────────────
@@ -418,7 +445,7 @@ objects:
         flags: [funsyntax]
       # The body is markdown, rendered against this object's own RENDERMARKUP templates so a topic's
       # [cross-reference] becomes a live +help — see RENDERMARKUP`LINK.
-      # %0 records · %1 a record — the whole topic, titled with its name
+      # %0 records, its own source's at least · %1 a record — the whole topic, titled with its name
       FUN`DISPLAY`TOPIC:
         value: |-
           box(rendermarkdowncustom(u(%!/FUN`RECORD`TEXT,%1),%!,u(%!/FUN`GET`BODYWIDTH))[u(%!/FUN`DISPLAY`NAV,%0,%1)][u(%!/FUN`DISPLAY`LOCKS,%1)],u(%!/FUN`RECORD`NAME,%1),,u(%!/FUN`GET`FRAME))%r+help/list [u(%!/FUN`RECORD`SOURCE,%1)]
@@ -564,10 +591,13 @@ objects:
         flags: [cmdsyntax]
       # A topic match wins; a source with readable records lists through the same renderer as
       # +help/list. Empty, unavailable and inaccessible sources keep the ordinary topic miss.
+      # A plain name is looked up by its attribute first (FUN`GET`NAMED); only a miss, a wildcard or a
+      # command-style query builds every record. A topic shown then needs only its own source's records,
+      # for its subtopics.
       # named: query as typed · page, for several matches.
       INC`DO`SHOW:
         value: |-
-          @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think setq(help_records,u(%!/FUN`GET`RECORDS))[setq(help_matches,u(%!/FUN`GET`LOOKUP,%q<help_records>,%<query>))]; @break cand(not(words(%q<help_matches>)),words(setr(source_matches,u(%!/FUN`GET`OF,%q<help_records>,lcstr(trim(%<query>))))))={@include/args %!/INC`DO`LISTING=list,%q<source_matches>,title,Topics: [lcstr(trim(%<query>))],head,+help/list,tail,lcstr(trim(%<query>)),page,%<page>}; @assert words(%q<help_matches>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<help_matches>),1)={@include/args %!/INC`DO`LISTING=list,%q<help_matches>,title,switch(%q<help_lookup_kind>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<help_query>' in their names,Topics matching '%q<help_query>'),head,+help,tail,trim(%<query>),page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=u(%!/FUN`DISPLAY`TOPIC,%q<help_records>,%q<help_matches>)
+          @assert strlen(trim(%<query>))=@include %!/INC`DISPLAY`WARN=Which topic? Try +help for the index.; think setq(help_query,u(%!/FUN`GET`QUERY,%<query>))[setq(help_lookup_kind,name)][setq(help_matches,if(u(%!/FUN`IS`PLAINNAME,%q<help_query>),u(%!/FUN`GET`RESOLVED,u(%!/FUN`GET`NAMED,%q<help_query>))))][if(words(%q<help_matches>),setq(help_records,u(%!/FUN`SOURCE`RECORDS,u(%!/FUN`RECORD`SOURCE,first(%q<help_matches>)))),setq(help_records,u(%!/FUN`GET`RECORDS))[setq(help_matches,u(%!/FUN`GET`LOOKUP,%q<help_records>,%<query>))])]; @break cand(not(words(%q<help_matches>)),words(setr(source_matches,u(%!/FUN`GET`OF,%q<help_records>,lcstr(trim(%<query>))))))={@include/args %!/INC`DO`LISTING=list,%q<source_matches>,title,Topics: [lcstr(trim(%<query>))],head,+help/list,tail,lcstr(trim(%<query>)),page,%<page>}; @assert words(%q<help_matches>)=@include %!/INC`DISPLAY`MISS; @break gt(words(%q<help_matches>),1)={@include/args %!/INC`DO`LISTING=list,%q<help_matches>,title,switch(%q<help_lookup_kind>,command,Topics about [u(%!/FUN`GET`COMMAND,%<query>)],near,Topics with '%q<help_query>' in their names,Topics matching '%q<help_query>'),head,+help,tail,trim(%<query>),page,%<page>}; @assert lte(%<page>,1)=@include %!/INC`DISPLAY`WARN=There is one page — you asked for page %<page>.; @pemit %#=u(%!/FUN`DISPLAY`TOPIC,%q<help_records>,%q<help_matches>)
         flags: [cmdsyntax]
 
       # ── Commands ────────────────────────────────────────────────────────────

@@ -138,20 +138,68 @@ public sealed class NatsJetStreamConsumerService : BackgroundService
 		_logger.LogInformation("[NATS-CONSUMER] Consumer active — subject: {Subject}, durable: {Durable}",
 			reg.Subject, reg.DurableName);
 
-		await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
+		if (reg.PerHandle)
 		{
-			if (msg.Metadata is { NumDelivered: > 1 } redelivery)
-				_logger.LogInformation("[NATS-CONSUMER] Delivery {Count} of message {Sequence} on {Subject}",
-					redelivery.NumDelivered, redelivery.Sequence.Stream, reg.Subject);
-			var outcome = await HandleDeliveryAsync(reg, msg.Data, msg.Metadata?.Sequence.Stream,
-				progress => msg.AckProgressAsync(cancellationToken: progress), ct);
-			// Broker failures belong to the consumer-group recovery boundary, including ACKs. An ACK lost
-			// here leads to a redelivery, which HandleDeliveryAsync recognises as already handled.
-			if (outcome == DeliveryOutcome.Terminated)
-				await msg.AckTerminateAsync(cancellationToken: ct);
-			else
-				await msg.AckAsync(cancellationToken: ct);
+			await ConsumePerHandleAsync(consumer, reg, ct);
+			return;
 		}
+
+		await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: ct))
+			await DeliverAsync(reg, msg, ct);
+	}
+
+	/// <summary>
+	/// How many messages a <see cref="NatsConsumerRegistration.PerHandle"/> consumer has started and not
+	/// finished, across all handles, before it waits to fetch more.
+	/// </summary>
+	internal const int PerHandleInFlight = 256;
+
+	/// <summary>
+	/// Each handle's messages one after another, in stream order; different handles' at once, so output
+	/// fanned out to many connections is not written one connection at a time. A failure stops fetching,
+	/// lets what is already running finish, and rethrows into the consumer-group recovery boundary.
+	/// </summary>
+	private async Task ConsumePerHandleAsync(INatsJSConsumer consumer, NatsConsumerRegistration reg, CancellationToken ct)
+	{
+		using var lanes = new HandleLanes(PerHandleInFlight);
+		using var fetching = CancellationTokenSource.CreateLinkedTokenSource(ct, lanes.Faulted);
+		try
+		{
+			await foreach (var msg in consumer.ConsumeAsync<JsonElement>(serializer: CompressingNatsSerializer<JsonElement>.Default, cancellationToken: fetching.Token))
+				await lanes.DispatchAsync(HandleOf(msg.Data), () => DeliverAsync(reg, msg, ct), fetching.Token);
+		}
+		catch (OperationCanceledException) when (!ct.IsCancellationRequested && lanes.Faulted.IsCancellationRequested)
+		{
+			// A dispatched delivery failed; DrainAsync rethrows that failure.
+		}
+		finally
+		{
+			await lanes.DrainAsync();
+		}
+	}
+
+	/// <summary>The handle an <see cref="Messages.IHandleMessage"/> payload names; anything unreadable shares lane 0.</summary>
+	internal static long HandleOf(JsonElement data) =>
+		data.ValueKind == JsonValueKind.Object
+		&& data.TryGetProperty(nameof(Messages.IHandleMessage.Handle), out var handle)
+		&& handle.ValueKind == JsonValueKind.Number
+		&& handle.TryGetInt64(out var value)
+			? value
+			: 0;
+
+	private async Task DeliverAsync(NatsConsumerRegistration reg, INatsJSMsg<JsonElement> msg, CancellationToken ct)
+	{
+		if (msg.Metadata is { NumDelivered: > 1 } redelivery)
+			_logger.LogInformation("[NATS-CONSUMER] Delivery {Count} of message {Sequence} on {Subject}",
+				redelivery.NumDelivered, redelivery.Sequence.Stream, reg.Subject);
+		var outcome = await HandleDeliveryAsync(reg, msg.Data, msg.Metadata?.Sequence.Stream,
+			progress => msg.AckProgressAsync(cancellationToken: progress), ct);
+		// Broker failures belong to the consumer-group recovery boundary, including ACKs. An ACK lost
+		// here leads to a redelivery, which HandleDeliveryAsync recognises as already handled.
+		if (outcome == DeliveryOutcome.Terminated)
+			await msg.AckTerminateAsync(cancellationToken: ct);
+		else
+			await msg.AckAsync(cancellationToken: ct);
 	}
 
 	internal enum DeliveryOutcome { Handled, Duplicate, Terminated }

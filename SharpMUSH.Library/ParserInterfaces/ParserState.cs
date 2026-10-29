@@ -358,12 +358,15 @@ public sealed class CommandText(MString? output = null, MString? printed = null)
 
 	/// <summary>
 	/// A command starts: <paramref name="raw"/> becomes <see cref="Raw"/>, unless the command it
-	/// replaces asked to keep its own text with <see cref="KeepRawThroughRedispatch"/>.
+	/// replaces asked to keep its own text with <see cref="KeepRawThroughRedispatch"/>. Returns whether
+	/// it did: the command is a rewrite of one that already began.
 	/// </summary>
-	public void Begin(MString raw)
+	public bool Begin(MString raw)
 	{
+		var rewrite = _redispatchedRaw is not null;
 		Raw = _redispatchedRaw ?? raw;
 		_redispatchedRaw = null;
+		return rewrite;
 	}
 
 	/// <summary>

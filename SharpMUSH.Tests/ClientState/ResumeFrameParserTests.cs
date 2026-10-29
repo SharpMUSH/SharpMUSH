@@ -122,6 +122,31 @@ public class ResumeFrameParserTests
 	}
 
 	[Test]
+	public async Task A_seq_that_is_not_a_whole_number_is_not_a_sequenced_frame()
+	{
+		await Assert.That(ResumeFrameParser.TryReadSeq("{\"type\":\"seq\",\"seq\":1.5,\"data\":\"x\"}", out _, out _)).IsFalse();
+		await Assert.That(ResumeFrameParser.TryReadSeq("{\"type\":\"seq\",\"seq\":1e40,\"data\":\"x\"}", out _, out _)).IsFalse();
+	}
+
+	[Test]
+	public async Task Server_seq_envelope_carries_a_json_frame_in_place_and_text_as_a_string()
+	{
+		const string markup = """{"type":"markup","data":{"t":"═ jobs ═"}}""";
+		var wrappedFrame = Encoding.UTF8.GetString(SeqEnvelope.Wrap(3, Encoding.UTF8.GetBytes(markup)));
+		var wrappedText = Encoding.UTF8.GetString(SeqEnvelope.Wrap(4, "{not json"));
+
+		await Assert.That(wrappedFrame).IsEqualTo("""{"type":"seq","seq":3,"data":""" + markup + "}");
+		await Assert.That(ResumeFrameParser.TryReadSeq(wrappedFrame, out var seq, out var data)).IsTrue();
+		await Assert.That(seq).IsEqualTo(3L);
+		await Assert.That(TerminalFrameRenderer.Parse(data!).Plain).IsEqualTo("═ jobs ═");
+
+		await Assert.That(ResumeFrameParser.TryReadSeq(wrappedText, out var textSeq, out var text)).IsTrue();
+		await Assert.That(textSeq).IsEqualTo(4L);
+		await Assert.That(text).IsEqualTo("{not json");
+		await Assert.That(SeqEnvelope.ReadSeq(Encoding.UTF8.GetBytes(wrappedFrame))).IsEqualTo(3L);
+	}
+
+	[Test]
 	public async Task Passes_through_a_normal_oob_frame_as_neither()
 	{
 		const string oob = "{\"type\":\"html\",\"content\":\"<b>hi</b>\"}";

@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Messaging.Abstractions;
+using SharpMUSH.Messaging.Messages;
 
 namespace SharpMUSH.Messaging.NATS;
 
@@ -146,6 +147,15 @@ public interface INatsConsumerConfigurator
 	void AddConsumer<TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class;
+
+	/// <summary>
+	/// As <see cref="AddConsumer{TConsumer, TMessage}"/>, but messages for different connection handles
+	/// run at once: one handle's messages still run one after another, in published order, and a slow
+	/// write to one connection no longer holds up output to every other.
+	/// </summary>
+	void AddPerHandleConsumer<TConsumer, TMessage>()
+		where TConsumer : class, IMessageConsumer<TMessage>
+		where TMessage : class, IHandleMessage;
 }
 
 /// <summary>
@@ -173,6 +183,16 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 	public void AddConsumer<TConsumer, TMessage>()
 		where TConsumer : class, IMessageConsumer<TMessage>
 		where TMessage : class
+		=> Add<TConsumer, TMessage>(perHandle: false);
+
+	public void AddPerHandleConsumer<TConsumer, TMessage>()
+		where TConsumer : class, IMessageConsumer<TMessage>
+		where TMessage : class, IHandleMessage
+		=> Add<TConsumer, TMessage>(perHandle: true);
+
+	private void Add<TConsumer, TMessage>(bool perHandle)
+		where TConsumer : class, IMessageConsumer<TMessage>
+		where TMessage : class
 	{
 		var messageType = typeof(TMessage);
 		var subject = GetSubjectForMessageType(messageType, _options.GetConsumeSubjectPrefix());
@@ -181,7 +201,8 @@ public sealed class NatsConsumerConfigurator : INatsConsumerConfigurator
 		_services.AddTransient<IMessageConsumer<TMessage>, TConsumer>();
 
 		_registry.Registrations.Add(new NatsConsumerRegistration(messageType, subject, durableName,
-			static (sp, msg, ct) => sp.GetRequiredService<IMessageConsumer<TMessage>>().HandleAsync((TMessage)msg, ct)));
+			static (sp, msg, ct) => sp.GetRequiredService<IMessageConsumer<TMessage>>().HandleAsync((TMessage)msg, ct),
+			perHandle));
 	}
 
 	private string GetDurableName(Type messageType)

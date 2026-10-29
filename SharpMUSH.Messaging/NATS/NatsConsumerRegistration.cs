@@ -1,13 +1,16 @@
 namespace SharpMUSH.Messaging.NATS;
 
 /// <summary>
-/// Holds the metadata and dispatch delegate for a single NATS JetStream consumer.
+/// Holds the metadata and dispatch delegate for a single NATS JetStream consumer. A consumer
+/// <paramref name="PerHandle"/> runs the messages for different connection handles at once, and each
+/// handle's in the order they were published; otherwise it runs its messages one at a time.
 /// </summary>
 public record NatsConsumerRegistration(
 	Type MessageType,
 	string Subject,
 	string DurableName,
-	Func<IServiceProvider, object, CancellationToken, Task> Handler);
+	Func<IServiceProvider, object, CancellationToken, Task> Handler,
+	bool PerHandle = false);
 
 /// <summary>
 /// Registry that accumulates <see cref="NatsConsumerRegistration"/> entries built by

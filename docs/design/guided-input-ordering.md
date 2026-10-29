@@ -39,16 +39,20 @@ clear for a WebSocket client (below), in the place reserved when the capture end
   `_gate`. Every other publication reserves its place when it publishes; puppet relays in
   `ListenerRoutingService` do too.
 - **One subject on the wire.** A prompt travels as `MarkupOutputMessage { Prompt = true }`. The
-  socket owner consumes that subject in one sequential loop and writes a prompt to the connection's
-  prompt channel, so stream order is display order. A publication completes only once JetStream
-  acknowledges it, so reservation order is stream order.
+  socket owner consumes that subject one handle at a time (`AddPerHandleConsumer`: different
+  handles' messages run at once, one handle's in stream order) and writes a prompt to the
+  connection's prompt channel, so stream order is display order. A place starts publishing only once
+  JetStream has acknowledged the place before it, so reservation order is stream order. The caller
+  need not wait for that acknowledgement itself: inside an `OutputBatch` (every queue entry runs in
+  one) a publication is started and the batch waits for all of them when it ends, so a message to
+  many connections goes to all of them at once.
 
 ## Prompt frames on a WebSocket
 
 A terminal's prompt is its last line, so it needs nothing more. A WebSocket client keeps the current
 prompt in a row of its own above the input line, so it is told which frames are prompts and when a
 prompt stops applying. The socket owner's `MarkupOutputConsumer` writes these for a `websocket`
-connection (`WebSocketPromptFrames`):
+connection (`WebSocketMarkupFrames`):
 
 - `{"type":"markup","data":<markup>,"prompt":true,"session":<id>}` for
   `MarkupOutputMessage { Prompt = true }`. `session` is the capture's id

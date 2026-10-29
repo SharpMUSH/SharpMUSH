@@ -39,6 +39,14 @@ public class MarkupOutputConsumer(
 		if (string.IsNullOrEmpty(message.Markup))
 			return;
 
+		// The browser renders markup itself, so a WebSocket line needs no trip to the rendering worker:
+		// the frame is the markup as it came. Only a reader who asked to see list separators has it changed.
+		if (connection.ConnectionType == WebSocketConnectionType && connection.Preferences?.ShowSeparators != true)
+		{
+			await WriteWebSocketLineAsync(message, connection);
+			return;
+		}
+
 		try
 		{
 			var rendered = await renderer.RenderAsync(message.Markup, connection, message.Prompt, cancellationToken);
@@ -61,8 +69,20 @@ public class MarkupOutputConsumer(
 		}
 	}
 
+	private async ValueTask WriteWebSocketLineAsync(MarkupOutputMessage message, ConnectionServerService.ConnectionData connection)
+	{
+		try
+		{
+			await connection.OutputFunction(WebSocketMarkupFrames.Line(message.Markup));
+		}
+		catch (Exception ex)
+		{
+			logger.LogError(ex, "Error sending markup output to connection {Handle}", message.Handle);
+		}
+	}
+
 	/// <summary>
-	/// A WebSocket client keeps its prompt apart from the output (<see cref="WebSocketPromptFrames"/>), so a
+	/// A WebSocket client keeps its prompt apart from the output (<see cref="WebSocketMarkupFrames"/>), so a
 	/// prompt is marked as one and the end of its <c>@input</c> session is sent as a frame of its own. A
 	/// terminal's prompt is only its last line, so a clear sends it nothing.
 	/// </summary>
@@ -70,8 +90,8 @@ public class MarkupOutputConsumer(
 	{
 		if (message.Prompt && string.IsNullOrEmpty(message.Markup)) return;
 		var frame = message.ClearPrompt
-			? WebSocketPromptFrames.Clear(message.InputSession)
-			: WebSocketPromptFrames.Prompt(message.Markup, message.InputSession);
+			? WebSocketMarkupFrames.Clear(message.InputSession)
+			: WebSocketMarkupFrames.Prompt(message.Markup, message.InputSession);
 		try
 		{
 			if (message.ClearPrompt) await connection.OutputFunction(frame);

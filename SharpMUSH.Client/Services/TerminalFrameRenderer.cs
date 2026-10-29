@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Text.Json;
 
 namespace SharpMUSH.Client.Services;
@@ -38,7 +39,7 @@ public readonly record struct TerminalFrame(TerminalFrameKind Kind, string Plain
 
 /// <summary>
 /// Interprets a raw WebSocket text frame. Game output now arrives as an out-of-band JSON envelope
-/// <c>{ "type": "markup", "data": &lt;serialized MString&gt; }</c>; this deserializes the markup and
+/// <c>{ "type": "markup", "data": &lt;serialized MString, as an object&gt; }</c>; this deserializes the markup and
 /// renders it to HTML with the MarkupString library (<c>MString.Render(MarkupFormat.Html)</c>).
 /// Non-envelope frames (banners, pre-markup server text) fall back to plain-text handling.
 /// </summary>
@@ -63,8 +64,13 @@ public static class TerminalFrameRenderer
 			{
 				case "markup":
 					{
-						var data = GetStringProperty(root, "data");
-						var ms = MarkupTextSerializer.Deserialize(data);
+						// A frame from a socket owner older than this portal carries the markup as a JSON string.
+						var ms = !root.TryGetProperty("data", out var markup) ? MarkupText.Empty : markup.ValueKind switch
+						{
+							JsonValueKind.Object => MarkupTextSerializer.Deserialize(JsonMarshal.GetRawUtf8Value(markup)),
+							JsonValueKind.String => MarkupTextSerializer.Deserialize(markup.GetString()!),
+							_ => MarkupText.Empty
+						};
 						return new TerminalFrame(TerminalFrameKind.Markup, ms.ToPlainText(), ms.Render(MarkupFormat.Html), string.Empty, string.Empty,
 							IsTrue(root, "prompt"), GetStringProperty(root, "session"));
 					}

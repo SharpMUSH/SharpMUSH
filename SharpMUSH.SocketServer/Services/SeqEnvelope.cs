@@ -1,4 +1,6 @@
+using System.Buffers;
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace SharpMUSH.SocketServer.Services;
@@ -6,7 +8,7 @@ namespace SharpMUSH.SocketServer.Services;
 /// <summary>
 /// Server-side codec for the terminal control frames exchanged with the client, all serialized via
 /// <see cref="System.Text.Json"/> (camelCase) and sharing one flat discriminated envelope
-/// <c>{"type":"&lt;kind&gt;",...}</c>: the sequenced output envelope <c>{"type":"seq","seq":n,"data":"..."}</c>,
+/// <c>{"type":"&lt;kind&gt;",...}</c>: the sequenced output envelope <c>{"type":"seq","seq":n,"data":&lt;frame&gt;}</c>,
 /// the <c>{"type":"resumeToken","token":"..."}</c> handshake, the <c>{"type":"reattached"}</c> rebind ack,
 /// the <c>{"type":"bye"}</c> logout notice, and the inbound <c>{"type":"hello"}</c> /
 /// <c>{"type":"resume","token":"...","lastSeq":n}</c> requests.
@@ -19,11 +21,48 @@ public static class SeqEnvelope
 		PropertyNameCaseInsensitive = true
 	};
 
-	public static byte[] Wrap(long seq, string data)
-		=> JsonSerializer.SerializeToUtf8Bytes(new SeqFrame("seq", seq, data), Json);
+	/// <summary>Leaves the text's non-ASCII as UTF-8: the frame goes to a JSON parser, never into a document.</summary>
+	private static readonly JsonWriterOptions WriterOptions = new() { Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping };
 
+	public static byte[] Wrap(long seq, string data)
+		=> Wrap(seq, Encoding.UTF8.GetBytes(data));
+
+	/// <summary>
+	/// Wraps one output frame. A frame that is a JSON object (markup, OOB) is written in place as
+	/// <c>data</c>, so the client parses it once and nothing in it is escaped a second time; plain text
+	/// (a banner, a notice) is a string.
+	/// </summary>
 	public static byte[] Wrap(long seq, ReadOnlySpan<byte> utf8Data)
-		=> Wrap(seq, Encoding.UTF8.GetString(utf8Data));
+	{
+		var buffer = new ArrayBufferWriter<byte>(utf8Data.Length + 48);
+		using (var writer = new Utf8JsonWriter(buffer, WriterOptions))
+		{
+			writer.WriteStartObject();
+			writer.WriteString("type", "seq");
+			writer.WriteNumber("seq", seq);
+			writer.WritePropertyName("data");
+			if (IsJsonObject(utf8Data)) writer.WriteRawValue(utf8Data, skipInputValidation: true);
+			else writer.WriteStringValue(Encoding.UTF8.GetString(utf8Data));
+			writer.WriteEndObject();
+		}
+		return buffer.WrittenSpan.ToArray();
+	}
+
+	private static bool IsJsonObject(ReadOnlySpan<byte> utf8)
+	{
+		if (utf8.IsEmpty || utf8[0] != (byte)'{') return false;
+		try
+		{
+			var reader = new Utf8JsonReader(utf8);
+			reader.Read();
+			reader.Skip();
+			return !reader.Read();
+		}
+		catch (JsonException)
+		{
+			return false;
+		}
+	}
 
 	/// <summary>Serializes the <c>{"type":"resumeToken","token":"..."}</c> control frame.</summary>
 	public static byte[] ResumeToken(string token)
@@ -141,7 +180,7 @@ public static class SeqEnvelope
 
 	private sealed record HelloFrame(string? Type, string? Class, bool? SignIn = null);
 
-	private sealed record SeqFrame(string Type, long? Seq, string? Data);
+	private sealed record SeqFrame(string Type, long? Seq);
 
 	private sealed record ResumeFrame(string Type, string? Token, long LastSeq, string? Class, bool? SignIn = null);
 

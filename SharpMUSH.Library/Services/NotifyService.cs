@@ -156,7 +156,7 @@ public class NotifyService(
 	/// or the connection's current one when it names none, so prompts and plain output share an order.
 	/// </summary>
 	private ValueTask Publish<T>(long handle, T message, string? sessionId) where T : IHandleMessage
-		=> new(Lane.PublishAsync(handle, sessionId ?? connections.Get(handle)?.Metadata.GetValueOrDefault("SessionId"),
+		=> OutputBatch.Defer(Lane.PublishAsync(handle, sessionId ?? connections.Get(handle)?.Metadata.GetValueOrDefault("SessionId"),
 			token => publishEndpoint.HandlePublish(message, token), ExecutionBudget.CurrentToken));
 
 	/// <summary>
@@ -294,6 +294,7 @@ public class NotifyService(
 		if (!await bound.MoveNextAsync()) return;
 		var outgoing = await PrepareRecipient(Prepare(delivered), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
+		await using var batch = OutputBatch.Begin();
 		do
 		{
 			var conn = bound.Current;
@@ -330,6 +331,7 @@ public class NotifyService(
 
 		var raw = Prepare(what);
 		var prepared = new Dictionary<DBRef, Outgoing>();
+		await using var batch = OutputBatch.Begin();
 		foreach (var handle in handles)
 		{
 			await PublishToHandle(handle, raw, sender, type, prompt: false, prepared);
@@ -348,7 +350,7 @@ public class NotifyService(
 	public ValueTask NotifyToBinding(IConnectionService.ConnectionData binding, string sessionId, SharpMessage what)
 	{
 		var outgoing = Prepare(what);
-		return new(Lane.PublishAsync(binding.Handle, sessionId, async token =>
+		return OutputBatch.Defer(Lane.PublishAsync(binding.Handle, sessionId, async token =>
 		{
 			// Wait for earlier output first, then fence the actual publication against logout/rebind.
 			// A binding transition either retires this identity first or waits until this send completes.
@@ -392,6 +394,7 @@ public class NotifyService(
 	{
 		var raw = Prepare(what);
 		var prepared = new Dictionary<DBRef, Outgoing>();
+		await using var batch = OutputBatch.Begin();
 		foreach (var handle in handles)
 		{
 			await PublishToHandle(handle, raw, sender, type, prompt: true, prepared);
@@ -413,6 +416,7 @@ public class NotifyService(
 
 		var outgoing = await PrepareRecipient(Prepare(what), who, sender, type);
 		var perceptions = new Dictionary<DBRef, bool> { [who] = true };
+		await using var batch = OutputBatch.Begin();
 		await foreach (var conn in ConnectionsOf(who))
 		{
 			if (!excludeHandles.Contains(conn.Handle) && await CanReceiveBound(conn.Handle, who, sender, perceptions))

@@ -59,7 +59,7 @@ public class GlobalTerminalPromptTests : BunitContext
 		var envelope = new JsonObject
 		{
 			["type"] = "markup",
-			["data"] = MarkupTextSerializer.Serialize(text),
+			["data"] = JsonNode.Parse(MarkupTextSerializer.Serialize(text)),
 			["prompt"] = true
 		};
 		if (session is not null) envelope["session"] = session;

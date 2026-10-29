@@ -121,8 +121,7 @@ public sealed class MarkupOutputRenderer(TerminalPictureStore? pictureStore, Con
 			// Forward the markup inside the out-of-band envelope; the browser renders it. Untouched, unless the
 			// reader asked to see list separators.
 			if (showSeparators) markup = MarkupTextSerializer.Serialize(ListSeparators.Show(MarkupTextSerializer.Deserialize(markup)));
-			var envelope = JsonSerializer.Serialize(new { type = "markup", data = markup });
-			return new RenderedOutput(Encoding.UTF8.GetBytes(envelope), ApplyOutputTransform: false);
+			return new RenderedOutput(WebSocketMarkupFrames.Line(markup), ApplyOutputTransform: false);
 		}
 
 		var depth = ColorDepthFor(connection.Capabilities, connection.Preferences);

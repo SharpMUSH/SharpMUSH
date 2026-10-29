@@ -11,13 +11,27 @@ public class TerminalFrameRendererTests
 		var envelope = System.Text.Json.JsonSerializer.Serialize(new
 		{
 			type = "markup",
-			data = MarkupString.MarkupTextSerializer.Serialize(link)
+			data = System.Text.Json.Nodes.JsonNode.Parse(MarkupString.MarkupTextSerializer.Serialize(link))
 		});
 		var frame = TerminalFrameRenderer.Parse(envelope);
 
 		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
 		await Assert.That(frame.Html).Contains("xch_cmd=\"help newbie\"");
 		await Assert.That(frame.Plain).IsEqualTo("help newbie");
+	}
+
+	[Test]
+	public async Task MarkupSentAsAStringStillRenders()
+	{
+		var envelope = System.Text.Json.JsonSerializer.Serialize(new
+		{
+			type = "markup",
+			data = MarkupString.MarkupTextSerializer.Serialize(MString.Plain("You see a quay."))
+		});
+		var frame = TerminalFrameRenderer.Parse(envelope);
+
+		await Assert.That(frame.Kind).IsEqualTo(TerminalFrameKind.Markup);
+		await Assert.That(frame.Plain).IsEqualTo("You see a quay.");
 	}
 
 	[Test]
@@ -43,7 +57,7 @@ public class TerminalFrameRendererTests
 		var envelope = new System.Text.Json.Nodes.JsonObject
 		{
 			["type"] = "markup",
-			["data"] = MarkupString.MarkupTextSerializer.Serialize(MString.Plain(text))
+			["data"] = System.Text.Json.Nodes.JsonNode.Parse(MarkupString.MarkupTextSerializer.Serialize(MString.Plain(text)))
 		};
 		if (prompt is { } p) envelope["prompt"] = p;
 		if (session is not null) envelope["session"] = session;
