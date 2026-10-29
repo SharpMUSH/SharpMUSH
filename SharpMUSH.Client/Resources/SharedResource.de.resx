@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Keine Treffer} one {# Treffer} other {# Treffer}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Von hier verlinkt</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>In der Nähe</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Weitere Themen</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Admin-Hilfe</value>
   </data>

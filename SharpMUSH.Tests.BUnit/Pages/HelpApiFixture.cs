@@ -7,6 +7,7 @@ using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Documentation;
 using SharpMUSH.Implementation.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Server.Controllers;
@@ -61,6 +62,17 @@ internal sealed class DictionaryTextFileService(Dictionary<string, Dictionary<st
 			.Select(kv => kv.Key)
 			.ToList());
 
+	public Task<IReadOnlyList<string>> GetLinkedTopicsAsync(string fileReference, string entryName)
+	{
+		var corpus = Corpus(fileReference);
+		IReadOnlyList<string> linked = corpus is not null && corpus.TryGetValue(entryName, out var body)
+			? HelpLinks.Targets(body)
+				.Where(target => corpus.ContainsKey(target) && !string.Equals(target, entryName, StringComparison.OrdinalIgnoreCase))
+				.ToList()
+			: [];
+		return Task.FromResult(linked);
+	}
+
 	public Task ReindexAsync() => Task.CompletedTask;
 }
 
@@ -94,6 +106,7 @@ internal sealed class HelpApiHandler(IHelpTopicResolver resolver, bool isStaff) 
 		{
 			"api/help" => (await controller.Index()).Result,
 			"api/help/entry" => (await controller.Entry(topic)).Result,
+			"api/help/related" => (await controller.Related(topic)).Result,
 			"api/help/admin" => (await controller.AdminIndex()).Result,
 			"api/help/admin/entry" => (await controller.AdminEntry(topic)).Result,
 			_ => null

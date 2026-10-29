@@ -15,6 +15,12 @@ public sealed record HelpEntry(string Topic, string Markdown)
 /// <param name="Topics">Candidate topic names, ordered case-insensitively.</param>
 public sealed record HelpCandidates(IReadOnlyList<string> Topics);
 
+/// <summary>The topics around one help topic, by the help's own links.</summary>
+/// <param name="Topic">The topic as the index names it (<c>Mail</c> for <c>@mail</c>), or null when nothing answered.</param>
+/// <param name="Linked">What the topic's page links to, in reading order.</param>
+/// <param name="Nearby">What those link to, breadth-first outward, each topic once.</param>
+public sealed record HelpRelatedTopics(string? Topic, IReadOnlyList<string> Linked, IReadOnlyList<string> Nearby);
+
 /// <summary>
 /// Resolves a help topic the way the game's <c>help</c> command does: literal wildcards first,
 /// then a prefix match, then PennMUSH's fuzzy pattern.
@@ -56,4 +62,12 @@ public interface IHelpTopicResolver
 
 	/// <summary>Topic names whose bodies contain <paramref name="searchTerm"/>, ordered case-insensitively.</summary>
 	ValueTask<IReadOnlyList<string>> SearchContentAsync(string corpus, string searchTerm);
+
+	/// <summary>
+	/// The topics around <paramref name="topic"/>: at most <paramref name="linkedLimit"/> its page links to, then at
+	/// most <paramref name="nearbyLimit"/> more found by following links breadth-first from those. Topics on the same
+	/// page are left out, and so is the corpus's index topic (the one named as the corpus is), which is never
+	/// followed either: it links everything.
+	/// </summary>
+	ValueTask<HelpRelatedTopics> RelatedAsync(string corpus, string topic, int linkedLimit, int nearbyLimit);
 }

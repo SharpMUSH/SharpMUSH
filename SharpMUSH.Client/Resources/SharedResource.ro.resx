@@ -5089,6 +5089,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Niciun rezultat} one {# rezultat} few {# rezultate} other {# de rezultate}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Legate de aici</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>În apropiere</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Mai multe subiecte</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Ajutor pentru administratori</value>
   </data>

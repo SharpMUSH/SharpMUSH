@@ -4398,6 +4398,15 @@
   <data name="NavHelpMatches" xml:space="preserve">
     <value>{count, plural, =0 {Aucun résultat} one {# résultat} other {# résultats}}</value>
   </data>
+  <data name="NavHelpLinked" xml:space="preserve">
+    <value>Liés depuis cette page</value>
+  </data>
+  <data name="NavHelpNearby" xml:space="preserve">
+    <value>À proximité</value>
+  </data>
+  <data name="NavHelpMoreTopics" xml:space="preserve">
+    <value>Autres sujets</value>
+  </data>
   <data name="NavHelpAdmin" xml:space="preserve">
     <value>Aide d'administration</value>
   </data>

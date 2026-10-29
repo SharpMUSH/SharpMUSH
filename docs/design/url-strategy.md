@@ -140,7 +140,8 @@ to a game's editable content.
 - The backing API is `GET /api/help`, `GET /api/help/entry?topic=…`, and their
   `/api/help/admin` counterparts. The topic travels as a query value because
   topic names include `%#`, `#-1 exception` and `?`, which a path segment cannot
-  carry intact.
+  carry intact. `GET /api/help/related?topic=…` (general corpus only) feeds the
+  sidebar: what the topic's page links to, then breadth-first outward.
 
 Two wiki pages do live in the `Help` namespace — the Markdown Guide and the
 Application Schema Guide, both seeded at startup. They document the *portal's*
