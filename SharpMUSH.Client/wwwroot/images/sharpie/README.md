@@ -16,4 +16,9 @@ shown in the welcome view at a time. All three retain the original transparent
 background and three-color palette. Explicit administrator artwork overrides
 and approved genre selections take precedence over these neutral defaults.
 
-Fantasy minimalist v03 and Science Fiction minimalist v02 were explicitly approved for onboarding by the owner on 2026-10-20. The PNGs are byte-identical native-transparent originals from the onboarding inventory. Their approval is specific to these two images; other candidates remain excluded.
+Fantasy minimalist v03 and Science Fiction minimalist v02 were explicitly approved for onboarding by the owner on 2026-10-20. Their approval is specific to these two images; other candidates remain excluded.
+
+The raster artwork ships as WebP, 512 px wide, quality 90, keeping the original transparency and
+aspect ratio. The portal never draws one wider than 16rem (256 CSS px), so 512 px covers a 2x
+screen. Convert a new image the same way and give its `SharpieArtCatalog` entry the converted
+width and height. The full-size PNG masters are in this repository's history at commit 1d9396ef.
