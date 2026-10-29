@@ -6500,8 +6500,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>This scene is not running, so it takes no poses.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>You can watch this scene, but your character is not approved to take part in scenes, so you cannot pose here.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>You can watch this scene, but your character cannot pose in it: that needs the scene.join and scene.pose permissions.</value>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
     <value>The game did not record your pose.</value>
@@ -7280,8 +7280,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Schedule a scene</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Approval needed</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Needs scene.create</value>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">
     <value>The scene has no room until it starts: it runs wherever its host is when they start it.</value>

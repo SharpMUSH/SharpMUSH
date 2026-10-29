@@ -31,25 +31,20 @@ public static class SceneFunctions
 	private const string NoSuchDetailField = "#-1 UNKNOWN DETAIL FIELD";
 
 	/// <summary>
-	/// Returns true when the viewer may see this scene. Public scenes are visible
-	/// to anyone; non-public scenes are visible only to their members. Mirrors the
-	/// wiki draft-visibility convention.
+	/// Returns true when the viewer may see this scene. Public scenes are visible to anyone holding
+	/// <c>scene.view</c>; every scene is visible to its members. Mirrors the wiki draft-visibility convention.
 	/// </summary>
 	private static async ValueTask<bool> SceneVisibleToAsync(ISceneService service, Contracts.Scene scene, IMUSHCodeParser parser)
 	{
-		if (scene.IsPublic)
-		{
-			return true;
-		}
-
 		var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
 		// The viewer is the ENACTOR (%#, the player asking) — not the executor. Verbs run via the WIZARD
 		// Scene Logger $-commands, so keying on the executor would make every read see the logger's view;
 		// keying on the enactor gives each player their own visibility (a member sees their own scene).
 		var enactor = await parser.CurrentState.KnownEnactorObject(mediator);
 
-		// A wizard enactor still sees every scene.
-		if (await enactor.IsWizard())
+		// A public scene is read with scene.view; a wizard enactor still sees every scene.
+		if ((scene.IsPublic && await ScenePermissions.AllowsAsync(enactor, ScenePermissions.View, ExecutionBudget.CurrentToken))
+			|| await enactor.IsWizard())
 		{
 			return true;
 		}

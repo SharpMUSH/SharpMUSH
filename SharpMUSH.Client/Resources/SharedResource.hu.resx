@@ -5759,8 +5759,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ez a jelenet nem fut, ezért nem fogad pózokat.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Ezt a jelenetet nézheted, de a karaktered nincs jóváhagyva a jelenetekben való részvételre, ezért itt nem posztolhatsz.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Ezt a jelenetet nézheted, de a karaktered nem posztolhat benne: ehhez a scene.join és a scene.pose jogosultság kell.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5962,8 +5962,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Jelenet ütemezése</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Jóváhagyás szükséges</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>scene.create szükséges</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

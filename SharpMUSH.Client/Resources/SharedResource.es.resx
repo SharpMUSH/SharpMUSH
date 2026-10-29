@@ -5759,8 +5759,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Esta escena no está en curso, así que no admite poses.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Puedes ver esta escena, pero tu personaje no está aprobado para participar en escenas, así que no puedes publicar aquí.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Puedes ver esta escena, pero tu personaje no puede publicar en ella: necesita los permisos scene.join y scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5962,8 +5962,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Programar una escena</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Se necesita aprobación</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Requiere scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

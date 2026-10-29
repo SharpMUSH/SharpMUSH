@@ -274,7 +274,7 @@ public class PlayPageD1Tests : TrackingBunitContext
 	/// repeats what the game said, and says the join failed when the game said nothing.
 	/// </summary>
 	[Test]
-	[Arguments("You are not approved to take part in scenes.", "You are not approved to take part in scenes.")]
+	[Arguments("Permission denied. You need the scene.pose permission.", "Permission denied. You need the scene.pose permission.")]
 	[Arguments(null, "The game did not let you join this scene.")]
 	public async Task ARefusedJoin_SaysWhyInTheJoinBar(string? said, string shown)
 	{

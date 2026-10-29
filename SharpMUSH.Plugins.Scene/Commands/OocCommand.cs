@@ -28,11 +28,11 @@ namespace SharpMUSH.Plugins.Scene.Commands;
 /// path, with type and source <c>ooc</c>, and broadcast like any other pose. The recorded text
 /// is exactly the line the room heard, less the <c>&lt;OOC&gt;</c> marker (the type carries it): the speech
 /// name, not the scene persona, since out of character is the player speaking. Anywhere else nothing is
-/// recorded. The speaker must also be approved when they speak, re-checked on every line as the scene
-/// package's capture hooks do, because focus and membership survive a revoked approved role. The rule is
-/// the package's own <c>FUN`IS`APPROVED</c>, evaluated on its Scene Logger as the logger, so a game that
-/// redefines it is obeyed here too; without the package it is the package's default, a player that
-/// <c>isapproved()</c>.</para>
+/// recorded. The speaker must also hold <c>scene.pose</c> when they speak, re-checked on every line as the
+/// scene package's capture hooks do, because focus and membership survive a revoked permission. The rule is
+/// the package's own <c>FUN`MAY</c>, evaluated on its Scene Logger as the logger, so a game that redefines
+/// it is obeyed here too; without the package it is the package's default, a player holding
+/// <c>scene.pose</c>.</para>
 ///
 /// <para>This is the "game's OOC command" the portal's OOC band assumes (design handoff §7.2): the band
 /// draws a pose by its type.</para>
@@ -121,7 +121,7 @@ public static class OocCommand
 		if (await sceneService.GetCurrentSceneAsync(speaker) is not Contracts.Scene focused
 			|| await sceneService.GetActiveSceneInRoomAsync(room) is not Contracts.Scene here
 			|| focused.Id != here.Id
-			|| !await IsApprovedAsync(parser, executor))
+			|| !await MayPoseAsync(parser, executor))
 			return;
 
 		var recorded = await sceneService.AddPoseAsync(here.Id, speaker, showAs: string.Empty, room, type: Tag, source: Tag, tags: [],
@@ -130,29 +130,33 @@ public static class OocCommand
 			await SceneBroadcast.PublishSceneEventAsync(parser, here.Id, "pose", pose);
 	}
 
-	private const string ApprovalRule = "FUN`IS`APPROVED";
+	private const string PermissionRule = "FUN`MAY";
 
 	/// <summary>
-	/// Whether the speaker may be written into a scene: the scene package's <c>FUN`IS`APPROVED</c>, the rule
-	/// its capture hooks and verbs re-check on every write, or — when the package or that attribute is
-	/// absent — the package's default, <c>and(hastype(%0,PLAYER),isapproved(%0))</c>.
+	/// Whether the speaker may be written into a scene: the scene package's <c>FUN`MAY</c> asked for
+	/// <c>scene.pose</c>, the rule its capture hooks and verbs re-check on every write, or — when the package or
+	/// that attribute is absent — the package's default, <c>cand(hastype(%0,PLAYER),permission(%0,scene.pose))</c>.
 	/// </summary>
-	private static async ValueTask<bool> IsApprovedAsync(IMUSHCodeParser parser, AnySharpObject speaker)
+	private static async ValueTask<bool> MayPoseAsync(IMUSHCodeParser parser, AnySharpObject speaker)
 	{
 		if (await SceneLogger.FindAsync(parser.ServiceProvider) is { } logger)
 		{
 			var attributes = parser.ServiceProvider.GetRequiredService<IAttributeService>();
-			if (await attributes.GetAttributeAsync(logger, logger, ApprovalRule, IAttributeService.AttributeMode.Read)
+			if (await attributes.GetAttributeAsync(logger, logger, PermissionRule, IAttributeService.AttributeMode.Read)
 				is SharpAttribute[])
 			{
-				var answer = await attributes.EvaluateAttributeFunctionAsync(parser, logger, logger, ApprovalRule,
-					new Dictionary<string, CallState> { ["0"] = new(speaker.Object().DBRef.ToString()) },
+				var answer = await attributes.EvaluateAttributeFunctionAsync(parser, logger, logger, PermissionRule,
+					new Dictionary<string, CallState>
+					{
+						["0"] = new(speaker.Object().DBRef.ToString()),
+						["1"] = new(ScenePermissions.Pose)
+					},
 					ignorePermissions: true);
 				return IsTrue(answer.ToPlainText());
 			}
 		}
 
-		return speaker.IsPlayer && await speaker.IsApproved();
+		return speaker.IsPlayer && await ScenePermissions.AllowsAsync(speaker, ScenePermissions.Pose, ExecutionBudget.CurrentToken);
 	}
 
 	/// <summary>MUSH truth: empty, a number equal to zero, and an error (<c>#-…</c>) are false.</summary>

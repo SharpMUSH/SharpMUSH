@@ -5759,8 +5759,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Den här scenen pågår inte, så den tar inte emot poser.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Du kan titta på den här scenen, men din karaktär är inte godkänd för att delta i scener, så du kan inte posta här.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Du kan titta på den här scenen, men din karaktär kan inte posta i den: det kräver behörigheterna scene.join och scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5962,8 +5962,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Planera en scen</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Godkännande krävs</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Kräver scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

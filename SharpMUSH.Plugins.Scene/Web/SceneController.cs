@@ -42,7 +42,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 [ApiController]
 [Route("api/scenes")]
 [AllowAnonymous]
-public class SceneController(ISceneService sceneService) : ControllerBase
+public class SceneController(ISceneService sceneService, ISceneReadAccess readAccess) : ControllerBase
 {
 	/// <summary>Scene data returned by the API. Timestamps are UTC Unix-millis (long).</summary>
 	public record SceneDto(
@@ -120,13 +120,19 @@ public class SceneController(ISceneService sceneService) : ControllerBase
 	private string? CallerDbref => CallerRef?.ToString();
 
 	/// <summary>
-	/// True when <paramref name="scene"/> is visible to the caller: it is public, the caller owns
-	/// it, or the caller is a member of it. Non-public scenes require an authenticated character.
-	/// The rule itself lives in <see cref="SceneVisibility"/> because the scene hub asks the same
-	/// question of the same scenes, and two copies of it would drift.
+	/// True when <paramref name="scene"/> is visible to the caller: it is public and the caller holds
+	/// <c>scene.view</c>, the caller owns it, or the caller is a member of it. Non-public scenes require an
+	/// authenticated character. The rule itself lives in <see cref="SceneVisibility"/> because the scene hub
+	/// asks the same question of the same scenes, and two copies of it would drift.
 	/// </summary>
-	private Task<bool> CanSeeAsync(Contracts.Scene scene) =>
-		SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef);
+	private async Task<bool> CanSeeAsync(Contracts.Scene scene) =>
+		await SceneVisibility.CanSeeAsync(sceneService, scene, CallerRef, await MayReadAsync());
+
+	private bool? _mayRead;
+
+	/// <summary>Whether the caller holds <c>scene.view</c>, asked once per request.</summary>
+	private async ValueTask<bool> MayReadAsync() =>
+		_mayRead ??= await readAccess.MayReadAsync(CallerRef, HttpContext.RequestAborted);
 
 	/// <summary>
 	/// GET /api/scenes?filter=active|recent|scheduled&amp;count=50

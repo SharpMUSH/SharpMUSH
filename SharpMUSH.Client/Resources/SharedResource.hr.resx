@@ -5759,8 +5759,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Ova scena nije u tijeku pa ne prima poze.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Ovu scenu možeš gledati, ali tvoj lik nije odobren za sudjelovanje u scenama, pa ovdje ne možeš objavljivati.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Ovu scenu možeš gledati, ali tvoj lik u njoj ne može objavljivati: za to su potrebna dopuštenja scene.join i scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5962,8 +5962,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Zakaži scenu</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Potrebno odobrenje</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Potrebno scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

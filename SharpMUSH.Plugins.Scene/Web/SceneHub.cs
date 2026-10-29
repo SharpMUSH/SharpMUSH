@@ -45,7 +45,7 @@ namespace SharpMUSH.Plugins.Scene.Web;
 /// it without touching anything else.</para>
 /// </summary>
 [Authorize]
-public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logger) : Hub
+public sealed class SceneHub(ISceneService sceneService, ISceneReadAccess readAccess, ILogger<SceneHub> logger) : Hub
 {
 	/// <summary>The SignalR client method the portal subscribes to for live scene events.</summary>
 	public const string ReceiveSceneMessageMethod = "ReceiveSceneMessage";
@@ -92,7 +92,7 @@ public sealed class SceneHub(ISceneService sceneService, ILogger<SceneHub> logge
 		var character = RequireCharacter();
 
 		if (await sceneService.GetSceneAsync(id) is not Contracts.Scene scene
-			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character))
+			|| !await SceneVisibility.CanSeeAsync(sceneService, scene, character, await readAccess.MayReadAsync(character)))
 		{
 			logger.LogWarning(
 				"[SceneHub] Connection {ConnectionId} (char:{Character}) was refused scene group {Group}: " +

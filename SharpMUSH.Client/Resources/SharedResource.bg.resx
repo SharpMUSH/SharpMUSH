@@ -5759,8 +5759,8 @@
   <data name="RolComposeNotRunning" xml:space="preserve">
     <value>Тази сцена не е активна, затова не приема пози.</value>
   </data>
-  <data name="RolComposeNotApproved" xml:space="preserve">
-    <value>Можеш да гледаш тази сцена, но героят ти не е одобрен за участие в сцени, затова не можеш да пишеш тук.</value>
+  <data name="RolComposeNoPermission" xml:space="preserve">
+    <value>Можеш да гледаш тази сцена, но героят ти не може да пише в нея: за това са нужни правата scene.join и scene.pose.</value>
     <comment>MT</comment>
   </data>
   <data name="RolComposeRefused" xml:space="preserve">
@@ -5962,8 +5962,8 @@
   <data name="RolScheduleScene" xml:space="preserve">
     <value>Насрочи сцена</value>
   </data>
-  <data name="RolSceneApprovalNeeded" xml:space="preserve">
-    <value>Нужно е одобрение</value>
+  <data name="RolSceneCreateNeeded" xml:space="preserve">
+    <value>Нужно е scene.create</value>
     <comment>MT</comment>
   </data>
   <data name="RolScheduleSceneHint" xml:space="preserve">

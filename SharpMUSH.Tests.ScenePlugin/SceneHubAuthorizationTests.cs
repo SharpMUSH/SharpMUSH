@@ -28,10 +28,10 @@ public class SceneHubAuthorizationTests
 	/// <see cref="SceneFixture.PrincipalFor"/> builds. Both must be refused.
 	/// </summary>
 	private static (SceneHub hub, RecordingGroupManager groups) HubFor(
-		FixedSceneService service, string? claimValue, bool authenticated = true)
+		FixedSceneService service, string? claimValue, bool authenticated = true, bool mayRead = true)
 	{
 		var groups = new RecordingGroupManager();
-		var hub = new SceneHub(service, NullLogger<SceneHub>.Instance)
+		var hub = new SceneHub(service, new SceneReadAccessStub(mayRead), NullLogger<SceneHub>.Instance)
 		{
 			Groups = groups,
 			Context = new FakeHubCallerContext(SceneFixture.PrincipalFor(claimValue, authenticated)),
@@ -99,6 +99,29 @@ public class SceneHubAuthorizationTests
 	{
 		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
 		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid);
+
+		await hub.JoinScene("scene-1");
+
+		await Assert.That(groups.Added).Contains(("conn-001", "scene:scene-1"));
+	}
+
+	/// <summary>A public scene is read with scene.view: a character without it is refused as for a private scene.</summary>
+	[Test]
+	public async Task JoinScene_PublicScene_RefusesACharacterWithoutSceneView()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#1", isPublic: true));
+		var (hub, groups) = HubFor(service, SceneFixture.StrangerObjid, mayRead: false);
+
+		await Assert.That(async () => await hub.JoinScene("scene-1")).Throws<HubException>();
+		await Assert.That(groups.Added).IsEmpty();
+	}
+
+	/// <summary>Without scene.view a character still follows a scene it is in.</summary>
+	[Test]
+	public async Task JoinScene_PublicSceneCallerIsMember_IsAdmittedWithoutSceneView()
+	{
+		var service = new FixedSceneService(SceneFixture.SceneOwnedBy("#7", isPublic: true)) { MemberDbref = "#1" };
+		var (hub, groups) = HubFor(service, SceneFixture.GodObjid, mayRead: false);
 
 		await hub.JoinScene("scene-1");
 

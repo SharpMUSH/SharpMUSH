@@ -13,20 +13,21 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Tests.Integration.Scenes;
 
 /// <summary>
-/// The approval boundary, end to end: the engine's <c>approved</c> role and <c>isapproved()</c> predicate,
-/// the bundled <c>scene</c> package's <c>+scene</c> verbs that consume them, and the wizard lockdown on the
-/// primitive <c>@scene</c> surface underneath.
+/// The scene permission boundary, end to end: the bundled <c>scene</c> package's <c>scene.view</c>,
+/// <c>scene.join</c>, <c>scene.pose</c> and <c>scene.create</c>, the <c>+scene</c> verbs that ask for them, the
+/// grants that give them to the <c>approved</c> role by default, and the wizard lockdown on the primitive
+/// <c>@scene</c> surface underneath.
 ///
-/// <para>The rule under test: a CHARACTER is required for any scene participation, viewing is open to every
-/// character approved or not, and ASSOCIATION — joining, owning, administering, posing into a scene — needs
-/// approval. An unapproved character has no scenes and must not be able to acquire one by any route the
-/// package exposes. Guests are never approved, whatever else is set on them.</para>
+/// <para>The rule under test: a CHARACTER is required for any scene participation, viewing is open to everyone
+/// by default, and ASSOCIATION — joining, owning, administering, posing into a scene — needs the permission each
+/// verb names. A character without them has no scenes and must not be able to acquire one by any route the
+/// package exposes. A game moves the permissions with the role tools, and the verbs follow.</para>
 ///
 /// <para>The negative assertions are the point. Each refused verb is checked twice: the player is told no,
 /// AND the membership list is re-read to prove nothing was written anyway.</para>
 /// </summary>
 [NotInParallel]
-public class SceneApprovalIntegrationTests
+public class ScenePermissionIntegrationTests
 {
 	[ClassDataSource<ServerWebAppFactory>(Shared = SharedType.PerTestSession)]
 	public required ServerWebAppFactory WebAppFactoryArg { get; init; }
@@ -38,8 +39,8 @@ public class SceneApprovalIntegrationTests
 
 	private static readonly string Tag = Guid.NewGuid().ToString("N")[..8];
 
-	/// <summary>The refusal the package's INC`REQUIRE`APPROVED guard emits.</summary>
-	private const string NotApproved = "You are not approved to take part in scenes.";
+	/// <summary>The refusal the package's FUN`DENY gives for a missing permission.</summary>
+	private static string Needs(string permission) => $"Permission denied. You need the {permission} permission.";
 
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText().Trim();
@@ -130,38 +131,44 @@ public class SceneApprovalIntegrationTests
 	}
 
 	[Test]
-	public async Task ApprovalBoundary_FullMatrix()
+	public async Task ScenePermissionBoundary_FullMatrix()
 	{
 		static void Log(string m) => TestDiagnostics.WriteLine(m);
 
 		await God1("@set #1=WIZARD");
 
-		// ---- 1. The predicate itself ------------------------------------------------------------
+		// ---- 1. The default grants ----------------------------------------------------------------
 		var (approved, approvedHandle) = await CreatePlayerAsync($"App_{Tag}");
 		var (unapproved, unapprovedHandle) = await CreatePlayerAsync($"Unapp_{Tag}");
 		var (guest, guestHandle) = await CreatePlayerAsync($"Guesty_{Tag}");
+		var (reader, readerHandle) = await CreatePlayerAsync($"Reader_{Tag}");
 
 		await God1($"@role/assign {approved}=approved");
 		await GrantGuestPowerAsync(guest);
-		// Deliberately ALSO give the guest the approved role: the guest term must win regardless.
-		await God1($"@role/assign {guest}=approved");
 		await Assert.That(await Eval($"haspower({guest}, Guest)")).IsEqualTo("1")
 			.Because("the rest of this beat is meaningless if the Guest power did not take");
 
-		await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("1")
-			.Because("the approved role makes an ordinary character approved");
-		await Assert.That(await Eval($"isapproved({unapproved})")).IsEqualTo("0")
-			.Because("a character with neither staff bit nor the flag is not approved");
-		await Assert.That(await Eval("isapproved(#1)")).IsEqualTo("1")
-			.Because("staff are implicitly approved — 'royalty or above, or approved'");
-		await Assert.That(await Eval($"isapproved({guest})")).IsEqualTo("0")
-			.Because("a guest is never approved even when the flag is set on it");
-		Log($"[PREDICATE] approved={approved} unapproved={unapproved} guest={guest} — all four answers correct");
+		foreach (var permission in new[] { "scene.join", "scene.pose", "scene.create" })
+		{
+			await Assert.That(await Eval($"permission({approved},{permission})")).IsEqualTo("1")
+				.Because($"the package grants {permission} to the approved role");
+			await Assert.That(await Eval($"permission(#1,{permission})")).IsEqualTo("1")
+				.Because($"and to wizards");
+			await Assert.That(await Eval($"permission({unapproved},{permission})")).IsEqualTo("0")
+				.Because($"a character without the approved role does not hold {permission}");
+			await Assert.That(await Eval($"permission({guest},{permission})")).IsEqualTo("0")
+				.Because($"nor does a guest");
+		}
 
-		// ---- 2. Stage: a room, the three players, and the Scene Logger co-located ----------------
+		await Assert.That(await Eval($"permission({unapproved},scene.view)")).IsEqualTo("1")
+			.Because("the package grants scene.view to everyone");
+		await Assert.That(await Eval($"permission({guest},scene.view)")).IsEqualTo("1");
+		Log($"[GRANTS] approved={approved} unapproved={unapproved} guest={guest} — the defaults hold");
+
+		// ---- 2. Stage: a room, the players, and the Scene Logger co-located ----------------------
 		var digOut = (await God1($"@dig ApprovalStage_{Tag}")).Message.ToPlainText().Trim();
 		var roomDbref = Num(digOut);
-		foreach (var who in new[] { approved, unapproved, guest })
+		foreach (var who in new[] { approved, unapproved, guest, reader })
 			await God1($"@tel {who}={digOut}");
 
 		var registry = (IPackageRegistryService)WebAppFactoryArg.Services.GetRequiredService<ISharpDatabase>();
@@ -178,84 +185,100 @@ public class SceneApprovalIntegrationTests
 			await God1($"@tel {loggerDbref}={digOut}");
 			await Assert.That(await EvalNum($"loc({loggerDbref})")).IsEqualTo(roomDbref);
 
-			// ---- 3. An approved character may own a scene -------------------------------------------
+			// ---- 3. A character holding scene.create may own a scene ----------------------------------
 			var createOut = await RunAs(approvedHandle, $"+scene/create Approval Test {Tag}");
 			Log($"[CREATE approved] {createOut}");
 			var sceneId = await Eval($"scenefocus({approved})");
-			await Assert.That(sceneId).IsNotEmpty().Because("an approved character may create and own a scene");
+			await Assert.That(sceneId).IsNotEmpty().Because("a character holding scene.create may create and own a scene");
 			await Assert.That(sceneId).DoesNotStartWith("#-1");
 			await God1($"@scene/set {sceneId}/public=1");
 			await Assert.That(await EvalNum($"scene({sceneId}, owner)")).IsEqualTo(Num(approved));
 
-			// ---- 4. Every ASSOCIATING route is closed to an unapproved character ---------------------
+			// ---- 4. Every ASSOCIATING route is closed without its permission --------------------------
 			// Each of these is a distinct way the package could hand out a membership edge.
-			var associatingVerbs = new (string Command, string What)[]
+			var associatingVerbs = new (string Command, string Permission)[]
 			{
-				($"+scene/join {sceneId}", "join"),
-				($"+scene/tag {sceneId}", "RSVP"),
-				($"+scene/activate {sceneId}", "re-activate"),
-				("+scene/as The Interloper", "set a persona"),
-				($"+scene/create Sneaky {Tag}", "create/own"),
-				($"+scene/schedule 1893456000/Sneaky Later {Tag}=A pitch", "schedule/own")
+				($"+scene/join {sceneId}", "scene.join"),
+				($"+scene/tag {sceneId}", "scene.join"),
+				($"+scene/activate {sceneId}", "scene.join"),
+				("+scene/as The Interloper", "scene.pose"),
+				($"+scene/pose {sceneId}=intrudes.", "scene.join"),
+				($"+scene/create Sneaky {Tag}", "scene.create"),
+				($"+scene/schedule 1893456000/Sneaky Later {Tag}=A pitch", "scene.create")
 			};
 
-			foreach (var (command, what) in associatingVerbs)
+			foreach (var (command, permission) in associatingVerbs)
 			{
 				var output = await RunAs(unapprovedHandle, command);
 				Log($"[REFUSED unapproved] {command} -> {output.Replace("\n", " | ")}");
-				await Assert.That(output).Contains(NotApproved)
-					.Because($"an unapproved character must be refused when trying to {what}");
+				await Assert.That(output).Contains(Needs(permission))
+					.Because($"{command} needs {permission}, and the refusal names it");
 				await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(unapproved))
-					.Because($"the refusal of {what} must also mean nothing was written");
+					.Because($"the refusal of {command} must also mean nothing was written");
 			}
 
-			await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(unapproved))
-				.Because("no refused verb may leave a membership edge behind");
 			await Assert.That(await Eval($"scenefocus({unapproved})")).StartsWith("#-1")
-				.Because("an unapproved character is focused on nothing");
+				.Because("a character without scene.join is focused on nothing");
 			await Assert.That(await EvalAs(unapprovedHandle, "scenelist(mine)")).IsEmpty()
-				.Because("an unapproved character has no scenes");
+				.Because("a character without scene.join has no scenes");
 
-			// ---- 5. A GUEST is refused too, flag or no flag ------------------------------------------
+			// ---- 5. A GUEST is refused too -----------------------------------------------------------
 			var guestJoin = await RunAs(guestHandle, $"+scene/join {sceneId}");
 			Log($"[REFUSED guest] +scene/join -> {guestJoin.Replace("\n", " | ")}");
-			await Assert.That(guestJoin).Contains(NotApproved)
-				.Because("guests never participate in scenes");
+			await Assert.That(guestJoin).Contains(Needs("scene.join"))
+				.Because("guests do not hold scene.join by default");
 			await Assert.That(await MembersAsync(sceneId)).DoesNotContain(Num(guest));
 
-			// ---- 6. Viewing stays OPEN to an unapproved character ------------------------------------
+			// ---- 6. Viewing stays OPEN to a character that may not take part -------------------------
 			var browse = await RunAs(unapprovedHandle, "+scene");
 			Log($"[VIEW unapproved] +scene -> {browse.Replace("\n", " | ")[..Math.Min(160, browse.Replace("\n", " | ").Length)]}");
-			await Assert.That(browse).DoesNotContain(NotApproved)
-				.Because("browsing the scene list needs no approval");
+			await Assert.That(browse).DoesNotContain("Permission denied")
+				.Because("browsing the scene list needs only scene.view");
 			await Assert.That(browse).Contains("Scenes:");
 
 			var upcoming = await RunAs(unapprovedHandle, "+scene/upcoming");
-			await Assert.That(upcoming).DoesNotContain(NotApproved)
-				.Because("viewing the schedule needs no approval");
+			await Assert.That(upcoming).DoesNotContain("Permission denied")
+				.Because("viewing the schedule needs only scene.view");
 			await Assert.That(upcoming).Contains("Scheduled Scenes");
 
 			var info = await RunAs(unapprovedHandle, $"+scene {sceneId}");
 			Log($"[VIEW unapproved] +scene {sceneId} -> {info.Replace("\n", " | ")[..Math.Min(160, info.Replace("\n", " | ").Length)]}");
-			await Assert.That(info).DoesNotContain(NotApproved)
-				.Because("reading scene information needs no approval");
+			await Assert.That(info).DoesNotContain("Permission denied")
+				.Because("reading scene information needs only scene.view");
 			await Assert.That(info).Contains($"Scene {sceneId}");
 
-			// ---- 7. Approval is checked at POSE time, so revoking it stops capture immediately --------
+			// ---- 7. A game changes the bar: the permissions move and the verbs follow -----------------
+			await God1($"@permission/allow {unapproved}=scene.join");
+			var allowedJoin = await RunAs(unapprovedHandle, $"+scene/join {sceneId}");
+			Log($"[ALLOWED] +scene/join -> {allowedJoin.Replace("\n", " | ")}");
+			await Assert.That(await MembersAsync(sceneId)).Contains(Num(unapproved))
+				.Because("scene.join allowed on the character lets it join without the approved role");
+			await RunAs(unapprovedHandle, "pose tries to pose with scene.join alone.");
+			await Assert.That(await EvalAs(unapprovedHandle, $"sceneposes({sceneId},{unapproved})")).IsEmpty()
+				.Because("joining is not posing: without scene.pose nothing it says is recorded");
+
+			await God1($"@permission/deny {reader}=scene.view");
+			var deniedBrowse = await RunAs(readerHandle, "+scene");
+			await Assert.That(deniedBrowse).Contains(Needs("scene.view"))
+				.Because("without scene.view the list says why instead of listing nothing");
+			await Assert.That(await EvalAs(readerHandle, $"scene({sceneId}, status)")).StartsWith("#-1")
+				.Because("and the scene functions hide a public scene from a reader without scene.view");
+			await Assert.That(await EvalAs(readerHandle, "scenelist(active)")).DoesNotContain(sceneId);
+
+			// ---- 8. The permission is checked at POSE time, so revoking it stops capture immediately ---
 			var posesBefore = await Eval($"scene({sceneId}, posecount)");
 			await RunAs(approvedHandle, "pose tests that capture works while approved.");
 			var posesWhileApproved = await Eval($"scene({sceneId}, posecount)");
 			await Assert.That(int.Parse(posesWhileApproved)).IsGreaterThan(int.Parse(posesBefore))
-				.Because("an approved, focused character's pose is captured");
+				.Because("a focused character holding scene.pose has its pose captured");
 
 			await God1($"@role/unassign {approved}=approved");
-			await Assert.That(await Eval($"isapproved({approved})")).IsEqualTo("0");
-			await RunAs(approvedHandle, "pose tests that capture stops the moment approval is revoked.");
+			await Assert.That(await Eval($"permission({approved},scene.pose)")).IsEqualTo("0");
+			await RunAs(approvedHandle, "pose tests that capture stops the moment the permission goes.");
 			var posesAfterRevoke = await Eval($"scene({sceneId}, posecount)");
 			Log($"[REVOKE] posecount before={posesBefore} approved={posesWhileApproved} after-revoke={posesAfterRevoke}");
 			await Assert.That(posesAfterRevoke).IsEqualTo(posesWhileApproved)
-				.Because("membership and focus survive revocation, so capture itself has to re-check approval");
-
+				.Because("membership and focus survive revocation, so capture itself has to re-check scene.pose");
 		}
 		finally
 		{

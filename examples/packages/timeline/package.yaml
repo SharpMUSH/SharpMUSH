@@ -1,7 +1,7 @@
 format: "1.16"
 package: timeline
 title: "IC timeline"
-version: 1.1.0
+version: 1.2.0
 authors: [SharpMUSH]
 description: "IC dates on scenes and a timeline for each character: a scene is dated in the game's IC calendar when it starts, +scene/date dates a flashback, and +timeline lists a character's finished scenes in IC order."
 license: MIT
@@ -18,7 +18,7 @@ plugins: [scene]
 # The scene package keeps the scenes and their details; this one adds two details and reads them back.
 depends:
   - package: scene
-    version: ">=1.13"
+    version: ">=1.18"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
@@ -100,10 +100,10 @@ objects:
         value: |-
           @assert not(strmatch(%q<date_scene>,#-1*))=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`NOFOCUS),warn); @assert not(strmatch(scene(%q<date_scene>,status),#-1*))=@pemit %#=notice(SCENE,No such scene: %q<date_scene>,warn)
         flags: [cmdsyntax]
-      # Only an approved player who owns the scene, or staff, dates it: the rule +scene/set keeps.
+      # Only a player holding scene.create who owns the scene, or staff, dates it: the rule +scene/set keeps.
       INC`DATE`OWNER:
         value: |-
-          @assert u({{scene/logger}}/FUN`IS`APPROVED,%#)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`APPROVAL),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<date_scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`NOTOWNER),error)
+          @assert u({{scene/logger}}/FUN`MAY,%#,scene.create)=@pemit %#=notice(SCENE,u({{scene/logger}}/FUN`DENY,scene.create),error); @assert u({{scene/logger}}/FUN`OWNS,%#,%q<date_scene>)=@pemit %#=notice(SCENE,get({{scene/logger}}/DATA`DENY`NOTOWNER),error)
         flags: [cmdsyntax]
       INC`DATE`SET:
         value: |-

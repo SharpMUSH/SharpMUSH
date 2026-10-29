@@ -78,8 +78,8 @@ There is no `SceneOptions` config category. Every setting is policy, kept on the
 - `recall-rounds`: how many rounds of poses a bare `+scene/recall` shows. `2` by default.
 - `schedule-days`: how many days ahead a bare `+scene/upcoming` looks. `30` by default.
 
-The refusal strings (``DATA`DENY`APPROVAL``, ``DATA`DENY`NOFOCUS``, ``DATA`DENY`NOTOWNER`` and the
-rest) stay plain ``DATA`` attributes on the Scene Logger.
+The refusal strings (``DATA`DENY`NOFOCUS``, ``DATA`DENY`NOTOWNER`` and the rest) stay plain ``DATA``
+attributes on the Scene Logger. A missing scene permission is refused with ``FUN`DENY``, which names it.
 
 ## Player commands
 
