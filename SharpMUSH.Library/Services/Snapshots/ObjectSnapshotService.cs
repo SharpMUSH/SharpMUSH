@@ -296,8 +296,8 @@ public sealed partial class ObjectSnapshotService(
 				if (await mediator.Send(new GetObjectFlagQuery(flag), ct) is null) throw Error("missing", "An object flag no longer exists: " + flag);
 		if (selection.Locks)
 			foreach (var name in snapshot.AbsentLocks)
-				if (await locks.AuthorizeWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new())) is Error<string> refused)
-					throw Error("denied", $"Lock {name}: {refused.Value}");
+				if (!await locks.CanWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), new())))
+					throw Error("denied", "Permission denied for lock: " + name);
 		if (selection.Locks)
 			foreach (var (name, value) in snapshot.Locks)
 			{
@@ -305,10 +305,8 @@ public sealed partial class ObjectSnapshotService(
 					throw Error("invalid", "Invalid lock expression or missing object: " + name);
 				var data = new SharpLockData(value.Expression, (LockService.LockFlags)value.Flags,
 					DBRef.TryParse(value.Creator, out var creator) ? creator : null);
-				if (await locks.AuthorizeWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), data)) is Error<string> refusedOld)
-					throw Error("denied", $"Lock {name}: {refusedOld.Value}");
-				if (await locks.AuthorizeWriteAsync(executor, obj, data) is Error<string> refusedNew)
-					throw Error("denied", $"Lock {name}: {refusedNew.Value}");
+				if (!await locks.CanWriteAsync(executor, obj, obj.Object().Locks.GetValueOrDefault(LockNames.Canonical(name), data)) ||
+					!await locks.CanWriteAsync(executor, obj, data)) throw Error("denied", "Permission denied for lock: " + name);
 
 			}
 	}
