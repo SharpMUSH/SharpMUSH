@@ -6020,8 +6020,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Mostrar</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Tipos de pose exibidos</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Tipos de pose exibidos ao ler</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Tipos de pose exibidos ao jogar</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# linha {label} oculta} other {# linhas {label} ocultas}}</value>

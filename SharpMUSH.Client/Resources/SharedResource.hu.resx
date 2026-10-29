@@ -6020,8 +6020,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Megjelenítés</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Megjelenített póztípusok</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Olvasáskor megjelenített póztípusok</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Játék közben megjelenített póztípusok</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label} sor elrejtve} other {# {label} sor elrejtve}}</value>

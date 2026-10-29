@@ -36,7 +36,7 @@ public static class SceneTypesRead
 			],
 			catalogue.Types.Select(t => new[]
 			{
-				t.Key, t.Label, t.Presentation, t.Tone, t.Icon, t.Hidden ? "yes" : "no",
+				t.Key, t.Label, t.Presentation, t.Tone, t.Icon, t.HiddenContexts.Any() ? string.Join(" ", t.HiddenContexts) : "no",
 				t.Order.ToString(CultureInfo.InvariantCulture),
 			}));
 

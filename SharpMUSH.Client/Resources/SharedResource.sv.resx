@@ -6020,8 +6020,11 @@
   <data name="RolPoseTypesShow" xml:space="preserve">
     <value>Visa</value>
   </data>
-  <data name="RolPoseTypesShowLegend" xml:space="preserve">
-    <value>Posetyper som visas</value>
+  <data name="RolPoseTypesShowReading" xml:space="preserve">
+    <value>Posetyper som visas vid läsning</value>
+  </data>
+  <data name="RolPoseTypesShowPlaying" xml:space="preserve">
+    <value>Posetyper som visas under spel</value>
   </data>
   <data name="RolPoseTypeLinesHidden" xml:space="preserve">
     <value>{count, plural, one {# {label}-rad dold} other {# {label}-rader dolda}}</value>
