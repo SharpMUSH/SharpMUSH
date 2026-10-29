@@ -195,7 +195,8 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		// that used to survive the character creation below.
 		var before = await AuthenticateAsync(account.AccountSessionToken);
 		await Assert.That(before.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		await Assert.That(ScopesOf(before)).IsEquivalentTo([PortalPermission.WikiRead]);
+		// What everyone holds: reading the wiki, and the scene package's scene.view.
+		await Assert.That(ScopesOf(before)).IsEquivalentTo([PortalPermission.WikiRead, "scene.view"]);
 
 		await CreateCharacterAsync(http, account.AccountSessionToken, UniqueName("Gwen"));
 
@@ -212,6 +213,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 			PortalPermission.SnapshotRestore,
 			PortalPermission.SoftcodeUse,
 			PortalPermission.WikiRead,
+			"scene.view",
 		}).Because("writing the wiki comes with the approved role, not with having a character");
 	}
 
@@ -237,7 +239,7 @@ public class NewPlayerSessionTests(ServerWebAppFactory factory)
 		var afterUnlink = await AuthenticateAsync(account.AccountSessionToken);
 
 		await Assert.That(afterUnlink.FindFirstValue(ClaimTypes.Role)).IsEqualTo(nameof(PortalRole.Guest));
-		await Assert.That(ScopesOf(afterUnlink)).IsEquivalentTo([PortalPermission.WikiRead]);
+		await Assert.That(ScopesOf(afterUnlink)).IsEquivalentTo([PortalPermission.WikiRead, "scene.view"]);
 	}
 
 	/// <summary>
