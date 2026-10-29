@@ -103,6 +103,11 @@
 	margin-block-end: 1lh;
 }
 
+/* The portal's reset takes a list's indent off, which leaves its markers left of the text. */
+.help-entry ::deep :is(ul, ol) {
+	padding-inline-start: 1.5em;
+}
+
 .help-entry ::deep :is(h2, h3) {
 	margin: 0 0 0.5em;
 }
