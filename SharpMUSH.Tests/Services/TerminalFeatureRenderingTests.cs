@@ -325,6 +325,55 @@ public class TerminalFeatureRenderingTests
 		await Assert.That(handler.Requests).IsEqualTo(0);
 	}
 
+	private static string InlinePictureMarkup(string source) => MarkupTextSerializer.Serialize(MarkupText.Concat([
+		MarkupText.Plain("See "), MarkupText.Image(source, "a cat"), MarkupText.Plain(" here.")]));
+
+	/// <summary>A terminal that draws no pictures is sent a picture's address in place of its description.</summary>
+	[Test]
+	public async Task NoPictureFeature_SendsAnInlinePicturesAddress()
+	{
+		var text = await RenderAsync(new MarkupOutputRenderer(), InlinePictureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities()));
+
+		await Assert.That(text).IsEqualTo("See https://pictures.example/cat.png here.");
+	}
+
+	/// <summary>A figure with no art is its description to a terminal, sent as the address; the game's own at <c>mud_url</c>.</summary>
+	[Test]
+	public async Task NoPictureFeature_SendsAnArtlessFiguresAddressAtTheGamesWebAddress()
+	{
+		var context = new RenderContext("telnet", new ProtocolCapabilities(), null, Handle: 7, SessionId: "s",
+			Website: "https://game.example");
+
+		var text = await RenderAsync(new MarkupOutputRenderer(), ArtlessFigureMarkup("/assets/cat.webp"), context);
+
+		await Assert.That(text.Trim()).IsEqualTo("https://game.example/pictures/png/assets/cat.webp.png");
+	}
+
+	/// <summary>Without <c>mud_url</c> there is no address to send for the game's own picture, so its description stays.</summary>
+	[Test]
+	public async Task NoPictureFeature_KeepsTheDescriptionOfAnAddressItCannotOpen()
+	{
+		var text = await RenderAsync(new MarkupOutputRenderer(), InlinePictureMarkup("/assets/cat.png"),
+			Context(new ProtocolCapabilities()));
+
+		await Assert.That(text).IsEqualTo("See a cat here.");
+	}
+
+	/// <summary>A screen reader gets the description, unless <c>SOCKSET alttext</c> says otherwise either way.</summary>
+	[Test]
+	[Arguments(false, null, "https://pictures.example/cat.png")]
+	[Arguments(true, null, "a cat")]
+	[Arguments(false, true, "a cat")]
+	[Arguments(true, false, "https://pictures.example/cat.png")]
+	public async Task AltText_FollowsTheScreenReaderUnlessPinned(bool screenReader, bool? altText, string expected)
+	{
+		var text = await RenderAsync(new MarkupOutputRenderer(), InlinePictureMarkup("https://pictures.example/cat.png"),
+			Context(new ProtocolCapabilities(ScreenReader: screenReader, Pins: new TerminalPins(AltText: altText))));
+
+		await Assert.That(text).IsEqualTo($"See {expected} here.");
+	}
+
 	[Test]
 	public async Task Links_FollowTheConnectionsFeatures()
 	{

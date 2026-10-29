@@ -68,11 +68,11 @@ public class WikiSyntaxInGameRenderingTests
 
 	/// <summary>
 	/// A surface that may show pictures (<c>@wiki</c>, or markdown rendered for an object with
-	/// Send_OOB) wraps the placeholder in the picture: a client that shows pictures draws it, and a
-	/// terminal still reads the placeholder.
+	/// Send_OOB) shows the picture: a client that shows pictures draws it, and a terminal reads its
+	/// description.
 	/// </summary>
 	[Test]
-	public async Task ImageAllowed_ShowsThePictureAndKeepsThePlaceholderForATerminal()
+	public async Task ImageAllowed_ShowsThePictureAndItsDescriptionForATerminal()
 	{
 		var rendered = RecursiveMarkdownHelper.RenderMarkdown(
 			"![SharpMUSH logo](/assets/Logo.svg){width=200px height=100}",
@@ -85,8 +85,8 @@ public class WikiSyntaxInGameRenderingTests
 		await Assert.That(html).Contains("height=\"100\"");
 		await Assert.That(html).DoesNotContain("[image:");
 		await Assert.That(rendered.Render(MarkupFormat.Mxp)).Contains("<IMAGE");
-		await Assert.That(rendered.Render(MarkupFormat.Ansi)).Contains("[image: SharpMUSH logo]");
-		await Assert.That(rendered.ToPlainText()).Contains("[image: SharpMUSH logo]");
+		await Assert.That(rendered.Render(MarkupFormat.Ansi)).Contains("[SharpMUSH logo]");
+		await Assert.That(rendered.ToPlainText()).Contains("[SharpMUSH logo]");
 	}
 
 	/// <summary>
@@ -113,7 +113,7 @@ public class WikiSyntaxInGameRenderingTests
 		var lines = RecursiveMarkdownHelper.RenderMarkdown("::: center\n![logo](/l.svg)\n:::",
 			new RecursiveMarkdownRenderer(20) { ImageAllowed = _ => true }).ToPlainText().Split('\n');
 
-		await Assert.That(lines[0].TrimEnd()).IsEqualTo("   [image: logo]");
+		await Assert.That(lines[0].TrimEnd()).IsEqualTo("       [logo]");
 	}
 
 	/// <summary>A percentage has no pixel count, so the picture is left its own size.</summary>

@@ -138,6 +138,22 @@ public class SocketCommandTests
 		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Screen Reader")).IsNotNull().And.Contains("Screen Reader:   on ");
 	}
 
+	/// <summary>SOCKSET alttext pins whether an undrawn picture is its description or its address; auto follows the screen reader.</summary>
+	[Test]
+	public async Task SocksetAltTextPinsDescriptionsOrAddresses()
+	{
+		var handle = await LoggedInHandleAsync("SockAltText");
+		var metadata = ConnectionService.Get(handle)!.Metadata;
+
+		await Assert.That(await RunAsync(handle, "SOCKSET alttext=on")).Contains("Alt text set to 'on'");
+		await Assert.That(TerminalPins.Of(metadata).AltText).IsTrue();
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Alt Text")).IsNotNull().And.Contains(" on ");
+
+		await RunAsync(handle, "SOCKSET alttext=auto");
+		await Assert.That(TerminalPins.Of(metadata).AltText).IsNull();
+		await Assert.That(await RunForLineAsync(handle, "SOCKSET", "Alt Text")).IsNotNull().And.Contains("auto (off)");
+	}
+
 	// --- IDLE --------------------------------------------------------------------------------
 
 	/// <summary>

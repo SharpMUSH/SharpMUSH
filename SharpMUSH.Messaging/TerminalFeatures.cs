@@ -27,6 +27,10 @@ public sealed record TerminalProbeResult(bool? KittyGraphics, bool Sixel, string
 /// </param>
 /// <param name="Charset">The character set the player named with <c>SOCKSET charset</c> (one of <see cref="TerminalCharsets"/>), or null for auto.</param>
 /// <param name="StripAccents">Whether <c>SOCKSET stripaccents</c> is on, which sends ASCII whatever the client says.</param>
+/// <param name="AltText">
+/// A <c>SOCKSET alttext</c> pin: on sends a picture the terminal does not draw as its description, off as its address.
+/// Null for a screen reader's choice: descriptions for one, addresses for everyone else.
+/// </param>
 public sealed record TerminalPins(
 	bool? Hyperlinks = null,
 	bool? CommandLinks = null,
@@ -35,7 +39,8 @@ public sealed record TerminalPins(
 	string? Terminal = null,
 	bool? ScreenReader = null,
 	string? Charset = null,
-	bool StripAccents = false)
+	bool StripAccents = false,
+	bool? AltText = null)
 {
 	/// <summary>Nothing set: links worked out from the terminal, no pictures.</summary>
 	public static TerminalPins None { get; } = new();
@@ -52,7 +57,8 @@ public sealed record TerminalPins(
 			metadata.GetValueOrDefault(TerminalFeatureReader.TerminalKey),
 			TerminalFeatureReader.PinOf(metadata, TerminalCapabilityReader.ScreenReaderKey),
 			TerminalCharsets.Parse(metadata.GetValueOrDefault(TerminalFeatureReader.CharsetKey)),
-			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.StripAccentsKey) == true);
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.StripAccentsKey) == true,
+			TerminalFeatureReader.PinOf(metadata, TerminalFeatureReader.AltTextKey));
 	}
 }
 
@@ -153,6 +159,9 @@ public static class TerminalFeatureReader
 
 	/// <summary>The metadata key holding PennMUSH's <c>SOCKSET stripaccents</c>: <c>1</c> or <c>0</c>.</summary>
 	public const string StripAccentsKey = "STRIPACCENTS";
+
+	/// <summary>The metadata key holding a <c>SOCKSET alttext</c> pin: <c>1</c> or <c>0</c>.</summary>
+	public const string AltTextKey = "ALTTEXT";
 
 	/// <summary>Metadata keys holding what the terminal answered when asked.</summary>
 	public const string ProbeKittyKey = "TerminalKitty";

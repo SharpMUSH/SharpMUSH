@@ -181,15 +181,15 @@ public partial class RecursiveMarkdownRenderer
 
 	/// <summary>
 	/// An image alone in its paragraph, drawn as a <see cref="MarkupString.Layout.Figure"/> (what <c>figure()</c> builds): the
-	/// portal shows it as a figure of its own and a screen reader hears "Image: alt". The figure's art is
-	/// the inline picture, so MXP and Pueblo still draw it and a terminal reads the placeholder. An image
-	/// <see cref="ImageAllowed"/> refuses is <see cref="RenderImage"/>'s placeholder.
+	/// portal shows it as a figure of its own and a screen reader hears "Image: alt". It has no art, so a
+	/// terminal that draws no picture reads its description, which the renderer sends as the picture's address
+	/// to anyone but a screen reader. An image <see cref="ImageAllowed"/> refuses is <see cref="RenderImage"/>'s placeholder.
 	/// </summary>
 	protected virtual MString RenderFigure(LinkInline link, MString content)
 	{
 		var alt = content.ToPlainText().Trim();
 		return ShownImage(link, alt) is { } image
-			? Laid(new MarkupString.Layout.Figure(image, MarkupText.Wrap(image, ImagePlaceholder(alt))))
+			? Laid(new MarkupString.Layout.Figure(image, MarkupText.Empty))
 			: RenderImage(link, content);
 	}
 
