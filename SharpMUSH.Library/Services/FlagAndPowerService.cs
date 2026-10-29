@@ -566,8 +566,7 @@ public class FlagAndPowerService(
 			return false;
 
 		var hasPrincipal = false;
-		var principals = permissions
-			.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"));
+		var principals = Principals(permissions);
 		foreach (var permission in principals)
 		{
 			hasPrincipal = true;
@@ -600,12 +599,14 @@ public class FlagAndPowerService(
 	private ValueTask NotifyRefusal(AnySharpObject executor, PermissionRefusal refusal)
 		=> notifyService.NotifyLocalized(executor, refusal.Key, refusal.Args);
 
+	/// <summary>The permissions that name who may set a flag, leaving out the metadata (dark, log, event) that names no one.</summary>
+	private static IEnumerable<string> Principals(string[] permissions)
+		=> permissions.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"));
+
 	/// <summary>Why <see cref="HasAnyFlagPermission"/> refused the flag: it cannot be changed at all, or who may.</summary>
 	private static PermissionRefusal FlagPermissionRefusal(SharpObjectFlag flag, string[] permissions)
 	{
-		var principals = permissions
-			.Where(permission => permission.ToLowerInvariant() is not ("dark" or "mdark" or "odark" or "log" or "event"))
-			.ToArray();
+		var principals = Principals(permissions).ToArray();
 		return flag.Disabled || principals.Any(permission => permission.ToLowerInvariant() is "internal" or "disabled")
 			? new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedFlagLocked),
 				Definitions.ErrorMessages.Notifications.PermissionDeniedFlagLocked, flag.Name)
@@ -616,9 +617,8 @@ public class FlagAndPowerService(
 	/// <summary>
 	/// Checks flag-specific permission restrictions beyond the generic permission check.
 	/// Matches PennMUSH's can_set_flag() logic from flags.c.
-	/// Returns why the operation is denied, or null when it is not.
 	/// </summary>
-	private static async ValueTask<PermissionRefusal?> CheckFlagSpecificPermissions(
+	private static async ValueTask<Permission> CheckFlagSpecificPermissions(
 		AnySharpObject executor, AnySharpObject obj, SharpObjectFlag flag, bool negate)
 	{
 		var flagName = flag.Name.ToUpperInvariant();
@@ -631,7 +631,7 @@ public class FlagAndPowerService(
 		if (flagName is "CHOWN_OK" or "DESTROY_OK")
 		{
 			return await executor.Owns(obj) || await executor.IsWizard()
-				? null
+				? new Success()
 				: new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds),
 					Definitions.ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds, obj.Object().Name, PortalPermission.GameWizard);
 		}
@@ -641,6 +641,6 @@ public class FlagAndPowerService(
 			return new PermissionRefusal(nameof(Definitions.ErrorMessages.Notifications.PermissionDeniedGagWizard),
 				Definitions.ErrorMessages.Notifications.PermissionDeniedGagWizard);
 
-		return null; // no additional restriction
+		return new Success();
 	}
 }

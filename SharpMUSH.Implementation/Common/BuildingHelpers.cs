@@ -1358,8 +1358,9 @@ public static class BuildingHelpers
 	{
 		if (!await executor.IsWizard() && !await executor.Object().HasPower("Pick_DBRefs"))
 		{
-			await notifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GamePower("Pick_DBRefs"));
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			var refusal = PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("Pick_DBRefs"));
+			await notifyService.PermissionDenied(executor, refusal);
+			return new Error<string>(refusal.ReturnText);
 		}
 
 		if (ParseDbref(requested) is not { } wanted)

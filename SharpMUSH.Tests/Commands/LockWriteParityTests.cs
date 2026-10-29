@@ -326,6 +326,22 @@ public class LockWriteParityTests
 		await Assert.That(Factory.Notifications.For(player.DbRef)).DoesNotContain(ErrorMessages.Notifications.NoSuchLock);
 	}
 
+	/// <summary>
+	/// PennMUSH's <c>string_to_lockflag</c> hides the wizard flag from a caller without See_All, so it reads
+	/// as an unknown flag; here the refusal says what it would take.
+	/// </summary>
+	[Test]
+	public async Task LsetWizardWithoutSeeAllSaysWhy()
+	{
+		var (player, _, target) = await MortalWithThingAsync("LsetWizardFlag");
+		await As(player, $"@lock/Teleport {target}=#TRUE");
+
+		await As(player, $"@lset {target}/Teleport=wizard");
+
+		await Factory.Notifications.WaitForAsync(player.DbRef, ErrorMessages.Notifications.PermissionDeniedLockSetWizard);
+		await Assert.That(await Read($"lockflags({target}/Teleport)")).DoesNotContain("w");
+	}
+
 	/// <summary><c>do_lset</c> on a lock the object does not have.</summary>
 	[Test]
 	public async Task LsetOnAMissingLockIsNoSuchLock()

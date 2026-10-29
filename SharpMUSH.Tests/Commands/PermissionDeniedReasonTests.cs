@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library.Authorization;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -28,8 +29,13 @@ public class PermissionDeniedReasonTests
 	private async Task<AnySharpObject> ObjectAsync(DBRef dbref)
 		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
+	/// <summary>A player in a room of its own, so what it hears is only what its own commands told it.</summary>
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix)
-		=> await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
+	{
+		var god = (await ObjectAsync(WebAppFactoryArg.ExecutorDBRef)).Expect<SharpPlayer>();
+		var room = await Mediator.Send(new CreateRoomCommand(TestIsolationHelpers.GenerateUniqueName(prefix + "Room"), god));
+		return await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix, room);
+	}
 
 	private async Task<List<string>> Run(TestIsolationHelpers.TestPlayer who, string command)
 	{

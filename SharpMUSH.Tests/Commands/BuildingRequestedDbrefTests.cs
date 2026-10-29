@@ -151,7 +151,7 @@ public class BuildingRequestedDbrefTests
 
 		var refused = $"BrdRefused{uid}";
 		await Assert.That(await Build(mortal.Handle, throughTheFunction, refused, $"#{hole.Number}"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.PICK_DBREFS");
 		await Assert.That((await Named(refused)).Length).IsEqualTo(0)
 			.Because("Penn refuses before new_object(), so a mortal's request builds nothing at all");
 
