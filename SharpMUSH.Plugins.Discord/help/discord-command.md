@@ -22,7 +22,7 @@
       "id": "discord-restrict",
       "heading": "Restricted channels",
       "lookup": "@discord restrict",
-      "aliases": ["@discord/gate", "@discord/unrestricted", "@discord/restrict", "discordlink()"]
+      "aliases": ["@discord/gate", "@discord/unrestricted", "@discord/restrict"]
     },
     {
       "id": "discord-members",
@@ -128,8 +128,6 @@ Anything that sends a line on the feed posts it in Discord, such as `@feed/send 
 
 - `/gate` or `/restrict` makes the channel need a linked game account again. `/gate` also retries a permission change that failed while linking.
 - `/unrestricted` lets Discord members without a game account speak too, under their Discord name. Use it for a help channel for newcomers. The portal's Discord page does the same, channel by channel, and shows which channels are unrestricted.
-
-`discordlink(<channel id>)` returns `restricted` or `unrestricted` for a linked channel and `#-1 NO SUCH LINK` for one that is not. Like these commands, it needs `discord.admin`.
 
 To restrict a channel, the bot notes the channel's Send Messages and Send Messages in Threads settings for `@everyone` and the Linked role, then denies both to `@everyone` and allows both to Linked. Unlinking or unrestricting puts the noted settings back, but only where a setting still holds what the bot wrote: one someone has changed since is left alone, and so is every other permission. A channel linked before the bot noted settings has nothing to put back, so the bot clears its own values and those settings fall back to the category's or the server's.
 
