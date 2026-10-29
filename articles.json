@@ -1772,6 +1772,12 @@
         "aliases": []
       },
       {
+        "id": "a-refusal-says-why",
+        "lookup": "compatibility parser a refusal says why",
+        "heading": "A refusal says why",
+        "aliases": []
+      },
+      {
         "id": "a-set-function-s-delimiter-can-be-longer-than-one-character",
         "lookup": "compatibility parser a set function s delimiter can be longer than one character",
         "heading": "A set function\u0027s delimiter can be longer than one character",

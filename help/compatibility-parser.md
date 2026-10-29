@@ -66,6 +66,11 @@
       "lookup": "compatibility parser a failing function says why"
     },
     {
+      "id": "a-refusal-says-why",
+      "heading": "A refusal says why",
+      "lookup": "compatibility parser a refusal says why"
+    },
+    {
       "id": "a-set-function-s-delimiter-can-be-longer-than-one-character",
       "heading": "A set function's delimiter can be longer than one character",
       "lookup": "compatibility parser a set function s delimiter can be longer than one character"
@@ -302,6 +307,16 @@ Where SharpMUSH gives a function an optional argument PennMUSH does not have (se
 > think [strmatch(zone(me),#-*)] [t(zone(me))]
 1 0
 ```
+
+## A refusal says why
+
+**A choice.**
+
+**PennMUSH** tells a player who may not do something "Permission denied." and nothing more.<br>
+**SharpMUSH** adds the reason: `Permission denied. You need the players.moderate permission.`, `Permission denied. You do not control Widget.`, `Permission denied. You do not control Lab, and it is not OPEN_OK.`, `Permission denied. Only God can do that.` A command's own restrict message still replaces the whole line. A function refused for one of these reasons returns it too, in capitals and without names: `#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.HALT`, `#-1 PERMISSION DENIED: NOT CONTROLLED`, `#-1 PERMISSION DENIED: GOD ONLY`.<br>
+**Why.** A bare "Permission denied." does not say what to ask staff for, and staff cannot tell which permission to grant.<br>
+**Workaround.** Match the start: a `@listen` or `$`-pattern of `Permission denied.*` hears both servers, and `strmatch(%0,#-1 PERMISSION DENIED*)` or `t()` tests a function's answer on both.<br>
+**Example.** The parity case `admin.denied` in `tools/parity/scenarios/20-admin-commands.scn`.
 
 ## A set function's delimiter can be longer than one character
 
