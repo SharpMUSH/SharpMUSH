@@ -86,9 +86,9 @@ public static class SetHelpers
 		{
 			// do_attrib_flags finds the object with match_controlled (src/set.c:570), so a player who does
 			// not control it learns nothing about its attributes.
-			if (!await permissionService.Controls(executor, found))
+			if (await permissionService.Check(executor, Requires.ControlOf(found)) is PermissionRefusal refused)
 			{
-				return await notifyService.PermissionDeniedNotControlled(executor, found);
+				return await notifyService.PermissionDenied(executor, refused);
 			}
 
 			var flagTokens = MushText.SplitList(MarkupText.Space, flagOrAttributeValue)

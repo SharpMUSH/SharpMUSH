@@ -1,5 +1,6 @@
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -22,6 +23,10 @@ public class PermissionDeniedReasonTests
 	private IConnectionService ConnectionService => WebAppFactoryArg.Services.GetRequiredService<IConnectionService>();
 	private IMUSHCodeParser Parser => WebAppFactoryArg.CommandParser;
 	private IMediator Mediator => WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+	private IPermissionService Permissions => WebAppFactoryArg.Services.GetRequiredService<IPermissionService>();
+
+	private async Task<AnySharpObject> ObjectAsync(DBRef dbref)
+		=> (await Mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
 
 	private async Task<TestIsolationHelpers.TestPlayer> PlayerAsync(string prefix)
 		=> await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, prefix);
@@ -85,6 +90,57 @@ public class PermissionDeniedReasonTests
 
 		await Assert.That(said).Contains(
 			$"Permission denied. You do not control {otherName}, and you need one of these permissions: game.wizard, game.halt.");
+	}
+
+	[Test]
+	public async Task Check_RefusesWithWhatIsMissing_AndReturnsTheFunctionError()
+	{
+		var mortal = await ObjectAsync((await PlayerAsync("PdCheck")).DbRef);
+
+		var checkedOut = await Permissions.Check(mortal, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("Halt")));
+
+		var refusal = checkedOut.Expect<PermissionRefusal>();
+		await Assert.That(refusal.Text).IsEqualTo("Permission denied. You need one of these permissions: game.wizard, game.halt.");
+		await Assert.That(refusal.Return.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+	}
+
+	[Test]
+	public async Task Check_LetsAnyOneScopeContinue()
+	{
+		var halter = await PlayerAsync("PdCheckHalt");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@power {halter.DbRef}=Halt"));
+		var who = await ObjectAsync(halter.DbRef);
+
+		var checkedOut = await Permissions.Check(who, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("Halt")));
+
+		await Assert.That(checkedOut.Expect<Success>()).IsEqualTo(new Success());
+	}
+
+	[Test]
+	public async Task Check_ControlOfYourOwnObjectContinues_AndOfAnotherNamesIt()
+	{
+		var mortal = await PlayerAsync("PdCheckCtl");
+		var other = await PlayerAsync("PdCheckCtlOther");
+		var self = await ObjectAsync(mortal.DbRef);
+		var stranger = await ObjectAsync(other.DbRef);
+
+		var own = await Permissions.Check(self, Requires.ControlOf(self));
+		var theirs = await Permissions.Check(self, Requires.ControlOf(stranger, PortalPermission.GameWizard));
+
+		await Assert.That(own.Expect<Success>()).IsEqualTo(new Success());
+		await Assert.That(theirs.Expect<PermissionRefusal>().Text)
+			.IsEqualTo($"Permission denied. You do not control {stranger.Object().Name}, and you need the game.wizard permission.");
+	}
+
+	[Test]
+	public async Task Check_GodOnly_LetsOnlyGodContinue()
+	{
+		var god = await ObjectAsync(new DBRef(1));
+		var mortal = await ObjectAsync((await PlayerAsync("PdCheckGod")).DbRef);
+
+		await Assert.That((await Permissions.Check(god, Requires.God())).Expect<Success>()).IsEqualTo(new Success());
+		await Assert.That((await Permissions.Check(mortal, Requires.God())).Expect<PermissionRefusal>().Text)
+			.IsEqualTo("Permission denied. Only God can do that.");
 	}
 
 	[Test]

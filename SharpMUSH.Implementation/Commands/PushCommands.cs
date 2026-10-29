@@ -36,9 +36,9 @@ public partial class Commands
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches.ToArray();
 
-		if (!await executor.Can(PortalPermission.NotifyPush))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.NotifyPush)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.NotifyPush);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var target = args.GetValueOrDefault("0")?.Message.ToPlainText().Trim() ?? string.Empty;

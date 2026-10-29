@@ -583,9 +583,10 @@ public partial class Commands
 
 	private async ValueTask<Option<CallState>> HideOtherPlayerAsync(AnySharpObject executor, SharpPlayer player, bool? hide)
 	{
-		if (player.Object.DBRef != executor.Object().DBRef && !await executor.IsWizard())
+		if (player.Object.DBRef != executor.Object().DBRef
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard)) is PermissionRefusal refused)
 		{
-			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
+			await NotifyService.PermissionDenied(executor, refused);
 			return CallState.Empty;
 		}
 
@@ -611,9 +612,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (connection.Ref != executor.Object().DBRef && !await executor.IsWizard())
+		if (connection.Ref != executor.Object().DBRef
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard)) is PermissionRefusal refused)
 		{
-			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
+			await NotifyService.PermissionDenied(executor, refused);
 			return CallState.Empty;
 		}
 
@@ -698,9 +700,10 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if ((switches.Contains("ADD") || switches.Contains("DELETE")) && !await executor.Can(PortalPermission.ConfigAdmin))
+		if ((switches.Contains("ADD") || switches.Contains("DELETE"))
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (switches.Contains("ADD"))
@@ -858,9 +861,9 @@ public partial class Commands
 	{
 		var targetObj = target.Object();
 
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNotControlled(executor, target);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var warningListString = warningListArg.Message.ToPlainText();

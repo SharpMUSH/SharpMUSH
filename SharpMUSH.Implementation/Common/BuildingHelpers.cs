@@ -896,9 +896,9 @@ public static class BuildingHelpers
 		bool preserve,
 		MString? requestedDbref = null)
 	{
-		if (!await permissionService.Controls(executor, target))
+		if (await permissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 		{
-			await notifyService.PermissionDeniedNotControlled(executor, target);
+			await notifyService.PermissionDenied(executor, notControlled);
 			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
 		}
 

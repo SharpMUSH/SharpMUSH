@@ -39,9 +39,10 @@ public partial class Commands
 		if (switches.Contains("LIST") || (name.Length == 0 && !hasValue && switches.Length == 0))
 		{
 			var listed = await SecretsManagedBy(executor);
-			if (listed.Count == 0 && !await executor.Can(PortalPermission.ConfigAdmin))
+			if (listed.Count == 0
+				&& await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 			{
-				return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+				return await NotifyService.PermissionDenied(executor, refused);
 			}
 
 			await NotifyService.Notify(executor, SecretListing(listed), executor);

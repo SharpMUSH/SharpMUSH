@@ -155,14 +155,9 @@ public class ObjectRelationshipService(
 
 	public async ValueTask<CallState> UnsetParent(AnySharpObject executor, AnySharpObject obj, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.PermissionDeniedNotControlled(executor, obj);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		await mediator.Send(new UnsetObjectParentCommand(obj));
@@ -180,14 +175,9 @@ public class ObjectRelationshipService(
 	public async ValueTask<CallState> SetZone(AnySharpObject executor, AnySharpObject obj, AnySharpObject newZone,
 		bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.PermissionDeniedNotControlled(executor, obj);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		if (await cycleChecker.SafeToAddZoneAsync(obj, newZone) is not RelationshipSafety.Safe)
@@ -214,13 +204,9 @@ public class ObjectRelationshipService(
 
 	public async ValueTask<CallState> UnsetZone(AnySharpObject executor, AnySharpObject obj, bool notify)
 	{
-		if (!await permissionService.Controls(executor, obj))
+		if (await permissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 		{
-			if (notify)
-			{
-				await notifyService.PermissionDeniedNotControlled(executor, obj);
-			}
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refused) : refused.Return;
 		}
 
 		await mediator.Send(new UnsetObjectZoneCommand(obj));

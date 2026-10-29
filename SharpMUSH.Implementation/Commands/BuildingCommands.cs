@@ -682,9 +682,9 @@ public partial class Commands
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
+				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 				{
-					return await NotifyService.PermissionDeniedNotControlled(executor, obj);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				if (!await UndestroyAsync(parser, obj.Object().DBRef, []))
@@ -887,9 +887,9 @@ public partial class Commands
 			executor, executor, targetName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
+				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 				{
-					return await NotifyService.PermissionDeniedNotControlled(executor, obj);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				if (!args.ContainsKey("1") || string.IsNullOrWhiteSpace(args["1"].Message.ToPlainText()))
@@ -918,9 +918,9 @@ public partial class Commands
 			executor, executor, args["0"].Message.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService.Controls(executor, target))
+				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 				{
-					return await NotifyService.PermissionDeniedNotControlled(executor, target);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				switch (args)

@@ -44,9 +44,9 @@ public partial class Commands
 		}
 
 		// Everything but /claim administers other people's accounts.
-		if (!await executor.IsWizard())
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (switches.Contains("LIST"))

@@ -463,10 +463,9 @@ public partial class Commands
 	private async ValueTask<Option<CallState>> WipeAsync(AnySharpObject executor, AnySharpObject targetObject,
 		string? maybeAttribute)
 	{
-		var canModify = await PermissionService.Controls(executor, targetObject);
-		if (!canModify)
+		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var isSafe = await targetObject.HasFlag("SAFE");
@@ -525,10 +524,9 @@ public partial class Commands
 		AnySharpObject targetObject, OrderedArguments args, IEnumerable<string> switches,
 		string attrPattern)
 	{
-		var canModify = await PermissionService.Controls(executor, targetObject);
-		if (!canModify)
+		if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		// With RSArgs, the arguments after = are split by comma

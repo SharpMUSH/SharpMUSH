@@ -57,6 +57,9 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 	/// <summary>The reason in English, for a message that is not localised (a fail_lock default, say).</summary>
 	public string Text => string.Format(null, Format, Args);
 
+	/// <summary>What a function refused this way returns: <see cref="ErrorMessages.Returns.PermissionDenied"/>, the reason told apart.</summary>
+	public CallState Return => new(ErrorMessages.Returns.PermissionDenied);
+
 	public static PermissionRefusal GodOnly()
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedGodOnly), ErrorMessages.Notifications.PermissionDeniedGodOnly);
 

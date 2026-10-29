@@ -29,9 +29,9 @@ public partial class Commands
 	public async ValueTask<Option<CallState>> Tag(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		return await TagCommandAsync(parser, executor, null);

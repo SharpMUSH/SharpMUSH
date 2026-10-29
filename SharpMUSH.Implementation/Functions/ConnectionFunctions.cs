@@ -1029,9 +1029,11 @@ public partial class Functions
 
 		// The one thing fun_ports does say out loud, and it still returns nothing rather than "#-1":
 		// reading someone else's descriptors needs Priv_Who.
-		if (target.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
+		if (target.Object.DBRef != executor.Object().DBRef
+			&& await PermissionService.Check(executor,
+				Requires.Any(PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All"))) is PermissionRefusal refused)
 		{
-			await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All"));
+			await NotifyService.PermissionDenied(executor, refused);
 			return CallState.Empty;
 		}
 

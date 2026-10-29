@@ -32,9 +32,9 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("2", out var dataArg);
 		parser.CurrentState.Arguments.TryGetValue("3", out var headersArg);
 
-		if (!await executor.IsWizard() && !await executor.HasPower("CAN_HTTP"))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("CAN_HTTP"))) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GamePower("CAN_HTTP"));
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (objAttrArg is null)

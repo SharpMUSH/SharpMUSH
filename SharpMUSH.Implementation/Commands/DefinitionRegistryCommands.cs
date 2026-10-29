@@ -82,9 +82,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<Option<CallState>> NameCommandArgumentsAsync(AnySharpObject executor, string commandName, string? names)
 	{
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (!CommandLibrary.TryGetValue(commandName, out var command))
@@ -330,9 +330,9 @@ public partial class Commands : ICommandRestrictionApplier
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.CommandNoevalNoLongerNoparse), executor);
 		}
 
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (FindCommand(name) is { } taken)
@@ -377,9 +377,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<Option<CallState>> AliasCommandAsync(AnySharpObject executor, string name, string alias, bool quiet)
 	{
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (!await ValidCommandName(alias))
@@ -418,9 +418,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<Option<CallState>> CloneCommandAsync(AnySharpObject executor, string original, string clone)
 	{
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (!CommandLibrary.TryGetValue(original, out var source))
@@ -473,9 +473,9 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<Option<CallState>> DeleteCommandAsync(AnySharpObject executor, string name)
 	{
-		if (!executor.IsGod())
+		if (await PermissionService.Check(executor, Requires.God()) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedGodOnly(executor);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		// command_find_exact still finds a disabled command, so /delete reaches one too.
@@ -1524,9 +1524,9 @@ public partial class Commands : ICommandRestrictionApplier
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(
 			parser, executor, executor, objSpec, LocateFlags.All, async targetObject =>
 			{
-				if (!await PermissionService.Controls(executor, targetObject))
+				if (await PermissionService.Check(executor, Requires.ControlOf(targetObject)) is PermissionRefusal refused)
 				{
-					return await NotifyService.PermissionDeniedNotControlled(executor, targetObject);
+					return await NotifyService.PermissionDenied(executor, refused);
 				}
 
 				return await DefineUserFunctionOnAsync(executor, userFunctionService, functionName, targetObject, attribSpec, minArgs, maxArgs,
@@ -2109,23 +2109,18 @@ public partial class Commands : ICommandRestrictionApplier
 	/// </summary>
 	private async ValueTask<CallState?> RejectUnlessGlobalFuncs(AnySharpObject executor)
 	{
-		if (await executor.HasPower("FUNCTIONS") || await executor.Can(PortalPermission.ConfigAdmin))
-		{
-			return null;
-		}
-
-		return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin, PortalPermission.GamePower("FUNCTIONS"));
+		return await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin, PortalPermission.GamePower("Functions")))
+			is PermissionRefusal refused
+			? await NotifyService.PermissionDenied(executor, refused)
+			: null;
 	}
 
 	/// <summary>The refusal a caller without the <c>ConfigAdmin</c> permission gets, or null when they have it.</summary>
 	private async ValueTask<CallState?> RejectUnlessConfigAdmin(AnySharpObject executor)
 	{
-		if (await executor.Can(PortalPermission.ConfigAdmin))
-		{
-			return null;
-		}
-
-		return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+		return await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused
+			? await NotifyService.PermissionDenied(executor, refused)
+			: null;
 	}
 
 	/// <summary>
@@ -2803,9 +2798,9 @@ public partial class Commands : ICommandRestrictionApplier
 		var args = parser.CurrentState.Arguments;
 		var switches = parser.CurrentState.Switches;
 
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.ConfigAdmin);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (args.Count == 0)
@@ -3088,9 +3083,9 @@ public partial class Commands : ICommandRestrictionApplier
 
 	private async ValueTask<Option<CallState>> ListAllocationsAsync(AnySharpObject executor)
 	{
-		if (!await executor.IsWizard())
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var output = new System.Text.StringBuilder();

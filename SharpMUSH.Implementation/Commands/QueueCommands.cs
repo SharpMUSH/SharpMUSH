@@ -227,7 +227,7 @@ public partial class Commands
 		var controls = await PermissionService.Controls(executor, target);
 		if (!controls && !await HaltsAnything(executor))
 		{
-			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GamePower("Halt"));
+			return await NotifyService.PermissionDeniedNotControlled(executor, target, HaltAnything);
 		}
 
 		// RSBrace preserves outer braces during argument parsing (PennMUSH CS_BRACES).
@@ -313,6 +313,12 @@ public partial class Commands
 
 	private static async ValueTask<bool> HaltsAnything(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("HALT");
+
+	/// <summary>What halts anything: the scopes behind <see cref="HaltsAnything"/>.</summary>
+	private static readonly string[] HaltAnything = [PortalPermission.GameWizard, PortalPermission.GamePower("Halt")];
+
+	/// <summary>What reads anyone's queue: Priv_Who or See_Queue.</summary>
+	private static readonly string[] SeeQueue = [PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue")];
 
 	/// <summary>
 	/// PennMUSH <c>do_halt</c> (<c>src/cque.c:2160-2220</c>): tells the victim's owner
@@ -627,9 +633,9 @@ public partial class Commands
 			return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, arg0,
 				LocateFlags.All, async located =>
 				{
-					if (!await PermissionService.Controls(executor, located))
+					if (await PermissionService.Check(executor, Requires.ControlOf(located)) is PermissionRefusal refused)
 					{
-						return await NotifyService.PermissionDeniedNotControlled(executor, located);
+						return await NotifyService.PermissionDenied(executor, refused);
 					}
 
 					await QueueSemaphore(parser, located, DefaultSemaphoreAttributeArray, arg1, callbackState);
@@ -1116,18 +1122,18 @@ public partial class Commands
 			target = executor;
 		}
 
-		if (!await PermissionService.Controls(executor, target) && !await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target, SeeQueue)) is PermissionRefusal refused)
 		{
-			return await NotifyService.PermissionDeniedNotControlled(executor, target, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue"));
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var targetDbRef = target.Object().DBRef;
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.IsPriv() && !await executor.HasPower("SEE_QUEUE"))
+			if (await PermissionService.Check(executor, Requires.Any(SeeQueue)) is PermissionRefusal refusedAll)
 			{
-				return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue"));
+				return await NotifyService.PermissionDenied(executor, refusedAll);
 			}
 
 			var allTasks = await Mediator.CreateStream(new ScheduleAllTasksQuery()).ToArrayAsync();
