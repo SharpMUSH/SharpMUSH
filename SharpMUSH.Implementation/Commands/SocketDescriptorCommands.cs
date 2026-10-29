@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
@@ -433,8 +434,7 @@ public partial class Commands
 
 		if (!isOwnDescriptor && !isWizard)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 		}
 
 		// PennMUSH walks args_right in (option, value) pairs starting at index 1, so the right-hand

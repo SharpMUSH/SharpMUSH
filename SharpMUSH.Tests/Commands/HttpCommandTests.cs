@@ -272,7 +272,7 @@ public class HttpCommandTests
 	{
 		var run = await RunHttpAsync("HttpNoPower", [], ["https://example.invalid/get"], canHttp: false);
 
-		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(run.Result.Message.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NEEDS GAME.WIZARD OR GAME.CAN_HTTP");
 		await Assert.That(run.ClientCreated).IsFalse();
 		await Assert.That(run.Callback).IsNull();
 	}

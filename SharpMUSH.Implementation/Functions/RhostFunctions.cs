@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Globalization;
 using System.Text;
 using SharpMUSH.Implementation.Common;
@@ -211,7 +212,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		return await executor.IsPriv()
 			? new CallState($"#{Configuration.CurrentValue.Database.MasterRoom}")
-			: new CallState(ErrorMessages.Returns.PermissionDenied);
+			: PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GameRoyalty).Return;
 	}
 
 	[SharpFunction(Name = "isalnum", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["string"])]
@@ -305,9 +306,9 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService.Controls(executor, target))
+				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return refused.Return;
 				}
 
 				var command = direction.Equals("home", StringComparison.OrdinalIgnoreCase)

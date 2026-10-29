@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
@@ -6,6 +7,7 @@ using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Services.Interfaces;
 using MarkupString;
 using MarkupString.Ansi;
 using MarkupString.Html;
@@ -67,7 +69,7 @@ public partial class Functions
 
 		return TagwrapPolicy.Wrap(tagName, parameters) is { } markup
 			? new CallState(MarkupText.Wrap(markup, content))
-			: new CallState(ErrorMessages.Returns.PermissionDenied);
+			: PermissionRefusal.Tag(tagName).Return;
 	}
 
 	/// <summary>
@@ -88,7 +90,7 @@ public partial class Functions
 
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		if (string.IsNullOrWhiteSpace(command))
@@ -106,6 +108,10 @@ public partial class Functions
 			Ansi.Create(linkUrl: command, linkKind: LinkKind.Command, linkText: hint.Length > 0 ? hint : command),
 			text));
 	}
+
+	private static readonly string[] OobScopes = [PortalPermission.GameWizard, PortalPermission.GamePower("Send_OOB")];
+
+	private static readonly string[] ImageScopes = [.. OobScopes, PortalPermission.GamePower("Send_Image")];
 
 	/// <summary>PennMUSH's <c>Can_Send_OOB</c> (<c>hdrs/mushdb.h</c>).</summary>
 	private static async ValueTask<bool> CanSendOob(AnySharpObject executor)
@@ -213,7 +219,7 @@ public partial class Functions
 
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		if (file.Length == 0 || file.Any(char.IsControl))
@@ -257,7 +263,7 @@ public partial class Functions
 	{
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -285,7 +291,7 @@ public partial class Functions
 	{
 		if (!await CanSendImage(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(ImageScopes).Return;
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -331,7 +337,7 @@ public partial class Functions
 	{
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;
@@ -368,7 +374,7 @@ public partial class Functions
 	public async ValueTask<CallState> ClearScreen(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 		=> await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator))
 			? new CallState(MarkupText.ClearScreen())
-			: new CallState(ErrorMessages.Returns.PermissionDenied);
+			: PermissionRefusal.Needs(OobScopes).Return;
 
 	/// <summary>
 	/// <c>prefetch(&lt;address&gt;)</c> — asks the client to fetch something now that it will want soon.
@@ -379,7 +385,7 @@ public partial class Functions
 	{
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		var address = parser.CurrentState.Arguments["0"].Message.ToPlainText().Trim();
@@ -399,7 +405,7 @@ public partial class Functions
 	{
 		if (!await CanSendOob(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(OobScopes).Return;
 		}
 
 		var args = parser.CurrentState.ArgumentsOrdered;

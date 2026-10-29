@@ -284,7 +284,7 @@ public static class MailAliases
 
 		if (!await MaySeeMembersAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied.");
+			await Tell(services, executor, $"MAIL: {string.Format(ErrorMessages.Notifications.PermissionDeniedAliasMembers, Token + alias.Name)}");
 			return;
 		}
 
@@ -369,7 +369,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied!");
+			await Tell(services, executor, $"MAIL: {NotYours(alias)}");
 			return;
 		}
 
@@ -405,6 +405,10 @@ public static class MailAliases
 		return false;
 	}
 
+	/// <summary>Why <see cref="MayManageAsync"/> refused: the alias is someone else's, and chat.admin would have done.</summary>
+	private static string NotYours(SharpMailAlias alias)
+		=> string.Format(ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds, Token + alias.Name, PortalPermission.ChatAdmin);
+
 	/// <summary>The owner, or a wizard: who may change an alias.</summary>
 	private static async ValueTask<bool> MayManageAsync(SharpMailAlias alias, AnySharpObject executor)
 		=> IsOwner(alias, executor) || await executor.Can(PortalPermission.ChatAdmin);
@@ -420,7 +424,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied!");
+			await Tell(services, executor, $"MAIL: {NotYours(alias)}");
 			return;
 		}
 
@@ -439,7 +443,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "Permission denied.");
+			await Tell(services, executor, NotYours(alias));
 			return;
 		}
 
@@ -471,7 +475,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "Permission denied.");
+			await Tell(services, executor, NotYours(alias));
 			return;
 		}
 
@@ -519,7 +523,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied.");
+			await Tell(services, executor, $"MAIL: {NotYours(alias)}");
 			return;
 		}
 
@@ -554,7 +558,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied.");
+			await Tell(services, executor, $"MAIL: {NotYours(alias)}");
 			return;
 		}
 
@@ -572,7 +576,7 @@ public static class MailAliases
 	{
 		if (!await executor.IsPriv())
 		{
-			await Tell(services, executor, "MAIL: Permission denied.");
+			await Tell(services, executor, $"MAIL: {PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GameRoyalty).Text}");
 			return;
 		}
 
@@ -623,7 +627,7 @@ public static class MailAliases
 
 		if (!await MayManageAsync(alias, executor))
 		{
-			await Tell(services, executor, "MAIL: Permission denied.");
+			await Tell(services, executor, $"MAIL: {NotYours(alias)}");
 			return;
 		}
 

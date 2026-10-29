@@ -41,7 +41,7 @@ public class DiscordCommandModuleTests
 		var result = await _harness.RunAsync(mortal, "link", Channel.ToString());
 
 		await Assert.That(result).IsEqualTo("#-1 PERMISSION DENIED");
-		await Assert.That(_harness.ToldTo(mortal)).IsEquivalentTo(["[DISCORD] Error: Permission denied."]);
+		await Assert.That(_harness.ToldTo(mortal)).IsEquivalentTo(["[DISCORD] Error: Permission denied. You need the discord.admin permission."]);
 		await Assert.That(_harness.Get<IDiscordLinkStore>().List()).IsEmpty();
 	}
 

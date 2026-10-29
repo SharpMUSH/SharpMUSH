@@ -22,6 +22,10 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
+	/// <summary>Who may read another player's connections: PennMUSH's Priv_Who.</summary>
+	private static readonly string[] SeeAllScopes =
+		[PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All")];
+
 	[SharpFunction(Name = "addrlog", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular, ParameterNames = ["object"])]
 	public async ValueTask<CallState> AddressLog(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
@@ -31,7 +35,7 @@ public partial class Functions
 				!await executor.IsRoyalty() &&
 				!await executor.IsSee_All())
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(SeeAllScopes).Return;
 		}
 
 		if (!Configuration.CurrentValue.Log.UseConnLog)
@@ -337,7 +341,7 @@ public partial class Functions
 		// whether the player is connected.
 		if (!await ArgHelpers.CanReadDescriptorAsync(executor, located.Object.DBRef))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(SeeAllScopes).Return;
 		}
 
 		var connection = await ArgHelpers.VisibleConnectionAsync(ConnectionService, executor, located.Object.DBRef);
@@ -388,9 +392,9 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!await executor.IsSee_All())
+		if (await PermissionService.Check(executor, Requires.Any(SeeAllScopes)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var viewer = executor;
@@ -484,7 +488,7 @@ public partial class Functions
 		// PennMUSH bsd.c:6561: only a powered caller may ask about anything but the online list.
 		if (status != "online" && !powered)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(SeeAllScopes).Return;
 		}
 
 		if (status == "online")
@@ -554,7 +558,7 @@ public partial class Functions
 		{
 			if (!powered && looker.Object().DBRef.Number != executor.Object().DBRef.Number)
 			{
-				return (executor, false, new CallState(ErrorMessages.Returns.PermissionDenied));
+				return (executor, false, PermissionRefusal.Needs(SeeAllScopes).Return);
 			}
 
 			return (looker, powered && await looker.IsSee_All(), null);
@@ -733,7 +737,7 @@ public partial class Functions
 
 		return await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
 			? new CallState(descriptor.Metadata.GetValueOrDefault(ConnectionTimeZone.Key, string.Empty))
-			: new CallState(ErrorMessages.Returns.PermissionDenied);
+			: PermissionRefusal.Needs(SeeAllScopes).Return;
 	}
 
 	[SharpFunction(Name = "ssl", MinArgs = 1, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi, ParameterNames = ["object"])]
@@ -752,7 +756,7 @@ public partial class Functions
 
 		return await ArgHelpers.CanReadDescriptorAsync(executor, descriptor.Ref)
 			? new CallState(descriptor.Metadata.GetValueOrDefault("SSL", "0"))
-			: new CallState(ErrorMessages.Returns.PermissionDenied);
+			: PermissionRefusal.Needs(SeeAllScopes).Return;
 	}
 
 	[SharpFunction(Name = "terminfo", MinArgs = 1, MaxArgs = 1,
@@ -974,7 +978,7 @@ public partial class Functions
 			// answer is then capped at that viewer's own privilege (:6847).
 			if (!powered)
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.Needs(SeeAllScopes).Return;
 			}
 
 			var maybeViewer = await LocateService.LocatePlayerAndNotifyIfInvalidWithCallState(
@@ -995,7 +999,7 @@ public partial class Functions
 		// the caller (bsd.c:6832-6839).
 		if (!executorHasSeeAll && !await LockService.Evaluate(LockType.Zone, zone, viewer))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Lock(zone, "Zone").Return;
 		}
 
 		var zoneNumber = zone.Object().DBRef.Number;
@@ -1029,9 +1033,11 @@ public partial class Functions
 
 		// The one thing fun_ports does say out loud, and it still returns nothing rather than "#-1":
 		// reading someone else's descriptors needs Priv_Who.
-		if (target.Object.DBRef != executor.Object().DBRef && !await executor.IsSee_All())
+		if (target.Object.DBRef != executor.Object().DBRef
+			&& await PermissionService.Check(executor,
+				Requires.Any(SeeAllScopes)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDenied(executor, refused);
 			return CallState.Empty;
 		}
 
@@ -1076,7 +1082,7 @@ public partial class Functions
 		// this far.
 		if (!canSeeHidden)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(SeeAllScopes).Return;
 		}
 
 		// fun_hidden asks for a descriptor only with a strict integer (src/bsd.c:6600).

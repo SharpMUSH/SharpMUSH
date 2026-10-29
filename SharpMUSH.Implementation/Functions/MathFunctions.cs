@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Utilities;
 using MoreLinq;
 using SharpMUSH.Implementation.Common;
@@ -1413,7 +1414,7 @@ public partial class Functions
 			{
 				if (!await PermissionService.CanExamine(executor, container))
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return PermissionRefusal.Examine(container).Return;
 				}
 
 				if (container.AsOptionalContainer is not AnySharpContainer searched)

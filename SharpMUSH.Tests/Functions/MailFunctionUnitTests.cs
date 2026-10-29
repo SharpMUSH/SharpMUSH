@@ -223,9 +223,9 @@ public class MailFunctionUnitTests
 	[Arguments("mailstats(%#)", "0 0")]
 	[Arguments("maildstats(me)", "0 0 0 0 0 0")]
 	[Arguments("mailfstats(me)", "0 0 0 0 0 0 0 0")]
-	[Arguments("mailstats(#1)", "#-1 PERMISSION DENIED")]
-	[Arguments("maildstats(#1)", "#-1 PERMISSION DENIED")]
-	[Arguments("mailfstats(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mailstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
+	[Arguments("maildstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
+	[Arguments("mailfstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	[Arguments("mailstats(NoSuchMailStatsPlayer)", "#-1 NO SUCH PLAYER")]
 	public async Task MailStats_MortalReadsOnlyTheirOwn(string code, string expected)
 	{
@@ -243,7 +243,7 @@ public class MailFunctionUnitTests
 	/// player first and then require <c>controls(executor, player)</c>, so a mortal reads their own
 	/// mailbox under any name for themselves and is refused anyone else's (#1491). SharpMUSH used to
 	/// refuse every non-wizard before looking at who was named. A refused fetch answers as Penn's does:
-	/// "Permission denied" to the caller, and the function's usual not-found value.
+	/// "Permission denied" to the caller (with the reason, here), and the function's usual not-found value.
 	/// </summary>
 	[Test]
 	[Arguments("mail(me)", "0 1 0")]
@@ -251,11 +251,11 @@ public class MailFunctionUnitTests
 	[Arguments("mail(me,1)", "MortalOwnMailBody")]
 	[Arguments("mailsubject(me,1)", "MortalOwnMailSubject")]
 	[Arguments("mailstatus(me,1)", "N----")]
-	[Arguments("mail(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mail(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	[Arguments("mail(#1,1)", "#-1 INVALID MESSAGE OR PLAYER")]
 	[Arguments("mailsubject(#1,1)", "#-1")]
 	[Arguments("mailfrom(#1,1)", "#-1")]
-	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED")]
+	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	public async Task MailFunctions_MortalReadsOnlyTheirOwnMailbox(string code, string expected)
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
@@ -276,6 +276,7 @@ public class MailFunctionUnitTests
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(
 			WebAppFactoryArg.Services, Mediator, "MailFetchRefused");
+		var god = (await Mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>().Object().Name;
 		var before = WebAppFactoryArg.Notifications.DeliveryCountFor(mortal);
 
 		await WebAppFactoryArg.FunctionParserFor(mortal).FunctionParse(MarkupText.Plain(code));
@@ -285,7 +286,7 @@ public class MailFunctionUnitTests
 		await Assert.That(WebAppFactoryArg.Notifications.DeliveriesFor(mortal).Skip(before)
 				.Where(delivery => delivery.Sender is { } sender && sender.Number == mortal.Number)
 				.Select(delivery => delivery.Message))
-			.IsEquivalentTo(["Permission denied"]);
+			.IsEquivalentTo([$"Permission denied. You do not control {god}."]);
 	}
 
 	[Test]

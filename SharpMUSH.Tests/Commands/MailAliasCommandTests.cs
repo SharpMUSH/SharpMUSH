@@ -108,7 +108,7 @@ public class MailAliasCommandTests
 
 		await Assert.That(await RunAsync(owner, $"@malias/members {alias}"))
 			.Contains($"MAIL: Alias {alias}: {owner.Name}, {member.Name}");
-		await Assert.That(await RunAsync(member, $"@malias {alias}")).Contains("MAIL: Permission denied.");
+		await Assert.That(await RunAsync(member, $"@malias {alias}")).Contains($"MAIL: Permission denied. {alias} does not show its members to you.");
 		await Assert.That(await RunAsync(outsider, $"@malias/who {alias}")).Contains($"MAIL: Alias '{alias}' not found.");
 
 		await Assert.That(await EvaluateAsync(owner, $"malias({alias})"))
@@ -202,9 +202,10 @@ public class MailAliasCommandTests
 	{
 		var (owner, member, outsider, alias) = await AliasAsync("MalEdit");
 
-		await Assert.That(await RunAsync(member, $"@malias/add {alias}=#{outsider.DbRef.Number}")).Contains("Permission denied.");
-		await Assert.That(await RunAsync(member, $"@malias/describe {alias}=Mine now")).Contains("MAIL: Permission denied.");
-		await Assert.That(await RunAsync(member, $"@malias/destroy {alias}")).Contains("MAIL: Permission denied!");
+		var notYours = $"Permission denied. {alias} is not yours, and you need the chat.admin permission.";
+		await Assert.That(await RunAsync(member, $"@malias/add {alias}=#{outsider.DbRef.Number}")).Contains(notYours);
+		await Assert.That(await RunAsync(member, $"@malias/describe {alias}=Mine now")).Contains($"MAIL: {notYours}");
+		await Assert.That(await RunAsync(member, $"@malias/destroy {alias}")).Contains($"MAIL: {notYours}");
 		await Assert.That(await RunAsync(member, $"@malias/chown {alias}=me")).Contains("MAIL: You cannot do that!");
 
 		var added = await RunAsync(owner, $"@malias/add {alias}=#{outsider.DbRef.Number} #{member.DbRef.Number}");
@@ -242,7 +243,7 @@ public class MailAliasCommandTests
 		await Assert.That(await RunAsync(owner, $"@malias/use {alias}="))
 			.Contains(m => m.StartsWith($"MAIL: Permission to see/use alias '{alias}' changed to"));
 		await Assert.That((await EvaluateAsync(outsider, "malias()")).Split(' ')).Contains(alias);
-		await Assert.That(await RunAsync(outsider, "@malias/stat")).Contains("MAIL: Permission denied.");
+		await Assert.That(await RunAsync(outsider, "@malias/stat")).Contains("MAIL: Permission denied. You need one of these permissions: game.wizard, game.royalty.");
 	}
 
 	[Test]
@@ -250,7 +251,7 @@ public class MailAliasCommandTests
 	{
 		var mortal = await PlayerAsync("MalMortal");
 
-		await Assert.That(await RunAsync(mortal, "@malias/stats")).Contains("MAIL: Permission denied.");
+		await Assert.That(await RunAsync(mortal, "@malias/stats")).Contains("MAIL: Permission denied. You need one of these permissions: game.wizard, game.royalty.");
 		await Assert.That(await RunAsync(mortal, "@malias/nuke")).Contains("MAIL: Only god can do that!");
 		await Assert.That(await RunAsync(mortal, "@malias =me")).Contains("MAIL: Invalid malias command.");
 	}

@@ -152,8 +152,7 @@ public partial class Commands
 				if (!await PermissionService.Controls(executor, found)
 						&& (spoofSwitch || !(await executor.Owns(found) && await found.HasFlag("LINK_OK"))))
 				{
-					await NotifyService.Notify(executor, ErrorMessages.Notifications.PermissionDenied, executor);
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return await NotifyService.PermissionDeniedNotControlled(executor, found);
 				}
 
 				// The object the callbacks answer to: the command executor, or the enactor that caused

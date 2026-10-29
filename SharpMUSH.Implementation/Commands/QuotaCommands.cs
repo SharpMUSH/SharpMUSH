@@ -31,13 +31,9 @@ public partial class Commands
 
 		if (switches.Contains("SET"))
 		{
-			if (!await executor.Can(PortalPermission.PlayersModerate))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.PlayersModerate)) is PermissionRefusal refused)
 			{
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-					shouldNotify: true);
+				return await NotifyService.PermissionDenied(executor, refused);
 			}
 
 			if (await RejectIfTooFewArguments(parser, 2, executor,
@@ -69,13 +65,9 @@ public partial class Commands
 
 		if (switches.Contains("ALL"))
 		{
-			if (!await executor.Can(PortalPermission.PlayersModerate))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.PlayersModerate)) is PermissionRefusal refused)
 			{
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-					shouldNotify: true);
+				return await NotifyService.PermissionDenied(executor, refused);
 			}
 
 			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.QuotaListingHeader), executor);
@@ -252,13 +244,9 @@ public partial class Commands
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!await executor.Can(PortalPermission.PlayersModerate))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.PlayersModerate)) is PermissionRefusal refused)
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (await RejectIfTooFewArguments(parser, 1, executor,

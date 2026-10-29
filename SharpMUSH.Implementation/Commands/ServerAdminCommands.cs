@@ -381,10 +381,10 @@ public partial class Commands
 			.ToList();
 
 		if (targets.Any(connection => connection.Ref is not { } owner || owner.Number != executorRef.Number)
-			&& !await executor.Can(PortalPermission.PlayersModerate) && !await executor.HasPower("Boot"))
+			&& await PermissionService.Check(executor, Requires.Any(PortalPermission.PlayersModerate, PortalPermission.GamePower("Boot")))
+				is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		foreach (var handle in targetHandles)
@@ -782,10 +782,9 @@ public partial class Commands
 			return new CallState(ErrorMessages.Returns.NotFound);
 		}
 
-		if (!await PermissionService.Controls(executor, target) && !await HaltsAnything(executor))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target, HaltAnything)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var targetObject = target.Object();
@@ -1230,10 +1229,9 @@ public partial class Commands
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var switches = parser.CurrentState.Switches;
 
-		if (!executor.IsGod())
+		if (await PermissionService.Check(executor, Requires.God()) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		// logtype_from_switch(sw, LT_ERR) and the policy switches, each with Penn's default.

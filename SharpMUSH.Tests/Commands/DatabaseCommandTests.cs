@@ -792,7 +792,7 @@ public class DatabaseCommandTests
 		await testParser.CommandParse(mortal.Handle, ConnectionService,
 			MarkupText.Plain($"@mapsql {target}/MAPDENIED=SELECT col1 FROM test_mapsql_data_cmd WHERE id = 1"));
 
-		await Assert.That(SqlWebAppFactoryArg.Notifications.For(mortal.DbRef)).Contains("Permission denied.");
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(mortal.DbRef).Any(m => m.StartsWith("Permission denied. You do not control "))).IsTrue();
 		await Assert.That(SqlWebAppFactoryArg.Notifications.For(mortal.DbRef).Any(m => m.EndsWith("queued for execution."))).IsFalse();
 		await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).Any(m => m.Contains(marker))).IsFalse();
 	}
@@ -825,7 +825,7 @@ public class DatabaseCommandTests
 		}
 		else
 		{
-			await Assert.That(SqlWebAppFactoryArg.Notifications.For(requester)).Contains("Permission denied.");
+			await Assert.That(SqlWebAppFactoryArg.Notifications.For(requester).Any(m => m.StartsWith("Permission denied. You do not control "))).IsTrue();
 			await Assert.That(SqlWebAppFactoryArg.Notifications.For(target).Any(m => m == marker)).IsFalse();
 		}
 	}

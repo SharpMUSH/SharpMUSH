@@ -37,9 +37,9 @@ public partial class Commands
 
 		if (switches.Contains("LIST"))
 		{
-			if (!await executor.Can(PortalPermission.ChatAdmin))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ChatAdmin)) is PermissionRefusal refused)
 			{
-				await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+				await NotifyService.PermissionDenied(executor, refused);
 				return CallState.Empty;
 			}
 
@@ -100,9 +100,9 @@ public partial class Commands
 				return CallState.Empty;
 			}
 		}
-		else if (!await executor.Can(PortalPermission.ChatAdmin))
+		else if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ChatAdmin)) is PermissionRefusal refused)
 		{
-			await NotifyService.NotifyLocalized(executor, nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await NotifyService.PermissionDenied(executor, refused);
 			return CallState.Empty;
 		}
 
@@ -140,13 +140,9 @@ public partial class Commands
 
 		if (switches.Contains("CLEAR"))
 		{
-			if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("Poll"))) is PermissionRefusal clearRefused)
 			{
-				return await NotifyService.NotifyAndReturn(
-					executor.Object().DBRef,
-					errorReturn: ErrorMessages.Returns.PermissionDenied,
-					notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-					shouldNotify: true);
+				return await NotifyService.PermissionDenied(executor, clearRefused);
 			}
 
 			var newPollData = pollData with { Message = null };
@@ -168,13 +164,9 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		if (!await executor.IsWizard() && !await executor.HasPower("POLL"))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("Poll"))) is PermissionRefusal refused)
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		var argText = ArgHelpers.NoParseDefaultNoParseArgument(args, 0, MarkupText.Empty).ToPlainText();

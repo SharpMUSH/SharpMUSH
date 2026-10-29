@@ -73,7 +73,7 @@ public partial class Functions
 	/// PennMUSH <c>mailfun_fetch</c> (<c>src/extmail.c:2154-2186</c>): the message
 	/// <c>[&lt;player&gt;, ][&lt;folder&gt;:]&lt;message&gt;</c> names, or null. With one argument it reads
 	/// the caller's own mailbox and says nothing when the message is not there. With two it matches the
-	/// player noisily, tells a caller who does not control them "Permission denied", and a malformed
+	/// player noisily, tells a caller who does not control them "Permission denied" and why, and a malformed
 	/// message "Invalid message specification"; a well-formed number with no message behind it is
 	/// silent either way. Each function then returns its own failure value.
 	/// </summary>
@@ -101,7 +101,7 @@ public partial class Functions
 
 		if (!await CanReadMailOf(executor, player))
 		{
-			await NotifyService.Notify(executor, ErrorMessages.Notifications.MailFetchPermissionDenied, executor);
+			await NotifyService.PermissionDeniedNotControlled(executor, player);
 			return null;
 		}
 
@@ -162,7 +162,7 @@ public partial class Functions
 		{
 			if (!await CanReadMailOf(executor, mailbox))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.NotControlled(mailbox).Return;
 			}
 
 			var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
@@ -218,7 +218,7 @@ public partial class Functions
 
 			if (!await CanReadMailOf(executor, located))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.NotControlled(located).Return;
 			}
 
 			targetPlayer = located;
@@ -337,9 +337,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(mailbox.Object)));

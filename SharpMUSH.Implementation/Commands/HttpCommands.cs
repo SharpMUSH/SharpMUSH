@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.DiscriminatedUnions;
@@ -31,13 +32,9 @@ public partial class Commands
 		parser.CurrentState.Arguments.TryGetValue("2", out var dataArg);
 		parser.CurrentState.Arguments.TryGetValue("3", out var headersArg);
 
-		if (!await executor.IsWizard() && !await executor.HasPower("CAN_HTTP"))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GamePower("CAN_HTTP"))) is PermissionRefusal refused)
 		{
-			return await NotifyService.NotifyAndReturn(
-				executor.Object().DBRef,
-				errorReturn: ErrorMessages.Returns.PermissionDenied,
-				notifyMessage: ErrorMessages.Notifications.PermissionDenied,
-				shouldNotify: true);
+			return await NotifyService.PermissionDenied(executor, refused);
 		}
 
 		if (objAttrArg is null)

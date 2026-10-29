@@ -225,7 +225,7 @@ public class DefinitionAuthorizationTests
 		await Factory.CommandParser.CommandParse(actor.Handle, Connections, MarkupText.Plain("@flag/debug WIZARD"));
 		await Assert.That(Factory.Notifications.For(actor.DbRef).Skip(offset).Any(message => message.Contains("Flag WIZARD (debug)"))).IsEqualTo(wizard);
 		if (!wizard) await Assert.That(TestHelpers.ReceivedNotifyLocalizedWithKey(Factory.Services.GetRequiredService<INotifyService>(),
-			nameof(ErrorMessages.Notifications.PermissionDenied), actor.DbRef, actor.DbRef)).IsTrue();
+			nameof(ErrorMessages.Notifications.PermissionDeniedNeedsPermission), actor.DbRef, actor.DbRef)).IsTrue();
 	}
 
 	[Test]

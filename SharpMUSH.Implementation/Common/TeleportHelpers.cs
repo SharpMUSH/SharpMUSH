@@ -268,13 +268,20 @@ public static class TeleportHelpers
 		// it stands, authority over where it is going, and the FIXED rule. Any of the three failing
 		// is the same refusal, and it is the destination's ENTER lock failure triad (wiz.c:590) —
 		// not a bare notification — shown to the room the teleporter is standing in.
-		if (!await TportControlOk(services, executor, target, currentLocation, telAnything)
-				|| !await TportDestOk(services, executor, target, destinationContainer, telAnywhere)
-				|| !await FixedAllows(executor, target, destinationContainer, telAnywhere, telAnything))
+		var refusal = !await TportControlOk(services, executor, target, currentLocation, telAnything)
+			? ControlRefusal(executor, target)
+			: !await TportDestOk(services, executor, target, destinationContainer, telAnywhere)
+				? new PermissionRefusal(nameof(ErrorMessages.Notifications.PermissionDeniedTeleportDestination),
+					ErrorMessages.Notifications.PermissionDeniedTeleportDestination, destinationContainer.Object().Name, target.Object().Name)
+				: !await FixedAllows(executor, target, destinationContainer, telAnywhere, telAnything)
+					? new PermissionRefusal(nameof(ErrorMessages.Notifications.PermissionDeniedTeleportFixed),
+						ErrorMessages.Notifications.PermissionDeniedTeleportFixed)
+					: null;
+		if (refusal is not null)
 		{
 			await services.DidItService.FailLock(parser, executor, destinationContainer.WithExitOption(),
 				LockType.Enter,
-				MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied),
+				MarkupText.Plain(refusal.Text),
 				await executor.Where());
 			return;
 		}
@@ -346,12 +353,16 @@ public static class TeleportHelpers
 
 		// wiz.c:468: the room the exit sits in decides the eviction, and the new room has to be
 		// one the teleporter could have opened an exit in to begin with.
-		if (!await TportControlOk(services, executor, target, oldSource, telAnything)
-				|| !await BuildingHelpers.CanOpenFromAsync(services.PermissionService, services.LockService,
-					executor, destinationContainer))
+		if (!await TportControlOk(services, executor, target, oldSource, telAnything))
 		{
-			await services.NotifyService.NotifyLocalized(executor,
-				nameof(ErrorMessages.Notifications.PermissionDenied), executor);
+			await services.NotifyService.PermissionDenied(executor, ControlRefusal(executor, target));
+			return;
+		}
+
+		if (await BuildingHelpers.OpenFromAsync(services.PermissionService, services.LockService,
+				executor, destinationContainer) is PermissionRefusal openRefusal)
+		{
+			await services.NotifyService.PermissionDenied(executor, openRefusal);
 			return;
 		}
 
@@ -585,6 +596,10 @@ public static class TeleportHelpers
 
 		return playerOwner.Equals(victimOwner);
 	}
+
+	/// <summary>Why <see cref="TportControlOk"/> said no: God is God's alone to move, and anything else is control.</summary>
+	private static PermissionRefusal ControlRefusal(AnySharpObject player, AnySharpObject victim)
+		=> victim.IsGod() && !player.IsGod() ? PermissionRefusal.GodOnly() : PermissionRefusal.NotControlled(victim);
 
 	/// <summary>
 	/// PennMUSH <c>tport_dest_ok</c> (<c>src/wiz.c:302</c>): may <paramref name="player"/> legitimately

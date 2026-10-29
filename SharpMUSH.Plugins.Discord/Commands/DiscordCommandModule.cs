@@ -59,7 +59,7 @@ public static class DiscordCommandModule
 
 		if (!await executor.Can(DiscordPlugin.AdminPermission))
 		{
-			await notify.Notify(executor, Notice("Permission denied.", NoticeKind.Error));
+			await notify.Notify(executor, Notice(PermissionRefusal.Needs(DiscordPlugin.AdminPermission).Text, NoticeKind.Error));
 			return new CallState(PermissionDenied);
 		}
 

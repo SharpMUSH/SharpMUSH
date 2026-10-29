@@ -120,7 +120,7 @@ public class UnrecycleAliasTests
 
 		var result = await As(stranger, $"{command} {thing}");
 
-		await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(result.Message.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 		await Assert.That(WasTold(stranger.DbRef, ErrorMessages.Notifications.PermissionDenied)).IsTrue();
 		await Assert.That(await IsGoingAsync(thing)).IsTrue();
 	}

@@ -56,7 +56,7 @@ public class LocateFunctionPermissionTests
 		// the gate talking and not simply a search that was never going to match.
 		var godSees = await EvalAs(new DBRef(1), $"locate(#{looker.Number},LocatePermTarget,n)");
 
-		await Assert.That(mortalSees).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(mortalSees).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
 	}
 
@@ -80,7 +80,7 @@ public class LocateFunctionPermissionTests
 		var mortalSees = await EvalAs(mortal.DbRef, $"locate(#{looker.Number},LocateInjectTarget,N)");
 		var godSees = await EvalAs(new DBRef(1), $"locate(#{looker.Number},LocateInjectTarget,N)");
 
-		await Assert.That(mortalSees).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(mortalSees).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 		await Assert.That(godSees).IsEqualTo($"#{target.Number}");
 	}
 }

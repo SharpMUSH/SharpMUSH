@@ -82,7 +82,7 @@ public class ExplicitFailureReturnTests
 		var mortal = await Mortal("ExplicitZoneSnoop");
 		var thing = await Thing("ExplicitZoneTarget");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"zone({thing})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"zone({thing})")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT EXAMINE");
 	}
 
 	// ---------------------------------------------------------------- loc(), home(), rloc(), room(), where()
@@ -138,19 +138,19 @@ public class ExplicitFailureReturnTests
 	/// (<c>:1670</c>): a mortal may not learn where something they neither control nor stand near is.
 	/// </summary>
 	[Test]
-	[Arguments("loc({0})")]
-	[Arguments("rloc({0},1)")]
-	[Arguments("room({0})")]
-	[Arguments("where({0})")]
-	[Arguments("home({0})")]
-	public async Task AMortalCannotLocateSomethingFarAway(string template)
+	[Arguments("loc({0})", "#-1 PERMISSION DENIED: CANNOT LOCATE")]
+	[Arguments("rloc({0},1)", "#-1 PERMISSION DENIED: CANNOT LOCATE")]
+	[Arguments("room({0})", "#-1 PERMISSION DENIED: CANNOT LOCATE")]
+	[Arguments("where({0})", "#-1 PERMISSION DENIED: CANNOT LOCATE")]
+	[Arguments("home({0})", "#-1 PERMISSION DENIED: CANNOT EXAMINE")]
+	public async Task AMortalCannotLocateSomethingFarAway(string template, string refusal)
 	{
 		var mortal = await Mortal("ExplicitLocSnoop");
 		var faraway = await Room("ExplicitLocFar");
 		var thing = await Thing("ExplicitLocHidden", faraway);
 
 		await Assert.That(await EvalAs(mortal.DbRef, string.Format(template, thing)))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo(refusal);
 	}
 
 	// ---------------------------------------------------------------- the dbwalk family
@@ -225,7 +225,7 @@ public class ExplicitFailureReturnTests
 		var faraway = await Room("ExplicitLocateFar");
 
 		await Assert.That(await EvalAs(mortal.DbRef, $"locate(#{faraway.Number},anything,n)"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 	}
 
 	// ---------------------------------------------------------------- locks
@@ -237,8 +237,8 @@ public class ExplicitFailureReturnTests
 		var thing = await Thing("ExplicitLocked");
 		await God($"@lock #{thing.Number}=#1");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"elock(#{thing.Number},me)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
-		await Assert.That(await EvalAs(mortal.DbRef, $"lock(#{thing.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"elock(#{thing.Number},me)")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT READ BASIC LOCK");
+		await Assert.That(await EvalAs(mortal.DbRef, $"lock(#{thing.Number})")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT READ BASIC LOCK");
 	}
 
 	[Test]
@@ -258,7 +258,7 @@ public class ExplicitFailureReturnTests
 		var faraway = await Room("ExplicitTestlockFar");
 		var thing = await Thing("ExplicitTestlockVictim", faraway);
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"testlock(#1,#{thing.Number})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"testlock(#1,#{thing.Number})")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT LOCATE");
 	}
 
 	// ---------------------------------------------------------------- nearby(), rnum()
@@ -275,7 +275,7 @@ public class ExplicitFailureReturnTests
 		var room = await Room("ExplicitRnumRoom");
 		var exit = DBRef.Parse((await God($"@open {Unique("ExplicitRnumExit")}=,#{room.Number}")).Trim().Split(' ')[^1].Trim());
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"rnum(#{faraway.Number},anything)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"rnum(#{faraway.Number},anything)")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT EXAMINE");
 		await Assert.That(await EvalAsGod($"rnum(#{exit.Number},anything)")).IsEqualTo(ErrorMessages.Returns.InvalidObjectType);
 		await Assert.That(await EvalAsGod($"rnum(#{room.Number},{Missing})")).IsEqualTo(ErrorMessages.Returns.NoMatch);
 
@@ -350,7 +350,7 @@ public class ExplicitFailureReturnTests
 		var offline = Unique("ExOff")[..14];
 		await God($"@pcreate {offline}=password");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"{function}({other.Name})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, $"{function}({other.Name})")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 		await Assert.That(await EvalAsGod($"{function}(*{offline})")).IsEqualTo(ErrorMessages.Returns.NotConnected);
 	}
 
@@ -383,7 +383,7 @@ public class ExplicitFailureReturnTests
 		var deliveredBefore = Factory.Notifications.DeliveryCountFor(mortal.DbRef);
 		var messagesBefore = Factory.Notifications.CountFor(mortal.DbRef);
 
-		await Assert.That(await EvalAs(mortal.DbRef, "hidden(me)")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await EvalAs(mortal.DbRef, "hidden(me)")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL");
 
 		await Assert.That(Factory.Notifications.DeliveriesFor(mortal.DbRef).Skip(deliveredBefore)
 				.Where(delivery => delivery.Sender is null || delivery.Sender == mortal.DbRef))
