@@ -11,6 +11,7 @@ using SharpMUSH.Client.Authentication;
 using SharpMUSH.Client.Layout;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Services.Navigation;
 using SharpMUSH.Client.Widgets;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Services;
@@ -44,6 +45,8 @@ builder.Services.AddScoped<CharacterProfileService>();
 builder.Services.AddScoped<SidebarCollapseService>();
 builder.Services.AddSingleton<SchemaAppService>();
 builder.Services.AddSingleton<ApplicationRegistryClient>();
+builder.Services.AddSingleton<NavLayoutClient>();
+builder.Services.AddScoped<PortalNavigation>();
 // Loads + resolves plugin-shipped compiled Blazor components at runtime (gate-guarded server-side; renders
 // by reflection only — references zero plugin types). Caches loaded assemblies (no unload, by design).
 builder.Services.AddSingleton<PluginComponentLoader>();

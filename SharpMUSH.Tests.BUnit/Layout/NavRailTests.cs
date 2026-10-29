@@ -211,6 +211,54 @@ public class NavRailTests : TrackingBunitContext
 			.Because("signing out leaves the Wizard-only section behind the previous role");
 	}
 
+	/// <summary>
+	/// The rail draws the game's navigation groups: each inline group a list named for it, and an application
+	/// placed in Play joins Play's list rather than going without a button.
+	/// </summary>
+	[Test]
+	public async Task InlineGroups_AreNamedLists_AndAPlayAppJoinsPlay()
+	{
+		_apps.Apps =
+		[
+			new
+			{
+				slug = "chargen", displayName = "Chargen", icon = (string?)null, kind = "Page", schemaUrl = "http/chargen/schema",
+				minimumRole = "Guest", navPlacement = "Play", zones = Array.Empty<string>(), order = 0,
+			},
+		];
+		var cut = RenderAt("/");
+
+		cut.WaitForAssertion(() => cut.Find("ul[aria-label='Play'] a[href='/apps/chargen']"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll("ul[aria-label='Play'] a[href='/play']").Count).IsEqualTo(1);
+		await Assert.That(cut.FindAll("ul[aria-label='NavSectionWorld'] a[href='/wiki']").Count).IsEqualTo(1);
+	}
+
+	/// <summary>Applications sharing a placement of their own are one button, opening the first of them.</summary>
+	[Test]
+	public async Task ASectionOfItsOwn_IsOneButton_ForItsFirstApp()
+	{
+		_apps.Apps =
+		[
+			new
+			{
+				slug = "boards", displayName = "Boards", icon = (string?)null, kind = "Page", schemaUrl = "http/boards/schema",
+				minimumRole = "Guest", navPlacement = "Community", zones = Array.Empty<string>(), order = 2,
+			},
+			new
+			{
+				slug = "highlights", displayName = "Highlights", icon = (string?)null, kind = "Page", schemaUrl = "http/highlights/schema",
+				minimumRole = "Guest", navPlacement = "Community", zones = Array.Empty<string>(), order = 1,
+			},
+		];
+		var cut = RenderAt("/apps/boards");
+
+		cut.WaitForAssertion(() => cut.Find("a.phosphor-rail-item[aria-label='Community']"), TimeSpan.FromSeconds(5));
+		var community = cut.Find("a.phosphor-rail-item[aria-label='Community']");
+		await Assert.That(community.GetAttribute("href")).IsEqualTo("/apps/highlights");
+		await Assert.That(community.GetAttribute("aria-current")).IsEqualTo("page").Because("boards is in the section too");
+		await Assert.That(cut.FindAll("a[href='/apps/boards']").Count).IsEqualTo(0);
+	}
+
 	[Test]
 	public async Task Search_OpensThePalette_AndTheTerminalToggleSaysWhetherItIsOpen()
 	{

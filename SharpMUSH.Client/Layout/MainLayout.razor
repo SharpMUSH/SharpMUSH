@@ -12,6 +12,7 @@
 @inject AccountAuthService AccountAuth
 @inject AuthenticationStateProvider AuthStateProvider
 @inject ServerInfoService ServerInfo
+@inject PortalNavigation Navigation
 @inject ILayoutService LayoutService
 @inject IJSRuntime JS
 
@@ -130,12 +131,10 @@
         {
             <nav class="phosphor-bottomnav" aria-label="@Loc["NavBottomNavLabel"]">
                 @BottomTab("/", Icons.Material.Filled.Home, Loc["Home"], exact: true)
-                @if (_showPlay)
+                @foreach (var tab in _tabs)
                 {
-                    @BottomTab("/play", Icons.Material.Filled.SportsEsports, Loc["Play"])
+                    @BottomTab(tab.Href, tab.FillIcon, tab.Label)
                 }
-                @BottomTab("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
-                @BottomTab("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
                 <button type="button"
                         class="phosphor-bottomtab @(_mobileNavOpen ? "phosphor-bottomtab--on" : "")"
                         aria-expanded="@(_mobileNavOpen ? "true" : "false")" @onclick="ToggleMobileNav">
@@ -163,12 +162,10 @@
     private bool _isConfigRoute = false;
     private bool _isPlayRoute = false;
     private bool _terminalOpen = false;
-    private bool _characterActive = false;
 
-    // Logged-in users can Play as their character; anonymous visitors can Play only when the
-    // server accepts guests. Defaults to the config default (true) until the fetch settles.
-    private bool _guestsEnabled = true;
-    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
+    // The tab bar's destinations between Home and Menu, from the game's navigation for this viewer: a tab they
+    // may not open (Play for a visitor while guest logins are off) is not there.
+    private IReadOnlyList<NavDestination> _tabs = [];
     private bool _isDebugAuth;
     private LayoutConfiguration? _layout;
     private string? _pendingHintStrip;
@@ -258,10 +255,10 @@
     protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
-        // Mirror the sidebar's Play gating on the bottom nav: a character session is
-        // "active" when the command terminal is connected.
-        _characterActive = Terminal.IsConnected;
+        // A destination behind a connected character (Mail) can be a tab.
         Terminal.ConnectionStateChanged += OnCharacterConnectionChanged;
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Navigation.Changed += OnNavigationChanged;
         UpdateConfigRouteState();
         LayoutService.OnLayoutChanged += HandleLayoutChanged;
         ServerInfo.Changed += OnServerInfoChanged;
@@ -270,7 +267,7 @@
         // instead of one after another behind it: each is a round trip the shell's zones, the Play
         // tab or the /setup redirect would otherwise wait on in turn.
         var globalLayout = LoadGlobalLayoutAsync();
-        var guestLogins = LoadGuestLoginsEnabledAsync();
+        var tabs = LoadTabsAsync();
         var setupStatus = AccountAuth.NeedsSetupAsync();
 
         await AccountAuth.InitAsync();
@@ -303,7 +300,9 @@
             RestoreCharacterAsync(),
             EnsureAccountRoutingAsync(setupStatus),
             globalLayout,
-            guestLogins);
+            tabs);
+        // The first read went out before the session was restored; a signed-in player's tabs follow who they are.
+        await LoadTabsAsync();
     }
 
     /// <summary>The roster, then the <c>?as=</c> hint that picks a character from it.</summary>
@@ -321,14 +320,22 @@
         StateHasChanged();
     }
 
-    private async Task LoadGuestLoginsEnabledAsync()
+    private async Task LoadTabsAsync()
     {
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
+#pragma warning disable BL0013
+        var user = (await AuthStateProvider.GetAuthenticationStateAsync()).User;
+#pragma warning restore BL0013
+        _tabs = (await Navigation.ResolveAsync(user)).Tabs;
         StateHasChanged();
     }
 
-    /// <summary>A newer server answer (the guest roster changed): the Play tab follows it.</summary>
-    private void OnServerInfoChanged() => _ = InvokeAsync(LoadGuestLoginsEnabledAsync);
+    /// <summary>A newer server answer (the guest roster or the features changed): the tabs follow it.</summary>
+    private void OnServerInfoChanged() => _ = InvokeAsync(LoadTabsAsync);
+
+    private void OnAuthenticationStateChanged(Task<AuthenticationState> state) => _ = InvokeAsync(LoadTabsAsync);
+
+    /// <summary>Staff in this tab saved the layout: the tabs follow it.</summary>
+    private void OnNavigationChanged() => _ = InvokeAsync(LoadTabsAsync);
 
     private void HandleLayoutChanged(string scope)
     {
@@ -395,8 +402,7 @@
             // A page change is when an aged-out server answer is asked again (a fresh one costs nothing), so
             // a tab left open follows the guest roster without a reload; a changed answer reaches the menus
             // through ServerInfo.Changed.
-            _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-            StateHasChanged();
+            await LoadTabsAsync();
         });
     }
 
@@ -422,12 +428,7 @@
         _pagebarOpen = false;
     }
 
-    private void OnCharacterConnectionChanged(bool connected)
-        => InvokeAsync(() =>
-        {
-            _characterActive = connected;
-            StateHasChanged();
-        });
+    private void OnCharacterConnectionChanged(bool connected) => _ = InvokeAsync(LoadTabsAsync);
 
     private bool? _needsSetup;
 
@@ -517,6 +518,8 @@
         NavigationManager.LocationChanged -= OnLocationChanged;
         LayoutService.OnLayoutChanged -= HandleLayoutChanged;
         Terminal.ConnectionStateChanged -= OnCharacterConnectionChanged;
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Navigation.Changed -= OnNavigationChanged;
         ServerInfo.Changed -= OnServerInfoChanged;
     }
 }

@@ -2,11 +2,14 @@ using System.Net;
 using System.Text;
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.JSInterop;
 using MudBlazor.Services;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Services.Navigation;
 
 namespace SharpMUSH.Tests.Client;
 
@@ -60,6 +63,14 @@ public abstract class MudBlazorTestContext : BunitContext
 		// character directory; the empty list leaves every avatar as initials.
 		Services.AddSingleton<ICharacterPictures>(new CharacterDirectoryService(
 			StubFactoryReturningEmptyList(), NullLogger<CharacterDirectoryService>.Instance));
+		// The rail, the drawer and the tab bar draw the game's navigation: no stored layout, so the default.
+		Services.AddSingleton(sp => new PortalNavigation(
+			sp.GetRequiredService<ApplicationRegistryClient>(),
+			new NavLayoutClient(StubFactoryReturningEmptyList()),
+			sp.GetRequiredService<ServerInfoService>(),
+			sp.GetRequiredService<AccountAuthService>(),
+			sp.GetRequiredService<ITerminalService>(),
+			sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
 	}
 
 	private IHttpClientFactory StubFactoryReturningEmptyList() => StubFactoryReturning("[]");

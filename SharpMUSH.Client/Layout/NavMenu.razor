@@ -3,13 +3,14 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Library.Authorization
 @using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Library.Models.Portal.Navigation
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
-@inject AccountAuthService AccountAuth
 @inject ApplicationCatalog Applications
 @inject ServerInfoService ServerInfo
+@inject PortalNavigation Navigation
 @implements IDisposable
 
 <div class="phosphor-sidebar @(IsCollapsed ? "phosphor-sidebar--collapsed" : "")">
@@ -27,43 +28,18 @@
 
     <nav class="phosphor-nav" aria-label="@Loc["NavMenuLabel"]">
 
-        <div class="nav-group">
-            <div class="nav-group-label">@Loc["Play"]</div>
-            @* Logged-in users Play as their character; guests Play only when the server allows it. *@
-            @if (_showPlay)
-            {
-                <NavLink class="phosphor-nav-link" href="/play" Match="NavLinkMatch.Prefix">
-                    <MudIcon Icon="@Icons.Material.Filled.SportsEsports" Class="phosphor-nav-icon" />
-                    @* Collapsed to its icon, the link still says where it goes. *@
-                    <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@Loc["Play"]</span>
-                    @if (_playActive)
-                    {
-                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")" aria-hidden="true"
-                              title="@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])"></span>
-                        <span class="visually-hidden">@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])</span>
-                    }
-                </NavLink>
-            }
-            <FeatureGate Feature="@GameFeatures.Scenes">@NavItem("/scenes", Icons.Material.Filled.Theaters, Loc["SceneArchive"])</FeatureGate>
-            @if (_characterActive)
-            {
-                @NavItem("/mail", Icons.Material.Filled.Mail, Loc["Mail"])
-            }
-            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Play" Applications="_apps" />
-        </div>
-
-        <div class="nav-group">
-            <div class="nav-group-label">@Loc["NavSectionWorld"]</div>
-            @NavItem("/wiki", Icons.Material.Filled.MenuBook, Loc["Wiki"])
-            <FeatureGate Feature="@GameFeatures.WorldMap">@NavItem("/map", Icons.Material.Filled.Map, Loc["NavWorldMap"])</FeatureGate>
-            @NavItem("/characters", Icons.Material.Filled.Groups, Loc["Characters"])
-            @* Help sits with Wiki, not under Manage: it is reference reading for players, and it was
-               the ONLY ungated entry under Manage — which made "Manage" a one-item section holding
-               something nobody manages, for every non-admin. Manage is now purely staff tooling and
-               disappears entirely for a viewer who has none of it. *@
-            @NavItem("/help", Icons.Material.Filled.Help, Loc["Help"])
-            <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="World" Applications="_apps" />
-        </div>
+        @* The game's navigation groups (PortalNavigation), in the rail's order. A section group lists all its
+           destinations here: the drawer has room for their names. *@
+        @foreach (var group in _nav.Groups)
+        {
+            <div class="nav-group" @key="group.Id">
+                <div class="nav-group-label">@group.Label</div>
+                @foreach (var item in group.Items)
+                {
+                    @Destination(item)
+                }
+            </div>
+        }
 
         @* Build & manage, grouped as its sidebar and overview group it (BuildNavCatalog). A group with
            nothing the viewer may use hides its heading through the nav-group CSS rule. Applications
@@ -92,15 +68,6 @@
             <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="Manage" Applications="_apps" />
         </div>
 
-        @* DATA-DRIVEN SECTIONS — any app whose NavPlacement is not a built-in section becomes its own
-           group, ordered by the minimum Order of its apps (ties broken by section name). *@
-        @foreach (var section in _novelSections)
-        {
-            <div class="nav-group" @key="section">
-                <div class="nav-group-label">@section</div>
-                <ApplicationNavLinks IsCollapsed="IsCollapsed" Section="@section" Applications="_apps" />
-            </div>
-        }
     </nav>
 
     @* The touch header's other buttons, for a page that merges that header into its own (Play). Rendered only
@@ -155,17 +122,13 @@
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    // The registered Page apps and the novel (non-built-in) sections derived from their NavPlacement.
-    // Fetched once and shared with every ApplicationNavLinks instance to avoid N registry calls.
+    // The registered Page apps, shared with the Build and Manage ApplicationNavLinks to avoid a registry call each.
     private IReadOnlyList<PortalApplication> _apps = [];
-    private IReadOnlyList<string> _novelSections = [];
 
-    private bool _characterActive;
+    // The game's navigation for this viewer: the same groups, in the same order, as the rail.
+    private ResolvedNav _nav = ResolvedNav.Empty;
 
-    // Anyone logged in can Play as their character; an anonymous visitor can Play only when the
-    // server accepts guest logins. Defaults to the config default (true) until the fetch settles.
-    private bool _guestsEnabled = true;
-    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
+    private static readonly string PlayKey = NavKeys.Core("play");
 
     // The configured game name shown as the sidebar brand. Defaults to the config default until the
     // ServerInfo fetch settles.
@@ -175,16 +138,36 @@
     private bool _playActive;
     private bool _playUnread;
 
-    private RenderFragment NavItem(string href, string icon, string label, NavLinkMatch match = NavLinkMatch.Prefix) =>
-        @<NavLink class="phosphor-nav-link" href="@href" Match="match">
-            <MudIcon Icon="@icon" Class="phosphor-nav-icon" />
-            <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@label</span>
-        </NavLink>;
+    /// <summary>One destination's link. Play carries the session dot; a link to another site opens in a new tab.</summary>
+    private RenderFragment Destination(NavDestination item) =>
+        @<text>
+            @if (item.External)
+            {
+                <a class="phosphor-nav-link" href="@item.Href" target="_blank" rel="noopener">
+                    <MudIcon Icon="@item.FillIcon" Class="phosphor-nav-icon" />
+                    <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@item.Label</span>
+                </a>
+            }
+            else
+            {
+                <NavLink class="phosphor-nav-link" href="@item.Href" Match="NavLinkMatch.Prefix">
+                    <MudIcon Icon="@item.FillIcon" Class="phosphor-nav-icon" />
+                    @* Collapsed to its icon, the link still says where it goes. *@
+                    <span class="@(IsCollapsed ? "visually-hidden" : "phosphor-nav-text")">@item.Label</span>
+                    @if (_playActive && string.Equals(item.Key, PlayKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        <span class="phosphor-nav-dot @(_playUnread ? "phosphor-nav-dot--unread" : "")" aria-hidden="true"
+                              title="@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])"></span>
+                        <span class="visually-hidden">@(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])</span>
+                    }
+                </NavLink>
+            }
+        </text>;
 
     protected override void OnInitialized()
     {
         ServerInfo.Changed += OnServerInfoChanged;
-        _characterActive = Terminal.IsConnected;
+        Navigation.Changed += OnNavigationChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
 
         _playActive = PlayTerminal.IsConnected;
@@ -212,25 +195,26 @@
         _sectionsAuth = AuthState;
         var user = AuthState is null ? null : (await AuthState).User;
 
+        _nav = await Navigation.ResolveAsync(user);
         // The startup catalog, not a second GET api/applications of our own: the list is the same
         // for every viewer (the caller filters by role), and the catalog is already fetching it.
         await Applications.Loaded;
         _apps = Applications.All;
-        _novelSections = PortalNavSections.NovelSections(_apps, user);
     }
 
-    private async Task LoadServerInfoAsync()
+    private async Task LoadServerInfoAsync() => _gameName = await ServerInfo.GameNameAsync();
+
+    // Mail is there only while a character is connected.
+    private void OnConnectionChanged(bool connected) => _ = InvokeAsync(ResolveAsync);
+
+    // Staff in this tab saved the layout.
+    private void OnNavigationChanged() => _ = InvokeAsync(ResolveAsync);
+
+    private async Task ResolveAsync()
     {
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-        _gameName = await ServerInfo.GameNameAsync();
+        _nav = await Navigation.ResolveAsync(AuthState is null ? null : (await AuthState).User);
+        StateHasChanged();
     }
-
-    private void OnConnectionChanged(bool connected)
-        => InvokeAsync(() =>
-        {
-            _characterActive = connected;
-            StateHasChanged();
-        });
 
     private void OnPlayConnectionChanged(bool connected)
         => InvokeAsync(() =>
@@ -275,13 +259,13 @@
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
         ServerInfo.Changed -= OnServerInfoChanged;
+        Navigation.Changed -= OnNavigationChanged;
     }
 
-    /// <summary>A newer server answer (the guest roster or the game's name changed): the brand and the Play link follow it.</summary>
+    /// <summary>A newer server answer (the guest roster, the game's name or its features changed): the brand and the destinations follow it.</summary>
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
         _gameName = await ServerInfo.GameNameAsync();
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-        StateHasChanged();
+        await ResolveAsync();
     });
 }

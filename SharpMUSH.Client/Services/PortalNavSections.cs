@@ -6,15 +6,13 @@ using SharpMUSH.Library.Models.Portal.Applications;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// Pure grouping/ordering logic for data-driven NavBar sections. A registered Page application's
-/// <see cref="PortalApplication.NavPlacement"/> names the sidebar <b>section</b> its link belongs to.
-/// Built-in section names (<c>Play</c>/<c>World</c>/<c>Build</c>/<c>Manage</c>) slot into the existing
-/// hardcoded groups; any other name becomes its own data-driven group.
+/// The page applications one sidebar lists: a registered Page application's
+/// <see cref="PortalApplication.NavPlacement"/> names the <b>section</b> its link belongs to. Build and Manage
+/// apps are listed in Build &amp; manage, Play apps at the foot of the Play sidebar, and a section of its own
+/// is that section's sidebar. Where the main navigation puts each section is <c>NavResolver</c>'s business.
 ///
-/// <para>This helper is UI-free so it can be unit-tested directly: it filters the accessible Page apps for a
-/// caller's <see cref="PortalRole"/>, returns the apps for a given section in <c>Order</c>-then-name order,
-/// and returns the novel (non-built-in) sections ordered by their minimum <c>Order</c> (ties broken by
-/// section name).</para>
+/// <para>UI-free so it can be unit-tested directly: it filters the accessible Page apps for a caller's
+/// <see cref="PortalRole"/> and returns the apps for a given section in <c>Order</c>-then-name order.</para>
 /// </summary>
 public static class PortalNavSections
 {
@@ -37,10 +35,6 @@ public static class PortalNavSections
 		IEnumerable<PortalApplication> apps, ClaimsPrincipal? user, string section) =>
 		AppsForSection(apps, PortalRoleHelper.CurrentRole(user), section, scope => PortalApplication.HoldsPermission(user, scope));
 
-	/// <summary>The role-based <c>NovelSections</c> for a signed-in principal, honouring each app's permission.</summary>
-	public static IReadOnlyList<string> NovelSections(IEnumerable<PortalApplication> apps, ClaimsPrincipal? user) =>
-		NovelSections(apps, PortalRoleHelper.CurrentRole(user), scope => PortalApplication.HoldsPermission(user, scope));
-
 	/// <summary>
 	/// The accessible apps placed in <paramref name="section"/> (case-insensitive match on NavPlacement),
 	/// ordered by <c>Order</c> then display name. A role alone holds no permission, so a permission-gated
@@ -53,23 +47,4 @@ public static class PortalNavSections
 			.OrderBy(a => a.Order)
 			.ThenBy(a => a.DisplayName, StringComparer.OrdinalIgnoreCase)
 			.ToList();
-
-	/// <summary>
-	/// The novel sections (NavPlacement names that are not one of the built-ins) that have at least one
-	/// accessible app, ordered by the minimum <c>Order</c> across their apps (ties broken by section name).
-	/// Returned values are the canonical (first-seen) casing of each section name.
-	/// </summary>
-	public static IReadOnlyList<string> NovelSections(IEnumerable<PortalApplication> apps, PortalRole role, Func<string, bool>? holds = null)
-	{
-		var builtIn = new HashSet<string>(BuiltInSections, StringComparer.OrdinalIgnoreCase);
-
-		return Accessible(apps, role, holds ?? HoldsNothing)
-			.Where(a => !builtIn.Contains(a.NavPlacement!))
-			.GroupBy(a => a.NavPlacement!, StringComparer.OrdinalIgnoreCase)
-			.Select(g => (Name: g.First().NavPlacement!, MinOrder: g.Min(a => a.Order)))
-			.OrderBy(s => s.MinOrder)
-			.ThenBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-			.Select(s => s.Name)
-			.ToList();
-	}
 }

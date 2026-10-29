@@ -157,6 +157,42 @@
 	background: color-mix(in srgb, var(--rail-ink) 45%, transparent);
 }
 
+/* The game's navigation groups (PortalNavigation): a list of groups, an inline group a labelled list of its
+   destinations. A divider sits between groups. */
+.phosphor-rail-groups,
+.phosphor-rail-group-items {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+}
+
+.phosphor-rail-group {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 4px;
+}
+
+.phosphor-rail-group + .phosphor-rail-group {
+	padding-top: 6px;
+	border-top: 1px solid color-mix(in srgb, var(--rail-ink) 30%, transparent);
+}
+
+.phosphor-rail-group-label {
+	max-width: calc(var(--rail-w) - 8px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	font-size: 0.5625rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--rail-ink);
+}
+
 .phosphor-rail-item {
 	position: relative;
 	width: 44px;

@@ -13,6 +13,7 @@
 @inject PaletteClient Server
 @inject IPlayTerminalService PlayTerminal
 @inject GameCommandService Commands
+@inject PortalNavigation Navigation
 
 @* The command palette (docs/design/command-palette.md). Empty, it shows what the player's situation puts
    first: the @input session's lines, urgent commands, pins, what this page and the context stack raise,
@@ -255,19 +256,14 @@
             if (!IsCurrent(opening)) return;
             var build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
             if (!IsCurrent(opening)) return;
-            var scenes = await ServerInfo.HasFeatureAsync(GameFeatures.Scenes);
-            if (!IsCurrent(opening)) return;
-            var map = await ServerInfo.HasFeatureAsync(GameFeatures.WorldMap);
+            // What the navigation shows and what staff hid from it: hiding declutters the rail, it does not
+            // take a page away from whoever may open it.
+            var nav = await Navigation.ResolveAsync(user);
             if (!IsCurrent(opening)) return;
             _destinations =
             [
                 PaletteRow.Go("/", Icons.Material.Outlined.Home, Loc["Home"]),
-                PaletteRow.Go("/play", Icons.Material.Outlined.SportsEsports, Loc["Play"]),
-                .. (PaletteRow[])(scenes ? [PaletteRow.Go("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"])] : []),
-                PaletteRow.Go("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"]),
-                .. (PaletteRow[])(map ? [PaletteRow.Go("/map", Icons.Material.Outlined.Map, Loc["NavWorldMap"])] : []),
-                PaletteRow.Go("/characters", Icons.Material.Outlined.Groups, Loc["Characters"]),
-                PaletteRow.Go("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"]),
+                .. nav.Shown.Concat(nav.Hidden).Where(d => !d.External).Select(d => PaletteRow.Go(d.Href, d.OutlineIcon, d.Label)),
                 PaletteRow.Go("/settings", Icons.Material.Outlined.Settings, Loc["Settings"]),
                 .. build.Select(b => PaletteRow.Go(b.Href, b.Icon, Loc[b.LabelKey], Loc["NavBuildManage"])),
             ];
