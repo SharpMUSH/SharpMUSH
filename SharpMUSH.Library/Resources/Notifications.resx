@@ -228,6 +228,27 @@
   <data name="PermissionDeniedAliasMembers" xml:space="preserve">
     <value>Permission denied. {0} does not show its members to you.</value>
   </data>
+  <data name="PermissionDeniedExamine" xml:space="preserve">
+    <value>Permission denied. You cannot examine {0}.</value>
+  </data>
+  <data name="PermissionDeniedLocate" xml:space="preserve">
+    <value>Permission denied. You cannot locate {0}.</value>
+  </data>
+  <data name="PermissionDeniedCannotUse" xml:space="preserve">
+    <value>Permission denied. You cannot use {0}.</value>
+  </data>
+  <data name="PermissionDeniedChannelRead" xml:space="preserve">
+    <value>Permission denied. You may not read channel {0}'s settings.</value>
+  </data>
+  <data name="PermissionDeniedReadAttribute" xml:space="preserve">
+    <value>Permission denied. You cannot read the {0} attribute on {1}.</value>
+  </data>
+  <data name="PermissionDeniedReadLock" xml:space="preserve">
+    <value>Permission denied. You cannot read the {1} lock on {0}.</value>
+  </data>
+  <data name="PermissionDeniedTag" xml:space="preserve">
+    <value>Permission denied. The {0} tag is not allowed.</value>
+  </data>
 
   <!-- General -->
   <data name="EmptyLine" xml:space="preserve">

@@ -78,7 +78,7 @@ public class RhostBringInFunctionTests : ServerTestBase
 		try
 		{
 			await Assert.That(await Eval("globalroom()")).Matches("^#[0-9]+$");
-			await Assert.That(await EvalAs(mortal.DbRef, "globalroom()")).IsEqualTo("#-1 PERMISSION DENIED");
+			await Assert.That(await EvalAs(mortal.DbRef, "globalroom()")).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.ROYALTY");
 		}
 		finally
 		{

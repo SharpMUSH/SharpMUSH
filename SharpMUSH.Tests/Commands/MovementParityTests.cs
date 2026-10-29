@@ -2203,7 +2203,7 @@ public class MovementParityTests
 		var wizardsOnly = ParserWithCommand(mover.DbRef, ("@TEL", "FLAG^WIZARD"));
 		var refused = await wizardsOnly.FunctionParse(MarkupText.Plain($"tel(me,{destination})"));
 
-		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: CANNOT USE @TEL")
 			.Because("the restriction on the command @tel would run is the one fun_tel reads");
 		await Assert.That(await LocationOf(mover.DbRef.ToString())).IsEqualTo(BareDbref(room));
 

@@ -43,7 +43,7 @@ public class QuotaFunctionPermissionTests
 		var target = await Mortal("QuotaFnSubject");
 		await God($"@quota/set {target.Name}=37");
 
-		await Assert.That(await EvalAs(mortal.DbRef, $"quota({target.Name})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(await EvalAs(mortal.DbRef, $"quota({target.Name})")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL OR GAME.QUOTAS")
 			.Because("wiz.c:1876 refuses a mortal who neither controls the player nor holds See_All or Quotas");
 	}
 
@@ -174,7 +174,7 @@ public class QuotaFunctionPermissionTests
 		await God($"@quota/set {owner.Name}=67");
 		var thing = await CreateThingOwnedByAsync(owner, "QuotaFnPlain");
 
-		await Assert.That(await EvalAs(thing, $"quota({owner.DbRef})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied)
+		await Assert.That(await EvalAs(thing, $"quota({owner.DbRef})")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL OR GAME.QUOTAS")
 			.Because("predicat.c:405 refuses controls(thing, player) without TRUST");
 	}
 

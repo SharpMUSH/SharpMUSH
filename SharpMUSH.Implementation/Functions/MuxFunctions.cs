@@ -92,7 +92,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(executor, command))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.CannotUse(command).Return;
 		}
 
 		var commandParser = parser.Push(parser.CurrentState with

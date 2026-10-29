@@ -53,7 +53,7 @@ public partial class Functions
 			shouldLock = parsed;
 			if (!await CanInvokeLockCommandAsync(parser, executor, "@ATRLOCK"))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.CannotUse("@ATRLOCK").Return;
 			}
 		}
 
@@ -113,7 +113,7 @@ public partial class Functions
 				}
 
 				// Evaluate the lock: does victim pass the lock expression?
-				if (!await PermissionService.CanLocate(executor, victim)) return new CallState(ErrorMessages.Returns.PermissionDenied);
+				if (!await PermissionService.CanLocate(executor, victim)) return PermissionRefusal.Locate(victimName).Return;
 				var passes = await LockService.Evaluate(expression, executor, victim);
 				return new CallState(passes ? "1" : "0");
 			});
@@ -131,7 +131,7 @@ public partial class Functions
 		if (parser.CurrentState.Arguments.TryGetValue("1", out var expression))
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-			if (!await CanInvokeLockCommandAsync(parser, executor, "@LOCK")) return new CallState(ErrorMessages.Returns.PermissionDenied);
+			if (!await CanInvokeLockCommandAsync(parser, executor, "@LOCK")) return PermissionRefusal.CannotUse("@LOCK").Return;
 			var parts = parser.CurrentState.Arguments["0"].Message.ToPlainText().Split('/', 2);
 			await LockHelpers.LockAsync(parser, LocateService, NotifyService, PermissionService, LockService, executor,
 				parts[0], expression.Message.ToPlainText(), parts.Length > 1 ? parts[1] : null);
@@ -157,7 +157,7 @@ public partial class Functions
 	public async ValueTask<CallState> SetLockFlagsFunction(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await CanInvokeLockCommandAsync(parser, executor, "@LSET")) return new CallState(ErrorMessages.Returns.PermissionDenied);
+		if (!await CanInvokeLockCommandAsync(parser, executor, "@LSET")) return PermissionRefusal.CannotUse("@LSET").Return;
 		// A refusal do_lset words is told to the caller, not answered; an object that does not match
 		// answers with the matcher's error, as SharpMUSH's side-effect functions do.
 		return await LockHelpers.SetFlagsAsync(parser, LocateService, NotifyService, LockService, executor,
@@ -182,7 +182,8 @@ public partial class Functions
 			async target =>
 			{
 				var resolved = await LockService.LookupAsync(target, name) is ResolvedLock found ? found : null;
-				if (!await PermissionService.CanReadLock(executor, target, resolved?.Data.Flags ?? 0)) return new CallState(denied);
+				if (!await PermissionService.CanReadLock(executor, target, resolved?.Data.Flags ?? 0))
+					return denied == ErrorMessages.Returns.PermissionDenied ? PermissionRefusal.ReadLock(target, name).Return : new CallState(denied);
 				return await read(executor, target, resolved);
 			});
 	}

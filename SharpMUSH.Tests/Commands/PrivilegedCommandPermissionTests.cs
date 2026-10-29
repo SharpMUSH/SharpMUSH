@@ -78,7 +78,7 @@ public class PrivilegedCommandPermissionTests
 
 	[Test]
 	[Arguments("followers", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
-	[Arguments("lpids", "#-1 PERMISSION DENIED")]
+	[Arguments("lpids", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	public async Task AnUncontrolledObjectsListIsRefused(string function, string refusal)
 	{
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "Private");

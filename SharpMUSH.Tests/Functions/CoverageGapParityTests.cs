@@ -118,7 +118,7 @@ public class CoverageGapParityTests : ServerTestBase
 
 		await Assert.That(await EvalAs(mortal.DbRef, $"lparent({gc})")).IsEqualTo(gc);
 		await Assert.That(await EvalAs(mortal.DbRef, $"lparent({mc})")).IsEqualTo($"{mc} {gp}");
-		await Assert.That(await EvalAs(mortal.DbRef, $"parent({gc})")).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(await EvalAs(mortal.DbRef, $"parent({gc})")).IsEqualTo("#-1 PERMISSION DENIED: CANNOT EXAMINE");
 		await Assert.That(await EvalAs(mortal.DbRef, $"children({gp})")).IsEqualTo(mc);
 		await Assert.That(await Eval($"children({gp})")).IsEqualTo($"{gc} {mc}");
 	}

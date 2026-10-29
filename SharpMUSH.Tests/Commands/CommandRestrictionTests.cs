@@ -113,6 +113,6 @@ public class CommandRestrictionTests
 		var answer = (await WebAppFactoryArg.FunctionParserFor(player.DbRef).FunctionParse(MarkupText.Plain("lset(me/Basic,no_inherit)")))
 			?.Message.ToPlainText();
 
-		await Assert.That(answer == ErrorMessages.Returns.PermissionDenied).IsEqualTo(denied);
+		await Assert.That(answer == "#-1 PERMISSION DENIED: CANNOT USE @LSET").IsEqualTo(denied);
 	}
 }

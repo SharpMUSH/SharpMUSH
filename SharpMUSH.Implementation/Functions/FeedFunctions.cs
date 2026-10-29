@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using System.Globalization;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Library;
@@ -36,7 +37,7 @@ public partial class Functions
 		return await FeedRules(parser).GetKindAsync(kindName) switch
 		{
 			SharpFeedKind kind when await FeedRules(parser).CanRunAsync(executor, kind) => kind,
-			SharpFeedKind => new Error<string>(ErrorMessages.Returns.PermissionDenied),
+			SharpFeedKind => new Error<string>(PermissionRefusal.Needs(PortalPermission.FeedAdmin).ReturnText),
 			_ => new Error<string>(NoSuchFeedKind)
 		};
 	}

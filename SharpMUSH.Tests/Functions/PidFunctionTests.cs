@@ -78,7 +78,7 @@ public class PidFunctionTests
 		var other = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(WebAppFactoryArg.Services, Mediator, ConnectionService, "LpidsStranger");
 		try
 		{
-			await Assert.That(await As(other, $"lpids({queued.Mortal.DbRef})")).IsEqualTo("#-1 PERMISSION DENIED");
+			await Assert.That(await As(other, $"lpids({queued.Mortal.DbRef})")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED");
 			await Assert.That(await As(other, "lpids(all)")).DoesNotContain($"{queued.OwnWait}");
 		}
 		finally { await HaltAsync(queued); }

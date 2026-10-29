@@ -1,3 +1,5 @@
+using SharpMUSH.Library.Services.Interfaces;
+using SharpMUSH.Library.Authorization;
 using Microsoft.Extensions.Logging;
 using SharpMUSH.Implementation.Common;
 using SharpMUSH.Library;
@@ -134,6 +136,6 @@ public partial class Functions
 		if (!string.Equals(corpus, HelpCorpora.Admin, StringComparison.OrdinalIgnoreCase)) return corpus;
 
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		return await executor.IsPriv() ? corpus : new Error<string>(ErrorMessages.Returns.PermissionDenied);
+		return await executor.IsPriv() ? corpus : new Error<string>(PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GameRoyalty).ReturnText);
 	}
 }

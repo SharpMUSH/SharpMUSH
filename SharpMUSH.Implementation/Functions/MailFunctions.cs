@@ -162,7 +162,7 @@ public partial class Functions
 		{
 			if (!await CanReadMailOf(executor, mailbox))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.NotControlled(mailbox).Return;
 			}
 
 			var tally = await TallyMail(Mediator.CreateStream(new GetAllMailListQuery(mailbox)));
@@ -218,7 +218,7 @@ public partial class Functions
 
 			if (!await CanReadMailOf(executor, located))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.NotControlled(located).Return;
 			}
 
 			targetPlayer = located;

@@ -36,7 +36,7 @@ public class QueueInspectionPermissionTests
 	[Test]
 	[Arguments("list", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
 	[Arguments("debug", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
-	[Arguments("pidinfo", "#-1 PERMISSION DENIED")]
+	[Arguments("pidinfo", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
 	[Arguments("halt", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.HALT")]
 	[Arguments("reschedule", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.HALT")]
 	public async Task AnotherPlayersQueueCannotBeReadOrChanged(string operation, string refusal)

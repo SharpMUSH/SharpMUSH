@@ -251,11 +251,11 @@ public class MailFunctionUnitTests
 	[Arguments("mail(me,1)", "MortalOwnMailBody")]
 	[Arguments("mailsubject(me,1)", "MortalOwnMailSubject")]
 	[Arguments("mailstatus(me,1)", "N----")]
-	[Arguments("mail(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mail(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	[Arguments("mail(#1,1)", "#-1 INVALID MESSAGE OR PLAYER")]
 	[Arguments("mailsubject(#1,1)", "#-1")]
 	[Arguments("mailfrom(#1,1)", "#-1")]
-	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED")]
+	[Arguments("maillist(#1,1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	public async Task MailFunctions_MortalReadsOnlyTheirOwnMailbox(string code, string expected)
 	{
 		var mortal = await TestIsolationHelpers.CreateTestPlayerAsync(

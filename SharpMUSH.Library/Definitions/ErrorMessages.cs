@@ -636,6 +636,20 @@ public static partial class ErrorMessages
 		public const string PermissionDeniedLinkedExit = "Permission denied. You do not control {0}, and it already leads somewhere.";
 		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
 		public const string PermissionDeniedAliasMembers = "Permission denied. {0} does not show its members to you.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedExamine = "Permission denied. You cannot examine {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedLocate = "Permission denied. You cannot locate {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedCannotUse = "Permission denied. You cannot use {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedChannelRead = "Permission denied. You may not read channel {0}'s settings.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedReadAttribute = "Permission denied. You cannot read the {0} attribute on {1}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedReadLock = "Permission denied. You cannot read the {1} lock on {0}.";
+		[StringSyntax(StringSyntaxAttribute.CompositeFormat)]
+		public const string PermissionDeniedTag = "Permission denied. The {0} tag is not allowed.";
 		public const string NoPermission = "You don't have permission to do that.";
 		public const string YouDoNotControlThatObject = "You do not control that object.";
 

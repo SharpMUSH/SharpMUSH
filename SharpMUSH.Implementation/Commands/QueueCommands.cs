@@ -297,20 +297,14 @@ public partial class Commands
 		return CallState.Empty;
 	}
 
-	/// <summary>PennMUSH <c>HaltAny</c> (<c>hdrs/mushdb.h:38</c>): a wizard, or the HALT power.</summary>
 	/// <summary>
 	/// <see cref="IQueueControlService.CanAccessLegacyAsync"/> said no: the executor does not control what
 	/// queued <paramref name="pid"/>, nor holds what reaches any task (to change one, or to see one).
 	/// </summary>
-	private async ValueTask<CallState> QueueEntryRefused(AnySharpObject executor, long pid, bool mutate)
-	{
-		string[] scopes = mutate
-			? [PortalPermission.GameWizard, PortalPermission.GamePower("Halt")]
-			: [PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue")];
-		return await NotifyService.PermissionDenied(executor, nameof(ErrorMessages.Notifications.PermissionDeniedQueueEntry), pid,
-			string.Join(", ", scopes));
-	}
+	private ValueTask<CallState> QueueEntryRefused(AnySharpObject executor, long pid, bool mutate)
+		=> NotifyService.PermissionDenied(executor, PermissionRefusal.QueueEntry(pid, mutate ? HaltAnything : SeeQueue));
 
+	/// <summary>PennMUSH <c>HaltAny</c> (<c>hdrs/mushdb.h:38</c>): a wizard, or the HALT power.</summary>
 	private static async ValueTask<bool> HaltsAnything(AnySharpObject executor)
 		=> await executor.IsWizard() || await executor.HasPower("HALT");
 

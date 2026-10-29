@@ -181,7 +181,7 @@ public class DatabaseFunctionUnitTests
 		var result = await WebAppFactoryArg.CommandParserFor(mortal.DbRef, mortal.Handle)
 			.EvaluateAsync(MarkupText.Plain("sqlescape(text)"));
 
-		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(result.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.SQL_OK");
 	}
 
 	[Test]

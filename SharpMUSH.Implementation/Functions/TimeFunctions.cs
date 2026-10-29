@@ -109,7 +109,7 @@ public partial class Functions
 			LocateFlags.All,
 			async found => await PermissionService.CanExamine(executor, found)
 				? new CallState(FormatInstant(found.Object().ModifiedTime, utc))
-				: new CallState(ErrorMessages.Returns.PermissionDenied));
+				: PermissionRefusal.Examine(found).Return);
 	}
 
 	/// <remarks>
@@ -803,7 +803,7 @@ public partial class Functions
 			LocateFlags.All,
 			async found => await PermissionService.CanExamine(executor, found)
 				? new CallState(TimePrecisions.Format(found.Object().ModifiedTime, precision))
-				: new CallState(ErrorMessages.Returns.PermissionDenied));
+				: PermissionRefusal.Examine(found).Return);
 	}
 
 	[SharpFunction(Name = "etime", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,

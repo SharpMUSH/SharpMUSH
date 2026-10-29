@@ -205,7 +205,7 @@ public class FunctionFamilyConformanceTests
 		var target = owner.DbRef.ToString();
 		await Assert.That(await Eval(viewer.Handle,
 				$"[hasattr({target},FFSECRET{uid})]|[hasattrp({target},FFSECRET{uid})]|[hasattrval({target},FFSECRET{uid})]|[hasattrpval({target},FFSECRET{uid})]"))
-			.IsEqualTo(string.Join("|", Enumerable.Repeat(ErrorMessages.Returns.PermissionDenied, 4)));
+			.IsEqualTo(string.Join("|", Enumerable.Repeat("#-1 PERMISSION DENIED: CANNOT READ ATTRIBUTE", 4)));
 		await Assert.That(await Eval(viewer.Handle, $"[get({target}/FFSECRET{uid})]|[xget({target},FFSECRET{uid})]"))
 			.IsEqualTo($"{ErrorMessages.Returns.AttrPermissions}|{ErrorMessages.Returns.AttrPermissions}");
 	}

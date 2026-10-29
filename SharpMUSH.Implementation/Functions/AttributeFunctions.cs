@@ -465,7 +465,7 @@ public partial class Functions
 							mode: IAttributeService.AttributeMode.Read,
 							parent: checkParents) switch
 					{
-						Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => new CallState(ErrorMessages.Returns.PermissionDenied),
+						Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => PermissionRefusal.ReadAttribute(found, attribute).Return,
 						Error<string> error => new CallState(error.Value),
 						LazySharpAttribute[] => new CallState("1"),
 						_ => new CallState("0")
@@ -486,7 +486,7 @@ public partial class Functions
 				// e_perm, not the NO PERMISSION TO GET ATTRIBUTE that get() gives.
 				return maybeAttr switch
 				{
-					Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => new CallState(ErrorMessages.Returns.PermissionDenied),
+					Error<string> { Value: ErrorMessages.Returns.AttrPermissions } => PermissionRefusal.ReadAttribute(found, attribute).Return,
 					Error<string> error => new CallState(error.Value),
 					SharpAttribute[] chain => new CallState(
 						!requireValue || HasValue(chain.Last().Value.ToPlainText()) ? "1" : "0"),
@@ -890,7 +890,7 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		if (!await parser.ServiceProvider.GetRequiredService<ICommandPermission>().CanRunAsync(executor, "@CHOWN"))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.CannotUse("@CHOWN").Return;
 		}
 
 		var args = parser.CurrentState.Arguments;

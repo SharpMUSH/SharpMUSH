@@ -327,7 +327,7 @@ public partial class Functions
 
 		if (!await CanInvokeLockCommandAsync(parser, executor, telCommand))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.CannotUse(telCommand).Return;
 		}
 
 		// fundb.c:2320-2323: argument 3 is TEL_SILENT and argument 4 is TEL_INSIDE, the /SILENT and

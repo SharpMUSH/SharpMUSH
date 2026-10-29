@@ -173,7 +173,7 @@ public partial class Functions
 			if (entry is null) return new CallState(ErrorMessages.Returns.InvalidPid);
 			if (!await parser.ServiceProvider.GetRequiredService<SharpMUSH.Library.Services.IQueueControlService>()
 				.CanAccessLegacyAsync(executor, pid, mutate: false, ExecutionBudget.CurrentToken))
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.QueueEntry(pid, SeeQueueScopes).Return;
 		}
 		catch (NotSupportedException)
 		{
@@ -297,7 +297,7 @@ public partial class Functions
 				&& !await PermissionService.Controls(executor, looker)
 				&& !await PermissionService.Controls(executor, victim))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.NotControlled(victim, SeeAllScopes).Return;
 		}
 
 		return new CallState(await PermissionService.CanLocate(looker, victim));
@@ -351,7 +351,7 @@ public partial class Functions
 			{
 				if (!await CanSeeQueueOf(executor, found))
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return PermissionRefusal.NotControlled(found, SeeQueueScopes).Return;
 				}
 
 				var query = attr is null
@@ -363,6 +363,10 @@ public partial class Functions
 	}
 
 	/// <summary>@ps's rule for reading an object's queue: its controller, a privileged player or the See_Queue power.</summary>
+	/// <summary>What reads anyone's queue: Priv_Who or See_Queue.</summary>
+	private static readonly string[] SeeQueueScopes =
+		[PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_Queue")];
+
 	private async ValueTask<bool> CanSeeQueueOf(AnySharpObject executor, AnySharpObject located)
 		=> await PermissionService.Controls(executor, located) || await executor.IsPriv() || await executor.HasPower("SEE_QUEUE");
 
@@ -460,7 +464,7 @@ public partial class Functions
 			parser, executor, executor, obj, LocateFlags.All,
 			async found => await MaySeeInsideName(executor, found)
 				? new CallState(await InsideNameAsync(parser, executor, found))
-				: new CallState(ErrorMessages.Returns.PermissionDenied));
+				: PermissionRefusal.NotControlled(found, SeeAllScopes).Return);
 	}
 
 	/// <summary>
@@ -523,7 +527,7 @@ public partial class Functions
 				case Error<CallState>:
 					return new CallState(ErrorMessages.Returns.NotVisible);
 				case AnySharpObject found when !lookQueue && !await OwnsOrControls(found):
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return PermissionRefusal.NotControlled(found).Return;
 				case AnySharpObject found:
 					player = found;
 					break;
@@ -643,7 +647,7 @@ public partial class Functions
 				&& !await ObjectStatsHelpers.CanSearchAll(executor)
 				&& !await PermissionService.Controls(executor, subject))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.NotControlled(subject, PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("Search")).Return;
 		}
 
 		var counts = await ObjectStatsHelpers.CountAsync(Mediator, who?.Object().DBRef);
@@ -804,7 +808,7 @@ public partial class Functions
 	{
 		if (!await PermissionService.CanSeeQuota(executor, player))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.NotControlled(player, [.. SeeAllScopes, PortalPermission.GamePower("Quotas")]).Return;
 		}
 
 		return await player.Object.HasPower("No_Quota")

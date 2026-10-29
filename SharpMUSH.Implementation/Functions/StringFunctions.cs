@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Models;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.DependencyInjection;
@@ -2606,7 +2607,7 @@ public partial class Functions
 		// Raw colour codes are a spoofing tool wherever the result is echoed back into the game.
 		if (ansi && !await PermissionService.CanNoSpoof(await parser.CurrentState.KnownExecutorObject(Mediator)))
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return PermissionRefusal.Needs(PortalPermission.GameWizard, PortalPermission.GamePower("Can_Spoof")).Return;
 		}
 
 		var rendered = (html, markdown, ansi) switch

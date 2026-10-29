@@ -93,7 +93,7 @@ public partial class Functions
 			// extchat.c:2393 — Chan_Can_Modify, the same gate @channel/buffer and @channel/wipe answer to.
 			if (!await ChannelPermissions.ChannelCanModifyAsync(executor, channel))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.ChannelModify(channel.Name.ToPlainText()).Return;
 			}
 
 			// extchat.c:2380 — the third argument attributes the line to the enactor instead of the executor,
@@ -176,7 +176,7 @@ public partial class Functions
 					// read who is hiding or gagging on a channel you share with them.
 					if (!await PermissionService.CanExamine(executor, player))
 					{
-						return new CallState(ErrorMessages.Returns.PermissionDenied);
+						return PermissionRefusal.Examine(player).Return;
 					}
 
 					var maybeMemberStatus = await ChannelHelper.ChannelMemberStatus(Mediator, player, channel);
@@ -321,7 +321,7 @@ public partial class Functions
 			// join/speak/see/hide/mod lock key to any mortal who asked for it.
 			if (!await ChannelPermissions.ChannelCanDecomposeAsync(executor, channel))
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return PermissionRefusal.ChannelRead(channel.Name.ToPlainText()).Return;
 			}
 
 			return new CallState(readLock(channel) ?? string.Empty);
@@ -503,7 +503,7 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
 			async target => await PermissionService.Controls(executor, target)
 				? await answer(target)
-				: new CallState(ErrorMessages.Returns.PermissionDenied));
+				: PermissionRefusal.NotControlled(target).Return);
 	}
 
 	/// <summary>

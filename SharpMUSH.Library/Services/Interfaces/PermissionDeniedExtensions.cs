@@ -104,6 +104,14 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 		nameof(ErrorMessages.Notifications.PermissionDeniedFlagRestricted) => $"{Arg(0)} NEEDS {Alternatives(1)}",
 		nameof(ErrorMessages.Notifications.PermissionDeniedGagWizard) => "WIZARD",
 		nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit) => "NOT CONTROLLED, ALREADY LINKED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedExamine) => "CANNOT EXAMINE",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLocate) => "CANNOT LOCATE",
+		nameof(ErrorMessages.Notifications.PermissionDeniedCannotUse) => $"CANNOT USE {Arg(0)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedChannelRead) => "CANNOT READ CHANNEL",
+		nameof(ErrorMessages.Notifications.PermissionDeniedChannelModify) => "CANNOT CHANGE CHANNEL",
+		nameof(ErrorMessages.Notifications.PermissionDeniedReadAttribute) => "CANNOT READ ATTRIBUTE",
+		nameof(ErrorMessages.Notifications.PermissionDeniedReadLock) => $"CANNOT READ {Arg(1)} LOCK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedTag) => "TAG NOT ALLOWED",
 		_ => null
 	};
 
@@ -141,6 +149,40 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 	public static PermissionRefusal Lock(AnySharpObject target, string lockName)
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedLock), ErrorMessages.Notifications.PermissionDeniedLock,
 			target.Object().Name, lockName);
+
+	/// <summary>Does not control what queued task <paramref name="pid"/>, nor holds any of <paramref name="scopes"/>.</summary>
+	public static PermissionRefusal QueueEntry(long pid, params string[] scopes)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedQueueEntry), ErrorMessages.Notifications.PermissionDeniedQueueEntry,
+			pid, string.Join(", ", scopes));
+
+	public static PermissionRefusal Examine(AnySharpObject target)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedExamine), ErrorMessages.Notifications.PermissionDeniedExamine,
+			target.Object().Name);
+
+	/// <summary>Cannot locate what was asked for; <paramref name="name"/> is the text the caller gave.</summary>
+	public static PermissionRefusal Locate(string name)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedLocate), ErrorMessages.Notifications.PermissionDeniedLocate, name);
+
+	/// <summary>Cannot run <paramref name="command"/>, which the function stands in for.</summary>
+	public static PermissionRefusal CannotUse(string command)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedCannotUse), ErrorMessages.Notifications.PermissionDeniedCannotUse, command);
+
+	public static PermissionRefusal ChannelRead(string channel)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedChannelRead), ErrorMessages.Notifications.PermissionDeniedChannelRead, channel);
+
+	public static PermissionRefusal ChannelModify(string channel)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedChannelModify), ErrorMessages.Notifications.PermissionDeniedChannelModify, channel);
+
+	public static PermissionRefusal ReadAttribute(AnySharpObject target, string attribute)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedReadAttribute), ErrorMessages.Notifications.PermissionDeniedReadAttribute,
+			attribute, target.Object().Name);
+
+	public static PermissionRefusal ReadLock(AnySharpObject target, string lockName)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedReadLock), ErrorMessages.Notifications.PermissionDeniedReadLock,
+			target.Object().Name, lockName);
+
+	public static PermissionRefusal Tag(string tag)
+		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedTag), ErrorMessages.Notifications.PermissionDeniedTag, tag);
 }
 
 /// <summary>Allowed, or refused for a reason.</summary>
