@@ -169,9 +169,10 @@ There is no column count: `align` and `widths` already have exactly one entry pe
 ## Container templates
 
 - ``RENDERMARKUP`CONTAINER`` - Custom container (`::: name args`) rendering
-  - `%0` or `%<directive>` - The directive name (`category`, `tag`, `pagelist`, `recent`, `seealso`, or your own)
+  - `%0` or `%<directive>` - The directive name (`category`, `pagelist`, `recent`, `facts`, `seealso`, or your own)
   - `%1` or `%<options>` - The rest of the fence line, empty if there is none
   - `%2` or `%<text>` - The container's contents, rendered (see the note below). For a `::: seealso` footer of names only, that is the topics separated by `, `
+  - `%3` or `%<listing>` - For a wiki listing (`category`, `pagelist`, `recent`, `facts`), the pages it lists, as `rendermarkdown()` shows them (see [rendermarkdown containers]). Empty for any other container
   
 ## Inline templates
 

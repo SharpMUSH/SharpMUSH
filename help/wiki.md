@@ -56,6 +56,8 @@ Page content is Markdown; see [rendermarkdown supported markdown features], or t
 - `@wiki/md <page>` - show the page's markdown source instead of the rendered body
 - `@wiki/view/draft <page>` - also render the page if it is a draft (see [wiki reading drafts])
 
+A page's live listing blocks (`::: category`, `::: pagelist`, `::: recent` and `::: facts`) list the pages they find each time the page is read: up to 20 per block, then a link to the command that lists the rest. A category's page lists its subcategories and pages under its text, as `@wiki/category` does.
+
 Listings (`@wiki/list`, `@wiki/search`, `@wiki/recent`) print every page's identifier fully qualified as `<namespace>:<slug>`; `home` in the main namespace lists as `main:home`. One column, one grammar, and the identifier printed is always one you can paste straight back into `@wiki`. Typing a target is unchanged: the short form still works, so `@wiki home` and `@wiki main:home` reach the same page.
 
 ## Searching
