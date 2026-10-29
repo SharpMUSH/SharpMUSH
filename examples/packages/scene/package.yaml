@@ -1,7 +1,7 @@
 format: "1.16"
 package: scene
 title: "Scene System"
-version: 1.18.0
+version: 1.19.0
 authors: [SharpMUSH]
 description: "Scene Logger: pose/say/semipose capture into the Scene System, plus the +scene/* player verbs. Ships the game policy the C# engine deliberately omits, including who may be associated with a scene."
 license: MIT
