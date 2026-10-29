@@ -1,3 +1,5 @@
+using System.Collections;
+
 namespace SharpMUSH.Configuration;
 
 /// <summary>
@@ -28,9 +30,10 @@ public static class ConfigValueDisplay
 	/// list (<see cref="SharpConfigAttribute.Flag"/>) also keeps the leading space <c>cf_flag</c>
 	/// stores: PennMUSH 1.8.8 (<c>80a1d5b9</c>, shipped <c>mushcnf.dst</c>) prints
 	/// <c>config(player_flags)</c> as <c>" enter_ok ansi no_command"</c>. A mapping option
-	/// (<c>command_aliases</c>, <c>command_restrictions</c>, <c>sitelock_rules</c>, <c>mssp</c>, ...) has no
-	/// PennMUSH counterpart, which writes these as repeated <c>mush.cnf</c> directives; it prints as
-	/// <c>key=values</c> for each of its <see cref="Entries"/>, separated by <c>|</c>.
+	/// (<c>command_aliases</c>, <c>command_restrictions</c>, <c>sitelock_rules</c>, <c>mssp</c>,
+	/// <c>ascii_translations</c>, ...) has no PennMUSH counterpart, which writes these as repeated
+	/// <c>mush.cnf</c> directives; it prints as <c>key=values</c> for each of its <see cref="Entries"/>,
+	/// separated by <c>|</c>.
 	/// </remarks>
 	public static string Format(object? value, SharpConfigAttribute metadata)
 		=> metadata.Dbref
@@ -40,7 +43,7 @@ public static class ConfigValueDisplay
 				bool flag => flag ? "Yes" : "No",
 				null => string.Empty,
 				string text => text,
-				IEnumerable<KeyValuePair<string, string[]>> map => string.Join('|', Entries(map).Select(entry => $"{entry.Key}={entry.Values}")),
+				IDictionary map => string.Join('|', Entries(map).Select(entry => $"{entry.Key}={entry.Values}")),
 				IEnumerable<string> words => FormatList(words.ToArray(), metadata.Flag),
 				_ => value.ToString() ?? string.Empty
 			};
@@ -49,10 +52,17 @@ public static class ConfigValueDisplay
 	/// A mapping option's entries in key order, each key with its values space-separated, as
 	/// <c>@config</c> lists them one per line.
 	/// </summary>
-	public static IEnumerable<(string Key, string Values)> Entries(IEnumerable<KeyValuePair<string, string[]>> map)
-		=> map
-			.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase)
-			.Select(entry => (entry.Key, string.Join(' ', entry.Value ?? [])));
+	public static IEnumerable<(string Key, string Values)> Entries(IDictionary map)
+		=> map.Keys
+			.Cast<object>()
+			.Select(key => (Key: key.ToString() ?? string.Empty, Values: map[key] switch
+			{
+				null => string.Empty,
+				string text => text,
+				IEnumerable<string> words => string.Join(' ', words),
+				var other => other.ToString() ?? string.Empty
+			}))
+			.OrderBy(entry => entry.Key, StringComparer.OrdinalIgnoreCase);
 
 	private static string FormatList(string[] words, bool flagList)
 		=> words.Length == 0 ? string.Empty

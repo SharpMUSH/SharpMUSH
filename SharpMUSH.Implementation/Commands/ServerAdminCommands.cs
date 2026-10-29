@@ -24,6 +24,7 @@ using SharpMUSH.Configuration;
 using SharpMUSH.Library.Requests;
 using System.Collections.Immutable;
 using System.Buffers;
+using System.Collections;
 using System.Runtime.InteropServices;
 using MarkupString.Layout;
 using SharpMUSH.Library.Markup;
@@ -1165,7 +1166,7 @@ public partial class Commands
 			{
 				var name = useLowercase ? opt.ConfigAttr.Name.ToLower() : opt.ConfigAttr.Name;
 				lastValue = ConfigValueDisplay.Format(opt.Value, opt.ConfigAttr);
-				if (opt.Value is IEnumerable<KeyValuePair<string, string[]>> map)
+				if (opt.Value is IDictionary map)
 				{
 					// One entry per line, the name on the first and the rest kept to its value column.
 					var label = name;
@@ -1203,7 +1204,7 @@ public partial class Commands
 	/// labelled values of their own, anything else as the text <c>config()</c> returns.
 	/// </summary>
 	private static Block ConfigValueBlock(object? value, SharpConfigAttribute metadata)
-		=> value is IEnumerable<KeyValuePair<string, string[]>> map
+		=> value is IDictionary map
 			? ServerLayout.KeyValues(ConfigValueDisplay.Entries(map).Select(entry => (entry.Key, MarkupText.Plain(entry.Values))))
 			: ServerLayout.Body(MarkupText.Plain(ConfigValueDisplay.Format(value, metadata)));
 
