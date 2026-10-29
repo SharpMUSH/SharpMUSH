@@ -3,6 +3,11 @@
 	height: 100%;
 }
 
+/* the card fills the cell, so a row of widgets keeps one height */
+.active-scene-widget ::deep .kit-card {
+	height: 100%;
+}
+
 .active-scene-tiles {
 	display: flex;
 	flex-direction: column;
