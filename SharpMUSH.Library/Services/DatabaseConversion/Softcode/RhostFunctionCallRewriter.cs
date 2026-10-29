@@ -58,8 +58,60 @@ public static class RhostFunctionCallRewriter
 			[] or [""] => "config(money_singular)",
 			[var value] => $"if(and(strlen({value}),or(eq({value},0),gt(abs({value}),1))),config(money_plural),config(money_singular))",
 			_ => null
-		}
+		},
+		// A comparison of bittype() with a number asks whether a role of some rank is held.
+		["gte"] = args => BitTypeComparison(args, atLeast: 0, mirrored: "lte"),
+		["gt"] = args => BitTypeComparison(args, atLeast: 1, mirrored: "lt"),
+		["lt"] = args => BitTypeComparison(args, atLeast: 0, mirrored: "gt", negated: true),
+		["lte"] = args => BitTypeComparison(args, atLeast: 1, mirrored: "gte", negated: true)
 	};
+
+	/// <summary>Rules that apply to one shape of a function SharpMUSH has: any other call to it is left without a note.</summary>
+	private static readonly HashSet<string> ShapeOnly = new(StringComparer.OrdinalIgnoreCase) { "gte", "gt", "lt", "lte" };
+
+	/// <summary>The role each step of RhostMUSH's bittype() scale stands for, from 1 to 7.</summary>
+	private static readonly string[] BitTypeRoles = ["player", "guildmaster", "builder", "royalty", "wizard", "immortal", "god"];
+
+	/// <summary>
+	/// <c>bittype(&lt;object&gt;)</c> compared with a whole number, as <c>hasrole()</c> asking whether the object's owner
+	/// holds the step's role or a higher one: the comparison holds when the step is at least the number plus
+	/// <paramref name="atLeast"/>, or, <paramref name="negated"/>, when it is not. A number first is the
+	/// <paramref name="mirrored"/> comparison the other way round. Null for any other shape.
+	/// </summary>
+	private static string? BitTypeComparison(string[] args, int atLeast, string mirrored, bool negated = false)
+	{
+		switch (args)
+		{
+			case [var left, var right] when BitTypeObject(left) is { } subject && int.TryParse(right.Trim(), out var number):
+				var step = number + atLeast;
+				return step <= 0 || step > BitTypeRoles.Length
+					? ((step <= 0) != negated ? "1" : "0")
+					: (negated ? $"not(hasrole(owner({subject}),{BitTypeRoles[step - 1]},1))" : $"hasrole(owner({subject}),{BitTypeRoles[step - 1]},1)");
+			case [var left, var right] when BitTypeObject(right) is not null && int.TryParse(left.Trim(), out _):
+				return Rules[mirrored]([right, left]);
+			default:
+				return null;
+		}
+	}
+
+	/// <summary>The object of an argument that is just a <c>bittype()</c> call, bracketed or not: <c>me</c> when it names none.</summary>
+	private static string? BitTypeObject(string argument)
+	{
+		var call = argument.Trim();
+		if (call.StartsWith('[') && call.EndsWith(']')) call = call[1..^1];
+		if (!call.StartsWith("bittype(", StringComparison.OrdinalIgnoreCase)
+			|| Arguments(call, "bittype(".Length) is not ({ } arguments, var close) || close != call.Length - 1)
+		{
+			return null;
+		}
+
+		return arguments switch
+		{
+			[var subject] when subject.Trim().Length > 0 => subject.Trim(),
+			[_] => "me",
+			_ => null
+		};
+	}
 
 	/// <summary>The arguments each rule writes more than once, by position.</summary>
 	private static readonly Dictionary<string, int[]> Repeated = new(StringComparer.OrdinalIgnoreCase)
@@ -127,7 +179,13 @@ public static class RhostFunctionCallRewriter
 			else if (rule(rewritten) is { } replacement)
 			{
 				output.Append(replacement);
-				Say(notes, said, $"{lower}() written as {replacement[..replacement.IndexOf('(')]}()");
+				Say(notes, said, ShapeOnly.Contains(lower)
+					? $"{lower}() comparing bittype() written with hasrole()"
+					: $"{lower}() written as {replacement[..replacement.IndexOf('(')]}()");
+			}
+			else if (ShapeOnly.Contains(lower))
+			{
+				output.Append(name).Append('(').Append(string.Join(',', rewritten)).Append(')');
 			}
 			else
 			{

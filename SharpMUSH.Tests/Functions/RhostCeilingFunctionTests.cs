@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 
 namespace SharpMUSH.Tests.Functions;
@@ -25,7 +26,7 @@ public class RhostCeilingFunctionTests : ServerTestBase
 			await Assert.That(await Eval($"streval({check},player)")).IsEqualTo("0");
 			await Assert.That(await Eval($"streval({check},wizard)")).IsEqualTo("1");
 			await Assert.That(await Eval($"streval({check},god)")).IsEqualTo("1");
-			await Assert.That(await Eval($"streval({check},nosuchrole)")).IsEqualTo("1");
+			await Assert.That(await Eval($"streval({check},nosuchrole)")).IsEqualTo(ErrorMessages.Returns.NoSuchRole);
 		}
 		finally
 		{
@@ -83,10 +84,31 @@ public class RhostCeilingFunctionTests : ServerTestBase
 			await Assert.That(await Eval($"ueval(me/{attribute}/citizen,x)")).IsEqualTo("0 x");
 			await Assert.That(await Eval($"ueval({attribute}/sub,x)")).IsEqualTo($"[controls(#1,{mortal.DbRef})] x");
 			await Assert.That(await Eval($"ueval({attribute})")).IsEqualTo("#-1 NO LEVEL SPECIFIED");
+			await Assert.That(await Eval($"ueval({attribute}/citzen,x)")).IsEqualTo(ErrorMessages.Returns.NoSuchRole);
 		}
 		finally
 		{
 			await Cmd($"&{attribute} me=");
+			await ConnectionService.Disconnect(mortal.Handle);
+		}
+	}
+
+	[Test]
+	public async Task BitTypeRanksTheOwnersHighestRole()
+	{
+		var mortal = await MortalAsync();
+		try
+		{
+			await Assert.That(await Eval($"bittype({mortal.DbRef})")).IsEqualTo("1");
+			await Cmd($"@role/assign {mortal.DbRef}=builder");
+			await Assert.That(await Eval($"bittype({mortal.DbRef})")).IsEqualTo("3");
+			await Cmd($"@role/assign {mortal.DbRef}=royalty");
+			await Assert.That(await Eval($"bittype({mortal.DbRef})")).IsEqualTo("4");
+			await Cmd($"@role/assign {mortal.DbRef}=wizard");
+			await Assert.That(await Eval($"bittype({mortal.DbRef})")).IsEqualTo("5");
+		}
+		finally
+		{
 			await ConnectionService.Disconnect(mortal.Handle);
 		}
 	}
