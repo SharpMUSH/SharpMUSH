@@ -7,6 +7,14 @@
 	border-radius: var(--radius);
 	background: var(--surface-3);
 	overscroll-behavior: contain;
+	/* One finger scrolls the frame; two are a pinch the map handles, not the page's own zoom. */
+	touch-action: pan-x pan-y;
+	cursor: grab;
+}
+
+.map-frame--dragging,
+.map-frame--dragging .map-room {
+	cursor: grabbing;
 }
 
 .map-figure {

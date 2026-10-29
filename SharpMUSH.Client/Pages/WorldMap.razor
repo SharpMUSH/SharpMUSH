@@ -157,7 +157,7 @@
                     {
                         <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
                                    Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
-                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" />
+                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" OnZoomAt="ZoomBy" />
                         @Legend()
                         @if (_editing && _plan is not null)
                         {
