@@ -108,7 +108,7 @@
     background: var(--surface-3);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    transition: border-color 0.14s;
+    transition: border-color var(--motion-fade);
 }
 .sc-search:focus-within {
     border-color: var(--accent);
@@ -158,7 +158,7 @@
     font-family: var(--font-ui);
     font-size: 0.71875rem;
     font-weight: 600;
-    transition: background 0.14s;
+    transition: background var(--motion-fade);
 }
 .sc-add-btn:hover:not(:disabled) {
     background: rgba(var(--glow), 0.18);

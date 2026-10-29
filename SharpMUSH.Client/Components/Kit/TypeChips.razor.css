@@ -14,7 +14,7 @@
 	font: inherit;
 	font-size: 13px;
 	cursor: pointer;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 .kit-chip:focus-visible {

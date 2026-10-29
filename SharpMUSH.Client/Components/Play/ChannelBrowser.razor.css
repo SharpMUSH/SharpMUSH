@@ -79,7 +79,7 @@
 	border-radius: 11px;
 	background: var(--border);
 	cursor: pointer;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 /* a bigger invisible hit box around the small pill */
@@ -101,7 +101,7 @@
 	height: 16px;
 	border-radius: 50%;
 	background: var(--switch-knob-off);
-	transition: left var(--motion-pop), background var(--motion-pop);
+	transition: left var(--motion-spring), background var(--motion-fade);
 }
 
 .chan-browse-switch[aria-checked="true"] .chan-browse-thumb {

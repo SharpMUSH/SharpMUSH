@@ -72,7 +72,7 @@
 	font: inherit;
 	font-size: 0.8125rem;
 	cursor: pointer;
-	transition: border-color var(--motion-pop), background var(--motion-pop);
+	transition: border-color var(--motion-fade), background var(--motion-fade);
 }
 
 .wcp-option:hover,

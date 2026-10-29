@@ -17,7 +17,7 @@
 	background: var(--surface-2);
 	border: 1px solid var(--border-soft);
 	border-radius: var(--radius-tile);
-	transition: border-color var(--motion-pop);
+	transition: border-color var(--motion-fade);
 }
 
 .adm-media-card:hover {

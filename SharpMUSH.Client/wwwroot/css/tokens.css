@@ -300,8 +300,32 @@
 	/* Zero until shell.css raises it while the fixed touch bottom nav is on screen; a scoped
 	   stylesheet reads it instead of repeating that media query. */
 	--bottomnav-clearance: 0px;
-	--motion-pop: 0.16s;
-	--motion-slide: 0.2s;
+	/* Motion, after Material 3's easing and duration tokens; the spring has the damping of its Expressive
+	   default spatial spring (0.8). A rule names what moves and takes one of the --motion-* pairs:
+	   --motion-fade for an effect (colour, background, border, opacity, filter, shadow); for a spatial
+	   change (transform, position, size) --motion-enter as it arrives, --motion-move as it changes in
+	   place, --motion-exit as it leaves, and --motion-spring for a turn or a switch's thumb.
+	   Reduced motion zeroes the spatial durations (globals.css) and keeps the effects, which move nothing. */
+	--duration-effect: 0.15s;
+	--duration-enter: 0.3s;
+	--duration-exit: 0.2s;
+	--duration-spring: 0.35s;
+	--duration-linger: 2s;
+	--ease-standard: cubic-bezier(0.2, 0, 0, 1);
+	--ease-enter: cubic-bezier(0.05, 0.7, 0.1, 1);
+	--ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+	/* Sampled from the spring until it settles. Its shape depends only on the damping; the duration sets
+	   how stiff it is (0.35s is a stiffness of about 600). It starts from rest, so it suits a turn or a
+	   thumb, not something arriving, and overshoots by 1.5%, which a panel pinned to an edge would show. */
+	--ease-spring: linear(0, 0.008 1.5%, 0.029 3%, 0.061 4.5%, 0.102 6%, 0.148 7.5%, 0.198 9%, 0.433 15.5%, 0.536 18.5%, 0.644 22%, 0.723 25%, 0.791 28%, 0.848 31%, 0.893 34%, 0.934 37.5%, 0.964 41%, 0.988 45%, 1.004 49.5%, 1.012 54.5%, 1.015 63.5%, 1);
+	--motion-fade: var(--duration-effect) var(--ease-standard);
+	--motion-enter: var(--duration-enter) var(--ease-enter);
+	--motion-move: var(--duration-enter) var(--ease-standard);
+	--motion-exit: var(--duration-exit) var(--ease-exit);
+	--motion-spring: var(--duration-spring) var(--ease-spring);
+	/* How long a panel opened by hovering stays after the pointer leaves, so a path that grazes its edge does
+	   not close it. A wait, not movement, so reduced motion keeps it. */
+	--delay-hover-leave: 0.25s;
 	--font-ui: 'Hanken Grotesk', system-ui, sans-serif;
 	--font-mono: "Cascadia Mono", "DejaVu Sans Mono", monospace;
 	--font-display: 'Hanken Grotesk', system-ui, sans-serif;
@@ -549,7 +573,7 @@
 	font-family: var(--font-ui);
 	font-size: 0.8125rem;
 	font-weight: 600;
-	transition: filter 0.12s;
+	transition: filter var(--motion-fade);
 }
 .not-authorized-home:hover {
 	filter: brightness(1.08);

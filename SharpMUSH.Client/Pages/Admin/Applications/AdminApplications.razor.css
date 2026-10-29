@@ -12,7 +12,7 @@
     font-weight: 500;
     cursor: pointer;
     text-decoration: none;
-    transition: all 0.12s;
+    transition: border-color var(--motion-fade), filter var(--motion-fade);
 }
 .appadmin ::deep .aa-btn:hover { border-color: rgba(var(--glow), 0.4); }
 .appadmin ::deep .aa-btn--primary {
@@ -75,7 +75,7 @@
     background: var(--surface);
     border-radius: var(--radius-card);
     border: 1px solid var(--border);
-    transition: border-color 0.12s, box-shadow 0.12s;
+    transition: border-color var(--motion-fade), box-shadow var(--motion-fade);
 }
 .appadmin ::deep .aa-card:hover { border-color: rgba(var(--glow), 0.3); }
 .appadmin ::deep .aa-card--on {

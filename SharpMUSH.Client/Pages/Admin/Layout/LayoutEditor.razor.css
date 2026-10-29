@@ -65,7 +65,7 @@
     position: absolute; top: 0; right: 0; width: 14px; height: 100%;
     border-radius: 0 var(--radius) var(--radius) 0;
     cursor: ew-resize; touch-action: none; opacity: 0.4;
-    transition: opacity 0.12s, background-color 0.12s;
+    transition: opacity var(--motion-fade), background-color var(--motion-fade);
 }
 .le-resize::after {
     content: ''; position: absolute; top: 50%; right: 4px; translate: 0 -50%;

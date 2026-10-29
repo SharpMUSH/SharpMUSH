@@ -12,7 +12,7 @@
 	font-size: 14px;
 	font-weight: 600;
 	cursor: pointer;
-	transition: border-color var(--motion-pop), color var(--motion-pop);
+	transition: border-color var(--motion-fade), color var(--motion-fade);
 }
 
 .wiki-side-new:hover,

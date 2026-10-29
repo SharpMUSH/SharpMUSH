@@ -109,7 +109,7 @@
 	font-weight: 600;
 	text-decoration: none;
 	cursor: pointer;
-	transition: filter 0.12s ease;
+	transition: filter var(--motion-fade);
 }
 
 .setup-signin {

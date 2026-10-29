@@ -20,13 +20,18 @@
     let _initialised = false;
     let _mermaidInitialised = false;
 
+    // A smooth scroll is movement, so a reader who asked for reduced motion jumps instead.
+    function scrollBehavior() {
+        return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+    }
+
     function scrollToHash() {
         const raw = window.location.hash;
         if (!raw || raw.length < 2) return;
         let id;
         try { id = decodeURIComponent(raw.slice(1)); } catch { id = raw.slice(1); }
         const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (el) el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
     }
 
     // Capture-phase handler: only acts on in-page fragment links inside wiki content,
@@ -46,7 +51,7 @@
         // Stop Blazor's interceptor from turning "#frag" into a root navigation.
         ev.preventDefault();
         ev.stopPropagation();
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        el.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
         if (window.history && window.history.replaceState) {
             window.history.replaceState(null, "", href);
         } else {

@@ -78,7 +78,7 @@
 	font: inherit;
 	text-align: start;
 	cursor: pointer;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 ::deep .mail-row-avatar {

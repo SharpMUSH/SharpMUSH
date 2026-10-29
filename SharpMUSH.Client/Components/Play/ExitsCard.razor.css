@@ -190,7 +190,7 @@
 	padding-right: 12px;
 	box-sizing: border-box;
 	z-index: 5;
-	transition: display 0s linear 0.25s allow-discrete;
+	transition: display 0s var(--delay-hover-leave) allow-discrete;
 }
 
 .exit:hover .exit-preview,

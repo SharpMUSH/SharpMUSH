@@ -252,5 +252,23 @@ reads as dark text on a light theme's surface or the reverse. Use the variables 
 are fine, as is a fallback inside `var()`. `ThemeVariableTests.NoComponentStylesheetWritesAColourOfItsOwn` enforces
 this; a new colour belongs in `tokens.css` and, when it must follow the theme, in `ThemeResolver.Derive`.
 
+Motion is the same: a transition or animation names what changes and takes one of the pairs in `tokens.css`, never
+a time or curve of its own (`MotionTokenTests` enforces this).
+
+| Pair | For |
+|---|---|
+| `--motion-fade` | Colour, background, border, opacity, filter, shadow |
+| `--motion-enter` | Something moving or growing into view |
+| `--motion-move` | Something moving or resizing in place (a panel's width, a sliding track) |
+| `--motion-exit` | Something leaving; shorter than it took to arrive |
+| `--motion-spring` | A turn or a switch's thumb: it starts from rest and overshoots a little, so not something arriving or a panel pinned to an edge |
+
+`transition: background var(--motion-fade), transform var(--motion-enter);`
+
+Under reduced motion `globals.css` sets `--duration-enter`, `--duration-exit` and `--duration-spring` to zero,
+so nothing moves; colour changes still fade, since they move nothing. A loop (`infinite`) keeps its own timing; one
+that only decorates, like the unread pulse, stops under reduced motion with a rule of its own. Script that scrolls checks `(prefers-reduced-motion: reduce)` before asking for
+`behavior: 'smooth'`.
+
 The Monaco editor paints with its own dark theme whatever the portal's, so its frame reads `--editor-bg`, which no
 theme derives.

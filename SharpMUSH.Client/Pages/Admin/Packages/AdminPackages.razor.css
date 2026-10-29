@@ -21,7 +21,7 @@
     font-size: 14px;
     font-weight: 600;
     color: var(--text-dim);
-    transition: color var(--motion-pop), border-color var(--motion-pop);
+    transition: color var(--motion-fade), border-color var(--motion-fade);
 }
 
 .pkg-tab:hover { color: var(--text); }
@@ -55,7 +55,7 @@
     background: var(--surface-2);
     border: 1px solid var(--border);
     border-radius: var(--radius-row);
-    transition: border-color var(--motion-pop);
+    transition: border-color var(--motion-fade);
 }
 
 .pkg-search:focus-within { border-color: var(--accent); }

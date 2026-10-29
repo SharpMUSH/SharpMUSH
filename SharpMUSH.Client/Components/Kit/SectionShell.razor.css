@@ -22,7 +22,7 @@
 	background: var(--surface-2);
 	color: var(--text-dim);
 	cursor: pointer;
-	transition: color var(--motion-pop), background var(--motion-pop);
+	transition: color var(--motion-fade), background var(--motion-fade);
 }
 
 .kit-pagebar-toggle:hover,

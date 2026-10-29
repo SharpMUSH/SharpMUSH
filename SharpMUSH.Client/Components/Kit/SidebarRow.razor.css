@@ -15,7 +15,7 @@
 	cursor: pointer;
 	box-sizing: border-box;
 	position: relative;
-	transition: background var(--motion-pop);
+	transition: background var(--motion-fade);
 }
 
 .kit-row:hover {

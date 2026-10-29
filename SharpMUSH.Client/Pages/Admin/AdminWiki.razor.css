@@ -209,7 +209,7 @@
 	border-radius: var(--radius-row);
 	background: var(--surface-2);
 	border: 1px solid var(--border);
-	transition: border-color var(--motion-pop);
+	transition: border-color var(--motion-fade);
 }
 
 .adminwiki-catcard-link {
