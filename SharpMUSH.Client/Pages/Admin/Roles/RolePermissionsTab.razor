@@ -7,10 +7,10 @@
     <div class="ra-section">
         <RoleNote Text="@Loc["RolCustomHelp"]" />
         <div class="ra-override-add">
-            <input class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@Draft.Scope"
+            <input name="scope" class="ra-input" type="text" placeholder="scene.close" aria-label="@Loc["RolCustomScopeLabel"]" value="@Draft.Scope"
                    @oninput="@(e => Draft.Scope = e.Value?.ToString() ?? string.Empty)" />
             <RoleCategorySelect Categories="Categories" Value="@Draft.Category" ValueChanged="@(value => Draft.Category = value)" />
-            <input class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@Draft.Description"
+            <input name="scope-description" class="ra-input" type="text" placeholder="@Loc["RolCustomDescriptionLabel"]" aria-label="@Loc["RolCustomDescriptionLabel"]" value="@Draft.Description"
                    @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
             <button type="button" class="ra-btn ra-btn--primary" @onclick="OnDefine" disabled="@Saving">
                 <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCustomAdd"]

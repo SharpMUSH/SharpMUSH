@@ -38,7 +38,7 @@
             </MudSelect>
             @if (_addingLocale)
             {
-                <input class="wiki-edit-localeinput" value="@_customLocale"
+                <input name="locale" class="wiki-edit-localeinput" value="@_customLocale"
                        @oninput="@(e => _customLocale = e.Value?.ToString() ?? string.Empty)"
                        @onkeydown="@(async e => { if (e.Key == "Enter") await AddCustomLocaleAsync(); })"
                        placeholder="@Loc["WkCustomLocalePlaceholder"]" aria-label="@Loc["WkCustomLocalePlaceholder"]" />
@@ -52,7 +52,7 @@
         </div>
 
         <div class="wiki-edit-titlerow">
-            <input @ref="_title" class="wiki-edit-title" value="@Article.Title" aria-label="@Loc["WkPageTitlePlaceholder"]"
+            <input name="title" @ref="_title" class="wiki-edit-title" value="@Article.Title" aria-label="@Loc["WkPageTitlePlaceholder"]"
                    @oninput="@(e => Article.Title = e.Value?.ToString() ?? string.Empty)"
                    placeholder="@Loc["WkPageTitlePlaceholder"]" />
         </div>
@@ -129,13 +129,13 @@
                     </span>
                 }
             }
-            <input class="wiki-edit-taginput" value="@_categoryEntry"
+            <input name="category" class="wiki-edit-taginput" value="@_categoryEntry"
                    disabled="@IsTranslation"
                    @oninput="@(e => _categoryEntry = e.Value?.ToString() ?? string.Empty)"
                    @onkeydown="OnCategoryKeyDown" placeholder="@Loc["WkAddCategory"]" aria-label="@Loc["WkAddCategory"]" />
             <div style="flex:1;"></div>
             <label class="wiki-edit-pub">
-                <input type="checkbox" checked="@Article.Published"
+                <input name="published" type="checkbox" checked="@Article.Published"
                        @onchange="@(e => Article.Published = (bool)(e.Value ?? false))" />
                 @Loc["WikiPublished"]
             </label>
@@ -154,7 +154,7 @@
         <div class="wiki-edit-savebar toolbar-row">
             <div class="wiki-edit-summary">
                 <MudIcon Icon="@Icons.Material.Filled.Edit" Style="font-size:0.875rem;color:var(--text-faint);" />
-                <input value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
+                <input name="summary" value="@_summary" @oninput="@(e => _summary = e.Value?.ToString() ?? string.Empty)"
                        placeholder="@Loc["WkSummaryPlaceholder"]" aria-label="@Loc["WkSummaryLabel"]" />
             </div>
             <button type="button" class="wiki-edit-minor" @onclick="@(() => _minor = !_minor)">

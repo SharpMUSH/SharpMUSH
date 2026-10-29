@@ -49,13 +49,13 @@
             <form class="gallery-details" @onsubmit="@(() => SaveDetailsAsync(editing))" @onsubmit:preventDefault="true">
                 <label class="gallery-field">
                     <span>@Loc["NavGalleryCaption"]</span>
-                    <input class="gallery-caption-input" type="text" maxlength="300" @bind="_caption" />
+                    <input name="caption" class="gallery-caption-input" type="text" maxlength="300" @bind="_caption" />
                 </label>
                 <ListEditor Items="_tags" ItemsChanged="@(tags => _tags = tags)" Label="@Loc["NavGalleryTags"]"
                             Help="@Loc["NavGalleryTagsHelp"]" Normalize="GalleryService.NormalizeTag" Class="gallery-tags-editor" />
                 <label class="gallery-field">
                     <span>@Loc["NavGalleryWarning"]</span>
-                    <input class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
+                    <input name="content-warning" class="gallery-warning-input" type="text" maxlength="100" @bind="_warning" aria-describedby="gallery-warning-help" />
                     <small id="gallery-warning-help">@Loc["NavGalleryWarningHelp"]</small>
                 </label>
                 <div class="gallery-share">
@@ -84,7 +84,7 @@
             <form class="gallery-details" @onsubmit="@(() => ReportAsync(reporting))" @onsubmit:preventDefault="true">
                 <label class="gallery-field">
                     <span>@Loc["NavGalleryReportReason"]</span>
-                    <textarea class="gallery-report-reason" maxlength="500" rows="3" @bind="_reason" @bind:event="oninput"></textarea>
+                    <textarea name="report-reason" class="gallery-report-reason" maxlength="500" rows="3" @bind="_reason" @bind:event="oninput"></textarea>
                 </label>
                 <div class="gallery-form-actions">
                     <button type="button" class="gallery-report-cancel" disabled="@_busy" @onclick="@(() => _reporting = null)">@Loc["Cancel"]</button>

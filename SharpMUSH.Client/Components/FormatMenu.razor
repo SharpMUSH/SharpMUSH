@@ -35,7 +35,7 @@
                 <form class="fm-custom" @onsubmit="() => ApplyCustom(background: false)" @onsubmit:preventDefault>
                     <label class="fm-custom-label">
                         <span>@Loc["NavFormatCustom"]</span>
-                        <input class="fm-custom-input" type="text" inputmode="text" maxlength="7" placeholder="#rrggbb" spellcheck="false"
+                        <input name="custom-colour" class="fm-custom-input" type="text" inputmode="text" maxlength="7" placeholder="#rrggbb" spellcheck="false"
                                value="@_custom" @oninput="e => _custom = e.Value?.ToString() ?? string.Empty" />
                     </label>
                     <button type="submit" class="fm-custom-apply" disabled="@(Custom is null)" @onmousedown:preventDefault>@Loc["NavFormatText"]</button>
@@ -45,7 +45,7 @@
                 @if (OnRawChanged.HasDelegate && !AlwaysRaw)
                 {
                     <label class="fm-raw" title="@Loc["NavFormatSoftcodeHint"]">
-                        <input type="checkbox" checked="@Target.Draft.Raw" @onchange="ToggleRawAsync" />
+                        <input name="raw" type="checkbox" checked="@Target.Draft.Raw" @onchange="ToggleRawAsync" />
                         <span>@Loc["NavFormatSoftcode"]</span>
                     </label>
                 }

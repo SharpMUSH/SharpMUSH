@@ -2,7 +2,7 @@
 @inject IStringLocalizer<SharedResource> Loc
 
 @* A picker over one category list, keeping a value no category has any more. *@
-<select class="ra-input" aria-label="@Loc["RolCategoryLabel"]" value="@Value"
+<select name="category" class="ra-input" aria-label="@Loc["RolCategoryLabel"]" value="@Value"
         @onchange="@(e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty))">
     <option value="">@Loc["RolCategoryChoose"]</option>
     @foreach (var category in Categories)

@@ -6,9 +6,9 @@
 <div class="ra-section" data-kind="@Kind.ToString().ToLowerInvariant()">
     <div class="ra-section-label">@Heading</div>
     <div class="ra-override-add">
-        <input class="ra-input" type="text" placeholder="@Loc["RolCategoryLabel"]" aria-label="@Loc["RolCategoryLabel"]" value="@Draft.Name"
+        <input name="category-name" class="ra-input" type="text" placeholder="@Loc["RolCategoryLabel"]" aria-label="@Loc["RolCategoryLabel"]" value="@Draft.Name"
                maxlength="@Categories.MaxNameLength" @oninput="@(e => Draft.Name = e.Value?.ToString() ?? string.Empty)" />
-        <input class="ra-input" type="text" placeholder="@Loc["RolCategoryDescriptionLabel"]" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@Draft.Description"
+        <input name="category-description" class="ra-input" type="text" placeholder="@Loc["RolCategoryDescriptionLabel"]" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@Draft.Description"
                maxlength="@Categories.MaxDescriptionLength" @oninput="@(e => Draft.Description = e.Value?.ToString() ?? string.Empty)" />
         <button type="button" class="ra-btn ra-btn--primary" @onclick="@(() => OnCreate.InvokeAsync(Kind))" disabled="@Saving">
             <MudIcon Icon="@Icons.Material.Filled.Add" Class="ra-ico" /> @Loc["RolCategoryAdd"]
@@ -26,9 +26,9 @@
                 var edit = EditOf(Kind, c);
                 <div class="ra-perm-row ra-category-row">
                     <div class="ra-perm-label">
-                        <input class="ra-input" type="text" aria-label="@Loc["RolCategoryLabel"]" value="@edit.Name" maxlength="@Categories.MaxNameLength"
+                        <input name="category-name" class="ra-input" type="text" aria-label="@Loc["RolCategoryLabel"]" value="@edit.Name" maxlength="@Categories.MaxNameLength"
                                @oninput="@(e => edit.Name = e.Value?.ToString() ?? string.Empty)" />
-                        <input class="ra-input" type="text" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@edit.Description" maxlength="@Categories.MaxDescriptionLength"
+                        <input name="category-description" class="ra-input" type="text" aria-label="@Loc["RolCategoryDescriptionLabel"]" value="@edit.Description" maxlength="@Categories.MaxDescriptionLength"
                                @oninput="@(e => edit.Description = e.Value?.ToString() ?? string.Empty)" />
                         <div class="ra-perm-desc">@Holds(c)</div>
                     </div>

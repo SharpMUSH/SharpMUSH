@@ -12,7 +12,7 @@
    the page, a click in the output and the skip link bring the reader to it, and Autofocus focuses it when it
    comes on screen. *@
 <div class="fi @Class @(Draft.Raw ? "fi--raw" : "fi--rich") @(Wrap ? null : "fi--nowrap")">
-    <textarea @ref="_input" class="fi-input @InputClass" rows="@Rows" aria-label="@AriaLabel" placeholder="@Placeholder"
+    <textarea name="text" @ref="_input" class="fi-input @InputClass" rows="@Rows" aria-label="@AriaLabel" placeholder="@Placeholder"
               wrap="@(Wrap ? "soft" : "off")" data-primary-input="@Primary" enterkeyhint="@EnterKeyHint"
               value="@Draft.Value" @oninput="OnInput" @onkeydown="OnKeyDown" spellcheck="true"></textarea>
     @if (!Draft.Raw)

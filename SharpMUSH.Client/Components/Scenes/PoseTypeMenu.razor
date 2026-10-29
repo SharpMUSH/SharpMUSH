@@ -19,7 +19,7 @@
                 {
                     var key = type.Key;
                     <label class="story-show-item" data-pose-type="@key">
-                        <input type="checkbox" checked="@(!PoseTypes.IsHidden(key))" disabled="@_busy"
+                        <input name="pose-type" type="checkbox" checked="@(!PoseTypes.IsHidden(key))" disabled="@_busy"
                                @onchange="e => SetShownAsync(key, e.Value is true)" />
                         @if (PoseTypeStyle.Icon(type.Icon) is { } icon)
                         {

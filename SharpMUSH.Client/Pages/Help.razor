@@ -38,7 +38,7 @@
 
         <KitCard Title="@string.Format(Loc["HelpAllTopics"], _index.Topics.Count)">
             <Controls>
-                <input class="help-filter" type="search" placeholder="@Loc["HelpFilterTopics"]" aria-label="@Loc["HelpFilterTopics"]"
+                <input name="help-filter" class="help-filter" type="search" placeholder="@Loc["HelpFilterTopics"]" aria-label="@Loc["HelpFilterTopics"]"
                        value="@_filter" @oninput="@(e => _filter = e.Value?.ToString() ?? string.Empty)" />
             </Controls>
             <ChildContent>

@@ -16,7 +16,7 @@
         <span class="cfg-image-preview" aria-hidden="true">
             <img src="@ApiUrl.Resolve(Preview)" alt="" />
         </span>
-        <input class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
+        <input name="@Property.Path" class="cfg-text" type="text" aria-label="@Label" aria-describedby="@DescribedBy"
                placeholder="@Loc["AdmCfgImageDefault"]"
                value="@Value"
                readonly="@Property.ReadOnly"

@@ -11,7 +11,7 @@
     <KitCard>
         <div class="diag-controls diag-controls--card">
             <label>@Loc["DiagCharacter"]
-                <select value="@_character" @onchange="SelectCharacter" disabled="@_busy">
+                <select name="character" value="@_character" @onchange="SelectCharacter" disabled="@_busy">
                     <option value="">@Loc["DiagSelectCharacter"]</option>
                     @foreach (var character in Account.Characters)
                     {
@@ -47,7 +47,7 @@
                 @if (report.CanProfile)
                 {
                     <div class="diag-controls">
-                        <label>@Loc["DiagSeconds"] <input type="number" min="1" max="300" @bind="_seconds" disabled="@_busy" /></label>
+                        <label>@Loc["DiagSeconds"] <input name="seconds" type="number" min="1" max="300" @bind="_seconds" disabled="@_busy" /></label>
                         <button @onclick="StartProfile" disabled="@_busy">@Loc["DiagStart"]</button>
                         @if (report.Profile?.Recording == true)
                         {

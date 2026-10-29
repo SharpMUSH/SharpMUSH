@@ -65,7 +65,7 @@
             {
                 <span class="cfg-range">@range</span>
             }
-            <input class="cfg-num" type="number" inputmode="numeric" aria-label="@DisplayName" aria-describedby="@DescribedBy"
+            <input name="@Property.Path" class="cfg-num" type="number" inputmode="numeric" aria-label="@DisplayName" aria-describedby="@DescribedBy"
                    value="@Draft.NumericString(Property)"
                    min="@(min?.ToString())"
                    max="@(max?.ToString())"
@@ -77,7 +77,7 @@
             var items = Draft.StringList(Property);
             <RemovableChips Items="items" ChipClass="@(IsChanged ? "cfg-chip--changed" : "")"
                             OnRemove="index => Edit(() => Draft.RemoveListItemAt(Property, index))" />
-            <input class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
+            <input name="list-item" class="cfg-text" placeholder="@Loc["AddItem"]" aria-label="@Loc["AddItem"]"
                    value="@Draft.ListDraft(Property)"
                    @oninput="@(e => Draft.SetListDraft(Property, e.Value?.ToString() ?? string.Empty))"
                    @onkeydown="@(e => OnEnter(e, () => Draft.CommitListDraft(Property)))" />
@@ -96,7 +96,7 @@
                     var entry = entries[entryIndex];
                     <div class="cfg-dict-entry" @key="@($"{Property.Path}-entry-{entryIndex}")">
                         <div class="cfg-dict-head">
-                            <input class="cfg-text" placeholder="@Loc["Key"]" aria-label="@Loc["Key"]"
+                            <input name="key" class="cfg-text" placeholder="@Loc["Key"]" aria-label="@Loc["Key"]"
                                    value="@entry.Key"
                                    @onchange="@(ev => Edit(() => Draft.SetDictKey(Property, entryIndex, ev.Value?.ToString() ?? string.Empty)))" />
                             <button type="button" class="cfg-icon-btn cfg-icon-btn--danger"
@@ -107,7 +107,7 @@
                         </div>
                         <RemovableChips Items="entry.Values"
                                         OnRemove="valueIndex => Edit(() => Draft.RemoveDictValueAt(Property, entryIndex, valueIndex))" />
-                        <input class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
+                        <input name="value" class="cfg-text" placeholder="@Loc["AddValue"]" aria-label="@Loc["AddValue"]"
                                value="@entry.ValueDraft"
                                @oninput="@(ev => entry.ValueDraft = ev.Value?.ToString() ?? string.Empty)"
                                @onkeydown="@(ev => OnEnter(ev, () => Draft.CommitDictValueDraft(Property, entryIndex)))" />
@@ -125,7 +125,7 @@
         else
         {
             var single = ConfigNaming.IsSingleChar(Property);
-            <input class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@DisplayName" aria-describedby="@DescribedBy"
+            <input name="@Property.Path" class="cfg-text @(single ? "cfg-text--char" : "")" type="text" aria-label="@DisplayName" aria-describedby="@DescribedBy"
                    maxlength="@(single ? 1 : null)"
                    value="@Draft.String(Property)"
                    readonly="@Property.ReadOnly"

@@ -113,7 +113,7 @@
             <ChildContent>
                 <div class="sc-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Style="font-size:0.875rem;color:var(--text-faint);" />
-                    <input value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
+                    <input name="attribute-search" value="@_attrSearch" @oninput="@(e => _attrSearch = e.Value?.ToString() ?? string.Empty)"
                            placeholder="@Loc["TermFilterAttributes"]" aria-label="@Loc["TermFilterAttributes"]" class="sc-search-input" />
                     @if (!string.IsNullOrEmpty(_attrSearch))
                     {
@@ -128,7 +128,7 @@
                     {
                         <div class="sc-add-row">
                             <span class="sc-add-amp">&amp;</span>
-                            <input @ref="_newAttrInput" value="@_newAttrName" aria-label="@Loc["TermNewAttributeName"]"
+                            <input name="attribute-name" @ref="_newAttrInput" value="@_newAttrName" aria-label="@Loc["TermNewAttributeName"]"
                                    @oninput="@(e => _newAttrName = e.Value?.ToString() ?? string.Empty)"
                                    @onkeydown="OnCreateAttrKeyDown"
                                    placeholder="ATTR`NAME" class="sc-add-input" />

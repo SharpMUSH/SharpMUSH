@@ -67,7 +67,7 @@
                 <div class="pkg-tabs-spacer"></div>
                 <div class="pkg-search">
                     <MudIcon Icon="@Icons.Material.Filled.Search" Class="pkg-search-icon" />
-                    <input type="text" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]" value="@_search"
+                    <input name="package-search" type="text" placeholder="@Loc["PkgSearchPlaceholder"]" aria-label="@Loc["PkgSearchPlaceholder"]" value="@_search"
                            @oninput="@(e => _search = e.Value?.ToString() ?? string.Empty)" />
                 </div>
             </div>

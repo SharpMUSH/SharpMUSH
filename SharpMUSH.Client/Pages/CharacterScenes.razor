@@ -24,7 +24,7 @@
             <a class="char-scenes-back" href="@ProfileHref">@string.Format(Loc["NavCharScenesBack"], Name)</a>
         </DescriptionContent>
         <Actions>
-            <input class="char-scenes-search" type="search" placeholder="@Loc["NavCharScenesSearch"]" aria-label="@Loc["NavCharScenesSearch"]"
+            <input name="scene-search" class="char-scenes-search" type="search" placeholder="@Loc["NavCharScenesSearch"]" aria-label="@Loc["NavCharScenesSearch"]"
                    value="@_search" @onchange="@(e => SearchAsync(e.Value?.ToString()))" />
         </Actions>
     </PlainPageHeader>
