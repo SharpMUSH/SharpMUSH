@@ -66,7 +66,7 @@ public partial class PackageInstallService
 			.ToHashSet(StringComparer.Ordinal);
 
 		var hooks = new List<PackageLocalHook>();
-		foreach (var change in changeset.Objects.Where(o => o.Objid is not null && !shipped.Contains(o.Ref)))
+		foreach (var change in changeset.Objects.Where(o => o.Objid is not null && !shipped.Contains(o.Ref) && changeset.RunsLifecycleOn(o)))
 		{
 			if (HelperFunctions.ParseDbRef(change.Objid!) is not DBRef dbref)
 			{

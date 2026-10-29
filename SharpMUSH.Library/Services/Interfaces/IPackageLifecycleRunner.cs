@@ -18,7 +18,8 @@ public interface IPackageLifecycleRunner
 {
 	/// <summary>
 	/// After a successful apply, runs the appropriate lifecycle attribute on each
-	/// object the package created or attached to:
+	/// object of the package's own, and on an object it attaches to only when it ships the hook there
+	/// (<see cref="PackageChangeset.RunsLifecycleOn"/>):
 	/// <list type="bullet">
 	/// <item><c>AINSTALL</c> when <paramref name="changeset"/>'s
 	/// <see cref="PackageChangeset.Kind"/> is <see cref="PackageRevisionKind.Install"/>.</item>

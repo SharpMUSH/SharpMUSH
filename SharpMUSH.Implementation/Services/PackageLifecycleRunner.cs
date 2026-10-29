@@ -45,10 +45,10 @@ public class PackageLifecycleRunner(
 			return;
 		}
 
-		// Every object the package created or attaches to: created objids (resolved
-		// at apply time) plus already-existing/attach targets carried on the changeset.
+		// Every object the package created (resolved at apply time) plus its already-existing objects carried on the
+		// changeset. An object it only attaches to keeps its hook to itself.
 		var objids = new HashSet<string>(createdObjects.Values, StringComparer.Ordinal);
-		foreach (var change in changeset.Objects)
+		foreach (var change in changeset.Objects.Where(changeset.RunsLifecycleOn))
 		{
 			var objid = change.Objid ?? createdObjects.GetValueOrDefault(change.Ref);
 			if (objid is not null)

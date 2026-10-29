@@ -1,7 +1,7 @@
 format: "1.16"
 package: bboards
 title: "Bulletin boards"
-version: 1.7.1
+version: 1.7.2
 authors: [SharpMUSH]
 description: "BBoards: bulletin boards that nest, with posts, comments and replies, pinned posts and per-reader unread tracking, using the +bbread/+bbpost commands Myrddin's board players know."
 license: MIT
@@ -399,10 +399,10 @@ objects:
       # every boot. /noparse and /rsnoparse hand the hook the text as typed; /inline runs it in place.
       STARTUP: |-
         @command/add/noparse/rsnoparse +bb;@hook/override/inline +bb={{bboards}},CMD`BB;@dolist/inline get({{bboards}}/DATA`WORDS)={@command/add/noparse/rsnoparse +bb%i0; @hook/override/inline +bb%i0={{bboards}},CMD`BB};&DATA`TICK`ID {{bboards}}=secs()[rand(100000)];@trigger {{bboards}}/INC`TICK`PASS=get({{bboards}}/DATA`TICK`ID)
-      # Runs once, on first install, as God: puts the commands in the master room, makes the starting
-      # boards and their locks, and starts the commands.
+      # Runs once, on first install, as God: puts the commands in the master room, starts the commands,
+      # and makes the starting boards and their locks when the store holds no board yet.
       AINSTALL: |-
-        @teleport {{bboards}}=#2;@include {{bboards}}/INC`SEED`RUN;@trigger {{bboards}}/STARTUP
+        @teleport {{bboards}}=#2;@trigger {{bboards}}/STARTUP;@break words(get({{store}}/ORDER));@include {{bboards}}/INC`SEED`RUN
       # Runs after an update: starts the commands and the cleanup pass again, so a pass started by the
       # version before stops at its next turn.
       AUPDATE: |-

@@ -50,6 +50,16 @@ public sealed record PackageChangeset(
 	};
 
 	/// <summary>
+	/// Whether the apply runs <see cref="LifecycleHook"/> on <paramref name="change"/>'s object: on each object of the
+	/// package's own, and on an object it attaches to only when it ships the hook there. An attached object belongs to
+	/// another package or to the game, and its first-install code is not this package's to run again.
+	/// </summary>
+	public bool RunsLifecycleOn(PackageObjectChange change)
+		=> change.Action != PackageObjectAction.Attach
+			|| Attributes.Any(a => a.TargetRef == change.Ref
+				&& string.Equals(a.Attribute, LifecycleHook, StringComparison.OrdinalIgnoreCase));
+
+	/// <summary>
 	/// True when invalid authored metadata, dependency/conflict issues, a declared item or setting that cannot be applied, or a server older than
 	/// the package's <c>requires_server</c>, prevent applying at all.
 	/// </summary>
