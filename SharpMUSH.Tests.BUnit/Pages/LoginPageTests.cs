@@ -59,6 +59,16 @@ public class LoginPageRenderTests : BunitContext
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
+	[Test]
+	public async Task AccountExplanationKeepsTheDirectCharacterTerminalRoute()
+	{
+		SeedServices();
+		var cut = Render<SharpMUSH.Client.Pages.Login>();
+		await Assert.That(cut.Find(".journey-identity").TextContent).IsEqualTo("AuthJourneyIdentity");
+		await Assert.That(cut.FindAll("a[href='/play']")).IsNotEmpty();
+		await Assert.That(cut.FindAll("#login-username, #login-password").Count).IsEqualTo(2);
+	}
+
 	[TUnit.Core.Test]
 	public async Task Login_RendersSingleCard_NoHeroMarketingPanel()
 	{

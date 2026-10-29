@@ -5101,10 +5101,10 @@
     <value>Réclamer le personnage</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Liez à ce compte un personnage que vous jouez déjà : créé à l'écran de connexion, par l'équipe ou venu d'un autre jeu. Son mot de passe prouve qu'il est à vous.</value>
+    <value>Le personnage est déjà sur ce compte ? Sélectionnez-le au lieu de le réclamer à nouveau. Pour associer un personnage non associé qui vous appartient, connectez-vous et utilisez son mot de passe de personnage. Si vous ne l’avez pas, contactez l’équipe. Les mots de passe de compte et de personnage sont distincts ; le jeu vérifie l’éligibilité et les éventuelles conditions de transfert.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Vous avez déjà un personnage ? Réclamez-le.</value>
+    <value>Besoin d’associer un personnage existant ?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Créer plutôt un nouveau personnage.</value>
@@ -6198,4 +6198,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>La pièce a déjà une sortie portant l'un de ces noms.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Apprendre à jouer</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>À propos de ce jeu</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Référence des commandes</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Votre compte est votre accès privé. Un personnage est celui que vous incarnez dans le monde partagé. Un compte peut posséder plusieurs personnages ; vérifiez lequel vous incarnez avant d’agir.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Annuaire public des personnages</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guides et références</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Choisissez l’aide dont vous avez besoin.</value></data>
 </root>

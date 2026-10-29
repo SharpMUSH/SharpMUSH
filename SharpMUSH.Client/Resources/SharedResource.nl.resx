@@ -5792,10 +5792,10 @@
     <value>Personage claimen</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Koppel een personage dat je al speelt aan dit account: een dat is aangemaakt op het verbindingsscherm, door de staf of overgezet uit een ander spel. Het wachtwoord bewijst dat het van jou is.</value>
+    <value>Staat het personage al op dit account? Selecteer het in plaats van het opnieuw te claimen. Meld je aan en gebruik het personagewachtwoord om een eigen, nog niet gekoppeld personage te koppelen. Vraag de staf om hulp als je dat wachtwoord niet hebt. Account- en personagewachtwoorden zijn apart; het spel controleert de voorwaarden en eventuele overdrachtseisen.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Heb je al een personage? Claim het.</value>
+    <value>Wil je een bestaand personage koppelen?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Maak in plaats daarvan een nieuw personage.</value>
@@ -6889,4 +6889,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>De kamer heeft al een uitgang met een van deze namen.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Leren spelen</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Over dit spel</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Opdrachtenreferentie</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Je account is je privé-aanmelding. Een personage is wie je speelt in de gedeelde wereld. Eén account kan meerdere personages bezitten; controleer met welk personage je speelt voordat je handelt.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Openbare personagegids</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Gidsen en naslag</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Kies de hulp die je nodig hebt.</value></data>
 </root>

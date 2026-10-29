@@ -35,6 +35,24 @@ public class HomePageTests : BunitContext
 	}
 
 	[Test]
+	public async Task HomeKeepsAuthoredHeroContentWithoutInjectingJourneyChrome()
+	{
+		Arrange(new LayoutConfiguration(new Dictionary<WidgetZone, List<WidgetPlacement>>
+		{
+			[WidgetZone.MainContent] = [new WidgetPlacement("WelcomeText", 0, Text("An intentional administrator placeholder"))],
+		}, new LayoutSettings(LeftSidebarEnabled: false, RightSidebarEnabled: false)));
+		Services.AddSingleton<ServerInfoService>(new StubServerInfoService(true, onboarding:
+			new SharpMUSH.Library.Models.Portal.Onboarding.OnboardingPresentation("game", "", "", "", "", "",
+				new SharpMUSH.Library.Models.Portal.Onboarding.GuideLink("Our setting", "/wiki/main/our_setting"), null, null)));
+		var cut = Render<SharpMUSH.Client.Pages.Home>();
+		cut.WaitForAssertion(() => cut.Find(".welcome-text-widget"));
+		await Assert.That(cut.FindAll(".journey-links")).IsEmpty();
+		await Assert.That(cut.FindAll("a[href='/welcome'], a[href='/help'], a[href='/wiki/main/our_setting']")).IsEmpty();
+		await Assert.That(cut.Find(".kit-page-head .kit-page-title").TextContent).IsEqualTo("HomeWhatsHappening");
+		await Assert.That(cut.Find(".welcome-text-widget").TextContent).Contains("An intentional administrator placeholder");
+	}
+
+	[Test]
 	public async Task ThePlainHeader_OverTheMainZone_BesideTheAsideZone()
 	{
 		Arrange(new LayoutConfiguration(

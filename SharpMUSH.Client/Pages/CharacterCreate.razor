@@ -29,6 +29,9 @@
             @(Claiming ? Loc["NavClaimCharacterBlurb"] : Loc["NavCreateCharacterBlurb"])
         </MudText>
 
+        <MudText Typo="Typo.body2" Class="mt-3 journey-identity">@Loc["AuthJourneyIdentity"]</MudText>
+        <p class="charcreate-switch journey-character-links"><a href="/account">@Loc["NavCharYourCharacters"]</a> · <a href="/characters">@Loc["NavJourneyDirectory"]</a></p>
+
         @if (!Claiming && _characterGuide is { } guide)
         {
             <p class="charcreate-guide">@Loc["NavCharacterGuideLead"] <a href="@guide.Url">@guide.Title</a></p>
@@ -44,7 +47,7 @@
         }
         @if (Claiming || _withPassword)
         {
-        <MudTextField @bind-Value="_password" Label="@Loc["AuthPassword"]" InputType="InputType.Password"
+        <MudTextField @bind-Value="_password" Label="@Loc["AuthCharacterPassword"]" InputType="InputType.Password"
                       Variant="Variant.Outlined" Margin="Margin.Dense" Class="mt-3" />
         }
 

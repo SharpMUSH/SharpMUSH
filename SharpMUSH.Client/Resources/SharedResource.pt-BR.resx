@@ -5792,10 +5792,10 @@
     <value>Reivindicar personagem</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Vincule a esta conta um personagem que você já interpreta: criado na tela de conexão, pela equipe ou trazido de outro jogo. A senha dele prova que é seu.</value>
+    <value>O personagem já está nesta conta? Selecione-o em vez de reivindicá-lo novamente. Para vincular um personagem seu ainda sem vínculo, entre na conta e use a senha do personagem. Se não a tiver, peça ajuda à equipe. As senhas da conta e do personagem são separadas; o jogo verifica a elegibilidade e os requisitos de transferência.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Já tem um personagem? Reivindique-o.</value>
+    <value>Precisa vincular um personagem existente?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Criar um novo personagem em vez disso.</value>
@@ -6889,4 +6889,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>A sala já tem uma saída com um destes nomes.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Aprenda a jogar</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Sobre este jogo</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Referência de comandos</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Sua conta é seu acesso privado. Um personagem é quem você interpreta no mundo compartilhado. Uma conta pode ter vários personagens; confira com qual está jogando antes de agir.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Diretório público de personagens</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guias e referência</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Escolha a ajuda de que precisa.</value></data>
 </root>

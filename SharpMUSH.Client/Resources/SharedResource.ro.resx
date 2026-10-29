@@ -5792,10 +5792,10 @@
     <value>Revendicați personajul</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Asociați acestui cont un personaj pe care îl jucați deja: creat la ecranul de conectare, de echipă sau adus din alt joc. Parola lui dovedește că este al dumneavoastră.</value>
+    <value>Personajul este deja pe acest cont? Selectează-l în loc să-l revendici din nou. Pentru a asocia un personaj neasociat care îți aparține, autentifică-te și folosește parola personajului. Dacă nu o ai, cere ajutorul echipei. Parolele contului și personajului sunt separate; jocul verifică eligibilitatea și eventualele condiții de transfer.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Aveți deja un personaj? Revendicați-l.</value>
+    <value>Trebuie să asociezi un personaj existent?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Creați în schimb un personaj nou.</value>
@@ -6889,4 +6889,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Camera are deja o ieșire cu unul dintre aceste nume.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Învață să joci</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Despre acest joc</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Referință pentru comenzi</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Contul este accesul tău privat. Un personaj este cel pe care îl joci în lumea comună. Un cont poate deține mai multe personaje; verifică pe care îl joci înainte de a acționa.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Catalog public de personaje</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Ghiduri și referințe</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Alege ajutorul de care ai nevoie.</value></data>
 </root>

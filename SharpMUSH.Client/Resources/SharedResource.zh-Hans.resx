@@ -5792,10 +5792,10 @@
     <value>认领角色</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>将您已经在玩的角色关联到此账号：无论是在连接界面创建的、由工作人员创建的，还是从其他游戏迁移来的。角色密码可证明它属于您。</value>
+    <value>角色已在本账号下？请选择该角色，不必再次认领。若要关联你拥有的尚未关联账号的角色，请先登录，再使用该角色的密码。如果没有该密码，请联系管理人员。账号密码与角色密码相互独立；游戏会检查关联资格及可能的转移条件。</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>已经有角色了？认领它。</value>
+    <value>需要关联已有角色？</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>改为创建新角色。</value>
@@ -6889,4 +6889,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>该房间已有使用其中某个名称的出口。</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>学习游玩</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>关于本游戏</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>命令参考</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>账号是你的私人登录身份。角色是你在共享世界中扮演的人物。一个账号可以拥有多个角色；行动前请确认当前正在使用哪个角色。</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>公开角色名录</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>指南与参考</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>选择你需要的帮助。</value></data>
 </root>

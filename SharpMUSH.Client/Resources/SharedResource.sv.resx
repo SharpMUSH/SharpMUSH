@@ -5792,10 +5792,10 @@
     <value>Gör anspråk på karaktär</value>
   </data>
   <data name="NavClaimCharacterBlurb" xml:space="preserve">
-    <value>Koppla en karaktär du redan spelar till det här kontot: en som skapades på anslutningsskärmen, av personalen eller togs med från ett annat spel. Dess lösenord bevisar att den är din.</value>
+    <value>Finns karaktären redan på det här kontot? Välj den i stället för att göra anspråk på den igen. Logga in och använd karaktärens lösenord för att koppla en okopplad karaktär som du äger. Fråga personalen om du saknar lösenordet. Konto- och karaktärslösenord är separata; spelet kontrollerar villkoren och eventuella krav för överföring.</value>
   </data>
   <data name="NavClaimInstead" xml:space="preserve">
-    <value>Har du redan en karaktär? Gör anspråk på den.</value>
+    <value>Behöver du koppla en befintlig karaktär?</value>
   </data>
   <data name="NavCreateInstead" xml:space="preserve">
     <value>Skapa en ny karaktär i stället.</value>
@@ -6889,4 +6889,11 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Rummet har redan en utgång med ett av de här namnen.</value>
   </data>
+  <data name="NavJourneyLearn" xml:space="preserve"><value>Lär dig spela</value></data>
+  <data name="NavJourneyAbout" xml:space="preserve"><value>Om det här spelet</value></data>
+  <data name="NavJourneyReference" xml:space="preserve"><value>Kommandoreferens</value></data>
+  <data name="AuthJourneyIdentity" xml:space="preserve"><value>Ditt konto är din privata inloggning. En karaktär är den du spelar i den gemensamma världen. Ett konto kan äga flera karaktärer; kontrollera vilken du spelar innan du agerar.</value></data>
+  <data name="NavJourneyDirectory" xml:space="preserve"><value>Offentlig karaktärskatalog</value></data>
+  <data name="NavHelpGuidanceTitle" xml:space="preserve"><value>Guider och referens</value></data>
+  <data name="NavHelpGuidanceDescription" xml:space="preserve"><value>Välj den hjälp du behöver.</value></data>
 </root>

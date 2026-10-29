@@ -6,7 +6,8 @@ by any authorised user.
 :::
 
 ## Getting started
-- [Get started with Sharpie](/welcome) for an optional guide matched to your experience.
+- **[Learn to Play](/welcome)**: an optional guide matched to your experience.
+- **[Command Reference](/help)**: the server's command and function reference.
 - [Sign in or register](/login), then create or select a character to open [Play](/play).
 - Prefer a MU* client? Make an account with `register <name> [email] <password>`,
   a character with `create <character> <password>`, and next time log in with
