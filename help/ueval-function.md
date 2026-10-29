@@ -27,9 +27,7 @@ ueval() is u() with a privilege ceiling. The code runs with only what the roles 
 
 streval() evaluates `<string>` under the same ceiling. Its arguments are not evaluated; `<string>` reads them as `%0` onwards.
 
-`<role>` is a role's name or one of RhostMUSH's levels: see [ueval levels].
-
-For ueval() only, the level `subeval` evaluates the attribute's substitutions and calls no function.
+`<role>` is a role's name or one of RhostMUSH's levels: see [ueval levels]. Any other name is `#-1 NO SUCH ROLE`. For ueval() only, the level `subeval` evaluates the attribute's substitutions and calls no function.
 
 These functions come from RhostMUSH. With no `/<role>`, ueval() is `#-1 NO LEVEL SPECIFIED`.
 
@@ -51,5 +49,5 @@ These functions come from RhostMUSH. With no `/<role>`, ueval() is `#-1 NO LEVEL
 
 ## Levels
 
-RhostMUSH's levels can be shortened: `citizen`, `guildmaster`, `architect`, `councilor`, `royalty` (a full wizard), `wizard`, `immortal` and `god`. Each level uses the role of the same name when the game has one, as an imported RhostMUSH game does. Otherwise `citizen` and `guildmaster` mean `player`, `architect` means `builder`, `councilor` means `royalty`, and `immortal` means every role but not God's own powers. `god`, or a name that is no role, evaluates with no ceiling.
+RhostMUSH's levels can be shortened: `citizen`, `guildmaster`, `architect`, `councilor`, `royalty` (a full wizard), `wizard`, `immortal` and `god`. Each level uses the role of the same name when the game has one, as an imported RhostMUSH game does. Otherwise `citizen` and `guildmaster` mean `player`, `architect` means `builder`, `councilor` means `royalty`, and `immortal` means every role but not God's own powers. `god` evaluates with no ceiling.
 
