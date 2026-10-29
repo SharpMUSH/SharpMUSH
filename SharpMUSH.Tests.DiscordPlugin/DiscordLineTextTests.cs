@@ -61,6 +61,18 @@ public class DiscordLineTextTests
 	}
 
 	[Test]
+	public async Task AMemberWithoutACharacter_GoesOutUnderTheirDiscordName()
+	{
+		var identity = new ExternalFeedIdentity("discord", "251506208924499969", "Mercutio");
+		var message = Message("pose", "waves.", name: identity.DisplayName, display: identity.DisplayName) with { ExternalIdentity = identity };
+
+		var line = DiscordLineText.From(message);
+
+		await Assert.That(line.Speaker).IsEqualTo("Mercutio");
+		await Assert.That(line.Text).IsEqualTo("*Mercutio waves.*");
+	}
+
+	[Test]
 	public async Task ALineTheSystemFormatted_GoesOutAsDelivered()
 	{
 		var line = DiscordLineText.From(Message("say", "hi", line: MString.Plain("[Public] Alice says, \"hi\"")));

@@ -1,9 +1,9 @@
 format: "1.16"
 package: discord-channels
 title: "Discord channel bridge"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
-description: "Joins a game channel to a linked Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel links one, +discord/channels lists them."
+description: "Joins a game channel to a Discord channel, both ways: what is said on the game channel is posted in Discord, and what Discord members post comes back onto the game channel. +discord/channel joins one and links the Discord channel when it is not linked yet, +discord/channels lists them, and +discord/channel/unrestricted lets members without a game account speak there."
 license: MIT
 homepage: https://github.com/SharpMUSH/SharpMUSH
 keywords: [discord, chat, channels, bridge, feed]
@@ -20,15 +20,17 @@ requires_server: ">=0.1"
 # event sent there.
 depends:
   - package: discord
-    version: ">=1.0 <2.0"
+    version: ">=1.2 <2.0"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/discord/
       branch: main
 
 objects:
-  # The links and the commands. WIZARD because it emits onto channels it is not on, and its tap and the event
-  # send on Discord feeds owned by the Discord Bridge.
+  # The links and the commands. WIZARD because it emits onto channels it is not on, its tap and the event
+  # send on Discord feeds owned by the Discord Bridge, and a wizard may give itself a role below its own:
+  # STARTUP gives it the discord package's Discord Admin role, since @discord/link, @discord/unrestricted and
+  # discordlink() need discord.admin and wizards do not hold it. It runs them only for players who hold it too.
   #
   # Trees: CMD` the commands, INC`CMD` their steps, FUN`LINK` the reads about a link, FUN`DISPLAY` what players
   # see, TAP`DISCORD the tap, and DATA`LINK` the links:
@@ -56,11 +58,23 @@ objects:
         $+discord/channel/confirm *=*:@include/args me/INC`CMD`LINK=channel,%0,discord_channel_id,%1,confirmed,1
       CMD`REMOVE: |-
         $+discord/channel/remove *:@include/args me/INC`CMD`REMOVE=channel,%0
+      CMD`UNRESTRICTED: |-
+        $+discord/channel/unrestricted *:@include/args me/INC`CMD`ACCESS=channel,%0,access,unrestricted
+      CMD`RESTRICT: |-
+        $+discord/channel/restrict *:@include/args me/INC`CMD`ACCESS=channel,%0,access,restrict
 
       # %<channel> the game channel as typed, %<discord_channel_id> the Discord channel's id, %<confirmed> 1 when
       # the player confirmed that a channel with a see or join lock goes to Discord.
       INC`CMD`LINK: |-
-        @assert not(strmatch(setr(game_channel,cinfo(%<channel>,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %<channel>.,warn); @assert u(me/FUN`LINK`MAYLINK,%#,%q<game_channel>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<game_channel> to Discord.,warn); @assert cand(regmatch(%<discord_channel_id>,^\\d+$),gte(strlen(%<discord_channel_id>),17),lte(strlen(%<discord_channel_id>),20))=@pemit %#=notice(DISCORD,%<discord_channel_id> is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(DATA`LINK`%<discord_channel_id>)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(DATA`LINK`%<discord_channel_id>)].,warn); @assert not(strlen(u(me/FUN`LINK`OF,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> already goes to Discord channel [u(me/FUN`LINK`OF,%q<game_channel>)]. +discord/channel/remove %q<game_channel> first.,warn); @assert cor(%<confirmed>,not(u(me/FUN`LINK`PRIVATE,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> is for staff only or has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<game_channel>=%<discord_channel_id> links it anyway.,warn); &DATA`LINK`%<discord_channel_id> me=%q<game_channel>; &DATA`LINK`%<discord_channel_id>`BY me=objid(%#); @pemit %#=notice(DISCORD,%q<game_channel> goes to Discord channel %<discord_channel_id>%, and what is posted there comes back. If @discord does not list that channel%, link it with @discord/link.,ok)
+        @assert not(strmatch(setr(game_channel,cinfo(%<channel>,name)),#-*))=@pemit %#=notice(DISCORD,There is no channel called %<channel>.,warn); @assert u(me/FUN`LINK`MAYLINK,%#,%q<game_channel>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin link %q<game_channel> to Discord.,warn); @assert cand(regmatch(%<discord_channel_id>,^\\d+$),gte(strlen(%<discord_channel_id>),17),lte(strlen(%<discord_channel_id>),20))=@pemit %#=notice(DISCORD,%<discord_channel_id> is not a Discord channel id. @discord lists the linked channels with their ids.,warn); @assert not(strlen(v(DATA`LINK`%<discord_channel_id>)))=@pemit %#=notice(DISCORD,That Discord channel already goes to [v(DATA`LINK`%<discord_channel_id>)].,warn); @assert not(strlen(u(me/FUN`LINK`OF,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> already goes to Discord channel [u(me/FUN`LINK`OF,%q<game_channel>)]. +discord/channel/remove %q<game_channel> first.,warn); @assert cor(%<confirmed>,not(u(me/FUN`LINK`PRIVATE,%q<game_channel>)))=@pemit %#=notice(DISCORD,%q<game_channel> is for staff only or has a see or join lock%, but everyone who can read the Discord channel will read it. +discord/channel/confirm %q<game_channel>=%<discord_channel_id> links it anyway.,warn); &DATA`LINK`%<discord_channel_id> me=%q<game_channel>; &DATA`LINK`%<discord_channel_id>`BY me=objid(%#); @pemit %#=notice(DISCORD,%q<game_channel> goes to Discord channel %<discord_channel_id>%, and what is posted there comes back.,ok); @include/args me/INC`CMD`DISCORDLINK=discord_channel_id,%<discord_channel_id>
+      # %<discord_channel_id> a Discord channel the game may not have linked yet: links it, when the player may.
+      # @discord/link answers the one who ran it, this object, so the player is pointed at +discord/channels.
+      INC`CMD`DISCORDLINK: |-
+        @break not(strmatch(discordlink(%<discord_channel_id>),#-*)); @break not(permission(%#,discord.admin))=@pemit %#=notice(DISCORD,The game has not linked Discord channel %<discord_channel_id> yet%, so nothing crosses until staff with discord.admin type: @discord/link %<discord_channel_id>,warn); @discord/link %<discord_channel_id>; @pemit %#=notice(DISCORD,Linking Discord channel %<discord_channel_id> too. +discord/channels shows when it is linked.,ok)
+      # %<channel> a joined game channel as typed, %<access> unrestricted or restrict: whether Discord members without a
+      # game account may speak in its Discord channel. Discord's channel permissions change, so it needs discord.admin.
+      INC`CMD`ACCESS: |-
+        @assert strlen(setr(discord_channel_id,u(me/FUN`LINK`OF,firstof(cinfo(%<channel>,name),%<channel>))))=@pemit %#=notice(DISCORD,%<channel> does not go to Discord.,warn); @assert permission(%#,discord.admin)=@pemit %#=notice(DISCORD,Only staff with discord.admin change who may speak in a Discord channel.,warn); @assert not(strmatch(discordlink(%q<discord_channel_id>),#-*))=@pemit %#=notice(DISCORD,The game has not linked Discord channel %q<discord_channel_id> yet. Link it with @discord/link %q<discord_channel_id> first.,warn); @switch %<access>=unrestricted,{@discord/unrestricted %q<discord_channel_id>; @pemit %#=notice(DISCORD,Opening [v(DATA`LINK`%q<discord_channel_id>)]'s Discord channel to members without a game account%, whose lines show as \[D\] and their Discord name. +discord/channels shows when it is done.,ok)},{@discord/restrict %q<discord_channel_id>; @pemit %#=notice(DISCORD,Closing [v(DATA`LINK`%q<discord_channel_id>)]'s Discord channel to all but linked members. +discord/channels shows when it is done.,ok)}
       # %<channel> the game channel as typed, or the name it had when it was linked. @wipe takes the link's BY with it.
       INC`CMD`REMOVE: |-
         @assert strlen(setr(discord_channel_id,u(me/FUN`LINK`OF,firstof(cinfo(%<channel>,name),%<channel>))))=@pemit %#=notice(DISCORD,%<channel> does not go to Discord.,warn); @assert u(me/FUN`LINK`MAYREMOVE,%#,%q<discord_channel_id>)=@pemit %#=notice(DISCORD,Only the channel's owner or staff with chat.admin unlink [v(DATA`LINK`%q<discord_channel_id>)].,warn); @pemit %#=notice(DISCORD,[v(DATA`LINK`%q<discord_channel_id>)] no longer goes to Discord channel %q<discord_channel_id>.,ok); @wipe me/DATA`LINK`%q<discord_channel_id>
@@ -84,20 +98,26 @@ objects:
         switch(%0,pose,%1 %2,semipose,%1%2,emit,%2,%1 says%, "%2")
       # The linked channels, as +discord/channels shows them.
       FUN`DISPLAY`LIST: |-
-        if(words(lattr(me/DATA`LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),tone(strong,Game channel)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`CHANNELNAME,v(%i0)),,%r)],tone(strong,Discord channel)%r[iter(lattr(me/DATA`LINK`*),last(%i0,`),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
+        if(words(lattr(me/DATA`LINK`*)),box(datacolumns(json(object,delim,json(string,%r),grow,json(string,1)),tone(strong,Game channel)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`CHANNELNAME,v(%i0)),,%r)],tone(strong,Discord channel)%r[iter(lattr(me/DATA`LINK`*),last(%i0,`),,%r)],tone(strong,Who speaks)%r[iter(lattr(me/DATA`LINK`*),u(me/FUN`DISPLAY`ACCESS,last(%i0,`)),,%r)])%r[rule()]%r[tone(muted,+discord/channel <channel>=<Discord channel id> links one · +discord/channel/remove <channel> unlinks it · +discord/channel/unrestricted <channel> lets anyone on Discord speak)],Discord Channels),notice(DISCORD,No game channel goes to Discord. +discord/channel <channel>=<Discord channel id> links one.))
+      # %0 a Discord channel id: who may speak there, or that the game has not linked it.
+      FUN`DISPLAY`ACCESS: |-
+        switch(discordlink(%0),unrestricted,anyone,restricted,linked members,tone(error,not linked))
       # %0 a linked channel's name: the name, or a note that no channel has it any more.
       FUN`DISPLAY`CHANNELNAME: |-
         if(strmatch(cinfo(%0,name),#-*),%0 [tone(error,no such channel)],%0)
 
       # A tap on the discord kind. It hears every line sent on a Discord feed, after it is delivered, with the
-      # speaker as enactor (help @feed taps), and passes on the lines Discord members posted.
+      # speaker as enactor (help @feed taps), and passes on the lines Discord members posted. /noisy puts the
+      # channel's name in front, as the channel shows it. A member without a game account has no speaker;
+      # %<name> is then their Discord name behind [D].
       TAP`DISCORD: |-
-        @assert cand(strmatch(%<origin>,discord/*),strlen(setr(game_channel,v(DATA`LINK`[after(%<feed>,/)])))); @cemit %q<game_channel>=u(me/FUN`DISPLAY`LINE,%<style>,firstof(%<name>,name(%<speaker>)),%<text>)
+        @assert cand(strmatch(%<origin>,discord/*),strlen(setr(game_channel,v(DATA`LINK`[after(%<feed>,/)])))); @cemit/noisy %q<game_channel>=u(me/FUN`DISPLAY`LINE,%<style>,firstof(%<name>,name(%<speaker>)),%<text>)
 
       # Taps are stored, so this only puts the tap back after the discord kind was undefined and defined again, or
-      # adds TAP`DISCORD after an update from 1.0, whose tap was on TAP.
+      # adds TAP`DISCORD after an update from 1.0, whose tap was on TAP. The role is for @discord/link and
+      # discordlink(); giving it again changes nothing.
       STARTUP: |-
-        @feed/tap discord={{links}}/TAP`DISCORD
+        @feed/tap discord={{links}}/TAP`DISCORD; @role/assign me=discord-admin
       AINSTALL: |-
         @trigger {{links}}/STARTUP
       AUPDATE: |-
@@ -121,30 +141,31 @@ objects:
       HELP: |-
         Joining game channels to Discord channels.
       HELP`DISCORD`CHANNELS: |-
-        A game channel can be joined to a Discord channel the game has linked with `@discord/link`. What
-        is said on the game channel is posted in Discord under the speaker's name, and what Discord
-        members post comes back onto the game channel as the character they speak as there.
+        A game channel can be joined to a Discord channel. What is said on the game channel is posted
+        in Discord under the speaker's name, and what Discord members post comes back onto the game
+        channel, with its usual `<Channel>` prefix.
 
-        - `+discord/channels` lists the game channels that go to Discord.
-        - `+discord/channel <channel>=<Discord channel id>` joins a game channel to a Discord channel.
-          `@discord` lists the linked Discord channels with their ids.
+        - `+discord/channels` lists the joined channels and who may speak in each Discord channel.
+        - `+discord/channel <channel>=<Discord channel id>` joins a game channel to a Discord channel,
+          and links the Discord channel too (`@discord/link`) when you hold `discord.admin`.
         - `+discord/channel/remove <channel>` takes it apart again.
+        - `+discord/channel/unrestricted <channel>` lets Discord members without a game account speak.
+          `+discord/channel/restrict <channel>` limits it to linked members again. Both need `discord.admin`.
 
-        Only the channel's owner, or staff with `chat.admin`, joins or parts a channel. A game channel
-        goes to one Discord channel, and a Discord channel to one game channel. A staff-only (Admin or
-        Wizard) channel, or one with a see or join lock, is refused until you give `/confirm`, because
-        everyone who can read the Discord channel reads what is said on it.
+        Only the channel's owner, or staff with `chat.admin`, joins or parts a channel. A staff-only
+        channel, or one with a see or join lock, needs `/confirm`, because everyone who can read the
+        Discord channel reads it.
 
         Example:
 
         ```
         > +discord/channel Public=1427000000000000001
         DISCORD: Public goes to Discord channel 1427000000000000001, and what is posted there comes back.
+        DISCORD: Linking Discord channel 1427000000000000001 too. +discord/channels shows when it is linked.
         ```
 
-        Output: one line saying the channel is joined.
+        Output: a line from a linked member shows as their character, `<Public> Ann says, "Hi."`, and one
+        from a member without a game account as `<Public> [D] Mercutio says, "Hi."`.
 
-        A line said in the game reaches Discord only if its speaker passes the Discord feed's send
-        lock. Connect and disconnect lines stay in the game. Renaming the game channel parts it from
-        Discord: whoever joined it removes the old name with `+discord/channel/remove <old name>`, then
-        joins it again under its new name.
+        Only lines whose speaker passes the Discord feed's send lock reach Discord. Renaming the game
+        channel parts it from Discord: remove the old name with `+discord/channel/remove`, then join again.

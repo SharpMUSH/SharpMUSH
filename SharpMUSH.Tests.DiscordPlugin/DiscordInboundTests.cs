@@ -101,7 +101,7 @@ public class DiscordInboundTests
 		var identity = bridge.Game.Spoken.Single().ExternalIdentity!;
 		await Assert.That(identity.Name.Contains('\u001b')).IsFalse();
 		await Assert.That(identity.Name.Contains('\u202e')).IsFalse();
-		await Assert.That(identity.DisplayName.StartsWith("[Discord] ")).IsTrue();
+		await Assert.That(identity.DisplayName.StartsWith("[D] ")).IsTrue();
 	}
 
 	[Test]
