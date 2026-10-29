@@ -303,10 +303,15 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	[GeneratedRegex(@"^(@(?:newp|pcreate)[^=]*)=(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline)]
 	private static partial Regex NewPasswordCommand();
 
-	/// <summary>Stamps the connection's last signal and command count; <c>IDLE</c> counts as neither.</summary>
+	/// <summary>
+	/// Stamps the connection's last signal and command count for a line typed at it, as PennMUSH counts
+	/// <c>cmds</c>; the commands that line runs (a <c>$</c>-command's body) are not typed, and <c>IDLE</c>
+	/// counts as neither. Each stamp is a write to the shared connection state.
+	/// </summary>
 	private void RecordConnectionActivity(IMUSHCodeParser parser, string command)
 	{
-		if (parser.CurrentState.Handle is null || command == "IDLE")
+		if (parser.CurrentState.Handle is null || command == "IDLE"
+			|| !parser.CurrentState.Flags.HasFlag(ParserStateFlags.DirectInput))
 			return;
 
 		services.ConnectionService.Update(parser.CurrentState.Handle.Value, "LastConnectionSignal",
