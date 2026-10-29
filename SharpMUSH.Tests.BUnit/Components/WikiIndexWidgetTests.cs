@@ -14,7 +14,7 @@ using SharpMUSH.Tests.BUnit.Resources;
 namespace SharpMUSH.Tests.BUnit.Components;
 
 /// <summary>Serves the wiki page list the way the REST API does.</summary>
-file sealed class WikiListHandler : HttpMessageHandler
+internal sealed class WikiListHandler : HttpMessageHandler
 {
 	private const string Pages = """
 	[
@@ -29,8 +29,25 @@ file sealed class WikiListHandler : HttpMessageHandler
 		return "[" + document.RootElement[0].GetRawText() + "]";
 	}
 
-	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+	private readonly TaskCompletionSource _previews = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	private int _previewsWaiting;
+
+	/// <summary>When set, a category preview is answered only once <see cref="ReleasePreviews"/> is called.</summary>
+	public bool HoldPreviews { get; init; }
+
+	/// <summary>How many category previews have been asked for and not yet answered.</summary>
+	public int PreviewsWaiting => Volatile.Read(ref _previewsWaiting);
+
+	public void ReleasePreviews() => _previews.TrySetResult();
+
+	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
 	{
+		if (HoldPreviews && request.RequestUri!.AbsolutePath.StartsWith("/api/wiki/collections/", StringComparison.Ordinal))
+		{
+			Interlocked.Increment(ref _previewsWaiting);
+			await _previews.Task.WaitAsync(ct);
+			Interlocked.Decrement(ref _previewsWaiting);
+		}
 		var body = request.RequestUri!.AbsolutePath switch
 		{
 			"/api/wiki/pages" => Pages,
@@ -43,7 +60,7 @@ file sealed class WikiListHandler : HttpMessageHandler
 			? new HttpResponseMessage(HttpStatusCode.NotFound)
 			: new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 		result.Headers.Add("X-Total-Count", "1");
-		return Task.FromResult(result);
+		return result;
 	}
 }
 
@@ -53,9 +70,11 @@ file sealed class WikiListHandler : HttpMessageHandler
 /// </summary>
 public class WikiIndexWidgetTests : TrackingBunitContext
 {
+	private readonly WikiListHandler _api = new() { HoldPreviews = true };
+
 	public WikiIndexWidgetTests()
 	{
-		var apiClient = Track(new HttpClient(new WikiListHandler()) { BaseAddress = new Uri("https://localhost:8081/") });
+		var apiClient = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
 		var factory = Substitute.For<IHttpClientFactory>();
 		factory.CreateClient("api").Returns(apiClient);
 
@@ -73,6 +92,7 @@ public class WikiIndexWidgetTests : TrackingBunitContext
 	[TUnit.Core.Test]
 	public async Task RendersCategoriesAndPages()
 	{
+		_api.ReleasePreviews();
 		var cut = Render<WikiIndexWidget>();
 
 		cut.WaitForAssertion(() =>
@@ -91,5 +111,27 @@ public class WikiIndexWidgetTests : TrackingBunitContext
 		var names = cut.FindAll(".wiki-cat-name").Select(n => n.TextContent.Trim()).ToList();
 		await Assert.That(names).IsEquivalentTo(["Guides", "House rules"])
 			.Because("a page in two pinned categories is listed under each");
+	}
+
+	[TUnit.Core.Test]
+	public async Task AsksForEveryPinnedCategoryPreviewAtOnce()
+	{
+		var cut = Render<WikiIndexWidget>();
+
+		// Both pinned categories' previews are in flight before either is answered: the grid waits one
+		// round trip, not one per category.
+		cut.WaitForAssertion(() =>
+		{
+			if (_api.PreviewsWaiting != 2)
+				throw new InvalidOperationException($"{_api.PreviewsWaiting} previews in flight");
+		}, TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".wiki-cat-card")).IsEmpty();
+
+		_api.ReleasePreviews();
+		cut.WaitForAssertion(() =>
+		{
+			if (cut.FindAll(".wiki-cat-card").Count != 2)
+				throw new InvalidOperationException("cards not rendered yet");
+		}, TimeSpan.FromSeconds(5));
 	}
 }

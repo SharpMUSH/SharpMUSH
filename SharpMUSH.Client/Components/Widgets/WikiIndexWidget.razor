@@ -194,11 +194,13 @@
             _navigation = navigation;
             _names = navigation.Categories.ToDictionary(row => row.Key, row => row.Name);
             _pinned = navigation.Categories.Where(row => row.Pinned).Select(row => row.Key).ToHashSet(StringComparer.Ordinal);
+            // Every card's preview is read at once: one round trip for the grid, not one per pinned category.
+            var results = await Task.WhenAll(_pinned.Select(category =>
+                Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category, lang: locale).AsTask()));
+            if (_disposed || version != _version) return;
             var previews = new Dictionary<(string, string), WikiPageSummary>();
-            foreach (var category in _pinned)
+            foreach (var result in results)
             {
-                var result = await Wiki.GetCollectionPagesAsync("game", take: TopPages, category: category, lang: locale);
-                if (_disposed || version != _version) return;
                 if (result is not WikiPageBatch batch)
                 { _loadFailed = true; break; }
                 foreach (var page in batch.Pages) previews.TryAdd((page.Namespace, page.Slug), page);
