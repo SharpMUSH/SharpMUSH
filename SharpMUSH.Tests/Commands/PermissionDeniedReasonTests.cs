@@ -101,7 +101,7 @@ public class PermissionDeniedReasonTests
 
 		var refusal = checkedOut.Expect<PermissionRefusal>();
 		await Assert.That(refusal.Text).IsEqualTo("Permission denied. You need one of these permissions: game.wizard, game.halt.");
-		await Assert.That(refusal.Return.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED");
+		await Assert.That(refusal.Return.Message.ToPlainText()).IsEqualTo("#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.HALT");
 	}
 
 	[Test]

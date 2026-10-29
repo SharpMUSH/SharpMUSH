@@ -24,11 +24,7 @@ public class ObjectRelationshipService(
 	{
 		if (await ChownPermission(executor, obj, newOwner) is PermissionRefusal refusal)
 		{
-			if (notify)
-			{
-				await notifyService.PermissionDenied(executor, refusal);
-			}
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refusal) : refusal.Return;
 		}
 
 		await mediator.Send(new SetObjectOwnerCommand(obj, newOwner));
@@ -105,12 +101,7 @@ public class ObjectRelationshipService(
 
 		if (refusal is not null)
 		{
-			if (notify)
-			{
-				await notifyService.PermissionDenied(executor, refusal);
-			}
-
-			return ErrorMessages.Returns.PermissionDenied;
+			return notify ? await notifyService.PermissionDenied(executor, refusal) : refusal.Return;
 		}
 
 		var parentSafety = await cycleChecker.SafeToAddParentAsync(obj, newParent);

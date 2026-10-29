@@ -34,12 +34,12 @@ public class QueueInspectionPermissionTests
 	public required ServerWebAppFactory Factory { get; init; }
 
 	[Test]
-	[Arguments("list")]
-	[Arguments("debug")]
-	[Arguments("pidinfo")]
-	[Arguments("halt")]
-	[Arguments("reschedule")]
-	public async Task AnotherPlayersQueueCannotBeReadOrChanged(string operation)
+	[Arguments("list", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
+	[Arguments("debug", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_QUEUE")]
+	[Arguments("pidinfo", "#-1 PERMISSION DENIED")]
+	[Arguments("halt", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.HALT")]
+	[Arguments("reschedule", "#-1 PERMISSION DENIED: NOT CONTROLLED, NEEDS GAME.WIZARD OR GAME.HALT")]
+	public async Task AnotherPlayersQueueCannotBeReadOrChanged(string operation, string refusal)
 	{
 		var connections = Factory.Services.GetRequiredService<IConnectionService>();
 		var mediator = Factory.Services.GetRequiredService<IMediator>();
@@ -61,7 +61,7 @@ public class QueueInspectionPermissionTests
 				_ => $"@ps {target}"
 			};
 			var result = await Factory.CommandParser.CommandParse(mortal.Handle, connections, MarkupText.Plain(command));
-			await Assert.That(result.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			await Assert.That(result.Message.ToPlainText()).IsEqualTo(refusal);
 			await Assert.That(Factory.Notifications.For(mortal.DbRef).Skip(before).Any(m => m.Contains("PrivateQueueSecret"))).IsFalse();
 		}
 		finally { if (job.Pid is { } pid) await queue.HaltByPid(pid); }

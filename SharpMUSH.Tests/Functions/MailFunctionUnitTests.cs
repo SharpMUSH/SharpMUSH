@@ -223,9 +223,9 @@ public class MailFunctionUnitTests
 	[Arguments("mailstats(%#)", "0 0")]
 	[Arguments("maildstats(me)", "0 0 0 0 0 0")]
 	[Arguments("mailfstats(me)", "0 0 0 0 0 0 0 0")]
-	[Arguments("mailstats(#1)", "#-1 PERMISSION DENIED")]
-	[Arguments("maildstats(#1)", "#-1 PERMISSION DENIED")]
-	[Arguments("mailfstats(#1)", "#-1 PERMISSION DENIED")]
+	[Arguments("mailstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
+	[Arguments("maildstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
+	[Arguments("mailfstats(#1)", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
 	[Arguments("mailstats(NoSuchMailStatsPlayer)", "#-1 NO SUCH PLAYER")]
 	public async Task MailStats_MortalReadsOnlyTheirOwn(string code, string expected)
 	{

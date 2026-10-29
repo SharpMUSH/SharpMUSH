@@ -388,9 +388,9 @@ public partial class Functions
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
-		if (!await executor.IsSee_All())
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.GameWizard, PortalPermission.GameRoyalty, PortalPermission.GamePower("See_All"))) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var viewer = executor;

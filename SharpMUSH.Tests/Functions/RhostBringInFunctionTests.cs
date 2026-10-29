@@ -157,7 +157,7 @@ public class RhostBringInFunctionTests : ServerTestBase
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MoveMortal");
 		try
 		{
-			await Assert.That(await EvalAs(mortal.DbRef, "move(#1,home)")).IsEqualTo("#-1 PERMISSION DENIED");
+			await Assert.That(await EvalAs(mortal.DbRef, "move(#1,home)")).IsEqualTo("#-1 PERMISSION DENIED: NOT CONTROLLED");
 		}
 		finally
 		{

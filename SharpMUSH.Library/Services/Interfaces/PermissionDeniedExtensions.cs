@@ -8,7 +8,7 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// "Permission denied." with the reason: the permission the executor lacks, the object it does not
 /// control, or that only God may. A command's refusal goes through one of these, so a player learns
 /// what would let them, and staff what to grant. Each tells the refused object why and answers
-/// <see cref="ErrorMessages.Returns.PermissionDenied"/>, for a command to return.
+/// <see cref="PermissionRefusal.Return"/>, for a command to return.
 /// </summary>
 public static class PermissionDeniedExtensions
 {
@@ -39,7 +39,7 @@ public static class PermissionDeniedExtensions
 		string key, params object[] args)
 	{
 		await notifyService.NotifyLocalized(who, key, who, args);
-		return new CallState(ErrorMessages.Returns.PermissionDenied);
+		return new PermissionRefusal(key, string.Empty, args).Return;
 	}
 
 	/// <summary>Refused for <paramref name="refusal"/>'s reason.</summary>
@@ -57,8 +57,60 @@ public sealed record PermissionRefusal(string Key, string Format, params object[
 	/// <summary>The reason in English, for a message that is not localised (a fail_lock default, say).</summary>
 	public string Text => string.Format(null, Format, Args);
 
-	/// <summary>What a function refused this way returns: <see cref="ErrorMessages.Returns.PermissionDenied"/>, the reason told apart.</summary>
-	public CallState Return => new(ErrorMessages.Returns.PermissionDenied);
+	/// <summary>
+	/// What a function refused this way returns: <see cref="ErrorMessages.Returns.PermissionDenied"/> and, after a colon,
+	/// the reason in capitals without any object's name, so <c>#-1 PERMISSION DENIED*</c> still matches it:
+	/// <c>#-1 PERMISSION DENIED: NEEDS GAME.WIZARD OR GAME.HALT</c>.
+	/// </summary>
+	public CallState Return => new(ReturnText);
+
+	/// <summary><see cref="Return"/>'s text, for a caller that answers with an <c>Error&lt;string&gt;</c>.</summary>
+	public string ReturnText => Code is { } code ? $"{ErrorMessages.Returns.PermissionDenied}: {code}" : ErrorMessages.Returns.PermissionDenied;
+
+	/// <summary>The reason as <see cref="Return"/> carries it, or null for a refusal with no short form.</summary>
+	public string? Code => Key switch
+	{
+		nameof(ErrorMessages.Notifications.PermissionDeniedNeedsPermission) => $"NEEDS {Arg(0)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNeedsAnyPermission) => $"NEEDS {Alternatives(0)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedGodOnly) => "GOD ONLY",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotControlled)
+			or nameof(ErrorMessages.Notifications.PermissionDeniedNotControlledMatch)
+			or nameof(ErrorMessages.Notifications.PermissionDeniedLockNotControlled) => "NOT CONTROLLED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotControlledNeeds) => $"NOT CONTROLLED, NEEDS {Arg(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotControlledNeedsAny)
+			or nameof(ErrorMessages.Notifications.PermissionDeniedQueueEntry) => $"NOT CONTROLLED, NEEDS {Alternatives(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotControlledNorFlag) => $"NOT CONTROLLED, NOT {Arg(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotOwnerNeeds) => $"NOT OWNED, NEEDS {Arg(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotOwnerNeedsAny) => $"NOT OWNED, NEEDS {Alternatives(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLock) => $"{Arg(1)} LOCK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedCommandLock) => "COMMAND LOCK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedGuest)
+			or nameof(ErrorMessages.Notifications.PermissionDeniedCommandGuest) => "GUEST",
+		nameof(ErrorMessages.Notifications.PermissionDeniedCommandGagged) => "GAGGED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedCommandApp) => "APPLICATION",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNeedsAccount) => "NEEDS AN ACCOUNT",
+		nameof(ErrorMessages.Notifications.PermissionDeniedProtectedWizard) => "NEEDS GAME.WIZARD",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLockOfGod) => "GOD ONLY",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLockWizard) => "WIZARD LOCK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLockOwner) => "OWNER LOCK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLockLocked) => "LOCKED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLockSetWizard) => "NEEDS GAME.WIZARD OR GAME.ROYALTY OR GAME.SEE_ALL",
+		nameof(ErrorMessages.Notifications.PermissionDeniedNotARoom) => "NOT A ROOM",
+		nameof(ErrorMessages.Notifications.PermissionDeniedTeleportDestination) => "NOT CONTROLLED, NOT JUMP_OK",
+		nameof(ErrorMessages.Notifications.PermissionDeniedTeleportFixed) => "FIXED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedChownCarry) => "NOT CARRIED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedFlagType) => $"{Arg(0)} NOT FOR {Arg(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedFlagLocked) => $"{Arg(0)} LOCKED",
+		nameof(ErrorMessages.Notifications.PermissionDeniedFlagRestricted) => $"{Arg(0)} NEEDS {Alternatives(1)}",
+		nameof(ErrorMessages.Notifications.PermissionDeniedGagWizard) => "WIZARD",
+		nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit) => "NOT CONTROLLED, ALREADY LINKED",
+		_ => null
+	};
+
+	private string Arg(int index) => (Args.ElementAtOrDefault(index)?.ToString() ?? string.Empty).ToUpperInvariant();
+
+	/// <summary>A comma-joined list of scopes as "A OR B".</summary>
+	private string Alternatives(int index) => Arg(index).Replace(", ", " OR ", StringComparison.Ordinal);
 
 	public static PermissionRefusal GodOnly()
 		=> new(nameof(ErrorMessages.Notifications.PermissionDeniedGodOnly), ErrorMessages.Notifications.PermissionDeniedGodOnly);

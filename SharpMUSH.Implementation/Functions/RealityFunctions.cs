@@ -115,9 +115,9 @@ public partial class Functions
 
 	private async ValueTask<ProfileOrRefusal> ProfileOfAsync(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject target)
 	{
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		return await Reality(parser).ReadObjectAsync(target.Object().DBRef, ExecutionBudget.CurrentToken) is { } profile

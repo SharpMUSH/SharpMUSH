@@ -47,9 +47,9 @@ public partial class Functions
 	public async ValueTask<CallState> ListTags(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var owner = await OwnerOfAsync(executor);
@@ -77,9 +77,9 @@ public partial class Functions
 	public async ValueTask<CallState> TagMatch(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-		if (!await executor.Can(PortalPermission.ConfigAdmin))
+		if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ConfigAdmin)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var pattern = parser.CurrentState.Arguments["0"].Message.ToPlainText();

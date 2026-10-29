@@ -87,7 +87,7 @@ public class FlagUnsetPermissionTests
 		var result = await FlagAndPowerService.SetOrUnsetFlag(reread, reread, "!SUSPECT", false);
 
 		await Assert.That(result.Message.ToPlainText())
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: SUSPECT NEEDS WIZARD");
 
 		var after = (await Mediator.Send(new GetObjectNodeQuery(playerDbRef))).Expect<AnySharpObject>();
 		var flags = await after.Object().Flags.Value.ToArrayAsync();

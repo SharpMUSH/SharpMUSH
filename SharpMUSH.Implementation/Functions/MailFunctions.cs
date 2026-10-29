@@ -337,9 +337,9 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.NoSuchPlayer);
 		}
 
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return new CallState(ErrorMessages.Returns.PermissionDenied);
+			return refused.Return;
 		}
 
 		var sent = await TallyMail(Mediator.CreateStream(new GetAllSentMailListQuery(mailbox.Object)));

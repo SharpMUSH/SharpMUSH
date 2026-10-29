@@ -505,7 +505,7 @@ public class CloneStateParityTests
 		await Assert.That(await Run(mortal.Handle, throughTheFunction
 				? $"think clone({exit},{newName})"
 				: $"@clone {exit}={newName}"))
-			.IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+			.IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED, NOT OPEN_OK");
 		await Assert.That((await Named(newName)).Length).IsEqualTo(0)
 			.Because("can_open_from refuses before can_pay_fees, so nothing is built");
 	}

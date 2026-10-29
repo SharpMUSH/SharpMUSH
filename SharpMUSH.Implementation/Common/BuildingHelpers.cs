@@ -582,7 +582,7 @@ public static class BuildingHelpers
 		if (await OpenFromAsync(permissionService, lockService, executor, sourceRoom) is PermissionRefusal refusal)
 		{
 			await notifyService.PermissionDenied(executor, refusal);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			return new Error<string>(refusal.ReturnText);
 		}
 
 		var owner = await executor.Object().Owner.WithCancellation(CancellationToken.None);
@@ -899,7 +899,7 @@ public static class BuildingHelpers
 		if (await permissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 		{
 			await notifyService.PermissionDenied(executor, notControlled);
-			return new Error<string>(ErrorMessages.Returns.PermissionDenied);
+			return new Error<string>(notControlled.ReturnText);
 		}
 
 		if (target.IsPlayer)

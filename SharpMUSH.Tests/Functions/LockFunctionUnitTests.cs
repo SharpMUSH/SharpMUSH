@@ -271,7 +271,7 @@ public class LockFunctionUnitTests
 		var refused = await WebAppFactoryArg.FunctionParserFor(mortal.DbRef)
 			.FunctionParse(MarkupText.Plain($"atrlock({thing}/PROBE,on)"));
 
-		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(refused!.Message.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 		await Assert.That(await Eval($"atrlock({thing}/PROBE)")).IsEqualTo("0")
 			.Because("the refusal has to have left the flag alone");
 	}

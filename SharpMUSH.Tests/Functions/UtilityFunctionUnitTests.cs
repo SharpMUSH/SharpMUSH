@@ -986,7 +986,7 @@ public class UtilityFunctionUnitTests
 		var strangerParser = WebAppFactoryArg.FunctionParserFor(stranger);
 
 		var wipeResult = await strangerParser.EvaluateAsync(MarkupText.Plain($"wipe({thing})"));
-		await Assert.That(wipeResult.ToPlainText()).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(wipeResult.ToPlainText()).IsEqualTo($"{ErrorMessages.Returns.PermissionDenied}: NOT CONTROLLED");
 
 		var after = await Parser.EvaluateAsync(MarkupText.Plain($"get({thing}/WFN{uid})"));
 		await Assert.That(after.ToPlainText()).IsEqualTo("keepme")

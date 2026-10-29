@@ -74,9 +74,9 @@ public partial class Functions
 			}
 			else
 			{
-				if (!await executor.Can(PortalPermission.ChatAdmin))
+				if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ChatAdmin)) is PermissionRefusal refused)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return refused.Return;
 				}
 
 				var locateResult = await LocateService.LocateAndNotifyIfInvalid(
@@ -96,9 +96,9 @@ public partial class Functions
 		}
 		else if (args.Count == 2)
 		{
-			if (!await executor.Can(PortalPermission.ChatAdmin))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ChatAdmin)) is PermissionRefusal refused)
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return refused.Return;
 			}
 
 			var playerArg = args["0"].Message.ToPlainText()!;
@@ -1224,9 +1224,9 @@ public partial class Functions
 		async ValueTask<CallState> GetWizardMotdAsync(IMUSHCodeParser parser, string which)
 		{
 			var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
-			if (!await executor.Can(PortalPermission.ChatAdmin))
+			if (await PermissionService.Check(executor, Requires.Any(PortalPermission.ChatAdmin)) is PermissionRefusal refused)
 			{
-				return new CallState(ErrorMessages.Returns.PermissionDenied);
+				return refused.Return;
 			}
 
 			return which switch
@@ -1367,9 +1367,9 @@ public partial class Functions
 			looker = located;
 		}
 
-		if (!await PermissionService.Controls(executor, looker))
+		if (await PermissionService.Check(executor, Requires.ControlOf(looker)) is PermissionRefusal refused)
 		{
-			return ErrorMessages.Returns.PermissionDenied;
+			return refused.Return;
 		}
 
 		var objectsToScan = new List<AnySharpObject>();

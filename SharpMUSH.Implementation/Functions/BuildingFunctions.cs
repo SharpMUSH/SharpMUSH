@@ -272,9 +272,9 @@ public partial class Functions
 			executor, executor, objectName, LocateFlags.All,
 			async obj =>
 			{
-				if (!await PermissionService.Controls(executor, obj))
+				if (await PermissionService.Check(executor, Requires.ControlOf(obj)) is PermissionRefusal refused)
 				{
-					return ErrorMessages.Returns.PermissionDenied;
+					return refused.Return;
 				}
 
 				if (await obj.HasFlag("SAFE"))

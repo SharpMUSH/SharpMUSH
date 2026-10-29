@@ -272,9 +272,9 @@ public partial class Functions
 			parser, executor, executor, objArg, LocateFlags.All,
 			async found =>
 			{
-				if (!await PermissionService.Controls(executor, found))
+				if (await PermissionService.Check(executor, Requires.ControlOf(found)) is PermissionRefusal refused)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return refused.Return;
 				}
 
 				// PennMUSH's fun_followers reads the leader's own FOLLOWERS list, which add_follower and
@@ -1044,9 +1044,9 @@ public partial class Functions
 	{
 		if (newZone.Equals("none", StringComparison.OrdinalIgnoreCase))
 		{
-			if (!await PermissionService.Controls(executor, target))
+			if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal notControlled)
 			{
-				return ErrorMessages.Returns.PermissionDenied;
+				return notControlled.Return;
 			}
 
 			await Mediator.Send(new UnsetObjectZoneCommand(target));
@@ -1060,9 +1060,9 @@ public partial class Functions
 		}
 
 		// Check permissions - must control both object and zone, or pass ChZone lock
-		if (!await PermissionService.Controls(executor, target))
+		if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 		{
-			return ErrorMessages.Returns.PermissionDenied;
+			return refused.Return;
 		}
 
 		bool canZone = await PermissionService.Controls(executor, zone);

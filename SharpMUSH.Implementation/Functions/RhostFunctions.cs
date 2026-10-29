@@ -305,9 +305,9 @@ public partial class Functions
 			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All,
 			async target =>
 			{
-				if (!await PermissionService.Controls(executor, target))
+				if (await PermissionService.Check(executor, Requires.ControlOf(target)) is PermissionRefusal refused)
 				{
-					return new CallState(ErrorMessages.Returns.PermissionDenied);
+					return refused.Return;
 				}
 
 				var command = direction.Equals("home", StringComparison.OrdinalIgnoreCase)

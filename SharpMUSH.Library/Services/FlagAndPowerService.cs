@@ -79,12 +79,13 @@ public class FlagAndPowerService(
 		var requiredPermissions = (unset ? realFlag.UnsetPermissions : realFlag.SetPermissions) ?? [];
 		if (realFlag.Disabled || !await HasAnyFlagPermission(executor, obj, requiredPermissions))
 		{
+			var refusal = FlagPermissionRefusal(realFlag, requiredPermissions);
 			if (notify)
 			{
-				await NotifyRefusal(executor, FlagPermissionRefusal(realFlag, requiredPermissions));
+				await NotifyRefusal(executor, refusal);
 			}
 
-			return ErrorMessages.Returns.PermissionDenied;
+			return refusal.Return;
 		}
 
 		// Flag-specific permission checks, matching PennMUSH's can_set_flag().
@@ -96,7 +97,7 @@ public class FlagAndPowerService(
 				await NotifyRefusal(executor, flagSpecificRefusal);
 			}
 
-			return ErrorMessages.Returns.PermissionDenied;
+			return flagSpecificRefusal.Return;
 		}
 
 		switch (unset)

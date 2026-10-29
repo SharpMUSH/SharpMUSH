@@ -29,17 +29,17 @@ public class PrivilegedCommandPermissionTests
 	}
 
 	[Test]
-	[Arguments("@mapsql me/row=SELECT 1")]
-	[Arguments("@function/delete abs")]
-	[Arguments("@function/disable abs")]
-	[Arguments("@function/enable abs")]
-	[Arguments("@function/alias absalias=abs")]
-	[Arguments("@function mortalfn=me,fn")]
-	[Arguments("@suggest/add words=mortalword")]
-	[Arguments("@suggest/delete words=mortalword")]
-	public async Task GameWideCommandsRefuseAnOrdinaryPlayer(string command)
+	[Arguments("@mapsql me/row=SELECT 1", "#-1 PERMISSION DENIED")]
+	[Arguments("@function/delete abs", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN OR GAME.FUNCTIONS")]
+	[Arguments("@function/disable abs", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN OR GAME.FUNCTIONS")]
+	[Arguments("@function/enable abs", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN OR GAME.FUNCTIONS")]
+	[Arguments("@function/alias absalias=abs", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN OR GAME.FUNCTIONS")]
+	[Arguments("@function mortalfn=me,fn", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN OR GAME.FUNCTIONS")]
+	[Arguments("@suggest/add words=mortalword", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN")]
+	[Arguments("@suggest/delete words=mortalword", "#-1 PERMISSION DENIED: NEEDS CONFIG.ADMIN")]
+	public async Task GameWideCommandsRefuseAnOrdinaryPlayer(string command, string refusal)
 	{
-		await Assert.That(await RunAsMortalAsync(command)).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await RunAsMortalAsync(command)).IsEqualTo(refusal);
 	}
 
 	[Test]
@@ -77,12 +77,12 @@ public class PrivilegedCommandPermissionTests
 	}
 
 	[Test]
-	[Arguments("followers")]
-	[Arguments("lpids")]
-	public async Task AnUncontrolledObjectsListIsRefused(string function)
+	[Arguments("followers", "#-1 PERMISSION DENIED: NOT CONTROLLED")]
+	[Arguments("lpids", "#-1 PERMISSION DENIED")]
+	public async Task AnUncontrolledObjectsListIsRefused(string function, string refusal)
 	{
 		var target = await TestIsolationHelpers.CreateTestThingAsync(Factory.CommandParser, Connections, "Private");
 
-		await Assert.That(await RunAsMortalAsync($"think {function}({target})")).IsEqualTo(ErrorMessages.Returns.PermissionDenied);
+		await Assert.That(await RunAsMortalAsync($"think {function}({target})")).IsEqualTo(refusal);
 	}
 }

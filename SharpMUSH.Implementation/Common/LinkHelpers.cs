@@ -176,8 +176,7 @@ public static class LinkHelpers
 		// create.c:267.
 		if (!await permissionService.Controls(executor, target))
 		{
-			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				PermissionRefusal.NotControlled(target).Text);
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlled(target));
 		}
 
 		switch (target)
@@ -346,8 +345,9 @@ public static class LinkHelpers
 		{
 			if (!await LeadsNowhereAsync(attributeService, executor, target, exit))
 			{
-				return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-					string.Format(ErrorMessages.Notifications.PermissionDeniedLinkedExit, target.Object().Name));
+				return await RefusedAsync(notifyService, executor, new PermissionRefusal(
+					nameof(ErrorMessages.Notifications.PermissionDeniedLinkedExit), ErrorMessages.Notifications.PermissionDeniedLinkedExit,
+					target.Object().Name));
 			}
 
 			if (!await lockService.Evaluate(LockType.Link, target, executor))
@@ -360,8 +360,7 @@ public static class LinkHelpers
 		// create.c:352-355, asked after the permission pair and before anything is written.
 		if (preserve && !await executor.IsWizard())
 		{
-			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				PermissionRefusal.Needs(PortalPermission.GameWizard).Text);
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.Needs(PortalPermission.GameWizard));
 		}
 
 		// create.c:367-378: an exit linked by its controller keeps its owner, and /preserve keeps it
@@ -474,15 +473,13 @@ public static class LinkHelpers
 		// parse_linkable_room ever yields HOME.
 		if (!await permissionService.Controls(executor, destination) && !await destination.HasFlag("ABODE"))
 		{
-			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				PermissionRefusal.NotControlledNorFlag(destination, "ABODE").Text);
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlledNorFlag(destination, "ABODE"));
 		}
 
 		// create.c:408.
 		if (!await permissionService.Controls(executor, target))
 		{
-			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				PermissionRefusal.NotControlled(target).Text);
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlled(target));
 		}
 
 		await mediator.Send(new SetObjectHomeCommand(homed, home));
@@ -538,8 +535,7 @@ public static class LinkHelpers
 		// create.c:424.
 		if (!await permissionService.Controls(executor, target))
 		{
-			return await RefusedAsync(notifyService, executor, ErrorMessages.Returns.PermissionDenied,
-				PermissionRefusal.NotControlled(target).Text);
+			return await RefusedAsync(notifyService, executor, PermissionRefusal.NotControlled(target));
 		}
 
 		await mediator.Send(new LinkRoomCommand(room, destinationRoom));
@@ -599,6 +595,11 @@ public static class LinkHelpers
 	/// A <c>do_link</c> refusal: it says why to the linker and returns 0, which the command reports as
 	/// its error return and the function as a falsehood.
 	/// </summary>
+	/// <summary>Refused for <paramref name="refusal"/>'s reason: told, and answered with its error.</summary>
+	private static ValueTask<Result<Success>> RefusedAsync(INotifyService notifyService, AnySharpObject executor,
+		PermissionRefusal refusal)
+		=> RefusedAsync(notifyService, executor, refusal.ReturnText, refusal.Text);
+
 	private static async ValueTask<Result<Success>> RefusedAsync(INotifyService notifyService,
 		AnySharpObject executor, string errorReturn, string notifyMessage)
 	{
