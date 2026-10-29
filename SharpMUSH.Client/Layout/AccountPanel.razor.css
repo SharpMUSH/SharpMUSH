@@ -192,12 +192,6 @@
     color: var(--text);
 }
 
-.account-panel-character-dbref {
-    font-family: var(--font-mono);
-    font-size: 0.65625rem;
-    color: var(--text-faint);
-}
-
 .account-panel-newtab {
     display: inline-flex;
     align-items: center;
