@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Mediator;
 using SharpMUSH.Library.Definitions;
+using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models.Wiki;
@@ -91,6 +92,24 @@ public static class ListWiki
 			return MarkupText.Plain(ErrorMessages.Returns.BadArgumentsToWikiCommand);
 		}
 
+		var output = await CategoryListingAsync(parser, executor, wikiService, localization, key, locale, forceSource);
+		await notifyService.Notify(executor, output, executor);
+		return output;
+	}
+
+	/// <summary>
+	/// The category <paramref name="key"/>'s subcategories and pages as <paramref name="executor"/> may see them, as
+	/// <c>@wiki/category</c> lists them and a category's own page shows them under its text.
+	/// </summary>
+	public static async ValueTask<MString> CategoryListingAsync(
+		IMUSHCodeParser parser,
+		AnySharpObject executor,
+		IWikiService wikiService,
+		IWikiLocalizationService localization,
+		string key,
+		string? locale,
+		bool forceSource)
+	{
 		var members = await wikiService.GetByCategoryAsync(key, 0, MaxListed,
 			await WikiCommandHelper.VisibilityAsync(parser, executor));
 		var subcategories = members.Where(p => p.Namespace == WikiHelpers.NamespaceName(WikiNamespace.Category)).ToList();
@@ -99,15 +118,13 @@ public static class ListWiki
 		var names = forceSource
 			? null
 			: await localization.GetCategoryNamesAsync(locale, await WikiCommandHelper.VisibilityAsync(parser, executor));
-		var output = WikiCommandHelper.PageListing(parser.HouseLook(),
+		return WikiCommandHelper.PageListing(parser.HouseLook(),
 			$"Category '{WikiHelpers.CategoryLabel(key, names)}' — {pages.Count} page(s), {subcategories.Count} subcategory(ies)",
 			await PageRowsAsync(localization, pages, locale, forceSource),
 			before: subcategories.Count == 0
 				? null
 				: ServerLayout.KeyValues([("Subcategories", MarkupText.Plain(string.Join(", ",
 					subcategories.Select(p => $"Category:{WikiHelpers.CategoryLabel(p.Slug, names)}"))))]));
-		await notifyService.Notify(executor, output, executor);
-		return output;
 	}
 
 	/// <param name="locale">The reader's locale, or null for the configured default.</param>
