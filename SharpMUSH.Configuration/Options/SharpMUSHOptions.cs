@@ -278,7 +278,7 @@ public record SharpMUSHOptions
 			Port: 4201,
 			PortalPort: 5117,
 			// PennMUSH's support_pueblo defaults to 0 (conf.c:1247), as does the shipped mushcnf.dst.
-			Pueblo: false,
+			Pueblo: true,
 			SslPortalPort: 7296,
 			SocketFile: "netmush.sock",
 			SqlHost: null,

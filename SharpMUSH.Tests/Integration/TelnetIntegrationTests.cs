@@ -195,7 +195,6 @@ public class TelnetIntegrationFixture : IAsyncInitializer, IAsyncDisposable
 		{
 			$"--ConnectionServer:TelnetPort={TelnetPort}",
 			$"--ConnectionServer:HttpPort={httpPort}",
-			"--ConnectionServer:PuebloEnabled=true",
 			"--ConnectionServer:MxpEnabled=true",
 			"--Rendering:SocketPath=" + renderingSocket
 		};

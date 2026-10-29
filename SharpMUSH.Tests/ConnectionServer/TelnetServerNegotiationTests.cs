@@ -490,6 +490,32 @@ public partial class TelnetServerNegotiationTests
 	}
 
 	/// <summary>
+	/// The game's <c>pueblo</c> option is the switch: with it off, a connection is not sent the hello, and a
+	/// <c>PUEBLOCLIENT</c> line is ordinary input rather than a handshake.
+	/// </summary>
+	[Test]
+	public async Task PuebloOff_SendsNoHelloAndTakesNoHandshake()
+	{
+		var (toServer, fromServer, handler, published, cts) = StartServer(settings: new OutputSettingsHolder());
+		try
+		{
+			var seen = await ReadUntilAsync(fromServer, seen => Contains(seen, IAC, DO, TTYPE));
+			await WriteAsync(toServer, Encoding.ASCII.GetBytes("PUEBLOCLIENT 2.50\r\n"));
+
+			var input = await WaitForPublishedAsync<TelnetInputMessage>(published);
+			await Assert.That(input?.Input).IsEqualTo("PUEBLOCLIENT 2.50");
+			await Assert.That(Encoding.ASCII.GetString(seen)).DoesNotContain(PuebloProtocol.Hello);
+		}
+		finally
+		{
+			await cts.CancelAsync();
+			await toServer.CompleteAsync();
+			await handler.WaitAsync(Timeout);
+			cts.Dispose();
+		}
+	}
+
+	/// <summary>
 	/// PennMUSH answers <c>PUEBLOCLIENT</c> with <c>PUEBLO_SEND</c>, and that answer is what moves the
 	/// client into HTML mode. Recognising the handshake without sending it left a real Pueblo client in
 	/// text mode, showing every tag as text. A repeat gets the short form, without the clear.
@@ -497,7 +523,9 @@ public partial class TelnetServerNegotiationTests
 	[Test]
 	public async Task PuebloHandshake_IsAnsweredWithTheStartSequence()
 	{
-		var (toServer, fromServer, handler, _, cancellation) = StartServer(new ConnectionServerOptions { PuebloEnabled = true });
+		var settings = new OutputSettingsHolder();
+		settings.Replace(new OutputSettingsMessage(new Dictionary<string, string>(), Pueblo: true));
+		var (toServer, fromServer, handler, _, cancellation) = StartServer(settings: settings);
 		using var cts = cancellation;
 		try
 		{
