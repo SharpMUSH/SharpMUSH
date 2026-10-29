@@ -149,7 +149,8 @@ else
                 </div>
             </div>
             @* Hidden rather than removed in focus mode: the exit keys live with the Exits card. Collapsed, the aside
-               is a strip holding only its toggle, and the panels stay mounted under it for the same reason. *@
+               is a strip holding only its toggle (open, the toggle sits in the first card's header corner), and the panels
+               stay mounted under it for the same reason. *@
             <aside class="play-aside" aria-label="@Loc["NavPlayTabRoom"]" hidden="@_focus">
                 <button type="button" class="play-aside-toggle" aria-expanded="@(_asideCollapsed ? "false" : "true")" aria-controls="play-aside-panels"
                         aria-label="@AsideToggleLabel" title="@AsideToggleLabel" @onclick="ToggleAsideAsync">

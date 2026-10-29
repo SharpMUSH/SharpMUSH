@@ -93,6 +93,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
+    position: relative;
     min-height: 0;
     overflow-x: hidden;
     overflow-y: auto;
@@ -104,13 +105,16 @@
     gap: 12px;
 }
 
-/* The aside's collapse button, 36×36 at its top right like the page sidebar's (SectionShell); collapsed, it is
-   all the strip holds. */
+/* The aside's collapse button, in the top right corner of its first card's header (Here, by default), so it
+   pushes nothing down; that header keeps clear of it. Collapsed, it is all the strip holds. Same look as the
+   page sidebar's (SectionShell), at 32px to fit an aside card's header. */
 .play-aside-toggle {
-    align-self: flex-end;
-    flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    z-index: 1;
+    width: 32px;
+    height: 32px;
     display: grid;
     place-items: center;
     padding: 0;
@@ -133,8 +137,14 @@
     box-shadow: 0 0 0 2px var(--accent);
 }
 
+.play-aside-panels ::deep .kit-card:first-child > .kit-card-head {
+    padding-right: 28px;
+}
+
 .play--aside-collapsed .play-aside-toggle {
+    position: static;
     align-self: center;
+    flex-shrink: 0;
 }
 
 /* The header's less frequent buttons (terminal settings, Disconnect): in the header's flex row as they are, and
@@ -234,7 +244,7 @@
    terminal takes the rest. After the tiers, which set the aside's width; the narrow tier has no aside and focus
    mode hides it, so neither is touched. */
 .play--aside-collapsed:not(.play--focus) {
-    grid-template-columns: minmax(0, 1fr) 36px;
+    grid-template-columns: minmax(0, 1fr) 32px;
 }
 
 @container page (max-width: 48rem) {
