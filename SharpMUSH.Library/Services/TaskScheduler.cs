@@ -850,7 +850,9 @@ public partial class TaskScheduler(
 					{
 						budget.ThrowIfExceeded();
 						queueLoad?.Record();
-						await entry.Action();
+						// Output this entry sends to many connections goes out to all of them at once, each still in
+						// its own order, and the entry ends once all of it is published.
+						await using (OutputBatch.Begin()) await entry.Action();
 						outcome = budget.IsExpired ? QueueOutcome.ExecutionLimit
 							: budget.IsCancelled ? QueueOutcome.Cancelled : QueueOutcome.Completed;
 						entry.Observation?.Complete(outcome);

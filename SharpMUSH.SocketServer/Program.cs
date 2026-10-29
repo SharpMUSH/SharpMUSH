@@ -201,13 +201,13 @@ public class Program
 			},
 			x =>
 			{
-				x.AddConsumer<TelnetOutputConsumer, TelnetOutputMessage>();
-				x.AddConsumer<TelnetPromptConsumer, TelnetPromptMessage>();
-				x.AddConsumer<MarkupOutputConsumer, MarkupOutputMessage>();
-				x.AddConsumer<MarkupPromptConsumer, MarkupPromptMessage>();
+				x.AddPerHandleConsumer<TelnetOutputConsumer, TelnetOutputMessage>();
+				x.AddPerHandleConsumer<TelnetPromptConsumer, TelnetPromptMessage>();
+				x.AddPerHandleConsumer<MarkupOutputConsumer, MarkupOutputMessage>();
+				x.AddPerHandleConsumer<MarkupPromptConsumer, MarkupPromptMessage>();
 				x.AddConsumer<BroadcastConsumer, BroadcastMessage>();
 				x.AddConsumer<DisconnectConnectionConsumer, DisconnectConnectionMessage>();
-				x.AddConsumer<GMCPOutputConsumer, GMCPOutputMessage>();
+				x.AddPerHandleConsumer<GMCPOutputConsumer, GMCPOutputMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdatePlayerPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, ClearPlayerOutputPreferencesMessage>();
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateColorStyleMessage>();
@@ -217,8 +217,8 @@ public class Program
 				x.AddConsumer<UpdatePlayerPreferencesConsumer, UpdateTelnetModeMessage>();
 				x.AddConsumer<ProbeTerminalConsumer, ProbeTerminalMessage>();
 				x.AddConsumer<ConnectionTrafficRequestConsumer, ConnectionTrafficRequestMessage>();
-				x.AddConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
-				x.AddConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
+				x.AddPerHandleConsumer<WebSocketOutputConsumer, WebSocketOutputMessage>();
+				x.AddPerHandleConsumer<WebSocketPromptConsumer, WebSocketPromptMessage>();
 				x.AddConsumer<MainProcessReadyConsumer, MainProcessReadyMessage>();
 				x.AddConsumer<MSSPReportConsumer, MSSPReportMessage>();
 				x.AddConsumer<OutputSettingsConsumer, OutputSettingsMessage>();
