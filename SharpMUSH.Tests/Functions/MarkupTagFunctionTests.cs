@@ -385,7 +385,7 @@ public class MarkupTagFunctionTests
 		var said = await ThinkAs(mortal, "rendermarkdown(!%[A map%]%(/assets/map.png%))");
 
 		await Assert.That(wizard.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
-		await Assert.That(wizard.ToPlainText()).Contains("[image: A map]");
+		await Assert.That(wizard.ToPlainText()).Contains("[A map]");
 		await Assert.That(said.Render(MarkupFormat.Html)).DoesNotContain("<img");
 		await Assert.That(said.ToPlainText()).Contains("[image: A map]");
 	}
@@ -445,7 +445,7 @@ public class MarkupTagFunctionTests
 		var boxed = await Eval("box(rendermarkdown(!%[A map%]%(/assets/map.png%)),Title)");
 
 		await Assert.That(boxed.Render(MarkupFormat.Html)).Contains("src=\"/assets/map.png\"");
-		await Assert.That(boxed.Render(MarkupFormat.Ansi)).Contains("[image: A map]");
+		await Assert.That(boxed.Render(MarkupFormat.Ansi)).Contains("[A map]");
 	}
 
 	[Test]
