@@ -66,6 +66,32 @@ public class ConfigListOptionTests
 		await Assert.That(ConfigValueDisplay.Format(new Dictionary<string, string[]>(), Metadata(flag: false))).IsEqualTo(string.Empty);
 	}
 
+	/// <summary>A mapping to single texts (<c>ascii_translations</c>) prints the same way, never the dictionary's type name.</summary>
+	[Test]
+	public async Task FormatterWritesTextMappings()
+	{
+		var map = new Dictionary<string, string> { { "é", "e" }, { "→", "->" }, { "…", "..." } };
+
+		await Assert.That(ConfigValueDisplay.Format(map, Metadata(flag: false))).IsEqualTo("é=e|…=...|→=->");
+		await Assert.That(ConfigValueDisplay.Format(new Dictionary<string, string>(), Metadata(flag: false))).IsEqualTo(string.Empty);
+	}
+
+	/// <summary>No option, whatever its type, prints as a .NET type name.</summary>
+	[Test]
+	public async Task NoOptionPrintsATypeName()
+	{
+		var options = ReadPennMushConfig.Create("Configuration/Testfile/mushcnf.dst") with
+		{
+			AsciiTranslations = new(new Dictionary<string, string> { ["é"] = "e" })
+		};
+
+		foreach (var property in ConfigMetadata.PropertyNames)
+		{
+			var text = ConfigValueDisplay.Format(ConfigAccessor.GetValue(options, property), ConfigMetadata.PropertyMetadata[property]);
+			await Assert.That(text).DoesNotContain("System.").Because(property);
+		}
+	}
+
 	[Test]
 	public async Task ConfigFunctionPrintsAMapping()
 	{
