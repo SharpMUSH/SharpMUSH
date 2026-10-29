@@ -1,14 +1,16 @@
 @using System.Globalization
 @using SharpMUSH.Library.API
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 @* One level of a map: each room a box at its place (on a picture, a pin unless it has a size), each region (a map inside this one) a dashed box that opens it, each exit between two rooms on the level a line (with an arrow
    when it runs one way only), and the rooms the map does not place in a dashed strip below. The drawing is a
    picture only; the rooms are buttons over it, so they take focus, read in order and scroll into view. The figure
    is drawn at Zoom pixels per drawing unit, over the map's backdrop when it has one, inside a scrolling frame, so panning is the browser's own scrolling,
-   by wheel, trackpad or finger. *@
-<div class="map-frame" tabindex="-1">
-    <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom);">
+   by wheel, trackpad or finger. Lines keep their width at any zoom; names grow with it. A room too small to hold its
+   name carries it on a label below, as a pin does, and one smaller still keeps it for its tooltip and screen reader. *@
+<div class="map-frame @(Layout.IsGraph && _backdrop is null ? "map-frame--blank" : null)" tabindex="-1" @ref="_frame">
+    <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom); --map-zoom: @Num(Zoom); --map-dots: @Px(DotSpacing);">
         <svg viewBox="@Num(_left) @Num(_top) @Num(_width) @Num(_height)" class="map-svg" preserveAspectRatio="none" aria-hidden="true" focusable="false">
             <defs>
                 <marker id="@ArrowId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -81,7 +83,7 @@
             @foreach (var room in _rooms.Where(room => room.Region))
             {
                 var here = room.Room.Id == Layout.Map.HereRegion;
-                <a class="map-room map-room--region @(here ? "map-room--here" : null)" style="@Box(room)"
+                <a class="map-room map-room--region @(here ? "map-room--here" : null) @Fit(room)" style="@Box(room)"
                    href="@($"/map/{room.Room.Id[1..]}")" title="@room.Room.Name"
                    aria-label="@(here ? $"{Loc["NavMapRegion", room.Room.Name]}, {Loc["NavMapYouAreHere"]}" : Loc["NavMapRegion", room.Room.Name].Value)">
                     <span class="map-room-name">@room.Room.Name</span>
@@ -90,7 +92,7 @@
             @foreach (var room in _rooms.Where(room => !room.Region))
             {
                 var here = room.Room.Id == Layout.Map.Here;
-                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
+                <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @Fit(room) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
                         style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
                         aria-label="@Label(room, here)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
@@ -144,6 +146,21 @@
     private const double Inset = 6;
     private const double Margin = 24;
 
+    /// <summary>The narrowest a room is drawn, in pixels, with its name inside.</summary>
+    private const double NameWidth = 44;
+
+    /// <summary>The narrowest a room is drawn, in pixels, with its name on a label below it.</summary>
+    private const double LabelWidth = 14;
+
+    /// <summary>
+    /// How far a builder may reach past the rooms of a graph map with no picture, in rooms: the map has no edge of its own,
+    /// so this is the room there is to choose a spot in.
+    /// </summary>
+    private const double Reach = 4;
+
+    private ElementReference _frame;
+    private double _drawnZoom;
+
     private readonly string _arrowId = "map-arrow-" + Guid.NewGuid().ToString("N")[..8];
     private string ArrowId => _arrowId;
 
@@ -173,6 +190,11 @@
         {
             bounds = (Math.Min(bounds.Left, _empty.Min(c => c.X) * MapLayout.Cell), Math.Min(bounds.Top, _empty.Min(c => -(c.Y + 1)) * MapLayout.Cell),
                 Math.Max(bounds.Right, (_empty.Max(c => c.X) + 1) * MapLayout.Cell), Math.Max(bounds.Bottom, -_empty.Min(c => c.Y) * MapLayout.Cell));
+        }
+        if (Editing && Layout.IsGraph && _backdrop is null)
+        {
+            var reach = Reach * MapLayout.GraphRoom;
+            bounds = (bounds.Left - reach, bounds.Top - reach, bounds.Right + reach, bounds.Bottom + reach);
         }
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
         (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
@@ -262,10 +284,67 @@
     /// <summary>A room on a picture with no size of its own is a pin at its point, so the picture shows around it.</summary>
     private bool Pin(MapPlacement room) => _backdrop is not null && room.Placed && !room.Region && room.Room.Size is null;
 
-    /// <summary>Moves focus to <paramref name="id"/>'s room, which scrolls it into view.</summary>
-    public async Task FocusAsync(string id)
+    /// <summary>
+    /// A zoom keeps the middle of the view where it was: the frame scrolls by as much as the drawing grew or shrank.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (_buttons.TryGetValue(id, out var button)) await button.FocusAsync();
+        var drawn = _drawnZoom;
+        _drawnZoom = Zoom;
+        if (drawn <= 0 || Zoom == drawn) return;
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.mapRescale", _frame, Zoom / drawn);
+        }
+        catch (JSException)
+        {
+            // No portal-interop.js (tests): the view stays where the browser left it.
+        }
+    }
+
+    /// <summary>The zoom that shows the whole level in the frame; null until the frame is drawn.</summary>
+    public async Task<double?> FitAsync()
+    {
+        double[]? size;
+        try
+        {
+            size = await JS.InvokeAsync<double[]?>("SharpMUSH.mapFrameSize", _frame);
+        }
+        catch (JSException)
+        {
+            return null;
+        }
+        if (size is not [> 0 and var width, > 0 and var height] || _width <= 0 || _height <= 0) return null;
+        return Math.Min(width / _width, height / _height);
+    }
+
+    /// <summary>
+    /// How far apart a blank graph map's dots are drawn, in pixels: half a room, or two rooms once the map is far enough
+    /// out that half a room is a few pixels and the dots would read as a texture.
+    /// </summary>
+    private double DotSpacing => MapLayout.GraphRoom * Zoom is var room && room < 24 ? room * 2 : room / 2;
+
+    /// <summary>Where <paramref name="room"/>'s name goes at this zoom: inside it (null), on a label below, or nowhere.</summary>
+    private string? Fit(MapPlacement room) => Pin(room) ? null : ((room.Width - 2 * Inset) * Zoom) switch
+    {
+        < LabelWidth => "map-room--tiny",
+        < NameWidth => "map-room--small",
+        _ => null,
+    };
+
+    /// <summary>Scrolls <paramref name="id"/>'s room to the middle of the view, and moves focus to it when <paramref name="focus"/>.</summary>
+    public async Task CentreAsync(string id, bool focus = true)
+    {
+        if (!_buttons.TryGetValue(id, out var button)) return;
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.mapCentre", _frame, button, focus);
+        }
+        catch (JSException)
+        {
+            // No portal-interop.js (tests): focus alone brings the room into view.
+            if (focus) await button.FocusAsync();
+        }
     }
 
     private RenderFragment Vertical(MapPlacement room, (bool Up, bool Down) vertical) => __builder =>

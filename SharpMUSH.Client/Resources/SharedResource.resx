@@ -9983,6 +9983,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Zoom out</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Fit the map</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>You are here</value>
   </data>

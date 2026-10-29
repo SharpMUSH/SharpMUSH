@@ -35,6 +35,45 @@
         if (el) el.scrollIntoView({ block: "start" });
     };
 
+    // The room a World map frame has for its drawing, as [width, height]: its width, and the tallest it may grow,
+    // less the space kept below the drawing for labels.
+    window.SharpMUSH.mapFrameSize = function (frame) {
+        var figure = frame && frame.firstElementChild;
+        if (!figure) return null;
+        var tallest = parseFloat(getComputedStyle(frame).maxHeight);
+        var below = parseFloat(getComputedStyle(figure).marginBottom) || 0;
+        return [frame.clientWidth, (isFinite(tallest) ? tallest : frame.clientHeight) - below];
+    };
+
+    // Keeps the middle of a World map's view in place after its drawing grew (or shrank) by ratio. A drawing
+    // narrower than its frame was centred in it, so its middle is measured from where it began.
+    window.SharpMUSH.mapRescale = function (frame, ratio) {
+        var figure = frame && frame.firstElementChild;
+        if (!figure || !(ratio > 0)) return;
+        var oldWidth = figure.offsetWidth / ratio;
+        var oldHeight = figure.offsetHeight / ratio;
+        var x = frame.scrollLeft + frame.clientWidth / 2 - Math.max(0, (frame.clientWidth - oldWidth) / 2);
+        var y = frame.scrollTop + Math.min(frame.clientHeight, oldHeight) / 2;
+        frame.scrollLeft = x * ratio - frame.clientWidth / 2;
+        frame.scrollTop = y * ratio - frame.clientHeight / 2;
+    };
+
+    // Scrolls a World map's frame so a room sits in the middle of its view, and the frame into the page's view,
+    // then gives the room focus when asked. Smooth unless the reader asked for less motion.
+    window.SharpMUSH.mapCentre = function (frame, room, focus) {
+        if (!frame || !room) return;
+        var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var view = frame.getBoundingClientRect();
+        var box = room.getBoundingClientRect();
+        frame.scrollTo({
+            left: frame.scrollLeft + (box.left + box.width / 2) - (view.left + frame.clientLeft + frame.clientWidth / 2),
+            top: frame.scrollTop + (box.top + box.height / 2) - (view.top + frame.clientTop + frame.clientHeight / 2),
+            behavior: still ? "auto" : "smooth"
+        });
+        frame.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+        if (focus) room.focus({ preventScroll: true });
+    };
+
     // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
     // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
     // terminal unmounted and kept its element, with its scrollback, alive.

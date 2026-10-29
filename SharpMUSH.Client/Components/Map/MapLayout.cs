@@ -25,8 +25,8 @@ public sealed class MapLayout
 	/// <summary>The side of one cell, in drawing units, on a coordinate or compass map.</summary>
 	public const double Cell = 96;
 
-	/// <summary>The side of a room with no size on a graph map, in the backdrop's pixels.</summary>
-	public const double GraphRoom = 48;
+	/// <summary>The side of a room with no size on a graph map, in the backdrop's pixels: a grid cell's, so its name fits.</summary>
+	public const double GraphRoom = Cell;
 
 	private static readonly Dictionary<string, (int X, int Y, int Z)> Directions = new(StringComparer.OrdinalIgnoreCase)
 	{

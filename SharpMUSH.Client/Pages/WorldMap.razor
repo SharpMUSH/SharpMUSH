@@ -9,6 +9,7 @@
 @inject GameCommandService Commands
 @inject IJSRuntime JS
 @inject ISnackbar Snackbar
+@inject IConnectionStateService Hub
 @implements IDisposable
 
 <PageTitle>@(_layout?.Map.Map.Name ?? Loc["NavWorldMap"].Value) — <GameName /></PageTitle>
@@ -16,7 +17,8 @@
 @* The World map (the world-map package): the game's maps beside the one on show, a level at a time. A map is an
    object with MAP`KIND, and its rooms are the rooms zoned to it; the server sends only what the acting character
    may see. Choosing a room lists its exits; an exit to another map opens that map. Choosing a room on the map you are
-   on also shows the way there, as one walk line to paste into any client or to walk from here. *@
+   on also shows the way there, as one walk line to paste into any client or to walk from here. The map follows the
+   character as it moves, to another map when it leaves this one. *@
 <FeatureGate Feature="@GameFeatures.WorldMap">
 <ChildContent>
 <div class="map-page">
@@ -29,6 +31,7 @@
                                OnClick="() => ZoomBy(1 / ZoomStep)" />
                 <CapsuleButton Icon="@Icons.Material.Outlined.ZoomIn" AriaLabel="@Loc["NavMapZoomIn"]" Disabled="@(_zoom >= MaxZoom)"
                                OnClick="() => ZoomBy(ZoomStep)" />
+                <CapsuleButton Icon="@Icons.Material.Outlined.FitScreen" AriaLabel="@Loc["NavMapZoomFit"]" OnClick="FitAsync" />
                 @if (_layout.Map.CanEdit && !_editing)
                 {
                     <CapsuleButton Icon="@Icons.Material.Outlined.Edit" OnClick="StartEditing">@Loc["NavMapEdit"]</CapsuleButton>
@@ -183,8 +186,11 @@
     [Parameter] public int? Id { get; set; }
 
     private const double ZoomStep = 1.25;
-    private const double MinZoom = 0.25;
-    private const double MaxZoom = 3;
+    private const double MinZoom = 0.1;
+    private const double MaxZoom = 4;
+
+    /// <summary>The most a map is enlarged to fit its frame, so a map of two rooms is not drawn as two posters.</summary>
+    private const double MaxFit = 2;
 
     private IReadOnlyList<MapSummaryDto>? _maps;
     private IReadOnlyDictionary<string, string?> _parents = new Dictionary<string, string?>();
@@ -232,7 +238,7 @@
     {
         var (level, selected) = (_level, _selected);
         await LoadMapAsync();
-        _applied = applied;
+        (_applied, _fit) = (applied, false);
         if (_layout is null) return;
         if (_layout.Levels.Contains(level)) _level = level;
         if (selected is not null && _layout.Rooms.ContainsKey(selected)) _selected = selected;
@@ -243,6 +249,10 @@
     private bool _missing;
     private int _level;
     private double _zoom = 1;
+    private bool _fit;
+
+    /// <summary>The room to bring to the middle of the view once the map is drawn.</summary>
+    private string? _centre;
     private string? _selected;
     private int? _shown;
     private MapCanvas? _canvas;
@@ -257,6 +267,9 @@
     protected override async Task OnInitializedAsync()
     {
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
+        Hub.OnCharacterMoved += OnMoved;
+        // Not awaited: the map does not wait for the live connection, which only tells it when the character moves.
+        _ = Hub.ConnectAsync();
         await Task.WhenAll(LoadListAsync(), LoadHereAsync());
     }
 
@@ -304,7 +317,7 @@
         switch (result)
         {
             case MapDto map:
-                _layout = new MapLayout(map);
+                (_layout, _fit, _centre) = (new MapLayout(map), true, map.Here);
                 _selected = map.Here;
                 _level = map.Here is { } here && _layout.Rooms.TryGetValue(here, out var room)
                     ? room.Level
@@ -362,6 +375,32 @@
     }
 
     private void ZoomBy(double factor) => _zoom = Math.Clamp(_zoom * factor, MinZoom, MaxZoom);
+
+    /// <summary>
+    /// A map just opened is drawn to fit its frame, which it has only once it is drawn; then the room the character
+    /// stands in comes to the middle of the view, which matters when the map is too big to fit.
+    /// </summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_canvas is null) return;
+        if (_fit)
+        {
+            _fit = false;
+            await FitAsync();
+            StateHasChanged();
+            return;
+        }
+        if (_centre is { } room)
+        {
+            _centre = null;
+            await _canvas.CentreAsync(room, focus: false);
+        }
+    }
+
+    private async Task FitAsync()
+    {
+        if (_canvas is not null && await _canvas.FitAsync() is { } fit) _zoom = Math.Clamp(fit, MinZoom, MaxFit);
+    }
 
     private async Task Select(string id)
     {
@@ -461,7 +500,7 @@
         (_selected, _level) = (id, room!.Level);
         StateHasChanged();
         await Task.Yield();
-        if (_canvas is not null) await _canvas.FocusAsync(id);
+        if (_canvas is not null) await _canvas.CentreAsync(id);
         await LoadRouteAsync(id);
     }
 
@@ -694,5 +733,62 @@
         </section>
     };
 
-    public void Dispose() => AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+    private void OnMoved(CharacterMovedMessage moved) => _ = InvokeAsync(() => FollowAsync(moved.Room.Split(':')[0]));
+
+    /// <summary>How often, and how far apart, the map asks again for a move the server has not finished telling it of.</summary>
+    private const int FollowTries = 4;
+    private static readonly TimeSpan FollowWait = TimeSpan.FromMilliseconds(250);
+
+    /// <summary>
+    /// The character moved. The map follows: to the map it reached, or on this one to its room, which comes to the
+    /// middle of the view (and is chosen, unless the reader had chosen another). A map being edited stays as it is.
+    /// </summary>
+    private async Task FollowAsync(string room)
+    {
+        if (_editing || AccountAuth.ActiveCharacter is null) return;
+        // The move is told as it happens, so the first answer can still have the character where it was.
+        for (var tries = 1; ; tries++)
+        {
+            _here = await Maps.HereAsync() switch
+            {
+                MapHereDto told => told,
+                _ => null,
+            };
+            if (_here?.Room == room || tries == FollowTries) break;
+            await Task.Delay(FollowWait);
+        }
+        if (_here?.Map is not { } map || _editing) return;
+        if (map.Id != _layout?.Map.Map.Id)
+        {
+            Nav.NavigateTo($"/map/{map.Id[1..]}");
+            return;
+        }
+        var fresh = await ReadMapAsync();
+        for (var tries = 1; fresh is not null && fresh.Here != room && tries < FollowTries; tries++)
+        {
+            await Task.Delay(FollowWait);
+            fresh = await ReadMapAsync();
+        }
+        if (fresh is null || _editing || fresh.Map.Id != _layout.Map.Map.Id) return;
+        var followSelection = _selected is null || _selected == _layout.Map.Here;
+        _layout = new MapLayout(fresh);
+        if (fresh.Here is { } here && _layout.Rooms.TryGetValue(here, out var placed))
+        {
+            (_level, _centre) = (placed.Level, here);
+            if (followSelection) await Select(here);
+        }
+        StateHasChanged();
+
+        async Task<MapDto?> ReadMapAsync() => await Maps.GetAsync(Id!.Value) switch
+        {
+            MapDto read => read,
+            _ => null,
+        };
+    }
+
+    public void Dispose()
+    {
+        AccountAuth.ActiveCharacterChanged -= OnActingChanged;
+        Hub.OnCharacterMoved -= OnMoved;
+    }
 }

@@ -1,7 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using Bunit;
+using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Localization;
 using MudBlazor.Services;
 using NSubstitute;
@@ -9,6 +11,7 @@ using SharpMUSH.Client.Components.Map;
 using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Library.Models.Portal;
 using SharpMUSH.Library.Models.Portal.Setup;
 using SharpMUSH.Tests.BUnit.Resources;
@@ -116,6 +119,9 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	/// <summary>What an <c>@open</c>'s check reads: 1 when both exits were opened and linked.</summary>
 	public string OpenReads { get; set; } = "1";
 
+	/// <summary>What <c>api/maps/50</c> answers in place of the harbour, once the sailor walked.</summary>
+	public MapDto? HarbourNow { get; set; }
+
 	protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
 	{
 		var path = request.RequestUri!.AbsolutePath.TrimStart('/');
@@ -138,7 +144,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		return path switch
 		{
 			"api/maps" => Json(new[] { City, Harbour, Caves }),
-			"api/maps/50" => Json(HarbourMap),
+			"api/maps/50" => Json(HarbourNow ?? HarbourMap),
 			"api/maps/51" => Json(CityMap),
 			"api/maps/52" => Json(CavesMap),
 			"api/maps/53" => Json(IsleMap),
@@ -176,6 +182,8 @@ public class WorldMapPageTests : TrackingBunitContext
 
 	private readonly IAccountAuthState _auth = Substitute.For<IAccountAuthState>();
 
+	private readonly IConnectionStateService _hub = Substitute.For<IConnectionStateService>();
+
 	private void Arrange(bool acting = true)
 	{
 		var api = Track(new HttpClient(_api) { BaseAddress = new Uri("https://localhost:8081/") });
@@ -189,6 +197,7 @@ public class WorldMapPageTests : TrackingBunitContext
 			.AddMudServices()
 			.AddSingleton(factory)
 			.AddSingleton(auth)
+			.AddSingleton(_hub)
 			.AddSingleton<ServerInfoService>(serverInfo)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new WorldMapService(sp.GetRequiredService<IHttpClientFactory>(), serverInfo))
@@ -282,6 +291,38 @@ public class WorldMapPageTests : TrackingBunitContext
 			.Because("the lamp room is a level up, and the shed has no place but is still drawn in the strip");
 		await Assert.That(cut.Find(".map-room--here").TextContent.Trim()).IsEqualTo("Quay");
 		await Assert.That(cut.Find(".map-room-panel").TextContent).Contains("NavMapToMap(City)");
+	}
+
+	[Test]
+	public async Task TheMapFollowsTheSailorUpTheLighthouse()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		_api.HarbourNow = WorldMapApiHandler.HarbourMap with { Here = "#11" };
+		_api.Here = new("#11", "Lighthouse", WorldMapApiHandler.Harbour);
+		_hub.OnCharacterMoved += Raise.Event<Action<CharacterMovedMessage>>(new CharacterMovedMessage("#11:1"));
+
+		cut.WaitForState(() => cut.Find(".map-room--here").TextContent.Trim() == "Lighthouse");
+		await Assert.That(cut.Find(".map-room--selected").TextContent.Trim()).IsEqualTo("Lighthouse")
+			.Because("the sailor's own room was chosen, so the choice follows them");
+		await Assert.That(JSInterop.Invocations["SharpMUSH.mapCentre"].Count).IsGreaterThan(0);
+	}
+
+	[Test]
+	public async Task TheMapFollowsTheSailorOntoAnotherMap()
+	{
+		Arrange();
+		var nav = (BunitNavigationManager)Services.GetRequiredService<NavigationManager>();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		_api.Here = new("#20", "Square", WorldMapApiHandler.City);
+		_hub.OnCharacterMoved += Raise.Event<Action<CharacterMovedMessage>>(new CharacterMovedMessage("#20:1"));
+
+		cut.WaitForState(() => nav.Uri.EndsWith("/map/51", StringComparison.Ordinal));
+		await Assert.That(nav.Uri).EndsWith("/map/51");
 	}
 
 	[Test]

@@ -6530,6 +6530,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Намаляване</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Побери картата</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Вие сте тук</value>
   </data>

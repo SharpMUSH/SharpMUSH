@@ -6530,6 +6530,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Verkleinern</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Karte einpassen</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Du bist hier</value>
   </data>

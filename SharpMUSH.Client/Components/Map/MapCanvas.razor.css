@@ -1,16 +1,30 @@
+/* The map is a well sunk into the page, so the rooms on it read as the brightest things there. */
 .map-frame {
 	overflow: auto;
 	max-width: 100%;
 	max-height: 70vh;
-	border: 1px solid var(--border-soft);
+	border: 1px solid var(--border);
 	border-radius: var(--radius);
-	background: var(--surface);
+	background: var(--surface-3);
 	overscroll-behavior: contain;
 }
 
 .map-figure {
 	position: relative;
-	margin: 0 auto;
+	/* Room below the drawing for the labels of the rooms along its bottom edge. */
+	margin: 0 auto 28px;
+}
+
+/* A graph map with no picture has no grid either: faint dots give the eye a ground to measure by. They
+   scale with the drawing, so they stay put under the rooms. */
+.map-frame--blank .map-figure {
+	background-image: radial-gradient(circle, color-mix(in srgb, var(--text) 14%, transparent) 1px, transparent 1.5px);
+	background-size: var(--map-dots) var(--map-dots);
+}
+
+/* Every line keeps its width as the map zooms; the drawing scales, its strokes do not. */
+.map-svg :is(line, rect, circle, path) {
+	vector-effect: non-scaling-stroke;
 }
 
 .map-svg {
@@ -27,7 +41,7 @@
 
 .map-edge {
 	stroke: var(--text-dim);
-	stroke-width: 3;
+	stroke-width: 2;
 	stroke-linecap: round;
 }
 
@@ -36,9 +50,9 @@
 }
 
 .map-box {
-	fill: var(--surface);
-	stroke: var(--border);
-	stroke-width: 2;
+	fill: var(--surface-2);
+	stroke: var(--text-faint);
+	stroke-width: 1.5;
 }
 
 /* A room of a kind the legend colours: a wash of the tone inside, the tone itself on the edge. */
@@ -57,13 +71,14 @@
 }
 
 .map-box--here {
+	fill: color-mix(in srgb, var(--accent) 14%, var(--surface-2));
 	stroke: var(--accent);
-	stroke-width: 4;
+	stroke-width: 2.5;
 }
 
 .map-box--selected {
-	fill: var(--surface-3);
 	stroke: var(--text);
+	stroke-width: 2.5;
 }
 
 .map-vertical path {
@@ -89,10 +104,24 @@
 	border-radius: 8px;
 	background: transparent;
 	color: var(--text);
-	font: 13px/1.2 var(--font-ui);
+	/* The name grows and shrinks with the drawing, within what still reads. */
+	font: clamp(11px, calc(13px * var(--map-zoom)), 20px)/1.2 var(--font-ui);
 	text-align: center;
 	overflow: hidden;
 	cursor: pointer;
+	transition: background-color var(--motion-fade);
+}
+
+.map-room:hover {
+	background: color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+/* Too small to hold its name: the name goes on a label below, as a pin's does. Smaller still, the room keeps it for
+   its tooltip and its screen reader. */
+.map-room--small .map-room-icon,
+.map-room--tiny .map-room-name,
+.map-room--tiny .map-room-icon {
+	display: none;
 }
 
 .map-room--region {
@@ -115,8 +144,8 @@
 /* Who is here: a count in the room's corner, so the name keeps the middle. */
 .map-room-count {
 	position: absolute;
-	right: 4px;
-	bottom: 2px;
+	right: 6px;
+	bottom: 4px;
 	display: inline-flex;
 	align-items: center;
 	color: var(--accent);
@@ -137,12 +166,12 @@
 
 .map-edge--route {
 	stroke: var(--hue-orange);
-	stroke-width: 6;
+	stroke-width: 4;
 }
 
 .map-box--route {
 	stroke: var(--hue-orange);
-	stroke-width: 3;
+	stroke-width: 2.5;
 }
 
 .map-box--pin {
@@ -152,13 +181,19 @@
 }
 
 /* A pin's name sits under its point, on a label of its own so it reads over any picture. */
-.map-room--pin {
+.map-room--pin,
+.map-room--small {
 	overflow: visible;
 	align-items: flex-start;
 	padding: 0;
 }
 
-.map-room--pin .map-room-name {
+.map-room--small .map-room-name {
+	margin-top: 4px;
+}
+
+.map-room--pin .map-room-name,
+.map-room--small .map-room-name {
 	position: absolute;
 	top: 100%;
 	left: 50%;
@@ -185,7 +220,7 @@
 
 .map-box--pin.map-box--here {
 	stroke: var(--accent);
-	stroke-width: 5;
+	stroke-width: 4;
 }
 
 .map-box--pin.map-box--selected {
@@ -215,7 +250,7 @@
 .map-spot {
 	fill: none;
 	stroke: var(--accent);
-	stroke-width: 3;
+	stroke-width: 2;
 	stroke-dasharray: 6 4;
 }
 

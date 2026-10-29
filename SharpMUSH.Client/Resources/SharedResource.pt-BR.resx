@@ -6530,6 +6530,9 @@
   <data name="NavMapZoomOut" xml:space="preserve">
     <value>Afastar</value>
   </data>
+  <data name="NavMapZoomFit" xml:space="preserve">
+    <value>Ajustar o mapa</value>
+  </data>
   <data name="NavMapYouAreHere" xml:space="preserve">
     <value>Você está aqui</value>
   </data>
