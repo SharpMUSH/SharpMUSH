@@ -310,8 +310,8 @@
       "tracking": "#2427",
       "profile": "A refusal says why",
       "command": "@dig Annex=Annex Door,Back",
-      "sharp": "Annex created with room number NEW2.\nPermission denied. You do not control Lab, and it is not OPEN_OK.\nOpened exit #NEW3\nTrying to link...",
-      "penn": "Annex created with room number NEW2.\nPermission denied.\nOpened exit #NEW3\nTrying to link..."
+      "sharp": "Annex created with room number NEW2.\nPermission denied. You do not control Lab, and it is not OPEN_OK.\nOpened exit #NEW3\nTrying to link...\nYou can't link to that.",
+      "penn": "Annex created with room number NEW2.\nPermission denied.\nOpened exit #NEW3\nTrying to link...\nYou can't link to that."
     },
     {
       "id": "KD-0029",
