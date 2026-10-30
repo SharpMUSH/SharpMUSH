@@ -211,6 +211,6 @@ objects:
       # The legend's description of the place's terrain, else its label.
       # The room's own exits, then the map's direction exits that lead somewhere from here for the looker.
       EXITFORMAT: |-
-        [setq(ways,squish(%0 [u(zone(me)/ZONE`EXITS,me,%#)]))][if(words(%q<ways>),Obvious exits:%r[itemize(iter(%q<ways>,name(%i0),,|),|)])]
+        [setq(ways,squish(%0 [u(zone(me)/ZONE`EXITS,%!,%#)]))][if(words(%q<ways>),Obvious exits:%r[itemize(iter(%q<ways>,name(%i0),,|),|)])]
       DESCRIBE: |-
         [setq(type,worldcell(zone(me),worldplace(me,x),worldplace(me,y),worldplace(me,z)))][strfirstof(get(zone(me)/MAP`LEGEND`%q<type>`DESC),worldcell(zone(me),worldplace(me,x),worldplace(me,y),worldplace(me,z),label).)]
