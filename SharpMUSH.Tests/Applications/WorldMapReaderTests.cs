@@ -207,8 +207,10 @@ public class WorldMapReaderTests
 	{
 		public List<MapWindow> Asked { get; } = [];
 
-		public ValueTask<MapSpaceDto?> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
-			ValueTask.FromResult(map.Object().DBRef.Number == mapNumber ? new MapSpaceDto(space, -10, -10, 10, 10, [0, 1]) : null);
+		public ValueTask<Found<MapSpaceDto>> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
+			ValueTask.FromResult<Found<MapSpaceDto>>(map.Object().DBRef.Number == mapNumber
+				? new MapSpaceDto(space, -10, -10, 10, 10, [0, 1])
+				: new NotFound());
 
 		public ValueTask<MapCellsDto> CellsAsync(AnySharpObject viewer, AnySharpObject map, MapWindow window, CancellationToken ct)
 		{
@@ -265,7 +267,9 @@ public class WorldMapReaderTests
 	public async Task AWindowCountsItsCells()
 	{
 		await Assert.That(new MapWindow(0, -63, -63, 64, 64).Cells).IsEqualTo(MapWindow.MaxCells);
-		await Assert.That(new MapWindow(0, int.MinValue, 0, int.MaxValue, 0).Cells).IsEqualTo(1L << 32);
+		await Assert.That(new MapWindow(0, int.MinValue, 0, int.MaxValue, 0).Cells).IsGreaterThan(MapWindow.MaxCells);
+		// Both sides 2^32 long: their product would overflow to 0, and pass for a window of no cells.
+		await Assert.That(new MapWindow(0, int.MinValue, int.MinValue, int.MaxValue, int.MaxValue).Cells).IsGreaterThan(MapWindow.MaxCells);
 	}
 
 	[Test]

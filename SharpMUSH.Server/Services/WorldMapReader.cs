@@ -195,7 +195,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	{
 		foreach (var source in sources ?? [])
 		{
-			if (await source.SpaceAsync(map, ct) is { } space) return (source, space);
+			if (await source.SpaceAsync(map, ct) is MapSpaceDto space) return (source, space);
 		}
 		return null;
 	}

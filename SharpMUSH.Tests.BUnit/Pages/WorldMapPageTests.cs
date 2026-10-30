@@ -124,6 +124,9 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	/// <summary>The windows of the wilds' places read, as their queries.</summary>
 	public List<string> CellsAsked { get; } = [];
 
+	/// <summary>When set, a read of the wilds' level 1 waits for it.</summary>
+	public TaskCompletionSource? LevelOneHeld { get; set; }
+
 	/// <summary>What a window of the wilds holds on <paramref name="level"/>.</summary>
 	public static MapCellsDto WildsCells(int level, int left, int bottom, int right, int top) => level == 0
 		? new(0, left, bottom, right, top,
@@ -172,6 +175,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		{
 			CellsAsked.Add(request.RequestUri.Query);
 			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+			if (query["level"] == "1" && LevelOneHeld is { } held) await held.Task;
 			return Json(WildsCells(int.Parse(query["level"]!), int.Parse(query["left"]!), int.Parse(query["bottom"]!),
 				int.Parse(query["right"]!), int.Parse(query["top"]!)));
 		}
@@ -456,6 +460,24 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(_api.CellsAsked[^1]).StartsWith("?level=1&");
 		await Assert.That(cut.Find(".map-room--place").TextContent.Trim()).IsEqualTo("Lookout");
+	}
+
+	[Test]
+	public async Task GoingBackToALevelBeforeItsReadReturnsKeepsItsPlaces()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		_api.LevelOneHeld = new TaskCompletionSource();
+
+		// The way up waits on its held read, which returns only once the way down has been taken.
+		var up = cut.Find("[aria-label=NavMapLevelUp]").ClickAsync();
+		await cut.Find("[aria-label=NavMapLevelDown]").ClickAsync();
+		_api.LevelOneHeld.SetResult();
+		await up;
+
+		await Assert.That(cut.Find(".map-room--place").TextContent).Contains("Old Mill")
+			.Because("the level-1 read returned after going back down, and is dropped");
 	}
 
 	[Test]
