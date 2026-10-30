@@ -123,7 +123,7 @@ Output: Wayside Inn now stands on 4,5,0 to stay.
 
 A place with no room of its own is lent one by [worldroom()]: a spare room when there is one, else a new one. A lent room is named after its place, or its terrain's label and where it is ("Old forest (3,1,0)"), joins the map's zone, takes the parent the map's `` MAP`CELLPARENT `` names, is set FLOATING, and holds the place's id in `` MAP`PLACE ``.
 
-Once a lent room has held nothing for 5 minutes it goes back: renamed Spare room, out of the zone and the parent, and a scene held there let go. It waits as a spare for any map. A room holding anyone or anything stays lent. Spares past the newest 50, or waiting a week, are destroyed.
+Once a lent room has held nothing for 5 minutes it goes back: renamed Spare room, out of the zone and the parent, and a scene held there let go. It waits as a spare for another place on its owner's maps, and keeps anything else put on it. A room holding anyone or anything stays lent; one whose map is destroyed waits until it is empty. Spares past the newest 50, or waiting a week, are destroyed.
 
 The game checks once a minute. `@world/sweep` takes back every empty lent room now. Wizards only.
 

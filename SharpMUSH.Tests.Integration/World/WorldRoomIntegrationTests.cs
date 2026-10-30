@@ -77,6 +77,34 @@ public class WorldRoomIntegrationTests
 	}
 
 	[Test]
+	public async Task ARoomLetGoWhileSomethingIsInItWaitsUntilItIsEmpty()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Marsh");
+		await God($"@create {map}", map);
+		var mapRef = await Eval($"num({map})");
+		await God($"@world/create {mapRef}", map);
+		await God($"@world/paint {mapRef}/0,0=reeds", "places");
+		var room = await Eval($"worldroom({mapRef},0,0)");
+		var heron = TestIsolationHelpers.GenerateUniqueName("Heron");
+		await God($"@create {heron}", heron);
+		var heronRef = await Eval($"num({heron})");
+		await God($"@tel {heronRef}={room}", heron);
+
+		await God($"@nuke {mapRef}", map);
+		await God($"@nuke {mapRef}", map);
+		await God("@purge", "Purge");
+		await God("@purge", "Purge");
+		await God($"@purge {mapRef}", mapRef);
+		await Assert.That(await Eval($"worldplace({room})")).IsEmpty().Because("a destroyed map lets go of its rooms");
+		await God("@world/sweep", "Took back");
+		await Assert.That(await Eval($"name({room})")).IsEqualTo("reeds (0,0,0)").Because("a room holding something is not made spare");
+
+		await God($"@tel {heronRef}=#0", heron);
+		await God("@world/sweep", "Took back");
+		await Assert.That(await Eval($"name({room})")).IsEqualTo("Spare room");
+	}
+
+	[Test]
 	public async Task ARoomPlacedToStayIsTheOnlyRoomItsPlaceHas()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Hamlet");

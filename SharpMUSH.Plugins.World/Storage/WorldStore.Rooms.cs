@@ -21,7 +21,11 @@ public sealed record WorldReleaseRecord(long Created, bool Lent);
 
 /// <summary>A spare room, tidied and waiting for any map to borrow it.</summary>
 /// <param name="Since">When it became spare, in Unix milliseconds.</param>
-public sealed record WorldSpareRecord(long Created, long Since);
+public sealed record WorldSpareRecord(long Created, long Since)
+{
+	/// <summary>The player the room belongs to; it is lent again only on that player's maps.</summary>
+	public int Owner { get; init; }
+}
 
 /// <summary>What became of placing a room to stay.</summary>
 public enum WorldPlacing
@@ -168,19 +172,20 @@ public sealed partial class WorldStore
 				.ThenBy(entry => entry.Item1.Number),
 		]);
 
-	/// <summary>Makes <paramref name="room"/> a spare, as of <paramref name="since"/>.</summary>
-	public ValueTask<bool> AddSpareAsync(DBRef room, long since) => _store.WriteAsync(tx =>
+	/// <summary>Makes <paramref name="room"/>, which <paramref name="owner"/> owns, a spare, as of <paramref name="since"/>.</summary>
+	public ValueTask<bool> AddSpareAsync(DBRef room, DBRef owner, long since) => _store.WriteAsync(tx =>
 	{
 		tx.Put(_spares, Keys.Dbref(room.Number),
-			JsonSerializer.SerializeToUtf8Bytes(new WorldSpareRecord(room.CreationMilliseconds ?? 0, since), Json));
+			JsonSerializer.SerializeToUtf8Bytes(new WorldSpareRecord(room.CreationMilliseconds ?? 0, since) { Owner = owner.Number }, Json));
 		return true;
 	});
 
-	/// <summary>Takes the spare that has waited longest off the list; null when there is none.</summary>
-	public ValueTask<DBRef?> TakeSpareAsync() => _store.WriteAsync(tx =>
+	/// <summary>Takes the spare of <paramref name="owner"/>'s that has waited longest off the list; null when there is none.</summary>
+	public ValueTask<DBRef?> TakeSpareAsync(DBRef owner) => _store.WriteAsync(tx =>
 	{
 		var first = tx.Range(_spares, [])
 			.Select(entry => (Number: Keys.ReadDbref(entry.Key), Record: JsonSerializer.Deserialize<WorldSpareRecord>(entry.Value, Json)!))
+			.Where(entry => entry.Record.Owner == owner.Number)
 			.OrderBy(entry => entry.Record.Since)
 			.ThenBy(entry => entry.Number)
 			.Select(entry => (DBRef?)new DBRef((int)entry.Number, entry.Record.Created))
