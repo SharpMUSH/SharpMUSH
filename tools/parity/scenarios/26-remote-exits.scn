@@ -1,0 +1,41 @@
+# Exits on a zone master room and global exits in the master room (src/game.c process_command remote_exit and
+# global_exit; src/move.c move_wrapper). A typed exit name and `goto` try the room's own exits, then the zone master
+# room's, then the master room's. Rooms are found by name with lsearch(), never by literal dbref. Each check prints
+# the mover's location by name, which reads the same on both servers.
+::case rx.setup  a zone master room, a room zoned to it, and rooms to reach
+::login wiz Wiz wizpass
+::as wiz
+@power me=No_Pay
+think set(me,RXHOME:[loc(me)])
+@dig RXZone
+@dig RXHere
+@dig RXThere
+@dig RXLocal
+@dig RXElsewhere
+@chzone [lsearch(all,name,RXHere)]=[lsearch(all,name,RXZone)]
+@open RXGate=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
+@open RXGoto=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
+@open RXShadow=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
+@open RXShadow=[lsearch(all,name,RXLocal)],,[lsearch(all,name,RXHere)]
+@open RXGlobal=[lsearch(all,name,RXElsewhere)],,[config(master_room)]
+
+::case rx.zone-exit  typing a zone master room's exit takes it
+@tel me=[lsearch(all,name,RXHere)]
+RXGate
+think [name(loc(me))]
+
+::case rx.zone-goto  goto takes a zone master room's exit
+@tel me=[lsearch(all,name,RXHere)]
+goto RXGoto
+think [name(loc(me))]
+
+::case rx.zone-shadow  the room's own exit wins over the zone's exit of the same name
+@tel me=[lsearch(all,name,RXHere)]
+RXShadow
+think [name(loc(me))]
+
+::case rx.global-exit  typing a global exit takes it
+@tel me=[lsearch(all,name,RXHere)]
+RXGlobal
+think [name(loc(me))]
+@tel me=[v(RXHOME)]
