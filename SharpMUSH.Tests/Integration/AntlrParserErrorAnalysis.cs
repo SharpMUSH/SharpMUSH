@@ -196,7 +196,7 @@ public class AntlrParserErrorAnalysis
 		Log("                                                          |");
 		Log("                                                          +-> bracketPattern -> OBRACK evaluationString CBRACK");
 		Log("                                                          +-> bracePattern -> OBRACE explicitEvaluationString? CBRACE");
-		Log("                                                          +-> PERCENT validSubstitution");
+		Log("                                                          +-> PERCENT complexSubstitutionSymbol | substitutionSymbol");
 		Log("                                                          +-> beginGenericText (incl. escapedText -> ESCAPE ANY)");
 		Log("                                                          +-> function -> FUNCHAR evaluationString? (COMMAWS evaluationString?)* CPAREN");
 		Log("");
