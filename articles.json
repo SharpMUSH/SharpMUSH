@@ -1482,6 +1482,12 @@
         "aliases": []
       },
       {
+        "id": "rhostmush-iter-separator-rhost-iter-separator",
+        "lookup": "compatibility config rhostmush iter separator rhost iter separator",
+        "heading": "RhostMUSH iter() separator: \u0060rhost_iter_separator\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-lattr-arguments-rhost-lattr",
         "lookup": "compatibility config rhostmush lattr arguments rhost lattr",
         "heading": "RhostMUSH lattr() arguments: \u0060rhost_lattr\u0060",
@@ -1491,6 +1497,12 @@
         "id": "rhostmush-list-loop-rhost-list",
         "lookup": "compatibility config rhostmush list loop rhost list",
         "heading": "RhostMUSH list() loop: \u0060rhost_list\u0060",
+        "aliases": []
+      },
+      {
+        "id": "rhostmush-lrooms-depth-rhost-lrooms",
+        "lookup": "compatibility config rhostmush lrooms depth rhost lrooms",
+        "heading": "RhostMUSH lrooms() depth: \u0060rhost_lrooms\u0060",
         "aliases": []
       },
       {
