@@ -50,7 +50,7 @@ That leaves 60 reachable combinations. The generator writes every rule for each 
 keeps one copy of each set of copies that have the same body and refer to copies that are alike in
 turn. A rule has as many copies as there are different ways to read it: `beginGenericText` depends
 only on which tokens are text, while `evaluationString` also depends on what its calls, braces and
-names hold. That gives 144 rules.
+names hold. That gives 124 rules.
 
 A copy is named for what is true of every context it is read in: `Top` or `Call` (outside or
 inside a call; neither when the copy is read the same either way), `Group` inside a paren group,
@@ -64,12 +64,22 @@ others, which dispatch on it.
 
 ## A call's tail
 
-`evaluationString` is either a leading call followed by `callTail`, or an `explicitEvaluationString`.
-`explicitEvaluationString` cannot begin with a `name(` token (`FUNCHAR`); that is how a string that
+`evaluationString` is either a leading call followed by `callTail`, or what an
+`explicitEvaluationString` holds, written into `evaluationString` itself rather than as a node of its
+own; `explicitEvaluationString` remains as a rule for the names of `%q<...>` and `$<...>`. That form
+cannot begin with a `name(` token (`FUNCHAR`); that is how a string that
 starts with one is known to start with a call, with no choice for prediction to make. `callTail` is
 what follows the call, and takes what may come later in any string, where a `FUNCHAR` is text:
 `add(1,2)mul(2,3)` is `3mul(2,3)`, as in PennMUSH, which looks for a function only at the first `(`.
 In an argument the tail's `,` and `)` keep their meaning there, as they do after any other text.
+
+## One node per piece
+
+A rule that would only ever wrap one other rule costs a tree node per use and gives the evaluator
+nothing. Text at the start of a string is `beginGenericText`, and later text is `genericText`, which
+lists the same tokens (and `FUNCHAR`) itself rather than wrapping a `beginGenericText`. A `%` is
+followed directly by `complexSubstitutionSymbol` or `substitutionSymbol`. `command` stays a node of
+its own though it holds one `evaluationString`: it marks where one command of a list begins and ends.
 
 ## Paren groups
 

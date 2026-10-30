@@ -11,11 +11,18 @@ namespace SharpMUSH.Implementation.Parsing;
 /// alike, and the one mapping from a <see cref="ParseType"/> to the grammar rule that starts it.
 /// </summary>
 /// <remarks>
-/// Every member is static and allocates only what a parse needs: the input stream, the lexer, the
-/// buffered token stream and the parser.
+/// Every member is static. Each thread keeps one lexer and one parser per paren_groups setting and
+/// hands them each new input, since building them cost more than parsing most inputs; a parse
+/// allocates only the input stream, the buffered token stream and the tree.
 /// </remarks>
 internal static class SoftcodeParsePipeline
 {
+	// Taken out of the slot while in use, so a parse that somehow started inside another one gets
+	// fresh instances rather than sharing these.
+	[ThreadStatic] private static SharpMUSHLexer? t_lexer;
+	[ThreadStatic] private static SharpMUSHParser? t_parser;
+	[ThreadStatic] private static SharpMUSHParser? t_parenGroupsParser;
+
 	/// <summary>
 	/// Deepest nesting of <c>[]</c>, <c>{}</c>, and function-call <c>()</c> the parser will
 	/// attempt. The generated parser is recursive descent, so each level becomes a native stack
@@ -48,9 +55,30 @@ internal static class SoftcodeParsePipeline
 	{
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		StringSpanInputStream inputStream = new(plainText, sourceName);
-		var lexer = CreateLexer(inputStream);
-		BufferedTokenSpanStream tokens = new(lexer);
-		tokens.Fill();
+		var lexer = t_lexer;
+		t_lexer = null;
+		BufferedTokenSpanStream tokens;
+		try
+		{
+			// A token keeps the input it came from, so the lexer is free for the next input once the
+			// stream is filled to EOF.
+			if (lexer is null)
+			{
+				lexer = CreateLexer(inputStream);
+			}
+			else
+			{
+				lexer.SetInputStream(inputStream);
+			}
+
+			tokens = new BufferedTokenSpanStream(lexer);
+			tokens.Fill();
+		}
+		finally
+		{
+			t_lexer = lexer;
+		}
+
 		if (rewriteOrphanedClosers)
 		{
 			RewriteOrphanedBracketClosers(tokens);
@@ -69,10 +97,7 @@ internal static class SoftcodeParsePipeline
 	/// </summary>
 	private static SharpMUSHLexer CreateLexer(StringSpanInputStream inputStream)
 	{
-		var lexer = new SharpMUSHLexer(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		var lexer = new SharpMUSHLexer(inputStream);
 		lexer.RemoveErrorListeners();
 
 		return lexer;
@@ -82,6 +107,42 @@ internal static class SoftcodeParsePipeline
 	/// A parser over <paramref name="tokens"/> with no error listeners. Callers attach the listener
 	/// and error strategy their pass needs.
 	/// </summary>
+	/// <summary>
+	/// <see cref="CreateParser"/>, reusing this thread's parser for that paren_groups setting when it
+	/// is free. Give it back with <see cref="ReturnParser"/> once the tree is built; the tree does not
+	/// need the parser.
+	/// </summary>
+	public static SharpMUSHParser RentParser(BufferedTokenSpanStream tokens, bool parenGroups, PredictionMode mode,
+		bool trace = false)
+	{
+		ref var slot = ref parenGroups ? ref t_parenGroupsParser : ref t_parser;
+		if (slot is not { } parser)
+		{
+			return CreateParser(tokens, parenGroups, mode, trace);
+		}
+
+		slot = null;
+		parser.TokenStream = tokens;
+		parser.Trace = trace;
+		parser.Interpreter.PredictionMode = mode;
+		parser.RemoveErrorListeners();
+
+		return parser;
+	}
+
+	/// <summary>Makes a parser from <see cref="RentParser"/> available to the next parse on this thread.</summary>
+	public static void ReturnParser(SharpMUSHParser parser)
+	{
+		if (parser.ParenGroups)
+		{
+			t_parenGroupsParser = parser;
+		}
+		else
+		{
+			t_parser = parser;
+		}
+	}
+
 	public static SharpMUSHParser CreateParser(BufferedTokenSpanStream tokens, bool parenGroups, PredictionMode mode,
 		bool trace = false)
 	{

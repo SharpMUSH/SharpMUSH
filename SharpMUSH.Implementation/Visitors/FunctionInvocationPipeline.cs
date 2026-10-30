@@ -185,7 +185,7 @@ internal sealed class FunctionInvocationPipeline(EvaluationServices services)
 
 					CallState evaluated;
 					using (clock.Pause())
-						evaluated = await visitor.VisitChildren(x) ?? CallState.Empty;
+						evaluated = await visitor.EvaluationStringItems(x) ?? CallState.Empty;
 					var msg = evaluated.Message;
 					retainedArguments?.Add(msg.Length);
 					if (stripAnsi) msg = msg.WithoutVisualMarkup();

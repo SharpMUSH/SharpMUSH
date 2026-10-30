@@ -31,7 +31,7 @@ namespace SharpMUSH.Implementation;
 /// <item><description>Evaluation services are resolved once on first evaluation and cached to avoid repeated DI lookups</description></item>
 /// <item><description>CommandTrie provides O(m) prefix matching where m is the length of the search string; one trie is shared per command library</description></item>
 /// <item><description><see cref="SoftcodeParsePipeline"/> is the one lexer/parser setup, shared with the tooling half (<see cref="SoftcodeSyntaxAnalyzer"/>)</description></item>
-/// <item><description>Custom span-based streams and token factory (BufferedTokenSpanStream, StringSpanInputStream, OptimizedTokenFactory) minimize allocations</description></item>
+/// <item><description>Custom span-based streams (BufferedTokenSpanStream, StringSpanInputStream) minimize allocations</description></item>
 /// <item><description>Prediction mode can be configured (SLL vs LL) for performance vs accuracy tradeoff</description></item>
 /// </list>
 /// 
@@ -154,8 +154,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 	/// error-free input, the common case, this is a single SLL pass. The SLL and LL settings force
 	/// one mode for diagnostics.
 	/// </para>
-	/// A fresh parser is built per attempt, and the token stream is sought back to the start between
-	/// attempts.
+	/// Each attempt rents this thread's parser (<see cref="SoftcodeParsePipeline.RentParser"/>) and gives it
+	/// back when it is done, and the token stream is sought back to the start between attempts.
 	/// </summary>
 	private (TContext Context, ParserErrorListener Errors) ParseTwoStage<TContext>(
 		BufferedTokenSpanStream tokens,
@@ -173,7 +173,7 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		(SharpMUSHParser Parser, ParserErrorListener Errors) Build(PredictionMode mode, IAntlrErrorStrategy strategy)
 		{
 			tokens.Seek(0);
-			var parser = SoftcodeParsePipeline.CreateParser(tokens, Configuration.CurrentValue.Compatibility.ParenGroups,
+			var parser = SoftcodeParsePipeline.RentParser(tokens, Configuration.CurrentValue.Compatibility.ParenGroups,
 				mode, trace: debug);
 			parser.ErrorHandler = strategy;
 			var errors = new ParserErrorListener(inputText);
@@ -207,6 +207,10 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 				// SLL could not parse this input; the LL pass below decides whether that is a real
 				// syntax error or only SLL's weaker analysis giving up.
 			}
+			finally
+			{
+				SoftcodeParsePipeline.ReturnParser(sllParser);
+			}
 
 			if (debug)
 			{
@@ -214,11 +218,25 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			}
 
 			var (llParser, llErrors) = Build(PredictionMode.LL, AuthoritativeStrategy());
-			return (entryPoint(llParser), llErrors);
+			try
+			{
+				return (entryPoint(llParser), llErrors);
+			}
+			finally
+			{
+				SoftcodeParsePipeline.ReturnParser(llParser);
+			}
 		}
 
 		var (singleParser, singleErrors) = Build(SoftcodeSyntaxAnalyzer.SinglePassPredictionMode(Configuration.CurrentValue), AuthoritativeStrategy());
-		return (entryPoint(singleParser), singleErrors);
+		try
+		{
+			return (entryPoint(singleParser), singleErrors);
+		}
+		finally
+		{
+			SoftcodeParsePipeline.ReturnParser(singleParser);
+		}
 	}
 
 	/// <summary>

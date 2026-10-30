@@ -31,7 +31,7 @@ public static partial class Substitutions
 			"T" or "t" => "\t",
 			"#" => $"#{parser.CurrentState.Enactor!.Value.Number}",
 			":" => parser.CurrentState.Enactor!.Value.ToString(),
-			// Both cases return the plain name; the caller (VisitValidSubstitution) capitalizes the
+			// Both cases return the plain name; the caller (VisitSubstitutionSymbol) capitalizes the
 			// first character for the uppercase selector %N. Doing it there rather than with
 			// ApplyCase(Sentence) matches PennMUSH, which upper-cases only the first character and
 			// leaves the rest alone — "McDonald" stays "McDonald", not "Mcdonald".

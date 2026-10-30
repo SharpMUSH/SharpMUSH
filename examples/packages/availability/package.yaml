@@ -1,7 +1,7 @@
 format: "1.16"
 package: availability
 title: "Availability"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "+avail: when each character is busy or free, as dates, ranges and repeating patterns like an office calendar, and the times a group of players are all free."
 license: MIT
@@ -12,7 +12,8 @@ requires_server: ">=0.1"
 
 # The time package keeps each player's zone in TZ and reads it through its Clock, so an entry is kept in its owner's
 # own time. Nothing here knows about scenes: scene-availability adds +avail/scene and the scene card's free list on top
-# of this package. availability-help and availability-config put its topics into +help and its settings into +config.
+# of this package. availability-help and availability-config put its topics into +help and its settings into +config;
+# availability-alts counts the characters an account lists in public as one person.
 depends:
   - package: time
     version: ">=1.0"
@@ -218,7 +219,8 @@ objects:
       # %0 the switches and %1 the argument, as typed. Sets cmd_switch_list, cmd_switch, cmd_argument (spaces
       # squeezed), cmd_left and cmd_right (either side of the first =; the right as typed, so a note keeps its
       # spaces), cmd_route (the INC` routine to run), now, viewer_key (where the reader's entries are kept),
-      # viewer_zone (their zone, else the game's) and viewer_today (the day it is for them).
+      # viewer_chars (every character on the reader's account, or the reader alone), viewer_keys (where those keep
+      # theirs), viewer_zone (their zone, else the game's) and viewer_today (the day it is for them).
       FUN`COMMAND`PARSE:
         value: |-
           setqm(cmd_switch_list,lcstr(trim(edit(%0,/,%b))),
@@ -229,6 +231,8 @@ objects:
           cmd_route,get(%!/DATA`ROUTE`[if(strlen(%q<cmd_switch>),ucstr(%q<cmd_switch>),if(strlen(%q<cmd_argument>),ARG,BARE))]),
           now,secs(),
           viewer_key,u(%!/FUN`KEY,%#),
+          viewer_chars,accountchars(%#),
+          viewer_keys,iter(%q<viewer_chars>,u(%!/FUN`KEY,%i0)),
           viewer_zone,u(%!/FUN`ZONE`OF,%#),
           viewer_today,u(%!/FUN`DAY`OF,%q<now>,%q<viewer_zone>))
         flags: [funsyntax]
@@ -244,6 +248,25 @@ objects:
       FUN`KEY:
         value: |-
           edit(objid(%0),#,,:,_)
+        flags: [funsyntax]
+      # %0 a player and %1 characters that are one person's, the reader's account: the keys whose entries count
+      # for the player. All of theirs when the player is one of them, else those of the player's characters
+      # anyone may know are together.
+      FUN`KEYS`OF:
+        value: |-
+          iter(if(member(%1,objid(%0)),%1,u(%!/FUN`TOGETHER,%0)),u(%!/FUN`KEY,%i0))
+        flags: [funsyntax]
+      # %0 a player: the characters anyone may know are one person's, the player among them. The player alone,
+      # then what each FILTER`AVAIL`TOGETHER`<name> on this object adds: a bridge's filter takes %0 the characters
+      # so far and %1 the player, and returns the characters (availability-alts adds an account's public alts).
+      FUN`TOGETHER:
+        value: |-
+          setq(together,objid(%0))[null(iter(lattr(%!/FILTER`AVAIL`TOGETHER`*),setq(together,u(%!/%i0,%q<together>,objid(%0)))))]%q<together>
+        flags: [funsyntax]
+      # %0 keys: their entries, key`n each.
+      FUN`KEYS`ENTRIES:
+        value: |-
+          squish(iter(%0,iter(u(%!/FUN`PLAYER`ENTRIES,%i0),%i1`%i0)))
         flags: [funsyntax]
       # %0 typed text: the objid of the player it names, or nothing.
       FUN`PLAYER:
@@ -506,16 +529,16 @@ objects:
         value: |-
           inc(firstof(last(u(%!/FUN`PLAYER`ENTRIES,%0)),0))
         flags: [funsyntax]
-      # %0 a key: 1 when it keeps a free entry, so only the times those cover count as free.
+      # %0 keys: 1 when one of them keeps a free entry, so only the times those cover count as free.
       FUN`PLAYER`HASFREE:
         value: |-
-          match(iter(u(%!/FUN`PLAYER`ENTRIES,%0),get({{calendar}}/PLAYER`%0`%i0`KIND)),free)
+          match(iter(u(%!/FUN`KEYS`ENTRIES,%0),get({{calendar}}/PLAYER`%i0`KIND)),free)
         flags: [funsyntax]
-      # %0 a key, %1 a kind (busy or free), %2 and %3 instants: the times its entries of that kind cover between
+      # %0 keys, %1 a kind (busy or free), %2 and %3 instants: the times their entries of that kind cover between
       # them, start:end in seconds.
       FUN`PLAYER`SPANS:
         value: |-
-          squish(iter(u(%!/FUN`PLAYER`ENTRIES,%0),if(strmatch(get({{calendar}}/PLAYER`%0`%i0`KIND),%1),u(%!/FUN`ENTRY`SPANS,%0,%i0,%2,%3))))
+          squish(iter(u(%!/FUN`KEYS`ENTRIES,%0),if(strmatch(get({{calendar}}/PLAYER`%i0`KIND),%1),u(%!/FUN`ENTRY`SPANS,first(%i0,`),last(%i0,`),%2,%3))))
         flags: [funsyntax]
       # %0 a key and %1 an entry: its leaves, into entry_ registers.
       FUN`ENTRY`LOAD:
@@ -576,15 +599,23 @@ objects:
         flags: [funsyntax]
 
       # ---- free slots --------------------------------------------------------------
-      # %0 a key, %1 an instant, %2 a number of slots and %3 a slot in seconds: a 1 for each slot from %1 the
-      # player is free in, a 0 for each they are not. Free entries cover only whole slots; a busy one takes any
-      # slot it touches.
+      # %0 keys, one player's or the characters of one person, %1 an instant, %2 a number of slots and %3 a slot
+      # in seconds: a 1 for each slot from %1 they are free in, a 0 for each they are not. Each key is laid out on
+      # its own and a slot is free only when it is free for every one, so one character's free time never frees
+      # another's.
       FUN`MASK`PLAYER:
         value: |-
           setqm(mask_from,%1,
           mask_slots,%2,
           mask_step,%3,
-          mask_to,add(%1,mul(%2,%3)))[fold(%!/FUN`MASK`BUSY,u(%!/FUN`PLAYER`SPANS,%0,busy,%q<mask_from>,%q<mask_to>),if(u(%!/FUN`PLAYER`HASFREE,%0),fold(%!/FUN`MASK`FREE,u(%!/FUN`PLAYER`SPANS,%0,free,%q<mask_from>,%q<mask_to>),repeat(0,%2)),repeat(1,%2)))]
+          mask_to,add(%1,mul(%2,%3)),
+          mask_each,iter(%0,u(%!/FUN`MASK`ONE,%i0)))[if(eq(words(%q<mask_each>),1),%q<mask_each>,edit(iter(lnum(0,dec(%2)),if(match(iter(%q<mask_each>,mid(%i0,%i1,1)),0),0,1)),%b,))]
+        flags: [funsyntax]
+      # %0 a key, with the mask_ registers set: its slots. Free entries cover only whole slots; a busy one takes any
+      # slot it touches.
+      FUN`MASK`ONE:
+        value: |-
+          fold(%!/FUN`MASK`BUSY,u(%!/FUN`PLAYER`SPANS,%0,busy,%q<mask_from>,%q<mask_to>),if(u(%!/FUN`PLAYER`HASFREE,%0),fold(%!/FUN`MASK`FREE,u(%!/FUN`PLAYER`SPANS,%0,free,%q<mask_from>,%q<mask_to>),repeat(0,%q<mask_slots>)),repeat(1,%q<mask_slots>)))
         flags: [funsyntax]
       # fold() steps: %0 the slots so far, %1 a span start:end. The slots it covers whole become 1.
       FUN`MASK`FREE:
@@ -602,19 +633,20 @@ objects:
           if(gt(%2,%1),[left(%0,%1)][repeat(%3,sub(%2,%1))][mid(%0,%2,%q<mask_slots>)],%0)
         flags: [funsyntax]
       # %0 a player, %1 and %2 instants: 1 when they are free the whole time, 0 when not, nothing when they keep no
-      # entries.
+      # entries. The characters they are known to be together with count too.
       FUN`FREE`AT:
         value: |-
-          if(words(u(%!/FUN`PLAYER`ENTRIES,setr(free_at_key,u(%!/FUN`KEY,%0)))),not(strmatch(u(%!/FUN`MASK`PLAYER,%q<free_at_key>,%1,div(add(sub(%2,%1),dec(setr(free_at_step,u(%!/FUN`CONFIG`STEP)))),%q<free_at_step>),%q<free_at_step>),*0*)))
+          if(words(u(%!/FUN`KEYS`ENTRIES,setr(free_at_key,u(%!/FUN`KEYS`OF,%0)))),not(strmatch(u(%!/FUN`MASK`PLAYER,%q<free_at_key>,%1,div(add(sub(%2,%1),dec(setr(free_at_step,u(%!/FUN`CONFIG`STEP)))),%q<free_at_step>),%q<free_at_step>),*0*)))
         flags: [funsyntax]
 
       # ---- finding a time ---------------------------------------------------------
-      # %0 players, %1 an instant, %2 a number of slots and %3 a length in slots: the runs from %1 where every one
-      # of them is free for at least %3 slots, start:end in seconds.
+      # %0 players, %1 an instant, %2 a number of slots, %3 a length in slots and %4 characters that are one
+      # person's (the reader's account; may be left out): the runs from %1 where every one of them is free for at
+      # least %3 slots, start:end in seconds. A player among %4 is free only when every one of %4 is.
       FUN`FIND`RUNS:
         value: |-
           setqm(find_step,u(%!/FUN`CONFIG`STEP),
-          find_masks,iter(%0,u(%!/FUN`MASK`PLAYER,u(%!/FUN`KEY,%i0),%1,%2,%q<find_step>)),
+          find_masks,iter(%0,u(%!/FUN`MASK`PLAYER,u(%!/FUN`KEYS`OF,%i0,%4),%1,%2,%q<find_step>)),
           find_all,if(eq(words(%q<find_masks>),1),%q<find_masks>,edit(iter(lnum(0,dec(%2)),if(match(iter(%q<find_masks>,mid(%i0,%i1,1)),0),0,1)),%b,)))[squish(iter(lnum(0,dec(%2)),if(cand(mid(%q<find_all>,%i0,1),cor(not(%i0),not(mid(%q<find_all>,dec(%i0),1))),gte(setr(find_run,strlen(before(mid(%q<find_all>,%i0,%2),0))),%3)),[add(%1,mul(%i0,%q<find_step>))]:[add(%1,mul(add(%i0,%q<find_run>),%q<find_step>))])))]
         flags: [funsyntax]
       # %0 an instant: the start of the slot it falls in, or of the next when it is not on one.
@@ -708,8 +740,8 @@ objects:
         flags: [funsyntax]
 
       # ---- screens ------------------------------------------------------------------------
-      # %0 a key, %1 the first day (in the reader's zone), %2 the reader's zone, %3 how many days and %4 1 when the
-      # reader may see notes: a table, a row a day, of the times the player is free and busy.
+      # %0 keys, %1 the first day (in the reader's zone), %2 the reader's zone, %3 how many days and %4 1 when the
+      # reader may see notes: a table, a row a day, of the times they are free and busy.
       FUN`SCREEN`WEEK:
         value: |-
           setqm(week_step,u(%!/FUN`CONFIG`STEP),
@@ -731,31 +763,41 @@ objects:
         value: |-
           if(gte(%0,%1),24:00,timefmt($H:$M,%0,%2))
         flags: [funsyntax]
-      # %0 a key, %1 and %2 instants, %3 1 to keep notes: every busy time between them, start:end:entry, by start.
+      # %0 keys, %1 and %2 instants, %3 1 to keep notes: every busy time between them, start:end:key`entry, by
+      # start.
       FUN`SCREEN`WEEK`BUSY:
         value: |-
-          sort(squish(iter(u(%!/FUN`PLAYER`ENTRIES,%0),if(strmatch(get({{calendar}}/PLAYER`%0`%i0`KIND),busy),iter(u(%!/FUN`ENTRY`SPANS,%0,%i0,%1,%2),%i0:[if(%3,%i1)])))))
+          sort(squish(iter(u(%!/FUN`KEYS`ENTRIES,%0),if(strmatch(get({{calendar}}/PLAYER`%i0`KIND),busy),iter(u(%!/FUN`ENTRY`SPANS,first(%i0,`),last(%i0,`),%1,%2),%i0:[if(%3,%i1)])))))
         flags: [funsyntax]
       # %0 and %1 the instants a day starts and ends, %2 the zone: the busy times that day, with their notes; all day
       # when one covers it.
       FUN`SCREEN`WEEK`BUSYDAY:
         value: |-
-          firstof(edit(squish(iter(%q<week_busy>,if(cand(lt(first(%i0,:),%1),gt(extract(%i0,2,1,:),%0)),[if(cand(lte(first(%i0,:),%0),gte(extract(%i0,2,1,:),%1)),all day,[timefmt($H:$M,max(first(%i0,:),%0),%2)]-[u(%!/FUN`SCREEN`WEEK`END,extract(%i0,2,1,:),%1,%2)])][if(cand(strlen(extract(%i0,3,1,:)),strlen(setr(week_note,get({{calendar}}/PLAYER`%q<week_key>`[extract(%i0,3,1,:)]`NOTE)))),%b[tone(muted,%q<week_note>)])]),,|),|),|,%,%b),tone(muted,-))
+          firstof(edit(squish(iter(%q<week_busy>,if(cand(lt(first(%i0,:),%1),gt(extract(%i0,2,1,:),%0)),[if(cand(lte(first(%i0,:),%0),gte(extract(%i0,2,1,:),%1)),all day,[timefmt($H:$M,max(first(%i0,:),%0),%2)]-[u(%!/FUN`SCREEN`WEEK`END,extract(%i0,2,1,:),%1,%2)])][if(cand(strlen(extract(%i0,3,1,:)),strlen(setr(week_note,get({{calendar}}/PLAYER`[extract(%i0,3,1,:)]`NOTE)))),%b[tone(muted,%q<week_note>)])]),,|),|),|,%,%b),tone(muted,-))
         flags: [funsyntax]
-      # %0 a key and %1 the reader's zone: the entries table, a row an entry.
+      # %0 keys, the reader's first, %1 the reader's zone and %2 the reader's key: the entries table, a row an
+      # entry. An entry of another character is numbered with its name, Bea/2, as /remove and /skip take it.
       FUN`SCREEN`ENTRIES:
         value: |-
-          setq(entries_list,u(%!/FUN`PLAYER`ENTRIES,%0))[datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2,||1|1),>[tone(strong,#)]%r[iter(%q<entries_list>,%i0,,%r)],[tone(strong,Kind)]%r[iter(%q<entries_list>,u(%!/FUN`DISPLAY`KIND,get({{calendar}}/PLAYER`%0`%i0`KIND)),,%r)],[tone(strong,When)]%r[iter(%q<entries_list>,u(%!/FUN`ENTRY`DESCRIBE,%0,%i0,%1),,%r)],[tone(strong,Note)]%r[iter(%q<entries_list>,firstof(get({{calendar}}/PLAYER`%0`%i0`NOTE),tone(muted,-)),,%r)])]
+          setq(entries_list,u(%!/FUN`KEYS`ENTRIES,%0))[datacolumns(u(%!/FUN`DISPLAY`TABLE,1|2,||1|1),>[tone(strong,#)]%r[iter(%q<entries_list>,u(%!/FUN`ENTRY`LABEL,first(%i0,`),last(%i0,`),%2),,%r)],[tone(strong,Kind)]%r[iter(%q<entries_list>,u(%!/FUN`DISPLAY`KIND,get({{calendar}}/PLAYER`%i0`KIND)),,%r)],[tone(strong,When)]%r[iter(%q<entries_list>,u(%!/FUN`ENTRY`DESCRIBE,first(%i0,`),last(%i0,`),%1),,%r)],[tone(strong,Note)]%r[iter(%q<entries_list>,firstof(get({{calendar}}/PLAYER`%i0`NOTE),tone(muted,-)),,%r)])]
         flags: [funsyntax]
-      # +avail: the reader's entries and their week.
+      # %0 a key, %1 an entry and %2 the reader's key: how the reader names the entry, 2 for their own and Bea/2
+      # for another character's.
+      FUN`ENTRY`LABEL:
+        value: |-
+          if(strmatch(%0,%2),%1,[name(get({{calendar}}/PLAYER`%0))]/%1)
+        flags: [funsyntax]
+      # +avail: the entries of every character on the reader's account, the reader's first, and their week
+      # together: busy on one is busy on all.
       FUN`SCREEN`MINE:
         value: |-
-          setq(week_key,%q<viewer_key>)[box([u(%!/FUN`SCREEN`ENTRIES,%q<viewer_key>,%q<viewer_zone>)]%r[rule(The week ahead)]%r[u(%!/FUN`SCREEN`WEEK,%q<viewer_key>,%q<viewer_today>,%q<viewer_zone>,7,1)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/busy and +avail/free add one · +avail/remove <n> takes one away · +avail/find <names> finds a time)],Your availability,,u(%!/FUN`DISPLAY`FRAME))]
+          setq(mine_keys,%q<viewer_key> [remove(%q<viewer_keys>,%q<viewer_key>)])[box([u(%!/FUN`SCREEN`ENTRIES,%q<mine_keys>,%q<viewer_zone>,%q<viewer_key>)]%r[rule(The week ahead)]%r[u(%!/FUN`SCREEN`WEEK,%q<mine_keys>,%q<viewer_today>,%q<viewer_zone>,7,1)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/busy and +avail/free add one · +avail/remove <n> takes one away · +avail/find <names> finds a time)],Your availability,,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
-      # +avail <name>: their week, without notes, in the reader's zone.
+      # +avail <name>: their week, without notes, in the reader's zone, with the characters they are known to be
+      # together with.
       FUN`SCREEN`OTHER:
         value: |-
-          setq(week_key,%q<target_key>)[box([u(%!/FUN`SCREEN`WEEK,%q<target_key>,%q<viewer_today>,%q<viewer_zone>,7,0)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/find [name(%q<target>)] finds a time you are both free)],Availability: [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))]
+          box([u(%!/FUN`SCREEN`WEEK,%q<target_key>,%q<viewer_today>,%q<viewer_zone>,7,0)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/find [name(%q<target>)] finds a time you are both free)][if(gt(words(%q<target_together>),1),%r[tone(muted,Counts [itemize(iter(remove(%q<target_together>,%q<target>),name(%i0),,|),|)] too%, listed as [name(%q<target>)]'s.)])],Availability: [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       # %0 the runs, start:end, %1 the players, %2 the reader's zone, %3 the length asked for, %4 the title: the free
       # times as a table, and who was counted.
@@ -768,22 +810,23 @@ objects:
         value: |-
           if(strmatch(timefmt($Y$m$d,%0,%2),timefmt($Y$m$d,%1,%2)),timefmt($H:$M,%1,%2),timefmt($a $d $b $H:$M,%1,%2))
         flags: [funsyntax]
-      # Who was counted and who set nothing, then what each FILTER`AVAIL`FIND`<name> on this object adds: another
+      # Who was counted and who set nothing (the reader counting every character on their account), then what each FILTER`AVAIL`FIND`<name> on this object adds: another
       # package's filter takes %0 the footer so far and %1 the runs, start:end, and returns the footer
       # (scene-availability adds the line that books the first time as a scene).
       FUN`SCREEN`FIND`FOOT:
         value: |-
-          setq(find_foot,tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`PLAYER`ENTRIES,u(%!/FUN`KEY,%i0)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])])[null(iter(lattr(%!/FILTER`AVAIL`FIND`*),setq(find_foot,u(%!/%i0,%q<find_foot>,%0))))]%q<find_foot>
+          setq(find_foot,tone(muted,For [itemize(iter(%1,name(%i0),,|),|)] · at least [u(%!/FUN`DISPLAY`LENGTH,%3)] · times in %2)[if(words(setr(find_unset,squish(iter(%1,if(not(words(u(%!/FUN`KEYS`ENTRIES,u(%!/FUN`KEYS`OF,%i0,%q<viewer_chars>)))),%i0))))),%r[tone(muted,[itemize(iter(%q<find_unset>,name(%i0),,|),|)] set no times%, so count as free throughout.)])])[null(iter(lattr(%!/FILTER`AVAIL`FIND`*),setq(find_foot,u(%!/%i0,%q<find_foot>,%0))))]%q<find_foot>
         flags: [funsyntax]
 
       # ---- show -------------------------------------------------------------------------
       INC`SHOW`MINE:
         value: |-
-          @assert words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>))=@pemit %#=notice(AVAIL,You have set no times. +avail/busy and +avail/free add them%, such as +avail/busy weekdays 9:00-17:00=Work.); @pemit %#=u(%!/FUN`SCREEN`MINE)
+          @assert words(u(%!/FUN`KEYS`ENTRIES,%q<viewer_keys>))=@pemit %#=notice(AVAIL,You have set no times. +avail/busy and +avail/free add them%, such as +avail/busy weekdays 9:00-17:00=Work.); @pemit %#=u(%!/FUN`SCREEN`MINE)
         flags: [cmdsyntax]
       INC`SHOW`OTHER:
         value: |-
-          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(AVAIL,There is no player called '%q<cmd_argument>'.,warn); think setq(target_key,u(%!/FUN`KEY,%q<target>)); @assert words(u(%!/FUN`PLAYER`ENTRIES,%q<target_key>))=@pemit %#=notice(AVAIL,[name(%q<target>)] has set no times%, so they count as free at any time.); @pemit %#=u(%!/FUN`SCREEN`OTHER)
+          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(AVAIL,There is no player called '%q<cmd_argument>'.,warn); think setqm(target_together,u(%!/FUN`TOGETHER,%q<target>),
+          target_key,iter(%q<target_together>,u(%!/FUN`KEY,%i0))); @assert words(u(%!/FUN`KEYS`ENTRIES,%q<target_key>))=@pemit %#=notice(AVAIL,[name(%q<target>)] has set no times%, so they count as free at any time.); @pemit %#=u(%!/FUN`SCREEN`OTHER)
         flags: [cmdsyntax]
 
       # ---- entries ------------------------------------------------------------------
@@ -797,29 +840,34 @@ objects:
         value: |-
           &PLAYER`%q<viewer_key> {{calendar}}=%:; &PLAYER`%q<viewer_key>`%q<entry_number> {{calendar}}=%q<cmd_switch>; &PLAYER`%q<viewer_key>`%q<entry_number>`KIND {{calendar}}=%q<cmd_switch>; &PLAYER`%q<viewer_key>`%q<entry_number>`REPEAT {{calendar}}=%q<read_repeat>; @if gt(%q<read_every>,1)={&PLAYER`%q<viewer_key>`%q<entry_number>`EVERY {{calendar}}=%q<read_every>}; @if strlen(%q<read_days>)={&PLAYER`%q<viewer_key>`%q<entry_number>`DAYS {{calendar}}=%q<read_days>}; &PLAYER`%q<viewer_key>`%q<entry_number>`DATE {{calendar}}=u(%!/FUN`DAY`DATE,%q<read_date>); &PLAYER`%q<viewer_key>`%q<entry_number>`TIME {{calendar}}=u(%!/FUN`DISPLAY`CLOCK,%q<read_minute>); &PLAYER`%q<viewer_key>`%q<entry_number>`MINUTES {{calendar}}=%q<read_length>; @if strlen(%q<read_until>)={&PLAYER`%q<viewer_key>`%q<entry_number>`UNTIL {{calendar}}=u(%!/FUN`DAY`DATE,%q<read_until>)}; &PLAYER`%q<viewer_key>`%q<entry_number>`ZONE {{calendar}}=%q<viewer_zone>; @if strlen(%q<cmd_right>)={&PLAYER`%q<viewer_key>`%q<entry_number>`NOTE {{calendar}}=%q<cmd_right>}
         flags: [cmdsyntax]
-      # Sets entry_number from what was typed, when it names one of the reader's entries.
+      # Sets entry_key, entry_number and entry_label from what was typed, when it names one of the reader's entries:
+      # <n> for the reader's own, <character>/<n> for one of another character on their account.
       INC`ENTRY`FIND:
         value: |-
-          think setq(entry_number,firstof(%q<cmd_left>,%q<cmd_argument>)); @assert strlen(%q<entry_number>)=@pemit %#=notice(AVAIL,Which entry? +avail lists yours with their numbers.,warn); @assert cand(isint(%q<entry_number>),hasattr({{calendar}},PLAYER`%q<viewer_key>`%q<entry_number>))=@pemit %#=notice(AVAIL,You have no entry %q<entry_number>. +avail lists yours.,warn)
+          think setqm(entry_label,firstof(%q<cmd_left>,%q<cmd_argument>),
+          entry_number,last(%q<entry_label>,/),
+          entry_owner,if(strmatch(%q<entry_label>,*/*),left(%q<entry_label>,sub(strlen(%q<entry_label>),inc(strlen(%q<entry_number>))))),
+          entry_owner_objid,if(strlen(%q<entry_owner>),u(%!/FUN`PLAYER,%q<entry_owner>),%:),
+          entry_key,u(%!/FUN`KEY,%q<entry_owner_objid>)); @assert strlen(%q<entry_number>)=@pemit %#=notice(AVAIL,Which entry? +avail lists yours with their numbers.,warn); @assert member(%q<viewer_chars>,%q<entry_owner_objid>)=@pemit %#=notice(AVAIL,'%q<entry_owner>' is not one of your characters.,warn); @assert cand(isint(%q<entry_number>),hasattr({{calendar}},PLAYER`%q<entry_key>`%q<entry_number>))=@pemit %#=notice(AVAIL,You have no entry %q<entry_label>. +avail lists yours.,warn)
         flags: [cmdsyntax]
       INC`ENTRY`REMOVE:
         value: |-
-          @include %!/INC`ENTRY`FIND; think setq(entry_words,u(%!/FUN`ENTRY`DESCRIBE,%q<viewer_key>,%q<entry_number>,%q<viewer_zone>)); @wipe {{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>; @if not(words(u(%!/FUN`PLAYER`ENTRIES,%q<viewer_key>)))={&PLAYER`%q<viewer_key> {{calendar}}}; @pemit %#=notice(AVAIL,Removed %q<entry_number>: %q<entry_words>.,ok)
+          @include %!/INC`ENTRY`FIND; think setq(entry_words,u(%!/FUN`ENTRY`DESCRIBE,%q<entry_key>,%q<entry_number>,%q<viewer_zone>)); @wipe {{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>; @if not(words(u(%!/FUN`PLAYER`ENTRIES,%q<entry_key>)))={&PLAYER`%q<entry_key> {{calendar}}}; @pemit %#=notice(AVAIL,Removed %q<entry_label>: %q<entry_words>.,ok)
         flags: [cmdsyntax]
-      # +avail/skip <n>=<date>: one date left out of a repeating entry.
+      # +avail/skip [<character>/]<n>=<date>: one date left out of a repeating entry.
       INC`ENTRY`SKIP:
         value: |-
-          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert not(member(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>))=@pemit %#=notice(AVAIL,Entry %q<entry_number> already leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); @assert u(%!/FUN`ROOM,1)=@pemit %#=notice(AVAIL,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &PLAYER`%q<viewer_key>`%q<entry_number>`SKIP {{calendar}}=sort(setunion(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>)); @pemit %#=notice(AVAIL,Entry %q<entry_number> leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,ok)
+          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert not(member(get({{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>`SKIP),%q<skip_date>))=@pemit %#=notice(AVAIL,Entry %q<entry_label> already leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); @assert u(%!/FUN`ROOM,1)=@pemit %#=notice(AVAIL,There is no room to record that: an object holds at most [config(max_attrs_per_obj)] attributes.,warn); &PLAYER`%q<entry_key>`%q<entry_number>`SKIP {{calendar}}=sort(setunion(get({{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>`SKIP),%q<skip_date>)); @pemit %#=notice(AVAIL,Entry %q<entry_label> leaves out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,ok)
         flags: [cmdsyntax]
-      # +avail/unskip <n>=<date>.
+      # +avail/unskip [<character>/]<n>=<date>.
       INC`ENTRY`UNSKIP:
         value: |-
-          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert member(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>)=@pemit %#=notice(AVAIL,Entry %q<entry_number> does not leave out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); think setq(skip_left,setdiff(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`SKIP),%q<skip_date>)); @if words(%q<skip_left>)={&PLAYER`%q<viewer_key>`%q<entry_number>`SKIP {{calendar}}=%q<skip_left>},{&PLAYER`%q<viewer_key>`%q<entry_number>`SKIP {{calendar}}}; @pemit %#=notice(AVAIL,Entry %q<entry_number> takes in [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)] again.,ok)
+          @include %!/INC`ENTRY`FIND; @include %!/INC`ENTRY`SKIPDATE; @assert member(get({{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>`SKIP),%q<skip_date>)=@pemit %#=notice(AVAIL,Entry %q<entry_label> does not leave out [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)].,warn); think setq(skip_left,setdiff(get({{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>`SKIP),%q<skip_date>)); @if words(%q<skip_left>)={&PLAYER`%q<entry_key>`%q<entry_number>`SKIP {{calendar}}=%q<skip_left>},{&PLAYER`%q<entry_key>`%q<entry_number>`SKIP {{calendar}}}; @pemit %#=notice(AVAIL,Entry %q<entry_label> takes in [u(%!/FUN`DISPLAY`DAY,%q<skip_day>,1)] again.,ok)
         flags: [cmdsyntax]
       # The date after =, for /skip and /unskip: sets skip_day and skip_date.
       INC`ENTRY`SKIPDATE:
         value: |-
-          @assert comp(get({{calendar}}/PLAYER`%q<viewer_key>`%q<entry_number>`REPEAT),once)=@pemit %#=notice(AVAIL,Entry %q<entry_number> happens once. +avail/remove %q<entry_number> takes it away.,warn); think setq(skip_day,case(lcstr(%q<cmd_right>),today,%q<viewer_today>,tomorrow,inc(%q<viewer_today>),u(%!/FUN`DAY`FROMDATE,%q<cmd_right>))); @assert strlen(%q<skip_day>)=@pemit %#=notice(AVAIL,Give the date after =%, written 2026-10-20.,warn); think setq(skip_date,u(%!/FUN`DAY`DATE,%q<skip_day>))
+          @assert comp(get({{calendar}}/PLAYER`%q<entry_key>`%q<entry_number>`REPEAT),once)=@pemit %#=notice(AVAIL,Entry %q<entry_label> happens once. +avail/remove %q<entry_label> takes it away.,warn); think setq(skip_day,case(lcstr(%q<cmd_right>),today,%q<viewer_today>,tomorrow,inc(%q<viewer_today>),u(%!/FUN`DAY`FROMDATE,%q<cmd_right>))); @assert strlen(%q<skip_day>)=@pemit %#=notice(AVAIL,Give the date after =%, written 2026-10-20.,warn); think setq(skip_date,u(%!/FUN`DAY`DATE,%q<skip_day>))
         flags: [cmdsyntax]
       INC`ENTRY`CLEAR:
         value: |-
@@ -833,13 +881,13 @@ objects:
           @assert strlen(%q<cmd_left>)=@pemit %#=notice(AVAIL,Name the players to find a time with%, such as +avail/find Ann Bob=2h.,warn); think setq(find_names,squish(edit(%q<cmd_left>,chr(44),%b))); think setq(find_missing,squish(iter(%q<find_names>,if(not(strlen(u(%!/FUN`PLAYER,%i0))),%i0)))); @assert not(words(%q<find_missing>))=@pemit %#=notice(AVAIL,There is no player called [itemize(iter(%q<find_missing>,'%i0',,|),|,or)].,warn); @include/args %!/INC`FIND`RUN=players,setunion(%:,iter(%q<find_names>,u(%!/FUN`PLAYER,%i0))),title,Free times
         flags: [cmdsyntax]
       # %<players> objids and %<title>: the runs they are all free in from the next slot, at least the length typed
-      # after = or the game's.
+      # after = or the game's. The reader is free only when every character on their account is.
       INC`FIND`RUN:
         value: |-
           @assert lte(words(%<players>),u(%!/FUN`CONFIG,FIND-PLAYERS))=@pemit %#=notice(AVAIL,Find a time for [u(%!/FUN`CONFIG,FIND-PLAYERS)] players at most%, you included.,warn); think setq(find_length,if(strlen(%q<cmd_right>),u(%!/FUN`READ`LENGTH,lcstr(%q<cmd_right>)),u(%!/FUN`CONFIG,FIND-LENGTH))); think setqm(find_least,get(%!/DATA`CONFIG`FIND-LENGTH`MIN),
           find_most,get(%!/DATA`CONFIG`FIND-LENGTH`MAX)); @assert cand(isint(%q<find_length>),gte(%q<find_length>,%q<find_least>),lte(%q<find_length>,%q<find_most>))=@pemit %#=notice(AVAIL,Give a length from [u(%!/FUN`DISPLAY`LENGTH,%q<find_least>)] to [u(%!/FUN`DISPLAY`LENGTH,%q<find_most>)] after =%, such as 2h or 90m.,warn); think setqm(find_step,u(%!/FUN`CONFIG`STEP),
           find_from,u(%!/FUN`FIND`START,%q<now>),
-          find_slots,div(mul(u(%!/FUN`CONFIG,FIND-DAYS),86400),%q<find_step>)); @pemit %#=u(%!/FUN`SCREEN`FIND,u(%!/FUN`FIND`RUNS,%<players>,%q<find_from>,%q<find_slots>,div(add(%q<find_length>,dec(%q<find_step>)),%q<find_step>)),%<players>,%q<viewer_zone>,%q<find_length>,%<title>)
+          find_slots,div(mul(u(%!/FUN`CONFIG,FIND-DAYS),86400),%q<find_step>)); @pemit %#=u(%!/FUN`SCREEN`FIND,u(%!/FUN`FIND`RUNS,%<players>,%q<find_from>,%q<find_slots>,div(add(%q<find_length>,dec(%q<find_step>)),%q<find_step>),%q<viewer_chars>),%<players>,%q<viewer_zone>,%q<find_length>,%<title>)
         flags: [cmdsyntax]
 
       # ---- lifecycle ------------------------------------------------------------
@@ -888,12 +936,12 @@ objects:
       HELP`AVAIL: |-
         `+avail` keeps the times your character is busy and the times you are free to play, and finds a time a group of players is all free.
 
-        - `+avail` shows your entries, numbered, and your week ahead.
+        - `+avail` shows your entries, numbered, and your week ahead. When your account has other characters, their entries are listed too, numbered with their names, and the week counts them all: busy on one is busy on every one.
         - `+avail <name>` shows another character's week: when they are free and when they are busy. Their notes stay theirs.
         - `+avail/busy <when>\[=<note>\]` adds a time you are busy: `+avail/busy weekdays 9:00-17:00=Work`.
         - `+avail/free <when>\[=<note>\]` adds a time you are free to play: `+avail/free sat sun 18:00-23:00`.
-        - `+avail/remove <n>` takes entry `<n>` away. `+avail/clear` takes them all.
-        - `+avail/skip <n>=<date>` leaves one date out of a repeating entry, a week you are away: `+avail/skip 1=2026-10-20`. `+avail/unskip <n>=<date>` puts it back.
+        - `+avail/remove <n>` takes entry `<n>` away; `+avail/remove Bea/2` takes entry 2 of Bea, another character on your account. `+avail/clear` takes all of this character's.
+        - `+avail/skip <n>=<date>` leaves one date out of a repeating entry, a week you are away: `+avail/skip 1=2026-10-20`. `+avail/unskip <n>=<date>` puts it back. Both take `Bea/2` too.
         - `+avail/find <names>\[=<length>\]` lists the times you and they are all free: `+avail/find Ann Bob=2h`.
 
         A `<when>` can be a date, a range of dates, or a pattern that repeats, as an office calendar's can: every weekday, every other Tuesday, the last Friday of the month. See `+help avail when`.
@@ -908,7 +956,7 @@ objects:
 
         Output: `\[AVAIL\] Done: Added 3, busy: Every 2 weeks on Tue, 20:00-22:00.`
 
-        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours.
+        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours. Others see each of your characters on its own, with only its own entries, so nothing they see ties your characters together, unless you have listed them in public as yours.
       HELP`AVAIL`WHEN: |-
         The `<when>` after `+avail/busy` and `+avail/free` is words in any order. Capitals and commas do not matter.
 
@@ -948,6 +996,8 @@ objects:
 
         Each line is a free time, in your zone: the day, when it starts, when it ends, and how long it lasts. A player who has set no times counts as free throughout, and is named under the list.
 
+        You count as free only when every character on your account is: a time one of them is busy is left out. The others named count with their own entries.
+
         For example:
 
         `+avail/find Bob Cleo=3h`
@@ -981,10 +1031,10 @@ objects:
         Other code reads availability through functions on the Availability object. It is WIZARD, so only privileged code may `u\(\)` them, such as the Scene Logger when scene-availability is installed.
 
         - `` u\(<Availability>/FUN`FREE`AT,<player>,<start>,<end>\) ``: `1` when the player is free from `<start>` to `<end>`, in seconds, `0` when not, nothing when they have set no times.
-        - `` u\(<Availability>/FUN`FIND`RUNS,<players>,<from>,<steps>,<least steps>\) ``: the times from `<from>` when every player is free for at least so many steps, each `<start>:<end>` in seconds.
+        - `` u\(<Availability>/FUN`FIND`RUNS,<players>,<from>,<steps>,<least steps>\[,<characters>\]\) ``: the times from `<from>` when every player is free for at least so many steps, each `<start>:<end>` in seconds. A player among `<characters>`, the characters of one account, is free only when all of them are.
         - `` u\(<Availability>/FUN`ENTRY`SPANS,<key>,<n>,<from>,<to>\) ``: when one entry happens between two moments, each `<start>:<end>`. `` u\(<Availability>/FUN`KEY,<player>\) `` is the key.
 
-        Another package adds to `+avail` on the Availability object: a `` DATA`ROUTE`<SWITCH> `` leaf naming an `` INC` `` routine adds a switch, and a `` FILTER`AVAIL`FIND`<name> `` adds to the footer under `+avail/find`'s times, given the footer so far and the times.
+        Another package adds to `+avail` on the Availability object: a `` DATA`ROUTE`<SWITCH> `` leaf naming an `` INC` `` routine adds a switch, a `` FILTER`AVAIL`FIND`<name> `` adds to the footer under `+avail/find`'s times, given the footer so far and the times, and a `` FILTER`AVAIL`TOGETHER`<name> ``, given the characters so far and a player, returns the characters anyone may know are that player's, which then count as one.
 
         For example, for a player busy on weekdays from 9:00 to 17:00 in UTC:
 

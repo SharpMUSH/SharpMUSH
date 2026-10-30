@@ -746,6 +746,10 @@
       <Link>BundledPackages\availability-config.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.availability-config.package.yaml</LogicalName>
     </EmbeddedResource>
+    <EmbeddedResource Include="..\examples\packages\availability-alts\package.yaml">
+      <Link>BundledPackages\availability-alts.package.yaml</Link>
+      <LogicalName>SharpMUSH.Server.BundledPackages.availability-alts.package.yaml</LogicalName>
+    </EmbeddedResource>
     <EmbeddedResource Include="..\examples\packages\scene-availability\package.yaml">
       <Link>BundledPackages\scene-availability.package.yaml</Link>
       <LogicalName>SharpMUSH.Server.BundledPackages.scene-availability.package.yaml</LogicalName>
