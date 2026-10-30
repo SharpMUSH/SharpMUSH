@@ -18,6 +18,12 @@ public class MuxCommandTests : ServerTestBase
 		return (name, await Eval($"create({name})"));
 	}
 
+	private static IDisposable MuxQuiet()
+		=> TestOptionsOverride.Scope(options => options with
+		{
+			Compatibility = options.Compatibility with { MuxQuiet = true }
+		});
+
 	[Test]
 	public async Task SetQuietLeavesOutTheConfirmation()
 	{
@@ -74,10 +80,31 @@ public class MuxCommandTests : ServerTestBase
 		await Assert.That(heard).IsEquivalentTo([$"{marker}-1", $"{marker}-after"], TUnit.Assertions.Enums.CollectionOrdering.Matching);
 	}
 
+	/// <summary>Without mux_quiet, drop/quiet and get/quiet leave out the messages and run the action.</summary>
+	[Test]
+	public async Task DropQuietRunsOnlyTheAction()
+	{
+		var (_, thing) = await CreateThing("MuxDrop");
+		var message = TestIsolationHelpers.GenerateUniqueName("MuxDropMsg");
+		var action = TestIsolationHelpers.GenerateUniqueName("MuxDropAct");
+		await Eval($"[attrib_set({thing}/DROP,{message})][attrib_set({thing}/SUCCESS,{message})][attrib_set({thing}/ADROP,lit(@pemit %#={action}))]");
+		var before = Notifications.CountFor(God);
+
+		await Cmd($"drop/quiet {thing}");
+
+		await Notifications.WaitForAsync(God, action, startIndex: before);
+		await Assert.That(Notifications.For(God).Skip(before).Any(line => line.Contains(message))).IsFalse();
+
+		await Cmd($"get/quiet {thing}");
+		await Assert.That(await Eval($"loc({thing})")).IsEqualTo(God.ToString());
+		await Assert.That(Notifications.For(God).Skip(before).Any(line => line.Contains(message))).IsFalse();
+	}
+
 	/// <summary>TinyMUX's drop/quiet and get/quiet: the dropper still sees its message; the o-message and action are left out.</summary>
 	[Test]
 	public async Task DropAndGetQuietKeepYourMessageAndLeaveOutTheAction()
 	{
+		using var _ = MuxQuiet();
 		var (_, thing) = await CreateThing("MuxDrop");
 		var dropped = TestIsolationHelpers.GenerateUniqueName("MuxDropMsg");
 		var taken = TestIsolationHelpers.GenerateUniqueName("MuxTakeMsg");
@@ -100,6 +127,7 @@ public class MuxCommandTests : ServerTestBase
 	[Test]
 	public async Task DropQuietOnSomethingYouDoNotControlRunsInFull()
 	{
+		using var _ = MuxQuiet();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxDropOther");
 		var (_, thing) = await CreateThing("MuxDropOther");
@@ -117,6 +145,7 @@ public class MuxCommandTests : ServerTestBase
 	[Test]
 	public async Task GiveQuietLeavesOutTheGivenNotices()
 	{
+		using var _ = MuxQuiet();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxGive");
 		var (name, thing) = await CreateThing("MuxGift");
@@ -181,6 +210,28 @@ public class MuxCommandTests : ServerTestBase
 		await Assert.That(Notifications.For(God).Any(line => line.Contains(marker))).IsFalse();
 	}
 
+	/// <summary>Without mux_quiet, enter/quiet leaves out @move and @omove and still runs @amove.</summary>
+	[Test]
+	public async Task EnterQuietStillRunsTheMoveAction()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxEnter");
+		var box = TestIsolationHelpers.GenerateUniqueName("MuxBox");
+		var message = TestIsolationHelpers.GenerateUniqueName("MuxMoveMsg");
+		var action = TestIsolationHelpers.GenerateUniqueName("MuxMoveAct");
+		await CmdAs(player.DbRef, player.Handle, $"@create {box}");
+		await CmdAs(player.DbRef, player.Handle, $"drop {box}");
+		await CmdAs(player.DbRef, player.Handle, $"&MOVE me={message}");
+		await CmdAs(player.DbRef, player.Handle, $"&AMOVE me=@pemit me={action}");
+		var before = Notifications.CountFor(player.DbRef);
+
+		await CmdAs(player.DbRef, player.Handle, $"enter/quiet {box}");
+
+		await Notifications.WaitForAsync(player.DbRef, action, startIndex: before);
+		await Assert.That(await EvalAs(player.DbRef, "name(loc(me))")).IsEqualTo(box);
+		await Assert.That(Notifications.For(player.DbRef).Skip(before).Any(line => line.Contains(message))).IsFalse();
+	}
+
 	/// <summary>
 	/// TinyMUX's enter/quiet and leave/quiet hush that side of the move: the container's ENTER or LEAVE message
 	/// is left out and its action still runs, and the mover's own MOVE triad runs as always.
@@ -188,6 +239,7 @@ public class MuxCommandTests : ServerTestBase
 	[Test]
 	public async Task EnterAndLeaveQuietHushTheirSideOfTheMove()
 	{
+		using var _ = MuxQuiet();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxEnter");
 		var box = TestIsolationHelpers.GenerateUniqueName("MuxBox");
@@ -220,6 +272,7 @@ public class MuxCommandTests : ServerTestBase
 	[Test]
 	public async Task GotoQuietLeavesOutTheExitsActionsOnlyThroughYourOwnExit()
 	{
+		using var _ = MuxQuiet();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxGoto");
 		var name = TestIsolationHelpers.GenerateUniqueName("MuxGoto");
@@ -251,6 +304,7 @@ public class MuxCommandTests : ServerTestBase
 	[Test]
 	public async Task TeleportQuietKeepsTheMoveTriad()
 	{
+		using var _ = MuxQuiet();
 		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
 			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxTel");
 		var name = TestIsolationHelpers.GenerateUniqueName("MuxTel");
@@ -266,6 +320,28 @@ public class MuxCommandTests : ServerTestBase
 
 		await Assert.That(await EvalAs(player.DbRef, "num(loc(me))")).IsEqualTo(room);
 		await Assert.That(Notifications.For(player.DbRef).Skip(before).Any(line => line.Contains(tported))).IsFalse();
+	}
+
+	/// <summary>Without mux_quiet, @teleport/quiet is @teleport/silent: the teleport messages and @move are left out.</summary>
+	[Test]
+	public async Task TeleportQuietIsSilentWithoutMuxQuiet()
+	{
+		var player = await TestIsolationHelpers.CreateTestPlayerWithHandleAsync(
+			WebAppFactoryArg.Services, Mediator, ConnectionService, "MuxTelSilent");
+		var name = TestIsolationHelpers.GenerateUniqueName("MuxTelSilent");
+		var tported = TestIsolationHelpers.GenerateUniqueName("MuxTelSilentTport");
+		var moved = TestIsolationHelpers.GenerateUniqueName("MuxTelSilentMove");
+		var room = await Eval($"num(dig({name}))");
+		await CmdAs(player.DbRef, player.Handle, $"&TPORT me={tported}");
+		await CmdAs(player.DbRef, player.Handle, $"&MOVE me={moved}");
+		var before = Notifications.CountFor(player.DbRef);
+
+		await Cmd($"@teleport/quiet {player.DbRef}={room}");
+		await WebAppFactoryArg.QueueBarrierAsync();
+
+		var heard = Notifications.For(player.DbRef).Skip(before).ToArray();
+		await Assert.That(await EvalAs(player.DbRef, "num(loc(me))")).IsEqualTo(room);
+		await Assert.That(heard.Any(line => line.Contains(tported) || line.Contains(moved))).IsFalse();
 	}
 
 	[Test]

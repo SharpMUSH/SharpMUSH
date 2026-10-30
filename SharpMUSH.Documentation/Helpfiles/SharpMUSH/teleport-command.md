@@ -27,7 +27,7 @@ If the `/list` switch is given, each object specified in `<object-list>` will be
 
 Admin and those with the tport_anything power can teleport an object even if they don't control it. Those with tport_anywhere can teleport objects to any destination. You can also teleport an exit to any room if you have the Open_Anywhere power.
 
-`/silent` leaves out the @tport and @otport messages, and the @move triad. `/quiet`, as TinyMUX has it, leaves out the @tport triad and @oxtport, and the messages of leaving and arriving, but runs the @move triad.
+`/silent` leaves out the @tport and @otport messages. `/quiet` is the same switch, as TinyMUX spells it.
 
 Privileged players who teleport a player to another player send them to the location of the target, unless the `/inside` switch is used, in which case they are sent to the inventory of the target.
 
@@ -40,6 +40,8 @@ Teleportation from a room can be stopped by setting the NO_TEL flag. Royalty and
 Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<room>` is an exit or the `/silent` switch is given. With @oxtport, %0 is the dbref of the object causing the dbref. The others, in addition to %0, get the former location of the object that was teleported passed in %1.
 
 `/silent` suppresses exactly two things: the @tport/@otport/@atport (and @oxtport) attributes above, and the @move/@omove/@amove attributes the move itself would trigger. It does not suppress the @enter/@oenter/@aenter and @leave/@oleave/@aleave attributes, the arrival and departure messages, or the automatic look at the destination.
+
+With the `mux_quiet` @config option on, `/quiet` does what TinyMUX's does instead: it leaves out the @tport triad and @oxtport, and the messages of leaving and arriving, but runs the @move triad.
 
 As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
 

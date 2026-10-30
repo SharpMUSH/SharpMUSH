@@ -2481,7 +2481,7 @@ Drops `<object>`, if you are presently carrying it. If the room the object is dr
 
 In order to drop an object, you must pass it's Drop lock and your location's DropIn lock.
 
-`drop/quiet` leaves out @odrop and @adrop when you control the object; you still see the drop message.
+`drop/quiet` leaves out the drop message and @odrop; @adrop still runs. With the `mux_quiet` @config option on, it leaves out @odrop and @adrop instead, and only when you control the object; you still see the drop message.
 
 
 ::: seealso
@@ -2497,7 +2497,7 @@ Used to enter a thing or player. You can only enter an object if you own it or i
 
 `enter` outputs the dbref of the object you enter.
 
-`enter/quiet` leaves out the object's @enter and @oenter messages, and the @oxleave of where you were, when you control the object; its @aenter still runs.
+`enter/quiet` leaves out your @move and @omove messages. With the `mux_quiet` @config option on, it leaves out the object's @enter and @oenter messages and the @oxleave of where you were instead, when you control the object; its @aenter still runs.
 
 Insides of objects are best used for vehicles, or storage spaces when you don't have a home. You can describe the interior of an object differently from its exterior by using @idescribe.
 
@@ -2593,7 +2593,7 @@ To get an object from someone else's inventory, the possessive_get @config optio
 
 'take' is usually an alias for the 'get' command.
 
-`get/quiet` leaves out @osuccess and @asuccess when you control the object; you still see the success message.
+`get/quiet` leaves out the success message and @osuccess; @asuccess still runs. With the `mux_quiet` @config option on, it leaves out @osuccess and @asuccess instead, and only when you control the object; you still see the success message.
 
 
 ::: seealso
@@ -2654,7 +2654,7 @@ SharpMUSH does not track money, so buy only says so, as [money()] does: "The buy
 
 SharpMUSH has no money: `give <recipient>=<number>` only answers "Money transfer will not be implemented.", and the `/silent` switch has no effect.
 
-`give/quiet`, for a wizard, leaves out the default "You gave" and "gave you" notices; GIVE, RECEIVE and the object's SUCCESS attributes still run.
+`give/quiet` leaves out your GIVE/OGIVE messages and the object's SUCCESS/OSUCCESS; the action attributes and the recipient's RECEIVE messages still run. With the `mux_quiet` @config option on, it is a wizard's switch and leaves out only the default "You gave" and "gave you" notices.
 
 This command gives an `<object>` from your inventory to `<recipient>`. The recipient must be set ENTER_OK or controlled by you, and you must pass his @lock/from. You must also pass `<object>`'s @lock/give, and `<object>` must pass `<recipient>`'s @lock/receive. When you give an object successfully, your GIVE/OGIVE/AGIVE attributes, `<recipient>`'s RECEIVE/ORECEIVE/ARECEIVE attributes, and `<object>`'s SUCCESS/ASUCCESS/OSUCCESS attributes are all triggered.
 
@@ -2683,7 +2683,7 @@ Moving outputs the dbref of the room you arrive in.
 
 'go home' is a special command that returns you to your home room/object.
 
-`goto/quiet` leaves out the exit's @osuccess, @asuccess, @odrop and @adrop when you control the exit; you still see its success and drop messages.
+`goto/quiet` leaves out the exit's success and drop messages and your @move and @omove; the action attributes still run. With the `mux_quiet` @config option on, it leaves out the exit's @osuccess, @asuccess, @odrop and @adrop instead, and only when you control the exit; you still see its success and drop messages.
 
 
 ::: seealso
@@ -2729,7 +2729,7 @@ The command leave allows you to exit an object you have enter'ed into. When you 
 
 `leave` outputs the dbref of the room you arrive in.
 
-`leave/quiet` leaves out the object's @leave and @oleave messages, and the @oxenter of where you go, when you control the object you leave; its @aleave still runs.
+`leave/quiet` leaves out your @move and @omove messages. With the `mux_quiet` @config option on, it leaves out the object's @leave and @oleave messages and the @oxenter of where you go instead, when you control the object you leave; its @aleave still runs.
 
 The NO_LEAVE flag may be enabled on some MUSHes. Objects set with this flag cannot be left. @lock/leave may also be enabled on some MUSHes, which allows you to set who can leave the object. If you fail to leave, the object's @lfail/@olfail/@alfail messages/actions will be triggered.
 

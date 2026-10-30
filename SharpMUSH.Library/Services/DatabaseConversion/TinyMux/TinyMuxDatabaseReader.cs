@@ -39,7 +39,7 @@ public static partial class TinyMuxDatabaseReader
 	/// <summary>
 	/// The options TinyMUX softcode needs. MUX tests and/or/xor numerically, cuts justified text, collates,
 	/// runs list() as a loop, reads ##/#@/#$ from the innermost loop, trims before characters and reads
-	/// non-numbers as 0, and runs trigger() and verb(); it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
+	/// non-numbers as 0, runs trigger() and verb(), and keeps TinyMUX's /quiet switches; it allows 500 levels of recursion and 32 KB values. It reads TinyMUX's names for
 	/// functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -54,6 +54,7 @@ public static partial class TinyMuxDatabaseReader
 		["tiny_math"] = true,
 		["null_eq_zero"] = true,
 		["mux_queue_functions"] = true,
+		["mux_quiet"] = true,
 		["function_recursion_limit"] = 500u,
 		["dialect"] = SoftcodeDialects.Mux.Key
 	};
@@ -761,7 +762,7 @@ public static partial class TinyMuxDatabaseReader
 			var notes = _database.ImportNotes;
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"Imported from a TinyMUX flatfile: the import turns on paren_groups, mux_logic, mux_justify, mux_collation, " +
-				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero and mux_queue_functions, and raises function_recursion_limit to 500, " +
+				"rhost_list, innermost_tokens, tiny_trim_fun, tiny_math, null_eq_zero, mux_queue_functions and mux_quiet, and raises function_recursion_limit to 500, " +
 				"as TinyMUX softcode expects."));
 			notes.Add(new ImportWarning(ImportWarningKind.Softcode,
 				"The import sets dialect to mux and gives every attribute it brings in the mux attribute flag, so that code " +
