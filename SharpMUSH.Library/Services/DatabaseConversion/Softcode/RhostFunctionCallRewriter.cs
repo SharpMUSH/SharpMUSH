@@ -100,7 +100,8 @@ public static class RhostFunctionCallRewriter
 
 	/// <summary>
 	/// lnum2(&lt;count&gt;, &lt;start&gt;[, +|-[, &lt;step&gt;]]): &lt;count&gt; numbers from &lt;start&gt;, up or down by
-	/// &lt;step&gt;, as lnum() from the first to the last. Only whole numbers written out are taken, a count of at
+	/// &lt;step&gt;, as lnum() from the first to the last; with no direction, the numbers up to
+	/// &lt;start&gt; + &lt;count&gt; - 1, &lt;step&gt; apart. Only whole numbers written out are taken, a count of at
 	/// least 1 and a start of at least 0; RhostMUSH answers anything else in ways lnum() has no form for.
 	/// Counting down stops at 0, as RhostMUSH's does.
 	/// </summary>
@@ -123,8 +124,9 @@ public static class RhostFunctionCallRewriter
 			step = Math.Max(1, step);
 		}
 
-		// Counting down stops at 0.
-		var span = (long)step * (count - 1);
+		// With no direction the step does not stretch the range: it ends at <start> + <count> - 1. Counting
+		// down stops at 0.
+		var span = direction == "" ? count - 1L : (long)step * (count - 1);
 		var last = direction == "-" ? Math.Max(first % step, first - span) : first + span;
 		if (last > int.MaxValue) return null;
 		return step == 1 ? $"lnum({first},{last})" : $"lnum({first},{last},%b,{step})";

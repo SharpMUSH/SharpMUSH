@@ -165,7 +165,7 @@ x (a,b)c
 
 ## Logical functions: `mux_logic`
 
-With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX does, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX.
+With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX and RhostMUSH do, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX and RhostMUSH.
 
 ```sharp
 > think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]

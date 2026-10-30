@@ -84,7 +84,7 @@ public static class RhostPrintfFormatter
 				// The wrap is done here, so the indent and the cell limit are too.
 				value = WordWrap(columnFormat.MaxCells > 0 && value.Length > columnFormat.MaxCells ? value.Substring(0, columnFormat.MaxCells) : value,
 					columnFormat.Width, columnFormat.Indent);
-				columnFormat = columnFormat with { Indent = default };
+				columnFormat = columnFormat with { Indent = default, MaxCells = 0 };
 			}
 
 			if (field.MultiLine && IsMultiLine(value, columnFormat)) multiLineSuppress.Add(columnFormat.SuppressBlankLast);
@@ -166,16 +166,18 @@ public static class RhostPrintfFormatter
 	/// <remarks>
 	/// With an <paramref name="indent"/>, every line after a break at a space has the indent taken off its
 	/// width, whether or not it is indented yet, as RhostMUSH counts it; after a cut, only an indented line
-	/// does. The indent's spaces start at <see cref="Indent.FromLine"/>.
+	/// does, and so does an indented line after a newline. The indent's spaces start at <see cref="Indent.FromLine"/>.
 	/// </remarks>
 	private static MarkupText WordWrap(MarkupText value, int width, Indent indent)
 	{
 		var amount = Math.Clamp(indent.Amount, 0, Math.Max(0, width - 1));
+		var firstIndented = Math.Max(1, indent.FromLine);
 		var lines = new List<MarkupText>();
 		foreach (var segment in value.Split("\n"))
 		{
 			var rest = segment;
-			var room = width;
+			// A line after a newline that will be indented has the indent taken off its width.
+			var room = lines.Count >= firstIndented ? Math.Max(1, width - amount) : width;
 			while (rest.Length > room)
 			{
 				var space = rest.Text.LastIndexOf(' ', room - 1);
@@ -198,7 +200,7 @@ public static class RhostPrintfFormatter
 
 		if (amount > 0)
 		{
-			for (var line = Math.Max(1, indent.FromLine); line < lines.Count; line++)
+			for (var line = firstIndented; line < lines.Count; line++)
 				lines[line] = MarkupText.Concat([MarkupText.Space.Repeat(amount), lines[line]]);
 		}
 

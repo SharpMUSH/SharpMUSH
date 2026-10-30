@@ -515,7 +515,7 @@ You say, "r baz"
 
   Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
 
-  As in TinyMUX, a single argument is tested on its own: `and(1)` is 1. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `and(1,abc)` is 0. See [compatibility config].
+  As in TinyMUX, a single argument is tested on its own: `and(1)` is 1. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX and RhostMUSH do, so `and(1,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -4051,7 +4051,7 @@ think objevals(me,v(DATA`TEXT))
 
   Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
 
-  As in TinyMUX, a single argument is tested on its own: `or(0)` is 0. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `or(0,abc)` is 0. See [compatibility config].
+  As in TinyMUX, a single argument is tested on its own: `or(0)` is 0. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX and RhostMUSH do, so `or(0,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -4637,7 +4637,7 @@ You say, "Turn south at the junction"
 # lrooms()
 `lrooms(<room>[, <depth>[, <all>[, <objid>]]])`
 
-  Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too.
+  Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too. With the `rhost_lrooms` @config option on, as on RhostMUSH, any depth is taken: 0 follows exits as far as they lead, a negative depth counts as 1, and at most 1,000 rooms are listed. See [compatibility config].
 
   If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order, as objids when `<objid>` is true.
 
@@ -6581,7 +6581,7 @@ think words(1 2%b%b3, %b)
 
   Takes one or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
 
-  With the `mux_logic` @config option on, xor() is TinyMUX's: each argument is tested by its leading signed integer, and the answer is 1 when an odd number of them are true, so `xor(1,1,1)` is 1. See [compatibility config].
+  With the `mux_logic` @config option on, xor() is TinyMUX's and RhostMUSH's: each argument is tested by its leading signed integer, and the answer is 1 when an odd number of them are true, so `xor(1,1,1)` is 1. See [compatibility config].
 
 
 ::: seealso

@@ -159,8 +159,9 @@ public class BitwiseFunctionUnitTests
 	}
 
 	/// <summary>
-	/// Each answer is what TinyMUX 2.14 gave for the same call; RhostMUSH 5.13 agrees on all but the invalid digits.
-	/// A negative number in radix 63 or 64 is RhostMUSH's: it writes the sign, where TinyMUX refuses.
+	/// Each answer is what TinyMUX 2.14 gave for the same call, except a negative number in radix 63 or 64, which
+	/// TinyMUX refuses: that answer is RhostMUSH 5.13's, which writes the sign. RhostMUSH agrees on the rest but the
+	/// invalid digits.
 	/// </summary>
 	[Test]
 	[Arguments("pack(255,16)", "FF")]

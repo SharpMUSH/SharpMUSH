@@ -17,6 +17,7 @@ public class RhostHelpExampleTests : ServerTestBase
 		Compatibility = configured.Compatibility with
 		{
 			ParenGroups = true,
+			MuxLogic = true,
 			TinyTrimFun = true,
 			RhostEdit = true,
 			RhostLattr = true,
@@ -259,6 +260,8 @@ public class RhostHelpExampleTests : ServerTestBase
 	[Arguments("lnum2(10,5,+,2)", "5 7 9 11 13 15 17 19 21 23")]
 	[Arguments("lnum2(10,20,-)", "20 19 18 17 16 15 14 13 12 11")]
 	[Arguments("[xnor(1,0)] @ [xnor(0,0)] @ [xnor(0,1)] @ [xnor(1,1)]", "0 @ 1 @ 0 @ 1")]
+	[Arguments("[xnor(abc,1,1)] [xnor(2abc,1)] [and(1,abc)] [xor(1,1,1)]", "0 1 0 1")]
+	[Arguments("lnum2(5,3,,2)", "3 5 7")]
 	[Arguments("andflag(me,ansi,terse,going)", "0")]
 	[Arguments("orflag(me,slave,fubar,dark,unf)", "0")]
 	[Arguments("moneyname()", "Penny")]

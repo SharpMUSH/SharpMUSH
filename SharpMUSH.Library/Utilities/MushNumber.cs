@@ -27,21 +27,18 @@ public static class MushNumber
 			: value.ToString(Fixed(), CultureInfo.InvariantCulture));
 
 	/// <summary>
-	/// Whether <paramref name="value"/> ends in a 5 just past the precision. Only values a double holds to that
-	/// digit qualify, so the double's rounding is the one C would make.
+	/// Whether <paramref name="value"/> ends in a 5 just past the precision. A value too large to scale has no
+	/// digit there.
 	/// </summary>
 	private static bool IsHalfway(decimal value)
 	{
 		var place = Pow10(Configurable.FloatPrecision);
 		var magnitude = Math.Abs(value);
-		if (magnitude >= DoubleDigits / 10m / place) return false;
+		if (magnitude > decimal.MaxValue / place) return false;
 
 		var scaled = magnitude * place;
 		return scaled - decimal.Truncate(scaled) == 0.5m;
 	}
-
-	/// <summary>Fifteen significant digits, which every double holds.</summary>
-	private const decimal DoubleDigits = 1e15m;
 
 	private static decimal Pow10(int exponent)
 	{

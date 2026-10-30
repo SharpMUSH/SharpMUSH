@@ -71,6 +71,11 @@ public class FloatPrecisionTests
 	public async Task LargeValuesAtFullPrecisionStillFormat()
 		=> await Assert.That(await Evaluate("[add(100000000000000,0)]", precision: 15)).IsEqualTo("100000000000000");
 
+	/// <summary>The double nearest 100000000000000.35 is 100000000000000.34375, which C writes .3 at one place.</summary>
+	[Test]
+	public async Task LargeHalfwayValuesRoundAsC()
+		=> await Assert.That(await Evaluate("[add(100000000000000.35,0)]", precision: 1)).IsEqualTo("100000000000000.3");
+
 	/// <summary>
 	/// PennMUSH's own suite sets <c>float_precision=10</c> around this case (<c>test/testmath.t:65-67</c>),
 	/// which is what shows the setting counts decimal places: 10 of them, not 10 significant digits.

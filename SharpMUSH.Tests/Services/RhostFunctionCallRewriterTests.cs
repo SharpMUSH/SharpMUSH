@@ -40,6 +40,8 @@ public class RhostFunctionCallRewriterTests
 	[Arguments("lnum2(3,,-)", "0")]
 	[Arguments("lnum2(5,3,-,2)", "3 1")]
 	[Arguments("lnum2(3,9,-,3)", "9 6 3")]
+	[Arguments("lnum2(5,3,,2)", "3 5 7")]
+	[Arguments("lnum2(6,3,,2)", "3 5 7")]
 	[Arguments("[xnor(1,1,1)] [xnor(1,0,0)] [xnor(1,1,0)]", "1 1 0")]
 	[Arguments("streq(ljc(abcdef,3),ABC)", "1")]
 	[Arguments("[andflag(#1,wizard,!going)] [andflag(#1,wizard,going)]", "1 0")]
