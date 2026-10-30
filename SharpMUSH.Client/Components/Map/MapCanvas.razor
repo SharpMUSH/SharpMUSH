@@ -82,6 +82,10 @@
                 {
                     var (cx, cy) = Centre(room);
                     <circle class="@RoomClass(room) map-box--pin" style="@MapLegendStyle.Style(Kind(room))" cx="@Num(cx)" cy="@Num(cy)" r="9" />
+                    @if (_doors.Contains(room.Room.Id))
+                    {
+                        <circle class="map-door" cx="@Num(cx + 9)" cy="@Num(cy - 9)" r="5" />
+                    }
                     continue;
                 }
                 <rect class="@RoomClass(room)" style="@MapLegendStyle.Style(Kind(room))" x="@Num(room.X + Inset)" y="@Num(room.Y + Inset)"

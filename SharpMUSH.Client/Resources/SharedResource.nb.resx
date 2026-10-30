@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Rommet har allerede en utgang med ett av disse navnene.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Velg rommet den knyttes til.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Dette er kartets første rom, så det graves uten vei inn. Åpne en vei til det fra et annet rom når det finnes.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Eller et roms dbref</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Hvilket som helst rom, på et annet kart eller på intet.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Velg</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Til {0}, et rom utenfor dette kartet.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} er ikke et rom du kan se.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Gå dit</value>
+  </data>
 </root>

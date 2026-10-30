@@ -44,10 +44,11 @@ public sealed partial class MapPlan(MapDto map)
 {
 	private readonly List<MapChange> _changes = [];
 	private readonly Dictionary<string, MapRoomDto> _dug = new();
-	private readonly Dictionary<string, (string From, string To, string? Back)> _dugExits = new();
+	private readonly Dictionary<string, (string? From, string To, string? Back)> _dugExits = new();
 	private readonly Dictionary<string, MapRoomDto> _added = new();
 	private readonly Dictionary<string, string> _dugDescriptions = new();
 	private readonly Dictionary<string, (string From, string To, string Names, string? Back)> _joins = new();
+	private readonly Dictionary<string, string> _elsewhere = new();
 	private int _next;
 
 	public MapDto Map { get; } = map;
@@ -132,12 +133,14 @@ public sealed partial class MapPlan(MapDto map)
 	}
 
 	/// <summary>
-	/// Opens an exit <paramref name="names"/> from <paramref name="from"/> to <paramref name="to"/>, two rooms on the map
-	/// (either may be one the plan digs), and, when given, <paramref name="back"/> the other way.
+	/// Opens an exit <paramref name="names"/> from <paramref name="from"/>, a room on the map, to <paramref name="to"/>,
+	/// and, when given, <paramref name="back"/> the other way. Either may be a room the plan digs. <paramref name="to"/>
+	/// may be a room on another map or on none, by its dbref, called <paramref name="toName"/>.
 	/// </summary>
-	public string Join(string from, string to, string names, string? back)
+	public string Join(string from, string to, string names, string? back, string? toName = null)
 	{
 		var key = $"join:{++_next}";
+		if (Room(to) is null && toName is not null) _elsewhere[to] = toName;
 		_joins[key] = (from, to, names.Trim(), string.IsNullOrWhiteSpace(back) ? null : back.Trim());
 		Upsert(JoinChange(key));
 		return key;
@@ -173,7 +176,7 @@ public sealed partial class MapPlan(MapDto map)
 
 	/// <summary>How many objects the plan makes, each counted against the builder's quota: a room per dig, an exit per way.</summary>
 	public int Builds =>
-		_dugExits.Values.Sum(exit => exit.Back is null ? 2 : 3) + _joins.Values.Sum(join => join.Back is null ? 1 : 2);
+		_dugExits.Values.Sum(exit => exit.From is null ? 1 : exit.Back is null ? 2 : 3) + _joins.Values.Sum(join => join.Back is null ? 1 : 2);
 
 	/// <summary>Zones <paramref name="room"/> to this map.</summary>
 	public void Add(MapRoomDto room)
@@ -210,14 +213,16 @@ public sealed partial class MapPlan(MapDto map)
 
 	/// <summary>
 	/// Digs a room called <paramref name="name"/> at (x, y, z), with an exit <paramref name="exitTo"/> to it from
-	/// <paramref name="from"/> and, when given, <paramref name="exitBack"/> back. Returns the key the new room has
-	/// in the plan.
+	/// <paramref name="from"/> and, when given, <paramref name="exitBack"/> back. With no <paramref name="from"/>, the
+	/// first room of an empty map, it is dug with no exit. Returns the key the new room has in the plan.
 	/// </summary>
-	public string Dig(string name, double x, double y, int z, string from, string exitTo, string? exitBack)
+	public string Dig(string name, double x, double y, int z, string? from, string exitTo, string? exitBack)
 	{
 		var key = $"new:{++_next}";
 		_dug[key] = new(key, name, IsGraph ? [x, y] : [x, y, z], null) { Editable = true };
-		_dugExits[key] = (from, exitTo, string.IsNullOrWhiteSpace(exitBack) ? null : exitBack.Trim());
+		_dugExits[key] = from is null
+			? (null, "", null)
+			: (from, exitTo, string.IsNullOrWhiteSpace(exitBack) ? null : exitBack.Trim());
 		Upsert(DigChange(key));
 		return key;
 	}
@@ -249,12 +254,13 @@ public sealed partial class MapPlan(MapDto map)
 			.ToList();
 		foreach (var (key, (from, to, back)) in _dugExits)
 		{
+			if (from is null) continue;
 			exits.Add(new($"{key}:to", First(to), Rest(to), from, key, null));
 			if (back is not null) exits.Add(new($"{key}:back", First(back), Rest(back), key, from, null));
 		}
 		foreach (var (key, (from, to, names, back)) in _joins)
 		{
-			exits.Add(new($"{key}:to", First(names), Rest(names), from, to, null));
+			exits.Add(new($"{key}:to", First(names), Rest(names), from, to, null) { DestinationName = Name(to) });
 			if (back is not null) exits.Add(new($"{key}:back", First(back), Rest(back), to, from, null));
 		}
 		var levels = new Dictionary<int, string>(Map.LevelNames);
@@ -364,7 +370,6 @@ public sealed partial class MapPlan(MapDto map)
 		var (from, to, back) = _dugExits[key];
 		var position = room.Position!;
 		var self = Token(key);
-		var source = _dug.ContainsKey(from) ? Token(from) : from;
 		var steps = new List<MapStep>
 		{
 			new($"@dig {room.Name}", "%>", null),
@@ -386,10 +391,14 @@ public sealed partial class MapPlan(MapDto map)
 			steps.Add(Set(self, "MAP`SIZE`W", Num(width)));
 			steps.Add(Set(self, "MAP`SIZE`H", Num(height)));
 		}
-		// @open gives the exit it made even when linking it, or opening the way back, failed: ask for both.
-		var linked = $"strmatch(num(loc(%>)),num({self}))";
-		var check = string.IsNullOrEmpty(back) ? linked : $"and({linked},strmatch(num(loc(lexits({self}))),num({source})))";
-		steps.Add(new($"@open {to}={self},{back ?? ""},{source}", check, "1"));
+		if (from is not null)
+		{
+			var source = _dug.ContainsKey(from) ? Token(from) : from;
+			// @open gives the exit it made even when linking it, or opening the way back, failed: ask for both.
+			var linked = $"strmatch(num(loc(%>)),num({self}))";
+			var check = string.IsNullOrEmpty(back) ? linked : $"and({linked},strmatch(num(loc(lexits({self}))),num({source})))";
+			steps.Add(new($"@open {to}={self},{back ?? ""},{source}", check, "1"));
+		}
 		if (_dugDescriptions.TryGetValue(key, out var description)) steps.Add(Set(self, "DESCRIBE", description));
 		return new(key, MapChangeKind.Dig, key, room.Name, steps);
 	}
@@ -454,7 +463,7 @@ public sealed partial class MapPlan(MapDto map)
 	private MapRoomDto? Room(string id) =>
 		Map.Rooms.FirstOrDefault(room => room.Id == id) ?? _added.GetValueOrDefault(id) ?? _dug.GetValueOrDefault(id);
 
-	private string Name(string id) => Room(id)?.Name ?? id;
+	private string Name(string id) => Room(id)?.Name ?? _elsewhere.GetValueOrDefault(id) ?? id;
 
 	private static MapStep Set(string room, string attribute, string value) =>
 		new($"&{attribute} {room}={value}", $"get({room}/{attribute})", value);

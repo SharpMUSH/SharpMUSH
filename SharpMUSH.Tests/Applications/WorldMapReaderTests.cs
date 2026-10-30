@@ -101,9 +101,9 @@ public class WorldMapReaderTests
 	[Test]
 	public async Task ListsOnlyObjectsWhoseKindIsAKind()
 	{
-		Map(50, "Harbour", MapKinds.Coordinates);
-		Map(51, "Not a map", "spiral");
-		Map(52, "Caves", "Compass");
+		Room(10, "Quay", Map(50, "Harbour", MapKinds.Coordinates));
+		Room(11, "Shed", Map(51, "Not a map", "spiral"));
+		Room(12, "Grotto", Map(52, "Caves", "Compass"));
 		Indexed(50, 51, 52);
 
 		var maps = await Reader.ListAsync(_viewer, default);
@@ -121,6 +121,8 @@ public class WorldMapReaderTests
 		Zone(harbour, city);
 		Zone(caves, _viewer);
 		Zone(city, city);
+		Room(10, "Quay", harbour);
+		Room(12, "Grotto", caves);
 		Indexed(50, 51, 52);
 
 		var maps = (await Reader.ListAsync(_viewer, default)).ToDictionary(map => map.Id);
@@ -128,6 +130,20 @@ public class WorldMapReaderTests
 		await Assert.That(maps["#51"].Parent).IsEqualTo("#50");
 		await Assert.That(maps["#52"].Parent).IsNull().Because("#3 is a player, not a map");
 		await Assert.That(maps["#50"].Parent).IsNull().Because("a map zoned to itself is inside nothing");
+	}
+
+	[Test]
+	public async Task AMapWithNothingTheViewerMaySeeIsListedOnlyForWhoControlsIt()
+	{
+		var empty = Map(50, "Docks", MapKinds.Compass);
+		Dark(Room(11, "Vault", Map(51, "Vaults", MapKinds.Compass)));
+		Indexed(50, 51);
+
+		await Assert.That(await Reader.ListAsync(_viewer, default)).IsEmpty();
+
+		_permissions.Controls(_builder, empty).Returns(true);
+
+		await Assert.That((await Reader.ListAsync(_builder, default)).Select(map => map.Id)).IsEquivalentTo(["#50"]);
 	}
 
 	[Test]

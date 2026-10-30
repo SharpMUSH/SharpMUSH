@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Pokój ma już wyjście o jednej z tych nazw.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Wybierz pomieszczenie, z którego się do niego wchodzi.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>To pierwsze pomieszczenie na mapie, więc powstaje bez wejścia. Gdy już istnieje, otwórz do niego przejście z innego pomieszczenia.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Albo dbref pomieszczenia</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Dowolne pomieszczenie, na innej mapie lub na żadnej.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Wybierz</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Do {0}, pomieszczenia spoza tej mapy.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} nie jest pomieszczeniem, które widzisz.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Idź tam</value>
+  </data>
 </root>

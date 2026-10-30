@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>该房间已有使用其中某个名称的出口。</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>选择通往它的房间。</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>这是地图上的第一个房间，所以挖出时没有入口。房间建好后，从另一个房间开一条路通往它。</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>或房间的 dbref</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>任何房间，可在其他地图上，也可不在任何地图上。</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>选择</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>通往 {0}，一个不在此地图上的房间。</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} 不是你能看到的房间。</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>前往</value>
+  </data>
 </root>

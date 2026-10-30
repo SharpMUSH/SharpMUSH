@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>A szobának már van kijárata ezen nevek egyikével.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Válaszd ki a szobát, ahonnan elérhető.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Ez a térkép első szobája, ezért bejárat nélkül készül. Ha már létezik, nyiss hozzá utat egy másik szobából.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Vagy egy szoba dbrefje</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Bármely szoba, másik térképen vagy egyiken sem.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Kiválaszt</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Ide: {0}, egy szoba a térképen kívül.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} nem olyan szoba, amelyet láthatsz.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Odamegyek</value>
+  </data>
 </root>
