@@ -7037,4 +7037,7 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Teckenförklaring för {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Ett kartnamn kan inte innehålla = [ ] % eller \.</value>
+  </data>
 </root>

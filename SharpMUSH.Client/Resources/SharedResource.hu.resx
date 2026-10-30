@@ -7037,4 +7037,7 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Jelmagyarázat: {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>A térkép neve nem tartalmazhat = [ ] % vagy \ karaktert.</value>
+  </data>
 </root>

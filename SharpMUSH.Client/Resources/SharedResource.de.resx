@@ -7037,4 +7037,7 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legende für {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Ein Kartenname darf = [ ] % oder \ nicht enthalten.</value>
+  </data>
 </root>

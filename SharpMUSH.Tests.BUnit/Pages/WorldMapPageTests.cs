@@ -673,6 +673,20 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(cut.Find(".map-review").TextContent).Contains("@name #55=Old works");
 	}
 
+	[Test]
+	public async Task AMapNameThatNameWouldEvaluateIsRefused()
+	{
+		var cut = await EditWorksAsync(authorized: true);
+
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapSettingsShow").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-settings input"));
+		await cut.Find(".map-settings input").InputAsync("Harbour [West]");
+
+		await Assert.That(cut.FindAll(".map-settings button").First(button => button.TextContent.Trim() == "NavMapSetName").HasAttribute("disabled")).IsTrue()
+			.Because("@name evaluates its name, so [West] would be stored as something else");
+		await Assert.That(cut.Find(".map-settings").TextContent).Contains("NavMapMapNameCharacter");
+	}
+
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync(bool authorized = false)
 	{
 		Arrange();

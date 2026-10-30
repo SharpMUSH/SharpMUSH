@@ -7037,4 +7037,7 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Signatur for {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Et kortnavn kan ikke indeholde = [ ] % eller \.</value>
+  </data>
 </root>
