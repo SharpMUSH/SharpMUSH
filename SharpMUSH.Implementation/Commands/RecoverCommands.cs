@@ -55,15 +55,16 @@ public partial class Commands
 	/// <summary><c>@recover &lt;object&gt;</c>: spares a GOING object, or brings one back from the recover list.</summary>
 	private async ValueTask<MString> RecoverOneAsync(IMUSHCodeParser parser, AnySharpObject executor, string target)
 	{
-		if (DBRef.TryParse(target, out var parsed) && parsed is { } number)
+		if (DBRef.TryParse(target, out var parsed) && parsed is { } objid)
 		{
-			if (await Mediator.Send(new GetObjectNodeQuery(new DBRef(number.Number))) is AnySharpObject live)
+			// An objid names one incarnation: a live object or an entry of another creation time is not it.
+			if (await Mediator.Send(new GetObjectNodeQuery(objid)) is AnySharpObject live)
 				return await SpareAsync(parser, executor, live);
 
-			return await Mediator.Send(new GetRecoverEntryQuery(number.Number)) switch
+			return await RecoverEntryAsync(target) switch
 			{
 				RecoverEntry entry => await RestoreAsync(executor, entry),
-				_ => MarkupText.Plain($"Nothing destroyed is held under #{number.Number}. @recover lists what is.")
+				_ => MarkupText.Plain($"Nothing destroyed is held under {target}. @recover lists what is.")
 			};
 		}
 
@@ -247,7 +248,7 @@ public partial class Commands
 				return MarkupText.Plain($"{entry.Name}(#{entry.Objid.Number}) is kept: "
 					+ $"{entry.Keep?.Reason ?? "a package records it"}. @purge/confirm #{entry.Objid.Number} removes it anyway.");
 
-			return MarkupText.Plain(await RecoverList.PurgeAsync(executor, entry)
+			return MarkupText.Plain(await RecoverList.PurgeAsync(executor, entry, evenIfKept: confirm)
 				? $"{entry.Name}(#{entry.Objid.Number}) is gone for good."
 				: $"{entry.Name}(#{entry.Objid.Number}) could not be purged.");
 		}

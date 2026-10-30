@@ -150,12 +150,13 @@ public partial class LightningDatabase
 			return new DBRef((int)n, record.CreationTime);
 		}, cancellationToken, character: restore.Objid);
 
-	public async ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, CancellationToken cancellationToken = default)
+	public async ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, bool evenIfKept, CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx =>
 		{
 			var n = (long)objid.Number;
 			if (ReadRecover(tx, n) is not { } entry
 				|| (objid.CreationMilliseconds is { } created && entry.Object.CreationTime != created)
+				|| (!evenIfKept && entry.KeptBy is not null)
 				|| tx.TryGet(Tables.Obj, Keys.Dbref(n), out _))
 			{
 				return false;

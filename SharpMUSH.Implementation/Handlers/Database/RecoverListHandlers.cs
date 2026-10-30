@@ -29,7 +29,7 @@ public class RestoreRecoverEntryCommandHandler(IRecoverListStore database)
 public class PurgeRecoverEntryCommandHandler(IRecoverListStore database) : ICommandHandler<PurgeRecoverEntryCommand, bool>
 {
 	public async ValueTask<bool> Handle(PurgeRecoverEntryCommand request, CancellationToken cancellationToken)
-		=> await database.PurgeRecoverEntryAsync(request.Objid, cancellationToken);
+		=> await database.PurgeRecoverEntryAsync(request.Objid, request.EvenIfKept, cancellationToken);
 }
 
 public class SetRecoverKeepCommandHandler(IRecoverListStore database) : ICommandHandler<SetRecoverKeepCommand, bool>

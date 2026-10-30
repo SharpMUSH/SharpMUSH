@@ -188,9 +188,9 @@ public class RecoverListService(
 		=> entry.Keep is not null || (await PackageObjidsAsync()).Contains(entry.Objid.ToString());
 
 	/// <inheritdoc />
-	public async ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, CancellationToken ct = default)
+	public async ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, bool evenIfKept = false, CancellationToken ct = default)
 	{
-		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid), ct)) return false;
+		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid, evenIfKept), ct)) return false;
 
 		foreach (var cleanup in cleanups)
 		{
@@ -217,7 +217,7 @@ public class RecoverListService(
 		var purged = 0;
 		foreach (var entry in expired)
 		{
-			if (await PurgeAsync(null, entry, ct)) purged++;
+			if (await PurgeAsync(null, entry, ct: ct)) purged++;
 		}
 
 		if (purged > 0) logger.LogInformation("Purged {Count} recover entries past their retention", purged);

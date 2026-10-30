@@ -49,9 +49,10 @@ public interface IRecoverListService
 
 	/// <summary>
 	/// Removes the entry for good and lets everything still naming its number by number alone let go of it
-	/// (<see cref="IFreedObjectCleanup"/>). <paramref name="actor"/> is null for the age pass.
+	/// (<see cref="IFreedObjectCleanup"/>). <paramref name="actor"/> is null for the age pass. An entry kept by the time
+	/// the removal is written is left alone unless <paramref name="evenIfKept"/>.
 	/// </summary>
-	ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, CancellationToken ct = default);
+	ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, bool evenIfKept = false, CancellationToken ct = default);
 
 	/// <summary>Purges every entry that is not kept and has outlived <see cref="RetentionFor"/> as of <paramref name="now"/>.</summary>
 	ValueTask<int> ExpireAsync(DateTimeOffset now, CancellationToken ct = default);

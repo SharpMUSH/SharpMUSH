@@ -139,6 +139,29 @@ public class RecoverListTests
 	}
 
 	[Test]
+	public async Task AKeepMarkSetAfterTheEntryWasReadStillHoldsOffThePurge()
+	{
+		var (objid, _) = await DestroyedThingAsync("RecoverLateKeep");
+		var readEarlier = (await EntryAsync(objid))!;
+		await RunAsync($"@recover/keep #{objid.Number}=just in time");
+
+		await Assert.That(await RecoverList.PurgeAsync(null, readEarlier)).IsFalse();
+		await Assert.That((await EntryAsync(objid))?.Keep?.Reason).IsEqualTo("just in time");
+	}
+
+	[Test]
+	public async Task RecoverByAnObjidOfAnotherIncarnationLeavesTheEntry()
+	{
+		var (objid, _) = await DestroyedThingAsync("RecoverOtherIncarnation");
+		var other = $"#{objid.Number}:{objid.CreationMilliseconds + 1}";
+
+		var output = await RunAsync($"@recover {other}");
+
+		await Assert.That(output).IsEqualTo($"Nothing destroyed is held under {other}. @recover lists what is.");
+		await Assert.That(await EntryAsync(objid)).IsNotNull();
+	}
+
+	[Test]
 	public async Task PurgingAKeptEntryNeedsConfirm()
 	{
 		var (objid, _) = await DestroyedThingAsync("RecoverConfirm");

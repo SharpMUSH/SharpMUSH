@@ -28,8 +28,8 @@ public record RestoreRecoverEntryCommand(RecoverRestore Restore) : ICommand<Resu
 	public string[] CacheTags => new DeleteObjectCommand(Restore.Objid).CacheTags;
 }
 
-/// <summary>Removes a recover entry for good, freeing its number.</summary>
-public record PurgeRecoverEntryCommand(DBRef Objid) : ICommand<bool>, ICacheInvalidating
+/// <summary>Removes a recover entry for good, freeing its number; a kept one only when <paramref name="EvenIfKept"/>.</summary>
+public record PurgeRecoverEntryCommand(DBRef Objid, bool EvenIfKept) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [];
 

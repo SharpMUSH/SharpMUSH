@@ -30,8 +30,11 @@ public interface IRecoverListStore
 	/// </summary>
 	ValueTask<Result<DBRef>> RestoreRecoverEntryAsync(RecoverRestore restore, CancellationToken cancellationToken = default);
 
-	/// <summary>Removes an entry for good, with its attributes and expanded data, freeing its number.</summary>
-	ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Removes an entry for good, with its attributes and expanded data, freeing its number. A kept entry is refused
+	/// unless <paramref name="evenIfKept"/>, judged in the same write as the removal.
+	/// </summary>
+	ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, bool evenIfKept, CancellationToken cancellationToken = default);
 
 	/// <summary>Marks an entry kept, or clears the mark when <paramref name="keep"/> is null.</summary>
 	ValueTask<bool> SetRecoverKeepAsync(DBRef objid, RecoverKeep? keep, CancellationToken cancellationToken = default);
