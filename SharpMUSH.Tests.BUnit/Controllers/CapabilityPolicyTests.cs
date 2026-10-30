@@ -68,6 +68,18 @@ public class CapabilityPolicyTests
 	}
 
 	[Test]
+	public async Task AssigningARoleToNoObjectIsNotFound()
+	{
+		var management = Substitute.For<IRoleManagementService>();
+		var mediator = Substitute.For<Mediator.IMediator>();
+		mediator.Send(Arg.Any<SharpMUSH.Library.Queries.Database.GetObjectNodeQuery>(), Arg.Any<CancellationToken>())
+			.Returns(ValueTask.FromResult<AnyOptionalSharpObject>(new None()));
+
+		await Assert.That(await Controller(management, mediator).AssignObjectRole(404, "builder", null)).IsTypeOf<NotFoundObjectResult>();
+		await management.DidNotReceiveWithAnyArgs().AssignToObjectAsync(default!, default!, default!, default);
+	}
+
+	[Test]
 	public async Task UnknownOverrideStateIsRefusedBeforeTheService()
 	{
 		var management = Substitute.For<IRoleManagementService>();
@@ -79,8 +91,9 @@ public class CapabilityPolicyTests
 	private static DelegatedPermissions Delegated(IAdministrativeCapabilityService capabilities)
 		=> new(capabilities, Substitute.For<IRoleRegistryService>(), new HttpContextAccessor());
 
-	private static RolesController Controller(IRoleManagementService management) => new(
-		Substitute.For<IRoleRegistryService>(), Substitute.For<IAccountService>(), Substitute.For<IAdministrativeCapabilityService>(), management)
+	private static RolesController Controller(IRoleManagementService management, Mediator.IMediator? mediator = null) => new(
+		Substitute.For<IRoleRegistryService>(), Substitute.For<IAccountService>(), Substitute.For<IAdministrativeCapabilityService>(), management,
+		mediator ?? Substitute.For<Mediator.IMediator>())
 	{ ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext { User = new(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, "a")], "test")) } } };
 
 	[Test]

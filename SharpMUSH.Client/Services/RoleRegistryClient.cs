@@ -81,6 +81,14 @@ public class RoleRegistryClient(IHttpClientFactory httpClientFactory, ILogger<Ro
 	public Task<ApiResult<Success>> RemoveAsync(string accountKey, string slug) =>
 		Client.DeleteApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/{Uri.EscapeDataString(slug)}");
 
+	/// <summary>Assigns a role to the object <paramref name="dbref"/> alone; <paramref name="created"/> refuses a reused number.</summary>
+	public Task<ApiResult<Success>> AssignToObjectAsync(int dbref, long created, string slug) =>
+		Client.PostApiAsync($"api/roles/object/{dbref}/{Uri.EscapeDataString(slug)}?created={created}");
+
+	/// <summary>Removes a role the object <paramref name="dbref"/> holds itself.</summary>
+	public Task<ApiResult<Success>> RemoveFromObjectAsync(int dbref, long created, string slug) =>
+		Client.DeleteApiAsync($"api/roles/object/{dbref}/{Uri.EscapeDataString(slug)}?created={created}");
+
 	/// <summary>Sets one per-account override (<c>Allow</c>, <c>Deny</c>, or <c>Inherit</c> to clear it).</summary>
 	public Task<ApiResult<Success>> SetOverrideAsync(string accountKey, string scope, string state) =>
 		Client.PutApiAsync($"api/roles/account/{Uri.EscapeDataString(accountKey)}/overrides", new OverrideRequest(scope, state));

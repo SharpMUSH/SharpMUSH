@@ -63,7 +63,9 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 			.AddSingleton<AdminAccountsService>()
 			.AddSingleton<AdminCharactersService>()
 			.AddSingleton<AdminAuditService>()
-			.AddSingleton<AdminBansService>();
+			.AddSingleton<AdminBansService>()
+			.AddLogging()
+			.AddSingleton<RoleRegistryClient>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		Auth = AddAuthorization();
 		Auth.SetAuthorized("staff");
@@ -126,6 +128,57 @@ public class AdminCharactersPagesTests : TrackingBunitContext
 		await Assert.That(cut.Markup).Contains("builder");
 		await Assert.That(cut.Markup).DoesNotContain("AdmCharacterLastSite")
 			.Because("the server sends the site only to server.admin, and the page shows nothing in its place");
+	}
+
+	private const string RoleList = """
+		[{"slug":"everyone","name":"Everyone","category":"System","color":"#888888","priority":0,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0},
+		 {"slug":"builder","name":"Builder","category":"Staff","color":"#888888","priority":10,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0},
+		 {"slug":"operator","name":"Operator","category":"Staff","color":"#888888","priority":20,"isSystem":false,"permissions":{},"createdAt":0,"updatedAt":0},
+		 {"slug":"helper","name":"Helper","category":"Staff","color":"#888888","priority":5,"isSystem":true,"permissions":{},"createdAt":0,"updatedAt":0}]
+		""";
+
+	[Test]
+	public async Task PlayerDetail_AssignsAndRemovesTheCharactersOwnRoles()
+	{
+		Auth.SetPolicies("players.view", "roles.admin");
+		_api.Bodies["api/admin/characters/7"] = $$"""
+			{"character":{{Alice}},"created":"2023-11-14T22:13:20+00:00","attributeCount":12,"mailTotal":3,"mailUnread":1,
+			 "lastLogout":null,"lastSite":null,"lastIp":null,"roles":["builder","helper(account)"],"connections":[4]}
+			""";
+		_api.Bodies["api/roles"] = RoleList;
+		_api.Bodies["api/roles/object/7/operator"] = "{}";
+		_api.Bodies["api/roles/object/7/builder"] = "{}";
+		var cut = RenderPage<PlayerDetail>(p => p.Add(x => x.Id, 7));
+
+		cut.WaitForAssertion(() => cut.Find(".adm-char-role-new"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".adm-char-role-new").Select(chip => chip.TextContent.Trim())).IsEquivalentTo(["Operator", "Helper"])
+			.Because("Alice holds Builder herself, and no one is given Everyone; Helper from her account can still be hers alone");
+		await Assert.That(cut.Find(".adm-char-roles").TextContent).Contains("AdmCharacterAccountRole(Helper)");
+
+		await cut.FindAll(".adm-char-role-new").First(chip => chip.TextContent.Trim() == "Operator").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!_api.Requested.Contains("POST api/roles/object/7/operator?created=1700000000000"))
+				throw new InvalidOperationException("not sent");
+		}, TimeSpan.FromSeconds(5));
+
+		await cut.Find(".adm-char-role .mud-chip-close-button").ClickAsync();
+		cut.WaitForAssertion(() =>
+		{
+			if (!_api.Requested.Contains("DELETE api/roles/object/7/builder?created=1700000000000"))
+				throw new InvalidOperationException("not sent");
+		}, TimeSpan.FromSeconds(5));
+	}
+
+	[Test]
+	public async Task PlayerDetail_OffersNoRoleChangesWithoutRolesAdmin()
+	{
+		_api.Bodies["api/admin/characters/7"] = AliceDetail;
+		var cut = RenderPage<PlayerDetail>(p => p.Add(x => x.Id, 7));
+
+		cut.WaitForAssertion(() => cut.Find(".adm-char-facts"), TimeSpan.FromSeconds(5));
+		await Assert.That(cut.FindAll(".adm-char-role-new, .adm-char-role .mud-chip-close-button").Count).IsEqualTo(0);
+		await Assert.That(_api.Requested).DoesNotContain("GET api/roles");
 	}
 
 	[Test]
