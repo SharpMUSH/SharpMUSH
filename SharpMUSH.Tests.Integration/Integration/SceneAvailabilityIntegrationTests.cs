@@ -387,6 +387,74 @@ public class SceneAvailabilityIntegrationTests
 	}
 
 	[Test]
+	public async Task WithAlts_APublicListCountsAsOnePersonAndAHiddenAltOnItsOwn()
+	{
+		var bridged = false;
+		try
+		{
+			await InstallAsync();
+			await ApplyAsync("alts");
+			bridged = true;
+			await ApplyAsync("availability-alts");
+
+			var ann = await Player("AvAlAnn");
+			var bea = await Player("AvAlBea");
+			var cleo = await Player("AvAlCleo");
+			var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+			var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("avalts").ToLowerInvariant(), null,
+				"correct horse battery")).Expect<SharpAccount>();
+			foreach (var player in new[] { ann, bea })
+			{
+				await accounts.AttachCharacterAsync(account.Id!,
+					(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>());
+			}
+			foreach (var player in new[] { ann, bea, cleo })
+			{
+				await God($"&TZ #{player.DbRef.Number}=UTC");
+			}
+			var annName = await Think($"name(#{ann.DbRef.Number})");
+			var beaName = await Think($"name(#{bea.DbRef.Number})");
+			var annObjid = await Think($"objid(#{ann.DbRef.Number})");
+			var beaKey = await KeyOf(bea);
+
+			// Ann is busy on weekdays from 9 to 5; Bea on Mondays from 18:00 to 20:00.
+			await EntryAsync(await KeyOf(ann), 1, "busy", ("REPEAT", "weekly"), ("DAYS", "mon tue wed thu fri"), ("DATE", "2026-10-01"),
+				("TIME", "09:00"), ("MINUTES", "480"), ("ZONE", "UTC"));
+			await God($"&PLAYER`{beaKey} {Calendar}={await Think($"objid(#{bea.DbRef.Number})")}");
+			await EntryAsync(beaKey, 1, "busy", ("REPEAT", "weekly"), ("DAYS", "mon"), ("DATE", "2026-10-01"),
+				("TIME", "18:00"), ("MINUTES", "120"), ("ZONE", "UTC"));
+			var annFreeMonday = $"u({Avail}/FUN`FREE`AT,#{ann.DbRef.Number},1792432800,1792440000)";
+			var annSecondRun = $"first(extract(u({Avail}/FUN`FIND`RUNS,{annObjid},1792368000,336,4),2,1),:)";
+
+			// A private list: Ann counts on her own.
+			await Assert.That(await As(cleo, $"+avail {annName}")).DoesNotContain("18:00-20:00");
+			await Assert.That(await Think(annFreeMonday)).IsEqualTo("1");
+
+			// Public: anyone sees Bea's Monday evening on Ann's week, and the scene card and +avail/find count it.
+			await As(ann, "+alts/public on");
+			await Assert.That(await As(cleo, $"+avail {annName}")).Contains("18:00-20:00").And.Contains($"Counts {beaName} too");
+			await Assert.That(await Think(annFreeMonday)).IsEqualTo("0");
+			await Assert.That(await Think(annSecondRun)).IsEqualTo("1792440000");
+
+			// Bea hidden: each counts on her own again.
+			await As(ann, $"+alts/hide {beaName}");
+			await Assert.That(await As(cleo, $"+avail {annName}")).DoesNotContain("18:00-20:00").And.DoesNotContain(beaName);
+			await Assert.That(await As(cleo, $"+avail {beaName}")).DoesNotContain("Counts").And.DoesNotContain(annName + "'s");
+			await Assert.That(await Think(annFreeMonday)).IsEqualTo("1");
+			await Assert.That(await Think(annSecondRun)).IsEqualTo("1792429200");
+		}
+		finally
+		{
+			if (bridged)
+			{
+				await Installer.UninstallAsync("availability-alts", force: true, CancellationToken.None);
+				await WebAppFactoryArg.Services.UninstallWithBridgesAsync("alts");
+			}
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task SettingsAreChangedThroughConfig()
 	{
 		try

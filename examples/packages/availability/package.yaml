@@ -12,7 +12,8 @@ requires_server: ">=0.1"
 
 # The time package keeps each player's zone in TZ and reads it through its Clock, so an entry is kept in its owner's
 # own time. Nothing here knows about scenes: scene-availability adds +avail/scene and the scene card's free list on top
-# of this package. availability-help and availability-config put its topics into +help and its settings into +config.
+# of this package. availability-help and availability-config put its topics into +help and its settings into +config;
+# availability-alts counts the characters an account lists in public as one person.
 depends:
   - package: time
     version: ">=1.0"
@@ -249,10 +250,18 @@ objects:
           edit(objid(%0),#,,:,_)
         flags: [funsyntax]
       # %0 a player and %1 characters that are one person's, the reader's account: the keys whose entries count
-      # for the player. All of theirs when the player is one of them, else the player's own.
+      # for the player. All of theirs when the player is one of them, else those of the player's characters
+      # anyone may know are together.
       FUN`KEYS`OF:
         value: |-
-          if(member(%1,objid(%0)),iter(%1,u(%!/FUN`KEY,%i0)),u(%!/FUN`KEY,%0))
+          iter(if(member(%1,objid(%0)),%1,u(%!/FUN`TOGETHER,%0)),u(%!/FUN`KEY,%i0))
+        flags: [funsyntax]
+      # %0 a player: the characters anyone may know are one person's, the player among them. The player alone,
+      # then what each FILTER`AVAIL`TOGETHER`<name> on this object adds: a bridge's filter takes %0 the characters
+      # so far and %1 the player, and returns the characters (availability-alts adds an account's public alts).
+      FUN`TOGETHER:
+        value: |-
+          setq(together,objid(%0))[null(iter(lattr(%!/FILTER`AVAIL`TOGETHER`*),setq(together,u(%!/%i0,%q<together>,objid(%0)))))]%q<together>
         flags: [funsyntax]
       # %0 keys: their entries, key`n each.
       FUN`KEYS`ENTRIES:
@@ -616,10 +625,10 @@ objects:
           if(gt(%2,%1),[left(%0,%1)][repeat(%3,sub(%2,%1))][mid(%0,%2,%q<mask_slots>)],%0)
         flags: [funsyntax]
       # %0 a player, %1 and %2 instants: 1 when they are free the whole time, 0 when not, nothing when they keep no
-      # entries.
+      # entries. The characters they are known to be together with count too.
       FUN`FREE`AT:
         value: |-
-          if(words(u(%!/FUN`PLAYER`ENTRIES,setr(free_at_key,u(%!/FUN`KEY,%0)))),not(strmatch(u(%!/FUN`MASK`PLAYER,%q<free_at_key>,%1,div(add(sub(%2,%1),dec(setr(free_at_step,u(%!/FUN`CONFIG`STEP)))),%q<free_at_step>),%q<free_at_step>),*0*)))
+          if(words(u(%!/FUN`KEYS`ENTRIES,setr(free_at_key,u(%!/FUN`KEYS`OF,%0)))),not(strmatch(u(%!/FUN`MASK`PLAYER,%q<free_at_key>,%1,div(add(sub(%2,%1),dec(setr(free_at_step,u(%!/FUN`CONFIG`STEP)))),%q<free_at_step>),%q<free_at_step>),*0*)))
         flags: [funsyntax]
 
       # ---- finding a time ---------------------------------------------------------
@@ -776,10 +785,11 @@ objects:
         value: |-
           setq(mine_keys,%q<viewer_key> [remove(%q<viewer_keys>,%q<viewer_key>)])[box([u(%!/FUN`SCREEN`ENTRIES,%q<mine_keys>,%q<viewer_zone>,%q<viewer_key>)]%r[rule(The week ahead)]%r[u(%!/FUN`SCREEN`WEEK,%q<mine_keys>,%q<viewer_today>,%q<viewer_zone>,7,1)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/busy and +avail/free add one · +avail/remove <n> takes one away · +avail/find <names> finds a time)],Your availability,,u(%!/FUN`DISPLAY`FRAME))]
         flags: [funsyntax]
-      # +avail <name>: their week, without notes, in the reader's zone.
+      # +avail <name>: their week, without notes, in the reader's zone, with the characters they are known to be
+      # together with.
       FUN`SCREEN`OTHER:
         value: |-
-          box([u(%!/FUN`SCREEN`WEEK,%q<target_key>,%q<viewer_today>,%q<viewer_zone>,7,0)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/find [name(%q<target>)] finds a time you are both free)],Availability: [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
+          box([u(%!/FUN`SCREEN`WEEK,%q<target_key>,%q<viewer_today>,%q<viewer_zone>,7,0)]%r[rule()]%r[tone(muted,Times in %q<viewer_zone> · +avail/find [name(%q<target>)] finds a time you are both free)][if(gt(words(%q<target_together>),1),%r[tone(muted,Counts [itemize(iter(remove(%q<target_together>,%q<target>),name(%i0),,|),|)] too%, listed as [name(%q<target>)]'s.)])],Availability: [name(%q<target>)],,u(%!/FUN`DISPLAY`FRAME))
         flags: [funsyntax]
       # %0 the runs, start:end, %1 the players, %2 the reader's zone, %3 the length asked for, %4 the title: the free
       # times as a table, and who was counted.
@@ -807,7 +817,8 @@ objects:
         flags: [cmdsyntax]
       INC`SHOW`OTHER:
         value: |-
-          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(AVAIL,There is no player called '%q<cmd_argument>'.,warn); think setq(target_key,u(%!/FUN`KEY,%q<target>)); @assert words(u(%!/FUN`PLAYER`ENTRIES,%q<target_key>))=@pemit %#=notice(AVAIL,[name(%q<target>)] has set no times%, so they count as free at any time.); @pemit %#=u(%!/FUN`SCREEN`OTHER)
+          think setq(target,u(%!/FUN`PLAYER,%q<cmd_argument>)); @assert strlen(%q<target>)=@pemit %#=notice(AVAIL,There is no player called '%q<cmd_argument>'.,warn); think setqm(target_together,u(%!/FUN`TOGETHER,%q<target>),
+          target_key,iter(%q<target_together>,u(%!/FUN`KEY,%i0))); @assert words(u(%!/FUN`KEYS`ENTRIES,%q<target_key>))=@pemit %#=notice(AVAIL,[name(%q<target>)] has set no times%, so they count as free at any time.); @pemit %#=u(%!/FUN`SCREEN`OTHER)
         flags: [cmdsyntax]
 
       # ---- entries ------------------------------------------------------------------
@@ -937,7 +948,7 @@ objects:
 
         Output: `\[AVAIL\] Done: Added 3, busy: Every 2 weeks on Tue, 20:00-22:00.`
 
-        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours. Others see each of your characters on its own, with only its own entries, so nothing they see ties your characters together.
+        **Privacy.** Your entries are kept on the Availability Calendar, not on your character, so no one who can examine your character reads them. Others see only when you are free or busy; your notes stay yours. Others see each of your characters on its own, with only its own entries, so nothing they see ties your characters together, unless you have listed them in public as yours.
       HELP`AVAIL`WHEN: |-
         The `<when>` after `+avail/busy` and `+avail/free` is words in any order. Capitals and commas do not matter.
 
@@ -977,7 +988,7 @@ objects:
 
         Each line is a free time, in your zone: the day, when it starts, when it ends, and how long it lasts. A player who has set no times counts as free throughout, and is named under the list.
 
-        You count as free only when every character on your account is: a time one of them is busy is left out. The others named count with their own entries alone.
+        You count as free only when every character on your account is: a time one of them is busy is left out. The others named count with their own entries, and those of the characters they list in public as theirs.
 
         For example:
 
@@ -1015,7 +1026,7 @@ objects:
         - `` u\(<Availability>/FUN`FIND`RUNS,<players>,<from>,<steps>,<least steps>\[,<characters>\]\) ``: the times from `<from>` when every player is free for at least so many steps, each `<start>:<end>` in seconds. A player among `<characters>`, the characters of one account, is free only when all of them are.
         - `` u\(<Availability>/FUN`ENTRY`SPANS,<key>,<n>,<from>,<to>\) ``: when one entry happens between two moments, each `<start>:<end>`. `` u\(<Availability>/FUN`KEY,<player>\) `` is the key.
 
-        Another package adds to `+avail` on the Availability object: a `` DATA`ROUTE`<SWITCH> `` leaf naming an `` INC` `` routine adds a switch, and a `` FILTER`AVAIL`FIND`<name> `` adds to the footer under `+avail/find`'s times, given the footer so far and the times.
+        Another package adds to `+avail` on the Availability object: a `` DATA`ROUTE`<SWITCH> `` leaf naming an `` INC` `` routine adds a switch, a `` FILTER`AVAIL`FIND`<name> `` adds to the footer under `+avail/find`'s times, given the footer so far and the times, and a `` FILTER`AVAIL`TOGETHER`<name> ``, given the characters so far and a player, returns the characters anyone may know are that player's, which then count as one.
 
         For example, for a player busy on weekdays from 9:00 to 17:00 in UTC:
 

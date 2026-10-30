@@ -484,6 +484,11 @@ packages:
     package: availability-config
     version: 1.0.0
     description: Registers the availability settings with +config (requires availability and plus-config)
+  - path: availability-alts/
+    name: Availability with alts
+    package: availability-alts
+    version: 1.0.0
+    description: Counts the characters an account lists in public with +alts as one person in +avail (requires availability and alts)
   - path: scene-availability/
     name: Scene Availability
     package: scene-availability
