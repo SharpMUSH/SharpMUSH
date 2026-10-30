@@ -389,7 +389,7 @@ Players can only have a limited number of aliases; the number is controlled by t
 
 If the 'page_aliases' @config option is on, the first alias in the list is shown along with the player's name when they page others.
 
-Exit aliases used to be a part of their name, though all newly created exits use @alias instead.
+An exit's aliases are set with @alias, not in its name.
 
 For other types of object, @alias has no special meaning.
 
