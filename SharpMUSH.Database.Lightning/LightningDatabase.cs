@@ -90,7 +90,7 @@ public partial class LightningDatabase(
 	/// slot that is already on the free list: a dbref below <c>db_top</c> whose object has been recycled
 	/// into garbage. SharpMUSH keeps no garbage rows — <c>@destroy</c> removes the row outright, which is
 	/// why <c>stats()</c> reports a garbage count of zero — so the free slots are exactly the holes:
-	/// below the counter, and holding no object. An id at or above the counter is refused rather than
+	/// below the counter, holding no object and held by no recover entry. An id at or above the counter is refused rather than
 	/// jumping the counter to reach it, so one mistyped argument cannot strand a block of dbrefs.</para>
 	/// <para>An import (<paramref name="import"/>) is the one caller entitled to an id at or above the
 	/// counter: the source database's ids are what its softcode holds, so the counter follows the import
@@ -100,7 +100,7 @@ public partial class LightningDatabase(
 	/// </summary>
 	internal long? AllocateDbrefAt(ITx tx, long requested, bool import = false)
 	{
-		if (requested < 0 || tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _))
+		if (requested < 0 || tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _) || IsHeldByRecoverEntry(tx, requested))
 		{
 			return null;
 		}

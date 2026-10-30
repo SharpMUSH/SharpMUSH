@@ -259,6 +259,42 @@ public class RhostImportTests
 		await Assert.That((await world.Services.GetRequiredService<RealityPolicy>().ConfigurationAsync()).Enabled).IsFalse();
 	}
 
+	/// <summary>
+	/// An object RhostMUSH holds on its recover list (RECOVER set) goes onto the recover list here, under its own
+	/// number and without the flag, rather than coming back to life.
+	/// </summary>
+	[Test]
+	public async Task ObjectsOnRhostsRecoverListArriveOnTheRecoverList()
+	{
+		// Gadget (#10) with RECOVER (word 1, 0x400000) added to its second flag word.
+		var flatfile = await File.ReadAllTextAsync(RhostFlatfileReaderTests.FlatfilePath);
+		var gadget = flatfile.IndexOf("!10\nGadget\n", StringComparison.Ordinal);
+		var flags = flatfile.IndexOf("\n33562625\n65536\n", gadget, StringComparison.Ordinal);
+		await Assert.That(gadget).IsGreaterThan(0);
+		await Assert.That(flags).IsGreaterThan(gadget);
+		var path = Path.Join(Path.GetTempPath(), $"rhost-recover-{Guid.NewGuid():N}.flat");
+		await File.WriteAllTextAsync(path, string.Concat(flatfile.AsSpan(0, flags), "\n33562625\n4259840\n",
+			flatfile.AsSpan(flags + "\n33562625\n65536\n".Length)));
+
+		try
+		{
+			await using var world = await IsolatedImportWorld.CreateAsync();
+			var result = await world.Converter.ConvertDatabaseAsync(
+				Files() with { Database = path }, new Progress<ConversionProgress>());
+			await Assert.That(result.Errors).IsEmpty();
+
+			await Assert.That(await world.Database.GetAllObjectsAsync().AnyAsync(o => o.Name == "Gadget")).IsFalse();
+			var entry = await world.Mediator.CreateStream(new GetRecoverEntriesQuery()).SingleAsync(e => e.Name == "Gadget");
+			await Assert.That(entry.Type).IsEqualTo("THING");
+			await Assert.That(entry.Flags).DoesNotContain("RECOVER");
+			await Assert.That(entry.Parent?.Number).IsEqualTo((await FindAsync(world, "Widget")).Object().DBRef.Number);
+		}
+		finally
+		{
+			File.Delete(path);
+		}
+	}
+
 	private static async Task<ObjectReality> LayersAsync(IsolatedImportWorld world, string name)
 		=> await world.Services.GetRequiredService<RealityPolicy>().ReadObjectAsync((await FindAsync(world, name)).Object().DBRef)
 			?? throw new InvalidOperationException($"{name} has no reality profile");

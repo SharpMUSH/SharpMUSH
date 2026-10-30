@@ -5,6 +5,7 @@ using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.ExpandedObjectData;
 using SharpMUSH.Library.Extensions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
@@ -21,7 +22,7 @@ public class ObjectDestructionService(
 	IMoveService moveService,
 	IEventService eventService,
 	IOptionsMonitor<SharpMUSHOptions> configuration,
-	IEnumerable<IFreedObjectCleanup> cleanups,
+	IExpandedObjectDataService expandedData,
 	ILogger<ObjectDestructionService> logger) : IObjectDestructionService
 {
 	private const int GodDbRefNumber = 1;
@@ -36,12 +37,21 @@ public class ObjectDestructionService(
 		var command = configuration.CurrentValue.Command;
 		var number = dbref.Number;
 
+		// PennMUSH's special_object() list, widened to the other objects the configuration names, which PennMUSH
+		// leaves destroyable: the ancestors and the event, HTTP and package handlers.
 		return number == GodDbRefNumber
 			|| number == database.PlayerStart
 			|| number == database.MasterRoom
 			|| number == database.BaseRoom
 			|| number == database.DefaultHome
-			|| number == command.ProbateJudge;
+			|| number == command.ProbateJudge
+			|| number == database.AncestorRoom
+			|| number == database.AncestorExit
+			|| number == database.AncestorThing
+			|| number == database.AncestorPlayer
+			|| number == database.EventHandler
+			|| number == database.HttpHandler
+			|| number == database.PackageManager;
 	}
 
 	/// <inheritdoc />
@@ -53,8 +63,9 @@ public class ObjectDestructionService(
 		if (IsSpecialObject(dbref))
 		{
 			logger.LogWarning(
-				"Refusing to destroy #{DbRef} ({Name}): it is a special object (player_start / master_room / "
-				+ "base_room / default_home / God / probate_judge).", dbref.Number, target.Object().Name);
+				"Refusing to destroy #{DbRef} ({Name}): it is a special object (God, or an object the configuration "
+				+ "names: player_start, master_room, base_room, default_home, probate_judge, an ancestor or a handler).",
+				dbref.Number, target.Object().Name);
 			return false;
 		}
 
@@ -104,15 +115,13 @@ public class ObjectDestructionService(
 		// Read while the object still exists; the event fires once it does not.
 		var eventArguments = await DescribeForDestroyEventAsync(target, cancellationToken);
 
-		var deleted = await mediator.Send(new DeleteObjectCommand(dbref), cancellationToken);
-		if (!deleted)
+		// Freed onto the recover list rather than deleted: the number stays held, and @recover can bring the object
+		// back whole until the entry is purged, which is when what still names the number lets go of it.
+		var destroyedBy = await expandedData.GetExpandedDataAsync<DestroyedByData>(target.Object()) is { Objid: { } objid }
+			&& DBRef.TryParse(objid, out var by) ? by : null;
+		if (!await mediator.Send(new RetireObjectCommand(dbref, destroyedBy), cancellationToken))
 		{
 			return false;
-		}
-
-		foreach (var cleanup in cleanups)
-		{
-			await cleanup.ObjectsFreedAsync([dbref], cancellationToken);
 		}
 
 		// PennMUSH free_object() queues OBJECT`DESTROY with everything about the object it can still

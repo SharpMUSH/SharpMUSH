@@ -200,7 +200,9 @@ public static partial class ReadPennMushConfig
 				Message(nameof(DumpOptions.DumpMessage), d.Dump.DumpMessage),
 				Message(nameof(DumpOptions.DumpComplete), d.Dump.DumpComplete),
 				Message(nameof(DumpOptions.DumpWarning5Min), d.Dump.DumpWarning5Min),
-				Message(nameof(DumpOptions.DumpWarning1Min), d.Dump.DumpWarning1Min)
+				Message(nameof(DumpOptions.DumpWarning1Min), d.Dump.DumpWarning1Min),
+				RequiredString(Get(nameof(DumpOptions.RecoverKeepPlayers)), d.Dump.RecoverKeepPlayers),
+				RequiredString(Get(nameof(DumpOptions.RecoverKeepObjects)), d.Dump.RecoverKeepObjects)
 			),
 			File = new FileOptions(
 				RequiredString(Get(nameof(FileOptions.AccessFile)), d.File.AccessFile),

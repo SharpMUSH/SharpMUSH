@@ -219,11 +219,22 @@ public partial class Commands
 	/// <c>GOING_TWICE</c>. Two passes, so an accidental <c>@destroy</c> stays recoverable via
 	/// <c>@undestroy</c> for a whole purge interval. A special object that somehow got marked is
 	/// spared rather than freed.
+	/// <para>Given an object or a bulk switch it removes recover entries instead, as RhostMUSH's @purge does; see
+	/// <c>RecoverCommands.cs</c>.</para>
 	/// </remarks>
-	[SharpCommand(Name = "@PURGE", Switches = [], Behavior = CB.Default, CommandLock = "PERM^server.operate", MinArgs = 0, MaxArgs = 0, ParameterNames = [])]
+	[SharpCommand(Name = "@PURGE", Switches = ["CONFIRM", "ALL", "TIME", "TYPE", "OWNER"], Behavior = CB.Default, CommandLock = "PERM^server.operate",
+		MinArgs = 0, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Purge(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
+		var switches = parser.CurrentState.Switches.ToArray();
+		var argument = parser.CurrentState.Arguments.TryGetValue("0", out var first) ? first.Message!.ToPlainText().Trim() : string.Empty;
+		if (switches.Length > 0 || argument.Length > 0)
+		{
+			var output = await PurgeRecoverListAsync(parser, executor, switches, argument);
+			await NotifyService.Notify(executor, output);
+			return new CallState(output);
+		}
 
 		await ObjectDestructionService.PurgeAsync(parser);
 

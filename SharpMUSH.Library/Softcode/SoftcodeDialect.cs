@@ -80,7 +80,7 @@ public static class SoftcodeDialects
 			["@reboot"] = "@restart",
 			["@logrotate"] = "@logwipe/rotate",
 			["@selfboot"] = "@boot/me",
-			["@recover"] = "@undestroy",
+			["@reclist"] = "@recover",
 			["folder"] = "@mail/folder",
 			["rpage"] = "page/reply",
 			["rp"] = "page/reply",

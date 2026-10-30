@@ -38,6 +38,18 @@ public class ValidateSharpOptions : IValidateOptions<SharpMUSHOptions>
 			}
 		}
 
+		foreach (var (setting, value) in new[]
+			{
+				("recover_keep_players", options.Dump.RecoverKeepPlayers),
+				("recover_keep_objects", options.Dump.RecoverKeepObjects)
+			})
+		{
+			if (!RecoverRetention.TryParse(value, out _))
+			{
+				failures.Add($"{setting} is '{value}': it takes forever, or a time of at least one day such as 30d.");
+			}
+		}
+
 		return failures.Count > 0 ? ValidateOptionsResult.Fail(failures) : ValidateOptionsResult.Success;
 	}
 

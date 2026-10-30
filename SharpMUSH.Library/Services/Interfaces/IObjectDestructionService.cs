@@ -20,19 +20,21 @@ public interface IObjectDestructionService
 	/// <summary>
 	/// Objects that must never be destroyed, however they got marked — PennMUSH
 	/// <c>special_object()</c>: <c>player_start</c>, <c>master_room</c>, <c>base_room</c>,
-	/// <c>default_home</c>, God, and the <c>probate_judge</c>.
+	/// <c>default_home</c>, God, and the <c>probate_judge</c>; and, beyond PennMUSH, the four
+	/// ancestors and the event, HTTP and package handlers.
 	/// </summary>
 	bool IsSpecialObject(DBRef dbref);
 
 	/// <summary>
-	/// Tear an object down and remove it from the database for good.
+	/// Tear an object down and move it onto the recover list (<see cref="IRecoverListStore"/>).
 	/// </summary>
 	/// <remarks>
 	/// Performs no permission checking — the caller has already decided this object dies. Runs the
 	/// type-specific teardown (contents sent home, held exits destroyed, exits leading here relinked
 	/// to their own source, possessions and channels chowned to probate), rehomes anything that
 	/// called this object home, takes it off every channel it is on, halts the object's queue, and
-	/// then deletes it.
+	/// then retires it: its number and attributes stay held until <c>@recover</c> brings it back or
+	/// <c>@purge</c> or the age pass removes the entry.
 	/// <para>
 	/// A special object (see <see cref="IsSpecialObject"/>) is refused and left intact, matching
 	/// PennMUSH <c>purge()</c>, which undestroys one rather than freeing it.

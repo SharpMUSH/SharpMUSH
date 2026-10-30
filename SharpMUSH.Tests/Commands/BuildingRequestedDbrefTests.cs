@@ -31,12 +31,16 @@ public class BuildingRequestedDbrefTests
 		=> (await Parser.CommandParse(handle, ConnectionService, MarkupText.Plain(command)))?.Message.ToPlainText()
 			?? string.Empty;
 
-	/// <summary>Creates a thing as God and frees its dbref again — <c>@destroy</c> twice is Penn's immediate free.</summary>
+	/// <summary>
+	/// Creates a thing as God and frees its dbref again: <c>@destroy</c> twice is Penn's immediate free, which puts it
+	/// on the recover list, and <c>@purge</c> on the entry frees the number.
+	/// </summary>
 	private async Task<DBRef> Hole(string uid)
 	{
 		var doomed = DBRef.Parse(await Run(1, $"@create BrdHole{uid}"));
 		await Run(1, $"@destroy {doomed}");
 		await Run(1, $"@destroy {doomed}");
+		await Run(1, $"@purge/confirm #{doomed.Number}");
 
 		await Assert.That(await Mediator.Send(new GetObjectNodeQuery(new DBRef(doomed.Number))) is None).IsTrue()
 			.Because("the hole has to be a hole for the rest of the test to mean anything");

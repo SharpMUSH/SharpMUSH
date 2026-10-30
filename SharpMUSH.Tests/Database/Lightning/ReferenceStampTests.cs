@@ -60,6 +60,18 @@ public class ReferenceStampTests : LightningDatabaseFixture
 	}
 
 	[Test]
+	public async Task ALockNamingARecoverEntryNamesTheObjectItHolds()
+	{
+		var target = await Thing("StampHeldLocked");
+		var held = await Thing("StampHeld");
+		await Db.RetireObjectAsync(held.DBRef, null);
+
+		await Db.SetLockAsync(target, "Basic", new SharpLockData { LockString = $"=#{held.DBRef.Number}" });
+
+		await Assert.That(StoredLock(target, "Basic")).IsEqualTo($"={held.DBRef}");
+	}
+
+	[Test]
 	public async Task AStampedLockIsWrittenAgainUnchanged()
 	{
 		var target = await Thing("StampTwice");

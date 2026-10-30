@@ -210,12 +210,16 @@ public class RoomAndExitCreationEventTests
 		await Assert.That(calls.All(arguments => ((DBRef)arguments[1]!).Number == 1)).IsTrue();
 	}
 
-	/// <summary>Creates a thing as God and frees its dbref again — <c>@destroy</c> twice is Penn's immediate free.</summary>
+	/// <summary>
+	/// Creates a thing as God and frees its dbref again: <c>@destroy</c> twice is Penn's immediate free, which puts it
+	/// on the recover list, and <c>@purge</c> on the entry frees the number.
+	/// </summary>
 	private async Task<int> Hole(string name)
 	{
 		var doomed = DBRef.Parse(await AsGod($"@create {name}"));
 		await AsGod($"@destroy {doomed}");
 		await AsGod($"@destroy {doomed}");
+		await AsGod($"@purge/confirm #{doomed.Number}");
 
 		await Assert.That(await Mediator.Send(new GetObjectNodeQuery(new DBRef(doomed.Number))) is None).IsTrue();
 

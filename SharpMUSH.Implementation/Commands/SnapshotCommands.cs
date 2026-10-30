@@ -10,6 +10,7 @@ using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Models.Snapshots;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Snapshots;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -30,8 +31,21 @@ public partial class Commands
 		var snapshots = parser.ServiceProvider.GetRequiredService<IObjectSnapshotService>();
 		var actor = await capabilities.GetGameActorAsync(executor.Object().DBRef, cancellationToken);
 		if (actor is null) return await NotifyService.NotifyAndReturn(executor.Object().DBRef, "#-1 PERMISSION DENIED", "A linked player executor is required.", true);
+		var target = parser.CurrentState.Arguments["0"].Message.ToPlainText();
+
+		// Snapshots are for live objects. A destroyed one keeps its history on the recover list, and comes back
+		// with it through @recover.
+		if (DBRef.TryParse(target, out var named) && named is { } number
+			&& await Mediator.Send(new GetObjectNodeQuery(new DBRef(number.Number)), cancellationToken) is not AnySharpObject
+			&& await Mediator.Send(new GetRecoverEntryQuery(number.Number), cancellationToken) is RecoverEntry destroyed)
+		{
+			return await NotifyService.NotifyAndReturn(executor.Object().DBRef, ErrorMessages.Returns.NoSuchObject,
+				$"{destroyed.Name}(#{number.Number}) was destroyed. @recover/detail #{number.Number} shows it, and @recover #{number.Number} brings it back with its snapshots.",
+				true);
+		}
+
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor,
-			parser.CurrentState.Arguments["0"].Message.ToPlainText(), LocateFlags.All, async obj =>
+			target, LocateFlags.All, async obj =>
 			{
 				MString output;
 				try
