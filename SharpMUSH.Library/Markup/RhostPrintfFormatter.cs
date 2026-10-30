@@ -51,6 +51,7 @@ public static class RhostPrintfFormatter
 
 		var cells = new List<LayoutCell>();
 		var lastMultiLine = -1;
+		var multiLineSuppress = new List<bool>();
 		var fieldIndex = 0;
 		var skipLiteral = false;
 		foreach (var piece in pieces)
@@ -76,8 +77,13 @@ public static class RhostPrintfFormatter
 			if (columnFormat.Width <= 0) continue;
 			if (field.WordWrap)
 			{
-				value = WordWrap(value, columnFormat.Width);
+				// The wrap is done here, so the indent and the cell limit are too.
+				value = WordWrap(columnFormat.MaxCells > 0 && value.Length > columnFormat.MaxCells ? value.Substring(0, columnFormat.MaxCells) : value,
+					columnFormat.Width, columnFormat.Indent);
+				columnFormat = columnFormat with { Indent = default };
 			}
+
+			if (field.MultiLine && IsMultiLine(value, columnFormat)) multiLineSuppress.Add(columnFormat.SuppressBlankLast);
 
 			// Full justification has no gap to widen in a single word; RhostMUSH centres that word.
 			if (columnFormat.Alignment == Alignment.Full && value.ToPlainText().Split(" ", StringSplitOptions.RemoveEmptyEntries).Length < 2)
@@ -94,6 +100,15 @@ public static class RhostPrintfFormatter
 			result = MarkupText.Concat(cells.OfType<LayoutSeparator>().Select(separator => separator.Text).ToArray());
 			error = null;
 			return true;
+		}
+
+		// RhostMUSH drops a blank last row when every field that runs past the first row asks for it; a field
+		// with one row has no say. The layout asks it of every column, so all of them get the same answer.
+		var suppressBlankLast = multiLineSuppress.Count > 0 && multiLineSuppress.All(asked => asked);
+		for (var i = 0; i < cells.Count; i++)
+		{
+			if (cells[i] is LayoutColumn column && column.Format.SuppressBlankLast != suppressBlankLast)
+				cells[i] = column with { Format = column.Format with { SuppressBlankLast = suppressBlankLast } };
 		}
 
 		var span = CollectionsMarshal.AsSpan(cells);
@@ -132,33 +147,55 @@ public static class RhostPrintfFormatter
 	private static bool IsEmpty(MarkupText value) => value.Length == 0;
 
 	/// <summary>
+	/// Whether a field RhostMUSH breaks into rows: one with <c>&amp;</c> whose value holds a newline, or one with
+	/// <c>|</c> whose value is wider than the field.
+	/// </summary>
+	private static bool IsMultiLine(MarkupText value, ColumnFormat format)
+		=> value.Text.Contains('\n') || (format.Wrap == WrapMode.Cell && value.DisplayWidth > format.Width);
+
+	/// <summary>
 	/// RhostMUSH's <c>|"</c> wrap, as lines joined by newlines. A line that does not reach the end of the
 	/// text breaks at the last space among its first <paramref name="width"/> characters, which is
 	/// then dropped; so a word plus the space after it has to fit. A line with no space there is cut at
 	/// the width. Newlines in the text break as well.
 	/// </summary>
-	private static MarkupText WordWrap(MarkupText value, int width)
+	/// <remarks>
+	/// With an <paramref name="indent"/>, every line after a break at a space has the indent taken off its
+	/// width, whether or not it is indented yet, as RhostMUSH counts it; after a cut, only an indented line
+	/// does. The indent's spaces start at <see cref="Indent.FromLine"/>.
+	/// </remarks>
+	private static MarkupText WordWrap(MarkupText value, int width, Indent indent)
 	{
+		var amount = Math.Clamp(indent.Amount, 0, Math.Max(0, width - 1));
 		var lines = new List<MarkupText>();
 		foreach (var segment in value.Split("\n"))
 		{
 			var rest = segment;
-			while (rest.Length > width)
+			var room = width;
+			while (rest.Length > room)
 			{
-				var space = rest.Text.LastIndexOf(' ', width - 1);
+				var space = rest.Text.LastIndexOf(' ', room - 1);
 				if (space > 0)
 				{
 					lines.Add(rest.Substring(0, space));
 					rest = rest.Substring(space + 1);
+					room = Math.Max(1, width - amount + indent.Widen);
 				}
 				else
 				{
-					lines.Add(rest.Substring(0, width));
-					rest = rest.Substring(width);
+					lines.Add(rest.Substring(0, room));
+					rest = rest.Substring(room);
+					room = lines.Count >= indent.FromLine ? Math.Max(1, width - amount) : width;
 				}
 			}
 
 			lines.Add(rest);
+		}
+
+		if (amount > 0)
+		{
+			for (var line = Math.Max(1, indent.FromLine); line < lines.Count; line++)
+				lines[line] = MarkupText.Concat([MarkupText.Space.Repeat(amount), lines[line]]);
 		}
 
 		return MarkupText.Join(MarkupText.Plain("\n"), lines);
@@ -364,7 +401,8 @@ public static class RhostPrintfFormatter
 						var plus = spec.Split('+', 2);
 						var dot = plus[0].Split('.', 2);
 						if (dot[0].Length > 0) amount = SmallNumber(dot[0]);
-						if (dot.Length > 1 && dot[1].Length > 0) fromLine = SmallNumber(dot[1]);
+						// RhostMUSH's .n counts the lines after the first, so the indent starts on line n + 2.
+						if (dot.Length > 1 && dot[1].Length > 0) fromLine = SmallNumber(dot[1]) + 1;
 						if (plus.Length > 1 && plus[1].Length > 0) widen = SmallNumber(plus[1]);
 						position = semicolon + 1;
 					}

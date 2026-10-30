@@ -12,9 +12,11 @@
 -->
 # strdistance()
 
-`strdistance(<source>, <target>)`
+`strdistance(<source>, <target>[, <ignore case>[, <transpositions>]])`
 
 strdistance() returns how many characters must be added, removed or changed to turn `<source>` into `<target>`. Each of those costs one, so swapping two characters costs two. Case matters, and markup is ignored.
+
+When `<ignore case>` is 1, case does not matter. When `<transpositions>` is 1, swapping two neighbouring characters costs one.
 
 A character is what the screen shows as one: an emoji, or a letter with an accent written as a separate mark, counts once. A letter with its accent built in, `chr(233)`, and the same letter written as `e[chr(769)]` look alike but differ.
 
@@ -36,6 +38,10 @@ Each input can be at most 65,536 characters long and hold at most 4,096 characte
 3
 > think strdistance(ab,ba)
 2
+> think strdistance(this,This,1)
+0
+> think strdistance(the,teh,,1)
+1
 > think strdistance(ansi(r,[chr(30028)][chr(128512)]),[chr(30028)][chr(128570)])
 1
 > think strdistance(,e[chr(769)][chr(128512)])

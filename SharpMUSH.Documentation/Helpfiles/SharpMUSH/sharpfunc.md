@@ -4119,7 +4119,7 @@ think objevals(me,v(DATA`TEXT))
 
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$"
 
-  Every one of them can appear in an attribute name, so a radix-64 number makes a short attribute name. A negative number is written with a leading `-`, except in radix 63 and 64, which have no digit to spare for it.
+  Every one of them can appear in an attribute name, so a radix-64 number makes a short attribute name. A negative number is written with a leading `-`. With `<baseconv digits>`, radix 63 and 64 have no digit to spare for it, so a negative number is an error there.
 
   When `<baseconv digits>` is true, the digits are baseconv()'s instead: lower case up to radix 36, and its base64 url string above that. pack(<number>,<radix>,1) is baseconv(<number>,10,<radix>).
 
@@ -4135,6 +4135,8 @@ think pack(255,16,1)
 ff
 think pack(-10,2)
 -1010
+think pack(-629126998)
+-bVxTM
 ```
 
 
@@ -4633,11 +4635,11 @@ You say, "Turn south at the junction"
 - [STRREPLACE()]
 :::
 # lrooms()
-`lrooms(<room>[, <depth>[, <all>]])`
+`lrooms(<room>[, <depth>[, <all>[, <objid>]]])`
 
   Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too.
 
-  If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order.
+  If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order, as objids when `<objid>` is true.
 
   Example:
 ```sharp
@@ -4769,7 +4771,7 @@ moderator player everyone
 # roman()
 `roman(<number>)`
 
-  Writes `<number>`, a whole number from 1 to 3999, in Roman numerals.
+  Writes `<number>`, a whole number from 1 to 3999999, in Roman numerals. Thousands from 4000 up, which take a bar over the letter on paper, are written in lower case: v is 5000, x 10000, l 50000, c 100000, d 500000 and m 1000000.
 
   Examples:
 ```sharp
@@ -4777,6 +4779,8 @@ think roman(1999)
 MCMXCIX
 think roman(4)
 IV
+think roman(777777)
+dcclxxvMMDCCLXXVII
 ```
 # room()
 `room(<object>)`
@@ -5546,9 +5550,9 @@ My name
 - [STRREPLACE()]
 :::
 # strip()
-`strip(<string>[, <characters>])`
+`strip(<string>[, <characters>[, <keep>]])`
 
-  Removes every one of `<characters>` from `<string>`, wherever it appears. Case matters. Without `<characters>`, it returns `<string>` without its markup, as stripansi() does. Either way the result has no markup.
+  Removes every one of `<characters>` from `<string>`, wherever it appears. Case matters. When `<keep>` is 1, it keeps only those characters instead. Without `<characters>`, it returns `<string>` without its markup, as stripansi() does. Either way the result has no markup.
 
   Examples:
 ```sharp
@@ -5556,6 +5560,8 @@ think strip(This is a test, is)
 Th  a tet
 think strip(abcdefgABCDEFG, azGy!7$B)
 bcdefgACDEF
+think strip(This is a test,is,1)
+isiss
 ```
 
 ::: seealso

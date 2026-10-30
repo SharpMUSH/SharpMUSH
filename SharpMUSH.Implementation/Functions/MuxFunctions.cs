@@ -109,18 +109,20 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "strip", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["string", "characters"])]
+	[SharpFunction(Name = "strip", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "characters", "keep"])]
 	public ValueTask<CallState> Strip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var text = args["0"].Message?.ToPlainText() ?? string.Empty;
 		var remove = args.TryGetValue("1", out var removeArg) ? removeArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
+		// RhostMUSH's third argument keeps the characters instead of removing them.
+		var keep = args.TryGetValue("2", out var keepArg) && ArgHelpers.ParseInteger(keepArg.Message?.ToPlainText()) != 0;
 
 		// With nothing to remove, the string comes back without its markup.
 		return ValueTask.FromResult(new CallState(remove.Length == 0
 			? text
-			: string.Concat(text.Where(c => !remove.Contains(c)))));
+			: string.Concat(text.Where(c => remove.Contains(c) == keep))));
 	}
 
 	[SharpFunction(Name = "lrand", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -332,15 +334,20 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		if (number is < 1 or > 3999) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
+		if (number is < 1 or > 3999999) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
 
-		string[] thousands = ["", "M", "MM", "MMM"];
+		// RhostMUSH's range: from 4000 up the numerals that take a bar on paper are written in lower case.
+		string[] millions = ["", "m", "mm", "mmm"];
+		string[] hundredThousands = ["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"];
+		string[] tenThousands = ["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"];
+		string[] thousands = ["", "M", "MM", "MMM", "Mv", "v", "vM", "vMM", "vMMM", "Mx"];
 		string[] hundreds = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
 		string[] tens = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
 		string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 
 		return ValueTask.FromResult(new CallState(
-			thousands[number / 1000] + hundreds[number / 100 % 10] + tens[number / 10 % 10] + ones[number % 10]));
+			millions[number / 1000000] + hundredThousands[number / 100000 % 10] + tenThousands[number / 10000 % 10]
+			+ thousands[number / 1000 % 10] + hundreds[number / 100 % 10] + tens[number / 10 % 10] + ones[number % 10]));
 	}
 
 	[SharpFunction(Name = "crc32", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -436,43 +443,47 @@ public partial class Functions
 				});
 	}
 
-	[SharpFunction(Name = "lrooms", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["room", "depth", "all"])]
+	[SharpFunction(Name = "lrooms", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["room", "depth", "all", "objid"])]
 	public async ValueTask<CallState> ListRooms(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
+		// An empty depth is the default, as RhostMUSH reads lrooms(here,,,1).
 		var depth = 1;
-		if (args.TryGetValue("1", out var depthArg) && !ArgHelpers.TryInteger(parser, depthArg.Message?.ToPlainText(), out depth))
+		if (args.TryGetValue("1", out var depthArg) && depthArg.Message?.Length > 0
+			&& !ArgHelpers.TryInteger(parser, depthArg.Message?.ToPlainText(), out depth))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
 		if (depth is < 0 or > MaxRoomDepth) return new CallState(ErrorMessages.Returns.NumberOutOfRange);
 
-		var all = !args.TryGetValue("2", out var allArg) || allArg.Message.Truthy(parser);
+		var all = !args.TryGetValue("2", out var allArg) || allArg.Message?.Length is 0 or null || allArg.Message.Truthy(parser);
+		var objids = args.TryGetValue("3", out var objidArg) && objidArg.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message?.ToPlainText() ?? string.Empty, LocateFlags.All,
 			async room => room.IsRoom
-				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all)
+				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all, objids)
 				: new CallState(ErrorMessages.Returns.NotARoom));
 	}
 
 	/// <summary>
 	/// Walks out from <paramref name="start"/> through the exits the executor can see, on the room and its
 	/// parents, one step per level. A room is listed when it is at the last level (or at any level, with
-	/// <paramref name="all"/>) and the executor can examine it, stands in it, or the enactor is it.
+	/// <paramref name="all"/>) and the executor can examine it, stands in it, or the enactor is it. With
+	/// <paramref name="objids"/>, each is listed as its objid.
 	/// </summary>
 	private async ValueTask<CallState> RoomsWithinAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject enactor, AnySharpObject start, int depth, bool all)
+		AnySharpObject enactor, AnySharpObject start, int depth, bool all, bool objids)
 	{
 		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
 		var executorLocation = (await executor.Where()).Object().DBRef.Number;
 		var seen = new HashSet<int> { start.Object().DBRef.Number };
-		var reported = new SortedSet<int>();
+		var reported = new SortedDictionary<int, DBRef>();
 		var level = new List<AnySharpObject> { start };
 
 		for (var step = 1; step <= depth && level.Count > 0; step++)
@@ -490,7 +501,7 @@ public partial class Functions
 						&& (number == executorLocation || number == enactor.Object().DBRef.Number
 							|| await PermissionService.CanExamine(executor, destination)))
 					{
-						reported.Add(number);
+						reported[number] = destination.Object().DBRef;
 					}
 				}
 			}
@@ -498,7 +509,7 @@ public partial class Functions
 			level = next;
 		}
 
-		return new CallState(string.Join(" ", reported.Select(number => $"#{number}")));
+		return new CallState(string.Join(" ", reported.Values.Select(dbref => objids ? dbref.ToString() : $"#{dbref.Number}")));
 	}
 
 	/// <summary>The rooms the exits the viewer can see on <paramref name="room"/> and its parents lead to.</summary>

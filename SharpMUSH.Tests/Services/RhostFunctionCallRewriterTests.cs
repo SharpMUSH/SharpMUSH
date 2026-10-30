@@ -34,6 +34,13 @@ public class RhostFunctionCallRewriterTests
 	[Arguments("-[chomp(%rthis is a test%r)]-", "-this is a test-")]
 	[Arguments("-[chomp(%rthis is a test%r,r)]-", "-\nthis is a test-")]
 	[Arguments("lnum2(5)", "0 1 2 3 4")]
+	[Arguments("lnum2(10,5,+)", "5 6 7 8 9 10 11 12 13 14")]
+	[Arguments("lnum2(10,5,+,2)", "5 7 9 11 13 15 17 19 21 23")]
+	[Arguments("lnum2(10,20,-)", "20 19 18 17 16 15 14 13 12 11")]
+	[Arguments("lnum2(3,,-)", "0")]
+	[Arguments("lnum2(5,3,-,2)", "3 1")]
+	[Arguments("lnum2(3,9,-,3)", "9 6 3")]
+	[Arguments("[xnor(1,1,1)] [xnor(1,0,0)] [xnor(1,1,0)]", "1 1 0")]
 	[Arguments("streq(ljc(abcdef,3),ABC)", "1")]
 	[Arguments("[andflag(#1,wizard,!going)] [andflag(#1,wizard,going)]", "1 0")]
 	[Arguments("[orflag(#1,going,wizard)] [orflag(#1,going,halt)]", "1 0")]
@@ -86,12 +93,12 @@ public class RhostFunctionCallRewriterTests
 	[Test]
 	public async Task LeavesAShapeNoRuleCoversAndSaysSo()
 	{
-		var result = RhostSoftcodeRewriter.Rewrite("think [lnum2(10,5,+)] [xnor(1,1,1)]");
+		var result = RhostSoftcodeRewriter.Rewrite("think [lnum2(%0,5,+)] [xnor(1)]");
 
-		await Assert.That(result.Text).IsEqualTo("think [lnum2(10,5,+)] [xnor(1,1,1)]");
+		await Assert.That(result.Text).IsEqualTo("think [lnum2(%0,5,+)] [xnor(1)]");
 		await Assert.That(result.Notes).IsEquivalentTo([
 			"lnum2() with 3 argument(s) left as written: SharpMUSH has no lnum2()",
-			"xnor() with 3 argument(s) left as written: SharpMUSH has no xnor()"
+			"xnor() with 1 argument(s) left as written: SharpMUSH has no xnor()"
 		]);
 	}
 

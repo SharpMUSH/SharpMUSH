@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
@@ -25,7 +26,8 @@ public static class RhostFunctionCallRewriter
 		["streq"] = args => args.Length == 2 ? $"not(comp({args[0]},{args[1]},I))" : null,
 		["ncomp"] = args => args.Length == 2 ? $"comp({args[0]},{args[1]},F)" : null,
 		["power10"] = args => args.Length == 1 ? $"power(10,{args[0]})" : null,
-		["xnor"] = args => args.Length == 2 ? $"not(xor({args[0]},{args[1]}))" : null,
+		// Each argument after the first is compared with the answer so far.
+		["xnor"] = args => args.Length >= 2 ? args[1..].Aggregate(args[0], (answer, next) => $"not(xor({answer},{next}))") : null,
 		["nummatch"] = args => args.Length switch
 		{
 			2 => $"words(matchall({args[0]},{args[1]}))",
@@ -48,7 +50,7 @@ public static class RhostFunctionCallRewriter
 		},
 		// RhostMUSH's tag() looks a tag up; SharpMUSH's tag() writes an HTML tag.
 		["tag"] = args => args.Length == 1 ? $"tagref({args[0]})" : null,
-		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : null,
+		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : NumberRange(args),
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
 		["orflag"] = args => args.Length >= 2 ? $"orlflags({args[0]},{FlagList(args[1..])})" : null,
@@ -92,6 +94,38 @@ public static class RhostFunctionCallRewriter
 			default:
 				return null;
 		}
+	}
+
+	/// <summary>
+	/// lnum2(&lt;count&gt;, &lt;start&gt;[, +|-[, &lt;step&gt;]]): &lt;count&gt; numbers from &lt;start&gt;, up or down by
+	/// &lt;step&gt;, as lnum() from the first to the last. Only whole numbers written out are taken, a count of at
+	/// least 1 and a start of at least 0; RhostMUSH answers anything else in ways lnum() has no form for.
+	/// Counting down stops at 0, as RhostMUSH's does.
+	/// </summary>
+	private static string? NumberRange(string[] args)
+	{
+		if (args.Length is < 2 or > 4
+			|| !int.TryParse(args[0].Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1
+			|| !int.TryParse(args[1].Trim() is { Length: > 0 } start ? start : "0", NumberStyles.None, CultureInfo.InvariantCulture, out var first))
+		{
+			return null;
+		}
+
+		var direction = args.Length > 2 ? args[2].Trim() : "";
+		if (direction is not ("" or "+" or "-")) return null;
+		// A step of 1 or less is 1, as in RhostMUSH.
+		var step = 1;
+		if (args.Length > 3 && args[3].Trim() is { Length: > 0 } stepText)
+		{
+			if (!int.TryParse(stepText, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out step) || step > 1_000_000) return null;
+			step = Math.Max(1, step);
+		}
+
+		// Counting down stops at 0.
+		var span = (long)step * (count - 1);
+		var last = direction == "-" ? Math.Max(first % step, first - span) : first + span;
+		if (last > int.MaxValue) return null;
+		return step == 1 ? $"lnum({first},{last})" : $"lnum({first},{last},%b,{step})";
 	}
 
 	/// <summary>The object of an argument that is just a <c>bittype()</c> call, bracketed or not: <c>me</c> when it names none.</summary>

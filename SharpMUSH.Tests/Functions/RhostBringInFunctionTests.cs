@@ -59,7 +59,8 @@ public class RhostBringInFunctionTests : ServerTestBase
 	}
 
 	[Test]
-	[Arguments("escapex(\\[add\\(1\\,1\\)\\])", "\\\\[add\\(1\\,1\\)\\]")]
+	[Arguments("escapex(\\[add\\(1\\,1\\)\\])", "\\[add\\(1\\,1\\)\\]")]
+	[Arguments("escapex(x\\[y\\])", "\\x\\[y\\]")]
 	[Arguments("escapex(\\[add\\(1\\,1\\)\\],f)", "\\[add\\(1\\,1\\)\\]")]
 	[Arguments("escapex(\\[add\\(1\\,1\\)\\],f\\[\\])", "[add\\(1\\,1\\)]")]
 	[Arguments("escapex(\\%b\\[x\\],fs)", "%b\\[x\\]")]

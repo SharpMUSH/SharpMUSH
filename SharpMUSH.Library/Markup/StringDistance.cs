@@ -10,7 +10,14 @@ public static class StringDistance
 	public const long MaxEditCells = 4_000_000;
 	public const string WorkLimitExceeded = "#-1 STRING DISTANCE WORK LIMIT EXCEEDED";
 
+	/// <summary>
+	/// The distance from <paramref name="source"/> to <paramref name="target"/>. <paramref name="ignoreCase"/> compares
+	/// lower case; <paramref name="transpositions"/> counts two neighbours swapped as one edit, not two.
+	/// </summary>
 	public static bool TryCalculate(MarkupText source, MarkupText target, out int distance)
+		=> TryCalculate(source, target, false, false, out distance);
+
+	public static bool TryCalculate(MarkupText source, MarkupText target, bool ignoreCase, bool transpositions, out int distance)
 	{
 		distance = 0;
 		if (source.Length > MaxInputCodeUnits || target.Length > MaxInputCodeUnits) return false;
@@ -26,10 +33,11 @@ public static class StringDistance
 		}
 
 		// Intern cluster contents once so each edit-cell comparison is constant-time, even for long clusters.
-		var symbols = new Dictionary<string, int>(StringComparer.Ordinal);
+		var symbols = new Dictionary<string, int>(ignoreCase ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal);
 		var left = Tokenize(source.Text, sourceCount, symbols);
 		var right = Tokenize(target.Text, targetCount, symbols);
 		if (left.Length < right.Length) (left, right) = (right, left);
+		var beforePrevious = new int[right.Length + 1];
 		var previous = new int[right.Length + 1];
 		var current = new int[right.Length + 1];
 		for (var column = 0; column <= right.Length; column++) previous[column] = column;
@@ -40,8 +48,13 @@ public static class StringDistance
 			{
 				var replacement = previous[column - 1] + (left[row - 1] == right[column - 1] ? 0 : 1);
 				current[column] = Math.Min(replacement, Math.Min(previous[column] + 1, current[column - 1] + 1));
+				if (transpositions && row > 1 && column > 1
+					&& left[row - 1] == right[column - 2] && left[row - 2] == right[column - 1])
+				{
+					current[column] = Math.Min(current[column], beforePrevious[column - 2] + 1);
+				}
 			}
-			(previous, current) = (current, previous);
+			(beforePrevious, previous, current) = (previous, current, beforePrevious);
 		}
 		distance = previous[right.Length];
 		return true;
