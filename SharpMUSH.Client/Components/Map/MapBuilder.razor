@@ -119,6 +119,11 @@
             if (Cell is var (x, y) && Layout.Space is not null) ChoosePlace((int)x, (int)y);
             else if (Cell is var (x2, y2)) (_from, _exitTo, _exitBack) = DefaultExits(x2, y2);
         }
+        // The same place on another level is another place: its fields start again once that level's places are read.
+        else if (Cell is var (px, py) && Layout.Space is not null && _placeRead != (Cells?.Level == Level ? Level : null))
+        {
+            ChoosePlace((int)px, (int)py);
+        }
         // The fields follow the room as the plan moves it, not only when another room is chosen.
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
@@ -649,6 +654,9 @@
     private string _placeRoom = "";
     private string? _placeRoomProblem;
     private string _side = "n";
+
+    /// <summary>The level whose places the place fields were read from; null while that level's places were not read.</summary>
+    private int? _placeRead;
     private string _sideState = "open";
     private string _sideReason = "";
     private static readonly string[] Sides = ["n", "e", "s", "w", "u", "d"];
@@ -662,19 +670,34 @@
     private void ChoosePlace(int x, int y)
     {
         var place = PlaceAt(x, y);
+        _placeRead = Cells?.Level == Level ? Level : null;
         (_paintX, _paintY, _paintX2, _paintY2, _paintType) = (x, y, x, y, place?.Type ?? _paintType);
         (_placeName, _placeRoom, _placeRoomProblem) = (place?.Name ?? "", place?.Room ?? "", null);
         ChooseSide(_side);
     }
 
-    /// <summary>The side's state and reason as the view read them: open when it lists no wall there.</summary>
+    /// <summary>
+    /// The side's state and reason as the view read them: open when it lists no wall there. A wall between two places is
+    /// listed once, on the north, east or up side of the one it belongs to, so a south or west side reads it from the
+    /// neighbour's; a one-way side is listed on the place it leads out of.
+    /// </summary>
     private void ChooseSide(string side)
     {
         _side = side;
-        var wall = Cell is var (x, y) && Cells is { } cells && cells.Level == Level
-            ? cells.Walls.FirstOrDefault(wall => wall.X == (int)x && wall.Y == (int)y && wall.Side == side)
-            : null;
-        (_sideState, _sideReason) = wall is { Kind: MapWallKinds.Wall or MapWallKinds.OneWay } ? (wall.Kind, wall.Reason ?? "") : ("open", "");
+        MapWallDto? wall = null;
+        if (Cell is var (cx, cy) && Cells is { } cells && cells.Level == Level)
+        {
+            var (x, y) = ((int)cx, (int)cy);
+            var (ownerX, ownerY, ownerSide) = side switch
+            {
+                "s" => (x, y - 1, "n"),
+                "w" => (x - 1, y, "e"),
+                _ => (x, y, side),
+            };
+            wall = cells.Walls.FirstOrDefault(wall => wall.X == x && wall.Y == y && wall.Side == side && wall.Kind == MapWallKinds.OneWay)
+                ?? cells.Walls.FirstOrDefault(wall => wall.X == ownerX && wall.Y == ownerY && wall.Side == ownerSide && wall.Kind == MapWallKinds.Wall);
+        }
+        (_sideState, _sideReason) = wall is { } found ? (found.Kind, found.Reason ?? "") : ("open", "");
     }
 
     private bool WorldPlanned => Plan.Changes.Any(change => change.Kind == MapChangeKind.CreateWorld);

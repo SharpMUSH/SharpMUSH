@@ -716,6 +716,45 @@ public class WorldMapPageTests : TrackingBunitContext
 		]).Because("the paint box starts on the place chosen, with its terrain");
 	}
 
+	[Test]
+	public async Task ThePlaceFieldsFollowTheLevelOnShow()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("Old Mill");
+
+		await cut.Find("[aria-label=NavMapLevelUp]").ClickAsync();
+
+		cut.WaitForAssertion(() => cut.Find("#map-place-title").TextContent.Contains("NavMapPlaceAt(0, 1, 1)"));
+		cut.WaitForAssertion(() => AssertPlaceNameEmpty(cut));
+	}
+
+	private static void AssertPlaceNameEmpty(IRenderedComponent<SharpMUSH.Client.Pages.WorldMap> cut)
+	{
+		if (cut.Find(".map-builder input").GetAttribute("value") != "") throw new InvalidOperationException("the place fields still hold level 0's place");
+	}
+
+	[Test]
+	public async Task APlacesSouthSideReadsTheWallItSharesWithThePlaceBelow()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+
+		var selects = cut.FindComponents<MudBlazor.MudSelect<string>>();
+		await cut.InvokeAsync(() => selects[0].Instance.ValueChanged.InvokeAsync("s"));
+
+		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall)
+			.Because("the wall between 0,1 and 0,0 is listed once, as the north side of 0,0");
+	}
+
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync(bool authorized = false)
 	{
 		Arrange();

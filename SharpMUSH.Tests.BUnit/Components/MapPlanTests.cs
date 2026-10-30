@@ -379,6 +379,18 @@ public class MapPlanTests
 	}
 
 	[Test]
+	public async Task ARoomPlacedByItsObjidIsCheckedByItsDbref()
+	{
+		var plan = new MapPlan(Grid() with { Space = new(MapSpaces.Square, 0, 0, 9, 9, [0]) });
+
+		plan.PlaceRoom(4, 5, 0, "#12:1793148715366");
+
+		var step = plan.Changes.Single().Steps.Single();
+		await Assert.That(step).IsEqualTo(new MapStep("@world/room #50/4,5,0=#12:1793148715366", "num(worldcell(#50,4,5,0,room))", "#12"));
+		await Assert.That(MapPlan.Worked(step, "#12")).IsTrue();
+	}
+
+	[Test]
 	public async Task ARoomStandingOnAPlaceNeedsNoWayIn()
 	{
 		var map = Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Old forest (1,0,0)", [1, 0, 0]) with { OnPlace = true })

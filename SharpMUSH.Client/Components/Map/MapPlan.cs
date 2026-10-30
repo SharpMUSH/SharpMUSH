@@ -313,7 +313,7 @@ public sealed partial class MapPlan(MapDto map)
 		var id = Map.Map.Id;
 		var at = Place(x, y, z);
 		Upsert(new($"place-room:{at}", MapChangeKind.PlaceRoom, id, at,
-			[new($"@world/room {id}/{at}={room.Trim()}", $"num(worldcell({id},{x},{y},{z},room))", room.Trim().Length > 0 ? room.Trim() : "#-1")])
+			[new($"@world/room {id}/{at}={room.Trim()}", $"num(worldcell({id},{x},{y},{z},room))", room.Trim().Length > 0 ? room.Trim().Split(':')[0] : "#-1")])
 		{ Other = room.Trim() });
 	}
 
