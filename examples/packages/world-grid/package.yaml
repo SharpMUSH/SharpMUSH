@@ -70,13 +70,13 @@ objects:
       DATA`RADIUS: |-
         5
       # Copied onto each map by +map/exits. ZONE`EXITS, with %0 a room on the map and %1 a viewer, lists the
-      # direction exits that lead somewhere from that room for that viewer, leaving out a way the room has an
-      # exit of its own for. ZONE`EXITS`TO, with %1 one of them, is the room standing where it leads; empty
+      # direction exits that lead somewhere from that room for that viewer, leaving out a DARK one the viewer
+      # can't see and a way the room has an exit of its own for (by any of its names, in any case). ZONE`EXITS`TO, with %1 one of them, is the room standing where it leads; empty
       # while none does, and it lends none. look, room-contents and gmcp-room read them.
       DATA`ZONE: |-
         What +map/exits copies onto a map. One leaf per attribute.
       DATA`ZONE`EXITS: |-
-        [setq(zoneexits_own,iter(lexits(%0),name(%i0),,|))][squish(iter(lexits(me),if(cand(hasattr(%i0,MAP`WAY),not(member(%q<zoneexits_own>,name(%i0),|)),t(match(open oneway,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%i0/MAP`WAY),state,%1)))),%i0)))]
+        [setq(zoneexits_own,lcstr(iter(lexits(%0),fullname(%i0),,;)))][squish(iter(lexits(me),if(cand(hasattr(%i0,MAP`WAY),not(member(%q<zoneexits_own>,lcstr(name(%i0)),;)),cor(not(hasflag(%i0,DARK)),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All)),t(match(open oneway,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%i0/MAP`WAY),state,%1)))),%i0)))]
       DATA`ZONE`EXITS`TO: |-
         [setq(zoneexits_to,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%1/MAP`WAY),to))][if(eq(words(%q<zoneexits_to>,%,),3),worldcell(me,extract(%q<zoneexits_to>,1,1,%,),extract(%q<zoneexits_to>,2,1,%,),extract(%q<zoneexits_to>,3,1,%,),room))]
 

@@ -126,6 +126,15 @@ public class WorldGridIntegrationTests
 			// look lists the map's ways that lead somewhere from here: none east, the map ends there.
 			await Assert.That(walked).Contains("Obvious exits:").And.Contains("North").And.Contains("West").And.DoesNotContain("East");
 
+			// A DARK direction exit is left out for whoever can't see it.
+			var westExit = await Eval($"first(iter(lexits({mapRef}),if(strmatch(name(%i0),West),%i0)))");
+			await God($"@set {westExit}=DARK");
+			await Assert.That(await As(walker, "look")).Contains("North").And.DoesNotContain("West");
+			await God($"@set {westExit}=!DARK");
+			// An exit of the room's own, by any name or alias in any case, stands in for the map's way.
+			await God($"@open w;WEST={start},,{east}");
+			await Assert.That(await As(walker, "look")).Contains("w, Southwest").And.Contains("and North").And.DoesNotContain("West");
+
 			await Assert.That(await As(walker, "e")).Contains("You can't go that way.");
 			await Assert.That(await As(walker, "+map")).Contains("   OO@").And.Contains("Key: O Old forest");
 			await God($"&MAP`LEGEND`FOREST`CHAR {mapRef}=f");
