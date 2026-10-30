@@ -29,7 +29,7 @@ public class RestoreRecoverEntryCommandHandler(IRecoverListStore database)
 public class PurgeRecoverEntryCommandHandler(IRecoverListStore database) : ICommandHandler<PurgeRecoverEntryCommand, bool>
 {
 	public async ValueTask<bool> Handle(PurgeRecoverEntryCommand request, CancellationToken cancellationToken)
-		=> await database.PurgeRecoverEntryAsync(request.Objid, request.EvenIfKept, cancellationToken);
+		=> await database.PurgeRecoverEntryAsync(request.Objid, request.EvenIfKept, request.ReusableAt, cancellationToken);
 }
 
 public class SetRecoverKeepCommandHandler(IRecoverListStore database) : ICommandHandler<SetRecoverKeepCommand, bool>
@@ -57,4 +57,34 @@ public class MeasureRecoverListQueryHandler(IRecoverListStore database)
 {
 	public async ValueTask<RecoverListUsage> Handle(MeasureRecoverListQuery request, CancellationToken cancellationToken)
 		=> await database.MeasureRecoverListAsync(cancellationToken);
+}
+
+public class CountFreeNumbersQueryHandler(IFreeNumberStore database) : IQueryHandler<CountFreeNumbersQuery, int>
+{
+	public async ValueTask<int> Handle(CountFreeNumbersQuery request, CancellationToken cancellationToken)
+		=> await database.CountFreeNumbersAsync(cancellationToken);
+}
+
+public class IsFreeNumberQueryHandler(IFreeNumberStore database) : IQueryHandler<IsFreeNumberQuery, bool>
+{
+	public async ValueTask<bool> Handle(IsFreeNumberQuery request, CancellationToken cancellationToken)
+		=> await database.IsFreeNumberAsync(request.Number, cancellationToken);
+}
+
+public class GetFreeNumbersQueryHandler(IFreeNumberStore database) : IStreamQueryHandler<GetFreeNumbersQuery, FreeNumber>
+{
+	public IAsyncEnumerable<FreeNumber> Handle(GetFreeNumbersQuery request, CancellationToken cancellationToken)
+		=> database.GetFreeNumbersAsync(cancellationToken);
+}
+
+public class RecordUntrackedHolesCommandHandler(IFreeNumberStore database) : ICommandHandler<RecordUntrackedHolesCommand, int>
+{
+	public async ValueTask<int> Handle(RecordUntrackedHolesCommand request, CancellationToken cancellationToken)
+		=> await database.RecordUntrackedHolesAsync(request.ReusableAt, cancellationToken);
+}
+
+public class FindNumberReferencesQueryHandler(IFreeNumberStore database) : IStreamQueryHandler<FindNumberReferencesQuery, NumberReference>
+{
+	public IAsyncEnumerable<NumberReference> Handle(FindNumberReferencesQuery request, CancellationToken cancellationToken)
+		=> database.FindNumberReferencesAsync(request.Numbers, cancellationToken);
 }

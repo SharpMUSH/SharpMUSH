@@ -188,4 +188,33 @@ public class RecoverListTests
 		await Assert.That(WebAppFactoryArg.Notifications.For(WebAppFactoryArg.ExecutorDBRef).Where(message => message.Contains(marker)))
 			.Count().IsEqualTo(1);
 	}
+
+	[Test]
+	public async Task APurgedNumberIsGarbageAndWaitsOutItsEntrysRetention()
+	{
+		var (objid, _) = await DestroyedThingAsync("RecoverGarbage");
+		await RunAsync($"@purge #{objid.Number}");
+
+		await Assert.That(await EvalAsync($"hastype(#{objid.Number},GARBAGE)")).IsEqualTo("1");
+		await Assert.That(int.Parse((await EvalAsync("lstats()")).Split(' ')[^1])).IsGreaterThanOrEqualTo(1);
+		await Assert.That(await RunAsync("@recover/free")).Contains($"#{objid.Number}");
+
+		var next = DBRef.Parse((await RunAsync($"@create {TestIsolationHelpers.GenerateUniqueName("RecoverAfter")}")).Trim());
+		await Assert.That(next.Number).IsNotEqualTo(objid.Number)
+			.Because("an entry purged early is due only when it would have expired");
+	}
+
+	[Test]
+	public async Task RefsListsCodeThatNamesAHeldNumberBare()
+	{
+		var (objid, name) = await DestroyedThingAsync("RecoverRefTarget");
+		var holder = DBRef.Parse((await RunAsync($"@create {TestIsolationHelpers.GenerateUniqueName("RecoverRefHolder")}")).Trim());
+		await RunAsync($"&STALE #{holder.Number}=[pemit(#{objid.Number},hello)]");
+		await RunAsync($"&FINE #{holder.Number}=[pemit({objid},hello)]");
+
+		var output = await RunAsync($"@recover/refs #{objid.Number}");
+
+		await Assert.That(output).Contains($"#{holder.Number}/STALE").And.Contains(name);
+		await Assert.That(output).DoesNotContain($"#{holder.Number}/FINE");
+	}
 }

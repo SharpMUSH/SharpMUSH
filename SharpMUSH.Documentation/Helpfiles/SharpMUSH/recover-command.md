@@ -9,7 +9,8 @@
   "sections": [
     {"id": "listing", "heading": "Listing the recover list", "lookup": "@recover listing"},
     {"id": "recovering", "heading": "What a recovery puts back", "lookup": "@recover recovering"},
-    {"id": "keeping", "heading": "Keeping and purging entries", "lookup": "@recover keeping"}
+    {"id": "keeping", "heading": "Keeping and purging entries", "lookup": "@recover keeping"},
+    {"id": "numbers", "heading": "Free numbers and stale references", "lookup": "@recover numbers"}
   ]
 }
 -->
@@ -22,7 +23,9 @@
 `@recover <object>|#<number>`<br>
 `@recover/exits <room>`<br>
 `@recover/keep #<number>[=<reason>]`<br>
-`@recover/unkeep #<number>`
+`@recover/unkeep #<number>`<br>
+`@recover/free`<br>
+`@recover/refs [#<number>]`
 
 A destroyed object is not deleted outright. When the purge frees it, it goes onto the recover list, still holding its number, its attributes and what it pointed at. No new object gets that number while the entry is there. `@recover` brings it back under the same number, so references to it, locks naming it and snapshots of it find it again.
 
@@ -31,6 +34,7 @@ Given an object still marked GOING, `@recover` spares it, as `@undestroy` does. 
 - [@recover listing]: who sees which entries, and the filters
 - [@recover recovering]: what comes back and what falls back
 - [@recover keeping]: keep marks, how long entries stay, and `@purge`
+- [@recover numbers]: when a number is reused, and finding code that still names it
 
 ## Listing the recover list
 
@@ -59,7 +63,19 @@ Entries expire after recover_keep_players for characters (forever by default) an
 
 `@purge #<number>` removes one entry for good and frees its number; a kept one needs `@purge/confirm #<number>`. See [@purge] for removing many at once.
 
+## Free numbers and stale references
+
+Once an entry expires or is purged, its number is free (see [garbage]). A new object takes the free number that has waited longest, and only once the entry would have expired, so purging early does not bring a number back sooner unless someone asks for it by number.
+
+These need the See_All power. `@recover/free` lists the free numbers and when each will be reused. `@recover/refs` lists every attribute that names a number on the recover list, or a free number not reused yet, as a bare `#<number>`: code that would point at the next object to take that number. Given a number, it looks for that one alone. An objid (`#<number>:<time>`) is not listed, since it stops matching once its object is gone.
+
+Example:
+```
+> @recover/refs #42
+```
+
 ::: seealso
+- [garbage]
 - [@destroy]
 - [@undestroy]
 - [@purge]

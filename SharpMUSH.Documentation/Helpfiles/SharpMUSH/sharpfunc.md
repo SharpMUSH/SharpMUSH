@@ -2348,7 +2348,7 @@ think hasrole(*Ariel, royalty, 1)
 # hastype()
 `hastype(<object>, <type list>)`
 
-  Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM and EXIT.
+  Returns 1 if `<object>` belongs to one of the types given in `<type list>`, and 0 otherwise. Valid types are PLAYER, THING, ROOM, EXIT and GARBAGE. GARBAGE matches a `#<number>` that is free (see [garbage]).
 
   Example:
 ```sharp
@@ -3280,8 +3280,8 @@ think lrand(5, 5, 3, |)
   `<Total objects>` `<Rooms>` `<Exits>` `<Things>` `<Players>`
 
   PennMUSH's own help lists six columns for both forms, but fun_lstats prints the garbage column
-  only for the whole database; SharpMUSH follows the code. A destroyed object is removed here
-  rather than kept as garbage, so that column is always 0.
+  only for the whole database; SharpMUSH follows the code. Garbage is the free numbers (see
+  [garbage]), and the whole database's total counts them.
 
   stats() is an alias for lstats().
 
@@ -3817,7 +3817,7 @@ You say, "#1 #7 #56 #-1"
 # nextdbref()
 `nextdbref()`
 
-  This function returns the next dbref on the free list; when the next object is @created (or @dug, or @opened, or @pcreated, etc.), it will have this dbref.
+  This function returns the dbref the next object @created (or @dug, or @opened, or @pcreated, etc.) will have: the free number that has waited longest, once it is due, or else the next unused one (see [garbage]).
 
 
 ::: seealso

@@ -290,6 +290,7 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			ReportProgress("Channels imported", 0.97);
 
 			await RetireRecoverListedAsync(pennDatabase, context, cancellationToken);
+			await QuarantineSourceGarbageAsync(context, cancellationToken);
 			await ReinstallPackagesAsync(context);
 			await EnableSourceOptionsAsync(pennDatabase, context, cancellationToken);
 			// Last: the admin page takes 100% as the end of the import and stops polling.
@@ -367,6 +368,35 @@ public partial class PennMUSHDatabaseConverter : IPennMUSHDatabaseConverter
 			context.Notes.Add(retired == 1
 				? "1 object on RhostMUSH's recover list was put on the recover list; @recover lists it."
 				: $"{retired} objects on RhostMUSH's recover list were put on the recover list; @recover lists them.");
+		}
+	}
+
+	/// <summary>
+	/// The numbers the source held as garbage stay free here, but softcode written there may still name them, so they
+	/// wait out recover_keep_objects before a creation takes one unasked, as a destroyed object's number does.
+	/// </summary>
+	private async Task QuarantineSourceGarbageAsync(PennMUSHConversionContext context, CancellationToken cancellationToken)
+	{
+		var keep = RecoverRetention.TryParse(RecoverKeepObjects(), out var retention) ? retention : null;
+		var held = await _mediator.Send(new RecordUntrackedHolesCommand(DateTimeOffset.UtcNow + keep), cancellationToken);
+		if (held == 0) return;
+
+		context.Notes.Add(keep is { } days
+			? $"{held} object numbers that were garbage in {context.SourceName} wait {days.TotalDays:0} days before a new object takes one unasked."
+			: $"{held} object numbers that were garbage in {context.SourceName} are only given to a new object that asks for one.");
+	}
+
+	/// <summary>recover_keep_objects, or its default when the configuration cannot be read.</summary>
+	private string RecoverKeepObjects()
+	{
+		try
+		{
+			return _options.CurrentValue.Dump.RecoverKeepObjects;
+		}
+		catch (Exception exception) when (exception is not OperationCanceledException)
+		{
+			_logger.LogWarning(exception, "Could not read recover_keep_objects; source garbage waits {Default}", RecoverRetention.ObjectsDefault);
+			return RecoverRetention.ObjectsDefault;
 		}
 	}
 

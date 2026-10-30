@@ -28,6 +28,7 @@ public interface ISharpDatabase :
 	IPushSubscriptionStore,
 	IPageLogStore,
 	IFeedStore,
-	IRecoverListStore
+	IRecoverListStore,
+	IFreeNumberStore
 {
 }

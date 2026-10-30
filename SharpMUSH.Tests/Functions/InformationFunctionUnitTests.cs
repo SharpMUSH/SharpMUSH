@@ -268,9 +268,8 @@ public class InformationFunctionUnitTests
 	/// The figures themselves cannot be compared between two calls: the whole test session shares
 	/// one world, and any test running in parallel may create an object between them. What is stable
 	/// is the shape — six fields for ANY_OWNER against the one-player form's five, every field a
-	/// count, the first the sum of the other four, and the last always <c>0</c> because SharpMUSH
-	/// removes a destroyed object rather than keeping it as garbage. The garbage column is printed
-	/// rather than dropped because the shipped helpfile names six fields and softcode counts them.
+	/// count, and the first the sum of the other five: rooms, exits, things, players and the free
+	/// numbers counted as garbage.
 	/// </remarks>
 	[Test]
 	[Arguments("lstats()")]
@@ -289,10 +288,9 @@ public class InformationFunctionUnitTests
 		}
 
 		await Assert.That(int.Parse(fields[0]))
-			.IsEqualTo(int.Parse(fields[1]) + int.Parse(fields[2]) + int.Parse(fields[3]) + int.Parse(fields[4]))
-			.Because("the first field is the total, and the four after it are rooms, exits, things and players");
+			.IsEqualTo(int.Parse(fields[1]) + int.Parse(fields[2]) + int.Parse(fields[3]) + int.Parse(fields[4]) + int.Parse(fields[5]))
+			.Because("the first field is the total: rooms, exits, things and players, then garbage, as PennMUSH counts it");
 		await Assert.That(int.Parse(fields[0])).IsGreaterThan(0).Because("the world is not empty");
-		await Assert.That(fields[5]).IsEqualTo("0").Because("there is no garbage to count");
 	}
 
 	/// <summary>

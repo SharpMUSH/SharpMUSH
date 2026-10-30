@@ -31,28 +31,7 @@ public class ObjectDestructionService(
 	private const string NothingDbRef = "#-1";
 
 	/// <inheritdoc />
-	public bool IsSpecialObject(DBRef dbref)
-	{
-		var database = configuration.CurrentValue.Database;
-		var command = configuration.CurrentValue.Command;
-		var number = dbref.Number;
-
-		// PennMUSH's special_object() list, widened to the other objects the configuration names, which PennMUSH
-		// leaves destroyable: the ancestors and the event, HTTP and package handlers.
-		return number == GodDbRefNumber
-			|| number == database.PlayerStart
-			|| number == database.MasterRoom
-			|| number == database.BaseRoom
-			|| number == database.DefaultHome
-			|| number == command.ProbateJudge
-			|| number == database.AncestorRoom
-			|| number == database.AncestorExit
-			|| number == database.AncestorThing
-			|| number == database.AncestorPlayer
-			|| number == database.EventHandler
-			|| number == database.HttpHandler
-			|| number == database.PackageManager;
-	}
+	public bool IsSpecialObject(DBRef dbref) => SpecialObjectNumbers.From(configuration.CurrentValue).Contains(dbref.Number);
 
 	/// <inheritdoc />
 	public async ValueTask<bool> FreeObjectAsync(IMUSHCodeParser parser, AnySharpObject target,

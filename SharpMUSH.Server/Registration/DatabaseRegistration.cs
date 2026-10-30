@@ -219,6 +219,7 @@ internal static class DatabaseRegistration
 		services.AddSingleton<IPageLogStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IFeedStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IRecoverListStore>(sp => sp.GetRequiredService<TProvider>());
+		services.AddSingleton<IFreeNumberStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IWikiStore>(sp => sp.GetRequiredService<TProvider>());
 		services.AddSingleton<IOAuthStore>(sp => sp.GetRequiredService<TProvider>());
 		// Keep IWikiStore bound to the provider for handlers. Only the host facade uses the

@@ -190,7 +190,8 @@ public class RecoverListService(
 	/// <inheritdoc />
 	public async ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, bool evenIfKept = false, CancellationToken ct = default)
 	{
-		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid, evenIfKept), ct)) return false;
+		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid, evenIfKept, ReusableAt(entry, DateTimeOffset.UtcNow)), ct))
+			return false;
 
 		foreach (var cleanup in cleanups)
 		{
@@ -223,6 +224,16 @@ public class RecoverListService(
 		if (purged > 0) logger.LogInformation("Purged {Count} recover entries past their retention", purged);
 		return purged;
 	}
+
+	/// <summary>
+	/// When the allocator may hand a purged entry's number out unasked: once the entry would have expired, so purging
+	/// early frees the number for whoever asks for it but does not cut its quarantine short. Never, for a type kept
+	/// forever.
+	/// </summary>
+	private DateTimeOffset? ReusableAt(RecoverEntry entry, DateTimeOffset now)
+		=> RetentionFor(entry.Type) is { } keep
+			? entry.DestroyedAt + keep > now ? entry.DestroyedAt + keep : now
+			: null;
 
 	/// <summary>The objids every installed package records, whose entries stay for a package rollback to find.</summary>
 	private async ValueTask<HashSet<string>> PackageObjidsAsync()
