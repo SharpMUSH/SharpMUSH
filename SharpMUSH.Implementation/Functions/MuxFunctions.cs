@@ -402,6 +402,67 @@ public partial class Functions
 			+ thousands[number / 1000 % 10] + hundreds[number / 100 % 10] + tens[number / 10 % 10] + ones[number % 10]));
 	}
 
+	[SharpFunction(Name = "lpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> LeftPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, _ => 0);
+
+	[SharpFunction(Name = "rpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> RightPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, padding => padding);
+
+	[SharpFunction(Name = "cpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> CenterPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, padding => padding / 2);
+
+	/// <summary>
+	/// TinyMUX's lpad(), rpad() and cpad(): the fill repeats across the whole field from its first cell, and the
+	/// string is laid over it <paramref name="leftOf"/> cells in, given the cells left over. Where ljust(),
+	/// rjust() and center() start the fill afresh on each side, these keep the one pattern, and they never cut
+	/// a string wider than the field, whatever mux_justify says.
+	/// </summary>
+	private static ValueTask<CallState> PadInField(IMUSHCodeParser parser, Func<int, int> leftOf)
+	{
+		var text = parser.CurrentState.Arguments["0"].Message!;
+		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.Space);
+
+		if (!ArgHelpers.TryUnsignedInteger(parser, parser.CurrentState.Arguments["1"].Message!.ToPlainText(), out var width))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
+		}
+
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, width))
+		{
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
+		}
+
+		var padding = width - text.DisplayWidth;
+		if (padding <= 0) return ValueTask.FromResult(new CallState(text));
+
+		var left = leftOf(padding);
+		var field = SplitIntoGraphemes(TileFill(fill, width));
+		return ValueTask.FromResult(new CallState(MarkupText.Concat(
+			[FieldCells(field, 0, left), text, FieldCells(field, left + text.DisplayWidth, width)])));
+	}
+
+	/// <summary>The cells <paramref name="from"/> up to <paramref name="to"/> of a tiled field; half a wide character is a space.</summary>
+	private static MString FieldCells(MString[] field, int from, int to)
+	{
+		var pieces = new List<MString>();
+		var cell = 0;
+		foreach (var piece in field)
+		{
+			var end = cell + piece.DisplayWidth;
+			if (cell >= from && end <= to) pieces.Add(piece);
+			else if (end > from && cell < to) pieces.Add(MarkupText.Plain(new string(' ', Math.Min(end, to) - Math.Max(cell, from))));
+			cell = end;
+		}
+
+		return MarkupText.Concat(pieces);
+	}
+
 	[SharpFunction(Name = "crc32", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
 		ParameterNames = ["strings..."])]
 	public ValueTask<CallState> Crc32(IMUSHCodeParser parser, SharpFunctionAttribute _2)

@@ -311,18 +311,6 @@ public partial class Commands
 		}
 	}
 
-	/// <summary>
-	/// <c>/quiet</c> leaves out @move and @omove but still runs @amove. MoveService's <c>noMoveMsgs</c> is
-	/// PennMUSH's and skips all three, so a quiet move runs the action here once the mover has arrived.
-	/// </summary>
-	private async ValueTask QuietMoveAction(IMUSHCodeParser parser, AnySharpObject mover, AnySharpContainer arrived, DBRef from)
-	{
-		if (!IsQuiet(parser)) return;
-		await DidItService.DidIt(parser, new DidItRequest(
-			Place: MonikerPlace.Movement, Player: mover, Thing: mover, AWhat: "AMOVE",
-			Loc: arrived, Env0: arrived.Object().DBRef.ToString(), Env1: from.ToString()));
-	}
-
 	[SharpCommand(Name = "GOTO", Output = CommandOutput.Value, Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["destination"])]
 	public async ValueTask<Option<CallState>> GoTo(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -395,17 +383,20 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
+		// TinyMUX's goto/quiet leaves out the exit's o-messages and actions when the mover controls the exit.
+		var quiet = await QuietOver(parser, executor, exitObject);
+
 		// did_it_with(..., NOTHING, Location(player), NOTHING, …) (move.c:480-482): the success triad
 		// runs with the room being LEFT in %0. did_it's loc of NOTHING resolves to the mover's
 		// location, which is still that room (predicat.c:230).
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(quiet, new DidItRequest(
 			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "SUCCESS", OWhat: "OSUCCESS", AWhat: "ASUCCESS",
 			Loc: currentLocation, Env0: currentLocation.Object().DBRef.ToString())));
 
 		// @drop / @odrop / @adrop on an exit are shown where the mover ARRIVES: did_it's loc argument
 		// is var_dest, not the room being left (move.c:483).
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(quiet, new DidItRequest(
 			Place: MonikerPlace.Movement, Player: executor, Thing: exitObject,
 			What: "DROP", OWhat: "ODROP", AWhat: "ADROP",
 			Loc: destination)));
@@ -413,9 +404,9 @@ public partial class Commands
 		// A room destination goes through enter_room, anything else through safe_tel (move.c:486-508).
 		var result = destination.WithExitOption().IsRoom
 			? await MoveService.EnterRoom(parser, mover, destination,
-				noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "move")
+				noMoveMsgs: false, executor.Object().DBRef, "move")
 			: await MoveService.SafeTel(parser, mover, destination,
-				noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "move");
+				noMoveMsgs: false, executor.Object().DBRef, "move");
 
 		if (result is Error<string> error)
 		{
@@ -425,7 +416,6 @@ public partial class Commands
 
 		// Followers trail the leader only if the leader actually went somewhere (move.c:493).
 		var newLocation = await executor.Where();
-		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -526,7 +516,8 @@ public partial class Commands
 			new TeleportOptions(
 				List: switches.Contains("LIST"),
 				Inside: switches.Contains("INSIDE"),
-				Silent: switches.Contains("SILENT") || switches.Contains("QUIET"))) switch
+				Silent: switches.Contains("SILENT"),
+				Quiet: switches.Contains("QUIET"))) switch
 		{
 			AnySharpObject destination => new CallState(destination.Object().DBRef.ToString()),
 			NotFound => CallState.Empty
@@ -617,9 +608,10 @@ public partial class Commands
 
 		// move.c:962: do_enter teleports rather than plain enter_room, so a container owned by
 		// someone else strips the STICKY possessions the mover does not control.
-		var enteredFrom = (await executor.Where()).Object().DBRef;
+		// TinyMUX's enter/quiet, on something the mover controls, hushes the entering side of the move.
 		var moveResult = await MoveService.SafeTel(parser, mover, containerToEnter,
-			noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "enter");
+			noMoveMsgs: false, executor.Object().DBRef, "enter",
+			await QuietOver(parser, executor, objectToEnter) ? MoveHush.Enter : MoveHush.None);
 
 		if (moveResult is Error<string> error)
 		{
@@ -629,7 +621,6 @@ public partial class Commands
 
 		// move.c:964-965: followers trail the leader only if the leader actually went somewhere.
 		var newLocation = await executor.Where();
-		await QuietMoveAction(parser, executor, newLocation, enteredFrom);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
@@ -672,8 +663,10 @@ public partial class Commands
 		}
 
 		// move.c:986. EnterRoom carries the automatic look, so the command adds none of its own.
+		// TinyMUX's leave/quiet, from a container the mover controls, hushes the leaving side of the move.
 		var moveResult = await MoveService.EnterRoom(parser, leaver, destinationLocation,
-			noMoveMsgs: IsQuiet(parser), executor.Object().DBRef, "leave");
+			noMoveMsgs: false, executor.Object().DBRef, "leave",
+			await QuietOver(parser, executor, container) ? MoveHush.Leave : MoveHush.None);
 
 		if (moveResult is Error<string> error)
 		{
@@ -683,7 +676,6 @@ public partial class Commands
 
 		// move.c:987-988.
 		var newLocation = await executor.Where();
-		await QuietMoveAction(parser, executor, newLocation, currentLocation.Object().DBRef);
 
 		if (!newLocation.Object().DBRef.Equals(currentLocation.Object().DBRef))
 		{
