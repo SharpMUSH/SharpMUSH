@@ -549,9 +549,12 @@ public class PackagePlanService : IPackagePlanService
 
 				var baseValue = baseLocks.GetValueOrDefault(lockType);
 				var liveValue = liveLocks.GetValueOrDefault(lockType);
-				// The store keeps each object a lock names as its objid, so "=#1" reads back as "=#1:<ms>";
-				// the three sides are compared without those times.
-				var (action, conflict) = ClassifyLock(Unstamped(baseValue), Unstamped(liveValue), Unstamped(newValue), requiresApply);
+				// The store keeps each object a lock names as its objid, so "=#1" reads back as "=#1:<ms>". A side
+				// that names the same objects as another is compared as that side; two different creation times
+				// for one number are different objects, so a lock moved to a new incarnation is still written.
+				var liveKey = AlignedTo(liveValue, newValue);
+				var baseKey = AlignedTo(baseValue, liveKey, newValue);
+				var (action, conflict) = ClassifyLock(baseKey, liveKey, newValue, requiresApply);
 				changes.Add(new PackageStructureChange(
 					obj.Ref, objid, PackageStructureKind.Lock, lockType, action,
 					Attribute: null, Conflict: conflict,
@@ -619,7 +622,13 @@ public class PackagePlanService : IPackagePlanService
 		};
 	}
 
-	private static string? Unstamped(string? key) => key is null ? null : LockKeyReferences.WithoutCreationTimes(key);
+	/// <summary>
+	/// <paramref name="key"/>, or the first of <paramref name="others"/> that names the same objects
+	/// (<see cref="LockKeyReferences.NameSameObjects"/>), so a stamped readback compares equal to the bare text it
+	/// was set from.
+	/// </summary>
+	private static string? AlignedTo(string? key, params string?[] others)
+		=> key is null ? null : others.FirstOrDefault(other => other is not null && LockKeyReferences.NameSameObjects(key, other)) ?? key;
 
 	/// <summary>Value-typed (lock) three-way table — the attribute truth table, mapped to structure actions.</summary>
 	private static (PackageStructureAction Action, PackageConflictKind? Conflict) ClassifyLock(

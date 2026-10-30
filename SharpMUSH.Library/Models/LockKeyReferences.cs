@@ -28,6 +28,28 @@ public static partial class LockKeyReferences
 	public static string WithoutCreationTimes(string key)
 		=> key.Contains(':') ? RewriteLeaves(key, Unstamped) : key;
 
+	/// <summary>
+	/// Whether <paramref name="a"/> and <paramref name="b"/> name the same objects: equal once creation times are
+	/// taken off, with no object leaf where both carry a creation time and the two differ. A bare <c>#N</c> matches
+	/// any incarnation of <c>N</c>; <c>#N:1000</c> and <c>#N:2000</c> are different objects.
+	/// </summary>
+	public static bool NameSameObjects(string a, string b)
+		=> WithoutCreationTimes(a) == WithoutCreationTimes(b)
+			&& CreationTimes(a).Zip(CreationTimes(b)).All(pair => pair.First is null || pair.Second is null || pair.First == pair.Second);
+
+	/// <summary>Each leaf's creation time, in order, or <see langword="null"/> for a leaf that carries none.</summary>
+	private static List<string?> CreationTimes(string key)
+	{
+		var times = new List<string?>();
+		RewriteLeaves(key, leaf =>
+		{
+			var match = ObjectLeaf().Match(leaf);
+			times.Add(match.Success && match.Groups["created"].Success ? match.Groups["created"].Value : null);
+			return leaf;
+		});
+		return times;
+	}
+
 	private static string RewriteLeaves(string key, Func<string, string> rewriteLeaf)
 	{
 		var rewritten = new StringBuilder(key.Length);
