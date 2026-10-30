@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
@@ -56,19 +57,26 @@ public static partial class WorldCommand
 		if (switches.Contains("SWEEP"))
 		{
 			if (!await executor.IsWizard())
-				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+				return await notify.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 			var (returned, destroyed) = await parser.ServiceProvider.GetRequiredService<WorldRooms>().SweepAsync(parser, TimeSpan.Zero);
 			return await Say($"Took back {Rooms(returned)}, and destroyed {destroyed} spare{(destroyed == 1 ? "" : "s")}.", returned.ToString());
 		}
 
 		var parts = left.Split('/', 3, StringSplitOptions.TrimEntries);
 		if (parts[0].Length == 0) return await Say("World what?", ErrorMessages.Returns.NoMatch);
-		if (await WorldMaps.LocateAsync(parser, executor, parts[0]) is not { } map) return new CallState(ErrorMessages.Returns.NoMatch);
+		if (await WorldMaps.LocateAsync(parser, executor, parts[0]) is not { } map)
+		{
+			// A map is usually a room no one stands in, so it is out of reach by name.
+			if (!parts[0].StartsWith('#')) await notify.Notify(executor, "Name a map you are not near by its dbref, such as #40.");
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
 
 		var permissions = parser.ServiceProvider.GetRequiredService<IPermissionService>();
 		var reading = switches.Length == 0;
-		if (!(reading ? await permissions.CanExamine(executor, map) : await permissions.Controls(executor, map)))
-			return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+		if (reading && !await permissions.CanExamine(executor, map))
+			return await notify.PermissionDenied(executor, PermissionRefusal.Examine(map));
+		if (!reading && !await permissions.Controls(executor, map))
+			return await notify.PermissionDeniedNotControlled(executor, map);
 
 		var store = parser.ServiceProvider.GetRequiredService<WorldStore>();
 		var attributes = parser.ServiceProvider.GetRequiredService<IAttributeService>();
@@ -248,7 +256,7 @@ public static partial class WorldCommand
 			if (await WorldMaps.LocateAsync(parser, executor, value.Trim()) is not { } found) return new CallState(ErrorMessages.Returns.NoMatch);
 			if (!found.IsRoom) return await Say($"{found.Object().Name} is not a room.", "#-1 NOT A ROOM");
 			if (!await permissions.Controls(executor, found))
-				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+				return await notify.PermissionDeniedNotControlled(executor, found);
 			var room = found.Object().DBRef;
 			if (await rooms.StandingAsync(dbref, place) is { } lent && lent.Number != room.Number
 				&& store.Room(lent) is { Permanent: false } && await rooms.HoldsAnythingAsync(lent))
