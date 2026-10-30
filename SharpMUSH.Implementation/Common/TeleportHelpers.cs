@@ -678,7 +678,7 @@ public static class TeleportHelpers
 		SharpExit exitObj, string typedName)
 	{
 		var exitObject = new AnySharpObject(exitObj);
-		var linkType = await LinkTypeOf(services, executor, exitObject);
+		var linkType = await LinkTypeOf(services, exitObject);
 
 		if (linkType == LinkTypeVariable)
 		{
@@ -714,22 +714,19 @@ public static class TeleportHelpers
 	/// <summary>
 	/// How the exit was linked. PennMUSH stores HOME and AMBIGUOUS directly in Destination(); SharpMUSH
 	/// records them in a <c>_LINKTYPE</c> attribute instead, which is the convention <c>loc()</c> already
-	/// reads to answer <c>#-3</c> and <c>#-2</c>.
+	/// reads to answer <c>#-3</c> and <c>#-2</c>. It is read without the mover's permissions, as PennMUSH reads
+	/// Destination(): a mover who may not read the exit's attributes still goes where it leads.
 	/// </summary>
-	private static async ValueTask<string?> LinkTypeOf(
-		TeleportServices services, AnySharpObject executor, AnySharpObject exitObject)
+	private static async ValueTask<string?> LinkTypeOf(TeleportServices services, AnySharpObject exitObject)
 	{
-		var linkTypeAttr = await services.AttributeService.GetAttributeAsync(
-			executor, exitObject, AttrLinkType, IAttributeService.AttributeMode.Read, false);
-
-		if (linkTypeAttr is not SharpAttribute[] { Length: > 0 } linkTypeChain)
+		await foreach (var linkTypeAttr in services.Mediator.CreateStream(
+			new GetAttributeQuery(exitObject.Object().DBRef, [AttrLinkType])))
 		{
-			return null;
+			var linkType = linkTypeAttr.Value.ToPlainText().Trim();
+			return string.IsNullOrEmpty(linkType) ? null : linkType.ToLowerInvariant();
 		}
 
-		var linkType = linkTypeChain[0].Value.ToPlainText().Trim();
-
-		return string.IsNullOrEmpty(linkType) ? null : linkType.ToLowerInvariant();
+		return null;
 	}
 
 	/// <summary>
