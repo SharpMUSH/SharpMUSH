@@ -13,6 +13,7 @@
     <ProjectReference Include="../../SharpMUSH.Plugins.Discord/SharpMUSH.Plugins.Discord.csproj" Aliases="DiscordPlugin" />
     <ProjectReference Include="../../SharpMUSH.Plugins.Lsp/SharpMUSH.Plugins.Lsp.csproj" Aliases="LspPlugin" />
     <ProjectReference Include="../../SharpMUSH.Plugins.Mcp/SharpMUSH.Plugins.Mcp.csproj" Aliases="McpPlugin" />
+    <ProjectReference Include="../../SharpMUSH.Plugins.World/SharpMUSH.Plugins.World.csproj" Aliases="WorldPlugin" />
     <Compile Include="../../SharpMUSH.Tests.Infrastructure/RegistryInventory.cs" Link="RegistryInventory.cs" />
   </ItemGroup>
 </Project>

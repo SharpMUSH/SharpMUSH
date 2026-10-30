@@ -10,7 +10,7 @@ import unittest
 PACK_SCRIPT = Path(__file__).with_name("pack-test-build.sh")
 PROJECTS = (
     "SharpMUSH.Tests", "SharpMUSH.Tests.BUnit", "SharpMUSH.Tests.ScenePlugin",
-    "SharpMUSH.Tests.DiscordPlugin", "SharpMUSH.Tests.Integration",
+    "SharpMUSH.Tests.DiscordPlugin", "SharpMUSH.Tests.WorldPlugin", "SharpMUSH.Tests.Integration",
 )
 
 
@@ -22,7 +22,7 @@ class TestBuildPackagingTests(unittest.TestCase):
             for project in (*PROJECTS, "SharpMUSH.Client"):
                 (root / project / "bin/Debug/net11.0").mkdir(parents=True)
             payloads = {}
-            for plugin in ("discord", "lsp", "mcp", "scene"):
+            for plugin in ("discord", "lsp", "mcp", "scene", "world"):
                 base = Path("SharpMUSH.Server/bin/Debug/net11.0/plugins") / plugin
                 payloads[base / "plugin.json"] = '{"id":"' + plugin + '"}'
                 payloads[base / (plugin + ".dll")] = "built assembly payload: " + plugin
