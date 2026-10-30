@@ -15,7 +15,7 @@ namespace SharpMUSH.Plugins.World.Functions;
 /// <summary>
 /// The <c>world…</c> functions, named for <c>@world</c>: <c>worldcell()</c> reads a place, <c>worldway()</c> a way out
 /// of one, and <c>worlddraw()</c> draws the places around one as text. They read only. A place whose data hides it
-/// reads as nothing, and its data shows only <c>render</c> and <c>info</c>, to whoever may not examine the map.
+/// reads as bare terrain, and its data shows only <c>render</c> and <c>info</c>, to whoever may not examine the map.
 /// <c>worldroom()</c> gives the room standing on a place, lending it one, and <c>worldplace()</c> the place a room
 /// stands on.
 /// </summary>
@@ -70,10 +70,12 @@ public static class WorldFunctions
 			var dbref = reading.Map.Object().DBRef;
 			var type = reading.Record.Type(reading.Store.Cell(dbref, at.X, at.Y, at.Z).Terrain);
 			var place = reading.Store.Place(dbref, at.X, at.Y, at.Z);
-			if (!reading.Examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(place?.Data))) (type, place) = (null, null);
+			// A hidden place reads as bare terrain: no name, data or room of its own.
+			var hidden = !reading.Examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(place?.Data));
+			if (hidden) place = null;
 			var terrain = type is null ? null : await reading.Legend.TerrainAsync(type);
 			var rooms = parser.ServiceProvider.GetRequiredService<WorldRooms>();
-			var standing = type is null || field is not ("room" or "permanent") ? null : await rooms.StandingAsync(dbref, at);
+			var standing = type is null || hidden || field is not ("room" or "permanent") ? null : await rooms.StandingAsync(dbref, at);
 			return field switch
 			{
 				"type" => new CallState(type ?? ""),
@@ -151,7 +153,6 @@ public static class WorldFunctions
 	private static async ValueTask<string> GlyphAsync(Reading reading, WorldWindowRead? window, int x, int y)
 	{
 		if (window is null || !window.Cells.TryGetValue((x, y), out var cell) || reading.Record.Type(cell.Terrain) is not { } type) return " ";
-		if (!reading.Examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(window.Places.GetValueOrDefault((x, y))?.Data))) return " ";
 		return (await reading.Legend.TerrainAsync(type)).Glyph;
 	}
 

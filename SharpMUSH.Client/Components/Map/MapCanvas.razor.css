@@ -330,3 +330,10 @@
 	color: var(--text-faint);
 	cursor: default;
 }
+
+/* A place is one small cell: its name breaks between words, a word too long for it is hyphenated, and what does not fit ends in an ellipsis. */
+.map-room--place .map-room-name {
+	overflow-wrap: normal;
+	hyphens: auto;
+	-webkit-line-clamp: 2;
+}
