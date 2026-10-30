@@ -6923,4 +6923,121 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Ga erheen</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Kaartinstellingen</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Tonen</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Verbergen</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Naam van de kaart</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Binnen kaart</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Geen</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Verplaatsen</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Een kaart binnen een andere verschijnt daarop als een gebied dat je kunt openen.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Opent op niveau</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Instellen</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Afbeelding</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Adres van de afbeelding</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Kiezen uit de mediabibliotheek</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>De bibliotheek heeft geen afbeeldingen die je kunt gebruiken.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Breedte (vakken)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Hoogte (vakken)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Breedte (pixels)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Hoogte (pixels)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Grootte van de afbeelding gebruiken</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>De afbeelding werd niet geladen.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Legenda</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Een type bepaalt hoe kamers en plaatsen van een soort getekend worden: de ENVIRONMENT van een kamer of het terrein van een wereldkaart.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Bewerken</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Kleur</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Geen kleur</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Pictogram</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Geen pictogram</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Type instellen</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Geef het type een naam.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Een type bestaat alleen uit letters, cijfers, _ en -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Kaart {0} hernoemen naar {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>{0} binnen {1} plaatsen</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>{0} uit de kaart halen waarin hij staat</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>{0} instellen op {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>{0} wissen</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Legenda voor {0}</value>
+  </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Een kaartnaam mag geen = [ ] % of \ bevatten.</value>
+  </data>
 </root>

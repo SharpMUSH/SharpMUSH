@@ -307,4 +307,45 @@ public class MapPlanTests
 		await Assert.That(plan.Preview().Exits.First().DestinationName).IsEqualTo("Town square");
 		await Assert.That(plan.Builds).IsEqualTo(2);
 	}
+
+	[Test]
+	public async Task TheMapsOwnSettingsAreItsAttributesAndShowInThePreview()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])) with { Legend = [new("water", "Water", "blue", "~")] });
+
+		plan.RenameMap("Old harbour");
+		plan.MoveMap("#40", "Coast");
+		plan.SetMapSize(12, 8);
+		plan.SetDefaultLevel(-1);
+		plan.SetLegend("forest", "Old forest", "green", "forest");
+		plan.SetLegend("water", "", "", "");
+
+		await Assert.That(plan.Changes.SelectMany(Commands)).IsEquivalentTo(
+		[
+			"@name #50=Old harbour",
+			"@chzone #50=#40",
+			"&MAP`SIZE`W #50=12",
+			"&MAP`SIZE`H #50=8",
+			"&MAP`LEVEL #50=-1",
+			"&MAP`LEGEND`FOREST`LABEL #50=Old forest",
+			"&MAP`LEGEND`FOREST`TONE #50=green",
+			"&MAP`LEGEND`FOREST`ICON #50=forest",
+			"&MAP`LEGEND`WATER`LABEL #50=",
+			"&MAP`LEGEND`WATER`TONE #50=",
+			"&MAP`LEGEND`WATER`ICON #50=",
+		]);
+		var preview = plan.Preview();
+		await Assert.That((preview.Map.Name, preview.Map.Parent, preview.Level)).IsEqualTo(("Old harbour", (string?)"#40", (int?)-1));
+		await Assert.That(preview.Size).IsEquivalentTo([12.0, 8.0]);
+		await Assert.That(preview.Legend).IsEquivalentTo([new MapLegendDto("forest", "Old forest", "green", "forest")])
+			.Because("a type with nothing set is gone from the legend");
+
+		plan.MoveMap(null, null);
+		plan.SetBackdrop("https://example.com/isle.png");
+
+		await Assert.That(plan.Changes.Single(change => change.Kind == MapChangeKind.MoveMap).Steps.Single())
+			.IsEqualTo(new MapStep("@chzone #50=none", "num(zone(#50))", "#-1"));
+		await Assert.That(plan.Preview().Map.Parent).IsNull();
+		await Assert.That(plan.Preview().Backdrop).IsEqualTo("https://example.com/isle.png");
+	}
 }

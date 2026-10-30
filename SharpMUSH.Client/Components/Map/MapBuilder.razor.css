@@ -103,3 +103,52 @@
 .map-builder-leads {
 	margin-inline-start: 0.5em;
 }
+
+.map-builder-section ::deep .map-settings-library {
+	display: grid;
+	gap: 8px;
+}
+
+.map-builder-section ::deep .map-settings-tiles {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+	gap: 8px;
+	max-height: 240px;
+	overflow-y: auto;
+}
+
+.map-builder-section ::deep .map-settings-tile {
+	display: grid;
+	gap: 4px;
+	padding: 4px;
+	border: 1px solid var(--line);
+	border-radius: 8px;
+	background: var(--surface);
+	color: var(--text);
+	font-size: 11px;
+	text-align: start;
+	cursor: pointer;
+}
+
+.map-builder-section ::deep .map-settings-tile img {
+	width: 100%;
+	aspect-ratio: 1;
+	object-fit: cover;
+	border-radius: 4px;
+}
+
+.map-builder-section ::deep .map-settings-tile span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.map-builder-section ::deep .map-settings-swatch {
+	display: inline-grid;
+	place-items: center;
+	min-width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	background: var(--room-tone, var(--surface-2));
+	color: var(--text);
+}

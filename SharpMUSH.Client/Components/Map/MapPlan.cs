@@ -33,6 +33,10 @@ public enum MapChangeKind
 	RenameExit,
 	RemoveExit,
 	NameLevel,
+	RenameMap,
+	MoveMap,
+	MapSetting,
+	Legend,
 }
 
 /// <summary>
@@ -174,6 +178,64 @@ public sealed partial class MapPlan(MapDto map)
 		{ Other = number });
 	}
 
+	/// <summary>Renames the map object.</summary>
+	public void RenameMap(string name)
+	{
+		var id = Map.Map.Id;
+		Upsert(new("map:name", MapChangeKind.RenameMap, id, Map.Map.Name, [new($"@name {id}={name.Trim()}", $"name({id})", name.Trim())])
+		{ Other = name.Trim() });
+	}
+
+	/// <summary>
+	/// Zones the map to <paramref name="parent"/>, another map, so it shows inside it as a region; null takes it out of
+	/// any. <paramref name="parentName"/> is how the review names it.
+	/// </summary>
+	public void MoveMap(string? parent, string? parentName)
+	{
+		var id = Map.Map.Id;
+		Upsert(new("map:parent", MapChangeKind.MoveMap, id, Map.Map.Name,
+			[new($"@chzone {id}={parent ?? "none"}", $"num(zone({id}))", parent ?? "#-1")])
+		{ Other = parentName ?? "" });
+	}
+
+	/// <summary>The map's picture, by its address; empty takes it away.</summary>
+	public void SetBackdrop(string url) => SetMap("backdrop", MapAttributes.Backdrop, url.Trim());
+
+	/// <summary>The map's size: cells on a grid, the picture's pixels on a picture map.</summary>
+	public void SetMapSize(double width, double height)
+	{
+		var id = Map.Map.Id;
+		Upsert(new("map:size", MapChangeKind.MapSetting, id, MapAttributes.Size, [Set(id, MapAttributes.Width, Num(width)), Set(id, MapAttributes.Height, Num(height))])
+		{ Other = $"{Num(width)} × {Num(height)}" });
+	}
+
+	/// <summary>The level the map opens on for someone who is not on it; null leaves it at the ground.</summary>
+	public void SetDefaultLevel(int? level) =>
+		SetMap("level", MapAttributes.Level, level?.ToString(CultureInfo.InvariantCulture) ?? "");
+
+	/// <summary>
+	/// How the legend draws <paramref name="type"/>: its label, a <c>tone()</c> colour's name and an icon name or a
+	/// character or two. An empty value clears that part.
+	/// </summary>
+	public void SetLegend(string type, string label, string tone, string icon)
+	{
+		var id = Map.Map.Id;
+		var key = type.Trim().ToUpperInvariant();
+		Upsert(new($"legend:{key}", MapChangeKind.Legend, id, type.Trim(),
+		[
+			Set(id, $"{MapAttributes.Legend}`{key}`LABEL", label.Trim()),
+			Set(id, $"{MapAttributes.Legend}`{key}`TONE", tone.Trim()),
+			Set(id, $"{MapAttributes.Legend}`{key}`ICON", icon.Trim()),
+		])
+		{ Other = label.Trim() });
+	}
+
+	private void SetMap(string key, string attribute, string value)
+	{
+		var id = Map.Map.Id;
+		Upsert(new($"map:{key}", MapChangeKind.MapSetting, id, attribute, [Set(id, attribute, value)]) { Other = value });
+	}
+
 	/// <summary>How many objects the plan makes, each counted against the builder's quota: a room per dig, an exit per way.</summary>
 	public int Builds =>
 		_dugExits.Values.Sum(exit => exit.From is null ? 1 : exit.Back is null ? 2 : 3) + _joins.Values.Sum(join => join.Back is null ? 1 : 2);
@@ -270,7 +332,25 @@ public sealed partial class MapPlan(MapDto map)
 			if (change.Name.Length == 0) levels.Remove(level);
 			else levels[level] = change.Name;
 		}
-		return Map with { Rooms = rooms, Exits = exits, LevelNames = levels };
+		return Map with
+		{
+			Map = Map.Map with
+			{
+				Name = Changed("map:name") is { } renaming ? Value(renaming) : Map.Map.Name,
+				Parent = Changed("map:parent") is { } moving ? (Value(moving) == "#-1" ? null : Value(moving)) : Map.Map.Parent,
+			},
+			Rooms = rooms,
+			Exits = exits,
+			LevelNames = levels,
+			Backdrop = Changed("map:backdrop") is { } backdrop ? NullIfEmpty(Value(backdrop)) : Map.Backdrop,
+			Size = Changed("map:size") is { } size
+				? [double.Parse(Value(size), CultureInfo.InvariantCulture), double.Parse(Value(size, 1), CultureInfo.InvariantCulture)]
+				: Map.Size,
+			Level = Changed("map:level") is { } opening
+				? int.TryParse(Value(opening), CultureInfo.InvariantCulture, out var number) ? number : null
+				: Map.Level,
+			Legend = PlannedLegend(),
+		};
 	}
 
 	/// <summary>
@@ -460,6 +540,28 @@ public sealed partial class MapPlan(MapDto map)
 		return set.All(command => command.EndsWith('=')) ? null : values;
 	}
 
+	private MapChange? Changed(string key) => _changes.FirstOrDefault(change => change.Key == key);
+
+	private static string? NullIfEmpty(string value) => value.Length == 0 ? null : value;
+
+	/// <summary>What step <paramref name="step"/> of <paramref name="change"/> sets.</summary>
+	private static string Value(MapChange change, int step = 0) => change.Steps[step].Expect ?? "";
+
+	/// <summary>The legend with each planned entry in place of the stored one; an entry with nothing set is left out.</summary>
+	private IReadOnlyList<MapLegendDto> PlannedLegend()
+	{
+		var legend = Map.Legend.ToDictionary(entry => entry.Type.ToUpperInvariant(), StringComparer.Ordinal);
+		foreach (var change in _changes.Where(change => change.Kind == MapChangeKind.Legend))
+		{
+			var (label, tone, icon) = (Value(change), Value(change, 1), Value(change, 2));
+			var type = change.Name.ToUpperInvariant();
+			if (label.Length == 0 && tone.Length == 0 && icon.Length == 0) legend.Remove(type);
+			else legend[type] = new MapLegendDto(legend.GetValueOrDefault(type)?.Type ?? change.Name.ToLowerInvariant(),
+				label.Length > 0 ? label : change.Name, NullIfEmpty(tone.ToLowerInvariant()), NullIfEmpty(icon));
+		}
+		return [.. legend.Values];
+	}
+
 	private MapRoomDto? Room(string id) =>
 		Map.Rooms.FirstOrDefault(room => room.Id == id) ?? _added.GetValueOrDefault(id) ?? _dug.GetValueOrDefault(id);
 
@@ -488,4 +590,15 @@ public enum MapAppliedState
 	Done,
 	Failed,
 	NotRun,
+}
+
+/// <summary>The attributes on a map object that say how the World map draws it.</summary>
+public static class MapAttributes
+{
+	public const string Backdrop = "MAP`BACKDROP";
+	public const string Size = "MAP`SIZE";
+	public const string Width = "MAP`SIZE`W";
+	public const string Height = "MAP`SIZE`H";
+	public const string Level = "MAP`LEVEL";
+	public const string Legend = "MAP`LEGEND";
 }

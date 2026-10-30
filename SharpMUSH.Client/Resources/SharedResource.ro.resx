@@ -6923,4 +6923,121 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Mergi acolo</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Setările hărții</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Arată</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Ascunde</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Numele hărții</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>În harta</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Niciuna</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Mută</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>O hartă din altă hartă apare pe ea ca o regiune care se poate deschide.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Se deschide la nivelul</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Setează</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Imagine</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Adresa imaginii</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Alege din biblioteca media</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>Biblioteca nu are imagini pe care le poți folosi.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Lățime (celule)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Înălțime (celule)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Lățime (pixeli)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Înălțime (pixeli)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Folosește dimensiunea imaginii</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Imaginea nu s-a încărcat.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Legendă</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Un tip arată cum se desenează camerele și locurile de un fel: ENVIRONMENT al camerei sau terenul unei hărți a lumii.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Editează</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Tip</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Etichetă</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Culoare</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Fără culoare</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Pictogramă</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Fără pictogramă</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Setează tipul</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Dă un nume tipului.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Un tip conține doar litere, cifre, _ și -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Redenumește harta {0} în {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Pune {0} în {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Scoate {0} din harta în care se află</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Setează {0} la {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Golește {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Legendă pentru {0}</value>
+  </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Numele unei hărți nu poate conține = [ ] % sau \.</value>
+  </data>
 </root>

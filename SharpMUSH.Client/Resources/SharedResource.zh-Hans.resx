@@ -6923,4 +6923,121 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>前往</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>地图设置</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>显示</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>隐藏</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>地图名称</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>所属地图</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>无</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>移动</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>位于另一地图内的地图会在其上显示为可打开的区域。</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>打开时的层级</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>图片</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>图片地址</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>从媒体库选择</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>媒体库中没有你可以使用的图片。</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>宽度（格）</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>高度（格）</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>宽度（像素）</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>高度（像素）</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>使用图片尺寸</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>该图片未能加载。</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>图例</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>类型决定同类房间和地点的绘制方式：房间的 ENVIRONMENT 或世界地图的地形。</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>编辑</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>类型</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>标签</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>颜色</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>无颜色</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>图标</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>无图标</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>设置类型</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>请为类型命名。</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>类型只能包含字母、数字、_ 和 -。</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>将地图 {0} 重命名为 {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>将 {0} 放入 {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>将 {0} 移出所在地图</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>将 {0} 设为 {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>清除 {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>{0} 的图例</value>
+  </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>地图名称不能包含 = [ ] % 或 \。</value>
+  </data>
 </root>

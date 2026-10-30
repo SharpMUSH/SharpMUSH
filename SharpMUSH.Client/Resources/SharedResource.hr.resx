@@ -6923,4 +6923,121 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Idi tamo</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Postavke karte</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Prikaži</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Sakrij</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Naziv karte</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Unutar karte</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Nijedna</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Premjesti</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Karta unutar druge prikazuje se na njoj kao područje koje se može otvoriti.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Otvara se na razini</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Postavi</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Slika</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Adresa slike</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Odaberi iz medijateke</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>Medijateka nema slika koje možete koristiti.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Širina (polja)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Visina (polja)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Širina (pikseli)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Visina (pikseli)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Koristi veličinu slike</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Slika se nije učitala.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Legenda</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Tip određuje kako se crtaju sobe i mjesta jedne vrste: ENVIRONMENT sobe ili teren karte svijeta.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Uredi</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Tip</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Oznaka</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Boja</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Bez boje</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Ikona</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Bez ikone</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Postavi tip</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Dajte tipu ime.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Tip smije sadržavati samo slova, znamenke, _ i -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Preimenuj kartu {0} u {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Stavi {0} unutar {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Izvadi {0} iz karte u kojoj je</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Postavi {0} na {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Očisti {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Legenda za {0}</value>
+  </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Naziv karte ne može sadržavati = [ ] % ili \.</value>
+  </data>
 </root>

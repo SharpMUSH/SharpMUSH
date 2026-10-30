@@ -6923,4 +6923,121 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Отиди там</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Настройки на картата</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Покажи</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Скрий</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Име на картата</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>В картата</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Няма</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Премести</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Карта в друга карта се показва в нея като област, която може да се отвори.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Отваря се на ниво</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Задай</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Картина</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Адрес на картината</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Избери от медийната библиотека</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>В библиотеката няма картини, които можете да използвате.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Ширина (клетки)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Височина (клетки)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Ширина (пиксели)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Височина (пиксели)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Използвай размера на картината</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Картината не се зареди.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Легенда</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Типът определя как се рисуват стаите и местата от един вид: ENVIRONMENT на стаята или теренът на световната карта.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Редактирай</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Тип</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Етикет</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Цвят</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Без цвят</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Икона</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Без икона</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Задай типа</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Дайте име на типа.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Типът може да съдържа само букви, цифри, _ и -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Преименувай картата {0} на {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Постави {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Извади {0} от картата, в която е</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Задай {0} на {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Изчисти {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Легенда за {0}</value>
+  </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Името на картата не може да съдържа = [ ] % или \.</value>
+  </data>
 </root>
