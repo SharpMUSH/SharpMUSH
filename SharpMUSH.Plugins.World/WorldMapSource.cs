@@ -13,10 +13,10 @@ namespace SharpMUSH.Plugins.World;
 /// </summary>
 public sealed class WorldMapSource(WorldStore store, IAttributeService attributes, IPermissionService permissions) : IWorldMapSource
 {
-	public ValueTask<MapSpaceDto?> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
-		ValueTask.FromResult(store.Map(map.Object().DBRef) is { } record
+	public ValueTask<Found<MapSpaceDto>> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
+		ValueTask.FromResult<Found<MapSpaceDto>>(store.Map(map.Object().DBRef) is { } record
 			? new MapSpaceDto(record.Space, record.Left, record.Bottom, record.Right, record.Top, record.Levels)
-			: null);
+			: new NotFound());
 
 	public async ValueTask<MapCellsDto> CellsAsync(AnySharpObject viewer, AnySharpObject map, MapWindow window, CancellationToken ct)
 	{

@@ -81,7 +81,7 @@ public class WorldCommandIntegrationTests
 		var stored = (await mediator.Send(new GetObjectNodeQuery(new DBRef(number)))).Expect<AnySharpObject>();
 		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
 		var source = WebAppFactoryArg.Services.GetServices<IWorldMapSource>().Single();
-		var space = (await source.SpaceAsync(stored, CancellationToken.None))!;
+		var space = (await source.SpaceAsync(stored, CancellationToken.None)).Expect<MapSpaceDto>();
 		await Assert.That((space.Kind, space.Left, space.Bottom, space.Right, space.Top)).IsEqualTo((MapSpaces.Square, 0, 0, 9, 9));
 		await Assert.That(space.Levels).IsEquivalentTo([0]);
 		var window = await source.CellsAsync(god, stored, new MapWindow(0, 3, 3, 5, 5), CancellationToken.None);
