@@ -97,7 +97,7 @@ Formatting never rewrites the stored attribute; `@decompile` and the raw value r
 ## Other servers' names
 
 - `rhost`             The attribute is written for RhostMUSH. When it runs, a function or command SharpMUSH has no name for is looked up among RhostMUSH's names for one it has: `wildmatch()` runs `match()`, `@sudo` runs `@force/inplace`. SharpMUSH's own names, and `@function`s, still come first.
-- `mux`               The same for TinyMUX: `strtrunc()` runs `left()`, `rpad()` runs `rjust()`, `@qmail` runs `@mail/quick`.
+- `mux`               The same for TinyMUX: `strtrunc()` runs `left()`, `iadd()` runs `add()`, `@qmail` runs `@mail/quick`.
 
 An attribute without the flag reads the game's `dialect` option instead, as typed commands do. A RhostMUSH or TinyMUX database import sets the option and its flag on every attribute it brings in. See [compatibility config].
 

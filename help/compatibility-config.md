@@ -51,6 +51,11 @@
       "lookup": "compatibility config tinymux queue functions mux queue functions"
     },
     {
+      "id": "tinymux-quiet-switches-mux-quiet",
+      "heading": "TinyMUX quiet switches: `mux_quiet`",
+      "lookup": "compatibility config tinymux quiet switches mux quiet"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
@@ -253,6 +258,19 @@ With the option on, trigger() queues the attribute and returns nothing:
 > think X[trigger(me/MUXDOC_TRIGGER)]Y
 XY
 ```
+
+## TinyMUX quiet switches: `mux_quiet`
+
+Off by default; importing a TinyMUX database turns it on. It chooses what the `/quiet` switch of `drop`, `get`, `give`, `goto`, `enter`, `leave` and `@teleport` leaves out.
+
+With it off, `/quiet` hides the messages and keeps the actions. `drop`, `get` and `goto` leave out your own message and the o-message, defaults included, and run the action attribute. `give/quiet` does the same to your GIVE triad and the gift's SUCCESS triad. `enter`, `leave` and `goto` also leave out your @move and @omove but run @amove. `@teleport/quiet` is `@teleport/silent`.
+
+With it on, `/quiet` does what TinyMUX's does:
+
+- `drop`, `get` and `goto` hold it only on an object or exit you control. You still see your own message; the o-message and the action attribute are left out.
+- `enter/quiet` leaves out the object's @enter and @oenter and the @oxleave of where you were; `leave/quiet` leaves out the object's @leave and @oleave and the @oxenter of where you go. Each holds only on an object you control, and the object's action attribute and your @move triad still run.
+- `give/quiet` is a wizard's switch, and leaves out only the default "You gave" and "gave you" notices.
+- `@teleport/quiet` leaves out the @tport triad, @oxtport, and the messages of leaving and arriving, but runs the @move triad.
 
 ## RhostMUSH edit() modes: `rhost_edit`
 

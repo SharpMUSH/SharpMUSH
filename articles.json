@@ -1476,6 +1476,12 @@
         "aliases": []
       },
       {
+        "id": "tinymux-quiet-switches-mux-quiet",
+        "lookup": "compatibility config tinymux quiet switches mux quiet",
+        "heading": "TinyMUX quiet switches: \u0060mux_quiet\u0060",
+        "aliases": []
+      },
+      {
         "id": "rhostmush-edit-modes-rhost-edit",
         "lookup": "compatibility config rhostmush edit modes rhost edit",
         "heading": "RhostMUSH edit() modes: \u0060rhost_edit\u0060",
@@ -10624,6 +10630,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:cpad()",
+    "lookup": "cpad()",
+    "title": "cpad()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:crc32()",
     "lookup": "crc32()",
     "title": "crc32()",
@@ -11581,6 +11595,14 @@
     "file": "sharpfunc.md"
   },
   {
+    "id": "legacy:lpad()",
+    "lookup": "lpad()",
+    "title": "lpad()",
+    "aliases": [],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
     "id": "legacy:lparent()",
     "lookup": "lparent()",
     "title": "lparent()",
@@ -12440,6 +12462,14 @@
       "ceil()",
       "floor()"
     ],
+    "sections": [],
+    "file": "sharpfunc.md"
+  },
+  {
+    "id": "legacy:rpad()",
+    "lookup": "rpad()",
+    "title": "rpad()",
+    "aliases": [],
     "sections": [],
     "file": "sharpfunc.md"
   },

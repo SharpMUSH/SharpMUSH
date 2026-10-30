@@ -167,7 +167,7 @@ SharpMUSH provides the MUX comsys commands for players more familiar with them:
 
 - `addcom <alias>=<channel>` joins `<channel>` and remembers `<alias>` for it
 - `delcom <alias>` leaves the channel `<alias>` names and forgets the alias
-- `comlist` lists your aliases and the channels they name
+- `comlist` lists your aliases, the channels they name, whether you are on each (`On`, `Gag` or `Off`) and your title there
 - `comtitle <alias>=<title>` is `@channel/title <channel>=<title>`
 - `<alias> <message>` > `@chat <channel>=<message>`, and `<alias> :<pose>` and `<alias> ;<pose>` pose
 - `<alias> on` > `@channel/ungag <channel>`
