@@ -34,7 +34,7 @@ A context is the set of facts that decide what the five tokens mean:
 
 | Fact | Values |
 |---|---|
-| mode | the entry point: plain, command list (`;` separates), command args (`,` separates), or before the `=` of an `=` split |
+| mode | the entry point: plain, command list (`;` separates), command args (`,` separates), or before the `=` of an `=` split; the last two also inside a command list, where `;` still separates |
 | F | inside a function call, since the last brace (a brace starts over) |
 | B | inside a brace, at any depth: a `;`, `,` or `=` there ends no command or argument outside the brace |
 | K | inside a register, argument or capture name (`%q<...>`, `%<...>`, `$<...>`) |
@@ -46,11 +46,11 @@ so only the bracket's `]` or the name's `>` ends them, as PennMUSH's `process_ex
 `[` with `PT_BRACKET` alone and a name with `PT_GT` alone. `cat(a,[x,y])` is `a x,y`, `think [x;y]`
 does not split the command, and the comma in `cat(a,%q<x,y>)` is part of the name.
 
-That leaves 60 reachable combinations. The generator writes every rule for each of them, then
+That leaves 84 reachable combinations. The generator writes every rule for each of them, then
 keeps one copy of each set of copies that have the same body and refer to copies that are alike in
 turn. A rule has as many copies as there are different ways to read it: `beginGenericText` depends
 only on which tokens are text, while `evaluationString` also depends on what its calls, braces and
-names hold. That gives 124 rules.
+names hold. That gives 149 rules.
 
 A copy is named for what is true of every context it is read in: `Top` or `Call` (outside or
 inside a call; neither when the copy is read the same either way), `Group` inside a paren group,
@@ -79,7 +79,32 @@ A rule that would only ever wrap one other rule costs a tree node per use and gi
 nothing. Text at the start of a string is `beginGenericText`, and later text is `genericText`, which
 lists the same tokens (and `FUNCHAR`) itself rather than wrapping a `beginGenericText`. A `%` is
 followed directly by `complexSubstitutionSymbol` or `substitutionSymbol`. `command` stays a node of
-its own though it holds one `evaluationString`: it marks where one command of a list begins and ends.
+its own: it marks where one command of a list begins and ends.
+
+## Commands
+
+A built-in command's arguments are split in the same parse as the line. Before a command or command
+list is parsed, `SoftcodeParsePipeline.MarkCommandHeads` looks up each command's name (with its
+switches) through `BuiltInCommandHeads`, the lookup dispatch uses. When it names a built-in, the
+name, switches and the spaces after them become one token that says how the arguments split:
+`CMD_SINGLE`, `CMD_ARGS` (`,`), `CMD_EQ` (`=`) or `CMD_EQ_ARGS` (`=` then `,`). The lexer defines
+these tokens and never produces them. The `command` rule has an alternative for each, reading the
+arguments as the matching start rule reads them, and one for a command with no such token, which is
+read as one string as before.
+
+The parser still has no predicates: the token decides the alternative. `OTHER` runs through spaces,
+so `think add(1,2)` lexes as `think add` and `(`; the pipeline lexes again from the first argument
+character until the new tokens end where old ones did, so the argument starts with `add(`.
+
+Only a name that is the start of an `OTHER` run followed by a space, or a whole run with nothing
+after it, is marked. `addcom=x`, `think[x]` and `[think]` are not. A `;` starts a command when no
+bracket, brace, call or name is open. A marked line that does not parse is parsed again unmarked, so
+a wrong guess never fails a line.
+
+The mark is a guess that dispatch checks. A tree is kept for its text alone, and the command that
+runs may differ (an exit of that name, a socket command, another dialect). Dispatch takes the parsed
+arguments only for a built-in whose split matches the token, and otherwise splits the command's text
+as it always did.
 
 ## Paren groups
 

@@ -21,7 +21,7 @@ namespace SharpMUSH.Benchmarks;
 public sealed class ProfileHarness : LightningBaseBenchmark
 {
 	private sealed record Scenario(string Name, string Input, bool IsCommand, bool IsCommandList = false, bool AsMortal = false,
-		bool AsStranger = false);
+		bool AsStranger = false, bool Typed = false);
 
 	private static readonly string Shuffled100 = string.Join(' ', Enumerable.Range(0, 100).Select(i => i * 37 % 100));
 
@@ -39,6 +39,11 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 		new("b-think", "think add(1,2)", true),
 		new("b-think-br", "think [add(1,2)]", true),
 		new("think-subst", "think %#", true),
+		// As typed at a connection: a typed line's parses are not kept, so these parse every time.
+		new("typed-think", "think add(1,2)", true, Typed: true),
+		new("typed-think-br", "think [add(1,2)] and [mul(3,4)]", true, Typed: true),
+		new("typed-pemit", "@pemit me=Hello [name(me)], you have [add(1,2)] things", true, Typed: true),
+		new("typed-set", "&PROFILE_X me=x", true, Typed: true),
 		new("pemit-fn", "@pemit me=[add(1,2)]", true),
 		new("fn1", "[add(1,2)]", false),
 		new("fn10", BuildNested(10), false),
@@ -581,7 +586,8 @@ public sealed class ProfileHarness : LightningBaseBenchmark
 
 	private static async ValueTask RunOnce(IMUSHCodeParser baseParser, DBRef one, Scenario scenario, MString input)
 	{
-		var parser = baseParser.FromState(BenchmarkHelpers.FreshState(one));
+		var state = BenchmarkHelpers.FreshState(one);
+		var parser = baseParser.FromState(scenario.Typed ? state with { TypedLine = input.ToPlainText() } : state);
 		if (scenario.IsCommandList)
 			await parser.CommandListParse(input);
 		else if (scenario.IsCommand)

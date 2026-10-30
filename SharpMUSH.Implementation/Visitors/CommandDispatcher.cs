@@ -77,12 +77,11 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 		try
 		{
-			var firstCommandMatch = context.evaluationString();
-			command = CommandName(firstCommandMatch);
+			command = CommandName(context);
 			if (command is null)
 				return new None();
 
-			var commandText = CommandSlice(src, firstCommandMatch);
+			var commandText = CommandSlice(src, context);
 			// A rewrite (`"hi` run as SAY) was counted when the typed line began.
 			if (parser.CurrentState.CommandText?.Begin(commandText) is not true)
 				RecordConnectionActivity(parser, command);
@@ -118,7 +117,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			{
 				switch (await MatchChatAliasAsync(parser, command[1..]))
 				{
-					case SharpChannel channel when !context.evaluationString().IsEmpty:
+					case SharpChannel channel:
 						return await services.Commands.ChannelAsync(parser, channel, context, src);
 					case AmbiguousChatAlias:
 						return new None();
@@ -168,7 +167,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 			// Step 6: Check @attribute setting
 			// Standard attributes (e.g., DESCRIBE) can be set using @attrname object=value syntax
 			// This supports prefix matching when the attribute has the "prefixmatch" flag
-			if (builtIn.RootCommand.StartsWith('@') && context.evaluationString() != null)
+			if (builtIn.RootCommand.StartsWith('@'))
 			{
 				var attrCommandResult = await services.StandardAttributes.TryRunAsync(parser, src, context, builtIn.RootCommand);
 				if (attrCommandResult.IsSome())
@@ -200,7 +199,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// The command's first word, or <see langword="null"/> when there is none: no evaluation string, or
 	/// a command body that began with only whitespace.
 	/// </summary>
-	private static string? CommandName(IEvaluationStringContext? firstCommandMatch)
+	private static string? CommandName(ICommandContext firstCommandMatch)
 	{
 		if (firstCommandMatch is not { SourceInterval.Length: > 0 })
 			return null;
@@ -229,7 +228,7 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// src, otherwise a $command in a list is matched against the entire list and its ^...$ pattern
 	/// never matches. This is the same arithmetic as SplitAsync's realSubtext.
 	/// </summary>
-	private static MString CommandSlice(MString src, IEvaluationStringContext firstCommandMatch)
+	internal static MString CommandSlice(MString src, ISoftcodeContext firstCommandMatch)
 		=> src.Substring(firstCommandMatch.Start.StartIndex, firstCommandMatch.Stop.StopIndex - firstCommandMatch.Start.StartIndex + 1);
 
 	/// <summary>
@@ -556,13 +555,13 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 	/// The command name split into its root and switches, and the built-in the root abbreviates, when
 	/// there is one.
 	/// </summary>
-	private readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition);
+	internal readonly record struct BuiltInLookup(string RootCommand, string[] Switches, CommandDefinition? Definition);
 
 	/// <summary>
 	/// The built-in <paramref name="command"/> names: one spelled that way, else the one the dialect in force
 	/// means by it (<see cref="SoftcodeDialects"/>), else the one it abbreviates.
 	/// </summary>
-	private static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command, string? gameDialect)
+	internal static BuiltInLookup FindBuiltIn(IMUSHCodeParser parser, string command, string? gameDialect)
 	{
 		// Use CommandTrie for efficient prefix matching instead of LINQ
 		var slashIndex = command.AsSpan().IndexOf('/');

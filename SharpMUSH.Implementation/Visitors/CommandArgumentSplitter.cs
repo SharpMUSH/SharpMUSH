@@ -27,9 +27,11 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// <param name="rootCommand">The command name as typed, stripped when the arguments follow it with no space.</param>
 	/// <param name="noEvalSwitch">Whether the command was given <c>/NOEVAL</c>.</param>
 	/// <param name="singleArgument">Whether a switch makes the command take its arguments as one.</param>
+	/// <param name="builtIn">Whether the command is the built-in its name means, whose arguments the parse may
+	/// already have split (<see cref="BuiltInCommandHeads"/>).</param>
 	public async ValueTask<Result<CommandArguments>> SplitAsync(SharpMUSHParserVisitor visitor, IMUSHCodeParser prs,
 		MString src, ICommandContext context, CommandDefinition libraryCommandDefinition, string? rootCommand = null,
-		bool noEvalSwitch = false, bool singleArgument = false)
+		bool noEvalSwitch = false, bool singleArgument = false, bool builtIn = false)
 	{
 		var mode = SplitMode.For(libraryCommandDefinition.Attribute.Behavior, prs.CurrentState.ParseMode, noEvalSwitch,
 			singleArgument);
@@ -40,6 +42,11 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 				? prs.CurrentState.Flags | ParserStateFlags.PreserveBraces
 				: prs.CurrentState.Flags & ~ParserStateFlags.PreserveBraces
 		});
+
+		if (builtIn && context.Start.Type == SplitToken(mode.Behavior))
+		{
+			return await SplitParsedAsync(visitor, prs, src, context, mode, rawParser: newNoParseParser);
+		}
 
 		// The exact text the NoParse pass below parses to produce argCallState. Retained
 		// IEvaluationStringContext nodes on argCallState.ArgumentContexts have token offsets
@@ -68,6 +75,45 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 		}
 
 		return await EvaluateSplitAsync(visitor, prs, mode, parsedArgumentText, argCallState, rawArguments);
+	}
+
+	/// <summary>
+	/// The behavior a built-in splits its arguments by, given the switches it runs with: a switch it
+	/// declares in <see cref="SharpCommandAttribute.SingleArgumentSwitches"/> makes them one.
+	/// </summary>
+	public static CommandBehavior SplitBehavior(CommandDefinition definition, string[] switches)
+		=> Array.Exists(switches, s => definition.Attribute.SingleArgumentSwitches.Contains(s, StringComparer.OrdinalIgnoreCase))
+			? definition.Attribute.Behavior & ~(CommandBehavior.EqSplit | CommandBehavior.RSArgs)
+			: definition.Attribute.Behavior;
+
+	/// <summary>
+	/// The <c>CMD_*</c> token that marks a command whose arguments split by <paramref name="behavior"/>,
+	/// matching the choice <see cref="SplitAs"/> makes.
+	/// </summary>
+	public static int SplitToken(CommandBehavior behavior)
+		=> behavior.HasFlag(CommandBehavior.EqSplit) && behavior.HasFlag(CommandBehavior.RSArgs)
+			? SharpMUSHLexer.CMD_EQ_ARGS
+			: behavior.HasFlag(CommandBehavior.EqSplit)
+				? SharpMUSHLexer.CMD_EQ
+				: behavior.HasFlag(CommandBehavior.RSArgs)
+					? SharpMUSHLexer.CMD_ARGS
+					: SharpMUSHLexer.CMD_SINGLE;
+
+	/// <summary>
+	/// The arguments of a command the parse already split: the subtrees after its <c>CMD_*</c> token,
+	/// whose positions are in <paramref name="src"/> itself. Walked once as written, as the split of the
+	/// argument text would have been, then evaluated as <see cref="EvaluateSplitAsync"/> evaluates any split.
+	/// </summary>
+	private async ValueTask<Result<CommandArguments>> SplitParsedAsync(SharpMUSHParserVisitor visitor,
+		IMUSHCodeParser prs, MString src, ICommandContext context, SplitMode mode, IMUSHCodeParser rawParser)
+	{
+		if (context.ChildCount < 2) return new CommandArguments();
+
+		var walker = new SharpMUSHParserVisitor(visitor.Logger, rawParser, visitor.Configuration, services, src);
+		var argCallState = await walker.VisitCommandArguments(context);
+		return argCallState is { Arguments: { Length: > 0 } rawArguments }
+			? await EvaluateSplitAsync(visitor, prs, mode, src, argCallState, rawArguments)
+			: new CommandArguments();
 	}
 
 	/// <summary>
@@ -147,7 +193,7 @@ internal sealed class CommandArgumentSplitter(EvaluationServices services)
 	/// </summary>
 	private static MString CommandSubtext(MString src, ICommandContext context)
 	{
-		var realSubtext = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+		var realSubtext = CommandDispatcher.CommandSlice(src, context);
 		var leadingSpaces = SkipSpaces(realSubtext, 0);
 		return leadingSpaces > 0
 			? realSubtext.Substring(leadingSpaces, realSubtext.Length - leadingSpaces)

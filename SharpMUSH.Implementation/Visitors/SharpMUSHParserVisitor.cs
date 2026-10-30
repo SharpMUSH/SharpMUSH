@@ -936,7 +936,11 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	{
 		if (parser.CurrentState.ParseMode == ParseMode.NoParse)
 		{
-			return await VisitChildren(context) ?? new CallState(context.GetText());
+			// A built-in's split arguments are not one string to walk; the command is its text as written.
+			return context.Start.Type is SharpMUSHLexer.CMD_SINGLE or SharpMUSHLexer.CMD_ARGS or SharpMUSHLexer.CMD_EQ
+				or SharpMUSHLexer.CMD_EQ_ARGS
+				? new CallState(GetContextText(context))
+				: await VisitChildren(context) ?? new CallState(context.GetText());
 		}
 
 		var result = await _services.Dispatcher.DispatchAsync(this, source, context);
@@ -1207,10 +1211,25 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitStartPlainSingleCommandArg(
+	public override ValueTask<CallState?> VisitStartPlainSingleCommandArg(
 		[NotNull] IStartPlainSingleCommandArgContext context)
+		=> SingleCommandArg(context, context.evaluationString());
+
+	/// <summary>
+	/// The arguments after a command's <c>CMD_*</c> token, split the way that token says: what the visit
+	/// of the matching start rule returns for the argument text on its own.
+	/// </summary>
+	internal ValueTask<CallState?> VisitCommandArguments(ICommandContext context) => context.Start.Type switch
 	{
-		var evalString = context.evaluationString();
+		SharpMUSHLexer.CMD_EQ_ARGS => EqSplitCommandArgs(context,
+			context.evaluationString() is [var lhs, ..] ? lhs : null, context.commaCommandArgs()),
+		SharpMUSHLexer.CMD_EQ => EqSplitCommand(context, context.evaluationString(), context.EQUALS()),
+		SharpMUSHLexer.CMD_ARGS => VisitCommaCommandArgs(context.commaCommandArgs()),
+		_ => SingleCommandArg(context, context.evaluationString() is [var argument, ..] ? argument : null)
+	};
+
+	private async ValueTask<CallState?> SingleCommandArg(ISoftcodeContext context, IEvaluationStringContext? evalString)
+	{
 		if (evalString is null)
 			return CallState.Empty;
 
@@ -1235,12 +1254,14 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitStartEqSplitCommandArgs(
+	public override ValueTask<CallState?> VisitStartEqSplitCommandArgs(
 		[NotNull] IStartEqSplitCommandArgsContext context)
+		=> EqSplitCommandArgs(context, context.evaluationString(), context.commaCommandArgs());
+
+	private async ValueTask<CallState?> EqSplitCommandArgs(ISoftcodeContext context,
+		IEvaluationStringContext? evalString, ICommaCommandArgsContext? commaArgsContext)
 	{
-		var evalString = context.evaluationString();
 		var baseArg = evalString is not null ? await Visit(evalString) : CallState.Empty;
-		var commaArgsContext = context.commaCommandArgs();
 		var commaArgs = commaArgsContext is not null
 			? await VisitCommaCommandArgs(commaArgsContext)
 			: null;
@@ -1259,11 +1280,13 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public override async ValueTask<CallState?> VisitStartEqSplitCommand(
+	public override ValueTask<CallState?> VisitStartEqSplitCommand(
 		[NotNull] IStartEqSplitCommandContext context)
+		=> EqSplitCommand(context, context.evaluationString(), context.EQUALS());
+
+	private async ValueTask<CallState?> EqSplitCommand(ISoftcodeContext context,
+		IEvaluationStringContext[] evalStrings, ITerminalNode? equalsToken)
 	{
-		var evalStrings = context.evaluationString();
-		var equalsToken = context.EQUALS();
 
 		if (equalsToken is null)
 		{

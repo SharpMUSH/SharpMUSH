@@ -46,7 +46,8 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 		{
 			Result<CommandArguments> split;
 			using (clock.Pause())
-				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, rootCommand, noEvalSwitch, singleArgument);
+				split = await services.Arguments.SplitAsync(visitor, prs, src, context, libraryCommandDefinition, rootCommand,
+					noEvalSwitch, singleArgument, builtIn: true);
 
 			return split switch
 			{
@@ -813,7 +814,7 @@ internal sealed class CommandInvocationPipeline(EvaluationServices services)
 	public async Task<Option<CallState>> ChannelAsync(IMUSHCodeParser prs, SharpChannel channel,
 		ICommandContext context, MString src)
 	{
-		var full = src.Substring(context.evaluationString().Start.StartIndex, context.evaluationString().Stop.StopIndex - context.evaluationString().Start.StartIndex + 1);
+		var full = CommandDispatcher.CommandSlice(src, context);
 		var aliasStart = CommandArgumentSplitter.SkipSpaces(full, 0);
 		if (aliasStart > 0)
 		{

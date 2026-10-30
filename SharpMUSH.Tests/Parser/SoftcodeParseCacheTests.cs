@@ -91,22 +91,28 @@ public class SoftcodeParseCacheTests
 		await Assert.That(cache.TryGet(KeyFor(body), out _)).IsTrue();
 	}
 
-	/// <summary>A command in an action list splits the same arguments each time the list runs.</summary>
+	/// <summary>
+	/// A built-in in an action list has its arguments split in the list's own parse, which is kept: the
+	/// list runs again on the same tree, and its arguments are never parsed on their own.
+	/// </summary>
 	[Test]
-	public async Task ActionListArguments_AreParsedOnce()
+	public async Task ActionListArguments_AreSplitWithTheList()
 	{
 		var cache = Factory.Services.GetRequiredService<SoftcodeParseCache>();
 		var arguments = $"me={TestIsolationHelpers.GenerateUniqueName("split")} [add(1,2)]";
+		var list = $"@pemit {arguments}";
 		var options = Factory.Services.GetRequiredService<IOptionsWrapper<SharpMUSHOptions>>().CurrentValue;
-		var key = new SoftcodeParseCache.Key(arguments, "CommandEqSplitParse", true,
+		var listKey = new SoftcodeParseCache.Key(list, "CommandListParse", false,
 			options.Compatibility.ParenGroups, options.Debug.ParserPredictionMode);
+		var splitKey = listKey with { Text = arguments, EntryPoint = "CommandEqSplitParse", Lenient = true };
 
-		await Factory.CommandParser.CommandListParse(MarkupText.Plain($"@pemit {arguments}"));
-		await Assert.That(cache.TryGet(key, out var entry)).IsTrue();
+		await Factory.CommandParser.CommandListParse(MarkupText.Plain(list));
+		await Assert.That(cache.TryGet(listKey, out var entry)).IsTrue();
 
-		await Factory.CommandParser.CommandListParse(MarkupText.Plain($"@pemit {arguments}"));
-		await Assert.That(cache.TryGet(key, out var again)).IsTrue();
+		await Factory.CommandParser.CommandListParse(MarkupText.Plain(list));
+		await Assert.That(cache.TryGet(listKey, out var again)).IsTrue();
 		await Assert.That(again).IsSameReferenceAs(entry);
+		await Assert.That(cache.TryGet(splitKey, out _)).IsFalse();
 	}
 
 	[Test]

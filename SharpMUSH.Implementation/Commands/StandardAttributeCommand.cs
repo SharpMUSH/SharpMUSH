@@ -93,13 +93,7 @@ internal sealed class StandardAttributeCommand(EvaluationServices services)
 			return new None();
 		}
 
-		var evalString = context.evaluationString();
-		if (evalString == null || evalString.IsEmpty)
-		{
-			return await _writer.UsageAsync(prs, matchedEntry.Name);
-		}
-
-		var fullText = src.Substring(evalString.Start.StartIndex, evalString.Stop.StopIndex - evalString.Start.StartIndex + 1);
+		var fullText = CommandDispatcher.CommandSlice(src, context);
 
 		// The command was matched on the line's trimmed text; an indented line must be split the same way
 		// or its first space is the indent and the command token lands in the object name.

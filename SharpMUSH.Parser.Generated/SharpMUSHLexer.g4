@@ -3,6 +3,10 @@
 
 lexer grammar SharpMUSHLexer;
 
+// No lexer rule makes these. Before a command is parsed, the parse pipeline puts one in place of the
+// name and switches of a built-in it knows (CommandHeads), saying how its arguments split.
+tokens { CMD_SINGLE, CMD_ARGS, CMD_EQ, CMD_EQ_ARGS }
+
 /*
  * Lexer Rules   
  */

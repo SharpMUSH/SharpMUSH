@@ -71,7 +71,14 @@ public partial class SharpMUSHParser
 	/// <summary>Every <c>command__*</c> rule.</summary>
 	public interface ICommandContext : ISoftcodeContext
 	{
-		IEvaluationStringContext evaluationString() => SoftcodeTree.Rule<IEvaluationStringContext>(this, 0);
+		ITerminalNode CMD_EQ_ARGS() => SoftcodeTree.Token(this, SharpMUSHParser.CMD_EQ_ARGS, 0);
+		IEvaluationStringContext[] evaluationString() => SoftcodeTree.Rules<IEvaluationStringContext>(this);
+		IEvaluationStringContext evaluationString(int i) => SoftcodeTree.Rule<IEvaluationStringContext>(this, i);
+		ITerminalNode EQUALS() => SoftcodeTree.Token(this, SharpMUSHParser.EQUALS, 0);
+		ICommaCommandArgsContext commaCommandArgs() => SoftcodeTree.Rule<ICommaCommandArgsContext>(this, 0);
+		ITerminalNode CMD_EQ() => SoftcodeTree.Token(this, SharpMUSHParser.CMD_EQ, 0);
+		ITerminalNode CMD_ARGS() => SoftcodeTree.Token(this, SharpMUSHParser.CMD_ARGS, 0);
+		ITerminalNode CMD_SINGLE() => SoftcodeTree.Token(this, SharpMUSHParser.CMD_SINGLE, 0);
 	}
 
 	/// <summary>Every <c>commaCommandArgs__*</c> rule.</summary>
@@ -278,8 +285,12 @@ public partial class SharpMUSHParser
 	public partial class BeginGenericText__Call_EA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Call_SEAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Call_SEA_GContext : IBeginGenericTextContext;
+	public partial class BeginGenericText__Top_RCAContext : IBeginGenericTextContext;
+	public partial class BeginGenericText__Top_RCA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RCEAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RCEA_GContext : IBeginGenericTextContext;
+	public partial class BeginGenericText__Top_REAContext : IBeginGenericTextContext;
+	public partial class BeginGenericText__Top_REA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RSCAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RSCA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RSCEContext : IBeginGenericTextContext;
@@ -303,8 +314,13 @@ public partial class SharpMUSHParser
 	public partial class CallTail__Call_EA_GContext : ICallTailContext;
 	public partial class CallTail__Call_SEAContext : ICallTailContext;
 	public partial class CallTail__Call_SEA_GContext : ICallTailContext;
+	public partial class CallTail__Top_RCAContext : ICallTailContext;
+	public partial class CallTail__Top_RCA_GContext : ICallTailContext;
 	public partial class CallTail__Top_RCEAContext : ICallTailContext;
 	public partial class CallTail__Top_RCEA_GContext : ICallTailContext;
+	public partial class CallTail__Top_REAContext : ICallTailContext;
+	public partial class CallTail__Top_REA_GContext : ICallTailContext;
+	public partial class CallTail__Top_REA_G_closedContext : ICallTailContext;
 	public partial class CallTail__Top_RSCAContext : ICallTailContext;
 	public partial class CallTail__Top_RSCA_GContext : ICallTailContext;
 	public partial class CallTail__Top_RSCEAContext : ICallTailContext;
@@ -314,12 +330,16 @@ public partial class SharpMUSHParser
 	public partial class CallTail__Top_RSEA_G_closedContext : ICallTailContext;
 	public partial class ClosedGroup__Group_CEA_GContext : IParenGroupContext;
 	public partial class ClosedGroup__Group_SCEA_GContext : IParenGroupContext;
+	public partial class ClosedGroup__TopGroup_CA_GContext : IParenGroupContext;
 	public partial class ClosedGroup__TopGroup_SCA_GContext : IParenGroupContext;
 	public partial class ClosedGroup__TopGroup_SCE_GContext : IParenGroupContext;
 	public partial class ClosedGroupFirst__Group_CEA_GContext : IParenGroupContext;
 	public partial class ClosedGroupFirst__Group_SCEA_GContext : IParenGroupContext;
+	public partial class ClosedGroupFirst__TopGroup_CA_GContext : IParenGroupContext;
 	public partial class ClosedGroupFirst__TopGroup_SCA_GContext : IParenGroupContext;
 	public partial class ClosedGroupFirst__TopGroup_SCE_GContext : IParenGroupContext;
+	public partial class CommaCommandArgs__Top_REAContext : ICommaCommandArgsContext;
+	public partial class CommaCommandArgs__Top_REA_GContext : ICommaCommandArgsContext;
 	public partial class CommaCommandArgs__Top_RSEAContext : ICommaCommandArgsContext;
 	public partial class CommaCommandArgs__Top_RSEA_GContext : ICommaCommandArgsContext;
 	public partial class Command__Top_RCEAContext : ICommandContext;
@@ -335,8 +355,13 @@ public partial class SharpMUSHParser
 	public partial class EvaluationString__Call_EA_GContext : IEvaluationStringContext;
 	public partial class EvaluationString__Call_SEAContext : IEvaluationStringContext;
 	public partial class EvaluationString__Call_SEA_GContext : IEvaluationStringContext;
+	public partial class EvaluationString__Top_RCAContext : IEvaluationStringContext;
+	public partial class EvaluationString__Top_RCA_GContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RCEAContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RCEA_GContext : IEvaluationStringContext;
+	public partial class EvaluationString__Top_REAContext : IEvaluationStringContext;
+	public partial class EvaluationString__Top_REA_GContext : IEvaluationStringContext;
+	public partial class EvaluationString__Top_REA_G_closedContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RSCAContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RSCA_GContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RSCEAContext : IEvaluationStringContext;
@@ -356,10 +381,15 @@ public partial class SharpMUSHParser
 	public partial class GenericText__Call_SEA_GContext : IGenericTextContext;
 	public partial class GenericText__Group_CEA_GContext : IGenericTextContext;
 	public partial class GenericText__Group_SCEA_GContext : IGenericTextContext;
+	public partial class GenericText__TopGroup_CA_GContext : IGenericTextContext;
 	public partial class GenericText__TopGroup_SCA_GContext : IGenericTextContext;
 	public partial class GenericText__TopGroup_SCE_GContext : IGenericTextContext;
+	public partial class GenericText__Top_RCAContext : IGenericTextContext;
+	public partial class GenericText__Top_RCA_GContext : IGenericTextContext;
 	public partial class GenericText__Top_RCEAContext : IGenericTextContext;
 	public partial class GenericText__Top_RCEA_GContext : IGenericTextContext;
+	public partial class GenericText__Top_REAContext : IGenericTextContext;
+	public partial class GenericText__Top_REA_GContext : IGenericTextContext;
 	public partial class GenericText__Top_RSCAContext : IGenericTextContext;
 	public partial class GenericText__Top_RSCA_GContext : IGenericTextContext;
 	public partial class GenericText__Top_RSCEContext : IGenericTextContext;
@@ -371,10 +401,12 @@ public partial class SharpMUSHParser
 	public partial class GenericText__OpenContext : IGenericTextContext;
 	public partial class GenericText__CloseContext : IGenericTextContext;
 	public partial class IterationTokenContext : ISoftcodeContext;
+	public partial class OpenTail__TopGroup_CA_GContext : IParenGroupContext;
 	public partial class OpenTail__TopGroup_CEA_GContext : IParenGroupContext;
 	public partial class OpenTail__TopGroup_SCA_GContext : IParenGroupContext;
 	public partial class OpenTail__TopGroup_SCEA_GContext : IParenGroupContext;
 	public partial class OpenTail__TopGroup_SCE_GContext : IParenGroupContext;
+	public partial class OpenTailFirst__TopGroup_CA_GContext : IParenGroupContext;
 	public partial class OpenTailFirst__TopGroup_CEA_GContext : IParenGroupContext;
 	public partial class OpenTailFirst__TopGroup_SCA_GContext : IParenGroupContext;
 	public partial class OpenTailFirst__TopGroup_SCEA_GContext : IParenGroupContext;
@@ -452,8 +484,12 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitBeginGenericText__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_EA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_SEAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_SEA_GContext context) => VisitBeginGenericText(context);
+	public override TResult VisitBeginGenericText__Top_RCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCAContext context) => VisitBeginGenericText(context);
+	public override TResult VisitBeginGenericText__Top_RCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCEAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCEA_GContext context) => VisitBeginGenericText(context);
+	public override TResult VisitBeginGenericText__Top_REA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_REAContext context) => VisitBeginGenericText(context);
+	public override TResult VisitBeginGenericText__Top_REA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_REA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSCAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RSCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSCA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RSCE([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSCEContext context) => VisitBeginGenericText(context);
@@ -477,8 +513,13 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitCallTail__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Call_EA_GContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Call_SEAContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Call_SEA_GContext context) => VisitCallTail(context);
+	public override TResult VisitCallTail__Top_RCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RCAContext context) => VisitCallTail(context);
+	public override TResult VisitCallTail__Top_RCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RCA_GContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RCEAContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RCEA_GContext context) => VisitCallTail(context);
+	public override TResult VisitCallTail__Top_REA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_REAContext context) => VisitCallTail(context);
+	public override TResult VisitCallTail__Top_REA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_REA_GContext context) => VisitCallTail(context);
+	public override TResult VisitCallTail__Top_REA_G_closed([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_REA_G_closedContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSCAContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RSCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSCA_GContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RSCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSCEAContext context) => VisitCallTail(context);
@@ -486,6 +527,8 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitCallTail__Top_RSEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSEAContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RSEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSEA_GContext context) => VisitCallTail(context);
 	public override TResult VisitCallTail__Top_RSEA_G_closed([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CallTail__Top_RSEA_G_closedContext context) => VisitCallTail(context);
+	public override TResult VisitCommaCommandArgs__Top_REA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CommaCommandArgs__Top_REAContext context) => VisitCommaCommandArgs(context);
+	public override TResult VisitCommaCommandArgs__Top_REA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CommaCommandArgs__Top_REA_GContext context) => VisitCommaCommandArgs(context);
 	public override TResult VisitCommaCommandArgs__Top_RSEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CommaCommandArgs__Top_RSEAContext context) => VisitCommaCommandArgs(context);
 	public override TResult VisitCommaCommandArgs__Top_RSEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.CommaCommandArgs__Top_RSEA_GContext context) => VisitCommaCommandArgs(context);
 	public override TResult VisitCommand__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.Command__Top_RCEAContext context) => VisitCommand(context);
@@ -500,8 +543,13 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitEvaluationString__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Call_EA_GContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Call_SEAContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Call_SEA_GContext context) => VisitEvaluationString(context);
+	public override TResult VisitEvaluationString__Top_RCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RCAContext context) => VisitEvaluationString(context);
+	public override TResult VisitEvaluationString__Top_RCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RCA_GContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RCEAContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RCEA_GContext context) => VisitEvaluationString(context);
+	public override TResult VisitEvaluationString__Top_REA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_REAContext context) => VisitEvaluationString(context);
+	public override TResult VisitEvaluationString__Top_REA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_REA_GContext context) => VisitEvaluationString(context);
+	public override TResult VisitEvaluationString__Top_REA_G_closed([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_REA_G_closedContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSCAContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RSCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSCA_GContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RSCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSCEAContext context) => VisitEvaluationString(context);
@@ -521,10 +569,15 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitGenericText__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Call_SEA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Group_CEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Group_CEA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Group_SCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Group_SCEA_GContext context) => VisitGenericText(context);
+	public override TResult VisitGenericText__TopGroup_CA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__TopGroup_CA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__TopGroup_SCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__TopGroup_SCA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__TopGroup_SCE_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__TopGroup_SCE_GContext context) => VisitGenericText(context);
+	public override TResult VisitGenericText__Top_RCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RCAContext context) => VisitGenericText(context);
+	public override TResult VisitGenericText__Top_RCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RCA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RCEAContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RCEA_GContext context) => VisitGenericText(context);
+	public override TResult VisitGenericText__Top_REA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_REAContext context) => VisitGenericText(context);
+	public override TResult VisitGenericText__Top_REA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_REA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RSCAContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Top_RSCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RSCA_GContext context) => VisitGenericText(context);
 	public override TResult VisitGenericText__Top_RSCE([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.GenericText__Top_RSCEContext context) => VisitGenericText(context);
