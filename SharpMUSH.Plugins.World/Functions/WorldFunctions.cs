@@ -4,6 +4,7 @@ using SharpMUSH.Library;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.World.Common;
@@ -15,6 +16,8 @@ namespace SharpMUSH.Plugins.World.Functions;
 /// The <c>world…</c> functions, named for <c>@world</c>: <c>worldcell()</c> reads a place, <c>worldway()</c> a way out
 /// of one, and <c>worlddraw()</c> draws the places around one as text. They read only. A place whose data hides it
 /// reads as nothing, and its data shows only <c>render</c> and <c>info</c>, to whoever may not examine the map.
+/// <c>worldroom()</c> gives the room standing on a place, lending it one, and <c>worldplace()</c> the place a room
+/// stands on.
 /// </summary>
 public static class WorldFunctions
 {
@@ -23,6 +26,7 @@ public static class WorldFunctions
 	public const string BadField = "#-1 BAD FIELD";
 	public const string BadDirection = "#-1 BAD DIRECTION";
 	public const string BadRadius = "#-1 BAD RADIUS";
+	public const string NotARoom = "#-1 NOT A ROOM";
 
 	/// <summary>The furthest <c>worlddraw()</c> reaches from its centre.</summary>
 	public const int MaxRadius = 20;
@@ -53,7 +57,8 @@ public static class WorldFunctions
 
 	/// <summary>
 	/// worldcell(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;[, &lt;field&gt;]]): the place's <c>type</c> (the default),
-	/// <c>label</c>, <c>name</c>, <c>data</c>, <c>closed</c> (1 or 0), <c>reason</c> or <c>id</c>.
+	/// <c>label</c>, <c>name</c>, <c>data</c>, <c>closed</c> (1 or 0), <c>reason</c>, <c>id</c>, <c>room</c> (the room
+	/// standing there, lending none) or <c>permanent</c> (1 when that room was placed there to stay).
 	/// </summary>
 	[SharpFunction(Name = "worldcell", MinArgs = 3, MaxArgs = 5, Flags = FunctionFlags.Regular,
 		ParameterNames = ["map", "x", "y", "z", "field"])]
@@ -67,6 +72,8 @@ public static class WorldFunctions
 			var place = reading.Store.Place(dbref, at.X, at.Y, at.Z);
 			if (!reading.Examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(place?.Data))) (type, place) = (null, null);
 			var terrain = type is null ? null : await reading.Legend.TerrainAsync(type);
+			var rooms = parser.ServiceProvider.GetRequiredService<WorldRooms>();
+			var standing = type is null || field is not ("room" or "permanent") ? null : await rooms.StandingAsync(dbref, at);
 			return field switch
 			{
 				"type" => new CallState(type ?? ""),
@@ -76,6 +83,8 @@ public static class WorldFunctions
 				"closed" => new CallState(terrain?.Closed is not null),
 				"reason" => new CallState(terrain?.Closed ?? ""),
 				"id" => new CallState(type is null ? "" : WorldPlaceId.Of(dbref, at.X, at.Y, at.Z)),
+				"room" => new CallState(standing is { } held ? $"#{held.Number}" : ""),
+				"permanent" => new CallState(standing is { } room && reading.Store.Room(room) is { Permanent: true }),
 				_ => new CallState(BadField),
 			};
 		});
@@ -144,5 +153,64 @@ public static class WorldFunctions
 		if (window is null || !window.Cells.TryGetValue((x, y), out var cell) || reading.Record.Type(cell.Terrain) is not { } type) return " ";
 		if (!reading.Examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(window.Places.GetValueOrDefault((x, y))?.Data))) return " ";
 		return (await reading.Legend.TerrainAsync(type)).Glyph;
+	}
+
+	/// <summary>
+	/// worldroom(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;]), or worldroom(&lt;map&gt;, &lt;x&gt;,&lt;y&gt;,&lt;z&gt;) with the
+	/// place in one argument as <c>worldway()</c>'s <c>to</c> gives it: the room standing on a place, lending it one
+	/// when none does. Needs control of the map.
+	/// </summary>
+	[SharpFunction(Name = "worldroom", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX,
+		ParameterNames = ["map", "x", "y", "z"])]
+	public static ValueTask<CallState> WorldRoom(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
+		ReadAsync(parser, async reading =>
+		{
+			var executor = await WorldMaps.ExecutorAsync(parser);
+			if (!await parser.ServiceProvider.GetRequiredService<IPermissionService>().Controls(executor, reading.Map))
+				return new CallState(ErrorMessages.Returns.PermissionDenied);
+			var at = parser.CurrentState.Arguments.Count == 2 ? WorldPosition.Parse(Arg(parser, 1)) : Position(parser);
+			if (at is not { } place) return new CallState(BadPlace);
+			return await parser.ServiceProvider.GetRequiredService<WorldRooms>().RoomAsync(reading.Map, reading.Record, place) switch
+			{
+				DBRef room => new CallState($"#{room.Number}"),
+				Error<string> error => new CallState(error.Value),
+			};
+		});
+
+	/// <summary>
+	/// worldplace(&lt;room&gt;[, &lt;field&gt;]): where a room stands: <c>coords</c> (the default, as <c>x,y,z</c>),
+	/// <c>x</c>, <c>y</c>, <c>z</c>, <c>map</c>, <c>id</c> or <c>permanent</c> (1 when it was placed there to stay). Empty
+	/// for a room on no world map. Needs to examine the room, or be in it.
+	/// </summary>
+	[SharpFunction(Name = "worldplace", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
+		ParameterNames = ["room", "field"])]
+	public static async ValueTask<CallState> WorldPlace(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+	{
+		var executor = await WorldMaps.ExecutorAsync(parser);
+		var locate = parser.ServiceProvider.GetRequiredService<ILocateService>();
+		return await locate.LocateAndNotifyIfInvalidWithCallStateFunction(parser, executor, executor, Arg(parser, 0), LocateFlags.All,
+			async room =>
+			{
+				if (!room.IsRoom) return new CallState(NotARoom);
+				var field = Arg(parser, 1) is { Length: > 0 } given ? given.ToLowerInvariant() : "coords";
+				if (field is not ("coords" or "x" or "y" or "z" or "map" or "id" or "permanent")) return new CallState(BadField);
+				var dbref = room.Object().DBRef;
+				var inside = (await executor.Where()).Object().DBRef.Number == dbref.Number;
+				if (!inside && !await parser.ServiceProvider.GetRequiredService<IPermissionService>().CanExamine(executor, room))
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				if (parser.ServiceProvider.GetRequiredService<WorldStore>().Room(dbref) is not { } stands) return new CallState("");
+				var map = new DBRef((int)stands.Map, stands.MapCreated);
+				var at = new WorldPosition(stands.X, stands.Y, stands.Z);
+				return field switch
+				{
+					"x" => new CallState(at.X.ToString()),
+					"y" => new CallState(at.Y.ToString()),
+					"z" => new CallState(at.Z.ToString()),
+					"map" => new CallState(new DBRef(map.Number).ToString()),
+					"id" => new CallState(WorldPlaceId.Of(map, at.X, at.Y, at.Z)),
+					"permanent" => new CallState(stands.Permanent),
+					_ => new CallState(at.ToString()),
+				};
+			});
 	}
 }

@@ -1,11 +1,13 @@
 using System.Text;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
+using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.Attributes;
+using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
@@ -19,7 +21,8 @@ namespace SharpMUSH.Plugins.World.Commands;
 
 /// <summary>
 /// <c>@world[/&lt;switch&gt;] &lt;map&gt;[/&lt;x&gt;,&lt;y&gt;[,&lt;z&gt;][/&lt;side&gt;]][=&lt;value&gt;]</c>: makes an object a stored
-/// map and paints, walls, names and fills in its places. Every change needs control of the map; reading it, examine.
+/// map and paints, walls, names and fills in its places, and places rooms on them. Every change needs control of the
+/// map; reading it, examine.
 /// The left side is evaluated, and the right side too except for <c>/data</c>, whose JSON is taken as typed.
 /// </summary>
 public static partial class WorldCommand
@@ -30,7 +33,7 @@ public static partial class WorldCommand
 	[GeneratedRegex("^[a-z0-9_-]+$")]
 	private static partial Regex TypePattern();
 
-	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "PLACE", "DATA", "MERGE", "CLEAR"],
+	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "value"])]
 	public static async ValueTask<Option<CallState>> World(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -47,6 +50,14 @@ public static partial class WorldCommand
 		{
 			await notify.Notify(executor, text);
 			return new CallState(result);
+		}
+
+		if (switches.Contains("SWEEP"))
+		{
+			if (!await executor.IsWizard())
+				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+			var (returned, destroyed) = await parser.ServiceProvider.GetRequiredService<WorldRooms>().SweepAsync(parser, TimeSpan.Zero);
+			return await Say($"Took back {Rooms(returned)}, and destroyed {destroyed} spare{(destroyed == 1 ? "" : "s")}.", returned.ToString());
 		}
 
 		var parts = left.Split('/', 3, StringSplitOptions.TrimEntries);
@@ -79,6 +90,7 @@ public static partial class WorldCommand
 		if (switches.Contains("WALL")) return await WallAsync(at);
 		if (switches.Contains("PLACE")) return await NameAsync(at);
 		if (switches.Contains("DATA")) return await DataAsync(at);
+		if (switches.Contains("ROOM")) return await RoomAsync(at);
 		return reading ? await Say(await DescribePlaceAsync(at), "") : await Say("Use /data with /merge or /clear.", "#-1 BAD SWITCH");
 
 		async ValueTask<Option<CallState>> CreateAsync()
@@ -179,6 +191,42 @@ public static partial class WorldCommand
 				: await Say($"Set the data of {place}.", "");
 		}
 
+		async ValueTask<Option<CallState>> RoomAsync(WorldPosition place)
+		{
+			var rooms = parser.ServiceProvider.GetRequiredService<WorldRooms>();
+			var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				if (await rooms.StandingAsync(dbref, place) is not { } standing)
+					return await Say($"No room stands on {place}.", "#-1 NO ROOM");
+				if (store.Room(standing) is not { Permanent: true })
+					return await Say($"#{standing.Number} is lent to {place}, and goes back by itself once empty.", "#-1 LENT");
+				await store.UnstandAsync(standing, release: false);
+				await rooms.UnmarkAsync(standing);
+				return await Say($"Took #{standing.Number} off {place}.", "");
+			}
+
+			if (await WorldMaps.LocateAsync(parser, executor, value.Trim()) is not { } found) return new CallState(ErrorMessages.Returns.NoMatch);
+			if (!found.IsRoom) return await Say($"{found.Object().Name} is not a room.", "#-1 NOT A ROOM");
+			if (!await permissions.Controls(executor, found))
+				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+			var room = found.Object().DBRef;
+			if (await rooms.StandingAsync(dbref, place) is { } lent && lent.Number != room.Number
+				&& store.Room(lent) is { Permanent: false } && await rooms.HoldsAnythingAsync(lent))
+				return await Say($"#{lent.Number} is lent to {place} and holds something; place a room there once it is empty.", "#-1 OCCUPIED");
+
+			var placing = await store.PlaceRoomAsync(dbref, place.X, place.Y, place.Z, room);
+			if (placing == WorldPlacing.Taken)
+				return await Say($"Another room stands on {place} to stay.", "#-1 TAKEN");
+			if (placing == WorldPlacing.AlreadyThere)
+				return await Say($"{found.Object().Name} already stands on {place}.", $"#{room.Number}");
+			await mediator.Send(new SetObjectZoneCommand(found, map));
+			await rooms.MarkAsync(found, await found.Object().Owner.WithCancellation(CancellationToken.None), map, place);
+			return await Say(placing == WorldPlacing.Kept
+				? $"{found.Object().Name} stays on {place} now."
+				: $"{found.Object().Name} now stands on {place} to stay.", $"#{room.Number}");
+		}
+
 		async ValueTask<string> DescribePlaceAsync(WorldPosition place)
 		{
 			var legend = new WorldLegend(attributes, map);
@@ -204,6 +252,8 @@ public static partial class WorldCommand
 				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{(reason is null ? "" : $" ({reason})")}");
 			}
 			if (held?.Data is { } data) lines.Add($"Data: {data}");
+			if (await parser.ServiceProvider.GetRequiredService<WorldRooms>().StandingAsync(dbref, place) is { } standing)
+				lines.Add($"Room: #{standing.Number}{(store.Room(standing) is { Permanent: true } ? ", to stay" : ", lent")}");
 			return string.Join("\n", lines);
 		}
 
@@ -215,4 +265,6 @@ public static partial class WorldCommand
 	}
 
 	private static string Places(long count) => count == 1 ? "1 place" : $"{count} places";
+
+	private static string Rooms(int count) => count == 1 ? "1 empty room" : $"{count} empty rooms";
 }
