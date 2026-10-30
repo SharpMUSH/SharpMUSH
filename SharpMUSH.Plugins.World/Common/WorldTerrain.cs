@@ -17,9 +17,13 @@ public sealed record WorldTerrain(string Type, string Label, string? Tone, strin
 		: Label.Length > 0 ? Label[..1].ToUpperInvariant() : "?";
 }
 
+/// <summary>A lock on moving between two terrain types: its key, and what a refused mover is told.</summary>
+public sealed record WorldTerrainLock(string Key, string? Reason);
+
 /// <summary>
 /// The legend of a stored map: <c>MAP`LEGEND`&lt;type&gt;`LABEL</c>, <c>`TONE</c>, <c>`ICON</c> and <c>`CLOSED</c> on
-/// the map, read as the map, as the World map reads them. A type the legend does not name is labelled by itself.
+/// the map, read as the map, as the World map reads them, and <c>`LOCK</c> and <c>`FAILURE</c>, which gate moving
+/// into a type. A type the legend does not name is labelled by itself.
 /// </summary>
 public sealed class WorldLegend
 {
@@ -48,6 +52,21 @@ public sealed class WorldLegend
 			await ValueAsync(type, "ICON"), await ValueAsync(type, "CLOSED"));
 		_terrain[type] = terrain;
 		return terrain;
+	}
+
+	/// <summary>
+	/// The lock on entering a place of type <paramref name="to"/> from one of type <paramref name="from"/> (null when
+	/// nothing is painted there): <c>`LOCK`&lt;from&gt;</c> of <paramref name="to"/>'s legend, else, coming from
+	/// another type, its <c>`LOCK</c>. Its reason is <c>`FAILURE`&lt;from&gt;</c>, else <c>`FAILURE</c>. Null when no
+	/// key applies.
+	/// </summary>
+	public async ValueTask<WorldTerrainLock?> LockAsync(string to, string? from)
+	{
+		var key = from is null ? null : await ValueAsync(to, $"LOCK`{from.ToUpperInvariant()}");
+		if (key is null && from != to) key = await ValueAsync(to, "LOCK");
+		if (key is null) return null;
+		var reason = (from is null ? null : await ValueAsync(to, $"FAILURE`{from.ToUpperInvariant()}")) ?? await ValueAsync(to, "FAILURE");
+		return new WorldTerrainLock(key, reason);
 	}
 
 	private ValueTask<string?> ValueAsync(string type, string field) => _read($"MAP`LEGEND`{type.ToUpperInvariant()}`{field}");

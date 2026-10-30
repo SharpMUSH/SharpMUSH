@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.0.0
+version: 1.1.0
 authors: [SharpMUSH]
 description: "Walking a world map the World plugin keeps: ten direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
 license: MIT
@@ -133,7 +133,7 @@ objects:
       HELP`MAP`GRID: |-
         A world map keeps its places itself (see `help @world`). With this package, people walk it.
 
-        The map must be a room that nobody enters. `+map/exits <map>` opens ten exits on it (name a map you are not near by its dbref), `North;n` to `Down;d`. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side or a closed terrain refuses, with its reason. Rooms placed on the map keep their own exits, and those come first.
+        The map must be a room that nobody enters. `+map/exits <map>` opens ten exits on it (name a map you are not near by its dbref), `North;n` to `Down;d`. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first.
 
         A lent room is named after its place and described by the map's legend: ``MAP`LEGEND`<type>`DESC``, else the type's label. Set ``MAP`CELLPARENT`` on the map to describe them your own way.
 
@@ -162,19 +162,20 @@ objects:
     location: "{{grid}}"
     flags: [no_command]
     attributes:
-      # %0 the room, %1 a field of worldway(): the way out of the room's place this exit leads.
+      # %0 the room, %1 a field of worldway(), %2 the mover: the way out of the room's place this exit leads, its
+      # locks evaluated for the mover.
       FUN`WAY:
         value: |-
-          worldway(zone(%0),worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),v(MAP`WAY),%1)
+          worldway(zone(%0),worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),v(MAP`WAY),%1,%2)
         flags: [funsyntax]
       # A way that refuses leads back to where the mover stands, so no room is lent for it and the lock below
       # refuses with the reason.
       DESTINATION: |-
-        [if(u(CANGO),worldroom(zone(%l),u(FUN`WAY,%l,to)),%l)]
+        [if(u(CANGO),worldroom(zone(%l),u(FUN`WAY,%l,to,%#)),%l)]
       CANGO: |-
-        [t(match(open oneway,u(FUN`WAY,%l,state)))]
+        [t(match(open oneway,u(FUN`WAY,%l,state,%#)))]
       FAILURE: |-
-        [if(strlen(setr(reason,u(FUN`WAY,%l,reason))),%q<reason>,You can't go that way.)]
+        [if(strlen(setr(reason,u(FUN`WAY,%l,reason,%#))),%q<reason>,You can't go that way.)]
 
   # The parent of every room a map lends, unless the map's MAP`CELLPARENT names another. Its attributes run as the
   # room, which the map's owner owns.

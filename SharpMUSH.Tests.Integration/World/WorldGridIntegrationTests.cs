@@ -17,7 +17,8 @@ namespace SharpMUSH.Tests.Integration.World;
 
 /// <summary>
 /// The bundled world-grid package over the World plugin: +map/exits opens the ten direction exits on a world map,
-/// a player walks between the rooms its places are lent and is refused by walls with their reasons, the cell parent
+/// a player walks between the rooms its places are lent and is refused by walls and the locks they do not pass with
+/// their reasons, the cell parent
 /// describes a lent room from the legend, and +map draws the places around the player. Not in parallel: the
 /// package's commands are global.
 /// </summary>
@@ -126,6 +127,22 @@ public class WorldGridIntegrationTests
 			await Assert.That(await As(walker, "e")).Contains("You can't go that way.");
 			await Assert.That(await As(walker, "+map")).Contains("   OO@");
 			await Assert.That(await As(walker, "+map/keep")).Contains($"You do not control {map}.");
+
+			// A locked side opens for whoever passes its key, as an exit's lock does.
+			await God($"@world/wall {mapRef}/2,1/n=lock,The gate is barred.");
+			await Assert.That(await As(walker, "north")).Contains("The gate is barred.");
+			await God($"@world/lock {mapRef}/2,1/n={walker.DbRef}");
+			await As(walker, "north");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},2,2,,room)"));
+
+			// The legend locks moving into a terrain from another one.
+			await God($"@world/paint {mapRef}/1,2=mountain");
+			await God($"&MAP`LEGEND`MOUNTAIN`LOCK {mapRef}=CLIMBER:yes");
+			await God($"&MAP`LEGEND`MOUNTAIN`FAILURE {mapRef}=The slope is too steep.");
+			await Assert.That(await As(walker, "west")).Contains("The slope is too steep.");
+			await God($"&CLIMBER {walker.DbRef}=yes");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},1,2,,room)"));
 		}
 		finally
 		{

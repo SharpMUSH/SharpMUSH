@@ -35,7 +35,10 @@ public sealed record WorldPlaceRecord(string? Name, string? Data, Dictionary<str
 {
 	public static readonly WorldPlaceRecord Empty = new(null, null, null);
 
-	public bool IsEmpty => Name is null && Data is null && Reasons is not { Count: > 0 };
+	/// <summary>The lock key of each locked edge it owns, by side letter, bound to objids as <c>@lock</c> stores one.</summary>
+	public Dictionary<string, string>? Keys { get; init; }
+
+	public bool IsEmpty => Name is null && Data is null && Reasons is not { Count: > 0 } && Keys is not { Count: > 0 };
 }
 
 /// <summary>One place read out of the store: its terrain id and the edges it owns.</summary>
@@ -220,20 +223,59 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 			: default;
 	}
 
-	/// <summary>The edge on <paramref name="side"/> of (x, y, z), as that place sees it, and why it refuses a mover.</summary>
-	public (WorldEdge Edge, string? Reason) Edge(DBRef map, int x, int y, int z, WorldSide side) => _store.Read(tx =>
+	/// <summary>
+	/// The edge on <paramref name="side"/> of (x, y, z), as that place sees it, why it refuses a mover, and the key a
+	/// locked edge opens for.
+	/// </summary>
+	public (WorldEdge Edge, string? Reason, string? Key) Edge(DBRef map, int x, int y, int z, WorldSide side) => _store.Read(tx =>
 	{
 		var (ox, oy, oz, owned, flipped) = WorldGrid.Owner(x, y, z, side);
 		var edge = WorldGrid.Edge(CellIn(tx, map.Number, ox, oy, oz).Edges, owned);
-		var reason = PlaceIn(tx, map.Number, ox, oy, oz)?.Reasons?.GetValueOrDefault(WorldGrid.Letter(owned));
-		return (flipped ? WorldGrid.Flip(edge) : edge, edge == WorldEdge.Open ? null : reason);
+		var place = PlaceIn(tx, map.Number, ox, oy, oz);
+		var reason = place?.Reasons?.GetValueOrDefault(WorldGrid.Letter(owned));
+		var key = edge == WorldEdge.Lock ? place?.Keys?.GetValueOrDefault(WorldGrid.Letter(owned)) : null;
+		return (flipped ? WorldGrid.Flip(edge) : edge, edge == WorldEdge.Open ? null : reason, key);
 	});
 
 	/// <summary>
 	/// Sets the edge on <paramref name="side"/> of (x, y, z), as that place sees it, and why it refuses a mover (null
-	/// for no reason). False when <paramref name="map"/> is no stored map.
+	/// for no reason). A locked edge keeps its key; any other loses it. False when <paramref name="map"/> is no stored map.
 	/// </summary>
-	public ValueTask<bool> SetEdgeAsync(DBRef map, int x, int y, int z, WorldSide side, WorldEdge edge, string? reason) => _store.WriteAsync(tx =>
+	public ValueTask<bool> SetEdgeAsync(DBRef map, int x, int y, int z, WorldSide side, WorldEdge edge, string? reason) =>
+		_store.WriteAsync(tx => SetEdgeIn(tx, map, x, y, z, side, edge, (place, letter) =>
+		{
+			var reasons = new Dictionary<string, string>(place.Reasons ?? []);
+			if (edge == WorldEdge.Open || string.IsNullOrWhiteSpace(reason)) reasons.Remove(letter);
+			else reasons[letter] = reason.Trim();
+			var keys = new Dictionary<string, string>(place.Keys ?? []);
+			if (edge != WorldEdge.Lock) keys.Remove(letter);
+			return place with { Reasons = reasons.Count > 0 ? reasons : null, Keys = keys.Count > 0 ? keys : null };
+		}));
+
+	/// <summary>
+	/// Locks the edge on <paramref name="side"/> of (x, y, z) with <paramref name="key"/>, keeping its reason; a null key
+	/// opens it. False when <paramref name="map"/> is no stored map.
+	/// </summary>
+	public ValueTask<bool> SetLockAsync(DBRef map, int x, int y, int z, WorldSide side, string? key) =>
+		_store.WriteAsync(tx => SetEdgeIn(tx, map, x, y, z, side, key is null ? WorldEdge.Open : WorldEdge.Lock, (place, letter) =>
+		{
+			var reasons = new Dictionary<string, string>(place.Reasons ?? []);
+			var keys = new Dictionary<string, string>(place.Keys ?? []);
+			if (key is null)
+			{
+				reasons.Remove(letter);
+				keys.Remove(letter);
+			}
+			else keys[letter] = key;
+			return place with { Reasons = reasons.Count > 0 ? reasons : null, Keys = keys.Count > 0 ? keys : null };
+		}));
+
+	/// <summary>
+	/// Stores <paramref name="edge"/> on the place that owns the edge on <paramref name="side"/> of (x, y, z), and that
+	/// place's record as <paramref name="change"/> leaves it, handed the record and the owned edge's letter.
+	/// </summary>
+	private bool SetEdgeIn(ITx tx, DBRef map, int x, int y, int z, WorldSide side, WorldEdge edge,
+		Func<WorldPlaceRecord, string, WorldPlaceRecord> change)
 	{
 		if (MapIn(tx, map) is null) return false;
 		var (ox, oy, oz, owned, flipped) = WorldGrid.Owner(x, y, z, side);
@@ -244,14 +286,9 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 		var stores = flipped ? WorldGrid.Flip(edge) : edge;
 		WorldGrid.SetEdges(tile, column, row, WorldGrid.WithEdge(WorldGrid.Edges(tile, column, row), owned, stores));
 		PutTile(tx, key, tile);
-
-		var place = PlaceIn(tx, map.Number, ox, oy, oz) ?? WorldPlaceRecord.Empty;
-		var reasons = new Dictionary<string, string>(place.Reasons ?? []);
-		if (edge == WorldEdge.Open || string.IsNullOrWhiteSpace(reason)) reasons.Remove(WorldGrid.Letter(owned));
-		else reasons[WorldGrid.Letter(owned)] = reason.Trim();
-		PutPlace(tx, map.Number, ox, oy, oz, place with { Reasons = reasons.Count > 0 ? reasons : null });
+		PutPlace(tx, map.Number, ox, oy, oz, change(PlaceIn(tx, map.Number, ox, oy, oz) ?? WorldPlaceRecord.Empty, WorldGrid.Letter(owned)));
 		return true;
-	});
+	}
 
 	/// <summary>The record of the place at (x, y, z); null when it has none.</summary>
 	public WorldPlaceRecord? Place(DBRef map, int x, int y, int z) => _store.Read(tx => PlaceIn(tx, map.Number, x, y, z));

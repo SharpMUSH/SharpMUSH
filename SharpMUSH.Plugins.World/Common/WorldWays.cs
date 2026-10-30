@@ -12,7 +12,7 @@ public enum WorldWayState
 	/// <summary>The way is open going out, and not coming back.</summary>
 	OneWay,
 
-	/// <summary>Only whoever passes its lock goes through.</summary>
+	/// <summary>Only whoever passes its lock goes through; for a known mover, one who does not.</summary>
 	Lock,
 
 	/// <summary>The place it leads to cannot be entered: its terrain is closed.</summary>
@@ -50,39 +50,44 @@ public static class WorldWays
 
 	/// <summary>
 	/// The way out of <paramref name="from"/> toward <paramref name="direction"/>. A diagonal goes round a corner: it is
-	/// as good as the better of its two routes, each as good as its worse step.
+	/// as good as the better of its two routes, each as good as its worse step. Given <paramref name="unlock"/>, which
+	/// says whether the mover passes a lock key, a lock the mover passes is open; without it, every lock is a lock.
 	/// </summary>
 	public static async ValueTask<WorldWay> WayAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,
-		bool examine, WorldPosition from, IReadOnlyList<WorldSide> direction)
+		bool examine, WorldPosition from, IReadOnlyList<WorldSide> direction, Func<string, ValueTask<bool>>? unlock = null)
 	{
 		// A place hidden from the reader has no ways out that it may learn of.
 		if (Hidden(store, map, examine, from)) return new WorldWay(WorldWayState.None, null, Target(from, direction));
-		if (direction is [var side]) return await StepAsync(store, record, legend, map, examine, from, side);
+		if (direction is [var side]) return await StepAsync(store, record, legend, map, examine, from, side, unlock);
 
 		var (first, second) = (direction[0], direction[1]);
 		var target = Target(from, direction);
-		var one = await RouteAsync(store, record, legend, map, examine, from, first, second);
-		var other = await RouteAsync(store, record, legend, map, examine, from, second, first);
+		var one = await RouteAsync(store, record, legend, map, examine, from, first, second, unlock);
+		var other = await RouteAsync(store, record, legend, map, examine, from, second, first, unlock);
 		var best = one.State <= other.State ? one : other;
 		return best with { To = target };
 	}
 
 	private static async ValueTask<WorldWay> RouteAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,
-		bool examine, WorldPosition from, WorldSide first, WorldSide second)
+		bool examine, WorldPosition from, WorldSide first, WorldSide second, Func<string, ValueTask<bool>>? unlock)
 	{
-		var step = await StepAsync(store, record, legend, map, examine, from, first);
+		var step = await StepAsync(store, record, legend, map, examine, from, first, unlock);
 		if (step.State > WorldWayState.Lock) return step;
-		var next = await StepAsync(store, record, legend, map, examine, step.To, second);
+		var next = await StepAsync(store, record, legend, map, examine, step.To, second, unlock);
 		return next.State >= step.State ? next : step with { To = next.To };
 	}
 
-	/// <summary>One step out of <paramref name="from"/> across its <paramref name="side"/>.</summary>
+	/// <summary>
+	/// One step out of <paramref name="from"/> across its <paramref name="side"/>: a wall, a place with nothing painted
+	/// or closed terrain refuses; then a locked side, and the legend's lock on moving from this place's terrain into
+	/// that one's (<see cref="WorldLegend.LockAsync"/>), each for whoever does not pass it.
+	/// </summary>
 	public static async ValueTask<WorldWay> StepAsync(WorldStore store, WorldMapRecord record, WorldLegend legend, DBRef map,
-		bool examine, WorldPosition from, WorldSide side)
+		bool examine, WorldPosition from, WorldSide side, Func<string, ValueTask<bool>>? unlock = null)
 	{
 		var to = from.Toward(side);
 		if (Hidden(store, map, examine, to)) return new WorldWay(WorldWayState.None, null, to);
-		var (edge, reason) = store.Edge(map, from.X, from.Y, from.Z, side);
+		var (edge, reason, key) = store.Edge(map, from.X, from.Y, from.Z, side);
 		var state = edge switch
 		{
 			WorldEdge.Wall or WorldEdge.OneWayIn => WorldWayState.Wall,
@@ -93,9 +98,18 @@ public static class WorldWays
 		if (state == WorldWayState.Wall) return new WorldWay(state, reason, to);
 		if (!WorldGrid.InReach(to.X, to.Y, to.Z) || record.Type(store.Cell(map, to.X, to.Y, to.Z).Terrain) is not { } type)
 			return new WorldWay(WorldWayState.None, null, to);
-		return (await legend.TerrainAsync(type)).Closed is { } closed
-			? new WorldWay(WorldWayState.Closed, closed, to)
-			: new WorldWay(state, reason, to);
+		if ((await legend.TerrainAsync(type)).Closed is { } closed) return new WorldWay(WorldWayState.Closed, closed, to);
+
+		if (state == WorldWayState.Lock)
+		{
+			// A side locked with no key yet lets nobody through.
+			if (unlock is null || !await unlock(key ?? "")) return new WorldWay(state, reason, to);
+			(state, reason) = (WorldWayState.Open, null);
+		}
+		var here = record.Type(store.Cell(map, from.X, from.Y, from.Z).Terrain);
+		if (await legend.LockAsync(type, here) is { } terrainLock && (unlock is null || !await unlock(terrainLock.Key)))
+			return new WorldWay(WorldWayState.Lock, terrainLock.Reason, to);
+		return new WorldWay(state, reason, to);
 	}
 
 	private static WorldPosition Target(WorldPosition from, IReadOnlyList<WorldSide> direction) =>
