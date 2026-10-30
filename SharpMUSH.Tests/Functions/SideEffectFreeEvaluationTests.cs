@@ -54,6 +54,18 @@ public class SideEffectFreeEvaluationTests
 	}
 
 	[Test]
+	[Arguments("sql(SELECT 1)")]
+	[Arguments("mapsql(me/NOSUCH,SELECT 1)")]
+	public async Task AnSqlQueryIsRefused(string call)
+	{
+		string result;
+		using (SideEffectFreeEvaluation.Enter())
+			result = await Evaluate($"[{call}]");
+
+		await Assert.That(result).IsEqualTo("#-1 FUNCTION DISABLED").Because("a query can write to the database it reaches");
+	}
+
+	[Test]
 	public async Task ReadsStillWork()
 	{
 		var thing = await Thing("NoFxRead");
