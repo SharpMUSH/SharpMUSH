@@ -40,7 +40,7 @@
             @foreach (var place in _places)
             {
                 var (px, py) = (place.X * MapLayout.Cell, -(place.Y + 1) * MapLayout.Cell);
-                <rect class="map-place @(PlaceStyle(place) is null ? null : "map-place--toned") @(place.X == SelectedPlace?.X && place.Y == SelectedPlace?.Y ? "map-place--selected" : null)"
+                <rect class="map-place @(PlaceStyle(place) is null ? null : "map-place--toned") @(SelectedPlace == (place.X, place.Y) ? "map-place--selected" : null)"
                       style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(MapLayout.Cell)" height="@Num(MapLayout.Cell)" />
                 @if (place.Closed)
                 {
@@ -112,7 +112,7 @@
             }
             @foreach (var place in _marked)
             {
-                var chosen = place.X == SelectedPlace?.X && place.Y == SelectedPlace?.Y;
+                var chosen = SelectedPlace == (place.X, place.Y);
                 <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@CellBox(place.X, place.Y)"
                         aria-pressed="@(chosen ? "true" : "false")" aria-label="@PlaceLabel(place)" title="@PlaceName(place)"
                         @onclick="() => OnPlace.InvokeAsync(place)">
