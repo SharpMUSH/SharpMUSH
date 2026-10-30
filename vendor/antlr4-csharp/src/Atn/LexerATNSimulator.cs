@@ -712,13 +712,13 @@ namespace Antlr4.Runtime.Atn
 			{
 				lock (p)
 				{
-					var wide = p.wideEdges;
-					if (FindWideEdge(wide, t) != null || (wide != null && wide.Length >= MaxWideEdges))
+					var wide = p.wideEdges ?? Array.Empty<KeyValuePair<int, DFAState>>();
+					if (wide.Length >= MaxWideEdges || FindWideEdge(wide, t) != null)
 					{
 						return;
 					}
 
-					int n = wide == null ? 0 : wide.Length;
+					int n = wide.Length;
 					var grown = new KeyValuePair<int, DFAState>[n + 1];
 					int at = 0;
 					while (at < n && wide[at].Key < t)
