@@ -18,6 +18,7 @@ namespace SharpMUSH.Server.Controllers;
 /// Routes:
 ///   GET api/maps          — every map the character may see
 ///   GET api/maps/{dbref}  — one map's rooms and exits
+///   GET api/maps/{dbref}/cells?level=&amp;left=&amp;bottom=&amp;right=&amp;top= — a window of a stored map's places (<see cref="IWorldMapSource"/>)
 ///   GET api/maps/route/{dbref} — the way from where the character stands to a room, across maps
 ///   GET api/maps/here     — where the character stands, and the map that is on
 ///   GET api/maps/description/{dbref} — the attribute a look shows as a room's description to the character
@@ -36,9 +37,10 @@ public class MapsController(
 	IVisibleWorldProjection projection,
 	IConnectionService connections,
 	ILookService look,
-	IOptionsWrapper<SharpMUSHOptions> configuration) : ControllerBase
+	IOptionsWrapper<SharpMUSHOptions> configuration,
+	IEnumerable<IWorldMapSource> sources) : ControllerBase
 {
-	private WorldMapReader Reader => new(mediator, permissions, reality, attributes, connections);
+	private WorldMapReader Reader => new(mediator, permissions, reality, attributes, connections, sources);
 
 	[HttpGet]
 	public async Task<IActionResult> List(CancellationToken ct)
@@ -58,6 +60,22 @@ public class MapsController(
 			MapDto { CanEdit: true } map => Ok(map with { BuildsLeft = await BuildingHelpers.BuildsLeftAsync(mediator, configuration, viewer) }),
 			MapDto map => Ok(map),
 			SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound(new ApiErrorDto($"#{dbref} is not a map you may see."))
+		};
+	}
+
+	[HttpGet("{dbref:int}/cells")]
+	public async Task<IActionResult> GetCells(int dbref, [FromQuery] int level, [FromQuery] int left, [FromQuery] int bottom,
+		[FromQuery] int right, [FromQuery] int top, CancellationToken ct)
+	{
+		if (await User.ResolveExecutorAsync(projection, ct) is not { } viewer) return Unauthorized();
+		var window = new MapWindow(level, left, bottom, right, top);
+		if (right < left || top < bottom || window.Cells > MapWindow.MaxCells)
+			return BadRequest(new ApiErrorDto($"A window is at most {MapWindow.MaxCells} cells, with right at least left and top at least bottom."));
+		Response.Headers.CacheControl = "no-store";
+		return await Reader.CellsAsync(viewer, dbref, window, ct) switch
+		{
+			MapCellsDto cells => Ok(cells),
+			SharpMUSH.Library.DiscriminatedUnions.NotFound => NotFound(new ApiErrorDto($"#{dbref} is not a map of places you may see."))
 		};
 	}
 

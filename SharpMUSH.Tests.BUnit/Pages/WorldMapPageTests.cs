@@ -113,6 +113,33 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 		[new("#83", "Pier head", [0, 0, 0], null) { People = ["Ada", "Bram"] }],
 		[new("#34", "Ladder", [], "#83", "#84", null) { DestinationName = "Boat" }], null, Truncated: false);
 
+	/// <summary>Wilds whose places a map source stores, 41 cells a side over two levels, with one room standing at the middle.</summary>
+	public static readonly MapDto WildsMap = new(new("#59", "Wilds", MapKinds.Coordinates, null), null,
+		[new("#85", "Camp", [0, 0, 0], null)], [], "#85", Truncated: false)
+	{
+		Space = new(MapSpaces.Square, -20, -20, 20, 20, [0, 1]),
+		Legend = [new("forest", "Forest", "green", "forest"), new("water", "Deep water", "blue", "~")],
+	};
+
+	/// <summary>The windows of the wilds' places read, as their queries.</summary>
+	public List<string> CellsAsked { get; } = [];
+
+	/// <summary>What a window of the wilds holds on <paramref name="level"/>.</summary>
+	public static MapCellsDto WildsCells(int level, int left, int bottom, int right, int top) => level == 0
+		? new(0, left, bottom, right, top,
+			[
+				new(0, 0, "forest") { Room = "#85" },
+				new(1, 0, "water") { Closed = true, Reason = "Too deep to wade." },
+				new(0, 1, "forest")
+				{
+					Name = "Old Mill", Image = "/api/wiki-assets/7/mill.webp", People = 1,
+					Info = [new("Owner", "Miller Bram"), new("Grinds", "Barley")],
+				},
+			],
+			[new(0, 0, "n", MapWallKinds.Wall, null), new(0, 0, "e", MapWallKinds.Lock, "The gate is barred."), new(1, 0, "w", MapWallKinds.OneWay, null)],
+			false)
+		: new(1, left, bottom, right, top, [new(0, 0, "forest") { Name = "Lookout" }], [], false);
+
 	/// <summary>How many more objects the builder of the harbour works may build; null for no quota.</summary>
 	public int? BuildsLeft { get; set; }
 
@@ -141,6 +168,13 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			Commands.Add(sent!.Command);
 			return Json(new PortalCommandResponse([], Read(sent), false));
 		}
+		if (path == "api/maps/59/cells")
+		{
+			CellsAsked.Add(request.RequestUri.Query);
+			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+			return Json(WildsCells(int.Parse(query["level"]!), int.Parse(query["left"]!), int.Parse(query["bottom"]!),
+				int.Parse(query["right"]!), int.Parse(query["top"]!)));
+		}
 		return path switch
 		{
 			"api/maps" => Json(new[] { City, Harbour, Caves }),
@@ -153,6 +187,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/56" => Json(FarMap),
 			"api/maps/57" => Json(ShoreMap),
 			"api/maps/58" => Json(PierMap),
+			"api/maps/59" => Json(WildsMap),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -350,6 +385,77 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).Contains("Lamp room");
 		await Assert.That(cut.FindAll("button[role=radio]").Select(button => button.TextContent))
 			.IsEquivalentTo(["NavMapLevel(0)", "Lantern deck"]).Because("a level without a name is numbered");
+	}
+
+	[Test]
+	public async Task AStoredMapDrawsThePlacesAroundYouInTheirTerrainWithClosedOnesHatchedAndItsWalls()
+	{
+		Arrange();
+
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find("rect.map-place"));
+
+		await Assert.That(_api.CellsAsked).IsEquivalentTo(["?level=0&left=-16&bottom=-16&right=16&top=16"])
+			.Because("the view starts on the camp, eight cells around it, and reads half as much again on each side");
+		await Assert.That(cut.FindAll("rect.map-place").Select(place => place.GetAttribute("style")))
+			.IsEquivalentTo(["--room-tone: var(--hue-green);", "--room-tone: var(--hue-blue);", "--room-tone: var(--hue-green);"]);
+		await Assert.That(cut.FindAll("rect.map-place-hatch")).Count().IsEqualTo(1);
+		await Assert.That(cut.FindAll("text.map-place-glyph").Select(glyph => glyph.TextContent)).IsEquivalentTo(["~"])
+			.Because("a named icon is drawn on a button, and only a place with something to say is one");
+		await Assert.That(cut.FindAll("line.map-wall").Count).IsEqualTo(2);
+		await Assert.That(cut.FindAll("line.map-wall--lock").Count).IsEqualTo(1);
+		await Assert.That(cut.Find("line.map-oneway").GetAttribute("marker-end")).StartsWith("url(#map-arrow-");
+		await Assert.That(cut.FindAll(".map-room").Select(room => room.TextContent.Trim())).IsEquivalentTo(["Old Mill1", "Camp"])
+			.Because("the camp's place is drawn by its room");
+		var kinds = cut.FindAll(".map-legend li").Select(kind => kind.TextContent).ToList();
+		await Assert.That(kinds).Count().IsEqualTo(2);
+		await Assert.That(kinds[0]).Contains("Forest");
+		await Assert.That(kinds[1]).Contains("Deep water");
+	}
+
+	[Test]
+	public async Task ANamedPlaceOpensAPanelOfWhatItsDataSays()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		var mill = cut.Find(".map-room--place");
+		await Assert.That(mill.GetAttribute("aria-label")).IsEqualTo("Old Mill, Forest, NavMapPeopleCount(1)");
+
+		await mill.ClickAsync();
+
+		var panel = cut.Find(".map-room-panel");
+		await Assert.That(panel.TextContent).Contains("Old Mill");
+		await Assert.That(cut.FindAll(".map-place-info dt").Select(label => label.TextContent)).IsEquivalentTo(["Owner", "Grinds"]);
+		await Assert.That(cut.FindAll(".map-place-info dd").Select(value => value.TextContent)).IsEquivalentTo(["Miller Bram", "Barley"]);
+		await Assert.That(cut.Find(".map-place-image").GetAttribute("src")).EndsWith("/api/wiki-assets/7/mill.webp");
+		await Assert.That(cut.Find(".map-room--place").GetAttribute("aria-pressed")).IsEqualTo("true");
+	}
+
+	[Test]
+	public async Task MovingTheViewReadsPlacesOnlyWhenItLeavesThoseRead()
+	{
+		Arrange();
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find("rect.map-place"));
+		var canvas = cut.FindComponent<MapCanvas>();
+
+		await cut.InvokeAsync(() => canvas.Instance.ViewAt(1_000_000, 1_000_000, 10, 10));
+		await Assert.That(_api.CellsAsked).Count().IsEqualTo(1).Because("past the stored places there is nothing to read");
+
+		// The drawing starts a margin of 24 pixels west and north of cell (-20, 20), so cell (0, 0) is 1944 pixels in.
+		await cut.InvokeAsync(() => canvas.Instance.ViewAt(1944, 1944, 96, 96));
+		await Assert.That(_api.CellsAsked).Count().IsEqualTo(1).Because("the camp's cell is inside what was read");
+
+		await cut.InvokeAsync(() => canvas.Instance.ViewAt(1944 + 18 * 96, 1944, 96, 96));
+		await Assert.That(_api.CellsAsked[^1]).IsEqualTo("?level=0&left=17&bottom=-1&right=20&top=2")
+			.Because("eighteen cells east is past what was read; the read stops at the stored places' edge");
+
+		await cut.Find("[aria-label=NavMapLevelUp]").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+
+		await Assert.That(_api.CellsAsked[^1]).StartsWith("?level=1&");
+		await Assert.That(cut.Find(".map-room--place").TextContent.Trim()).IsEqualTo("Lookout");
 	}
 
 	[Test]
@@ -796,6 +902,56 @@ public class MapLayoutTests
 		await Assert.That(MapLayout.Direction(new("#1", "Out", ["o"], "#1", "#2", null))).IsNull();
 		await Assert.That(MapLayout.Direction(new("#1", "Ladder", ["U"], "#1", "#2", null))).IsEqualTo((0, 0, 1));
 		await Assert.That(MapLayout.Direction(new("#1", "Southwest", [], "#1", "#2", null))).IsEqualTo((-1, -1, 0));
+	}
+
+	[Test]
+	public async Task StoredPlacesWidenTheDrawingAndAddTheirLevels()
+	{
+		var layout = new MapLayout(Map(MapKinds.Coordinates, [new("#1", "Camp", [0, 0, 0], null)], []) with
+		{
+			Space = new(MapSpaces.Square, -3, -2, 4, 5, [-1, 0]),
+		});
+
+		await Assert.That(layout.Levels).IsEquivalentTo([-1, 0]);
+		await Assert.That(layout.Bounds(0)).IsEqualTo((-3 * MapLayout.Cell, -6 * MapLayout.Cell, 5 * MapLayout.Cell, 2 * MapLayout.Cell));
+		await Assert.That(layout.Bounds(0, includePlaces: false)).IsEqualTo((0d, -MapLayout.Cell, MapLayout.Cell, 0d));
+		await Assert.That(new MapLayout(Map(MapKinds.Graph, [], []) with { Space = new(MapSpaces.Square, 0, 0, 1, 1, [0]) }).Space).IsNull()
+			.Because("a picture places rooms by its pixels, not by cells");
+		await Assert.That(new MapLayout(Map(MapKinds.Coordinates, [], []) with { Space = new(MapSpaces.Hex, 0, 0, 1, 1, [0]) }).Space).IsNull()
+			.Because("this portal draws square cells only");
+	}
+
+	[Test]
+	public async Task AWindowOfPlacesIsTheViewAndHalfAgainWithinTheStoredPlacesAndAtMost128ASide()
+	{
+		var layout = new MapLayout(Map(MapKinds.Coordinates, [], []) with
+		{
+			Space = new(MapSpaces.Square, -1000, -1000, 1000, 1000, [0]),
+		});
+
+		await Assert.That(layout.Window((0, 0, 9, 9))).IsEqualTo((-5, -5, 14, 14));
+		await Assert.That(layout.Window((-1000, -1000, -991, -991))).IsEqualTo((-1000, -1000, -986, -986));
+		await Assert.That(layout.Window((-200, 0, 199, 9))).IsEqualTo((-64, -5, 63, 14))
+			.Because("a view wider than one read holds is read around its middle");
+		await Assert.That(layout.Window((2000, 0, 2010, 10))).IsNull();
+		await Assert.That(MapLayout.CellsIn(-1, -2 * MapLayout.Cell + 1, MapLayout.Cell, 0)).IsEqualTo((-1, 0, 1, 1));
+	}
+
+	[Test]
+	public async Task PlacesReadAlreadyHoldAViewInsideThemOrTheMostOneReadMayHold()
+	{
+		var layout = new MapLayout(Map(MapKinds.Coordinates, [], []) with
+		{
+			Space = new(MapSpaces.Square, -1000, -1000, 1000, 1000, [0, 1]),
+		});
+		var read = new MapCellsDto(0, -5, -5, 14, 14, [], [], false);
+
+		await Assert.That(layout.Holds(read, 0, (0, 0, 9, 9))).IsTrue();
+		await Assert.That(layout.Holds(read, 1, (0, 0, 9, 9))).IsFalse().Because("it is another level's");
+		await Assert.That(layout.Holds(read, 0, (10, 0, 19, 9))).IsFalse();
+		await Assert.That(layout.Holds(null, 0, (5000, 5000, 5001, 5001))).IsTrue().Because("there is nothing there to read");
+		var widest = new MapCellsDto(0, -64, -5, 63, 14, [], [], false);
+		await Assert.That(layout.Holds(widest, 0, (-200, 0, 199, 9))).IsTrue();
 	}
 
 	[Test]

@@ -47,10 +47,16 @@ public sealed class MapLayout
 	/// <summary>Every room and region, placed or not, by dbref.</summary>
 	public IReadOnlyDictionary<string, MapPlacement> Rooms { get; }
 
-	/// <summary>The levels that have a placed room, lowest first; 0 alone when none has.</summary>
+	/// <summary>The levels that have a placed room or a stored place, lowest first; 0 alone when none has.</summary>
 	public IReadOnlyList<int> Levels { get; }
 
 	public bool IsGraph => Map.Map.Kind == MapKinds.Graph;
+
+	/// <summary>
+	/// The square cells a map source stores this map's places in, drawn under its rooms; null for a map of rooms alone,
+	/// a picture, or a space this portal does not draw.
+	/// </summary>
+	public MapSpaceDto? Space => !IsGraph && Map.Space is { Kind: MapSpaces.Square } space ? space : null;
 
 	public MapLayout(MapDto map)
 	{
@@ -63,7 +69,8 @@ public sealed class MapLayout
 		};
 		foreach (var (id, region) in IsGraph ? Graph(map.Regions) : Grid(map.Regions)) placed.TryAdd(id, region with { Region = true });
 		var rooms = new Dictionary<string, MapPlacement>(placed);
-		Levels = placed.Count == 0 ? [0] : [.. placed.Values.Select(p => p.Level).Distinct().Order()];
+		var levels = placed.Values.Select(p => p.Level).Concat(Space?.Levels ?? []).Distinct().Order().ToList();
+		Levels = levels.Count == 0 ? [0] : levels;
 		var ground = Levels.Contains(0) ? 0 : Levels[0];
 		foreach (var room in map.Rooms.Where(room => !rooms.ContainsKey(room.Id)))
 		{
@@ -119,14 +126,64 @@ public sealed class MapLayout
 		return strip;
 	}
 
-	/// <summary>The box around the rooms on <paramref name="level"/>, in drawing units; one cell when there are none.</summary>
-	public (double Left, double Top, double Right, double Bottom) Bounds(int level, bool includeUnplaced = true)
+	/// <summary>
+	/// The box around the rooms on <paramref name="level"/> and, with <paramref name="includePlaces"/>, the stored places
+	/// of every level, in drawing units; one cell when there are none.
+	/// </summary>
+	public (double Left, double Top, double Right, double Bottom) Bounds(int level, bool includeUnplaced = true, bool includePlaces = true)
 	{
 		var rooms = On(level).ToList();
 		if (includeUnplaced) rooms.AddRange(Unplaced(level));
 		if (Map.Size is [var width, var height, ..] && IsGraph) return (0, 0, Math.Max(width, Right(rooms)), Math.Max(height, Bottom(rooms)));
-		if (rooms.Count == 0) return (0, 0, IsGraph ? GraphRoom : Cell, IsGraph ? GraphRoom : Cell);
-		return (rooms.Min(r => r.X), rooms.Min(r => r.Y), Right(rooms), Bottom(rooms));
+		if (rooms.Count == 0 && (Space is null || !includePlaces)) return (0, 0, IsGraph ? GraphRoom : Cell, IsGraph ? GraphRoom : Cell);
+		var box = rooms.Count == 0
+			? (Left: double.MaxValue, Top: double.MaxValue, Right: double.MinValue, Bottom: double.MinValue)
+			: (Left: rooms.Min(r => r.X), Top: rooms.Min(r => r.Y), Right: Right(rooms), Bottom: Bottom(rooms));
+		if (Space is not { } space || !includePlaces) return box;
+		return (Math.Min(box.Left, space.Left * Cell), Math.Min(box.Top, -(space.Top + 1) * Cell),
+			Math.Max(box.Right, (space.Right + 1d) * Cell), Math.Max(box.Bottom, -space.Bottom * Cell));
+	}
+
+	/// <summary>The cells a box of the drawing touches, from its drawing units.</summary>
+	public static (int Left, int Bottom, int Right, int Top) CellsIn(double left, double top, double right, double bottom) =>
+		((int)Math.Floor(left / Cell), (int)Math.Floor(-bottom / Cell), (int)Math.Floor(right / Cell), (int)Math.Floor(-top / Cell));
+
+	/// <summary>
+	/// The window of places to read for a view of <paramref name="view"/>'s cells: the view and half as much again on
+	/// every side, within the stored places, and at most <see cref="MapCellsDto.MaxSide"/> cells a side around the view's
+	/// middle. Null when the view holds no stored place.
+	/// </summary>
+	public (int Left, int Bottom, int Right, int Top)? Window((int Left, int Bottom, int Right, int Top) view)
+	{
+		if (Space is not { } space || view.Right < space.Left || view.Left > space.Right || view.Top < space.Bottom
+				|| view.Bottom > space.Top) return null;
+		var (left, right) = Span(view.Left, view.Right, space.Left, space.Right);
+		var (bottom, top) = Span(view.Bottom, view.Top, space.Bottom, space.Top);
+		return (left, bottom, right, top);
+
+		static (int, int) Span(int from, int to, int min, int max)
+		{
+			var half = (to - from + 1) / 2;
+			var (low, high) = (Math.Max(min, (long)from - half), Math.Min(max, (long)to + half));
+			if (high - low + 1 <= MapCellsDto.MaxSide) return ((int)low, (int)high);
+			var middle = Math.Clamp(((long)from + to) / 2, low, high);
+			var start = Math.Clamp(middle - MapCellsDto.MaxSide / 2, low, high - MapCellsDto.MaxSide + 1);
+			return ((int)start, (int)(start + MapCellsDto.MaxSide - 1));
+		}
+	}
+
+	/// <summary>
+	/// Whether <paramref name="cells"/> needs no new read for a view of <paramref name="view"/>'s cells on
+	/// <paramref name="level"/>: it holds every stored place in view, or is already the most of them one read may hold.
+	/// </summary>
+	public bool Holds(MapCellsDto? cells, int level, (int Left, int Bottom, int Right, int Top) view)
+	{
+		if (Window(view) is not { } window || Space is not { } space) return true;
+		if (cells is null || cells.Level != level) return false;
+		var (left, bottom, right, top) = (Math.Max(view.Left, space.Left), Math.Max(view.Bottom, space.Bottom),
+			Math.Min(view.Right, space.Right), Math.Min(view.Top, space.Top));
+		return cells.Left <= left && cells.Right >= right && cells.Bottom <= bottom && cells.Top >= top
+					 || (cells.Left, cells.Bottom, cells.Right, cells.Top) == window;
 	}
 
 	private static double Right(List<MapPlacement> rooms) => rooms.Count == 0 ? 0 : rooms.Max(r => r.X + r.Width);

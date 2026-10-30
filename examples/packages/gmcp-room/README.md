@@ -10,12 +10,13 @@ type writes.
 
 | Package | Body | When |
 |---|---|---|
-| `Room.Info` | `{"num":1234,"name":"Garden","area":"Town","environment":"garden","coords":"3,4,0","exits":{"North":1235}}` | The player moves, or connects (on the new connection) |
+| `Room.Info` | `{"num":1234,"hash":"#1234:1761800000","name":"Garden","area":"Town","environment":"garden","coords":"3,4,0","exits":{"North":1235}}` | The player moves, or connects (on the new connection) |
 | `Room.Players` | `[{"name":"Wren","fullname":"Wren of the Marsh"}]` | With every `Room.Info` |
 | `Room.AddPlayer` | `{"name":"Wren","fullname":"Wren of the Marsh"}` | To the others, when a connected player arrives or connects |
 | `Room.RemovePlayer` | `"Wren"` | To the others, when a player leaves or their last connection closes |
 
 - `num`, and the room each exit leads to, are dbref numbers: stable while the room exists, as a mapper wants.
+- `hash` is the place a room stands for on a stored map (its `` MAP`PLACE ``), the same whichever room stands there, or else the room's objid. A mapper that keys rooms by `hash`, as Carto does, keeps one room per place.
 - `exits` is `exitmap(<room>, <player>)`: the exits the player sees, as `look` shows them. The package never decides exit visibility itself.
 - `area` is the room's area attribute, or else its zone's name. `coords` is left out of a room with no coordinates.
 - `Room.Players` lists the connected players the viewer sees, the viewer included. A DARK player is seen only by themself and by someone who may see everything.

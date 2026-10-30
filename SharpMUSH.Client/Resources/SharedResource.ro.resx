@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} aici acum</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Închis</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Arată camera</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Setează poziția</value>
   </data>

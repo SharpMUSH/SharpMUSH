@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-map
 title: "World map"
-version: 1.2.0
+version: 1.3.0
 authors: [SharpMUSH]
 description: "The portal's World map: every map in the game, drawn from its rooms and exits. A map is an object whose MAP`KIND says how it is drawn (coordinates, compass or graph); a room is on the map that is its zone."
 license: MIT
@@ -11,10 +11,11 @@ category: Building
 requires_server: ">=0.1"
 
 # The portal reads the maps through api/maps, which lists them from this index: an object is a map when it holds
-# its own MAP`KIND. The package owns no code; the Map Guide only carries the +help topic.
+# its own MAP`KIND. Any type may be one, so a zone master room can be a map. The package owns no code; the Map
+# Guide only carries the +help topic.
 attributes:
   MAP`KIND:
-    index: type:thing
+    index: true
 
 objects:
   - ref: world_map
@@ -31,7 +32,7 @@ objects:
       HELP`MAP: |-
         The portal's **World map** draws each map of the game from its rooms and the exits between them. Everyone can look at a map; the room you are in is marked.
 
-        A map is a thing whose ``MAP`KIND`` attribute says how it is drawn. A room is on the map that is its zone.
+        A map is an object, usually a thing, whose ``MAP`KIND`` attribute says how it is drawn. A room is on the map that is its zone.
 
         - `coordinates`: a grid. Each room sits in the cell its ``MAP`COORDS`X``, ``MAP`COORDS`Y`` and ``MAP`COORDS`Z`` name, one level (z) at a time, north up.
         - `compass`: placed by its exits. A room north of another is drawn above it; `up` and `down` change the level.

@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} тук сега</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Затворено</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Покажи стаята</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Задай място</value>
   </data>

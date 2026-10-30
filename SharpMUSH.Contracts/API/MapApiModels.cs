@@ -63,6 +63,13 @@ public sealed record MapDto(MapSummaryDto Map, double[]? Size, IReadOnlyList<Map
 	public bool CanEdit { get; init; }
 
 	/// <summary>
+	/// When a map source (a plugin) stores this map's places: the space they are in and how far they reach. The places
+	/// are read a window at a time (<c>GET api/maps/{dbref}/cells</c>); <see cref="Rooms"/> still lists the rooms
+	/// standing on the map. Null for a map of rooms alone.
+	/// </summary>
+	public MapSpaceDto? Space { get; init; }
+
+	/// <summary>
 	/// For a viewer who <see cref="CanEdit"/>: the rooms this map's exits lead to that are on no map and that they
 	/// control, which they may add to it. Empty for anyone else.
 	/// </summary>
@@ -144,3 +151,108 @@ public sealed record MapDescriptionDto(string Attribute);
 /// <param name="Map">The map that room is on, when that is a map the viewer may see; null otherwise.</param>
 public sealed record MapStepDto(string Exit, string Name, string Source, string Destination, string DestinationName,
 	MapSummaryDto? Map);
+
+/// <summary>The spaces a map source may store a map's places in.</summary>
+public static class MapSpaces
+{
+	/// <summary>Square cells at x and y, a level at a time; north is y + 1.</summary>
+	public const string Square = "square";
+
+	/// <summary>Hexagons at axial q and r, a level at a time.</summary>
+	public const string Hex = "hex";
+
+	/// <summary>Named places joined by named ways, with no grid.</summary>
+	public const string Graph = "graph";
+
+	public static IReadOnlyList<string> All { get; } = [Square, Hex, Graph];
+}
+
+/// <summary>
+/// The space a map source stores a map's places in, and the box from <see cref="Left"/>, <see cref="Bottom"/> to
+/// <see cref="Right"/>, <see cref="Top"/> (inclusive) that holds every place on every level.
+/// </summary>
+/// <param name="Kind">One of <see cref="MapSpaces"/>.</param>
+/// <param name="Levels">The levels that hold a place, lowest first.</param>
+public sealed record MapSpaceDto(string Kind, int Left, int Bottom, int Right, int Top, IReadOnlyList<int> Levels);
+
+/// <summary>
+/// The places of one level of a stored map inside a window, from <see cref="Left"/>, <see cref="Bottom"/> to
+/// <see cref="Right"/>, <see cref="Top"/> inclusive, as the viewer may see them. A cell that holds nothing is left out.
+/// </summary>
+/// <param name="Walls">The walls, one-way edges and locked ways on the edges of these cells, each once.</param>
+/// <param name="Truncated">The window holds more places than one read returns; some are left out.</param>
+public sealed record MapCellsDto(int Level, int Left, int Bottom, int Right, int Top, IReadOnlyList<MapCellDto> Cells,
+	IReadOnlyList<MapWallDto> Walls, bool Truncated)
+{
+	/// <summary>The most cells one window may cover: 128 by 128.</summary>
+	public const int MaxCells = MaxSide * MaxSide;
+
+	/// <summary>The widest and tallest a square window may be, in cells.</summary>
+	public const int MaxSide = 128;
+}
+
+/// <summary>One place of a stored map, drawn from its terrain type, its own data and the map's render format.</summary>
+/// <param name="Type">Its terrain type, a legend type of the map (<see cref="MapDto.Legend"/>).</param>
+public sealed record MapCellDto(int X, int Y, string Type)
+{
+	/// <summary>The place's id: the map's objid and its position, <c>#120:1761800000/3,1,0</c>.</summary>
+	public string? Id { get; init; }
+
+	/// <summary>The place's own name; null when it is named only by its terrain.</summary>
+	public string? Name { get; init; }
+
+	/// <summary>The room standing on the place, when one does and the viewer may see it.</summary>
+	public string? Room { get; init; }
+
+	/// <summary>The room standing on it is a permanent room rather than one lent while someone is there.</summary>
+	public bool Permanent { get; init; }
+
+	/// <summary>The place cannot be entered: its terrain is closed.</summary>
+	public bool Closed { get; init; }
+
+	/// <summary>Why it cannot be entered, as a player who tries is told; null when it can.</summary>
+	public string? Reason { get; init; }
+
+	/// <summary>An icon name, or a character or two, overriding the legend's; null to use the legend's.</summary>
+	public string? Icon { get; init; }
+
+	/// <summary>A <c>tone()</c> colour's name overriding the legend's; null to use the legend's.</summary>
+	public string? Tone { get; init; }
+
+	/// <summary>What the place is called on the map overriding the legend's label; null to use the legend's.</summary>
+	public string? Label { get; init; }
+
+	/// <summary>A short marker drawn on the cell; null for none.</summary>
+	public string? Badge { get; init; }
+
+	/// <summary>A picture for the place's panel: a site path or an https URL; null for none.</summary>
+	public string? Image { get; init; }
+
+	/// <summary>Labelled values the place's panel shows, in order.</summary>
+	public IReadOnlyList<MapInfoDto> Info { get; init; } = [];
+
+	/// <summary>How many connected players the viewer may know are on the place.</summary>
+	public int People { get; init; }
+}
+
+/// <summary>One labelled value in a place's panel.</summary>
+public sealed record MapInfoDto(string Label, string Value);
+
+/// <summary>Kinds of <see cref="MapWallDto"/>.</summary>
+public static class MapWallKinds
+{
+	/// <summary>Nothing passes either way.</summary>
+	public const string Wall = "wall";
+
+	/// <summary>Passable only out of the cell it is on, through <see cref="MapWallDto.Side"/>.</summary>
+	public const string OneWay = "oneway";
+
+	/// <summary>Passable for whoever passes its lock; the map does not try it.</summary>
+	public const string Lock = "lock";
+}
+
+/// <summary>An edge of the cell at <see cref="X"/>, <see cref="Y"/> that is not simply open.</summary>
+/// <param name="Side">The side: <c>n</c>, <c>e</c>, <c>s</c>, <c>w</c>, <c>u</c> or <c>d</c>.</param>
+/// <param name="Kind">One of <see cref="MapWallKinds"/>.</param>
+/// <param name="Reason">What a player who is refused is told; null when the map does not say.</param>
+public sealed record MapWallDto(int X, int Y, string Side, string Kind, string? Reason);

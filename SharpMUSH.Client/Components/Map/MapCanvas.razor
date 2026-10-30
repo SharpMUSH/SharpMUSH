@@ -10,7 +10,10 @@
    is drawn at Zoom pixels per drawing unit, over the map's backdrop when it has one, inside a scrolling frame, so panning is the browser's own scrolling,
    by wheel, trackpad or finger, or a mouse dragging it. A pinch, or the wheel with Ctrl, zooms about the point under
    it (OnZoomAt). Lines keep their width at any zoom; names grow with it. A room too small to hold its
-   name carries it on a label below, as a pin does, and one smaller still keeps it for its tooltip and screen reader. *@
+   name carries it on a label below, as a pin does, and one smaller still keeps it for its tooltip and screen reader.
+   A map whose places a map source stores draws the window of them it was given (Cells) under its rooms: each place
+   in its terrain's tone, hatched when closed, and walls, one-way edges and locked ways on their sides. A place with
+   something to say (a name, a room, a panel) is a button too. *@
 <div class="map-frame @(Layout.IsGraph && _backdrop is null ? "map-frame--blank" : null)" tabindex="-1" @ref="_frame">
     <figure class="map-figure" style="width: @Px(_width * Zoom); height: @Px(_height * Zoom); --map-zoom: @Num(Zoom); --map-dots: @Px(DotSpacing);">
         <svg viewBox="@Num(_left) @Num(_top) @Num(_width) @Num(_height)" class="map-svg" preserveAspectRatio="none" aria-hidden="true" focusable="false">
@@ -18,6 +21,9 @@
                 <marker id="@ArrowId" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                     <path d="M0,0 L10,5 L0,10 z" class="map-arrow" />
                 </marker>
+                <pattern id="@HatchId" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line class="map-hatch" x1="0" y1="0" x2="0" y2="12" />
+                </pattern>
             </defs>
             @if (_backdrop is not null)
             {
@@ -30,6 +36,28 @@
                 {
                     <line class="map-grid" x1="@Num(line.X1)" y1="@Num(line.Y1)" x2="@Num(line.X2)" y2="@Num(line.Y2)" />
                 }
+            }
+            @foreach (var place in _places)
+            {
+                var (px, py) = (place.X * MapLayout.Cell, -(place.Y + 1) * MapLayout.Cell);
+                <rect class="map-place @(PlaceStyle(place) is null ? null : "map-place--toned") @(place.X == SelectedPlace?.X && place.Y == SelectedPlace?.Y ? "map-place--selected" : null)"
+                      style="@PlaceStyle(place)" x="@Num(px)" y="@Num(py)" width="@Num(MapLayout.Cell)" height="@Num(MapLayout.Cell)" />
+                @if (place.Closed)
+                {
+                    <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(MapLayout.Cell)" height="@Num(MapLayout.Cell)" />
+                }
+                @if (!_marked.Contains(place) && MapLegendStyle.Glyph(Icon(place)) is { } glyph)
+                {
+                    @SvgText("map-place-glyph", px + MapLayout.Cell / 2, py + MapLayout.Cell / 2, glyph)
+                }
+                @if (place.Badge is { Length: > 0 } badge)
+                {
+                    @SvgText("map-place-badge", px + MapLayout.Cell - Inset, py + Inset, badge)
+                }
+            }
+            @foreach (var wall in _walls)
+            {
+                @Wall(wall)
             }
             @foreach (var edge in _edges)
             {
@@ -81,6 +109,29 @@
                 <button type="button" class="map-cell @(chosen ? "map-cell--selected" : null)" style="@CellBox(x, y)"
                         aria-pressed="@(chosen ? "true" : "false")" aria-label="@Loc["NavMapCell", x, y]"
                         @onclick="() => OnCell.InvokeAsync((x, y))"></button>
+            }
+            @foreach (var place in _marked)
+            {
+                var chosen = place.X == SelectedPlace?.X && place.Y == SelectedPlace?.Y;
+                <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@CellBox(place.X, place.Y)"
+                        aria-pressed="@(chosen ? "true" : "false")" aria-label="@PlaceLabel(place)" title="@PlaceName(place)"
+                        @onclick="() => OnPlace.InvokeAsync(place)">
+                    @if (MapLegendStyle.Svg(Icon(place)) is { } svg)
+                    {
+                        <MudIcon Icon="@svg" Class="map-room-icon" Size="Size.Small" aria-hidden="true" />
+                    }
+                    else if (MapLegendStyle.Glyph(Icon(place)) is { } glyph)
+                    {
+                        <span class="map-room-icon" aria-hidden="true">@glyph</span>
+                    }
+                    <span class="map-room-name">@PlaceName(place)</span>
+                    @if (place.People > 0)
+                    {
+                        <span class="map-room-count" aria-hidden="true">
+                            <MudIcon Icon="@Icons.Material.Outlined.Person" Size="Size.Small" />@place.People
+                        </span>
+                    }
+                </button>
             }
             @foreach (var room in _rooms.Where(room => room.Region))
             {
@@ -148,6 +199,17 @@
     /// <summary>A pinch or Ctrl+wheel asked to zoom by Factor; the page sets the zoom, and the point under it holds still.</summary>
     [Parameter] public EventCallback<double> OnZoomAt { get; set; }
 
+    /// <summary>The stored places read around the view; drawn when they are of this level. Null for a map of rooms alone.</summary>
+    [Parameter] public MapCellsDto? Cells { get; set; }
+
+    /// <summary>The view settled after a scroll or resize: the cells it shows, as (left, bottom, right, top).</summary>
+    [Parameter] public EventCallback<(int Left, int Bottom, int Right, int Top)> OnView { get; set; }
+
+    /// <summary>The place chosen for its panel, by position.</summary>
+    [Parameter] public (int X, int Y)? SelectedPlace { get; set; }
+
+    [Parameter] public EventCallback<MapCellDto> OnPlace { get; set; }
+
     private const double Inset = 6;
     private const double Margin = 24;
 
@@ -171,10 +233,12 @@
 
     private DotNetObjectReference<MapCanvas>? _self;
     private IJSObjectReference? _gestures;
+    private IJSObjectReference? _viewport;
     private bool _disposed;
 
     private readonly string _arrowId = "map-arrow-" + Guid.NewGuid().ToString("N")[..8];
     private string ArrowId => _arrowId;
+    private string HatchId => _arrowId.Replace("arrow", "hatch");
 
     private readonly Dictionary<string, ElementReference> _buttons = new();
     private List<MapPlacement> _rooms = [];
@@ -185,6 +249,11 @@
     private string? _backdrop;
     private List<(double X, double Y)> _empty = [];
     private Dictionary<string, MapLegendDto> _legend = [];
+    private IReadOnlyList<MapCellDto> _places = [];
+    private IReadOnlyList<MapWallDto> _walls = [];
+
+    /// <summary>The places with something to say beyond their terrain, which are buttons; a room the map draws stands for its own.</summary>
+    private List<MapCellDto> _marked = [];
 
     private sealed record Edge(double X1, double Y1, double X2, double Y2, bool OneWay, bool Route);
 
@@ -192,6 +261,14 @@
     {
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
         _legend = Layout.Map.Legend.ToDictionary(entry => entry.Type);
+        (_places, _walls) = Layout.Space is not null && Cells is { } cells && cells.Level == Level ? (cells.Cells, cells.Walls) : ([], []);
+        // Read in the order the eye does: rows top to bottom, cells left to right.
+        _marked =
+        [
+            .. _places.Where(place => place.Name is not null || place.Info.Count > 0 || place.Image is not null
+                                      || place.Room is { } room && !(Layout.Rooms.TryGetValue(room, out var drawn) && drawn.Placed))
+                .OrderByDescending(place => place.Y).ThenBy(place => place.X),
+        ];
         _backdrop = Layout.IsGraph && Layout.Map.Size is [> 0, > 0, ..] && ImageUrlPolicy.IsRenderable(Layout.Map.Backdrop)
             ? ApiUrl.Resolve(Layout.Map.Backdrop!)
             : null;
@@ -302,6 +379,7 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender) await WatchGesturesAsync();
+        if (firstRender) await WatchViewAsync();
         var (drawn, anchor) = (_drawnZoom, _anchor);
         (_drawnZoom, _anchor) = (Zoom, null);
         if (drawn <= 0 || Zoom == drawn) return;
@@ -330,6 +408,27 @@
         if (_disposed) await ReleaseGesturesAsync();
     }
 
+    private async Task WatchViewAsync()
+    {
+        if (!OnView.HasDelegate) return;
+        _self ??= DotNetObjectReference.Create(this);
+        try
+        {
+            _viewport = await JS.InvokeAsync<IJSObjectReference?>("SharpMUSH.mapViewport", _frame, _self);
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        {
+            // No portal-interop.js (tests): the page reads the places around the map's middle once.
+        }
+        if (_disposed) await ReleaseGesturesAsync();
+    }
+
+    /// <summary>The view settled at (x, y), width by height, in the figure's pixels.</summary>
+    [JSInvokable]
+    public Task ViewAt(double x, double y, double width, double height) =>
+        Zoom <= 0 ? Task.CompletedTask : OnView.InvokeAsync(MapLayout.CellsIn(_left + x / Zoom, _top + y / Zoom,
+            _left + (x + width) / Zoom, _top + (y + height) / Zoom));
+
     /// <summary>A pinch or Ctrl+wheel: zoom by <paramref name="factor"/>, holding still the point (x, y) of the frame.</summary>
     [JSInvokable]
     public Task ZoomAt(double factor, double x, double y)
@@ -340,6 +439,19 @@
 
     private async Task ReleaseGesturesAsync()
     {
+        if (_viewport is { } viewport)
+        {
+            _viewport = null;
+            try
+            {
+                await viewport.InvokeVoidAsync("dispose");
+                await viewport.DisposeAsync();
+            }
+            catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+            {
+                // The page is already gone, and its listeners with it.
+            }
+        }
         if (_gestures is { } gestures)
         {
             _gestures = null;
@@ -423,9 +535,66 @@
         </g>
     };
 
+    /// <summary>
+    /// A wall or a locked way along its side of its cell, or, for a one-way edge, an arrow across the side pointing
+    /// the way it may be passed. A wall between levels has no side on a drawing of one level.
+    /// </summary>
+    private RenderFragment Wall(MapWallDto wall) => __builder =>
+    {
+        var (left, top) = (wall.X * MapLayout.Cell, -(wall.Y + 1) * MapLayout.Cell);
+        var (right, bottom) = (left + MapLayout.Cell, top + MapLayout.Cell);
+        (double X1, double Y1, double X2, double Y2, double Dx, double Dy)? side = wall.Side switch
+        {
+            "n" => (left, top, right, top, 0, -1),
+            "e" => (right, top, right, bottom, 1, 0),
+            "s" => (left, bottom, right, bottom, 0, 1),
+            "w" => (left, top, left, bottom, -1, 0),
+            _ => null,
+        };
+        if (side is not var (x1, y1, x2, y2, dx, dy)) return;
+        if (wall.Kind == MapWallKinds.OneWay)
+        {
+            var (mx, my) = ((x1 + x2) / 2, (y1 + y2) / 2);
+            <line class="map-oneway" x1="@Num(mx - dx * 16)" y1="@Num(my - dy * 16)" x2="@Num(mx + dx * 16)" y2="@Num(my + dy * 16)"
+                  marker-end="@($"url(#{ArrowId})")" />
+            return;
+        }
+        <line class="map-wall @(wall.Kind == MapWallKinds.Lock ? "map-wall--lock" : null)" x1="@Num(x1)" y1="@Num(y1)" x2="@Num(x2)" y2="@Num(y2)" />
+    };
+
+    /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>
+    private static RenderFragment SvgText(string className, double x, double y, string content) => builder =>
+    {
+        builder.OpenElement(0, "text");
+        builder.AddAttribute(1, "class", className);
+        builder.AddAttribute(2, "x", Num(x));
+        builder.AddAttribute(3, "y", Num(y));
+        builder.AddContent(4, content);
+        builder.CloseElement();
+    };
+
+    /// <summary>The legend entry for a place's terrain, when the legend names it.</summary>
+    private MapLegendDto? Terrain(MapCellDto place) => _legend.GetValueOrDefault(place.Type);
+
+    private string? Icon(MapCellDto place) => place.Icon ?? Terrain(place)?.Icon;
+
+    private string? PlaceStyle(MapCellDto place) => MapLegendStyle.Style(place.Tone ?? Terrain(place)?.Tone);
+
+    /// <summary>What a place is called: its own name, else its label, else its terrain's.</summary>
+    private string PlaceName(MapCellDto place) => place.Name ?? place.Label ?? Terrain(place)?.Label ?? place.Type;
+
+    /// <summary>The place's name, then its terrain, whether it is closed and why, and who is there, as a screen reader hears it.</summary>
+    private string PlaceLabel(MapCellDto place) => string.Join(", ", new[]
+    {
+        PlaceName(place),
+        place.Name is not null ? Terrain(place)?.Label : null,
+        place.Closed ? place.Reason ?? Loc["NavMapClosed"].Value : null,
+        place.People > 0 ? Loc["NavMapPeopleCount", place.People].Value : null,
+    }.Where(part => part is not null).Distinct());
+
     private IEnumerable<(double X1, double Y1, double X2, double Y2)> GridLines()
     {
-        var bounds = Layout.Bounds(Level, includeUnplaced: false);
+        var bounds = Layout.Bounds(Level, includeUnplaced: false, includePlaces: false);
         if (!Layout.On(Level).Any()) yield break;
         for (var x = bounds.Left; x <= bounds.Right + 0.5; x += MapLayout.Cell) yield return (x, bounds.Top, x, bounds.Bottom);
         for (var y = bounds.Top; y <= bounds.Bottom + 0.5; y += MapLayout.Cell) yield return (bounds.Left, y, bounds.Right, y);

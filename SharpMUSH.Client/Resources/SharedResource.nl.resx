@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} nu hier</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Afgesloten</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Toon de kamer</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Positie instellen</value>
   </data>

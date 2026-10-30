@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} här nu</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Stängt</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Visa rummet</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Ange plats</value>
   </data>

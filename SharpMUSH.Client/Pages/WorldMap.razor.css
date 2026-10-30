@@ -109,6 +109,34 @@
 	color: var(--text-dim);
 }
 
+.map-place-closed {
+	margin: 0 0 8px;
+	color: var(--text-dim);
+	font-style: italic;
+}
+
+.map-place-image {
+	display: block;
+	max-width: 100%;
+	margin: 0 0 8px;
+	border-radius: var(--radius);
+}
+
+.map-place-info {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: 2px 12px;
+	margin: 0 0 8px;
+}
+
+.map-place-info dt {
+	color: var(--text-dim);
+}
+
+.map-place-info dd {
+	margin: 0;
+}
+
 @container page (max-width: 48rem) {
 	.map-panes {
 		grid-template-columns: minmax(0, 1fr);
