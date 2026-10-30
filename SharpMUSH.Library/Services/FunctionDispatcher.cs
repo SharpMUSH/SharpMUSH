@@ -101,7 +101,8 @@ public static class FunctionDispatcher
 		if (!argumentsValidated && ValidateArgumentCount(attribute, name, count, emptyCall) is { } arityError)
 			return new CallState(arityError);
 		if (flags.HasFlag(FunctionFlags.HasSideFX) && count >= attribute.SideEffectMinArgs
-			&& (!sideEffects || (sideEffectsNeedGrant && executor is not null && !await SideEffectsGranted(executor))))
+			&& (!sideEffects || SideEffectFreeEvaluation.Active
+				|| (sideEffectsNeedGrant && executor is not null && !await SideEffectsGranted(executor))))
 			return new CallState(ErrorMessages.Returns.FunctionDisabled);
 		if ((flags & NumericFlags) != 0
 			&& ValidateNumericArguments(attribute, parser.CurrentState.ArgumentsOrdered.Values, parser) is { } error)

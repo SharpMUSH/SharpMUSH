@@ -35,22 +35,30 @@ public partial class SharpMUSHParser
 		var exiting = Context;
 		base.ExitRule();
 		if (exiting is not IParenGroupContext || !BuildParseTree
-			|| Context is not { children: { Count: > 0 } siblings } parent
-			|| !ReferenceEquals(siblings[^1], exiting))
+			|| Context is not { ChildCount: > 0 } parent
+			|| !ReferenceEquals(parent.GetChild(parent.ChildCount - 1), exiting))
 		{
 			return;
 		}
 
-		siblings.RemoveAt(siblings.Count - 1);
-		foreach (var child in exiting.children ?? [])
+		parent.RemoveLastChild();
+		for (var i = 0; i < exiting.ChildCount; i++)
 		{
-			switch (child)
+			switch (exiting.GetChild(i))
 			{
-				case RuleContext rule: rule.Parent = parent; break;
-				case TerminalNodeImpl terminal: terminal.Parent = parent; break;
-			}
+				case RuleContext rule:
+					rule.Parent = parent;
+					parent.AddChild(rule);
+					break;
+				case ITerminalNode terminal:
+					if (terminal is TerminalNodeImpl node)
+					{
+						node.Parent = parent;
+					}
 
-			siblings.Add(child);
+					parent.AddChild(terminal);
+					break;
+			}
 		}
 	}
 }

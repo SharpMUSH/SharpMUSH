@@ -84,10 +84,7 @@ public class BooleanExpressionParser(
 		var errors = new ParserErrorListener(text);
 
 		StringSpanInputStream inputStream = new(text, origin);
-		SharpMUSHBoolExpLexer lexer = new(inputStream)
-		{
-			TokenFactory = OptimizedTokenFactory.Default
-		};
+		SharpMUSHBoolExpLexer lexer = new(inputStream);
 		lexer.RemoveErrorListeners();
 		// The lock lexer is not total (a stray '^' matches no rule), so collect its token-recognition
 		// errors too — otherwise a trailing bad character is dropped silently and the truncated stream

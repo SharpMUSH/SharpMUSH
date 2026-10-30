@@ -43,83 +43,34 @@ commaCommandArgs__Top_RSEA_G: (evaluationString__Top_RSEA_G_closed? COMMAWS)* ev
 // evaluationString__*: a leading call and its tail, or a string that does not start with one.
 evaluationString__Call_EA
     : function__Call_EA callTail__Call_EA?
-    | explicitEvaluationString__Call_EA
-    ;
-evaluationString__Call_EA_G
-    : function__Call_EA_G callTail__Call_EA_G?
-    | explicitEvaluationString__Call_EA_G
-    ;
-evaluationString__Call_SEA
-    : function__Call_SEA callTail__Call_SEA?
-    | explicitEvaluationString__Call_SEA
-    ;
-evaluationString__Call_SEA_G
-    : function__Call_SEA_G callTail__Call_SEA_G?
-    | explicitEvaluationString__Call_SEA_G
-    ;
-evaluationString__Top_RCEA
-    : function__Call_EA callTail__Top_RCEA?
-    | explicitEvaluationString__Top_RCEA
-    ;
-evaluationString__Top_RCEA_G
-    : function__Call_EA_G callTail__Top_RCEA_G?
-    | explicitEvaluationString__Top_RCEA_G
-    ;
-evaluationString__Top_RSCA
-    : function__Call_SEA callTail__Top_RSCA?
-    | explicitEvaluationString__Top_RSCA
-    ;
-evaluationString__Top_RSCA_G
-    : function__Call_SEA_G callTail__Top_RSCA_G?
-    | explicitEvaluationString__Top_RSCA_G
-    ;
-evaluationString__Top_RSCEA
-    : function__Call_SEA callTail__Top_RSCEA?
-    | explicitEvaluationString__Top_RSCEA
-    ;
-evaluationString__Top_RSCEA_G
-    : function__Call_SEA_G callTail__Top_RSCEA_G?
-    | explicitEvaluationString__Top_RSCEA_G
-    ;
-evaluationString__Top_RSEA
-    : function__Call_SEA callTail__Top_RSEA?
-    | explicitEvaluationString__Top_RSEA
-    ;
-evaluationString__Top_RSEA_G
-    : function__Call_SEA_G callTail__Top_RSEA_G?
-    | explicitEvaluationString__Top_RSEA_G
-    ;
-evaluationString__Top_RSEA_G_closed
-    : function__Call_SEA_G callTail__Top_RSEA_G_closed?
-    | explicitEvaluationString__Top_RSEA_G_closed
-    ;
-
-// explicitEvaluationString__*: a string that does not start with a call.
-explicitEvaluationString__Call_EA
-    : (
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Call_EA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Call_EA
     )*
     ;
-explicitEvaluationString__Call_EA_G
-    : (
+evaluationString__Call_EA_G
+    : function__Call_EA_G callTail__Call_EA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Call_EA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -127,7 +78,8 @@ explicitEvaluationString__Call_EA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -135,31 +87,36 @@ explicitEvaluationString__Call_EA_G
         | closedGroup__Group_CEA_G
     )*
     ;
-explicitEvaluationString__Call_SEA
-    : (
+evaluationString__Call_SEA
+    : function__Call_SEA callTail__Call_SEA?
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Call_SEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Call_SEA
     )*
     ;
-explicitEvaluationString__Call_SEA_G
-    : (
+evaluationString__Call_SEA_G
+    : function__Call_SEA_G callTail__Call_SEA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Call_SEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -167,7 +124,8 @@ explicitEvaluationString__Call_SEA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -175,31 +133,36 @@ explicitEvaluationString__Call_SEA_G
         | closedGroup__Group_SCEA_G
     )*
     ;
-explicitEvaluationString__Top_RCEA
-    : (
+evaluationString__Top_RCEA
+    : function__Call_EA callTail__Top_RCEA?
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Top_RCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Top_RCEA
     )*
     ;
-explicitEvaluationString__Top_RCEA_G
-    : (
+evaluationString__Top_RCEA_G
+    : function__Call_EA_G callTail__Top_RCEA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -207,7 +170,8 @@ explicitEvaluationString__Top_RCEA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -216,31 +180,36 @@ explicitEvaluationString__Top_RCEA_G
     )* openTail__TopGroup_CEA_G?
     | openTailFirst__TopGroup_CEA_G
     ;
-explicitEvaluationString__Top_RSCA
-    : (
+evaluationString__Top_RSCA
+    : function__Call_SEA callTail__Top_RSCA?
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Top_RSCA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Top_RSCA
     )*
     ;
-explicitEvaluationString__Top_RSCA_G
-    : (
+evaluationString__Top_RSCA_G
+    : function__Call_SEA_G callTail__Top_RSCA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RSCA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -248,7 +217,8 @@ explicitEvaluationString__Top_RSCA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -257,50 +227,36 @@ explicitEvaluationString__Top_RSCA_G
     )* openTail__TopGroup_SCA_G?
     | openTailFirst__TopGroup_SCA_G
     ;
-explicitEvaluationString__Top_RSCE
-    : (
-          bracePattern__Top_RSCE
-        | bracketPattern__Top_RSCEA
-        | beginGenericText__Top_RSCE
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-    ) (
-          bracePattern__Top_RSCE
-        | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
-        | regexpCapture__Top_RSCE
-        | iterationToken
-        | switchSubject
-        | genericText__Top_RSCE
-    )*
-    ;
-explicitEvaluationString__Top_RSCEA
-    : (
+evaluationString__Top_RSCEA
+    : function__Call_SEA callTail__Top_RSCEA?
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Top_RSCEA
     )*
     ;
-explicitEvaluationString__Top_RSCEA_G
-    : (
+evaluationString__Top_RSCEA_G
+    : function__Call_SEA_G callTail__Top_RSCEA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -308,7 +264,8 @@ explicitEvaluationString__Top_RSCEA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -317,53 +274,36 @@ explicitEvaluationString__Top_RSCEA_G
     )* openTail__TopGroup_SCEA_G?
     | openTailFirst__TopGroup_SCEA_G
     ;
-explicitEvaluationString__Top_RSCE_G
-    : (
-          bracePattern__Top_RSCE_G
-        | bracketPattern__Top_RSCEA_G
-        | beginGenericText__Top_RSCE_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | closedGroupFirst__TopGroup_SCE_G
-    ) (
-          bracePattern__Top_RSCE_G
-        | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
-        | regexpCapture__Top_RSCE_G
-        | iterationToken
-        | switchSubject
-        | genericText__Top_RSCE_G
-        | closedGroup__TopGroup_SCE_G
-    )* openTail__TopGroup_SCE_G?
-    | openTailFirst__TopGroup_SCE_G
-    ;
-explicitEvaluationString__Top_RSEA
-    : (
+evaluationString__Top_RSEA
+    : function__Call_SEA callTail__Top_RSEA?
+    | (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
         | beginGenericText__Top_RSEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
     ) (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
         | genericText__Top_RSEA
     )*
     ;
-explicitEvaluationString__Top_RSEA_G
-    : (
+evaluationString__Top_RSEA_G
+    : function__Call_SEA_G callTail__Top_RSEA_G?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RSEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -371,7 +311,8 @@ explicitEvaluationString__Top_RSEA_G
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -380,12 +321,14 @@ explicitEvaluationString__Top_RSEA_G
     )* openTail__TopGroup_SCEA_G?
     | openTailFirst__TopGroup_SCEA_G
     ;
-explicitEvaluationString__Top_RSEA_G_closed
-    : (
+evaluationString__Top_RSEA_G_closed
+    : function__Call_SEA_G callTail__Top_RSEA_G_closed?
+    | (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
         | beginGenericText__Top_RSEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -393,7 +336,8 @@ explicitEvaluationString__Top_RSEA_G_closed
     ) (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -402,12 +346,60 @@ explicitEvaluationString__Top_RSEA_G_closed
     )*
     ;
 
+// explicitEvaluationString__*: a string that does not start with a call.
+explicitEvaluationString__Top_RSCE
+    : (
+          bracePattern__Top_RSCE
+        | bracketPattern__Top_RSCEA
+        | beginGenericText__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
+        | regexpCapture__Top_RSCE
+        | iterationToken
+        | switchSubject
+    ) (
+          bracePattern__Top_RSCE
+        | bracketPattern__Top_RSCEA
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
+        | regexpCapture__Top_RSCE
+        | iterationToken
+        | switchSubject
+        | genericText__Top_RSCE
+    )*
+    ;
+explicitEvaluationString__Top_RSCE_G
+    : (
+          bracePattern__Top_RSCE_G
+        | bracketPattern__Top_RSCEA_G
+        | beginGenericText__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
+        | regexpCapture__Top_RSCE_G
+        | iterationToken
+        | switchSubject
+        | closedGroupFirst__TopGroup_SCE_G
+    ) (
+          bracePattern__Top_RSCE_G
+        | bracketPattern__Top_RSCEA_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
+        | regexpCapture__Top_RSCE_G
+        | iterationToken
+        | switchSubject
+        | genericText__Top_RSCE_G
+        | closedGroup__TopGroup_SCE_G
+    )* openTail__TopGroup_SCE_G?
+    | openTailFirst__TopGroup_SCE_G
+    ;
+
 // callTail__*: what follows a leading call; a name( there is text.
 callTail__Call_EA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -418,7 +410,8 @@ callTail__Call_EA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -430,7 +423,8 @@ callTail__Call_SEA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -441,7 +435,8 @@ callTail__Call_SEA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -453,7 +448,8 @@ callTail__Top_RCEA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -464,7 +460,8 @@ callTail__Top_RCEA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -477,7 +474,8 @@ callTail__Top_RSCA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -488,7 +486,8 @@ callTail__Top_RSCA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -501,7 +500,8 @@ callTail__Top_RSCEA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -512,7 +512,8 @@ callTail__Top_RSCEA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -525,7 +526,8 @@ callTail__Top_RSEA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -536,7 +538,8 @@ callTail__Top_RSEA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -549,7 +552,8 @@ callTail__Top_RSEA_G_closed
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -563,7 +567,8 @@ braceExplicitEvaluationString__Top_RSCE
     : (
           bracePattern__Top_RSCE
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -574,7 +579,8 @@ braceExplicitEvaluationString__Top_RSCEA
     : (
           bracePattern__Top_RSCEA
         | bracketPattern__Top_RSCEA
-        | PERCENT validSubstitution__Top_RSCE
+        | PERCENT complexSubstitutionSymbol__Top_RSCE
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE
         | iterationToken
         | switchSubject
@@ -585,7 +591,8 @@ braceExplicitEvaluationString__Top_RSCEA_G
     : (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -598,7 +605,8 @@ braceExplicitEvaluationString__Top_RSCE_G
     : (
           bracePattern__Top_RSCE_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -628,10 +636,6 @@ bracketPattern__Top_RSCEA_G: OBRACK evaluationString__Top_RSCEA_G? CBRACK;
 regexpCapture__Top_RSCE: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE? CCARET?;
 regexpCapture__Top_RSCE_G: REGEXP_NUM | REGEXP_STARTCARET explicitEvaluationString__Top_RSCE_G? CCARET?;
 
-// validSubstitution__*: what follows a '%'.
-validSubstitution__Top_RSCE: complexSubstitutionSymbol__Top_RSCE | substitutionSymbol;
-validSubstitution__Top_RSCE_G: complexSubstitutionSymbol__Top_RSCE_G | substitutionSymbol;
-
 // complexSubstitutionSymbol__*: a '%' substitution that names something.
 complexSubstitutionSymbol__Top_RSCE
     : (REG_STARTCARET | ARG_STARTCARET | ATTR_STARTCARET | DELIM_STARTCARET) explicitEvaluationString__Top_RSCE CCARET
@@ -647,34 +651,30 @@ complexSubstitutionSymbol__Top_RSCE_G
     ;
 
 // genericText__*: text, after the start of a string.
-genericText__Call_EA: beginGenericText__Call_EA | FUNCHAR;
-genericText__Call_EA_G: beginGenericText__Call_EA_G;
-genericText__Call_SEA: beginGenericText__Call_SEA | FUNCHAR;
-genericText__Call_SEA_G: beginGenericText__Call_SEA_G;
-genericText__Group_CEA_G: beginGenericText__Group_CEA_G;
-genericText__Group_SCEA_G: beginGenericText__Group_SCEA_G;
-genericText__TopGroup_SCA_G: beginGenericText__TopGroup_SCA_G;
-genericText__TopGroup_SCE_G: beginGenericText__TopGroup_SCE_G;
-genericText__Top_RCEA: beginGenericText__Top_RCEA | FUNCHAR;
-genericText__Top_RCEA_G: beginGenericText__Top_RCEA_G;
-genericText__Top_RSCA: beginGenericText__Top_RSCA | FUNCHAR;
-genericText__Top_RSCA_G: beginGenericText__Top_RSCA_G;
-genericText__Top_RSCE: beginGenericText__Top_RSCE | FUNCHAR;
-genericText__Top_RSCEA: beginGenericText__Top_RSCEA | FUNCHAR;
-genericText__Top_RSCEA_G: beginGenericText__Top_RSCEA_G;
-genericText__Top_RSCE_G: beginGenericText__Top_RSCE_G;
-genericText__Top_RSEA: beginGenericText__Top_RSEA | FUNCHAR;
-genericText__Top_RSEA_G: beginGenericText__Top_RSEA_G;
+genericText__Call_EA: EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Call_EA_G: EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Call_SEA: SEMICOLON | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Call_SEA_G: SEMICOLON | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Group_CEA_G: COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Group_SCEA_G: SEMICOLON | COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__TopGroup_SCA_G: SEMICOLON | COMMAWS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__TopGroup_SCE_G: SEMICOLON | COMMAWS | EQUALS | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Top_RCEA: CPAREN | COMMAWS | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Top_RCEA_G: CPAREN | COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Top_RSCA: CPAREN | SEMICOLON | COMMAWS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Top_RSCA_G: CPAREN | SEMICOLON | COMMAWS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Top_RSCE: CPAREN | SEMICOLON | COMMAWS | EQUALS | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Top_RSCEA: CPAREN | SEMICOLON | COMMAWS | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Top_RSCEA_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Top_RSCE_G: CPAREN | SEMICOLON | COMMAWS | EQUALS | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
+genericText__Top_RSEA: CPAREN | SEMICOLON | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi | FUNCHAR;
+genericText__Top_RSEA_G: CPAREN | SEMICOLON | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 
 // beginGenericText__*: text, at the start of a string.
 beginGenericText__Call_EA: EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Call_EA_G: EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Call_SEA: SEMICOLON | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Call_SEA_G: SEMICOLON | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
-beginGenericText__Group_CEA_G: COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
-beginGenericText__Group_SCEA_G: SEMICOLON | COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
-beginGenericText__TopGroup_SCA_G: SEMICOLON | COMMAWS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
-beginGenericText__TopGroup_SCE_G: SEMICOLON | COMMAWS | EQUALS | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Top_RCEA: CPAREN | COMMAWS | EQUALS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Top_RCEA_G: CPAREN | COMMAWS | EQUALS | CCARET | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
 beginGenericText__Top_RSCA: CPAREN | SEMICOLON | COMMAWS | CCARET | OPAREN | escapedText | OTHER | DOLLAR | HASH | PERCENT_AT_END | ansi;
@@ -690,7 +690,8 @@ beginGenericText__Top_RSEA_G: CPAREN | SEMICOLON | EQUALS | CCARET | escapedText
 closedGroupFirst__Group_CEA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -700,7 +701,8 @@ closedGroupFirst__Group_CEA_G: beginGenericText__Open (
 closedGroupFirst__Group_SCEA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -710,7 +712,8 @@ closedGroupFirst__Group_SCEA_G: beginGenericText__Open (
 closedGroupFirst__TopGroup_SCA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -720,7 +723,8 @@ closedGroupFirst__TopGroup_SCA_G: beginGenericText__Open (
 closedGroupFirst__TopGroup_SCE_G: beginGenericText__Open (
           bracePattern__Top_RSCE_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -732,7 +736,8 @@ closedGroupFirst__TopGroup_SCE_G: beginGenericText__Open (
 closedGroup__Group_CEA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -742,7 +747,8 @@ closedGroup__Group_CEA_G: genericText__Open (
 closedGroup__Group_SCEA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -752,7 +758,8 @@ closedGroup__Group_SCEA_G: genericText__Open (
 closedGroup__TopGroup_SCA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -762,7 +769,8 @@ closedGroup__TopGroup_SCA_G: genericText__Open (
 closedGroup__TopGroup_SCE_G: genericText__Open (
           bracePattern__Top_RSCE_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -774,7 +782,8 @@ closedGroup__TopGroup_SCE_G: genericText__Open (
 openTailFirst__TopGroup_CEA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -784,7 +793,8 @@ openTailFirst__TopGroup_CEA_G: beginGenericText__Open (
 openTailFirst__TopGroup_SCA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -794,7 +804,8 @@ openTailFirst__TopGroup_SCA_G: beginGenericText__Open (
 openTailFirst__TopGroup_SCEA_G: beginGenericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -804,7 +815,8 @@ openTailFirst__TopGroup_SCEA_G: beginGenericText__Open (
 openTailFirst__TopGroup_SCE_G: beginGenericText__Open (
           bracePattern__Top_RSCE_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -816,7 +828,8 @@ openTailFirst__TopGroup_SCE_G: beginGenericText__Open (
 openTail__TopGroup_CEA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -826,7 +839,8 @@ openTail__TopGroup_CEA_G: genericText__Open (
 openTail__TopGroup_SCA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -836,7 +850,8 @@ openTail__TopGroup_SCA_G: genericText__Open (
 openTail__TopGroup_SCEA_G: genericText__Open (
           bracePattern__Top_RSCEA_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -846,7 +861,8 @@ openTail__TopGroup_SCEA_G: genericText__Open (
 openTail__TopGroup_SCE_G: genericText__Open (
           bracePattern__Top_RSCE_G
         | bracketPattern__Top_RSCEA_G
-        | PERCENT validSubstitution__Top_RSCE_G
+        | PERCENT complexSubstitutionSymbol__Top_RSCE_G
+        | PERCENT substitutionSymbol
         | regexpCapture__Top_RSCE_G
         | iterationToken
         | switchSubject
@@ -855,10 +871,9 @@ openTail__TopGroup_SCE_G: genericText__Open (
     )* openTail__TopGroup_SCE_G?;
 
 // Leaves, the same in every context.
-genericText__Open: beginGenericText__Open | FUNCHAR;
+genericText__Open: OPAREN | FUNCHAR;
 beginGenericText__Open: OPAREN;
-genericText__Close: beginGenericText__Close;
-beginGenericText__Close: CPAREN;
+genericText__Close: CPAREN;
 
 substitutionSymbol
     : SPACE | BLANKLINE | TAB | COLON | DBREF | ENACTOR_NAME | CAP_ENACTOR_NAME | ACCENT_NAME | MONIKER_NAME
