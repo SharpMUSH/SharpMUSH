@@ -42,6 +42,14 @@ public partial class LightningDatabase
 	public ValueTask<bool> IsFreeNumberAsync(int number, CancellationToken cancellationToken = default)
 		=> ValueTask.FromResult(number >= 0 && Store.Read(tx => tx.TryGet(Tables.FreeByNumber, Keys.Dbref(number), out _)));
 
+	public async ValueTask<bool> SetFreeNumberDueAsync(int number, DateTimeOffset reusableAt, CancellationToken cancellationToken = default)
+		=> await Store.WriteAsync(tx =>
+		{
+			if (number < 0 || !tx.TryGet(Tables.FreeByNumber, Keys.Dbref(number), out _)) return false;
+			FreeNumberAt(tx, number, reusableAt.ToUnixTimeMilliseconds());
+			return true;
+		}, cancellationToken);
+
 	public async IAsyncEnumerable<FreeNumber> GetFreeNumbersAsync([EnumeratorCancellation] CancellationToken cancellationToken = default)
 	{
 		await foreach (var (key, _) in Store.RangeAsync(Tables.FreeByTime, [], FreeNumberPage, cancellationToken))

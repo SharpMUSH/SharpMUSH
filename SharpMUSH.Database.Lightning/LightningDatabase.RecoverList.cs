@@ -150,8 +150,7 @@ public partial class LightningDatabase
 			return new DBRef((int)n, record.CreationTime);
 		}, cancellationToken, character: restore.Objid);
 
-	public async ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, bool evenIfKept, DateTimeOffset? reusableAt,
-		CancellationToken cancellationToken = default)
+	public async ValueTask<bool> PurgeRecoverEntryAsync(DBRef objid, bool evenIfKept, CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx =>
 		{
 			var n = (long)objid.Number;
@@ -165,7 +164,7 @@ public partial class LightningDatabase
 
 			DeleteObjectContent(tx, n);
 			tx.Delete(Tables.Recover, Keys.Dbref(n));
-			FreeNumberAt(tx, n, reusableAt?.ToUnixTimeMilliseconds() ?? Never);
+			FreeNumberAt(tx, n, Never);
 			return true;
 		}, cancellationToken);
 

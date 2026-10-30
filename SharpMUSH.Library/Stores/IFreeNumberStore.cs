@@ -17,6 +17,12 @@ public interface IFreeNumberStore
 	/// <summary>Whether <paramref name="number"/> is free.</summary>
 	ValueTask<bool> IsFreeNumberAsync(int number, CancellationToken cancellationToken = default);
 
+	/// <summary>
+	/// Sets the time from which the allocator may hand <paramref name="number"/> out unasked. False when the number is
+	/// not free, because something took it meanwhile.
+	/// </summary>
+	ValueTask<bool> SetFreeNumberDueAsync(int number, DateTimeOffset reusableAt, CancellationToken cancellationToken = default);
+
 	/// <summary>Every free number, the earliest due first, the order the allocator takes them in.</summary>
 	IAsyncEnumerable<FreeNumber> GetFreeNumbersAsync(CancellationToken cancellationToken = default);
 

@@ -190,13 +190,17 @@ public class RecoverListService(
 	/// <inheritdoc />
 	public async ValueTask<bool> PurgeAsync(AnySharpObject? actor, RecoverEntry entry, bool evenIfKept = false, CancellationToken ct = default)
 	{
-		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid, evenIfKept, ReusableAt(entry, DateTimeOffset.UtcNow)), ct))
-			return false;
+		if (!await mediator.Send(new PurgeRecoverEntryCommand(entry.Objid, evenIfKept), ct)) return false;
 
 		foreach (var cleanup in cleanups)
 		{
 			await cleanup.ObjectsFreedAsync([entry.Objid], ct);
 		}
+
+		// The number comes due only once everything that named it by number has let go: a failed cleanup leaves it
+		// free for whoever asks for it, never handed out unasked.
+		if (ReusableAt(entry, DateTimeOffset.UtcNow) is { } due)
+			await mediator.Send(new SetFreeNumberDueCommand(entry.Objid.Number, due), ct);
 
 		var details = $"{entry.Type.ToLowerInvariant()} destroyed {entry.DestroyedAt:yyyy-MM-dd}";
 		if (actor is null)

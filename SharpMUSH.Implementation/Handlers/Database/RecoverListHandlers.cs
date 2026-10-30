@@ -29,7 +29,7 @@ public class RestoreRecoverEntryCommandHandler(IRecoverListStore database)
 public class PurgeRecoverEntryCommandHandler(IRecoverListStore database) : ICommandHandler<PurgeRecoverEntryCommand, bool>
 {
 	public async ValueTask<bool> Handle(PurgeRecoverEntryCommand request, CancellationToken cancellationToken)
-		=> await database.PurgeRecoverEntryAsync(request.Objid, request.EvenIfKept, request.ReusableAt, cancellationToken);
+		=> await database.PurgeRecoverEntryAsync(request.Objid, request.EvenIfKept, cancellationToken);
 }
 
 public class SetRecoverKeepCommandHandler(IRecoverListStore database) : ICommandHandler<SetRecoverKeepCommand, bool>
@@ -81,6 +81,21 @@ public class RecordUntrackedHolesCommandHandler(IFreeNumberStore database) : ICo
 {
 	public async ValueTask<int> Handle(RecordUntrackedHolesCommand request, CancellationToken cancellationToken)
 		=> await database.RecordUntrackedHolesAsync(request.ReusableAt, cancellationToken);
+}
+
+public class SetFreeNumberDueCommandHandler(IFreeNumberStore database) : ICommandHandler<SetFreeNumberDueCommand, bool>
+{
+	public async ValueTask<bool> Handle(SetFreeNumberDueCommand request, CancellationToken cancellationToken)
+		=> await database.SetFreeNumberDueAsync(request.Number, request.ReusableAt, cancellationToken);
+}
+
+public class SetProtectedNumbersCommandHandler(IFreeNumberStore database) : ICommandHandler<SetProtectedNumbersCommand>
+{
+	public async ValueTask<Unit> Handle(SetProtectedNumbersCommand request, CancellationToken cancellationToken)
+	{
+		await database.SetProtectedNumbersAsync(request.Numbers, cancellationToken);
+		return Unit.Value;
+	}
 }
 
 public class FindNumberReferencesQueryHandler(IFreeNumberStore database) : IStreamQueryHandler<FindNumberReferencesQuery, NumberReference>

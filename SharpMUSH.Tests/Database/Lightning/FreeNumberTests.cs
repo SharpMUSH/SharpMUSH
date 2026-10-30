@@ -42,8 +42,24 @@ public class FreeNumberTests
 	{
 		var room = await RoomAsync(name);
 		await Assert.That(await _db.RetireObjectAsync(room, null)).IsTrue();
-		await Assert.That(await _db.PurgeRecoverEntryAsync(room, false, reusableAt)).IsTrue();
+		await Assert.That(await _db.PurgeRecoverEntryAsync(room, false)).IsTrue();
+		if (reusableAt is { } due) await Assert.That(await _db.SetFreeNumberDueAsync(room.Number, due)).IsTrue();
 		return room.Number;
+	}
+
+	[Test]
+	public async Task APurgedNumberIsNotTakenUnaskedUntilItIsGivenADueTime()
+	{
+		var room = await RoomAsync("Purged");
+		await _db.RetireObjectAsync(room, null);
+		await _db.PurgeRecoverEntryAsync(room, false);
+
+		await Assert.That((await RoomAsync("Before")).Number).IsNotEqualTo(room.Number);
+
+		await _db.SetFreeNumberDueAsync(room.Number, DateTimeOffset.UtcNow.AddHours(-1));
+		await Assert.That((await RoomAsync("After")).Number).IsEqualTo(room.Number);
+		await Assert.That(await _db.SetFreeNumberDueAsync(room.Number, DateTimeOffset.UtcNow)).IsFalse()
+			.Because("a number something took is no longer free");
 	}
 
 	[Test]
@@ -70,7 +86,8 @@ public class FreeNumberTests
 		foreach (var (room, due) in new[] { (laterRoom, now.AddHours(-1)), (earlierRoom, now.AddHours(-2)) })
 		{
 			await _db.RetireObjectAsync(room, null);
-			await _db.PurgeRecoverEntryAsync(room, false, due);
+			await _db.PurgeRecoverEntryAsync(room, false);
+			await _db.SetFreeNumberDueAsync(room.Number, due);
 		}
 
 		var (later, earlier) = (laterRoom.Number, earlierRoom.Number);
