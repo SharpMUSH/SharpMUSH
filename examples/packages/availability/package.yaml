@@ -988,7 +988,7 @@ objects:
 
         Each line is a free time, in your zone: the day, when it starts, when it ends, and how long it lasts. A player who has set no times counts as free throughout, and is named under the list.
 
-        You count as free only when every character on your account is: a time one of them is busy is left out. The others named count with their own entries, and those of the characters they list in public as theirs.
+        You count as free only when every character on your account is: a time one of them is busy is left out. The others named count with their own entries.
 
         For example:
 
