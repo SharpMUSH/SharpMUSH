@@ -6349,4 +6349,133 @@
   <data name="NavMapMapNameCharacter" xml:space="preserve">
     <value>Un nom de carte ne peut pas contenir = [ ] % ou \.</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Carte du monde</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>Une carte du monde garde ses lieux elle-même : peignez le terrain, posez des murs et nommez des lieux, sans une salle pour chacun.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>En faire une carte du monde</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Peignez un lieu, ou chaque lieu d’un rectangle, avec un type de terrain. Cliquez sur la carte pour choisir un lieu.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>Jusqu’à x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>Jusqu’à y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Type de terrain</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Lettres, chiffres, _ et -. Vide efface.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Peindre</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Types de la légende</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Les joueurs parcourent une carte du monde par dix sorties de direction posées dessus. Les ouvrir demande le paquet World grid, et la carte doit être une salle.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Ouvrir les sorties de direction</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Lieu {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Nom du lieu</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Côté</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Nord</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Est</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Sud</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Ouest</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Haut</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Bas</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Passage</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Ouvert</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Mur</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Sortie seulement</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Ce qu’on dit au joueur refusé</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Définir le côté</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Cacher aux joueurs</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Montrer aux joueurs</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Salle ici, par dbref</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} n’est pas une salle que vous contrôlez.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Faire de {0} une carte du monde</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Ouvrir les sorties de direction sur {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>Peindre {1} en {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>Effacer {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Côté {0} : {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Nommer le lieu {0} {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Retirer le nom du lieu {0}</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Cacher le lieu {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Montrer le lieu {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>Placer {1} sur {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Retirer la salle placée de {0}</value>
+  </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Placer la salle</value>
+  </data>
 </root>

@@ -126,8 +126,9 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			// A room's place is read as the room, as a region's is: a builder may dig a room into a map someone else owns.
 			// A room standing on a place of a stored map has no coordinates of its own: it is drawn at its place, and left
 			// off the map with it when the place is hidden from the viewer.
+			var place = source is null ? null : PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map);
 			var at = await NumbersAsync(room, room, position, ct);
-			if (at is null && source is not null && PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map) is { } place)
+			if (at is null && source is not null && place is not null)
 			{
 				if (await source.HiddenAsync(viewer, map, (int)place[0], (int)place[1], (int)place[2], ct)) continue;
 				at = place;
@@ -136,6 +137,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 				Positive(await NumbersAsync(room, room, Size, ct)))
 			{
 				Editable = canEdit && await permissions.Controls(viewer, room),
+				OnPlace = place is not null,
 				Environment = await OwnValueAsync(room, room, EnvironmentAttribute) is { Length: > 0 } environment
 					? environment.ToLowerInvariant()
 					: null,

@@ -7040,4 +7040,133 @@
   <data name="NavMapMapNameCharacter" xml:space="preserve">
     <value>Een kaartnaam mag geen = [ ] % of \ bevatten.</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Wereldkaart</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>Een wereldkaart bewaart zelf haar plaatsen: schilder het terrein, zet muren en geef plaatsen een naam, zonder kamer voor elk.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Maak hier een wereldkaart van</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Schilder een plaats, of elke plaats in een vak, met een terreintype. Klik op de kaart om een plaats te kiezen.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>Tot x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>Tot y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Terreintype</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Letters, cijfers, _ en -. Leeg wist.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Schilderen</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Typen uit de legenda</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Spelers lopen over een wereldkaart via tien richtingsuitgangen erop. Openen vraagt het pakket World grid, en de kaart moet een kamer zijn.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Richtingsuitgangen openen</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Plaats {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Naam van de plaats</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Zijde</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Noord</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Oost</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Zuid</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>West</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Omhoog</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Omlaag</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Doorgang</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Muur</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Alleen naar buiten</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Wat een geweigerde speler te zien krijgt</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Zijde instellen</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Verbergen voor spelers</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Tonen aan spelers</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Kamer hier, per dbref</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} is geen kamer die je beheert.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Maak van {0} een wereldkaart</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Richtingsuitgangen openen op {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>{1} schilderen als {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>{0} wissen</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Zijde {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Plaats {0} {1} noemen</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Naam van plaats {0} verwijderen</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Plaats {0} verbergen</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Plaats {0} tonen</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>{1} plaatsen op {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Geplaatste kamer van {0} halen</value>
+  </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Kamer plaatsen</value>
+  </data>
 </root>

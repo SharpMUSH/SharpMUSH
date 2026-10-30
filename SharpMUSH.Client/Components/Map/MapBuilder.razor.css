@@ -152,3 +152,7 @@
 	background: var(--room-tone, var(--surface-2));
 	color: var(--text);
 }
+
+.map-builder-row--numbers ::deep .mud-input-control {
+	flex: 1 1 4rem;
+}

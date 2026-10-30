@@ -107,6 +107,12 @@
                    point as numbers, for a keyboard. *@
                 <div class="map-pick" @onclick="PickAsync"></div>
             }
+            else if (Editing && Layout.Space is not null)
+            {
+                @* A world map reaches further than a button per cell would: a click chooses the place under it, and the
+                   world tools take the same place as numbers, for a keyboard. *@
+                <div class="map-pick" @onclick="PickPlaceAsync"></div>
+            }
             @foreach (var (x, y) in _empty)
             {
                 var chosen = Cell == (x, y);
@@ -278,7 +284,7 @@
             : null;
         var route = (Route ?? []).Select(step => Pair(step.Source, step.Destination)).ToHashSet();
         var bounds = Layout.Bounds(Level);
-        _empty = Editing && !Layout.IsGraph ? EmptyCells() : [];
+        _empty = Editing && !Layout.IsGraph && Layout.Space is null ? EmptyCells() : [];
         if (_empty.Count > 0)
         {
             bounds = (Math.Min(bounds.Left, _empty.Min(c => c.X) * MapLayout.Cell), Math.Min(bounds.Top, _empty.Min(c => -(c.Y + 1)) * MapLayout.Cell),
@@ -371,6 +377,11 @@
     /// <summary>A click on the picture, in its own pixels.</summary>
     private Task PickAsync(MouseEventArgs click) =>
         OnCell.InvokeAsync((Math.Round(_left + click.OffsetX / Zoom), Math.Round(_top + click.OffsetY / Zoom)));
+
+    /// <summary>A click on a world map: the cell under it.</summary>
+    private Task PickPlaceAsync(MouseEventArgs click) =>
+        OnCell.InvokeAsync((Math.Floor((_left + click.OffsetX / Zoom) / MapLayout.Cell),
+            -Math.Floor((_top + click.OffsetY / Zoom) / MapLayout.Cell) - 1));
 
     private static (string, string) Pair(string a, string b) => string.CompareOrdinal(a, b) < 0 ? (a, b) : (b, a);
 
