@@ -21,17 +21,17 @@ escapex() is escape(), with some characters left as they are. Each character of 
 - `p`: pronouns and names, `%n`, `%p`, `%a`, `%s` and `%o`.
 - `x`: the substitutions whose letters are in `<substitutions>`.
 
-Two letters change the rest: `f` leaves out the backslash escape() puts at the front, and `r` escapes only what the others would leave alone.
+Like escape(), escapex() puts a backslash at the front, unless the string starts with a character that gets its own backslash or a substitution left alone. `f` leaves it out, and `r` escapes only what the others would leave alone (with `r`, `f` puts the front backslash in).
 
 escapex() comes from RhostMUSH.
 
 ```sharp
-> think escapex(\[add\(1\,1\)\], f)
+> think escapex(x\[y\])
+\x\[y\]
+> think escapex(\[add\(1\,1\)\])
 \[add\(1\,1\)\]
 > think escapex(\[add\(1\,1\)\], f\[\])
 [add\(1\,1\)]
-> think escapex(\%b\[x\], fs)
-%b\[x\]
 > think escapex(\%b\[x\], fsr)
 \%b[x]
 ```

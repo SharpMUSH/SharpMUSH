@@ -148,8 +148,9 @@ public partial class Functions
 	private static string PackNumber(BigInteger number, int radix, bool pennDigits)
 	{
 		if (radix == 10) return number.ToString();
-		// Radix 63 and 64 use every printable digit, '-' among baseconv()'s, so a sign has nothing to be written with.
-		if (number.Sign < 0 && radix >= 63) return "#-1 NEGATIVE NUMBER IS NOT REPRESENTABLE IN OUTPUT RADIX";
+		// baseconv()'s radix 63 and 64 use '-' as a digit, so a sign has nothing to be written with. pack()'s own
+		// digits have no '-', and RhostMUSH writes the sign in every radix.
+		if (number.Sign < 0 && pennDigits && radix >= 63) return "#-1 NEGATIVE NUMBER IS NOT REPRESENTABLE IN OUTPUT RADIX";
 		var digits = pennDigits ? radix <= 36 ? Chars36 : Chars : PackChars;
 		var magnitude = BigInteger.Abs(number);
 		var output = new StringBuilder();

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace SharpMUSH.Library.Services.DatabaseConversion.Softcode;
@@ -25,7 +26,8 @@ public static class RhostFunctionCallRewriter
 		["streq"] = args => args.Length == 2 ? $"not(comp({args[0]},{args[1]},I))" : null,
 		["ncomp"] = args => args.Length == 2 ? $"comp({args[0]},{args[1]},F)" : null,
 		["power10"] = args => args.Length == 1 ? $"power(10,{args[0]})" : null,
-		["xnor"] = args => args.Length == 2 ? $"not(xor({args[0]},{args[1]}))" : null,
+		// Each argument after the first is compared with the answer so far.
+		["xnor"] = args => args.Length >= 2 ? args[1..].Aggregate(args[0], (answer, next) => $"not(xor({answer},{next}))") : null,
 		["nummatch"] = args => args.Length switch
 		{
 			2 => $"words(matchall({args[0]},{args[1]}))",
@@ -48,15 +50,17 @@ public static class RhostFunctionCallRewriter
 		},
 		// RhostMUSH's tag() looks a tag up; SharpMUSH's tag() writes an HTML tag.
 		["tag"] = args => args.Length == 1 ? $"tagref({args[0]})" : null,
-		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : null,
+		["lnum2"] = args => args.Length == 1 ? $"lnum({args[0]})" : NumberRange(args),
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
 		["orflag"] = args => args.Length >= 2 ? $"orlflags({args[0]},{FlagList(args[1..])})" : null,
-		// Plural for 0 and for anything past -1 to 1; singular for none given or empty.
+		// Plural for 0 and for anything past -1 to 1; singular for none given or empty. A computed amount is
+		// evaluated once, into a register that localize() puts back.
 		["moneyname"] = args => args switch
 		{
 			[] or [""] => "config(money_singular)",
-			[var value] => $"if(and(strlen({value}),or(eq({value},0),gt(abs({value}),1))),config(money_plural),config(money_singular))",
+			[var value] when HoldsCall(value) => $"localize({MoneyName($"setr(moneyname,{value})", "%q<moneyname>")})",
+			[var value] => MoneyName(value, value),
 			_ => null
 		},
 		// A comparison of bittype() with a number asks whether a role of some rank is held.
@@ -94,6 +98,40 @@ public static class RhostFunctionCallRewriter
 		}
 	}
 
+	/// <summary>
+	/// lnum2(&lt;count&gt;, &lt;start&gt;[, +|-[, &lt;step&gt;]]): &lt;count&gt; numbers from &lt;start&gt;, up or down by
+	/// &lt;step&gt;, as lnum() from the first to the last; with no direction, the numbers up to
+	/// &lt;start&gt; + &lt;count&gt; - 1, &lt;step&gt; apart. Only whole numbers written out are taken, a count of at
+	/// least 1 and a start of at least 0; RhostMUSH answers anything else in ways lnum() has no form for.
+	/// Counting down stops at 0, as RhostMUSH's does.
+	/// </summary>
+	private static string? NumberRange(string[] args)
+	{
+		if (args.Length is < 2 or > 4
+			|| !int.TryParse(args[0].Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var count) || count < 1
+			|| !int.TryParse(args[1].Trim() is { Length: > 0 } start ? start : "0", NumberStyles.None, CultureInfo.InvariantCulture, out var first))
+		{
+			return null;
+		}
+
+		var direction = args.Length > 2 ? args[2].Trim() : "";
+		if (direction is not ("" or "+" or "-")) return null;
+		// A step of 1 or less is 1, as in RhostMUSH.
+		var step = 1;
+		if (args.Length > 3 && args[3].Trim() is { Length: > 0 } stepText)
+		{
+			if (!int.TryParse(stepText, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out step) || step > 1_000_000) return null;
+			step = Math.Max(1, step);
+		}
+
+		// With no direction the step does not stretch the range: it ends at <start> + <count> - 1. Counting
+		// down stops at 0.
+		var span = direction == "" ? count - 1L : (long)step * (count - 1);
+		var last = direction == "-" ? Math.Max(first % step, first - span) : first + span;
+		if (last > int.MaxValue) return null;
+		return step == 1 ? $"lnum({first},{last})" : $"lnum({first},{last},%b,{step})";
+	}
+
 	/// <summary>The object of an argument that is just a <c>bittype()</c> call, bracketed or not: <c>me</c> when it names none.</summary>
 	private static string? BitTypeObject(string argument)
 	{
@@ -117,9 +155,12 @@ public static class RhostFunctionCallRewriter
 	private static readonly Dictionary<string, int[]> Repeated = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["ljc"] = [1],
-		["rjc"] = [1],
-		["moneyname"] = [0]
+		["rjc"] = [1]
 	};
+
+	/// <summary>The money name for an amount: <paramref name="first"/> is its first use, <paramref name="again"/> the rest.</summary>
+	private static string MoneyName(string first, string again)
+		=> $"if(and(strlen({first}),or(eq({again},0),gt(abs({again}),1))),config(money_plural),config(money_singular))";
 
 	/// <summary>Rewritten functions whose name SharpMUSH also has, for something else.</summary>
 	private static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase) { "tag" };

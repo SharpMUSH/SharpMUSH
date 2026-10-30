@@ -10,12 +10,15 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "strdistance", MinArgs = 2, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["source", "target"])]
+	[SharpFunction(Name = "strdistance", MinArgs = 2, MaxArgs = 4, Flags = FunctionFlags.Regular,
+		ParameterNames = ["source", "target", "ignore case", "transpositions"])]
 	public ValueTask<CallState> StringDistanceFunction(IMUSHCodeParser parser, SharpFunctionAttribute _)
 	{
 		var arguments = parser.CurrentState.Arguments;
-		return StringDistance.TryCalculate(arguments["0"].Message, arguments["1"].Message, out var distance)
+		// RhostMUSH's third and fourth arguments: a non-zero number for each.
+		var ignoreCase = arguments.TryGetValue("2", out var caseArg) && ArgHelpers.ParseInteger(caseArg.Message.ToPlainText()) != 0;
+		var transpositions = arguments.TryGetValue("3", out var swapArg) && ArgHelpers.ParseInteger(swapArg.Message.ToPlainText()) != 0;
+		return StringDistance.TryCalculate(arguments["0"].Message, arguments["1"].Message, ignoreCase, transpositions, out var distance)
 			? ValueTask.FromResult<CallState>(distance)
 			: ValueTask.FromResult<CallState>(StringDistance.WorkLimitExceeded);
 	}

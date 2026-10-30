@@ -111,6 +111,7 @@ public class RhostImportTests
 		await Assert.That(stored.Compatibility).IsEqualTo(stored.Compatibility with
 		{
 			ParenGroups = true,
+			MuxLogic = true,
 			TinyTrimFun = true,
 			RhostEdit = true,
 			RhostLattr = true,
@@ -118,6 +119,8 @@ public class RhostImportTests
 			RhostMapArgs = true,
 			SidefxFlag = true,
 			RhostList = true,
+			RhostIterSeparator = true,
+			RhostLrooms = true,
 			Dialect = "rhost"
 		});
 		await Assert.That(result.Warnings.Texts()).Contains(w => w.StartsWith("Imported from a RhostMUSH flatfile") && w.Contains("rhost_list"));
