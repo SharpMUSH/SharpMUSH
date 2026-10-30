@@ -67,6 +67,10 @@ public class FloatPrecisionTests
 	public async Task HalfwayValuesRoundAsC(string code, string expected)
 		=> await Assert.That(await Evaluate($"[{code}]", precision: 6)).IsEqualTo(expected);
 
+	[Test]
+	public async Task LargeValuesAtFullPrecisionStillFormat()
+		=> await Assert.That(await Evaluate("[add(100000000000000,0)]", precision: 15)).IsEqualTo("100000000000000");
+
 	/// <summary>
 	/// PennMUSH's own suite sets <c>float_precision=10</c> around this case (<c>test/testmath.t:65-67</c>),
 	/// which is what shows the setting counts decimal places: 10 of them, not 10 significant digits.

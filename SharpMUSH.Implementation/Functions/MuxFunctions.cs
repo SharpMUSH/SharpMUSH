@@ -36,6 +36,11 @@ public partial class Functions
 	/// <summary>TinyMUX's limit on <c>lrooms()</c> depth.</summary>
 	private const int MaxRoomDepth = 50;
 
+	/// <summary>The times <c>moon()</c> takes: the years 1 to 9999.</summary>
+	private static readonly double MinMoonSeconds = (DateTime.MinValue - DateTime.UnixEpoch).TotalSeconds;
+
+	private static readonly double MaxMoonSeconds = Math.Floor((DateTime.MaxValue - DateTime.UnixEpoch).TotalSeconds);
+
 	/// <summary>How many rooms <c>lrooms()</c> reaches under <c>rhost_lrooms</c>, which takes any depth.</summary>
 	private const int MaxRhostRooms = 1000;
 
@@ -154,6 +159,11 @@ public partial class Functions
 		else if (!ArgHelpers.TryNumber(parser, secondsText, out seconds))
 		{
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
+		}
+
+		if (seconds < MinMoonSeconds || seconds > MaxMoonSeconds)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
 		}
 
 		var numeric = args.TryGetValue("1", out var numericArg) && numericArg.Message.Truthy(parser);

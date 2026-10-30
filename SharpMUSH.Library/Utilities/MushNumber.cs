@@ -32,11 +32,12 @@ public static class MushNumber
 	/// </summary>
 	private static bool IsHalfway(decimal value)
 	{
+		var place = Pow10(Configurable.FloatPrecision);
 		var magnitude = Math.Abs(value);
-		if (magnitude >= DoubleDigits) return false;
+		if (magnitude >= DoubleDigits / 10m / place) return false;
 
-		var scaled = magnitude * Pow10(Configurable.FloatPrecision);
-		return scaled < DoubleDigits / 10m && scaled - decimal.Truncate(scaled) == 0.5m;
+		var scaled = magnitude * place;
+		return scaled - decimal.Truncate(scaled) == 0.5m;
 	}
 
 	/// <summary>Fifteen significant digits, which every double holds.</summary>

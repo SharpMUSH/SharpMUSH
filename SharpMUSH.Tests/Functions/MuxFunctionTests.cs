@@ -39,6 +39,8 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("moon(947811600)", "The Moon is Waxing Half (50% of Full)")]
 	[Arguments("moon(947797200)", "The Moon is Waxing Crescent (48% of Full)")]
 	[Arguments("[moon(948000000,1)] [moon(999999999,1)]", "74 -72")]
+	[Arguments("moon(1000000000000)", ErrorMessages.Returns.NumberOutOfRange)]
+	[Arguments("moon(-100000000000)", ErrorMessages.Returns.NumberOutOfRange)]
 	[Arguments("moon(x)", ErrorMessages.Returns.Number)]
 	[Arguments("lrand(5,5,3,|)", "5|5|5")]
 	[Arguments("[lrand(1,6,0)][lrand(6,1,3)]", "")]
