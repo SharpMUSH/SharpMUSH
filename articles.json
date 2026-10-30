@@ -16389,6 +16389,22 @@
         ]
       },
       {
+        "id": "world-lock",
+        "lookup": "@world lock",
+        "heading": "Locks",
+        "aliases": [
+          "@world/lock"
+        ]
+      },
+      {
+        "id": "world-terrain-lock",
+        "lookup": "@world terrain",
+        "heading": "Terrain locks",
+        "aliases": [
+          "terrain locks"
+        ]
+      },
+      {
         "id": "world-place",
         "lookup": "@world place",
         "heading": "Naming places",
