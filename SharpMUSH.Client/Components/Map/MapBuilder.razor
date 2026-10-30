@@ -3,10 +3,11 @@
 @using SharpMUSH.Library.Models.Portal
 @inject GameCommandService Commands
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
 
 @* Builder mode's side of the World map: the room or empty cell chosen on the map, the rooms a builder may add, the
    checks, and the plan, reviewed and applied as the builder's own commands. Nothing reaches the game until Apply. *@
-<div class="map-builder">
+<div class="map-builder" @ref="_panel">
     @if (_reviewing)
     {
         @Review()
@@ -73,12 +74,21 @@
     private string? _exitEditing;
     private string _exitNames = "";
     private string? _joinTo;
+
+    /// <summary>The name of the room a way leads to when it is not on this map; null for one on it.</summary>
+    private string? _joinElsewhere;
     private string _joinNames = "";
     private string _joinBack = "";
     private bool _joinWayBack = true;
     private int? _levelFor;
     private string _levelName = "";
-    private double _x, _y, _width = 1, _height = 1;
+    private string _joinId = "";
+    private string? _joinIdProblem;
+    private string? _addProblem;
+    private ElementReference _panel;
+    private (string? Selected, (double X, double Y)? Cell) _scrolledFor;
+    private double? _x, _y;
+    private double _width = 1, _height = 1;
     private int _z;
     private string? _editing;
     private MapPlacement? _shown;
@@ -100,13 +110,15 @@
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
         {
             var chosen = id != _editing;
-            if (chosen) (_vertical, _exitEditing, _joinTo, _joinNames, _joinBack, _joinWayBack) = (0, null, null, "", "", true);
+            if (chosen) (_vertical, _exitEditing, _joinTo, _joinNames, _joinBack, _joinWayBack, _joinId, _joinIdProblem) = (0, null, null, "", "", true, "", null);
             (_editing, _shown) = (id, room);
             _roomName = room.Room.Name;
-            (_x, _y, _z) = room.Room.Position switch
+            (_x, _y, _z) = room switch
             {
-                [var x, var y, var z, ..] => (x, y, (int)z),
-                [var x, var y] => (x, y, 0),
+                { Room.Position: [var x, var y, var z, ..] } => (x, y, (int)z),
+                { Room.Position: [var x, var y] } => (x, y, 0),
+                // A room the map does not place has no place to start from.
+                { Placed: false } => ((double?)null, (double?)null, room.Level),
                 // A compass map places most rooms by their exits: start from where it drew them.
                 _ => Layout.Spot(room),
             };
@@ -138,6 +150,38 @@
 
     private static string Lines(string stored) => stored.Replace("%r", "\n", StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>A cell or room just chosen brings the panel into view: on a narrow screen it starts below the map.</summary>
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var chosen = (Selected, Cell);
+        if (chosen == _scrolledFor) return;
+        _scrolledFor = chosen;
+        if (firstRender || (Selected is null && Cell is null)) return;
+        try
+        {
+            await JS.InvokeVoidAsync("SharpMUSH.mapPanelIntoView", _panel);
+        }
+        catch (JSException)
+        {
+            // No portal-interop.js (tests): the panel stays where it is.
+        }
+    }
+
+    /// <summary>
+    /// The room <paramref name="dbref"/>'s name as the character may read it, and whether they control it; null when it
+    /// is no room they may see.
+    /// </summary>
+    private async Task<(string Name, bool Controls)?> RoomAsync(string dbref)
+    {
+        var result = await Commands.EvaluateAsync($"if(hastype({dbref},ROOM),[controls(%#,{dbref})] [name({dbref})],#-1)", character: Character);
+        return result is PortalCommandResponse { Result: [var controls, ' ', .. var name] } && name.Length > 0
+            ? (name, controls == '1')
+            : null;
+    }
+
+    /// <summary>The map has no room of its own yet: its first is dug with no way in.</summary>
+    private bool Empty => !Layout.Rooms.Values.Any(room => !room.Region);
+
     private void ResetDig() => (_name, _description, _wayBack) = ("", "", true);
 
     /// <summary>
@@ -148,7 +192,13 @@
     {
         if (Layout.IsGraph)
         {
-            var from = Selected is { } chosen && Layout.Rooms.TryGetValue(chosen, out var room) && !room.Region ? chosen : null;
+            // A picture has no directions: the chosen room, else the room nearest the point.
+            var from = Selected is { } chosen && Layout.Rooms.TryGetValue(chosen, out var room) && !room.Region
+                ? chosen
+                : Layout.On(Level).Where(other => !other.Region)
+                    .OrderBy(other => Math.Pow(other.X + other.Width / 2 - x, 2) + Math.Pow(other.Y + other.Height / 2 - y, 2))
+                    .Select(other => other.Room.Id)
+                    .FirstOrDefault();
             return (from, "", "");
         }
         var beside = Neighbours(x, y).ToList();
@@ -199,13 +249,13 @@
             case "empty": return Loc["NavMapNameMissing"];
             case "character": return Loc["NavMapNameCharacter"];
         }
-        if (_from is null) return Loc["NavMapNoNeighbour"];
+        if (_from is null) return Empty ? null : Layout.IsGraph ? Loc["NavMapChooseFrom"].Value : Loc["NavMapNoNeighbour"].Value;
         return ExitProblem(_exitTo, _from) ?? (_wayBack ? ExitProblem(_exitBack) : null);
     }
 
     private async Task DigAsync(double x, double y, int z)
     {
-        if (DigProblem() is not null || _from is null) return;
+        if (DigProblem() is not null || (_from is null && !Empty)) return;
         var key = Plan.Dig(_name.Trim(), x, y, z, _from, _exitTo.Trim(), _wayBack ? _exitBack.Trim() : null);
         if (!string.IsNullOrWhiteSpace(_description)) Plan.Describe(key, _description);
         ResetDig();
@@ -231,7 +281,11 @@
             <h4 class="map-builder-subtitle">@Loc["NavMapDigHere"]</h4>
             <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapRoomName"]" Variant="Variant.Outlined" Immediate="true" />
             @DescriptionField()
-            @if (Layout.IsGraph)
+            @if (Empty)
+            {
+                <p class="map-note">@Loc["NavMapFirstRoom"]</p>
+            }
+            else if (Layout.IsGraph)
             {
                 <MudSelect T="string" @bind-Value="_from" Label="@Loc["NavMapDigFrom"]" Variant="Variant.Outlined">
                     @foreach (var room in Layout.Rooms.Values.Where(r => !r.Region).OrderBy(r => r.Room.Name, StringComparer.OrdinalIgnoreCase))
@@ -253,7 +307,10 @@
             {
                 <p class="map-note">@Loc["NavMapDigFromRoom", source.Room.Name]</p>
             }
-            @ExitFields()
+            @if (!Empty)
+            {
+                @ExitFields()
+            }
             @if (problem is not null)
             {
                 <p class="map-note">@problem</p>
@@ -304,15 +361,19 @@
                 <MudTextField T="string" @bind-Value="_roomDescription" Label="@Loc["NavMapRoomDescription"]" Variant="Variant.Outlined"
                               Lines="3" Sizing="InputSizing.Auto" />
                 <MudButton Variant="Variant.Outlined" OnClick="DescribeAsync">@Loc["NavMapSetDescription"]</MudButton>
+                @if (!room.Placed)
+                {
+                    <p class="map-note">@Loc["NavMapUnplaced"]</p>
+                }
                 <div class="map-builder-fields">
-                    <MudNumericField T="double" @bind-Value="_x" Label="X" Variant="Variant.Outlined" Class="map-builder-x" />
-                    <MudNumericField T="double" @bind-Value="_y" Label="Y" Variant="Variant.Outlined" />
+                    <MudNumericField T="double?" @bind-Value="_x" Label="X" Variant="Variant.Outlined" Class="map-builder-x" />
+                    <MudNumericField T="double?" @bind-Value="_y" Label="Y" Variant="Variant.Outlined" />
                     @if (!Layout.IsGraph)
                     {
                         <MudNumericField T="int" @bind-Value="_z" Label="@Loc["NavMapLevelField"]" Variant="Variant.Outlined" />
                     }
                 </div>
-                <MudButton Variant="Variant.Outlined" OnClick="SavePlaceAsync">@Loc["NavMapSetPlace"]</MudButton>
+                <MudButton Variant="Variant.Outlined" Disabled="@(_x is null || _y is null)" OnClick="SavePlaceAsync">@Loc["NavMapSetPlace"]</MudButton>
                 <div class="map-builder-fields">
                     <MudNumericField T="double" @bind-Value="_width" Min="1" Label="@Loc["NavMapWidth"]" Variant="Variant.Outlined" />
                     <MudNumericField T="double" @bind-Value="_height" Min="1" Label="@Loc["NavMapHeight"]" Variant="Variant.Outlined" />
@@ -335,7 +396,7 @@
                             <p class="map-note">@problem</p>
                         }
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(problem is not null)"
-                                   OnClick="() => DigAsync(_x, _y, _z + _vertical)">@Loc["NavMapAddToPlan"]</MudButton>
+                                   OnClick="() => DigAsync(_x ?? 0, _y ?? 0, _z + _vertical)">@Loc["NavMapAddToPlan"]</MudButton>
                     }
                 }
                 @Exits(room)
@@ -443,21 +504,37 @@
         await OnChanged.InvokeAsync(_editing);
     }
 
-    /// <summary>Opens a way from <paramref name="room"/> to another room on the map, and back when asked.</summary>
+    /// <summary>
+    /// Opens a way from <paramref name="room"/> to another room, and back when asked: one on this map, or any room by its
+    /// dbref, on another map or on none.
+    /// </summary>
     private RenderFragment Join(MapPlacement room) => __builder =>
     {
         var others = Layout.Rooms.Values.Where(other => !other.Region && other.Room.Id != room.Room.Id)
             .OrderBy(other => other.Room.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        if (others.Count == 0) return;
         var problem = JoinProblem(room.Room.Id);
         <h4 class="map-builder-subtitle">@Loc["NavMapJoin"]</h4>
-        <MudSelect T="string" Value="_joinTo" ValueChanged="to => ChooseJoin(room, to)" Label="@Loc["NavMapJoinTo"]" Variant="Variant.Outlined"
-                   Class="map-builder-join">
-            @foreach (var other in others)
-            {
-                <MudSelectItem Value="@other.Room.Id">@other.Room.Name</MudSelectItem>
-            }
-        </MudSelect>
+        @if (others.Count > 0)
+        {
+            <MudSelect T="string" Value="@(_joinElsewhere is null ? _joinTo : null)" ValueChanged="to => ChooseJoin(room, to)" Label="@Loc["NavMapJoinTo"]"
+                       Variant="Variant.Outlined" Class="map-builder-join">
+                @foreach (var other in others)
+                {
+                    <MudSelectItem Value="@other.Room.Id">@other.Room.Name</MudSelectItem>
+                }
+            </MudSelect>
+        }
+        <div class="map-builder-row">
+            <MudTextField T="string" @bind-Value="_joinId" Label="@Loc["NavMapJoinByDbref"]" Variant="Variant.Outlined" Immediate="true"
+                          HelperText="@(_joinIdProblem ?? Loc["NavMapJoinByDbrefHelp"].Value)" Error="@(_joinIdProblem is not null)" />
+            <MudButton Variant="Variant.Outlined" Disabled="@(!MapPlan.IsDbref(_joinId))" OnClick="() => ChooseJoinByIdAsync(room)">
+                @Loc["NavMapChoose"]
+            </MudButton>
+        </div>
+        @if (_joinElsewhere is { } elsewhere)
+        {
+            <p class="map-note">@Loc["NavMapJoinToRoom", elsewhere]</p>
+        }
         @if (_joinTo is not null)
         {
             <MudTextField T="string" @bind-Value="_joinNames" Label="@Loc["NavMapExitTo"]" Variant="Variant.Outlined" Immediate="true"
@@ -478,7 +555,7 @@
     /// <summary>Chooses the room a way leads to; on a grid, its names start from the direction between the two.</summary>
     private void ChooseJoin(MapPlacement room, string? to)
     {
-        _joinTo = to;
+        (_joinTo, _joinElsewhere) = (to, null);
         (_joinNames, _joinBack) = ("", "");
         if (Layout.IsGraph || to is null || !Layout.Rooms.TryGetValue(to, out var other) || !room.Placed || !other.Placed) return;
         var (fx, fy, fz) = Layout.Spot(room);
@@ -489,11 +566,31 @@
         }
     }
 
+    /// <summary>Chooses a room by its dbref, wherever it is, once the game says it is a room the character may see.</summary>
+    private async Task ChooseJoinByIdAsync(MapPlacement room)
+    {
+        var id = _joinId.Trim();
+        if (!MapPlan.IsDbref(id)) return;
+        if (Layout.Rooms.ContainsKey(id))
+        {
+            ChooseJoin(room, id);
+            (_joinId, _joinIdProblem) = ("", null);
+            return;
+        }
+        if (await RoomAsync(id) is not var (name, controls))
+        {
+            _joinIdProblem = Loc["NavMapNoSuchRoom", id];
+            return;
+        }
+        // A way back is an exit in that room, which only someone who controls it may open.
+        (_joinTo, _joinElsewhere, _joinNames, _joinBack, _joinWayBack, _joinId, _joinIdProblem) = (id, name, "", "", controls, "", null);
+    }
+
     private async Task JoinAsync(string from)
     {
         if (_joinTo is not { } to || JoinProblem(from) is not null) return;
-        Plan.Join(from, to, _joinNames, _joinWayBack ? _joinBack : null);
-        (_joinTo, _joinNames, _joinBack, _joinWayBack) = (null, "", "", true);
+        Plan.Join(from, to, _joinNames, _joinWayBack ? _joinBack : null, _joinElsewhere);
+        (_joinTo, _joinElsewhere, _joinNames, _joinBack, _joinWayBack) = (null, null, "", "", true);
         await OnChanged.InvokeAsync(from);
     }
 
@@ -528,8 +625,8 @@
 
     private async Task SavePlaceAsync()
     {
-        if (_editing is null) return;
-        Plan.Place(_editing, _x, _y, _z);
+        if (_editing is null || _x is not { } x || _y is not { } y) return;
+        Plan.Place(_editing, x, y, _z);
         await OnChanged.InvokeAsync(_editing);
     }
 
@@ -552,12 +649,18 @@
         await OnChanged.InvokeAsync(room.Id);
     }
 
+    /// <summary>Adds a room by its dbref, by name, once the game says it is a room the character may see.</summary>
     private async Task AddByIdAsync()
     {
         var id = _addId.Trim();
         if (!MapPlan.IsDbref(id) || Layout.Rooms.ContainsKey(id)) return;
-        _addId = "";
-        await AddAsync(new MapRoomDto(id, id, null, null) { Editable = true });
+        if (await RoomAsync(id) is not var (name, _))
+        {
+            _addProblem = Loc["NavMapNoSuchRoom", id];
+            return;
+        }
+        (_addId, _addProblem) = ("", null);
+        await AddAsync(new MapRoomDto(id, name, null, null) { Editable = true });
     }
 
     private RenderFragment Tray() => __builder =>
@@ -579,7 +682,8 @@
                 </ul>
             }
             <div class="map-builder-row">
-                <MudTextField T="string" @bind-Value="_addId" Label="@Loc["NavMapAddByDbref"]" Variant="Variant.Outlined" Immediate="true" />
+                <MudTextField T="string" @bind-Value="_addId" Label="@Loc["NavMapAddByDbref"]" Variant="Variant.Outlined" Immediate="true"
+                              HelperText="@_addProblem" Error="@(_addProblem is not null)" />
                 <MudButton Variant="Variant.Outlined" Disabled="@(!MapPlan.IsDbref(_addId))" OnClick="AddByIdAsync">@Loc["NavMapAdd"]</MudButton>
             </div>
         </section>

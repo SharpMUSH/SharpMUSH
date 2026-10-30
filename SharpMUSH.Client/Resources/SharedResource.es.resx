@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>La sala ya tiene una salida con uno de estos nombres.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Elige la sala desde la que se llega.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Es la primera sala del mapa, así que se excava sin entrada. Abre un camino hacia ella desde otra sala cuando exista.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>O el dbref de una sala</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Cualquier sala, en otro mapa o en ninguno.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Elegir</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>A {0}, una sala fuera de este mapa.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} no es una sala que puedas ver.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Ir allí</value>
+  </data>
 </root>

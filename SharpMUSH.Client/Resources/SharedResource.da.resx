@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Rummet har allerede en udgang med et af disse navne.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Vælg det rum, den forbindes fra.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Dette er kortets første rum, så det graves uden vej ind. Åbn en vej til det fra et andet rum, når det findes.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Eller et rums dbref</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Ethvert rum, på et andet kort eller på intet.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Vælg</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Til {0}, et rum uden for dette kort.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} er ikke et rum, du kan se.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Gå derhen</value>
+  </data>
 </root>

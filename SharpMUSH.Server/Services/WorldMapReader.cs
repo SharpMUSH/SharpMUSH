@@ -60,7 +60,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 
 	private const int IndexPage = 200;
 
-	/// <summary>Every map <paramref name="viewer"/> may see, by name. Empty while the world-map package is not installed.</summary>
+	/// <summary>
+	/// Every map <paramref name="viewer"/> may see, by name: one with a room or a stored place on it, or one they control,
+	/// so a map someone started and left empty is not listed for everyone. Empty while the world-map package is not installed.
+	/// </summary>
 	public async Task<IReadOnlyList<MapSummaryDto>> ListAsync(AnySharpObject viewer, CancellationToken ct)
 	{
 		var maps = new List<AnySharpObject>();
@@ -74,7 +77,8 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			{
 				if (maps.Count == MaxMaps) break;
 				if (await MapAsync(viewer, hit.Number, ct) is { } map
-					&& maps.All(known => known.Object().DBRef.Number != hit.Number)) maps.Add(map);
+					&& maps.All(known => known.Object().DBRef.Number != hit.Number)
+					&& await ShownAsync(viewer, map, ct)) maps.Add(map);
 			}
 			after = maps.Count < MaxMaps ? page.Next : null;
 		} while (after is not null);
@@ -188,6 +192,26 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		if (await MapAsync(viewer, number, ct) is not { } map || await SourceAsync(map, ct) is not var (source, _))
 			return new NotFound();
 		return await source.CellsAsync(viewer, map, window, ct);
+	}
+
+	/// <summary>
+	/// Whether the map list shows <paramref name="map"/> to <paramref name="viewer"/>: they control it, a map source stores
+	/// places on it, or a room or region on it is one they may see.
+	/// </summary>
+	private async Task<bool> ShownAsync(AnySharpObject viewer, AnySharpObject map, CancellationToken ct)
+	{
+		if (await permissions.Controls(viewer, map) || await SourceAsync(map, ct) is not null) return true;
+		await foreach (var member in mediator.CreateStream(new GetObjectsByZoneQuery(map.Object().DBRef), ct))
+		{
+			if (member.DBRef == map.Object().DBRef) continue;
+			if (string.Equals(member.Type, "ROOM", StringComparison.OrdinalIgnoreCase))
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is AnySharpObject { IsRoom: true } room
+					&& await VisibleAsync(viewer, room, ct)) return true;
+			}
+			else if (await MapAsync(viewer, member.DBRef.Number, ct) is not null) return true;
+		}
+		return false;
 	}
 
 	/// <summary>The first map source that stores <paramref name="map"/>'s places, and the space it stores them in.</summary>

@@ -6208,4 +6208,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>La pièce a déjà une sortie portant l'un de ces noms.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Choisissez la salle depuis laquelle on y accède.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>C'est la première salle de la carte : elle est creusée sans entrée. Ouvrez un passage depuis une autre salle une fois qu'elle existe.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Ou le dbref d'une salle</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>N'importe quelle salle, sur une autre carte ou sur aucune.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Choisir</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Vers {0}, une salle hors de cette carte.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} n'est pas une salle que vous pouvez voir.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Y aller</value>
+  </data>
 </root>

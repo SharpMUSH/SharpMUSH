@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>В комнате уже есть выход с одним из этих имён.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Выберите комнату, из которой в неё ведёт проход.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Это первая комната карты, поэтому она создаётся без входа. Когда она появится, откройте к ней проход из другой комнаты.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Или dbref комнаты</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Любая комната, на другой карте или вне карт.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Выбрать</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>В {0}, комнату вне этой карты.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} — не комната, которую вы видите.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Перейти туда</value>
+  </data>
 </root>

@@ -465,6 +465,18 @@
                 {
                     <MudButton Variant="Variant.Outlined" OnClick="() => GoToRoomAsync(room)">@Loc["NavMapPlaceRoom"]</MudButton>
                 }
+                @if (_layout is { Map.CanEdit: true } && !place.Closed && (place.Room is null || place.Room != _layout.Map.Here))
+                {
+                    @* Whoever controls the map may go to any place on it: the place is lent a room if it has none. *@
+                    <MudButton Variant="Variant.Outlined" StartIcon="@Icons.Material.Outlined.NearMe" Disabled="_walking"
+                               OnClick="@(() => TeleportAsync($"@tel me=[worldroom({_layout!.Map.Map.Id},{x},{y},{_level})]"))">
+                        @Loc["NavMapGoThere"]
+                    </MudButton>
+                }
+                @if (_walkError is not null)
+                {
+                    <p class="map-route-error" role="alert">@_walkError</p>
+                }
             </div>
         </KitCard>
     };
@@ -588,6 +600,37 @@
         }
     }
 
+    /// <summary>
+    /// Takes the acting character somewhere with <paramref name="command"/>, an <c>@tel</c>, then reads the map again,
+    /// as a walk does. What a refusal said is shown under the button.
+    /// </summary>
+    private async Task TeleportAsync(string command)
+    {
+        if (CharacterId is not { } character || Id is null) return;
+        (_walking, _walkError) = (true, null);
+        try
+        {
+            var from = _here?.Room;
+            var outcome = await Commands.RunAsync(command, "loc(%#)", character);
+            var error = outcome switch
+            {
+                PortalCommandResponse { Result: { } arrived } when arrived != from => null,
+                PortalCommandResponse refused => refused.Output.LastOrDefault() ?? Loc["NavMapWalkStopped"].Value,
+                ApiFailure failure => failure.Message,
+            };
+            var (selected, place) = (_selected, _place);
+            await LoadHereAsync();
+            await LoadMapAsync();
+            // A refusal is read where it was asked for; once there, the map opens on where they now stand.
+            if (error is not null) (_selected, _place) = (selected, place);
+            _walkError = error;
+        }
+        finally
+        {
+            _walking = false;
+        }
+    }
+
     /// <summary>Selects a room on this map, changing to its level, and moves focus to it.</summary>
     private async Task GoToRoomAsync(string id)
     {
@@ -612,6 +655,8 @@
     /// </summary>
     private RenderFragment NewMap() => __builder =>
     {
+        // Only someone who may build sees it: a map is an object they create.
+        if (_here is not { CanBuild: true }) return;
         if (!_creating)
         {
             <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.Add" Class="map-new" OnClick="() => (_creating, _newError) = (true, null)">
@@ -750,6 +795,18 @@
                     </ul>
                 }
                 @GettingThere()
+                @if (_layout.Map.CanEdit && room.Room.Editable && _selected != _layout.Map.Here)
+                {
+                    @* A builder goes straight to a room of theirs, as @tel would take them, whether or not a way leads there. *@
+                    <MudButton Variant="Variant.Text" StartIcon="@Icons.Material.Outlined.NearMe" Disabled="_walking"
+                               OnClick="@(() => TeleportAsync($"@tel me={room.Room.Id}"))">
+                        @Loc["NavMapGoThere"]
+                    </MudButton>
+                    @if (_walkError is not null && _route is null && !_noRoute)
+                    {
+                        <p class="map-route-error" role="alert">@_walkError</p>
+                    }
+                }
             </div>
         </KitCard>
     };

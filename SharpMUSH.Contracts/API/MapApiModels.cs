@@ -129,7 +129,11 @@ public sealed record MapExitDto(string Id, string Name, IReadOnlyList<string> Al
 /// <param name="Room">The viewer's room.</param>
 /// <param name="Name">That room's name.</param>
 /// <param name="Map">The map the room is on, when it is on one the viewer may see.</param>
-public sealed record MapHereDto(string Room, string Name, MapSummaryDto? Map);
+public sealed record MapHereDto(string Room, string Name, MapSummaryDto? Map)
+{
+	/// <summary>The viewer may run <c>@create</c>, which is how a new map is made.</summary>
+	public bool CanBuild { get; init; }
+}
 
 /// <summary>The way from where the viewer stands to a room, over exits they may see, crossing maps where it must.</summary>
 /// <param name="Steps">Each exit in turn; empty when the viewer is already there.</param>

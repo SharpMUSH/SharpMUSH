@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>De kamer heeft al een uitgang met een van deze namen.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Kies de kamer waarvandaan hij bereikt wordt.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Dit is de eerste kamer van de kaart, dus hij wordt zonder ingang gegraven. Open er een weg naartoe vanuit een andere kamer zodra hij bestaat.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Of de dbref van een kamer</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Elke kamer, op een andere kaart of op geen.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Kiezen</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Naar {0}, een kamer buiten deze kaart.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} is geen kamer die je kunt zien.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Ga erheen</value>
+  </data>
 </root>

@@ -763,8 +763,9 @@ public class WorldMapPageTests : TrackingBunitContext
 	public async Task NewMapCreatesTheObjectGivesItAKindAndOpensIt()
 	{
 		Arrange();
+		_api.Here = new("#0", "Room Zero", null) { CanBuild = true };
 		var cut = Render<SharpMUSH.Client.Pages.WorldMap>();
-		cut.WaitForAssertion(() => cut.Find(".map-tree"));
+		cut.WaitForAssertion(() => cut.FindAll(".map-list button").First(button => button.TextContent.Trim() == "NavMapNewMap"));
 
 		await cut.FindAll(".map-list button").First(button => button.TextContent.Trim() == "NavMapNewMap").ClickAsync();
 		await cut.Find(".map-new-form input").InputAsync("Docks");
@@ -774,6 +775,17 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(_api.Commands).IsEquivalentTo(["@create Docks", "&MAP`KIND #91=compass"]);
 		var navigation = Services.GetRequiredService<Microsoft.AspNetCore.Components.NavigationManager>();
 		cut.WaitForState(() => navigation.Uri.EndsWith("/map/91", StringComparison.Ordinal));
+	}
+
+	[Test]
+	public async Task NewMapIsOfferedOnlyToACharacterWhoMayBuild()
+	{
+		Arrange();
+		_api.Here = new("#10", "Quay", WorldMapApiHandler.Harbour);
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 50));
+		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
+
+		await Assert.That(cut.FindAll(".map-list button").Select(button => button.TextContent.Trim())).DoesNotContain("NavMapNewMap");
 	}
 
 	[Test]

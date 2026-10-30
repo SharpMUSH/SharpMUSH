@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Camera are deja o ieșire cu unul dintre aceste nume.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Alege camera din care se ajunge aici.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Aceasta e prima cameră a hărții, deci se sapă fără intrare. Deschide o cale spre ea din altă cameră după ce există.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Sau dbref-ul unei camere</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Orice cameră, pe altă hartă sau pe niciuna.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Alege</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Spre {0}, o cameră din afara acestei hărți.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} nu este o cameră pe care o poți vedea.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Mergi acolo</value>
+  </data>
 </root>
