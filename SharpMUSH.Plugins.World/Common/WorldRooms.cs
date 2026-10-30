@@ -58,20 +58,18 @@ public sealed class WorldRooms(
 		var owner = await map.Object().Owner.WithCancellation(CancellationToken.None);
 		var name = store.Place(dbref, at.X, at.Y, at.Z)?.Name
 			?? $"{(await new WorldLegend(attributes, map).TerrainAsync(type)).Label} ({at})";
-		var room = await SpareAsync() ?? await mediator.Send(new CreateRoomCommand(name, owner));
+		var room = await SpareAsync(owner.Object.DBRef) ?? await mediator.Send(new CreateRoomCommand(name, owner));
 		if (await store.LendAsync(dbref, at.X, at.Y, at.Z, room) is not { } lent) return new Error<string>("#-1 NOT A WORLD MAP");
 		if (lent.Number != room.Number)
 		{
 			// Someone else lent the place a room first: this one waits for the next.
-			await store.AddSpareAsync(room, time.GetUtcNow().ToUnixTimeMilliseconds());
+			await store.AddSpareAsync(room, owner.Object.DBRef, time.GetUtcNow().ToUnixTimeMilliseconds());
 			return lent;
 		}
 
 		if (await mediator.Send(new GetObjectNodeQuery(room)) is not AnySharpObject lentRoom)
 			return new Error<string>("#-1 NOTHING THERE");
 		await mediator.Send(new SetNameCommand(lentRoom, MarkupText.Plain(name)));
-		if (lentRoom.Object().Owner is var current && (await current.WithCancellation(CancellationToken.None)).Object.DBRef != owner.Object.DBRef)
-			await mediator.Send(new SetObjectOwnerCommand(lentRoom, owner));
 		await mediator.Send(new SetObjectZoneCommand(lentRoom, map));
 		await mediator.Send(await CellParentAsync(map) is { } parent
 			? new SetObjectParentCommand(lentRoom, parent)
@@ -99,10 +97,13 @@ public sealed class WorldRooms(
 	/// <summary>Takes the place's id off a room that no longer stands on it.</summary>
 	public async ValueTask UnmarkAsync(DBRef room) => await mediator.Send(new ClearAttributeCommand(room, PlacePath));
 
-	/// <summary>A spare room that still exists, taken off the list; null when there is none.</summary>
-	private async ValueTask<DBRef?> SpareAsync()
+	/// <summary>
+	/// A spare room of <paramref name="owner"/>'s that still exists, taken off the list; null when there is none. A spare
+	/// keeps whatever was put on it, so it is lent again only to its owner's maps, never handed to another player.
+	/// </summary>
+	private async ValueTask<DBRef?> SpareAsync(DBRef owner)
 	{
-		while (await store.TakeSpareAsync() is { } spare)
+		while (await store.TakeSpareAsync(owner) is { } spare)
 		{
 			if (await mediator.Send(new GetObjectNodeQuery(spare)) is AnySharpObject and { IsRoom: true }) return spare;
 		}
@@ -150,7 +151,9 @@ public sealed class WorldRooms(
 		foreach (var (room, release) in store.Releases())
 		{
 			cancellationToken.ThrowIfCancellationRequested();
-			if (await TidyAsync(room, release.Lent, cancellationToken)) await store.AddSpareAsync(room, now);
+			// A lent room let go while it holds anyone, as when its map is destroyed, waits until it is empty.
+			if (release.Lent && await HoldsAnythingAsync(room, cancellationToken)) continue;
+			if (await TidyAsync(room, release.Lent, cancellationToken) is { } owner) await store.AddSpareAsync(room, owner, now);
 			await store.DropReleaseAsync(room);
 		}
 
@@ -186,14 +189,14 @@ public sealed class WorldRooms(
 
 	/// <summary>
 	/// A room let go of its place: its id comes off and, when it was lent, it is made spare: renamed, out of the map's
-	/// zone and parent, and let go by everything that keeps rooms by number (a scene held there), as if freed. False
-	/// when it is not to wait as a spare.
+	/// zone and parent, and let go by everything that keeps rooms by number (a scene held there), as if freed. Answers
+	/// its owner when it is to wait as a spare, else null.
 	/// </summary>
-	private async ValueTask<bool> TidyAsync(DBRef room, bool lent, CancellationToken cancellationToken)
+	private async ValueTask<DBRef?> TidyAsync(DBRef room, bool lent, CancellationToken cancellationToken)
 	{
-		if (await mediator.Send(new GetObjectNodeQuery(room), cancellationToken) is not AnySharpObject found) return false;
+		if (await mediator.Send(new GetObjectNodeQuery(room), cancellationToken) is not AnySharpObject found) return null;
 		await UnmarkAsync(room);
-		if (!lent || !found.IsRoom) return false;
+		if (!lent || !found.IsRoom) return null;
 		await mediator.Send(new SetNameCommand(found, MarkupText.Plain(SpareName)), cancellationToken);
 		await mediator.Send(new UnsetObjectZoneCommand(found), cancellationToken);
 		await mediator.Send(new UnsetObjectParentCommand(found), cancellationToken);
@@ -201,6 +204,6 @@ public sealed class WorldRooms(
 		{
 			await cleanup.ObjectsFreedAsync([room], cancellationToken);
 		}
-		return true;
+		return (await found.Object().Owner.WithCancellation(cancellationToken)).Object.DBRef;
 	}
 }

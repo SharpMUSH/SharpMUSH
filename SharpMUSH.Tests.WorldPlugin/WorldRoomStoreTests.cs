@@ -92,13 +92,18 @@ public class WorldRoomStoreTests
 		await Assert.That(_store.Releases().Select(release => release.Room)).IsEquivalentTo([Lent]);
 
 		await _store.DropReleaseAsync(Lent);
-		await _store.AddSpareAsync(Kept, 20);
-		await _store.AddSpareAsync(Lent, 10);
-		await Assert.That(_store.Spares().Select(spare => spare.Room).ToList()).IsEquivalentTo([Lent, Kept]);
-		await Assert.That(_store.Spares()[0].Room).IsEqualTo(Lent);
-		await Assert.That(await _store.TakeSpareAsync()).IsEqualTo(Lent);
-		await Assert.That(await _store.TakeSpareAsync()).IsEqualTo(Kept);
-		await Assert.That(await _store.TakeSpareAsync()).IsNull();
+		var builder = new DBRef(10);
+		var stranger = new DBRef(11);
+		var strangers = new DBRef(4403, 4000);
+		await _store.AddSpareAsync(Kept, builder, 20);
+		await _store.AddSpareAsync(Lent, builder, 10);
+		await _store.AddSpareAsync(strangers, stranger, 5);
+		await Assert.That(_store.Spares().Select(spare => spare.Room).ToList()).IsEquivalentTo([strangers, Lent, Kept]);
+		await Assert.That(_store.Spares()[0].Room).IsEqualTo(strangers);
+		await Assert.That(await _store.TakeSpareAsync(builder)).IsEqualTo(Lent).Because("a spare is lent again only to its owner's maps");
+		await Assert.That(await _store.TakeSpareAsync(builder)).IsEqualTo(Kept);
+		await Assert.That(await _store.TakeSpareAsync(builder)).IsNull();
+		await Assert.That(await _store.TakeSpareAsync(stranger)).IsEqualTo(strangers);
 	}
 
 	[Test]
@@ -114,7 +119,7 @@ public class WorldRoomStoreTests
 			(Kept, new WorldReleaseRecord(Kept.CreationMilliseconds!.Value, false)),
 		]);
 
-		await _store.AddSpareAsync(Lent, 1);
+		await _store.AddSpareAsync(Lent, new DBRef(10), 1);
 		await _store.ObjectsFreedAsync([Lent, new DBRef(Kept.Number, 1)]);
 		await Assert.That(_store.Spares()).IsEmpty();
 		await Assert.That(_store.Releases().Select(release => release.Room)).IsEquivalentTo([Kept]).Because("a later object with its number was freed, not it");
