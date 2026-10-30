@@ -1,0 +1,3 @@
+# Third-party source kept as upstream wrote it: excluded from the repository's formatting gate.
+[*.cs]
+generated_code = true
