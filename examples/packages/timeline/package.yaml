@@ -18,7 +18,7 @@ plugins: [scene]
 # The scene package keeps the scenes and their details; this one adds two details and reads them back.
 depends:
   - package: scene
-    version: ">=1.18"
+    version: ">=1.19"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/

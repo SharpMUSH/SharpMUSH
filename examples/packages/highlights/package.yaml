@@ -19,7 +19,7 @@ plugins: [scene]
 # the Highlights Store, which goes with it.
 depends:
   - package: scene
-    version: ">=1.18"
+    version: ">=1.19"
     source:
       repo: https://github.com/SharpMUSH/SharpMUSH
       path: examples/packages/scene/
