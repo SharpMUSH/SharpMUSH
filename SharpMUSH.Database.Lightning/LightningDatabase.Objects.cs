@@ -24,11 +24,12 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Resolves the optional creation/modification stamps an importer may supply: absent means now,
 	/// and an absent modification time matches the creation time, which is what every freshly created
-	/// object has anyway.
+	/// object has anyway. No object is created at <see cref="GoneCreationTime"/> or before it, so a lock
+	/// naming a gone object never matches the next holder of its number.
 	/// </summary>
 	private static (long Created, long Modified) Timestamps(long? creationTime, long? modifiedTime)
 	{
-		var created = creationTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var created = creationTime is > GoneCreationTime ? creationTime.Value : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		return (created, modifiedTime ?? created);
 	}
 
@@ -906,13 +907,14 @@ public partial class LightningDatabase
 		CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)target.Number;
-		var modified = modifiedTime ?? creationTime;
 
 		await WriteCredentialsAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
+			// A stamp at or before GoneCreationTime keeps the one the object has, as Timestamps refuses it.
+			var created = creationTime > GoneCreationTime ? creationTime : found.Record.CreationTime;
 			tx.Put(Tables.Obj, Keys.Dbref(dbref),
-				Codec.Serialize(found.Record with { CreationTime = creationTime, ModifiedTime = modified }));
+				Codec.Serialize(found.Record with { CreationTime = created, ModifiedTime = modifiedTime ?? created }));
 		}, cancellationToken, character: target);
 	}
 

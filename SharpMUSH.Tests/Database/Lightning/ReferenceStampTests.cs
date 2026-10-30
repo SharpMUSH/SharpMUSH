@@ -53,6 +53,10 @@ public class ReferenceStampTests : LightningDatabaseFixture
 		await Db.SetLockAsync(target, "Basic", new SharpLockData { LockString = $"=#{gone.DBRef.Number}" });
 
 		await Assert.That(StoredLock(target, "Basic")).IsEqualTo($"=#{gone.DBRef.Number}:{LightningDatabase.GoneCreationTime}");
+
+		var successor = await Thing("StampHoleSuccessor", gone.DBRef.Number, LightningDatabase.GoneCreationTime);
+		await Assert.That(successor.CreationTime).IsNotEqualTo(LightningDatabase.GoneCreationTime)
+			.Because("no object is created at the time a gone lock operand carries");
 	}
 
 	[Test]
