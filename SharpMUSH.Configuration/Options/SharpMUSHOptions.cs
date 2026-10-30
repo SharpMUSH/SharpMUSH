@@ -117,7 +117,8 @@ public record SharpMUSHOptions
 			Dialect: null,
 			MuxQueueFunctions: false,
 			RhostIterSeparator: false,
-			RhostLrooms: false
+			RhostLrooms: false,
+			MuxQuiet: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

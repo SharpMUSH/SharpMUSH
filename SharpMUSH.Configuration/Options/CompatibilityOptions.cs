@@ -168,5 +168,13 @@ public record CompatibilityOptions(
 		Description = "lrooms() takes any depth, and a depth of 0 follows exits as far as they lead, as RhostMUSH does; it lists at most 1,000 rooms. Off, a depth of 0 lists nothing and the deepest is 50, as on TinyMUX",
 		Group = "RhostMUSH Compatibility",
 		Order = 8)]
-	bool RhostLrooms
+	bool RhostLrooms,
+
+	[property: SharpConfig(
+		Name = "mux_quiet",
+		Category = "Compatibility",
+		Description = "The /quiet switch of drop, get, give, goto, enter, leave and @teleport does what TinyMUX's does: it holds only on what you control and leaves out the o-message and action, give/quiet is a wizard's and leaves out the default notices, and @teleport/quiet hushes leaving and arriving but runs @move. Off, /quiet leaves out your own message and the o-message, and the action still runs. Importing a TinyMUX database turns it on",
+		Group = "TinyMUX Compatibility",
+		Order = 6)]
+	bool MuxQuiet
 );

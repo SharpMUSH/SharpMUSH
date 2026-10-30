@@ -35,9 +35,11 @@ public union ExitDestination(AnySharpContainer, ExitDestinationFailure);
 /// <summary>
 /// The three teleport modes. <c>@teleport</c> names them with switches, <c>tel()</c> with its third
 /// and fourth arguments (<c>TEL_SILENT</c> and <c>TEL_INSIDE</c>, <c>src/fundb.c:2320-2323</c>);
-/// <c>TEL_LIST</c> has no function spelling, because <c>fun_tel</c> moves one object.
+/// <c>TEL_LIST</c> has no function spelling, because <c>fun_tel</c> moves one object. <paramref name="Quiet"/> is
+/// TinyMUX's <c>@teleport/quiet</c>: the teleport triads are left out as with <paramref name="Silent"/>, and so are
+/// the messages of leaving and entering, while the MOVE triad still runs.
 /// </summary>
-public readonly record struct TeleportOptions(bool List, bool Inside, bool Silent);
+public readonly record struct TeleportOptions(bool List, bool Inside, bool Silent, bool Quiet = false);
 
 /// <summary>
 /// The services <see cref="TeleportHelpers"/> works through. Bundled rather than passed one at a
@@ -286,7 +288,7 @@ public static class TeleportHelpers
 			return;
 		}
 
-		if (!options.Silent && changesRoom)
+		if (!options.Silent && !options.Quiet && changesRoom)
 		{
 			await services.DidItService.DidIt(parser, new DidItRequest(
 				Place: MonikerPlace.Movement, Player: target, Thing: target, OWhat: "OXTPORT",
@@ -294,7 +296,8 @@ public static class TeleportHelpers
 		}
 
 		var moveResult = await services.MoveService.SafeTel(
-			parser, targetContent, destinationContainer, options.Silent, executor.Object().DBRef, "teleport");
+			parser, targetContent, destinationContainer, options.Silent, executor.Object().DBRef, "teleport",
+			options.Quiet ? MoveHush.Enter | MoveHush.Leave : MoveHush.None);
 
 		if (moveResult is Error<string> error)
 		{
@@ -302,7 +305,7 @@ public static class TeleportHelpers
 			return;
 		}
 
-		if (!options.Silent && changesRoom)
+		if (!options.Silent && !options.Quiet && changesRoom)
 		{
 			await services.DidItService.DidIt(parser, new DidItRequest(
 				Place: MonikerPlace.Movement, Player: target, Thing: target,

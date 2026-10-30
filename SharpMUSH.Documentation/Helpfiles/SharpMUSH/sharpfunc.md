@@ -232,7 +232,7 @@
 
 
 # String Functions
-  String functions take at least one string and return a transformed string, parts of a string, or a value related to the string(s).
+  These functions return part of a string, a changed copy, or a fact about it.
 
 |                          |                          |                          |                          |
 |--------------------------|--------------------------|--------------------------|--------------------------|
@@ -240,24 +240,25 @@
 | [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
 | [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
 | [CENTER()]               | [CHR()]                  | [COLUMNS()]              | [COMP()]                 |
-| [COND()]                 | [CONDALL()]              | [CRC32()]                | [DECODE64()]             |
-| [DECOMPOSE()]            | [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               |
-| [DISPLAYWIDTH()]         | [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             |
-| [ENCRYPT()]              | [ESCAPE()]               | [ESCAPEX()]              | [FLIP()]                 |
-| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
-| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
-| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
-| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
-| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] |
-| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             |
-| [SECURE()]               | [SHA0()]                 | [SPACE()]                | [SPELLNUM()]             |
-| [SQUISH()]               | [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               |
-| [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            |
-| [STRIP()]                | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               |
-| [TR()]                   | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [COND()]                 | [CONDALL()]              | [CPAD()]                 | [CRC32()]                |
+| [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         | [DECRYPT()]              |
+| [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 | [ELEMENTPOS()]           |
+| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [ESCAPEX()]              |
+| [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                |
+| [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   |
+| [IFELSE()]               | [LCSTR()]                | [LEFT()]                 | [LIT()]                  |
+| [LJUST()]                | [LPAD()]                 | [LPOS()]                 | [MERGE()]                |
+| [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
+| [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
+| [RJUST()]                | [RPAD()]                 | [SCRAMBLE()]             | [SECURE()]               |
+| [SHA0()]                 | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               |
+| [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
+| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                |
+| [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             |
+| [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
+| [URLENCODE()]            | [WRAP()]                 |                          |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -1134,6 +1135,24 @@ You say, "0"
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
+# cpad()
+`cpad(<string>, <width>[, <fill>])`
+
+  Centers `<string>` in a field `<width>` characters wide, as TinyMUX's cpad() does. The `<fill>` pattern, a space by default, repeats across the whole field from its first character, and `<string>` is laid over the middle, so the right side carries on the pattern rather than starting it again as center() does. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think cpad(a,5,-)
+--a--
+think cpad(foo,12,=+)
+=+=+foo+=+=+
+```
+
+::: seealso
+- [CENTER()]
+- [LPAD()]
+- [RPAD()]
 :::
 # crc32()
 `crc32([<string1>[, ... <stringN>]])`
@@ -3196,6 +3215,24 @@ Basic USER:ITSME Use
 ::: seealso
 - [LN()]
 :::
+# lpad()
+`lpad(<string>, <width>[, <fill>])`
+
+  Puts `<string>` at the left of a field `<width>` characters wide, as TinyMUX's lpad() does. The `<fill>` pattern, a space by default, repeats across the whole field from its first character, so the fill after `<string>` carries on from where the pattern is at that column rather than starting again as ljust() does. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think -[lpad(foo,6)]-
+-foo   -
+think lpad(foo,12,=+)
+foo+=+=+=+=+
+```
+
+::: seealso
+- [LJUST()]
+- [RPAD()]
+- [CPAD()]
+:::
 # lparent()
 `lparent(<object>)`
 
@@ -4839,6 +4876,24 @@ think floor(3.14159)
 ::: seealso
 - [BOUND()]
 - [TRUNC()]
+:::
+# rpad()
+`rpad(<string>, <width>[, <fill>])`
+
+  Puts `<string>` at the right of a field `<width>` characters wide, as TinyMUX's rpad() does. The `<fill>` pattern, a space by default, repeats from the first character of the field. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think -[rpad(foo,6)]-
+-   foo-
+think =[rpad(bar,5,.)]=
+=..bar=
+```
+
+::: seealso
+- [RJUST()]
+- [LPAD()]
+- [CPAD()]
 :::
 # s()
 # s-function

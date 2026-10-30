@@ -52,6 +52,9 @@ public class MuxComsysCommandTests
 			await Assert.That(await Think(player, $"MC-ABBREV [comalias(me,{channel[..^1]})]")).IsEqualTo("MC-ABBREV mc");
 			await Assert.That(await Think(player, $"MC-OTHER [comalias(#1,{channel})]")).IsEqualTo("MC-OTHER #-1 PERMISSION DENIED: NOT CONTROLLED");
 
+			await Assert.That(await Run(player, "comlist")).Contains(line => line.Contains(channel) && line.Contains("Herald"));
+			await Assert.That(await Run(player, "allcom who")).Contains(line => line.Contains(player.Name));
+
 			await Run(player, "allcom off");
 			await Assert.That(await Think(player, $"MC-OFF [cstatus(me,{channel})]")).Contains("GAG");
 			await Run(player, "allcom on");

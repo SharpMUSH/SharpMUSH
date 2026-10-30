@@ -55,14 +55,28 @@ public partial class Commands
 	/// <summary>TinyMUX's <c>/quiet</c> on the getting, dropping, giving and moving commands.</summary>
 	private static bool IsQuiet(IMUSHCodeParser parser) => parser.CurrentState.Switches.Contains("QUIET");
 
+	/// <summary>Whether <c>/quiet</c> does what TinyMUX's does, chosen by mux_quiet.</summary>
+	private bool MuxQuiet => Configuration.CurrentValue.Compatibility.MuxQuiet;
+
 	/// <summary>
-	/// A triad under <c>/quiet</c>: its message and o-message are left out, defaults included, and only
-	/// the action attribute runs.
+	/// Whether <c>/quiet</c> holds for a move of or through <paramref name="target"/>. TinyMUX honours it only
+	/// on what the executor controls, and otherwise the command runs as if it had not been given.
 	/// </summary>
-	private static DidItRequest Hushed(IMUSHCodeParser parser, DidItRequest request)
-		=> IsQuiet(parser)
-			? request with { What = null, Def = null, OWhat = null, ODef = null, DefaultNotification = null }
-			: request;
+	private async ValueTask<bool> QuietOver(IMUSHCodeParser parser, AnySharpObject executor, AnySharpObject target)
+		=> IsQuiet(parser) && (!MuxQuiet || await PermissionService.Controls(executor, target));
+
+	/// <summary>
+	/// A triad under <c>/quiet</c>. With mux_quiet, as TinyMUX runs it: the executor still sees its message, and
+	/// the o-message, its default included, and the action attribute are left out. Without it, the message and
+	/// o-message are left out, defaults included, and only the action attribute runs.
+	/// </summary>
+	private DidItRequest Hushed(bool quiet, DidItRequest request)
+		=> (quiet, MuxQuiet) switch
+		{
+			(false, _) => request,
+			(true, true) => request with { OWhat = null, ODef = null, AWhat = null },
+			(true, false) => request with { What = null, Def = null, OWhat = null, ODef = null, DefaultNotification = null }
+		};
 
 	[SharpCommand(Name = "DROP", Switches = ["QUIET"], Behavior = CB.Player | CB.Thing, MinArgs = 1, MaxArgs = 1, ParameterNames = ["object"])]
 	public async ValueTask<Option<CallState>> Drop(IMUSHCodeParser parser, SharpCommandAttribute _2)
@@ -130,7 +144,7 @@ public partial class Commands
 		// the room, the drop-to, home, or the drop-in refusal that moves it nowhere — so it sits
 		// after the drop-to handling rather than inside it, and it is the dropper's only success
 		// message.
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(await QuietOver(parser, executor, objectToDrop), new DidItRequest(
 			Player: executor, Thing: objectToDrop,
 			What: AttrDrop,
 			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouDrop, objectToDrop.Object().Name)),
@@ -725,7 +739,7 @@ public partial class Commands
 		// to Location(player) (predicat.c:230), so the o-message audience is the taker's own room; the
 		// source container rides in %0. The final `flags` is 0 on both get paths, so this o-message
 		// consults no interaction lock — unlike the RECEIVE triad below, which Penn gives NA_INTER_HEAR.
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(await QuietOver(parser, executor, thing), new DidItRequest(
 			Player: executor, Thing: thing,
 			What: AttrSuccess,
 			Def: MarkupText.Plain(possessive
@@ -914,13 +928,17 @@ public partial class Commands
 		var giverName = executor.Object().Name;
 		var giftName = objectToGive.Object().Name;
 		var recipientDisplayName = recipient.Object().Name;
+		// With mux_quiet, give/quiet is TinyMUX's wizard switch and leaves out only the default notices of the gift
+		// changing hands. Without it, it hushes the GIVE and SUCCESS triads.
+		var muxQuiet = MuxQuiet && IsQuiet(parser) && await executor.IsWizard();
+		var hushed = !MuxQuiet && IsQuiet(parser);
 
 		// rob.c:357-358. GIVE/OGIVE/AGIVE live on the GIVER, not on the gift: did_it_with's `thing`
 		// argument here is `player`. %0 is the gift and %1 the recipient.
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(hushed, new DidItRequest(
 			Player: executor, Thing: executor,
 			What: AttrGive,
-			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouGaveTo, giftName, recipientDisplayName)),
+			Def: muxQuiet ? null : MarkupText.Plain(string.Format(ErrorMessages.Notifications.YouGaveTo, giftName, recipientDisplayName)),
 			OWhat: AttrOGive,
 			AWhat: AttrAGive,
 			Env0: objectToGive.Object().DBRef.ToString(),
@@ -928,11 +946,14 @@ public partial class Commands
 			Interact: IPermissionService.InteractType.See)));
 
 		// rob.c:361 — the gift is told what happened to it.
-		await NotifyService.Notify(objectToGive,
-			string.Format(ErrorMessages.Notifications.GaveYouTo, giverName, recipientDisplayName));
+		if (!muxQuiet)
+		{
+			await NotifyService.Notify(objectToGive,
+				string.Format(ErrorMessages.Notifications.GaveYouTo, giverName, recipientDisplayName));
+		}
 
 		// rob.c:364-365: the GIFT's success triad, fired with the RECIPIENT as the enactor.
-		await DidItService.DidIt(parser, Hushed(parser, new DidItRequest(
+		await DidItService.DidIt(parser, Hushed(hushed, new DidItRequest(
 			Player: recipient, Thing: objectToGive,
 			What: AttrSuccess, OWhat: AttrOSuccess, AWhat: AttrASuccess)));
 
@@ -942,7 +963,7 @@ public partial class Commands
 		await DidItService.DidIt(parser, new DidItRequest(
 			Player: recipient, Thing: recipient,
 			What: AttrReceive,
-			Def: MarkupText.Plain(string.Format(ErrorMessages.Notifications.GaveYou, giverName, giftName)),
+			Def: muxQuiet ? null : MarkupText.Plain(string.Format(ErrorMessages.Notifications.GaveYou, giverName, giftName)),
 			OWhat: AttrOReceive,
 			AWhat: AttrAReceive,
 			Env0: objectToGive.Object().DBRef.ToString(),

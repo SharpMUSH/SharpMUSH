@@ -41,6 +41,8 @@ Teleportation triggers the @oxtport/@tport/@otport/@atport attributes, unless `<
 
 `/silent` suppresses exactly two things: the @tport/@otport/@atport (and @oxtport) attributes above, and the @move/@omove/@amove attributes the move itself would trigger. It does not suppress the @enter/@oenter/@aenter and @leave/@oleave/@aleave attributes, the arrival and departure messages, or the automatic look at the destination.
 
+With the `mux_quiet` @config option on, `/quiet` does what TinyMUX's does instead: it leaves out the @tport triad and @oxtport, and the messages of leaving and arriving, but runs the @move triad.
+
 As a special case, using "home" as the `<room>` has the same effect as the home command, and does not act like a normal teleport.
 
 

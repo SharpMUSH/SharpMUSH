@@ -35,13 +35,15 @@ public interface IMoveService
 	/// <param name="noMoveMsgs">Suppresses the <c>MOVE</c>/<c>OMOVE</c>/<c>AMOVE</c> triad only.</param>
 	/// <param name="enactor">The object that caused the move.</param>
 	/// <param name="cause">What caused the move, for events.</param>
+	/// <param name="hush">The sides of the move whose messages TinyMUX's <c>/quiet</c> leaves out.</param>
 	ValueTask MoveIt(
 		IMUSHCodeParser parser,
 		AnySharpContent what,
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause);
+		string cause,
+		MoveHush hush = MoveHush.None);
 
 	/// <summary>
 	/// Moves something into a container: the recursion guard, the validity checks,
@@ -71,7 +73,8 @@ public interface IMoveService
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause);
+		string cause,
+		MoveHush hush = MoveHush.None);
 
 	/// <summary>
 	/// <see cref="EnterRoom"/>, first sending home anything carried that the mover does not control,
@@ -89,7 +92,8 @@ public interface IMoveService
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause);
+		string cause,
+		MoveHush hush = MoveHush.None);
 
 	/// <summary>
 	/// Checks if a player is "in the void" (location has DBRef &lt; 0 or is unresolvable).
@@ -112,3 +116,16 @@ public interface IMoveService
 /// <param name="TooManyContainers">The walk ran out of <c>Limit.MaxDepth</c> before reaching a room —
 /// PennMUSH's <c>AMBIGUOUS</c> (<c>src/utils.c:813</c>).</param>
 public readonly record struct AbsoluteRoomResult(AnySharpContainer? Room, bool TooManyContainers = false);
+
+/// <summary>
+/// The sides of a move TinyMUX's <c>/quiet</c> leaves out (its <c>HUSH_ENTER</c> and <c>HUSH_LEAVE</c>). A hushed
+/// side keeps its action attribute and loses its messages: leaving loses LEAVE, OLEAVE (the "has left." line
+/// with it) and the destination's OXENTER; entering loses ENTER, OENTER ("has arrived.") and the source's OXLEAVE.
+/// </summary>
+[Flags]
+public enum MoveHush
+{
+	None = 0,
+	Enter = 1,
+	Leave = 2
+}
