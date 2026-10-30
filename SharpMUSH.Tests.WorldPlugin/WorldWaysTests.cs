@@ -17,8 +17,8 @@ public class WorldWaysTests
 	private WorldStore _store = null!;
 	private static readonly DBRef Map = new(4300, 1000);
 
-	/// <summary>A legend whose lava is closed.</summary>
-	private static readonly WorldLegend Legend = new(name =>
+	/// <summary>A legend whose lava is closed. One per test: a legend caches what it read and is not shared.</summary>
+	private readonly WorldLegend _legend = new(name =>
 		ValueTask.FromResult(name == "MAP`LEGEND`LAVA`CLOSED" ? "Too hot to cross." : null));
 
 	[Before(Test)]
@@ -48,7 +48,7 @@ public class WorldWaysTests
 	}
 
 	private async Task<WorldWay> Way(int x, int y, string direction, bool examine = true) =>
-		await WorldWays.WayAsync(_store, _store.Map(Map)!, Legend, Map, examine, new WorldPosition(x, y, 0), WorldWays.ParseDirection(direction)!);
+		await WorldWays.WayAsync(_store, _store.Map(Map)!, _legend, Map, examine, new WorldPosition(x, y, 0), WorldWays.ParseDirection(direction)!);
 
 	[Test]
 	public async Task AnOpenSideLeadsToThePlaceBesideIt()
