@@ -233,6 +233,32 @@ public class WorldMapReaderTests
 	}
 
 	[Test]
+	public async Task ARoomStandingOnAPlaceIsDrawnThere()
+	{
+		var wilds = Map(50, "Wilds", MapKinds.Coordinates);
+		Room(10, "Glade", wilds);
+		_values[(10, WorldMapReader.PlaceAttribute)] = "#50:0/3,-2,1";
+		Room(11, "Kept hut", wilds);
+		_values[(11, WorldMapReader.PlaceAttribute)] = "#50:0/4,4,0";
+		_values[(11, "MAP`COORDS`X")] = "9";
+		Room(12, "Stray", wilds);
+		_values[(12, WorldMapReader.PlaceAttribute)] = "#51:0/1,1,0";
+		Room(13, "Recycled", wilds);
+		_values[(13, WorldMapReader.PlaceAttribute)] = "#50:77/1,1,0";
+		var reader = new WorldMapReader(_mediator, _permissions, _reality, _attributes, _connections,
+			[new StoredPlaces(50, MapSpaces.Square)]);
+
+		var rooms = (await reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Rooms.ToDictionary(room => room.Name);
+
+		await Assert.That(rooms["Glade"].Position).IsEquivalentTo([3.0, -2.0, 1.0]);
+		await Assert.That(rooms["Kept hut"].Position).IsEquivalentTo([9.0, 0.0, 0.0]).Because("coordinates of its own win");
+		await Assert.That(rooms["Stray"].Position).IsNull().Because("its place is on another map");
+		await Assert.That(rooms["Recycled"].Position).IsNull().Because("its place is on an earlier object with this number");
+		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Rooms.Single(room => room.Name == "Glade").Position)
+			.IsNull().Because("a map no source stores has no places to stand on");
+	}
+
+	[Test]
 	public async Task CellsComeFromTheSourceThatStoresTheMap()
 	{
 		Map(50, "Wilds", MapKinds.Coordinates);

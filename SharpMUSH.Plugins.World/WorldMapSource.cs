@@ -8,8 +8,8 @@ namespace SharpMUSH.Plugins.World;
 
 /// <summary>
 /// The World map's view of the stored maps: the space a map's places are in, and a window of them as a viewer may see
-/// them. Reads only. A place whose data hides it (<c>render.hidden</c>) is left out for a viewer who may not examine
-/// the map.
+/// them. Reads only. A place whose data hides it (<c>render.hidden</c>) is drawn as its bare terrain, with none of its
+/// walls, for a viewer who may not examine the map.
 /// </summary>
 public sealed class WorldMapSource(WorldStore store, IAttributeService attributes, IPermissionService permissions) : IWorldMapSource
 {
@@ -36,7 +36,8 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 			if (!Inside(x, y) || read.Map.Type(cell.Terrain) is not { } type) continue;
 			var place = read.Places.GetValueOrDefault((x, y));
 			var data = WorldPlaceData.Parse(place?.Data);
-			if (!examine && WorldPlaceData.Hidden(data)) continue;
+			// A hidden place reads as bare terrain: nothing of the place itself shows.
+			if (!examine && WorldPlaceData.Hidden(data)) (place, data) = (null, null);
 			var terrain = await legend.TerrainAsync(type);
 			cells.Add(new MapCellDto(x, y, type)
 			{
