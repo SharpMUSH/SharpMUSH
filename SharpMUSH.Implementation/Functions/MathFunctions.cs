@@ -600,7 +600,7 @@ public partial class Functions
 			}
 			var intCount = (int)count;
 			if (intCount < 0) return new CallState(ErrorMessages.Returns.Integer);
-			return new CallState(string.Join(" ", Enumerable.Range(0, intCount)));
+			return JoinNumbers(parser, MarkupText.Space, Enumerable.Range(0, intCount).Select(number => number.ToString(CultureInfo.InvariantCulture)));
 		}
 
 		// Multi-arg: lnum(start, end[, sep[, step]])
@@ -630,25 +630,46 @@ public partial class Functions
 			&& Math.Abs(end - Math.Floor(end)) < 1e-10
 			&& Math.Abs(step - Math.Floor(step)) < 1e-10;
 
-		var results = new List<string>();
-		if (step > 0)
+		return JoinNumbers(parser, delim, Range(start, end, step)
+			.Select(i => useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : MushNumber.Unparse(i)));
+
+		static IEnumerable<double> Range(double start, double end, double step)
 		{
-			for (var i = start; i <= end + step * 0.0001; i += step)
+			if (step > 0)
 			{
-				if (i > end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : MushNumber.Unparse(i));
+				for (var i = start; i <= end + step * 0.0001; i += step)
+				{
+					if (i > end + step * 0.5) yield break;
+					yield return i;
+				}
+			}
+			else
+			{
+				for (var i = start; i >= end + step * 0.0001; i += step)
+				{
+					if (i < end + step * 0.5) yield break;
+					yield return i;
+				}
 			}
 		}
-		else
+	}
+
+	/// <summary>
+	/// lnum()'s numbers joined by <paramref name="delimiter"/>, refused as soon as they would pass the output
+	/// limit, so a huge range is never built in memory.
+	/// </summary>
+	private static CallState JoinNumbers(IMUSHCodeParser parser, MString delimiter, IEnumerable<string> numbers)
+	{
+		var results = new List<string>();
+		var length = 0L;
+		foreach (var number in numbers)
 		{
-			for (var i = start; i >= end + step * 0.0001; i += step)
-			{
-				if (i < end + step * 0.5) break;
-				results.Add(useIntegers ? ((long)Math.Round(i)).ToString(CultureInfo.InvariantCulture) : MushNumber.Unparse(i));
-			}
+			length += number.Length + (results.Count > 0 ? delimiter.Length : 0);
+			if (FunctionLimits.ExceedsOutput(parser.CurrentState, length)) return FunctionLimits.RejectOutput(parser.CurrentState);
+			results.Add(number);
 		}
 
-		return new CallState(MarkupText.Join(delim, results.Select(MarkupText.Plain)));
+		return new CallState(MarkupText.Join(delimiter, results.Select(MarkupText.Plain)));
 	}
 
 
