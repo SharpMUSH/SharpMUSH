@@ -1965,10 +1965,6 @@
     <value>uppkopplad</value>
     <comment>MT — corpus term; overrides the modern loanword 'online'.</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>Mer</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, innehåller den här sidan</value>
     <comment>MT</comment>

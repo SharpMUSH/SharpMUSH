@@ -13,12 +13,12 @@
 @inject IAuthorizationService Authorization
 @inject PortalNavigation Navigation
 @inject IJSRuntime JS
-@implements IAsyncDisposable
+@implements IDisposable
 
 @* D1 §3 rail (desktop): 72px, the logo (the link home), the game's navigation groups (PortalNavigation:
    an inline group is a labelled list with one icon per destination, a section group one icon for its first
-   destination, a pop-out group one button opening its list beside the rail; the groups that do not fit go into
-   More, a pop-out of its own), then, then Build & manage when anything in it is visible to the viewer, search (the
+   destination, a pop-out group one button opening its list beside the rail; the groups scroll when the rail is
+   too short for them, and the current page's button is scrolled into view), then Build & manage when anything in it is visible to the viewer, search (the
    command palette), the terminal toggle, the language, and the account. Each item is 44×44, radius 14; the
    current section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
    the rail and keeps the drawer (NavMenu) and bottom tab bar. *@
@@ -33,7 +33,7 @@
         @for (var i = 0; i < _nav.Groups.Count; i++)
         {
             var group = _nav.Groups[i];
-            <li class="phosphor-rail-group @(i >= _fit ? "phosphor-rail-group--overflow" : null)" data-group="@group.Id" @key="group.Id">
+            <li class="phosphor-rail-group" data-group="@group.Id" @key="group.Id">
                 @if (group.Mode == NavGroupModes.Inline)
                 {
                     <span class="phosphor-rail-group-label" aria-hidden="true">@group.Label</span>
@@ -46,18 +46,12 @@
                 }
                 else if (group.Mode == NavGroupModes.Flyout)
                 {
-                    <NavRailFlyout Id="@group.Id" Label="@group.Label" Groups="[group]" Icon="@(group.OwnIcon ? group.OutlineIcon : null)" Path="@_path" />
+                    <NavRailFlyout Group="group" Icon="@(group.OwnIcon ? group.OutlineIcon : null)" Path="@_path" />
                 }
                 else
                 {
                     @Item(group.Items[0].Href, group.OutlineIcon, group.Label, group.IsCurrent(_path))
                 }
-            </li>
-        }
-        @if (_fit < _nav.Groups.Count)
-        {
-            <li class="phosphor-rail-group" data-more @key="MoreKey">
-                <NavRailFlyout Id="overflow.more" Label="@Loc["NavMore"]" Icon="@Icons.Material.Outlined.MoreHoriz" Groups="@(_nav.Groups.Skip(_fit).ToList())" Path="@_path" />
             </li>
         }
     </ul>
@@ -94,14 +88,10 @@
 
     private ResolvedNav _nav = ResolvedNav.Empty;
 
-    // How many groups the rail has room for (layout.js watchRailFit); the rest are in More. All of them until
-    // measured, and again whenever the groups change, so each is drawn and measured once.
-    private int _fit = int.MaxValue;
-    private bool _remeasure;
+    // The groups list scrolls; after a render that changed the page or the groups, layout.js scrolls the
+    // current page's button into view.
     private ElementReference _groupList;
-    private IJSObjectReference? _fitWatch;
-    private DotNetObjectReference<NavRail>? _selfRef;
-    private const string MoreKey = "\u0000more";
+    private bool _reveal = true;
     private IReadOnlyList<BuildNavCatalog.Entry> _build = [];
     private IReadOnlyList<PortalApplication> _buildApps = [];
     private bool _playActive;
@@ -192,7 +182,7 @@
     {
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
         _nav = await Navigation.ResolveAsync(user);
-        (_fit, _remeasure) = (int.MaxValue, true);
+        _reveal = true;
         _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
         var apps = await Registry.ListAsync();
         _buildApps = [.. PortalNavSections.AppsForSection(apps, user, "Build"), .. PortalNavSections.AppsForSection(apps, user, "Manage")];
@@ -207,6 +197,7 @@
     private void OnLocationChanged(object? sender, LocationChangedEventArgs e) => InvokeAsync(() =>
     {
         Locate();
+        _reveal = true;
         if (IsUnder("/play")) _playUnread = false;
         StateHasChanged();
     });
@@ -239,49 +230,20 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!_reveal) return;
+        _reveal = false;
         try
         {
-            if (firstRender)
-            {
-                _selfRef = DotNetObjectReference.Create(this);
-                _fitWatch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchRailFit", _groupList, _selfRef);
-                _remeasure = false;
-            }
-            else if (_remeasure && _fitWatch is not null)
-            {
-                _remeasure = false;
-                await _fitWatch.InvokeVoidAsync("measure", true);
-            }
+            await JS.InvokeVoidAsync("sharpmushLayout.revealRailCurrent", _groupList);
         }
         catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException)
         {
-            // No layout script (a test): every group stays on the rail.
+            // No layout script (a test): the list stays where it is.
         }
     }
 
-    /// <summary>layout.js: how many groups fit since the rail changed height or the groups were drawn again.</summary>
-    [JSInvokable]
-    public Task OnRailFit(int fit) => InvokeAsync(() =>
+    public void Dispose()
     {
-        if (fit == _fit) return;
-        _fit = fit;
-        StateHasChanged();
-    });
-
-    public async ValueTask DisposeAsync()
-    {
-        if (_fitWatch is not null)
-        {
-            try
-            {
-                await _fitWatch.InvokeVoidAsync("dispose");
-                await _fitWatch.DisposeAsync();
-            }
-            catch (JSDisconnectedException)
-            {
-            }
-        }
-        _selfRef?.Dispose();
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;

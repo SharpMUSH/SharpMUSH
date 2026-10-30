@@ -371,28 +371,44 @@ public class NavRailTests : TrackingBunitContext
 	}
 
 	/// <summary>
-	/// The groups the rail has no room for go into More, a pop-out of their own that lists each under its name; the
-	/// ones that fit stay where they were.
+	/// Every group stays on the rail, however many there are: the list scrolls instead, and the current page's
+	/// button is scrolled into view when the page changes, not on every render.
 	/// </summary>
 	[Test]
-	public async Task TheGroupsThatDoNotFit_GoIntoMore()
+	public async Task EveryGroupStaysOnTheRail_AndTheCurrentPageIsScrolledIntoView()
 	{
 		StoreCommunityPopOut();
 		var cut = RenderWithPopoversAt("/wiki");
 		cut.WaitForElement("button.phosphor-rail-flyout-btn", TimeSpan.FromSeconds(5));
-		await Assert.That(cut.FindAll("[data-more]")).IsEmpty().Because("everything fits until measured otherwise");
+		await Assert.That(cut.FindAll("li.phosphor-rail-group[data-group]").Select(li => li.GetAttribute("data-group")))
+			.IsEquivalentTo(["play", "world", "community"]);
 
-		var rail = cut.FindComponent<NavRail>();
-		await rail.InvokeAsync(() => rail.Instance.OnRailFit(1));
+		int Reveals() => JSInterop.Invocations.Count(i => i.Identifier == "sharpmushLayout.revealRailCurrent");
+		cut.WaitForState(() => Reveals() > 0);
+		var before = Reveals();
 
-		await Assert.That(cut.FindAll("li.phosphor-rail-group:not(.phosphor-rail-group--overflow)[data-group]").Select(li => li.GetAttribute("data-group")))
-			.IsEquivalentTo(["play"]);
-		var more = cut.Find("[data-more] button.phosphor-rail-flyout-btn");
-		await Assert.That(more.GetAttribute("aria-label")).IsEqualTo("NavFlyoutHoldsCurrent(NavMore)").Because("the wiki is in a group inside it");
+		await cut.Find("button.phosphor-rail-flyout-btn").ClickAsync();
+		await Assert.That(Reveals()).IsEqualTo(before).Because("opening a pop-out does not move the list");
 
-		await more.ClickAsync();
+		Services.GetRequiredService<BunitNavigationManager>().NavigateTo("/apps/highlights");
+		cut.WaitForState(() => Reveals() > before);
+	}
+	/// <summary>
+	/// An open pop-out closes when the rail's groups scroll its button out of sight; opening it is what starts the
+	/// watch.
+	/// </summary>
+	[Test]
+	public async Task ScrollingItsButtonOutOfSight_ClosesAnOpenPopOut()
+	{
+		StoreCommunityPopOut();
+		var cut = RenderWithPopoversAt("/");
+		await cut.WaitForElement("button.phosphor-rail-flyout-btn", TimeSpan.FromSeconds(5)).ClickAsync();
+		cut.WaitForElement("ul[aria-label='Community']");
+		cut.WaitForState(() => JSInterop.Invocations.Any(i => i.Identifier == "sharpmushLayout.closeOnRailScroll"));
 
-		cut.WaitForElement("#rail-flyout-overflow\\.more ul[aria-label='NavSectionWorld'] a[href='/wiki']");
-		await Assert.That(cut.FindAll("#rail-flyout-overflow\\.more ul[aria-label='Community'] a").Count).IsEqualTo(2);
+		var flyout = cut.FindComponent<NavRailFlyout>();
+		await flyout.InvokeAsync(() => flyout.Instance.OnRailScrolled());
+
+		cut.WaitForState(() => cut.Find("button.phosphor-rail-flyout-btn").GetAttribute("aria-expanded") == "false");
 	}
 }

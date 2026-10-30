@@ -1965,10 +1965,6 @@
     <value>online</value>
     <comment>MT</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>Mai mult</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, conține această pagină</value>
     <comment>MT</comment>

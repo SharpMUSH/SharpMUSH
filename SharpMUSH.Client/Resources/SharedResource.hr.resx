@@ -1965,10 +1965,6 @@
     <value>na mreži</value>
     <comment>MT</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>Više</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, sadrži ovu stranicu</value>
     <comment>MT</comment>

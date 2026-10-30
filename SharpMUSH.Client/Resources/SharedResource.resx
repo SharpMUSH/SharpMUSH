@@ -3669,9 +3669,6 @@
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, holds this page</value>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>More</value>
-  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Play session active</value>
   </data>

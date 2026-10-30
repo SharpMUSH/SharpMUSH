@@ -1965,10 +1965,6 @@
     <value>онлайн</value>
     <comment>MT</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>Още</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, съдържа тази страница</value>
     <comment>MT</comment>
