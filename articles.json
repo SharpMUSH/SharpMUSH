@@ -16393,6 +16393,22 @@
           "@world/data/merge",
           "@world/data/clear"
         ]
+      },
+      {
+        "id": "world-room",
+        "lookup": "@world room",
+        "heading": "Rooms on a map",
+        "aliases": [
+          "@world/room"
+        ]
+      },
+      {
+        "id": "world-sweep",
+        "lookup": "@world sweep",
+        "heading": "Lent rooms",
+        "aliases": [
+          "@world/sweep"
+        ]
       }
     ],
     "file": "world-command.md",
@@ -16420,6 +16436,18 @@
         "id": "worlddraw",
         "lookup": "worlddraw()",
         "heading": "worlddraw()",
+        "aliases": []
+      },
+      {
+        "id": "worldroom",
+        "lookup": "worldroom()",
+        "heading": "worldroom()",
+        "aliases": []
+      },
+      {
+        "id": "worldplace",
+        "lookup": "worldplace()",
+        "heading": "worldplace()",
         "aliases": []
       }
     ],
