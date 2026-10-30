@@ -455,6 +455,36 @@ public class MovementCommandTests
 	}
 
 	/// <summary>
+	/// PennMUSH reads a variable exit's link from Destination(), which no permission guards: a mover who may not
+	/// read the exit's attributes goes through it all the same.
+	/// </summary>
+	[Test]
+	public async ValueTask VariableExitTakesAMoverWhoCannotExamineIt()
+	{
+		var builder = await CreateTestPlayerAsync("VarDestBuilder");
+		var walker = await CreateTestPlayerAsync("VarDestWalker");
+
+		var sourceResult = await Parser.CommandParse(builder.Handle, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("VarWalkSource")}"));
+		var sourceDbRef = sourceResult.Message.ToPlainText()!.Trim();
+		var destResult = await Parser.CommandParse(builder.Handle, ConnectionService,
+			MarkupText.Plain($"@dig {TestIsolationHelpers.GenerateUniqueName("VarWalkTarget")}"));
+		var destDbRef = destResult.Message.ToPlainText()!.Trim();
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {builder.DbRef}={sourceDbRef}"));
+		var exitName = TestIsolationHelpers.GenerateUniqueName("VarWalkExit");
+		await Parser.CommandParse(builder.Handle, ConnectionService, MarkupText.Plain($"@open {exitName}"));
+		await Parser.CommandParse(builder.Handle, ConnectionService, MarkupText.Plain($"@link {exitName}=variable"));
+		await Parser.CommandParse(builder.Handle, ConnectionService, MarkupText.Plain($"&DESTINATION {exitName}={destDbRef}"));
+
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"@tel {walker.DbRef}={sourceDbRef}"));
+		await Parser.CommandParse(walker.Handle, ConnectionService, MarkupText.Plain(exitName));
+
+		var location = await Mediator.Send(new GetLocationQuery(walker.DbRef));
+		await Assert.That(location.WithExitOption().Expect<AnySharpObject>().Object().DBRef.ToString()).IsEqualTo(destDbRef);
+	}
+
+	/// <summary>
 	/// PennMUSH <c>find_var_dest</c> uses <c>call_attrib</c>, so <c>DESTINATION</c> is softcode that is
 	/// evaluated — that is the whole point of a variable exit.
 	/// </summary>
