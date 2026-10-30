@@ -22,7 +22,8 @@ public partial class LightningDatabase
 	internal const string ReferenceStampMigrationId = "0009_reference_stamps";
 
 	/// <summary>
-	/// <paramref name="key"/> with each object it names by a bare <c>#N</c> written as that object's objid. A
+	/// <paramref name="key"/> with each object it names by a bare <c>#N</c> written as that object's objid, or as
+	/// the objid of the recover entry holding the number, so the lock admits it again once recovered. A
 	/// number below the counter that holds nothing was an object once, so it is written with
 	/// <see cref="GoneCreationTime"/> and fails for whatever holds the number next. A number the counter has not
 	/// reached yet is kept as written: an import sets locks that name objects it is still to create.
@@ -32,6 +33,7 @@ public partial class LightningDatabase
 			? LockKeyReferences.Rewrite(key, number => ReadObjectHeader(tx, number) switch
 			{
 				{ } header => $"#{number}:{header.CreationTime}",
+				null when ReadRecover(tx, number) is { } held => $"#{number}:{held.Object.CreationTime}",
 				null when number < ReadNextDbref(tx) => $"#{number}:{GoneCreationTime}",
 				null => null
 			})
