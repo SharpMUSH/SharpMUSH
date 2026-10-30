@@ -128,7 +128,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			// off the map with it when the place is hidden from the viewer.
 			var place = source is null ? null : PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map);
 			var at = await NumbersAsync(room, room, position, ct);
-			if (at is null && place is not null && source is not null)
+			if (at is null && source is not null && place is not null)
 			{
 				if (await source.HiddenAsync(viewer, map, (int)place[0], (int)place[1], (int)place[2], ct)) continue;
 				at = place;
