@@ -88,7 +88,25 @@ public partial class SharpMUSHParser
 	{
 		IFunctionContext function() => SoftcodeTree.Rule<IFunctionContext>(this, 0);
 		ICallTailContext callTail() => SoftcodeTree.Rule<ICallTailContext>(this, 0);
-		IExplicitEvaluationStringContext explicitEvaluationString() => SoftcodeTree.Rule<IExplicitEvaluationStringContext>(this, 0);
+		IBracePatternContext[] bracePattern() => SoftcodeTree.Rules<IBracePatternContext>(this);
+		IBracePatternContext bracePattern(int i) => SoftcodeTree.Rule<IBracePatternContext>(this, i);
+		IBracketPatternContext[] bracketPattern() => SoftcodeTree.Rules<IBracketPatternContext>(this);
+		IBracketPatternContext bracketPattern(int i) => SoftcodeTree.Rule<IBracketPatternContext>(this, i);
+		IBeginGenericTextContext beginGenericText() => SoftcodeTree.Rule<IBeginGenericTextContext>(this, 0);
+		ITerminalNode[] PERCENT() => SoftcodeTree.Tokens(this, SharpMUSHParser.PERCENT);
+		ITerminalNode PERCENT(int i) => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT, i);
+		IComplexSubstitutionSymbolContext[] complexSubstitutionSymbol() => SoftcodeTree.Rules<IComplexSubstitutionSymbolContext>(this);
+		IComplexSubstitutionSymbolContext complexSubstitutionSymbol(int i) => SoftcodeTree.Rule<IComplexSubstitutionSymbolContext>(this, i);
+		SubstitutionSymbolContext[] substitutionSymbol() => SoftcodeTree.Rules<SubstitutionSymbolContext>(this);
+		SubstitutionSymbolContext substitutionSymbol(int i) => SoftcodeTree.Rule<SubstitutionSymbolContext>(this, i);
+		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
+		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
+		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
+		IterationTokenContext iterationToken(int i) => SoftcodeTree.Rule<IterationTokenContext>(this, i);
+		SwitchSubjectContext[] switchSubject() => SoftcodeTree.Rules<SwitchSubjectContext>(this);
+		SwitchSubjectContext switchSubject(int i) => SoftcodeTree.Rule<SwitchSubjectContext>(this, i);
+		IGenericTextContext[] genericText() => SoftcodeTree.Rules<IGenericTextContext>(this);
+		IGenericTextContext genericText(int i) => SoftcodeTree.Rule<IGenericTextContext>(this, i);
 	}
 
 	/// <summary>Every <c>explicitEvaluationString__*</c> rule.</summary>
@@ -101,8 +119,10 @@ public partial class SharpMUSHParser
 		IBeginGenericTextContext beginGenericText() => SoftcodeTree.Rule<IBeginGenericTextContext>(this, 0);
 		ITerminalNode[] PERCENT() => SoftcodeTree.Tokens(this, SharpMUSHParser.PERCENT);
 		ITerminalNode PERCENT(int i) => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT, i);
-		IValidSubstitutionContext[] validSubstitution() => SoftcodeTree.Rules<IValidSubstitutionContext>(this);
-		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
+		IComplexSubstitutionSymbolContext[] complexSubstitutionSymbol() => SoftcodeTree.Rules<IComplexSubstitutionSymbolContext>(this);
+		IComplexSubstitutionSymbolContext complexSubstitutionSymbol(int i) => SoftcodeTree.Rule<IComplexSubstitutionSymbolContext>(this, i);
+		SubstitutionSymbolContext[] substitutionSymbol() => SoftcodeTree.Rules<SubstitutionSymbolContext>(this);
+		SubstitutionSymbolContext substitutionSymbol(int i) => SoftcodeTree.Rule<SubstitutionSymbolContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
@@ -122,8 +142,10 @@ public partial class SharpMUSHParser
 		IBracketPatternContext bracketPattern(int i) => SoftcodeTree.Rule<IBracketPatternContext>(this, i);
 		ITerminalNode[] PERCENT() => SoftcodeTree.Tokens(this, SharpMUSHParser.PERCENT);
 		ITerminalNode PERCENT(int i) => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT, i);
-		IValidSubstitutionContext[] validSubstitution() => SoftcodeTree.Rules<IValidSubstitutionContext>(this);
-		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
+		IComplexSubstitutionSymbolContext[] complexSubstitutionSymbol() => SoftcodeTree.Rules<IComplexSubstitutionSymbolContext>(this);
+		IComplexSubstitutionSymbolContext complexSubstitutionSymbol(int i) => SoftcodeTree.Rule<IComplexSubstitutionSymbolContext>(this, i);
+		SubstitutionSymbolContext[] substitutionSymbol() => SoftcodeTree.Rules<SubstitutionSymbolContext>(this);
+		SubstitutionSymbolContext substitutionSymbol(int i) => SoftcodeTree.Rule<SubstitutionSymbolContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
@@ -143,8 +165,10 @@ public partial class SharpMUSHParser
 		IBracketPatternContext bracketPattern(int i) => SoftcodeTree.Rule<IBracketPatternContext>(this, i);
 		ITerminalNode[] PERCENT() => SoftcodeTree.Tokens(this, SharpMUSHParser.PERCENT);
 		ITerminalNode PERCENT(int i) => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT, i);
-		IValidSubstitutionContext[] validSubstitution() => SoftcodeTree.Rules<IValidSubstitutionContext>(this);
-		IValidSubstitutionContext validSubstitution(int i) => SoftcodeTree.Rule<IValidSubstitutionContext>(this, i);
+		IComplexSubstitutionSymbolContext[] complexSubstitutionSymbol() => SoftcodeTree.Rules<IComplexSubstitutionSymbolContext>(this);
+		IComplexSubstitutionSymbolContext complexSubstitutionSymbol(int i) => SoftcodeTree.Rule<IComplexSubstitutionSymbolContext>(this, i);
+		SubstitutionSymbolContext[] substitutionSymbol() => SoftcodeTree.Rules<SubstitutionSymbolContext>(this);
+		SubstitutionSymbolContext substitutionSymbol(int i) => SoftcodeTree.Rule<SubstitutionSymbolContext>(this, i);
 		IRegexpCaptureContext[] regexpCapture() => SoftcodeTree.Rules<IRegexpCaptureContext>(this);
 		IRegexpCaptureContext regexpCapture(int i) => SoftcodeTree.Rule<IRegexpCaptureContext>(this, i);
 		IterationTokenContext[] iterationToken() => SoftcodeTree.Rules<IterationTokenContext>(this);
@@ -191,13 +215,6 @@ public partial class SharpMUSHParser
 		ITerminalNode CCARET() => SoftcodeTree.Token(this, SharpMUSHParser.CCARET, 0);
 	}
 
-	/// <summary>Every <c>validSubstitution__*</c> rule.</summary>
-	public interface IValidSubstitutionContext : ISoftcodeContext
-	{
-		IComplexSubstitutionSymbolContext complexSubstitutionSymbol() => SoftcodeTree.Rule<IComplexSubstitutionSymbolContext>(this, 0);
-		SubstitutionSymbolContext substitutionSymbol() => SoftcodeTree.Rule<SubstitutionSymbolContext>(this, 0);
-	}
-
 	/// <summary>Every <c>complexSubstitutionSymbol__*</c> rule.</summary>
 	public interface IComplexSubstitutionSymbolContext : ISoftcodeContext
 	{
@@ -224,8 +241,19 @@ public partial class SharpMUSHParser
 	/// <summary>Every <c>genericText__*</c> rule.</summary>
 	public interface IGenericTextContext : ISoftcodeContext
 	{
-		IBeginGenericTextContext beginGenericText() => SoftcodeTree.Rule<IBeginGenericTextContext>(this, 0);
+		ITerminalNode EQUALS() => SoftcodeTree.Token(this, SharpMUSHParser.EQUALS, 0);
+		ITerminalNode CCARET() => SoftcodeTree.Token(this, SharpMUSHParser.CCARET, 0);
+		ITerminalNode OPAREN() => SoftcodeTree.Token(this, SharpMUSHParser.OPAREN, 0);
+		EscapedTextContext escapedText() => SoftcodeTree.Rule<EscapedTextContext>(this, 0);
+		ITerminalNode OTHER() => SoftcodeTree.Token(this, SharpMUSHParser.OTHER, 0);
+		ITerminalNode DOLLAR() => SoftcodeTree.Token(this, SharpMUSHParser.DOLLAR, 0);
+		ITerminalNode HASH() => SoftcodeTree.Token(this, SharpMUSHParser.HASH, 0);
+		ITerminalNode PERCENT_AT_END() => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT_AT_END, 0);
+		AnsiContext ansi() => SoftcodeTree.Rule<AnsiContext>(this, 0);
 		ITerminalNode FUNCHAR() => SoftcodeTree.Token(this, SharpMUSHParser.FUNCHAR, 0);
+		ITerminalNode SEMICOLON() => SoftcodeTree.Token(this, SharpMUSHParser.SEMICOLON, 0);
+		ITerminalNode COMMAWS() => SoftcodeTree.Token(this, SharpMUSHParser.COMMAWS, 0);
+		ITerminalNode CPAREN() => SoftcodeTree.Token(this, SharpMUSHParser.CPAREN, 0);
 	}
 
 	/// <summary>Every <c>beginGenericText__*</c> rule.</summary>
@@ -241,8 +269,8 @@ public partial class SharpMUSHParser
 		ITerminalNode PERCENT_AT_END() => SoftcodeTree.Token(this, SharpMUSHParser.PERCENT_AT_END, 0);
 		AnsiContext ansi() => SoftcodeTree.Rule<AnsiContext>(this, 0);
 		ITerminalNode SEMICOLON() => SoftcodeTree.Token(this, SharpMUSHParser.SEMICOLON, 0);
-		ITerminalNode COMMAWS() => SoftcodeTree.Token(this, SharpMUSHParser.COMMAWS, 0);
 		ITerminalNode CPAREN() => SoftcodeTree.Token(this, SharpMUSHParser.CPAREN, 0);
+		ITerminalNode COMMAWS() => SoftcodeTree.Token(this, SharpMUSHParser.COMMAWS, 0);
 	}
 
 	public partial class AnsiContext : ISoftcodeContext;
@@ -250,10 +278,6 @@ public partial class SharpMUSHParser
 	public partial class BeginGenericText__Call_EA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Call_SEAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Call_SEA_GContext : IBeginGenericTextContext;
-	public partial class BeginGenericText__Group_CEA_GContext : IBeginGenericTextContext;
-	public partial class BeginGenericText__Group_SCEA_GContext : IBeginGenericTextContext;
-	public partial class BeginGenericText__TopGroup_SCA_GContext : IBeginGenericTextContext;
-	public partial class BeginGenericText__TopGroup_SCE_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RCEAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RCEA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RSCAContext : IBeginGenericTextContext;
@@ -265,7 +289,6 @@ public partial class SharpMUSHParser
 	public partial class BeginGenericText__Top_RSEAContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__Top_RSEA_GContext : IBeginGenericTextContext;
 	public partial class BeginGenericText__OpenContext : IBeginGenericTextContext;
-	public partial class BeginGenericText__CloseContext : IBeginGenericTextContext;
 	public partial class BraceExplicitEvaluationString__Top_RSCEContext : IBraceExplicitEvaluationStringContext;
 	public partial class BraceExplicitEvaluationString__Top_RSCEAContext : IBraceExplicitEvaluationStringContext;
 	public partial class BraceExplicitEvaluationString__Top_RSCEA_GContext : IBraceExplicitEvaluationStringContext;
@@ -321,21 +344,8 @@ public partial class SharpMUSHParser
 	public partial class EvaluationString__Top_RSEAContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RSEA_GContext : IEvaluationStringContext;
 	public partial class EvaluationString__Top_RSEA_G_closedContext : IEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Call_EAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Call_EA_GContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Call_SEAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Call_SEA_GContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RCEAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RCEA_GContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSCAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSCA_GContext : IExplicitEvaluationStringContext;
 	public partial class ExplicitEvaluationString__Top_RSCEContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSCEAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSCEA_GContext : IExplicitEvaluationStringContext;
 	public partial class ExplicitEvaluationString__Top_RSCE_GContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSEAContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSEA_GContext : IExplicitEvaluationStringContext;
-	public partial class ExplicitEvaluationString__Top_RSEA_G_closedContext : IExplicitEvaluationStringContext;
 	public partial class Function__Call_EAContext : IFunctionContext;
 	public partial class Function__Call_EA_GContext : IFunctionContext;
 	public partial class Function__Call_SEAContext : IFunctionContext;
@@ -387,8 +397,6 @@ public partial class SharpMUSHParser
 	public partial class StartSingleCommandString__GContext : IStartSingleCommandStringContext;
 	public partial class SubstitutionSymbolContext : ISoftcodeContext;
 	public partial class SwitchSubjectContext : ISoftcodeContext;
-	public partial class ValidSubstitution__Top_RSCEContext : IValidSubstitutionContext;
-	public partial class ValidSubstitution__Top_RSCE_GContext : IValidSubstitutionContext;
 
 	/// <summary>Parses from <c>startSingleCommandString</c>, or <c>startSingleCommandString__G</c> under <see cref="ParenGroups"/>.</summary>
 	public IStartSingleCommandStringContext StartSingleCommandString() => ParenGroups ? startSingleCommandString__G() : startSingleCommandString();
@@ -436,7 +444,6 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public virtual TResult VisitBracePattern([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IBracePatternContext context) => VisitChildren(context);
 	public virtual TResult VisitBracketPattern([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IBracketPatternContext context) => VisitChildren(context);
 	public virtual TResult VisitRegexpCapture([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IRegexpCaptureContext context) => VisitChildren(context);
-	public virtual TResult VisitValidSubstitution([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IValidSubstitutionContext context) => VisitChildren(context);
 	public virtual TResult VisitComplexSubstitutionSymbol([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IComplexSubstitutionSymbolContext context) => VisitChildren(context);
 	public virtual TResult VisitGenericText([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IGenericTextContext context) => VisitChildren(context);
 	public virtual TResult VisitBeginGenericText([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.IBeginGenericTextContext context) => VisitChildren(context);
@@ -445,10 +452,6 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitBeginGenericText__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_EA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_SEAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Call_SEA_GContext context) => VisitBeginGenericText(context);
-	public override TResult VisitBeginGenericText__Group_CEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Group_CEA_GContext context) => VisitBeginGenericText(context);
-	public override TResult VisitBeginGenericText__Group_SCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Group_SCEA_GContext context) => VisitBeginGenericText(context);
-	public override TResult VisitBeginGenericText__TopGroup_SCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__TopGroup_SCA_GContext context) => VisitBeginGenericText(context);
-	public override TResult VisitBeginGenericText__TopGroup_SCE_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__TopGroup_SCE_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCEAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RCEA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSCAContext context) => VisitBeginGenericText(context);
@@ -460,7 +463,6 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitBeginGenericText__Top_RSEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSEAContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Top_RSEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__Top_RSEA_GContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBeginGenericText__Open([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__OpenContext context) => VisitBeginGenericText(context);
-	public override TResult VisitBeginGenericText__Close([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BeginGenericText__CloseContext context) => VisitBeginGenericText(context);
 	public override TResult VisitBraceExplicitEvaluationString__Top_RSCE([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BraceExplicitEvaluationString__Top_RSCEContext context) => VisitBraceExplicitEvaluationString(context);
 	public override TResult VisitBraceExplicitEvaluationString__Top_RSCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BraceExplicitEvaluationString__Top_RSCEAContext context) => VisitBraceExplicitEvaluationString(context);
 	public override TResult VisitBraceExplicitEvaluationString__Top_RSCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.BraceExplicitEvaluationString__Top_RSCEA_GContext context) => VisitBraceExplicitEvaluationString(context);
@@ -507,21 +509,8 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitEvaluationString__Top_RSEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSEAContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RSEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSEA_GContext context) => VisitEvaluationString(context);
 	public override TResult VisitEvaluationString__Top_RSEA_G_closed([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.EvaluationString__Top_RSEA_G_closedContext context) => VisitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Call_EA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Call_EAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Call_EA_GContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Call_SEAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Call_SEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Call_SEA_GContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RCEAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RCEA_GContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSCA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSCA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCA_GContext context) => VisitExplicitEvaluationString(context);
 	public override TResult VisitExplicitEvaluationString__Top_RSCE([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCEContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSCEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCEAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSCEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCEA_GContext context) => VisitExplicitEvaluationString(context);
 	public override TResult VisitExplicitEvaluationString__Top_RSCE_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSCE_GContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSEAContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSEA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSEA_GContext context) => VisitExplicitEvaluationString(context);
-	public override TResult VisitExplicitEvaluationString__Top_RSEA_G_closed([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ExplicitEvaluationString__Top_RSEA_G_closedContext context) => VisitExplicitEvaluationString(context);
 	public override TResult VisitFunction__Call_EA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.Function__Call_EAContext context) => VisitFunction(context);
 	public override TResult VisitFunction__Call_EA_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.Function__Call_EA_GContext context) => VisitFunction(context);
 	public override TResult VisitFunction__Call_SEA([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.Function__Call_SEAContext context) => VisitFunction(context);
@@ -562,6 +551,4 @@ public abstract class SharpMUSHParserRuleVisitor<TResult> : SharpMUSHParserBaseV
 	public override TResult VisitStartPlainString__G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.StartPlainString__GContext context) => VisitStartPlainString(context);
 	public override TResult VisitStartSingleCommandString([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.StartSingleCommandStringContext context) => VisitStartSingleCommandString(context);
 	public override TResult VisitStartSingleCommandString__G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.StartSingleCommandString__GContext context) => VisitStartSingleCommandString(context);
-	public override TResult VisitValidSubstitution__Top_RSCE([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ValidSubstitution__Top_RSCEContext context) => VisitValidSubstitution(context);
-	public override TResult VisitValidSubstitution__Top_RSCE_G([Antlr4.Runtime.Misc.NotNull] SharpMUSHParser.ValidSubstitution__Top_RSCE_GContext context) => VisitValidSubstitution(context);
 }
