@@ -26,9 +26,8 @@ inactive. The existing plugin boot catalog records load/state failures. This plu
 and routes and is not hot-unloadable; changing availability requires restart. Generic game readiness
 continues to describe the game, not every optional transport.
 
-The classes retain their `SharpMUSH.Server.Mcp` namespace for source compatibility, but their assembly
-is now `SharpMUSH.Plugins.Mcp`. Internal consumers must reference that project/assembly; the host must
-not link it. JSON tool names, arguments and result DTOs are unchanged. Cancellation is SDK-injected,
+The classes are in the `SharpMUSH.Server.Mcp` namespace and the `SharpMUSH.Plugins.Mcp` assembly.
+Internal consumers reference that project/assembly; the host must not link it. Cancellation is SDK-injected,
 not a wire argument. See [document/resource limits](../docs/design/mcp-document-limits.md).
 
 Analysis deadlines are cooperative. An uncooperative call can overrun the deadline while holding its

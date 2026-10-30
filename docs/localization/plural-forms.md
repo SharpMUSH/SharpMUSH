@@ -139,11 +139,9 @@ The fix was structural, not lexical: the key became `MemberSince`
 the same move whenever a value's grammar depends on something the caller does
 not know.
 
-## Keys to convert
+## Count-bearing keys
 
-All count-bearing values have now been converted; the list below is no longer
-reproduced here, because a hand-maintained copy went stale the first time a key
-was added. Regenerate it instead:
+Every count-bearing value uses plural forms. List them with:
 
 ```bash
 python3 tools/i18n/validate_resx.py --list-count-bearing
@@ -193,9 +191,9 @@ for most actual values.
 not inside a prepositional phrase.** Restructure so the noun is apposed rather
 than governed:
 
-| Before | After | Why it works |
+| Avoid | Write | Why it works |
 |---|---|---|
-| `Scene in {0}` | `Scene — {0}` | `{0}` is now apposition; no case is demanded |
+| `Scene in {0}` | `Scene — {0}` | `{0}` is apposition; no case is demanded |
 | `Metadata saved for {0}` | `Metadata saved: {0}` | colon, not preposition |
 | `Connected to {0}` | `Connected: {0}` | same |
 | `Welcome to {0}` | `{0} — welcome` or keep | game name is often left uninflected anyway; low risk, translator's call |

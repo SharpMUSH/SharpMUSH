@@ -111,7 +111,7 @@ Without paren_groups, every string in the test corpus gives the same tree as the
 did. With paren_groups:
 
 - A group left open inside a call takes the call's `)`, as `process_expression` does.
-- An open group no longer runs past the `=`, `;` or `,` that ends the argument or command it is in.
+- An open group never runs past the `=`, `;` or `,` that ends the argument or command it is in.
 
 ## Error messages
 

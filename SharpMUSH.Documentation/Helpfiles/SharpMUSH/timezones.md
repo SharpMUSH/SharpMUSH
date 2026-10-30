@@ -6,7 +6,21 @@
   "aliases": [
     "@tz"
   ],
-  "sections": []
+  "sections": [],
+  "redirects": {
+    "TIMEZONES2": "timezones",
+    "TIMEZONES3": "timezones",
+    "TIMEZONES4": "timezones",
+    "TIMEZONES5": "timezones",
+    "TIMEZONES6": "timezones",
+    "TIMEZONES7": "timezones",
+    "TIMEZONES8": "timezones",
+    "TIMEZONES9": "timezones",
+    "TIMEZONES10": "timezones",
+    "TIMEZONES11": "timezones",
+    "TIMEZONES12": "timezones",
+    "TIMEZONES13": "timezones"
+  }
 }
 -->
 # Timezones
@@ -21,4 +35,4 @@ Symbolic time zone names can also be used.
 
 valid(timezone, `<tz>`) tests if `<tz>` can be used as a timezone.
 
-[timezones historical catalog] is a preserved historical snapshot of zone names, not the server's current list. Use `valid(timezone,<tz>)` to check a name against the installed timezone data. The current IANA database is available at https://www.iana.org/time-zones.
+Zone names are those of the IANA time zone database installed on the server, such as `America/New_York` or `Europe/Paris`; the list is at https://www.iana.org/time-zones.

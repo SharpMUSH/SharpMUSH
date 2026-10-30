@@ -16,7 +16,7 @@ shown in the welcome view at a time. All three retain the original transparent
 background and three-color palette. Explicit administrator artwork overrides
 and approved genre selections take precedence over these neutral defaults.
 
-Fantasy minimalist v03 and Science Fiction minimalist v02 were explicitly approved for onboarding by the owner on 2026-10-20. Their approval is specific to these two images; other candidates remain excluded.
+Fantasy minimalist v03 and Science Fiction minimalist v02 are the approved onboarding images; no other candidate is shipped.
 
 The raster artwork ships as WebP, 512 px wide, quality 90, keeping the original transparency and
 aspect ratio. The portal never draws one wider than 16rem (256 CSS px), so 512 px covers a 2x

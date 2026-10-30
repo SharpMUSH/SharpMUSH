@@ -416,7 +416,7 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 :::
 
 # Non-standard Attributes
-  While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. In the past, you were limited to attributes named VA-VZ, WA-WZ, XA-XZ; these are still available as standard attributes. However, it is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
+  While there are many standard attributes in MUSH, objects can also have an enormous number of attributes, with any name you wish to use. The attributes VA-VZ, WA-WZ and XA-XZ are standard attributes anyone can use. It is strongly recommended that you use non-standard attributes and meaningful names in order to make maintaining your MUSHCode easier.
 
   To set a non-standard attribute, you can use these formats:<br>
       &`<attribute name>` `<obj>`=`<value>`  OR<br>

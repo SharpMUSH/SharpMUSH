@@ -1,16 +1,16 @@
 # MCP temporary document ownership and limits
 
 The optional `SharpMUSH.Plugins.Mcp` plugin owns this state and transport. The host supplies
-authentication/authorization and the analyzer. The eight tool names and arguments are unchanged. `open_document` still returns an opaque id,
+authentication/authorization and the analyzer. `open_document` returns an opaque id,
 `close_document` returns a boolean, and analysis accepts inline code or a document id.
 
-Handles now belong to the authenticated `MushBasic` identity's character key, creation time and
+Handles belong to the authenticated `MushBasic` identity's character key, creation time and
 optional account id. Identity comes from the current HTTP request, not a tool parameter. A different
 character/incarnation/account cannot read or close a handle. Foreign handles behave like unknown
 handles. Missing or different authentication schemes cannot access the store. This does not change
 which credentials the endpoint accepts or grant game writes.
 
-Configure these keys under the existing `Mcp` section:
+Configure these keys under the `Mcp` section:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
@@ -48,19 +48,15 @@ bytes, with protocol overhead. Temporary storage and parser memory remain distin
 
 The six analysis tools acquire a global worker with an elapsed deadline and request cancellation.
 Ambient shorter execution budgets remain effective. Saturated admission returns a tool error.
-Cancellation now reaches syntax lexing, token buffering, tree/line traversal and intelligence loops;
+Cancellation reaches syntax lexing, token buffering, tree/line traversal and intelligence loops;
 analysis propagates cancellation instead of disguising it as diagnostics or unchanged output.
 The executor awaits actual worker termination before releasing capacity, including after timeout or
 host shutdown. This is cooperative cancellation, not hard preemption: an uncooperative library call
 can overrun its deadline, while retaining its worker and admission slots until it ends. Open/close
 remain synchronous and document-only. Cancellation tokens are injected by the SDK and do not appear
-in the eight unchanged wire schemas.
+in the tool schemas.
 
-Compatibility changes: over-budget input now returns a tool error; capacity pressure no longer
-silently evicts old handles; idle handles expire; handles cannot be shared across characters.
-Unknown/foreign handles use the same existing error path. Handles remain process-lifetime only and
-are lost on restart. The internal store now requires DI request context/options/clock rather than
-an unauthenticated parameterless constructor. No tool schema gains a principal or owner argument.
-
-Validated with synthetic host identities and real in-memory HTTP MCP dispatch, without creating
-a game or credentials. This is not a published-production-host or proxy-fixture validation.
+Over-budget input returns a tool error. Capacity pressure never evicts a handle; idle handles expire,
+and a handle cannot be shared across characters. Unknown or foreign handles get the same error.
+Handles last only as long as the process and are lost on restart. The store takes its request
+context, options and clock from DI. No tool takes a principal or owner argument.

@@ -153,10 +153,12 @@ nothing to regenerate or commit.
 - Prefer compact lists for terminal references; use readable tables when useful.
 - Let metadata generate directories and parent links. Authored previous/next
   chains are unnecessary; any future traversal must follow declared order.
-- Keep legal notices intact. A historical catalog must be labeled as historical;
-  current catalogs should come from their authoritative data source.
+- Keep legal notices intact. A catalog (time zones, colours) comes from its
+  authoritative data source, not a copied snapshot.
+- State what is true now. No "previously", "no longer", "since 1.8.5" or
+  before/after notes; CHANGELOG.md holds the history.
 
-## Legacy sources, migration, and localization
+## Aggregate files, redirects, and localization
 
 The structural adapter accepts aggregate files with adjacent H1 aliases. The
 first H1 is canonical; consecutive empty H1s point at the same body. Legacy IDs
@@ -166,9 +168,8 @@ keep the first definition in deterministic file order and are logged; declared
 article collisions fail indexing rather than silently overwriting content.
 
 Numbered continuations are never canonical, visible directory entries, or new
-authored links. Preserve only actual historical lookups as hidden redirects.
-This migration retains them indefinitely as compatibility lookups; removal
-requires a separately documented compatibility change. Do not invent variants
+authored links. PennMUSH's numbered lookups (`TIMEZONES2`) are kept as
+hidden redirects so a player's habit still finds the topic. Do not invent variants
 such as `align()2`. Ordinary aliases participate in prefix and wildcard matching,
 but search returns the canonical entry once. Redirects participate only in exact
 lookup. Content search indexes overview and section bodies separately, excluding
@@ -178,30 +179,7 @@ Use the existing localized category directories (`help.fr`, `ahelp.fr`, etc.) an
 `LocalizedTextFileService` fallback. Metadata corpus remains `help` or `ahelp`;
 preserve article/section IDs and translate titles, text, and lookups as appropriate.
 A missing translated category is an empty scoped lookup, never permission to
-search another corpus. Administrator access gates remain unchanged.
-
-`help-migration.json` accounts for old headings, semantic destinations, and source
-body hashes. `help-inventory.json` records the resulting canonical entries,
-aliases, and deprecated redirects. Intentional edits include the contradictory
-attribute flag propagation text, the Unicode claim, removal of duplicate channel
-function aliases, and moving drop-cap prose out of its code fence. Review corrections
-also distinguish C# hardcode from PennMUSH's C, explain recycled dbrefs and durable
-objids, label inert queue economy settings, repair JSON modification examples, and
-give the economy and evaluation-lock articles useful overviews. Building costs now
-describe quota slots rather than pennies; the executor-selection example has balanced
-parentheses, and render compatibility is a declared profile decision. Related API and
-listener lists retain distinct function/attribute names beside their shared canonical
-help link instead of repeating an indistinguishable link. Mail examples use actual
-fences, regex guidance distinguishes substring search from anchored validation, and
-TOC labels come from parsed heading content rather than raw Markdown. The regex guides
-now describe .NET syntax, Unicode/ASCII class choices, strict anchors, parser escaping,
-and the distinction between PennMUSH-compatible softcode captures and .NET replacements;
-the former PCRE manual attribution is retained. Further review corrections cover Unicode
-accent display, escaped table pipes and lowercase thorn, the recycle command spelling,
-quota-only destruction accounting, supported quota command forms, actual uptime output,
-balanced filter notation, foreach markers, distinct listening/pose labels, the retry cap,
-and Unix-second numeric timecalc input. The IANA 2011n
-catalog is retained as a complete, explicitly historical section.
+search another corpus. Administrator access gates still apply.
 
 ## Validation
 
@@ -209,6 +187,6 @@ Run `dotnet run --project SharpMUSH.Tests -- --treenode-filter
 "/*/*/HelpArticleTests/*"` and the help service/command tests. The normal CI test
 suite and the dedicated `help-integrity` CI job run the shipped-corpus check. Invalid declarations, missing section
 targets, duplicate declared IDs or lookups, unresolved/deprecated declared links,
-redirect chains, and numbered continuations fail. Existing unresolved links in
-unmigrated articles remain legacy debt; unrelated edits are not blocked by them.
+redirect chains, and numbered continuations fail. Unresolved links in aggregate
+files do not block unrelated edits.
 Size and screen readability remain editorial checks, never CI length gates.

@@ -28,7 +28,7 @@
 
 	<ItemGroup>
 		<!-- Compiled plugin Blazor components (gated, off-by-default; see
-		     docs/superpowers/specs/2026-06-22-plugin-wasm-components-design.md) are Assembly.Load()ed at
+		     docs/design/plugin-wasm-components.md) are Assembly.Load()ed at
 		     runtime, so the trimmer cannot see what they use. Root the shared UI surface a plugin
 		     component compiles against — the component-model assemblies, MudBlazor, and the app's own
 		     contract/markup assemblies — so trimming never strips members those components rely on.

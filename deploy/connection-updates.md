@@ -4,7 +4,7 @@ The stable SocketServer owns telnet and `/ws` sockets, their protocol state, and
 
 Where the two cannot share a volume (separate Fly.io apps or Railway services), set `Rendering__Address` on both to an address on the host's private network, such as `http://my-game-renderer.internal:5100`, and the worker listens there instead of on the socket. The worker asks for no credentials, so that address must never be public.
 
-An image name is never reused for a different process: that would change which process an existing Compose file pulls under an unchanged tag, which is the Watchtower hazard the migration section below describes. The source project was renamed from `SharpMUSH.ConnectionServer` to `SharpMUSH.RenderingWorker` without touching any image, service or configuration key; `ConnectionServer__*` settings still configure SocketServer.
+Each image name always means one process, so a Compose file never pulls a different process under the same tag. `ConnectionServer__*` settings configure SocketServer.
 
 ## Changes to browser control frames
 
@@ -15,8 +15,8 @@ running socket owner. Compare the running containers' `org.opencontainers.image.
 with the commit that added the control handler; a floating `dev` tag does not prove compatibility.
 
 For example, the browser's `{"type":"environ","vars":{"TZ":"America/Chicago"}}` timezone report
-requires the SocketServer handler added in `ca18a485d`. Older socket owners recognize only the
-previous control types and forward this JSON as a command. It can then enter softcode evaluation
+needs a SocketServer that handles `environ`. A socket owner without that handler forwards this
+JSON as a command. It can then enter softcode evaluation
 and game command dispatch, instead of remaining connection metadata. JSON escaping in the portal
 cannot repair that missing gateway handler. Updating the owner closes its
 physical sockets, so use the SocketServer update procedure below and verify a fresh browser login
@@ -55,9 +55,7 @@ Replay uses durable JetStream sequence numbers, including across SocketServer re
 
 ## Rollout and PR impact
 
-The `Deployment impact` PR check reports three image closures and explicitly answers **SocketServer restart / live connection drops: YES or NO**. Dev publishing uses the same analyzer, including old and new project references, Docker inputs, linked resources and global build files. ConnectionServer-only rendering changes can now deploy without closing telnet or WebSocket sockets; changes to SocketServer or its shared dependencies still require socket-owner replacement. This is conservative source-impact analysis, not comparison of remote image digests. Forced publishing and release publishing can also replace unchanged services.
-
-Before merging/publishing this migration, pause Watchtower for the existing public ConnectionServer service: its current image tag becomes the private renderer, so an automatic update using the old Compose definition would interrupt public service. Then publish all three images and apply the new Compose definition once: it switches the existing `socketserver` service to the SocketServer image, creates `renderer`, and mounts their private `render-socket` volume. That first migration drops current sockets. Legacy v1 resume credentials and replay frames deliberately do not authorize v2 recovery; players must reconnect and log in once at this upgrade boundary. Publish all three images before applying the Compose migration. Do not point existing public ports at the new ConnectionServer rendering image.
+The `Deployment impact` PR check reports three image closures and explicitly answers **SocketServer restart / live connection drops: YES or NO**. Dev publishing uses the same analyzer, including old and new project references, Docker inputs, linked resources and global build files. Rendering-worker-only changes deploy without closing telnet or WebSocket sockets; changes to SocketServer or its shared dependencies require socket-owner replacement. This is conservative source-impact analysis, not comparison of remote image digests. Forced publishing and release publishing can also replace unchanged services.
 
 The Cloudflare stack continues automatic updates for all three images. Watchtower uses `WATCHTOWER_TIMEOUT=60s`; Compose uses `stop_grace_period: 60s` for engine, socket owner and worker. Rendering requests retry across worker replacement while the stable process retains sockets and pending output. A prolonged rendering outage delays output; it does not reconstruct sockets after loss of the owner process. The worker has no public TCP listener and shares its Unix socket volume only with SocketServer.
 
@@ -70,23 +68,12 @@ docker compose -f docker-compose.cloudflare.yml up -d socketserver
 
 Leaving that label at `true` is what makes a routine image publish disconnect every logged-in player without warning — the notices for the engine restart arrive, and then the socket dies when Watchtower reaches the owner in the same cycle. Set it to `true` only where unattended socket-owner updates are worth that. Watchtower's [stop timeout](https://containrrr.dev/watchtower/arguments/#stop-timeout) controls forced termination; optional [lifecycle hooks](https://containrrr.dev/watchtower/lifecycle-hooks/) can add countdowns, but container startup alone does not establish game readiness. These repository changes do not deploy production automatically until merged, images published, and the Compose migration applied.
 
-## Measured rendering boundary cost
-
-A diagnostic run on 2026-09-07 used CachyOS, an Intel Core Ultra 7 265F and .NET 10.0.8, with the existing Debug worker/SocketServer assemblies and a Release harness. The worker ran in a separate process; `RemoteOutputRenderer.TransformAsync` reused its HTTP/2 Unix-socket connection. Each size received 500 warmups followed by five rounds of 1,000 serial calls, compared against `OutputTransformService.Transform` in process. Inputs were exactly 256 or 4,096 UTF-8 bytes: red ANSI prefix, repeated ASCII text, reset suffix; ANSI stripping was enabled. Warmup outputs were compared byte-for-byte and measured outputs checked for the expected length, with no failures.
-
-| Input | Local mean | UDS mean | UDS round-mean range | UDS round-median range | Serial UDS throughput range |
-| --- | --- | --- | --- | --- | --- |
-| 256 B | 1.37 µs | 156.17 µs | 140.0–172.9 µs | 117.7–134.4 µs | 5,783–7,143 requests/s |
-| 4 KiB | 2.95 µs | 188.91 µs | 178.8–208.7 µs | 147.0–168.4 µs | 4,792–5,594 requests/s |
-
-The process boundary added roughly 0.15–0.19 ms to this simple transformation. It exchanges transport overhead for independent worker replacement. This is a warmed diagnostic measurement, not a production latency/throughput guarantee: Debug assemblies, host scheduling, workload complexity and concurrency affect the result. It does not measure full game commands, NATS, client network latency, allocations, or tail latency under load. Broadcast output is transformed once per matching capability/preference group. Keep the persistent connection and send complete output chunks; measure representative concurrent game traffic before deciding whether batching or a different framing protocol is warranted.
-
-## Remaining boundaries
+## What each update keeps
 
 | Event | Existing TCP connection | Logical session |
 | --- | --- | --- |
 | Engine update | Retained by SocketServer | Reconciled from durable state |
-| ConnectionServer rendering-worker update | Retained by SocketServer | Retained; output waits for worker recovery |
+| Rendering worker update | Retained by SocketServer | Retained; output waits for worker recovery |
 | SocketServer update | Closed | Authenticated WebSocket reconnect can resume within its recovery window; ordinary telnet must reconnect |
 | Host, disk or NATS retention loss | Not guaranteed | Limited by available durable state and replay |
 

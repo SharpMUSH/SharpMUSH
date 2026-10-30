@@ -207,7 +207,7 @@ Two things this depends on:
   wrong voice.
 - **Nothing may name a font directly.** Every mono surface reads `var(--font-mono)`;
   a hardcoded `font-family:'…',monospace` in an inline style silently opts that
-  element out of the switch. That is how 24 of them were opted out before this.
+  element out of the switch.
 
 Adding a new CJK script means vendoring the matching Sarasa family into
 `wwwroot/fonts/` (SC covers Simplified Chinese; J and K exist for Japanese and

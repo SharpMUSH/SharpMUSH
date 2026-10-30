@@ -16,8 +16,8 @@ semantics), #1461 (bounded replay reads).
 The bus streams are queues, not archives. Interest retention removes a message once every consumer
 that wants it has acknowledged it, so a bus stream's size is the unprocessed backlog: zero while the
 consumers keep up. A subject no consumer wants is not retained at all — that is how transient
-notifications behave. Browser replay is the only archive, kept by the store built for it, so the
-bus no longer keeps a second, 24-hour copy of everything it carried.
+notifications behave. Browser replay is the only archive, kept by the store built for it; the bus
+keeps no second copy of what it carried.
 
 Discard policy follows what the data is. On a bus stream the oldest message is work nobody has done
 yet (a command, an output frame), so a full stream refuses the newest publication instead of

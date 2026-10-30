@@ -436,43 +436,7 @@ public class ThemeService
 
 ---
 
-## Implementation Phases
-
-### Phase 1: Foundation (current + near-term)
-- [x] Terminal with WebSocket + multi-character
-- [x] Admin panel (config, import, banned names, sitelock)
-- [x] Wiki components (WikiView, WikiEdit, WikiDisplay)
-- [ ] Wiki API endpoints + DB storage
-- [ ] Wiki in-game commands (+wiki, wiki(), etc.)
-- [ ] Markdown-to-ANSI renderer for terminal output
-- [ ] ThemeService (extract hardcoded MudTheme → DB-backed)
-- [ ] LayoutService (extract hardcoded MainLayout → config-driven)
-
-### Phase 2: Portal Features
-- [ ] Character profiles page (attribute-driven, auto-sync)
-- [ ] Scene system (list, join, pose via SignalR)
-- [ ] BBS/Forums page
-- [ ] Mail inbox page
-- [ ] Online players widget + presence tracking
-- [ ] Help file → wiki migration tool
-
-### Phase 3: Layout Engine
-- [ ] WidgetRegistry + DynamicComponent rendering
-- [ ] Admin layout editor (MudDropZone)
-- [ ] Per-user layout preferences
-- [ ] Custom nav links management
-
-### Phase 4: Polish & Community
-- [ ] Theme editor with live preview + presets
-- [ ] Events/calendar with iCal
-- [ ] Wiki full-text search
-- [ ] Wiki revision history + diff view
-- [ ] Custom widget support (softcode-driven content blocks)
-- [ ] RSS feeds for scenes, wiki changes, forum posts
-
----
-
-## Design Decisions (Resolved)
+## Design Decisions
 
 1. **Wiki storage**: Separate document collection — NOT graph nodes mixed with
    game objects. Wiki pages have their own schema and query patterns. They can
@@ -503,7 +467,7 @@ public class ThemeService
    sidebars. However, players CAN customize their theme colors (palette choices,
    dark/light mode, font size) — stored per-account.
 
-## Open Questions (Remaining)
+## Open Questions
 
 1. **SignalR vs. extending the existing WS protocol**: The terminal already uses
    WebSocket with a custom protocol. Should SignalR be a separate connection, or

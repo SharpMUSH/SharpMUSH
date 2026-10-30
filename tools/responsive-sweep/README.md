@@ -36,14 +36,13 @@ curl -sk -X POST https://localhost:8081/api/setup/complete \
 
 While a game is unclaimed, MainLayout redirects every route to `/setup` — *sometimes*, since
 whether it fires races the debug-auth bootstrap on each full page load, and the bounce can land
-several seconds after the page first renders. This used to be the harness's worst failure mode:
-`/setup` renders under OnboardingLayout, so it has a perfectly measurable `.onboarding-body`,
-and the sweep would measure the small claim form, find it clean, and file that result under
-whichever route had been requested. Full-looking coverage, an unknown share of it fictional.
+several seconds after the page first renders. `/setup` renders under OnboardingLayout, so it
+has a measurable `.onboarding-body`, and measuring it would file the small claim form's result
+under whichever route had been requested.
 
-The sweep now detects this: any route that lands on `/setup` without having asked for it is
-recorded as `NOT MEASURED` and gates (exit `1`), with a message naming the cause. An unclaimed
-game can no longer produce a clean sweep. It is still worth claiming the game first, because
+So any route that lands on `/setup` without having asked for it is recorded as `NOT MEASURED`
+and gates (exit `1`), with a message naming the cause. An unclaimed game never produces a clean
+sweep. Claim the game first, because
 otherwise most of the run is failures rather than measurements.
 
 ## Setup
@@ -233,7 +232,7 @@ instead. See "Screenshots" below for why. Unmeasured pairs *do* gate, unlike cap
 not an environment fault but a case of the gate being handed a page it does not understand and
 returning no verdict on it.
 
-A single bad route no longer aborts the run: `sweep.mjs` records the failure and continues to
+A single bad route does not abort the run: `sweep.mjs` records the failure and continues to
 the next route/width pair, so one broken page can't hide overflow data on the other 47.
 
 `SWEEP_BASE` overrides the default `https://localhost:7102`.
@@ -255,9 +254,8 @@ Screenshots: 0/256 captured, 256 FAILED (listed above).
 ```
 
 Failures are counted and each one is printed on stderr under `Failed to capture N screenshots`.
-This matters more than it sounds: before this, a capture failure was swallowed entirely, so a
-sweep that wrote **zero** images still ended on a bare "No horizontal overflow across 64
-routes" and read as fully verified.
+A sweep that wrote no images therefore never ends on a bare "No horizontal overflow"
+and reads as verified.
 
 Capture failures do **not** change the exit code (see Exit codes above): the exit code answers
 "is the layout clean?", overflow is measured from `scrollWidth`/`innerWidth` and is unaffected
@@ -295,10 +293,7 @@ Four groups:
     "note": "one per scope: they differ in zone count" }
   ```
 
-  These used to be printed once and skipped, on the reasoning that no ID is meaningful across
-  every dev environment. That reasoning had a hole: it left the branch's two most complex
-  layouts — the wiki editor and the layout editor — outside the gate, and both were
-  overflowing at 390px (205px and 42px) when a reviewer measured them by hand. A route nobody
+  Parameterized routes are measured through their samples rather than skipped: a route nobody
   measures is a route nobody knows about.
 
   `content` states what a clean result actually certifies:

@@ -136,10 +136,8 @@ public class AttributeTreeParentPermissionTests
 	/// attribute itself. Penn's atr_get_with_parent (attrib.c:1232-1252) walks every
 	/// backtick-delimited segment of the path while crossing a parent boundary and returns
 	/// NULL the moment any segment carries AF_PRIVATE — see also SharpMUSH's own
-	/// documentation (Documentation/Testfile/sharpattr.md): "If a branch on the parent is
-	/// set no_inherit, it will not be inherited, regardless of any other flags that may be
-	/// present." A prior version of this test asserted the opposite (that the child leaf
-	/// was still readable); that pinned the leak this fix closes.
+	/// help (attribute-trees.md): "If a branch on the parent is set no_inherit, it will not
+	/// be inherited, regardless of any other flags that may be present."
 	/// </summary>
 	[Test]
 	public async ValueTask Parent_NoInheritOnBranch_BlocksChildren()

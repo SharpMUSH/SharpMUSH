@@ -74,7 +74,7 @@ PEMIT/NSPEMIT and REMIT/NSREMIT functions suppress confirmations. PROMPT/NSPROMP
 LEMIT/NSLEMIT and ZEMIT/NSZEMIT retain PennMUSH's confirmation behavior.
 
 OEMIT retains PennMUSH's maximum of ten matched exclusions. This is a recipient-selection
-contract, unrelated to the obsolete 8,192-character output buffers. Explicit location syntax
+contract, unrelated to output buffer size. Explicit location syntax
 with no matching exclusions still emits to that location; implicit unmatched lists report failure.
 Explicit-location exclusions accept quoted English ordinals and `*Player` names, but only immediate
 player and thing members count toward the exclusion limit. The destination itself and exits cannot

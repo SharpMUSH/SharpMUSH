@@ -26,8 +26,7 @@ typed schema + action model.
 
 **User-facing documentation:** an admin guide (`../guides/dynamic-applications-admin.md`)
 and a softcode author guide (`../guides/dynamic-applications-authoring.md`) accompany this
-spec. They carry the step-by-step walkthroughs and screenshots (screenshots captured once
-the registration UI and `/apps/{slug}` route land — see Area-21 TODO Phase 9).
+spec. They carry the step-by-step walkthroughs.
 
 ### Design principles
 
@@ -43,7 +42,7 @@ the registration UI and `/apps/{slug}` route land — see Area-21 TODO Phase 9).
    dynamic pages, and computed defaults are realized by **softcode-driven progression**:
    the client posts current state and re-renders whatever schema/data softcode returns.
 5. **Schemas live in softcode and ship as packages.** Authored on a game object and served
-   over `/http/...`, distributable via the Area-20 package manager.
+   over `/http/...`, distributable via the package manager.
 
 ## Architecture
 
@@ -309,8 +308,8 @@ RegisteredApplication {
 }
 ```
 
-Persisted via `ISharpDatabase` on Lightning, with integration tests, exactly like the Area-20
-`sys_*` collections (`area-20-packages.md` Phase 2). Exposed through an
+Persisted via `ISharpDatabase` on Lightning, with integration tests, exactly like the package
+manager's `sys_*` collections. Exposed through an
 `ApplicationsController` at `/api/applications`, `[Authorize]` **Wizard+** (decision
 10.3 — layout/admin editing is Wizard-and-up; `architectural-decisions.md:99`). On
 registration, the portal validates that `schemaUrl` returns parseable JSON before saving
@@ -353,17 +352,16 @@ schema).
 Standing up a Dynamic Application is explicitly **two parts**:
 
 **(a) Install the softcode** that defines the routes + schema. Either hand-author the
-attributes on the HTTP handler object, or install an Area-20 package — e.g. a `chargen`
+attributes on the HTTP handler object, or install an package — e.g. a `chargen`
 package providing `GET`CHARGEN`SCHEMA`, `GET`CHARGEN`, and `POST`CHARGEN`SUBMIT`. (Routes
-are backtick children of the verb routers from the bundled `http-handler` package; see
-`area-20-packages.md` Phase 9.)
+are backtick children of the verb routers from the bundled `http-handler` package.)
 
 **(b) Register the Application** in the portal admin: name, icon, `kind`, the
 schema/data/submit endpoints, allowed roles, and nav/zone placement → the DB registry
 record. The portal validates the schema endpoint returns parseable JSON before saving.
 
 **One-step alternative (application packages, decision 20.22).** Step (b) can also ship
-as an Area-20 **application package** (`kind: application`): a manifest carrying only the
+as an **application package** (`kind: application`): a manifest carrying only the
 `application:` block, depending on the softcode package from (a). Installing it registers
 the application (stamped with its `OwningPackage`); uninstalling it removes the
 registration. This makes the linking step distributable, versioned, and reversible through
@@ -423,10 +421,8 @@ A `chargen` package's `package.yaml` (attach-mode attributes on the HTTP handler
 `navPlacement: main`) links it into the portal. Installing the package + creating the
 record = a live `/apps/chargen` wizard.
 
-## Non-goals (v1)
+## Non-goals
 
-- **No code in this pass** — this document is the binding spec; implementation is tracked
-  in `docs/todo/area-21-applications.md`.
 - **No client-side business logic** — no schema-level conditional/branching predicates;
   visibility and progression are softcode-driven (partial-submit round-trips + returned
   schemas). The client only renders, collects, posts, and binds errors.

@@ -1,6 +1,6 @@
 # Screenshot provenance
 
-These JPEGs were captured on 2026-10-16 from actual SharpMUSH Blazor components, not drawn or reconstructed UI. `SharpMUSH.Tests.BUnit/Pages/DiscordGuideUiTests.cs` supplies synthetic GET-only API responses and the real English resources. The production `ThemeProvider` uses the built-in Phosphor theme; captures load the current generated scoped bundle, `wwwroot/css/custom.css`, its layered MudBlazor import, theme attributes and self-hosted fonts.
+These JPEGs are captured from actual SharpMUSH Blazor components, not drawn or reconstructed UI. `SharpMUSH.Tests.BUnit/Pages/DiscordGuideUiTests.cs` supplies synthetic GET-only API responses and the real English resources. The production `ThemeProvider` uses the built-in Phosphor theme; captures load the current generated scoped bundle, `wwwroot/css/custom.css`, its layered MudBlazor import, theme attributes and self-hosted fonts.
 
 | Asset | Actual component | Viewport | State |
 |---|---|---|---|

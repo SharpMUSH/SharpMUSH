@@ -76,7 +76,7 @@ Walker's preferred @chatformat, which strips all ansi out, wraps every line to y
 
 If you're on a system with chat_strip_quote set to "no", you might want to change the '%0%2' arg to speak() to '`[switch(%0,\",%2,%0%2)]`'
 
-Suppose you want it just like the old version, but anytime somebody says your name, you want it all in red:
+Suppose you want it just like that, but anytime somebody says your name, you want it all in red:
 
 ```sharp
 @chatformat me=ansi(switch(%2,*[name(%!)]*,r,n),%5)
@@ -84,7 +84,7 @@ Suppose you want it just like the old version, but anytime somebody says your na
 
 ## Channel color themes
 
-A popular feature in clients now available in SharpMUSH directly: Let's suppose you want "Public" channel chatter to all be green, "Softcode" to be blue and "Admin" to be cyan.
+Many clients colour channels by name, and @chatformat can do it in the game. Let's suppose you want "Public" channel chatter to all be green, "Softcode" to be blue and "Admin" to be cyan.
 
 ```sharp
 @chatformat me=ansi(switch(%1,Public,g,Softcode,b,Admin,c,n),%5)

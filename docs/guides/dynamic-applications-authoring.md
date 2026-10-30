@@ -1,13 +1,5 @@
 # Softcode Author Guide: Dynamic Application Schemas
 
-> **Status — implemented.** The rendering client, registry, and routes described here are
-> built and tested (`docs/todo/area-21-applications.md`). The softcode contract below is the
-> same HTTP-handler model the character-profile API uses
-> (`examples/packages/profile-handler/package.yaml`). `examples/packages/chargen/` (character
-> applications) and `examples/packages/jobs/` are complete examples: a form, lists, buttons and a
-> sidebar, each built for the viewer, and integration tests drive their routes.
-> **[SCREENSHOT]** markers await capture from a served deployment.
-
 ## The model in one paragraph
 
 You write attributes on the game's **HTTP handler** object. A `GET` route returns a
@@ -253,12 +245,10 @@ parses the `think` payload and asserts it's valid JSON — do the same for new s
 
 ## Distributing as a package
 
-Ship the route attributes as an **attach-mode** Area-20 package (managing attributes on
+Ship the route attributes as an **attach-mode** package (managing attributes on
 the existing HTTP handler, like `profile-handler`). Then an admin installs the package and
 registers the application — see `dynamic-applications-admin.md`.
 
-> **[SCREENSHOT] The rendered wizard built from this schema — abilities page with the
-> "Roll Stats" button having merged rolled values into the fields.**
 
 See also: the design spec **`../design/dynamic-applications.md`** and the live reference
 implementation **`../../examples/packages/profile-handler/package.yaml`**.

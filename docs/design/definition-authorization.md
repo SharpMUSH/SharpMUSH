@@ -33,5 +33,5 @@ built-in privilege levels and custom flag/power names retain SharpMUSH's OR sema
 containing only metadata adds no privilege requirement. The full Controls authorization gate,
 including eligible zone and control locks, and the type- and flag-specific checks still apply.
 SYSTEM protects definition management and does not itself prohibit assignment.
-Definitions retain their stored metadata and remain queryable for administration; no migration or
-global disabled-definition filtering is required.
+Definitions keep their stored metadata and stay queryable for administration; there is no global
+disabled-definition filtering.

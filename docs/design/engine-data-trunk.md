@@ -152,10 +152,8 @@ walk both `GetAttributesQuery` handlers run is `AttributeAncestry.MatchesWithPar
 by `LazyAttributeParentParityTests`. A new pair shares its logic the same way, and the lazy record
 takes its documentation from the eager one with `inheritdoc`.
 
-A request that differs from another only in return shape is not a pair and is not kept:
-`GetBaseObjectNodeQuery` answered the same "is `#N` (with this objid) live?" question as
-`GetObjectNodeQuery`, uncached and with no documented reason, and its one caller now uses
-`GetObjectNodeQuery`. `GetObjectNodeQuery` and `GetObjectNodeByNumberQuery` are a deliberate
+A request that differs from another only in return shape is not a pair and is not kept.
+`GetObjectNodeQuery` and `GetObjectNodeByNumberQuery` are a deliberate
 split (the objid check runs outside the number-keyed cache) and stay.
 
 A query without `ICacheable` reads its store on every request. That is the default, not an
