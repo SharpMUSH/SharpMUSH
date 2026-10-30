@@ -2,6 +2,7 @@ extern alias ScenePlugin;
 extern alias DiscordPlugin;
 extern alias LspPlugin;
 extern alias McpPlugin;
+extern alias WorldPlugin;
 
 using System.Text.Json;
 using System.Xml.Linq;
@@ -19,7 +20,8 @@ public class ShippedPluginContractInventoryTests
 			new ScenePlugin::SharpMUSH.Plugins.Scene.ScenePlugin(),
 			new DiscordPlugin::SharpMUSH.Plugins.Discord.DiscordPlugin(),
 			new LspPlugin::SharpMUSH.Plugins.Lsp.LspPlugin(),
-			new McpPlugin::SharpMUSH.Plugins.Mcp.McpPlugin()
+			new McpPlugin::SharpMUSH.Plugins.Mcp.McpPlugin(),
+			new WorldPlugin::SharpMUSH.Plugins.World.WorldPlugin()
 		];
 		var shipped = XDocument.Load(Path.Combine(TestPaths.RepositoryRoot, "SharpMUSH.Server", "SharpMUSH.Server.csproj"))
 			.Descendants("ProjectReference").Select(element => (string?)element.Attribute("Include"))

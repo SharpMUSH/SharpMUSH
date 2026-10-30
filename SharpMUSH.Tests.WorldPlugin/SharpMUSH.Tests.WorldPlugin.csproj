@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+    <RollForward>LatestMajor</RollForward>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <NoWarn>TUnit0038</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSubstitute" Version="5.3.0" />
+    <PackageReference Include="TUnit" Version="$(TUnitVersion)" />
+  </ItemGroup>
+
+  <!-- The World plugin's store and ways, run against a real LMDB world. Like the Scene plugin's tests, this
+       references the plugin and Library without SharpMUSH.Implementation. -->
+  <ItemGroup>
+    <ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj" />
+    <ProjectReference Include="..\SharpMUSH.Database.Lightning\SharpMUSH.Database.Lightning.csproj" />
+  </ItemGroup>
+
+</Project>

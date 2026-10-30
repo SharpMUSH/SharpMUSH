@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net11.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<LangVersion>default</LangVersion>
+		<IsPackable>false</IsPackable>
+		<!-- A dynamically loaded plugin: emits a .deps.json and keeps the shared contract assemblies out of its bin. -->
+		<EnableDynamicLoading>true</EnableDynamicLoading>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<RootNamespace>SharpMUSH.Plugins.World</RootNamespace>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Host-owned at runtime; Private=false + ExcludeAssets=runtime keep them out of the plugin's output, as the Scene plugin does. -->
+		<ProjectReference Include="..\SharpMUSH.Library\SharpMUSH.Library.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\SharpMUSH.Configuration\SharpMUSH.Configuration.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<ProjectReference Include="..\SharpMUSH.Contracts\SharpMUSH.Contracts.csproj">
+			<Private>false</Private>
+			<ExcludeAssets>runtime</ExcludeAssets>
+		</ProjectReference>
+		<!-- The generator turns the [SharpCommand]/[SharpFunction] methods into this assembly's command and function libraries. -->
+		<ProjectReference Include="..\SharpMUSH.Implementation.Generated\SharpMUSH.Implementation.Generated.csproj"
+			OutputItemType="Analyzer"
+			ReferenceOutputAssembly="false" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="help\*.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+	</ItemGroup>
+
+</Project>

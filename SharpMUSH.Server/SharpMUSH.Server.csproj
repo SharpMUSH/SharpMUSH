@@ -70,6 +70,7 @@
          ReferenceOutputAssembly=false keeps it out of the host's compile graph; the CopyScenePlugin target
          below drops it into the output's plugins/scene/ where PluginBootstrapService discovers it. -->
     <ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+    <ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
     <ProjectReference Include="..\SharpMUSH.Plugins.Lsp\SharpMUSH.Plugins.Lsp.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\SharpMUSH.Plugins.Mcp\SharpMUSH.Plugins.Mcp.csproj" ReferenceOutputAssembly="false" Private="false" />
     <ProjectReference Include="..\SharpMUSH.Plugins.Discord\SharpMUSH.Plugins.Discord.csproj" ReferenceOutputAssembly="false" Private="false" />
@@ -190,6 +191,40 @@
       </ResolvedFileToPublish>
       <ResolvedFileToPublish Include="@(ScenePluginHelpFiles)">
         <RelativePath>plugins/scene/help/%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <!-- The World plugin ships as the Scene plugin does: DLL, deps.json, manifest and help in plugins/world/. -->
+  <Target Name="ResolveWorldPluginFiles">
+    <PropertyGroup>
+      <WorldPluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\bin\$(Configuration)\net11.0</WorldPluginOutDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.dll" />
+      <WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.deps.json" />
+      <WorldPluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\plugin.json" />
+      <WorldPluginHelpFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\help\*.md" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CopyWorldPlugin" AfterTargets="Build" DependsOnTargets="ResolveWorldPluginFiles">
+    <MakeDir Directories="$(OutDir)plugins\world" />
+    <Copy SourceFiles="@(WorldPluginFiles)" DestinationFolder="$(OutDir)plugins\world" SkipUnchangedFiles="false" />
+    <RemoveDir Directories="$(OutDir)plugins\world\help" />
+    <Copy SourceFiles="@(WorldPluginHelpFiles)" DestinationFolder="$(OutDir)plugins\world\help" SkipUnchangedFiles="false" />
+  </Target>
+
+  <Target Name="PublishWorldPlugin" AfterTargets="ComputeResolvedFilesToPublishList"
+          DependsOnTargets="ResolveWorldPluginFiles">
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(WorldPluginFiles)">
+        <RelativePath>plugins/world/%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+      <ResolvedFileToPublish Include="@(WorldPluginHelpFiles)">
+        <RelativePath>plugins/world/help/%(Filename)%(Extension)</RelativePath>
         <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       </ResolvedFileToPublish>
     </ItemGroup>

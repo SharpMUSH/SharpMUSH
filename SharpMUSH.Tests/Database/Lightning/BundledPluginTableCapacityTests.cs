@@ -45,7 +45,7 @@ public class BundledPluginTableCapacityTests
 		services.AddLogging();
 		services.AddSingleton<ILightningStorageAccessor>(storage);
 		var catalog = PluginCatalog.Build(services, new PluginDirectories(builtIn, Path.Combine(path, "installed")), NullLogger.Instance);
-		await Assert.That(catalog.Plugins.Select(plugin => plugin.Id)).IsEquivalentTo(new[] { "discord", "lsp", "mcp", "scene" });
+		await Assert.That(catalog.Plugins.Select(plugin => plugin.Id)).IsEquivalentTo(new[] { "discord", "lsp", "mcp", "scene", "world" });
 		// Resolve real registrations, rather than copying table names or manufacturing a threshold-sized schema.
 		var stores = catalog.Plugins.Select(plugin => plugin.GetType().Assembly).Distinct()
 			.SelectMany(assembly => assembly.GetTypes())
@@ -58,7 +58,7 @@ public class BundledPluginTableCapacityTests
 					?? services.First(descriptor => descriptor.ServiceType.IsAssignableFrom(implementation))
 			}).ToArray();
 		await Assert.That(stores.Select(store => store.Implementation.Assembly.GetName().Name ?? throw new InvalidOperationException("Unnamed plugin assembly.")).Distinct())
-			.IsEquivalentTo(new[] { "SharpMUSH.Plugins.Discord", "SharpMUSH.Plugins.Scene" });
+			.IsEquivalentTo(new[] { "SharpMUSH.Plugins.Discord", "SharpMUSH.Plugins.Scene", "SharpMUSH.Plugins.World" });
 		using var provider = services.BuildServiceProvider();
 		foreach (var store in stores)
 			await Assert.That(provider.GetRequiredService(store.Registration.ServiceType).GetType()).IsEqualTo(store.Implementation);

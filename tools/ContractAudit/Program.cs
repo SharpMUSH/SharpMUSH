@@ -2,6 +2,7 @@ extern alias ScenePlugin;
 extern alias DiscordPlugin;
 extern alias LspPlugin;
 extern alias McpPlugin;
+extern alias WorldPlugin;
 
 using System.Diagnostics;
 using SharpMUSH.Tools.ContractAudit;
@@ -26,7 +27,8 @@ PluginBase[] shippedPlugins =
 	new ScenePlugin::SharpMUSH.Plugins.Scene.ScenePlugin(),
 	new DiscordPlugin::SharpMUSH.Plugins.Discord.DiscordPlugin(),
 	new LspPlugin::SharpMUSH.Plugins.Lsp.LspPlugin(),
-	new McpPlugin::SharpMUSH.Plugins.Mcp.McpPlugin()
+	new McpPlugin::SharpMUSH.Plugins.Mcp.McpPlugin(),
+	new WorldPlugin::SharpMUSH.Plugins.World.WorldPlugin()
 ];
 var shippedProjects = XDocument.Load(Path.Join(root, "SharpMUSH.Server", "SharpMUSH.Server.csproj"))
 	.Descendants("ProjectReference").Select(element => (string?)element.Attribute("Include"))

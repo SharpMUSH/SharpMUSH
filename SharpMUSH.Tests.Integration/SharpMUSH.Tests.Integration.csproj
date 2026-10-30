@@ -38,6 +38,8 @@
 		<!-- Build the Scene plugin (the Phase-5 reference plugin) before this project so its DLL exists to
 		     copy into plugins/scene/. ReferenceOutputAssembly=false: it is loaded at runtime, not linked. -->
 		<ProjectReference Include="..\SharpMUSH.Plugins.Scene\SharpMUSH.Plugins.Scene.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
+		<!-- The World plugin, loaded the same way from plugins/world/ for the @world tests. -->
+		<ProjectReference Include="..\SharpMUSH.Plugins.World\SharpMUSH.Plugins.World.csproj" ReferenceOutputAssembly="false" Private="false" SkipGetTargetFrameworkProperties="true" />
 	</ItemGroup>
 
 	<Target Name="CopyLspPluginFixture" AfterTargets="Build">
@@ -84,6 +86,20 @@
 		</ItemGroup>
 		<MakeDir Directories="$(ScenePluginsTargetDir)" />
 		<Copy SourceFiles="@(ScenePluginFiles)" DestinationFolder="$(ScenePluginsTargetDir)" SkipUnchangedFiles="false" />
+	</Target>
+
+	<Target Name="CopyWorldPlugin" AfterTargets="Build">
+		<PropertyGroup>
+			<WorldPluginOutDir>$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\bin\$(Configuration)\net11.0</WorldPluginOutDir>
+			<WorldPluginsTargetDir>$(OutDir)plugins\world</WorldPluginsTargetDir>
+		</PropertyGroup>
+		<ItemGroup>
+			<WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.dll" />
+			<WorldPluginFiles Include="$(WorldPluginOutDir)\SharpMUSH.Plugins.World.deps.json" />
+			<WorldPluginFiles Include="$(MSBuildThisFileDirectory)..\SharpMUSH.Plugins.World\plugin.json" />
+		</ItemGroup>
+		<MakeDir Directories="$(WorldPluginsTargetDir)" />
+		<Copy SourceFiles="@(WorldPluginFiles)" DestinationFolder="$(WorldPluginsTargetDir)" SkipUnchangedFiles="false" />
 	</Target>
 
 	<ItemGroup>
