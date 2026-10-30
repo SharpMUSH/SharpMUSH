@@ -7037,6 +7037,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>{0} 的图例</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>地图名称不能包含 = [ ] % 或 \。</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>世界地图</value>
   </data>

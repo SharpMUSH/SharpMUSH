@@ -7037,6 +7037,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legenda voor {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Een kaartnaam mag geen = [ ] % of \ bevatten.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>Wereldkaart</value>
   </data>

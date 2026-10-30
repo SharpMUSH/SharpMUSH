@@ -677,6 +677,20 @@ public class WorldMapPageTests : TrackingBunitContext
 	}
 
 	[Test]
+	public async Task AMapNameThatNameWouldEvaluateIsRefused()
+	{
+		var cut = await EditWorksAsync(authorized: true);
+
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapSettingsShow").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-settings input"));
+		await cut.Find(".map-settings input").InputAsync("Harbour [West]");
+
+		await Assert.That(cut.FindAll(".map-settings button").First(button => button.TextContent.Trim() == "NavMapSetName").HasAttribute("disabled")).IsTrue()
+			.Because("@name evaluates its name, so [West] would be stored as something else");
+		await Assert.That(cut.Find(".map-settings").TextContent).Contains("NavMapMapNameCharacter");
+	}
+
+	[Test]
 	public async Task ABuilderNamesHidesAndPaintsAPlaceOfAWorldMap()
 	{
 		Arrange();

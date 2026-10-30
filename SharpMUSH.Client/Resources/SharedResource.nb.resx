@@ -7037,6 +7037,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Tegnforklaring for {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Et kartnavn kan ikke inneholde = [ ] % eller \.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>Verdenskart</value>
   </data>

@@ -6346,6 +6346,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Légende de {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Un nom de carte ne peut pas contenir = [ ] % ou \.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>Carte du monde</value>
   </data>

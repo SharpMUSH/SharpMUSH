@@ -7037,6 +7037,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legenda za {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>Naziv karte ne može sadržavati = [ ] % ili \.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>Karta svijeta</value>
   </data>

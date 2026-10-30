@@ -7037,6 +7037,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legenda de {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>O nome de um mapa não pode conter = [ ] % ou \.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>Mapa do mundo</value>
   </data>

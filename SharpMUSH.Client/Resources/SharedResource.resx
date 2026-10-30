@@ -10634,6 +10634,9 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legend for {0}</value>
   </data>
+  <data name="NavMapMapNameCharacter" xml:space="preserve">
+    <value>A map name can't hold = [ ] % or \.</value>
+  </data>
   <data name="NavMapWorld" xml:space="preserve">
     <value>World map</value>
   </data>

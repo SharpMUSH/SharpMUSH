@@ -13,9 +13,13 @@
 <div class="map-settings">
     <div class="map-builder-row">
         <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapSettingsName"]" Variant="Variant.Outlined" Immediate="true" />
-        <MudButton Variant="Variant.Outlined" Disabled="@(_name.Trim().Length == 0 || _name.Trim() == Shown.Map.Name)"
+        <MudButton Variant="Variant.Outlined" Disabled="@(MapPlan.RoomNameProblem(_name) is not null || _name.Trim() == Shown.Map.Name)"
                    OnClick="RenameAsync">@Loc["NavMapSetName"]</MudButton>
     </div>
+    @if (MapPlan.RoomNameProblem(_name) == "character")
+    {
+        <p class="map-note">@Loc["NavMapMapNameCharacter"]</p>
+    }
 
     <div class="map-builder-row">
         <MudSelect T="string" @bind-Value="_parent" Label="@Loc["NavMapSettingsParent"]" Variant="Variant.Outlined" Dense="true">
@@ -183,6 +187,7 @@
 
     private Task RenameAsync()
     {
+        if (MapPlan.RoomNameProblem(_name) is not null) return Task.CompletedTask;
         Plan.RenameMap(_name);
         return OnChanged.InvokeAsync();
     }
