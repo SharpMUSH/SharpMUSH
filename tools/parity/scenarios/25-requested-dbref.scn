@@ -3,6 +3,8 @@
 # anything else is refused and builds nothing.
 # Holes are made by creating an object and recycling it twice (the second @recycle of a GOING object frees
 # it at once, src/destroy.c), and every hole is kept in an attribute so steps never name a literal dbref.
+# SharpMUSH keeps a destroyed object on its recover list, holding the number, so the same step purges each
+# entry; PennMUSH has no recover list, and that step already differs on the @recycle messages.
 # Every build after the holes exist names its dbref, or is refused: PennMUSH's new_object() reuses the most
 # recently freed slot for a build that names none, SharpMUSH takes the counter's next id, and that is not
 # what is under test.
@@ -17,7 +19,7 @@
 ::as wiz
 @power me=No_Pay
 think [set(me,HOLES:[create(RqA)] [create(RqB)] [create(RqC)] [create(RqD)] [create(RqE)] [create(RqF)] [create(RqG)] [create(RqH)] [create(RqI)] [create(RqJ)] [create(RqK)] [create(RqL)] [create(RqM)] [create(RqN)] [create(RqO)] [create(RqP)] [create(RqQ)])]
-@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##}
+@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##;@purge/confirm ##}
 think [words(v(HOLES))]
 
 ::case dbref.create  @create and create() take the hole they ask for

@@ -114,7 +114,7 @@
   },
   {
    "key": "25-requested-dbref/dbref.holes#3",
-   "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##}"
+   "command": "@dolist/inline [v(HOLES)]={@recycle ##;@recycle ##;@purge/confirm ##}"
   },
   {
    "key": "25-requested-dbref/dbref.mortal#1",
