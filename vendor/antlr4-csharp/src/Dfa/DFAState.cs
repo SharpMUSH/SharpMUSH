@@ -48,6 +48,11 @@ namespace Antlr4.Runtime.Dfa
 
 		public DFAState[] edges;
 
+		/** Lexer edges for characters above {@link LexerATNSimulator#MAX_DFA_EDGE}, sorted by
+		 *  character. The array is never changed once published; adding an edge replaces it.
+		 */
+		internal KeyValuePair<int, DFAState>[] wideEdges;
+
 		public bool isAcceptState = false;
 
 		/** if accept state, what ttype do we match or alt do we predict?

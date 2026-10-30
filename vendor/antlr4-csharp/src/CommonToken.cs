@@ -236,7 +236,8 @@ namespace Antlr4.Runtime
                 int n = input.Size;
                 if (start < n && stop < n)
                 {
-                    return input.GetText(Interval.Of(start, stop));
+                    // Kept, so a token whose text is read more than once copies it out once.
+                    return _text = input.GetText(Interval.Of(start, stop));
                 }
                 else
                 {

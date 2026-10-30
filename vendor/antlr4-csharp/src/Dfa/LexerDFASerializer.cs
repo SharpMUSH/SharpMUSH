@@ -16,7 +16,8 @@ namespace Antlr4.Runtime.Dfa
         [return: NotNull]
         protected internal override string GetEdgeLabel(int i)
         {
-            return "'" + (char)i + "'";
+            // Lexer edges are shifted up by one so EOF has index 0 (see LexerATNSimulator).
+            return i == 0 ? "EOF" : "'" + (char)(i - 1) + "'";
         }
     }
 }

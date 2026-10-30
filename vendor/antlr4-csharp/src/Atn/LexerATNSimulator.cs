@@ -4,6 +4,7 @@
  * can be found in the LICENSE.txt file in the project root.
  */
 using System;
+using System.Collections.Generic;
 using Antlr4.Runtime.Dfa;
 using Antlr4.Runtime.Misc;
 
@@ -18,7 +19,14 @@ namespace Antlr4.Runtime.Atn
 
 
 		public static readonly int MIN_DFA_EDGE = 0;
-		public static readonly int MAX_DFA_EDGE = 127; // forces unicode to stay in ATN
+		public static readonly int MAX_DFA_EDGE = 127; // characters above this use DFAState.wideEdges
+
+		// Edges are shifted up by one so that EOF (-1) has a slot at index 0. Without it, the end of
+		// every input recomputed its target from the ATN, allocating config sets each time.
+		private const int EdgeOffset = 1;
+
+		// How many characters above MAX_DFA_EDGE one DFA state remembers. Past this the ATN is used.
+		private const int MaxWideEdges = 256;
 
 
 
@@ -228,12 +236,21 @@ namespace Antlr4.Runtime.Atn
 
 		protected DFAState GetExistingTargetState(DFAState s, int t)
 		{
-			if (s.edges == null || t < MIN_DFA_EDGE || t > MAX_DFA_EDGE)
+			DFAState target;
+			if (t > MAX_DFA_EDGE)
 			{
-				return null;
+				target = FindWideEdge(s.wideEdges, t);
+			}
+			else
+			{
+				if (s.edges == null || t < MIN_DFA_EDGE - EdgeOffset)
+				{
+					return null;
+				}
+
+				target = s.edges[t - MIN_DFA_EDGE + EdgeOffset];
 			}
 
-			DFAState target = s.edges[t - MIN_DFA_EDGE];
 			if (debug && target != null)
 			{
 				Console.WriteLine("reuse state " + s.stateNumber + " edge to " + target.stateNumber);
@@ -669,9 +686,60 @@ namespace Antlr4.Runtime.Atn
 			return to;
 		}
 
+		private static DFAState FindWideEdge(KeyValuePair<int, DFAState>[] wide, int t)
+		{
+			if (wide == null)
+			{
+				return null;
+			}
+
+			int lo = 0, hi = wide.Length - 1;
+			while (lo <= hi)
+			{
+				int mid = (lo + hi) >> 1;
+				int key = wide[mid].Key;
+				if (key == t) return wide[mid].Value;
+				if (key < t) lo = mid + 1;
+				else hi = mid - 1;
+			}
+
+			return null;
+		}
+
 		protected void AddDFAEdge(DFAState p, int t, DFAState q)
 		{
-			if (t < MIN_DFA_EDGE || t > MAX_DFA_EDGE)
+			if (t > MAX_DFA_EDGE)
+			{
+				lock (p)
+				{
+					var wide = p.wideEdges;
+					if (FindWideEdge(wide, t) != null || (wide != null && wide.Length >= MaxWideEdges))
+					{
+						return;
+					}
+
+					int n = wide == null ? 0 : wide.Length;
+					var grown = new KeyValuePair<int, DFAState>[n + 1];
+					int at = 0;
+					while (at < n && wide[at].Key < t)
+					{
+						grown[at] = wide[at];
+						at++;
+					}
+
+					grown[at] = new KeyValuePair<int, DFAState>(t, q);
+					if (n > at)
+					{
+						Array.Copy(wide, at, grown, at + 1, n - at);
+					}
+
+					p.wideEdges = grown;
+				}
+
+				return;
+			}
+
+			if (t < MIN_DFA_EDGE - EdgeOffset)
 			{
 				// Only track edges within the DFA bounds
 				return;
@@ -687,9 +755,9 @@ namespace Antlr4.Runtime.Atn
 				if (p.edges == null)
 				{
 					//  make room for tokens 1..n and -1 masquerading as index 0
-					p.edges = new DFAState[MAX_DFA_EDGE - MIN_DFA_EDGE + 1];
+					p.edges = new DFAState[MAX_DFA_EDGE - MIN_DFA_EDGE + 1 + EdgeOffset];
 				}
-				p.edges[t - MIN_DFA_EDGE] = q; // connect
+				p.edges[t - MIN_DFA_EDGE + EdgeOffset] = q; // connect
 			}
 		}
 

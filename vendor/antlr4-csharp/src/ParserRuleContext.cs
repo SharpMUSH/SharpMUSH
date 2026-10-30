@@ -48,7 +48,174 @@ namespace Antlr4.Runtime
         /// operation because we don't the need to track the details about
         /// how we parse this rule.
         /// </remarks>
-        public IList<IParseTree> children;
+        public IList<IParseTree> children
+        {
+            get { return _childCount == 0 ? null : new ChildList(this); }
+            set
+            {
+                ClearChildren();
+                if (value != null)
+                {
+                    foreach (var child in value)
+                    {
+                        AppendChild(child);
+                    }
+                }
+            }
+        }
+
+        // The children are kept here rather than in a List: most rule contexts have exactly one
+        // child, which then needs no storage of its own, and the rest share one growable array.
+        // Once the array exists it holds every child, whatever the count drops back to.
+        private IParseTree _onlyChild;
+        private IParseTree[] _childArray;
+        private int _childCount;
+
+        private IParseTree ChildAt(int i)
+        {
+            return _childArray != null ? _childArray[i] : _onlyChild;
+        }
+
+        private void AppendChild(IParseTree child)
+        {
+            if (_childArray == null)
+            {
+                if (_childCount == 0)
+                {
+                    _onlyChild = child;
+                    _childCount = 1;
+                    return;
+                }
+
+                _childArray = new IParseTree[4];
+                _childArray[0] = _onlyChild;
+                _onlyChild = null;
+            }
+            else if (_childCount == _childArray.Length)
+            {
+                Array.Resize(ref _childArray, _childCount * 2);
+            }
+
+            _childArray[_childCount++] = child;
+        }
+
+        private void RemoveChildAt(int index)
+        {
+            if (_childArray == null)
+            {
+                _onlyChild = null;
+                _childCount = 0;
+                return;
+            }
+
+            _childCount--;
+            if (index < _childCount)
+            {
+                Array.Copy(_childArray, index + 1, _childArray, index, _childCount - index);
+            }
+
+            _childArray[_childCount] = null;
+        }
+
+        private void ClearChildren()
+        {
+            _onlyChild = null;
+            if (_childArray != null)
+            {
+                Array.Clear(_childArray, 0, _childCount);
+            }
+
+            _childCount = 0;
+        }
+
+        /// <summary>Drops unused capacity once the rule is finished; see <see cref="Parser.TrimParseTree"/>.</summary>
+        internal void TrimChildren()
+        {
+            if (_childArray != null && _childCount < _childArray.Length)
+            {
+                Array.Resize(ref _childArray, _childCount);
+            }
+        }
+
+        /// <summary>A view of a context's children, for callers that want them as a list.</summary>
+        private sealed class ChildList : IList<IParseTree>
+        {
+            private readonly ParserRuleContext _owner;
+
+            public ChildList(ParserRuleContext owner)
+            {
+                _owner = owner;
+            }
+
+            public int Count { get { return _owner._childCount; } }
+
+            public bool IsReadOnly { get { return false; } }
+
+            public IParseTree this[int index]
+            {
+                get
+                {
+                    if ((uint)index >= (uint)_owner._childCount) throw new ArgumentOutOfRangeException(nameof(index));
+                    return _owner.ChildAt(index);
+                }
+                set
+                {
+                    if ((uint)index >= (uint)_owner._childCount) throw new ArgumentOutOfRangeException(nameof(index));
+                    if (_owner._childArray != null) _owner._childArray[index] = value;
+                    else _owner._onlyChild = value;
+                }
+            }
+
+            public void Add(IParseTree item) { _owner.AppendChild(item); }
+
+            public void Clear() { _owner.ClearChildren(); }
+
+            public bool Contains(IParseTree item) { return IndexOf(item) >= 0; }
+
+            public void CopyTo(IParseTree[] array, int arrayIndex)
+            {
+                for (int i = 0; i < _owner._childCount; i++) array[arrayIndex + i] = _owner.ChildAt(i);
+            }
+
+            public IEnumerator<IParseTree> GetEnumerator()
+            {
+                for (int i = 0; i < _owner._childCount; i++) yield return _owner.ChildAt(i);
+            }
+
+            System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() { return GetEnumerator(); }
+
+            public int IndexOf(IParseTree item)
+            {
+                for (int i = 0; i < _owner._childCount; i++)
+                {
+                    if (Equals(_owner.ChildAt(i), item)) return i;
+                }
+
+                return -1;
+            }
+
+            public void Insert(int index, IParseTree item)
+            {
+                if ((uint)index > (uint)_owner._childCount) throw new ArgumentOutOfRangeException(nameof(index));
+                _owner.AppendChild(item);
+                for (int i = _owner._childCount - 1; i > index; i--) this[i] = this[i - 1];
+                this[index] = item;
+            }
+
+            public bool Remove(IParseTree item)
+            {
+                int i = IndexOf(item);
+                if (i < 0) return false;
+                _owner.RemoveChildAt(i);
+                return true;
+            }
+
+            public void RemoveAt(int index)
+            {
+                if ((uint)index >= (uint)_owner._childCount) throw new ArgumentOutOfRangeException(nameof(index));
+                _owner.RemoveChildAt(index);
+            }
+        }
 
         /// <summary>
         /// For debugging/tracing purposes, we want to track all of the nodes in
@@ -137,18 +304,14 @@ namespace Antlr4.Runtime
             this._stop = ctx._stop;
 
             // copy any error nodes to alt label node
-            if (ctx.children != null)
+            // reset parent pointer for any error nodes
+            for (int i = 0; i < ctx._childCount; i++)
             {
-                children = new List<IParseTree>();
-                // reset parent pointer for any error nodes
-                foreach (var child in ctx.children)
+                var errorChildNode = ctx.ChildAt(i) as ErrorNodeImpl;
+                if (errorChildNode != null)
                 {
-                    var errorChildNode = child as ErrorNodeImpl;
-                    if (errorChildNode != null)
-                    {
-                        children.Add(errorChildNode);
-                        errorChildNode.Parent = this;
-                    }
+                    AppendChild(errorChildNode);
+                    errorChildNode.Parent = this;
                 }
             }
         }
@@ -170,22 +333,12 @@ namespace Antlr4.Runtime
         /// <summary>Does not set parent link; other add methods do that</summary>
         public virtual void AddChild(ITerminalNode t)
         {
-            if (children == null)
-            {
-                children = new List<IParseTree>();
-            }
-
-            children.Add(t);
+            AppendChild(t);
         }
 
         public virtual void AddChild(RuleContext ruleInvocation)
         {
-            if (children == null)
-            {
-                children = new List<IParseTree>();
-            }
-
-            children.Add(ruleInvocation);
+            AppendChild(ruleInvocation);
         }
 
         /// <summary>
@@ -199,9 +352,9 @@ namespace Antlr4.Runtime
         /// </remarks>
         public virtual void RemoveLastChild()
         {
-            if (children != null)
+            if (_childCount > 0)
             {
-                children.RemoveAt(children.Count - 1);
+                RemoveChildAt(_childCount - 1);
             }
         }
 
@@ -228,21 +381,22 @@ namespace Antlr4.Runtime
 
         public override IParseTree GetChild(int i)
         {
-            return children != null && i >= 0 && i < children.Count ? children[i] : null;
+            return i >= 0 && i < _childCount ? ChildAt(i) : null;
         }
 
         public virtual T GetChild<T>(int i)
             where T : IParseTree
         {
-            if (children == null || i < 0 || i >= children.Count)
+            if (i < 0 || i >= _childCount)
             {
                 return default(T);
             }
 
             int j = -1;
             // what element have we found with ctxType?
-            foreach (IParseTree o in children)
+            for (int k = 0; k < _childCount; k++)
             {
+                IParseTree o = ChildAt(k);
                 if (o is T)
                 {
                     j++;
@@ -258,15 +412,16 @@ namespace Antlr4.Runtime
 
         public virtual ITerminalNode GetToken(int ttype, int i)
         {
-            if (children == null || i < 0 || i >= children.Count)
+            if (i < 0 || i >= _childCount)
             {
                 return null;
             }
 
             int j = -1;
             // what token with ttype have we found?
-            foreach (IParseTree o in children)
+            for (int k = 0; k < _childCount; k++)
             {
+                IParseTree o = ChildAt(k);
                 if (o is ITerminalNode)
                 {
                     ITerminalNode tnode = (ITerminalNode) o;
@@ -287,14 +442,10 @@ namespace Antlr4.Runtime
 
         public virtual ITerminalNode[] GetTokens(int ttype)
         {
-            if (children == null)
-            {
-                return Collections.EmptyList<ITerminalNode>();
-            }
-
             List<ITerminalNode> tokens = null;
-            foreach (IParseTree o in children)
+            for (int k = 0; k < _childCount; k++)
             {
+                IParseTree o = ChildAt(k);
                 if (o is ITerminalNode)
                 {
                     ITerminalNode tnode = (ITerminalNode) o;
@@ -328,14 +479,10 @@ namespace Antlr4.Runtime
         public virtual T[] GetRuleContexts<T>()
             where T : Antlr4.Runtime.ParserRuleContext
         {
-            if (children == null)
-            {
-                return Collections.EmptyList<T>();
-            }
-
             List<T> contexts = null;
-            foreach (IParseTree o in children)
+            for (int k = 0; k < _childCount; k++)
             {
+                IParseTree o = ChildAt(k);
                 if (o is T)
                 {
                     if (contexts == null)
@@ -357,7 +504,7 @@ namespace Antlr4.Runtime
 
         public override int ChildCount
         {
-            get { return children != null ? children.Count : 0; }
+            get { return _childCount; }
         }
 
         public override Interval SourceInterval

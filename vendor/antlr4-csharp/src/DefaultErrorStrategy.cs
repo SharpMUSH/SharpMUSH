@@ -726,7 +726,7 @@ namespace Antlr4.Runtime
         protected internal virtual IToken ConstructToken(ITokenSource tokenSource, int expectedTokenType, string tokenText, IToken current)
         {
             ITokenFactory factory = tokenSource.TokenFactory;
-            return factory.Create(Tuple.Create(tokenSource, current.TokenSource.InputStream), expectedTokenType, tokenText, TokenConstants.DefaultChannel, -1, -1, current.Line, current.Column);
+            return factory.Create(Tuple.Create(tokenSource, current.InputStream), expectedTokenType, tokenText, TokenConstants.DefaultChannel, -1, -1, current.Line, current.Column);
         }
 
         [return: NotNull]

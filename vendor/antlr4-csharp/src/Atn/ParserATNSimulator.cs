@@ -265,18 +265,25 @@ namespace Antlr4.Runtime.Atn
 
 		// Object pools to reduce GC pressure during prediction.
 		// These are instance-level because a parser/ATN sim cannot be shared across threads.
-		private readonly Misc.ObjectPool<ATNConfigSet> _fullCtxConfigSetPool =
-			new Misc.ObjectPool<ATNConfigSet>(() => new ATNConfigSet(true), cs => cs.PoolReset());
-		private readonly Misc.ObjectPool<ATNConfigSet> _sllConfigSetPool =
-			new Misc.ObjectPool<ATNConfigSet>(() => new ATNConfigSet(false), cs => cs.PoolReset());
-		private readonly Misc.ObjectPool<HashSet<ATNConfig>> _closureBusyPool =
-			new Misc.ObjectPool<HashSet<ATNConfig>>(() => new HashSet<ATNConfig>(), hs => hs.Clear());
-		private readonly Misc.ObjectPool<MergeCache> _mergeCachePool =
-			new Misc.ObjectPool<MergeCache>(() => new MergeCache(), mc => mc.Clear(), 2);
+		// They are created on first use: a prediction the DFA already answers needs none, and a
+		// parser that is built for one short input would otherwise pay for all four.
+		private Misc.ObjectPool<ATNConfigSet> _fullCtxConfigSetPool;
+		private Misc.ObjectPool<ATNConfigSet> _sllConfigSetPool;
+		private Misc.ObjectPool<HashSet<ATNConfig>> _closureBusyPool;
+		private Misc.ObjectPool<MergeCache> _mergeCachePool;
+
+		private Misc.ObjectPool<ATNConfigSet> FullCtxConfigSetPool =>
+			_fullCtxConfigSetPool ??= new Misc.ObjectPool<ATNConfigSet>(static () => new ATNConfigSet(true), static cs => cs.PoolReset());
+		private Misc.ObjectPool<ATNConfigSet> SllConfigSetPool =>
+			_sllConfigSetPool ??= new Misc.ObjectPool<ATNConfigSet>(static () => new ATNConfigSet(false), static cs => cs.PoolReset());
+		private Misc.ObjectPool<HashSet<ATNConfig>> ClosureBusyPool =>
+			_closureBusyPool ??= new Misc.ObjectPool<HashSet<ATNConfig>>(static () => new HashSet<ATNConfig>(), static hs => hs.Clear());
+		private Misc.ObjectPool<MergeCache> MergeCachePool =>
+			_mergeCachePool ??= new Misc.ObjectPool<MergeCache>(static () => new MergeCache(), static mc => mc.Clear(), 2);
 
 		internal ATNConfigSet GetPooledConfigSet(bool fullCtx)
 		{
-			return fullCtx ? _fullCtxConfigSetPool.Get() : _sllConfigSetPool.Get();
+			return fullCtx ? FullCtxConfigSetPool.Get() : SllConfigSetPool.Get();
 		}
 
 		internal void ReturnConfigSet(ATNConfigSet configSet)
@@ -285,19 +292,19 @@ namespace Antlr4.Runtime.Atn
 			// Don't return sets that have been made read-only (they're owned by DFA states)
 			if (configSet.IsReadOnly) return;
 			if (configSet.fullCtx)
-				_fullCtxConfigSetPool.Return(configSet);
+				FullCtxConfigSetPool.Return(configSet);
 			else
-				_sllConfigSetPool.Return(configSet);
+				SllConfigSetPool.Return(configSet);
 		}
 
 		internal HashSet<ATNConfig> GetPooledClosureBusy()
 		{
-			return _closureBusyPool.Get();
+			return ClosureBusyPool.Get();
 		}
 
 		internal void ReturnClosureBusy(HashSet<ATNConfig> closureBusy)
 		{
-			_closureBusyPool.Return(closureBusy);
+			ClosureBusyPool.Return(closureBusy);
 		}
 
 		// LAME globals to avoid parameters!!!!! I need these down deep in predTransition
@@ -417,7 +424,7 @@ namespace Antlr4.Runtime.Atn
 			{
 				if (mergeCache != null)
 				{
-					_mergeCachePool.Return(mergeCache);
+					MergeCachePool.Return(mergeCache);
 				}
 				mergeCache = null; // wack cache after each prediction
 				thisDfa = null;
@@ -831,7 +838,7 @@ namespace Antlr4.Runtime.Atn
 
 			if (mergeCache == null)
 			{
-				mergeCache = _mergeCachePool.Get();
+				mergeCache = MergeCachePool.Get();
 			}
 
 			ATNConfigSet intermediate = GetPooledConfigSet(fullCtx);
