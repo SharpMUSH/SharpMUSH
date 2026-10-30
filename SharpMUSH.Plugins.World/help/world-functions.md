@@ -18,7 +18,7 @@
 
 These read the places of a world map that [@world] keeps. A place is given as x, y and z; an empty z is 0. A map that is not a world map gives `#-1 NOT A WORLD MAP`, and a place out of reach `#-1 BAD PLACE`.
 
-A place whose data hides it reads as nothing to whoever may not examine the map, and only the `render` and `info` keys of its data show to them.
+A place whose data hides it reads as bare terrain to whoever may not examine the map, with no name, data or room, and only the `render` and `info` keys of its data show to them.
 
 - [worldcell()]: a place's terrain, name, data or id
 - [worldway()]: whether a mover can go one way out of a place

@@ -15,7 +15,7 @@ namespace SharpMUSH.Plugins.World.Functions;
 /// <summary>
 /// The <c>world…</c> functions, named for <c>@world</c>: <c>worldcell()</c> reads a place, <c>worldway()</c> a way out
 /// of one, and <c>worlddraw()</c> draws the places around one as text. They read only. A place whose data hides it
-/// reads as nothing, and its data shows only <c>render</c> and <c>info</c>, to whoever may not examine the map.
+/// reads as bare terrain, and its data shows only <c>render</c> and <c>info</c>, to whoever may not examine the map.
 /// <c>worldroom()</c> gives the room standing on a place, lending it one, and <c>worldplace()</c> the place a room
 /// stands on.
 /// </summary>
