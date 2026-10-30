@@ -11,8 +11,8 @@ namespace SharpMUSH.Library.Services.Interfaces;
 /// </summary>
 public interface IWorldMapSource
 {
-	/// <summary>The space <paramref name="map"/>'s places are stored in and how far they reach, or null when this source does not hold it.</summary>
-	ValueTask<MapSpaceDto?> SpaceAsync(AnySharpObject map, CancellationToken ct);
+	/// <summary>The space <paramref name="map"/>'s places are stored in and how far they reach; not found when this source does not hold it.</summary>
+	ValueTask<Found<MapSpaceDto>> SpaceAsync(AnySharpObject map, CancellationToken ct);
 
 	/// <summary>
 	/// The places of <paramref name="window"/> on <paramref name="map"/>, as <paramref name="viewer"/> may see them. A source
@@ -27,5 +27,9 @@ public readonly record struct MapWindow(int Level, int Left, int Bottom, int Rig
 	/// <summary>The most cells one window may cover, and one read return.</summary>
 	public const int MaxCells = MapCellsDto.MaxCells;
 
-	public long Cells => ((long)Right - Left + 1) * ((long)Top - Bottom + 1);
+	public long Width => (long)Right - Left + 1;
+	public long Height => (long)Top - Bottom + 1;
+
+	/// <summary>How many cells the window covers; past <see cref="MaxCells"/> on either side, more than any window may hold.</summary>
+	public long Cells => Width > MaxCells || Height > MaxCells ? long.MaxValue : Width * Height;
 }

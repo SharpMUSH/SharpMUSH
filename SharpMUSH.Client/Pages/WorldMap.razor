@@ -410,14 +410,14 @@
     }
 
     /// <summary>
-    /// Reads the stored places around the view on the level on show. A read overtaken by another (the view moved on, or
-    /// the level changed) is dropped.
+    /// Reads the stored places around the view on the level on show. A read still out is dropped once another starts or
+    /// the places already read hold the view, as they do on going back to a level before its read for elsewhere returns.
     /// </summary>
     private async Task ReadCellsAsync()
     {
-        if (_layout is null || Id is not { } id || _view is not { } view || Shown.Holds(_cells, _level, view)
-            || Shown.Window(view) is not var (left, bottom, right, top)) return;
+        if (_layout is null || Id is not { } id || _view is not { } view) return;
         var (asked, level) = (++_cellsAsked, _level);
+        if (Shown.Holds(_cells, level, view) || Shown.Window(view) is not var (left, bottom, right, top)) return;
         if (await Maps.CellsAsync(id, level, left, bottom, right, top) is MapCellsDto cells && asked == _cellsAsked) _cells = cells;
     }
 
