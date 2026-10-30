@@ -735,6 +735,11 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 
 		for (var scope = CommandScope.Nearby; scope <= CommandScope.MasterRoom; scope++)
 		{
+			if (await RemoteExitAsync(visitor, executorObject, scope, evaluatedCommandText.ToPlainText().Trim()) is SharpExit exit)
+			{
+				return await CommandInvocationPipeline.GoAsync(parser, exit, evaluatedCommandText.ToPlainText().Trim());
+			}
+
 			if (await CommandScopes.CandidatesIn(services.Mediator, scope, executorObject, visitor.Configuration)
 					is not IAsyncEnumerable<AnySharpObject> candidates)
 			{
@@ -763,6 +768,37 @@ internal sealed partial class CommandDispatcher(EvaluationServices services)
 		}
 
 		return new NotFound();
+	}
+
+	/// <summary>
+	/// process_command's remote_exit and global_exit (src/game.c:1309, 1347): once nothing nearby matched, the
+	/// exits of the zone master room the executor's location is zoned to, ahead of its contents' <c>$</c>-commands;
+	/// once no zone matched, the master room's global exits, ahead of its <c>$</c>-commands, unless the executor
+	/// stands in the master room.
+	/// </summary>
+	private async ValueTask<Found<SharpExit>> RemoteExitAsync(SharpMUSHParserVisitor visitor, AnySharpObject executor,
+		CommandScope scope, string line)
+	{
+		if (line.Length == 0 || executor.AsOptionalContent is not AnySharpContent mover) return new NotFound();
+
+		LocateFlags? remote = scope switch
+		{
+			CommandScope.LocationZone => LocateFlags.MatchRemoteContents,
+			CommandScope.MasterRoom => LocateFlags.MatchGlobalExits,
+			_ => null
+		};
+		if (remote is not { } flags) return new NotFound();
+
+		var where = await mover.Location();
+		if (scope == CommandScope.MasterRoom
+				&& where.Object().DBRef.Number == Convert.ToInt32(visitor.Configuration.CurrentValue.Database.MasterRoom))
+			return new NotFound();
+
+		return await services.LocateService.Locate(visitor.Parser, executor, executor, line,
+				LocateFlags.ExitsInTheRoomOfLooker | LocateFlags.ExitsPreference | flags)
+			is AnySharpObject and SharpExit exit
+			? exit
+			: new NotFound();
 	}
 
 	/// <summary>
