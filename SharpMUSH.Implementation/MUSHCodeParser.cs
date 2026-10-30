@@ -319,7 +319,14 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 		else
 		{
-			var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plainText, methodName);
+			// A command's arguments are split in this parse when its name is a built-in (see
+			// SoftcodeParsePipeline.MarkCommandHeads); a marked line that does not parse is parsed again
+			// unmarked, so a wrong guess about a command never fails the line.
+			var heads = methodName is nameof(CommandParse) or nameof(CommandListParse) or nameof(PipedCommandParse)
+				? new BuiltInCommandHeads(parser, options.Compatibility.Dialect)
+				: null;
+			var commandList = methodName == nameof(CommandListParse);
+			var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plainText, methodName, heads: heads, commandList: commandList);
 
 			// Refuse pathologically nested input before the recursive-descent parser overflows the
 			// stack (see SoftcodeParsePipeline.MaxParseNestingDepth). Reported as the call-limit error,
@@ -337,6 +344,11 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 			{
 				(context, errorListener) = ParseTwoStage(
 					bufferedTokenSpanStream, entryPoint, plainText, lenient, parser.FunctionLibrary);
+				if (errorListener.HasErrors && heads is not null)
+				{
+					(context, errorListener) = ParseTwoStage(
+						SoftcodeParsePipeline.Lex(plainText, methodName), entryPoint, plainText, lenient, parser.FunctionLibrary);
+				}
 			}
 			catch (OperationCanceledException) when (budget.IsExpired)
 			{
@@ -507,7 +519,8 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		}
 
 		var plaintext = text.ToPlainText();
-		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor));
+		var bufferedTokenSpanStream = SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor),
+			heads: new BuiltInCommandHeads(this, Configuration.CurrentValue.Compatibility.Dialect), commandList: true);
 
 		if (SoftcodeParsePipeline.ExceedsNestingLimit(bufferedTokenSpanStream, SoftcodeParsePipeline.MaxParseNestingDepth,
 			Configuration.CurrentValue.Compatibility.ParenGroups, out _))
@@ -521,6 +534,12 @@ public record MUSHCodeParser(ILogger<MUSHCodeParser> Logger,
 		{
 			(chatContext, errorListener) = ParseTwoStage(
 				bufferedTokenSpanStream, p => p.StartCommandString(), plaintext, lenient: false);
+			if (errorListener.HasErrors)
+			{
+				(chatContext, errorListener) = ParseTwoStage(
+					SoftcodeParsePipeline.Lex(plaintext, nameof(CommandListParseVisitor)), p => p.StartCommandString(),
+					plaintext, lenient: false);
+			}
 		}
 		catch (OperationCanceledException) when (ExecutionBudget.Current?.IsExpired == true)
 		{

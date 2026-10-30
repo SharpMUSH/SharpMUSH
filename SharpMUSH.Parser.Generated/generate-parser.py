@@ -29,7 +29,8 @@ from collections import namedtuple
 
 # Where a token stands, as the facts that decide what it is.
 #   mode  the entry point: plain | cmd (command list, ';' separates) | args (',' separates)
-#         | eq (before the '=' of an '=' split)
+#         | eq (before the '=' of an '=' split); cmdargs and cmdeq are args and eq inside a command
+#         list, where ';' still separates
 #   F     inside a function call, since the last brace (a brace starts over)
 #   B     inside a brace, at any depth
 #   K     inside a register, argument or capture name (%q<...>, %<...>, $<...>), where '>' ends the name
@@ -48,11 +49,11 @@ def text_tokens(c):
 	tokens = []
 	if not c.F and not c.P:  # no call or group for it to close
 		tokens.append('CPAREN')
-	if c.mode != 'cmd' or c.B:  # not separating commands
+	if not c.mode.startswith('cmd') or c.B:  # not separating commands
 		tokens.append('SEMICOLON')
-	if c.P or (not c.F and (c.mode != 'args' or c.B)):  # not separating arguments
+	if c.P or (not c.F and (c.mode not in ('args', 'cmdargs') or c.B)):  # not separating arguments
 		tokens.append('COMMAWS')
-	if c.mode != 'eq' or c.F or c.B:  # not the '=' that splits a command
+	if c.mode not in ('eq', 'cmdeq') or c.F or c.B:  # not the '=' that splits a command
 		tokens.append('EQUALS')
 	if not c.K:  # not ending a register name
 		tokens.append('CCARET')
@@ -126,11 +127,12 @@ def context_rules(c, ref):
 
 	strings('', open_tails)
 	# An argument followed by a comma cannot end inside an open paren group, which would take the comma.
-	if open_tails and c.mode == 'args':
+	if open_tails and c.mode in ('args', 'cmdargs'):
 		strings('_closed', False)
 	# A brace holds what a call's tail holds: anything a string may hold after its start, a name( as text.
 	rules[own('braceExplicitEvaluationString')] = rules[own('callTail')]
-	rules[own('command')] = f': {own("evaluationString")};'
+	if c.mode in ('plain', 'cmd') and not (c.F or c.B or c.K or c.P):
+		rules[own('command')] = command_rule(c, ref)
 	rules[own('commandList')] = f': {own("command")} (SEMICOLON {own("command")}?)*;'
 	rules[own('commaCommandArgs')] = (
 		f': ({own("evaluationString", "_closed")}? COMMAWS)* {own("evaluationString")}?;' if open_tails
@@ -157,6 +159,22 @@ def context_rules(c, ref):
 		rules[own('openTailFirst')] = f': beginGenericText__Open {loop} {own("openTail")}?;'
 		rules[own('openTail')] = f': genericText__Open {loop} {own("openTail")}?;'
 	return rules
+
+
+def command_rule(c, ref):
+	"""One command: a CMD_* token the lexer put before the arguments of a built-in it knows, saying how
+	they split, then those arguments read that way; or, when no such token is there, the whole command
+	as one string. In a command list the arguments end at a ';' as the command does."""
+	in_list = 'cmd' if c.mode == 'cmd' else ''
+	lhs = ref('evaluationString', c._replace(mode=in_list + 'eq'))
+	args = ref('commaCommandArgs', c._replace(mode=in_list + 'args'))
+	rest = ref('evaluationString', c)
+	return alternatives([
+		f'CMD_EQ_ARGS {lhs}? (EQUALS {args})?',
+		f'CMD_EQ {lhs}? (EQUALS {rest}?)?',
+		f'CMD_ARGS {args}',
+		f'CMD_SINGLE {rest}?',
+		rest])
 
 
 ENTRIES = dict(
@@ -217,7 +235,7 @@ RULE_NAME = re.compile(r'\b[a-z]\w*\b')
 
 def all_rules():
 	"""Every rule of every context, named family__<context number>, and the contexts by number."""
-	starts = {(m, g): Ctx(m, 0, 0, 0, 0, g) for m in ('plain', 'cmd', 'args', 'eq') for g in (0, 1)}
+	starts = {(m, g): Ctx(m, 0, 0, 0, 0, g) for m in ('plain', 'cmd', 'args', 'eq', 'cmdargs', 'cmdeq') for g in (0, 1)}
 	ctxs = reachable(starts.values())
 	number = {c: i for i, c in enumerate(ctxs)}
 

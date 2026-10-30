@@ -44,6 +44,10 @@ internal static class SoftcodeParsePipeline
 	/// <summary>
 	/// Lexes <paramref name="plainText"/> into a filled token stream.
 	/// </summary>
+	/// <param name="heads">For a command or command list: the built-ins whose heads are marked (see
+	/// <see cref="MarkCommandHeads"/>). Null leaves every command a plain string.</param>
+	/// <param name="commandList">Whether a <c>;</c> outside any bracket, brace, call or name starts another
+	/// command, as it does in a command list.</param>
 	/// <param name="plainText">The text to lex, already stripped of markup.</param>
 	/// <param name="sourceName">The name the input stream reports, which is the calling entry point.</param>
 	/// <param name="rewriteOrphanedClosers">
@@ -51,7 +55,8 @@ internal static class SoftcodeParsePipeline
 	/// <see cref="RewriteOrphanedBracketClosers"/>). Every parse does; only <c>Tokenize</c>, which
 	/// reports raw lexer tokens, does not.
 	/// </param>
-	public static BufferedTokenSpanStream Lex(string plainText, string sourceName, bool rewriteOrphanedClosers = true)
+	public static BufferedTokenSpanStream Lex(string plainText, string sourceName, bool rewriteOrphanedClosers = true,
+		ICommandHeads? heads = null, bool commandList = false)
 	{
 		ExecutionBudget.Current?.ThrowIfExceeded();
 		StringSpanInputStream inputStream = new(plainText, sourceName);
@@ -73,19 +78,161 @@ internal static class SoftcodeParsePipeline
 
 			tokens = new BufferedTokenSpanStream(lexer);
 			tokens.Fill();
+
+			if (rewriteOrphanedClosers)
+			{
+				RewriteOrphanedBracketClosers(tokens);
+				RewriteOrphanedBraceClosers(tokens);
+			}
+
+			if (heads is not null)
+			{
+				MarkCommandHeads(tokens, lexer, inputStream, heads, commandList);
+			}
 		}
 		finally
 		{
 			t_lexer = lexer;
 		}
 
-		if (rewriteOrphanedClosers)
+		return tokens;
+	}
+
+	/// <summary>
+	/// Puts a <c>CMD_*</c> token in place of the name, switches and following spaces of each command
+	/// whose name is a built-in <paramref name="heads"/> knows, so the command grammar reads its
+	/// arguments the way that built-in splits them, in the same parse as the line.
+	/// <para>
+	/// A command is marked only when its name is the start of an <c>OTHER</c> run followed by a space,
+	/// or the whole run when nothing follows it; anything else (<c>addcom=x</c>, <c>think[x]</c>, a
+	/// name that starts with a token of its own) is left a plain string, which dispatch splits from its
+	/// text as before. <c>OTHER</c> runs through spaces, so the text from the first argument character
+	/// is lexed again, up to where its tokens meet the old ones.
+	/// </para>
+	/// <para>
+	/// A <c>;</c> is taken as a separator when no bracket, brace, call or name is open. A wrong guess
+	/// costs only a reparse: a marked parse that fails is parsed again unmarked.
+	/// </para>
+	/// </summary>
+	private static void MarkCommandHeads(BufferedTokenSpanStream stream, SharpMUSHLexer lexer,
+		StringSpanInputStream input, ICommandHeads heads, bool commandList)
+	{
+		var tokens = stream.tokens;
+		var marked = false;
+		var depth = 0;
+		Stack<int>? open = null;
+		var commandStart = true;
+
+		for (var i = 0; i < tokens.Count; i++)
 		{
-			RewriteOrphanedBracketClosers(tokens);
-			RewriteOrphanedBraceClosers(tokens);
+			if (commandStart)
+			{
+				commandStart = false;
+				if (MarkCommandHead(tokens, i, lexer, input, heads, commandList))
+				{
+					marked = true;
+					continue;
+				}
+			}
+
+			var type = tokens[i].Type;
+			switch (type)
+			{
+				case SharpMUSHLexer.OBRACK or SharpMUSHLexer.OBRACE or SharpMUSHLexer.FUNCHAR
+					or SharpMUSHLexer.REG_STARTCARET or SharpMUSHLexer.ARG_STARTCARET or SharpMUSHLexer.ATTR_STARTCARET
+					or SharpMUSHLexer.DELIM_STARTCARET or SharpMUSHLexer.REGEXP_STARTCARET:
+					(open ??= new Stack<int>()).Push(Closer(type));
+					depth++;
+					break;
+				case SharpMUSHLexer.CBRACK or SharpMUSHLexer.CBRACE or SharpMUSHLexer.CPAREN or SharpMUSHLexer.CCARET
+					when depth > 0 && open!.Peek() == type:
+					open.Pop();
+					depth--;
+					break;
+				case SharpMUSHLexer.SEMICOLON when commandList && depth == 0:
+					commandStart = true;
+					break;
+			}
 		}
 
-		return tokens;
+		if (marked)
+		{
+			for (var i = 0; i < tokens.Count; i++)
+			{
+				if (tokens[i] is IWritableToken writable) writable.TokenIndex = i;
+			}
+		}
+
+		static int Closer(int opener) => opener switch
+		{
+			SharpMUSHLexer.OBRACK => SharpMUSHLexer.CBRACK,
+			SharpMUSHLexer.OBRACE => SharpMUSHLexer.CBRACE,
+			SharpMUSHLexer.FUNCHAR => SharpMUSHLexer.CPAREN,
+			_ => SharpMUSHLexer.CCARET
+		};
+	}
+
+	/// <summary>
+	/// Marks the command whose first token is at <paramref name="index"/>, when its head names a built-in;
+	/// see <see cref="MarkCommandHeads"/>.
+	/// </summary>
+	private static bool MarkCommandHead(List<IToken> tokens, int index, SharpMUSHLexer lexer,
+		StringSpanInputStream input, ICommandHeads heads, bool commandList)
+	{
+		var first = tokens[index];
+		if (first.Type != SharpMUSHLexer.OTHER) return false;
+
+		var text = first.Text;
+		var nameStart = 0;
+		while (nameStart < text.Length && text[nameStart] == ' ') nameStart++;
+		var nameEnd = text.IndexOf(' ', nameStart);
+		if (nameStart == text.Length || text.AsSpan(0, nameStart).ContainsAnyExcept(' ')) return false;
+
+		if (nameEnd == -1)
+		{
+			// A name with nothing after it, or with an argument that starts without a space: only the first
+			// can be told from the tokens.
+			var next = tokens[index + 1].Type;
+			if (!(next == TokenConstants.EOF || commandList && next == SharpMUSHLexer.SEMICOLON)) return false;
+			nameEnd = text.Length;
+		}
+
+		var split = heads.SplitToken(text[nameStart..nameEnd]);
+		if (split == 0) return false;
+
+		var argumentStart = nameEnd;
+		while (argumentStart < text.Length && text[argumentStart] == ' ') argumentStart++;
+		var source = Tuple.Create((ITokenSource)lexer, (ICharStream)input);
+		var head = new CommonToken(source, split, TokenConstants.DefaultChannel, first.StartIndex,
+			first.StartIndex + argumentStart - 1);
+
+		if (argumentStart == text.Length)
+		{
+			tokens[index] = head;
+			return true;
+		}
+
+		// Lex again from the first argument character until a token ends where an old one did, with the
+		// lexer back in its default mode on both sides; from there the old tokens are the same.
+		lexer.SetInputStream(input);
+		input.Seek(first.StartIndex + argumentStart);
+		var relexed = new List<IToken> { head };
+		var old = index;
+		while (true)
+		{
+			var token = lexer.NextToken();
+			relexed.Add(token);
+			while (old < tokens.Count - 1 && tokens[old].StopIndex < token.StopIndex) old++;
+			if (token.Type == TokenConstants.EOF) { old = tokens.Count - 1; break; }
+			if (tokens[old].StopIndex == token.StopIndex && lexer.ModeStack.Count == 0
+				&& tokens[old].Type is not (SharpMUSHLexer.ESCAPE or SharpMUSHLexer.PERCENT or SharpMUSHLexer.OANSI
+					or SharpMUSHLexer.ANSICHARACTER))
+				break;
+		}
+
+		tokens.RemoveRange(index, old - index + 1);
+		tokens.InsertRange(index, relexed);
+		return true;
 	}
 
 	/// <summary>
