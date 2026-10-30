@@ -27,7 +27,10 @@ public class WorldCommandIntegrationTests
 	private async Task<string> Eval(string expression) =>
 		(await FunctionParser.EvaluateAsync(MarkupText.Plain(expression))).ToPlainText();
 
-	/// <summary>Runs a command as God and answers what God was told meanwhile that mentions <paramref name="match"/>.</summary>
+	/// <summary>
+	/// Runs a command as God and answers what God was told meanwhile that mentions <paramref name="match"/>. Output of an
+	/// earlier command can still arrive in that window, so callers look for their line rather than count them.
+	/// </summary>
 	private async Task<string[]> God(string command, string match)
 	{
 		var god = ConnectionService.Get(1)!.Ref!.Value;
@@ -44,25 +47,27 @@ public class WorldCommandIntegrationTests
 		var map = TestIsolationHelpers.GenerateUniqueName("Wilds");
 		await God($"@create {map}", map);
 
-		await Assert.That(await God($"@world/create {map}", map)).IsEquivalentTo([$"{map} is now a world map."]);
+		var created = await God($"@world/create {map}", map);
+		await Assert.That(created).Contains($"{map} is now a world map.");
+		await Assert.That(created).DoesNotContain($"{map} is already a world map.");
 		await Assert.That(await Eval($"get({map}/MAP`KIND)")).IsEqualTo("coordinates");
-		await Assert.That(await God($"@world/create {map}", map)).IsEquivalentTo([$"{map} is already a world map."]);
+		await Assert.That(await God($"@world/create {map}", map)).Contains($"{map} is already a world map.");
 
-		await Assert.That(await God($"@world/paint {map}/0,0:9,9=forest", "places")).IsEquivalentTo(["Painted 100 places as forest."]);
+		await Assert.That(await God($"@world/paint {map}/0,0:9,9=forest", "places")).Contains("Painted 100 places as forest.");
 		await God($"&MAP`LEGEND`FOREST`LABEL {map}=Old forest", map);
 		await Assert.That(await Eval($"worldcell({map},4,4)/[worldcell({map},4,4,,label)]/[worldcell({map},10,4)]"))
 			.IsEqualTo("forest/Old forest/");
 
 		await Assert.That(await God($"@world/wall {map}/4,4/n=wall,A fallen oak blocks the path.", "4,4,0"))
-			.IsEquivalentTo(["The north side of 4,4,0 is now a wall."]);
+			.Contains("The north side of 4,4,0 is now a wall.");
 		await Assert.That(await Eval($"worldway({map},4,4,0,n)/[worldway({map},4,4,0,n,reason)]/[worldway({map},4,5,0,s)]/[worldway({map},4,4,0,ne,to)]"))
 			.IsEqualTo("wall/A fallen oak blocks the path./wall/5,5,0");
 
-		await Assert.That(await God($"@world/place {map}/4,4=Old Oak", "4,4,0")).IsEquivalentTo(["Named 4,4,0 Old Oak."]);
+		await Assert.That(await God($"@world/place {map}/4,4=Old Oak", "4,4,0")).Contains("Named 4,4,0 Old Oak.");
 		await Assert.That(await Eval($"worldcell({map},4,4,,name)")).IsEqualTo("Old Oak");
 
 		await Assert.That(await God($$$"""@world/data {{{map}}}/4,4={"render":{"icon":"T"},"info":{"Danger":"Low"}}""", "4,4,0"))
-			.IsEquivalentTo(["Set the data of 4,4,0."]);
+			.Contains("Set the data of 4,4,0.");
 		await God($$$"""@world/data/merge {{{map}}}/4,4={"info":null,"note":"[add(1,1)]"}""", "4,4,0");
 		await Assert.That(await Eval($"worldcell({map},4,4,,data)")).IsEqualTo("""{"render":{"icon":"T"},"note":"[add(1,1)]"}""");
 
