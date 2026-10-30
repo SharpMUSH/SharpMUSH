@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
 
@@ -90,11 +91,13 @@ public class WorldRoomIntegrationTests
 		var heronRef = await Eval($"num({heron})");
 		await God($"@tel {heronRef}={room}", heron);
 
-		await God($"@nuke {mapRef}", map);
-		await God($"@nuke {mapRef}", map);
-		await God("@purge", "Purge");
-		await God("@purge", "Purge");
-		await God($"@purge {mapRef}", mapRef);
+		// What purging the map's recover entry does, without a purge pass over every test's objects.
+		if (!DBRef.TryParse(await Eval($"objid({mapRef})"), out var objid) || objid is null)
+			throw new InvalidOperationException($"No objid for {mapRef}.");
+		foreach (var cleanup in WebAppFactoryArg.Services.GetServices<IFreedObjectCleanup>())
+		{
+			await cleanup.ObjectsFreedAsync([objid.Value]);
+		}
 		await Assert.That(await Eval($"worldplace({room})")).IsEmpty().Because("a destroyed map lets go of its rooms");
 		await God("@world/sweep", "Took back");
 		await Assert.That(await Eval($"name({room})")).IsEqualTo("reeds (0,0,0)").Because("a room holding something is not made spare");
