@@ -234,53 +234,38 @@ window.sharpmushLayout = {
 		});
 	},
 
-	// The rail's navigation groups: how many fit, top down, leaving room for More when not all of them do.
-	// heights are the groups' own in px, gap the list's row gap, more the More entry's height.
-	railFit: function (heights, available, more, gap) {
-		const all = heights.reduce((sum, height, i) => sum + height + (i > 0 ? gap : 0), 0);
-		if (all <= available) return heights.length;
-		let used = more;
-		for (let i = 0; i < heights.length; i++) {
-			used += heights[i] + gap;
-			if (used > available) return i;
-		}
-		return heights.length;
+	// Scrolls the rail's groups list (list) just enough to show the current page's button clear of the edge
+	// fade; a button already in view leaves the list where it is. Only the list moves, never the page.
+	revealRailCurrent: function (list) {
+		if (!list) return;
+		const current = list.querySelector('[aria-current="page"], .phosphor-rail-item--on');
+		if (!current) return;
+		const room = 20; // the edge fade in shell.css
+		const shown = list.getBoundingClientRect();
+		const item = current.getBoundingClientRect();
+		if (item.top < shown.top + room) list.scrollTop -= shown.top + room - item.top;
+		else if (item.bottom > shown.bottom - room) list.scrollTop += item.bottom - (shown.bottom - room);
 	},
 
-	// Reports to dotnetRef's OnRailFit how many of the rail's groups fit the list (the rail's room between its
-	// logo and its tools), whenever that room changes, and on measure(), after the rail drew a new set of groups
-	// (measure(true) forgets the old heights). A group moved into More is not drawn, so its last height stands.
-	// Returns { measure, dispose }.
-	watchRailFit: function (list, dotnetRef) {
-		const heights = new Map();
-		const moreKey = '\u0000more';
-		let last = -1;
-		const measure = reset => {
-			if (reset) {
-				heights.clear();
-				last = -1;
-			}
-			const groups = Array.from(list.children).filter(item => item.dataset.group !== undefined);
-			for (const item of groups) {
-				if (item.offsetHeight > 0) heights.set(item.dataset.group, item.offsetHeight);
-			}
-			const more = Array.from(list.children).find(item => item.dataset.more !== undefined);
-			if (more && more.offsetHeight > 0) heights.set(moreKey, more.offsetHeight);
-			const gap = parseFloat(getComputedStyle(list).rowGap) || 0;
-			const fit = this.railFit(groups.map(item => heights.get(item.dataset.group) || 0), list.clientHeight,
-				heights.get(moreKey) || 51, gap);
-			if (fit === last) return;
-			last = fit;
-			const pending = dotnetRef.invokeMethodAsync('OnRailFit', fit);
+	// Tells dotnetRef's OnRailScrolled once when the rail's groups list holding button scrolls it out of sight,
+	// even in part, so an open pop-out closes rather than point at a button that is not there; while the button
+	// shows, the pop-out follows it. When focus is in its list (panelId), it goes back to the button.
+	// Returns { dispose }.
+	closeOnRailScroll: function (button, panelId, dotnetRef) {
+		const list = button && button.closest ? button.closest('.phosphor-rail-groups') : null;
+		if (!list) return { dispose: () => { } };
+		const scrolled = () => {
+			const shown = list.getBoundingClientRect();
+			const at = button.getBoundingClientRect();
+			if (at.top >= shown.top && at.bottom <= shown.bottom) return;
+			list.removeEventListener('scroll', scrolled);
+			const panel = document.getElementById(panelId);
+			if (panel && panel.contains(document.activeElement)) button.focus({ preventScroll: true });
+			const pending = dotnetRef.invokeMethodAsync('OnRailScrolled');
 			if (pending && typeof pending.catch === 'function') pending.catch(() => { });
 		};
-		const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => measure(false)) : null;
-		if (observer) observer.observe(list);
-		measure(false);
-		return {
-			measure: reset => measure(reset),
-			dispose: () => { if (observer) observer.disconnect(); }
-		};
+		list.addEventListener('scroll', scrolled, { passive: true });
+		return { dispose: () => list.removeEventListener('scroll', scrolled) };
 	},
 
 	// Moves focus to the first control of a popover, as when it switches to another level.

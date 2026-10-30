@@ -170,14 +170,53 @@
 	gap: 6px;
 }
 
-/* The groups take the rail's room between the logo and its tools; what does not fit goes into More
-   (layout.js watchRailFit), so the list is clipped rather than scrolled. The padding keeps a focus ring in. */
+/* The groups take the rail's room between the logo and its tools and scroll when they need more, as Discord's
+   server list does; the logo and the tools stay put. The scrollbar is a thin one shown on hover, its gutter
+   kept on both sides so the buttons stay centred. The padding keeps a focus ring in. */
 .phosphor-rail-groups {
 	flex: 1 1 0;
 	min-height: 0;
 	align-self: stretch;
 	padding: 4px 0;
-	overflow: hidden;
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	scrollbar-width: thin;
+	scrollbar-color: transparent transparent;
+	scrollbar-gutter: stable both-edges;
+}
+
+.phosphor-rail-groups:hover,
+.phosphor-rail-groups:focus-within {
+	scrollbar-color: color-mix(in srgb, var(--rail-ink) 45%, transparent) transparent;
+}
+
+/* An edge with more beyond it fades out, so the rail says it scrolls: the top once the list has moved, the
+   bottom until it reaches the end. A scroll-driven animation sets the two fades; a list that does not scroll
+   has no scroll timeline, and keeps both at nothing. */
+@property --rail-fade-top {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
+@property --rail-fade-bottom {
+	syntax: "<length>";
+	inherits: false;
+	initial-value: 0px;
+}
+
+@keyframes phosphor-rail-fade {
+	0% { --rail-fade-top: 0px; --rail-fade-bottom: 20px; }
+	8%, 92% { --rail-fade-top: 20px; --rail-fade-bottom: 20px; }
+	100% { --rail-fade-top: 20px; --rail-fade-bottom: 0px; }
+}
+
+@supports (animation-timeline: scroll()) {
+	.phosphor-rail-groups {
+		mask-image: linear-gradient(transparent, #000 var(--rail-fade-top), #000 calc(100% - var(--rail-fade-bottom)), transparent);
+		animation: phosphor-rail-fade linear both;
+		animation-timeline: scroll(self);
+	}
 }
 
 .phosphor-rail-group {
@@ -185,10 +224,6 @@
 	flex-direction: column;
 	align-items: center;
 	gap: 4px;
-}
-
-.phosphor-rail-group--overflow {
-	display: none;
 }
 
 /* A pop-out's button with no icon of its own: its first four destinations' icons, two by two. */

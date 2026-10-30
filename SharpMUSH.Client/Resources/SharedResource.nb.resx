@@ -1965,10 +1965,6 @@
     <value>tilkoblet</value>
     <comment>MT — corpus term for connected/online.</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>Mer</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}, inneholder denne siden</value>
     <comment>MT</comment>

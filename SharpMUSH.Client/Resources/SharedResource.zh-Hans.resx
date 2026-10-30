@@ -1965,10 +1965,6 @@
     <value>在线</value>
     <comment>MT</comment>
   </data>
-  <data name="NavMore" xml:space="preserve">
-    <value>更多</value>
-    <comment>MT</comment>
-  </data>
   <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
     <value>{0}，包含此页面</value>
     <comment>MT</comment>

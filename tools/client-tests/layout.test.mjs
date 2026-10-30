@@ -13,7 +13,6 @@ function boot() {
     const context = vm.createContext({
         window: { matchMedia: () => ({ matches: false }) },
         document: { addEventListener: (name, handler) => listeners.set(name, handler) },
-        getComputedStyle: () => ({ rowGap: '6px' }),
         HTMLElement: class {}
     });
     vm.runInContext(readFileSync(new URL('js/layout.js', root), 'utf8'), context, { filename: 'js/layout.js' });
@@ -746,29 +745,64 @@ test('terminal guide insertion refuses composition and a draft not yet delivered
     assert.equal(layout.terminalInputBusy(field), false);
 });
 
-// The rail's groups (watchRailFit): as many as fit top down, with room kept for More when not all of them do.
-test('the rail keeps every group that fits, and leaves room for More when one does not', () => {
+// The rail's groups scroll; the current page's button is scrolled into view, and only as far as it takes.
+function railList(top, bottom, scrollTop, current) {
+    return {
+        scrollTop,
+        getBoundingClientRect: () => ({ top, bottom }),
+        querySelector: () => current === null ? null : { getBoundingClientRect: () => current },
+    };
+}
+
+test('the rail scrolls the current page\'s button into view, with room beside it', () => {
     const { layout } = boot();
-    assert.equal(layout.railFit([100, 50, 50], 212, 51, 6), 3);
-    assert.equal(layout.railFit([100, 50, 50], 211, 51, 6), 1);
-    assert.equal(layout.railFit([100, 50, 50], 157, 51, 6), 1);
-    assert.equal(layout.railFit([100, 50, 50], 156, 51, 6), 0);
-    assert.equal(layout.railFit([], 0, 51, 6), 0);
+    const below = railList(100, 400, 0, { top: 420, bottom: 464 });
+    layout.revealRailCurrent(below);
+    assert.equal(below.scrollTop, 84);
+    const above = railList(100, 400, 200, { top: 60, bottom: 104 });
+    layout.revealRailCurrent(above);
+    assert.equal(above.scrollTop, 140);
 });
 
-test('the rail reports a new fit only when it changes, and again after measure(true)', () => {
+test('the rail leaves its groups where they are when the button shows or there is none', () => {
     const { layout } = boot();
-    const fits = [];
-    const group = (id, height) => ({ dataset: { group: id }, offsetHeight: height });
-    const list = { children: [group('a', 100), group('b', 50)], clientHeight: 400 };
-    const context = { invokeMethodAsync: (name, fit) => { fits.push(fit); return Promise.resolve(); } };
-    const watch = layout.watchRailFit(list, context);
-    watch.measure(false);
-    assert.deepEqual(fits, [2]);
-    list.clientHeight = 120;
-    watch.measure(false);
-    assert.deepEqual(fits, [2, 0]);
-    watch.measure(true);
-    assert.deepEqual(fits, [2, 0, 0]);
+    const shown = railList(100, 400, 30, { top: 200, bottom: 244 });
+    layout.revealRailCurrent(shown);
+    assert.equal(shown.scrollTop, 30);
+    const none = railList(100, 400, 30, null);
+    layout.revealRailCurrent(none);
+    assert.equal(none.scrollTop, 30);
+    layout.revealRailCurrent(null);
+});
+
+test('an open pop-out stays while its button shows, and closes once the rail scrolls it out of sight', () => {
+    const { layout, document } = boot();
+    const handlers = new Map();
+    const list = {
+        getBoundingClientRect: () => ({ top: 100, bottom: 400 }),
+        addEventListener: (name, handler) => handlers.set(name, handler),
+        removeEventListener: (name, handler) => { if (handlers.get(name) === handler) handlers.delete(name); },
+    };
+    let at = { top: 200, bottom: 244 };
+    let focused = null;
+    const button = { closest: () => list, getBoundingClientRect: () => at, focus: options => { focused = options; } };
+    const link = {};
+    document.activeElement = link;
+    document.getElementById = id => id === 'rail-flyout-community' ? { contains: element => element === link } : null;
+    const calls = [];
+    const ref = { invokeMethodAsync: name => { calls.push(name); return Promise.resolve(); } };
+
+    layout.closeOnRailScroll(button, 'rail-flyout-community', ref);
+    handlers.get('scroll')();
+    assert.deepEqual(calls, []);
+    at = { top: 380, bottom: 424 };
+    handlers.get('scroll')();
+    assert.deepEqual(calls, ['OnRailScrolled']);
+    assert.equal(focused?.preventScroll, true);
+    assert.equal(handlers.has('scroll'), false);
+
+    const watch = layout.closeOnRailScroll(button, 'rail-flyout-community', ref);
     watch.dispose();
+    assert.equal(handlers.has('scroll'), false);
+    layout.closeOnRailScroll({ closest: () => null }, 'x', ref).dispose();
 });

@@ -1,15 +1,18 @@
 @using SharpMUSH.Client.Services
 @inject IStringLocalizer<SharedResource> Loc
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
 @* A pop-out on the rail, a disclosure (not a menu): one button opens a list of links beside the rail. A click
    opens it, never a hover; Escape and a click outside close it and hand focus back to the button, and following
    a link closes it. Up and Down move between the links. The button's name says when the page shown is one of
-   its links. It holds one pop-out group, or (More) the groups the rail had no room for, each under its name.
-   With no icon of its own it shows its first four destinations' icons, two by two. *@
+   its links. With no icon of its own it shows its first four destinations' icons, two by two. While the rail's
+   groups scroll it follows its button, and it closes once the button scrolls out of sight (layout.js
+   closeOnRailScroll). *@
 <PopoverMenu Class="phosphor-rail-flyout" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft" ArrowKeys="true"
              Open="_open" OpenChanged="v => _open = v">
     <Activator>
-        <button type="button" class="phosphor-rail-item phosphor-rail-flyout-btn @(Current ? "phosphor-rail-item--on" : null)"
+        <button @ref="_button" type="button" class="phosphor-rail-item phosphor-rail-flyout-btn @(Current ? "phosphor-rail-item--on" : null)"
                 aria-expanded="@(_open ? "true" : "false")" aria-controls="@(_open ? PanelId : null)"
                 aria-label="@Name" title="@Name" @onclick="() => _open = !_open" @onkeydown="CloseOnEscape">
             @if (Icon is not null)
@@ -19,7 +22,7 @@
             else
             {
                 <span class="phosphor-rail-flyout-grid" aria-hidden="true">
-                    @foreach (var item in Groups.SelectMany(g => g.Items).Take(4))
+                    @foreach (var item in Group.Items.Take(4))
                     {
                         <MudIcon Icon="@item.OutlineIcon" />
                     }
@@ -29,45 +32,37 @@
     </Activator>
     <ChildContent>
         <div id="@PanelId" class="phosphor-rail-flyout-panel">
-            @foreach (var group in Groups)
-            {
-                <div class="phosphor-rail-flyout-title" aria-hidden="true" @key="group.Id">@group.Label</div>
-                <ul class="phosphor-rail-flyout-items" aria-label="@group.Label">
-                    @foreach (var item in group.Items)
-                    {
-                        var current = item.IsCurrent(Path);
-                        <li @key="item.Key">
-                            @if (item.External)
-                            {
-                                <a href="@item.Href" class="phosphor-rail-flyout-item" target="_blank" rel="noopener" @onclick="() => _open = false">
-                                    <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
-                                    <span>@item.Label</span>
-                                </a>
-                            }
-                            else
-                            {
-                                <a href="@item.Href" class="phosphor-rail-flyout-item @(current ? "phosphor-rail-flyout-item--on" : null)"
-                                   aria-current="@(current ? "page" : null)">
-                                    <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
-                                    <span>@item.Label</span>
-                                </a>
-                            }
-                        </li>
-                    }
-                </ul>
-            }
+            <div class="phosphor-rail-flyout-title" aria-hidden="true">@Group.Label</div>
+            <ul class="phosphor-rail-flyout-items" aria-label="@Group.Label">
+                @foreach (var item in Group.Items)
+                {
+                    var current = item.IsCurrent(Path);
+                    <li @key="item.Key">
+                        @if (item.External)
+                        {
+                            <a href="@item.Href" class="phosphor-rail-flyout-item" target="_blank" rel="noopener" @onclick="() => _open = false">
+                                <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
+                                <span>@item.Label</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="@item.Href" class="phosphor-rail-flyout-item @(current ? "phosphor-rail-flyout-item--on" : null)"
+                               aria-current="@(current ? "page" : null)">
+                                <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
+                                <span>@item.Label</span>
+                            </a>
+                        }
+                    </li>
+                }
+            </ul>
         </div>
     </ChildContent>
 </PopoverMenu>
 
 @code {
-    /// <summary>Names the panel (<c>rail-flyout-{Id}</c>).</summary>
-    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
-
-    /// <summary>The button's name.</summary>
-    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
-
-    [Parameter, EditorRequired] public IReadOnlyList<ResolvedNavGroup> Groups { get; set; } = [];
+    /// <summary>The pop-out group: its id names the panel (<c>rail-flyout-{Id}</c>), its label the button.</summary>
+    [Parameter, EditorRequired] public ResolvedNavGroup Group { get; set; } = null!;
 
     /// <summary>The button's icon; without one it shows the first four destinations' icons.</summary>
     [Parameter] public string? Icon { get; set; }
@@ -77,12 +72,15 @@
 
     private bool _open;
     private string? _shownAt;
+    private ElementReference _button;
+    private IJSObjectReference? _scrollWatch;
+    private DotNetObjectReference<NavRailFlyout>? _selfRef;
 
-    private bool Current => Groups.Any(group => group.IsCurrent(Path));
+    private bool Current => Group.IsCurrent(Path);
 
-    private string PanelId => $"rail-flyout-{Id}";
+    private string PanelId => $"rail-flyout-{Group.Id}";
 
-    private string Name => Current ? Loc["NavFlyoutHoldsCurrent", Label].Value : Label;
+    private string Name => Current ? Loc["NavFlyoutHoldsCurrent", Group.Label].Value : Group.Label;
 
     protected override void OnParametersSet()
     {
@@ -93,5 +91,56 @@
     private void CloseOnEscape(KeyboardEventArgs e)
     {
         if (e.Key == "Escape") _open = false;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        try
+        {
+            if (_open && _scrollWatch is null)
+            {
+                _selfRef ??= DotNetObjectReference.Create(this);
+                _scrollWatch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.closeOnRailScroll", _button, PanelId, _selfRef);
+            }
+            else if (!_open && _scrollWatch is not null)
+            {
+                await StopWatchingAsync();
+            }
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException)
+        {
+            // No layout script (a test): the list stays open while the rail scrolls.
+        }
+    }
+
+    /// <summary>layout.js: the rail's groups scrolled the button out of sight while the list was open.</summary>
+    [JSInvokable]
+    public Task OnRailScrolled() => InvokeAsync(() =>
+    {
+        if (!_open) return;
+        _open = false;
+        StateHasChanged();
+    });
+
+    private async Task StopWatchingAsync()
+    {
+        var watch = _scrollWatch;
+        _scrollWatch = null;
+        if (watch is null) return;
+        try
+        {
+            await watch.InvokeVoidAsync("dispose");
+            await watch.DisposeAsync();
+        }
+        catch (Exception ex) when (ex is JSException or JSDisconnectedException)
+        {
+            // The page is going away; so is its listener.
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopWatchingAsync();
+        _selfRef?.Dispose();
     }
 }
