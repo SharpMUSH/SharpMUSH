@@ -94,7 +94,8 @@ public static class WorldFunctions
 			if (WorldWays.ParseDirection(Arg(parser, 4)) is not { } direction) return new CallState(BadDirection);
 			var field = Arg(parser, 5) is { Length: > 0 } given ? given.ToLowerInvariant() : "state";
 			if (field is not ("state" or "reason" or "to")) return new CallState(BadField);
-			var way = await WorldWays.WayAsync(reading.Store, reading.Record, reading.Legend, reading.Map.Object().DBRef, at, direction);
+			var way = await WorldWays.WayAsync(reading.Store, reading.Record, reading.Legend, reading.Map.Object().DBRef, reading.Examine, at,
+				direction);
 			return field switch
 			{
 				"state" => new CallState(way.StateWord),

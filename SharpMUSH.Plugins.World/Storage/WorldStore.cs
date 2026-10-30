@@ -151,7 +151,8 @@ public sealed class WorldStore : IFreedObjectCleanup
 			}
 		}
 
-		if (type is not null)
+		if (type is null) record = Extent(tx, map.Number, record);
+		else
 		{
 			record = record.Painted
 				? record with
@@ -167,6 +168,33 @@ public sealed class WorldStore : IFreedObjectCleanup
 		Put(tx, map.Number, record);
 		return ((long)right - left + 1) * ((long)top - bottom + 1);
 	});
+
+	/// <summary>
+	/// <paramref name="record"/> with the box and levels of what is still painted, read from every tile of the map, after
+	/// an erase that may have taken the outermost places or a whole level.
+	/// </summary>
+	private WorldMapRecord Extent(ITx tx, long map, WorldMapRecord record)
+	{
+		var (left, bottom, right, top) = (int.MaxValue, int.MaxValue, int.MinValue, int.MinValue);
+		var levels = new SortedSet<int>();
+		foreach (var (key, tile) in tx.Range(_tiles, Keys.Dbref(map)))
+		{
+			var (level, tileX, tileY) = WorldGrid.ReadTileKey(key);
+			for (var column = 0; column < WorldGrid.TileSide; column++)
+			{
+				for (var row = 0; row < WorldGrid.TileSide; row++)
+				{
+					if (WorldGrid.Terrain(tile, column, row) == 0) continue;
+					var (x, y) = (tileX * WorldGrid.TileSide + column, tileY * WorldGrid.TileSide + row);
+					(left, bottom, right, top) = (Math.Min(left, x), Math.Min(bottom, y), Math.Max(right, x), Math.Max(top, y));
+					levels.Add(level);
+				}
+			}
+		}
+		return levels.Count == 0
+			? record with { Painted = false, Left = 0, Bottom = 0, Right = 0, Top = 0, Levels = [] }
+			: record with { Painted = true, Left = left, Bottom = bottom, Right = right, Top = top, Levels = [.. levels] };
+	}
 
 	/// <summary>Stores a tile, or drops it when no place in it has a terrain or an edge.</summary>
 	private void PutTile(ITx tx, byte[] key, byte[] tile)
@@ -254,6 +282,11 @@ public sealed class WorldStore : IFreedObjectCleanup
 	public WorldWindowRead? Window(DBRef map, int level, int left, int bottom, int right, int top) => _store.Read(tx =>
 	{
 		if (MapIn(tx, map) is not { } record) return null;
+		// Nothing is stored past reach, and clamping to it keeps every bound below and the column loop clear of overflow.
+		(left, bottom) = (Math.Max(left, -WorldGrid.Reach), Math.Max(bottom, -WorldGrid.Reach));
+		(right, top) = (Math.Min(right, WorldGrid.Reach), Math.Min(top, WorldGrid.Reach));
+		if (left > right || bottom > top || Math.Abs((long)level) > WorldGrid.Reach)
+			return new WorldWindowRead(record, new Dictionary<(int, int), WorldCell>(), new Dictionary<(int, int), WorldPlaceRecord>());
 		var cells = new Dictionary<(int, int), WorldCell>();
 		var (fromTileX, _) = WorldGrid.Split(left - 1);
 		var (toTileX, _) = WorldGrid.Split(right);
@@ -309,9 +342,9 @@ public sealed class WorldStore : IFreedObjectCleanup
 	/// <summary>A freed map's places go with it, so a new object with its number starts with none.</summary>
 	public async ValueTask ObjectsFreedAsync(IReadOnlyCollection<DBRef> objids, CancellationToken cancellationToken = default)
 	{
-		foreach (var objid in objids)
+		foreach (var objid in objids.Where(objid => Map(objid) is not null))
 		{
-			if (Map(objid) is not null) await DeleteAsync(objid.Number);
+			await DeleteAsync(objid.Number);
 		}
 	}
 }

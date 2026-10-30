@@ -125,9 +125,9 @@ public static class WorldPlaceData
 	{
 		if (examine || Parse(data) is not { } parsed) return examine ? data : null;
 		var shown = new JsonObject();
-		foreach (var key in new[] { "render", "info" })
+		foreach (var entry in parsed.Where(entry => entry.Key is "render" or "info" && entry.Value is not null))
 		{
-			if (parsed[key] is { } value) shown[key] = value.DeepClone();
+			shown[entry.Key] = entry.Value?.DeepClone();
 		}
 		return shown.Count > 0 ? shown.ToJsonString() : null;
 	}

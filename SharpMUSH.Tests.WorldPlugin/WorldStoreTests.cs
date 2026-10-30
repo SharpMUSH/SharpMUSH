@@ -126,4 +126,37 @@ public class WorldStoreTests
 		await Assert.That(_store.Cell(Map, 0, 0, 0).IsEmpty).IsTrue();
 		await Assert.That(_store.Place(Map, 0, 0, 0)).IsNull();
 	}
+
+	[Test]
+	public async Task AnEraseShrinksTheMapToWhatIsStillPainted()
+	{
+		await _store.CreateAsync(Map, "square");
+		await _store.PaintAsync(Map, 0, 0, 0, 3, 3, "grass");
+		await _store.PaintAsync(Map, 0, 500, -40, 500, -40, "rock");
+		await _store.PaintAsync(Map, 2, 1, 1, 1, 1, "cave");
+
+		await _store.PaintAsync(Map, 0, 500, -40, 500, -40, null);
+		var record = _store.Map(Map)!;
+		await Assert.That((record.Left, record.Bottom, record.Right, record.Top)).IsEqualTo((0, 0, 3, 3));
+		await Assert.That(record.Levels).IsEquivalentTo([0, 2]);
+
+		await _store.PaintAsync(Map, 2, 1, 1, 1, 1, null);
+		await Assert.That(_store.Map(Map)!.Levels).IsEquivalentTo([0]);
+
+		await _store.PaintAsync(Map, 0, 0, 0, 3, 3, null);
+		await Assert.That(_store.Map(Map)!.Painted).IsFalse();
+		await Assert.That(_store.Map(Map)!.Levels).IsEmpty();
+	}
+
+	[Test]
+	public async Task AWindowAtTheEdgeOfTheIntegersReadsNothingAndEnds()
+	{
+		await _store.CreateAsync(Map, "square");
+		await _store.PaintAsync(Map, 0, 0, 0, 0, 0, "grass");
+
+		var far = _store.Window(Map, 0, int.MaxValue, 0, int.MaxValue, 0)!;
+		await Assert.That(far.Cells).IsEmpty();
+		var corner = _store.Window(Map, 0, int.MinValue, int.MinValue, -WorldGrid.Reach + 1, -WorldGrid.Reach + 1)!;
+		await Assert.That(corner.Cells).IsEmpty();
+	}
 }

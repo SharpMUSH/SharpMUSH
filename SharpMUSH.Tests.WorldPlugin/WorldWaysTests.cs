@@ -47,8 +47,8 @@ public class WorldWaysTests
 		}
 	}
 
-	private async Task<WorldWay> Way(int x, int y, string direction) =>
-		await WorldWays.WayAsync(_store, _store.Map(Map)!, Legend, Map, new WorldPosition(x, y, 0), WorldWays.ParseDirection(direction)!);
+	private async Task<WorldWay> Way(int x, int y, string direction, bool examine = true) =>
+		await WorldWays.WayAsync(_store, _store.Map(Map)!, Legend, Map, examine, new WorldPosition(x, y, 0), WorldWays.ParseDirection(direction)!);
 
 	[Test]
 	public async Task AnOpenSideLeadsToThePlaceBesideIt()
@@ -94,5 +94,21 @@ public class WorldWaysTests
 
 		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.East, WorldEdge.Wall, "Fence.");
 		await Assert.That((await Way(1, 1, "ne")).State).IsEqualTo(WorldWayState.Wall);
+	}
+
+	[Test]
+	public async Task AHiddenPlaceHasNoWaysForAReaderWhoMayNotExamine()
+	{
+		await _store.ChangePlaceAsync(Map, 1, 2, 0, place => place with { Data = """{"render":{"hidden":true}}""" });
+		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.North, WorldEdge.Wall, "A hedge.");
+
+		await Assert.That((await Way(1, 1, "n")).State).IsEqualTo(WorldWayState.Wall);
+		var hidden = await Way(1, 1, "n", examine: false);
+		await Assert.That((hidden.State, hidden.Reason)).IsEqualTo((WorldWayState.None, (string?)null));
+		await Assert.That((await Way(1, 2, "s", examine: false)).State).IsEqualTo(WorldWayState.None);
+		await Assert.That((await Way(0, 1, "ne", examine: false)).To).IsEqualTo(new WorldPosition(1, 2, 0));
+		await Assert.That((await Way(0, 1, "ne", examine: false)).State).IsEqualTo(WorldWayState.None);
+		await Assert.That((await Way(0, 2, "se", examine: false)).State)
+			.IsEqualTo(WorldWayState.Open).Because("the route by 0,1 avoids the hidden place");
 	}
 }

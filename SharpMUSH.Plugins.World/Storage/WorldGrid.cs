@@ -81,6 +81,9 @@ public static class WorldGrid
 	public static (int Level, int X, int Y) ReadPlaceKey(ReadOnlySpan<byte> key) =>
 		(ReadOrdered(key[8..12]), ReadOrdered(key[12..16]), ReadOrdered(key[16..20]));
 
+	/// <summary>The level and the tile's column and row, from a <see cref="TileKey"/>, laid out as a place key is.</summary>
+	public static (int Level, int TileX, int TileY) ReadTileKey(ReadOnlySpan<byte> key) => ReadPlaceKey(key);
+
 	private static int Index(int column, int row) => (row * TileSide + column) * CellBytes;
 
 	public static ushort Terrain(ReadOnlySpan<byte> tile, int column, int row) =>
