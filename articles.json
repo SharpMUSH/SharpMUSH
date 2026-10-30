@@ -1564,7 +1564,7 @@
       {
         "id": "a-destroyed-object-s-dbref-is-not-reused",
         "lookup": "compatibility identity a destroyed object s dbref is not reused",
-        "heading": "A destroyed object\u0027s dbref is not reused",
+        "heading": "A destroyed object\u0027s dbref is reused late",
         "aliases": []
       },
       {
@@ -6412,6 +6412,41 @@
       }
     ],
     "file": "reality.md"
+  },
+  {
+    "id": "recover-command",
+    "lookup": "@recover",
+    "title": "@recover",
+    "aliases": [
+      "RECOVER LIST"
+    ],
+    "sections": [
+      {
+        "id": "listing",
+        "lookup": "@recover listing",
+        "heading": "Listing the recover list",
+        "aliases": []
+      },
+      {
+        "id": "recovering",
+        "lookup": "@recover recovering",
+        "heading": "What a recovery puts back",
+        "aliases": []
+      },
+      {
+        "id": "keeping",
+        "lookup": "@recover keeping",
+        "heading": "Keeping and purging entries",
+        "aliases": []
+      },
+      {
+        "id": "numbers",
+        "lookup": "@recover numbers",
+        "heading": "Free numbers and stale references",
+        "aliases": []
+      }
+    ],
+    "file": "recover-command.md"
   },
   {
     "id": "regexp-classes",

@@ -37,7 +37,8 @@ These '@' commands are building-related (they create or modify objects):
 | [@elock]     | [@eunlock]   | [@firstexit] | [@link]      | [@lock]      |
 | [@lset]      | [@moniker]   | [@mvattr]    | [@name]      | [@nuke]      |
 | [@open]      | [@parent]    | [@recycle]   | [@set]       | [@ulock]     |
-| [@undestroy] | [@unlink]    | [@unlock]    | [@uunlock]   | [@wipe]      |
+| [@recover]   | [@undestroy] | [@unlink]    | [@unlock]    | [@uunlock]   |
+| [@wipe]      |              |              |              |              |
 
 # @-general
 These '@' commands are general utility and programming commands:
@@ -932,6 +933,7 @@ If `<object>` is a player and the 'destroy_possessions' @config option is on, al
 
 ::: seealso
 - [@destroy]
+- [@recover]
 - [GOING]
 - [@startup]
 :::
@@ -1852,12 +1854,25 @@ This attribute is meant to be used with the AUDIBLE flag. It is evaluated, with 
 - [@listen]
 :::
 # @purge
-@purge is a wizard only command that calls the internal purge routine to advance the clock of each object scheduled to be destroyed, and destroy those things whose time is up. The internal purge routine is normally run automatically approximately every 10 minutes.
+`@purge`<br>
+`@purge[/confirm] #<number>`<br>
+`@purge[/confirm] /all|/time <days>|/type <type>|/owner <player>`
 
-The @purge command should almost never need to be performed manually. If you do use it manually, you may want to use it twice in a row to make sure that everything marked GOING is actually destroyed.
+Needs the `server.operate` permission. With nothing after it, @purge runs the purge pass at once: objects marked GOING are set GOING_TWICE, and those already GOING_TWICE are freed onto the recover list (see [@recover]). The pass runs on its own every purge_interval, so this is rarely needed.
 
+`@purge #<number>` removes one recover entry for good and frees its number. A kept entry needs `/confirm`. Anyone allowed to pick a dbref can then ask for the number (`@create <name>=<cost>,#<number>`), but nothing takes it unasked before the entry would have expired (see [garbage]).
+
+`/all` covers every entry, `/time <days>` those destroyed at least that many days ago, `/type` PLAYER, ROOM, THING or EXIT, and `/owner` those a player owned. Without `/confirm` it only lists what it would remove. With `/confirm` the world is copied first, as before a package change, and then the entries go. Kept entries are always left alone.
+
+Example:
+```
+> @purge/time 90
+> @purge/confirm/time 90
+```
 
 ::: seealso
+- [@recover]
+- [@destroy]
 - [@dbck]
 :::
 # @readcache
@@ -2190,7 +2205,7 @@ Note that @startups are NEVER inherited from parent objects.
 `@stats/paging`<br>
 `@stats/freespace`
 
-In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with a garbage count, which is always 0: a destroyed object is removed rather than kept as garbage.
+In its first form, display the number of objects in the game broken down by object types: `<total> objects = <rooms> rooms, <exits> exits, <things> things, <players> players.` With a `<player>`, only the objects that player owns are counted. Anyone may count their own objects (`@stats me`) or the whole game's; counting another player's objects needs the Search power or wizard/royalty privileges. The whole-game count ends with the garbage count, the free numbers (see [garbage]), which the total includes.
 
 `@stats/tables` lists SharpMUSH's lookup tables (built-in functions, @functions, commands, flags, powers, attribute definitions, config options and connections) with the number of entries in each.<br>
 `@stats/flags` reports, for the FLAG and POWER flagspaces, how many definitions each has and how objects' sets of flags are distributed.

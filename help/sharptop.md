@@ -569,7 +569,7 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 # Objects
   Everything on a MUSH is an object in the MUSH database. There are four main types of objects: players, things (once called 'objects'), rooms and exits. You can see the type of an object when you 'examine' it, or with the `type()` function.
 
-  There is no garbage type in SharpMUSH: an object that is `@destroyed` is removed from the database. See [garbage].
+  There is no garbage object in SharpMUSH: a destroyed object goes onto the recover list, and its number is free once its entry is gone. See [garbage].
 
   For more information on each type, see [players], [things], [rooms], [exits] and [garbage].
 
@@ -642,13 +642,14 @@ For information about SharpMUSH, see [code]. If the help text has an error, tell
 :::
 
 # Garbage
-  SharpMUSH keeps no garbage objects. When `@destroy`/`@nuke` finishes destroying an object, it is removed from the database, so `@stats` always reports zero garbage.
+  SharpMUSH keeps no garbage objects. A destroyed object waits on the recover list under its own number (see [@recover]); once its entry expires or is purged, the number is free. `@stats`, `lstats()` and `hastype(#<n>, GARBAGE)` count free numbers as garbage.
 
-  New objects take the next unused dbref; a destroyed object's dbref is not reused automatically. A creator with the Pick_DBRefs `@power` can choose a free dbref. A reused dbref gets a new creation time, so its objid differs.
+  A new object takes the free number that has waited longest, once it is due, and otherwise the next unused one. A number freed early with `@purge` is due when its entry would have expired; one the configuration names, such as the master room, is never taken unasked. A creator with the Pick_DBRefs `@power` can ask for any free number. A reused number gets a new creation time, so its objid differs. `@recover/free` lists the free numbers.
 
 
 ::: seealso
 - [@destroy]
+- [@recover]
 - [@stats]
 :::
 

@@ -17,7 +17,7 @@
     },
     {
       "id": "a-destroyed-object-s-dbref-is-not-reused",
-      "heading": "A destroyed object's dbref is not reused",
+      "heading": "A destroyed object's dbref is reused late",
       "lookup": "compatibility identity a destroyed object s dbref is not reused"
     },
     {
@@ -65,14 +65,14 @@ That is the same two fields as `objid(me)`; whole seconds are not:
 
 SharpMUSH's `objid` is `<dbref>:<creation time in milliseconds>`. Where PennMUSH's `unparse_dbref` produces a bare dbref in a message, SharpMUSH may produce the stamped form; the two are not interchangeable as text. Parse an objid with `num()` when you want the dbref alone. The representation is deliberate.
 
-## A destroyed object's dbref is not reused
+## A destroyed object's dbref is reused late
 
 **A choice.**
 
-**PennMUSH** puts a purged object's dbref, now garbage, on a free list; `new_object()` takes from it first (`free_get()`, `src/db.c`, `src/destroy.c`), so the last dbref purged is the next one created. `isdbref()` is 1 for garbage, since `parse_objid()` accepts any dbref in the database (`fun_isdbref`, `src/fundb.c`).<br>
-**SharpMUSH** keeps no garbage objects: a purged object is removed. A new object takes the next dbref after the highest one ever allocated, so a purged object's dbref is not reused unless a wizard or a holder of the `Pick_DBRefs` power names it (`@create <name>=<cost>,<dbref>`), and `isdbref()` then answers 0.<br>
-**Why.** A dbref stored in an attribute, a lock or a list keeps pointing at nothing once its object is gone, not silently at whatever was created next.<br>
-**Workaround.** Do not rely on a destroyed object's dbref being reused, and check a dbref still names an object with `isdbref()`, not by comparing old dbrefs.
+**PennMUSH** puts a purged object's dbref, now garbage, on a free list; `new_object()` takes from it first (`free_get()`, `src/db.c`, `src/destroy.c`), so the last dbref purged is the next one created, about twenty minutes after the `@destroy`.<br>
+**SharpMUSH** keeps the purged object on the recover list under its dbref (see [@recover]) for 30 days, or for good if it is a character. Once the entry is gone the dbref is free, and new objects take the free dbref that has waited longest (see [garbage]).<br>
+**Why.** Code that stored the bare dbref would silently point at the next object to take it. Reusing late and oldest first gives a game time to notice; `@recover/refs` lists such code.<br>
+**Workaround.** Store objids (`objid()`) rather than bare dbrefs: an objid stops matching once its object is gone, whatever takes the number.
 
 Until purged, the object is only `GOING`, with `isdbref()` 1 on both servers. A second `@nuke` purges it at once; PennMUSH would answer `1` and create `#50` again:
 
