@@ -379,6 +379,21 @@ public class SceneAvailabilityIntegrationTests
 			await Assert.That(await As(ann, $"+avail/remove {beaName}/1")).Contains($"Removed {beaName}/1:");
 			await Assert.That(await Think($"hasattr({Calendar},PLAYER`{beaKey}`1)")).IsEqualTo("0");
 			await Assert.That(await Think($"hasattr({Calendar},PLAYER`{beaKey})")).IsEqualTo("0");
+
+			// Counted together, one's free time never frees the other's: free on Monday and free on Tuesday is
+			// free on neither.
+			var mondayKey = TestIsolationHelpers.GenerateUniqueName("AvMon");
+			var tuesdayKey = TestIsolationHelpers.GenerateUniqueName("AvTue");
+			await EntryAsync(mondayKey, 1, "free", ("REPEAT", "once"), ("DATE", "2026-10-19"), ("TIME", "10:00"), ("MINUTES", "120"),
+				("ZONE", "UTC"));
+			await EntryAsync(tuesdayKey, 1, "free", ("REPEAT", "once"), ("DATE", "2026-10-20"), ("TIME", "10:00"), ("MINUTES", "120"),
+				("ZONE", "UTC"));
+			await Assert.That(await Think($"strmatch(u({Avail}/FUN`MASK`PLAYER,{mondayKey},1792368000,96,1800),*1*)")).IsEqualTo("1");
+			await Assert.That(await Think($"strmatch(u({Avail}/FUN`MASK`PLAYER,{tuesdayKey},1792368000,96,1800),*1*)")).IsEqualTo("1");
+			await Assert.That(await Think($"strmatch(u({Avail}/FUN`MASK`PLAYER,{mondayKey} {tuesdayKey},1792368000,96,1800),*1*)"))
+				.IsEqualTo("0");
+			await God($"@wipe {Calendar}/PLAYER`{mondayKey}");
+			await God($"@wipe {Calendar}/PLAYER`{tuesdayKey}");
 		}
 		finally
 		{

@@ -599,15 +599,23 @@ objects:
         flags: [funsyntax]
 
       # ---- free slots --------------------------------------------------------------
-      # %0 keys, one player's or the characters of one account, %1 an instant, %2 a number of slots and %3 a slot
-      # in seconds: a 1 for each slot from %1 they are free in, a 0 for each they are not. Free entries cover only
-      # whole slots; a busy one takes any slot it touches.
+      # %0 keys, one player's or the characters of one person, %1 an instant, %2 a number of slots and %3 a slot
+      # in seconds: a 1 for each slot from %1 they are free in, a 0 for each they are not. Each key is laid out on
+      # its own and a slot is free only when it is free for every one, so one character's free time never frees
+      # another's.
       FUN`MASK`PLAYER:
         value: |-
           setqm(mask_from,%1,
           mask_slots,%2,
           mask_step,%3,
-          mask_to,add(%1,mul(%2,%3)))[fold(%!/FUN`MASK`BUSY,u(%!/FUN`PLAYER`SPANS,%0,busy,%q<mask_from>,%q<mask_to>),if(u(%!/FUN`PLAYER`HASFREE,%0),fold(%!/FUN`MASK`FREE,u(%!/FUN`PLAYER`SPANS,%0,free,%q<mask_from>,%q<mask_to>),repeat(0,%2)),repeat(1,%2)))]
+          mask_to,add(%1,mul(%2,%3)),
+          mask_each,iter(%0,u(%!/FUN`MASK`ONE,%i0)))[if(eq(words(%q<mask_each>),1),%q<mask_each>,edit(iter(lnum(0,dec(%2)),if(match(iter(%q<mask_each>,mid(%i0,%i1,1)),0),0,1)),%b,))]
+        flags: [funsyntax]
+      # %0 a key, with the mask_ registers set: its slots. Free entries cover only whole slots; a busy one takes any
+      # slot it touches.
+      FUN`MASK`ONE:
+        value: |-
+          fold(%!/FUN`MASK`BUSY,u(%!/FUN`PLAYER`SPANS,%0,busy,%q<mask_from>,%q<mask_to>),if(u(%!/FUN`PLAYER`HASFREE,%0),fold(%!/FUN`MASK`FREE,u(%!/FUN`PLAYER`SPANS,%0,free,%q<mask_from>,%q<mask_to>),repeat(0,%q<mask_slots>)),repeat(1,%q<mask_slots>)))
         flags: [funsyntax]
       # fold() steps: %0 the slots so far, %1 a span start:end. The slots it covers whole become 1.
       FUN`MASK`FREE:
