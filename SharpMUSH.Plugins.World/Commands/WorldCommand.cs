@@ -12,6 +12,7 @@ using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.World.Common;
 using SharpMUSH.Plugins.World.Storage;
@@ -174,8 +175,28 @@ public static partial class WorldCommand
 			var bound = await keys.BindAsync(value.Trim(), executor);
 			if (bound is not string key)
 				return await Say($"I don't understand that key: {(bound is Error<string> error ? error.Value : "")}", ErrorMessages.Returns.InvalidLock);
-			await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, key);
+			await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, await StampAsync(key));
 			return await Say($"The {WorldGrid.Word(side)} side of {place} is now locked.", "");
+		}
+
+		// Each object the key names is kept as its objid, as @lock keeps it, so the key fails once the object is
+		// destroyed rather than passing to whatever takes its number next.
+		async ValueTask<string> StampAsync(string key)
+		{
+			var numbers = new List<int>();
+			LockKeyReferences.Rewrite(key, number =>
+			{
+				numbers.Add(number);
+				return null;
+			});
+			var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+			var objids = new Dictionary<int, string>();
+			foreach (var number in numbers.Distinct())
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number))) is AnySharpObject found)
+					objids[number] = found.Object().DBRef.ToString();
+			}
+			return LockKeyReferences.Rewrite(key, number => objids.GetValueOrDefault(number));
 		}
 
 		async ValueTask<Option<CallState>> NameAsync(WorldPosition place)
