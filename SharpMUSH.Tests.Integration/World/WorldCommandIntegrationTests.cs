@@ -91,4 +91,34 @@ public class WorldCommandIntegrationTests
 		await Assert.That(window.Walls.Select(wall => (wall.X, wall.Y, wall.Side, wall.Kind, wall.Reason)))
 			.IsEquivalentTo([(4, 4, "n", MapWallKinds.Wall, (string?)"A fallen oak blocks the path.")]);
 	}
+
+	[Test]
+	public async Task AHiddenPlaceKeepsItsWallsFromThoseWhoMayNotExamineTheMap()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Hollow");
+		await God($"@create {map}", map);
+		await God($"@world/create {map}", map);
+		await God($"@world/paint {map}/0,0:4,4=forest", "places");
+		await God($"@world/wall {map}/0,0/n=wall,Brambles.", "0,0,0");
+		await God($"@world/wall {map}/2,2/n=wall,The hidden glade's hedge.", "2,2,0");
+		await God($"@world/wall {map}/2,1/n=wall,Into the glade.", "2,1,0");
+		await God($"@world/wall {map}/1,2/e=wall,Beside the glade.", "1,2,0");
+		await God($$$"""@world/data {{{map}}}/2,2={"render":{"hidden":true}}""", "2,2,0");
+
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		async Task<AnySharpObject> Find(DBRef dbref) =>
+			(await mediator.Send(new GetObjectNodeQuery(dbref))).Expect<AnySharpObject>();
+		var stored = await Find(new DBRef(int.Parse((await Eval($"num({map})")).TrimStart('#'))));
+		var god = await Find(new DBRef(1));
+		var mortal = await Find(await TestIsolationHelpers.CreateTestPlayerAsync(WebAppFactoryArg.Services, mediator, "Walker"));
+		var source = WebAppFactoryArg.Services.GetServices<IWorldMapSource>().Single();
+		async Task<IEnumerable<(int, int, string)>> Walls(AnySharpObject viewer, int right) =>
+			(await source.CellsAsync(viewer, stored, new MapWindow(0, 0, 0, right, 4), CancellationToken.None))
+			.Walls.Select(wall => (wall.X, wall.Y, wall.Side));
+
+		await Assert.That(await Walls(god, 4)).IsEquivalentTo([(0, 0, "n"), (2, 2, "n"), (2, 1, "n"), (1, 2, "e")]);
+		await Assert.That(await Walls(mortal, 4)).IsEquivalentTo([(0, 0, "n")]);
+		// The glade is past the window's right edge, and the wall leading to it still stays hidden.
+		await Assert.That(await Walls(mortal, 1)).IsEquivalentTo([(0, 0, "n")]);
+	}
 }

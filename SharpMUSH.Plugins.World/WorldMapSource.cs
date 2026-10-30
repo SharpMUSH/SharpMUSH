@@ -53,10 +53,13 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 			});
 		}
 
+		bool HiddenAt(int x, int y) =>
+			!examine && WorldPlaceData.Hidden(WorldPlaceData.Parse(read.Places.GetValueOrDefault((x, y))?.Data));
+
 		var walls = new List<MapWallDto>();
 		foreach (var ((x, y), cell) in read.Cells)
 		{
-			if (cell.Edges == 0) continue;
+			if (cell.Edges == 0 || HiddenAt(x, y)) continue;
 			var reasons = read.Places.GetValueOrDefault((x, y))?.Reasons;
 			if (Inside(x, y) || Inside(x, y + 1)) Add(x, y, WorldSide.North);
 			if (Inside(x, y) || Inside(x + 1, y)) Add(x, y, WorldSide.East);
@@ -67,6 +70,7 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 				var edge = WorldGrid.Edge(cell.Edges, owned);
 				var reason = reasons?.GetValueOrDefault(WorldGrid.Letter(owned));
 				var (dx, dy, _) = WorldGrid.Step(owned);
+				if (owned != WorldSide.Up && HiddenAt(x + dx, y + dy)) return;
 				switch (edge)
 				{
 					case WorldEdge.Wall:
