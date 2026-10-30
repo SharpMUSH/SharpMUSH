@@ -10,7 +10,7 @@
 think set(me,RXHOME:[loc(*Alice)])
 @force [loc(*Alice)]=@dolist RXZone RXHere RXThere RXLocal RXElsewhere=@dig ##
 ::settle
-@force [loc(*Alice)]=@lock/zone [lsearch(all,name,RXZone)]=me
+@force [loc(*Alice)]=@lock/zone [lsearch(all,name,RXZone)]==*Alice
 @force [loc(*Alice)]=@open RXGate=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
 @force [loc(*Alice)]=@open RXGoto=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
 @force [loc(*Alice)]=@open RXShadow=[lsearch(all,name,RXThere)],,[lsearch(all,name,RXZone)]
