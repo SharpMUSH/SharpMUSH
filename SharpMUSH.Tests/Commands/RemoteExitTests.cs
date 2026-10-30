@@ -129,4 +129,34 @@ public class RemoteExitTests
 
 		await Assert.That(await LocationOf(mover)).IsEqualTo(there);
 	}
+
+	[Test]
+	public async ValueTask GotoStopsAtTwoOfTheRoomsOwnExitsOfOneName()
+	{
+		var (mover, here, _, there) = await Zoned("GotoTwoLocal");
+		var exit = TestIsolationHelpers.GenerateUniqueName("GotoTwoLocalGate");
+		await God($"@open {exit}={there},,{MasterRoom}");
+		await God($"@open {exit}={await Dig("GotoTwoLocalA")},,{here}");
+		await God($"@open {exit}={await Dig("GotoTwoLocalB")},,{here}");
+
+		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"goto {exit}"));
+
+		await Assert.That(await LocationOf(mover)).IsEqualTo(here)
+			.Because("can_move finds the room's own exits ambiguous, which is not NOTHING, so the global exits are never searched");
+	}
+
+	[Test]
+	public async ValueTask GotoPassesTwoOfTheZonesExitsOfOneNameToTheGlobalExit()
+	{
+		var (mover, _, zone, there) = await Zoned("GotoTwoZone");
+		var exit = TestIsolationHelpers.GenerateUniqueName("GotoTwoZoneGate");
+		await God($"@open {exit}={await Dig("GotoTwoZoneA")},,{zone}");
+		await God($"@open {exit}={await Dig("GotoTwoZoneB")},,{zone}");
+		await God($"@open {exit}={there},,{MasterRoom}");
+
+		await GodParser.CommandParse(mover.Handle, ConnectionService, MarkupText.Plain($"goto {exit}"));
+
+		await Assert.That(await LocationOf(mover)).IsEqualTo(there)
+			.Because("remote_exit asks GoodObject, which an ambiguous match is not, so the global exits are searched");
+	}
 }
