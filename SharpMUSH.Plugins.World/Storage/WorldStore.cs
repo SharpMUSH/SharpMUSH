@@ -50,16 +50,17 @@ public sealed record WorldWindowRead(WorldMapRecord Map, IReadOnlyDictionary<(in
 	IReadOnlyDictionary<(int X, int Y), WorldPlaceRecord> Places);
 
 /// <summary>
-/// The World plugin's store, over the host-shared Lightning accessor. Three tables:
+/// The World plugin's store, over the host-shared Lightning accessor. Three tables for the places:
 /// <list type="table">
 ///   <item><term><c>world.map</c></term><description>map number → <see cref="WorldMapRecord"/> JSON.</description></item>
 ///   <item><term><c>world.tile</c></term><description><see cref="WorldGrid.TileKey"/> → 32 by 32 cells (<see cref="WorldGrid"/>).</description></item>
 ///   <item><term><c>world.place</c></term><description><see cref="WorldGrid.PlaceKey"/> → <see cref="WorldPlaceRecord"/> JSON.</description></item>
 /// </list>
+/// and four for the rooms standing on them, in <c>WorldStore.Rooms.cs</c>.
 /// Each change is one write job, which does its own reads through the transaction it is handed; tables are opened
 /// once, here, never inside a job.
 /// </summary>
-public sealed class WorldStore : IFreedObjectCleanup
+public sealed partial class WorldStore : IFreedObjectCleanup
 {
 	private static readonly JsonSerializerOptions Json = new() { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
 
@@ -77,6 +78,10 @@ public sealed class WorldStore : IFreedObjectCleanup
 		_maps = store.OpenTable("world.map", duplicates: false);
 		_tiles = store.OpenTable("world.tile", duplicates: false);
 		_places = store.OpenTable("world.place", duplicates: false);
+		_rooms = store.OpenTable("world.room", duplicates: false);
+		_standing = store.OpenTable("world.standing", duplicates: false);
+		_releases = store.OpenTable("world.release", duplicates: false);
+		_spares = store.OpenTable("world.spare", duplicates: false);
 	}
 
 	/// <summary>The record of <paramref name="map"/>, when it is a stored map; null otherwise.</summary>
@@ -334,17 +339,22 @@ public sealed class WorldStore : IFreedObjectCleanup
 
 	private void DeleteIn(ITx tx, long map)
 	{
+		ReleaseMapRoomsIn(tx, map);
 		tx.Delete(_maps, Keys.Dbref(map));
 		tx.DeletePrefix(_tiles, Keys.Dbref(map));
 		tx.DeletePrefix(_places, Keys.Dbref(map));
 	}
 
-	/// <summary>A freed map's places go with it, so a new object with its number starts with none.</summary>
+	/// <summary>
+	/// A freed map's places go with it, so a new object with its number starts with none, and its rooms are let go.
+	/// A freed room is forgotten wherever it stood or waited.
+	/// </summary>
 	public async ValueTask ObjectsFreedAsync(IReadOnlyCollection<DBRef> objids, CancellationToken cancellationToken = default)
 	{
-		foreach (var objid in objids.Where(objid => Map(objid) is not null))
+		foreach (var objid in objids)
 		{
-			await DeleteAsync(objid.Number);
+			if (Map(objid) is not null) await DeleteAsync(objid.Number);
+			await ForgetRoomAsync(objid);
 		}
 	}
 }

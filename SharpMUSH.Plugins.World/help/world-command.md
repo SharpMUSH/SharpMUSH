@@ -10,7 +10,9 @@
     {"id": "world-paint", "heading": "Painting places", "lookup": "@world paint", "aliases": ["@world/paint"]},
     {"id": "world-wall", "heading": "Walls and ways", "lookup": "@world wall", "aliases": ["@world/wall"]},
     {"id": "world-place", "heading": "Naming places", "lookup": "@world place", "aliases": ["@world/place"]},
-    {"id": "world-data", "heading": "A place's data", "lookup": "@world data", "aliases": ["@world/data", "@world/data/merge", "@world/data/clear"]}
+    {"id": "world-data", "heading": "A place's data", "lookup": "@world data", "aliases": ["@world/data", "@world/data/merge", "@world/data/clear"]},
+    {"id": "world-room", "heading": "Rooms on a map", "lookup": "@world room", "aliases": ["@world/room"]},
+    {"id": "world-sweep", "heading": "Lent rooms", "lookup": "@world sweep", "aliases": ["@world/sweep"]}
   ]
 }
 -->
@@ -27,6 +29,8 @@ A world map keeps its places itself, so a large grid needs no room for each one.
 - [@world wall]: walls, one-way sides and locks
 - [@world place]: give a place a name
 - [@world data]: JSON a place keeps, and how it is drawn
+- [@world room]: place a room on a place to stay
+- [@world sweep]: the rooms lent to places, and taking them back
 
 The [world functions] read the same places.
 
@@ -97,3 +101,34 @@ Two keys are read by the World map. `render` changes how the place is drawn: `ic
 ```
 
 Output: Set the data of 4,4,0.
+
+## Rooms on a map
+
+`@world/room <map>/<x>,<y>[,<z>]=[<room>]`
+
+Places a room on a place to stay. It joins the map's zone and holds the place's id in `` MAP`PLACE ``, and [worldroom()] gives it for that place from then on. A room placed elsewhere moves. Placing the room lent to the place keeps it, as it is. An empty room takes the room placed there off; it keeps its zone. Needs control of the room too.
+
+`@world <map>/<x>,<y>,<z>` names the room standing on a place, and whether it is lent or there to stay.
+
+```sharp
+> @dig Wayside Inn
+> @world/room Wilds/4,5=Wayside Inn
+```
+
+Output: Wayside Inn now stands on 4,5,0 to stay.
+
+## Lent rooms
+
+`@world/sweep`
+
+A place with no room of its own is lent one by [worldroom()]: a spare room when there is one, else a new one. A lent room is named after its place, or its terrain's label and where it is ("Old forest (3,1,0)"), joins the map's zone, takes the parent the map's `` MAP`CELLPARENT `` names, is set FLOATING, and holds the place's id in `` MAP`PLACE ``.
+
+Once a lent room has held nothing for 5 minutes it goes back: renamed Spare room, out of the zone and the parent, and a scene held there let go. It waits as a spare for any map. A room holding anyone or anything stays lent. Spares past the newest 50, or waiting a week, are destroyed.
+
+The game checks once a minute. `@world/sweep` takes back every empty lent room now. Wizards only.
+
+```sharp
+> @world/sweep
+```
+
+Output: Took back 3 empty rooms, and destroyed 0 spares.
