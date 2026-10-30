@@ -97,7 +97,7 @@ Keeps a JSON object on a place, taken as typed, at most as long as an attribute 
 Two keys are read by the World map. `render` changes how the place is drawn: `icon`, `tone`, `label`, `badge`, `image`, and `hidden` set to `true`, which leaves it off the map for whoever may not examine the map. `info` is the panel it shows: an object of labels and values, or a list of `{"label": ..., "value": ...}`. Only these two keys show to whoever may not examine the map.
 
 ```sharp
-> @world/data Wilds/4,4={"render":{"icon":"🌳"},"info":{"Danger":"Low"}}
+> @world/data Wilds/4,4={"render":{"icon":"T"},"info":{"Danger":"Low"}}
 ```
 
 Output: Set the data of 4,4,0.

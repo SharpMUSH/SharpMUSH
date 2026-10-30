@@ -282,7 +282,8 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 
 	/// <summary>
 	/// The window from (left, bottom) to (right, top) of <paramref name="level"/>: its cells, with the row below and
-	/// the column left of it (whose edges border the window), and its place records. Null for no stored map.
+	/// the column left of it (whose edges border the window), and its place records with a border of one all round (the
+	/// places those edges lead to). Null for no stored map.
 	/// </summary>
 	public WorldWindowRead? Window(DBRef map, int level, int left, int bottom, int right, int top) => _store.Read(tx =>
 	{
@@ -318,12 +319,12 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 		}
 
 		var places = new Dictionary<(int, int), WorldPlaceRecord>();
-		for (var x = left; x <= right; x++)
+		for (var x = left - 1; x <= right + 1; x++)
 		{
 			foreach (var (key, value) in tx.Range(_places, WorldGrid.PlaceColumn(map.Number, level, x)))
 			{
 				var (_, _, y) = WorldGrid.ReadPlaceKey(key);
-				if (y >= bottom && y <= top && JsonSerializer.Deserialize<WorldPlaceRecord>(value, Json) is { } place)
+				if (y >= bottom - 1 && y <= top + 1 && JsonSerializer.Deserialize<WorldPlaceRecord>(value, Json) is { } place)
 					places[(x, y)] = place;
 			}
 		}
