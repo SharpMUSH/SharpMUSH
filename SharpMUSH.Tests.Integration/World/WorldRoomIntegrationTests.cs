@@ -66,8 +66,13 @@ public class WorldRoomIntegrationTests
 		await Assert.That(await Eval($"worldcell({map},0,0,,room)/[worldcell({map},1,1,,room)]")).IsEqualTo($"{corner}/");
 		await Assert.That(await Eval($"name({well})/[zone({well})]/[get({well}/MAP`PLACE)]")).IsEqualTo("Spare room/#-1 NO ZONE SET/");
 
+		// The sweep is the game's, so other tests' rooms may be spares too, and one of them may be older; the next place
+		// is lent some spare, made before this marker, not a new room.
+		var marker = TestIsolationHelpers.GenerateUniqueName("Marker");
+		await God($"@create {marker}", marker);
 		var next = await Eval($"worldroom({map},2,2)");
-		await Assert.That(next).IsEqualTo(well).Because("the spare that waited longest is lent first");
+		await Assert.That(await Eval($"lte(after(objid({next}),:),after(objid(num(search(name={marker}))),:))")).IsEqualTo("1")
+			.Because("a spare is lent before a room is made");
 		await Assert.That(await Eval($"name({next})/[worldplace({next})]")).IsEqualTo("Meadow (2,2,0)/2,2,0");
 	}
 
