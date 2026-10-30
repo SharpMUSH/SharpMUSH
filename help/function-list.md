@@ -31,7 +31,7 @@ Functions are grouped by what they work on. Each topic below covers one group, w
 - [Page functions]: read your own page log (PAGERECALL, PAGECONVERSATIONS)
 - [Wiki functions]: read the shared wiki (WIKI, WIKILIST)
 
-From plugins: [discordlink()], [scene functions], [scene type functions], [scene write functions]
+From plugins: [discordlink()], [scene functions], [scene type functions], [scene write functions], [world functions]
 
 ## Functions for data, text and output
 

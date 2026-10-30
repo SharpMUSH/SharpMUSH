@@ -45,6 +45,8 @@ In addition to these, there are several types of '@' commands. @-commands are us
 - [@-GENERAL]
 - [@-WIZARD]
 
+From plugins: [@world]
+
 ## At the login screen and on a connection
 
 At the login screen, [connect] reaches a character. On a game with web-portal accounts, [register] and [login] reach your account, [create] and [play] create and connect its characters, and [claim] adds a character you already have. See [accounts].

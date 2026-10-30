@@ -16345,5 +16345,85 @@
     ],
     "file": "scene-write-functions.md",
     "plugin": "scene"
+  },
+  {
+    "id": "world-command",
+    "lookup": "@world",
+    "title": "@world",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "world-create",
+        "lookup": "@world create",
+        "heading": "Making a world map",
+        "aliases": [
+          "@world/create"
+        ]
+      },
+      {
+        "id": "world-paint",
+        "lookup": "@world paint",
+        "heading": "Painting places",
+        "aliases": [
+          "@world/paint"
+        ]
+      },
+      {
+        "id": "world-wall",
+        "lookup": "@world wall",
+        "heading": "Walls and ways",
+        "aliases": [
+          "@world/wall"
+        ]
+      },
+      {
+        "id": "world-place",
+        "lookup": "@world place",
+        "heading": "Naming places",
+        "aliases": [
+          "@world/place"
+        ]
+      },
+      {
+        "id": "world-data",
+        "lookup": "@world data",
+        "heading": "A place\u0027s data",
+        "aliases": [
+          "@world/data",
+          "@world/data/merge",
+          "@world/data/clear"
+        ]
+      }
+    ],
+    "file": "world-command.md",
+    "plugin": "world"
+  },
+  {
+    "id": "world-functions",
+    "lookup": "world functions",
+    "title": "World Functions",
+    "aliases": [],
+    "sections": [
+      {
+        "id": "worldcell",
+        "lookup": "worldcell()",
+        "heading": "worldcell()",
+        "aliases": []
+      },
+      {
+        "id": "worldway",
+        "lookup": "worldway()",
+        "heading": "worldway()",
+        "aliases": []
+      },
+      {
+        "id": "worlddraw",
+        "lookup": "worlddraw()",
+        "heading": "worlddraw()",
+        "aliases": []
+      }
+    ],
+    "file": "world-functions.md",
+    "plugin": "world"
   }
 ]
