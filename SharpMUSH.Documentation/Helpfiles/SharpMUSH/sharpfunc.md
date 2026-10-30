@@ -3698,18 +3698,18 @@ You say, "$;No;Nol;Noli;Nolt"
 
   With `<numeric>` true, it returns just the percentage, positive while the moon is waxing and negative while it is waning.
 
-  The phase is worked out from the new moon of 6 January 2000 and the average length of a lunar month, 29.53059 days, so it can be up to a day off.
+  The phase is worked out as RhostMUSH does, from where the sun and moon are twelve hours after `<seconds>`; it is waxing when more is lit a further half day on. Over 99.4% lit is Full, under 0.5% is New, and between 49.7% and 50.3% is Half.
 
   Examples:
 ```sharp
-think moon(947182440)
+think moon(947172800)
 The Moon is New
-think moon(948458160)
+think moon(948382400)
 The Moon is Full
-think moon(949000000)
-The Moon is Waning Gibbous (62% of Full)
+think moon(999999999)
+The Moon is Waning Gibbous (72% of Full)
 think moon(948000000, 1)
-71
+74
 ```
 
 ::: seealso

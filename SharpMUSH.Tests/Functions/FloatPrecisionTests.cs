@@ -54,6 +54,20 @@ public class FloatPrecisionTests
 		=> await Assert.That(await Evaluate($"[{code}]", precision: 6)).IsEqualTo(expected);
 
 	/// <summary>
+	/// A value exactly halfway at the last place is rounded as C's <c>%.*f</c> rounds the double nearest it:
+	/// 1.5707965 is held a little below the halfway point and 0.0000015 a little above.
+	/// </summary>
+	[Test]
+	[Arguments("fdiv(pi(),2)", "1.570796")]
+	[Arguments("fdiv(3,2000000)", "0.000002")]
+	[Arguments("fdiv(1,2000000)", "0")]
+	[Arguments("fdiv(-3,2000000)", "-0.000002")]
+	[Arguments("add(0.0000125,0)", "0.000013")]
+	[Arguments("add(1.25,0)", "1.25")]
+	public async Task HalfwayValuesRoundAsC(string code, string expected)
+		=> await Assert.That(await Evaluate($"[{code}]", precision: 6)).IsEqualTo(expected);
+
+	/// <summary>
 	/// PennMUSH's own suite sets <c>float_precision=10</c> around this case (<c>test/testmath.t:65-67</c>),
 	/// which is what shows the setting counts decimal places: 10 of them, not 10 significant digits.
 	/// </summary>

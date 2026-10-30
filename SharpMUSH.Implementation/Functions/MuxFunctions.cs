@@ -25,12 +25,6 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	/// <summary>Seconds since 1970 of the new moon of 6 January 2000, 18:14 UTC.</summary>
-	private const double NewMoonEpoch = 947182440.0;
-
-	/// <summary>The mean synodic month, in seconds.</summary>
-	private const double SynodicMonth = 29.53059 * 86400.0;
-
 	/// <summary>TinyMUX's limit on how many numbers <c>lrand()</c> returns.</summary>
 	private const int MaxRandomCount = 8000;
 
@@ -41,6 +35,9 @@ public partial class Functions
 
 	/// <summary>TinyMUX's limit on <c>lrooms()</c> depth.</summary>
 	private const int MaxRoomDepth = 50;
+
+	/// <summary>How many rooms <c>lrooms()</c> reaches under <c>rhost_lrooms</c>, which takes any depth.</summary>
+	private const int MaxRhostRooms = 1000;
 
 	/// <summary>How far up the parent chain <c>lrooms()</c> looks for exits.</summary>
 	private const int MaxRoomParentDepth = 10;
@@ -164,29 +161,74 @@ public partial class Functions
 	}
 
 	/// <summary>
-	/// The moon's phase at <paramref name="seconds"/>: how far into the synodic month the time falls, and
-	/// how much of the disc is lit, rounded to a whole percent.
+	/// The moon's phase at <paramref name="seconds"/>, as RhostMUSH works it out: the lit percentage of the disc twelve
+	/// hours on, from the lunar and solar positions in Duffett-Smith's <i>Practical Astronomy with your
+	/// Calculator</i> (sections 42, 61 and 63), and waxing when the next half day lights more of it.
 	/// </summary>
 	private static string MoonPhase(double seconds, bool numeric)
 	{
-		var phase = (seconds - NewMoonEpoch) % SynodicMonth;
-		if (phase < 0) phase += SynodicMonth;
+		var days = DaysSinceMoonEpoch(seconds);
+		var today = LitPercent(days + 0.5);
+		var waxing = LitPercent(days + 1.0) > today;
+		var shown = Math.Round(today, MidpointRounding.ToEven).ToString("0", CultureInfo.InvariantCulture);
 
-		var fraction = phase / SynodicMonth;
-		var lit = (int)((1.0 - Math.Cos(2.0 * Math.PI * fraction)) / 2.0 * 100.0 + 0.5);
-		var waxing = fraction < 0.5;
-
-		if (numeric) return (waxing ? lit : -lit).ToString(CultureInfo.InvariantCulture);
+		if (numeric) return waxing ? shown : $"-{shown}";
 
 		var direction = waxing ? "Waxing" : "Waning";
-		return lit switch
+		return today switch
 		{
-			>= 100 => "The Moon is Full",
-			<= 0 => "The Moon is New",
-			>= 49 and <= 51 => $"The Moon is {direction} Half ({lit}% of Full)",
-			> 50 => $"The Moon is {direction} Gibbous ({lit}% of Full)",
-			_ => $"The Moon is {direction} Crescent ({lit}% of Full)"
+			> 99.4 => "The Moon is Full",
+			< 0.5 => "The Moon is New",
+			> 49.7 and < 50.3 => $"The Moon is {direction} Half ({shown}% of Full)",
+			> 50.0 => $"The Moon is {direction} Gibbous ({shown}% of Full)",
+			_ => $"The Moon is {direction} Crescent ({shown}% of Full)"
 		};
+	}
+
+	/// <summary>
+	/// Days from the end of 1984 to <paramref name="seconds"/> (UTC): the day of the year and the time of day, plus
+	/// every year from 1985 to the one before. RhostMUSH counts a year as a leap year from its number less 1900, so
+	/// 2000 has 365 days here; the count keeps that so its answers match.
+	/// </summary>
+	private static double DaysSinceMoonEpoch(double seconds)
+	{
+		var time = DateTime.UnixEpoch.AddSeconds(Math.Floor(seconds));
+		var days = time.DayOfYear + time.TimeOfDay.TotalHours / 24.0;
+		for (var year = 85; year < time.Year - 1900; year++)
+		{
+			days += (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 ? 366 : 365;
+		}
+
+		return days;
+	}
+
+	/// <summary>How much of the moon's disc is lit, in percent, <paramref name="days"/> after the end of 1984.</summary>
+	private static double LitPercent(double days)
+	{
+		const double solarLongitudeAtEpoch = 279.611371;
+		const double solarPerigeeAtEpoch = 282.680403;
+		const double solarEccentricity = 0.01671542;
+		const double lunarLongitudeAtEpoch = 18.251907;
+		const double lunarPerigeeAtEpoch = 192.917585;
+
+		static double Degrees(double angle) => (angle % 360.0 + 360.0) % 360.0;
+		static double Sin(double degrees) => Math.Sin(degrees * Math.PI / 180.0);
+
+		var meanAnomaly = Degrees(360.0 * days / 365.2422);
+		var solarAnomaly = Degrees(meanAnomaly + solarLongitudeAtEpoch - solarPerigeeAtEpoch);
+		var solarLongitude = Degrees(meanAnomaly + 360.0 / Math.PI * solarEccentricity * Sin(solarAnomaly)
+			+ solarLongitudeAtEpoch);
+
+		var lunarLongitude = Degrees(13.1763966 * days + lunarLongitudeAtEpoch);
+		var lunarAnomaly = Degrees(lunarLongitude - 0.1114041 * days - lunarPerigeeAtEpoch);
+		var evection = 1.2739 * Sin(2.0 * (lunarLongitude - solarLongitude) - lunarAnomaly);
+		var annualEquation = 0.1858 * Sin(solarAnomaly);
+		var correctedAnomaly = lunarAnomaly + evection - annualEquation - 0.37 * Sin(solarAnomaly);
+		var correctedLongitude = lunarLongitude + evection + 6.2886 * Sin(correctedAnomaly) - annualEquation
+			+ 0.214 * Sin(2.0 * correctedAnomaly);
+		var trueLongitude = correctedLongitude + 0.6583 * Sin(2.0 * (correctedLongitude - solarLongitude));
+
+		return 50.0 * (1.0 - Math.Cos((trueLongitude - solarLongitude) * Math.PI / 180.0));
 	}
 
 	[SharpFunction(Name = "bittype", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -459,7 +501,16 @@ public partial class Functions
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		if (depth is < 0 or > MaxRoomDepth) return new CallState(ErrorMessages.Returns.NumberOutOfRange);
+		var rhost = Configuration.CurrentValue.Compatibility.RhostLrooms;
+		if (rhost)
+		{
+			// RhostMUSH reads a negative depth as 1 and 0 as no limit.
+			depth = depth switch { < 0 => 1, 0 => int.MaxValue, _ => depth };
+		}
+		else if (depth is < 0 or > MaxRoomDepth)
+		{
+			return new CallState(ErrorMessages.Returns.NumberOutOfRange);
+		}
 
 		var all = !args.TryGetValue("2", out var allArg) || allArg.Message?.Length is 0 or null || allArg.Message.Truthy(parser);
 		var objids = args.TryGetValue("3", out var objidArg) && objidArg.Message.Truthy(parser);
@@ -467,7 +518,7 @@ public partial class Functions
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message?.ToPlainText() ?? string.Empty, LocateFlags.All,
 			async room => room.IsRoom
-				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all, objids)
+				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all, objids, rhost ? MaxRhostRooms : int.MaxValue)
 				: new CallState(ErrorMessages.Returns.NotARoom));
 	}
 
@@ -478,7 +529,7 @@ public partial class Functions
 	/// <paramref name="objids"/>, each is listed as its objid.
 	/// </summary>
 	private async ValueTask<CallState> RoomsWithinAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject enactor, AnySharpObject start, int depth, bool all, bool objids)
+		AnySharpObject enactor, AnySharpObject start, int depth, bool all, bool objids, int limit)
 	{
 		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
 		var executorLocation = (await executor.Where()).Object().DBRef.Number;
@@ -494,7 +545,7 @@ public partial class Functions
 				foreach (var destination in await ExitDestinationsAsync(executor, room, reality))
 				{
 					var number = destination.Object().DBRef.Number;
-					if (!seen.Add(number)) continue;
+					if (seen.Count > limit || !seen.Add(number)) continue;
 
 					next.Add(destination);
 					if ((all || step == depth)

@@ -152,5 +152,21 @@ public record CompatibilityOptions(
 		Description = "Turn on trigger() and verb(), which queue an attribute's actions from inside a function, as TinyMUX does. Off, they answer the disabled-function error. Importing a TinyMUX database turns it on",
 		Group = "TinyMUX Compatibility",
 		Order = 5)]
-	bool MuxQueueFunctions
+	bool MuxQueueFunctions,
+
+	[property: SharpConfig(
+		Name = "rhost_iter_separator",
+		Category = "Compatibility",
+		Description = "iter() and parse() put a space between results when no output separator is given, as RhostMUSH does, instead of the list's delimiter",
+		Group = "RhostMUSH Compatibility",
+		Order = 7)]
+	bool RhostIterSeparator,
+
+	[property: SharpConfig(
+		Name = "rhost_lrooms",
+		Category = "Compatibility",
+		Description = "lrooms() takes any depth, and a depth of 0 follows exits as far as they lead, as RhostMUSH does; it lists at most 1,000 rooms. Off, a depth of 0 lists nothing and the deepest is 50, as on TinyMUX",
+		Group = "RhostMUSH Compatibility",
+		Order = 8)]
+	bool RhostLrooms
 );

@@ -54,11 +54,13 @@ public static class RhostFunctionCallRewriter
 		// Each flag an argument of its own, !FLAG allowed, as andlflags() and orlflags() take them in a list.
 		["andflag"] = args => args.Length >= 2 ? $"andlflags({args[0]},{FlagList(args[1..])})" : null,
 		["orflag"] = args => args.Length >= 2 ? $"orlflags({args[0]},{FlagList(args[1..])})" : null,
-		// Plural for 0 and for anything past -1 to 1; singular for none given or empty.
+		// Plural for 0 and for anything past -1 to 1; singular for none given or empty. A computed amount is
+		// evaluated once, into a register that localize() puts back.
 		["moneyname"] = args => args switch
 		{
 			[] or [""] => "config(money_singular)",
-			[var value] => $"if(and(strlen({value}),or(eq({value},0),gt(abs({value}),1))),config(money_plural),config(money_singular))",
+			[var value] when HoldsCall(value) => $"localize({MoneyName($"setr(moneyname,{value})", "%q<moneyname>")})",
+			[var value] => MoneyName(value, value),
 			_ => null
 		},
 		// A comparison of bittype() with a number asks whether a role of some rank is held.
@@ -151,9 +153,12 @@ public static class RhostFunctionCallRewriter
 	private static readonly Dictionary<string, int[]> Repeated = new(StringComparer.OrdinalIgnoreCase)
 	{
 		["ljc"] = [1],
-		["rjc"] = [1],
-		["moneyname"] = [0]
+		["rjc"] = [1]
 	};
+
+	/// <summary>The money name for an amount: <paramref name="first"/> is its first use, <paramref name="again"/> the rest.</summary>
+	private static string MoneyName(string first, string again)
+		=> $"if(and(strlen({first}),or(eq({again},0),gt(abs({again}),1))),config(money_plural),config(money_singular))";
 
 	/// <summary>Rewritten functions whose name SharpMUSH also has, for something else.</summary>
 	private static readonly HashSet<string> SharedNames = new(StringComparer.OrdinalIgnoreCase) { "tag" };

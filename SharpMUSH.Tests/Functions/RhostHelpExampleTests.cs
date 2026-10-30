@@ -23,6 +23,8 @@ public class RhostHelpExampleTests : ServerTestBase
 			RhostPrintf = true,
 			RhostMapArgs = true,
 			RhostList = true,
+			RhostIterSeparator = true,
+			RhostLrooms = true,
 			Dialect = SoftcodeDialects.Rhost.Key
 		}
 	});
@@ -138,6 +140,7 @@ public class RhostHelpExampleTests : ServerTestBase
 	[Arguments("iter(This is a test,-## #@-)", "-This 1- -is 2- -a 3- -test 4-")]
 	[Arguments("iter(This is a test,strlen(##))", "4 2 1 4")]
 	[Arguments("iter(lnum(10),mul(mul(##,##),10))", "0 10 40 90 160 250 360 490 640 810")]
+	[Arguments("iter(Was it a cat I saw,words(##),s)", "1 4 1")]
 	[Arguments("iter(This is a test,##,,***)", "This***is***a***test")]
 	[Arguments("iter(This is a test,%i0,,***)", "This***is***a***test")]
 	[Arguments("iter(:1000:>:,%i0)", ":1000:>:")]
@@ -161,14 +164,18 @@ public class RhostHelpExampleTests : ServerTestBase
 	[Arguments("pack(-629126998)", "-bVxTM")]
 	[Arguments("unpack(bVxTM)", "629126998")]
 	[Arguments("unpack(1111,2)", "15")]
+	[Arguments("moon(999999999)", "The Moon is Waning Gibbous (72% of Full)")]
 	[Arguments("roman(1999)", "MCMXCIX")]
 	[Arguments("roman(777777)", "dcclxxvMMDCCLXXVII")]
 	[Arguments("power10(2)", "100")]
 	[Arguments("power10(5)", "100000")]
 	[Arguments("cosh(0)", "1")]
+	// fdiv(pi(),2) is 1.570796, as C writes it; the help's answers are for pi/2 itself.
+	[Arguments("cosh(fdiv(pi(),2))", "2.509178")]
 	[Arguments("cosh(fdiv(pi(),4))", "1.324609")]
 	[Arguments("cosh(fdiv(pi(),6))", "1.140238")]
 	[Arguments("sinh(0)", "0")]
+	[Arguments("sinh(fdiv(pi(),2))", "2.301298")]
 	[Arguments("sinh(fdiv(pi(),4))", "0.868671")]
 	[Arguments("sinh(fdiv(pi(),6))", "0.547854")]
 	[Arguments("tanh(0)", "0")]
@@ -316,6 +323,8 @@ public class RhostHelpExampleTests : ServerTestBase
 	[Arguments("1[printf($10!s $10!s, one, )]2", "1       one 2")]
 	[Arguments("1[printf($10!s $10!s, , )]2", "12")]
 	[Arguments("1[printf($10@s $10@s, one, two)]2", "1       one        two2")]
+	[Arguments("1[printf($10@s $10@s, , two)]2", "1       two2")]
+	[Arguments("1[printf($10@s $10@s, one, )]2", "1       one           2")]
 	[Arguments("1[printf($10@s $10@s, , )]2", "12")]
 	[Arguments("1[printf($10s $10<s, one, two)]2", "1       one        two2")]
 	[Arguments("1[printf($10s $10<s, , two)]2", "1                     2")]

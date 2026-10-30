@@ -17,7 +17,7 @@ namespace SharpMUSH.Library.Markup;
 /// no cut, <c>*</c> cut the start rather than the end, <c>&amp;</c> one row per line of the value,
 /// <c>|</c> wrap at the width, <c>"</c> wrap at a space, <c>:fill:</c> (<c>:!fill:</c> leaves blank
 /// lines unfilled), <c>.</c> drop a blank last row, <c>!</c> leave out an empty field and the text
-/// after it, <c>@</c> the same when the field before was empty too, <c>&lt;</c> and <c>&gt;</c> empty
+/// after it, <c>@</c> leave out a field and the text after it until some field has had a value, <c>&lt;</c> and <c>&gt;</c> empty
 /// the field when the one before or after is empty, <c>'</c> and <c>`</c> shift a neighbour into an
 /// empty column, <c>#</c> or <c>#n#</c> tabs as spaces, <c>/n/</c> and <c>/wn/</c> a cell or line
 /// limit for wrapping, and <c>;</c>, <c>;n;</c>, <c>;n.l;</c> or <c>;n.l+w;</c> a hanging indent.
@@ -28,7 +28,7 @@ public static class RhostPrintfFormatter
 {
 	public const string AlignmentRepeated = "#-1 FIELD SPECIFIER EXPECTED [ALIGNMENT PREVIOUSLY SPECIFIED]";
 
-	private enum Omit { Never, WhenEmpty, WhenThisOrPreviousEmpty }
+	private enum Omit { Never, WhenEmpty, UntilAValue }
 
 	private sealed record Field(ColumnFormat Format, bool Natural, bool MultiLine, Omit Omit,
 		bool EmptyIfPreviousEmpty, bool EmptyIfNextEmpty, bool WordWrap);
@@ -54,6 +54,7 @@ public static class RhostPrintfFormatter
 		var multiLineSuppress = new List<bool>();
 		var fieldIndex = 0;
 		var skipLiteral = false;
+		var sawValue = false;
 		foreach (var piece in pieces)
 		{
 			if (piece.Literal is { } literal)
@@ -66,8 +67,11 @@ public static class RhostPrintfFormatter
 			var field = piece.Field!;
 			var index = fieldIndex++;
 			var value = effective[index];
-			if ((field.Omit == Omit.WhenEmpty && IsEmpty(value))
-					|| (field.Omit == Omit.WhenThisOrPreviousEmpty && (IsEmpty(value) || (index > 0 && IsEmpty(effective[index - 1])))))
+			sawValue |= !IsEmpty(value);
+			// A field with no argument at all is left out under either code.
+			if (field.Omit != Omit.Never && index >= values.Count
+					|| field.Omit == Omit.WhenEmpty && IsEmpty(value)
+					|| field.Omit == Omit.UntilAValue && !sawValue)
 			{
 				skipLiteral = true;
 				continue;
@@ -352,7 +356,7 @@ public static class RhostPrintfFormatter
 				case '"': words = true; break;
 				case '.': suppressBlankLast = true; break;
 				case '!': omit = Omit.WhenEmpty; break;
-				case '@': omit = Omit.WhenThisOrPreviousEmpty; break;
+				case '@': omit = Omit.UntilAValue; break;
 				case '<': emptyIfPrevious = true; break;
 				case '>': emptyIfNext = true; break;
 				case '\'': whenEmpty = WhenEmpty.PullRightColumnLeft; break;

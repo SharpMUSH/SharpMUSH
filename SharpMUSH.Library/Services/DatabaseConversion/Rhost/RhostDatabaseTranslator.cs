@@ -34,8 +34,8 @@ public static partial class RhostDatabaseTranslator
 
 	/// <summary>
 	/// The options RhostMUSH softcode needs. It writes literal parentheses unescaped (<c>paren_groups</c>),
-	/// reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c> and <c>list()</c> as
-	/// RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), and
+	/// reads <c>trim()</c>, <c>edit()</c>, <c>lattr()</c>, <c>printf()</c>, <c>map()</c>, <c>list()</c>, <c>iter()</c>
+	/// and <c>lrooms()</c> as RhostMUSH defines them, lets only a SIDEFX object run side-effect functions (<c>sidefx_flag</c>), and
 	/// reads RhostMUSH's names for functions and commands SharpMUSH has under its own (<c>dialect</c>).
 	/// </summary>
 	public static Dictionary<string, object> CompatibilityOptions() => new(StringComparer.OrdinalIgnoreCase)
@@ -48,6 +48,8 @@ public static partial class RhostDatabaseTranslator
 		["rhost_map_args"] = true,
 		["sidefx_flag"] = true,
 		["rhost_list"] = true,
+		["rhost_iter_separator"] = true,
+		["rhost_lrooms"] = true,
 		["dialect"] = SoftcodeDialects.Rhost.Key,
 		// RhostMUSH's mail command is mail (see the note Translate gives).
 		["command_aliases"] = new Dictionary<string, string[]> { ["@MAIL"] = ["mail"] }
