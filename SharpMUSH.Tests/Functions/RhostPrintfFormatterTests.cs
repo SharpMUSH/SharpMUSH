@@ -51,6 +51,16 @@ public class RhostPrintfFormatterTests
 	public async Task SeveralFields(string format, string[] values, string expected)
 		=> await Assert.That(Format(format, values)).IsEqualTo(expected);
 
+	/// <summary>
+	/// <c>|"</c> with an indent, worked out from RhostMUSH's source (<c>showfield_printf</c>): the cell limit
+	/// counts the value's own characters, and a line after a newline has the indent taken off its width.
+	/// </summary>
+	[Test]
+	[Arguments("<$-4/8/|\";1;s>", "abcdefghij", "<abcd>\n  efg\n  h  ")]
+	[Arguments("<$-5|\";2;s>", "abcde\nfghij", "<abcde>\n   fgh\n   ij ")]
+	public async Task WrappedWithAnIndent(string format, string value, string expected)
+		=> await Assert.That(Format(format, value)).IsEqualTo(expected);
+
 	private static string Format(string format, params string[] values)
 		=> RhostPrintfFormatter.TryFormat(MarkupText.Plain(format), values.Select(MarkupText.Plain).ToArray(),
 			out var result, out var error)

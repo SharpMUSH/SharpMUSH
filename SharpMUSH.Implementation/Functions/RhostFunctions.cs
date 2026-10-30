@@ -164,7 +164,9 @@ public partial class Functions
 	/// <summary>
 	/// escapex(): escape(), leaving alone the characters listed and the kinds of <c>%</c>-substitution the
 	/// letters <c>a 8 s d p x</c> name; <c>f</c> drops the leading backslash and <c>r</c> escapes only what
-	/// the others would leave alone.
+	/// the others would leave alone. As in RhostMUSH, the leading backslash goes only before a first character
+	/// that is written as it is: one that gets its own backslash, or starts a substitution left alone, has none.
+	/// With <c>r</c>, <c>f</c> asks for the leading backslash instead.
 	/// </summary>
 	[SharpFunction(Name = "escapex", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
 		ParameterNames = ["string", "omissions", "substitutions"])]
@@ -202,7 +204,10 @@ public partial class Functions
 				|| text[index] == '%' && index + 1 < text.Length && omittedSubstitutions.Contains(char.ToLowerInvariant(text[index + 1]));
 
 		var escaped = EscapeSoftcode(text, index => Omitted(index) == reverse);
-		return ValueTask.FromResult(new CallState(omissions.Contains('f') ? escaped : "\\" + escaped));
+		var firstEscaped = SoftcodeDecomposer.SoftcodeSpecial().IsMatch(text[..1]) && Omitted(0) == reverse;
+		var firstSubstitution = text.Length > 1 && text[0] == '%' && omittedSubstitutions.Contains(char.ToLowerInvariant(text[1]));
+		var leading = !firstEscaped && !firstSubstitution && omissions.Contains('f') == reverse;
+		return ValueTask.FromResult(new CallState(leading ? "\\" + escaped : escaped));
 	}
 
 	/// <summary>globalroom(): the master room, to a wizard or royalty.</summary>
