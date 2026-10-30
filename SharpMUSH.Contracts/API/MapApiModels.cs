@@ -99,6 +99,9 @@ public sealed record MapRoomDto(string Id, string Name, double[]? Position, doub
 	/// </summary>
 	public string? Environment { get; init; }
 
+	/// <summary>The room stands on a place of the map's <see cref="MapDto.Space"/>: the map's own ways lead to it.</summary>
+	public bool OnPlace { get; init; }
+
 	/// <summary>The connected players the viewer may know are in the room, by name: as <c>loc()</c> would find them, and not DARK or hidden.</summary>
 	public IReadOnlyList<string> People { get; init; } = [];
 }

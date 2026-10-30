@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Jelmagyarázat: {0}</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Világtérkép</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>A világtérkép maga tárolja a helyeit: fesd a terepet, állíts falakat és nevezz el helyeket, mindegyikhez szoba nélkül.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Legyen világtérkép</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Fess egy helyet, vagy egy téglalap minden helyét, egy tereptípussal. Kattints a térképre egy hely kiválasztásához.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>x-ig</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>y-ig</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Tereptípus</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Betűk, számjegyek, _ és -. Üresen töröl.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Festés</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>A jelmagyarázat típusai</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>A játékosok a rajta lévő tíz irány-kijáraton át járják a világtérképet. Megnyitásukhoz a World grid csomag kell, és a térképnek szobának kell lennie.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Irány-kijáratok megnyitása</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Hely: {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Hely neve</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Oldal</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Észak</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Kelet</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Dél</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Nyugat</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Fel</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Le</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Átjárás</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Nyitott</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Fal</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Csak kifelé</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Mit lát az elutasított játékos</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Oldal beállítása</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Elrejtés a játékosok elől</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Megjelenítés a játékosoknak</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Szoba ide, dbref szerint</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} nem a te irányításod alatt álló szoba.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>{0} legyen világtérkép</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Irány-kijáratok megnyitása itt: {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>{1} festése: {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>{0} törlése</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>{0} oldal: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>{0} hely neve: {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>{0} hely nevének törlése</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>{0} hely elrejtése</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>{0} hely megjelenítése</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>{1} elhelyezése ide: {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Az elhelyezett szoba levétele innen: {0}</value>
+  </data>
 </root>

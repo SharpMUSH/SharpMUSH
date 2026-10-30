@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Легенда для {0}</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Карта мира</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>Карта мира сама хранит свои места: раскрашивайте местность, ставьте стены и называйте места без комнаты для каждого.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Сделать картой мира</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Раскрасьте место или все места в прямоугольнике типом местности. Щёлкните по карте, чтобы выбрать место.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>До x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>До y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Тип местности</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Буквы, цифры, _ и -. Пусто стирает.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Раскрасить</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Типы из легенды</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Игроки ходят по карте мира через десять выходов-направлений на ней. Для их открытия нужен пакет World grid, а карта должна быть комнатой.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Открыть выходы-направления</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Место {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Название места</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Сторона</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Север</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Восток</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Юг</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Запад</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Вверх</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Вниз</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Проход</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Открыто</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Стена</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Только наружу</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Что увидит игрок при отказе</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Задать сторону</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Скрыть от игроков</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Показать игрокам</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Комната здесь, по dbref</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} — не комната под вашим контролем.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Сделать {0} картой мира</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Открыть выходы-направления на {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>Раскрасить {1} как {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>Стереть {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Сторона {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Назвать место {0} «{1}»</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Убрать название места {0}</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Скрыть место {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Показать место {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>Поставить {1} на {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Убрать поставленную комнату с {0}</value>
+  </data>
 </root>

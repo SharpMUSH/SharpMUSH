@@ -163,7 +163,7 @@
                         @if (_editing && _plan is not null)
                         {
                             <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
-                                <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell"
+                                <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell" Cells="_cells"
                                             Character="@CharacterId" Maps="@(_maps ?? [])" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
                             </KitCard>
                         }
@@ -226,7 +226,8 @@
     {
         if (_plan is null) return Task.CompletedTask;
         _preview = new MapLayout(_plan.Preview());
-        _cell = null;
+        // A world map's place stays chosen, for the next change to it; elsewhere the cell is dug or left.
+        if (_preview.Space is null) _cell = null;
         if (room is not null && _preview.Rooms.TryGetValue(room, out var placed))
         {
             (_selected, _level) = (room, placed.Placed ? placed.Level : _level);
@@ -238,13 +239,14 @@
     /// <summary>The plan ran, all of it or up to a failed step: read the map again and keep editing it from there.</summary>
     private async Task AppliedAsync(IReadOnlyList<MapApplied> applied)
     {
-        var (level, selected) = (_level, _selected);
+        var (level, selected, cell) = (_level, _selected, _cell);
         await LoadMapAsync();
         (_applied, _fit) = (applied, false);
         if (_layout is null) return;
         if (_layout.Levels.Contains(level)) _level = level;
         if (selected is not null && _layout.Rooms.ContainsKey(selected)) _selected = selected;
         StartEditing();
+        if (_layout.Space is not null) _cell = cell;
         _applied = applied;
     }
     private bool _loading;
@@ -424,6 +426,7 @@
     private void SelectPlace(MapCellDto place)
     {
         (_place, _selected) = ((place.X, place.Y), null);
+        if (_editing) _cell = (place.X, place.Y);
         ForgetRoute();
     }
 

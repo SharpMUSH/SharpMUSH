@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legenda za {0}</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Karta svijeta</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>Karta svijeta sama čuva svoja mjesta: obojite teren, postavite zidove i imenujte mjesta, bez sobe za svako.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Pretvori u kartu svijeta</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Obojite mjesto, ili svako mjesto u pravokutniku, vrstom terena. Kliknite kartu za odabir mjesta.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>Do x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>Do y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Vrsta terena</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Slova, znamenke, _ i -. Prazno briše.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Oboji</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Vrste iz legende</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Igrači hodaju kartom svijeta kroz deset izlaza za smjerove na njoj. Za njihovo otvaranje treba paket World grid, a karta mora biti soba.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Otvori izlaze za smjerove</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Mjesto {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Naziv mjesta</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Strana</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Sjever</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Istok</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Jug</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Zapad</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Gore</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Dolje</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Prolaz</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Otvoreno</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Zid</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Samo van</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Što se kaže odbijenom igraču</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Postavi stranu</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Sakrij od igrača</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Prikaži igračima</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Soba ovdje, po dbrefu</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} nije soba koju kontrolirate.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Pretvori {0} u kartu svijeta</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Otvori izlaze za smjerove na {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>Oboji {1} kao {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>Izbriši {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Strana {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Imenuj mjesto {0} {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Ukloni naziv mjesta {0}</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Sakrij mjesto {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Prikaži mjesto {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>Postavi {1} na {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Ukloni postavljenu sobu s {0}</value>
+  </data>
 </root>

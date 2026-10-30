@@ -14,7 +14,11 @@
     }
     else
     {
-        @if (Cell is var (cellX, cellY))
+        @if (Cell is var (placeX, placeY) && Layout.Space is not null)
+        {
+            @WorldPlace((int)placeX, (int)placeY)
+        }
+        else if (Cell is var (cellX, cellY))
         {
             @Spot(cellX, cellY)
         }
@@ -28,6 +32,7 @@
         }
         @Tray()
         @LevelEditor()
+        @World()
         @Settings()
         @Checks()
         <div class="map-builder-footer">
@@ -48,6 +53,9 @@
     [Parameter] public int Level { get; set; }
     [Parameter] public string? Selected { get; set; }
     [Parameter] public (double X, double Y)? Cell { get; set; }
+
+    /// <summary>The places of a world map read for the view, for the place chosen.</summary>
+    [Parameter] public MapCellsDto? Cells { get; set; }
 
     /// <summary>The objid of the character the commands run as.</summary>
     [Parameter] public string? Character { get; set; }
@@ -108,7 +116,8 @@
         {
             _formFor = Cell;
             ResetDig();
-            if (Cell is var (x, y)) (_from, _exitTo, _exitBack) = DefaultExits(x, y);
+            if (Cell is var (x, y) && Layout.Space is not null) ChoosePlace((int)x, (int)y);
+            else if (Cell is var (x2, y2)) (_from, _exitTo, _exitBack) = DefaultExits(x2, y2);
         }
         // The fields follow the room as the plan moves it, not only when another room is chosen.
         if (Selected is { } id && Layout.Rooms.TryGetValue(id, out var room) && (id != _editing || room != _shown))
@@ -632,6 +641,195 @@
         </section>
     };
 
+    // ---- world map ------------------------------------------------------------------------------------------------
+
+    private int _paintX, _paintY, _paintX2, _paintY2;
+    private string _paintType = "";
+    private string _placeName = "";
+    private string _placeRoom = "";
+    private string? _placeRoomProblem;
+    private string _side = "n";
+    private string _sideState = "open";
+    private string _sideReason = "";
+    private static readonly string[] Sides = ["n", "e", "s", "w", "u", "d"];
+    private static readonly string[] SideStates = ["open", "wall", "oneway"];
+
+    /// <summary>The place at (x, y) on the level on show, as the view read it; null when it holds nothing or was not read.</summary>
+    private MapCellDto? PlaceAt(int x, int y) =>
+        Cells is { } cells && cells.Level == Level ? cells.Cells.FirstOrDefault(cell => cell.X == x && cell.Y == y) : null;
+
+    /// <summary>A place was chosen: the paint box starts on it, and its fields start from what it holds.</summary>
+    private void ChoosePlace(int x, int y)
+    {
+        var place = PlaceAt(x, y);
+        (_paintX, _paintY, _paintX2, _paintY2, _paintType) = (x, y, x, y, place?.Type ?? _paintType);
+        (_placeName, _placeRoom, _placeRoomProblem) = (place?.Name ?? "", place?.Room ?? "", null);
+        ChooseSide(_side);
+    }
+
+    /// <summary>The side's state and reason as the view read them: open when it lists no wall there.</summary>
+    private void ChooseSide(string side)
+    {
+        _side = side;
+        var wall = Cell is var (x, y) && Cells is { } cells && cells.Level == Level
+            ? cells.Walls.FirstOrDefault(wall => wall.X == (int)x && wall.Y == (int)y && wall.Side == side)
+            : null;
+        (_sideState, _sideReason) = wall is { Kind: MapWallKinds.Wall or MapWallKinds.OneWay } ? (wall.Kind, wall.Reason ?? "") : ("open", "");
+    }
+
+    private bool WorldPlanned => Plan.Changes.Any(change => change.Kind == MapChangeKind.CreateWorld);
+    private bool WaysPlanned => Plan.Changes.Any(change => change.Kind == MapChangeKind.OpenWays);
+
+    /// <summary>
+    /// A grid map that is not a world map yet may become one; a world map paints its terrain and opens the exits that walk
+    /// it. A picture keeps its rooms where they are drawn.
+    /// </summary>
+    private RenderFragment World() => __builder =>
+    {
+        if (Layout.IsGraph) return;
+        <section class="map-builder-section" aria-labelledby="map-world-title">
+            <h3 id="map-world-title" class="map-builder-title">@Loc["NavMapWorld"]</h3>
+            @if (Layout.Space is null)
+            {
+                <p class="map-note">@Loc["NavMapWorldNote"]</p>
+                <MudButton Variant="Variant.Outlined" Disabled="WorldPlanned" OnClick="CreateWorldAsync">@Loc["NavMapMakeWorld"]</MudButton>
+            }
+            else
+            {
+                <p class="map-note">@Loc["NavMapPaintNote"]</p>
+                <div class="map-builder-row map-builder-row--numbers">
+                    <MudNumericField T="int" @bind-Value="_paintX" Label="x" Variant="Variant.Outlined" />
+                    <MudNumericField T="int" @bind-Value="_paintY" Label="y" Variant="Variant.Outlined" />
+                    <MudNumericField T="int" @bind-Value="_paintX2" Label="@Loc["NavMapPaintToX"]" Variant="Variant.Outlined" />
+                    <MudNumericField T="int" @bind-Value="_paintY2" Label="@Loc["NavMapPaintToY"]" Variant="Variant.Outlined" />
+                </div>
+                <div class="map-builder-row">
+                    <MudTextField T="string" @bind-Value="_paintType" Label="@Loc["NavMapTerrain"]" Variant="Variant.Outlined" Immediate="true"
+                                  HelperText="@Loc["NavMapTerrainNote"]" Error="@(!PaintTypeValid)" />
+                    <MudButton Variant="Variant.Outlined" Disabled="@(!PaintTypeValid || PaintTooLarge)" OnClick="PaintAsync">@Loc["NavMapPaint"]</MudButton>
+                </div>
+                @if (Layout.Map.Legend.Count > 0)
+                {
+                    <div class="map-builder-row" role="group" aria-label="@Loc["NavMapTerrainTypes"]">
+                        @foreach (var entry in Layout.Map.Legend)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => _paintType = entry.Type">@entry.Label</MudButton>
+                        }
+                    </div>
+                }
+                <p class="map-note">@Loc["NavMapOpenWaysNote"]</p>
+                <MudButton Variant="Variant.Outlined" Disabled="WaysPlanned" OnClick="OpenWaysAsync">@Loc["NavMapOpenWays"]</MudButton>
+            }
+        </section>
+    };
+
+    /// <summary>The place chosen on a world map: its name, its sides, whether players see it, and a room to stand on it.</summary>
+    private RenderFragment WorldPlace(int x, int y) => __builder =>
+    {
+        var place = PlaceAt(x, y);
+        <section class="map-builder-section" aria-labelledby="map-place-title">
+            <h3 id="map-place-title" class="map-builder-title">@Loc["NavMapPlaceAt", x, y, Level]</h3>
+            @if (place is not null)
+            {
+                <p class="map-note">@(Layout.Map.Legend.FirstOrDefault(entry => entry.Type == place.Type)?.Label ?? place.Type)</p>
+            }
+            <div class="map-builder-row">
+                <MudTextField T="string" @bind-Value="_placeName" Label="@Loc["NavMapPlaceName"]" Variant="Variant.Outlined" Immediate="true" />
+                <MudButton Variant="Variant.Outlined" Disabled="@(_placeName.Trim() == (place?.Name ?? ""))" OnClick="() => NamePlaceAsync(x, y)">@Loc["NavMapSetName"]</MudButton>
+            </div>
+            <div class="map-builder-row">
+                <MudSelect T="string" Value="_side" ValueChanged="ChooseSide" Label="@Loc["NavMapSide"]" Variant="Variant.Outlined">
+                    @foreach (var side in Sides)
+                    {
+                        <MudSelectItem T="string" Value="side">@Loc[$"NavMapSide{side.ToUpperInvariant()}"]</MudSelectItem>
+                    }
+                </MudSelect>
+                <MudSelect T="string" @bind-Value="_sideState" Label="@Loc["NavMapSideState"]" Variant="Variant.Outlined">
+                    @foreach (var state in SideStates)
+                    {
+                        <MudSelectItem T="string" Value="state">@Loc[$"NavMapSideState{state}"]</MudSelectItem>
+                    }
+                </MudSelect>
+            </div>
+            <div class="map-builder-row">
+                <MudTextField T="string" @bind-Value="_sideReason" Label="@Loc["NavMapSideReason"]" Variant="Variant.Outlined" Immediate="true"
+                              Disabled="@(_sideState == "open")" />
+                <MudButton Variant="Variant.Outlined" OnClick="() => SideAsync(x, y)">@Loc["NavMapSetSide"]</MudButton>
+            </div>
+            <div class="map-builder-row">
+                <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, true)">@Loc["NavMapHidePlace"]</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="() => HidePlaceAsync(x, y, false)">@Loc["NavMapShowPlace"]</MudButton>
+            </div>
+            <div class="map-builder-row">
+                <MudTextField T="string" @bind-Value="_placeRoom" Label="@Loc["NavMapPlaceRoomField"]" Variant="Variant.Outlined" Immediate="true"
+                              HelperText="@_placeRoomProblem" Error="@(_placeRoomProblem is not null)" />
+                <MudButton Variant="Variant.Outlined" Disabled="@(_placeRoom.Trim() is { Length: > 0 } typed && !MapPlan.IsDbref(typed))"
+                           OnClick="() => PlaceRoomAsync(x, y)">@Loc["NavMapPlaceRoom"]</MudButton>
+            </div>
+        </section>
+    };
+
+    /// <summary>A terrain type is letters, digits, <c>_</c> and <c>-</c>, at most 32; empty erases.</summary>
+    private bool PaintTypeValid => _paintType.Trim() is var type && type.Length <= 32 && type.All(c => char.IsAsciiLetterOrDigit(c) || c is '_' or '-');
+
+    /// <summary>One paint covers at most 262144 places, as <c>@world/paint</c> allows.</summary>
+    private bool PaintTooLarge => (Math.Abs((long)_paintX2 - _paintX) + 1) * (Math.Abs((long)_paintY2 - _paintY) + 1) > 262144;
+
+    private async Task CreateWorldAsync()
+    {
+        Plan.CreateWorld();
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task OpenWaysAsync()
+    {
+        Plan.OpenWays();
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task PaintAsync()
+    {
+        Plan.Paint(_paintX, _paintY, _paintX2, _paintY2, Level, _paintType);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task NamePlaceAsync(int x, int y)
+    {
+        Plan.NamePlace(x, y, Level, _placeName);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task SideAsync(int x, int y)
+    {
+        Plan.Side(x, y, Level, _side, _sideState, _sideState == "open" ? "" : _sideReason);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    private async Task HidePlaceAsync(int x, int y, bool hidden)
+    {
+        Plan.HidePlace(x, y, Level, hidden);
+        await OnChanged.InvokeAsync(null);
+    }
+
+    /// <summary>Places a room by its dbref, once the game says it is a room the character controls; empty takes it off.</summary>
+    private async Task PlaceRoomAsync(int x, int y)
+    {
+        var room = _placeRoom.Trim();
+        if (room.Length > 0)
+        {
+            _placeRoomProblem = await RoomAsync(room) switch
+            {
+                null => Loc["NavMapNoSuchRoom", room].Value,
+                (_, false) => Loc["NavMapNotYourRoom", room].Value,
+                _ => null,
+            };
+            if (_placeRoomProblem is not null) return;
+        }
+        _placeRoomProblem = null;
+        Plan.PlaceRoom(x, y, Level, room);
+        await OnChanged.InvokeAsync(null);
+    }
+
     private async Task NameLevelAsync()
     {
         Plan.NameLevel(Level, _levelName);
@@ -733,6 +931,11 @@
         { Kind: MapChangeKind.NameLevel, Name.Length: 0 } => Loc["NavMapPlanClearLevel", change.Other ?? ""],
         { Kind: MapChangeKind.MapSetting, Other.Length: 0 } => Loc["NavMapPlanClearSetting", change.Name],
         { Kind: MapChangeKind.MoveMap, Other.Length: 0 } => Loc["NavMapPlanUnparentMap", change.Name],
+        { Kind: MapChangeKind.Side } => Loc["NavMapPlanSide", change.Name, Loc[$"NavMapSideState{change.Other}"].Value],
+        { Kind: MapChangeKind.Paint, Name.Length: 0 } => Loc["NavMapPlanErase", change.Other ?? ""],
+        { Kind: MapChangeKind.NamePlace, Other.Length: 0 } => Loc["NavMapPlanUnnamePlace", change.Name],
+        { Kind: MapChangeKind.HidePlace, Other.Length: 0 } => Loc["NavMapPlanShowPlace", change.Name],
+        { Kind: MapChangeKind.PlaceRoom, Other.Length: 0 } => Loc["NavMapPlanUnplaceRoom", change.Name],
         _ => Loc[$"NavMapPlan{change.Kind}", change.Name, change.Other ?? ""],
     };
 

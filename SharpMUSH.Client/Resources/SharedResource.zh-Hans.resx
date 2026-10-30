@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>{0} 的图例</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>世界地图</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>世界地图自己保存其地点：绘制地形、设置墙壁、命名地点，无需为每处建房间。</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>设为世界地图</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>用地形类型绘制一个地点或方框内的所有地点。点击地图选择地点。</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>到 x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>到 y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>地形类型</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>字母、数字、_ 和 -。留空即擦除。</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>绘制</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>图例中的类型</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>玩家通过地图上的十个方向出口在世界地图上行走。打开它们需要 World grid 包，且地图必须是房间。</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>打开方向出口</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>地点 {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>地点名称</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>边</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>北</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>东</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>南</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>西</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>上</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>下</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>通行</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>开放</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>墙</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>仅可离开</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>被拒玩家看到的说明</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>设置边</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>对玩家隐藏</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>向玩家显示</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>放在此处的房间（dbref）</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} 不是你控制的房间。</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>将 {0} 设为世界地图</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>在 {0} 上打开方向出口</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>将 {1} 绘制为 {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>擦除 {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>边 {0}：{1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>将地点 {0} 命名为 {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>移除地点 {0} 的名称</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>隐藏地点 {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>显示地点 {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>将 {1} 放在 {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>从 {0} 移除已放置的房间</value>
+  </data>
 </root>

@@ -37,6 +37,13 @@ public enum MapChangeKind
 	MoveMap,
 	MapSetting,
 	Legend,
+	CreateWorld,
+	OpenWays,
+	Paint,
+	Side,
+	NamePlace,
+	HidePlace,
+	PlaceRoom,
 }
 
 /// <summary>
@@ -236,6 +243,82 @@ public sealed partial class MapPlan(MapDto map)
 		Upsert(new($"map:{key}", MapChangeKind.MapSetting, id, attribute, [Set(id, attribute, value)]) { Other = value });
 	}
 
+	/// <summary>Makes the map a world map, which keeps its places itself (<c>@world/create</c>).</summary>
+	public void CreateWorld()
+	{
+		var id = Map.Map.Id;
+		Upsert(new("world:create", MapChangeKind.CreateWorld, id, Map.Map.Name,
+			[new($"@world/create {id}", $"strmatch(worldcell({id},0,0),#-1 NOT A WORLD MAP)", "0")]));
+	}
+
+	/// <summary>Opens the ten direction exits that walk the map (world-grid's <c>+map/exits</c>); the map must be a room.</summary>
+	public void OpenWays()
+	{
+		var id = Map.Map.Id;
+		Upsert(new("world:ways", MapChangeKind.OpenWays, id, Map.Map.Name,
+			[new($"+map/exits {id}", $"gte(words(lexits({id})),10)", "1")]));
+	}
+
+	/// <summary>Paints the places in the box from (x, y) to (x2, y2) on level z with <paramref name="type"/>; empty erases them.</summary>
+	public void Paint(int x, int y, int x2, int y2, int z, string type)
+	{
+		var id = Map.Map.Id;
+		var (left, right, bottom, top) = (Math.Min(x, x2), Math.Max(x, x2), Math.Min(y, y2), Math.Max(y, y2));
+		var box = left == right && bottom == top ? $"{left},{bottom},{z}" : $"{left},{bottom},{z}:{right},{top}";
+		Upsert(new($"paint:{++_next}", MapChangeKind.Paint, id, type.Trim(),
+			[new($"@world/paint {id}/{box}={type.Trim()}", $"worldcell({id},{left},{bottom},{z})", type.Trim().ToLowerInvariant())])
+		{ Other = box });
+	}
+
+	/// <summary>
+	/// Sets side <paramref name="side"/> of place (x, y, z): <c>open</c>, <c>wall</c> or <c>oneway</c>, with the reason a
+	/// refused mover is told. The check reads the way out through it, which is <c>none</c> or <c>closed</c> when the place
+	/// beyond is unpainted or closed, whatever the side holds.
+	/// </summary>
+	public void Side(int x, int y, int z, string side, string state, string reason)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		var value = reason.Trim().Length > 0 ? $"{state},{reason.Trim()}" : state;
+		Upsert(new($"side:{at}/{side}", MapChangeKind.Side, id, $"{at}/{side}",
+			[new($"@world/wall {id}/{at}/{side}={value}", $"t(match({state} none closed,worldway({id},{x},{y},{z},{side})))", "1")])
+		{ Other = state });
+	}
+
+	/// <summary>Names place (x, y, z); empty takes its name away.</summary>
+	public void NamePlace(int x, int y, int z, string name)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		Upsert(new($"place-name:{at}", MapChangeKind.NamePlace, id, at,
+			[new($"@world/place {id}/{at}={name.Trim()}", $"worldcell({id},{x},{y},{z},name)", name.Trim())])
+		{ Other = name.Trim() });
+	}
+
+	/// <summary>Hides place (x, y, z) from whoever may not examine the map, or shows it again.</summary>
+	public void HidePlace(int x, int y, int z, bool hidden)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		var value = hidden ? "true" : "null";
+		Upsert(new($"place-hidden:{at}", MapChangeKind.HidePlace, id, at,
+			[new($"@world/data/merge {id}/{at}={{\"render\":{{\"hidden\":{value}}}}}",
+				$"t(strmatch(worldcell({id},{x},{y},{z},data),*\"hidden\":true*))", hidden ? "1" : "0")])
+		{ Other = hidden ? "1" : "" });
+	}
+
+	/// <summary>Places <paramref name="room"/> on place (x, y, z) to stay; empty takes the placed room off it.</summary>
+	public void PlaceRoom(int x, int y, int z, string room)
+	{
+		var id = Map.Map.Id;
+		var at = Place(x, y, z);
+		Upsert(new($"place-room:{at}", MapChangeKind.PlaceRoom, id, at,
+			[new($"@world/room {id}/{at}={room.Trim()}", $"num(worldcell({id},{x},{y},{z},room))", room.Trim().Length > 0 ? room.Trim() : "#-1")])
+		{ Other = room.Trim() });
+	}
+
+	private static string Place(int x, int y, int z) => $"{x},{y},{z}";
+
 	/// <summary>How many objects the plan makes, each counted against the builder's quota: a room per dig, an exit per way.</summary>
 	public int Builds =>
 		_dugExits.Values.Sum(exit => exit.From is null ? 1 : exit.Back is null ? 2 : 3) + _joins.Values.Sum(join => join.Back is null ? 1 : 2);
@@ -355,14 +438,15 @@ public sealed partial class MapPlan(MapDto map)
 
 	/// <summary>
 	/// What the builder should look at before applying: a room on the map, planned or not, that no exit leads into.
-	/// Only rooms they may change are named, so a map they share does not nag them about rooms of others.
+	/// Only rooms they may change are named, so a map they share does not nag them about rooms of others; a room standing on
+	/// a place is reached by the map's own ways.
 	/// </summary>
 	public IReadOnlyList<MapRoomDto> NoWayIn()
 	{
 		var preview = Preview();
 		var reached = preview.Exits.Where(exit => exit.Destination is not null && exit.Destination != exit.Source)
 			.Select(exit => exit.Destination!).ToHashSet();
-		return [.. preview.Rooms.Where(room => room.Editable && !reached.Contains(room.Id) && room.Id != Map.Here)];
+		return [.. preview.Rooms.Where(room => room.Editable && !room.OnPlace && !reached.Contains(room.Id) && room.Id != Map.Here)];
 	}
 
 	/// <summary>

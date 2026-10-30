@@ -143,6 +143,9 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			false)
 		: new(1, left, bottom, right, top, [new(0, 0, "forest") { Name = "Lookout" }], [], false);
 
+	/// <summary>Whether the viewer controls the wilds, so may plan changes to its places.</summary>
+	public bool WildsEditable { get; set; }
+
 	/// <summary>How many more objects the builder of the harbour works may build; null for no quota.</summary>
 	public int? BuildsLeft { get; set; }
 
@@ -191,7 +194,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/56" => Json(FarMap),
 			"api/maps/57" => Json(ShoreMap),
 			"api/maps/58" => Json(PierMap),
-			"api/maps/59" => Json(WildsMap),
+			"api/maps/59" => Json(WildsMap with { CanEdit = WildsEditable }),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -671,6 +674,32 @@ public class WorldMapPageTests : TrackingBunitContext
 		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapReview").ClickAsync();
 
 		await Assert.That(cut.Find(".map-review").TextContent).Contains("@name #55=Old works");
+	}
+
+	[Test]
+	public async Task ABuilderNamesHidesAndPaintsAPlaceOfAWorldMap()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 59));
+		cut.WaitForAssertion(() => cut.Find(".map-room--place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+
+		await Assert.That(cut.Find("#map-place-title").TextContent).IsEqualTo("NavMapPlaceAt(0, 1, 0)");
+		await Assert.That(cut.Find(".map-builder input").GetAttribute("value")).IsEqualTo("Old Mill");
+		await cut.Find(".map-builder input").InputAsync("Mill ruins");
+		await Click(cut, "NavMapSetName");
+		await Click(cut, "NavMapHidePlace");
+		await Click(cut, "NavMapPaint");
+		await Click(cut, "NavMapReview");
+
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent)).IsEquivalentTo(
+		[
+			"@world/place #59/0,1,0=Mill ruins",
+			"""@world/data/merge #59/0,1,0={"render":{"hidden":true}}""",
+			"@world/paint #59/0,1,0=forest",
+		]).Because("the paint box starts on the place chosen, with its terrain");
 	}
 
 	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync(bool authorized = false)

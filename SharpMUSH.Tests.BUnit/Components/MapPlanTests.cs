@@ -348,4 +348,43 @@ public class MapPlanTests
 		await Assert.That(plan.Preview().Map.Parent).IsNull();
 		await Assert.That(plan.Preview().Backdrop).IsEqualTo("https://example.com/isle.png");
 	}
+	[Test]
+	public async Task AWorldMapsPlacesAreChangedWithTheWorldCommands()
+	{
+		var plan = new MapPlan(Grid() with { Space = new(MapSpaces.Square, 0, 0, 9, 9, [0]) });
+
+		plan.CreateWorld();
+		plan.Paint(3, 2, 0, 0, 0, " Forest ");
+		plan.Paint(5, 5, 5, 5, 1, "");
+		plan.Side(1, 1, 0, "n", "wall", " A fallen oak blocks the path. ");
+		plan.Side(1, 1, 0, "n", "open", "");
+		plan.NamePlace(4, 4, 0, "Old Oak");
+		plan.HidePlace(4, 4, 0, true);
+		plan.PlaceRoom(4, 5, 0, "#12");
+		plan.OpenWays();
+
+		await Assert.That(plan.Changes.SelectMany(change => change.Steps)).IsEquivalentTo(
+		[
+			new MapStep("@world/create #50", "strmatch(worldcell(#50,0,0),#-1 NOT A WORLD MAP)", "0"),
+			new MapStep("@world/paint #50/0,0,0:3,2=Forest", "worldcell(#50,0,0,0)", "forest"),
+			new MapStep("@world/paint #50/5,5,1=", "worldcell(#50,5,5,1)", ""),
+			new MapStep("@world/wall #50/1,1,0/n=open", "t(match(open none closed,worldway(#50,1,1,0,n)))", "1"),
+			new MapStep("@world/place #50/4,4,0=Old Oak", "worldcell(#50,4,4,0,name)", "Old Oak"),
+			new MapStep("""@world/data/merge #50/4,4,0={"render":{"hidden":true}}""", """t(strmatch(worldcell(#50,4,4,0,data),*"hidden":true*))""", "1"),
+			new MapStep("@world/room #50/4,5,0=#12", "num(worldcell(#50,4,5,0,room))", "#12"),
+			new MapStep("+map/exits #50", "gte(words(lexits(#50)),10)", "1"),
+		]).Because("a side set twice is one change, the last");
+		await Assert.That(plan.Changes.Where(change => change.Kind == MapChangeKind.Paint).Select(change => change.Other))
+			.IsEquivalentTo(["0,0,0:3,2", "5,5,1"]);
+	}
+
+	[Test]
+	public async Task ARoomStandingOnAPlaceNeedsNoWayIn()
+	{
+		var map = Grid(Room("#10", "Quay", [0, 0, 0]), Room("#11", "Old forest (1,0,0)", [1, 0, 0]) with { OnPlace = true })
+			with
+		{ Here = "#10", Space = new(MapSpaces.Square, 0, 0, 9, 9, [0]) };
+
+		await Assert.That(new MapPlan(map).NoWayIn()).IsEmpty().Because("the map's own direction exits lead to a room on a place");
+	}
 }

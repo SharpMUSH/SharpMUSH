@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Tegnforklaring for {0}</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Verdenskart</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>Et verdenskart lagrer stedene sine selv: mal terrenget, sett vegger og navngi steder, uten et rom for hvert.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Gjør dette til et verdenskart</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Mal et sted, eller hvert sted i en boks, med en terrengtype. Klikk på kartet for å velge et sted.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>Til x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>Til y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Terrengtype</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Bokstaver, sifre, _ og -. Tomt sletter.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Mal</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Tegnforklaringens typer</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Spillere går rundt på et verdenskart gjennom ti retningsutganger på det. Å åpne dem krever pakken World grid, og kartet må være et rom.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Åpne retningsutgangene</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Sted {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Stedets navn</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Side</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Nord</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Øst</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Sør</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Vest</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Opp</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Ned</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Passasje</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Åpen</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Vegg</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Bare ut</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Hva en avvist spiller får vite</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Sett side</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Skjul for spillere</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Vis for spillere</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Rom her, etter dbref</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} er ikke et rom du kontrollerer.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Gjør {0} til et verdenskart</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Åpne retningsutgangene på {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>Mal {1} som {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>Slett {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Side {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Gi sted {0} navnet {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Fjern navnet fra sted {0}</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Skjul sted {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Vis sted {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>Plasser {1} på {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Fjern det plasserte rommet fra {0}</value>
+  </data>
 </root>

@@ -270,6 +270,8 @@ public class WorldMapReaderTests
 		await Assert.That(rooms["Kept hut"].Position).IsEquivalentTo([9.0, 0.0, 0.0]).Because("coordinates of its own win");
 		await Assert.That(rooms["Stray"].Position).IsNull().Because("its place is on another map");
 		await Assert.That(rooms["Recycled"].Position).IsNull().Because("its place is on an earlier object with this number");
+		await Assert.That(rooms.Values.Where(room => room.OnPlace).Select(room => room.Name)).IsEquivalentTo(["Glade", "Kept hut"])
+			.Because("the map's own ways lead to a room on one of its places");
 		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Rooms.Single(room => room.Name == "Glade").Position)
 			.IsNull().Because("a map no source stores has no places to stand on");
 	}

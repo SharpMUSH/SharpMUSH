@@ -7037,4 +7037,130 @@
   <data name="NavMapPlanLegend" xml:space="preserve">
     <value>Legendă pentru {0}</value>
   </data>
+  <data name="NavMapWorld" xml:space="preserve">
+    <value>Harta lumii</value>
+  </data>
+  <data name="NavMapWorldNote" xml:space="preserve">
+    <value>O hartă a lumii își păstrează singură locurile: pictează terenul, pune ziduri și numește locuri, fără o cameră pentru fiecare.</value>
+  </data>
+  <data name="NavMapMakeWorld" xml:space="preserve">
+    <value>Transformă în hartă a lumii</value>
+  </data>
+  <data name="NavMapPaintNote" xml:space="preserve">
+    <value>Pictează un loc, sau fiecare loc dintr-un dreptunghi, cu un tip de teren. Fă clic pe hartă pentru a alege un loc.</value>
+  </data>
+  <data name="NavMapPaintToX" xml:space="preserve">
+    <value>Până la x</value>
+  </data>
+  <data name="NavMapPaintToY" xml:space="preserve">
+    <value>Până la y</value>
+  </data>
+  <data name="NavMapTerrain" xml:space="preserve">
+    <value>Tip de teren</value>
+  </data>
+  <data name="NavMapTerrainNote" xml:space="preserve">
+    <value>Litere, cifre, _ și -. Gol șterge.</value>
+  </data>
+  <data name="NavMapPaint" xml:space="preserve">
+    <value>Pictează</value>
+  </data>
+  <data name="NavMapTerrainTypes" xml:space="preserve">
+    <value>Tipurile din legendă</value>
+  </data>
+  <data name="NavMapOpenWaysNote" xml:space="preserve">
+    <value>Jucătorii străbat o hartă a lumii prin zece ieșiri de direcție de pe ea. Deschiderea lor cere pachetul World grid, iar harta trebuie să fie o cameră.</value>
+  </data>
+  <data name="NavMapOpenWays" xml:space="preserve">
+    <value>Deschide ieșirile de direcție</value>
+  </data>
+  <data name="NavMapPlaceAt" xml:space="preserve">
+    <value>Locul {0},{1},{2}</value>
+  </data>
+  <data name="NavMapPlaceName" xml:space="preserve">
+    <value>Numele locului</value>
+  </data>
+  <data name="NavMapSide" xml:space="preserve">
+    <value>Latura</value>
+  </data>
+  <data name="NavMapSideN" xml:space="preserve">
+    <value>Nord</value>
+  </data>
+  <data name="NavMapSideE" xml:space="preserve">
+    <value>Est</value>
+  </data>
+  <data name="NavMapSideS" xml:space="preserve">
+    <value>Sud</value>
+  </data>
+  <data name="NavMapSideW" xml:space="preserve">
+    <value>Vest</value>
+  </data>
+  <data name="NavMapSideU" xml:space="preserve">
+    <value>Sus</value>
+  </data>
+  <data name="NavMapSideD" xml:space="preserve">
+    <value>Jos</value>
+  </data>
+  <data name="NavMapSideState" xml:space="preserve">
+    <value>Trecere</value>
+  </data>
+  <data name="NavMapSideStateopen" xml:space="preserve">
+    <value>Deschis</value>
+  </data>
+  <data name="NavMapSideStatewall" xml:space="preserve">
+    <value>Zid</value>
+  </data>
+  <data name="NavMapSideStateoneway" xml:space="preserve">
+    <value>Doar spre ieșire</value>
+  </data>
+  <data name="NavMapSideReason" xml:space="preserve">
+    <value>Ce i se spune jucătorului refuzat</value>
+  </data>
+  <data name="NavMapSetSide" xml:space="preserve">
+    <value>Setează latura</value>
+  </data>
+  <data name="NavMapHidePlace" xml:space="preserve">
+    <value>Ascunde de jucători</value>
+  </data>
+  <data name="NavMapShowPlace" xml:space="preserve">
+    <value>Arată jucătorilor</value>
+  </data>
+  <data name="NavMapPlaceRoomField" xml:space="preserve">
+    <value>Cameră aici, după dbref</value>
+  </data>
+  <data name="NavMapNotYourRoom" xml:space="preserve">
+    <value>{0} nu este o cameră pe care o controlezi.</value>
+  </data>
+  <data name="NavMapPlanCreateWorld" xml:space="preserve">
+    <value>Transformă {0} în hartă a lumii</value>
+  </data>
+  <data name="NavMapPlanOpenWays" xml:space="preserve">
+    <value>Deschide ieșirile de direcție pe {0}</value>
+  </data>
+  <data name="NavMapPlanPaint" xml:space="preserve">
+    <value>Pictează {1} ca {0}</value>
+  </data>
+  <data name="NavMapPlanErase" xml:space="preserve">
+    <value>Șterge {0}</value>
+  </data>
+  <data name="NavMapPlanSide" xml:space="preserve">
+    <value>Latura {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanNamePlace" xml:space="preserve">
+    <value>Numește locul {0} {1}</value>
+  </data>
+  <data name="NavMapPlanUnnamePlace" xml:space="preserve">
+    <value>Scoate numele locului {0}</value>
+  </data>
+  <data name="NavMapPlanHidePlace" xml:space="preserve">
+    <value>Ascunde locul {0}</value>
+  </data>
+  <data name="NavMapPlanShowPlace" xml:space="preserve">
+    <value>Arată locul {0}</value>
+  </data>
+  <data name="NavMapPlanPlaceRoom" xml:space="preserve">
+    <value>Plasează {1} pe {0}</value>
+  </data>
+  <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
+    <value>Scoate camera plasată de pe {0}</value>
+  </data>
 </root>
