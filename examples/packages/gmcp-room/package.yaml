@@ -1,7 +1,7 @@
 format: "1.16"
 package: gmcp-room
 title: "GMCP room data"
-version: 1.4.0
+version: 1.5.0
 authors: [SharpMUSH]
 description: "Sends MUD clients the GMCP Room package: Room.Info for a mapper (number, name, area, environment, coordinates and exits), Room.Players, Room.AddPlayer and Room.RemovePlayer, as each player moves, connects and disconnects."
 license: MIT
@@ -23,7 +23,7 @@ requires_server: ">=0.1"
 # mapper. hash names the place for a mapper that keys rooms by it (Mudlet's Carto): a room standing in for
 # a place on a stored map carries the place's id in MAP`PLACE, the same whichever room stands there;
 # any other room is its objid. exits is exitmap(): the exits the player can see, as look shows them, so this package never
-# works out exit visibility itself. coords is left out for a room without coordinates.
+# works out exit visibility itself; a room on a world map adds the ways its zone lends it (the zone's ZONE`EXITS). coords is left out for a room without coordinates.
 #
 # Every send is oob(..., supported): a client that listed GMCP modules in Core.Supports without Room
 # is sent none of this, and a client that listed nothing (TinTin++, MUSHclient) is sent all of it.
@@ -63,6 +63,14 @@ objects:
       # %0 an object: its dbref's number, as Room.Info and the exits carry it.
       FUN`GMCPROOM`NUMBER: |-
         after(num(%0),#)
+      # %0 a room, %1 the viewer: exitmap(), then each way the room's zone lends it (the zone's ZONE`EXITS, as a
+      # world map sets it) to the room its ZONE`EXITS`TO names, or -2 while none stands there, as exitmap() gives
+      # a variable exit.
+      FUN`GMCPROOM`EXITS: |-
+        setq(gmcproom_room,%0)[if(hasattr(zone(%0),ZONE`EXITS),fold(me/FUN`GMCPROOM`ZONEWAY,u(zone(%0)/ZONE`EXITS,%0,%1),exitmap(%0,%1)),exitmap(%0,%1))]
+      # %0 the exits so far, %1 a way on the zone of the room in %q<gmcproom_room>: %0 with the way added.
+      FUN`GMCPROOM`ZONEWAY: |-
+        json_mod(%0,patch,json(object,name(%1),json(number,if(isdbref(setr(gmcproom_to,u(zone(%q<gmcproom_room>)/ZONE`EXITS`TO,%q<gmcproom_room>,%1))),after(num(%q<gmcproom_to>),#),-2))))
       # %0 a room: the place it stands for on a stored map, else its objid.
       FUN`GMCPROOM`HASH: |-
         strfirstof(get(%0/MAP`PLACE),objid(%0))
@@ -90,7 +98,7 @@ objects:
       # ── Payloads ─────────────────────────────────────────────────────────
       # Room.Info: %0 the room, %1 the viewer. exitmap() lists the exits the viewer sees there.
       FUN`GMCPROOM`INFO: |-
-        json_mod(json(object,num,json(number,u(me/FUN`GMCPROOM`NUMBER,%0)),hash,json(string,u(me/FUN`GMCPROOM`HASH,%0)),name,json(string,name(%0)),area,json(string,u(me/FUN`GMCPROOM`AREA,%0)),environment,json(string,u(me/FUN`GMCPROOM`ENVIRONMENT,%0)),exits,exitmap(%0,%1)),patch,json(object,coords,if(strlen(setr(gmcproom_coords,u(me/FUN`GMCPROOM`COORDINATES,%0))),json(string,%q<gmcproom_coords>),null)))
+        json_mod(json(object,num,json(number,u(me/FUN`GMCPROOM`NUMBER,%0)),hash,json(string,u(me/FUN`GMCPROOM`HASH,%0)),name,json(string,name(%0)),area,json(string,u(me/FUN`GMCPROOM`AREA,%0)),environment,json(string,u(me/FUN`GMCPROOM`ENVIRONMENT,%0)),exits,u(me/FUN`GMCPROOM`EXITS,%0,%1)),patch,json(object,coords,if(strlen(setr(gmcproom_coords,u(me/FUN`GMCPROOM`COORDINATES,%0))),json(string,%q<gmcproom_coords>),null)))
       # One player in Room.Players or Room.AddPlayer: %0 the player.
       FUN`GMCPROOM`PLAYER: |-
         json(object,name,json(string,name(%0)),fullname,json(string,u(me/FUN`GMCPROOM`FULLNAME,%0)))

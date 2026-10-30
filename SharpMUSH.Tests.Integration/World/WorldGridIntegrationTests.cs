@@ -19,7 +19,7 @@ namespace SharpMUSH.Tests.Integration.World;
 /// The bundled world-grid package over the World plugin: +map/exits opens the ten direction exits on a world map,
 /// a player walks between the rooms its places are lent and is refused by walls and the locks they do not pass with
 /// their reasons, the cell parent
-/// describes a lent room from the legend, and +map draws the places around the player. Not in parallel: the
+/// describes a lent room from the legend and lists its ways, and +map draws the places around the player with a key. Not in parallel: the
 /// package's commands are global.
 /// </summary>
 [NotInParallel]
@@ -123,9 +123,13 @@ public class WorldGridIntegrationTests
 			await Assert.That(east).StartsWith("#");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(east);
 			await Assert.That(walked).Contains("Old forest (2,1,0)").And.Contains("Oaks crowd the path.");
+			// look lists the map's ways that lead somewhere from here: none east, the map ends there.
+			await Assert.That(walked).Contains("Obvious exits:").And.Contains("North").And.Contains("West").And.DoesNotContain("East");
 
 			await Assert.That(await As(walker, "e")).Contains("You can't go that way.");
-			await Assert.That(await As(walker, "+map")).Contains("   OO@");
+			await Assert.That(await As(walker, "+map")).Contains("   OO@").And.Contains("Key: O Old forest");
+			await God($"&MAP`LEGEND`FOREST`CHAR {mapRef}=f");
+			await Assert.That(await As(walker, "+map")).Contains("   ff@").And.Contains("Key: f Old forest");
 			await Assert.That(await As(walker, "+map/keep")).Contains($"You do not control {map}.");
 
 			// A locked side opens for whoever passes its key, as an exit's lock does.

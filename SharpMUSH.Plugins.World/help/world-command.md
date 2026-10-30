@@ -57,7 +57,7 @@ Output: Wilds is now a world map.
 
 Paints a place, or every place in the box from it to `<x2>,<y2>` on the same level, with a terrain type: letters, digits, `_` and `-`, at most 32. Painting with no type erases the places; their sides stay. One paint covers at most 262144 places.
 
-What a type looks like comes from the map's legend, as for any map: `` MAP`LEGEND`<type>`LABEL ``, `` `TONE `` and `` `ICON ``. A type whose `` `CLOSED `` holds a reason cannot be entered, and the World map shows it closed. A type can be locked instead (see [@world terrain]).
+What a type looks like comes from the map's legend, as for any map: `` MAP`LEGEND`<type>`LABEL ``, `` `TONE `` and `` `ICON ``, and `` `CHAR `` the character a text drawing such as [worlddraw()] shows for it. A type whose `` `CLOSED `` holds a reason cannot be entered, and the World map shows it closed. A type can be locked instead (see [@world terrain]).
 
 ```sharp
 > @world/paint Wilds/0,0:9,9=forest

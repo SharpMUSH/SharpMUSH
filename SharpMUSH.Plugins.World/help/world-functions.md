@@ -80,7 +80,7 @@ lock/open
 
 `worlddraw(<map>, <x>, <y>[, <z>[, <radius>[, <mark>]]])`
 
-The places within `<radius>` of a place, 3 by default and at most 20, one character each, north up and a row a line. A place shows its type's icon when that is a character or two, else its label's first letter; a place with nothing painted is a space. `<mark>`, when given, stands in the centre.
+The places within `<radius>` of a place, 3 by default and at most 20, one character each, north up and a row a line. A place shows its type's ``MAP`LEGEND`<type>`CHAR``, else its icon when that is a character or two, else its label's first letter; a place with nothing painted is a space. `<mark>`, when given, stands in the centre.
 
 ```sharp
 > think worlddraw(Wilds, 1, 1, 0, 1, @)
