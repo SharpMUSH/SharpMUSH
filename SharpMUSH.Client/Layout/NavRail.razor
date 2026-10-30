@@ -3,21 +3,24 @@
 @using SharpMUSH.Library.Authorization
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Routing
+@using SharpMUSH.Library.Models.Portal.Navigation
 @inject IStringLocalizer<SharedResource> Loc
 @inject ITerminalService Terminal
 @inject IPlayTerminalService PlayTerminal
 @inject NavigationManager Nav
-@inject AccountAuthService AccountAuth
 @inject ApplicationRegistryClient Registry
 @inject ServerInfoService ServerInfo
 @inject IAuthorizationService Authorization
-@implements IDisposable
+@inject PortalNavigation Navigation
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-@* D1 §3 rail (desktop): 72px, the logo (the link home), one icon per section (Play, Scenes, Wiki,
-   Characters, Mail while a character is active, Help, then any novel application section), a spacer, then
-   Build & manage when anything in it is visible to the viewer, search (the command palette), the
-   terminal toggle, the language, and the account. Each item is 44×44, radius 14; the current
-   section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
+@* D1 §3 rail (desktop): 72px, the logo (the link home), the game's navigation groups (PortalNavigation:
+   an inline group is a labelled list with one icon per destination, a section group one icon for its first
+   destination, a pop-out group one button opening its list beside the rail; the groups that do not fit go into
+   More, a pop-out of its own), then, then Build & manage when anything in it is visible to the viewer, search (the
+   command palette), the terminal toggle, the language, and the account. Each item is 44×44, radius 14; the
+   current section is filled --surface-2 with an accent icon and carries aria-current="page". Mobile hides
    the rail and keeps the drawer (NavMenu) and bottom tab bar. *@
 <nav class="phosphor-rail" aria-label="@Loc["NavSections"]">
     <a href="/" class="phosphor-rail-logo @(IsHome ? "phosphor-rail-logo--on" : null)"
@@ -26,33 +29,38 @@
     </a>
     <div class="phosphor-rail-sep" aria-hidden="true"></div>
 
-    @if (_showPlay)
-    {
-        <a href="/play" class="phosphor-rail-item @(IsUnder("/play") ? "phosphor-rail-item--on" : null)"
-           aria-current="@(IsUnder("/play") ? "page" : null)" aria-label="@PlayLabel" title="@PlayLabel">
-            <MudIcon Icon="@Icons.Material.Outlined.SportsEsports" />
-            @if (_playActive)
-            {
-                <span class="phosphor-rail-dot @(_playUnread ? "phosphor-rail-dot--unread" : null)" aria-hidden="true"></span>
-            }
-        </a>
-    }
-    <FeatureGate Feature="@GameFeatures.Scenes">@Item("/scenes", Icons.Material.Outlined.Theaters, Loc["SceneArchive"], IsUnder("/scenes"))</FeatureGate>
-    @Item("/wiki", Icons.Material.Outlined.MenuBook, Loc["Wiki"], IsUnder("/wiki"))
-    <FeatureGate Feature="@GameFeatures.WorldMap">@Item("/map", Icons.Material.Outlined.Map, Loc["NavWorldMap"], IsUnder("/map"))</FeatureGate>
-    @Item("/characters", Icons.Material.Outlined.Groups, Loc["Characters"], IsUnder("/characters") || IsUnder("/character"))
-    @if (_characterActive)
-    {
-        @Item("/mail", Icons.Material.Outlined.MailOutline, Loc["Mail"], IsUnder("/mail"))
-    }
-    @Item("/help", Icons.Material.Outlined.HelpOutline, Loc["Help"], IsUnder("/help"))
-    @foreach (var s in _novelSections)
-    {
-        @Item($"/apps/{s.First.Slug}", AppIcons.Outline(s.First.Icon, Icons.Material.Outlined.Apps), s.Name,
-            s.Apps.Any(a => IsUnder($"/apps/{a.Slug}")))
-    }
-
-    <div class="phosphor-rail-spacer"></div>
+    <ul class="phosphor-rail-groups" @ref="_groupList">
+        @for (var i = 0; i < _nav.Groups.Count; i++)
+        {
+            var group = _nav.Groups[i];
+            <li class="phosphor-rail-group @(i >= _fit ? "phosphor-rail-group--overflow" : null)" data-group="@group.Id" @key="group.Id">
+                @if (group.Mode == NavGroupModes.Inline)
+                {
+                    <span class="phosphor-rail-group-label" aria-hidden="true">@group.Label</span>
+                    <ul class="phosphor-rail-group-items" aria-label="@group.Label">
+                        @foreach (var item in group.Items)
+                        {
+                            <li @key="item.Key">@Destination(item)</li>
+                        }
+                    </ul>
+                }
+                else if (group.Mode == NavGroupModes.Flyout)
+                {
+                    <NavRailFlyout Id="@group.Id" Label="@group.Label" Groups="[group]" Icon="@(group.OwnIcon ? group.OutlineIcon : null)" Path="@_path" />
+                }
+                else
+                {
+                    @Item(group.Items[0].Href, group.OutlineIcon, group.Label, group.IsCurrent(_path))
+                }
+            </li>
+        }
+        @if (_fit < _nav.Groups.Count)
+        {
+            <li class="phosphor-rail-group" data-more @key="MoreKey">
+                <NavRailFlyout Id="overflow.more" Label="@Loc["NavMore"]" Icon="@Icons.Material.Outlined.MoreHoriz" Groups="@(_nav.Groups.Skip(_fit).ToList())" Path="@_path" />
+            </li>
+        }
+    </ul>
 
     @if (_build.Count > 0)
     {
@@ -84,30 +92,64 @@
 
     [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
 
-    private sealed record NovelSection(string Name, PortalApplication First, IReadOnlyList<PortalApplication> Apps);
+    private ResolvedNav _nav = ResolvedNav.Empty;
 
-    private IReadOnlyList<NovelSection> _novelSections = [];
+    // How many groups the rail has room for (layout.js watchRailFit); the rest are in More. All of them until
+    // measured, and again whenever the groups change, so each is drawn and measured once.
+    private int _fit = int.MaxValue;
+    private bool _remeasure;
+    private ElementReference _groupList;
+    private IJSObjectReference? _fitWatch;
+    private DotNetObjectReference<NavRail>? _selfRef;
+    private const string MoreKey = "\u0000more";
     private IReadOnlyList<BuildNavCatalog.Entry> _build = [];
     private IReadOnlyList<PortalApplication> _buildApps = [];
-    private bool _characterActive;
-    private bool _guestsEnabled = true;
-    private bool _showPlay => AccountAuth.IsLoggedIn || _guestsEnabled;
     private bool _playActive;
     private bool _playUnread;
     private string _gameName = "SharpMUSH";
     private string _path = "/";
 
+    private static readonly string PlayKey = NavKeys.Core("play");
+
     private string HomeLabel => $"{_gameName} · {Loc["Home"]}";
 
-    private string PlayLabel => _playActive
-        ? $"{Loc["Play"]} · {(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])}"
-        : Loc["Play"];
+    private string PlayLabel(string label) => _playActive
+        ? $"{label} · {(_playUnread ? Loc["NavPlayUnreadActivity"] : Loc["NavPlaySessionActive"])}"
+        : label;
 
     private RenderFragment Item(string href, string icon, string label, bool current) =>
         @<a href="@href" class="phosphor-rail-item @(current ? "phosphor-rail-item--on" : null)"
             aria-current="@(current ? "page" : null)" aria-label="@label" title="@label">
             <MudIcon Icon="@icon" />
         </a>;
+
+    /// <summary>
+    /// One destination's button. Play carries the session dot; a link to another site opens in a new tab.
+    /// </summary>
+    private RenderFragment Destination(NavDestination item)
+    {
+        var current = item.IsCurrent(_path);
+        if (item.External)
+        {
+            return @<a href="@item.Href" class="phosphor-rail-item" target="_blank" rel="noopener"
+                       aria-label="@item.Label" title="@item.Label">
+                <MudIcon Icon="@item.OutlineIcon" />
+            </a>;
+        }
+        if (!string.Equals(item.Key, PlayKey, StringComparison.OrdinalIgnoreCase))
+        {
+            return Item(item.Href, item.OutlineIcon, item.Label, current);
+        }
+        var label = PlayLabel(item.Label);
+        return @<a href="@item.Href" class="phosphor-rail-item @(current ? "phosphor-rail-item--on" : null)"
+                   aria-current="@(current ? "page" : null)" aria-label="@label" title="@label">
+            <MudIcon Icon="@item.OutlineIcon" />
+            @if (_playActive)
+            {
+                <span class="phosphor-rail-dot @(_playUnread ? "phosphor-rail-dot--unread" : null)" aria-hidden="true"></span>
+            }
+        </a>;
+    }
 
     private bool IsHome => _path == "/";
 
@@ -122,7 +164,7 @@
     protected override void OnInitialized()
     {
         ServerInfo.Changed += OnServerInfoChanged;
-        _characterActive = Terminal.IsConnected;
+        Navigation.Changed += OnNavigationChanged;
         Terminal.ConnectionStateChanged += OnConnectionChanged;
         _playActive = PlayTerminal.IsConnected;
         PlayTerminal.ConnectionStateChanged += OnPlayConnectionChanged;
@@ -136,30 +178,23 @@
 
     protected override async Task OnParametersSetAsync()
     {
-        // The gates and the role-filtered applications depend only on who is signed in; a parent
-        // re-render (a terminal toggle, a palette opening) passes new callbacks and would otherwise
-        // re-ask every policy. A sign-in or sign-out cascades a new AuthState and recomputes both.
+        // The gates depend only on who is signed in; a parent re-render (a terminal toggle, a palette opening)
+        // passes new callbacks and would otherwise re-ask every policy. A sign-in or sign-out cascades a new
+        // AuthState and recomputes them.
         if (_gatesKnown && ReferenceEquals(AuthState, _gatesFor)) return;
         (_gatesFor, _gatesKnown) = (AuthState, true);
+        await LoadAsync();
+    }
+
+    protected override async Task OnInitializedAsync() => _gameName = await ServerInfo.GameNameAsync();
+
+    private async Task LoadAsync()
+    {
         var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
+        _nav = await Navigation.ResolveAsync(user);
+        (_fit, _remeasure) = (int.MaxValue, true);
         _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
-        await LoadAppsAsync(user);
-    }
-
-    protected override async Task OnInitializedAsync()
-    {
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-        _gameName = await ServerInfo.GameNameAsync();
-    }
-
-    private async Task LoadAppsAsync(System.Security.Claims.ClaimsPrincipal user)
-    {
         var apps = await Registry.ListAsync();
-        _novelSections = PortalNavSections.NovelSections(apps, user)
-            .Select(name => PortalNavSections.AppsForSection(apps, user, name))
-            .Where(list => list.Count > 0)
-            .Select(list => new NovelSection(list[0].NavPlacement!, list[0], list))
-            .ToList();
         _buildApps = [.. PortalNavSections.AppsForSection(apps, user, "Build"), .. PortalNavSections.AppsForSection(apps, user, "Manage")];
     }
 
@@ -176,11 +211,17 @@
         StateHasChanged();
     });
 
-    private void OnConnectionChanged(bool connected) => InvokeAsync(() =>
+    /// <summary>Mail is there only while a character is connected.</summary>
+    private void OnConnectionChanged(bool connected) => _ = InvokeAsync(ReloadAsync);
+
+    /// <summary>Staff in this tab saved the layout.</summary>
+    private void OnNavigationChanged() => _ = InvokeAsync(ReloadAsync);
+
+    private async Task ReloadAsync()
     {
-        _characterActive = connected;
+        await LoadAsync();
         StateHasChanged();
-    });
+    }
 
     private void OnPlayConnectionChanged(bool connected) => InvokeAsync(() =>
     {
@@ -196,25 +237,67 @@
         StateHasChanged();
     });
 
-    public void Dispose()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        try
+        {
+            if (firstRender)
+            {
+                _selfRef = DotNetObjectReference.Create(this);
+                _fitWatch = await JS.InvokeAsync<IJSObjectReference>("sharpmushLayout.watchRailFit", _groupList, _selfRef);
+                _remeasure = false;
+            }
+            else if (_remeasure && _fitWatch is not null)
+            {
+                _remeasure = false;
+                await _fitWatch.InvokeVoidAsync("measure", true);
+            }
+        }
+        catch (Exception ex) when (ex is JSException or InvalidOperationException or JSDisconnectedException)
+        {
+            // No layout script (a test): every group stays on the rail.
+        }
+    }
+
+    /// <summary>layout.js: how many groups fit since the rail changed height or the groups were drawn again.</summary>
+    [JSInvokable]
+    public Task OnRailFit(int fit) => InvokeAsync(() =>
+    {
+        if (fit == _fit) return;
+        _fit = fit;
+        StateHasChanged();
+    });
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_fitWatch is not null)
+        {
+            try
+            {
+                await _fitWatch.InvokeVoidAsync("dispose");
+                await _fitWatch.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+        _selfRef?.Dispose();
         Terminal.ConnectionStateChanged -= OnConnectionChanged;
         PlayTerminal.ConnectionStateChanged -= OnPlayConnectionChanged;
         PlayTerminal.LineReceived -= OnPlayLine;
         Nav.LocationChanged -= OnLocationChanged;
         ServerInfo.Changed -= OnServerInfoChanged;
+        Navigation.Changed -= OnNavigationChanged;
     }
 
     /// <summary>
-    /// A newer server answer (the guest roster, the game's name or its applications changed): the brand, the Play
-    /// link and the Build &amp; manage entries follow it.
+    /// A newer server answer (the guest roster, the game's name or its applications changed): the brand, the
+    /// destinations and the Build &amp; manage entries follow it.
     /// </summary>
     private void OnServerInfoChanged() => _ = InvokeAsync(async () =>
     {
         _gameName = await ServerInfo.GameNameAsync();
-        _guestsEnabled = await ServerInfo.GuestLoginsEnabledAsync();
-        var user = AuthState is null ? new System.Security.Claims.ClaimsPrincipal() : (await AuthState).User;
-        _build = await BuildNavCatalog.VisibleAsync(Authorization, user, ServerInfo);
+        await LoadAsync();
         StateHasChanged();
     });
 }

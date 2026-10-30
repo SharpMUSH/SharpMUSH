@@ -1,8 +1,12 @@
 using Bunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Services.Navigation;
 
 namespace SharpMUSH.Tests.BUnit;
 
@@ -36,6 +40,11 @@ public abstract class TrackingBunitContext : BunitContext
 	/// the applications a first boot installs.
 	/// </para>
 	/// <para>
+	/// The rail, the drawer, the tab bar and the palette ask <see cref="PortalNavigation"/>, over the
+	/// <see cref="ApplicationRegistryClient"/> and <see cref="NavLayoutClient"/> a test registers (no applications and
+	/// no stored layout when it registers none) and the terminal it registers (no character connected when none).
+	/// </para>
+	/// <para>
 	/// An avatar finds a character's picture in the <see cref="CharacterDirectoryService"/> a test registers;
 	/// without one, nobody has a picture.
 	/// </para>
@@ -57,6 +66,14 @@ public abstract class TrackingBunitContext : BunitContext
 				sp.GetRequiredService<IAccountAuthState>());
 		});
 		Services.TryAddSingleton(sp => new SceneDetailService(sp.GetService<IHttpClientFactory>() ?? NoServer()));
+		Services.TryAddSingleton(sp => new PortalNavigation(
+			sp.GetService<ApplicationRegistryClient>()
+				?? new ApplicationRegistryClient(sp.GetService<IHttpClientFactory>() ?? NoServer(), NullLogger<ApplicationRegistryClient>.Instance),
+			sp.GetService<NavLayoutClient>() ?? new NavLayoutClient(sp.GetService<IHttpClientFactory>() ?? NoServer()),
+			sp.GetRequiredService<ServerInfoService>(),
+			sp.GetRequiredService<IAccountAuthState>(),
+			sp.GetService<ITerminalService>() ?? Substitute.For<ITerminalService>(),
+			sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
 	}
 
 	/// <summary>

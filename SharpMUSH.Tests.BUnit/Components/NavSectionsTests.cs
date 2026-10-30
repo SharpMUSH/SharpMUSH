@@ -105,50 +105,13 @@ public class ApplicationNavLinksSectionTests : NavSectionsTestBase
 }
 
 /// <summary>
-/// Pure-logic coverage of <see cref="PortalNavSections"/>: novel-section ordering and role filtering, which
-/// the sidebar relies on to place new groups deterministically without a full NavMenu render.
+/// Pure-logic coverage of <see cref="PortalNavSections"/>: the apps one section's sidebar lists, in order.
 /// </summary>
 public class PortalNavSectionsTests
 {
 	private static PortalApplication App(string slug, string nav, int order,
 		PortalRole role = PortalRole.Guest) =>
 		new(slug, $"App {slug}", null, "Page", $"http/{slug}/schema", null, null, role.ToString(), nav, [], order);
-
-	[TUnit.Core.Test]
-	public async Task NovelSections_ExcludeBuiltIns_OrderByMinOrderThenName()
-	{
-		var apps = new[]
-		{
-			App("a", "Build", 0),          // built-in → excluded
-			App("b", "Zeta", 30),          // novel, min order 30
-			App("c", "Alpha", 10),         // novel, min order 10
-			App("d", "Alpha", 99),         // same novel section, does not change min order
-			App("e", "Mid", 10),           // novel, ties Alpha at 10 → name tiebreak (Alpha before Mid)
-		};
-
-		var sections = PortalNavSections.NovelSections(apps, PortalRole.God);
-
-		await Assert.That(sections).IsEquivalentTo(new[] { "Alpha", "Mid", "Zeta" });
-	}
-
-	[TUnit.Core.Test]
-	public async Task NovelSections_RespectMinimumRole()
-	{
-		var apps = new[]
-		{
-			App("p", "Plugins", 1, PortalRole.Player),
-			App("w", "WizardOnly", 1, PortalRole.Wizard),
-		};
-
-		// A Player sees only the Player-accessible novel section.
-		var asPlayer = PortalNavSections.NovelSections(apps, PortalRole.Player);
-		await Assert.That(asPlayer).IsEquivalentTo(new[] { "Plugins" });
-
-		// A Wizard sees both.
-		var asWizard = PortalNavSections.NovelSections(apps, PortalRole.Wizard);
-		await Assert.That(asWizard).Contains("Plugins");
-		await Assert.That(asWizard).Contains("WizardOnly");
-	}
 
 	[TUnit.Core.Test]
 	public async Task AppsForSection_FiltersAndOrders()

@@ -1,16 +1,22 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using Bunit;
 using Bunit.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Logging.Abstractions;
 using MudBlazor.Services;
 using NSubstitute;
 using SharpMUSH.Client.Components;
+using SharpMUSH.Client.Resources;
 using SharpMUSH.Client.Services;
+using SharpMUSH.Client.Services.Navigation;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models.Portal;
+using SharpMUSH.Library.Models.Portal.Navigation;
 using SharpMUSH.Library.Models.Portal.Setup;
 
 namespace SharpMUSH.Tests.BUnit.Components;
@@ -61,6 +67,22 @@ internal sealed class PaletteCommandHandler : HttpMessageHandler
 	}
 }
 
+/// <summary>Answers <c>api/applications</c> with <see cref="Apps"/> and <c>api/navigation</c> with <see cref="Layout"/>, or no layout.</summary>
+internal sealed class PaletteApplicationsHandler : HttpMessageHandler
+{
+	public List<object> Apps { get; } = [];
+
+	public NavLayout? Layout { get; set; }
+
+	protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct) =>
+		Task.FromResult(request.RequestUri!.AbsolutePath.TrimStart('/') switch
+		{
+			"api/navigation" when Layout is null => new HttpResponseMessage(HttpStatusCode.NoContent),
+			"api/navigation" => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Layout) },
+			_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = JsonContent.Create(Apps) },
+		});
+}
+
 /// <summary>
 /// README §10 Q1's command palette: the destinations the viewer can use, filtered as they type, with
 /// "Search the wiki" and "Find a character" for what was typed; arrows move, Enter goes, Escape closes.
@@ -74,6 +96,7 @@ public class CommandPaletteTests : BunitContext
 	private readonly PaletteCommandHandler _commands = new();
 	private readonly IPlayTerminalService _terminal = Substitute.For<IPlayTerminalService>();
 	private readonly PaletteContext _page = new();
+	private readonly PaletteApplicationsHandler _apps = new();
 
 	public CommandPaletteTests()
 	{
@@ -88,6 +111,15 @@ public class CommandPaletteTests : BunitContext
 		Services.AddSingleton(_page);
 		Services.AddSingleton(_terminal);
 		Services.AddSingleton(new GameCommandService(factory));
+		var registry = Substitute.For<IHttpClientFactory>();
+		registry.CreateClient("api").Returns(_ => new HttpClient(_apps) { BaseAddress = new Uri("https://localhost:8081/") });
+		Services.AddSingleton(sp => new PortalNavigation(
+			new ApplicationRegistryClient(registry, NullLogger<ApplicationRegistryClient>.Instance),
+			new NavLayoutClient(registry),
+			sp.GetRequiredService<ServerInfoService>(),
+			_account,
+			Substitute.For<ITerminalService>(),
+			sp.GetRequiredService<IStringLocalizer<SharedResource>>()));
 		JSInterop.Mode = JSRuntimeMode.Loose;
 		_auth = AddAuthorization();
 		_auth.SetAuthorized("player");
@@ -356,6 +388,41 @@ public class CommandPaletteTests : BunitContext
 			new StubServerInfoService(guestsEnabled: true, features: scenes ? [GameFeatures.Scenes] : []));
 
 		await Assert.That(Labels(RenderOpen()).Contains("Scenes")).IsEqualTo(scenes);
+	}
+
+	/// <summary>The palette offers what the navigation shows, a game's page applications included.</summary>
+	[Test]
+	public async Task APageApplicationInTheNavigation_IsOffered()
+	{
+		_apps.Apps.Add(new
+		{
+			slug = "boards",
+			displayName = "Bulletin boards",
+			icon = (string?)null,
+			kind = "Page",
+			schemaUrl = "http/boards/schema",
+			minimumRole = "Guest",
+			navPlacement = "Community",
+			zones = Array.Empty<string>(),
+			order = 0,
+		});
+
+		var cut = RenderOpen();
+
+		cut.WaitForState(() => Labels(cut).Contains("Bulletin boards"), TimeSpan.FromSeconds(5));
+		await Assert.That(Labels(cut)).Contains("Bulletin boards");
+	}
+
+	/// <summary>Staff hid the help from the navigation; the palette still finds it.</summary>
+	[Test]
+	public async Task WhatStaffHid_IsStillOffered()
+	{
+		_apps.Layout = new NavLayout(NavLayout.CurrentFormat, 1, [], ["core:help"], []);
+
+		var cut = RenderOpen();
+
+		cut.WaitForState(() => Labels(cut).Contains("Help"), TimeSpan.FromSeconds(5));
+		await Assert.That(Labels(cut)).Contains("Help");
 	}
 
 	[Test]

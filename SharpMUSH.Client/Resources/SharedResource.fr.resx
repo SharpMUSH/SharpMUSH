@@ -2515,6 +2515,14 @@
   <data name="NavPlayUnreadActivity" xml:space="preserve">
     <value>Activité de jeu non lue</value>
   </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>Plus</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, contient cette page</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Session de jeu active</value>
   </data>

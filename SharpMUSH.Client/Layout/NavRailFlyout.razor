@@ -1,0 +1,97 @@
+@using SharpMUSH.Client.Services
+@inject IStringLocalizer<SharedResource> Loc
+
+@* A pop-out on the rail, a disclosure (not a menu): one button opens a list of links beside the rail. A click
+   opens it, never a hover; Escape and a click outside close it and hand focus back to the button, and following
+   a link closes it. Up and Down move between the links. The button's name says when the page shown is one of
+   its links. It holds one pop-out group, or (More) the groups the rail had no room for, each under its name.
+   With no icon of its own it shows its first four destinations' icons, two by two. *@
+<PopoverMenu Class="phosphor-rail-flyout" AnchorOrigin="Origin.TopRight" TransformOrigin="Origin.TopLeft" ArrowKeys="true"
+             Open="_open" OpenChanged="v => _open = v">
+    <Activator>
+        <button type="button" class="phosphor-rail-item phosphor-rail-flyout-btn @(Current ? "phosphor-rail-item--on" : null)"
+                aria-expanded="@(_open ? "true" : "false")" aria-controls="@(_open ? PanelId : null)"
+                aria-label="@Name" title="@Name" @onclick="() => _open = !_open" @onkeydown="CloseOnEscape">
+            @if (Icon is not null)
+            {
+                <MudIcon Icon="@Icon" />
+            }
+            else
+            {
+                <span class="phosphor-rail-flyout-grid" aria-hidden="true">
+                    @foreach (var item in Groups.SelectMany(g => g.Items).Take(4))
+                    {
+                        <MudIcon Icon="@item.OutlineIcon" />
+                    }
+                </span>
+            }
+        </button>
+    </Activator>
+    <ChildContent>
+        <div id="@PanelId" class="phosphor-rail-flyout-panel">
+            @foreach (var group in Groups)
+            {
+                <div class="phosphor-rail-flyout-title" aria-hidden="true" @key="group.Id">@group.Label</div>
+                <ul class="phosphor-rail-flyout-items" aria-label="@group.Label">
+                    @foreach (var item in group.Items)
+                    {
+                        var current = item.IsCurrent(Path);
+                        <li @key="item.Key">
+                            @if (item.External)
+                            {
+                                <a href="@item.Href" class="phosphor-rail-flyout-item" target="_blank" rel="noopener" @onclick="() => _open = false">
+                                    <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
+                                    <span>@item.Label</span>
+                                </a>
+                            }
+                            else
+                            {
+                                <a href="@item.Href" class="phosphor-rail-flyout-item @(current ? "phosphor-rail-flyout-item--on" : null)"
+                                   aria-current="@(current ? "page" : null)">
+                                    <MudIcon Icon="@item.OutlineIcon" Size="Size.Small" />
+                                    <span>@item.Label</span>
+                                </a>
+                            }
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+    </ChildContent>
+</PopoverMenu>
+
+@code {
+    /// <summary>Names the panel (<c>rail-flyout-{Id}</c>).</summary>
+    [Parameter, EditorRequired] public string Id { get; set; } = string.Empty;
+
+    /// <summary>The button's name.</summary>
+    [Parameter, EditorRequired] public string Label { get; set; } = string.Empty;
+
+    [Parameter, EditorRequired] public IReadOnlyList<ResolvedNavGroup> Groups { get; set; } = [];
+
+    /// <summary>The button's icon; without one it shows the first four destinations' icons.</summary>
+    [Parameter] public string? Icon { get; set; }
+
+    /// <summary>The page shown (an absolute path, no trailing slash). A new one closes the list.</summary>
+    [Parameter, EditorRequired] public string Path { get; set; } = "/";
+
+    private bool _open;
+    private string? _shownAt;
+
+    private bool Current => Groups.Any(group => group.IsCurrent(Path));
+
+    private string PanelId => $"rail-flyout-{Id}";
+
+    private string Name => Current ? Loc["NavFlyoutHoldsCurrent", Label].Value : Label;
+
+    protected override void OnParametersSet()
+    {
+        if (_shownAt is not null && _shownAt != Path) _open = false;
+        _shownAt = Path;
+    }
+
+    private void CloseOnEscape(KeyboardEventArgs e)
+    {
+        if (e.Key == "Escape") _open = false;
+    }
+}

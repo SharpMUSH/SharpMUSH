@@ -1965,6 +1965,14 @@
     <value>online</value>
     <comment>MT</comment>
   </data>
+  <data name="NavMore" xml:space="preserve">
+    <value>Továbbiak</value>
+    <comment>MT</comment>
+  </data>
+  <data name="NavFlyoutHoldsCurrent" xml:space="preserve">
+    <value>{0}, ezt az oldalt tartalmazza</value>
+    <comment>MT</comment>
+  </data>
   <data name="NavPlaySessionActive" xml:space="preserve">
     <value>Aktív játékmenet</value>
     <comment>MT</comment>

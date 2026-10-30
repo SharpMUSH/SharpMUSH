@@ -159,6 +159,8 @@ public static class Tables
 	/// <summary>The categories pinned to the wiki home, keyed by category key. See <c>LightningDatabase.WikiPins.cs</c>.</summary>
 	public static readonly TableDef WikiPin = TableDef.Node("wiki.pin");
 	public static readonly TableDef Layout = TableDef.Node("layout");
+	/// <summary>The portal navigation layout: one row, <c>main</c>. See <c>LightningDatabase.NavLayout.cs</c>.</summary>
+	public static readonly TableDef NavLayout = TableDef.Node("nav.layout");
 	public static readonly TableDef App = TableDef.Node("app");
 	public static readonly TableDef Role = TableDef.Node("role");
 	/// <summary>Custom permissions a game defines, keyed by scope.</summary>

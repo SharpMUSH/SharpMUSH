@@ -170,6 +170,12 @@ public static class AuditActions
 	/// <summary>A line taken out of a feed's recall, such as one whose Discord message a moderator deleted.</summary>
 	public const string FeedLineDelete = "feed.line.delete";
 
+	/// <summary>The portal navigation arranged and saved.</summary>
+	public const string NavigationSave = "navigation.save";
+
+	/// <summary>The portal navigation put back to its default.</summary>
+	public const string NavigationReset = "navigation.reset";
+
 	/// <summary>Every action, for the viewer's filter.</summary>
 	public static readonly IReadOnlyList<string> All =
 	[
@@ -179,6 +185,6 @@ public static class AuditActions
 		CategorySave, CategoryRename, CategoryDelete, SitelockAdd, SitelockRemove,
 		BannedNameAdd, BannedNameRemove, ConfigSet, ConfigImport, RestrictionSet, RestrictionClear,
 		PluginEnable, PluginDisable, PluginUpload, PluginInstall, PackagePastMaximum, ServerRestart, SecretSet, SecretClear, SecretHosts,
-		AppSave, AppDelete, FeedLineDelete
+		AppSave, AppDelete, FeedLineDelete, NavigationSave, NavigationReset
 	];
 }

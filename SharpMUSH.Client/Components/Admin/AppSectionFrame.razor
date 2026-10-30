@@ -1,11 +1,14 @@
 @using SharpMUSH.Client.Models.Applications
 @using SharpMUSH.Client.Services
+@using SharpMUSH.Library.Models.Portal.Navigation
 @inject IStringLocalizer<SharedResource> Loc
+@inject PortalNavigation Navigation
+@implements IDisposable
 
-@* An application page joins the section its NavPlacement names (README §3): Build and Manage apps
-   sit in Build & manage with its sidebar; an app in a section of its own gets that section's list of
-   apps as its sidebar. Play and World apps (and unplaced ones) have no section sidebar, but one that
-   serves links of its own (nav_url) gets them as its sidebar, or nobody could reach its other pages. *@
+@* An application page joins its section (README §3): Build and Manage apps sit in Build & manage with its
+   sidebar; an app in a section group of the game's navigation gets that group's apps as its sidebar. Apps in
+   an inline group or a pop-out (and unplaced ones) have no section sidebar, but one that serves links of its
+   own (nav_url) gets them as its sidebar, or nobody could reach its other pages. *@
 @if (App?.NavPlacement is { } placement && IsBuild(placement))
 {
     <SectionShell Key="build" Class="build-shell" NavLabel="@Loc["NavBuildManage"]" PadBody="false">
@@ -13,17 +16,17 @@
         <ChildContent>@ChildContent</ChildContent>
     </SectionShell>
 }
-else if (App?.NavPlacement is { } novel && !PortalNavSections.BuiltInSections.Contains(novel, StringComparer.OrdinalIgnoreCase))
+else if (App is not null && Section is { } section)
 {
-    <SectionShell Key="@($"apps-{novel.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@novel" PadBody="false">
-        <Nav Context="collapsed"><AppSectionSidebar Section="@novel" Collapsed="@collapsed" /></Nav>
+    <SectionShell Key="@($"apps-{section.Id.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@section.Label" PadBody="false">
+        <Nav Context="collapsed"><AppSectionSidebar Section="@section.Label" Slugs="@section.Slugs" Collapsed="@collapsed" /></Nav>
         <ChildContent>@ChildContent</ChildContent>
     </SectionShell>
 }
-else if (App is { NavUrl: { Length: > 0 }, NavPlacement: { } builtIn })
+else if (App is { NavUrl: { Length: > 0 } })
 {
     <SectionShell Key="@($"app-{App.Slug.ToLowerInvariant()}")" Class="app-section-shell" NavLabel="@App.DisplayName" PadBody="false">
-        <Nav Context="collapsed"><AppSectionSidebar Section="@builtIn" Slug="@App.Slug" Collapsed="@collapsed" /></Nav>
+        <Nav Context="collapsed"><AppSectionSidebar Section="@App.DisplayName" Slugs="@([App.Slug])" Collapsed="@collapsed" /></Nav>
         <ChildContent>@ChildContent</ChildContent>
     </SectionShell>
 }
@@ -35,6 +38,54 @@ else
 @code {
     [Parameter] public PortalApplication? App { get; set; }
     [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private sealed record SectionOf(string Id, string Label, IReadOnlyList<string> Slugs);
+
+    // The section group holding this app, once the navigation is in; until then the app's own placement, so a
+    // game whose staff never rearranged it draws the same shell at once and nothing remounts.
+    private SectionOf? _resolved;
+    private bool _known;
+
+    private SectionOf? Section => _known ? _resolved
+        : App?.NavPlacement is { Length: > 0 } placement && NavCatalog.GroupLabelKey(placement) is null
+            ? new SectionOf(placement, placement, [])
+            : null;
+
+    protected override void OnInitialized() => Navigation.Changed += OnNavigationChanged;
+
+    // A re-render of the same page (a fragment link) is not a reason to ask again.
+    private string? _resolvedFor;
+
+    protected override Task OnParametersSetAsync()
+    {
+        if (App is null || string.Equals(App.Slug, _resolvedFor, StringComparison.OrdinalIgnoreCase)) return Task.CompletedTask;
+        _known = false;
+        return ResolveAsync();
+    }
+
+    private async Task ResolveAsync()
+    {
+        if (App is null) return;
+        var key = NavKeys.App(App.Slug);
+        var nav = await Navigation.ResolveAsync(AuthState is null ? null : (await AuthState).User);
+        var group = nav.Groups.FirstOrDefault(g => g.Mode == NavGroupModes.Section
+            && g.Items.Any(i => string.Equals(i.Key, key, StringComparison.OrdinalIgnoreCase)));
+        _resolved = group is null ? null : new SectionOf(group.Id, group.Label,
+            group.Items.Where(i => i.Key.StartsWith(NavKeys.AppPrefix, StringComparison.OrdinalIgnoreCase))
+                .Select(i => i.Key[NavKeys.AppPrefix.Length..]).ToList());
+        _known = true;
+        _resolvedFor = App.Slug;
+    }
+
+    private void OnNavigationChanged() => _ = InvokeAsync(async () =>
+    {
+        await ResolveAsync();
+        StateHasChanged();
+    });
+
+    public void Dispose() => Navigation.Changed -= OnNavigationChanged;
 
     private static bool IsBuild(string placement) =>
         string.Equals(placement, "Build", StringComparison.OrdinalIgnoreCase) || string.Equals(placement, "Manage", StringComparison.OrdinalIgnoreCase);
