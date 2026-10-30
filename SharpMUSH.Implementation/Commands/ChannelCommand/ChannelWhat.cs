@@ -21,7 +21,8 @@ namespace SharpMUSH.Implementation.Commands.ChannelCommand;
 public static class ChannelWhat
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService locateService,
-		IChannelPermissionService permissionService, IMediator mediator, INotifyService notifyService, MString prefixArgument)
+		IChannelPermissionService permissionService, IMediator mediator, INotifyService notifyService,
+		IBooleanExpressionParser lockParser, MString prefixArgument)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(mediator);
 		var prefix = prefixArgument.ToPlainText().Trim();
@@ -66,14 +67,15 @@ public static class ChannelWhat
 			// the ones that are actually set.
 			if (await permissionService.ChannelCanDecomposeAsync(executor, channel))
 			{
-				var locks = new (string Label, string Key)[]
+				List<(string, MString)> locks = [];
+				foreach (var (label, key) in new (string Label, string Key)[]
 					{
 						("Mod", channel.ModLock), ("Hide", channel.HideLock), ("Join", channel.JoinLock),
 						("Speak", channel.SpeakLock), ("See", channel.SeeLock)
-					}
-					.Where(entry => !string.IsNullOrEmpty(entry.Key))
-					.Select(entry => (entry.Label, MarkupText.Plain(entry.Key)))
-					.ToList();
+					}.Where(entry => !string.IsNullOrEmpty(entry.Key)))
+				{
+					locks.Add((label, MarkupText.Plain(await lockParser.ReadbackAsync(key, executor))));
+				}
 
 				if (locks.Count != 0)
 				{

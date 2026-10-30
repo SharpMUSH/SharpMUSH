@@ -159,19 +159,19 @@ public partial class Functions
 			return new CallState(InvalidFeed);
 		return await RunnableKindAsync(parser, kindName) switch
 		{
-			SharpFeedKind kind => await FeedInfoAsync(kind, key, FeedArg(parser, 1).ToLowerInvariant()),
+			SharpFeedKind kind => await FeedInfoAsync(await parser.CurrentState.KnownExecutorObject(Mediator), kind, key, FeedArg(parser, 1).ToLowerInvariant()),
 			Error<string> error => new CallState(error.Value)
 		};
 	}
 
-	private async ValueTask<CallState> FeedInfoAsync(SharpFeedKind kind, string? key, string option)
+	private async ValueTask<CallState> FeedInfoAsync(AnySharpObject executor, SharpFeedKind kind, string? key, string option)
 	{
 		if (key is null)
 			return option switch
 			{
 				"owner" => new CallState(kind.Owner),
 				"description" => new CallState(kind.Description),
-				"read" or "send" => new CallState(kind.Lock(option)),
+				"read" or "send" => new CallState(await BooleanExpressionParser.ReadbackAsync(kind.Lock(option), executor, ExecutionBudget.CurrentToken)),
 				"feeds" or "messages" or "bytes" or "stored" => KindHeld(
 					(await Mediator.Send(new GetFeedUsageQuery(), ExecutionBudget.CurrentToken)).FirstOrDefault(usage => usage.Kind == kind.Name)
 						?? new SharpFeedUsage(kind.Name, 0, 0, 0, 0), option),
@@ -190,7 +190,7 @@ public partial class Functions
 			"stored" => new CallState(feed.StoredBytes),
 			"last" => new CallState(feed.LastId),
 			"members" => new CallState(await Mediator.Send(new CountFeedMembersQuery(kind.Name, key), ExecutionBudget.CurrentToken)),
-			"read" or "send" => new CallState(feed.Lock(option)),
+			"read" or "send" => new CallState(await BooleanExpressionParser.ReadbackAsync(feed.Lock(option), executor, ExecutionBudget.CurrentToken)),
 			_ => SettingValue(feed.Settings.Over(kind.Effective), option)
 		};
 	}

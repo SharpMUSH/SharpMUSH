@@ -649,7 +649,8 @@ public partial class Commands
 	private async ValueTask<string> FormatLockLineAsync(AnySharpObject viewer, string name, SharpLockData data)
 	{
 		var expression = await BooleanExpressionParser.RenderAsync(data.LockString, viewer, LockRenderMode.Examine, ExecutionBudget.CurrentToken);
-		var creator = data.Creator is { } identity ? $"#{identity.Number}" : "#-1";
+		var creator = data.Creator is { } identity && await Mediator.Send(new GetObjectNodeQuery(identity)) is AnySharpObject found
+			? $"#{found.Object().DBRef.Number}" : "#-1";
 		return $"{LockNames.Display(name)} Lock [{creator}{LockService.FormatLockFlags(data.Flags)}]: {expression}";
 	}
 }

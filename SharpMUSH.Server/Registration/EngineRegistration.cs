@@ -256,6 +256,7 @@ internal static class EngineRegistration
 		services.AddSingleton<ICommandDiscoveryService, CommandDiscoveryService>();
 		services.AddSingleton<ISortService, SortService>();
 		services.AddSingleton<IHookService, HookService>();
+		services.AddSingleton<IFreedObjectCleanup, FreedObjectHookCleanup>();
 		// Forgets the hooks, global functions and added commands that target objects which are going
 		// (package uninstall, the PennMUSH import's package removal). Reached through Lazy<T>: it holds
 		// the command library, which reaches nearly every service.

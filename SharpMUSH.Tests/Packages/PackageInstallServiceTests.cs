@@ -386,7 +386,7 @@ public class PackageInstallServiceTests
 		var locks = (await store.GetObjectNodeAsync(target)).Expect<AnySharpObject>().Object().Locks;
 		await Assert.That(locks.ContainsKey(nameof(LockType.Teleport))).IsTrue()
 			.Because("rolling back to a revision that carries the lock must not remove it");
-		await Assert.That(locks[nameof(LockType.Teleport)].LockString).IsEqualTo("=#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(locks[nameof(LockType.Teleport)].LockString)).IsEqualTo("=#1");
 		// And the baseline it persists is canonical, so the next rollback does not repeat the round trip.
 		var persisted = JsonSerializer.Deserialize<PackageStructureBaseline>(
 			(await Registry.GetManagedStructuresAsync(package)).Single(s => s.Objid == objid).StructureJson, json);

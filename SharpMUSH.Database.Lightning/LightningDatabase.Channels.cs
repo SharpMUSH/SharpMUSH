@@ -236,11 +236,11 @@ public partial class LightningDatabase
 				MarkedUpName = newMarkedUpName,
 				Description = newDescription,
 				Privs = privs ?? record.Privs,
-				JoinLock = joinLock ?? record.JoinLock,
-				SpeakLock = speakLock ?? record.SpeakLock,
-				SeeLock = seeLock ?? record.SeeLock,
-				HideLock = hideLock ?? record.HideLock,
-				ModLock = modLock ?? record.ModLock,
+				JoinLock = StampLockKey(tx, joinLock ?? record.JoinLock),
+				SpeakLock = StampLockKey(tx, speakLock ?? record.SpeakLock),
+				SeeLock = StampLockKey(tx, seeLock ?? record.SeeLock),
+				HideLock = StampLockKey(tx, hideLock ?? record.HideLock),
+				ModLock = StampLockKey(tx, modLock ?? record.ModLock),
 				Buffer = buffer ?? record.Buffer,
 				Mogrifier = mogrifier ?? record.Mogrifier
 			};

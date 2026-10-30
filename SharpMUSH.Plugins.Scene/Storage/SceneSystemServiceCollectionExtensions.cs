@@ -33,6 +33,9 @@ public static class SceneSystemServiceCollectionExtensions
 		// Whether a web reader holds scene.view, for the REST controllers and the live hub.
 		services.AddSingleton<Web.ISceneReadAccess, Web.SceneReadAccess>();
 
+		// Scenes, poses and casts name objects by number; a freed object is cleared from them before its number names another.
+		services.AddSingleton<IFreedObjectCleanup>(sp => sp.GetRequiredService<LightningSceneStorage>());
+
 		var builder = new SceneSystemBuilder(services);
 		services.AddSingleton<ISceneSystemBuilder>(builder);
 

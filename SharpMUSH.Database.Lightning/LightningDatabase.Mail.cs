@@ -123,11 +123,13 @@ public partial class LightningDatabase
 	/// <summary>
 	/// The Library model for one mail row. The sender is resolved only when someone asks for
 	/// <see cref="SharpMail.From"/>, in a read of its own: a listing of a mailbox mostly wants the rows, and
-	/// a sender that has been destroyed since resolves to <see cref="None"/> either way.
+	/// a sender that has been destroyed since resolves to <see cref="None"/> either way, as does whatever
+	/// holds its number now.
 	/// </summary>
 	private SharpMail MapRecordToMail(long mailId, MailRecord record)
 	{
 		var sender = record.Sender;
+		var stamp = record.SenderCreationTime;
 		return new SharpMail
 		{
 			Id = MailId(mailId),
@@ -141,13 +143,20 @@ public partial class LightningDatabase
 			Folder = record.Folder,
 			Content = MarkupTextSerializer.Deserialize(record.Content),
 			Subject = MarkupTextSerializer.Deserialize(record.Subject),
-			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender)))
+			From = new AsyncLazy<AnyOptionalSharpObject>(_ => Task.FromResult(LoadMailSender(sender, stamp)))
 		};
 	}
 
-	private AnyOptionalSharpObject LoadMailSender(long sender) => Store.Read(tx => ReadObject(tx, sender) is { } found
+	private AnyOptionalSharpObject LoadMailSender(long sender, long? stamp) => Store.Read(tx => ReadMailSender(tx, sender, stamp) is { } found
 		? Hydrate(found.Dbref, found.Record).WithNoneOption()
 		: (AnyOptionalSharpObject)new None());
+
+	/// <summary>
+	/// The object that sent a mail: the one holding <paramref name="sender"/> with the creation time the mail was
+	/// stamped with. A mail with no stamp has no sender, which is how a row the stamping could not reach fails.
+	/// </summary>
+	private (long Dbref, ObjectRecord Record)? ReadMailSender(ITx tx, long sender, long? stamp)
+		=> stamp is { } created && ReadObject(tx, sender) is { } found && found.Record.CreationTime == created ? found : null;
 
 	/// <summary>The mail an index entry names (its key ends with the mail id), or null when the row is missing —
 	/// a half-applied delete never turns a listing into an exception.</summary>
@@ -179,16 +188,16 @@ public partial class LightningDatabase
 	{
 		var summaries = Store.Read(tx =>
 		{
-			var names = new Dictionary<long, string?>();
+			var names = new Dictionary<(long, long?), string?>();
 			var list = new List<MailSummary>();
 			foreach (var mailId in MailFolderIds(tx, recipient, folder))
 			{
 				if (!tx.TryGet(Tables.Mail, MailKey(mailId), out var bytes)) continue;
 				var record = Codec.Deserialize<MailSummaryRecord>(bytes);
-				if (!names.TryGetValue(record.Sender, out var sender))
+				if (!names.TryGetValue((record.Sender, record.SenderCreationTime), out var sender))
 				{
-					sender = ReadObject(tx, record.Sender)?.Record.Name;
-					names[record.Sender] = sender;
+					sender = ReadMailSender(tx, record.Sender, record.SenderCreationTime)?.Record.Name;
+					names[(record.Sender, record.SenderCreationTime)] = sender;
 				}
 
 				list.Add(new MailSummary(MailId(mailId), DateTimeOffset.FromUnixTimeMilliseconds(record.DateSent), record.Read,
@@ -280,6 +289,7 @@ public partial class LightningDatabase
 			var record = new MailRecord
 			{
 				Sender = senderKey,
+				SenderCreationTime = ReadObjectHeader(tx, senderKey)?.CreationTime,
 				Recipient = recipientKey,
 				DateSent = mail.DateSent.ToUnixTimeMilliseconds(),
 				Fresh = mail.Fresh,

@@ -78,7 +78,7 @@ public class RhostImportTests
 			.IsEqualTo(widget.Object().Key);
 		await Assert.That((await gadget.Object().Parent.WithCancellation(CancellationToken.None)).Expect<AnySharpObject>().Object().Key)
 			.IsEqualTo(widget.Object().Key);
-		await Assert.That(widget.Object().Locks["Basic"].LockString).IsEqualTo("(#3)|(#1)");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Basic"].LockString)).IsEqualTo("(#3)|(#1)");
 		await Assert.That(widget.Object().Locks.Keys).Contains("Zone").And.Contains("Enter").And.Contains("Teleport");
 
 		var widgetFlags = await widget.Object().Flags.Value.Select(f => f.Name).ToListAsync();

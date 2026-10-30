@@ -63,27 +63,18 @@ public class ProjectionTests : LightningDatabaseFixture
 		await Assert.That(await Db.GetObjectTypeCountsAsync(owner.Object.DBRef)).IsEqualTo(new ObjectTypeCounts(1, 1, 2, 1));
 	}
 
+	/// <summary>The next creation takes the counter's number, which a freed top object does not lower.</summary>
 	[Test]
-	public async Task HighestDbref_FollowsTheLastObject()
+	public async Task NextDbref_IsTheNumberTheNextCreationTakes()
 	{
-		var highest = all(await Db.GetAllObjectsAsync().Select(o => o.Key).ToListAsync());
-		await Assert.That(await Db.GetHighestDbrefAsync() is int before && before == highest).IsTrue();
-
+		var next = await Db.GetNextDbrefAsync();
 		var created = await Thing("Topmost");
-		await Assert.That(await Db.GetHighestDbrefAsync() is int top && top == created.Number).IsTrue();
+		await Assert.That(created.Number).IsEqualTo(next);
+		await Assert.That(await Db.GetNextDbrefAsync()).IsEqualTo(next + 1);
 
 		await Db.DeleteObjectAsync(created);
-		await Assert.That(await Db.GetHighestDbrefAsync() is int after && after == highest).IsTrue();
-
-		static int all(List<int> keys) => keys.Max();
-	}
-
-	[Test]
-	public async Task HighestDbref_IsNotFoundForAnEmptyTable()
-	{
-		await Db.Store.WriteAsync(tx => tx.DeletePrefix(Tables.Obj, []));
-
-		await Assert.That(await Db.GetHighestDbrefAsync() is NotFound).IsTrue();
+		await Assert.That(await Db.GetNextDbrefAsync()).IsEqualTo(next + 1);
+		await Assert.That((await Thing("AfterTheTop")).Number).IsEqualTo(next + 1);
 	}
 
 	[Test]

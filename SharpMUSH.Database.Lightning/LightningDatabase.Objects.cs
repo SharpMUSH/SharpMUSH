@@ -24,11 +24,12 @@ public partial class LightningDatabase
 	/// <summary>
 	/// Resolves the optional creation/modification stamps an importer may supply: absent means now,
 	/// and an absent modification time matches the creation time, which is what every freshly created
-	/// object has anyway.
+	/// object has anyway. No object is created at <see cref="GoneCreationTime"/> or before it, so a lock
+	/// naming a gone object never matches the next holder of its number.
 	/// </summary>
 	private static (long Created, long Modified) Timestamps(long? creationTime, long? modifiedTime)
 	{
-		var created = creationTime ?? DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+		var created = creationTime is > GoneCreationTime ? creationTime.Value : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
 		return (created, modifiedTime ?? created);
 	}
 
@@ -337,7 +338,7 @@ public partial class LightningDatabase
 			// still hold. Writing the folded map back is what retires the old spelling on disk.
 			var locks = LockNames.Fold(found.Record.Locks);
 			locks[LockNames.Canonical(lockName)] =
-				new LockRecord { LockString = lockData.LockString, Flags = lockData.Flags.ToString(), Creator = lockData.Creator?.ToString() };
+				new LockRecord { LockString = StampLockKey(tx, lockData.LockString), Flags = lockData.Flags.ToString(), Creator = lockData.Creator?.ToString() };
 			tx.Put(Tables.Obj, Keys.Dbref(dbref), Codec.Serialize(found.Record with { Locks = locks }));
 		}, cancellationToken);
 	}
@@ -434,12 +435,8 @@ public partial class LightningDatabase
 		return new ObjectTypeCounts(rooms, exits, things, players);
 	}
 
-	public ValueTask<Found<int>> GetHighestDbrefAsync(CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => HighestKey(tx, Tables.Obj)) switch
-		{
-			< 0 => (Found<int>)new NotFound(),
-			var highest => (Found<int>)(int)highest
-		});
+	public ValueTask<int> GetNextDbrefAsync(CancellationToken cancellationToken = default)
+		=> ValueTask.FromResult((int)Store.Read(ReadNextDbref));
 
 	private int CountEdges(TableDef table, byte[] key, string what) => Store.Read(tx => CountEdges(tx, table, key, what));
 
@@ -910,13 +907,14 @@ public partial class LightningDatabase
 		CancellationToken cancellationToken = default)
 	{
 		var dbref = (long)target.Number;
-		var modified = modifiedTime ?? creationTime;
 
 		await WriteCredentialsAsync(tx =>
 		{
 			var found = ReadObject(tx, dbref) ?? throw new InvalidOperationException($"Object #{dbref} not found");
+			// A stamp at or before GoneCreationTime keeps the one the object has, as Timestamps refuses it.
+			var created = creationTime > GoneCreationTime ? creationTime : found.Record.CreationTime;
 			tx.Put(Tables.Obj, Keys.Dbref(dbref),
-				Codec.Serialize(found.Record with { CreationTime = creationTime, ModifiedTime = modified }));
+				Codec.Serialize(found.Record with { CreationTime = created, ModifiedTime = modifiedTime ?? created }));
 		}, cancellationToken, character: target);
 	}
 
@@ -1020,6 +1018,9 @@ public partial class LightningDatabase
 
 			// Its feed memberships and the taps on its attributes; feeds it owns stay, ownerless, for feed.admin.
 			DeleteFeedMemberships(tx, n);
+
+			// Its pose counts.
+			DeleteActivitySubject(tx, n);
 
 			// Mail received by this object dies with it (PennMUSH clear_player -> do_mail_purge): the
 			// mail row, its sent-index entry (found directly via the row's own Sender field rather than

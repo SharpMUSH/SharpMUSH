@@ -43,10 +43,10 @@ public partial class LightningDatabase
 			Name = kind.Name,
 			Owner = kind.Owner.ToString(),
 			Description = kind.Description,
-			Settings = ToRecord(kind.Settings),
-			Locks = new Dictionary<string, string>(kind.Locks)
+			Settings = ToRecord(kind.Settings)
 		};
-		await Store.WriteAsync(tx => tx.Put(Tables.FeedKind, Keys.Str(kind.Name), Codec.Serialize(record)), cancellationToken);
+		await Store.WriteAsync(tx => tx.Put(Tables.FeedKind, Keys.Str(kind.Name),
+			Codec.Serialize(record with { Locks = StampLockKeys(tx, kind.Locks) })), cancellationToken);
 	}
 
 	public async ValueTask<bool> DeleteFeedKindAsync(string kind, CancellationToken cancellationToken = default)
@@ -96,7 +96,7 @@ public partial class LightningDatabase
 			tx.Put(Tables.Feed, FeedKey(feed.Kind, feed.Key), Codec.Serialize(current with
 			{
 				Settings = ToRecord(feed.Settings),
-				Locks = new Dictionary<string, string>(feed.Locks)
+				Locks = StampLockKeys(tx, feed.Locks)
 			}));
 		}, cancellationToken);
 

@@ -139,9 +139,9 @@ public class PennMUSHDbrefPreservationTests
 		var widget = await NodeAsync(world, 6);
 		var gadget = await NodeAsync(world, 9);
 
-		await Assert.That(widget.Object().Locks["Basic"].LockString).IsEqualTo("#9");
-		await Assert.That(widget.Object().Locks["Use"].LockString).IsEqualTo("#4|#11");
-		await Assert.That(gadget.Object().Locks["Enter"].LockString).IsEqualTo("#6");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Basic"].LockString)).IsEqualTo("#9");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(widget.Object().Locks["Use"].LockString)).IsEqualTo("#4|#11");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(gadget.Object().Locks["Enter"].LockString)).IsEqualTo("#6");
 	}
 
 	/// <summary>The import's own summary counts what came in and does not report the holes as failures.</summary>
@@ -566,10 +566,10 @@ public class PennMUSHDbrefPreservationTests
 
 		await Assert.That(result.Errors).IsEmpty();
 		var ten = await NodeAsync(world, 10);
-		await Assert.That(ten.Object().Locks["Basic"].LockString).IsEqualTo("=#11|#1");
-		await Assert.That(ten.Object().Locks["Use"].LockString).IsEqualTo("@#11/Basic");
-		await Assert.That(ten.Object().Locks["Enter"].LockString).IsEqualTo("COUNT:#2");
-		await Assert.That(ten.Object().Locks["Page"].LockString).IsEqualTo("TAG:foo #2|!(#11 & $#11)");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(ten.Object().Locks["Basic"].LockString)).IsEqualTo("=#11|#1");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(ten.Object().Locks["Use"].LockString)).IsEqualTo("@#11/Basic");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(ten.Object().Locks["Enter"].LockString)).IsEqualTo("COUNT:#2");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(ten.Object().Locks["Page"].LockString)).IsEqualTo("TAG:foo #2|!(#11 & $#11)");
 		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("#10 Basic lock") && w.Contains("'=#2|#1' became '=#11|#1'"))).IsTrue();
 		await Assert.That(result.Warnings.Texts().Any(w => w.Contains("#10 Enter lock"))).IsFalse();
 

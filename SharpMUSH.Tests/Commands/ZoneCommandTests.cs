@@ -224,7 +224,7 @@ public class ZoneCommandTests
 
 		// check_zone_lock ran, which only happens if the per-object work went through do_chzone.
 		var zoneAfter = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
-		await Assert.That(zoneAfter.Object().Locks[nameof(LockType.Zone)].LockString)
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(zoneAfter.Object().Locks[nameof(LockType.Zone)].LockString))
 			.IsEqualTo($"=#{zone.Number}");
 	}
 
@@ -439,7 +439,7 @@ public class ZoneCommandTests
 
 		var zoneNode = (await Mediator.Send(new GetObjectNodeQuery(zone))).Expect<AnySharpObject>();
 		var installed = zoneNode.Object().Locks[nameof(LockType.Zone)];
-		await Assert.That(installed.LockString).IsEqualTo($"=#{zone.Number}");
+		await Assert.That(LockKeyReferences.WithoutCreationTimes(installed.LockString)).IsEqualTo($"=#{zone.Number}");
 		await Assert.That(installed.Creator?.Number).IsEqualTo(1);
 
 		// …and nothing was written to the Chzone lock, which would deny every later @chzone to this zone.

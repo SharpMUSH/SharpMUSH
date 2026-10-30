@@ -1103,5 +1103,56 @@ public class PackagePlanServiceTests
 		await Assert.That(lockChange.Action).IsEqualTo(PackageStructureAction.Remove);
 	}
 
+	[Test]
+	public async Task Lock_StampedReadback_OfTheSameObject_IsUnchanged()
+	{
+		const string manifest =
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    locks:
+			      use: "=#5"
+			""";
+		var baseline = new PackageStructureBaseline(
+			[], [], new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#5" },
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(locks: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#5:1000" });
+
+		var lockChange = _service.ComputeChangeset(StructureInputs(manifest, live, baseline))
+			.Structure.Single(s => s.Kind == PackageStructureKind.Lock);
+
+		await Assert.That(lockChange.Action).IsEqualTo(PackageStructureAction.NoChange);
+	}
+
+	[Test]
+	public async Task Lock_MovedToANewIncarnationOfTheSameNumber_IsWritten()
+	{
+		const string manifest =
+			"""
+			package: probe
+			version: "1.1"
+			objects:
+			  - ref: a
+			    type: thing
+			    name: Thing A
+			    locks:
+			      use: "=#5:2000"
+			""";
+		var baseline = new PackageStructureBaseline(
+			[], [], new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#5:1000" },
+			new Dictionary<string, IReadOnlyList<string>>());
+		var live = LiveStructured(locks: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["use"] = "=#5:1000" });
+
+		var lockChange = _service.ComputeChangeset(StructureInputs(manifest, live, baseline))
+			.Structure.Single(s => s.Kind == PackageStructureKind.Lock);
+
+		await Assert.That(lockChange.Action).IsEqualTo(PackageStructureAction.Add);
+		await Assert.That(lockChange.NewValue).IsEqualTo("=#5:2000");
+	}
+
 	#endregion
 }

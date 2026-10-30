@@ -15,7 +15,8 @@ public class LockMetadataPersistenceTests
 		var data = new SharpLockData("=#1", LockService.LockFlags.Visual | LockService.LockFlags.Locked, target.Object().DBRef);
 		await world.Database.SetLockAsync(target.Object(), "Basic", data);
 		var loaded = (await world.Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
-		await Assert.That(loaded.Object().Locks["Basic"]).IsEqualTo(data);
+		await Assert.That(loaded.Object().Locks["Basic"]).IsEqualTo(data with { LockString = $"={target.Object().DBRef}" })
+			.Because("the store keeps the objid of each object a lock names");
 		await world.Database.SetLockAsync(loaded.Object(), "Basic", data with { Creator = null });
 		var legacy = (await world.Database.GetObjectNodeAsync(new DBRef(1))).Expect<AnySharpObject>();
 		await Assert.That(legacy.Object().Locks["Basic"].Creator).IsNull();

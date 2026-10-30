@@ -21,22 +21,23 @@ public static class ChannelDecompile
 {
 	public static async ValueTask<CallState> Handle(IMUSHCodeParser parser, ILocateService LocateService,
 		IChannelPermissionService PermissionService, IMediator Mediator, INotifyService NotifyService,
-		IConnectionService ConnectionService, MString channelName, MString brief, string[] switches)
+		IConnectionService ConnectionService, IBooleanExpressionParser LockParser, MString channelName, MString brief,
+		string[] switches)
 	{
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 
 		return await ChannelHelper.GetVisibleChannelOrError(PermissionService, Mediator,
 			NotifyService, executor, channelName, true) switch
 		{
-			SharpChannel channel => await DecompileAsync(PermissionService, NotifyService, ConnectionService, executor,
-				channel, switches),
+			SharpChannel channel => await DecompileAsync(PermissionService, NotifyService, ConnectionService, LockParser,
+				executor, channel, switches),
 			Error<CallState> error => error.Value
 		};
 	}
 
 	private static async ValueTask<CallState> DecompileAsync(IChannelPermissionService PermissionService,
-		INotifyService NotifyService, IConnectionService ConnectionService, AnySharpObject executor, SharpChannel channel,
-		string[] switches)
+		INotifyService NotifyService, IConnectionService ConnectionService, IBooleanExpressionParser LockParser,
+		AnySharpObject executor, SharpChannel channel, string[] switches)
 	{
 		var name = channel.Name.ToPlainText();
 
@@ -66,11 +67,11 @@ public static class ChannelDecompile
 		}
 
 		AddIfSet("@channel/mogrifier", channel.Mogrifier);
-		AddIfSet("@clock/mod", channel.ModLock);
-		AddIfSet("@clock/hide", channel.HideLock);
-		AddIfSet("@clock/join", channel.JoinLock);
-		AddIfSet("@clock/speak", channel.SpeakLock);
-		AddIfSet("@clock/see", channel.SeeLock);
+		AddIfSet("@clock/mod", await LockParser.ReadbackAsync(channel.ModLock, executor));
+		AddIfSet("@clock/hide", await LockParser.ReadbackAsync(channel.HideLock, executor));
+		AddIfSet("@clock/join", await LockParser.ReadbackAsync(channel.JoinLock, executor));
+		AddIfSet("@clock/speak", await LockParser.ReadbackAsync(channel.SpeakLock, executor));
+		AddIfSet("@clock/see", await LockParser.ReadbackAsync(channel.SeeLock, executor));
 
 		// The switch is DESCRIBE — this dispatcher matches switch names exactly, where PennMUSH abbreviates
 		// them, so Penn's "@channel/desc" would not replay here. The description keeps its markup, since
