@@ -268,6 +268,8 @@ public static class BundledPackages
 		// new game. A running game that never marked a map would show players an empty page after an upgrade.
 		new("world-map", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),
 		new("world-map-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		new("world-grid", BundledPackageHandler.None, InstallAtFirstBoot: false),
+		new("world-grid-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
 	];
 
 	/// <summary>

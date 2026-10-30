@@ -1,0 +1,189 @@
+format: "1.16"
+package: world-grid
+title: "World grid"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Walking a world map the World plugin keeps: ten direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [map, world, grid, wilderness, building]
+category: Building
+requires_server: ">=0.1"
+
+# worldroom(), worldway(), worldplace(), worlddraw() and @world come from the World plugin.
+plugins: [world]
+
+depends:
+  - package: world-map
+    version: ">=1.3"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/world-map/
+      branch: main
+
+# The World plugin writes MAP`PLACE on every room standing on a place (the place's id); nothing else does.
+attributes:
+  MAP`PLACE:
+    flags: [wizard, no_command]
+
+objects:
+  # The command object, in the master room. WIZARD because +map/exits opens the ten exits on a map its player
+  # controls and gives them to the map's owner, and +map/keep places a room on a map the player controls; both
+  # check that control first. +map draws as the player, so a place hidden from them stays hidden, though it
+  # finds the map as itself: zone() answers only someone who may examine the room.
+  #
+  # Trees: CMD` the commands, INC` one routine each, FUN` the reads. DATA`WAY`<way> each exit's name and
+  # aliases, DATA`WAYS the ways in the order they are opened.
+  - ref: grid
+    type: thing
+    name: World Grid
+    location: "{{$master_room}}"
+    flags: [WIZARD]
+    attributes:
+      DATA: |-
+        Settings. One leaf per setting.
+      DATA`WAYS: |-
+        n e s w ne nw se sw u d
+      DATA`WAY: |-
+        Each direction exit's name and aliases. One leaf per way.
+      DATA`WAY`N: |-
+        North;n
+      DATA`WAY`E: |-
+        East;e
+      DATA`WAY`S: |-
+        South;s
+      DATA`WAY`W: |-
+        West;w
+      DATA`WAY`NE: |-
+        Northeast;ne
+      DATA`WAY`NW: |-
+        Northwest;nw
+      DATA`WAY`SE: |-
+        Southeast;se
+      DATA`WAY`SW: |-
+        Southwest;sw
+      DATA`WAY`U: |-
+        Up;u
+      DATA`WAY`D: |-
+        Down;d
+      # How far +map draws around you.
+      DATA`RADIUS: |-
+        5
+
+      # ---- commands -------------------------------------------------------------
+      CMD`MAP:
+        value: |-
+          $+map:@include %!/INC`SHOW
+        flags: [cmdsyntax]
+      CMD`MAP`KEEP:
+        value: |-
+          $+map/keep:@include %!/INC`KEEP
+        flags: [cmdsyntax]
+      # %0 the map, as typed.
+      CMD`MAP`EXITS:
+        value: |-
+          $+map/exits *:@include %!/INC`EXITS=%0
+        flags: [cmdsyntax]
+
+      # ---- routines -------------------------------------------------------------
+      # The places within DATA`RADIUS of the player's, drawn as the player sees them, @ where they stand.
+      INC`SHOW:
+        value: |-
+          @assert strlen(worldplace(%l))=@pemit %#=notice(MAP,You are not on a world map.,warn); think setqm(map,num(zone(%l)),
+          x,worldplace(%l,x),
+          y,worldplace(%l,y),
+          z,worldplace(%l,z),
+          radius,v(DATA`RADIUS)); @pemit %#=objeval(%#,worlddraw(%q<map>,%q<x>,%q<y>,%q<z>,%q<radius>,@))
+        flags: [cmdsyntax]
+      # The room the player stands in, lent to its place, stays there from now on.
+      INC`KEEP:
+        value: |-
+          @assert strlen(setr(place,worldplace(%l)))=@pemit %#=notice(MAP,You are not on a world map.,warn); @assert controls(%#,zone(%l))=@pemit %#=notice(MAP,You do not control [name(zone(%l))].,warn); @assert not(worldplace(%l,permanent))=@pemit %#=notice(MAP,[name(%l)] already stays here.,info); @world/room [zone(%l)]/%q<place>=%l; @pemit %#=notice(MAP,[name(%l)] stays on %q<place> now.,ok)
+        flags: [cmdsyntax]
+      # %0 the map, as typed: opens on it each direction exit it does not have yet, and names the cell parent.
+      INC`EXITS:
+        value: |-
+          @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn); @set %q<map>=FLOATING; @assert strlen(setr(missing,u(%!/FUN`MISSING,%q<map>)))=@pemit %#=notice(MAP,[name(%q<map>)] has every direction exit.,info); @dolist/inline %q<missing>=@include %!/INC`EXITS`OPEN=%q<map>,##; @include %!/INC`EXITS`PARENT=%q<map>; @pemit %#=notice(MAP,Opened [words(%q<missing>)] direction exits on [name(%q<map>)].,ok)
+        flags: [cmdsyntax]
+      # %0 the map, %1 a way: one direction exit, variable, leading by the way parent, given to the map's owner.
+      INC`EXITS`OPEN:
+        value: |-
+          think setr(exit,open(v(DATA`WAY`%1),variable,%0)); @parent %q<exit>={{way_parent}}; &MAP`WAY %q<exit>=%1; @lock %q<exit>=CANGO/1; @chown/preserve %q<exit>=owner(%0)
+        flags: [cmdsyntax]
+      # %0 the map: the rooms it lends are described by the cell parent, unless the map names its own.
+      INC`EXITS`PARENT:
+        value: |-
+          @assert not(hasattr(%0,MAP`CELLPARENT)); &MAP`CELLPARENT %0={{cell_parent}}
+        flags: [cmdsyntax]
+
+      # ---- reads ----------------------------------------------------------------
+      # %0 a map: the ways it has no direction exit for.
+      FUN`MISSING:
+        value: |-
+          setdiff(v(DATA`WAYS),iter(lexits(%0),get(##/MAP`WAY)))
+        flags: [funsyntax]
+
+      # ---- help -----------------------------------------------------------------
+      HELP: |-
+        Walking a world map, and +map.
+      SEE: |-
+        Cross-references. One leaf per topic; subtopics come from the tree, not from here.
+      SEE`MAP`GRID: |-
+        map|@world
+      HELP`MAP`GRID: |-
+        A world map keeps its places itself (see `help @world`). With this package, people walk it.
+
+        The map must be a room that nobody enters. `+map/exits <map>` opens ten exits on it (name a map you are not near by its dbref), `North;n` to `Down;d`. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side or a closed terrain refuses, with its reason. Rooms placed on the map keep their own exits, and those come first.
+
+        A lent room is named after its place and described by the map's legend: ``MAP`LEGEND`<type>`DESC``, else the type's label. Set ``MAP`CELLPARENT`` on the map to describe them your own way.
+
+        ```
+        @dig Wilds
+        @world/create Wilds
+        @world/paint Wilds/0,0:9,9=forest
+        +map/exits #40
+        ```
+
+        Output:
+        ```
+        Wilds created with room number 40.
+        Wilds is now a world map.
+        Painted 100 places as forest.
+        Opened 10 direction exits on Wilds.
+        ```
+
+        `+map` draws the places around you, with `@` where you stand. `+map/keep` keeps the lent room you stand in on its place, so it is never taken back; you need to control the map.
+
+  # The parent of every direction exit. Its attributes run as the exit, which the map's owner owns, so the World
+  # functions answer for the map. %l is the room the mover stands in.
+  - ref: way_parent
+    type: thing
+    name: World Way Parent
+    location: "{{grid}}"
+    flags: [no_command]
+    attributes:
+      # %0 the room, %1 a field of worldway(): the way out of the room's place this exit leads.
+      FUN`WAY:
+        value: |-
+          worldway(zone(%0),worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),v(MAP`WAY),%1)
+        flags: [funsyntax]
+      # A way that refuses leads back to where the mover stands, so no room is lent for it and the lock below
+      # refuses with the reason.
+      DESTINATION: |-
+        [if(u(CANGO),worldroom(zone(%l),u(FUN`WAY,%l,to)),%l)]
+      CANGO: |-
+        [t(match(open oneway,u(FUN`WAY,%l,state)))]
+      FAILURE: |-
+        [if(strlen(setr(reason,u(FUN`WAY,%l,reason))),%q<reason>,You can't go that way.)]
+
+  # The parent of every room a map lends, unless the map's MAP`CELLPARENT names another. Its attributes run as the
+  # room, which the map's owner owns.
+  - ref: cell_parent
+    type: thing
+    name: World Cell Parent
+    location: "{{grid}}"
+    flags: [no_command]
+    attributes:
+      # The legend's description of the place's terrain, else its label.
+      DESCRIBE: |-
+        [setq(type,worldcell(zone(me),worldplace(me,x),worldplace(me,y),worldplace(me,z)))][strfirstof(get(zone(me)/MAP`LEGEND`%q<type>`DESC),worldcell(zone(me),worldplace(me,x),worldplace(me,y),worldplace(me,z),label).)]
