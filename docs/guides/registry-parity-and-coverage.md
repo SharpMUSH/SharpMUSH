@@ -1,8 +1,8 @@
 # Registry parity and coverage
 
-Three things about the function and command surface used to be true only by accident: that every
-registered name had a help topic, that the signature in that topic matched the arity the parser
-enforces, and that some test somewhere had called it. Each is now a test. This is what they check,
+Three things about the function and command surface are tests: that every registered name has a
+help topic, that the signature in that topic matches the arity the parser enforces, and that some
+test calls it. This is what they check,
 where their data comes from, and how to change them when the answer is meant to change.
 
 ## What is checked

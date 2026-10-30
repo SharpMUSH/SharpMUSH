@@ -1,7 +1,7 @@
 format: "1.16"
 package: room-contents
 title: "Room feed"
-version: 1.2.1
+version: 1.2.2
 authors: [SharpMUSH]
 description: "Pushes room.info / room.contents / room.exits OOB v2 updates, built per viewer, to a room's connected occupants — the data source for the portal's Play page."
 license: MIT
@@ -48,8 +48,7 @@ requires_server: ">=0.1"
 #   room.exits, as a connect is: every package that carries current state is
 #   re-sent on connect and on resume (docs/design/d1/README.md §7.1).
 #
-# - OOB v2 (docs/design/d1/README.md §7.1, docs/superpowers/specs/
-#   2026-09-29-image-attributes-and-oob-v2-design.md §4): every payload carries
+# - OOB v2 (docs/design/d1/README.md §7.1, docs/design/image-attributes.md): every payload carries
 #   "v": 2, is built PER VIEWER, and only adds keys to the v1 shapes, so a v1
 #   consumer keeps working. The payload shapes are documented in README.md and
 #   docs/softcode/room-contents-handler.md.

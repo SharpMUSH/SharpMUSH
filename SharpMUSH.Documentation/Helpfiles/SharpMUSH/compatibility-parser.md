@@ -270,7 +270,7 @@ add(1,2)
 
 **A choice.**
 
-**PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow extra unescaped commas (`capstr(a,b,c)` capitalises the string `a,b,c`), though it now warns that this is deprecated.<br>
+**PennMUSH** lets the last argument of functions such as `pemit()`, `emit()` and `capstr()` swallow extra unescaped commas (`capstr(a,b,c)` capitalises the string `a,b,c`), and warns that this is deprecated.<br>
 **SharpMUSH** treats every comma as an argument separator, so `capstr(a,b,c)` is a too-many-arguments error.<br>
 **Why.** It avoids silently changing what counts as an argument.<br>
 **Workaround.** Escape the commas (`\,`) or brace the text.

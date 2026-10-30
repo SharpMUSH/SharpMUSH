@@ -5,7 +5,7 @@ using SharpMUSH.Library.Time;
 namespace SharpMUSH.Tests.Functions;
 
 /// <summary>
-/// The precision-argument contract from docs/superpowers/specs/2026-09-08-millisecond-precision-design.md:
+/// The precision-argument contract from docs/guides/time-precision.md:
 /// a PennMUSH call keeps PennMUSH's unit, milliseconds are reached only by asking, and every number
 /// a function reads is seconds.
 /// </summary>

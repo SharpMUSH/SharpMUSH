@@ -1000,7 +1000,7 @@ CSS knowledge — they pick colors in a UI, the tokens propagate everywhere.
 
 ### Specification
 
-**What exists (as of the D1 handoff, 2026-09-29).** The token set is the
+**What exists.** The token set is the
 `:root` block of `SharpMUSH.Client/wwwroot/css/tokens.css` (cascade layer
 `tokens`), and `docs/design/d1/README.md` §2 is its table: `--bg`, `--surface`,
 `--surface-2`, `--surface-3`, `--rail-bg`, `--text`, `--text-dim`, `--text-faint`,

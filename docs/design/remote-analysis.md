@@ -1,7 +1,6 @@
 # Remote analysis contract
 
-This is the implementation contract for the bounded remote LSP/MCP slice. Validation status is
-recorded below and updated with the final PR; these settings do not enable a deployed service.
+The contract for remote LSP and MCP analysis. Both are optional plugins, off until configured.
 
 ## Server setup
 
@@ -107,20 +106,3 @@ The VS Code example is a desktop stdio client with explicit offline/remote modes
 extensions, endpoint-bound SecretStorage-driven remote launch and a strict tsconfig. Packaging uses
 project-local tools (Node22 or newer for VSCE4); no global tool install is needed. The portal's static Monaco metadata
 is not a remote LSP integration. No global editor/network setup is changed by these code changes.
-
-## Validation and limitations
-
-Safe automated validation uses synthetic identities/objects, virtual HTTP/WebSocket transports and
-framing streams, with no listening port, TLS key or fixture credential/world creation. The local
-publish/dependency/type-identity checks are build artifacts, not deployment. Actual production boot,
-Basic credentials/account changes, TLS/reverse-proxy and a separate bridge process over real sockets
-require the separately approved disposable fixture. No production-ready/deployed claim is made.
-
-Final local evidence: actual standalone stdio42/42 assertions; analyzer50/50, local LSP handlers21/21,
-cooperative token3/3, catalog10/10 and parser5/5 tests. Fresh published payload passes isolated transport
-47/47 and MCP46/46 tests, including private plugin dependency/type identity, identity refresh,
-principal isolation, quotas, overload, lifecycle and negotiated protocol revisions. Editor strict
-compile/SecretStorage launch harness passes, npm audit reports zero vulnerabilities, and actual VSIX
-packaging succeeds. A read-only whole-branch review identified six transport findings addressed in
-one fix pass with regressions. Real TLS/proxy/socket authentication and native IDE UI remain untested;
-no listening service or fixture world was started. See the draft implementation PR for review status.

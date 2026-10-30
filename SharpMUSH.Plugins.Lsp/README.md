@@ -24,4 +24,4 @@ Idle clients do not acquire fragmented-message reader admission. Small single-fr
 remains independent of that pool. Request capacity errors are awaited; synchronization admission
 failure closes explicitly, requiring reconnect/initialize/reopen instead of losing latest diagnostics.
 Generation checks run again inside outbound sequencing. Bridge shutdown observes remaining pumps
-without awaiting an uncancellable console read. See `docs/design/analysis-validation.md` for evidence.
+without awaiting an uncancellable console read.

@@ -15,8 +15,8 @@ portal's Play page.
 > room-contents`, or edit the attributes directly (the package's three-way
 > merge keeps local edits on the next upgrade).
 
-Version 2.x of the package speaks **OOB v2** (`docs/design/d1/README.md` §7.1,
-`docs/superpowers/specs/2026-09-29-image-attributes-and-oob-v2-design.md` §4).
+The package speaks **OOB v2** (`docs/design/d1/README.md` §7.1,
+`docs/design/image-attributes.md`).
 The v1 shapes are at the end; v2 only adds keys to them.
 
 ---
