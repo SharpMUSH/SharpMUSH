@@ -203,9 +203,12 @@ public class WorldMapReaderTests
 		await Assert.That(await Reader.ReadAsync(_viewer, 50, default) is NotFound).IsTrue();
 	}
 
-	private sealed class StoredPlaces(int mapNumber, string space) : IWorldMapSource
+	private sealed class StoredPlaces(int mapNumber, string space, params (int X, int Y, int Level)[] hidden) : IWorldMapSource
 	{
 		public List<MapWindow> Asked { get; } = [];
+
+		public ValueTask<bool> HiddenAsync(AnySharpObject viewer, AnySharpObject map, int x, int y, int level, CancellationToken ct) =>
+			ValueTask.FromResult(hidden.Contains((x, y, level)));
 
 		public ValueTask<Found<MapSpaceDto>> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
 			ValueTask.FromResult<Found<MapSpaceDto>>(map.Object().DBRef.Number == mapNumber
@@ -256,6 +259,22 @@ public class WorldMapReaderTests
 		await Assert.That(rooms["Recycled"].Position).IsNull().Because("its place is on an earlier object with this number");
 		await Assert.That((await Reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Rooms.Single(room => room.Name == "Glade").Position)
 			.IsNull().Because("a map no source stores has no places to stand on");
+	}
+
+	[Test]
+	public async Task ARoomStandingOnAHiddenPlaceIsLeftOff()
+	{
+		var wilds = Map(50, "Wilds", MapKinds.Coordinates);
+		Room(10, "Glade", wilds);
+		_values[(10, WorldMapReader.PlaceAttribute)] = "#50:0/3,-2,1";
+		Room(11, "Kept hut", wilds);
+		_values[(11, WorldMapReader.PlaceAttribute)] = "#50:0/4,4,0";
+		var reader = new WorldMapReader(_mediator, _permissions, _reality, _attributes, _connections,
+			[new StoredPlaces(50, MapSpaces.Square, (3, -2, 1))]);
+
+		var rooms = (await reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Rooms.Select(room => room.Name);
+
+		await Assert.That(rooms).IsEquivalentTo(["Kept hut"]).Because("a hidden place keeps its room off the map with it");
 	}
 
 	[Test]

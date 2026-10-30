@@ -129,5 +129,8 @@ public class WorldCommandIntegrationTests
 		await Assert.That((bare.Type, bare.Name, bare.Icon)).IsEqualTo(("forest", (string?)null, (string?)null))
 			.Because("the glade is drawn as the forest around it, with nothing of the place itself");
 		await Assert.That(await Eval($"worldcell({map},2,2,0,name)")).IsEqualTo("Glade").Because("God may examine the map");
+		await Assert.That(await source.HiddenAsync(mortal, stored, 2, 2, 0, CancellationToken.None)).IsTrue();
+		await Assert.That(await source.HiddenAsync(god, stored, 2, 2, 0, CancellationToken.None)).IsFalse();
+		await Assert.That(await source.HiddenAsync(mortal, stored, 1, 2, 0, CancellationToken.None)).IsFalse();
 	}
 }
