@@ -19,6 +19,12 @@ public interface IWorldMapSource
 	/// returns at most <see cref="MapWindow.MaxCells"/> cells and sets <see cref="MapCellsDto.Truncated"/> past that.
 	/// </summary>
 	ValueTask<MapCellsDto> CellsAsync(AnySharpObject viewer, AnySharpObject map, MapWindow window, CancellationToken ct);
+
+	/// <summary>
+	/// Whether the place <paramref name="x"/>, <paramref name="y"/> on level <paramref name="level"/> of <paramref name="map"/>
+	/// is hidden from <paramref name="viewer"/>, so a room standing there is left off the map as the place is.
+	/// </summary>
+	ValueTask<bool> HiddenAsync(AnySharpObject viewer, AnySharpObject map, int x, int y, int level, CancellationToken ct);
 }
 
 /// <summary>A rectangle of one level of a map, edges included.</summary>

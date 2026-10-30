@@ -27,6 +27,8 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 	public const string HeightAttribute = "MAP`SIZE`H";
 	public const string LevelAttribute = "MAP`LEVEL";
 	public const string BackdropAttribute = "MAP`BACKDROP";
+	/// <summary>The place a room stands on, as the World plugin records it: <c>#map:created/x,y,z</c>.</summary>
+	public const string PlaceAttribute = "MAP`PLACE";
 	public const string LegendAttribute = "MAP`LEGEND";
 
 	/// <summary>The kind of place a room is: the attribute gmcp-room sends a MUD client's mapper by default.</summary>
@@ -60,7 +62,10 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 
 	private const int IndexPage = 200;
 
-	/// <summary>Every map <paramref name="viewer"/> may see, by name. Empty while the world-map package is not installed.</summary>
+	/// <summary>
+	/// Every map <paramref name="viewer"/> may see, by name: one with a room or a stored place on it, or one they control,
+	/// so a map someone started and left empty is not listed for everyone. Empty while the world-map package is not installed.
+	/// </summary>
 	public async Task<IReadOnlyList<MapSummaryDto>> ListAsync(AnySharpObject viewer, CancellationToken ct)
 	{
 		var maps = new List<AnySharpObject>();
@@ -74,7 +79,8 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			{
 				if (maps.Count == MaxMaps) break;
 				if (await MapAsync(viewer, hit.Number, ct) is { } map
-					&& maps.All(known => known.Object().DBRef.Number != hit.Number)) maps.Add(map);
+					&& maps.All(known => known.Object().DBRef.Number != hit.Number)
+					&& await ShownAsync(viewer, map, ct)) maps.Add(map);
 			}
 			after = maps.Count < MaxMaps ? page.Next : null;
 		} while (after is not null);
@@ -94,6 +100,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		var truncated = false;
 		// Only someone who controls the map may plan changes to it; they may change only the rooms they control.
 		var canEdit = await permissions.Controls(viewer, map);
+		var (source, space) = await SourceAsync(map, ct) is var (found, stored) ? (found, stored) : ((IWorldMapSource?)null, (MapSpaceDto?)null);
 
 		var rooms = new List<(AnySharpObject Room, MapRoomDto Dto)>();
 		var regions = new List<MapRoomDto>();
@@ -117,7 +124,15 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is not AnySharpObject room || !room.IsRoom) continue;
 			if (!await VisibleAsync(viewer, room, ct)) continue;
 			// A room's place is read as the room, as a region's is: a builder may dig a room into a map someone else owns.
-			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, await NumbersAsync(room, room, position, ct),
+			// A room standing on a place of a stored map has no coordinates of its own: it is drawn at its place, and left
+			// off the map with it when the place is hidden from the viewer.
+			var at = await NumbersAsync(room, room, position, ct);
+			if (at is null && source is not null && PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map) is { } place)
+			{
+				if (await source.HiddenAsync(viewer, map, (int)place[0], (int)place[1], (int)place[2], ct)) continue;
+				at = place;
+			}
+			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, at,
 				Positive(await NumbersAsync(room, room, Size, ct)))
 			{
 				Editable = canEdit && await permissions.Controls(viewer, room),
@@ -175,7 +190,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			LevelNames = await LevelNamesAsync(map),
 			Legend = await LegendAsync(map, ct),
 			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
-			Space = await SourceAsync(map, ct) is var (_, space) ? space : null,
+			Space = space,
 		};
 	}
 
@@ -188,6 +203,26 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		if (await MapAsync(viewer, number, ct) is not { } map || await SourceAsync(map, ct) is not var (source, _))
 			return new NotFound();
 		return await source.CellsAsync(viewer, map, window, ct);
+	}
+
+	/// <summary>
+	/// Whether the map list shows <paramref name="map"/> to <paramref name="viewer"/>: they control it, a map source stores
+	/// places on it, or a room or region on it is one they may see.
+	/// </summary>
+	private async Task<bool> ShownAsync(AnySharpObject viewer, AnySharpObject map, CancellationToken ct)
+	{
+		if (await permissions.Controls(viewer, map) || await SourceAsync(map, ct) is not null) return true;
+		await foreach (var member in mediator.CreateStream(new GetObjectsByZoneQuery(map.Object().DBRef), ct))
+		{
+			if (member.DBRef == map.Object().DBRef) continue;
+			if (string.Equals(member.Type, "ROOM", StringComparison.OrdinalIgnoreCase))
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is AnySharpObject { IsRoom: true } room
+					&& await VisibleAsync(viewer, room, ct)) return true;
+			}
+			else if (await MapAsync(viewer, member.DBRef.Number, ct) is not null) return true;
+		}
+		return false;
 	}
 
 	/// <summary>The first map source that stores <paramref name="map"/>'s places, and the space it stores them in.</summary>
@@ -504,6 +539,29 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			if (!double.TryParse(values[i], NumberStyles.Float, CultureInfo.InvariantCulture, out axes[i]) || !double.IsFinite(axes[i])) return null;
 		}
 		return axes;
+	}
+
+	/// <summary>
+	/// The position in a room's <see cref="PlaceAttribute"/>, <c>#map:created/x,y,z</c>, when the place is on
+	/// <paramref name="map"/>; null for a place on another map or a value that is no place.
+	/// </summary>
+	private static double[]? PlacePosition(string place, AnySharpObject map)
+	{
+		var slash = place.IndexOf('/');
+		if (slash < 1 || place[0] != '#') return null;
+		var id = place[1..slash].Split(':');
+		if (!int.TryParse(id[0], NumberStyles.None, CultureInfo.InvariantCulture, out var number) || number != map.Object().DBRef.Number) return null;
+		if (id.Length > 1 && (!long.TryParse(id[1], NumberStyles.None, CultureInfo.InvariantCulture, out var created)
+			|| created != map.Object().CreationTime)) return null;
+		var axes = place[(slash + 1)..].Split(',');
+		if (axes.Length != 3) return null;
+		var position = new double[3];
+		for (var i = 0; i < 3; i++)
+		{
+			if (!int.TryParse(axes[i], NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var axis)) return null;
+			position[i] = axis;
+		}
+		return position;
 	}
 
 	/// <summary>A size: each side at least 1, a missing one as 1.</summary>

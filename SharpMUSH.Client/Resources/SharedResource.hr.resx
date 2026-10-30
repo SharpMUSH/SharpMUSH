@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Soba već ima izlaz s jednim od tih imena.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Odaberite sobu iz koje se ulazi.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Ovo je prva soba na karti, pa se kopa bez ulaza. Kad postoji, otvorite put do nje iz druge sobe.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Ili dbref sobe</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Bilo koja soba, na drugoj karti ili ni na jednoj.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Odaberi</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Do {0}, sobe izvan ove karte.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} nije soba koju možete vidjeti.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Idi tamo</value>
+  </data>
 </root>

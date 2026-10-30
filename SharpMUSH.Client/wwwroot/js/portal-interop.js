@@ -229,6 +229,14 @@
         if (focus) room.focus({ preventScroll: true });
     };
 
+    // Brings a World map's builder panel into the page's view once a room or cell is chosen: on a narrow screen it
+    // sits below the map. Smooth unless the reader asked for less motion.
+    window.SharpMUSH.mapPanelIntoView = function (panel) {
+        if (!panel) return;
+        var still = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        panel.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
+    };
+
     // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
     // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
     // terminal unmounted and kept its element, with its scrollback, alive.

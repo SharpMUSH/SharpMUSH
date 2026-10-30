@@ -1,3 +1,4 @@
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.ParserInterfaces;
 
 namespace SharpMUSH.Tests.Functions;
@@ -49,6 +50,18 @@ public class PennMUSHStringFunctionTests
 	{
 		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
 		await Assert.That(result.ToPlainText()).StartsWith("#-1");
+	}
+
+	// A range too long to return is refused before it is built.
+	[Test]
+	[Arguments("lnum(100000000)")]
+	[Arguments("lnum(0,99999999)")]
+	[Arguments("lnum(0,1000000000000000,%b,1)")]
+	[Arguments("strlen(lnum(0,99999999))")]
+	public async Task LnumPastTheOutputLimit(string expr)
+	{
+		var result = await Parser.EvaluateAsync(MarkupText.Plain(expr));
+		await Assert.That(result.ToPlainText()).IsEqualTo(ErrorMessages.Returns.OutputTooLarge);
 	}
 
 	// === ljust/rjust edge cases from testjust.t not already covered ===

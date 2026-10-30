@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Implementation.Common;
+using SharpMUSH.Library;
 using SharpMUSH.Library.API;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Reality;
@@ -38,6 +39,7 @@ public class MapsController(
 	IConnectionService connections,
 	ILookService look,
 	IOptionsWrapper<SharpMUSHOptions> configuration,
+	ICommandPermission commands,
 	IEnumerable<IWorldMapSource> sources) : ControllerBase
 {
 	private WorldMapReader Reader => new(mediator, permissions, reality, attributes, connections, sources);
@@ -84,7 +86,10 @@ public class MapsController(
 	{
 		if (await User.ResolveExecutorAsync(projection, ct) is not { } viewer) return Unauthorized();
 		Response.Headers.CacheControl = "no-store";
-		return Ok(await Reader.HereAsync(viewer, ct));
+		return Ok(await Reader.HereAsync(viewer, ct) with
+		{
+			CanBuild = !await viewer.IsGuest() && await commands.CanRunAsync(viewer, "@CREATE"),
+		});
 	}
 
 	[HttpGet("route/{dbref:int}")]

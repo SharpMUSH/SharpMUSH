@@ -27,12 +27,12 @@ public class FunctionParameterNamesTests
 	}
 
 	[Test]
-	public async Task StringDistanceExposesItsTwoArgumentSignature()
+	public async Task StringDistanceExposesItsSignature()
 	{
 		var function = AllFunctions().Single(f => f.Name == "strdistance").Attr;
 		await Assert.That(function.MinArgs).IsEqualTo(2);
-		await Assert.That(function.MaxArgs).IsEqualTo(2);
-		await Assert.That(function.ParameterNames.SequenceEqual(new[] { "source", "target" })).IsTrue();
+		await Assert.That(function.MaxArgs).IsEqualTo(4);
+		await Assert.That(function.ParameterNames.SequenceEqual(new[] { "source", "target", "ignore case", "transpositions" })).IsTrue();
 	}
 
 	[Test]

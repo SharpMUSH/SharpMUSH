@@ -18,11 +18,13 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("strip(This is a test,is)", "Th  a tet")]
 	[Arguments("strip(abcdefgABCDEFG,azGy!7$B)", "bcdefgACDEF")]
 	[Arguments("strip(ansi(r,red))", "red")]
+	[Arguments("strip(This is a test,is,1)", "isiss")]
 	[Arguments("[between(1,10,5)][between(1,10,10)][between(1,10,10,1)][between(1.5,2.5,2)]", "1011")]
 	[Arguments("between(a,10,5)", ErrorMessages.Returns.Numbers)]
 	[Arguments("[roman(1999)] [roman(4)] [roman(3999)]", "MCMXCIX IV MMMCMXCIX")]
 	[Arguments("roman(0)", ErrorMessages.Returns.NumberOutOfRange)]
-	[Arguments("roman(4000)", ErrorMessages.Returns.NumberOutOfRange)]
+	[Arguments("[roman(4000)] [roman(777777)] [roman(3999999)]", "Mv dcclxxvMMDCCLXXVII mmmcmxcMxCMXCIX")]
+	[Arguments("roman(4000000)", ErrorMessages.Returns.NumberOutOfRange)]
 	[Arguments("roman(x)", ErrorMessages.Returns.Integer)]
 	[Arguments("[crc32(MUX)] [crc32(M,UX)] [crc32()]", "629126998 629126998 0")]
 	[Arguments("[strmem(This is a test)] [strmem(chr(233))]", "14 2")]
@@ -30,12 +32,15 @@ public class MuxFunctionTests : ServerTestBase
 	[Arguments("ledit(apple|banana|lime|plum,banana|lime,yellow,|,+)", "apple+yellow++plum")]
 	[Arguments("ledit(a b c,d,x)", "a b c")]
 	[Arguments("ledit(a b A,a,x)", "x b A")]
-	[Arguments("moon(947182440)", "The Moon is New")]
-	[Arguments("moon(948458160)", "The Moon is Full")]
-	[Arguments("moon(949000000)", "The Moon is Waning Gibbous (62% of Full)")]
-	[Arguments("moon(947820000)", "The Moon is Waxing Half (50% of Full)")]
-	[Arguments("moon(947800000)", "The Moon is Waxing Crescent (48% of Full)")]
-	[Arguments("[moon(948000000,1)] [moon(949000000,1)]", "71 -62")]
+	[Arguments("moon(947172800)", "The Moon is New")]
+	[Arguments("moon(948382400)", "The Moon is Full")]
+	[Arguments("moon(999999999)", "The Moon is Waning Gibbous (72% of Full)")]
+	[Arguments("moon(949000000)", "The Moon is Waning Gibbous (50% of Full)")]
+	[Arguments("moon(947811600)", "The Moon is Waxing Half (50% of Full)")]
+	[Arguments("moon(947797200)", "The Moon is Waxing Crescent (48% of Full)")]
+	[Arguments("[moon(948000000,1)] [moon(999999999,1)]", "74 -72")]
+	[Arguments("moon(1000000000000)", ErrorMessages.Returns.NumberOutOfRange)]
+	[Arguments("moon(-100000000000)", ErrorMessages.Returns.NumberOutOfRange)]
 	[Arguments("moon(x)", ErrorMessages.Returns.Number)]
 	[Arguments("lrand(5,5,3,|)", "5|5|5")]
 	[Arguments("[lrand(1,6,0)][lrand(6,1,3)]", "")]
@@ -112,6 +117,8 @@ public class MuxFunctionTests : ServerTestBase
 		await Assert.That(await Eval($"lrooms({a})")).IsEqualTo(b);
 		await Assert.That(await Eval($"lrooms({a},2)")).IsEqualTo($"{b} {c}");
 		await Assert.That(await Eval($"lrooms({a},2,0)")).IsEqualTo(c);
+		await Assert.That(await Eval($"lrooms({a},,)")).IsEqualTo(b);
+		await Assert.That(await Eval($"lrooms({a},2,,1)")).IsEqualTo(await Eval($"[objid({b})] [objid({c})]"));
 		await Assert.That(await Eval($"lrooms({a},0)")).IsEqualTo(string.Empty);
 		await Assert.That(await Eval($"lrooms({a},51)")).IsEqualTo(ErrorMessages.Returns.NumberOutOfRange);
 		await Assert.That(await Eval($"lrooms(me)")).IsEqualTo(ErrorMessages.Returns.NotARoom);

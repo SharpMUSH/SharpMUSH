@@ -5735,6 +5735,12 @@
   <data name="AdmCharacterNoRoles" xml:space="preserve">
     <value>None</value>
   </data>
+  <data name="AdmCharacterAccountRole" xml:space="preserve">
+    <value>{0} (account)</value>
+  </data>
+  <data name="AdmCharacterRolesHelp" xml:space="preserve">
+    <value>A role assigned here is held by this character alone. Roles marked (account) come from the account and are changed under Roles &amp; permissions.</value>
+  </data>
   <data name="AdmCharacterAttributes" xml:space="preserve">
     <value>Attributes</value>
   </data>
@@ -10495,5 +10501,29 @@
   </data>
   <data name="AdmNavDrag" xml:space="preserve">
     <value>Drag to move</value>
+  </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Choose the room it is joined from.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>This is the map's first room, so it is dug with no way in. Open a way to it from another room once it exists.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Or a room's dbref</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Any room, on another map or on none.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Choose</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>To {0}, a room off this map.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} is not a room you can see.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Go there</value>
   </data>
 </root>

@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Стаята вече има изход с едно от тези имена.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Изберете стаята, от която се влиза в нея.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Това е първата стая на картата, затова се създава без вход. След това отворете път към нея от друга стая.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Или dbref на стая</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Всяка стая, на друга карта или без карта.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Избери</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Към {0}, стая извън тази карта.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} не е стая, която виждате.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Отиди там</value>
+  </data>
 </root>

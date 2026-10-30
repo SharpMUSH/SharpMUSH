@@ -102,7 +102,7 @@ public class WorldCommandIntegrationTests
 	}
 
 	[Test]
-	public async Task AHiddenPlaceKeepsItsWallsFromThoseWhoMayNotExamineTheMap()
+	public async Task AHiddenPlaceIsBareTerrainWithoutItsWallsToThoseWhoMayNotExamineTheMap()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Hollow");
 		await God($"@create {map}", map);
@@ -112,7 +112,8 @@ public class WorldCommandIntegrationTests
 		await God($"@world/wall {map}/2,2/n=wall,The hidden glade's hedge.", "2,2,0");
 		await God($"@world/wall {map}/2,1/n=wall,Into the glade.", "2,1,0");
 		await God($"@world/wall {map}/1,2/e=wall,Beside the glade.", "1,2,0");
-		await God($$$"""@world/data {{{map}}}/2,2={"render":{"hidden":true}}""", "2,2,0");
+		await God($"@world/place {map}/2,2=Glade", "2,2,0");
+		await God($$$"""@world/data {{{map}}}/2,2={"render":{"hidden":true,"icon":"tree"}}""", "2,2,0");
 
 		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
 		async Task<AnySharpObject> Find(DBRef dbref) =>
@@ -129,5 +130,16 @@ public class WorldCommandIntegrationTests
 		await Assert.That(await Walls(mortal, 4)).IsEquivalentTo([(0, 0, "n")]);
 		// The glade is past the window's right edge, and the wall leading to it still stays hidden.
 		await Assert.That(await Walls(mortal, 1)).IsEquivalentTo([(0, 0, "n")]);
+
+		async Task<MapCellDto> Glade(AnySharpObject viewer) =>
+			(await source.CellsAsync(viewer, stored, new MapWindow(0, 0, 0, 4, 4), CancellationToken.None)).Cells.Single(cell => cell is { X: 2, Y: 2 });
+		await Assert.That((await Glade(god)).Name).IsEqualTo("Glade");
+		var bare = await Glade(mortal);
+		await Assert.That((bare.Type, bare.Name, bare.Icon)).IsEqualTo(("forest", (string?)null, (string?)null))
+			.Because("the glade is drawn as the forest around it, with nothing of the place itself");
+		await Assert.That(await Eval($"worldcell({map},2,2,0,name)")).IsEqualTo("Glade").Because("God may examine the map");
+		await Assert.That(await source.HiddenAsync(mortal, stored, 2, 2, 0, CancellationToken.None)).IsTrue();
+		await Assert.That(await source.HiddenAsync(god, stored, 2, 2, 0, CancellationToken.None)).IsFalse();
+		await Assert.That(await source.HiddenAsync(mortal, stored, 1, 2, 0, CancellationToken.None)).IsFalse();
 	}
 }

@@ -56,6 +56,11 @@
       "lookup": "compatibility config rhostmush edit modes rhost edit"
     },
     {
+      "id": "rhostmush-iter-separator-rhost-iter-separator",
+      "heading": "RhostMUSH iter() separator: `rhost_iter_separator`",
+      "lookup": "compatibility config rhostmush iter separator rhost iter separator"
+    },
+    {
       "id": "rhostmush-lattr-arguments-rhost-lattr",
       "heading": "RhostMUSH lattr() arguments: `rhost_lattr`",
       "lookup": "compatibility config rhostmush lattr arguments rhost lattr"
@@ -64,6 +69,11 @@
       "id": "rhostmush-list-loop-rhost-list",
       "heading": "RhostMUSH list() loop: `rhost_list`",
       "lookup": "compatibility config rhostmush list loop rhost list"
+    },
+    {
+      "id": "rhostmush-lrooms-depth-rhost-lrooms",
+      "heading": "RhostMUSH lrooms() depth: `rhost_lrooms`",
+      "lookup": "compatibility config rhostmush lrooms depth rhost lrooms"
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",
@@ -155,7 +165,7 @@ x (a,b)c
 
 ## Logical functions: `mux_logic`
 
-With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX does, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX.
+With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX and RhostMUSH do, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX and RhostMUSH.
 
 ```sharp
 > think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]
@@ -257,6 +267,19 @@ aXcabc
 aXcaXc
 ```
 
+## RhostMUSH iter() separator: `rhost_iter_separator`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_iter_separator` off, iter() and parse() put the list's delimiter between results when no output separator is given, as PennMUSH does. With it on, they put a space, as RhostMUSH does.
+
+```sharp rhost_iter_separator
+> think iter(a|b|c,ucstr(##),|)
+A B C
+> think iter(a|b|c,ucstr(##),|,-)
+A-B-C
+```
+
 ## RhostMUSH lattr() arguments: `rhost_lattr`
 
 Off by default; meant for a game moved from RhostMUSH.
@@ -300,6 +323,17 @@ An empty list tells nothing, header included, so this shows only what `think` re
 XY
 > think list(functions)
 #-1 FUNCTION (LIST) EXPECTS BETWEEN 2 AND 5 ARGUMENTS BUT GOT 1
+```
+
+## RhostMUSH lrooms() depth: `rhost_lrooms`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_lrooms` off, lrooms() takes a depth from 0 to 50, and a depth of 0 lists nothing, as on TinyMUX. With it on, as on RhostMUSH, any depth is taken, a negative one counts as 1, and 0 follows exits as far as they lead; lrooms() then lists at most 1,000 rooms.
+
+```sharp rhost_lrooms
+> think [setq(a,num(dig(RhostdocA)))][setq(b,num(dig(RhostdocB)))][setq(c,num(dig(RhostdocC)))][null(open(RhostdocAB,%qb,%qa),open(RhostdocBC,%qc,%qb))][words(lrooms(%qa,0))]
+2
 ```
 
 ## RhostMUSH map() arguments: `rhost_map_args`

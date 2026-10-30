@@ -276,4 +276,35 @@ public class MapPlanTests
 
 		await Assert.That(plan.Builds).IsEqualTo(2).Because("a way to a room no longer dug goes with it");
 	}
+
+	[Test]
+	public async Task TheFirstRoomOfAnEmptyMapIsDugWithNoExit()
+	{
+		var plan = new MapPlan(Grid());
+
+		var key = plan.Dig("Quay", 0, 0, 0, null, "", null);
+
+		await Assert.That(Commands(plan.Changes.Single())).IsEquivalentTo(
+		[
+			"@dig Quay",
+			$"@chzone {{{key}}}=#50",
+			$"&MAP`COORDS`X {{{key}}}=0",
+			$"&MAP`COORDS`Y {{{key}}}=0",
+		]);
+		await Assert.That(plan.Builds).IsEqualTo(1);
+		await Assert.That(plan.Preview().Exits).IsEmpty();
+	}
+
+	[Test]
+	public async Task AWayToARoomOffTheMapShowsItsName()
+	{
+		var plan = new MapPlan(Grid(Room("#10", "Quay", [0, 0, 0])));
+
+		plan.Join("#10", "#77", "Gate;g", "Harbour;h", "Town square");
+
+		await Assert.That(plan.Changes.Single().Steps.Single().Command).IsEqualTo("@open Gate;g=#77,Harbour;h,#10");
+		await Assert.That(plan.Changes.Single().Other).IsEqualTo("Town square");
+		await Assert.That(plan.Preview().Exits.First().DestinationName).IsEqualTo("Town square");
+		await Assert.That(plan.Builds).IsEqualTo(2);
+	}
 }

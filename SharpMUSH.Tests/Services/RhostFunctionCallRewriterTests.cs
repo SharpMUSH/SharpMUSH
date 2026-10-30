@@ -34,11 +34,22 @@ public class RhostFunctionCallRewriterTests
 	[Arguments("-[chomp(%rthis is a test%r)]-", "-this is a test-")]
 	[Arguments("-[chomp(%rthis is a test%r,r)]-", "-\nthis is a test-")]
 	[Arguments("lnum2(5)", "0 1 2 3 4")]
+	[Arguments("lnum2(10,5,+)", "5 6 7 8 9 10 11 12 13 14")]
+	[Arguments("lnum2(10,5,+,2)", "5 7 9 11 13 15 17 19 21 23")]
+	[Arguments("lnum2(10,20,-)", "20 19 18 17 16 15 14 13 12 11")]
+	[Arguments("lnum2(3,,-)", "0")]
+	[Arguments("lnum2(5,3,-,2)", "3 1")]
+	[Arguments("lnum2(3,9,-,3)", "9 6 3")]
+	[Arguments("lnum2(5,3,,2)", "3 5 7")]
+	[Arguments("lnum2(6,3,,2)", "3 5 7")]
+	[Arguments("[xnor(1,1,1)] [xnor(1,0,0)] [xnor(1,1,0)]", "1 1 0")]
 	[Arguments("streq(ljc(abcdef,3),ABC)", "1")]
 	[Arguments("[andflag(#1,wizard,!going)] [andflag(#1,wizard,going)]", "1 0")]
 	[Arguments("[orflag(#1,going,wizard)] [orflag(#1,going,halt)]", "1 0")]
 	[Arguments("[strmatch(moneyname(),config(money_singular))] [strmatch(moneyname(1),config(money_singular))]", "1 1")]
 	[Arguments("[strmatch(moneyname(0),config(money_plural))] [strmatch(moneyname(50),config(money_plural))] [strmatch(moneyname(-5),config(money_plural))]", "1 1 1")]
+	[Arguments("[strmatch(moneyname(add(25,25)),config(money_plural))] [strmatch(moneyname([sub(2,1)]),config(money_singular))]", "1 1")]
+	[Arguments("[setq(moneyname,kept)][strmatch(moneyname(add(1,1)),config(money_plural))] %q<moneyname>", "1 kept")]
 	[Arguments("[gte(bittype(#1),7)] [gt(bittype(#1),6)] [lt(bittype(#1),5)] [lte(bittype(#1),4)]", "1 1 0 0")]
 	[Arguments("[gte(5,bittype(#1))] [lt(3,[bittype(#1)])] [gte(bittype(),5)] [gte(bittype(#1),0)] [gt(bittype(#1),7)]", "0 1 1 1 0")]
 	public async Task RewrittenCallsGiveRhostMushAnswers(string rhost, string expected)
@@ -86,19 +97,18 @@ public class RhostFunctionCallRewriterTests
 	[Test]
 	public async Task LeavesAShapeNoRuleCoversAndSaysSo()
 	{
-		var result = RhostSoftcodeRewriter.Rewrite("think [lnum2(10,5,+)] [xnor(1,1,1)]");
+		var result = RhostSoftcodeRewriter.Rewrite("think [lnum2(%0,5,+)] [xnor(1)]");
 
-		await Assert.That(result.Text).IsEqualTo("think [lnum2(10,5,+)] [xnor(1,1,1)]");
+		await Assert.That(result.Text).IsEqualTo("think [lnum2(%0,5,+)] [xnor(1)]");
 		await Assert.That(result.Notes).IsEquivalentTo([
 			"lnum2() with 3 argument(s) left as written: SharpMUSH has no lnum2()",
-			"xnor() with 3 argument(s) left as written: SharpMUSH has no xnor()"
+			"xnor() with 1 argument(s) left as written: SharpMUSH has no xnor()"
 		]);
 	}
 
 	[Test]
 	[Arguments("think [ljc(abcdef,setr(0,add(%q0,1)))]", "ljc() with a call in argument 2 left as written: its rewrite would evaluate that argument more than once")]
 	[Arguments("think [rjc(abc,[v(width)],.)]", "rjc() with a call in argument 2 left as written: its rewrite would evaluate that argument more than once")]
-	[Arguments("think [moneyname(get(me/coins))]", "moneyname() with a call in argument 1 left as written: its rewrite would evaluate that argument more than once")]
 	public async Task LeavesACallWhoseRewriteWouldEvaluateAnArgumentTwice(string body, string note)
 	{
 		var result = RhostSoftcodeRewriter.Rewrite(body);

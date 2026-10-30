@@ -6899,4 +6899,28 @@
   <data name="NavMapExitTaken" xml:space="preserve">
     <value>Der Raum hat schon einen Ausgang mit einem dieser Namen.</value>
   </data>
+  <data name="NavMapChooseFrom" xml:space="preserve">
+    <value>Wähle den Raum, von dem aus er erreicht wird.</value>
+  </data>
+  <data name="NavMapFirstRoom" xml:space="preserve">
+    <value>Das ist der erste Raum der Karte, er wird also ohne Zugang gegraben. Öffne einen Weg von einem anderen Raum, sobald er existiert.</value>
+  </data>
+  <data name="NavMapJoinByDbref" xml:space="preserve">
+    <value>Oder die Dbref eines Raums</value>
+  </data>
+  <data name="NavMapJoinByDbrefHelp" xml:space="preserve">
+    <value>Jeder Raum, auf einer anderen Karte oder auf keiner.</value>
+  </data>
+  <data name="NavMapChoose" xml:space="preserve">
+    <value>Wählen</value>
+  </data>
+  <data name="NavMapJoinToRoom" xml:space="preserve">
+    <value>Zu {0}, einem Raum außerhalb dieser Karte.</value>
+  </data>
+  <data name="NavMapNoSuchRoom" xml:space="preserve">
+    <value>{0} ist kein Raum, den du sehen kannst.</value>
+  </data>
+  <data name="NavMapGoThere" xml:space="preserve">
+    <value>Dorthin gehen</value>
+  </data>
 </root>
