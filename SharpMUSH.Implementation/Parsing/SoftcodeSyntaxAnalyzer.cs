@@ -389,9 +389,11 @@ public sealed class SoftcodeSyntaxAnalyzer(
 			SharpMUSHParser.IBeginGenericTextContext
 				=> ClassifyOther(token.Text, sourceText),
 
-			// A FUNCHAR appearing in genericText (not inside a function call) is plain text.
-			SharpMUSHParser.IGenericTextContext
+			// Text after the start of a string, where a FUNCHAR (no call opened) is plain text too.
+			SharpMUSHParser.IGenericTextContext when token.Type != SharpMUSHParser.OTHER
 				=> SemanticTokenType.Text,
+			SharpMUSHParser.IGenericTextContext
+				=> ClassifyOther(token.Text, sourceText),
 
 			// FUNCHAR is the open-paren+name; COMMAWS and CPAREN inside the function are operators.
 			SharpMUSHParser.IFunctionContext when token.Type == SharpMUSHParser.FUNCHAR
@@ -432,7 +434,8 @@ public sealed class SoftcodeSyntaxAnalyzer(
 				=> SemanticTokenType.Substitution,
 
 			// PERCENT is the only direct terminal child of these.
-			SharpMUSHParser.IExplicitEvaluationStringContext
+			SharpMUSHParser.IEvaluationStringContext
+			or SharpMUSHParser.IExplicitEvaluationStringContext
 			or SharpMUSHParser.IBraceExplicitEvaluationStringContext
 			or SharpMUSHParser.ICallTailContext
 				=> SemanticTokenType.Substitution,

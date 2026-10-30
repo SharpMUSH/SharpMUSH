@@ -121,6 +121,14 @@
    "command": "Alice alicepass"
   },
   {
+   "key": "26-remote-exits/rx.setup#0",
+   "command": "Wiz wizpass"
+  },
+  {
+   "key": "26-remote-exits/rx.setup#1",
+   "command": "Alice alicepass"
+  },
+  {
    "key": "30-softcode/sc.control#4",
    "command": "think [setq(0,outer)][ulocal(#lambda/setq(0,inner)%%q0,x)] [r(0)]"
   },
@@ -193,22 +201,6 @@
    "command": "Wiz wizpass"
   },
   {
-   "key": "40-compat-choices/choice.dropto#11",
-   "command": "@create Pebble"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#12",
-   "command": "@tel me=[get(EventSink/DROPROOM)]"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#14",
-   "command": "@tel me=[v(HOMELOC)]"
-  },
-  {
-   "key": "40-compat-choices/choice.dropto#3",
-   "command": "@create EventSink"
-  },
-  {
    "key": "40-compat-choices/choice.housekeeping#0",
    "command": "One godpass"
   },
@@ -247,14 +239,6 @@
   {
    "key": "44-objects-audit/obj.login#0",
    "command": "Wiz wizpass"
-  },
-  {
-   "key": "44-objects-audit/obj.open#3",
-   "command": "@tel/silent me=#0"
-  },
-  {
-   "key": "44-objects-audit/obj.room-desc#2",
-   "command": "@tel/silent me=#0"
   },
   {
    "key": "43-speech-audit/sp.login#0",

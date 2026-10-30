@@ -334,15 +334,7 @@ public partial class Commands
 			return CallState.Empty;
 		}
 
-		var exit = await LocateService.Locate(
-			parser,
-			executor,
-			executor,
-			args["0"].Message.ToPlainText(),
-			LocateFlags.ExitsInTheRoomOfLooker
-			| LocateFlags.EnglishStyleMatching
-			| LocateFlags.ExitsPreference
-			| LocateFlags.OnlyMatchTypePreference);
+		var exit = await ExitToTake(parser, executor, args["0"].Message.ToPlainText());
 
 		// PennMUSH do_move (move.c:432) answers a failed exit match with "You can't go that way.",
 		// not with the generic locate failure.
@@ -441,6 +433,31 @@ public partial class Commands
 		}
 
 		return new CallState(destination.Object().DBRef.ToString());
+	}
+
+	/// <summary>
+	/// move_wrapper (move.c:1027): the room's own exits, then its zone master room's, then the master room's
+	/// global exits, each searched only when the one before found nothing.
+	/// </summary>
+	private async ValueTask<AnyOptionalSharpObjectOrError> ExitToTake(IMUSHCodeParser parser, AnySharpObject executor,
+		string direction)
+	{
+		const LocateFlags exits = LocateFlags.ExitsInTheRoomOfLooker
+			| LocateFlags.EnglishStyleMatching
+			| LocateFlags.ExitsPreference
+			| LocateFlags.OnlyMatchTypePreference;
+
+		var local = await LocateService.Locate(parser, executor, executor, direction, exits);
+		if (local is AnySharpObject and SharpExit || executor.AsOptionalContent is not AnySharpContent) return local;
+
+		var zoned = await LocateService.Locate(parser, executor, executor, direction, exits | LocateFlags.MatchRemoteContents);
+		if (zoned is AnySharpObject and SharpExit) return zoned;
+
+		var masterRoom = Convert.ToInt32(Configuration.CurrentValue.Database.MasterRoom);
+		if ((await executor.Where()).Object().DBRef.Number == masterRoom) return local;
+
+		var global = await LocateService.Locate(parser, executor, executor, direction, exits | LocateFlags.MatchGlobalExits);
+		return global is AnySharpObject and SharpExit ? global : local;
 	}
 
 	/// <summary>

@@ -98,8 +98,8 @@ def context_rules(c, ref):
 		"""What a string holds; start is what it holds first, where a name( cannot be text."""
 		alts = [ref('bracePattern', inner['brace']), ref('bracketPattern', inner['bracket'])]
 		alts += [own('beginGenericText')] if start else []
-		alts += [f'PERCENT {ref("validSubstitution", inner["name"])}', ref('regexpCapture', inner['name']),
-			'iterationToken', 'switchSubject']
+		alts += [f'PERCENT {ref("complexSubstitutionSymbol", inner["name"])}', 'PERCENT substitutionSymbol',
+			ref('regexpCapture', inner['name']), 'iterationToken', 'switchSubject']
 		alts += [] if start else [own('genericText')]
 		alts += [ref('closedGroupFirst' if start else 'closedGroup', inner['group'])] if c.G else []
 		return block(alts)
@@ -116,11 +116,12 @@ def context_rules(c, ref):
 		# What follows a leading call is not the start of the string, so it takes what may come later in
 		# one: a name( there is text, as it is after any other text. explicitEvaluationString cannot
 		# begin with a name(, which is how a string that starts with one is known to start with a call.
-		rules[own('evaluationString', suffix)] = alternatives([
-			f'{ref("function", inner["call"])} {own("callTail", suffix)}?',
-			own('explicitEvaluationString', suffix)])
-		rules[own('explicitEvaluationString', suffix)] = alternatives(
-			[f'{first} {later}*{tail}'] + ([ref('openTailFirst', inner['group'])] if open_tails else []))
+		# evaluationString holds explicitEvaluationString's alternatives itself rather than a node of it
+		# around them, since nearly every string is one: one rule node fewer per string parsed.
+		explicit = [f'{first} {later}*{tail}'] + ([ref('openTailFirst', inner['group'])] if open_tails else [])
+		rules[own('evaluationString', suffix)] = alternatives(
+			[f'{ref("function", inner["call"])} {own("callTail", suffix)}?'] + explicit)
+		rules[own('explicitEvaluationString', suffix)] = alternatives(explicit)
 		rules[own('callTail', suffix)] = alternatives([f'{later}+{tail}'] + ([group] if open_tails else []))
 
 	strings('', open_tails)
@@ -138,16 +139,17 @@ def context_rules(c, ref):
 	rules[own('bracePattern')] = f': OBRACE {own("braceExplicitEvaluationString")}? CBRACE;'
 	rules[own('bracketPattern')] = f': OBRACK {own("evaluationString")}? CBRACK;'
 	rules[own('regexpCapture')] = f': REGEXP_NUM | REGEXP_STARTCARET {own("explicitEvaluationString")}? CCARET?;'
-	rules[own('validSubstitution')] = f': {own("complexSubstitutionSymbol")} | substitutionSymbol;'
 	rules[own('complexSubstitutionSymbol')] = alternatives([
 		f'(REG_STARTCARET | ARG_STARTCARET | ATTR_STARTCARET | DELIM_STARTCARET) {own("explicitEvaluationString")} CCARET',
 		'REG_NUM | REG_ALPHA | VWX',
 		'ITEXT_NUM | ITEXT_LAST | ITEXT_POS_NUM | ITEXT_POS_LAST',
 		'ARG_DASH_NUM | DTEXT_NUM | DTEXT_LAST | STEXT_NUM | STEXT_LAST'])
 	# With paren_groups, a '(' or a name's '(' that starts no call opens a group instead of being text.
-	rules[own('genericText')] = f': {own("beginGenericText")}' + ('' if c.G else ' | FUNCHAR') + ';'
-	text = text_tokens(c) + ([] if c.G else ['OPAREN'])
-	rules[own('beginGenericText')] = ': ' + ' | '.join(text + ['escapedText', 'OTHER', 'DOLLAR', 'HASH', 'PERCENT_AT_END', 'ansi']) + ';'
+	# genericText lists beginGenericText's tokens itself rather than holding a node of it: a run of
+	# text is one rule node per token, not two.
+	text = text_tokens(c) + ([] if c.G else ['OPAREN']) + ['escapedText', 'OTHER', 'DOLLAR', 'HASH', 'PERCENT_AT_END', 'ansi']
+	rules[own('genericText')] = ': ' + ' | '.join(text + ([] if c.G else ['FUNCHAR'])) + ';'
+	rules[own('beginGenericText')] = ': ' + ' | '.join(text) + ';'
 	if c.P:
 		loop = f'{later}*'
 		rules[own('closedGroupFirst')] = f': beginGenericText__Open {loop} genericText__Close;'
@@ -180,7 +182,6 @@ FAMILIES = dict(
 	bracePattern='{...}, read as a string in which a call starts over',
 	bracketPattern='[...], read as a plain string whatever is around it',
 	regexpCapture='$0-$9 or $<name>',
-	validSubstitution="what follows a '%'",
 	complexSubstitutionSymbol="a '%' substitution that names something",
 	genericText='text, after the start of a string',
 	beginGenericText='text, at the start of a string',
@@ -190,10 +191,9 @@ FAMILIES = dict(
 	openTail='a paren group that runs to the end of the string it is in',
 )
 
-FIXED = '''genericText__Open: beginGenericText__Open | FUNCHAR;
+FIXED = '''genericText__Open: OPAREN | FUNCHAR;
 beginGenericText__Open: OPAREN;
-genericText__Close: beginGenericText__Close;
-beginGenericText__Close: CPAREN;
+genericText__Close: CPAREN;
 
 substitutionSymbol
     : SPACE | BLANKLINE | TAB | COLON | DBREF | ENACTOR_NAME | CAP_ENACTOR_NAME | ACCENT_NAME | MONIKER_NAME

@@ -23,7 +23,7 @@ internal sealed class LenientErrorStrategy : DefaultErrorStrategy
 		// Position at current.StopIndex so that StopIndex-based length calculations
 		// remain correct for the surrounding context.
 		return tokenSource.TokenFactory.Create(
-			Tuple.Create(tokenSource, current.TokenSource.InputStream),
+			Tuple.Create(tokenSource, current.InputStream),
 			expectedTokenType,
 			"",
 			TokenConstants.DefaultChannel,

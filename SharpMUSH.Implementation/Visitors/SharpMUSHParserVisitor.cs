@@ -421,7 +421,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		SharpMUSHParserVisitor visitor,
 		bool stripAnsi) => async () =>
 	{
-		var result = await visitor.VisitChildren(context) ?? CallState.Empty;
+		var result = await visitor.EvaluationStringItems(context) ?? CallState.Empty;
 		var message = result.Message;
 		return result with { Message = stripAnsi ? message.WithoutVisualMarkup() : message };
 	};
@@ -652,9 +652,16 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	}
 
 	public override async ValueTask<CallState?> VisitEvaluationString(
-		[NotNull] IEvaluationStringContext context) => await VisitChildren(context) ?? new CallState(
+		[NotNull] IEvaluationStringContext context) => await EvaluationStringItems(context) ?? new CallState(
 		GetContextText(context),
 		context.Depth());
+
+	/// <summary>
+	/// What an evaluation string's items evaluate to. One that does not start with a call holds
+	/// <c>explicitEvaluationString</c>'s items directly, and ends as that string does.
+	/// </summary>
+	internal async ValueTask<CallState?> EvaluationStringItems(IEvaluationStringContext context)
+		=> context.GetChild(0) is IFunctionContext ? await VisitChildren(context) : await TrimmedAtTheEnd(context);
 
 	public override async ValueTask<CallState?> VisitExplicitEvaluationString(
 		[NotNull] IExplicitEvaluationStringContext context) => await TrimmedAtTheEnd(context);
@@ -826,11 +833,9 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	{
 		var result = await VisitChildren(context)
 								 ?? new CallState(GetContextText(context), context.Depth());
-		// PE_COMPRESS_SPACES: only compress here for the FUNCHAR alternative
-		// (terminal token — VisitChildren returns null, so GetContextText has raw text).
-		// The beginGenericText alternative is already compressed by VisitBeginGenericText.
-		if (context.beginGenericText() is null
-				&& parser.CurrentState.ParseMode is ParseMode.Default)
+		// PE_COMPRESS_SPACES: compress literal space runs to single space. Text after the start of a
+		// string keeps its leading space, a separator: `add(1,2) x` is "3 x".
+		if (parser.CurrentState.ParseMode is ParseMode.Default)
 			return result with { Message = MushText.CompressSpaces(result.Message) };
 		return result;
 	}
@@ -846,11 +851,11 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		if (parser.CurrentState.ParseMode is ParseMode.Default)
 		{
 			var compressed = MushText.CompressSpaces(result.Message);
-			// Strip leading when this is the FIRST text node in an evaluation string
-			// (direct child of explicitEvaluationString). When reached via genericText
-			// (text between brackets, or after a leading call in callTail), leading spaces are
+			// Strip leading when this is the FIRST text node in an evaluation string; beginGenericText
+			// only ever starts one. Text later in a string is genericText, whose leading spaces are
 			// meaningful separators: `add(1,2) x` is "3 x".
-			if (context.Parent is IExplicitEvaluationStringContext or IBraceExplicitEvaluationStringContext)
+			if (context.Parent is IEvaluationStringContext or IExplicitEvaluationStringContext
+					or IBraceExplicitEvaluationStringContext)
 				compressed = compressed.Trim(global::MarkupString.TrimType.TrimStart, " ");
 			return result with { Message = compressed };
 		}
@@ -858,8 +863,24 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		return result;
 	}
 
-	public override async ValueTask<CallState?> VisitValidSubstitution(
-		[NotNull] IValidSubstitutionContext context)
+	/// <summary>What follows a <c>%</c> that names something: a register, an argument, an itext.</summary>
+	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
+		[NotNull] IComplexSubstitutionSymbolContext context)
+		=> UnevaluatedSubstitution(context) ?? CapitalizeForUpperSelector(context,
+			await Substitutions.Substitutions.ParseComplexSubstitution(
+				await ComplexSubstitutionName(context), parser, AttributeService, Mediator, context));
+
+	/// <summary>What follows a <c>%</c> that stands alone: <c>%#</c>, <c>%n</c>, <c>%r</c>.</summary>
+	public override async ValueTask<CallState?> VisitSubstitutionSymbol([NotNull] SubstitutionSymbolContext context)
+		=> UnevaluatedSubstitution(context) ?? CapitalizeForUpperSelector(context,
+			await Substitutions.Substitutions.ParseSimpleSubstitution(
+				context.GetText(), parser, Mediator, AttributeService, Configuration, context));
+
+	/// <summary>
+	/// The substitution as written when nothing is evaluated; otherwise null, once restricted evaluation
+	/// has allowed it.
+	/// </summary>
+	private CallState? UnevaluatedSubstitution(ISoftcodeContext context)
 	{
 		if (parser.CurrentState.ParseMode is ParseMode.NoParse or ParseMode.NoEval)
 		{
@@ -867,32 +888,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		}
 
 		EvaluationRestrictions.DemandSubstitution(context.GetText(), parser.CurrentState.Restrictions);
-		var complexSubstitutionSymbol = context.complexSubstitutionSymbol();
-		var simpleSubstitutionSymbol = context.substitutionSymbol();
-
-		CallState? result;
-		if (complexSubstitutionSymbol is not null)
-		{
-			var state = await VisitChildren(context);
-			result = await Substitutions.Substitutions.ParseComplexSubstitution(state, parser, AttributeService, Mediator,
-				complexSubstitutionSymbol);
-		}
-		else if (simpleSubstitutionSymbol is not null)
-		{
-			result = await Substitutions.Substitutions.ParseSimpleSubstitution(
-				simpleSubstitutionSymbol.GetText(),
-				parser,
-				Mediator,
-				AttributeService,
-				Configuration,
-				simpleSubstitutionSymbol);
-		}
-		else
-		{
-			result = await VisitChildren(context) ?? new CallState(MarkupText.Plain(context.GetText()), context.Depth());
-		}
-
-		return CapitalizeForUpperSelector(context, result);
+		return null;
 	}
 
 	/// <summary>
@@ -903,7 +899,7 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 	/// when the first output character is not a letter. Applying it here, once, covers every
 	/// substitution kind; it is idempotent for any output that is already capitalized.
 	/// </summary>
-	private static CallState? CapitalizeForUpperSelector(IValidSubstitutionContext context, CallState? result)
+	private static CallState? CapitalizeForUpperSelector(ISoftcodeContext context, CallState? result)
 	{
 		if (result is null || result.Message.Length < 1)
 		{
@@ -1340,8 +1336,8 @@ public class SharpMUSHParserVisitor : SharpMUSHParserRuleVisitor<ValueTask<CallS
 		};
 	}
 
-	public override async ValueTask<CallState?> VisitComplexSubstitutionSymbol(
-		[NotNull] IComplexSubstitutionSymbolContext context)
+	/// <summary>The name a complex substitution reads: the register, argument or level it names.</summary>
+	private async ValueTask<CallState?> ComplexSubstitutionName(IComplexSubstitutionSymbolContext context)
 	{
 		if (context.ChildCount > 1)
 			return await VisitChildren(context);

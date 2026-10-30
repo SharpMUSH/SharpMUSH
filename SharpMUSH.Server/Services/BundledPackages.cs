@@ -261,6 +261,9 @@ public static class BundledPackages
 		// on the event handler, so an account forgets a hidden character that leaves it.
 		new("alts", BundledPackageHandler.Event, InstallAtFirstBoot: false),
 		new("alts-help", BundledPackageHandler.None, InstallAtFirstBoot: false, Bridge: true),
+		// Available, not installed: counts an account's public alts as one person in +avail, for a game running both
+		// availability and alts that wants it.
+		new("availability-alts", BundledPackageHandler.None, InstallAtFirstBoot: false),
 		// Suggested at setup, not installed at first boot: the portal's World map and its builder, offered ticked to a
 		// new game. A running game that never marked a map would show players an empty page after an upgrade.
 		new("world-map", BundledPackageHandler.None, InstallAtFirstBoot: false, SuggestAtSetup: true),

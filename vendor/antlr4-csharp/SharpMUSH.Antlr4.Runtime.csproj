@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A modified copy of the ANTLR 4 C# runtime (BSD-3-Clause, see LICENSE.txt and README.md), built
+    in place of the Antlr4.Runtime.Standard package. It is never packed or published. The namespace
+    stays Antlr4.Runtime so generated parsers and SharpMUSH code compile unchanged; the assembly name
+    is ours so it is never mistaken for an ANTLR release.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net11.0</TargetFramework>
+    <AssemblyName>SharpMUSH.Antlr4.Runtime</AssemblyName>
+    <RootNamespace>Antlr4.Runtime</RootNamespace>
+    <LangVersion>12</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <NoWarn>$(NoWarn);CS1591;CS1574;CS1580;CS1570</NoWarn>
+    <GenerateAssemblyVersionAttribute>false</GenerateAssemblyVersionAttribute>
+    <Product>SharpMUSH</Product>
+    <Description>Modified copy of the ANTLR 4 C# runtime, built for SharpMUSH only.</Description>
+    <SkipFormatVerification>true</SkipFormatVerification>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="LICENSE.txt" Link="licenses/ANTLR-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
