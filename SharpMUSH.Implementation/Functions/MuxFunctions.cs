@@ -453,8 +453,8 @@ public partial class Functions
 
 		// An empty depth is the default, as RhostMUSH reads lrooms(here,,,1).
 		var depth = 1;
-		if (args.TryGetValue("1", out var depthArg) && depthArg.Message?.Length > 0
-			&& !ArgHelpers.TryInteger(parser, depthArg.Message?.ToPlainText(), out depth))
+		if (args.TryGetValue("1", out var depthArg) && depthArg.Message is { Length: > 0 } depthText
+			&& !ArgHelpers.TryInteger(parser, depthText.ToPlainText(), out depth))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
