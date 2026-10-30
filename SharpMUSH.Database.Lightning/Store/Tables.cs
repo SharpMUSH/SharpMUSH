@@ -18,6 +18,11 @@ public static class Tables
 	/// <summary>The recover list: a destroyed object's number → its row and relations (<c>RecoverRecord</c>). Its attributes
 	/// and expanded data stay under the number in their own tables. See <c>LightningDatabase.RecoverList.cs</c>.</summary>
 	public static readonly TableDef Recover = TableDef.Node("recover");
+	/// <summary>The free numbers in the order the allocator takes them: freed time (unix ms) then number, both big-endian →
+	/// nothing. See <c>LightningDatabase.FreeNumbers.cs</c>.</summary>
+	public static readonly TableDef FreeByTime = TableDef.Node("free.time");
+	/// <summary>A free number → when it was freed, so taking one by number finds its <see cref="FreeByTime"/> key.</summary>
+	public static readonly TableDef FreeByNumber = TableDef.Node("free.num");
 	public static readonly TableDef AttrMeta = TableDef.Node("attr.meta");
 	public static readonly TableDef AttrVal = TableDef.Node("attr.val");
 	public static readonly TableDef AttrFlag = TableDef.Node("attr.flag");

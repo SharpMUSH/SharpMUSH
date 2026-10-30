@@ -28,7 +28,11 @@ public record RestoreRecoverEntryCommand(RecoverRestore Restore) : ICommand<Resu
 	public string[] CacheTags => new DeleteObjectCommand(Restore.Objid).CacheTags;
 }
 
-/// <summary>Removes a recover entry for good, freeing its number; a kept one only when <paramref name="EvenIfKept"/>.</summary>
+/// <summary>
+/// Removes a recover entry for good, freeing its number with no due time; a kept one only when
+/// <paramref name="EvenIfKept"/>. The number can be asked for at once; <see cref="SetFreeNumberDueCommand"/> lets the
+/// allocator hand it out unasked.
+/// </summary>
 public record PurgeRecoverEntryCommand(DBRef Objid, bool EvenIfKept) : ICommand<bool>, ICacheInvalidating
 {
 	public string[] CacheKeys => [];
@@ -38,3 +42,15 @@ public record PurgeRecoverEntryCommand(DBRef Objid, bool EvenIfKept) : ICommand<
 
 /// <summary>Marks a recover entry kept, or clears the mark when <paramref name="Keep"/> is null.</summary>
 public record SetRecoverKeepCommand(DBRef Objid, RecoverKeep? Keep) : ICommand<bool>;
+
+/// <summary>
+/// Records the holes below the counter that are not free yet, due at <paramref name="ReusableAt"/> (never, when null).
+/// See <see cref="IFreeNumberStore.RecordUntrackedHolesAsync"/>.
+/// </summary>
+public record RecordUntrackedHolesCommand(DateTimeOffset? ReusableAt) : ICommand<int>;
+
+/// <summary>Gives a free number the time from which the allocator hands it out unasked. See <see cref="IFreeNumberStore.SetFreeNumberDueAsync"/>.</summary>
+public record SetFreeNumberDueCommand(int Number, DateTimeOffset ReusableAt) : ICommand<bool>;
+
+/// <summary>Replaces the configuration's protected numbers. See <see cref="IFreeNumberStore.SetProtectedNumbersAsync"/>.</summary>
+public record SetProtectedNumbersCommand(IReadOnlyCollection<int> Numbers) : ICommand;

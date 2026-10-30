@@ -89,6 +89,7 @@ internal static class HostedServiceRegistration
 		services.AddHostedService<Services.AttributeIndexResumeService>();
 		// The wiki's fact index builds, or carries on building, in the background.
 		services.AddHostedService<Services.WikiFactIndexStartupService>();
+		services.AddHostedService<Services.ProtectedNumbersService>();
 		// What the health endpoints and the portal's startup page read; the bridge reports into it.
 		services.AddSingleton<ServerReadiness>();
 		services.AddHostedService<NatsBridgeService>();

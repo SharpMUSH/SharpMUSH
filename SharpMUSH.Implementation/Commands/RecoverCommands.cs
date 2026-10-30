@@ -28,7 +28,7 @@ public partial class Commands
 	/// <summary>How many entries a bulk @purge preview names before it only counts.</summary>
 	private const int PurgePreviewLines = 20;
 
-	[SharpCommand(Name = "@RECOVER", Switches = ["LIST", "TYPE", "OWNER", "AGE", "COUNT", "DETAIL", "KEEP", "UNKEEP", "EXITS"],
+	[SharpCommand(Name = "@RECOVER", Switches = ["LIST", "TYPE", "OWNER", "AGE", "COUNT", "DETAIL", "KEEP", "UNKEEP", "EXITS", "FREE", "REFS"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoGagged, MinArgs = 0, MaxArgs = 2, ParameterNames = ["object", "reason"])]
 	public async ValueTask<Option<CallState>> Recover(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -44,6 +44,8 @@ public partial class Commands
 			_ when switches.Contains("KEEP") => await RecoverKeepAsync(executor, target, reason.Length == 0 ? "no reason given" : reason),
 			_ when switches.Contains("UNKEEP") => await RecoverKeepAsync(executor, target, null),
 			_ when switches.Contains("EXITS") => await RecoverExitsAsync(parser, executor, target),
+			_ when switches.Contains("FREE") => await FreeNumbersAsync(parser, executor),
+			_ when switches.Contains("REFS") => await NumberReferencesAsync(parser, executor, target),
 			_ when target.Length == 0 || switches.Any(RecoverListSwitches.Contains) => await RecoverListAsync(parser, executor, switches, target),
 			_ => await RecoverOneAsync(parser, executor, target)
 		};
@@ -296,6 +298,84 @@ public partial class Commands
 		}
 
 		return MarkupText.Plain($"Removed {purged} recover {(purged == 1 ? "entry" : "entries")} for good.{skipped}");
+	}
+
+	/// <summary>How many lines <c>@recover/free</c> and <c>@recover/refs</c> show before they only count.</summary>
+	private const int FreeListingLines = 200;
+
+	/// <summary><c>@recover/free</c>: the free numbers, the earliest due first, and when each may be handed out unasked.</summary>
+	private async ValueTask<MString> FreeNumbersAsync(IMUSHCodeParser parser, AnySharpObject executor)
+	{
+		if (!await RecoverList.MaySeeAllAsync(executor)) return MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied);
+
+		var now = DateTimeOffset.UtcNow;
+		var total = 0;
+		List<IEnumerable<string>> rows = [];
+		await foreach (var free in Mediator.CreateStream(new GetFreeNumbersQuery()))
+		{
+			if (++total > FreeListingLines) continue;
+			rows.Add([$"#{free.Number}", free.ReusableAt switch
+			{
+				null => "only when asked for",
+				{ } due when due <= now => "now",
+				{ } due => Day(due)
+			}]);
+		}
+
+		if (total == 0) return MarkupText.Plain("No numbers are free.");
+
+		var table = ServerLayout.Listing(
+			[new TableColumn(MarkupText.Plain("Dbref")) { Wrap = false }, new TableColumn(MarkupText.Plain("Reused from"))],
+			rows);
+		var title = total > FreeListingLines ? $"Free numbers ({total}, first {FreeListingLines})" : $"Free numbers ({total})";
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), table), 78, parser.HouseLook());
+	}
+
+	/// <summary>
+	/// <c>@recover/refs [#N]</c>: the attributes that name a number by <c>#N</c> alone, which would point at whatever
+	/// takes the number next. Without a number, every number on the recover list and every free number not yet due.
+	/// </summary>
+	private async ValueTask<MString> NumberReferencesAsync(IMUSHCodeParser parser, AnySharpObject executor, string target)
+	{
+		if (!await RecoverList.MaySeeAllAsync(executor)) return MarkupText.Plain(ErrorMessages.Notifications.PermissionDenied);
+
+		Dictionary<int, string> numbers = [];
+		if (target.Length > 0)
+		{
+			if (!DBRef.TryParse(target, out var parsed) || parsed is not { } named)
+				return MarkupText.Plain("@recover/refs takes a #number, or nothing for every number waiting to be reused.");
+			numbers[named.Number] = await Mediator.Send(new GetRecoverEntryQuery(named.Number)) is RecoverEntry held ? held.Name : "free";
+		}
+		else
+		{
+			var now = DateTimeOffset.UtcNow;
+			await foreach (var entry in Mediator.CreateStream(new GetRecoverEntriesQuery())) numbers[entry.Objid.Number] = entry.Name;
+			await foreach (var free in Mediator.CreateStream(new GetFreeNumbersQuery()).Where(free => free.ReusableAt is not { } due || due > now))
+				numbers[free.Number] = "free";
+		}
+
+		var total = 0;
+		List<IEnumerable<string>> rows = [];
+		await foreach (var reference in Mediator.CreateStream(new FindNumberReferencesQuery(numbers.Keys.ToHashSet())))
+		{
+			if (++total > FreeListingLines) continue;
+			rows.Add([$"#{reference.Holder}/{reference.Attribute}", $"#{reference.Number}", numbers[reference.Number]]);
+		}
+
+		if (total == 0)
+			return MarkupText.Plain(numbers.Count == 1
+				? $"No attribute names #{numbers.Keys.Single()} without its creation time."
+				: $"No attribute names any of the {numbers.Count} numbers waiting to be reused without its creation time.");
+
+		var table = ServerLayout.Listing(
+			[
+				new TableColumn(MarkupText.Plain("Attribute")) { Min = 12 },
+				new TableColumn(MarkupText.Plain("Names")) { Wrap = false },
+				new TableColumn(MarkupText.Plain("Held by")) { Priority = 2 }
+			],
+			rows);
+		var title = total > FreeListingLines ? $"Bare references ({total}, first {FreeListingLines})" : $"Bare references ({total})";
+		return ServerLayout.Build(ServerLayout.Panel(MarkupText.Plain(title), table), 78, parser.HouseLook());
 	}
 
 	/// <summary>The entry an argument names: <c>#N</c> or an objid.</summary>

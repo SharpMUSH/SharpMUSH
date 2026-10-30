@@ -14,17 +14,12 @@ namespace SharpMUSH.Implementation.Common;
 internal static class ObjectStatsHelpers
 {
 	/// <summary>
-	/// SharpMUSH removes a destroyed object rather than keeping it as garbage, so the garbage column
-	/// PennMUSH prints in the whole-database form is always this. The column stays because
-	/// <c>help lstats()</c> documents six fields and softcode counts them.
-	/// </summary>
-	public const int Garbage = 0;
-
-	/// <summary>
 	/// The figures <c>do_stats</c> prints, in its order. <c>fun_lstats</c> prints the same ones and
-	/// appends <see cref="Garbage"/> for the whole database only (<c>src/fundb.c:2400-2404</c>).
+	/// appends <paramref name="Garbage"/> for the whole database only (<c>src/fundb.c:2400-2404</c>).
+	/// Garbage is the free numbers below the counter (<see cref="CountFreeNumbersQuery"/>); as in
+	/// PennMUSH, the whole database's total counts them and one player's has none.
 	/// </summary>
-	public readonly record struct ObjectCounts(int Total, int Rooms, int Exits, int Things, int Players)
+	public readonly record struct ObjectCounts(int Total, int Rooms, int Exits, int Things, int Players, int Garbage)
 	{
 		/// <summary>The one-player form: five fields, no garbage column.</summary>
 		public string ForOnePlayer() => $"{Total} {Rooms} {Exits} {Things} {Players}";
@@ -40,7 +35,8 @@ internal static class ObjectStatsHelpers
 	public static async ValueTask<ObjectCounts> CountAsync(IMediator mediator, DBRef? owner)
 	{
 		var counts = await mediator.Send(new GetObjectTypeCountsQuery(owner));
-		return new ObjectCounts(counts.Total, counts.Rooms, counts.Exits, counts.Things, counts.Players);
+		var garbage = owner is null ? await mediator.Send(new CountFreeNumbersQuery()) : 0;
+		return new ObjectCounts(counts.Total + garbage, counts.Rooms, counts.Exits, counts.Things, counts.Players, garbage);
 	}
 
 	/// <summary>

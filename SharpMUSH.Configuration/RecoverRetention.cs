@@ -12,6 +12,9 @@ public static partial class RecoverRetention
 {
 	public const string Forever = "forever";
 
+	/// <summary><c>recover_keep_objects</c>' default.</summary>
+	public const string ObjectsDefault = "30d";
+
 	/// <summary>The shape @config accepts; <see cref="TryParse"/> also refuses a time shorter than <see cref="Shortest"/>.</summary>
 	public const string Pattern = @"^\s*(forever|(\d+[dhmsDHMS])+)\s*$";
 

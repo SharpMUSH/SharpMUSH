@@ -76,9 +76,18 @@ public partial class LightningDatabase(
 	/// <summary>Parses either a bare dbref string ("5") or a typed one ("PLAYER/5") into its numeric id.</summary>
 	internal static long ParseDbref(string id) => long.Parse(id.Contains('/') ? id[(id.IndexOf('/') + 1)..] : id.TrimStart('#'));
 
-	/// <summary>Reads and increments the <c>next_dbref</c> counter inside a write job, returning the id allocated to the caller.</summary>
+	/// <summary>
+	/// The id a creation that names none takes, inside its write job: the earliest due free number that is not
+	/// protected (<see cref="DueFreeNumber"/>), or else the <c>next_dbref</c> counter, which it increments.
+	/// </summary>
 	internal long AllocateDbref(ITx tx)
 	{
+		if (DueFreeNumber(tx) is { } free)
+		{
+			ForgetFreeNumber(tx, free);
+			return free;
+		}
+
 		var current = ReadNextDbref(tx);
 		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(current + 1));
 		return current;
@@ -88,9 +97,9 @@ public partial class LightningDatabase(
 	/// Allocates the dbref the caller named, or nothing when that id is not free to take.
 	/// <para>PennMUSH's <c>make_first_free_wrapper</c> (<c>src/destroy.c:928-949</c>) only hands back a
 	/// slot that is already on the free list: a dbref below <c>db_top</c> whose object has been recycled
-	/// into garbage. SharpMUSH keeps no garbage rows — <c>@destroy</c> removes the row outright, which is
-	/// why <c>stats()</c> reports a garbage count of zero — so the free slots are exactly the holes:
-	/// below the counter, holding no object and held by no recover entry. An id at or above the counter is refused rather than
+	/// into garbage. SharpMUSH keeps no garbage rows, so the free slots are the holes: below the counter,
+	/// holding no object and held by no recover entry, whether or not they are due for reuse yet (asking for
+	/// one is how a quarantine is cut short). An id at or above the counter is refused rather than
 	/// jumping the counter to reach it, so one mistyped argument cannot strand a block of dbrefs.</para>
 	/// <para>An import (<paramref name="import"/>) is the one caller entitled to an id at or above the
 	/// counter: the source database's ids are what its softcode holds, so the counter follows the import
@@ -100,25 +109,26 @@ public partial class LightningDatabase(
 	/// </summary>
 	internal long? AllocateDbrefAt(ITx tx, long requested, bool import = false)
 	{
-		if (requested < 0 || tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _) || IsHeldByRecoverEntry(tx, requested))
+		if (!MayTake(tx, requested, import)) return null;
+
+		if (requested < ReadNextDbref(tx))
 		{
-			return null;
+			ForgetFreeNumber(tx, requested);
+		}
+		else
+		{
+			tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(requested + 1));
 		}
 
-		var next = ReadNextDbref(tx);
-		if (requested < next)
-		{
-			return requested;
-		}
-
-		if (!import)
-		{
-			return null;
-		}
-
-		tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(requested + 1));
 		return requested;
 	}
+
+	/// <summary>Whether <see cref="AllocateDbrefAt"/> would hand out <paramref name="requested"/>, without writing.</summary>
+	private static bool MayTake(ITx tx, long requested, bool import = false)
+		=> requested >= 0
+			&& !tx.TryGet(Tables.Obj, Keys.Dbref(requested), out _)
+			&& !IsHeldByRecoverEntry(tx, requested)
+			&& (import || requested < ReadNextDbref(tx));
 
 	/// <summary>
 	/// The dbref an import names, or the next one when it names none. An id that already holds an
@@ -305,8 +315,9 @@ public partial class LightningDatabase(
 	public async ValueTask<int> ReleaseTrailingDbrefsAsync(CancellationToken cancellationToken = default)
 		=> await Store.WriteAsync(tx =>
 		{
-			var next = HighestKey(tx, Tables.Obj) + 1;
+			var next = Math.Max(HighestKey(tx, Tables.Obj), HighestKey(tx, Tables.Recover)) + 1;
 			tx.Put(Tables.Meta, Keys.Str("next_dbref"), Keys.Dbref(next));
+			ForgetFreeNumbersFrom(tx, next);
 			return (int)next;
 		}, cancellationToken);
 

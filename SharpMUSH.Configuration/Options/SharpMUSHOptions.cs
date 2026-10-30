@@ -184,7 +184,7 @@ public record SharpMUSHOptions
 			DumpWarning5Min: "GAME: Database save in 5 minutes.",
 			DumpWarning1Min: "GAME: Database save in 1 minute.",
 			RecoverKeepPlayers: RecoverRetention.Forever,
-			RecoverKeepObjects: "30d"
+			RecoverKeepObjects: RecoverRetention.ObjectsDefault
 		),
 		File = new FileOptions(
 			AccessFile: "access.cnf",

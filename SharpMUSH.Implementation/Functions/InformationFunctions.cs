@@ -441,6 +441,14 @@ public partial class Functions
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var toLocate = parser.CurrentState.Arguments["0"].Message;
 		var typeQuery = parser.CurrentState.Arguments["1"].Message.ToPlainText().ToUpper().Split(" ");
+
+		// A free number is PennMUSH's garbage object: no object to locate, but hastype() still answers for it.
+		if (typeQuery.Contains("GARBAGE") && DBRef.TryParse(toLocate.ToPlainText().Trim(), out var named) && named is { } number
+			&& await Mediator.Send(new IsFreeNumberQuery(number.Number)))
+		{
+			return new CallState(true);
+		}
+
 		var maybeLocate = await
 			LocateService.LocateAndNotifyIfInvalidWithCallState(parser, executor, executor, toLocate.ToPlainText(),
 				LocateFlags.All);
@@ -448,7 +456,7 @@ public partial class Functions
 		return maybeLocate switch
 		{
 			Error<CallState> error => error.Value,
-			AnySharpObject when typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT")
+			AnySharpObject when typeQuery.Any(x => x is not "PLAYER" and not "THING" and not "ROOM" and not "EXIT" and not "GARBAGE")
 				=> new CallState(ErrorMessages.Returns.NoSuchType),
 			AnySharpObject located => new CallState(typeQuery.Any(validType => located.HasType(validType)))
 		};

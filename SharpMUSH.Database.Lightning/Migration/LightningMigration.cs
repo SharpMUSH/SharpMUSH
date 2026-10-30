@@ -45,6 +45,7 @@ public partial class LightningDatabase
 		new(1, AttributeCountMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateAttributeCounts, ct)),
 		new(1, WikiTitleMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateWikiTitles, ct)),
 		new(1, ReferenceStampMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateReferenceStamps, ct)),
+		new(1, FreeNumberMigrationId, (db, _, ct) => db.Store.WriteAsync(MigrateFreeNumbers, ct)),
 	];
 
 	/// <summary>The world format this server writes and the newest it opens: the last core migration's.</summary>
@@ -470,7 +471,9 @@ public partial class LightningDatabase
 			MString.Plain(value)), WatchedAttributes.None.Names);
 
 	/// <summary>Raises <c>next_dbref</c> to (highest key in <c>obj</c>) + 1 when that is larger than what is stored — the floor a wiped-and-reimported world needs, never a ceiling this lowers.</summary>
-	private static void RecomputeNextDbref(ITx tx) => RecomputeCounter(tx, "next_dbref", Tables.Obj);
+	/// <summary>Raises <c>next_dbref</c> past every object and every number a recover entry holds.</summary>
+	private static void RecomputeNextDbref(ITx tx)
+		=> RaiseCounter(tx, "next_dbref", Math.Max(HighestKey(tx, Tables.Obj), HighestKey(tx, Tables.Recover)));
 
 	private static void EnsureServerState(ITx tx)
 	{

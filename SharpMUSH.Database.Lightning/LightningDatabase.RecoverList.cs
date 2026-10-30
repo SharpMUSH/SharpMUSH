@@ -164,6 +164,7 @@ public partial class LightningDatabase
 
 			DeleteObjectContent(tx, n);
 			tx.Delete(Tables.Recover, Keys.Dbref(n));
+			FreeNumberAt(tx, n, Never);
 			return true;
 		}, cancellationToken);
 

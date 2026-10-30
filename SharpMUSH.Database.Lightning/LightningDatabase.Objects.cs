@@ -106,7 +106,7 @@ public partial class LightningDatabase
 
 	/// <inheritdoc />
 	public ValueTask<bool> IsDbrefAvailableAsync(DBRef requested, CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult(Store.Read(tx => AllocateDbrefAt(tx, requested.Number) is not null));
+		=> ValueTask.FromResult(Store.Read(tx => MayTake(tx, requested.Number)));
 
 	/// <summary>The room rows themselves, once a dbref has been settled on.</summary>
 	private static DBRef WriteRoom(ITx tx, long dbref, string name, long ownerKey, long now, long modified)
@@ -436,7 +436,7 @@ public partial class LightningDatabase
 	}
 
 	public ValueTask<int> GetNextDbrefAsync(CancellationToken cancellationToken = default)
-		=> ValueTask.FromResult((int)Store.Read(ReadNextDbref));
+		=> ValueTask.FromResult((int)Store.Read(tx => DueFreeNumber(tx) ?? ReadNextDbref(tx)));
 
 	private int CountEdges(TableDef table, byte[] key, string what) => Store.Read(tx => CountEdges(tx, table, key, what));
 

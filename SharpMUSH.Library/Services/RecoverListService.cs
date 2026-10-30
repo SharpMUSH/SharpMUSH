@@ -197,6 +197,11 @@ public class RecoverListService(
 			await cleanup.ObjectsFreedAsync([entry.Objid], ct);
 		}
 
+		// The number comes due only once everything that named it by number has let go: a failed cleanup leaves it
+		// free for whoever asks for it, never handed out unasked.
+		if (ReusableAt(entry, DateTimeOffset.UtcNow) is { } due)
+			await mediator.Send(new SetFreeNumberDueCommand(entry.Objid.Number, due), ct);
+
 		var details = $"{entry.Type.ToLowerInvariant()} destroyed {entry.DestroyedAt:yyyy-MM-dd}";
 		if (actor is null)
 			await audit.RecordSystemAsync(AuditActions.RecoverPurge, Target(entry), details + ", past its retention", ct);
@@ -223,6 +228,16 @@ public class RecoverListService(
 		if (purged > 0) logger.LogInformation("Purged {Count} recover entries past their retention", purged);
 		return purged;
 	}
+
+	/// <summary>
+	/// When the allocator may hand a purged entry's number out unasked: once the entry would have expired, so purging
+	/// early frees the number for whoever asks for it but does not cut its quarantine short. Never, for a type kept
+	/// forever.
+	/// </summary>
+	private DateTimeOffset? ReusableAt(RecoverEntry entry, DateTimeOffset now)
+		=> RetentionFor(entry.Type) is { } keep
+			? entry.DestroyedAt + keep > now ? entry.DestroyedAt + keep : now
+			: null;
 
 	/// <summary>The objids every installed package records, whose entries stay for a package rollback to find.</summary>
 	private async ValueTask<HashSet<string>> PackageObjidsAsync()
