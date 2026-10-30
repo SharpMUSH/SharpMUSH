@@ -17,7 +17,7 @@ namespace SharpMUSH.Implementation.Functions;
 
 public partial class Functions
 {
-	[SharpFunction(Name = "sql", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["query", "rowsep", "fieldsep", "register"])]
+	[SharpFunction(Name = "sql", MinArgs = 1, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["query", "rowsep", "fieldsep", "register"])]
 	public async ValueTask<CallState> SQL(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var hadErrors = false;
@@ -125,7 +125,7 @@ public partial class Functions
 	/// identities: the attribute runs as the object it was read from, with the current executor as
 	/// its caller.
 	/// </remarks>
-	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular, ParameterNames = ["obj/attr", "query", "osep", "fieldnames"])]
+	[SharpFunction(Name = "mapsql", MinArgs = 2, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.HasSideFX, ParameterNames = ["obj/attr", "query", "osep", "fieldnames"])]
 	public async ValueTask<CallState> MapSql(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var hadErrors = false;
