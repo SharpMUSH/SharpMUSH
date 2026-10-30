@@ -18,6 +18,11 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 			? new MapSpaceDto(record.Space, record.Left, record.Bottom, record.Right, record.Top, record.Levels)
 			: new NotFound());
 
+	public async ValueTask<bool> HiddenAsync(AnySharpObject viewer, AnySharpObject map, int x, int y, int level, CancellationToken ct) =>
+		store.Window(map.Object().DBRef, level, x, y, x, y) is { } read
+		&& WorldPlaceData.Hidden(WorldPlaceData.Parse(read.Places.GetValueOrDefault((x, y))?.Data))
+		&& !await permissions.CanExamine(viewer, map);
+
 	public async ValueTask<MapCellsDto> CellsAsync(AnySharpObject viewer, AnySharpObject map, MapWindow window, CancellationToken ct)
 	{
 		var (level, left, bottom, right, top) = (window.Level, window.Left, window.Bottom, window.Right, window.Top);

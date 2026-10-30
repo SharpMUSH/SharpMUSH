@@ -100,7 +100,7 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 		var truncated = false;
 		// Only someone who controls the map may plan changes to it; they may change only the rooms they control.
 		var canEdit = await permissions.Controls(viewer, map);
-		var space = await SourceAsync(map, ct) is var (_, stored) ? stored : null;
+		var (source, space) = await SourceAsync(map, ct) is var (found, stored) ? (found, stored) : ((IWorldMapSource?)null, (MapSpaceDto?)null);
 
 		var rooms = new List<(AnySharpObject Room, MapRoomDto Dto)>();
 		var regions = new List<MapRoomDto>();
@@ -124,9 +124,15 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			if (await mediator.Send(new GetObjectNodeQuery(member.DBRef), ct) is not AnySharpObject room || !room.IsRoom) continue;
 			if (!await VisibleAsync(viewer, room, ct)) continue;
 			// A room's place is read as the room, as a region's is: a builder may dig a room into a map someone else owns.
-			// A room standing on a place of a stored map has no coordinates of its own: it is drawn at its place.
-			var place = space is null ? null : PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map);
-			var at = await NumbersAsync(room, room, position, ct) ?? place;
+			// A room standing on a place of a stored map has no coordinates of its own: it is drawn at its place, and left
+			// off the map with it when the place is hidden from the viewer.
+			var place = source is null ? null : PlacePosition(await OwnValueAsync(room, room, PlaceAttribute), map);
+			var at = await NumbersAsync(room, room, position, ct);
+			if (at is null && place is not null && source is not null)
+			{
+				if (await source.HiddenAsync(viewer, map, (int)place[0], (int)place[1], (int)place[2], ct)) continue;
+				at = place;
+			}
 			rooms.Add((room, new($"#{room.Object().DBRef.Number}", room.Object().Name, at,
 				Positive(await NumbersAsync(room, room, Size, ct)))
 			{
