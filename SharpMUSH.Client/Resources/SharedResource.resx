@@ -10520,4 +10520,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Go there</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Map settings</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Show</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Hide</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Map name</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Inside map</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Move</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>A map inside another shows on it as a region you can open.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Opens on level</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Set</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Picture</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Picture address</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Choose from the media library</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>The library has no pictures you can use.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Width (cells)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Height (cells)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Width (pixels)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Height (pixels)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Use the picture's size</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>That picture did not load.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Legend</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>A type is how rooms and places of a kind are drawn: a room's ENVIRONMENT or a world map's terrain.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Label</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Colour</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>No colour</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Icon</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>No icon</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Set type</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Give the type its name.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>A type is letters, digits, _ and - only.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Rename map {0} to {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Put {0} inside {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Take {0} out of the map it is in</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Set {0} to {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Clear {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Legend for {0}</value>
+  </data>
 </root>

@@ -54,6 +54,9 @@ public static class PoseTypeStyle
 		["bolt"] = Icons.Material.Outlined.Bolt,
 	};
 
+	/// <summary>The <c>tone()</c> colour names this portal draws, for a picker.</summary>
+	public static IEnumerable<string> ToneNames => ToneTokens.Keys;
+
 	/// <summary>The token a tone names (<c>--text-dim</c>), or null for no tone or one this portal does not know.</summary>
 	public static string? ToneToken(string? tone) =>
 		!string.IsNullOrWhiteSpace(tone) && ToneTokens.TryGetValue(tone.Trim(), out var token) ? token : null;

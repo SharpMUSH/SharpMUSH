@@ -6923,4 +6923,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Gå dit</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Kartinställningar</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Visa</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Dölj</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Kartans namn</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Inuti kartan</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Ingen</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Flytta</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>En karta inuti en annan visas på den som ett område du kan öppna.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Öppnas på nivå</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Ange</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Bild</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Bildens adress</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Välj från mediebiblioteket</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>Biblioteket har inga bilder du kan använda.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Bredd (rutor)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Höjd (rutor)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Bredd (pixlar)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Höjd (pixlar)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Använd bildens storlek</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Bilden lästes inte in.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Teckenförklaring</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>En typ är hur rum och platser av ett slag ritas: ett rums ENVIRONMENT eller en världskartas terräng.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Redigera</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Typ</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Etikett</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Färg</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Ingen färg</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Ikon</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Ingen ikon</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Ange typ</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Ge typen ett namn.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>En typ består bara av bokstäver, siffror, _ och -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Byt namn på kartan {0} till {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Lägg {0} inuti {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Ta ut {0} ur kartan den ligger i</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Sätt {0} till {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Rensa {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Teckenförklaring för {0}</value>
+  </data>
 </root>

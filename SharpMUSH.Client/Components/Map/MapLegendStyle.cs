@@ -35,6 +35,9 @@ public static class MapLegendStyle
 		["flag"] = Icons.Material.Outlined.Flag,
 	};
 
+	/// <summary>The <c>tone()</c> colour names a legend may use, for the builder.</summary>
+	public static IEnumerable<string> ToneNames => PoseTypeStyle.ToneNames;
+
 	/// <summary>The icon names a legend may use, for the help and the builder.</summary>
 	public static IEnumerable<string> IconNames => IconSvgs.Keys;
 

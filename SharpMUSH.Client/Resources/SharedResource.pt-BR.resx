@@ -6923,4 +6923,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Ir até lá</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Configurações do mapa</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Mostrar</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Ocultar</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Nome do mapa</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Dentro do mapa</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Nenhum</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Mover</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Um mapa dentro de outro aparece nele como uma região que se pode abrir.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Abre no nível</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Definir</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Imagem</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Endereço da imagem</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Escolher da biblioteca de mídia</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>A biblioteca não tem imagens que você possa usar.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Largura (células)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Altura (células)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Largura (pixels)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Altura (pixels)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Usar o tamanho da imagem</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>A imagem não carregou.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Legenda</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Um tipo é como salas e lugares de um tipo são desenhados: o ENVIRONMENT de uma sala ou o terreno de um mapa-múndi.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Editar</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Tipo</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Rótulo</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Cor</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Sem cor</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Ícone</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Sem ícone</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Definir tipo</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Dê um nome ao tipo.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Um tipo só tem letras, dígitos, _ e -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Renomear o mapa {0} para {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Colocar {0} dentro de {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Tirar {0} do mapa em que está</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Definir {0} como {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Limpar {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Legenda de {0}</value>
+  </data>
 </root>

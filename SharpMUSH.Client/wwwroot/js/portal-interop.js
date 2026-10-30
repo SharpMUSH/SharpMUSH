@@ -237,6 +237,17 @@
         panel.scrollIntoView({ block: "nearest", behavior: still ? "auto" : "smooth" });
     };
 
+    // A picture's size in pixels, [width, height], or null when it does not load: the map settings take a picture
+    // map's size from its backdrop.
+    window.SharpMUSH.imageSize = function (url) {
+        return new Promise(function (resolve) {
+            var image = new Image();
+            image.onload = function () { resolve([image.naturalWidth, image.naturalHeight]); };
+            image.onerror = function () { resolve(null); };
+            image.src = url;
+        });
+    };
+
     // The terminal output a pointer went down on (a drag of its scrollbar), until it comes up anywhere.
     // One pair of window listeners for every terminal: a pair per terminal stayed on window after the
     // terminal unmounted and kept its element, with its scrollback, alive.

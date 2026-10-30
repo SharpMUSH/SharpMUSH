@@ -240,7 +240,9 @@ public class WorldMapPageTests : TrackingBunitContext
 			.AddSingleton<ServerInfoService>(serverInfo)
 			.AddSingleton<IStringLocalizer<SharedResource>, EchoLocalizer<SharedResource>>()
 			.AddSingleton(sp => new WorldMapService(sp.GetRequiredService<IHttpClientFactory>(), serverInfo))
-			.AddSingleton(sp => new GameCommandService(sp.GetRequiredService<IHttpClientFactory>()));
+			.AddSingleton(sp => new GameCommandService(sp.GetRequiredService<IHttpClientFactory>()))
+			.AddLogging()
+			.AddSingleton<WikiAssetService>();
 		JSInterop.Mode = JSRuntimeMode.Loose;
 	}
 
@@ -657,9 +659,24 @@ public class WorldMapPageTests : TrackingBunitContext
 			.Because("@open names the exit it made even when the way back could not be opened");
 	}
 
-	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync()
+	[Test]
+	public async Task TheMapsSettingsJoinThePlan()
+	{
+		var cut = await EditWorksAsync(authorized: true);
+
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapSettingsShow").ClickAsync();
+		cut.WaitForAssertion(() => cut.Find(".map-settings input"));
+		await cut.Find(".map-settings input").InputAsync("Old works");
+		await cut.FindAll(".map-settings button").First(button => button.TextContent.Trim() == "NavMapSetName").ClickAsync();
+		await cut.FindAll(".map-builder button").First(button => button.TextContent.Trim() == "NavMapReview").ClickAsync();
+
+		await Assert.That(cut.Find(".map-review").TextContent).Contains("@name #55=Old works");
+	}
+
+	private async Task<IRenderedComponent<SharpMUSH.Client.Pages.WorldMap>> EditWorksAsync(bool authorized = false)
 	{
 		Arrange();
+		if (authorized) AddAuthorization().SetAuthorized("Sailor");
 		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 55));
 		cut.WaitForAssertion(() => cut.Find(".map-room--here"));
 		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();

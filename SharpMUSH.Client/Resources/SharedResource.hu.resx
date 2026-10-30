@@ -6923,4 +6923,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Odamegyek</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Térkép beállításai</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Megjelenítés</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Elrejtés</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Térkép neve</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Melyik térképen belül</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Nincs</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Áthelyezés</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>A másik térképen belüli térkép ott megnyitható területként jelenik meg.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Ezen a szinten nyílik</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Beállítás</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Kép</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Kép címe</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Választás a médiatárból</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>A médiatárban nincs használható kép.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Szélesség (cella)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Magasság (cella)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Szélesség (pixel)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Magasság (pixel)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>A kép méretének használata</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>A kép nem töltődött be.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Jelmagyarázat</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>A típus azt adja meg, hogyan rajzolódnak egy fajta szobái és helyei: a szoba ENVIRONMENT értéke vagy a világtérkép terepe.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Szerkesztés</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Típus</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Felirat</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Szín</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Nincs szín</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Ikon</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Nincs ikon</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Típus beállítása</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Adj nevet a típusnak.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>A típus csak betűket, számjegyeket, _ és - jelet tartalmazhat.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>{0} térkép átnevezése erre: {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>{0} áthelyezése ebbe: {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>{0} kivétele a tartalmazó térképből</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>{0} beállítása erre: {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>{0} törlése</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Jelmagyarázat: {0}</value>
+  </data>
 </root>

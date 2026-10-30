@@ -164,7 +164,7 @@
                         {
                             <KitCard Class="map-room-panel" Title="@Loc["NavMapBuilder"]">
                                 <MapBuilder Plan="_plan" Layout="Shown" Level="_level" Selected="@_selected" Cell="_cell"
-                                            Character="@CharacterId" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
+                                            Character="@CharacterId" Maps="@(_maps ?? [])" OnChanged="PlanChangedAsync" OnApplied="AppliedAsync" />
                             </KitCard>
                         }
                         else

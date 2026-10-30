@@ -28,6 +28,7 @@
         }
         @Tray()
         @LevelEditor()
+        @Settings()
         @Checks()
         <div class="map-builder-footer">
             <span>@Loc["NavMapChangesWaiting", Plan.Changes.Count]</span>
@@ -50,6 +51,9 @@
 
     /// <summary>The objid of the character the commands run as.</summary>
     [Parameter] public string? Character { get; set; }
+
+    /// <summary>The maps the viewer may see, for the map settings' parent.</summary>
+    [Parameter] public IReadOnlyList<MapSummaryDto> Maps { get; set; } = [];
 
     /// <summary>The plan changed: the page draws the map again, and chooses <c>string</c> when given (a room just dug).</summary>
     [Parameter] public EventCallback<string?> OnChanged { get; set; }
@@ -608,6 +612,26 @@
         </section>
     };
 
+    private bool _settingsOpen;
+
+    /// <summary>The map object's own settings, folded away until asked for.</summary>
+    private RenderFragment Settings() => __builder =>
+    {
+        <section class="map-builder-section" aria-labelledby="map-settings-title">
+            <div class="map-builder-row">
+                <h3 id="map-settings-title" class="map-builder-title">@Loc["NavMapSettings"]</h3>
+                <MudButton Variant="Variant.Text" aria-expanded="@(_settingsOpen ? "true" : "false")" aria-controls="map-settings-body"
+                           OnClick="() => _settingsOpen = !_settingsOpen">@Loc[_settingsOpen ? "NavMapSettingsHide" : "NavMapSettingsShow"]</MudButton>
+            </div>
+            @if (_settingsOpen)
+            {
+                <div id="map-settings-body">
+                    <MapSettings Plan="Plan" Maps="Maps" OnChanged="() => OnChanged.InvokeAsync(null)" />
+                </div>
+            }
+        </section>
+    };
+
     private async Task NameLevelAsync()
     {
         Plan.NameLevel(Level, _levelName);
@@ -707,6 +731,8 @@
     private string Title(MapChange change) => change switch
     {
         { Kind: MapChangeKind.NameLevel, Name.Length: 0 } => Loc["NavMapPlanClearLevel", change.Other ?? ""],
+        { Kind: MapChangeKind.MapSetting, Other.Length: 0 } => Loc["NavMapPlanClearSetting", change.Name],
+        { Kind: MapChangeKind.MoveMap, Other.Length: 0 } => Loc["NavMapPlanUnparentMap", change.Name],
         _ => Loc[$"NavMapPlan{change.Kind}", change.Name, change.Other ?? ""],
     };
 

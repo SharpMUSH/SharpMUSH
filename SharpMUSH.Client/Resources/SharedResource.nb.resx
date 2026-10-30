@@ -6923,4 +6923,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Gå dit</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Kartinnstillinger</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Vis</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Skjul</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Kartets navn</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Inne i kartet</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Ingen</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Flytt</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Et kart inne i et annet vises der som et område du kan åpne.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Åpner på nivå</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Angi</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Bilde</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Bildets adresse</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Velg fra mediebiblioteket</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>Biblioteket har ingen bilder du kan bruke.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Bredde (ruter)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Høyde (ruter)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Bredde (piksler)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Høyde (piksler)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Bruk bildets størrelse</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Bildet ble ikke lastet.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Tegnforklaring</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>En type er hvordan rom og steder av et slag tegnes: et roms ENVIRONMENT eller et verdenskarts terreng.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Rediger</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Type</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Etikett</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Farge</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Ingen farge</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Ikon</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Intet ikon</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Angi type</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Gi typen et navn.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>En type består bare av bokstaver, sifre, _ og -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Gi kartet {0} nytt navn: {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Legg {0} inn i {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Ta {0} ut av kartet det er i</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Sett {0} til {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Tøm {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Tegnforklaring for {0}</value>
+  </data>
 </root>

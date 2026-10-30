@@ -81,7 +81,7 @@ public static class BuiltInRoles
 
 	private static readonly string[] GuestScopes = [PortalPermission.GamePower("Guest")];
 
-	private static readonly string[] BuilderScopes = [PortalPermission.DiagnosticsProfile, PortalPermission.GamePower("Builder")];
+	private static readonly string[] BuilderScopes = [PortalPermission.DiagnosticsProfile, PortalPermission.GamePower("Builder"), PortalPermission.MediaUpload];
 
 	/// <summary>
 	/// PennMUSH royalty sees everything and changes little, so it views players rather than moderating

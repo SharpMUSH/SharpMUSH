@@ -6923,4 +6923,118 @@
   <data name="NavMapGoThere" xml:space="preserve">
     <value>Перейти туда</value>
   </data>
+  <data name="NavMapSettings" xml:space="preserve">
+    <value>Настройки карты</value>
+  </data>
+  <data name="NavMapSettingsShow" xml:space="preserve">
+    <value>Показать</value>
+  </data>
+  <data name="NavMapSettingsHide" xml:space="preserve">
+    <value>Скрыть</value>
+  </data>
+  <data name="NavMapSettingsName" xml:space="preserve">
+    <value>Название карты</value>
+  </data>
+  <data name="NavMapSettingsParent" xml:space="preserve">
+    <value>Внутри карты</value>
+  </data>
+  <data name="NavMapSettingsNoParent" xml:space="preserve">
+    <value>Нет</value>
+  </data>
+  <data name="NavMapSettingsMove" xml:space="preserve">
+    <value>Переместить</value>
+  </data>
+  <data name="NavMapSettingsParentHelp" xml:space="preserve">
+    <value>Карта внутри другой показывается на ней как область, которую можно открыть.</value>
+  </data>
+  <data name="NavMapSettingsOpenLevel" xml:space="preserve">
+    <value>Открывается на уровне</value>
+  </data>
+  <data name="NavMapSettingsSet" xml:space="preserve">
+    <value>Задать</value>
+  </data>
+  <data name="NavMapSettingsPicture" xml:space="preserve">
+    <value>Изображение</value>
+  </data>
+  <data name="NavMapSettingsPictureUrl" xml:space="preserve">
+    <value>Адрес изображения</value>
+  </data>
+  <data name="NavMapSettingsLibrary" xml:space="preserve">
+    <value>Выбрать из медиатеки</value>
+  </data>
+  <data name="NavMapSettingsLibraryEmpty" xml:space="preserve">
+    <value>В медиатеке нет изображений, которые можно использовать.</value>
+  </data>
+  <data name="NavMapSettingsWidth" xml:space="preserve">
+    <value>Ширина (клетки)</value>
+  </data>
+  <data name="NavMapSettingsHeight" xml:space="preserve">
+    <value>Высота (клетки)</value>
+  </data>
+  <data name="NavMapSettingsWidthPixels" xml:space="preserve">
+    <value>Ширина (пиксели)</value>
+  </data>
+  <data name="NavMapSettingsHeightPixels" xml:space="preserve">
+    <value>Высота (пиксели)</value>
+  </data>
+  <data name="NavMapSettingsFromPicture" xml:space="preserve">
+    <value>Взять размер изображения</value>
+  </data>
+  <data name="NavMapSettingsPictureFailed" xml:space="preserve">
+    <value>Изображение не загрузилось.</value>
+  </data>
+  <data name="NavMapSettingsLegend" xml:space="preserve">
+    <value>Легенда</value>
+  </data>
+  <data name="NavMapSettingsLegendHelp" xml:space="preserve">
+    <value>Тип задаёт, как рисуются комнаты и места одного вида: ENVIRONMENT комнаты или местность карты мира.</value>
+  </data>
+  <data name="NavMapSettingsEdit" xml:space="preserve">
+    <value>Изменить</value>
+  </data>
+  <data name="NavMapSettingsType" xml:space="preserve">
+    <value>Тип</value>
+  </data>
+  <data name="NavMapSettingsLabel" xml:space="preserve">
+    <value>Подпись</value>
+  </data>
+  <data name="NavMapSettingsTone" xml:space="preserve">
+    <value>Цвет</value>
+  </data>
+  <data name="NavMapSettingsNoTone" xml:space="preserve">
+    <value>Без цвета</value>
+  </data>
+  <data name="NavMapSettingsIcon" xml:space="preserve">
+    <value>Значок</value>
+  </data>
+  <data name="NavMapSettingsNoIcon" xml:space="preserve">
+    <value>Без значка</value>
+  </data>
+  <data name="NavMapSettingsSetType" xml:space="preserve">
+    <value>Задать тип</value>
+  </data>
+  <data name="NavMapSettingsTypeMissing" xml:space="preserve">
+    <value>Дайте типу имя.</value>
+  </data>
+  <data name="NavMapSettingsTypeCharacters" xml:space="preserve">
+    <value>Тип может содержать только буквы, цифры, _ и -.</value>
+  </data>
+  <data name="NavMapPlanRenameMap" xml:space="preserve">
+    <value>Переименовать карту {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanMoveMap" xml:space="preserve">
+    <value>Поместить {0} в {1}</value>
+  </data>
+  <data name="NavMapPlanUnparentMap" xml:space="preserve">
+    <value>Убрать {0} из карты, в которой она находится</value>
+  </data>
+  <data name="NavMapPlanMapSetting" xml:space="preserve">
+    <value>Задать {0}: {1}</value>
+  </data>
+  <data name="NavMapPlanClearSetting" xml:space="preserve">
+    <value>Очистить {0}</value>
+  </data>
+  <data name="NavMapPlanLegend" xml:space="preserve">
+    <value>Легенда для {0}</value>
+  </data>
 </root>

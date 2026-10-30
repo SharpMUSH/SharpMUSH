@@ -1,0 +1,288 @@
+@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+@using SharpMUSH.Library.API
+@using SharpMUSH.Library.Authorization
+@using SharpMUSH.Library.DiscriminatedUnions
+@inject WikiAssetService Library
+@inject IAuthorizationService Authorization
+@inject IJSRuntime JS
+@inject IStringLocalizer<SharedResource> Loc
+
+@* The map object itself, in builder mode: its name, the map it sits inside, the level it opens on, its picture and
+   size, and its legend. Each change joins the plan as the command a builder would type. *@
+<div class="map-settings">
+    <div class="map-builder-row">
+        <MudTextField T="string" @bind-Value="_name" Label="@Loc["NavMapSettingsName"]" Variant="Variant.Outlined" Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Disabled="@(_name.Trim().Length == 0 || _name.Trim() == Shown.Map.Name)"
+                   OnClick="RenameAsync">@Loc["NavMapSetName"]</MudButton>
+    </div>
+
+    <div class="map-builder-row">
+        <MudSelect T="string" @bind-Value="_parent" Label="@Loc["NavMapSettingsParent"]" Variant="Variant.Outlined" Dense="true">
+            <MudSelectItem T="string" Value="@None">@Loc["NavMapSettingsNoParent"]</MudSelectItem>
+            @foreach (var map in Maps.Where(map => map.Id != Shown.Map.Id))
+            {
+                <MudSelectItem T="string" Value="@map.Id">@map.Name</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Outlined" Disabled="@(_parent == (Shown.Map.Parent ?? None))" OnClick="MoveAsync">@Loc["NavMapSettingsMove"]</MudButton>
+    </div>
+    <p class="map-note">@Loc["NavMapSettingsParentHelp"]</p>
+
+    @if (!Graph)
+    {
+        <div class="map-builder-row">
+            <MudNumericField T="int?" @bind-Value="_level" Label="@Loc["NavMapSettingsOpenLevel"]" Variant="Variant.Outlined" />
+            <MudButton Variant="Variant.Outlined" Disabled="@(_level == Shown.Level)" OnClick="OpenLevelAsync">@Loc["NavMapSettingsSet"]</MudButton>
+        </div>
+    }
+    else
+    {
+        <h4 class="map-builder-subtitle">@Loc["NavMapSettingsPicture"]</h4>
+        <div class="map-builder-row">
+            <MudTextField T="string" @bind-Value="_backdrop" Label="@Loc["NavMapSettingsPictureUrl"]" Variant="Variant.Outlined" Immediate="true" />
+            <MudIconButton Icon="@Icons.Material.Outlined.PhotoLibrary" aria-label="@Loc["NavMapSettingsLibrary"]" title="@Loc["NavMapSettingsLibrary"]"
+                           aria-expanded="@(_library is not null ? "true" : "false")" OnClick="ToggleLibraryAsync" />
+            <MudButton Variant="Variant.Outlined" Disabled="@(_backdrop.Trim() == (Shown.Backdrop ?? ""))" OnClick="BackdropAsync">@Loc["NavMapSettingsSet"]</MudButton>
+        </div>
+        @if (_library is not null)
+        {
+            <div class="map-settings-library" role="group" aria-label="@Loc["NavMapSettingsLibrary"]">
+                @if (_canUpload)
+                {
+                    <MudFileUpload T="IBrowserFile" Accept=".png,.jpg,.jpeg,.gif,.webp,.svg" FilesChanged="UploadAsync"
+                                   MaximumFileCount="1" MaxFileSize="@MaxUploadBytes" Disabled="_uploading" />
+                }
+                @if (_library.Count == 0)
+                {
+                    <span class="map-note">@Loc["NavMapSettingsLibraryEmpty"]</span>
+                }
+                <div class="map-settings-tiles">
+                    @foreach (var asset in _library)
+                    {
+                        <button type="button" class="map-settings-tile" title="@asset.FileName" @onclick="() => PickAsync(asset.Url)">
+                            <img src="@ApiUrl.Resolve(asset.Url)" alt="" />
+                            <span>@asset.FileName</span>
+                        </button>
+                    }
+                </div>
+            </div>
+        }
+    }
+    @if (_problem is not null)
+    {
+        <p class="map-builder-warning" role="alert">@_problem</p>
+    }
+
+    <div class="map-builder-row">
+        <MudNumericField T="double?" @bind-Value="_width" Label="@Loc[Graph ? "NavMapSettingsWidthPixels" : "NavMapSettingsWidth"]" Variant="Variant.Outlined" Min="1" />
+        <MudNumericField T="double?" @bind-Value="_height" Label="@Loc[Graph ? "NavMapSettingsHeightPixels" : "NavMapSettingsHeight"]" Variant="Variant.Outlined" Min="1" />
+        @if (Graph)
+        {
+            <MudButton Variant="Variant.Text" Disabled="@string.IsNullOrWhiteSpace(_backdrop)" OnClick="SizeFromPictureAsync">@Loc["NavMapSettingsFromPicture"]</MudButton>
+        }
+        <MudButton Variant="Variant.Outlined" Disabled="@(_width is not > 0 || _height is not > 0)" OnClick="SizeAsync">@Loc["NavMapSettingsSet"]</MudButton>
+    </div>
+
+    <h4 class="map-builder-subtitle">@Loc["NavMapSettingsLegend"]</h4>
+    <p class="map-note">@Loc["NavMapSettingsLegendHelp"]</p>
+    @if (Shown.Legend.Count > 0)
+    {
+        <ul class="map-builder-list">
+            @foreach (var entry in Shown.Legend)
+            {
+                <li class="map-builder-row">
+                    <span class="map-settings-swatch" style="@MapLegendStyle.Style(entry)" aria-hidden="true">
+                        @if (MapLegendStyle.Svg(entry.Icon) is { } svg)
+                        {
+                            <MudIcon Icon="@svg" Size="Size.Small" />
+                        }
+                        else
+                        {
+                            @MapLegendStyle.Glyph(entry.Icon)
+                        }
+                    </span>
+                    <span>@entry.Label <span class="map-builder-dim">@entry.Type</span></span>
+                    <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="() => EditLegend(entry)">@Loc["NavMapSettingsEdit"]</MudButton>
+                </li>
+            }
+        </ul>
+    }
+    <div class="map-builder-fields">
+        <MudTextField T="string" @bind-Value="_type" Label="@Loc["NavMapSettingsType"]" Variant="Variant.Outlined" Immediate="true" />
+        <MudTextField T="string" @bind-Value="_label" Label="@Loc["NavMapSettingsLabel"]" Variant="Variant.Outlined" Immediate="true" />
+        <MudSelect T="string" @bind-Value="_tone" Label="@Loc["NavMapSettingsTone"]" Variant="Variant.Outlined" Dense="true">
+            <MudSelectItem T="string" Value="@("")">@Loc["NavMapSettingsNoTone"]</MudSelectItem>
+            @foreach (var tone in MapLegendStyle.ToneNames)
+            {
+                <MudSelectItem T="string" Value="@tone"><span class="map-settings-swatch" style="@MapLegendStyle.Style(tone)"></span> @tone</MudSelectItem>
+            }
+        </MudSelect>
+        <MudSelect T="string" @bind-Value="_icon" Label="@Loc["NavMapSettingsIcon"]" Variant="Variant.Outlined" Dense="true">
+            <MudSelectItem T="string" Value="@("")">@Loc["NavMapSettingsNoIcon"]</MudSelectItem>
+            @foreach (var icon in MapLegendStyle.IconNames)
+            {
+                <MudSelectItem T="string" Value="@icon"><MudIcon Icon="@MapLegendStyle.Svg(icon)" Size="Size.Small" /> @icon</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Outlined" Disabled="@(TypeProblem is not null)" OnClick="LegendAsync">@Loc["NavMapSettingsSetType"]</MudButton>
+    </div>
+    @if (_type.Length > 0 && TypeProblem is { } problem)
+    {
+        <p class="map-builder-warning">@problem</p>
+    }
+</div>
+
+@code {
+    /// <summary>The server's upload limit (WikiAssetController).</summary>
+    private const long MaxUploadBytes = 10_485_760;
+
+    /// <summary>The parent choice that is no map.</summary>
+    private const string None = "";
+
+    [Parameter, EditorRequired] public MapPlan Plan { get; set; } = default!;
+
+    /// <summary>The maps the viewer may see, to choose a parent from.</summary>
+    [Parameter] public IReadOnlyList<MapSummaryDto> Maps { get; set; } = [];
+
+    /// <summary>The plan changed.</summary>
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
+    private MapDto Shown => Plan.Preview();
+    private bool Graph => Plan.Map.Map.Kind == MapKinds.Graph;
+
+    private string _name = "";
+    private string _parent = None;
+    private int? _level;
+    private string _backdrop = "";
+    private double? _width, _height;
+    private string _type = "", _label = "", _tone = "", _icon = "";
+    private List<LibraryAssetInfo>? _library;
+    private bool _canUpload, _uploading;
+    private string? _problem;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var shown = Shown;
+        (_name, _parent, _level, _backdrop) = (shown.Map.Name, shown.Map.Parent ?? None, shown.Level, shown.Backdrop ?? "");
+        (_width, _height) = shown.Size is [var width, var height] ? (width, height) : ((double?)null, (double?)null);
+        if (AuthState is not null)
+            _canUpload = (await Authorization.AuthorizeAsync((await AuthState).User, PortalPermission.MediaUpload)).Succeeded;
+    }
+
+    /// <summary>Why the legend fields cannot be set as they stand, or null when they can.</summary>
+    private string? TypeProblem =>
+        _type.Trim().Length == 0 ? Loc["NavMapSettingsTypeMissing"].Value
+        : !_type.Trim().All(letter => char.IsAsciiLetterOrDigit(letter) || letter is '_' or '-') ? Loc["NavMapSettingsTypeCharacters"].Value
+        : null;
+
+    private void EditLegend(MapLegendDto entry) =>
+        (_type, _label, _tone, _icon) = (entry.Type, entry.Label == entry.Type ? "" : entry.Label, entry.Tone ?? "", entry.Icon ?? "");
+
+    private Task RenameAsync()
+    {
+        Plan.RenameMap(_name);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task MoveAsync()
+    {
+        Plan.MoveMap(_parent == None ? null : _parent, Maps.FirstOrDefault(map => map.Id == _parent)?.Name);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task OpenLevelAsync()
+    {
+        Plan.SetDefaultLevel(_level);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task BackdropAsync()
+    {
+        Plan.SetBackdrop(_backdrop);
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task SizeAsync()
+    {
+        if (_width is not > 0 || _height is not > 0) return Task.CompletedTask;
+        Plan.SetMapSize(Math.Round(_width.Value), Math.Round(_height.Value));
+        return OnChanged.InvokeAsync();
+    }
+
+    private Task LegendAsync()
+    {
+        if (TypeProblem is not null) return Task.CompletedTask;
+        Plan.SetLegend(_type, _label, _tone, _icon);
+        (_type, _label, _tone, _icon) = ("", "", "", "");
+        return OnChanged.InvokeAsync();
+    }
+
+    /// <summary>The picture's own size in pixels, as the map's.</summary>
+    private async Task SizeFromPictureAsync()
+    {
+        _problem = null;
+        double[]? size;
+        try
+        {
+            size = await JS.InvokeAsync<double[]?>("SharpMUSH.imageSize", ApiUrl.Resolve(_backdrop.Trim()));
+        }
+        catch (JSException)
+        {
+            size = null;
+        }
+        if (size is [var width, var height])
+            (_width, _height) = (width, height);
+        else
+            _problem = Loc["NavMapSettingsPictureFailed"];
+    }
+
+    private async Task ToggleLibraryAsync()
+    {
+        if (_library is not null)
+        {
+            _library = null;
+            return;
+        }
+        _library = await Library.LibraryAsync(take: 200) switch
+        {
+            List<LibraryAssetInfo> assets => [.. assets.Where(asset => asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))],
+            _ => [],
+        };
+    }
+
+    private async Task PickAsync(string url)
+    {
+        (_backdrop, _library) = (url, null);
+        await SizeFromPictureAsync();
+    }
+
+    private async Task UploadAsync(IBrowserFile? file)
+    {
+        if (file is null) return;
+        (_uploading, _problem) = (true, null);
+        try
+        {
+            await using var stream = file.OpenReadStream(MaxUploadBytes);
+            switch (await Library.UploadAsync(stream, file.Name, file.ContentType))
+            {
+                case UploadedAssetInfo info:
+                    await PickAsync(info.Url);
+                    break;
+                case ApiFailure failure:
+                    _problem = Loc["WkUploadFailed", failure.Message];
+                    break;
+            }
+        }
+        catch (IOException ex)
+        {
+            _problem = Loc["WkUploadError", ex.Message];
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+}
