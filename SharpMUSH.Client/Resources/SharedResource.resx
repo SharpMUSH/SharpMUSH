@@ -10760,4 +10760,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Take the placed room off {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Place room</value>
+  </data>
 </root>

@@ -7163,4 +7163,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Убрать поставленную комнату с {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Поставить комнату</value>
+  </data>
 </root>

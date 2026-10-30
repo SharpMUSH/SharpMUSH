@@ -764,7 +764,7 @@
                 <MudTextField T="string" @bind-Value="_placeRoom" Label="@Loc["NavMapPlaceRoomField"]" Variant="Variant.Outlined" Immediate="true"
                               HelperText="@_placeRoomProblem" Error="@(_placeRoomProblem is not null)" />
                 <MudButton Variant="Variant.Outlined" Disabled="@(_placeRoom.Trim() is { Length: > 0 } typed && !MapPlan.IsDbref(typed))"
-                           OnClick="() => PlaceRoomAsync(x, y)">@Loc["NavMapPlaceRoom"]</MudButton>
+                           OnClick="() => PlaceRoomAsync(x, y)">@Loc["NavMapPlaceRoomHere"]</MudButton>
             </div>
         </section>
     };

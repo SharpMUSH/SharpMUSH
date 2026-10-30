@@ -7163,4 +7163,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Ukloni postavljenu sobu s {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Postavi sobu</value>
+  </data>
 </root>

@@ -6472,4 +6472,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Retirer la salle placée de {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Placer la salle</value>
+  </data>
 </root>

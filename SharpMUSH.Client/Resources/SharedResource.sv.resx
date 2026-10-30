@@ -7163,4 +7163,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Ta bort det placerade rummet från {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Placera rum</value>
+  </data>
 </root>

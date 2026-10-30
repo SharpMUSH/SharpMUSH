@@ -7163,4 +7163,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>Az elhelyezett szoba levétele innen: {0}</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>Szoba elhelyezése</value>
+  </data>
 </root>

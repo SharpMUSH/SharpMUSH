@@ -7163,4 +7163,7 @@
   <data name="NavMapPlanUnplaceRoom" xml:space="preserve">
     <value>从 {0} 移除已放置的房间</value>
   </data>
+  <data name="NavMapPlaceRoomHere" xml:space="preserve">
+    <value>放置房间</value>
+  </data>
 </root>
