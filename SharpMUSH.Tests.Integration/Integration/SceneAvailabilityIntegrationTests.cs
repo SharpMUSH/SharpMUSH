@@ -327,6 +327,66 @@ public class SceneAvailabilityIntegrationTests
 	}
 
 	[Test]
+	public async Task AnAccountsCharactersAreListedAndCountedTogether()
+	{
+		try
+		{
+			await InstallAsync();
+			var ann = await Player("AvAcAnn");
+			var bea = await Player("AvAcBea");
+			var cleo = await Player("AvAcCleo");
+			var accounts = WebAppFactoryArg.Services.GetRequiredService<IAccountService>();
+			var account = (await accounts.CreateAccountAsync(TestIsolationHelpers.GenerateUniqueName("avacct").ToLowerInvariant(), null,
+				"correct horse battery")).Expect<SharpAccount>();
+			foreach (var player in new[] { ann, bea })
+			{
+				await accounts.AttachCharacterAsync(account.Id!,
+					(await Mediator.Send(new GetObjectNodeQuery(player.DbRef))).Expect<AnySharpObject>().Expect<SharpPlayer>());
+				await God($"&TZ #{player.DbRef.Number}=UTC");
+			}
+			await God($"&TZ #{cleo.DbRef.Number}=UTC");
+			var annName = await Think($"name(#{ann.DbRef.Number})");
+			var beaName = await Think($"name(#{bea.DbRef.Number})");
+			var cleoName = await Think($"name(#{cleo.DbRef.Number})");
+			var annObjid = await Think($"objid(#{ann.DbRef.Number})");
+			var beaObjid = await Think($"objid(#{bea.DbRef.Number})");
+			var beaKey = await KeyOf(bea);
+
+			// Ann is busy on weekdays from 9 to 5; Bea, on the same account, on Mondays from 18:00 to 20:00.
+			await EntryAsync(await KeyOf(ann), 1, "busy", ("REPEAT", "weekly"), ("DAYS", "mon tue wed thu fri"), ("DATE", "2026-10-01"),
+				("TIME", "09:00"), ("MINUTES", "480"), ("ZONE", "UTC"), ("NOTE", "Work"));
+			await God($"&PLAYER`{beaKey} {Calendar}={beaObjid}");
+			await EntryAsync(beaKey, 1, "busy", ("REPEAT", "weekly"), ("DAYS", "mon"), ("DATE", "2026-10-01"),
+				("TIME", "18:00"), ("MINUTES", "120"), ("ZONE", "UTC"), ("NOTE", "Raid night"));
+
+			// Ann lists both, Bea's numbered with her name, and her week counts Bea's Monday evening.
+			var mine = await As(ann, "+avail");
+			await Assert.That(mine).Contains("Work").And.Contains($"{beaName}/1").And.Contains("Raid night").And.Contains("18:00-20:00");
+
+			// Cleo sees Ann alone: nothing of Bea's.
+			var seen = await As(cleo, $"+avail {annName}");
+			await Assert.That(seen).Contains("Availability:").And.DoesNotContain("18:00-20:00").And.DoesNotContain(beaName);
+
+			// Finding a time, Ann is free only when Bea is too: Monday's evening run starts at 20:00, not 17:00.
+			await Assert.That(await Think($"first(extract(u({Avail}/FUN`FIND`RUNS,{annObjid},1792368000,336,4),2,1),:)"))
+				.IsEqualTo("1792429200");
+			await Assert.That(await Think($"first(extract(u({Avail}/FUN`FIND`RUNS,{annObjid},1792368000,336,4,{annObjid} {beaObjid}),2,1),:)"))
+				.IsEqualTo("1792440000");
+
+			await Assert.That(await As(ann, $"+avail/remove {cleoName}/1")).Contains($"'{cleoName}' is not one of your characters.");
+			await Assert.That(await As(ann, $"+avail/remove {beaName}/2")).Contains($"You have no entry {beaName}/2.");
+			await Assert.That(await As(ann, $"+avail/skip {beaName}/1=2099-01-05")).Contains($"Entry {beaName}/1 leaves out Mon 5 Jan 2099.");
+			await Assert.That(await As(ann, $"+avail/remove {beaName}/1")).Contains($"Removed {beaName}/1:");
+			await Assert.That(await Think($"hasattr({Calendar},PLAYER`{beaKey}`1)")).IsEqualTo("0");
+			await Assert.That(await Think($"hasattr({Calendar},PLAYER`{beaKey})")).IsEqualTo("0");
+		}
+		finally
+		{
+			await UninstallAsync();
+		}
+	}
+
+	[Test]
 	public async Task SettingsAreChangedThroughConfig()
 	{
 		try
