@@ -52,7 +52,7 @@ Output: forest/Old Oak
 
 ## worldway()
 
-`worldway(<map>, <x>, <y>, <z>, <direction>[, <field>])`
+`worldway(<map>, <x>, <y>, <z>, <direction>[, <field>[, <mover>]])`
 
 The way out of a place toward a direction: `n`, `e`, `s`, `w`, `u`, `d`, `ne`, `nw`, `se` or `sw`, or the word. The fields:
 
@@ -60,13 +60,21 @@ The way out of a place toward a direction: `n`, `e`, `s`, `w`, `u`, `d`, `ne`, `
 - `reason`: why, when the way is not open
 - `to`: the place it leads to, as `x,y,z`
 
-The state is `open`; `oneway`, open but not back; `lock`; `closed`, when the place it leads to has a closed type; `wall`, also for a one-way side coming the wrong way; or `none`, when nothing is painted there. A diagonal goes round a corner, and is as good as the better of its two routes.
+The state is `open`; `oneway`, open but not back; `lock`, a locked side or a terrain lock (see [@world lock]); `closed`, when the place it leads to has a closed type; `wall`, also for a one-way side coming the wrong way; or `none`, when nothing is painted there. A diagonal goes round a corner, and is as good as the better of its two routes.
+
+Given a `<mover>`, each lock on the way is evaluated for them, with the map as the locked object: a lock they pass is `open`, and one they do not is `lock` with its reason. Naming anyone but yourself needs examine of the map.
 
 ```sharp
 > think worldway(Wilds, 4, 4, 0, n)/[worldway(Wilds, 4, 4, 0, n, reason)]
+> &RANGER me=yes
+> think worldway(Wilds, 2, 1, 0, n)/[worldway(Wilds, 2, 1, 0, n, state, me)]
 ```
 
-Output: wall/A fallen oak blocks the path.
+Output:
+```
+wall/A fallen oak blocks the path.
+lock/open
+```
 
 ## worlddraw()
 

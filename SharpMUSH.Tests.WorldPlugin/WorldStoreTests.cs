@@ -81,8 +81,8 @@ public class WorldStoreTests
 		await _store.CreateAsync(Map, "square");
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.South, WorldEdge.Wall, "Cliff");
 
-		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.South)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff"));
-		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff"));
+		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.South)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", (string?)null));
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Wall, (string?)"Cliff", (string?)null));
 		await Assert.That(_store.Edge(Map, 0, 0, 0, WorldSide.North).Edge).IsEqualTo(WorldEdge.Open);
 
 		// One way out of 0,0 westward is one way in, seen from 1 west.
@@ -92,7 +92,7 @@ public class WorldStoreTests
 
 		// Opening a side drops its reason, and the place record goes with it.
 		await _store.SetEdgeAsync(Map, 0, 0, 0, WorldSide.South, WorldEdge.Open, "ignored");
-		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Open, (string?)null));
+		await Assert.That(_store.Edge(Map, 0, -1, 0, WorldSide.North)).IsEqualTo((WorldEdge.Open, (string?)null, (string?)null));
 		await Assert.That(_store.Place(Map, 0, -1, 0)).IsNull();
 	}
 

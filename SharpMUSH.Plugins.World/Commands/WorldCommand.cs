@@ -22,7 +22,7 @@ namespace SharpMUSH.Plugins.World.Commands;
 /// <summary>
 /// <c>@world[/&lt;switch&gt;] &lt;map&gt;[/&lt;x&gt;,&lt;y&gt;[,&lt;z&gt;][/&lt;side&gt;]][=&lt;value&gt;]</c>: makes an object a stored
 /// map and paints, walls, names and fills in its places, and places rooms on them. Every change needs control of the
-/// map; reading it, examine.
+/// map; reading it, examine. A locked side opens for whoever passes its key, as an exit's <c>@lock</c> does.
 /// The left side is evaluated, and the right side too except for <c>/data</c>, whose JSON is taken as typed.
 /// </summary>
 public static partial class WorldCommand
@@ -33,7 +33,7 @@ public static partial class WorldCommand
 	[GeneratedRegex("^[a-z0-9_-]+$")]
 	private static partial Regex TypePattern();
 
-	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
+	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "LOCK", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "value"])]
 	public static async ValueTask<Option<CallState>> World(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -88,6 +88,7 @@ public static partial class WorldCommand
 			return await Say($"{parts[1]} is not a place: give it as <x>,<y> or <x>,<y>,<z>.", "#-1 BAD PLACE");
 
 		if (switches.Contains("WALL")) return await WallAsync(at);
+		if (switches.Contains("LOCK")) return await LockAsync(at);
 		if (switches.Contains("PLACE")) return await NameAsync(at);
 		if (switches.Contains("DATA")) return await DataAsync(at);
 		if (switches.Contains("ROOM")) return await RoomAsync(at);
@@ -158,6 +159,23 @@ public static partial class WorldCommand
 				_ => "locked",
 			};
 			return await Say($"The {WorldGrid.Word(side)} side of {place} is now {what}.", "");
+		}
+
+		async ValueTask<Option<CallState>> LockAsync(WorldPosition place)
+		{
+			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2]) is not { } side)
+				return await Say("Which side? Give it as <map>/<x>,<y>[,<z>]/<n|e|s|w|u|d>.", "#-1 NO SIDE");
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, null);
+				return await Say($"The {WorldGrid.Word(side)} side of {place} is now open.", "");
+			}
+			var keys = parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>();
+			var bound = await keys.BindAsync(value.Trim(), executor);
+			if (bound is not string key)
+				return await Say($"I don't understand that key: {(bound is Error<string> error ? error.Value : "")}", ErrorMessages.Returns.InvalidLock);
+			await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, key);
+			return await Say($"The {WorldGrid.Word(side)} side of {place} is now locked.", "");
 		}
 
 		async ValueTask<Option<CallState>> NameAsync(WorldPosition place)
@@ -240,7 +258,7 @@ public static partial class WorldCommand
 			if (terrain?.Closed is { } closed) lines.Add($"Closed: {closed}");
 			foreach (var side in Enum.GetValues<WorldSide>())
 			{
-				var (edge, reason) = store.Edge(dbref, place.X, place.Y, place.Z, side);
+				var (edge, reason, key) = store.Edge(dbref, place.X, place.Y, place.Z, side);
 				if (edge == WorldEdge.Open) continue;
 				var what = edge switch
 				{
@@ -249,7 +267,10 @@ public static partial class WorldCommand
 					WorldEdge.OneWayIn => "one way, in",
 					_ => "lock",
 				};
-				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{(reason is null ? "" : $" ({reason})")}");
+				var shown = edge != WorldEdge.Lock ? ""
+					: key is null ? ", no key"
+					: $", key {await parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>().ReadbackAsync(key, executor)}";
+				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{shown}{(reason is null ? "" : $" ({reason})")}");
 			}
 			if (held?.Data is { } data) lines.Add($"Data: {data}");
 			if (await parser.ServiceProvider.GetRequiredService<WorldRooms>().StandingAsync(dbref, place) is { } standing)

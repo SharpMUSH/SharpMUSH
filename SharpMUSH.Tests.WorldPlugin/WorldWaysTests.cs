@@ -9,7 +9,7 @@ using SharpMUSH.Plugins.World.Storage;
 
 namespace SharpMUSH.Tests.WorldPlugin;
 
-/// <summary>How a mover fares going one way out of a place: sides, one-way edges, closed terrain and diagonals.</summary>
+/// <summary>How a mover fares going one way out of a place: sides, one-way edges, locks, closed terrain and diagonals.</summary>
 public class WorldWaysTests
 {
 	private string _path = null!;
@@ -47,8 +47,13 @@ public class WorldWaysTests
 		}
 	}
 
-	private async Task<WorldWay> Way(int x, int y, string direction, bool examine = true) =>
-		await WorldWays.WayAsync(_store, _store.Map(Map)!, _legend, Map, examine, new WorldPosition(x, y, 0), WorldWays.ParseDirection(direction)!);
+	private async Task<WorldWay> Way(int x, int y, string direction, bool examine = true, Func<string, ValueTask<bool>>? unlock = null,
+		WorldLegend? legend = null) =>
+		await WorldWays.WayAsync(_store, _store.Map(Map)!, legend ?? _legend, Map, examine, new WorldPosition(x, y, 0),
+			WorldWays.ParseDirection(direction)!, unlock);
+
+	/// <summary>A mover who passes exactly the keys given.</summary>
+	private static Func<string, ValueTask<bool>> Holding(params string[] keys) => key => ValueTask.FromResult(keys.Contains(key));
 
 	[Test]
 	public async Task AnOpenSideLeadsToThePlaceBesideIt()
@@ -110,5 +115,82 @@ public class WorldWaysTests
 		await Assert.That((await Way(0, 1, "ne", examine: false)).State).IsEqualTo(WorldWayState.None);
 		await Assert.That((await Way(0, 2, "se", examine: false)).State)
 			.IsEqualTo(WorldWayState.Open).Because("the route by 0,1 avoids the hidden place");
+	}
+
+	[Test]
+	public async Task ALockedSideOpensForAMoverWhoPassesItsKey()
+	{
+		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.North, WorldEdge.Lock, "The gate is shut.");
+		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.North, "#123");
+
+		var unknown = await Way(1, 1, "n");
+		await Assert.That((unknown.State, unknown.Reason)).IsEqualTo((WorldWayState.Lock, (string?)"The gate is shut."));
+		var refused = await Way(1, 1, "n", unlock: Holding("#456"));
+		await Assert.That((refused.State, refused.Reason)).IsEqualTo((WorldWayState.Lock, (string?)"The gate is shut."));
+		var passed = await Way(1, 2, "s", unlock: Holding("#123"));
+		await Assert.That((passed.State, passed.Reason, passed.To)).IsEqualTo((WorldWayState.Open, (string?)null, new WorldPosition(1, 1, 0)));
+	}
+
+	[Test]
+	public async Task ASideLockedWithNoKeyLetsNobodyThrough()
+	{
+		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.North, WorldEdge.Lock, null);
+		await Assert.That((await Way(1, 1, "n", unlock: _ => ValueTask.FromResult(true))).State).IsEqualTo(WorldWayState.Open);
+		await Assert.That((await Way(1, 1, "n", unlock: Holding("#1"))).State).IsEqualTo(WorldWayState.Lock);
+	}
+
+	[Test]
+	public async Task OpeningALockedSideDropsItsKeyAndReason()
+	{
+		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.East, WorldEdge.Lock, "Barred.");
+		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.East, "#123");
+		await Assert.That(_store.Edge(Map, 2, 1, 0, WorldSide.West)).IsEqualTo((WorldEdge.Lock, (string?)"Barred.", (string?)"#123"));
+
+		await _store.SetEdgeAsync(Map, 1, 1, 0, WorldSide.East, WorldEdge.Wall, "Bricked up.");
+		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Wall, (string?)"Bricked up.", (string?)null));
+
+		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.East, "#123");
+		await _store.SetLockAsync(Map, 1, 1, 0, WorldSide.East, null);
+		await Assert.That(_store.Edge(Map, 1, 1, 0, WorldSide.East)).IsEqualTo((WorldEdge.Open, (string?)null, (string?)null));
+		await Assert.That(_store.Place(Map, 1, 1, 0)).IsNull();
+	}
+
+	[Test]
+	public async Task TheLegendLocksMovingIntoATerrainFromAnother()
+	{
+		await _store.PaintAsync(Map, 0, 1, 2, 2, 2, "mountain");
+		var attributes = new Dictionary<string, string>
+		{
+			["MAP`LEGEND`MOUNTAIN`LOCK"] = "#FALSE",
+			["MAP`LEGEND`MOUNTAIN`FAILURE"] = "The slope is too steep.",
+		};
+		WorldLegend Legend() => new(name => ValueTask.FromResult(attributes.GetValueOrDefault(name)));
+		var climber = Holding("CLIMB:1");
+
+		var refused = await Way(1, 1, "n", unlock: climber, legend: Legend());
+		await Assert.That((refused.State, refused.Reason)).IsEqualTo((WorldWayState.Lock, (string?)"The slope is too steep."));
+		await Assert.That((await Way(1, 1, "n", legend: Legend())).State).IsEqualTo(WorldWayState.Lock);
+		await Assert.That((await Way(1, 2, "e", unlock: climber, legend: Legend())).State)
+			.IsEqualTo(WorldWayState.Open).Because("the lock is on coming from another terrain");
+		await Assert.That((await Way(1, 2, "s", unlock: climber, legend: Legend())).State).IsEqualTo(WorldWayState.Open);
+
+		attributes["MAP`LEGEND`MOUNTAIN`LOCK`GRASS"] = "CLIMB:1";
+		attributes["MAP`LEGEND`MOUNTAIN`FAILURE`GRASS"] = "You need climbing gear.";
+		await Assert.That((await Way(1, 1, "n", unlock: climber, legend: Legend())).State).IsEqualTo(WorldWayState.Open);
+		var unequipped = await Way(1, 1, "n", unlock: Holding(), legend: Legend());
+		await Assert.That((unequipped.State, unequipped.Reason)).IsEqualTo((WorldWayState.Lock, (string?)"You need climbing gear."));
+
+		attributes["MAP`LEGEND`MOUNTAIN`LOCK`MOUNTAIN"] = "#FALSE";
+		await Assert.That((await Way(1, 2, "e", unlock: climber, legend: Legend())).State)
+			.IsEqualTo(WorldWayState.Lock).Because("a key for the terrain itself gates moving within it");
+	}
+
+	[Test]
+	public async Task ADiagonalGoesRoundATerrainLockTheMoverFails()
+	{
+		await _store.PaintAsync(Map, 0, 1, 2, 1, 2, "mountain");
+		WorldLegend Legend() => new(name => ValueTask.FromResult(name == "MAP`LEGEND`MOUNTAIN`LOCK" ? "#FALSE" : null));
+		var around = await Way(1, 1, "ne", unlock: Holding(), legend: Legend());
+		await Assert.That((around.State, around.To)).IsEqualTo((WorldWayState.Open, new WorldPosition(2, 2, 0)));
 	}
 }
