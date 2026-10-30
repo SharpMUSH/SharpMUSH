@@ -39,8 +39,11 @@ public static class MapLegendStyle
 	public static IEnumerable<string> IconNames => IconSvgs.Keys;
 
 	/// <summary>The custom property a room of <paramref name="entry"/>'s kind carries, or null when it has no tone this portal knows.</summary>
-	public static string? Style(MapLegendDto? entry) =>
-		PoseTypeStyle.ToneToken(entry?.Tone) is { } token ? $"--room-tone: var({token});" : null;
+	public static string? Style(MapLegendDto? entry) => Style(entry?.Tone);
+
+	/// <summary>The custom property a <c>tone()</c> colour's name gives, or null when this portal does not know it.</summary>
+	public static string? Style(string? tone) =>
+		PoseTypeStyle.ToneToken(tone) is { } token ? $"--room-tone: var({token});" : null;
 
 	/// <summary>The MudBlazor icon an icon name shows, or null when it is not one.</summary>
 	public static string? Svg(string? icon) =>

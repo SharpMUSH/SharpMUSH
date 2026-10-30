@@ -203,6 +203,75 @@ public class WorldMapReaderTests
 		await Assert.That(await Reader.ReadAsync(_viewer, 50, default) is NotFound).IsTrue();
 	}
 
+	private sealed class StoredPlaces(int mapNumber, string space) : IWorldMapSource
+	{
+		public List<MapWindow> Asked { get; } = [];
+
+		public ValueTask<Found<MapSpaceDto>> SpaceAsync(AnySharpObject map, CancellationToken ct) =>
+			ValueTask.FromResult<Found<MapSpaceDto>>(map.Object().DBRef.Number == mapNumber
+				? new MapSpaceDto(space, -10, -10, 10, 10, [0, 1])
+				: new NotFound());
+
+		public ValueTask<MapCellsDto> CellsAsync(AnySharpObject viewer, AnySharpObject map, MapWindow window, CancellationToken ct)
+		{
+			Asked.Add(window);
+			return ValueTask.FromResult(new MapCellsDto(window.Level, window.Left, window.Bottom, window.Right, window.Top,
+				[new MapCellDto(window.Left, window.Bottom, "forest")], [], false));
+		}
+	}
+
+	[Test]
+	public async Task AMapASourceStoresSaysItsSpace()
+	{
+		Map(50, "Wilds", MapKinds.Coordinates);
+		Map(51, "Harbour", MapKinds.Coordinates);
+		var reader = new WorldMapReader(_mediator, _permissions, _reality, _attributes, _connections,
+			[new StoredPlaces(50, MapSpaces.Hex)]);
+
+		await Assert.That((await reader.ReadAsync(_viewer, 50, default)).Expect<MapDto>().Space?.Kind).IsEqualTo(MapSpaces.Hex);
+		await Assert.That((await reader.ReadAsync(_viewer, 51, default)).Expect<MapDto>().Space).IsNull();
+	}
+
+	[Test]
+	public async Task CellsComeFromTheSourceThatStoresTheMap()
+	{
+		Map(50, "Wilds", MapKinds.Coordinates);
+		Map(51, "Harbour", MapKinds.Coordinates);
+		var other = new StoredPlaces(51, MapSpaces.Square);
+		var wilds = new StoredPlaces(50, MapSpaces.Square);
+		var reader = new WorldMapReader(_mediator, _permissions, _reality, _attributes, _connections, [other, wilds]);
+		var window = new MapWindow(0, -4, -2, 4, 2);
+
+		var cells = (await reader.CellsAsync(_viewer, 50, window, default)).Expect<MapCellsDto>();
+
+		await Assert.That(cells.Cells.Single()).IsEqualTo(new MapCellDto(-4, -2, "forest"));
+		await Assert.That(wilds.Asked).IsEquivalentTo([window]);
+		await Assert.That(other.Asked).IsEmpty();
+	}
+
+	[Test]
+	public async Task CellsOfAMapNoSourceStoresAreNotFound()
+	{
+		Map(50, "Harbour", MapKinds.Coordinates);
+		_objects.CreateThing(52, "Plain thing", _start, _builder);
+		var reader = new WorldMapReader(_mediator, _permissions, _reality, _attributes, _connections,
+			[new StoredPlaces(52, MapSpaces.Square)]);
+		var window = new MapWindow(0, 0, 0, 1, 1);
+
+		await Assert.That(await reader.CellsAsync(_viewer, 50, window, default) is NotFound).IsTrue();
+		await Assert.That(await reader.CellsAsync(_viewer, 52, window, default) is NotFound).IsTrue()
+			.Because("a source cannot make an object without a kind a map");
+	}
+
+	[Test]
+	public async Task AWindowCountsItsCells()
+	{
+		await Assert.That(new MapWindow(0, -63, -63, 64, 64).Cells).IsEqualTo(MapWindow.MaxCells);
+		await Assert.That(new MapWindow(0, int.MinValue, 0, int.MaxValue, 0).Cells).IsGreaterThan(MapWindow.MaxCells);
+		// Both sides 2^32 long: their product would overflow to 0, and pass for a window of no cells.
+		await Assert.That(new MapWindow(0, int.MinValue, int.MinValue, int.MaxValue, int.MaxValue).Cells).IsGreaterThan(MapWindow.MaxCells);
+	}
+
 	[Test]
 	public async Task TheViewersRoomIsHereOnlyOnItsOwnMap()
 	{

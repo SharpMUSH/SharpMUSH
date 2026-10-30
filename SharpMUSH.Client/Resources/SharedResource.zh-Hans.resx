@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>此刻有 {0} 人在这里</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>不可通行</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>显示房间</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>设置位置</value>
   </data>

@@ -16,9 +16,11 @@ namespace SharpMUSH.Server.Services;
 /// are the rooms zoned to it, and a map zoned to another map is a region inside that one. Setting <c>MAP`KIND</c> publishes the map, so a viewer who may not examine its rooms
 /// still sees the ones they can perceive and that are not DARK. What the map says about its rooms (their coordinates,
 /// where a variable exit goes) is read as the map's owner, the builder who published it, never as the viewer.
+/// A map whose places a map source (<see cref="IWorldMapSource"/>, from a plugin) stores is read the same way, and its
+/// places a window at a time from that source.
 /// </summary>
 public sealed class WorldMapReader(IMediator mediator, IPermissionService permissions, IRealityPolicy reality,
-	IAttributeService attributes, IConnectionService connections)
+	IAttributeService attributes, IConnectionService connections, IEnumerable<IWorldMapSource>? sources = null)
 {
 	public const string KindAttribute = "MAP`KIND";
 	public const string WidthAttribute = "MAP`SIZE`W";
@@ -173,7 +175,29 @@ public sealed class WorldMapReader(IMediator mediator, IPermissionService permis
 			LevelNames = await LevelNamesAsync(map),
 			Legend = await LegendAsync(map, ct),
 			Backdrop = await OwnValueAsync(map, map, BackdropAttribute) is { Length: > 0 } backdrop ? backdrop : null,
+			Space = await SourceAsync(map, ct) is var (_, space) ? space : null,
 		};
+	}
+
+	/// <summary>
+	/// The places of <paramref name="window"/> on map <paramref name="number"/>, from the map source that stores them, as
+	/// <paramref name="viewer"/> may see them; NotFound when it is no map they may see, or no source stores its places.
+	/// </summary>
+	public async Task<Found<MapCellsDto>> CellsAsync(AnySharpObject viewer, int number, MapWindow window, CancellationToken ct)
+	{
+		if (await MapAsync(viewer, number, ct) is not { } map || await SourceAsync(map, ct) is not var (source, _))
+			return new NotFound();
+		return await source.CellsAsync(viewer, map, window, ct);
+	}
+
+	/// <summary>The first map source that stores <paramref name="map"/>'s places, and the space it stores them in.</summary>
+	private async Task<(IWorldMapSource Source, MapSpaceDto Space)?> SourceAsync(AnySharpObject map, CancellationToken ct)
+	{
+		foreach (var source in sources ?? [])
+		{
+			if (await source.SpaceAsync(map, ct) is MapSpaceDto space) return (source, space);
+		}
+		return null;
 	}
 
 	/// <summary>

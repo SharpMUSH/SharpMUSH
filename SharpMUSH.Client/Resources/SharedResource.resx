@@ -10259,6 +10259,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} here now</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Closed</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Show its room</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Set place</value>
   </data>

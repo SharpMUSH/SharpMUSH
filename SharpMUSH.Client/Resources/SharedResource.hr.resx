@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} ovdje sada</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Zatvoreno</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Prikaži sobu</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Postavi položaj</value>
   </data>

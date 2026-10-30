@@ -210,3 +210,80 @@ test('zooming about a point keeps that point of the drawing under it', () => {
 
     assert.deepEqual([el.scrollLeft, el.scrollTop], [1000, 700]);
 });
+
+// A window whose timers run when told, and whose ResizeObserver can be fired by hand.
+function timed() {
+    const timers = new Map();
+    let next = 1;
+    const observers = [];
+    const map = load();
+    const window = map.window;
+    window.setTimeout = (fn, ms) => { timers.set(next, { fn, ms }); return next++; };
+    window.clearTimeout = id => timers.delete(id);
+    window.ResizeObserver = class {
+        constructor(fn) { this.fn = fn; this.watched = []; observers.push(this); }
+        observe(el) { this.watched.push(el); }
+        disconnect() { this.watched = []; this.disconnected = true; }
+    };
+    const run = () => {
+        const due = [...timers.values()];
+        timers.clear();
+        for (const timer of due) timer.fn();
+    };
+    return { map, timers, observers, run };
+}
+
+function asking() {
+    const calls = [];
+    return { calls, invokeMethodAsync: (name, ...args) => calls.push([name, ...args]) };
+}
+
+test('the view is reported once scrolling settles, as the part of the drawing in the frame', () => {
+    const { map, timers, run } = timed();
+    const el = listening(frame({ clientWidth: 800, clientHeight: 400, left: 300, top: 200 }, { width: 4000, height: 3000 }));
+    const dotNet = asking();
+
+    map.mapViewport(el, dotNet);
+    run();
+    assert.deepEqual(dotNet.calls, [['ViewAt', 300, 200, 800, 400]]);
+
+    el.scrollLeft = 500;
+    el.fire('scroll');
+    el.fire('scroll');
+    assert.equal(timers.size, 1, 'a burst of scrolling waits for one report');
+    assert.equal([...timers.values()][0].ms, 150);
+    run();
+    assert.deepEqual(dotNet.calls[1], ['ViewAt', 500, 200, 800, 400]);
+});
+
+test('a drawing narrower than its frame is in view from its own edge, and no wider than itself', () => {
+    const { map, run } = timed();
+    const el = listening(frame({ clientWidth: 1000, clientHeight: 600 }, { width: 400, height: 300 }));
+    const dotNet = asking();
+
+    map.mapViewport(el, dotNet);
+    run();
+
+    assert.deepEqual(dotNet.calls, [['ViewAt', 0, 0, 400, 300]]);
+});
+
+test('a resize of the frame or the drawing reports the view, and disposing stops it all', () => {
+    const { map, timers, observers, run } = timed();
+    const el = listening(frame({ clientWidth: 800, clientHeight: 400 }, { width: 4000, height: 3000 }));
+    const dotNet = asking();
+
+    const watch = map.mapViewport(el, dotNet);
+    run();
+    assert.deepEqual(observers[0].watched, [el, el.firstElementChild]);
+    el.firstElementChild.offsetWidth = 8000;
+    el.clientWidth = 900;
+    observers[0].fn();
+    run();
+    assert.deepEqual(dotNet.calls[1], ['ViewAt', 0, 0, 900, 400]);
+
+    el.fire('scroll');
+    watch.dispose();
+    assert.equal(timers.size, 0);
+    assert.equal(observers[0].disconnected, true);
+    assert.deepEqual(el.listeners.scroll, []);
+});

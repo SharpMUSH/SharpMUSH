@@ -176,6 +176,43 @@
         };
     };
 
+    // Tells a World map what part of its drawing is in view, once the frame stops scrolling or changes size: dotNet's
+    // ViewAt(x, y, width, height), in the drawing's pixels. A drawing narrower than its frame is centred in it, so
+    // its view starts at its own edge.
+    window.SharpMUSH.mapViewport = function (frame, dotNet) {
+        if (!frame || !dotNet) return { dispose: function () { } };
+        var timer = 0;
+
+        function report() {
+            timer = 0;
+            var figure = frame.firstElementChild;
+            if (!figure) return;
+            var offset = Math.max(0, (frame.clientWidth - figure.offsetWidth) / 2);
+            dotNet.invokeMethodAsync("ViewAt", Math.max(0, frame.scrollLeft - offset), frame.scrollTop,
+                Math.min(frame.clientWidth, figure.offsetWidth), Math.min(frame.clientHeight, figure.offsetHeight));
+        }
+        function soon() {
+            if (timer) window.clearTimeout(timer);
+            timer = window.setTimeout(report, 150);
+        }
+
+        frame.addEventListener("scroll", soon, { passive: true });
+        var observer = typeof window.ResizeObserver === "function" ? new window.ResizeObserver(soon) : null;
+        if (observer) {
+            observer.observe(frame);
+            if (frame.firstElementChild) observer.observe(frame.firstElementChild);
+        }
+        soon();
+        return {
+            dispose: function () {
+                frame.removeEventListener("scroll", soon);
+                if (observer) observer.disconnect();
+                if (timer) window.clearTimeout(timer);
+                timer = 0;
+            }
+        };
+    };
+
     // Scrolls a World map's frame so a room sits in the middle of its view, and the frame into the page's view,
     // then gives the room focus when asked. Smooth unless the reader asked for less motion.
     window.SharpMUSH.mapCentre = function (frame, room, focus) {

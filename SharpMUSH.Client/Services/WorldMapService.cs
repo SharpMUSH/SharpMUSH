@@ -4,7 +4,7 @@ using SharpMUSH.Library.Models.Portal.Setup;
 namespace SharpMUSH.Client.Services;
 
 /// <summary>
-/// The World map's reads (<c>GET api/maps</c>, <c>GET api/maps/{dbref}</c>, <c>GET api/maps/route/{dbref}</c>, <c>GET api/maps/here</c>, <c>GET api/maps/description/{dbref}</c>), as the acting character. Nothing is kept:
+/// The World map's reads (<c>GET api/maps</c>, <c>GET api/maps/{dbref}</c>, <c>GET api/maps/{dbref}/cells</c>, <c>GET api/maps/route/{dbref}</c>, <c>GET api/maps/here</c>, <c>GET api/maps/description/{dbref}</c>), as the acting character. Nothing is kept:
 /// a builder's change shows on the next read.
 /// </summary>
 public class WorldMapService(IHttpClientFactory httpClientFactory, ServerInfoService? serverInfo = null)
@@ -21,6 +21,11 @@ public class WorldMapService(IHttpClientFactory httpClientFactory, ServerInfoSer
 
 	public Task<ApiResult<MapDto>> GetAsync(int dbref)
 		=> Client.GetFeatureApiAsync<MapDto>(serverInfo, GameFeatures.WorldMap, $"api/maps/{dbref}", "The server returned no map.");
+
+	/// <summary>The places of a stored map's window, <c>[left, right] × [bottom, top]</c> on <paramref name="level"/>.</summary>
+	public Task<ApiResult<MapCellsDto>> CellsAsync(int dbref, int level, int left, int bottom, int right, int top)
+		=> Client.GetFeatureApiAsync<MapCellsDto>(serverInfo, GameFeatures.WorldMap,
+			$"api/maps/{dbref}/cells?level={level}&left={left}&bottom={bottom}&right={right}&top={top}", "The server returned no places.");
 
 	public Task<ApiResult<MapHereDto>> HereAsync()
 		=> Client.GetFeatureApiAsync<MapHereDto>(serverInfo, GameFeatures.WorldMap, "api/maps/here", "The server returned no location.");

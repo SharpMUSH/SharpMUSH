@@ -149,7 +149,7 @@
                     {
                         <MudAlert Severity="Severity.Info" Dense="true" Class="map-truncated">@Loc["NavMapTruncated"]</MudAlert>
                     }
-                    @if (Shown.Rooms.Count == 0 && !_editing)
+                    @if (Shown.Rooms.Count == 0 && Shown.Space is null && !_editing)
                     {
                         <EmptyState Class="map-note">@Loc["NavMapEmpty"]</EmptyState>
                     }
@@ -157,7 +157,8 @@
                     {
                         <MapCanvas @ref="_canvas" Layout="Shown" Level="_level" Zoom="_zoom" Selected="@_selected" OnSelect="Select"
                                    Route="@(!_editing && _route?.Steps is { Count: > 0 } steps ? steps : null)"
-                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" OnZoomAt="ZoomBy" />
+                                   Editing="_editing" Cell="_cell" OnCell="SelectCell" OnZoomAt="ZoomBy"
+                                   Cells="_cells" OnView="ViewAsync" SelectedPlace="_place" OnPlace="SelectPlace" />
                         @Legend()
                         @if (_editing && _plan is not null)
                         {
@@ -169,6 +170,7 @@
                         else
                         {
                             @RoomPanel()
+                            @PlacePanel()
                         }
                     }
                 }
@@ -264,6 +266,12 @@
     private string? _walkError;
     private int _routeAsked;
 
+    /// <summary>The stored places read around the view, the view they were read for, and the place chosen for its panel.</summary>
+    private MapCellsDto? _cells;
+    private (int Left, int Bottom, int Right, int Top)? _view;
+    private (int X, int Y)? _place;
+    private int _cellsAsked;
+
     protected override async Task OnInitializedAsync()
     {
         AccountAuth.ActiveCharacterChanged += OnActingChanged;
@@ -308,6 +316,7 @@
     private async Task LoadMapAsync()
     {
         (_layout, _selected, _missing, _applied) = (null, null, false, null);
+        (_cells, _view, _place) = (null, null, null);
         ForgetRoute();
         StopEditing();
         if (Id is not { } id || AccountAuth.ActiveCharacter is null) return;
@@ -323,6 +332,8 @@
                     ? room.Level
                     : map.Level is { } level && _layout.Levels.Contains(level) ? level
                     : _layout.Levels.Contains(0) ? 0 : _layout.Levels[0];
+                _view = FirstView(_layout);
+                await ReadCellsAsync();
                 break;
             case ApiFailure failure:
                 _missing = failure.Status == System.Net.HttpStatusCode.NotFound;
@@ -347,12 +358,14 @@
     private string LevelName(int level) =>
         _layout?.Map.LevelNames.TryGetValue(level, out var name) == true ? name : Loc["NavMapLevel", level].Value;
 
-    /// <summary>The level <paramref name="by"/> places above (or below) the one on show, among the levels that have rooms.</summary>
-    private void StepLevel(int by)
+    /// <summary>The level <paramref name="by"/> places above (or below) the one on show, among the levels that have rooms or places.</summary>
+    private async Task StepLevel(int by)
     {
         if (_layout is null) return;
         var at = Shown.Levels.ToList().IndexOf(_level) + by;
-        if (at >= 0 && at < Shown.Levels.Count) _level = Shown.Levels[at];
+        if (at < 0 || at >= Shown.Levels.Count) return;
+        _level = Shown.Levels[at];
+        await ReadCellsAsync();
     }
 
     /// <summary>The regions this map is inside, outermost first.</summary>
@@ -369,10 +382,92 @@
         return trail;
     }
 
-    private void SelectLevel(string key)
+    private async Task SelectLevel(string key)
     {
-        if (int.TryParse(key, System.Globalization.CultureInfo.InvariantCulture, out var level)) _level = level;
+        if (!int.TryParse(key, System.Globalization.CultureInfo.InvariantCulture, out var level)) return;
+        _level = level;
+        await ReadCellsAsync();
     }
+
+    /// <summary>
+    /// The cells to read places for before the frame reports its view: around the character's room when the map places
+    /// it, else the middle of the stored places. Null for a map of rooms alone.
+    /// </summary>
+    private static (int Left, int Bottom, int Right, int Top)? FirstView(MapLayout layout)
+    {
+        if (layout.Space is not { } space) return null;
+        var (x, y) = layout.Map.Here is { } here && layout.Rooms.TryGetValue(here, out var room) && room.Placed
+            ? ((int)layout.Spot(room).X, (int)layout.Spot(room).Y)
+            : ((int)(((long)space.Left + space.Right) / 2), (int)(((long)space.Bottom + space.Top) / 2));
+        return (x - 8, y - 8, x + 8, y + 8);
+    }
+
+    /// <summary>The frame's view settled on other cells: read the places around it, unless those read already hold them.</summary>
+    private async Task ViewAsync((int Left, int Bottom, int Right, int Top) view)
+    {
+        _view = view;
+        await ReadCellsAsync();
+    }
+
+    /// <summary>
+    /// Reads the stored places around the view on the level on show. A read still out is dropped once another starts or
+    /// the places already read hold the view, as they do on going back to a level before its read for elsewhere returns.
+    /// </summary>
+    private async Task ReadCellsAsync()
+    {
+        if (_layout is null || Id is not { } id || _view is not { } view) return;
+        var (asked, level) = (++_cellsAsked, _level);
+        if (Shown.Holds(_cells, level, view) || Shown.Window(view) is not var (left, bottom, right, top)) return;
+        if (await Maps.CellsAsync(id, level, left, bottom, right, top) is MapCellsDto cells && asked == _cellsAsked) _cells = cells;
+    }
+
+    private void SelectPlace(MapCellDto place)
+    {
+        (_place, _selected) = ((place.X, place.Y), null);
+        ForgetRoute();
+    }
+
+    /// <summary>
+    /// The chosen place: what it is called and its terrain, whether it may be entered, its picture and the values its
+    /// data gives, who is there, and the room standing on it when the map draws that room.
+    /// </summary>
+    private RenderFragment PlacePanel() => __builder =>
+    {
+        if (_selected is not null || _place is not var (x, y) || _cells?.Level != _level
+            || _cells.Cells.FirstOrDefault(cell => cell.X == x && cell.Y == y) is not { } place) return;
+        var terrain = Shown.Map.Legend.FirstOrDefault(entry => entry.Type == place.Type);
+        var name = place.Name ?? place.Label ?? terrain?.Label ?? place.Type;
+        <KitCard Class="map-room-panel" Title="@name" Sub="@(name == terrain?.Label ? null : terrain?.Label)">
+            <div class="map-room-body">
+                @if (place.Closed)
+                {
+                    <p class="map-place-closed">@(place.Reason ?? Loc["NavMapClosed"].Value)</p>
+                }
+                @if (ImageUrlPolicy.IsRenderable(place.Image))
+                {
+                    <img class="map-place-image" src="@ApiUrl.Resolve(place.Image!)" alt="" loading="lazy" />
+                }
+                @if (place.Info.Count > 0)
+                {
+                    <dl class="map-place-info">
+                        @foreach (var info in place.Info)
+                        {
+                            <dt>@info.Label</dt>
+                            <dd>@info.Value</dd>
+                        }
+                    </dl>
+                }
+                @if (place.People > 0)
+                {
+                    <p class="map-room-people">@Loc["NavMapPeopleCount", place.People]</p>
+                }
+                @if (place.Room is { } room && _layout?.Rooms.ContainsKey(room) == true)
+                {
+                    <MudButton Variant="Variant.Outlined" OnClick="() => GoToRoomAsync(room)">@Loc["NavMapPlaceRoom"]</MudButton>
+                }
+            </div>
+        </KitCard>
+    };
 
     private void ZoomBy(double factor) => _zoom = Math.Clamp(_zoom * factor, MinZoom, MaxZoom);
 
@@ -404,7 +499,7 @@
 
     private async Task Select(string id)
     {
-        (_selected, _cell) = (id, null);
+        (_selected, _cell, _place) = (id, null, null);
         if (!_editing) await LoadRouteAsync(id);
     }
 
@@ -497,7 +592,8 @@
     private async Task GoToRoomAsync(string id)
     {
         if (_layout?.Rooms.TryGetValue(id, out var room) != true) return;
-        (_selected, _level) = (id, room!.Level);
+        (_selected, _level, _place) = (id, room!.Level, null);
+        await ReadCellsAsync();
         StateHasChanged();
         await Task.Yield();
         if (_canvas is not null) await _canvas.CentreAsync(id);
@@ -661,7 +757,8 @@
     /// <summary>The kinds of place on this map that its legend names, each with its colour and icon.</summary>
     private RenderFragment Legend() => __builder =>
     {
-        var used = Shown.Map.Rooms.Select(room => room.Environment).ToHashSet();
+        var used = Shown.Map.Rooms.Select(room => room.Environment)
+            .Concat(_cells?.Level == _level ? _cells.Cells.Select(place => place.Type) : []).ToHashSet();
         var kinds = Shown.Map.Legend.Where(entry => used.Contains(entry.Type)).ToList();
         if (kinds.Count == 0) return;
         <ul class="map-legend" aria-label="@Loc["NavMapLegend"]">

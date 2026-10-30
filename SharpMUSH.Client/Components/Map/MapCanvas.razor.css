@@ -57,6 +57,64 @@
 	fill: var(--text-dim);
 }
 
+/* A stored place: its terrain's tone washed over the cell, edge to edge, so a painted area reads as one ground. */
+.map-place {
+	fill: var(--surface-2);
+	stroke: var(--border-soft);
+	stroke-width: 1;
+}
+
+.map-place--toned {
+	fill: color-mix(in srgb, var(--room-tone) 30%, var(--surface));
+	stroke: color-mix(in srgb, var(--room-tone) 45%, var(--surface));
+}
+
+.map-place--selected {
+	stroke: var(--text);
+	stroke-width: 2.5;
+}
+
+/* A place that cannot be entered is hatched, so it reads as closed without its colour. */
+.map-hatch {
+	stroke: color-mix(in srgb, var(--text) 35%, transparent);
+	stroke-width: 2;
+}
+
+.map-place-hatch {
+	pointer-events: none;
+}
+
+.map-place-glyph,
+.map-place-badge {
+	fill: var(--text);
+	font-size: 28px;
+	text-anchor: middle;
+	dominant-baseline: central;
+}
+
+.map-place-badge {
+	font-size: 16px;
+	text-anchor: end;
+	dominant-baseline: hanging;
+}
+
+.map-wall {
+	stroke: var(--text);
+	stroke-width: 4;
+	stroke-linecap: round;
+}
+
+/* A locked way: passable for some, so broken rather than solid. */
+.map-wall--lock {
+	stroke: var(--accent);
+	stroke-dasharray: 8 6;
+}
+
+.map-oneway {
+	stroke: var(--text-dim);
+	stroke-width: 2;
+}
+
 .map-box {
 	fill: var(--surface-2);
 	stroke: var(--text-faint);

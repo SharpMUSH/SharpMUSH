@@ -6806,6 +6806,12 @@
   <data name="NavMapPeopleCount" xml:space="preserve">
     <value>{0} most itt</value>
   </data>
+  <data name="NavMapClosed" xml:space="preserve">
+    <value>Lezárva</value>
+  </data>
+  <data name="NavMapPlaceRoom" xml:space="preserve">
+    <value>Szoba megjelenítése</value>
+  </data>
   <data name="NavMapSetPlace" xml:space="preserve">
     <value>Hely beállítása</value>
   </data>
