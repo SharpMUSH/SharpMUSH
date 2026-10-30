@@ -1,0 +1,53 @@
+format: "1.16"
+package: availability-alts
+title: "Availability: public alts"
+version: 1.0.0
+authors: [SharpMUSH]
+description: "Counts the characters an account lists in public with +alts as one person in +avail: their weeks, +avail/find and a scene card's free list all count them together. A hidden alt stays on its own."
+license: MIT
+homepage: https://github.com/SharpMUSH/SharpMUSH
+keywords: [availability, alts, account, bridge]
+category: Community
+requires_server: ">=0.1"
+
+# A bridge: it joins two packages that do not know about each other. availability counts a reader's own characters
+# as one person, and asks its FILTER`AVAIL`TOGETHER` filters which characters anyone else may know are together;
+# alts keeps whether an account's list is public and which characters it hides. This package is that filter.
+# Uninstalling it leaves each character counted on its own again, and neither package changes.
+depends:
+  - package: availability
+    version: ">=1.5"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/availability/
+      branch: main
+  - package: alts
+    version: ">=1.4"
+    source:
+      repo: https://github.com/SharpMUSH/SharpMUSH
+      path: examples/packages/alts/
+      branch: main
+
+objects:
+  # On the Availability object, which u()s it: %0 the characters so far and %1 a player. When the player's account
+  # made its list public and the player is on it, every character on that list; else the characters as they were,
+  # so a hidden alt, and an account that keeps its list private, add nothing. Both objects are WIZARD, so the Alts
+  # object's reads answer it.
+  - ref: availability_together
+    target: "{{availability/availability}}"
+    attributes:
+      FILTER`AVAIL`TOGETHER`ALTS:
+        value: |-
+          if(cand(strlen(setr(together_alts_key,u({{alts/alts}}/FUN`KEY`ACCOUNT,account(%1)))),u({{alts/alts}}/FUN`IS`PUBLIC,%q<together_alts_key>),u({{alts/alts}}/FUN`IS`LISTED,%1,%q<together_alts_key>)),setunion(%0,filterbool({{alts/alts}}/FUN`IS`LISTED,accountchars(%1),,,%q<together_alts_key>)),%0)
+        flags: [funsyntax]
+
+  # The topic, beside the availability topics: +help avail alts once availability-help is installed too.
+  - ref: availability_alts_help
+    target: "{{availability/availability_help}}"
+    attributes:
+      HELP`AVAIL`ALTS: |-
+        When your account's list of alts is public \(`+alts/public on`\), the characters on it count as one person in `+avail`: `+avail <name>` shows the week of every one of them, `+avail/find` counts one free only when all of them are, and a scene's card counts them the same way. Its footer names the others it counted.
+
+        A character you keep off the list with `+alts/hide` counts on its own, so nothing ties it to the others. A private list counts each character on its own.
+
+        Your own `+avail` counts every character on your account, public or not.
