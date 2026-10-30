@@ -157,8 +157,9 @@ public class GameFeatureServiceTests
 	{
 		var packages = await new Game().Features(scenePlugin: false).PackagesAsync();
 
-		// The Discord plugin is not loaded here either; the discord packages are someone else's test.
-		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)).Select(p => p.Id))
+		// The Discord and World plugins are not loaded here either; their packages are someone else's test.
+		await Assert.That(packages.Where(p => !p.Available && !p.Id.StartsWith("discord", StringComparison.Ordinal)
+				&& !p.Id.StartsWith("world-grid", StringComparison.Ordinal)).Select(p => p.Id))
 			.IsEquivalentTo(["scene", "scene-help", "scene-config", "scene-verse", "scene-safety", "scene-safety-help", "scene-safety-config",
 				"radio-scene", "timeline", "timeline-help", "timeline-config", "highlights", "highlights-app", "highlights-config",
 				"scene-availability", "scene-here", "relationships-scene"])
