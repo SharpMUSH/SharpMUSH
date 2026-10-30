@@ -1,8 +1,12 @@
 @page "/admin/characters/{Id:int}"
 @attribute [Authorize(Policy = "players.view")]
 @using System.Globalization
+@using SharpMUSH.Client.Models.Roles
+@using SharpMUSH.Library.Authorization
 @using SharpMUSH.Library.DiscriminatedUnions
 @inject AdminCharactersService CharactersService
+@inject RoleRegistryClient RoleRegistry
+@inject IAuthorizationService Authorization
 @inject AdminAccountsService AccountsService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -70,17 +74,37 @@
                         <dt>@Loc["AdmCharactersFlags"]</dt>
                         <dd class="adm-char-mono">@(detail.Character.Flags is { Length: > 0 } flags ? flags : "—")</dd>
                         <dt>@Loc["AdmCharacterRoles"]</dt>
-                        <dd>
+                        <dd class="adm-char-roles">
                             @if (detail.Roles.Count == 0)
                             {
                                 @Loc["AdmCharacterNoRoles"]
                             }
-                            else
+                            @foreach (var role in detail.Roles)
                             {
-                                @foreach (var role in detail.Roles)
+                                @* A role the account holds reads "slug(account)"; it is changed on the account, not here. *@
+                                var own = !role.EndsWith(AccountSuffix, StringComparison.Ordinal);
+                                @if (own && _roles is not null)
                                 {
-                                    <MudChip T="string" Size="Size.Small">@role</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Class="adm-char-role" Disabled="_busy"
+                                             OnClose="() => RemoveRoleAsync(role)">@RoleName(role)</MudChip>
                                 }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Class="adm-char-role">
+                                        @(own ? RoleName(role) : Loc["AdmCharacterAccountRole", RoleName(role[..^AccountSuffix.Length])])
+                                    </MudChip>
+                                }
+                            }
+                            @if (_roles is not null && Assignable(detail) is { Count: > 0 } assignable)
+                            {
+                                <div class="adm-char-role-add" role="group" aria-label="@Loc["RolAddRole"]">
+                                    @foreach (var role in assignable)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Outlined" Icon="@Icons.Material.Filled.Add"
+                                                 Class="adm-char-role-new" Disabled="_busy" OnClick="() => AddRoleAsync(role.Slug)">@role.Name</MudChip>
+                                    }
+                                </div>
+                                <div class="adm-char-role-help">@Loc["AdmCharacterRolesHelp"]</div>
                             }
                         </dd>
                         <dt>@Loc["AdmCharacterAttributes"]</dt>
@@ -131,9 +155,42 @@
     private string? _error;
     private string? _linkAccount;
 
+    private const string AccountSuffix = "(account)";
+
+    /// <summary>Every role, once the viewer is known to manage roles; null hides the controls.</summary>
+    private IReadOnlyList<PortalRoleModel>? _roles;
+
+    [CascadingParameter] private Task<AuthenticationState>? AuthState { get; set; }
+
     private string Title => _detail?.Character.Name ?? Loc["AdmPlayerNumber", Id].Value;
 
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthState is not null && (await Authorization.AuthorizeAsync((await AuthState).User, PortalPermission.RolesAdmin)).Succeeded)
+            _roles = await RoleRegistry.ListAsync();
+    }
+
     protected override Task OnParametersSetAsync() => LoadAsync();
+
+    private string RoleName(string slug) => _roles?.FirstOrDefault(role => role.Slug == slug)?.Name ?? slug;
+
+    /// <summary>The roles the character does not hold itself; ones no one is given (such as everyone) are left out.</summary>
+    private List<PortalRoleModel> Assignable(AdminCharacterDetail detail) =>
+        (_roles ?? []).Where(role => !BuiltInRoles.IsImplicit(role.Slug) && !detail.Roles.Contains(role.Slug)).ToList();
+
+    private async Task AddRoleAsync(string slug)
+    {
+        if (_detail is not { Character: var character }) return;
+        await RunAsync(RoleRegistry.AssignToObjectAsync(character.DbrefNumber, character.CreationTime, slug),
+            Loc["RolAssigned", RoleName(slug)].Value, Loc["AdmOperationFailed"].Value);
+    }
+
+    private async Task RemoveRoleAsync(string slug)
+    {
+        if (_detail is not { Character: var character }) return;
+        await RunAsync(RoleRegistry.RemoveFromObjectAsync(character.DbrefNumber, character.CreationTime, slug),
+            Loc["RolRemoved", RoleName(slug)].Value, Loc["AdmOperationFailed"].Value);
+    }
 
     private async Task LoadAsync()
     {

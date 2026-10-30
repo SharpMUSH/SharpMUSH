@@ -5735,6 +5735,12 @@
   <data name="AdmCharacterNoRoles" xml:space="preserve">
     <value>None</value>
   </data>
+  <data name="AdmCharacterAccountRole" xml:space="preserve">
+    <value>{0} (account)</value>
+  </data>
+  <data name="AdmCharacterRolesHelp" xml:space="preserve">
+    <value>A role assigned here is held by this character alone. Roles marked (account) come from the account and are changed under Roles &amp; permissions.</value>
+  </data>
   <data name="AdmCharacterAttributes" xml:space="preserve">
     <value>Attributes</value>
   </data>
