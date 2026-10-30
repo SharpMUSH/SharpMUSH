@@ -9,6 +9,8 @@
     {"id": "world-create", "heading": "Making a world map", "lookup": "@world create", "aliases": ["@world/create"]},
     {"id": "world-paint", "heading": "Painting places", "lookup": "@world paint", "aliases": ["@world/paint"]},
     {"id": "world-wall", "heading": "Walls and ways", "lookup": "@world wall", "aliases": ["@world/wall"]},
+    {"id": "world-lock", "heading": "Locks", "lookup": "@world lock", "aliases": ["@world/lock"]},
+    {"id": "world-terrain-lock", "heading": "Terrain locks", "lookup": "@world terrain", "aliases": ["terrain locks"]},
     {"id": "world-place", "heading": "Naming places", "lookup": "@world place", "aliases": ["@world/place"]},
     {"id": "world-data", "heading": "A place's data", "lookup": "@world data", "aliases": ["@world/data", "@world/data/merge", "@world/data/clear"]},
     {"id": "world-room", "heading": "Rooms on a map", "lookup": "@world room", "aliases": ["@world/room"]},
@@ -27,6 +29,8 @@ A world map keeps its places itself, so a large grid needs no room for each one.
 - [@world create]: make an object a world map
 - [@world paint]: paint places with a terrain type, or erase them
 - [@world wall]: walls, one-way sides and locks
+- [@world lock]: who passes a locked side
+- [@world terrain]: locks on moving into a terrain type
 - [@world place]: give a place a name
 - [@world data]: JSON a place keeps, and how it is drawn
 - [@world room]: place a room on a place to stay
@@ -53,7 +57,7 @@ Output: Wilds is now a world map.
 
 Paints a place, or every place in the box from it to `<x2>,<y2>` on the same level, with a terrain type: letters, digits, `_` and `-`, at most 32. Painting with no type erases the places; their sides stay. One paint covers at most 262144 places.
 
-What a type looks like comes from the map's legend, as for any map: `` MAP`LEGEND`<type>`LABEL ``, `` `TONE `` and `` `ICON ``. A type whose `` `CLOSED `` holds a reason cannot be entered, and the World map shows it closed.
+What a type looks like comes from the map's legend, as for any map: `` MAP`LEGEND`<type>`LABEL ``, `` `TONE `` and `` `ICON ``, and `` `CHAR `` the character a text drawing such as [worlddraw()] shows for it. A type whose `` `CLOSED `` holds a reason cannot be entered, and the World map shows it closed. A type can be locked instead (see [@world terrain]).
 
 ```sharp
 > @world/paint Wilds/0,0:9,9=forest
@@ -66,13 +70,47 @@ Output: Painted 100 places as forest.
 
 `@world/wall <map>/<x>,<y>[,<z>]/<side>=<state>[,<reason>]`
 
-Sets one side of a place: `n`, `e`, `s`, `w`, `u` or `d`, or the word. The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock`. The reason is what a refused mover is told, and what the World map shows.
+Sets one side of a place: `n`, `e`, `s`, `w`, `u` or `d`, or the word. The place on the other side shares it. The state is `open`, `wall`, `oneway` (a mover may leave this way but not come back) or `lock` (see [@world lock]). The reason is what a refused mover is told, and what the World map shows. A locked side keeps its key; any other state drops it.
 
 ```sharp
 > @world/wall Wilds/4,4/n=wall,A fallen oak blocks the path.
 ```
 
 Output: The north side of 4,4,0 is now a wall.
+
+## Locks
+
+`@world/lock <map>/<x>,<y>[,<z>]/<side>=[<key>]`
+
+Locks one side of a place with a lock key, as `@lock` locks an exit: a mover who passes the key goes through, with the map as the locked object. The reason set with `@world/wall ...=lock,<reason>` stays. With no key, the side is open again and its reason goes. A side set to `lock` with `@world/wall` and given no key lets nobody through.
+
+[worldway()] gives `lock` for a locked way, and evaluates its keys when given a mover.
+
+```sharp
+> @world/wall Wilds/2,1/n=lock,The gate is barred.
+> @world/lock Wilds/2,1/n=RANGER:yes
+```
+
+Output: The north side of 2,1,0 is now locked.
+
+## Terrain locks
+
+The map's legend can lock moving into a terrain type:
+
+- `` MAP`LEGEND`<type>`LOCK ``: the key for entering a place of that type from a place of another type. Moving between two places of the type needs no key.
+- `` MAP`LEGEND`<type>`LOCK`<from> ``: the key for entering it from a place of type `<from>`, in place of `` `LOCK ``. Set for the type itself, it locks moving within it.
+- `` MAP`LEGEND`<type>`FAILURE `` and `` `FAILURE`<from> ``: what a refused mover is told.
+
+A legend key takes what `@lock` takes; names in it are found as the map finds them. `#FALSE` lets nobody in, and `#TRUE` everyone.
+
+```sharp
+> &MAP`LEGEND`MOUNTAIN`LOCK Wilds=#FALSE
+> &MAP`LEGEND`MOUNTAIN`LOCK`HILLS Wilds=CLIMBER:yes
+> &MAP`LEGEND`MOUNTAIN`FAILURE Wilds=The slope is too steep.
+> think worldway(Wilds, 1, 1, 0, n, reason, me)
+```
+
+Output: The slope is too steep.
 
 ## Naming places
 

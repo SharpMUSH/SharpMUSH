@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
+using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
 using SharpMUSH.Library.Services.Interfaces;
@@ -40,6 +41,34 @@ public class RhostCompatibilityOptionTests
 	{
 		await Assert.That(await EvaluateAsync(code, options => options with { RhostEdit = false })).IsEqualTo(off);
 		await Assert.That(await EvaluateAsync(code, options => options with { RhostEdit = true })).IsEqualTo(on);
+	}
+
+	[Test]
+	[Arguments("iter(a|b|c,ucstr(##),|)", "A|B|C", "A B C")]
+	[Arguments("parse(a|b|c,##,|)", "a|b|c", "a b c")]
+	[Arguments("iter(a|b|c,##,|,-)", "a-b-c", "a-b-c")]
+	[Arguments("iter(a b c,##)", "a b c", "a b c")]
+	public async Task RhostIterSeparator(string code, string off, string on)
+	{
+		await Assert.That(await EvaluateAsync(code, options => options with { RhostIterSeparator = false })).IsEqualTo(off);
+		await Assert.That(await EvaluateAsync(code, options => options with { RhostIterSeparator = true })).IsEqualTo(on);
+	}
+
+	[Test]
+	public async Task RhostLroomsFollowsExitsWithoutALimit()
+	{
+		var name = TestIsolationHelpers.GenerateUniqueName("RhostLrooms");
+		var rooms = (await EvaluateAsync($"[setq(0,num(dig({name}A)))][setq(1,num(dig({name}B)))][setq(2,num(dig({name}C)))][null(open({name}AB,%q1,%q0),open({name}BC,%q2,%q1))]%q0 %q1 %q2",
+			options => options)).Split(' ');
+		await Assert.That(rooms.Length).IsEqualTo(3);
+		var (a, b, c) = (rooms[0], rooms[1], rooms[2]);
+
+		await Assert.That(await EvaluateAsync($"lrooms({a},0)", options => options with { RhostLrooms = false })).IsEqualTo(string.Empty);
+		await Assert.That(await EvaluateAsync($"lrooms({a},51)", options => options with { RhostLrooms = false }))
+			.IsEqualTo(ErrorMessages.Returns.NumberOutOfRange);
+		await Assert.That(await EvaluateAsync($"lrooms({a},0)", options => options with { RhostLrooms = true })).IsEqualTo($"{b} {c}");
+		await Assert.That(await EvaluateAsync($"lrooms({a},51)", options => options with { RhostLrooms = true })).IsEqualTo($"{b} {c}");
+		await Assert.That(await EvaluateAsync($"lrooms({a},-3)", options => options with { RhostLrooms = true })).IsEqualTo(b);
 	}
 
 	[Test]

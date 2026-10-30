@@ -6,12 +6,14 @@ using Microsoft.Extensions.DependencyInjection;
 using SharpMUSH.Configuration.Options;
 using SharpMUSH.Library;
 using SharpMUSH.Library.API;
+using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.Attributes;
 using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 using SharpMUSH.Plugins.World.Common;
 using SharpMUSH.Plugins.World.Storage;
@@ -22,7 +24,7 @@ namespace SharpMUSH.Plugins.World.Commands;
 /// <summary>
 /// <c>@world[/&lt;switch&gt;] &lt;map&gt;[/&lt;x&gt;,&lt;y&gt;[,&lt;z&gt;][/&lt;side&gt;]][=&lt;value&gt;]</c>: makes an object a stored
 /// map and paints, walls, names and fills in its places, and places rooms on them. Every change needs control of the
-/// map; reading it, examine.
+/// map; reading it, examine. A locked side opens for whoever passes its key, as an exit's <c>@lock</c> does.
 /// The left side is evaluated, and the right side too except for <c>/data</c>, whose JSON is taken as typed.
 /// </summary>
 public static partial class WorldCommand
@@ -33,7 +35,7 @@ public static partial class WorldCommand
 	[GeneratedRegex("^[a-z0-9_-]+$")]
 	private static partial Regex TypePattern();
 
-	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
+	[SharpCommand(Name = "@WORLD", Switches = ["CREATE", "PAINT", "WALL", "LOCK", "PLACE", "DATA", "MERGE", "CLEAR", "ROOM", "SWEEP"],
 		Behavior = CB.Default | CB.EqSplit | CB.NoParse, MinArgs = 0, MaxArgs = 2, ParameterNames = ["target", "value"])]
 	public static async ValueTask<Option<CallState>> World(IMUSHCodeParser parser, SharpCommandAttribute _2)
 	{
@@ -55,19 +57,26 @@ public static partial class WorldCommand
 		if (switches.Contains("SWEEP"))
 		{
 			if (!await executor.IsWizard())
-				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+				return await notify.PermissionDeniedNeeds(executor, PortalPermission.GameWizard);
 			var (returned, destroyed) = await parser.ServiceProvider.GetRequiredService<WorldRooms>().SweepAsync(parser, TimeSpan.Zero);
 			return await Say($"Took back {Rooms(returned)}, and destroyed {destroyed} spare{(destroyed == 1 ? "" : "s")}.", returned.ToString());
 		}
 
 		var parts = left.Split('/', 3, StringSplitOptions.TrimEntries);
 		if (parts[0].Length == 0) return await Say("World what?", ErrorMessages.Returns.NoMatch);
-		if (await WorldMaps.LocateAsync(parser, executor, parts[0]) is not { } map) return new CallState(ErrorMessages.Returns.NoMatch);
+		if (await WorldMaps.LocateAsync(parser, executor, parts[0]) is not { } map)
+		{
+			// A map is usually a room no one stands in, so it is out of reach by name.
+			if (!parts[0].StartsWith('#')) await notify.Notify(executor, "Name a map you are not near by its dbref, such as #40.");
+			return new CallState(ErrorMessages.Returns.NoMatch);
+		}
 
 		var permissions = parser.ServiceProvider.GetRequiredService<IPermissionService>();
 		var reading = switches.Length == 0;
-		if (!(reading ? await permissions.CanExamine(executor, map) : await permissions.Controls(executor, map)))
-			return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+		if (reading && !await permissions.CanExamine(executor, map))
+			return await notify.PermissionDenied(executor, PermissionRefusal.Examine(map));
+		if (!reading && !await permissions.Controls(executor, map))
+			return await notify.PermissionDeniedNotControlled(executor, map);
 
 		var store = parser.ServiceProvider.GetRequiredService<WorldStore>();
 		var attributes = parser.ServiceProvider.GetRequiredService<IAttributeService>();
@@ -88,6 +97,7 @@ public static partial class WorldCommand
 			return await Say($"{parts[1]} is not a place: give it as <x>,<y> or <x>,<y>,<z>.", "#-1 BAD PLACE");
 
 		if (switches.Contains("WALL")) return await WallAsync(at);
+		if (switches.Contains("LOCK")) return await LockAsync(at);
 		if (switches.Contains("PLACE")) return await NameAsync(at);
 		if (switches.Contains("DATA")) return await DataAsync(at);
 		if (switches.Contains("ROOM")) return await RoomAsync(at);
@@ -160,6 +170,43 @@ public static partial class WorldCommand
 			return await Say($"The {WorldGrid.Word(side)} side of {place} is now {what}.", "");
 		}
 
+		async ValueTask<Option<CallState>> LockAsync(WorldPosition place)
+		{
+			if (parts.Length < 3 || WorldGrid.ParseSide(parts[2]) is not { } side)
+				return await Say("Which side? Give it as <map>/<x>,<y>[,<z>]/<n|e|s|w|u|d>.", "#-1 NO SIDE");
+			if (string.IsNullOrWhiteSpace(value))
+			{
+				await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, null);
+				return await Say($"The {WorldGrid.Word(side)} side of {place} is now open.", "");
+			}
+			var keys = parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>();
+			var bound = await keys.BindAsync(value.Trim(), executor);
+			if (bound is not string key)
+				return await Say($"I don't understand that key: {(bound is Error<string> error ? error.Value : "")}", ErrorMessages.Returns.InvalidLock);
+			await store.SetLockAsync(dbref, place.X, place.Y, place.Z, side, await StampAsync(key));
+			return await Say($"The {WorldGrid.Word(side)} side of {place} is now locked.", "");
+		}
+
+		// Each object the key names is kept as its objid, as @lock keeps it, so the key fails once the object is
+		// destroyed rather than passing to whatever takes its number next.
+		async ValueTask<string> StampAsync(string key)
+		{
+			var numbers = new List<int>();
+			LockKeyReferences.Rewrite(key, number =>
+			{
+				numbers.Add(number);
+				return null;
+			});
+			var mediator = parser.ServiceProvider.GetRequiredService<IMediator>();
+			var objids = new Dictionary<int, string>();
+			foreach (var number in numbers.Distinct())
+			{
+				if (await mediator.Send(new GetObjectNodeQuery(new DBRef(number))) is AnySharpObject found)
+					objids[number] = found.Object().DBRef.ToString();
+			}
+			return LockKeyReferences.Rewrite(key, number => objids.GetValueOrDefault(number));
+		}
+
 		async ValueTask<Option<CallState>> NameAsync(WorldPosition place)
 		{
 			var placeName = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -209,7 +256,7 @@ public static partial class WorldCommand
 			if (await WorldMaps.LocateAsync(parser, executor, value.Trim()) is not { } found) return new CallState(ErrorMessages.Returns.NoMatch);
 			if (!found.IsRoom) return await Say($"{found.Object().Name} is not a room.", "#-1 NOT A ROOM");
 			if (!await permissions.Controls(executor, found))
-				return await Say(ErrorMessages.Notifications.PermissionDenied, ErrorMessages.Returns.PermissionDenied);
+				return await notify.PermissionDeniedNotControlled(executor, found);
 			var room = found.Object().DBRef;
 			if (await rooms.StandingAsync(dbref, place) is { } lent && lent.Number != room.Number
 				&& store.Room(lent) is { Permanent: false } && await rooms.HoldsAnythingAsync(lent))
@@ -240,7 +287,7 @@ public static partial class WorldCommand
 			if (terrain?.Closed is { } closed) lines.Add($"Closed: {closed}");
 			foreach (var side in Enum.GetValues<WorldSide>())
 			{
-				var (edge, reason) = store.Edge(dbref, place.X, place.Y, place.Z, side);
+				var (edge, reason, key) = store.Edge(dbref, place.X, place.Y, place.Z, side);
 				if (edge == WorldEdge.Open) continue;
 				var what = edge switch
 				{
@@ -249,7 +296,10 @@ public static partial class WorldCommand
 					WorldEdge.OneWayIn => "one way, in",
 					_ => "lock",
 				};
-				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{(reason is null ? "" : $" ({reason})")}");
+				var shown = edge != WorldEdge.Lock ? ""
+					: key is null ? ", no key"
+					: $", key {await parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>().ReadbackAsync(key, executor)}";
+				lines.Add($"{char.ToUpperInvariant(WorldGrid.Word(side)[0])}{WorldGrid.Word(side)[1..]}: {what}{shown}{(reason is null ? "" : $" ({reason})")}");
 			}
 			if (held?.Data is { } data) lines.Add($"Data: {data}");
 			if (await parser.ServiceProvider.GetRequiredService<WorldRooms>().StandingAsync(dbref, place) is { } standing)

@@ -47,7 +47,7 @@ jobs:
       - name: Install upstream build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang make libssl-dev libpcre3-dev libcrypt-dev libnsl-dev
+          sudo apt-get install -y --no-install-recommends clang make libssl-dev libcrypt-dev libnsl-dev
       - name: Build pinned upstream converters and genuine native databases
         run: |
           git init "$RUNNER_TEMP/rhost-upstream"

@@ -17,8 +17,9 @@ namespace SharpMUSH.Tests.Integration.World;
 
 /// <summary>
 /// The bundled world-grid package over the World plugin: +map/exits opens the ten direction exits on a world map,
-/// a player walks between the rooms its places are lent and is refused by walls with their reasons, the cell parent
-/// describes a lent room from the legend, and +map draws the places around the player. Not in parallel: the
+/// a player walks between the rooms its places are lent and is refused by walls and the locks they do not pass with
+/// their reasons, the cell parent
+/// describes a lent room from the legend and lists its ways, and +map draws the places around the player with a key. Not in parallel: the
 /// package's commands are global.
 /// </summary>
 [NotInParallel]
@@ -122,10 +123,39 @@ public class WorldGridIntegrationTests
 			await Assert.That(east).StartsWith("#");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(east);
 			await Assert.That(walked).Contains("Old forest (2,1,0)").And.Contains("Oaks crowd the path.");
+			// look lists the map's ways that lead somewhere from here: none east, the map ends there.
+			await Assert.That(walked).Contains("Obvious exits:").And.Contains("North").And.Contains("West").And.DoesNotContain("East");
+
+			// A DARK direction exit is left out for whoever can't see it.
+			var westExit = await Eval($"first(iter(lexits({mapRef}),if(strmatch(name(%i0),West),%i0)))");
+			await God($"@set {westExit}=DARK");
+			await Assert.That(await As(walker, "look")).Contains("North").And.DoesNotContain("West");
+			await God($"@set {westExit}=!DARK");
+			// An exit of the room's own, by any name or alias in any case, stands in for the map's way.
+			await God($"@open w;WEST={start},,{east}");
+			await Assert.That(await As(walker, "look")).Contains("w, Southwest").And.Contains("and North").And.DoesNotContain("West");
 
 			await Assert.That(await As(walker, "e")).Contains("You can't go that way.");
-			await Assert.That(await As(walker, "+map")).Contains("   OO@");
+			await Assert.That(await As(walker, "+map")).Contains("   OO@").And.Contains("Key: O Old forest");
+			await God($"&MAP`LEGEND`FOREST`CHAR {mapRef}=f");
+			await Assert.That(await As(walker, "+map")).Contains("   ff@").And.Contains("Key: f Old forest");
 			await Assert.That(await As(walker, "+map/keep")).Contains($"You do not control {map}.");
+
+			// A locked side opens for whoever passes its key, as an exit's lock does.
+			await God($"@world/wall {mapRef}/2,1/n=lock,The gate is barred.");
+			await Assert.That(await As(walker, "north")).Contains("The gate is barred.");
+			await God($"@world/lock {mapRef}/2,1/n={walker.DbRef}");
+			await As(walker, "north");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},2,2,,room)"));
+
+			// The legend locks moving into a terrain from another one.
+			await God($"@world/paint {mapRef}/1,2=mountain");
+			await God($"&MAP`LEGEND`MOUNTAIN`LOCK {mapRef}=CLIMBER:yes");
+			await God($"&MAP`LEGEND`MOUNTAIN`FAILURE {mapRef}=The slope is too steep.");
+			await Assert.That(await As(walker, "west")).Contains("The slope is too steep.");
+			await God($"&CLIMBER {walker.DbRef}=yes");
+			await As(walker, "west");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},1,2,,room)"));
 		}
 		finally
 		{

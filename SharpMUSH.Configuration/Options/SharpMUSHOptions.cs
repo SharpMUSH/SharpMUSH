@@ -115,7 +115,10 @@ public record SharpMUSHOptions
 			SidefxFlag: false,
 			RhostList: false,
 			Dialect: null,
-			MuxQueueFunctions: false
+			MuxQueueFunctions: false,
+			RhostIterSeparator: false,
+			RhostLrooms: false,
+			MuxQuiet: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

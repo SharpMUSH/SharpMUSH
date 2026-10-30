@@ -1,11 +1,13 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Security.Claims;
+using Mediator;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SharpMUSH.Library.Authorization;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Models;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services.Interfaces;
 
 namespace SharpMUSH.Server.Controllers;
@@ -24,6 +26,8 @@ namespace SharpMUSH.Server.Controllers;
 ///   POST   /api/roles/account/{key}/{slug}              — assign a role to an account
 ///   DELETE /api/roles/account/{key}/{slug}              — remove a role from an account
 ///   PUT    /api/roles/account/{key}/overrides           — set one per-account override
+///   POST   /api/roles/object/{dbref}/{slug}?created=    — assign a role to one game object, such as a character
+///   DELETE /api/roles/object/{dbref}/{slug}?created=    — remove a role from one game object
 ///   GET    /api/roles/permissions                       — the custom permissions the game defines
 ///   PUT    /api/roles/permissions                       — define one, or change its description
 ///   DELETE /api/roles/permissions/{scope}               — remove one and every setting of it
@@ -39,7 +43,8 @@ public class RolesController(
 	IRoleRegistryService roles,
 	IAccountService accounts,
 	IAdministrativeCapabilityService capabilities,
-	IRoleManagementService management) : ControllerBase
+	IRoleManagementService management,
+	IMediator mediator) : ControllerBase
 {
 	public record RoleDto(
 		string Slug,
@@ -174,6 +179,38 @@ public class RolesController(
 		if (!Enum.TryParse<PermissionState>(dto.State, true, out var state) || !Enum.IsDefined(state))
 			return BadRequest(new { error = $"Invalid permission state: {dto.State}" });
 		return await management.SetOverridesAsync(actor, FullId(key), [dto.Scope], state, HttpContext.RequestAborted) switch
+		{
+			Success => Ok(),
+			RoleRefusal refusal => Refused(refusal)
+		};
+	}
+
+	/// <summary>
+	/// Assigns a role to the object <paramref name="dbref"/> alone, as <c>@role/assign</c> does: a character holds it
+	/// without the rest of its account's characters. <paramref name="created"/>, the creation time the page showed,
+	/// refuses a number reused since.
+	/// </summary>
+	[HttpPost("object/{dbref:int}/{slug}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> AssignObjectRole(int dbref, string slug, [FromQuery] long? created)
+		=> await ChangeObjectRoleAsync(dbref, created, (actor, target, ct) => management.AssignToObjectAsync(actor, target, slug, ct));
+
+	/// <summary>Removes a role the object <paramref name="dbref"/> holds itself; one it holds through its account stays.</summary>
+	[HttpDelete("object/{dbref:int}/{slug}")]
+	[Authorize(Policy = PortalPermission.RolesAdmin)]
+	public async Task<IActionResult> RemoveObjectRole(int dbref, string slug, [FromQuery] long? created)
+		=> await ChangeObjectRoleAsync(dbref, created, (actor, target, ct) => management.UnassignFromObjectAsync(actor, target, slug, ct));
+
+	private async Task<IActionResult> ChangeObjectRoleAsync(int dbref, long? created,
+		Func<RoleActor, AnySharpObject, CancellationToken, Task<RoleOutcome<Success>>> change)
+	{
+		if (Actor() is not { } actor) return Forbid();
+		var ct = HttpContext.RequestAborted;
+		if (await mediator.Send(new GetObjectNodeQuery(new DBRef(dbref)), ct) is not AnySharpObject target)
+			return NotFound(new { error = $"There is no #{dbref}." });
+		if (created is { } stamp && target.Object().CreationTime != stamp)
+			return Conflict(new { error = $"#{dbref} is now a different object. Reload and try again." });
+		return await change(actor, target, ct) switch
 		{
 			Success => Ok(),
 			RoleRefusal refusal => Refused(refusal)

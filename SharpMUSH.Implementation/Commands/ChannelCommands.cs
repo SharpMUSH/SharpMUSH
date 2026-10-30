@@ -1,3 +1,4 @@
+using MarkupString.Layout;
 using SharpMUSH.Configuration;
 using SharpMUSH.Implementation.Commands.ChannelCommand;
 using SharpMUSH.Library;
@@ -6,9 +7,11 @@ using SharpMUSH.Library.Commands.Database;
 using SharpMUSH.Library.Definitions;
 using SharpMUSH.Library.DiscriminatedUnions;
 using SharpMUSH.Library.Extensions;
+using SharpMUSH.Library.Markup;
 using SharpMUSH.Library.Models;
 using SharpMUSH.Library.Notifications;
 using SharpMUSH.Library.ParserInterfaces;
+using SharpMUSH.Library.Queries.Database;
 using SharpMUSH.Library.Services;
 using SharpMUSH.Library.Services.Interfaces;
 using CB = SharpMUSH.Library.Definitions.CommandBehavior;
@@ -412,7 +415,7 @@ public partial class Commands
 		return await AttributeService.GetAttributePatternAsync(executor, executor, "CHANALIAS`*", false,
 				IAttributeService.AttributePatternMode.Wildcard) switch
 		{
-			SharpAttribute[] aliases => await ListChannelAliasesAsync(executor, aliases),
+			SharpAttribute[] aliases => await ListChannelAliasesAsync(parser, executor, aliases),
 			Error<string> error => await ChannelAliasesUnreadableAsync(executor, error.Value)
 		};
 	}
@@ -423,7 +426,17 @@ public partial class Commands
 		return new CallState($"#-1 Error reading aliases: {error}");
 	}
 
-	private async ValueTask<Option<CallState>> ListChannelAliasesAsync(AnySharpObject executor, SharpAttribute[] aliases)
+	/// <summary>TinyMUX's comlist columns: each alias, the channel it names, your standing there and your title.</summary>
+	private static readonly ImmutableArray<TableColumn> ComListColumns =
+	[
+		new(MarkupText.Plain("Alias")) { Wrap = false },
+		new(MarkupText.Plain("Channel")) { Wrap = false },
+		new(MarkupText.Plain("Status")) { Wrap = false },
+		new(MarkupText.Plain("Title"))
+	];
+
+	private async ValueTask<Option<CallState>> ListChannelAliasesAsync(IMUSHCodeParser parser, AnySharpObject executor,
+		SharpAttribute[] aliases)
 	{
 		if (aliases.Length == 0)
 		{
@@ -431,13 +444,22 @@ public partial class Commands
 			return new CallState(string.Empty);
 		}
 
-		var outputLines = aliases.Select(attr =>
+		var rows = new List<ImmutableArray<Block>>();
+		foreach (var alias in aliases)
 		{
-			var aliasName = attr.LongName.StartsWith("CHANALIAS`") ? attr.LongName[10..] : attr.LongName;
-			return MarkupText.Concat(MarkupText.Plain($"{aliasName.ToLower()} : "), attr.Value);
-		});
+			var aliasName = alias.LongName.StartsWith("CHANALIAS`") ? alias.LongName[10..] : alias.LongName;
+			var membership = await Mediator.Send(new GetChannelQuery(alias.Value.ToPlainText())) is { } channel
+				? await ChannelHelper.ChannelMemberStatus(Mediator, executor, channel)
+				: null;
+			var status = membership is null ? "Off" : membership.Status.Gagged ?? false ? "Gag" : "On";
+			rows.Add([MarkupText.Plain(aliasName.ToLowerInvariant()), alias.Value, MarkupText.Plain(status),
+				membership?.Status.Title ?? MarkupText.Empty]);
+		}
 
-		await NotifyService.Notify(executor, MarkupText.Concat(outputLines), executor);
+		var result = ServerLayout.Build(
+			ServerLayout.Panel(MarkupText.Plain("Channel aliases"), ServerLayout.Listing(ComListColumns, rows)), 78,
+			parser.HouseLook());
+		await NotifyService.Notify(executor, result, executor);
 		return new CallState(string.Empty);
 	}
 

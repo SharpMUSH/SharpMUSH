@@ -232,7 +232,7 @@
 
 
 # String Functions
-  String functions take at least one string and return a transformed string, parts of a string, or a value related to the string(s).
+  These functions return part of a string, a changed copy, or a fact about it.
 
 |                          |                          |                          |                          |
 |--------------------------|--------------------------|--------------------------|--------------------------|
@@ -240,24 +240,25 @@
 | [ALPHAMIN()]             | [ART()]                  | [BEFORE()]               | [BRACKETS()]             |
 | [CAPSTR()]               | [CASE()]                 | [CASEALL()]              | [CAT()]                  |
 | [CENTER()]               | [CHR()]                  | [COLUMNS()]              | [COMP()]                 |
-| [COND()]                 | [CONDALL()]              | [CRC32()]                | [DECODE64()]             |
-| [DECOMPOSE()]            | [DECOMPOSEWEB()]         | [DECRYPT()]              | [DIGEST()]               |
-| [DISPLAYWIDTH()]         | [EDIT()]                 | [ELEMENTPOS()]           | [ENCODE64()]             |
-| [ENCRYPT()]              | [ESCAPE()]               | [ESCAPEX()]              | [FLIP()]                 |
-| [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                | [GRAPHEMECOUNT()]        |
-| [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   | [IFELSE()]               |
-| [LCSTR()]                | [LEFT()]                 | [LIT()]                  | [LJUST()]                |
-| [LPOS()]                 | [MERGE()]                | [MID()]                  | [ORD()]                  |
-| [ORDINAL()]              | [POS()]                  | [PRINTF()]               | [REGEDIT()]              |
-| [REGMATCH()]             | [RENDER()]               | [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] |
-| [REPEAT()]               | [RIGHT()]                | [RJUST()]                | [SCRAMBLE()]             |
-| [SECURE()]               | [SHA0()]                 | [SPACE()]                | [SPELLNUM()]             |
-| [SQUISH()]               | [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               |
-| [STRDELETE()]            | [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            |
-| [STRIP()]                | [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               |
-| [STRMATCH()]             | [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               |
-| [TR()]                   | [TRIM()]                 | [UCSTR()]                | [UNMARK()]               |
-| [URLDECODE()]            | [URLENCODE()]            | [WRAP()]                 |                          |
+| [COND()]                 | [CONDALL()]              | [CPAD()]                 | [CRC32()]                |
+| [DECODE64()]             | [DECOMPOSE()]            | [DECOMPOSEWEB()]         | [DECRYPT()]              |
+| [DIGEST()]               | [DISPLAYWIDTH()]         | [EDIT()]                 | [ELEMENTPOS()]           |
+| [ENCODE64()]             | [ENCRYPT()]              | [ESCAPE()]               | [ESCAPEX()]              |
+| [FLIP()]                 | [FOREACH()]              | [FORMDECODE()]           | [FORMQ()]                |
+| [GRAPHEMECOUNT()]        | [GRAPHEMES()]            | [HMAC()]                 | [IF()]                   |
+| [IFELSE()]               | [LCSTR()]                | [LEFT()]                 | [LIT()]                  |
+| [LJUST()]                | [LPAD()]                 | [LPOS()]                 | [MERGE()]                |
+| [MID()]                  | [ORD()]                  | [ORDINAL()]              | [POS()]                  |
+| [PRINTF()]               | [REGEDIT()]              | [REGMATCH()]             | [RENDER()]               |
+| [RENDERMARKDOWN()]       | [RENDERMARKDOWNCUSTOM()] | [REPEAT()]               | [RIGHT()]                |
+| [RJUST()]                | [RPAD()]                 | [SCRAMBLE()]             | [SECURE()]               |
+| [SHA0()]                 | [SPACE()]                | [SPELLNUM()]             | [SQUISH()]               |
+| [STANDIN()]              | [STRALLOF()]             | [STRCAT()]               | [STRDELETE()]            |
+| [STRDISTANCE()]          | [STRFIRSTOF()]           | [STRINSERT()]            | [STRIP()]                |
+| [STRIPACCENTS()]         | [STRIPANSI()]            | [STRLEN()]               | [STRMATCH()]             |
+| [STRMEM()]               | [STRREPLACE()]           | [SWITCH()]               | [TR()]                   |
+| [TRIM()]                 | [UCSTR()]                | [UNMARK()]               | [URLDECODE()]            |
+| [URLENCODE()]            | [WRAP()]                 |                          |                          |
 
 Boxes, titled rules, columns, labelled fields, trees, pictures, gauges, lists and tables that the web portal draws as real layout are [LAYOUT FUNCTIONS].
 
@@ -515,7 +516,7 @@ You say, "r baz"
 
   Prefer cand(): it skips work the answer no longer needs, and a later argument can rely on the earlier ones being true. Use and() only when every argument has a side effect that must run.
 
-  As in TinyMUX, a single argument is tested on its own: `and(1)` is 1. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `and(1,abc)` is 0. See [compatibility config].
+  As in TinyMUX, a single argument is tested on its own: `and(1)` is 1. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX and RhostMUSH do, so `and(1,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -1134,6 +1135,24 @@ You say, "0"
 - [CTU()]
 - [SIN()]
 - [TAN()]
+:::
+# cpad()
+`cpad(<string>, <width>[, <fill>])`
+
+  Centers `<string>` in a field `<width>` characters wide, as TinyMUX's cpad() does. The `<fill>` pattern, a space by default, repeats across the whole field from its first character, and `<string>` is laid over the middle, so the right side carries on the pattern rather than starting it again as center() does. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think cpad(a,5,-)
+--a--
+think cpad(foo,12,=+)
+=+=+foo+=+=+
+```
+
+::: seealso
+- [CENTER()]
+- [LPAD()]
+- [RPAD()]
 :::
 # crc32()
 `crc32([<string1>[, ... <stringN>]])`
@@ -3196,6 +3215,24 @@ Basic USER:ITSME Use
 ::: seealso
 - [LN()]
 :::
+# lpad()
+`lpad(<string>, <width>[, <fill>])`
+
+  Puts `<string>` at the left of a field `<width>` characters wide, as TinyMUX's lpad() does. The `<fill>` pattern, a space by default, repeats across the whole field from its first character, so the fill after `<string>` carries on from where the pattern is at that column rather than starting again as ljust() does. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think -[lpad(foo,6)]-
+-foo   -
+think lpad(foo,12,=+)
+foo+=+=+=+=+
+```
+
+::: seealso
+- [LJUST()]
+- [RPAD()]
+- [CPAD()]
+:::
 # lparent()
 `lparent(<object>)`
 
@@ -3698,18 +3735,18 @@ You say, "$;No;Nol;Noli;Nolt"
 
   With `<numeric>` true, it returns just the percentage, positive while the moon is waxing and negative while it is waning.
 
-  The phase is worked out from the new moon of 6 January 2000 and the average length of a lunar month, 29.53059 days, so it can be up to a day off.
+  The phase is worked out as RhostMUSH does, from where the sun and moon are twelve hours after `<seconds>`; it is waxing when more is lit a further half day on. Over 99.4% lit is Full, under 0.5% is New, and between 49.7% and 50.3% is Half.
 
   Examples:
 ```sharp
-think moon(947182440)
+think moon(947172800)
 The Moon is New
-think moon(948458160)
+think moon(948382400)
 The Moon is Full
-think moon(949000000)
-The Moon is Waning Gibbous (62% of Full)
+think moon(999999999)
+The Moon is Waning Gibbous (72% of Full)
 think moon(948000000, 1)
-71
+74
 ```
 
 ::: seealso
@@ -4051,7 +4088,7 @@ think objevals(me,v(DATA`TEXT))
 
   Prefer cor(): it skips work the answer no longer needs. Use or() only when every argument has a side effect that must run.
 
-  As in TinyMUX, a single argument is tested on its own: `or(0)` is 0. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX does, so `or(0,abc)` is 0. See [compatibility config].
+  As in TinyMUX, a single argument is tested on its own: `or(0)` is 0. With the `mux_logic` @config option on, each argument is tested by its leading signed integer, as TinyMUX and RhostMUSH do, so `or(0,abc)` is 0. See [compatibility config].
 
 
 ::: seealso
@@ -4119,7 +4156,7 @@ think objevals(me,v(DATA`TEXT))
 
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz@$"
 
-  Every one of them can appear in an attribute name, so a radix-64 number makes a short attribute name. A negative number is written with a leading `-`, except in radix 63 and 64, which have no digit to spare for it.
+  Every one of them can appear in an attribute name, so a radix-64 number makes a short attribute name. A negative number is written with a leading `-`. With `<baseconv digits>`, radix 63 and 64 have no digit to spare for it, so a negative number is an error there.
 
   When `<baseconv digits>` is true, the digits are baseconv()'s instead: lower case up to radix 36, and its base64 url string above that. pack(<number>,<radix>,1) is baseconv(<number>,10,<radix>).
 
@@ -4135,6 +4172,8 @@ think pack(255,16,1)
 ff
 think pack(-10,2)
 -1010
+think pack(-629126998)
+-bVxTM
 ```
 
 
@@ -4633,11 +4672,11 @@ You say, "Turn south at the junction"
 - [STRREPLACE()]
 :::
 # lrooms()
-`lrooms(<room>[, <depth>[, <all>]])`
+`lrooms(<room>[, <depth>[, <all>[, <objid>]]])`
 
-  Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too.
+  Returns the rooms you can reach from `<room>` through exits you can see, up to `<depth>` steps away. `<depth>` defaults to 1 and can be at most 50. Exits on the room's parents count too. With the `rhost_lrooms` @config option on, as on RhostMUSH, any depth is taken: 0 follows exits as far as they lead, a negative depth counts as 1, and at most 1,000 rooms are listed. See [compatibility config].
 
-  If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order.
+  If `<all>` is false, only the rooms exactly `<depth>` steps away are listed; by default every room on the way is listed. A room is listed only if you can examine it, are in it, or it is the enactor. `<room>` itself is never listed. The result is in dbref order, as objids when `<objid>` is true.
 
   Example:
 ```sharp
@@ -4769,7 +4808,7 @@ moderator player everyone
 # roman()
 `roman(<number>)`
 
-  Writes `<number>`, a whole number from 1 to 3999, in Roman numerals.
+  Writes `<number>`, a whole number from 1 to 3999999, in Roman numerals. Thousands from 4000 up, which take a bar over the letter on paper, are written in lower case: v is 5000, x 10000, l 50000, c 100000, d 500000 and m 1000000.
 
   Examples:
 ```sharp
@@ -4777,6 +4816,8 @@ think roman(1999)
 MCMXCIX
 think roman(4)
 IV
+think roman(777777)
+dcclxxvMMDCCLXXVII
 ```
 # room()
 `room(<object>)`
@@ -4835,6 +4876,24 @@ think floor(3.14159)
 ::: seealso
 - [BOUND()]
 - [TRUNC()]
+:::
+# rpad()
+`rpad(<string>, <width>[, <fill>])`
+
+  Puts `<string>` at the right of a field `<width>` characters wide, as TinyMUX's rpad() does. The `<fill>` pattern, a space by default, repeats from the first character of the field. A `<string>` wider than the field is returned whole, whatever `mux_justify` says.
+
+  Examples:
+```sharp
+think -[rpad(foo,6)]-
+-   foo-
+think =[rpad(bar,5,.)]=
+=..bar=
+```
+
+::: seealso
+- [RJUST()]
+- [LPAD()]
+- [CPAD()]
 :::
 # s()
 # s-function
@@ -5546,9 +5605,9 @@ My name
 - [STRREPLACE()]
 :::
 # strip()
-`strip(<string>[, <characters>])`
+`strip(<string>[, <characters>[, <keep>]])`
 
-  Removes every one of `<characters>` from `<string>`, wherever it appears. Case matters. Without `<characters>`, it returns `<string>` without its markup, as stripansi() does. Either way the result has no markup.
+  Removes every one of `<characters>` from `<string>`, wherever it appears. Case matters. When `<keep>` is 1, it keeps only those characters instead. Without `<characters>`, it returns `<string>` without its markup, as stripansi() does. Either way the result has no markup.
 
   Examples:
 ```sharp
@@ -5556,6 +5615,8 @@ think strip(This is a test, is)
 Th  a tet
 think strip(abcdefgABCDEFG, azGy!7$B)
 bcdefgACDEF
+think strip(This is a test,is,1)
+isiss
 ```
 
 ::: seealso
@@ -6575,7 +6636,7 @@ think words(1 2%b%b3, %b)
 
   Takes one or more booleans and returns a 1 if one, and only one, of the inputs is equivalent to true(1).
 
-  With the `mux_logic` @config option on, xor() is TinyMUX's: each argument is tested by its leading signed integer, and the answer is 1 when an odd number of them are true, so `xor(1,1,1)` is 1. See [compatibility config].
+  With the `mux_logic` @config option on, xor() is TinyMUX's and RhostMUSH's: each argument is tested by its leading signed integer, and the answer is 1 when an odd number of them are true, so `xor(1,1,1)` is 1. See [compatibility config].
 
 
 ::: seealso

@@ -25,12 +25,6 @@ namespace SharpMUSH.Implementation.Functions;
 /// </summary>
 public partial class Functions
 {
-	/// <summary>Seconds since 1970 of the new moon of 6 January 2000, 18:14 UTC.</summary>
-	private const double NewMoonEpoch = 947182440.0;
-
-	/// <summary>The mean synodic month, in seconds.</summary>
-	private const double SynodicMonth = 29.53059 * 86400.0;
-
 	/// <summary>TinyMUX's limit on how many numbers <c>lrand()</c> returns.</summary>
 	private const int MaxRandomCount = 8000;
 
@@ -41,6 +35,14 @@ public partial class Functions
 
 	/// <summary>TinyMUX's limit on <c>lrooms()</c> depth.</summary>
 	private const int MaxRoomDepth = 50;
+
+	/// <summary>The times <c>moon()</c> takes: the years 1 to 9999.</summary>
+	private static readonly double MinMoonSeconds = (DateTime.MinValue - DateTime.UnixEpoch).TotalSeconds;
+
+	private static readonly double MaxMoonSeconds = Math.Floor((DateTime.MaxValue - DateTime.UnixEpoch).TotalSeconds);
+
+	/// <summary>How many rooms <c>lrooms()</c> reaches under <c>rhost_lrooms</c>, which takes any depth.</summary>
+	private const int MaxRhostRooms = 1000;
 
 	/// <summary>How far up the parent chain <c>lrooms()</c> looks for exits.</summary>
 	private const int MaxRoomParentDepth = 10;
@@ -109,18 +111,20 @@ public partial class Functions
 		return CallState.Empty;
 	}
 
-	[SharpFunction(Name = "strip", MinArgs = 1, MaxArgs = 2, Flags = FunctionFlags.Regular,
-		ParameterNames = ["string", "characters"])]
+	[SharpFunction(Name = "strip", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "characters", "keep"])]
 	public ValueTask<CallState> Strip(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var text = args["0"].Message?.ToPlainText() ?? string.Empty;
 		var remove = args.TryGetValue("1", out var removeArg) ? removeArg.Message?.ToPlainText() ?? string.Empty : string.Empty;
+		// RhostMUSH's third argument keeps the characters instead of removing them.
+		var keep = args.TryGetValue("2", out var keepArg) && ArgHelpers.ParseInteger(keepArg.Message?.ToPlainText()) != 0;
 
 		// With nothing to remove, the string comes back without its markup.
 		return ValueTask.FromResult(new CallState(remove.Length == 0
 			? text
-			: string.Concat(text.Where(c => !remove.Contains(c)))));
+			: string.Concat(text.Where(c => remove.Contains(c) == keep))));
 	}
 
 	[SharpFunction(Name = "lrand", MinArgs = 3, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -157,34 +161,84 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Number));
 		}
 
+		if (seconds < MinMoonSeconds || seconds > MaxMoonSeconds)
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
+		}
+
 		var numeric = args.TryGetValue("1", out var numericArg) && numericArg.Message.Truthy(parser);
 		return ValueTask.FromResult(new CallState(MoonPhase(seconds, numeric)));
 	}
 
 	/// <summary>
-	/// The moon's phase at <paramref name="seconds"/>: how far into the synodic month the time falls, and
-	/// how much of the disc is lit, rounded to a whole percent.
+	/// The moon's phase at <paramref name="seconds"/>, as RhostMUSH works it out: the lit percentage of the disc twelve
+	/// hours on, from the lunar and solar positions in Duffett-Smith's <i>Practical Astronomy with your
+	/// Calculator</i> (sections 42, 61 and 63), and waxing when the next half day lights more of it.
 	/// </summary>
 	private static string MoonPhase(double seconds, bool numeric)
 	{
-		var phase = (seconds - NewMoonEpoch) % SynodicMonth;
-		if (phase < 0) phase += SynodicMonth;
+		var days = DaysSinceMoonEpoch(seconds);
+		var today = LitPercent(days + 0.5);
+		var waxing = LitPercent(days + 1.0) > today;
+		var shown = Math.Round(today, MidpointRounding.ToEven).ToString("0", CultureInfo.InvariantCulture);
 
-		var fraction = phase / SynodicMonth;
-		var lit = (int)((1.0 - Math.Cos(2.0 * Math.PI * fraction)) / 2.0 * 100.0 + 0.5);
-		var waxing = fraction < 0.5;
-
-		if (numeric) return (waxing ? lit : -lit).ToString(CultureInfo.InvariantCulture);
+		if (numeric) return waxing ? shown : $"-{shown}";
 
 		var direction = waxing ? "Waxing" : "Waning";
-		return lit switch
+		return today switch
 		{
-			>= 100 => "The Moon is Full",
-			<= 0 => "The Moon is New",
-			>= 49 and <= 51 => $"The Moon is {direction} Half ({lit}% of Full)",
-			> 50 => $"The Moon is {direction} Gibbous ({lit}% of Full)",
-			_ => $"The Moon is {direction} Crescent ({lit}% of Full)"
+			> 99.4 => "The Moon is Full",
+			< 0.5 => "The Moon is New",
+			> 49.7 and < 50.3 => $"The Moon is {direction} Half ({shown}% of Full)",
+			> 50.0 => $"The Moon is {direction} Gibbous ({shown}% of Full)",
+			_ => $"The Moon is {direction} Crescent ({shown}% of Full)"
 		};
+	}
+
+	/// <summary>
+	/// Days from the end of 1984 to <paramref name="seconds"/> (UTC): the day of the year and the time of day, plus
+	/// every year from 1985 to the one before. RhostMUSH counts a year as a leap year from its number less 1900, so
+	/// 2000 has 365 days here; the count keeps that so its answers match.
+	/// </summary>
+	private static double DaysSinceMoonEpoch(double seconds)
+	{
+		var time = DateTime.UnixEpoch.AddSeconds(Math.Floor(seconds));
+		var days = time.DayOfYear + time.TimeOfDay.TotalHours / 24.0;
+		for (var year = 85; year < time.Year - 1900; year++)
+		{
+			days += (year % 4 == 0 && year % 100 != 0) || year % 400 == 0 ? 366 : 365;
+		}
+
+		return days;
+	}
+
+	/// <summary>How much of the moon's disc is lit, in percent, <paramref name="days"/> after the end of 1984.</summary>
+	private static double LitPercent(double days)
+	{
+		const double solarLongitudeAtEpoch = 279.611371;
+		const double solarPerigeeAtEpoch = 282.680403;
+		const double solarEccentricity = 0.01671542;
+		const double lunarLongitudeAtEpoch = 18.251907;
+		const double lunarPerigeeAtEpoch = 192.917585;
+
+		static double Degrees(double angle) => (angle % 360.0 + 360.0) % 360.0;
+		static double Sin(double degrees) => Math.Sin(degrees * Math.PI / 180.0);
+
+		var meanAnomaly = Degrees(360.0 * days / 365.2422);
+		var solarAnomaly = Degrees(meanAnomaly + solarLongitudeAtEpoch - solarPerigeeAtEpoch);
+		var solarLongitude = Degrees(meanAnomaly + 360.0 / Math.PI * solarEccentricity * Sin(solarAnomaly)
+			+ solarLongitudeAtEpoch);
+
+		var lunarLongitude = Degrees(13.1763966 * days + lunarLongitudeAtEpoch);
+		var lunarAnomaly = Degrees(lunarLongitude - 0.1114041 * days - lunarPerigeeAtEpoch);
+		var evection = 1.2739 * Sin(2.0 * (lunarLongitude - solarLongitude) - lunarAnomaly);
+		var annualEquation = 0.1858 * Sin(solarAnomaly);
+		var correctedAnomaly = lunarAnomaly + evection - annualEquation - 0.37 * Sin(solarAnomaly);
+		var correctedLongitude = lunarLongitude + evection + 6.2886 * Sin(correctedAnomaly) - annualEquation
+			+ 0.214 * Sin(2.0 * correctedAnomaly);
+		var trueLongitude = correctedLongitude + 0.6583 * Sin(2.0 * (correctedLongitude - solarLongitude));
+
+		return 50.0 * (1.0 - Math.Cos((trueLongitude - solarLongitude) * Math.PI / 180.0));
 	}
 
 	[SharpFunction(Name = "bittype", MinArgs = 0, MaxArgs = 1, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -332,15 +386,81 @@ public partial class Functions
 			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.Integer));
 		}
 
-		if (number is < 1 or > 3999) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
+		if (number is < 1 or > 3999999) return ValueTask.FromResult(new CallState(ErrorMessages.Returns.NumberOutOfRange));
 
-		string[] thousands = ["", "M", "MM", "MMM"];
+		// RhostMUSH's range: from 4000 up the numerals that take a bar on paper are written in lower case.
+		string[] millions = ["", "m", "mm", "mmm"];
+		string[] hundredThousands = ["", "c", "cc", "ccc", "cd", "d", "dc", "dcc", "dccc", "cm"];
+		string[] tenThousands = ["", "x", "xx", "xxx", "xl", "l", "lx", "lxx", "lxxx", "xc"];
+		string[] thousands = ["", "M", "MM", "MMM", "Mv", "v", "vM", "vMM", "vMMM", "Mx"];
 		string[] hundreds = ["", "C", "CC", "CCC", "CD", "D", "DC", "DCC", "DCCC", "CM"];
 		string[] tens = ["", "X", "XX", "XXX", "XL", "L", "LX", "LXX", "LXXX", "XC"];
 		string[] ones = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX"];
 
 		return ValueTask.FromResult(new CallState(
-			thousands[number / 1000] + hundreds[number / 100 % 10] + tens[number / 10 % 10] + ones[number % 10]));
+			millions[number / 1000000] + hundredThousands[number / 100000 % 10] + tenThousands[number / 10000 % 10]
+			+ thousands[number / 1000 % 10] + hundreds[number / 100 % 10] + tens[number / 10 % 10] + ones[number % 10]));
+	}
+
+	[SharpFunction(Name = "lpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> LeftPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, _ => 0);
+
+	[SharpFunction(Name = "rpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> RightPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, padding => padding);
+
+	[SharpFunction(Name = "cpad", MinArgs = 2, MaxArgs = 3, Flags = FunctionFlags.Regular,
+		ParameterNames = ["string", "width", "fill"])]
+	public ValueTask<CallState> CenterPad(IMUSHCodeParser parser, SharpFunctionAttribute _2)
+		=> PadInField(parser, padding => padding / 2);
+
+	/// <summary>
+	/// TinyMUX's lpad(), rpad() and cpad(): the fill repeats across the whole field from its first cell, and the
+	/// string is laid over it <paramref name="leftOf"/> cells in, given the cells left over. Where ljust(),
+	/// rjust() and center() start the fill afresh on each side, these keep the one pattern, and they never cut
+	/// a string wider than the field, whatever mux_justify says.
+	/// </summary>
+	private static ValueTask<CallState> PadInField(IMUSHCodeParser parser, Func<int, int> leftOf)
+	{
+		var text = parser.CurrentState.Arguments["0"].Message!;
+		var fill = ArgHelpers.NoParseDefaultNoParseArgument(parser.CurrentState.ArgumentsOrdered, 2, MarkupText.Space);
+
+		if (!ArgHelpers.TryUnsignedInteger(parser, parser.CurrentState.Arguments["1"].Message!.ToPlainText(), out var width))
+		{
+			return ValueTask.FromResult(new CallState(ErrorMessages.Returns.PositiveInteger));
+		}
+
+		if (FunctionLimits.ExceedsOutput(parser.CurrentState, width))
+		{
+			return ValueTask.FromResult(FunctionLimits.RejectOutput(parser.CurrentState));
+		}
+
+		var padding = width - text.DisplayWidth;
+		if (padding <= 0) return ValueTask.FromResult(new CallState(text));
+
+		var left = leftOf(padding);
+		var field = SplitIntoGraphemes(TileFill(fill, width));
+		return ValueTask.FromResult(new CallState(MarkupText.Concat(
+			[FieldCells(field, 0, left), text, FieldCells(field, left + text.DisplayWidth, width)])));
+	}
+
+	/// <summary>The cells <paramref name="from"/> up to <paramref name="to"/> of a tiled field; half a wide character is a space.</summary>
+	private static MString FieldCells(MString[] field, int from, int to)
+	{
+		var pieces = new List<MString>();
+		var cell = 0;
+		foreach (var piece in field)
+		{
+			var end = cell + piece.DisplayWidth;
+			if (cell >= from && end <= to) pieces.Add(piece);
+			else if (end > from && cell < to) pieces.Add(MarkupText.Plain(new string(' ', Math.Min(end, to) - Math.Max(cell, from))));
+			cell = end;
+		}
+
+		return MarkupText.Concat(pieces);
 	}
 
 	[SharpFunction(Name = "crc32", MinArgs = 0, MaxArgs = int.MaxValue, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
@@ -436,43 +556,56 @@ public partial class Functions
 				});
 	}
 
-	[SharpFunction(Name = "lrooms", MinArgs = 1, MaxArgs = 3, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
-		ParameterNames = ["room", "depth", "all"])]
+	[SharpFunction(Name = "lrooms", MinArgs = 1, MaxArgs = 4, Flags = FunctionFlags.Regular | FunctionFlags.StripAnsi,
+		ParameterNames = ["room", "depth", "all", "objid"])]
 	public async ValueTask<CallState> ListRooms(IMUSHCodeParser parser, SharpFunctionAttribute _2)
 	{
 		var args = parser.CurrentState.Arguments;
 		var executor = await parser.CurrentState.KnownExecutorObject(Mediator);
 		var enactor = await parser.CurrentState.KnownEnactorObject(Mediator);
 
+		// An empty depth is the default, as RhostMUSH reads lrooms(here,,,1).
 		var depth = 1;
-		if (args.TryGetValue("1", out var depthArg) && !ArgHelpers.TryInteger(parser, depthArg.Message?.ToPlainText(), out depth))
+		if (args.TryGetValue("1", out var depthArg) && depthArg.Message is { Length: > 0 } depthText
+			&& !ArgHelpers.TryInteger(parser, depthText.ToPlainText(), out depth))
 		{
 			return new CallState(ErrorMessages.Returns.Integer);
 		}
 
-		if (depth is < 0 or > MaxRoomDepth) return new CallState(ErrorMessages.Returns.NumberOutOfRange);
+		var rhost = Configuration.CurrentValue.Compatibility.RhostLrooms;
+		if (rhost)
+		{
+			// RhostMUSH reads a negative depth as 1 and 0 as no limit.
+			depth = depth switch { < 0 => 1, 0 => int.MaxValue, _ => depth };
+		}
+		else if (depth is < 0 or > MaxRoomDepth)
+		{
+			return new CallState(ErrorMessages.Returns.NumberOutOfRange);
+		}
 
-		var all = !args.TryGetValue("2", out var allArg) || allArg.Message.Truthy(parser);
+		var all = !args.TryGetValue("2", out var allArg) || allArg.Message?.Length is 0 or null || allArg.Message.Truthy(parser);
+		var objids = args.TryGetValue("3", out var objidArg) && objidArg.Message.Truthy(parser);
 
 		return await LocateService.LocateAndNotifyIfInvalidWithCallStateFunction(parser,
 			executor, executor, args["0"].Message?.ToPlainText() ?? string.Empty, LocateFlags.All,
 			async room => room.IsRoom
-				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all)
+				? await RoomsWithinAsync(parser, executor, enactor, room, depth, all, objids, rhost ? MaxRhostRooms : int.MaxValue)
 				: new CallState(ErrorMessages.Returns.NotARoom));
 	}
 
 	/// <summary>
 	/// Walks out from <paramref name="start"/> through the exits the executor can see, on the room and its
 	/// parents, one step per level. A room is listed when it is at the last level (or at any level, with
-	/// <paramref name="all"/>) and the executor can examine it, stands in it, or the enactor is it.
+	/// <paramref name="all"/>) and the executor can examine it, stands in it, or the enactor is it. With
+	/// <paramref name="objids"/>, each is listed as its objid.
 	/// </summary>
 	private async ValueTask<CallState> RoomsWithinAsync(IMUSHCodeParser parser, AnySharpObject executor,
-		AnySharpObject enactor, AnySharpObject start, int depth, bool all)
+		AnySharpObject enactor, AnySharpObject start, int depth, bool all, bool objids, int limit)
 	{
 		var reality = parser.ServiceProvider.GetRequiredService<IRealityPolicy>();
 		var executorLocation = (await executor.Where()).Object().DBRef.Number;
 		var seen = new HashSet<int> { start.Object().DBRef.Number };
-		var reported = new SortedSet<int>();
+		var reported = new SortedDictionary<int, DBRef>();
 		var level = new List<AnySharpObject> { start };
 
 		for (var step = 1; step <= depth && level.Count > 0; step++)
@@ -483,14 +616,14 @@ public partial class Functions
 				foreach (var destination in await ExitDestinationsAsync(executor, room, reality))
 				{
 					var number = destination.Object().DBRef.Number;
-					if (!seen.Add(number)) continue;
+					if (seen.Count > limit || !seen.Add(number)) continue;
 
 					next.Add(destination);
 					if ((all || step == depth)
 						&& (number == executorLocation || number == enactor.Object().DBRef.Number
 							|| await PermissionService.CanExamine(executor, destination)))
 					{
-						reported.Add(number);
+						reported[number] = destination.Object().DBRef;
 					}
 				}
 			}
@@ -498,7 +631,7 @@ public partial class Functions
 			level = next;
 		}
 
-		return new CallState(string.Join(" ", reported.Select(number => $"#{number}")));
+		return new CallState(string.Join(" ", reported.Values.Select(dbref => objids ? dbref.ToString() : $"#{dbref.Number}")));
 	}
 
 	/// <summary>The rooms the exits the viewer can see on <paramref name="room"/> and its parents lead to.</summary>

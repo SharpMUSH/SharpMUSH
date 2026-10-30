@@ -133,7 +133,8 @@ public class MoveService(
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause)
+		string cause,
+		MoveHush hush = MoveHush.None)
 	{
 		// "Don't move something into something it's holding" (move.c:73).
 		if (await WouldCreateLoop(what, where))
@@ -182,16 +183,19 @@ public class MoveService(
 
 			if (await permissionService.IsHearer(mover))
 			{
+				var leaveHushed = hush.HasFlag(MoveHush.Leave);
+				var enterHushed = hush.HasFlag(MoveHush.Enter);
 				await didItService.DidIt(parser, new DidItRequest(
 					Place: MonikerPlace.Movement, Player: mover, Thing: oldObject,
-					What: "LEAVE", OWhat: "OLEAVE", ODef: ErrorMessages.Notifications.DefaultOLeave,
+					What: leaveHushed ? null : "LEAVE", OWhat: leaveHushed ? null : "OLEAVE",
+					ODef: leaveHushed ? null : ErrorMessages.Notifications.DefaultOLeave,
 					AWhat: "ALEAVE", Loc: oldContainer,
 					Env0: oldSeesWhat ? destination.ToString() : null,
 					Interact: IPermissionService.InteractType.Presence));
 
 				await ZoneTriad(parser, mover, oldZone, newZone, leaving: true, loc: oldContainer);
 
-				if (!oldObject.IsRoom)
+				if (!oldObject.IsRoom && !enterHushed)
 				{
 					// OXLEAVE lives on the container being left and is shown where the mover arrives.
 					await didItService.DidIt(parser, new DidItRequest(
@@ -200,7 +204,7 @@ public class MoveService(
 						Interact: IPermissionService.InteractType.See));
 				}
 
-				if (!destinationObject.IsRoom)
+				if (!destinationObject.IsRoom && !leaveHushed)
 				{
 					await didItService.DidIt(parser, new DidItRequest(
 						Place: MonikerPlace.Movement, Player: mover, Thing: destinationObject, OWhat: "OXENTER",
@@ -212,7 +216,8 @@ public class MoveService(
 
 				await didItService.DidIt(parser, new DidItRequest(
 					Place: MonikerPlace.Movement, Player: mover, Thing: destinationObject,
-					What: "ENTER", OWhat: "OENTER", ODef: ErrorMessages.Notifications.DefaultOEnter,
+					What: enterHushed ? null : "ENTER", OWhat: enterHushed ? null : "OENTER",
+					ODef: enterHushed ? null : ErrorMessages.Notifications.DefaultOEnter,
 					AWhat: "AENTER", Loc: where,
 					Env0: whereSeesWhat ? old.ToString() : null,
 					Interact: IPermissionService.InteractType.Presence));
@@ -336,7 +341,8 @@ public class MoveService(
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause)
+		string cause,
+		MoveHush hush = MoveHush.None)
 	{
 		// move.c:232-235. Penn's counter is a process-global `static int deep`, which is only safe
 		// under its single-threaded queue; SharpMUSH moves objects concurrently, so the counter rides
@@ -392,7 +398,7 @@ public class MoveService(
 
 			var oldContainer = await what.Location();
 
-			await MoveIt(parser, what, where, noMoveMsgs, enactor, cause);
+			await MoveIt(parser, what, where, noMoveMsgs, enactor, cause, hush);
 
 			// move.c:270-273: a STICKY room a Dropper just left empties through its drop-to, which for
 			// a room is its own location.
@@ -427,7 +433,8 @@ public class MoveService(
 		AnySharpContainer where,
 		bool noMoveMsgs,
 		DBRef enactor,
-		string cause)
+		string cause,
+		MoveHush hush = MoveHush.None)
 	{
 		// safe_tel resolves `dest == HOME` first (move.c:293). SharpMUSH has no HOME sentinel in
 		// AnySharpContainer, so a caller that means home resolves it before calling.
@@ -442,7 +449,7 @@ public class MoveService(
 		// move.c:294: same owner on both ends and nothing is stripped.
 		if (currentOwner.Equals(destinationOwner))
 		{
-			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause, hush);
 		}
 
 		// wiz.c:450-479: do_teleport_one handles an exit by rewriting its Source and returns, so Penn's
@@ -454,7 +461,7 @@ public class MoveService(
 		// itself, because only a Mobile is moved by enter_room (move.c:243).
 		if (mover.AsOptionalContainer is not AnySharpContainer moverContainer)
 		{
-			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+			return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause, hush);
 		}
 
 		// The list is materialised before anything moves, because each EnterRoom below rewrites the
@@ -488,7 +495,7 @@ public class MoveService(
 			await EnterRoom(parser, item, homeContainer, noMoveMsgs, enactor, cause);
 		}
 
-		return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause);
+		return await EnterRoom(parser, what, where, noMoveMsgs, enactor, cause, hush);
 	}
 
 	/// <summary>

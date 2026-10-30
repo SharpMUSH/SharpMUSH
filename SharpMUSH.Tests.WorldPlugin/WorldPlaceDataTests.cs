@@ -7,6 +7,15 @@ namespace SharpMUSH.Tests.WorldPlugin;
 public class WorldPlaceDataTests
 {
 	[Test]
+	public async Task ATextDrawingShowsCharThenAShortIconThenTheLabelsFirstLetter()
+	{
+		await Assert.That(new WorldTerrain("forest", "Old forest", null, "forest", null, "♣").Glyph).IsEqualTo("♣");
+		await Assert.That(new WorldTerrain("water", "Deep water", null, "~", null).Glyph).IsEqualTo("~");
+		await Assert.That(new WorldTerrain("forest", "old forest", null, "forest", null).Glyph).IsEqualTo("O")
+			.Because("an icon the portal draws by name is not a character");
+	}
+
+	[Test]
 	public async Task AMergeRemovesNullsAndMergesObjects()
 	{
 		var merged = WorldPlaceData.Merge(WorldPlaceData.Parse("""{"a":1,"render":{"icon":"x","tone":"red"},"gone":true}"""),

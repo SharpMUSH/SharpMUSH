@@ -65,3 +65,16 @@
 	flex: 1 1 12rem;
 	margin: 0;
 }
+
+.adm-char-role-add {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 8px;
+}
+
+.adm-char-role-help {
+	margin-top: 4px;
+	font-size: 12px;
+	color: var(--text-faint);
+}

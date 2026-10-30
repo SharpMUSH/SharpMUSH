@@ -51,9 +51,19 @@
       "lookup": "compatibility config tinymux queue functions mux queue functions"
     },
     {
+      "id": "tinymux-quiet-switches-mux-quiet",
+      "heading": "TinyMUX quiet switches: `mux_quiet`",
+      "lookup": "compatibility config tinymux quiet switches mux quiet"
+    },
+    {
       "id": "rhostmush-edit-modes-rhost-edit",
       "heading": "RhostMUSH edit() modes: `rhost_edit`",
       "lookup": "compatibility config rhostmush edit modes rhost edit"
+    },
+    {
+      "id": "rhostmush-iter-separator-rhost-iter-separator",
+      "heading": "RhostMUSH iter() separator: `rhost_iter_separator`",
+      "lookup": "compatibility config rhostmush iter separator rhost iter separator"
     },
     {
       "id": "rhostmush-lattr-arguments-rhost-lattr",
@@ -64,6 +74,11 @@
       "id": "rhostmush-list-loop-rhost-list",
       "heading": "RhostMUSH list() loop: `rhost_list`",
       "lookup": "compatibility config rhostmush list loop rhost list"
+    },
+    {
+      "id": "rhostmush-lrooms-depth-rhost-lrooms",
+      "heading": "RhostMUSH lrooms() depth: `rhost_lrooms`",
+      "lookup": "compatibility config rhostmush lrooms depth rhost lrooms"
     },
     {
       "id": "rhostmush-map-arguments-rhost-map-args",
@@ -155,7 +170,7 @@ x (a,b)c
 
 ## Logical functions: `mux_logic`
 
-With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX does, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX.
+With `mux_logic` off, `and()`, `or()`, `xor()`, `cand()` and `cor()` test each argument the way `t()` does, under `tiny_booleans`. With it on they test each argument by its leading signed integer, as TinyMUX and RhostMUSH do, so `abc` is false and `2` is true, whatever `tiny_booleans` says. `xor()` is then true for an odd number of true arguments, rather than for exactly one. `t()`, `not()`, `if()` and the other functions keep the game's own rule, as they do in TinyMUX and RhostMUSH.
 
 ```sharp
 > think [and(1,abc)]|[or(0,abc)]|[xor(1,1,1)]
@@ -244,6 +259,19 @@ With the option on, trigger() queues the attribute and returns nothing:
 XY
 ```
 
+## TinyMUX quiet switches: `mux_quiet`
+
+Off by default; importing a TinyMUX database turns it on. It chooses what the `/quiet` switch of `drop`, `get`, `give`, `goto`, `enter`, `leave` and `@teleport` leaves out.
+
+With it off, `/quiet` hides the messages and keeps the actions. `drop`, `get` and `goto` leave out your own message and the o-message, defaults included, and run the action attribute. `give/quiet` does the same to your GIVE triad and the gift's SUCCESS triad. `enter`, `leave` and `goto` also leave out your @move and @omove but run @amove. `@teleport/quiet` is `@teleport/silent`.
+
+With it on, `/quiet` does what TinyMUX's does:
+
+- `drop`, `get` and `goto` hold it only on an object or exit you control. You still see your own message; the o-message and the action attribute are left out.
+- `enter/quiet` leaves out the object's @enter and @oenter and the @oxleave of where you were; `leave/quiet` leaves out the object's @leave and @oleave and the @oxenter of where you go. Each holds only on an object you control, and the object's action attribute and your @move triad still run.
+- `give/quiet` is a wizard's switch, and leaves out only the default "You gave" and "gave you" notices.
+- `@teleport/quiet` leaves out the @tport triad, @oxtport, and the messages of leaving and arriving, but runs the @move triad.
+
 ## RhostMUSH edit() modes: `rhost_edit`
 
 Off by default; meant for a game moved from RhostMUSH.
@@ -255,6 +283,19 @@ With `rhost_edit` off, edit() reads its arguments after the string as from/to pa
 aXcabc
 > think edit(abcabc,b,X,c,Y)
 aXcaXc
+```
+
+## RhostMUSH iter() separator: `rhost_iter_separator`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_iter_separator` off, iter() and parse() put the list's delimiter between results when no output separator is given, as PennMUSH does. With it on, they put a space, as RhostMUSH does.
+
+```sharp rhost_iter_separator
+> think iter(a|b|c,ucstr(##),|)
+A B C
+> think iter(a|b|c,ucstr(##),|,-)
+A-B-C
 ```
 
 ## RhostMUSH lattr() arguments: `rhost_lattr`
@@ -300,6 +341,17 @@ An empty list tells nothing, header included, so this shows only what `think` re
 XY
 > think list(functions)
 #-1 FUNCTION (LIST) EXPECTS BETWEEN 2 AND 5 ARGUMENTS BUT GOT 1
+```
+
+## RhostMUSH lrooms() depth: `rhost_lrooms`
+
+Off by default; meant for a game moved from RhostMUSH.
+
+With `rhost_lrooms` off, lrooms() takes a depth from 0 to 50, and a depth of 0 lists nothing, as on TinyMUX. With it on, as on RhostMUSH, any depth is taken, a negative one counts as 1, and 0 follows exits as far as they lead; lrooms() then lists at most 1,000 rooms.
+
+```sharp rhost_lrooms
+> think [setq(a,num(dig(RhostdocA)))][setq(b,num(dig(RhostdocB)))][setq(c,num(dig(RhostdocC)))][null(open(RhostdocAB,%qb,%qa),open(RhostdocBC,%qc,%qb))][words(lrooms(%qa,0))]
+2
 ```
 
 ## RhostMUSH map() arguments: `rhost_map_args`

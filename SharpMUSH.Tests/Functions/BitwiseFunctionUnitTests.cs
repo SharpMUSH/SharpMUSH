@@ -158,7 +158,11 @@ public class BitwiseFunctionUnitTests
 		await Assert.That(result.ToPlainText()).IsEqualTo(expected);
 	}
 
-	/// <summary>Each answer is what TinyMUX 2.14 gave for the same call; RhostMUSH 5.13 agrees on all but the invalid digits.</summary>
+	/// <summary>
+	/// Each answer is what TinyMUX 2.14 gave for the same call, except a negative number in radix 63 or 64, which
+	/// TinyMUX refuses: that answer is RhostMUSH 5.13's, which writes the sign. RhostMUSH agrees on the rest but the
+	/// invalid digits.
+	/// </summary>
 	[Test]
 	[Arguments("pack(255,16)", "FF")]
 	[Arguments("pack(255)", "3$")]
@@ -174,7 +178,9 @@ public class BitwiseFunctionUnitTests
 	[Arguments("pack(255,16,0)", "FF")]
 	[Arguments("pack(61,62,1)", "9")]
 	[Arguments("pack(-255,16,1)", "-ff")]
-	[Arguments("pack(-1,64)", "#-1 NEGATIVE NUMBER IS NOT REPRESENTABLE IN OUTPUT RADIX")]
+	[Arguments("pack(-1,64)", "-1")]
+	[Arguments("pack(-629126998)", "-bVxTM")]
+	[Arguments("pack(-1,64,1)", "#-1 NEGATIVE NUMBER IS NOT REPRESENTABLE IN OUTPUT RADIX")]
 	[Arguments("pack(1,1)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
 	[Arguments("pack(1,65)", "#-1 RADIX MUST BE A NUMBER BETWEEN 2 and 64")]
 	[Arguments("pack(abc,16)", "#-1 ARGUMENTS MUST BE NUMBERS")]

@@ -63,6 +63,15 @@ public class WorldCommandIntegrationTests
 		await Assert.That(await Eval($"worldway({map},4,4,0,n)/[worldway({map},4,4,0,n,reason)]/[worldway({map},4,5,0,s)]/[worldway({map},4,4,0,ne,to)]"))
 			.IsEqualTo("wall/A fallen oak blocks the path./wall/5,5,0");
 
+		await Assert.That(await God($"@world/lock {map}/5,5/e=me", "5,5,0")).Contains("The east side of 5,5,0 is now locked.");
+		await Assert.That(await Eval($"worldway({map},5,5,0,e)/[worldway({map},5,5,0,e,state,me)]/[worldway({map},6,5,0,w,state,me)]"))
+			.IsEqualTo("lock/open/open");
+		await Assert.That(string.Join("\n", await God($"@world {map}/5,5", "East"))).Contains("East: lock, key #1");
+		await Assert.That(string.Join("\n", await God($"@world/lock {map}/5,5/e=NoSuchKeyholder", "key")))
+			.Contains("I don't understand that key: I can't find a unique object matching NoSuchKeyholder.");
+		await Assert.That(await God($"@world/lock {map}/5,5/e", "5,5,0")).Contains("The east side of 5,5,0 is now open.");
+		await Assert.That(await Eval($"worldway({map},5,5,0,e)")).IsEqualTo("open");
+
 		await Assert.That(await God($"@world/place {map}/4,4=Old Oak", "4,4,0")).Contains("Named 4,4,0 Old Oak.");
 		await Assert.That(await Eval($"worldcell({map},4,4,,name)")).IsEqualTo("Old Oak");
 

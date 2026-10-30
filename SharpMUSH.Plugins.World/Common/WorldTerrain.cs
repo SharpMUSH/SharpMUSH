@@ -9,17 +9,27 @@ namespace SharpMUSH.Plugins.World.Common;
 
 /// <summary>A terrain type as the map's legend describes it.</summary>
 /// <param name="Closed">Why a place of this type cannot be entered; null when it can.</param>
-public sealed record WorldTerrain(string Type, string Label, string? Tone, string? Icon, string? Closed)
+/// <param name="Char">The character a text drawing shows for the type, whatever its icon is.</param>
+public sealed record WorldTerrain(string Type, string Label, string? Tone, string? Icon, string? Closed, string? Char = null)
 {
-	/// <summary>The one character a text drawing shows for the type: its icon when that is a character or two, else its label's first letter.</summary>
-	public string Glyph => Icon is { Length: > 0 } icon && new StringInfo(icon).LengthInTextElements <= 2
+	/// <summary>
+	/// The one character a text drawing shows for the type: its <c>`CHAR</c>, else its icon when that is a character
+	/// or two, else its label's first letter.
+	/// </summary>
+	public string Glyph => Char is { Length: > 0 } glyph
+		? StringInfo.GetNextTextElement(glyph)
+		: Icon is { Length: > 0 } icon && new StringInfo(icon).LengthInTextElements <= 2
 		? StringInfo.GetNextTextElement(icon)
 		: Label.Length > 0 ? Label[..1].ToUpperInvariant() : "?";
 }
 
+/// <summary>A lock on moving between two terrain types: its key, and what a refused mover is told.</summary>
+public sealed record WorldTerrainLock(string Key, string? Reason);
+
 /// <summary>
-/// The legend of a stored map: <c>MAP`LEGEND`&lt;type&gt;`LABEL</c>, <c>`TONE</c>, <c>`ICON</c> and <c>`CLOSED</c> on
-/// the map, read as the map, as the World map reads them. A type the legend does not name is labelled by itself.
+/// The legend of a stored map: <c>MAP`LEGEND`&lt;type&gt;`LABEL</c>, <c>`TONE</c>, <c>`ICON</c>, <c>`CHAR</c> and <c>`CLOSED</c> on
+/// the map, read as the map, as the World map reads them, and <c>`LOCK</c> and <c>`FAILURE</c>, which gate moving
+/// into a type. A type the legend does not name is labelled by itself.
 /// </summary>
 public sealed class WorldLegend
 {
@@ -45,9 +55,24 @@ public sealed class WorldLegend
 		if (_terrain.TryGetValue(type, out var known)) return known;
 		var label = await ValueAsync(type, "LABEL");
 		var terrain = new WorldTerrain(type, label ?? type, (await ValueAsync(type, "TONE"))?.ToLowerInvariant(),
-			await ValueAsync(type, "ICON"), await ValueAsync(type, "CLOSED"));
+			await ValueAsync(type, "ICON"), await ValueAsync(type, "CLOSED"), await ValueAsync(type, "CHAR"));
 		_terrain[type] = terrain;
 		return terrain;
+	}
+
+	/// <summary>
+	/// The lock on entering a place of type <paramref name="to"/> from one of type <paramref name="from"/> (null when
+	/// nothing is painted there): <c>`LOCK`&lt;from&gt;</c> of <paramref name="to"/>'s legend, else, coming from
+	/// another type, its <c>`LOCK</c>. Its reason is <c>`FAILURE`&lt;from&gt;</c>, else <c>`FAILURE</c>. Null when no
+	/// key applies.
+	/// </summary>
+	public async ValueTask<WorldTerrainLock?> LockAsync(string to, string? from)
+	{
+		var key = from is null ? null : await ValueAsync(to, $"LOCK`{from.ToUpperInvariant()}");
+		if (key is null && from != to) key = await ValueAsync(to, "LOCK");
+		if (key is null) return null;
+		var reason = (from is null ? null : await ValueAsync(to, $"FAILURE`{from.ToUpperInvariant()}")) ?? await ValueAsync(to, "FAILURE");
+		return new WorldTerrainLock(key, reason);
 	}
 
 	private ValueTask<string?> ValueAsync(string type, string field) => _read($"MAP`LEGEND`{type.ToUpperInvariant()}`{field}");

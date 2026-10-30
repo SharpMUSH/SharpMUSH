@@ -92,12 +92,14 @@ public static class WorldFunctions
 		});
 
 	/// <summary>
-	/// worldway(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;, &lt;z&gt;, &lt;direction&gt;[, &lt;field&gt;]): the way out of a place toward a
-	/// side or a diagonal: its <c>state</c> (the default: open, oneway, lock, closed, wall or none), <c>reason</c>, or
-	/// <c>to</c>, the place it leads to.
+	/// worldway(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;, &lt;z&gt;, &lt;direction&gt;[, &lt;field&gt;[, &lt;mover&gt;]]): the way out of a
+	/// place toward a side or a diagonal: its <c>state</c> (the default: open, oneway, lock, closed, wall or none),
+	/// <c>reason</c>, or <c>to</c>, the place it leads to. Given a mover, each lock on the way is evaluated for them, as an
+	/// exit's lock is, with the map as the locked object: a lock they pass is open. Naming a mover other than yourself
+	/// needs examine of the map.
 	/// </summary>
-	[SharpFunction(Name = "worldway", MinArgs = 5, MaxArgs = 6, Flags = FunctionFlags.Regular,
-		ParameterNames = ["map", "x", "y", "z", "direction", "field"])]
+	[SharpFunction(Name = "worldway", MinArgs = 5, MaxArgs = 7, Flags = FunctionFlags.Regular,
+		ParameterNames = ["map", "x", "y", "z", "direction", "field", "mover"])]
 	public static ValueTask<CallState> WorldWay(IMUSHCodeParser parser, SharpFunctionAttribute _2) =>
 		ReadAsync(parser, async reading =>
 		{
@@ -105,8 +107,21 @@ public static class WorldFunctions
 			if (WorldWays.ParseDirection(Arg(parser, 4)) is not { } direction) return new CallState(BadDirection);
 			var field = Arg(parser, 5) is { Length: > 0 } given ? given.ToLowerInvariant() : "state";
 			if (field is not ("state" or "reason" or "to")) return new CallState(BadField);
+
+			Func<string, ValueTask<bool>>? unlock = null;
+			if (Arg(parser, 6) is { Length: > 0 } moverName)
+			{
+				var executor = await WorldMaps.ExecutorAsync(parser);
+				var locate = parser.ServiceProvider.GetRequiredService<ILocateService>();
+				if (await locate.Locate(parser, executor, executor, moverName, LocateFlags.All) is not AnySharpObject mover)
+					return new CallState(ErrorMessages.Returns.NoMatch);
+				if (mover.Object().DBRef.Number != executor.Object().DBRef.Number && !reading.Examine)
+					return new CallState(ErrorMessages.Returns.PermissionDenied);
+				unlock = Unlock(parser, reading.Map, mover);
+			}
+
 			var way = await WorldWays.WayAsync(reading.Store, reading.Record, reading.Legend, reading.Map.Object().DBRef, reading.Examine, at,
-				direction);
+				direction, unlock);
 			return field switch
 			{
 				"state" => new CallState(way.StateWord),
@@ -114,6 +129,23 @@ public static class WorldFunctions
 				_ => new CallState(way.To.ToString()),
 			};
 		});
+
+	/// <summary>
+	/// Whether <paramref name="mover"/> passes a lock key, with <paramref name="map"/> as the locked object. A side's key
+	/// was bound when it was set; a legend's key is typed into an attribute, so its names are found as the map finds them.
+	/// An empty key or one that names nothing lets nobody through.
+	/// </summary>
+	private static Func<string, ValueTask<bool>> Unlock(IMUSHCodeParser parser, AnySharpObject map, AnySharpObject mover)
+	{
+		var keys = parser.ServiceProvider.GetRequiredService<IBooleanExpressionParser>();
+		var locks = parser.ServiceProvider.GetRequiredService<ILockService>();
+		return async key =>
+		{
+			if (string.IsNullOrWhiteSpace(key)) return false;
+			if (keys.IsBound(key)) return await locks.Evaluate(key, map, mover);
+			return await keys.BindAsync(key, map) is string bound && await locks.Evaluate(bound, map, mover);
+		};
+	}
 
 	/// <summary>
 	/// worlddraw(&lt;map&gt;, &lt;x&gt;, &lt;y&gt;[, &lt;z&gt;[, &lt;radius&gt;[, &lt;mark&gt;]]]): the places within
