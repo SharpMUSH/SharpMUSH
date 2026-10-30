@@ -13,8 +13,8 @@ namespace SharpMUSH.Database.Lightning;
 /// <c>from_ctime</c>.
 /// <para>
 /// <see cref="ReferenceStampMigrationId"/> stamps what was stored before: every object, channel and feed lock,
-/// and every mail's sender. A lock operand or a sender whose object is already gone keeps no time, and reads as
-/// gone from then on.
+/// and every mail's sender. A sender whose object is already gone keeps no time, and reads as gone from then on;
+/// a lock operand naming a number below the counter that holds nothing is stamped with a time no object has.
 /// </para>
 /// </summary>
 public partial class LightningDatabase
@@ -23,12 +23,22 @@ public partial class LightningDatabase
 
 	/// <summary>
 	/// <paramref name="key"/> with each object it names by a bare <c>#N</c> written as that object's objid. A
-	/// number no object holds is kept as written; the lock fails on it either way.
+	/// number below the counter that holds nothing was an object once, so it is written with
+	/// <see cref="GoneCreationTime"/> and fails for whatever holds the number next. A number the counter has not
+	/// reached yet is kept as written: an import sets locks that name objects it is still to create.
 	/// </summary>
 	internal static string StampLockKey(ITx tx, string key)
 		=> key.Contains('#')
-			? LockKeyReferences.Rewrite(key, number => ReadObjectHeader(tx, number) is { } header ? $"#{number}:{header.CreationTime}" : null)
+			? LockKeyReferences.Rewrite(key, number => ReadObjectHeader(tx, number) switch
+			{
+				{ } header => $"#{number}:{header.CreationTime}",
+				null when number < ReadNextDbref(tx) => $"#{number}:{GoneCreationTime}",
+				null => null
+			})
 			: key;
+
+	/// <summary>The creation time a lock gives an object that is gone: no object is created at the epoch.</summary>
+	internal const long GoneCreationTime = 0;
 
 	/// <summary>A feed's or feed kind's locks, each stamped as <see cref="StampLockKey"/> stamps one.</summary>
 	private static Dictionary<string, string> StampLockKeys(ITx tx, IEnumerable<KeyValuePair<string, string>> locks)

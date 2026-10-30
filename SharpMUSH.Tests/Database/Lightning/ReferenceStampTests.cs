@@ -44,6 +44,18 @@ public class ReferenceStampTests : LightningDatabaseFixture
 	}
 
 	[Test]
+	public async Task ALockNamingAFreedNumberCannotPassToItsNextHolder()
+	{
+		var target = await Thing("StampHoleLocked");
+		var gone = await Thing("StampHoleGone");
+		await Db.DeleteObjectAsync(gone.DBRef);
+
+		await Db.SetLockAsync(target, "Basic", new SharpLockData { LockString = $"=#{gone.DBRef.Number}" });
+
+		await Assert.That(StoredLock(target, "Basic")).IsEqualTo($"=#{gone.DBRef.Number}:{LightningDatabase.GoneCreationTime}");
+	}
+
+	[Test]
 	public async Task AStampedLockIsWrittenAgainUnchanged()
 	{
 		var target = await Thing("StampTwice");
@@ -116,6 +128,19 @@ public class ReferenceStampTests : LightningDatabaseFixture
 		await Assert.That(window.Players.Any(p => p.Player == number)).IsFalse();
 		await Assert.That(window.Rooms.Any(r => r.Room == number)).IsFalse();
 		await Assert.That(window.LastPoses.ContainsKey(number)).IsFalse();
+	}
+
+	[Test]
+	public async Task AFreedRoomsSceneCountGoesWithItEvenWithoutAPose()
+	{
+		var day = DateOnly.FromDateTime(DateTime.UtcNow).DayNumber;
+		var room = await Thing("SceneOnlyRoom");
+		var number = room.DBRef.Number;
+		await Db.MergeActivityAsync(new ActivityBatch([], [new ActivityRoomDay(day, number, 0, 1, [])], new Dictionary<long, long>()));
+
+		await Db.DeleteObjectAsync(room.DBRef);
+
+		await Assert.That((await Db.GetActivityAsync(day, day)).Rooms.Any(r => r.Room == number)).IsFalse();
 	}
 
 	private static SharpMail Mail(string subject) => new()

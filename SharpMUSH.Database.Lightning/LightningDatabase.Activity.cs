@@ -96,12 +96,11 @@ public partial class LightningDatabase : IActivityStore
 
 	/// <summary>
 	/// Drops a freed object's day rows and last pose, so they are not reported for whatever holds its number
-	/// next. Only a character or room that has posed has any, and every one that has has a last pose. A room's
-	/// list of who posed in it keeps the number; it only counts distinct posers.
+	/// next. A room can have day rows with no last pose (a scene counted before anyone posed), so the day tables
+	/// are always searched. A room's list of who posed in it keeps the number; it only counts distinct posers.
 	/// </summary>
 	private static void DeleteActivitySubject(ITx tx, long subject)
 	{
-		if (!tx.TryGet(Tables.ActivityLast, Keys.Dbref(subject), out _)) return;
 		foreach (var table in (TableDef[])[Tables.ActivityPlayer, Tables.ActivityRoom])
 		{
 			foreach (var (key, _) in tx.Range(table, []).Where(row => ReadSubject(row.Key) == subject).ToList())
