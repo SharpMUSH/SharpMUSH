@@ -18,6 +18,20 @@ public record AdmitAttributeRequest(
 	DBRef? Executor = null,
 	DBRef? Enactor = null) : IRequest<QueueAdmissionResult>;
 
+/// <summary>An attribute queued once <paramref name="Work"/>, run off the queue, has built its state; see <c>ITaskScheduler.AdmitAttributeAfter</c>.</summary>
+public record AdmitAttributeAfterRequest(
+	Func<ValueTask<ParserState?>> Work,
+	DbRefAttribute DbRefAttribute,
+	DBRef? Executor = null,
+	DBRef? Enactor = null) : IRequest<QueueAdmissionResult>;
+
+/// <summary>Work run off the queue whose result runs as a queue entry; see <c>ITaskScheduler.AdmitWorkAfter</c>.</summary>
+public record AdmitWorkAfterRequest(
+	Func<ValueTask<Func<ValueTask<CallState?>>?>> Work,
+	string TriggerName,
+	DBRef Executor,
+	DBRef? Enactor = null) : IRequest<QueueAdmissionResult>;
+
 public record AdmitDelayedCommandListRequest(
 	MString Command,
 	ParserState State,

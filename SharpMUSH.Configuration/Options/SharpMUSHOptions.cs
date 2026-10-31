@@ -118,7 +118,8 @@ public record SharpMUSHOptions
 			MuxQueueFunctions: false,
 			RhostIterSeparator: false,
 			RhostLrooms: false,
-			MuxQuiet: false
+			MuxQuiet: false,
+			MapsqlSync: false
 		),
 		Cosmetic = new CosmeticOptions(
 			AnnounceConnects: true,

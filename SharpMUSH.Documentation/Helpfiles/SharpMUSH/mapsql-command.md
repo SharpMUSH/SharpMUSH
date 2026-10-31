@@ -20,6 +20,8 @@ This command issues an SQL query if the MUSH supports SQL and can connect to an 
 
 The server connects with the sql_platform, sql_host, sql_database and sql_username options and the password stored as the `sql.password` secret (see [@secret]).
 
+The query runs while the game goes on, and each row is queued as it arrives, so work queued after @mapsql can run before its rows; use `/notify` to run something after the last row. The query has 60 seconds, and @halt on the object using @mapsql stops one still running. With the `mapsql_sync` option on (a PennMUSH database import turns it on), the query runs inside the command, as in PennMUSH: the game waits for it, and every row is queued before anything queued after @mapsql.
+
 - [@mapsql rows]: what each queued row receives, and the column-name row
 - [@mapsql notify and spoof]: a completion notify, and keeping the enactor
 - [@mapsql prepare]: placeholders and parameters against SQL injection

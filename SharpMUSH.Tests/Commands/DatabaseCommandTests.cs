@@ -162,6 +162,7 @@ public class DatabaseCommandTests
 			state = state with { EnvironmentRegisters = parent, SuppliedArgumentKeys = AttributeArgumentEnvironment.SuppliedKeys(parent) };
 		}
 		await Parser.FromState(state).CommandListParse(MarkupText.Plain($"@mapsql {target}/RUN=SELECT '' AS present"));
+		await MapSqlQueriesSettledAsync();
 		await SqlWebAppFactoryArg.QueueBarrierAsync();
 		await Assert.That((await SqlWebAppFactoryArg.FunctionParser.EvaluateAsync(MarkupText.Plain($"get({target}/OUT)"))).ToPlainText()).IsEqualTo("1|1|1|0");
 	}
@@ -188,6 +189,7 @@ public class DatabaseCommandTests
 			}
 			await testParser.CommandParse(player.Handle, ConnectionService,
 				MarkupText.Plain($"@mapsql{(columnNames ? "/colnames" : "")} me/MAPCAPACITY=SELECT col1 FROM test_mapsql_data_cmd"));
+			await MapSqlQueriesSettledAsync();
 			await ExpectSelfNotified(player.DbRef, text => text == "0 rows queued for execution.", 1);
 		}
 		finally { foreach (var pid in pids) await scheduler.HaltByPid(pid); }
@@ -235,7 +237,7 @@ public class DatabaseCommandTests
 				.Returns(call => scheduler.ReserveCommandList(call.Arg<ReserveCommandListRequest>().Command, call.Arg<ReserveCommandListRequest>().State));
 			var sql = Substitute.For<ISqlService>();
 			sql.IsAvailable.Returns(true);
-			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, sql);
+			var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, sql, MapsqlSyncOptions());
 			await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
 			// A quota refusal is reported by the runaway notice alone (pay_queue, src/cque.c:304).
 			var runaway = reason == QueueRejectionReason.OwnerLimit;
@@ -276,7 +278,7 @@ public class DatabaseCommandTests
 		var admission = Substitute.For<IMediator>();
 		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(new QueueAdmissionResult(1, QueueRejectionReason.None));
 		admission.Send(Arg.Any<ReserveCommandListRequest>(), Arg.Any<CancellationToken>()).Returns(QueueCommandReservation.Rejected(reason));
-		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, MapsqlSyncOptions());
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
 		await parser.DidNotReceive().CommandParse(Arg.Any<MString>());
 		await ExpectSelfNotified(player.DbRef, text => text == new QueueAdmissionResult(null, reason).Error, 1);
@@ -318,6 +320,7 @@ public class DatabaseCommandTests
 			}
 			await parser.CommandParse(player.Handle, ConnectionService,
 				MarkupText.Plain("@mapsql/notify me/MAPCAPACITY=SELECT 1 AS col1"));
+			await MapSqlQueriesSettledAsync();
 			release.TrySetResult();
 			await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, text => text == marker, timeoutMs: 3000);
 			var messages = SqlWebAppFactoryArg.Notifications.For(player.DbRef)
@@ -362,6 +365,7 @@ public class DatabaseCommandTests
 			}
 			await parser.CommandParse(player.Handle, ConnectionService,
 				MarkupText.Plain("@mapsql/notify me/MAPORDER=SELECT 1 AS col1 UNION ALL SELECT 2 AS col1"));
+			await MapSqlQueriesSettledAsync();
 			var counter = await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).LastOrDefaultAsync();
 			await Assert.That(counter?.Value.ToPlainText() ?? "0").IsEqualTo("0");
 			await scheduler.HaltByPid(reservations[0]);
@@ -393,6 +397,7 @@ public class DatabaseCommandTests
 		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
 		var before = scheduler.GetQueueUsage().Total;
 		await parser.CommandParse(player.Handle, ConnectionService, MarkupText.Plain("@mapsql/notify me/MAPERROR=SELECT missing_column FROM test_mapsql_data_cmd"));
+		await MapSqlQueriesSettledAsync();
 		await Assert.That(scheduler.GetQueueUsage().Total).IsEqualTo(before);
 		await Assert.That(await Mediator.CreateStream(new GetAttributeQuery(player.DbRef, ["SEMAPHORE"])).AnyAsync()).IsFalse();
 	}
@@ -432,7 +437,7 @@ public class DatabaseCommandTests
 		var admission = Substitute.For<IMediator>();
 		var rejected = new QueueAdmissionResult(null, reason);
 		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(rejected);
-		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, MapsqlSyncOptions());
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
 		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).Count(message => message == rejected.Error))
 			.IsEqualTo(reason == QueueRejectionReason.InvalidTarget ? 1 : 0);
@@ -474,7 +479,7 @@ public class DatabaseCommandTests
 				: Mediator.Send(call.Arg<ReserveCommandListRequest>(), call.Arg<CancellationToken>()));
 		admission.Send(Arg.Any<AdmitAttributeRequest>(), Arg.Any<CancellationToken>()).Returns(call =>
 			new ValueTask<QueueAdmissionResult>(Block<QueueAdmissionResult>(call.Arg<CancellationToken>())));
-		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission);
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, admission, MapsqlSyncOptions());
 		var operation = commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" }).AsTask();
 		try
 		{
@@ -744,7 +749,8 @@ public class DatabaseCommandTests
 	/// against the real scheduler, so the queued callbacks actually run.
 	/// </summary>
 	private async Task RunMapSqlAsAsync(DBRef requester, DBRef enactor, string[] switches,
-		string objectAndAttribute, string query, ISqlService? sqlService = null)
+		string objectAndAttribute, string query, ISqlService? sqlService = null,
+		IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>? options = null)
 	{
 		var state = ParserState.RootFor(requester) with
 		{
@@ -760,10 +766,113 @@ public class DatabaseCommandTests
 		await state.KnownEnactorObject(Mediator);
 		var parser = Substitute.For<IMUSHCodeParser>();
 		parser.CurrentState.Returns(state);
-		var commands = sqlService is null
-			? ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services)
-			: ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, sqlService);
+		object[] replacements = [.. new object?[] { sqlService, options }.OfType<object>()];
+		var commands = ActivatorUtilities.CreateInstance<SharpMUSH.Implementation.Commands.Commands>(SqlWebAppFactoryArg.Services, replacements);
 		await commands.MapSql(parser, new SharpCommandAttribute { Name = "@MAPSQL" });
+	}
+
+	/// <summary>Waits for the queries @mapsql started off the queue to finish queueing their rows.</summary>
+	private Task MapSqlQueriesSettledAsync()
+		=> SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>().BackgroundWorkSettled().WaitAsync(TimeSpan.FromSeconds(30));
+
+	/// <summary>The game's options with <c>mapsql_sync</c> set to <paramref name="sync"/>.</summary>
+	private IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions> MapsqlSyncOptions(bool sync = true)
+	{
+		var baseline = SqlWebAppFactoryArg.Services.GetRequiredService<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>().CurrentValue;
+		var options = Substitute.For<IOptionsWrapper<SharpMUSH.Configuration.Options.SharpMUSHOptions>>();
+		options.CurrentValue.Returns(baseline with { Compatibility = baseline.Compatibility with { MapsqlSync = sync } });
+		return options;
+	}
+
+	/// <summary>An SQL service whose query gives one row, <c>col1</c> = <c>gated</c>, once <paramref name="gate"/> completes.</summary>
+	private static ISqlService GatedSql(Task gate, TaskCompletionSource<CancellationToken> entered)
+	{
+		var sql = Substitute.For<ISqlService>();
+		sql.IsAvailable.Returns(true);
+		sql.ExecuteStreamQueryAsync(Arg.Any<string>()).Returns(_ => Rows());
+		return sql;
+
+		async IAsyncEnumerable<Dictionary<string, object?>> Rows()
+		{
+			entered.TrySetResult(ExecutionBudget.CurrentToken);
+			await gate.WaitAsync(ExecutionBudget.CurrentToken);
+			yield return new Dictionary<string, object?> { ["col1"] = "gated" };
+		}
+	}
+
+	/// <summary>
+	/// By default the query runs off the queue: @mapsql returns while it is still running, and the rows
+	/// are queued when they arrive.
+	/// </summary>
+	[Test]
+	public async Task MapSqlReturnsBeforeItsQueryFinishes()
+	{
+		var player = await CreateWizardTestPlayerAsync("MapSqlOffQueue");
+		var marker = TestIsolationHelpers.GenerateUniqueName("MapSqlGatedRow");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ROW {player.DbRef}=think {marker} %1"));
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		await RunMapSqlAsAsync(player.DbRef, player.DbRef, [], $"{player.DbRef}/ROW", "SELECT col1",
+			GatedSql(release.Task, entered)).WaitAsync(TimeSpan.FromSeconds(15));
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.Contains(marker))).IsFalse();
+
+		release.SetResult();
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, message => message == $"{marker} gated");
+		await WaitForNotificationAsync(SqlWebAppFactoryArg.Notifications, player.DbRef, message => message == "1 row queued for execution.");
+	}
+
+	/// <summary>With <c>mapsql_sync</c>, the query runs inside the command, as PennMUSH's does (src/sql.c:486).</summary>
+	[Test]
+	public async Task MapSqlSyncRunsItsQueryInsideTheCommand()
+	{
+		var player = await CreateWizardTestPlayerAsync("MapSqlSync");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ROW {player.DbRef}=think synced %1"));
+		var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+		var command = RunMapSqlAsAsync(player.DbRef, player.DbRef, [], $"{player.DbRef}/ROW", "SELECT col1",
+			GatedSql(release.Task, entered), MapsqlSyncOptions());
+		await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+		await Assert.That(command.IsCompleted).IsFalse();
+
+		release.SetResult();
+		await command.WaitAsync(TimeSpan.FromSeconds(15));
+		await ExpectSelfNotified(player.DbRef, text => text == "1 row queued for execution.", 1);
+	}
+
+	/// <summary>@halt stops a query still running off the queue, and releases the queue entry it held.</summary>
+	[Test]
+	public async Task HaltStopsAMapSqlQueryStillRunning()
+	{
+		var player = await CreateWizardTestPlayerAsync("MapSqlHalt");
+		var marker = TestIsolationHelpers.GenerateUniqueName("MapSqlHaltedRow");
+		await Parser.CommandParse(1, ConnectionService, MarkupText.Plain($"&ROW {player.DbRef}=think {marker}"));
+		var never = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+		var entered = new TaskCompletionSource<CancellationToken>(TaskCreationOptions.RunContinuationsAsynchronously);
+		await RunMapSqlAsAsync(player.DbRef, player.DbRef, [], $"{player.DbRef}/ROW", "SELECT col1", GatedSql(never.Task, entered));
+		var query = await entered.Task.WaitAsync(TimeSpan.FromSeconds(15));
+		var scheduler = SqlWebAppFactoryArg.Services.GetRequiredService<QueueScheduler>();
+		await Assert.That(scheduler.GetQueueEntries().Any(entry => entry.Source?.Number == player.DbRef.Number)).IsTrue();
+
+		await scheduler.Halt(player.DbRef);
+
+		for (var started = System.Diagnostics.Stopwatch.GetTimestamp();
+			scheduler.GetQueueEntries().Any(entry => entry.Source?.Number == player.DbRef.Number)
+			&& System.Diagnostics.Stopwatch.GetElapsedTime(started) < TimeSpan.FromSeconds(15);)
+			await Task.Delay(20);
+		await Assert.That(query.IsCancellationRequested).IsTrue();
+		await Assert.That(scheduler.GetQueueEntries().Any(entry => entry.Source?.Number == player.DbRef.Number)).IsFalse();
+		await Assert.That(SqlWebAppFactoryArg.Notifications.For(player.DbRef).Any(message => message.EndsWith("queued for execution."))).IsFalse();
+	}
+
+	/// <summary>PennMUSH softcode counts on @mapsql's rows running first, so a PennMUSH import turns mapsql_sync on.</summary>
+	[Test]
+	public async Task PennMushImportKeepsMapSqlInsideTheCommand()
+	{
+		var source = new SharpMUSH.Library.Services.DatabaseConversion.PennMUSHDatabase { Version = "" };
+		await Assert.That(source.SourceOptions.GetValueOrDefault("mapsql_sync") is true).IsTrue();
 	}
 
 	/// <summary>Creates a thing owned by <paramref name="owner"/> rather than by God.</summary>

@@ -35,6 +35,22 @@ public interface ITaskScheduler
 	/// the factory builds its result later, and the scheduler gives that result independent evaluation counters.</summary>
 	ValueTask<QueueAdmissionResult> AdmitAsyncAttribute(Func<ValueTask<ParserState>> function, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null);
 
+	/// <summary>
+	/// Reserves an entry for the attribute now and runs <paramref name="work"/> off the queue, for slow I/O
+	/// such as an HTTP request; the attribute runs with the state the work returns once it finishes, and
+	/// does not run when it returns null. Halting the executor cancels the work. Capture caller inputs
+	/// before calling: the work runs on another thread, under a budget of its own.
+	/// </summary>
+	ValueTask<QueueAdmissionResult> AdmitAttributeAfter(Func<ValueTask<ParserState?>> work, DbRefAttribute dbAttribute, DBRef? executor = null, DBRef? enactor = null);
+
+	/// <summary>
+	/// Reserves an entry for <paramref name="executor"/> now and runs <paramref name="work"/> off the queue;
+	/// what the work returns runs as that entry once it finishes, and nothing releases it. Halting the
+	/// executor cancels the work. The entry counts against the global queue limit only, as a query that
+	/// queues rows is not itself charged in PennMUSH; what the work queues is charged as usual.
+	/// </summary>
+	ValueTask<QueueAdmissionResult> AdmitWorkAfter(Func<ValueTask<Func<ValueTask<CallState?>>?>> work, string triggerName, DBRef executor, DBRef? enactor = null);
+
 	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, DbRefAttribute dbAttribute, int oldValue, TimeSpan timeout, bool manageSemaphoreCount = false);
 
 	ValueTask<QueueAdmissionResult> AdmitCommandList(MString command, ParserState state, TimeSpan delay);

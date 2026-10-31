@@ -116,14 +116,27 @@ public partial class Commands
 				// Capture the caller before the request runs; its later mutations belong to its own entry.
 				var callbackState = parser.CurrentState.SnapshotForQueuedAction();
 
-				var admission = await Mediator.Send(new AdmitAttributeRequest(
+				// The request runs off the queue, as PennMUSH's does in libcurl's multi handle (src/cmds.c:1992),
+				// and the attribute is queued when the response arrives (src/bsd.c:1206).
+				var admission = await Mediator.Send(new AdmitAttributeAfterRequest(
 					async () =>
 					{
 						var client = HttpClientFactory.CreateClient(clientName);
 
 						using var message = BuildRequest(method, requestUri, requestBody, contentType, userPass, sentHeaders);
-						using var response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead,
-							ExecutionBudget.CurrentToken);
+						HttpResponseMessage response;
+						try
+						{
+							response = await client.SendAsync(message, HttpCompletionOption.ResponseHeadersRead,
+								ExecutionBudget.CurrentToken);
+						}
+						catch (Exception failure) when (RequestFailure(failure) is { } reason)
+						{
+							// PennMUSH tells the object and queues nothing (src/bsd.c:1209-1210).
+							await NotifyService.Notify(found, $"Request failed: {reason}", found);
+							return null;
+						}
+						using var held = response;
 
 						var body = await ReadResponseAsync(response.Content, outputLimit, ExecutionBudget.CurrentToken);
 						if (body.Overflowed)
@@ -182,6 +195,17 @@ public partial class Commands
 
 	/// <summary>What <c>@http</c> read of a response: the text up to the output limit, and whether there was more.</summary>
 	private readonly record struct ResponseBody(string Text, bool Overflowed);
+
+	/// <summary>
+	/// Why an <c>@http</c> request failed, in the words PennMUSH reports (<c>curl_easy_strerror</c>): the
+	/// connection's error, or "Timeout was reached" once its time is up. Null when it was halted.
+	/// </summary>
+	private static string? RequestFailure(Exception failure) => failure switch
+	{
+		HttpRequestException request => request.Message,
+		OperationCanceledException when ExecutionBudget.Current is { IsExpired: true } => "Timeout was reached",
+		_ => null
+	};
 
 	/// <summary>Only secrets under this prefix leave the server in a request, so <c>@http</c> never sends the SQL password or a bot token.</summary>
 	private const string HttpSecretPrefix = "http.";
