@@ -213,17 +213,17 @@ public static class WorldFunctions
 	/// </summary>
 	private static async ValueTask<string> HexDrawingAsync(Reading reading, WorldWindowRead? window, WorldPosition at, int radius, string mark)
 	{
-		var lines = Enumerable.Range(0, 4 * radius + 1).Select(_ => new StringBuilder(new string(' ', 4 * radius + 1))).ToArray();
+		// A slot per character position, so a glyph of several UTF-16 units never shifts or splits another.
+		var lines = Enumerable.Range(0, 4 * radius + 1).Select(_ => Enumerable.Repeat(" ", 4 * radius + 1).ToArray()).ToArray();
 		for (var dx = -radius; dx <= radius; dx++)
 		{
 			for (var dy = Math.Max(-radius, -dx - radius); dy <= Math.Min(radius, -dx + radius); dy++)
 			{
 				var (line, column) = (2 * radius - (2 * dy + dx), 2 * (dx + radius));
-				var glyph = dx == 0 && dy == 0 && mark.Length > 0 ? mark : await GlyphAsync(reading, window, at.X + dx, at.Y + dy);
-				lines[line].Remove(column, 1).Insert(column, glyph);
+				lines[line][column] = dx == 0 && dy == 0 && mark.Length > 0 ? mark : await GlyphAsync(reading, window, at.X + dx, at.Y + dy);
 			}
 		}
-		return string.Join("\n", lines.Select(line => line.ToString()));
+		return string.Join("\n", lines.Select(line => string.Concat(line)));
 	}
 
 	private static async ValueTask<string> GlyphAsync(Reading reading, WorldWindowRead? window, int x, int y)
