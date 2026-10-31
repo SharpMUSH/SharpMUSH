@@ -196,8 +196,13 @@ public static partial class WorldCommand
 				|| (fields.Length == count + 2 && WorldLinks.Normalize(fields[count + 1]) is null))
 				return await Say($"A way's names are separated by ;, each at most {WorldLinks.MaxNameLength} characters with no , = / or |.", "#-1 BAD NAME");
 			var back = fields.Length == count + 2 ? WorldLinks.Normalize(fields[count + 1]) : null;
-			if (await store.LinkAsync(dbref, (place.X, place.Y, place.Z), (to.X, to.Y, to.Z), names, back) == WorldLinking.TooMany)
-				return await Say($"A place has at most {WorldLinks.MaxWays} ways out.", "#-1 TOO MANY WAYS");
+			switch (await store.LinkAsync(dbref, (place.X, place.Y, place.Z), (to.X, to.Y, to.Z), names, back))
+			{
+				case WorldLinking.TooMany:
+					return await Say($"A place has at most {WorldLinks.MaxWays} ways out.", "#-1 TOO MANY WAYS");
+				case WorldLinking.NameTaken:
+					return await Say("Another way out of that place already goes by one of those names.", "#-1 NAME TAKEN");
+			}
 			var shown = WorldLinks.Split(names)[0];
 			return await Say(back is null
 				? $"{shown} leads from {place} to {to}."

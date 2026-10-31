@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.5.1
+version: 1.5.2
 authors: [SharpMUSH]
 description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
 license: MIT
@@ -76,7 +76,7 @@ objects:
       DATA`ZONE: |-
         What +map/exits copies onto a map. One leaf per attribute.
       DATA`ZONE`EXITS: |-
-        [setq(zoneexits_own,lcstr(iter(lexits(%0),fullname(%i0),,;)))][squish(iter(lexits(me),if(cand(hasattr(%i0,MAP`WAY),not(member(%q<zoneexits_own>,lcstr(name(%i0)),;)),cor(not(hasflag(%i0,DARK)),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All)),t(match(open oneway,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%i0/MAP`WAY),state,%1)))),%i0)))]
+        [setq(zoneexits_own,lcstr(iter(lexits(%0),fullname(%i0),,;)))][squish(iter(lexits(me),if(cand(hasattr(%i0,MAP`WAY),not(hasattr(%i0,MAP`SHARED)),not(member(%q<zoneexits_own>,lcstr(name(%i0)),;)),cor(not(hasflag(%i0,DARK)),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All)),t(match(open oneway,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%i0/MAP`WAY),state,%1)))),%i0)))]
       DATA`ZONE`EXITS`TO: |-
         [setq(zoneexits_to,worldway(me,worldplace(%0,x),worldplace(%0,y),worldplace(%0,z),get(%1/MAP`WAY),to))][if(eq(words(%q<zoneexits_to>,%,),3),worldcell(me,extract(%q<zoneexits_to>,1,1,%,),extract(%q<zoneexits_to>,2,1,%,),extract(%q<zoneexits_to>,3,1,%,),room))]
 
@@ -115,12 +115,12 @@ objects:
       # yet, and names the cell parent.
       INC`EXITS:
         value: |-
-          @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn); @set %q<map>=FLOATING; @cpattr %!/DATA`ZONE`EXITS=%q<map>/ZONE`EXITS; @cpattr %!/DATA`ZONE`EXITS`TO=%q<map>/ZONE`EXITS`TO; think setr(kind,if(strmatch(worldmap(%q<map>),graph),way,direction)); think setr(renamed,u(%!/FUN`RENAMED,%q<map>)); @dolist/inline %q<renamed>=@name ##=[setr(named,u(%!/FUN`NAME,%q<map>,get(##/MAP`WAY)))][if(strmatch(%q<named>,*;*),,;)]; @select/inline words(%q<renamed>)=0,,{@pemit %#=notice(MAP,Renamed [words(%q<renamed>)] way exits on [name(%q<map>)] to the names their ways go by now.,ok)}; @assert strlen(setr(missing,u(%!/FUN`MISSING,%q<map>)))=@pemit %#=notice(MAP,[name(%q<map>)] has every %q<kind> exit.,info); @dolist/inline %q<missing>=@include %!/INC`EXITS`OPEN=%q<map>,##; @include %!/INC`EXITS`PARENT=%q<map>; @pemit %#=notice(MAP,Opened [words(%q<missing>)] %q<kind> exits on [name(%q<map>)].,ok)
+          @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn); @set %q<map>=FLOATING; @cpattr %!/DATA`ZONE`EXITS=%q<map>/ZONE`EXITS; @cpattr %!/DATA`ZONE`EXITS`TO=%q<map>/ZONE`EXITS`TO; think setr(kind,if(strmatch(worldmap(%q<map>),graph),way,direction)); think setr(aliases,u(%!/FUN`ALIASES,%q<map>))[setr(unshare,squish(iter(lexits(%q<map>),if(cand(hasattr(%i0,MAP`SHARED),not(member(%q<aliases>,get(%i0/MAP`WAY)))),%i0))))][setr(share,squish(iter(lexits(%q<map>),if(cand(hasattr(%i0,MAP`WAY),not(hasattr(%i0,MAP`SHARED)),member(%q<aliases>,get(%i0/MAP`WAY))),%i0))))]; @dolist/inline %q<unshare>=&MAP`SHARED ##; @dolist/inline %q<share>=&MAP`SHARED ##=1; think setr(renamed,u(%!/FUN`RENAMED,%q<map>)); @dolist/inline %q<renamed>=@name ##=[setr(named,u(%!/FUN`NAME,%q<map>,get(##/MAP`WAY)))][if(strmatch(%q<named>,*;*),,;)]; @select/inline words(%q<renamed>)=0,,{@pemit %#=notice(MAP,Renamed [words(%q<renamed>)] way exits on [name(%q<map>)] to the names their ways go by now.,ok)}; @assert strlen(setr(missing,u(%!/FUN`MISSING,%q<map>)))=@pemit %#=notice(MAP,[name(%q<map>)] has every %q<kind> exit.,info); @dolist/inline %q<missing>=@include %!/INC`EXITS`OPEN=%q<map>,##; @include %!/INC`EXITS`PARENT=%q<map>; @pemit %#=notice(MAP,Opened [words(%q<missing>)] %q<kind> exits on [name(%q<map>)].,ok)
         flags: [cmdsyntax]
       # %0 the map, %1 a way: one direction exit, variable, leading by the way parent, given to the map's owner.
       INC`EXITS`OPEN:
         value: |-
-          think setr(exit,open(u(%!/FUN`NAME,%0,%1),variable,%0)); @parent %q<exit>={{way_parent}}; &MAP`WAY %q<exit>=%1; @lock %q<exit>=CANGO/1; @chown/preserve %q<exit>=owner(%0)
+          think setr(exit,open(u(%!/FUN`NAME,%0,%1),variable,%0)); @parent %q<exit>={{way_parent}}; &MAP`WAY %q<exit>=%1; @select/inline member(u(%!/FUN`ALIASES,%0),%1)=0,,{&MAP`SHARED %q<exit>=1}; @lock %q<exit>=CANGO/1; @chown/preserve %q<exit>=owner(%0)
         flags: [cmdsyntax]
       # %0 the map: the rooms it lends are described by the cell parent, unless the map names its own.
       INC`EXITS`PARENT:
@@ -144,17 +144,33 @@ objects:
       # every way any of its places has.
       FUN`MISSING:
         value: |-
-          setdiff(if(strmatch(worldmap(%0),graph),worldmap(%0,ways),setinter(v(DATA`WAYS),worldmap(%0,ways))),iter(lexits(%0),get(##/MAP`WAY)))
+          setdiff(if(strmatch(worldmap(%0),graph),setunion(worldmap(%0,ways),u(%!/FUN`ALIASES,%0)),setinter(v(DATA`WAYS),worldmap(%0,ways))),iter(lexits(%0),get(##/MAP`WAY)))
         flags: [funsyntax]
       # %0 a map: on a graph map, its way exits whose names are no longer every name their ways go by.
       FUN`RENAMED:
         value: |-
           if(strmatch(worldmap(%0),graph),squish(iter(lexits(%0),if(cand(hasattr(%i0,MAP`WAY),strlen(setr(0,u(%!/FUN`NAME,%0,get(%i0/MAP`WAY)))),comp(fullname(%i0),%q0)),%i0))))
         flags: [funsyntax]
-      # %0 a map, %1 a way: the name and aliases its exit is opened with. A graph map's way goes by every name its ways were linked with.
+      # %0 a map: on a graph map, each name more than one of its ways goes by, as a way is keyed (lower case, _ for a
+      # space). One exit can answer to such a name only if it walks whichever way goes by it from where the mover is.
+      FUN`SHARED:
+        value: |-
+          if(strmatch(worldmap(%0),graph),[setq(all,sort(iter(worldmap(%0,names),setunion(iter(%i0,edit(squish(lcstr(%i0)),%b,_),;,%b),),|,%b)))][if(gt(words(%q<all>),1),setunion(iter(lnum(1,dec(words(%q<all>))),if(comp(extract(%q<all>,%i0,1),extract(%q<all>,inc(%i0),1)),,extract(%q<all>,%i0,1))),))])
+        flags: [funsyntax]
+      # %0 a map: the shared names no way is first named, each walked by an exit of its own, MAP`SHARED, whose MAP`WAY is
+      # the name: worldway() takes a way's name, so it walks the way by that name out of the mover's place. A name keeps
+      # its exit once it has one, shared or not, so no two exits answer to it. +map/exits marks an exit MAP`SHARED while
+      # its name is one of these, and unmarks it once a way is first named it.
+      FUN`ALIASES:
+        value: |-
+          setdiff(setunion(u(%!/FUN`SHARED,%0),iter(lexits(%0),if(hasattr(%i0,MAP`SHARED),get(%i0/MAP`WAY)))),worldmap(%0,ways))
+        flags: [funsyntax]
+      # %0 a map, %1 a way: the name and aliases its exit is opened with. A graph map's way goes by every name its ways
+      # were linked with, but a name another way also goes by or that has an exit of its own: the way first named it, or
+      # that exit, takes it.
       FUN`NAME:
         value: |-
-          if(strmatch(worldmap(%0),graph),extract(worldmap(%0,names),match(worldmap(%0,ways),%1),1,|),v(DATA`WAY`%1))
+          if(strmatch(worldmap(%0),graph),if(member(worldmap(%0,ways),%1),[setq(names,extract(worldmap(%0,names),match(worldmap(%0,ways),%1),1,|))][setq(shared,setunion(u(%!/FUN`SHARED,%0),u(%!/FUN`ALIASES,%0)))][first(%q<names>,;)][iter(rest(%q<names>,;),if(member(%q<shared>,edit(squish(lcstr(%i0)),%b,_)),,;%i0),;,)],if(member(u(%!/FUN`ALIASES,%0),%1),[edit(%1,_,%b)][if(strmatch(%1,*_*),;%1)])),v(DATA`WAY`%1))
         flags: [funsyntax]
 
       # ---- help -----------------------------------------------------------------
@@ -167,7 +183,7 @@ objects:
       HELP`MAP`GRID: |-
         A world map keeps its places itself (see `help @world`). With this package, people walk it.
 
-        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten, `North;n` to `Down;d`. On a hex map east and west, and on a pointy hex map north and south, face a corner and lead round it to the place two over. On a graph map it opens one for each way name its places have, going by every name the ways by that name were linked with (see `help @world link`); run it again after linking more. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
+        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten, `North;n` to `Down;d`. On a hex map east and west, and on a pointy hex map north and south, face a corner and lead round it to the place two over. On a graph map it opens one for each way name its places have, going by every name the ways by that name were linked with (see `help @world link`); run it again after linking more. A name ways out of different places share, such as `old` on both `Old Road;old` and `Ford;old`, gets an exit of its own, which `look` does not list: it takes whichever way by that name leaves the mover's place. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
 
         A lent room is named after its place and described by the map's legend: ``MAP`LEGEND`<type>`DESC``, else the type's label. Set ``MAP`CELLPARENT`` on the map to describe them your own way; copy World Cell Parent's ``EXITFORMAT`` to it to keep the ways listed.
 
