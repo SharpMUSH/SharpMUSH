@@ -37,7 +37,7 @@ What a world map is. The fields:
 - `space`: `square`, `hex`, `pointy-hex` or `graph` (the default)
 - `sides`: its places' sides, by letter, separated by spaces; none on a graph map
 - `ways`: the directions [worldway()] takes there: the sides, then the corner steps. On a graph map, the name of every way out of any place
-- `names`: on a graph map, each of those ways' full names, `|` between them
+- `names`: on a graph map, for each of those ways, every name a way by it goes by, `|` between ways
 - `levels`: the levels painted, lowest first
 - `box`: the painted box as `<left> <bottom> <right> <top>`; empty before anything is painted
 

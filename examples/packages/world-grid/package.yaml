@@ -1,7 +1,7 @@
 format: "1.16"
 package: world-grid
 title: "World grid"
-version: 1.5.0
+version: 1.5.1
 authors: [SharpMUSH]
 description: "Walking a world map the World plugin keeps: direction exits on the map lead from place to place through the rooms it lends them, a parent describes those rooms from the map's legend, and +map draws the places around you."
 license: MIT
@@ -115,7 +115,7 @@ objects:
       # yet, and names the cell parent.
       INC`EXITS:
         value: |-
-          @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn); @set %q<map>=FLOATING; @cpattr %!/DATA`ZONE`EXITS=%q<map>/ZONE`EXITS; @cpattr %!/DATA`ZONE`EXITS`TO=%q<map>/ZONE`EXITS`TO; think setr(kind,if(strmatch(worldmap(%q<map>),graph),way,direction)); @assert strlen(setr(missing,u(%!/FUN`MISSING,%q<map>)))=@pemit %#=notice(MAP,[name(%q<map>)] has every %q<kind> exit.,info); @dolist/inline %q<missing>=@include %!/INC`EXITS`OPEN=%q<map>,##; @include %!/INC`EXITS`PARENT=%q<map>; @pemit %#=notice(MAP,Opened [words(%q<missing>)] %q<kind> exits on [name(%q<map>)].,ok)
+          @assert isdbref(setr(map,locate(%#,%0,*)))=@pemit %#=notice(MAP,I don't see %0 here.,warn); @assert controls(%#,%q<map>)=@pemit %#=notice(MAP,You do not control [name(%q<map>)].,warn); @assert hastype(%q<map>,ROOM)=@pemit %#=notice(MAP,[name(%q<map>)] must be a room: the exits that lead between its places are on it.,warn); @assert not(strmatch(worldcell(%q<map>,0,0),#-1 NOT A WORLD MAP))=@pemit %#=notice(MAP,[name(%q<map>)] is not a world map: use @world/create first.,warn); @set %q<map>=FLOATING; @cpattr %!/DATA`ZONE`EXITS=%q<map>/ZONE`EXITS; @cpattr %!/DATA`ZONE`EXITS`TO=%q<map>/ZONE`EXITS`TO; think setr(kind,if(strmatch(worldmap(%q<map>),graph),way,direction)); think setr(renamed,u(%!/FUN`RENAMED,%q<map>)); @dolist/inline %q<renamed>=@name ##=[setr(named,u(%!/FUN`NAME,%q<map>,get(##/MAP`WAY)))][if(strmatch(%q<named>,*;*),,;)]; @select/inline words(%q<renamed>)=0,,{@pemit %#=notice(MAP,Renamed [words(%q<renamed>)] way exits on [name(%q<map>)] to the names their ways go by now.,ok)}; @assert strlen(setr(missing,u(%!/FUN`MISSING,%q<map>)))=@pemit %#=notice(MAP,[name(%q<map>)] has every %q<kind> exit.,info); @dolist/inline %q<missing>=@include %!/INC`EXITS`OPEN=%q<map>,##; @include %!/INC`EXITS`PARENT=%q<map>; @pemit %#=notice(MAP,Opened [words(%q<missing>)] %q<kind> exits on [name(%q<map>)].,ok)
         flags: [cmdsyntax]
       # %0 the map, %1 a way: one direction exit, variable, leading by the way parent, given to the map's owner.
       INC`EXITS`OPEN:
@@ -146,7 +146,12 @@ objects:
         value: |-
           setdiff(if(strmatch(worldmap(%0),graph),worldmap(%0,ways),setinter(v(DATA`WAYS),worldmap(%0,ways))),iter(lexits(%0),get(##/MAP`WAY)))
         flags: [funsyntax]
-      # %0 a map, %1 a way: the name and aliases its exit is opened with. A graph map's way is named as it was linked.
+      # %0 a map: on a graph map, its way exits whose names are no longer every name their ways go by.
+      FUN`RENAMED:
+        value: |-
+          if(strmatch(worldmap(%0),graph),squish(iter(lexits(%0),if(cand(hasattr(%i0,MAP`WAY),strlen(setr(0,u(%!/FUN`NAME,%0,get(%i0/MAP`WAY)))),comp(fullname(%i0),%q0)),%i0))))
+        flags: [funsyntax]
+      # %0 a map, %1 a way: the name and aliases its exit is opened with. A graph map's way goes by every name its ways were linked with.
       FUN`NAME:
         value: |-
           if(strmatch(worldmap(%0),graph),extract(worldmap(%0,names),match(worldmap(%0,ways),%1),1,|),v(DATA`WAY`%1))
@@ -162,7 +167,7 @@ objects:
       HELP`MAP`GRID: |-
         A world map keeps its places itself (see `help @world`). With this package, people walk it.
 
-        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten, `North;n` to `Down;d`. On a hex map east and west, and on a pointy hex map north and south, face a corner and lead round it to the place two over. On a graph map it opens one for each way its places have, named as the way was linked (see `help @world link`); run it again after linking more. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
+        The map must be a room that nobody enters. `+map/exits <map>` opens an exit on it for each way its places have (name a map you are not near by its dbref): ten, `North;n` to `Down;d`. On a hex map east and west, and on a pointy hex map north and south, face a corner and lead round it to the place two over. On a graph map it opens one for each way name its places have, going by every name the ways by that name were linked with (see `help @world link`); run it again after linking more. A map is a zone master room, so its exits work in every room zoned to it. Going north from a place leads to the room standing on the place north of it, lent there if it has none. A wall, a one-way side, a closed terrain or a lock the mover does not pass refuses, with its reason. Rooms placed on the map keep their own exits, and those come first. `look` in a lent room lists the ways that lead somewhere, and so do the Play page and a GMCP client, through the map's ``ZONE`EXITS``.
 
         A lent room is named after its place and described by the map's legend: ``MAP`LEGEND`<type>`DESC``, else the type's label. Set ``MAP`CELLPARENT`` on the map to describe them your own way; copy World Cell Parent's ``EXITFORMAT`` to it to keep the ways listed.
 

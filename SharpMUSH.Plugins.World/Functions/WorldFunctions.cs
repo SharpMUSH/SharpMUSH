@@ -115,24 +115,29 @@ public static class WorldFunctions
 				"space" => new CallState(record.Space),
 				"sides" => new CallState(string.Join(" ", WorldGrid.Sides(record.Space).Select(WorldGrid.Letter))),
 				"ways" => new CallState(record.Space == MapSpaces.Graph
-					? string.Join(" ", Ways(reading).Select(link => link.Way))
+					? string.Join(" ", Ways(reading).Select(way => way.Way))
 					: string.Join(" ", WorldWays.Directions(record.Space))),
-				"names" => new CallState(record.Space == MapSpaces.Graph ? string.Join("|", Ways(reading).Select(link => link.Names)) : ""),
+				"names" => new CallState(record.Space == MapSpaces.Graph ? string.Join("|", Ways(reading).Select(way => way.Names)) : ""),
 				"levels" => new CallState(string.Join(" ", record.Levels)),
 				"box" => new CallState(record.Painted ? $"{record.Left} {record.Bottom} {record.Right} {record.Top}" : ""),
 				_ => new CallState(BadField),
 			});
 		});
 
-	/// <summary>A graph map's ways the reader may learn of, the first of each name, by name.</summary>
-	private static IEnumerable<WorldLinkRecord> Ways(Reading reading)
+	/// <summary>
+	/// A graph map's ways the reader may learn of, one for each way name, in order: the names every way by that name goes
+	/// by, the first way's first, so one exit by them walks any of those ways.
+	/// </summary>
+	private static IEnumerable<(string Way, string Names)> Ways(Reading reading)
 	{
 		var dbref = reading.Map.Object().DBRef;
 		return reading.Store.AllLinks(dbref)
 			.Where(entry => WorldWays.Visible(reading.Store, dbref, reading.Examine, entry.From, entry.Link))
-			.Select(entry => entry.Link)
-			.DistinctBy(link => link.Way)
-			.OrderBy(link => link.Way, StringComparer.Ordinal);
+			.GroupBy(entry => entry.Link.Way)
+			.OrderBy(group => group.Key, StringComparer.Ordinal)
+			.Select(group => (group.Key, string.Join(";", group
+				.SelectMany(entry => entry.Link.NameList)
+				.Distinct(StringComparer.OrdinalIgnoreCase))));
 	}
 
 	/// <summary>

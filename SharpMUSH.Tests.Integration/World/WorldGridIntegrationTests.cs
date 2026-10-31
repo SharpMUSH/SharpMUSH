@@ -231,6 +231,22 @@ public class WorldGridIntegrationTests
 			await Assert.That(await As(walker, "road")).Contains("You can't go that way.");
 			await As(walker, "back");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(start);
+
+			// A way out of another place by the same first name shares the exit, which takes its names too.
+			await God($"@world/link {mapRef}/9,9=0,0,Old Road;old");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Renamed 1 way exits on {map}");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),fullname(%i0),,|),,|,|)")).IsEqualTo("Back Road;back|Ford|Old Road;road;old");
+			await As(walker, "old");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},4,2,,room)"))
+				.Because("the exit takes the way out of the walker's own place, whichever of its names they use");
+
+			// Ways that go by no alias any more leave the exit none.
+			await God($"@world/link {mapRef}/9,9/old_road");
+			await God($"@world/link {mapRef}/0,0/old_road");
+			await God($"@world/link {mapRef}/0,0=4,2,Old Road");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Renamed 1 way exits on {map}");
+			await Assert.That(await Eval($"squish(iter(lexits({mapRef}),if(strmatch(get(%i0/MAP`WAY),old_road),fullname(%i0)),,|),|)")).IsEqualTo("Old Road");
+			await Assert.That(await God($"+map/exits {mapRef}")).DoesNotContain("Renamed");
 		}
 		finally
 		{

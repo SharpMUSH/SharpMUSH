@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using Bunit;
@@ -141,6 +142,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			new(3, 0, "back", "Back;b", 0, 0, 0, null, null),
 			new(3, 0, "shrine_path", "Shrine Path", 0, 3, 0, MapWallKinds.Wall, "Brambles."),
 			new(0, 0, "stair", "Stair", 0, 0, 1, null, null),
+			new(0, 0, "cellar", "Cellar", 0, 0, -1, null, null),
 		],
 	};
 
@@ -869,12 +871,19 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("rect.map-place").Count).IsEqualTo(2);
 		await Assert.That(cut.FindAll("line.map-grid")).IsEmpty().Because("a graph map's places are joined by its ways alone");
-		var ways = cut.FindAll("line.map-way");
-		await Assert.That(ways.Count).IsEqualTo(3).Because("the stair leads to another level, which this drawing does not show");
+		var ways = cut.FindAll("line.map-way:not(.map-way--climb)");
+		await Assert.That(ways.Count).IsEqualTo(3);
 		await Assert.That(ways.Count(way => way.GetAttribute("marker-end") is { Length: > 0 })).IsEqualTo(1)
 			.Because("only the shrine path has no way back");
 		await Assert.That(cut.FindAll("line.map-way--wall").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent)).IsEquivalentTo(["Old Road", "Back", "Shrine Path"]);
+		var climbs = cut.FindAll("line.map-way--climb");
+		await Assert.That(climbs.All(climb => climb.GetAttribute("marker-end") is { Length: > 0 })).IsTrue()
+			.Because("a way to another level is an arrow out of its place");
+		var rises = climbs.Select(climb => double.Parse(climb.GetAttribute("y2")!, CultureInfo.InvariantCulture) - double.Parse(climb.GetAttribute("y1")!, CultureInfo.InvariantCulture)).ToList();
+		await Assert.That(rises.Count(rise => rise < 0)).IsEqualTo(1).Because("the stair to the level above points up the page");
+		await Assert.That(rises.Count(rise => rise > 0)).IsEqualTo(1).Because("the cellar below points down it, apart from the stair");
+		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent))
+			.IsEquivalentTo(["Old Road", "Back", "Shrine Path", "NavMapWayToLevel(Stair, NavMapLevel(1))", "NavMapWayToLevel(Cellar, NavMapLevel(-1))"]);
 		await Assert.That(cut.Find("line.map-way--wall title").TextContent).IsEqualTo("Shrine Path: Brambles.");
 	}
 

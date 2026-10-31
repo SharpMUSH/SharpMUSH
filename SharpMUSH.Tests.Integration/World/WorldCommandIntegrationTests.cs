@@ -136,6 +136,11 @@ public class WorldCommandIntegrationTests
 		await God($"@world/link {map}/4,2,1=9,9,Nowhere", "leads");
 		await Assert.That(await Eval($"worldmap({map},ways)/[worldmap({map},names)]/[worldcell({map},0,0,0,ways)]"))
 			.IsEqualTo("back_road nowhere old_road/Back Road;back|Nowhere|Old Road;road/old_road");
+		await God($"@world/link {map}/4,2,1=0,0,Old Road;old", "leads");
+		await Assert.That(await Eval($"worldmap({map},ways)/[worldmap({map},names)]"))
+			.IsEqualTo("back_road nowhere old_road/Back Road;back|Nowhere|Old Road;road;old")
+			.Because("one exit walks every way by a name, so it goes by all their names");
+		await God($"@world/link {map}/4,2,1/old", "Removed");
 		await Assert.That(await Eval($"worldway({map},0,0,0,road)/[worldway({map},0,0,0,OLD ROAD,to)]/[worldway({map},4,2,1,back,to)]"))
 			.IsEqualTo("open/4,2,1/0,0,0");
 		await Assert.That(await Eval($"worldway({map},0,0,0,n)/[worldway({map},0,0,0,n,to)]/[worldway({map},4,2,1,nowhere)]"))

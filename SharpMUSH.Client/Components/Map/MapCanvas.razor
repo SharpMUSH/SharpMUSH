@@ -77,6 +77,10 @@
             {
                 @Way(link)
             }
+            @foreach (var link in _climbs)
+            {
+                @Climb(link)
+            }
             @foreach (var edge in _edges)
             {
                 <line class="map-edge @(edge.Route ? "map-edge--route" : null)" x1="@Num(edge.X1)" y1="@Num(edge.Y1)" x2="@Num(edge.X2)" y2="@Num(edge.Y2)"
@@ -254,6 +258,9 @@
     private const double Inset = MapLayout.RoomInset;
     private const double Margin = 24;
 
+    /// <summary>How far past its places a graph map's drawing reaches either side, for the names beside its ways.</summary>
+    private const double WayRoom = 160;
+
     /// <summary>The narrowest a room is drawn, in pixels, with its name inside.</summary>
     private const double NameWidth = 44;
 
@@ -300,6 +307,9 @@
 
     /// <summary>A graph map's ways on the level on show, and each as from, to, to know which have a way back.</summary>
     private List<MapLinkDto> _links = [];
+
+    /// <summary>A graph map's ways out of the level on show, to a place on another level.</summary>
+    private List<MapLinkDto> _climbs = [];
     private HashSet<(int, int, int, int)> _twoWay = [];
 
     protected override void OnParametersSet()
@@ -307,8 +317,9 @@
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
         _legend = Layout.Map.Legend.ToDictionary(entry => entry.Type);
         (_places, _walls) = Layout.Space is not null && Cells is { } cells && cells.Level == Level ? (cells.Cells, cells.Walls) : ([], []);
-        // A way to another level has no line on a drawing of one; the place's panel lists it.
-        _links = Layout.HasWays && Cells is { } read && read.Level == Level ? [.. read.Links.Where(link => link.ToZ == Level)] : [];
+        var ways = Layout.HasWays && Cells is { } read && read.Level == Level ? read.Links : [];
+        _links = [.. ways.Where(link => link.ToZ == Level)];
+        _climbs = [.. ways.Where(link => link.ToZ != Level)];
         _twoWay = _links.Select(link => (link.X, link.Y, link.ToX, link.ToY)).ToHashSet();
         // Read in the order the eye does: rows top to bottom, cells left to right.
         _marked =
@@ -332,6 +343,11 @@
         {
             var reach = Reach * MapLayout.GraphRoom;
             bounds = (bounds.Left - reach, bounds.Top - reach, bounds.Right + reach, bounds.Bottom + reach);
+        }
+        if (_links.Count + _climbs.Count > 0)
+        {
+            // A way's name stands beside its line, and a way to another level reaches out of its place: room for both.
+            bounds = (bounds.Left - WayRoom, bounds.Top - MapLayout.Cell, bounds.Right + WayRoom, bounds.Bottom + MapLayout.Cell);
         }
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
         (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
@@ -660,6 +676,37 @@
         var (nx, ny) = (-uy, ux);
         var anchor = nx > 0.4 ? "start" : nx < -0.4 ? "end" : "middle";
         @SvgText("map-way-name", x1 + (x2 - x1) / 3 + nx * 12, y1 + (y2 - y1) / 3 + ny * 12, link.Names.Split(';')[0], anchor)
+    };
+
+    /// <summary>
+    /// A way to a place on another level: a short arrow out of its place toward where the other lies, or up the page
+    /// when it lies straight above and down when straight below, named with the level it leads to.
+    /// </summary>
+    private RenderFragment Climb(MapLinkDto link) => __builder =>
+    {
+        var (fromX, fromY) = Layout.PlaceCentre(link.X, link.Y);
+        var (toX, toY) = Layout.PlaceCentre(link.ToX, link.ToY);
+        var (dx, dy) = (toX - fromX, toY - fromY);
+        var length = Math.Sqrt(dx * dx + dy * dy);
+        var (ux, uy) = length < 1 ? (0.0, link.ToZ > Level ? -1.0 : 1.0) : (dx / length, dy / length);
+        var (x1, y1) = (fromX + ux * MapLayout.Cell / 2, fromY + uy * MapLayout.Cell / 2);
+        var (x2, y2) = (x1 + ux * MapLayout.Cell * 0.6, y1 + uy * MapLayout.Cell * 0.6);
+        var kind = link.Kind switch
+        {
+            MapWallKinds.Wall => "map-way--wall",
+            MapWallKinds.Lock => "map-way--lock",
+            _ => null,
+        };
+        var name = link.Names.Split(';')[0];
+        var level = Layout.Map.LevelNames.GetValueOrDefault(link.ToZ) is { Length: > 0 } named ? named : Loc["NavMapLevel", link.ToZ].Value;
+        var label = Loc["NavMapWayToLevel", name, level].Value;
+        <line class="map-way map-way--climb @kind" x1="@Num(x1)" y1="@Num(y1)" x2="@Num(x2)" y2="@Num(y2)" marker-end="url(#@ArrowId)">
+            <title>@(link.Reason is { } reason ? $"{label}: {reason}" : label)</title>
+        </line>
+        // Beside the arrow, on its right, as a way's name is.
+        var (nx, ny) = (-uy, ux);
+        var anchor = nx > 0.4 ? "start" : nx < -0.4 ? "end" : "middle";
+        @SvgText("map-way-name", (x1 + x2) / 2 + nx * 12, (y1 + y2) / 2 + ny * 12, label, anchor)
     };
 
     /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>

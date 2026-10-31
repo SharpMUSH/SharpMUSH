@@ -7181,6 +7181,9 @@
   <data name="NavMapSetWay" xml:space="preserve">
     <value>Postavi put</value>
   </data>
+  <data name="NavMapWayToLevel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Sakrij od igrača</value>
   </data>
