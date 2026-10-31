@@ -16,7 +16,7 @@ from parity.echo import EchoSite
 from parity.normalize import DbrefCanonicalizer, normalize
 from parity.runner import StepRecord, Target, _execute
 from parity.scenario import Step
-from parity.session import Session, split_telnet, strip_telnet
+from parity.session import Session, banner_started, split_telnet, strip_telnet
 from parity.servers import StartupError, wait_for, finish_import_preview, verify_import_committed
 
 
@@ -125,6 +125,17 @@ class NormalizeTests(unittest.TestCase):
 
     def test_telnet_negotiation_is_stripped(self):
         self.assertEqual(strip_telnet(b"\xff\xfb\xc9hi\xff\xfa\x18\x00x\xff\xf0!\xff\xff"), b"hi!\xff")
+
+
+class BannerTests(unittest.TestCase):
+    def test_the_pueblo_hello_is_not_the_start_of_the_screen(self):
+        self.assertFalse(banner_started(b""))
+        self.assertFalse(banner_started(b"This world is Pueblo 1.10 Enhanced.\r\n"))
+        self.assertFalse(banner_started(b"This world is Pueblo 1.10"))
+
+    def test_text_after_the_hello_or_without_one_starts_the_screen(self):
+        self.assertTrue(banner_started(b"This world is Pueblo 1.10 Enhanced.\r\n  ==  Welcome"))
+        self.assertTrue(banner_started(b"<This is where you announce>\r\n"))
 
 
 class DbrefTests(unittest.TestCase):

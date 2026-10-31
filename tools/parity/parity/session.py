@@ -56,6 +56,19 @@ def strip_telnet(data: bytes) -> bytes:
     return split_telnet(data)[0]
 
 
+PUEBLO_HELLO = b"This world is Pueblo "
+
+
+def banner_started(text: bytes) -> bool:
+    """Whether `text` holds the start of a connect screen: some text past any Pueblo hello lines."""
+    while text.startswith(PUEBLO_HELLO):
+        end = text.find(b"\r\n")
+        if end < 0:
+            return False
+        text = text[end + 2:]
+    return bool(text)
+
+
 class Session:
     def __init__(self, name: str, host: str, port: int, token_prefix: str, timeout: float = 20.0):
         self.name = name
@@ -77,16 +90,20 @@ class Session:
 
     def _read_until(self, marker: bytes) -> bytes:
         """Everything before `marker`, consumed with it; an empty marker waits for any text."""
+        found = (lambda: self._text.find(marker)) if marker else (lambda: 0 if self._text else -1)
+        self._wait_for(lambda: found() >= 0, f"{marker!r}")
+        idx = found()
+        consumed = self._text[:idx]
+        self._text = self._text[idx + len(marker):]
+        return consumed
+
+    def _wait_for(self, ready, what: str) -> None:
+        """Reads until `ready()` holds for the text received so far, consuming nothing."""
         deadline = time.monotonic() + self._timeout
-        while True:
-            idx = self._text.find(marker) if marker else (0 if self._text else -1)
-            if idx >= 0:
-                consumed = self._text[:idx]
-                self._text = self._text[idx + len(marker):]
-                return consumed
+        while not ready():
             remaining = deadline - time.monotonic()
             if remaining <= 0:
-                raise SessionError(f"session {self.name}: timed out waiting for {marker!r}; "
+                raise SessionError(f"session {self.name}: timed out waiting for {what}; "
                                    f"received so far: {self._text[-300:]!r}")
             self._sock.settimeout(remaining)
             try:
@@ -94,7 +111,7 @@ class Session:
             except socket.timeout:
                 continue
             if not chunk:
-                raise SessionError(f"session {self.name}: connection closed while waiting for {marker!r}")
+                raise SessionError(f"session {self.name}: connection closed while waiting for {what}")
             text, self._partial = split_telnet(self._partial + chunk)
             self._text += text
 
@@ -128,8 +145,9 @@ class Session:
 
         SharpMUSH draws the screen when the connection registers, apart from the input queue, so an
         INFO sent at once can be answered first and the screen land in a later step. The INFO goes out
-        only once the screen has started to arrive."""
-        self._read_until(b"")
+        only once the screen has started to arrive. SharpMUSH's Pueblo hello comes before the screen,
+        so it does not count as the start of it."""
+        self._wait_for(lambda: banner_started(self._text), "the connect screen")
         return self._info_sync()
 
     def sync_prelogin(self) -> str:
