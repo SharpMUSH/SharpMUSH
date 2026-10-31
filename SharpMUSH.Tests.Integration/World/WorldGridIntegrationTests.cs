@@ -197,4 +197,45 @@ public class WorldGridIntegrationTests
 			if (_installedWorldMap) await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-map");
 		}
 	}
+
+	[Test]
+	public async Task APlayerWalksAGraphMapByItsNamedWays()
+	{
+		try
+		{
+			await InstallAsync();
+			var map = TestIsolationHelpers.GenerateUniqueName("Downs");
+			await God($"@dig {map}");
+			var mapRef = await Eval($"num(search(name={map}))");
+			await God($"@world/create {mapRef}=graph");
+			await God($"@world/paint {mapRef}/0,0=grass");
+			await God($"@world/paint {mapRef}/4,2=grass");
+			await God($"@world/paint {mapRef}/9,9=grass");
+			await God($"@world/link {mapRef}/0,0=4,2,Old Road;road,Back Road;back");
+			await God($"@world/link {mapRef}/4,2=9,9,Ford");
+			await God($"@world/wall {mapRef}/4,2/ford=wall,The river is in flood.");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"Opened 3 way exits on {map}.");
+			await Assert.That(await God($"+map/exits {mapRef}")).Contains($"{map} has every way exit.");
+			await Assert.That(await Eval($"sort(iter(lexits({mapRef}),fullname(%i0),,|),,|,|)")).IsEqualTo("Back Road;back|Ford|Old Road;road");
+
+			var walker = await Player("Drover");
+			var start = await Eval($"worldroom({mapRef},0,0)");
+			await God($"@tel {walker.DbRef}={start}");
+			await Assert.That(await As(walker, "look")).Contains("Old Road").And.DoesNotContain("Back Road").And.DoesNotContain("Ford");
+
+			var walked = await As(walker, "road");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},4,2,,room)"));
+			// From 4,2 the road leads back; the ford is walled, so look leaves it out.
+			await Assert.That(walked).Contains("Back Road").And.DoesNotContain("Old Road").And.DoesNotContain("Ford");
+			await Assert.That(await As(walker, "ford")).Contains("The river is in flood.");
+			await Assert.That(await As(walker, "road")).Contains("You can't go that way.");
+			await As(walker, "back");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(start);
+		}
+		finally
+		{
+			await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-grid");
+			if (_installedWorldMap) await WebAppFactoryArg.Services.UninstallWithBridgesAsync("world-map");
+		}
+	}
 }
