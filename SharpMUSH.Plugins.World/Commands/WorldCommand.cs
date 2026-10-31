@@ -179,8 +179,9 @@ public static partial class WorldCommand
 			{
 				if (!string.IsNullOrWhiteSpace(value))
 					return await Say("Give the way to remove as <map>/<x>,<y>[,<z>]/<way>, with nothing after =.", "#-1 BAD WAY");
+				var removed = Shown(place);
 				return await store.ChangeLinkAsync(dbref, place.X, place.Y, place.Z, parts[2], _ => null)
-					? await Say($"Removed the way {parts[2]} out of {place}.", "")
+					? await Say($"Removed the way {removed} out of {place}.", "")
 					: await NoWayAsync(place, parts[2]);
 			}
 
@@ -202,6 +203,10 @@ public static partial class WorldCommand
 				? $"{shown} leads from {place} to {to}."
 				: $"{shown} leads from {place} to {to}, and {WorldLinks.Split(back)[0]} from {to} back.", "");
 		}
+
+		// A way is told by its first name, whichever of its names it was given by.
+		string Shown(WorldPosition place) =>
+			store.Link(dbref, place.X, place.Y, place.Z, parts[2]) is { } link ? link.NameList[0] : parts[2];
 
 		ValueTask<Option<CallState>> NoWayAsync(WorldPosition place, string way) =>
 			Say($"{place} has no way out named {way}.", "#-1 NO WAY");
@@ -233,7 +238,7 @@ public static partial class WorldCommand
 				WorldEdge.Wall => "a wall",
 				_ => "locked",
 			};
-			return await Say($"The way {parts[2]} out of {place} is now {what}.", "");
+			return await Say($"The way {Shown(place)} out of {place} is now {what}.", "");
 		}
 
 		async ValueTask<Option<CallState>> LockWayAsync(WorldPosition place)
@@ -252,7 +257,7 @@ public static partial class WorldCommand
 				? link with { Edge = WorldEdge.Open, Reason = null, Key = null }
 				: link with { Edge = WorldEdge.Lock, Key = key }))
 				return await NoWayAsync(place, parts[2]);
-			return await Say($"The way {parts[2]} out of {place} is now {(key is null ? "open" : "locked")}.", "");
+			return await Say($"The way {Shown(place)} out of {place} is now {(key is null ? "open" : "locked")}.", "");
 		}
 
 		// A side that names nothing, or one a place in this space does not have, is refused with the sides it has.

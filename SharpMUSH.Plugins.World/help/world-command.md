@@ -135,7 +135,7 @@ On a graph map, `@world/wall` and `@world/lock` take a way's name where a side g
 Output:
 ```
 Old Road leads from 0,0,0 to 4,2,0, and Back Road from 4,2,0 back.
-The way back out of 4,2,0 is now a wall.
+The way Back Road out of 4,2,0 is now a wall.
 ```
 
 ## Terrain locks
