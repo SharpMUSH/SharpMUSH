@@ -10784,6 +10784,9 @@
   <data name="NavMapSetWay" xml:space="preserve">
     <value>Set way</value>
   </data>
+  <data name="NavMapWayToLevel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Hide from players</value>
   </data>

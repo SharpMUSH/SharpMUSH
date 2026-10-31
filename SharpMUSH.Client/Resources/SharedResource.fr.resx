@@ -6490,6 +6490,9 @@
   <data name="NavMapSetWay" xml:space="preserve">
     <value>Définir le chemin</value>
   </data>
+  <data name="NavMapWayToLevel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Cacher aux joueurs</value>
   </data>

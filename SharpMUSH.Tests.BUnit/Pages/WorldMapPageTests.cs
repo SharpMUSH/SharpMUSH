@@ -869,12 +869,15 @@ public class WorldMapPageTests : TrackingBunitContext
 
 		await Assert.That(cut.FindAll("rect.map-place").Count).IsEqualTo(2);
 		await Assert.That(cut.FindAll("line.map-grid")).IsEmpty().Because("a graph map's places are joined by its ways alone");
-		var ways = cut.FindAll("line.map-way");
-		await Assert.That(ways.Count).IsEqualTo(3).Because("the stair leads to another level, which this drawing does not show");
+		var ways = cut.FindAll("line.map-way:not(.map-way--climb)");
+		await Assert.That(ways.Count).IsEqualTo(3);
 		await Assert.That(ways.Count(way => way.GetAttribute("marker-end") is { Length: > 0 })).IsEqualTo(1)
 			.Because("only the shrine path has no way back");
 		await Assert.That(cut.FindAll("line.map-way--wall").Count).IsEqualTo(1);
-		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent)).IsEquivalentTo(["Old Road", "Back", "Shrine Path"]);
+		var climb = cut.Find("line.map-way--climb");
+		await Assert.That(climb.GetAttribute("marker-end")).IsNotNull().Because("a way to another level is an arrow out of its place");
+		await Assert.That(cut.FindAll("text.map-way-name").Select(name => name.TextContent))
+			.IsEquivalentTo(["Old Road", "Back", "Shrine Path", "NavMapWayToLevel(Stair, NavMapLevel(1))"]);
 		await Assert.That(cut.Find("line.map-way--wall title").TextContent).IsEqualTo("Shrine Path: Brambles.");
 	}
 

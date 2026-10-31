@@ -7181,6 +7181,9 @@
   <data name="NavMapSetWay" xml:space="preserve">
     <value>Задать путь</value>
   </data>
+  <data name="NavMapWayToLevel" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>Скрыть от игроков</value>
   </data>

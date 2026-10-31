@@ -7181,6 +7181,9 @@
   <data name="NavMapSetWay" xml:space="preserve">
     <value>设置道路</value>
   </data>
+  <data name="NavMapWayToLevel" xml:space="preserve">
+    <value>{0}（{1}）</value>
+  </data>
   <data name="NavMapHidePlace" xml:space="preserve">
     <value>对玩家隐藏</value>
   </data>
