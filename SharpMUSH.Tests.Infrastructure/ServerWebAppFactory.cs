@@ -89,10 +89,13 @@ public class ServerWebAppFactory : IAsyncInitializer, IAsyncDisposable
 	/// an event, an <c>@aconnect</c>-family hook, a triad's action — without waiting, as
 	/// <see cref="ITaskScheduler.DrainImmediateQueueForTests"/> does, for every other test's work to stop.
 	/// It still waits behind whatever the rest of the session queued first, the event handlers above all,
-	/// which is why the default allows a minute.
+	/// which is why the default allows a minute. Work running off the queue (an <c>@http</c> request, an
+	/// <c>@mapsql</c> query) is waited for first, since what it queues is queued when it finishes.
 	/// </summary>
 	public async Task QueueBarrierAsync(TimeSpan? timeout = null)
 	{
+		await Services.GetRequiredService<SharpMUSH.Library.Services.TaskScheduler>().BackgroundWorkSettled()
+			.WaitAsync(timeout ?? TimeSpan.FromSeconds(60));
 		var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 		var admission = await Services.GetRequiredService<ITaskScheduler>().AdmitWork(() =>
 		{
