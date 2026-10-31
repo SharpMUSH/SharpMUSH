@@ -130,9 +130,10 @@ public static class WorldGrid
 		WorldSide.Up, WorldSide.Down,
 	];
 
-	/// <summary>The sides a place in <paramref name="space"/> has.</summary>
+	/// <summary>The sides a place in <paramref name="space"/> has; none on a graph map, whose places have ways instead.</summary>
 	public static IReadOnlyList<WorldSide> Sides(string space) => space switch
 	{
+		MapSpaces.Graph => [],
 		MapSpaces.Hex => HexSides,
 		MapSpaces.PointyHex => PointyHexSides,
 		_ => SquareSides,
@@ -141,6 +142,7 @@ public static class WorldGrid
 	/// <summary>The sides a place in <paramref name="space"/> owns: the edges stored on it.</summary>
 	public static IReadOnlyList<WorldSide> Owned(string space) => space switch
 	{
+		MapSpaces.Graph => [],
 		MapSpaces.Hex => [WorldSide.North, WorldSide.NorthEast, WorldSide.SouthEast, WorldSide.Up],
 		MapSpaces.PointyHex => [WorldSide.PointyNorthEast, WorldSide.East, WorldSide.SouthEast, WorldSide.Up],
 		_ => [WorldSide.North, WorldSide.East, WorldSide.Up],

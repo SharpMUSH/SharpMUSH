@@ -7,7 +7,7 @@ using SharpMUSH.Library.Services.Interfaces;
 namespace SharpMUSH.Plugins.World.Storage;
 
 /// <summary>What the store keeps about one stored map.</summary>
-/// <param name="Space">The space its places are in: <c>square</c> or <c>hex</c>.</param>
+/// <param name="Space">The space its places are in: <c>square</c>, <c>hex</c>, <c>pointy-hex</c> or <c>graph</c>.</param>
 /// <param name="Created">The map object's creation time, so a record never passes to an object that reuses its number.</param>
 /// <param name="Palette">The terrain types painted on it, by terrain id less one.</param>
 public sealed record WorldMapRecord(string Space, long Created, List<string> Palette)
@@ -59,7 +59,8 @@ public sealed record WorldWindowRead(WorldMapRecord Map, IReadOnlyDictionary<(in
 ///   <item><term><c>world.tile</c></term><description><see cref="WorldGrid.TileKey"/> → 32 by 32 cells (<see cref="WorldGrid"/>).</description></item>
 ///   <item><term><c>world.place</c></term><description><see cref="WorldGrid.PlaceKey"/> → <see cref="WorldPlaceRecord"/> JSON.</description></item>
 /// </list>
-/// and four for the rooms standing on them, in <c>WorldStore.Rooms.cs</c>.
+/// four for the rooms standing on them, in <c>WorldStore.Rooms.cs</c>, and one for a graph map's ways, in
+/// <c>WorldStore.Links.cs</c>.
 /// Each change is one write job, which does its own reads through the transaction it is handed; tables are opened
 /// once, here, never inside a job.
 /// </summary>
@@ -85,6 +86,7 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 		_standing = store.OpenTable("world.standing", duplicates: false);
 		_releases = store.OpenTable("world.release", duplicates: false);
 		_spares = store.OpenTable("world.spare", duplicates: false);
+		_links = store.OpenTable("world.link", duplicates: false);
 	}
 
 	/// <summary>The record of <paramref name="map"/>, when it is a stored map; null otherwise.</summary>
@@ -381,6 +383,7 @@ public sealed partial class WorldStore : IFreedObjectCleanup
 		tx.Delete(_maps, Keys.Dbref(map));
 		tx.DeletePrefix(_tiles, Keys.Dbref(map));
 		tx.DeletePrefix(_places, Keys.Dbref(map));
+		tx.DeletePrefix(_links, Keys.Dbref(map));
 	}
 
 	/// <summary>

@@ -122,12 +122,66 @@ public class WorldCommandIntegrationTests
 	}
 
 	[Test]
+	public async Task AGraphMapsPlacesAreJoinedOnlyByTheirNamedWays()
+	{
+		var map = TestIsolationHelpers.GenerateUniqueName("Downs");
+		await God($"@create {map}", map);
+		await Assert.That(await God($"@world/create {map}=graph", map)).Contains($"{map} is now a world map.");
+		await God($"@world/paint {map}/0,0=grass", "places");
+		await God($"@world/paint {map}/4,2,1=grass", "places");
+		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},ways)]")).IsEqualTo("graph//");
+
+		await Assert.That(await God($"@world/link {map}/0,0=4,2,1,Old Road;road,Back Road;back", "leads"))
+			.Contains("Old Road leads from 0,0,0 to 4,2,1, and Back Road from 4,2,1 back.");
+		await God($"@world/link {map}/4,2,1=9,9,Nowhere", "leads");
+		await Assert.That(await Eval($"worldmap({map},ways)/[worldmap({map},names)]/[worldcell({map},0,0,0,ways)]"))
+			.IsEqualTo("back_road nowhere old_road/Back Road;back|Nowhere|Old Road;road/old_road");
+		await Assert.That(await Eval($"worldway({map},0,0,0,road)/[worldway({map},0,0,0,OLD ROAD,to)]/[worldway({map},4,2,1,back,to)]"))
+			.IsEqualTo("open/4,2,1/0,0,0");
+		await Assert.That(await Eval($"worldway({map},0,0,0,n)/[worldway({map},0,0,0,n,to)]/[worldway({map},4,2,1,nowhere)]"))
+			.IsEqualTo("none//none").Because("a graph map's places have no sides, and nothing is painted at 9,9");
+		await Assert.That(await Eval($"worlddraw({map},0,0,0,1,@)")).IsEqualTo("   \n @ \n   ");
+
+		await Assert.That(await God($"@world/wall {map}/4,2,1/back=wall,The bridge is out.", "back"))
+			.Contains("The way back out of 4,2,1 is now a wall.");
+		await Assert.That(await Eval($"worldway({map},4,2,1,back)/[worldway({map},4,2,1,back,reason)]")).IsEqualTo("wall/The bridge is out.");
+		await Assert.That(string.Join("\n", await God($"@world/wall {map}/4,2,1/back=oneway", "already")))
+			.Contains("A graph map's way leads one way already; link one back to go both ways.");
+		await God($"@world/lock {map}/0,0/road=#FALSE", "locked");
+		await Assert.That(await Eval($"worldway({map},0,0,0,road)/[worldway({map},0,0,0,road,state,me)]")).IsEqualTo("lock/lock");
+		await Assert.That(string.Join("\n", await God($"@world {map}/0,0", "Way"))).Contains("Way Old Road;road: to 4,2,1, lock, key #FALSE");
+		await Assert.That(await God($"@world/lock {map}/0,0/road=", "open")).Contains("The way road out of 0,0,0 is now open.");
+
+		// The World map draws each way from the place it leads out of.
+		var mediator = WebAppFactoryArg.Services.GetRequiredService<IMediator>();
+		var stored = (await mediator.Send(new GetObjectNodeQuery(new DBRef(int.Parse((await Eval($"num({map})")).TrimStart('#'))))))
+			.Expect<AnySharpObject>();
+		var god = (await mediator.Send(new GetObjectNodeQuery(new DBRef(1)))).Expect<AnySharpObject>();
+		var source = WebAppFactoryArg.Services.GetServices<IWorldMapSource>().Single();
+		await Assert.That((await source.SpaceAsync(stored, CancellationToken.None)).Expect<MapSpaceDto>().Kind).IsEqualTo(MapSpaces.Graph);
+		var window = await source.CellsAsync(god, stored, new MapWindow(1, 0, 0, 9, 9), CancellationToken.None);
+		await Assert.That(window.Links.Select(link => (link.X, link.Y, link.Way, link.Names, link.ToX, link.ToY, link.ToZ, link.Kind, link.Reason)))
+			.IsEquivalentTo([
+				(4, 2, "back_road", "Back Road;back", 0, 0, 0, (string?)MapWallKinds.Wall, (string?)"The bridge is out."),
+				(4, 2, "nowhere", "Nowhere", 9, 9, 0, null, null),
+			]);
+		await Assert.That(window.Walls).IsEmpty();
+
+		await Assert.That(await God($"@world/link {map}/0,0/Old Road", "Removed")).Contains("Removed the way Old Road out of 0,0,0.");
+		await Assert.That(await Eval($"worldcell({map},0,0,0,ways)/[worldway({map},4,2,1,back,to)]")).IsEqualTo("/0,0,0")
+			.Because("the way back stays");
+		await Assert.That(string.Join("\n", await God($"@world/wall {map}/0,0/n=wall", "no way"))).Contains("0,0,0 has no way out named n.");
+	}
+
+	[Test]
 	public async Task AHexMapIsWalledDrawnAndReadOnItsSixSides()
 	{
 		var map = TestIsolationHelpers.GenerateUniqueName("Steppe");
 		await God($"@create {map}", map);
 		await Assert.That(await God($"@world/create {map}=hex", map)).Contains($"{map} is now a world map.");
-		await Assert.That(await God($"@world/create {map}=graph", "stored")).Contains("graph maps are not stored; a world map is square, hex or pointy-hex.");
+		await Assert.That(await God($"@world/create {map}=octagon", "stored")).Contains("octagon maps are not stored; a world map is square, hex, pointy-hex or graph.");
+		await Assert.That(string.Join("\n", await God($"@world/link {map}/0,0=1,0,Road", "linked")))
+			.Contains("Only a graph map's places are linked; give a side to /wall instead.");
 		await God($"@world/paint {map}/-2,-2:2,2=grass", "places");
 		await Assert.That(await Eval($"worldmap({map})/[worldmap({map},sides)]/[worldmap({map},ways)]/[worldmap({map},levels)]/[worldmap({map},box)]"))
 			.IsEqualTo("hex/n ne se s sw nw u d/n ne se s sw nw e w u d/0/-2 -2 2 2");

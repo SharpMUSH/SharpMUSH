@@ -181,7 +181,7 @@ public static class MapSpaces
 	/// <summary>Pointy-topped hexagons at axial q and r, a level at a time; their sides face ne, e, se, sw, w and nw.</summary>
 	public const string PointyHex = "pointy-hex";
 
-	/// <summary>Named places joined by named ways, with no grid.</summary>
+	/// <summary>Places at x and y, a level at a time, joined only by the named ways made between them.</summary>
 	public const string Graph = "graph";
 
 	public static IReadOnlyList<string> All { get; } = [Square, Hex, PointyHex, Graph];
@@ -212,6 +212,9 @@ public sealed record MapCellsDto(int Level, int Left, int Bottom, int Right, int
 
 	/// <summary>The widest and tallest a square window may be, in cells.</summary>
 	public const int MaxSide = 128;
+
+	/// <summary>On a graph map, the ways out of these cells.</summary>
+	public IReadOnlyList<MapLinkDto> Links { get; init; } = [];
 }
 
 /// <summary>One place of a stored map, drawn from its terrain type, its own data and the map's render format.</summary>
@@ -273,6 +276,13 @@ public static class MapWallKinds
 	/// <summary>Passable for whoever passes its lock; the map does not try it.</summary>
 	public const string Lock = "lock";
 }
+
+/// <summary>A way out of the cell at <see cref="X"/>, <see cref="Y"/> of a graph map, to the place at <see cref="ToX"/>, <see cref="ToY"/>, <see cref="ToZ"/>.</summary>
+/// <param name="Way">The name the cell knows it by: its first, in lower case.</param>
+/// <param name="Names">Its names, <c>;</c> between them; the first is shown.</param>
+/// <param name="Kind">Null for an open way, else <see cref="MapWallKinds.Wall"/> or <see cref="MapWallKinds.Lock"/>.</param>
+/// <param name="Reason">What a player who is refused is told; null when the map does not say.</param>
+public sealed record MapLinkDto(int X, int Y, string Way, string Names, int ToX, int ToY, int ToZ, string? Kind, string? Reason);
 
 /// <summary>An edge of the cell at <see cref="X"/>, <see cref="Y"/> that is not simply open.</summary>
 /// <param name="Side">The side: <c>n</c>, <c>e</c>, <c>s</c>, <c>w</c>, <c>u</c> or <c>d</c>.</param>

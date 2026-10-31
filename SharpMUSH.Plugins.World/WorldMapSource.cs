@@ -120,6 +120,25 @@ public sealed class WorldMapSource(WorldStore store, IAttributeService attribute
 			}
 		}
 
-		return empty with { Cells = cells, Walls = walls };
+		var links = new List<MapLinkDto>();
+		if (space == MapSpaces.Graph)
+		{
+			foreach (var cell in cells)
+			{
+				var at = new WorldPosition(cell.X, cell.Y, level);
+				foreach (var link in store.Links(dbref, cell.X, cell.Y, level).Where(link => WorldWays.Visible(store, dbref, examine, at, link)))
+				{
+					var kind = link.Edge switch
+					{
+						WorldEdge.Wall => MapWallKinds.Wall,
+						WorldEdge.Lock => MapWallKinds.Lock,
+						_ => null,
+					};
+					links.Add(new MapLinkDto(cell.X, cell.Y, link.Way, link.Names, link.X, link.Y, link.Z, kind, kind is null ? null : link.Reason));
+				}
+			}
+		}
+
+		return empty with { Cells = cells, Walls = walls, Links = links };
 	}
 }
