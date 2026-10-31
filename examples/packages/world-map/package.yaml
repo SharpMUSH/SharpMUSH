@@ -20,7 +20,9 @@ attributes:
 objects:
   # The command object, in the master room. WIZARD because +map reads the rooms zoned to a map and their places,
   # which the player may not examine; it shows only the rooms and exits the player may see (a DARK one only to who
-  # controls it or sees all), and reads a World plugin map's places as the player.
+  # controls it or sees all, and only what the player perceives under @reality), and reads a World plugin map's
+  # places as the player. Under @reality it finds rooms as itself, so a game with layers gives it every layer
+  # (@reality/rx) for players on those layers to see their rooms.
   #
   # Trees: CMD` the command, INC` one routine each, FUN` the reads, DATA` the settings.
   - ref: command
@@ -77,10 +79,11 @@ objects:
         value: |-
           [name(%0)][if(strlen(setr(level,if(isnum(%1),strfirstof(get(%0/MAP`LEVEL`%1),if(neq(%1,0),Level %1))))),%b·%b%q<level>)]
         flags: [funsyntax]
-      # %0 a room or exit, %1 the viewer: whether +map shows it to them. A DARK one only to who controls it or sees all.
+      # %0 a room or exit, %1 the viewer: whether +map shows it to them. Only one they perceive under @reality (God,
+      # whom chkreality() can't be asked about, perceives all), and a DARK one only to who controls it or sees all.
       FUN`SEES:
         value: |-
-          cor(not(hasflag(%0,DARK)),controls(%1,%0),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All))
+          cand(if(controls(me,%1),chkreality(%1,%0),1),cor(not(hasflag(%0,DARK)),controls(%1,%0),hasflag(%1,WIZARD),hasflag(%1,ROYALTY),haspower(%1,See_All)))
         flags: [funsyntax]
       # %0 a map, %1 the viewer: the rooms zoned to it they may see.
       FUN`ROOMS:
@@ -105,11 +108,11 @@ objects:
         value: |-
           [setq(cx,get(%0/%2`X))][setq(cy,get(%0/%2`Y))][if(cand(isnum(%q<cx>),isnum(%q<cy>),eq(default(%0/%2`Z,0),%q<z0>)),[setq(dx,round(fdiv(sub(%q<cx>,%q<x0>),%3),0))][setq(dy,round(fdiv(sub(%q<cy>,%q<y0>),%3),0))][if(strmatch(%2,MAP`POS),setq(dy,mul(-1,%q<dy>)))][if(cand(lte(abs(%q<dx>),%1),lte(abs(%q<dy>),%1)),%0:%q<dx>:%q<dy>)])]
         flags: [funsyntax]
-      # A compass map places the rooms its compass exits reach from the viewer's, a step at a time; a cell already taken,
-      # or past the radius, stops that way.
+      # A compass map places the rooms its compass exits reach from the viewer's, a step at a time until no new room is
+      # placed (at most one step per cell); a cell already taken, or past the radius, stops that way.
       FUN`CELLS`COMPASS:
         value: |-
-          [setq(cells,[num(%1)]:0:0)][setq(front,num(%1))][null(iter(lnum(mul(2,%3)),if(words(%q<front>),setq(front,u(%!/FUN`WALK,%0,%2,%3)))))]%q<cells>
+          [setq(cells,[num(%1)]:0:0)][setq(front,num(%1))][null(iter(lnum(power(inc(mul(2,%3)),2)),if(words(%q<front>),setq(front,u(%!/FUN`WALK,%0,%2,%3)))))]%q<cells>
         flags: [funsyntax]
       # %0 a map, %1 the viewer, %2 the radius: one step out from each room in q<front>; the rooms it reaches.
       FUN`WALK:
