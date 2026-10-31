@@ -1056,6 +1056,26 @@ public class MapLayoutTests
 	}
 
 	[Test]
+	public async Task ACompassHexMapStepsToTheHexagonsAnExitFaces()
+	{
+		var layout = new MapLayout(Map(MapKinds.Compass,
+			[new("#1", "Ford", [2, 2, 0], null), new("#2", "Bank", null, null), new("#3", "Reeds", null, null)],
+			[Exit(10, "ne", "#1", "#2"), Exit(11, "Southwest", "#1", "#3")]) with
+		{ Space = new(MapSpaces.Hex, -5, -5, 5, 5, [0]) });
+
+		await Assert.That(layout.Spot(layout.Rooms["#2"])).IsEqualTo((3.0, 2.0, 0)).Because("a hex's northeast side faces (x+1, y)");
+		await Assert.That(layout.Spot(layout.Rooms["#3"])).IsEqualTo((1.0, 2.0, 0)).Because("a hex's southwest side faces (x-1, y)");
+	}
+
+	[Test]
+	public async Task ExitNamesGiveAHexMapsAxialSteps()
+	{
+		await Assert.That(MapLayout.Direction(new("#1", "Northeast", [], "#1", "#2", null), hex: true)).IsEqualTo((1, 0, 0));
+		await Assert.That(MapLayout.Direction(new("#1", "Out", ["sw"], "#1", "#2", null), hex: true)).IsEqualTo((-1, 0, 0));
+		await Assert.That(MapLayout.Direction(new("#1", "East", [], "#1", "#2", null), hex: true)).IsNull();
+	}
+
+	[Test]
 	public async Task AnUnconnectedCompassWingIsDrawnApart()
 	{
 		var layout = new MapLayout(Map(MapKinds.Compass,
