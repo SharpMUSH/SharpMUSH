@@ -347,7 +347,7 @@
         if (_links.Count + _climbs.Count > 0)
         {
             // A way's name stands beside its line, and a way to another level reaches out of its place: room for both.
-            bounds = (bounds.Left - WayRoom, bounds.Top - MapLayout.Cell, bounds.Right + WayRoom, bounds.Bottom + MapLayout.Cell / 2);
+            bounds = (bounds.Left - WayRoom, bounds.Top - MapLayout.Cell, bounds.Right + WayRoom, bounds.Bottom + MapLayout.Cell);
         }
         (_left, _top) = (bounds.Left - Margin, bounds.Top - Margin);
         (_width, _height) = (bounds.Right - bounds.Left + 2 * Margin, bounds.Bottom - bounds.Top + 2 * Margin);
@@ -680,7 +680,7 @@
 
     /// <summary>
     /// A way to a place on another level: a short arrow out of its place toward where the other lies, or up the page
-    /// when it lies straight above or below, named with the level it leads to.
+    /// when it lies straight above and down when straight below, named with the level it leads to.
     /// </summary>
     private RenderFragment Climb(MapLinkDto link) => __builder =>
     {
@@ -688,7 +688,7 @@
         var (toX, toY) = Layout.PlaceCentre(link.ToX, link.ToY);
         var (dx, dy) = (toX - fromX, toY - fromY);
         var length = Math.Sqrt(dx * dx + dy * dy);
-        var (ux, uy) = length < 1 ? (0.0, -1.0) : (dx / length, dy / length);
+        var (ux, uy) = length < 1 ? (0.0, link.ToZ > Level ? -1.0 : 1.0) : (dx / length, dy / length);
         var (x1, y1) = (fromX + ux * MapLayout.Cell / 2, fromY + uy * MapLayout.Cell / 2);
         var (x2, y2) = (x1 + ux * MapLayout.Cell * 0.6, y1 + uy * MapLayout.Cell * 0.6);
         var kind = link.Kind switch
