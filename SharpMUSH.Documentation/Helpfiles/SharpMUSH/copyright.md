@@ -43,6 +43,8 @@ Some code used in this server may have been derived from the PennMUSH source cod
 
 For more details, due to the derived copyrite of PennMUSH, see https://github.com/pennmush/pennmush/blob/master/COPYRITE.
 
+The web portal's map icons are from game-icons.net (https://game-icons.net), drawn by Lorc, Delapouite, Caro Asercion, Cathelineau, Pepijn Poolman, Sbed and Skoll, and used under CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/).
+
  *------------------------------------------------------------------------*
 
 ## Apache License terms

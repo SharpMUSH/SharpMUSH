@@ -6103,6 +6103,9 @@
   <data name="NavMapLegend" xml:space="preserve">
     <value>Légende</value>
   </data>
+  <data name="NavMapIconCredit" xml:space="preserve">
+    <value>Icônes de {0}</value>
+  </data>
   <data name="NavMapHereOffMap" xml:space="preserve">
     <value>Vous êtes dans {0}, qui ne figure sur aucune carte.</value>
   </data>

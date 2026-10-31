@@ -59,7 +59,15 @@
                         <rect class="map-place-hatch" fill="url(#@HatchId)" x="@Num(px)" y="@Num(py)" width="@Num(pw)" height="@Num(ph)" rx="@round" />
                     }
                 }
-                @if (!_marked.Contains(place) && MapLegendStyle.Glyph(Icon(place)) is { } glyph)
+                @if (!_marked.Contains(place) && MapLegendStyle.Svg(Icon(place)) is { } placeIcon)
+                {
+                    @* A place with no button of its own shows its icon on the ground, small and in its terrain's tone, so a painted area
+                       reads as textured ground rather than a field of symbols. *@
+                    var side = Math.Min(pw, ph) * 0.45;
+                    <svg class="map-place-icon" style="@PlaceStyle(place)" x="@Num(px + (pw - side) / 2)" y="@Num(py + (ph - side) / 2)"
+                         width="@Num(side)" height="@Num(side)" viewBox="0 0 24 24">@((MarkupString)placeIcon)</svg>
+                }
+                else if (!_marked.Contains(place) && MapLegendStyle.Glyph(Icon(place)) is { } glyph)
                 {
                     @SvgText("map-place-glyph", px + pw / 2, py + ph / 2, glyph)
                 }
@@ -158,12 +166,12 @@
             @foreach (var place in _marked)
             {
                 var chosen = SelectedPlace == (place.X, place.Y);
-                <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@PlaceButtonBox(place.X, place.Y)"
+                <button type="button" class="map-room map-room--place @(chosen ? "map-room--selected" : null)" style="@PlaceButtonBox(place.X, place.Y) @PlaceStyle(place)"
                         aria-pressed="@(chosen ? "true" : "false")" aria-label="@PlaceLabel(place)" title="@PlaceName(place)"
                         @onclick="() => OnPlace.InvokeAsync(place)">
                     @if (MapLegendStyle.Svg(Icon(place)) is { } svg)
                     {
-                        <MudIcon Icon="@svg" Class="map-room-icon" Size="Size.Small" aria-hidden="true" />
+                        <svg class="map-room-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@((MarkupString)svg)</svg>
                     }
                     else if (MapLegendStyle.Glyph(Icon(place)) is { } glyph)
                     {
@@ -191,7 +199,7 @@
             {
                 var here = room.Room.Id == Layout.Map.Here;
                 <button type="button" class="map-room @(Pin(room) ? "map-room--pin" : null) @Fit(room) @(Editing && !room.Room.Editable ? "map-room--locked" : null) @(room.Room.Id == Selected ? "map-room--selected" : null) @(here ? "map-room--here" : null)"
-                        style="@Box(room)" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
+                        style="@Box(room) @MapLegendStyle.Style(Kind(room))" aria-pressed="@(room.Room.Id == Selected ? "true" : "false")"
                         aria-label="@Label(room, here)"
                         title="@room.Room.Name" @onclick="() => OnSelect.InvokeAsync(room.Room.Id)"
                         @ref="_buttons[room.Room.Id]">
@@ -200,7 +208,7 @@
                         @* The icon says the kind without its colour, for a reader who cannot tell the colours apart. *@
                         @if (MapLegendStyle.Svg(kind.Icon) is { } svg)
                         {
-                            <MudIcon Icon="@svg" Class="map-room-icon" Size="Size.Small" aria-hidden="true" />
+                            <svg class="map-room-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">@((MarkupString)svg)</svg>
                         }
                         else if (MapLegendStyle.Glyph(kind.Icon) is { } glyph)
                         {

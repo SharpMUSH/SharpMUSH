@@ -6794,6 +6794,9 @@
   <data name="NavMapLegend" xml:space="preserve">
     <value>图例</value>
   </data>
+  <data name="NavMapIconCredit" xml:space="preserve">
+    <value>图标作者：{0}</value>
+  </data>
   <data name="NavMapHereOffMap" xml:space="preserve">
     <value>你在 {0}，它不在任何地图上。</value>
   </data>

@@ -6794,6 +6794,9 @@
   <data name="NavMapLegend" xml:space="preserve">
     <value>Teckenförklaring</value>
   </data>
+  <data name="NavMapIconCredit" xml:space="preserve">
+    <value>Ikoner av {0}</value>
+  </data>
   <data name="NavMapHereOffMap" xml:space="preserve">
     <value>Du är i {0}, som inte finns på någon karta.</value>
   </data>
