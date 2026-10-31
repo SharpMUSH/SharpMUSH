@@ -155,7 +155,7 @@ objects:
       # space). One exit can answer to such a name only if it walks whichever way goes by it from where the mover is.
       FUN`SHARED:
         value: |-
-          if(strmatch(worldmap(%0),graph),[setq(all,sort(iter(worldmap(%0,names),setunion(iter(%i0,edit(lcstr(%i0),%b,_),;,%b),),|,%b)))][if(gt(words(%q<all>),1),setunion(iter(lnum(1,dec(words(%q<all>))),if(comp(extract(%q<all>,%i0,1),extract(%q<all>,inc(%i0),1)),,extract(%q<all>,%i0,1))),))])
+          if(strmatch(worldmap(%0),graph),[setq(all,sort(iter(worldmap(%0,names),setunion(iter(%i0,edit(squish(lcstr(%i0)),%b,_),;,%b),),|,%b)))][if(gt(words(%q<all>),1),setunion(iter(lnum(1,dec(words(%q<all>))),if(comp(extract(%q<all>,%i0,1),extract(%q<all>,inc(%i0),1)),,extract(%q<all>,%i0,1))),))])
         flags: [funsyntax]
       # %0 a map: the shared names no way is first named, each walked by an exit of its own, MAP`SHARED, whose MAP`WAY is
       # the name: worldway() takes a way's name, so it walks the way by that name out of the mover's place. A name keeps
@@ -170,7 +170,7 @@ objects:
       # that exit, takes it.
       FUN`NAME:
         value: |-
-          if(strmatch(worldmap(%0),graph),if(member(worldmap(%0,ways),%1),[setq(names,extract(worldmap(%0,names),match(worldmap(%0,ways),%1),1,|))][setq(shared,setunion(u(%!/FUN`SHARED,%0),u(%!/FUN`ALIASES,%0)))][first(%q<names>,;)][iter(rest(%q<names>,;),if(member(%q<shared>,edit(lcstr(%i0),%b,_)),,;%i0),;,)],if(member(u(%!/FUN`ALIASES,%0),%1),edit(%1,_,%b))),v(DATA`WAY`%1))
+          if(strmatch(worldmap(%0),graph),if(member(worldmap(%0,ways),%1),[setq(names,extract(worldmap(%0,names),match(worldmap(%0,ways),%1),1,|))][setq(shared,setunion(u(%!/FUN`SHARED,%0),u(%!/FUN`ALIASES,%0)))][first(%q<names>,;)][iter(rest(%q<names>,;),if(member(%q<shared>,edit(squish(lcstr(%i0)),%b,_)),,;%i0),;,)],if(member(u(%!/FUN`ALIASES,%0),%1),[edit(%1,_,%b)][if(strmatch(%1,*_*),;%1)])),v(DATA`WAY`%1))
         flags: [funsyntax]
 
       # ---- help -----------------------------------------------------------------

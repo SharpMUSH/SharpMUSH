@@ -119,7 +119,7 @@ Output: The north side of 2,1,0 is now locked.
 - `@world/link <map>/<x>,<y>[,<z>]=<x2>,<y2>[,<z2>],<names>[,<names back>]`
 - `@world/link <map>/<x>,<y>[,<z>]/<way>`
 
-Makes a way out of a place of a graph map, to any place on any level of it. Its names are given as an exit's are, `;` between them: the first is shown, and any of them walks it. Given names back, the way back is made too. A way of the same name out of the same place is replaced. With a way and no `=`, removes that way; the way back stays. A place has at most 64 ways out.
+Makes a way out of a place of a graph map, to any place on any level of it. Its names are given as an exit's are, `;` between them: the first is shown, and any of them walks it. Given names back, the way back is made too. A way of the same name out of the same place is replaced; a way that would share any other name with another way out of that place is refused. With a way and no `=`, removes that way; the way back stays. A place has at most 64 ways out.
 
 On a graph map, `@world/wall` and `@world/lock` take a way's name where a side goes. A way is `open`, `wall` (it stays, and refuses with its reason) or `lock`. A way leads one way already, so it is never `oneway`.
 

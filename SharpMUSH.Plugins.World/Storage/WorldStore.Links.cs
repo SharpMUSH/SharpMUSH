@@ -71,6 +71,9 @@ public enum WorldLinking
 
 	/// <summary>A place it leads out of has as many ways as it may.</summary>
 	TooMany,
+
+	/// <summary>Another way out of a place it leads out of already goes by one of its names.</summary>
+	NameTaken,
 }
 
 /// <summary>
@@ -126,6 +129,7 @@ public sealed partial class WorldStore
 			var there = new WorldLinkRecord(names, to.X, to.Y, to.Z, WorldEdge.Open, null, null);
 			var home = back is null ? null : new WorldLinkRecord(back, from.X, from.Y, from.Z, WorldEdge.Open, null, null);
 			if (Full(from, there) || (home is not null && Full(to, home))) return WorldLinking.TooMany;
+			if (Taken(from, there) || (home is not null && Taken(to, home))) return WorldLinking.NameTaken;
 			PutLink(tx, map.Number, from, there);
 			if (home is not null) PutLink(tx, map.Number, to, home);
 			return WorldLinking.Linked;
@@ -135,6 +139,10 @@ public sealed partial class WorldStore
 				var ways = LinksIn(tx, map.Number, at.X, at.Y, at.Z);
 				return ways.Count >= WorldLinks.MaxWays && ways.All(way => way.Way != link.Way);
 			}
+
+			// One name, one way out of a place: a way it would replace keeps none of its names.
+			bool Taken((int X, int Y, int Z) at, WorldLinkRecord link) =>
+				LinksIn(tx, map.Number, at.X, at.Y, at.Z).Any(way => way.Way != link.Way && link.NameList.Any(way.Answers));
 		});
 
 	private void PutLink(ITx tx, long map, (int X, int Y, int Z) at, WorldLinkRecord link) =>

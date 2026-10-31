@@ -281,6 +281,16 @@ public class WorldGridIntegrationTests
 			await Assert.That(await As(walker, "look")).Contains("West");
 			await As(walker, "west");
 			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(await Eval($"worldcell({mapRef},4,2,,room)"));
+
+			// A shared name is keyed as a way's is, and its exit answers to it as it was written too.
+			await God($"@world/link {mapRef}/4,2=0,0,Mill Lane;old_mill");
+			await God($"@world/link {mapRef}/9,9=0,0,Mill Race;Old Mill");
+			await God($"+map/exits {mapRef}");
+			await Assert.That((await Eval($"iter(lexits({mapRef}),fullname(%i0),,|)")).Split('|'))
+				.IsEquivalentTo(["Back Road", "Ford", "Hill Path", "Mill Lane", "Mill Race", "Old Road", "West", "old mill;old_mill"]);
+			await God($"@tel {walker.DbRef}=[worldroom({mapRef},9,9)]");
+			await As(walker, "old_mill");
+			await Assert.That(await Eval($"num(loc({walker.DbRef}))")).IsEqualTo(origin).Because("from 9,9 the old mill is the Mill Race");
 		}
 		finally
 		{

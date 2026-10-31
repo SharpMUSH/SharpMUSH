@@ -6638,6 +6638,9 @@
   <data name="NavMapCell" xml:space="preserve">
     <value>Leeres Feld, X {0}, Y {1}</value>
   </data>
+  <data name="NavMapWayPlace" xml:space="preserve">
+    <value>{0}, X {1}, Y {2}</value>
+  </data>
   <data name="NavMapChangesWaiting" xml:space="preserve">
     <value>Wartende Änderungen: {0}</value>
   </data>

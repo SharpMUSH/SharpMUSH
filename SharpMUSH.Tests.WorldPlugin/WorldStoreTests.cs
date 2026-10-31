@@ -147,6 +147,11 @@ public class WorldStoreTests
 		await _store.LinkAsync(Map, (0, 0, 0), (5, 5, 0), "old road", null);
 		await Assert.That(_store.Link(Map, 0, 0, 0, "old_road")).IsEqualTo(new WorldLinkRecord("old road", 5, 5, 0, WorldEdge.Open, null, null))
 			.Because("a way of the same name is replaced, lock and all");
+		await Assert.That(await _store.LinkAsync(Map, (0, 0, 0), (6, 6, 0), "Mill Lane;FORD", null)).IsEqualTo(WorldLinking.NameTaken)
+			.Because("no two ways out of one place answer to one name");
+		await Assert.That(await _store.LinkAsync(Map, (7, 7, 0), (0, 0, 0), "Ford Back", "Mill Lane;old  road")).IsEqualTo(WorldLinking.NameTaken)
+			.Because("the way back is held to it too, its names keyed as a way's are");
+		await Assert.That(_store.Links(Map, 7, 7, 0)).IsEmpty().Because("a refused link makes neither way");
 		await Assert.That(await _store.ChangeLinkAsync(Map, 0, 0, 0, "ford", _ => null)).IsTrue();
 		await Assert.That(await _store.ChangeLinkAsync(Map, 0, 0, 0, "ford", _ => null)).IsFalse();
 

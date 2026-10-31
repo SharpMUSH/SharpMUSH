@@ -134,7 +134,7 @@
             @for (var i = 0; i < _climbs.Count; i++)
             {
                 var link = _climbs[i];
-                @Climb(link, _climbs.Take(i).Count(other => SameArrow(other, link)))
+                @Climb(link, _stacks[i])
             }
         </svg>
         @if (_links.Count + _climbs.Count > 0)
@@ -324,6 +324,12 @@
     private List<MapLinkDto> _climbs = [];
     private HashSet<(int, int, int, int)> _twoWay = [];
 
+    /// <summary>How many climbs before each in <see cref="_climbs"/> are drawn as the same arrow, to stack its name under theirs.</summary>
+    private int[] _stacks = [];
+
+    /// <summary>The places on show by where they are, to name a way's ends.</summary>
+    private Dictionary<(int X, int Y), MapCellDto> _placeAt = [];
+
     protected override void OnParametersSet()
     {
         _rooms = [.. Layout.On(Level), .. Layout.Unplaced(Level)];
@@ -333,6 +339,15 @@
         _links = [.. ways.Where(link => link.ToZ == Level)];
         _climbs = [.. ways.Where(link => link.ToZ != Level)];
         _twoWay = _links.Select(link => (link.X, link.Y, link.ToX, link.ToY)).ToHashSet();
+        var arrows = new Dictionary<(int, int, int, int), int>();
+        _stacks = [.. _climbs.Select(link =>
+        {
+            var arrow = Arrow(link);
+            var stack = arrows.GetValueOrDefault(arrow);
+            arrows[arrow] = stack + 1;
+            return stack;
+        })];
+        _placeAt = _places.GroupBy(place => (place.X, place.Y)).ToDictionary(group => group.Key, group => group.First());
         // Read in the order the eye does: rows top to bottom, cells left to right.
         _marked =
         [
@@ -722,10 +737,18 @@
         @SvgText("map-way-name", (x1 + x2) / 2 + nx * 12, (y1 + y2) / 2 + ny * 12 + stack * 14, label, anchor)
     };
 
-    /// <summary>Whether two ways to other levels are drawn as the same arrow.</summary>
-    private bool SameArrow(MapLinkDto one, MapLinkDto other) =>
-        (one.X, one.Y, one.ToX, one.ToY) == (other.X, other.Y, other.ToX, other.ToY)
-        && (one.ToX != one.X || one.ToY != one.Y || one.ToZ > Level == other.ToZ > Level);
+    /// <summary>
+    /// The arrow a way to another level is drawn as: its place and its heading, rounded so that ways toward places
+    /// lying the same way share it, or straight up or down for a place right above or below.
+    /// </summary>
+    private (int, int, int, int) Arrow(MapLinkDto link)
+    {
+        if (link.ToX == link.X && link.ToY == link.Y) return (link.X, link.Y, 0, link.ToZ > Level ? -1 : 1);
+        var (fromX, fromY) = Layout.PlaceCentre(link.X, link.Y);
+        var (toX, toY) = Layout.PlaceCentre(link.ToX, link.ToY);
+        var angle = Math.Atan2(toY - fromY, toX - fromX);
+        return (link.X, link.Y, (int)Math.Round(angle * 180 / Math.PI), 2);
+    }
 
     /// <summary>A way as words: the place it leaves, its name, and the place or level it leads to.</summary>
     private string WayText(MapLinkDto link)
@@ -734,11 +757,16 @@
         var to = link.ToZ != Level
             ? Layout.Map.LevelNames.GetValueOrDefault(link.ToZ) is { Length: > 0 } named ? named : Loc["NavMapLevel", link.ToZ].Value
             : PlaceAt(link.ToX, link.ToY);
-        return $"{PlaceAt(link.X, link.Y)}: {Loc["NavMapWayLeads", name, to]}";
+        var text = $"{PlaceAt(link.X, link.Y)}: {Loc["NavMapWayLeads", name, to]}";
+        return link.Kind is { } kind ? $"{text}, {Loc[$"NavMapSideState{kind}"]}{(link.Reason is { } reason ? $": {reason}" : null)}" : text;
     }
 
+    /// <summary>A way's end as words: the place's own name or its room's, else its terrain and where it is.</summary>
     private string PlaceAt(int x, int y) =>
-        _places.FirstOrDefault(place => place.X == x && place.Y == y) is { } place ? PlaceName(place) : Loc["NavMapCell", x, y].Value;
+        _placeAt.GetValueOrDefault((x, y)) is not { } place ? Loc["NavMapCell", x, y].Value
+        : place.Name ?? place.Label
+          ?? (place.Room is { } room && Layout.Rooms.TryGetValue(room, out var drawn) ? drawn.Room.Name : null)
+          ?? Loc["NavMapWayPlace", Terrain(place)?.Label ?? place.Type, x, y].Value;
 
     /// <summary>An SVG <c>text</c> element, which Razor markup reserves for its own use.</summary>
     private static RenderFragment SvgText(string className, double x, double y, string content, string? anchor = null) => builder =>
