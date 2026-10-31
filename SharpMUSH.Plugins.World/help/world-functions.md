@@ -109,7 +109,7 @@ lock/open
 
 The places within `<radius>` steps of a place, 3 by default and at most 20, one character each, north up and a row a line. A place shows its type's ``MAP`LEGEND`<type>`CHAR``, else its icon when that is a character or two, else its label's first letter; a place with nothing painted is a space. `<mark>`, when given, stands in the centre.
 
-A hex map draws its columns two characters apart, each half a row below the one to its left, so a row of places takes two lines.
+A hex map draws its columns two characters apart, each half a row above the one to its left, so a row of places takes two lines.
 
 ```sharp
 > think worlddraw(Wilds, 1, 1, 0, 1, @)
