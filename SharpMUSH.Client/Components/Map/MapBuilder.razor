@@ -669,14 +669,17 @@
     private MapCellDto? PlaceAt(int x, int y) =>
         Cells is { } cells && cells.Level == Level ? cells.Cells.FirstOrDefault(cell => cell.X == x && cell.Y == y) : null;
 
-    /// <summary>A place was chosen: the paint box starts on it, and its fields start from what it holds.</summary>
+    /// <summary>
+    /// A place was chosen: the paint box starts on it, and its fields start from what it holds. The side stays chosen
+    /// when this map's places have it, and is the first of theirs when not (north is a corner on a pointy hex map).
+    /// </summary>
     private void ChoosePlace(int x, int y)
     {
         var place = PlaceAt(x, y);
         _placeRead = Cells?.Level == Level ? Level : null;
         (_paintX, _paintY, _paintX2, _paintY2, _paintType) = (x, y, x, y, place?.Type ?? _paintType);
         (_placeName, _placeRoom, _placeRoomProblem) = (place?.Name ?? "", place?.Room ?? "", null);
-        ChooseSide(_side);
+        ChooseSide(Sides.Contains(_side) ? _side : Sides[0]);
     }
 
     /// <summary>

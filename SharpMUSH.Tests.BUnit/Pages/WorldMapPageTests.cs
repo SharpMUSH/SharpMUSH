@@ -124,6 +124,9 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 	/// <summary>The wilds again as a hex map, the steppe.</summary>
 	public static readonly MapDto SteppeMap = WildsMap with { Map = new("#62", "Steppe", MapKinds.Coordinates, null), Space = new(MapSpaces.Hex, -20, -20, 20, 20, [0]) };
 
+	/// <summary>The wilds again as a pointy hex map, the fen: the camp and a pool east of it, nothing walled.</summary>
+	public static readonly MapDto FenMap = WildsMap with { Map = new("#63", "Fen", MapKinds.Coordinates, null), Space = new(MapSpaces.PointyHex, -20, -20, 20, 20, [0]) };
+
 	/// <summary>
 	/// The steppe's places: the camp, and the ford north-east of it. The camp's north-east side is a wall, its south-east
 	/// side locked, its north side one way out, and its north-west side a wall, listed as the south-east side of the place
@@ -194,6 +197,12 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
 			return Json(SteppeCells(int.Parse(query["left"]!), int.Parse(query["bottom"]!), int.Parse(query["right"]!), int.Parse(query["top"]!)));
 		}
+		if (path == "api/maps/63/cells")
+		{
+			var query = System.Web.HttpUtility.ParseQueryString(request.RequestUri.Query);
+			return Json(new MapCellsDto(0, int.Parse(query["left"]!), int.Parse(query["bottom"]!), int.Parse(query["right"]!), int.Parse(query["top"]!),
+				[new(0, 0, "forest") { Room = "#85" }, new(1, 0, "water") { Name = "Pool" }], [], false));
+		}
 		if (path == "api/maps/59/cells")
 		{
 			CellsAsked.Add(request.RequestUri.Query);
@@ -216,6 +225,7 @@ internal sealed class WorldMapApiHandler : HttpMessageHandler
 			"api/maps/58" => Json(PierMap),
 			"api/maps/59" => Json(WildsMap with { CanEdit = WildsEditable }),
 			"api/maps/62" => Json(SteppeMap with { CanEdit = WildsEditable }),
+			"api/maps/63" => Json(FenMap with { CanEdit = WildsEditable }),
 			"api/maps/here" when Here is { } here => Json(here),
 			"api/maps/route/11" => Json(ToLighthouse),
 			"api/maps/route/10" => Json(new MapRouteDto([], null)),
@@ -804,6 +814,25 @@ public class WorldMapPageTests : TrackingBunitContext
 		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.Value).IsEqualTo(MapWallKinds.Wall)
 			.Because("the ford's south-west side is the camp's north-east side");
 		await Assert.That(cut.FindComponents<MudBlazor.MudTextField<string>>().Select(field => field.Instance.Value)).Contains("Reeds.");
+	}
+
+	[Test]
+	public async Task APointyHexPlaceStartsOnASideItHas()
+	{
+		Arrange();
+		_api.WildsEditable = true;
+		var cut = Render<SharpMUSH.Client.Pages.WorldMap>(parameters => parameters.Add(p => p.Id, 63));
+		cut.WaitForAssertion(() => cut.Find("polygon.map-place"));
+		await cut.FindAll("button").First(button => button.TextContent.Trim() == "NavMapEdit").ClickAsync();
+		await cut.Find(".map-room--place").ClickAsync();
+
+		await Assert.That(cut.FindComponents<MudBlazor.MudSelect<string>>()[0].Instance.Value).IsEqualTo("ne")
+			.Because("north is a corner on a pointy hex map, not a side");
+		await cut.InvokeAsync(() => cut.FindComponents<MudBlazor.MudSelect<string>>()[1].Instance.ValueChanged.InvokeAsync(MapWallKinds.Wall));
+		await Click(cut, "NavMapSetSide");
+		await Click(cut, "NavMapReview");
+		await Assert.That(cut.FindAll(".map-review-commands").Select(commands => commands.TextContent))
+			.IsEquivalentTo(["@world/wall #63/1,0,0/ne=wall"]);
 	}
 
 	[Test]
